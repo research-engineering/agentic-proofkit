@@ -64,8 +64,8 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | DONE | IMPORT-03 | CLI command and release proof surface | CLI registry, command families, package/release tools, npm/PyPI wrapper surfaces, specs, proofkit JSON, and workflows were imported with local `npm run check`. Provider CI, protected-branch, registry, and release evidence remain separate open proof classes. |
 | DONE | IMPORT-04 | Adoption and backlog owner surfaces | Public-ready adoption and backlog routing were added without stale private release facts or consumer-specific claims. |
 | DONE | IMPORT-05 | Design documents | Current durable design surfaces were imported, and the remaining pre-cutover design and implementation-plan files were adjudicated in `docs/design-import-adjudication.md`. |
-| NEXT | IMPORT-06 | Remaining source-local code delta audit | Treat remaining source-local code diff as candidate evidence only. Import no code unless the target branch lacks the invariant and the delta does not remove current hardening. |
-| OPEN | RELEASE-01 | Public source release | Publish a new version from this public repository and record npm, optional PyPI, GitHub Release, SBOM, and rollback evidence. |
+| DONE | IMPORT-06 | Remaining source-local code delta audit | Non-document source deltas were adjudicated in `docs/source-delta-adjudication.md`; no old source file is missing from the public source tree, and no old bytes are imported over current hardening. |
+| NEXT | RELEASE-01 | Public source release | Publish a new version from this public repository and record npm, optional PyPI, GitHub Release, SBOM, and rollback evidence. |
 | OPEN | SECURITY-01 | Provider security settings | Verify CodeQL, dependency review or equivalent advisory scanning, secret scanning, push protection, branch protection, and issue/PR policy in provider settings. |
 | OPEN | CONSUMER-01 | Public-package consumer proof | Run at least one consumer through exact package adoption, installed CLI smoke, rollback proof, and native-witness delegation. |
 | OPEN | CONSUMER-02 | Second-consumer pilot | Run a small observe or warn pilot in a topology-distinct repository and classify every gap as generic Proofkit work or consumer-local adapter work. |
@@ -117,6 +117,10 @@ Current import rule:
 - `docs/design-import-adjudication.md` is admitted as a source-repository
   import ledger. It is not package authority; it records why remaining
   pre-cutover design and implementation-plan files are not imported wholesale.
+- `docs/source-delta-adjudication.md` is admitted as a source-repository import
+  ledger for non-document source deltas. It is not package authority; it records
+  why old source bytes are candidate evidence only and why no source overwrite
+  is part of the public cutover.
 - Implementation plans remain excluded from package-public docs and current
   authority after their useful invariants have moved into code, tests, specs,
   package-public docs, or this backlog.
