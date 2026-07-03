@@ -16,7 +16,7 @@ var (
 	compactDateComponentRegexp = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
 	driveLikePathPattern       = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
 	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
-	secretValuePattern         = regexp.MustCompile(`(?i)(authorization\s*:|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access_?token|api_?key|password|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
+	secretValuePattern         = regexp.MustCompile(`(?i)(authorization\s*:|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
 	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
 	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
 	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
