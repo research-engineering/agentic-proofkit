@@ -9,9 +9,15 @@ belong in consuming repositories.
 
 ## Current Cutover Note
 
-The current public contract layer does not claim runtime code, package
-metadata, machine-readable contracts, specifications, or release workflows. Do
-not treat this layer as implementation or release readiness.
+This repository is in a staged public source import. Source files, tests,
+package metadata, machine-readable contracts, specifications, and workflow
+source are bounded owner surfaces for their exact behavior after their import
+pull request is reviewed and merged.
+
+Do not treat source presence as package publication, public-source provenance,
+provider-side security ingestion, branch protection, Trusted Publisher,
+rollout, deployment, or production readiness proof. Those claims require their
+own release, provider, or deployment evidence.
 
 ## Start Here
 

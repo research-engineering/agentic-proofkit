@@ -2,18 +2,19 @@
 
 Reusable CLI and JSON proof infrastructure for agentic software repositories.
 
-The current repository layer defines project governance, contribution rules,
-security reporting, and non-claims. Runtime code, machine-readable CLI
-contracts, specifications, package metadata, and release workflows are separate
-authority layers and are not claimed by this layer.
+This repository contains project governance, reusable Go CLI source,
+machine-readable CLI contracts, specifications, package metadata, release
+workflow source, and explicit non-claims. Source presence is not publication
+proof: package release, public-source provenance, provider-side security
+ingestion, and deployment readiness require their own evidence.
 
 ## Current Repository State
 
 | Surface | State |
 |---|---|
-| Source visibility | Public-source release provenance is not claimed by this layer |
-| Current layer | Public project contract |
-| Runtime implementation | Not claimed by this layer |
+| Source visibility | Public-source release provenance is not claimed until a release is produced from public source |
+| Current layer | Staged public source import |
+| Runtime implementation | Source present; release readiness still requires release evidence |
 | Package release | Not claimed by this repository state |
 | Public-source provenance | Not claimed until a reviewed release is produced from public source |
 | License | MIT |
@@ -42,6 +43,6 @@ rollout, deployment, or production readiness.
 ## Non-Claims
 
 This README is a human landing page. It is not a CLI contract, release proof,
-package publication claim, security audit, or consumer readiness claim. Runtime
-and package behavior are not claimed until the corresponding source, contracts,
-tests, and release evidence are imported and reviewed.
+package publication claim, security audit, or consumer readiness claim. CLI and
+package behavior are owned by their source, tests, machine-readable contracts,
+and release evidence, not by this overview.

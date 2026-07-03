@@ -1,0 +1,69 @@
+{
+  "name": "agentic-proofkit",
+  "description": "Reusable proof profile, report, graph, and witness-planning primitives.",
+  "version": "0.1.135",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "packageManager": "npm@11.17.0",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "bin": {
+    "agentic-proofkit": "dist/agentic-proofkit"
+  },
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/research-engineering/agentic-proofkit.git"
+  },
+  "files": [
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "LICENSE",
+    "NON_CLAIMS.md",
+    "README.md",
+    "SECURITY.md",
+    "dist/**",
+    "docs/proofkit-contract-map.md",
+    "docs/release-process.md",
+    "docs/specs/**/*",
+    "proofkit/*.json"
+  ],
+  "scripts": {
+    "build": "go run ./internal/tools/packagebuild",
+    "check": "npm run npm:version && npm run source-hygiene && npm run text-policy && npm run go:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
+    "go:actionlint": "go tool actionlint",
+    "go:bench": "go test ./internal/kernel/admission ./internal/kernel/stablejson -run '^$' -bench . -benchmem -count=10",
+    "go:check": "npm run go:fmt && npm run go:test && npm run go:vet && npm run go:staticcheck && npm run go:actionlint && npm run go:vulncheck",
+    "go:fmt": "test -z \"$(gofmt -l cmd internal scripts)\"",
+    "go:test": "go test ./...",
+    "go:vet": "go vet ./...",
+    "npm:version": "node -e \"const {execFileSync}=require('node:child_process'); const expected=require('./package.json').packageManager.split('@').at(-1); const actual=execFileSync('npm',['--version'],{encoding:'utf8'}).trim(); if(actual!==expected){throw new Error('expected npm '+expected+', got '+actual)}\"",
+    "package:artifact": "npm run build && go run ./internal/tools/packagepack && go run ./internal/tools/packageverify && npm run python:package && npm run python:verify && npm run release:manifest",
+    "platform:smoke": "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current",
+    "python:package": "go run ./internal/tools/pythonpackage build",
+    "python:verify": "go run ./internal/tools/pythonpackage verify",
+    "pypi:registry": "go run ./internal/tools/pypiregistry",
+    "release:manifest": "npm run release:sbom && go run ./internal/tools/releasemanifest",
+    "release:closeout": "go run ./internal/tools/releasecloseoutinput | go run ./cmd/agentic-proofkit completion-criteria --input -",
+    "release:sbom": "go run ./internal/tools/releasesbom",
+    "self:receipt": "go run ./scripts/validate-self-hosting-receipts.go",
+    "self:coverage": "go run ./internal/tools/coveragemetrics",
+    "source-hygiene": "node scripts/source-hygiene.mjs",
+    "text-policy": "go run ./internal/tools/textpolicyinput | go run ./cmd/agentic-proofkit text-policy --input -",
+    "go:staticcheck": "go tool staticcheck ./...",
+    "go:vulncheck": "go tool govulncheck ./..."
+  },
+  "os": [
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "arm64",
+    "x64"
+  ]
+}

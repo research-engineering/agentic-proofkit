@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "proofkit.package-boundary.requirements",
+  "specPackagePath": "docs/specs/proofkit-package-boundary",
+  "overviewPath": "docs/specs/proofkit-package-boundary/overview.md",
+  "requirementsPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+  "requirements": [
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-001",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "The package artifact set exposes the supported CLI through one root package with embedded platform binaries while denying root imports, source imports, generated JavaScript imports, and deep internal package paths as public contract.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-001"
+      ],
+      "nonClaims": [
+        "This requirement does not claim consumer adoption, registry publication, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "The CLI builds deterministic reports, plans, generated source artifacts, and policy-admission results from explicit caller-owned JSON, declared no-input command parameters, or declared explicit scanner scope classes without executing native witnesses, scanning implicit repository state, deciding proof freshness, or accepting broad caller-supplied phrase suppressors that can hide readiness overclaims.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-002"
+      ],
+      "nonClaims": [
+        "This requirement does not claim native witness execution, producer authentication, proof freshness, or merge approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-003",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "The root package remains installable and executable by an outside consumer on the current native platform without claiming registry publication.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-003"
+      ],
+      "nonClaims": [
+        "This requirement does not claim registry publication, registry consumer installation, execution for non-native platform binaries, or rollout readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-004",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "CI package-gate receipts used as merge evidence are admitted through a declared producer policy and proof-receipt shape validator instead of current-build output alone.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-004"
+      ],
+      "nonClaims": [
+        "This requirement does not authenticate GitHub Actions, compute proof freshness, approve merge, approve release, or make local advisory receipts merge-satisfying evidence."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "The Go source, formatting, static analysis, vet, test, package artifact, and vulnerability gates remain the native merge-critical quality floor for the current Proofkit source tree.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-005"
+      ],
+      "nonClaims": [
+        "This requirement does not claim semantic completeness, release approval, registry publication, consumer rollout, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "Python/uv distribution is a platform wheel wrapper over the same Go CLI, with wheel-safe package metadata, wheel tags, embedded binary identity, local install smoke proof, and explicit non-claims until PyPI publication.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-006"
+      ],
+      "nonClaims": [
+        "This requirement does not claim PyPI publication, PyPI registry install authority, a Python SDK contract, consumer rollout, or execution for non-native wheel platforms."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    }
+  ],
+  "nonClaims": [
+    "Proofkit requirement source admission validates record shape only; it does not own requirement meaning.",
+    "Proofkit self-hosting records do not replace native package tests, release evidence, or registry publication proof.",
+    "Python wheel candidate artifacts do not prove PyPI publication."
+  ]
+}

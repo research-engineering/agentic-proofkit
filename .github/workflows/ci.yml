@@ -1,0 +1,160 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  source-quality:
+    name: quality / source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Install pinned npm
+        run: |
+          set -euo pipefail
+          npm install -g npm@11.17.0
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify diff hygiene
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            git rev-parse --verify HEAD^1 >/dev/null
+            git diff --check HEAD^1 HEAD
+          else
+            git show --check --format= HEAD
+          fi
+
+      - name: Verify npm version
+        run: npm run npm:version
+
+      - name: Verify source hygiene
+        run: npm run source-hygiene
+
+      - name: Verify text policy
+        run: npm run text-policy
+
+      - name: Verify Go formatting
+        run: npm run go:fmt
+
+      - name: Run Go tests for app
+        run: go test ./cmd/agentic-proofkit ./internal/app
+
+      - name: Run Go tests for kernel
+        run: go test ./internal/kernel/...
+
+      - name: Run Go tests for commands
+        run: go test ./internal/command/...
+
+      - name: Run Go tests for coverage and package tools
+        run: go test ./internal/tools/coveragemetrics ./internal/tools/packagebuild ./internal/tools/packagepack ./internal/tools/packageverify
+
+      - name: Run Go tests for registry and Python tools
+        run: go test ./internal/tools/pypiregistry ./internal/tools/pythonpackage
+
+      - name: Run Go tests for release tools
+        run: go test ./internal/tools/releasecloseoutinput ./internal/tools/releasemanifest ./internal/tools/releasepreflight ./internal/tools/releasesbom ./internal/tools/textpolicyinput
+
+      - name: Run Go tests for scripts
+        run: go test ./scripts
+
+      - name: Run Go vet
+        run: npm run go:vet
+
+      - name: Run staticcheck
+        run: npm run go:staticcheck
+
+      - name: Run actionlint
+        run: npm run go:actionlint
+
+      - name: Run govulncheck
+        run: npm run go:vulncheck
+
+      - name: Build and verify package artifacts
+        run: npm run package:artifact
+
+      - name: Verify self-hosting receipts
+        run: npm run self:receipt
+
+      - name: Verify self-hosting coverage
+        run: npm run self:coverage
+
+      - name: Verify release closeout
+        run: npm run release:closeout
+
+      - name: Upload package tarball artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: agentic-proofkit-npm-package-${{ github.sha }}
+          path: |
+            artifacts/package/*.tgz
+            artifacts/package/npm-pack.json
+            artifacts/proofkit/*.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  platform-smoke:
+    name: quality / platform smoke / macos-latest
+    runs-on: macos-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Install pinned npm
+        run: |
+          set -euo pipefail
+          npm install -g npm@11.17.0
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run platform smoke
+        run: |
+          set -euo pipefail
+          npm run npm:version
+          npm run platform:smoke

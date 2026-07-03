@@ -222,7 +222,7 @@ func SafeRepoRelativePath(value string, context string) (string, error) {
 	if value == "" ||
 		strings.HasPrefix(value, "/") ||
 		strings.Contains(value, `\`) ||
-		strings.ContainsRune(value, '\x00') ||
+		containsControlRune(value) ||
 		ContainsSecretLikeValue(value) ||
 		driveLikePathPattern.MatchString(value) ||
 		schemeLikePathPattern.MatchString(value) {
@@ -238,6 +238,15 @@ func SafeRepoRelativePath(value string, context string) (string, error) {
 		return "", fmt.Errorf("%s must not escape the repository root", context)
 	}
 	return normalized, nil
+}
+
+func containsControlRune(value string) bool {
+	for _, character := range value {
+		if character < ' ' || character == 0x7f {
+			return true
+		}
+	}
+	return false
 }
 
 func PreserveSortedPathArray(raw any, context string, allowEmpty bool) ([]string, error) {
