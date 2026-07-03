@@ -2,30 +2,34 @@
 
 Thank you for improving `agentic-proofkit`.
 
-This project accepts changes that preserve Proofkit's boundary as reusable
-CLI/JSON proof infrastructure. Consumer-specific policy, product semantics,
-native witness execution, proof freshness decisions, and rollout approval
-belong in consuming repositories.
-
-## Current Cutover Note
-
-This repository is in a staged public source import. Source files, tests,
-package metadata, machine-readable contracts, specifications, and workflow
-source are bounded owner surfaces for their exact behavior after their import
-pull request is reviewed and merged.
-
-Do not treat source presence as package publication, public-source provenance,
-provider-side security ingestion, branch protection, Trusted Publisher,
-rollout, deployment, or production readiness proof. Those claims require their
-own release, provider, or deployment evidence.
+This project accepts changes that preserve Proofkit's boundary as a reusable
+CLI/JSON proof infrastructure toolkit. Consumer-specific policy, product
+semantics, native witness execution, proof freshness decisions, merge
+admission, and rollout approval belong in consuming repositories.
 
 ## Start Here
 
 1. Read [AGENTS.md](AGENTS.md) for repository authority, proof, and closeout
    rules.
 2. Use [README.md](README.md) for human orientation.
-3. Use [NON_CLAIMS.md](NON_CLAIMS.md) to understand the boundary between
+3. Use [docs/proofkit-contract-map.md](docs/proofkit-contract-map.md) to find
+   the owner command or primitive.
+4. Use [ADOPTION.md](ADOPTION.md) for dependency and channel authority.
+5. Use [BACKLOG.md](BACKLOG.md) to check completion criteria and open work.
+6. Use [NON_CLAIMS.md](NON_CLAIMS.md) to understand the boundary between
    Proofkit mechanics and consuming-repository authority.
+
+## Local Checks
+
+Run before proposing a non-trivial change:
+
+```bash
+npm run check
+git diff --check
+```
+
+For CLI or Go changes, run focused Go tests first. For package or release
+changes, inspect [docs/release-process.md](docs/release-process.md).
 
 ## Change Admission
 
@@ -39,8 +43,9 @@ An accepted change should have:
   consumer adoption, native witness execution, or rollout readiness.
 
 Do not add generated HTML, generated lookup graphs, local artifacts, package
-tarballs, build outputs, caches, credentials, or consumer repository snapshots
-to source control unless a release owner explicitly admits the artifact.
+tarballs, `dist/`, `artifacts/`, `node_modules/`, credentials, or consumer
+repository snapshots to source control unless a release owner explicitly
+admits the artifact.
 
 ## Pull Requests
 

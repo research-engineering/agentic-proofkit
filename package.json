@@ -21,7 +21,9 @@
     "url": "git+https://github.com/research-engineering/agentic-proofkit.git"
   },
   "files": [
+    "ADOPTION.md",
     "AGENTS.md",
+    "BACKLOG.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "NON_CLAIMS.md",

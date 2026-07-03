@@ -1,12 +1,12 @@
 # agentic-proofkit
 
-Reusable CLI and JSON proof infrastructure for agentic software repositories.
+Reusable CLI and JSON proof infrastructure for spec-to-proof workflows in
+software repositories.
 
-This repository contains project governance, reusable Go CLI source,
-machine-readable CLI contracts, specifications, package metadata, release
-workflow source, and explicit non-claims. Source presence is not publication
-proof: package release, public-source provenance, provider-side security
-ingestion, and deployment readiness require their own evidence.
+`agentic-proofkit` helps repositories validate structured requirements, bind
+requirements to proof routes, plan selective checks, admit receipt-shaped
+evidence, render human views, and give coding agents bounded next-action
+packets without copying verifier logic between projects.
 
 ## Current Repository State
 
@@ -35,6 +35,8 @@ rollout, deployment, or production readiness.
 |---|---|
 | Human orientation | This README |
 | Coding-agent startup | `AGENTS.md` |
+| Adoption and release-channel model | `ADOPTION.md` |
+| Completion criteria and remaining work | `BACKLOG.md` |
 | Contribution rules | `CONTRIBUTING.md` |
 | Vulnerability reporting boundary | `SECURITY.md` |
 | Explicit boundary denials | `NON_CLAIMS.md` |

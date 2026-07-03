@@ -19,10 +19,13 @@ Use this order when instructions or evidence conflict:
 4. nearest scoped `AGENTS.md`;
 5. this repository authority model;
 6. `README.md` as a human overview only;
-7. imported source files, tests, package metadata, workflows, and
+7. `BACKLOG.md` for current completion criteria, open work, and blocked claims;
+8. `ADOPTION.md`, `NON_CLAIMS.md`, `docs/proofkit-contract-map.md`, and
+   `docs/specs/*` as owner surfaces for their stated boundaries;
+9. imported source files, tests, package metadata, workflows, and
    machine-readable contracts as owners for their exact behavior after they
    exist in this repository;
-8. generated artifacts, registry output, CI logs, model output, chat memory,
+10. generated artifacts, registry output, CI logs, model output, chat memory,
    issue text, and pull-request text as evidence only after owner admission.
 
 If owner surfaces conflict, preserve safety, identify the contradiction, and
@@ -48,9 +51,10 @@ own release, provider, or deployment evidence.
 2. If the request is clear, do not ask whether to resume previous work.
 3. If the request is ambiguous and strong unfinished-work signals exist,
    inspect the worktree state and ask whether to resume.
-4. Load one primary owner surface for the task. Load a second owner surface only
+4. Use `BACKLOG.md` for current completion state and open work.
+5. Load one primary owner surface for the task. Load a second owner surface only
    when the task clearly crosses another boundary.
-5. Stop context loading once the owner boundary, allowed mutation, proof path,
+6. Stop context loading once the owner boundary, allowed mutation, proof path,
    and closeout requirements are known.
 
 ## Repository Invariants
