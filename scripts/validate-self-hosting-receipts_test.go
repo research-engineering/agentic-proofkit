@@ -10,6 +10,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestProducerAdmissionFromEnvironmentDoesNotMintMergeSatisfyingReceipts(t *testing.T) {
@@ -330,6 +331,43 @@ func TestReleaseWorkflowPackageGateRemainsAdvisory(t *testing.T) {
 			{event: "workflow_dispatch"},
 		},
 	})
+}
+
+func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatalf("read release workflow: %v", err)
+	}
+	var workflow githubWorkflow
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatalf("parse release workflow: %v", err)
+	}
+	stepIndex, err := uniqueStepIndex(workflow.Jobs["candidate"].Steps, "Build publish dry-run evidence")
+	if err != nil {
+		t.Fatalf("find candidate evidence step: %v", err)
+	}
+	if stepIndex < 0 {
+		t.Fatal("Build publish dry-run evidence step not found")
+	}
+	run := workflow.Jobs["candidate"].Steps[stepIndex].Run
+	required := []string{
+		"npm view \"${package_name}@${package_version}\"",
+		"go run ./internal/tools/releasepreflight npm-existing",
+		"writeFileSync(report",
+		"continue",
+		"npm publish \"artifacts/package/${filename}\"",
+		"--dry-run",
+	}
+	for _, item := range required {
+		if !strings.Contains(run, item) {
+			t.Fatalf("candidate evidence step missing %q", item)
+		}
+	}
+	existingIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-existing")
+	dryRunIndex := strings.Index(run, "npm publish \"artifacts/package/${filename}\"")
+	if existingIndex < 0 || dryRunIndex < 0 || existingIndex > dryRunIndex {
+		t.Fatalf("candidate evidence must validate existing-byte-match before npm publish dry-run")
+	}
 }
 
 func expectedCITrustInputNames() []string {

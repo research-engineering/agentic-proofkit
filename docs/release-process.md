@@ -121,11 +121,12 @@ The `release` workflow must:
 
 1. verify source package identity;
 2. run the package gate;
-3. build publish dry-run evidence;
+3. build publish candidate evidence through either npm publish dry-run or
+   exact existing-byte-match validation for an already published version;
 4. build Python wheel candidates for the same embedded Go CLI;
 5. prove publish readiness before any registry side effect: the tag must equal
    `v<package.json version>`, target a commit reachable from `main`, and have
-   npm dry-run evidence plus PyPI wheel candidates;
+   npm publish candidate evidence plus PyPI wheel candidates;
 6. publish to public npm through the admitted trusted path, or record
    `existing_byte_match` when the same version already exists with exact
    candidate bytes;
