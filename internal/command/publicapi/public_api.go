@@ -475,9 +475,8 @@ func verifyPackageExportMap(repoRoot string, packageDir string, item entry, fail
 		if exportEntry[condition.Condition] != condition.Path {
 			*failures = append(*failures, fmt.Sprintf("%s exports[%s].%s must be %s", item.PackageName, item.ExportKey, condition.Condition, condition.Path))
 		}
-		expectedSourceTarget := "./" + item.Source
-		if condition.Path != expectedSourceTarget {
-			*failures = append(*failures, fmt.Sprintf("%s exports[%s].%s target %s must match scanned source %s", item.PackageName, item.ExportKey, condition.Condition, condition.Path, expectedSourceTarget))
+		if !isAdmittedSourceExportTarget(item.Source, condition) {
+			*failures = append(*failures, fmt.Sprintf("%s exports[%s].%s target %s must match scanned source %s or its compiled target", item.PackageName, item.ExportKey, condition.Condition, condition.Path, "./"+item.Source))
 		}
 	}
 	for _, deniedKey := range item.DeniedExportKeys {
@@ -486,6 +485,25 @@ func verifyPackageExportMap(repoRoot string, packageDir string, item entry, fail
 			*failures = append(*failures, fmt.Sprintf("%s package.json exports[%s] must be denied with null", item.PackageName, deniedKey))
 		}
 	}
+}
+
+func isAdmittedSourceExportTarget(source string, condition exportCondition) bool {
+	if condition.Path == "./"+source {
+		return true
+	}
+	compiledTarget, ok := compiledExportTargetForSource(source, condition.Condition)
+	return ok && condition.Path == compiledTarget
+}
+
+func compiledExportTargetForSource(source string, condition string) (string, bool) {
+	if !strings.HasPrefix(source, "src/") || !strings.HasSuffix(source, ".ts") {
+		return "", false
+	}
+	stem := strings.TrimSuffix(strings.TrimPrefix(source, "src/"), ".ts")
+	if condition == "types" {
+		return "./dist/" + stem + ".d.ts", true
+	}
+	return "./dist/" + stem + ".js", true
 }
 
 func verifyCoveredPackageExportKeys(repoRoot string, packages map[string]string, entries []entry, failures *[]string) {

@@ -25,6 +25,35 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 	}
 }
 
+func TestVerifyTypeScriptPackagePublicAPIAcceptsCompiledTargetsForScannedSource(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
+	writeJSON(t, filepath.Join(packageRoot, "package.json"), map[string]any{
+		"name": "@example/alpha",
+		"exports": map[string]any{
+			".": map[string]any{
+				"default": "./dist/index.js",
+				"types":   "./dist/index.d.ts",
+			},
+			"./internal": nil,
+		},
+	})
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["exportConditions"] = []any{
+		map[string]any{"condition": "default", "path": "./dist/index.js"},
+		map[string]any{"condition": "types", "path": "./dist/index.d.ts"},
+	}
+
+	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if err != nil {
+		t.Fatalf("verify public API: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("expected compiled target success, got exitCode=%d output=%#v", exitCode, output)
+	}
+}
+
 func TestVerifyTypeScriptPackagePublicAPIRejectsSecretLikeManifestText(t *testing.T) {
 	repoRoot := writeTypeScriptPackageFixture(t)
 	secretLike := "Authorization: Bearer abcdefghijklmnop"
