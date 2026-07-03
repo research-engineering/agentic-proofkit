@@ -213,6 +213,16 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-016",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim git diff discovery, replacement semantic equivalence, native witness execution, receipt freshness, requirement deletion approval, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-RECEIPT-001",
       "ownerId": "proofkit.receipt-authority",
       "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
@@ -1115,6 +1125,19 @@
       "witnessId": "proofkit.spec-overview-claims.citation-boundary",
       "witnessKind": "contract",
       "witnessPath": "internal/command/specoverviewclaims/specoverviewclaims_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-016",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-transition-contract",
+      "witnessId": "proofkit.requirement-source-transition.contract-boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementsourcetransition/requirementsourcetransition_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],
