@@ -433,6 +433,7 @@ jobs:
       - name: Verify root-only registry install and signatures
         run: |
           set -euo pipefail
+          package_name="$(node -p "require('./package.json').name")"
           package_version="$(node -p "require('./package.json').version")"
           consumer="$(mktemp -d)"
           trap 'rm -rf "$consumer"' EXIT
@@ -440,7 +441,6 @@ jobs:
           npm init -y >/dev/null
           install_cache="$consumer/.npm-install-cache"
           for attempt in $(seq 1 30); do
-            package_name="$(node -p "require('./package.json').name")"
             if npm install "${package_name}@${package_version}" \
               --ignore-scripts \
               --cache "$install_cache" \
