@@ -106,6 +106,34 @@ jobs:
           NODE
           while IFS= read -r filename; do
             report="artifacts/publish/dry-run-${filename%.tgz}.json"
+            metadata="$(node -e "const records = require('./artifacts/package/npm-pack.json'); const filename = process.argv[1]; const record = records.find((item) => item.filename === filename); if (!record) { throw new Error('missing local pack record for ' + filename); } console.log(JSON.stringify({ name: record.name, version: record.version, filename: record.filename, shasum: record.shasum, integrity: record.integrity }));" "$filename")"
+            package_name="$(node -e 'console.log(JSON.parse(process.argv[1]).name)' "$metadata")"
+            package_version="$(node -e 'console.log(JSON.parse(process.argv[1]).version)' "$metadata")"
+            if npm view "${package_name}@${package_version}" name version dist --json --registry="${REGISTRY_URL}" >/tmp/proofkit-candidate-view.json 2>/tmp/proofkit-candidate-view.err; then
+              go run ./internal/tools/releasepreflight npm-existing \
+                --expected-json "$metadata" \
+                --actual-file /tmp/proofkit-candidate-view.json
+              node <<'NODE' "$metadata" "$filename" "$report"
+          const { execFileSync } = require("node:child_process");
+          const { writeFileSync } = require("node:fs");
+          const metadata = JSON.parse(process.argv[2]);
+          const filename = process.argv[3];
+          const report = process.argv[4];
+          const tarball = `artifacts/package/${filename}`;
+          const files = execFileSync("tar", ["-tf", tarball], { encoding: "utf8" })
+            .trim()
+            .split("\n")
+            .filter((path) => path.startsWith("package/") && path !== "package/")
+            .map((path) => ({ path: path.slice("package/".length) }))
+            .sort((left, right) => left.path.localeCompare(right.path));
+          writeFileSync(report, `${JSON.stringify({ [metadata.name]: { ...metadata, files } }, null, 2)}\n`);
+          NODE
+              continue
+            fi
+            if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-candidate-view.err; then
+              cat /tmp/proofkit-candidate-view.err >&2
+              exit 1
+            fi
             npm publish "artifacts/package/${filename}" \
               --dry-run \
               --json \
