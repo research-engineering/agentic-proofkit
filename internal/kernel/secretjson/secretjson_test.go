@@ -8,10 +8,12 @@ import (
 
 func TestScanFindsSecretShapedValuesAndKeysWithoutEchoingKey(t *testing.T) {
 	findings, err := Scan(map[string]any{
-		"safe": "Authorization: Bearer abcdefghijklmnop",
+		"safe":         "Authorization: Bearer abcdefghijklmnop",
+		"operatorNote": "api-key=abcdefghijklmnopqrstuvwxyz",
 		"api_key=ghp_secretvalue": map[string]any{
 			"child": "ok",
 		},
+		"passwd=zyxwvutsrqponmlkjihgfedcba":      "redacted",
 		"https://user:password@example.test/key": "safe",
 		"nested": []any{
 			map[string]any{"url": "https://user:password@example.test/path"},
@@ -23,9 +25,11 @@ func TestScanFindsSecretShapedValuesAndKeysWithoutEchoingKey(t *testing.T) {
 
 	want := []Finding{
 		{Path: "evidence.nested[0].url", Kind: KindURLCredentials},
+		{Path: "evidence.operatorNote", Kind: KindSecretShapedValue},
 		{Path: "evidence.safe", Kind: KindSecretShapedValue},
 		{Path: "evidence.{key:0}", Kind: KindSecretShapedKey},
 		{Path: "evidence.{key:1}", Kind: KindURLCredentialsKey},
+		{Path: "evidence.{key:4}", Kind: KindSecretShapedKey},
 	}
 	if len(findings) != len(want) {
 		t.Fatalf("Scan() findings=%v, want %v", findings, want)
@@ -36,7 +40,7 @@ func TestScanFindsSecretShapedValuesAndKeysWithoutEchoingKey(t *testing.T) {
 		}
 	}
 	for _, finding := range findings {
-		if strings.Contains(finding.Path, "ghp_secretvalue") || strings.Contains(finding.Path, "api_key") {
+		if strings.Contains(finding.Path, "ghp_secretvalue") || strings.Contains(finding.Path, "api_key") || strings.Contains(finding.Path, "zyxwvutsrqponmlkjihgfedcba") || strings.Contains(finding.Path, "passwd") {
 			t.Fatalf("Scan() leaked secret-shaped key in path: %v", findings)
 		}
 	}

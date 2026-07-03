@@ -31,6 +31,23 @@ func TestNonEmptyTextRejectsSecretLikeDiagnostics(t *testing.T) {
 	}
 }
 
+func TestContainsSecretLikeValueRecognizesHyphenatedAndPasswdLabels(t *testing.T) {
+	t.Parallel()
+
+	for _, value := range []string{
+		"api-key=abcdefghijklmnopqrstuvwxyz",
+		"access-token=abcdefghijklmnopqrstuvwxyz",
+		"passwd=abcdefghijklmnopqrstuvwxyz",
+	} {
+		if !ContainsSecretLikeValue(value) {
+			t.Fatalf("ContainsSecretLikeValue(%q) = false, want true", value)
+		}
+	}
+	if ContainsSecretLikeValue("credentialClass=github-token") {
+		t.Fatal("ContainsSecretLikeValue flagged a non-secret credential class label")
+	}
+}
+
 func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) {
 	t.Parallel()
 
