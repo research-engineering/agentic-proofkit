@@ -382,11 +382,39 @@
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-015",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Spec overview claim reports validate caller-provided overview claim extraction facts so overviewPath and requirementsPath match the spec package, durable overview claims cite at least one known requirement id, non-durable overview claims carry no requirement citations, and extraction refs, line digests, detected markers, rationale, and non-claims are explicit without reading Markdown, proving extractor completeness, validating requirement source records, deciding semantic support, or approving merge.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-015"
+      ],
+      "nonClaims": [
+        "This requirement does not claim Markdown reading, claim extractor completeness, requirement source validity, semantic support between overview prose and cited requirements, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
     }
   ],
   "nonClaims": [
     "Consumers still own requirement meaning, command policy, native witness execution, receipts, CI admission, and rollout decisions.",
     "Proofkit spec-proof core requirements describe reusable infrastructure primitives only.",
-    "Proofkit spec-proof core requirements do not approve document deletion or infer document meaning from Markdown prose."
+    "Proofkit spec-proof core requirements do not approve document deletion or infer document meaning from Markdown prose.",
+    "Proofkit spec-proof core requirements do not prove overview-claim extractor completeness."
   ]
 }

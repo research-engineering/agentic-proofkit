@@ -109,6 +109,9 @@ Current import rule:
 - `docs/document-lifecycle-boundary-design.md` is admitted as the first
   source-repository design surface because it defines the lifecycle boundary
   needed to review every later design document.
+- `docs/requirement-source-admission-design.md` and
+  `docs/spec-overview-claim-boundary-design.md` are admitted source-repository
+  design surfaces for the requirement source authority boundary.
 - Implementation plans remain excluded from package-public docs and should be
   deleted, rewritten into durable design notes, or left unimported after their
   useful invariants have moved into code, tests, specs, or this backlog.
