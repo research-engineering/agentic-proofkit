@@ -435,6 +435,7 @@ jobs:
           set -euo pipefail
           package_name="$(node -p "require('./package.json').name")"
           package_version="$(node -p "require('./package.json').version")"
+          repo_root="$PWD"
           consumer="$(mktemp -d)"
           trap 'rm -rf "$consumer"' EXIT
           pushd "$consumer" >/dev/null
@@ -480,7 +481,7 @@ jobs:
           node -e "const fs=require('node:fs'); const r=JSON.parse(fs.readFileSync('registry-install-json-failed.json','utf8')); const s=r.summary||{}; if(r.reportKind!=='proofkit.text-policy'||r.reportId!=='proofkit.package-smoke.failure'||r.state!=='failed'||s.inputFileCount!==1||s.checkedTextFileCount!==1||s.failureCount!==1){throw new Error('unexpected failed smoke report '+JSON.stringify(r));}"
           ./node_modules/.bin/agentic-proofkit json-report-cli-adapter-source --language typescript > registry-install-json-adapter-source.json 2> registry-install-json-adapter-source.stderr
           test ! -s registry-install-json-adapter-source.stderr
-          go run ./cmd/agentic-proofkit json-report-cli-adapter-source --language typescript > /tmp/proofkit-owner-json-adapter-source.json
+          (cd "$repo_root" && go run ./cmd/agentic-proofkit json-report-cli-adapter-source --language typescript) > /tmp/proofkit-owner-json-adapter-source.json
           node <<'NODE'
           const crypto = require("node:crypto");
           const fs = require("node:fs");
