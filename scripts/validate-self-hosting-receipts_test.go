@@ -370,6 +370,39 @@ func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T
 	}
 }
 
+func TestReleaseWorkflowRegistryInstallUsesRootPackageName(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatalf("read release workflow: %v", err)
+	}
+	var workflow githubWorkflow
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatalf("parse release workflow: %v", err)
+	}
+	stepIndex, err := uniqueStepIndex(workflow.Jobs["publish"].Steps, "Verify root-only registry install and signatures")
+	if err != nil {
+		t.Fatalf("find registry install step: %v", err)
+	}
+	if stepIndex < 0 {
+		t.Fatal("Verify root-only registry install and signatures step not found")
+	}
+	run := workflow.Jobs["publish"].Steps[stepIndex].Run
+	rootNameIndex := strings.Index(run, "package_name=\"$(node -p \"require('./package.json').name\")\"")
+	pushdIndex := strings.Index(run, "pushd \"$consumer\"")
+	if rootNameIndex < 0 {
+		t.Fatal("registry install step must read package_name from root package.json")
+	}
+	if pushdIndex < 0 {
+		t.Fatal("registry install step must enter a temporary consumer directory")
+	}
+	if rootNameIndex > pushdIndex {
+		t.Fatal("registry install step must read package_name before entering the temporary consumer directory")
+	}
+	if strings.Count(run, "package_name=\"$(node -p \"require('./package.json').name\")\"") != 1 {
+		t.Fatal("registry install step must not recompute package_name from temporary consumer package.json")
+	}
+}
+
 func expectedCITrustInputNames() []string {
 	return []string{
 		"GITHUB_ACTIONS",
