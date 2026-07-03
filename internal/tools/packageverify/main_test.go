@@ -589,7 +589,7 @@ func packageManifestFixture(repositoryURL string) string {
   "name": "agentic-proofkit",
   "version": "1.2.3",
   "license": "MIT",
-  "packageManager": "npm@11.17.0",
+  "packageManager": "npm@11.18.0",
   "repository": {
     "type": "git",
     "url": "` + repositoryURL + `"

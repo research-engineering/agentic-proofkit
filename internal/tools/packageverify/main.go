@@ -452,8 +452,8 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.License != "MIT" {
 		return fmt.Errorf("root package license must be MIT, got %s", manifest.License)
 	}
-	if manifest.PackageManager != "npm@11.17.0" {
-		return fmt.Errorf("root package packageManager must be npm@11.17.0, got %s", manifest.PackageManager)
+	if manifest.PackageManager != "npm@11.18.0" {
+		return fmt.Errorf("root package packageManager must be npm@11.18.0, got %s", manifest.PackageManager)
 	}
 	if manifest.Repository.Type != "git" || manifest.Repository.URL != "git+https://github.com/research-engineering/agentic-proofkit.git" {
 		return fmt.Errorf("root package repository must be git+https://github.com/research-engineering/agentic-proofkit.git")
