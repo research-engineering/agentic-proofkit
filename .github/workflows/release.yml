@@ -478,11 +478,59 @@ jobs:
           test "$failed_code" = "1"
           test ! -s registry-install-json-failed.stderr
           node -e "const fs=require('node:fs'); const r=JSON.parse(fs.readFileSync('registry-install-json-failed.json','utf8')); const s=r.summary||{}; if(r.reportKind!=='proofkit.text-policy'||r.reportId!=='proofkit.package-smoke.failure'||r.state!=='failed'||s.inputFileCount!==1||s.checkedTextFileCount!==1||s.failureCount!==1){throw new Error('unexpected failed smoke report '+JSON.stringify(r));}"
+          ./node_modules/.bin/agentic-proofkit json-report-cli-adapter-source --language typescript > registry-install-json-adapter-source.json 2> registry-install-json-adapter-source.stderr
+          test ! -s registry-install-json-adapter-source.stderr
+          go run ./cmd/agentic-proofkit json-report-cli-adapter-source --language typescript > /tmp/proofkit-owner-json-adapter-source.json
+          node <<'NODE'
+          const crypto = require("node:crypto");
+          const fs = require("node:fs");
+          const installed = JSON.parse(fs.readFileSync("registry-install-json-adapter-source.json", "utf8"));
+          const owner = JSON.parse(fs.readFileSync("/tmp/proofkit-owner-json-adapter-source.json", "utf8"));
+          for (const [key, value] of [
+            ["schemaVersion", 1],
+            ["artifactKind", "proofkit.json-report-cli-adapter-source"],
+            ["format", "json"],
+            ["generatorId", "proofkit.json-report-cli-adapter-source.typescript.v1"],
+            ["language", "typescript"],
+            ["sourceFileName", "proofkit-json-report-cli-adapter.ts"]
+          ]) {
+            if (installed[key] !== value) {
+              throw new Error(`registry adapter source ${key} mismatch: ${installed[key]}`);
+            }
+          }
+          if (installed.source !== owner.source) {
+            throw new Error("registry adapter source does not match current owner source");
+          }
+          const expectedHash = `sha256:${crypto.createHash("sha256").update(installed.source, "utf8").digest("hex")}`;
+          if (installed.sourceSha256 !== expectedHash || owner.sourceSha256 !== expectedHash) {
+            throw new Error("registry adapter source hash mismatch");
+          }
+          for (const token of [
+            "function readProofkitBoundedTextFile",
+            "export function runProofkitNoInputJsonCommand",
+            "options.inputMode === \"none\"",
+            "stable JSON value must not contain unsafe integer numbers",
+            "openSync(filePath, \"r\")"
+          ]) {
+            if (!installed.source.includes(token)) {
+              throw new Error(`registry adapter source missing required token ${token}`);
+            }
+          }
+          for (const token of [
+            "readFileSync(filePath, \"utf8\")",
+            "JSON.parse(text)"
+          ]) {
+            if (installed.source.includes(token)) {
+              throw new Error(`registry adapter source contains forbidden stale token ${token}`);
+            }
+          }
+          NODE
           popd >/dev/null
           cp "$consumer/package-lock.json" artifacts/registry/root-install-package-lock.json
           cp "$consumer/registry-install-help.txt" artifacts/registry/root-install-help.txt
           cp "$consumer/registry-install-json-success.json" artifacts/registry/root-install-json-success.json
           cp "$consumer/registry-install-json-failed.json" artifacts/registry/root-install-json-failed.json
+          cp "$consumer/registry-install-json-adapter-source.json" artifacts/registry/root-install-json-adapter-source.json
           cp "$consumer/registry-audit-signatures.txt" artifacts/registry/audit-signatures.txt
 
       - name: Upload registry evidence
@@ -496,6 +544,7 @@ jobs:
             artifacts/registry/root-install-help.txt
             artifacts/registry/root-install-json-success.json
             artifacts/registry/root-install-json-failed.json
+            artifacts/registry/root-install-json-adapter-source.json
             artifacts/registry/audit-signatures.txt
             artifacts/registry/npm-publication-mode.txt
           if-no-files-found: error
@@ -937,6 +986,7 @@ jobs:
             artifacts/registry/root-install-help.txt
             artifacts/registry/root-install-json-success.json
             artifacts/registry/root-install-json-failed.json
+            artifacts/registry/root-install-json-adapter-source.json
             artifacts/registry/audit-signatures.txt
             artifacts/release/checksums.sha256
             artifacts/release/github-release.json

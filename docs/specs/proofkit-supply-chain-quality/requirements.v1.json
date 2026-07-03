@@ -246,7 +246,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-019",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Installed package smoke proof verifies the package-managed binary can process explicit JSON input for one successful report command and one failed-report command, preserving report kind, report id, state, explicit input counts, exit code, stdout JSON, and stderr channel discipline without admitting unlisted consumer working-directory files in addition to help discoverability.",
+      "invariant": "Installed package smoke proof verifies the package-managed binary can process explicit JSON input for one successful report command and one failed-report command, and can emit the current json-report-cli-adapter-source artifact from the installed package binary with source bytes equal to the generator owner source, preserving report kind, report id, state, explicit input counts, exit code, stdout JSON, generated-source hash, and stderr channel discipline without admitting unlisted consumer working-directory files in addition to help discoverability.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

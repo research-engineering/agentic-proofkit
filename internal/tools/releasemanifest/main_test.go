@@ -422,6 +422,7 @@ func TestOptionalRegistryInstallEvidenceAdmitsCompleteEvidence(t *testing.T) {
 		"audit-signatures.txt",
 		"published-registry-artifact-set.json",
 		"root-install-help.txt",
+		"root-install-json-adapter-source.json",
 		"root-install-json-failed.json",
 		"root-install-json-success.json",
 		"root-install-package-lock.json",
@@ -435,6 +436,7 @@ func TestOptionalRegistryInstallEvidenceAdmitsCompleteEvidence(t *testing.T) {
 	}
 	if evidence == nil ||
 		evidence.AuditSignaturesSha256 == "" ||
+		evidence.AdapterSourceReportSha256 == "" ||
 		evidence.FailedReportSha256 == "" ||
 		evidence.HelpOutputSha256 == "" ||
 		evidence.PackageLockSha256 == "" ||
