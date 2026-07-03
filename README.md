@@ -13,10 +13,10 @@ packets without copying verifier logic between projects.
 | Surface | State |
 |---|---|
 | Source visibility | Public |
-| Current layer | Public source with admitted unscoped npm release evidence; scoped npm identity has a bootstrap namespace release and is staged for Trusted Publisher release evidence |
+| Current layer | Public source with admitted scoped npm release evidence |
 | Runtime implementation | Go CLI with npm and Python wrapper packaging |
-| Package release | `agentic-proofkit@0.1.135` is admitted; `@research-engineering/agentic-proofkit@0.1.136` is bootstrap-published; `@research-engineering/agentic-proofkit@0.1.137` proved scoped Trusted Publisher publication but not full release closeout; `@research-engineering/agentic-proofkit@0.1.138` is pending release evidence |
-| Public-source provenance | Admitted for `v0.1.135`; scoped package Trusted Publisher provenance is pending a reviewed scoped release |
+| Package release | `@research-engineering/agentic-proofkit@0.1.138` is admitted; `agentic-proofkit@0.1.135` remains the previous unscoped release |
+| Public-source provenance | Admitted for `v0.1.138` |
 | License | MIT |
 
 ## Project Boundary
