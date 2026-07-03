@@ -21,9 +21,11 @@ reviewed source
   -> GitHub Release archive assets and release evidence
 ```
 
-Public npm is the primary dependency authority. GitHub Release assets are
-archive and provenance lookup. Consumer repositories still own whether a
-released version becomes an admitted dependency.
+Public npm is the primary dependency authority. The npm package identity is
+`@research-engineering/agentic-proofkit`; the installed executable name remains
+`agentic-proofkit`. The Python package identity remains `agentic-proofkit`.
+GitHub Release assets are archive and provenance lookup. Consumer repositories
+still own whether a released version becomes an admitted dependency.
 
 Release and adoption evidence uses canonical `authorityChannel` ids:
 `tarball_pilot`, `registry_release`, `python_wheel_candidate`,
@@ -164,7 +166,7 @@ precondition rather than a proof.
 After publish, record the registry identity from npm:
 
 ```bash
-npm view agentic-proofkit@<version> version dist.tarball dist.integrity dist.shasum repository.url license --json
+npm view @research-engineering/agentic-proofkit@<version> version dist.tarball dist.integrity dist.shasum repository.url license --json
 ```
 
 The release workflow records PyPI identity through:

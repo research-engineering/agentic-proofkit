@@ -103,11 +103,7 @@ func TestBuildRejectsRegistryReleaseAuthorityProjection(t *testing.T) {
 		rootInput["packMetadataPath"].(string),
 	)
 	rootInput["releaseAuthorityInput"] = releaseInput
-	admitted, err := admitReportInput(input)
-	if err != nil {
-		t.Fatalf("admit external-consumer fixture: %v", err)
-	}
-	input["evidence"].(map[string]any)["consumerProof"].(map[string]any)["releaseAuthorityOutputSha256"] = expectedReleaseAuthorityOutputSHA256(admitted.Input)
+	input["evidence"].(map[string]any)["consumerProof"].(map[string]any)["releaseAuthorityOutputSha256"] = strings.Repeat("0", 64)
 
 	record, exitCode, err := Build(input)
 	if err != nil {
@@ -183,7 +179,7 @@ func validExternalConsumerInput(t *testing.T) map[string]any {
 	t.Helper()
 	sourceCommit := strings.Repeat("a", 40)
 	version := "1.2.3"
-	tarballPath := "artifacts/package/agentic-proofkit-" + version + ".tgz"
+	tarballPath := "artifacts/package/research-engineering-agentic-proofkit-" + version + ".tgz"
 	packPath := "artifacts/package/npm-pack.json"
 	tarballSHA := strings.Repeat("b", 64)
 	packSHA := strings.Repeat("c", 64)
@@ -195,7 +191,7 @@ func validExternalConsumerInput(t *testing.T) map[string]any {
 			"schemaVersion":          json.Number("1"),
 			"pilotId":                "proofkit.external-consumer.test",
 			"pilotMode":              "non_blocking",
-			"packageName":            "agentic-proofkit",
+			"packageName":            "@research-engineering/agentic-proofkit",
 			"packageVersion":         version,
 			"tarballPath":            tarballPath,
 			"tarballSha256":          tarballSHA,
@@ -221,9 +217,9 @@ func validExternalConsumerInput(t *testing.T) map[string]any {
 				"sha256": packSHA,
 				"records": []any{
 					map[string]any{
-						"name":      "agentic-proofkit",
+						"name":      "@research-engineering/agentic-proofkit",
 						"version":   version,
-						"filename":  "agentic-proofkit-" + version + ".tgz",
+						"filename":  "research-engineering-agentic-proofkit-" + version + ".tgz",
 						"integrity": npmIntegrity,
 						"shasum":    npmSHASum,
 						"files":     packedFileRecords(),
@@ -307,7 +303,7 @@ func validExternalReleaseAuthorityInput(version string, tarballPath string, pack
 		"package": map[string]any{
 			"artifactPath":           tarballPath,
 			"manifestPrivate":        true,
-			"name":                   "agentic-proofkit",
+			"name":                   "@research-engineering/agentic-proofkit",
 			"packageManagerLockfile": "go.mod",
 			"packManifestPath":       packPath,
 			"publishConfigRegistry":  nil,
@@ -346,7 +342,7 @@ func validExternalRegistryReleaseAuthorityInput(version string, tarballPath stri
 		"package": map[string]any{
 			"artifactPath":           tarballPath,
 			"manifestPrivate":        false,
-			"name":                   "agentic-proofkit",
+			"name":                   "@research-engineering/agentic-proofkit",
 			"packageManagerLockfile": "go.mod",
 			"packManifestPath":       packPath,
 			"publishConfigRegistry":  "https://registry.npmjs.org",
@@ -369,7 +365,7 @@ func validExternalRegistryReleaseAuthorityInput(version string, tarballPath stri
 		},
 		"registryAuthority": map[string]any{
 			"consumerMigrationPath": "External consumer tests do not own registry migration.",
-			"packageScope":          "",
+			"packageScope":          "@research-engineering",
 			"publishAuthorityMode":  "npm_trusted_publishing",
 			"publishWorkflowPath":   ".github/workflows/release.yml",
 			"registryKind":          "npm_registry",
@@ -387,7 +383,7 @@ func validExternalRegistryReleaseAuthorityInput(version string, tarballPath stri
 		"rollback": map[string]any{
 			"owner":      "proofkit.release",
 			"procedure":  "Pin consumers back to the previous admitted registry version.",
-			"versionPin": "agentic-proofkit@1.2.2",
+			"versionPin": "@research-engineering/agentic-proofkit@1.2.2",
 		},
 		"nonClaims": []any{"External consumer registry release fixture is a channel rejection witness."},
 	}

@@ -13,11 +13,12 @@ import (
 var pep440VersionPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)+(?:a[0-9]+|b[0-9]+|rc[0-9]+|\.post[0-9]+|\.dev[0-9]+)?$`)
 
 const (
-	artifactKind  = "proofkit.python-package-set.v1"
-	packageName   = "agentic-proofkit"
-	pythonTag     = "py3"
-	abiTag        = "none"
-	schemaVersion = 1
+	artifactKind   = "proofkit.python-package-set.v1"
+	npmPackageName = "@research-engineering/agentic-proofkit"
+	packageName    = "agentic-proofkit"
+	pythonTag      = "py3"
+	abiTag         = "none"
+	schemaVersion  = 1
 )
 
 type target = releaseplatform.Target
@@ -65,8 +66,8 @@ func readPackageJSON() (packageJSON, error) {
 	if err != nil {
 		return packageJSON{}, err
 	}
-	if manifest.Name != packageName {
-		return packageJSON{}, fmt.Errorf("package.json name must be %s, got %s", packageName, manifest.Name)
+	if manifest.Name != npmPackageName {
+		return packageJSON{}, fmt.Errorf("package.json name must be %s, got %s", npmPackageName, manifest.Name)
 	}
 	if err := requireMetadataField("version", manifest.Version); err != nil {
 		return packageJSON{}, err

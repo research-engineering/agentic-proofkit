@@ -121,7 +121,7 @@ func TestCompareRegistryFilesRejectsInvalidRegistryEvidence(t *testing.T) {
 }
 
 func TestRegistryArtifactOutputCarriesPyPIAuthorityMetadata(t *testing.T) {
-	manifest := packageJSON{Name: "agentic-proofkit", Version: "1.2.3"}
+	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3"}
 	evidence := []registryWheelEvidence{{
 		AbiTag:         "none",
 		BinarySha256:   "binary",
@@ -137,13 +137,16 @@ func TestRegistryArtifactOutputCarriesPyPIAuthorityMetadata(t *testing.T) {
 		WheelTag:       "py3-none-any",
 	}}
 
-	output := registryArtifactOutput(manifest, evidence)
+	output := registryArtifactOutput(manifest.Version, evidence)
 	definition := releasechannel.Must(releasechannel.PyPIRegistryRelease)
 	if output.AuthorityChannel != string(definition.ID) || output.AuthorityValidator != definition.AuthorityValidator {
 		t.Fatalf("registryArtifactOutput() authority = %s/%s, want %s/%s", output.AuthorityChannel, output.AuthorityValidator, definition.ID, definition.AuthorityValidator)
 	}
 	if output.Registry != releasechannel.PyPIRegistryURL || len(output.Packages) != 1 {
 		t.Fatalf("registryArtifactOutput() = %#v, want PyPI registry package evidence", output)
+	}
+	if output.PackageName != packageName || output.PackageVersion != manifest.Version {
+		t.Fatalf("registryArtifactOutput() package identity = %s@%s, want %s@%s", output.PackageName, output.PackageVersion, packageName, manifest.Version)
 	}
 }
 

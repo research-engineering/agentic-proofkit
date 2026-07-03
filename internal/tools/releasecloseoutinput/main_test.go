@@ -17,6 +17,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 )
 
+const (
+	testNPMPackageName    = "@research-engineering/agentic-proofkit"
+	testNPMTarballName    = "research-engineering-agentic-proofkit-1.2.3.tgz"
+	testPythonPackageName = "agentic-proofkit"
+	testPythonWheelName   = "agentic_proofkit-1.2.3-py3-none-any.whl"
+)
+
 func TestBuildInputProducesAdmittedSatisfiedCloseout(t *testing.T) {
 	root := completeFixture(t)
 
@@ -64,7 +71,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "missing package tarball",
 			criterionID: "proofkit.release_closeout.package_artifacts",
 			mutate: func(root string) {
-				mustRemove(t, filepath.Join(root, "artifacts", "package", "agentic-proofkit-1.2.3.tgz"))
+				mustRemove(t, filepath.Join(root, "artifacts", "package", testNPMTarballName))
 			},
 		},
 		{
@@ -72,7 +79,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			criterionID: "proofkit.release_closeout.package_artifacts",
 			mutate: func(root string) {
 				writeJSON(t, filepath.Join(root, "artifacts", "package", "npm-pack.json"), []any{
-					map[string]any{"name": "agentic-proofkit", "version": "9.9.9", "filename": "agentic-proofkit-1.2.3.tgz"},
+					map[string]any{"name": testNPMPackageName, "version": "9.9.9", "filename": testNPMTarballName},
 				})
 			},
 		},
@@ -82,9 +89,9 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			mutate: func(root string) {
 				writeJSON(t, filepath.Join(root, "artifacts", "package", "npm-pack.json"), []any{
 					map[string]any{
-						"filename":  "agentic-proofkit-1.2.3.tgz",
+						"filename":  testNPMTarballName,
 						"integrity": testNPMIntegrity([]byte("package")),
-						"name":      "agentic-proofkit",
+						"name":      testNPMPackageName,
 						"shasum":    strings.Repeat("0", 40),
 						"version":   "1.2.3",
 					},
@@ -97,9 +104,9 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			mutate: func(root string) {
 				writeJSON(t, filepath.Join(root, "artifacts", "package", "npm-pack.json"), []any{
 					map[string]any{
-						"filename":  "agentic-proofkit-1.2.3.tgz",
+						"filename":  testNPMTarballName,
 						"integrity": "sha512-" + strings.Repeat("A", 88),
-						"name":      "agentic-proofkit",
+						"name":      testNPMPackageName,
 						"shasum":    testSHA1([]byte("package")),
 						"version":   "1.2.3",
 					},
@@ -110,7 +117,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "missing Python wheel",
 			criterionID: "proofkit.release_closeout.python_wrappers",
 			mutate: func(root string) {
-				mustRemove(t, filepath.Join(root, "artifacts", "pypi", "agentic_proofkit-1.2.3-py3-none-any.whl"))
+				mustRemove(t, filepath.Join(root, "artifacts", "pypi", testPythonWheelName))
 			},
 		},
 		{
@@ -118,8 +125,10 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			criterionID: "proofkit.release_closeout.python_wrappers",
 			mutate: func(root string) {
 				writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
+					"packageName":    testPythonPackageName,
+					"packageVersion": "1.2.3",
 					"packages": []any{
-						map[string]any{"name": "agentic-proofkit", "version": "9.9.9", "filename": "agentic_proofkit-1.2.3-py3-none-any.whl"},
+						map[string]any{"name": testPythonPackageName, "version": "9.9.9", "filename": testPythonWheelName},
 					},
 				})
 			},
@@ -502,28 +511,30 @@ func completeFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	writeJSON(t, filepath.Join(root, "package.json"), map[string]any{
-		"name":       "agentic-proofkit",
+		"name":       testNPMPackageName,
 		"version":    "1.2.3",
 		"repository": map[string]any{"url": "git+https://github.com/research-engineering/agentic-proofkit.git"},
 	})
-	writeNPMArtifact(t, root, "agentic-proofkit-1.2.3.tgz", []byte("package"))
+	writeNPMArtifact(t, root, testNPMTarballName, []byte("package"))
 	writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
+		"packageName":    testPythonPackageName,
+		"packageVersion": "1.2.3",
 		"packages": []any{
-			map[string]any{"name": "agentic-proofkit", "version": "1.2.3", "filename": "agentic_proofkit-1.2.3-py3-none-any.whl"},
+			map[string]any{"name": testPythonPackageName, "version": "1.2.3", "filename": testPythonWheelName},
 		},
 	})
-	writeFile(t, filepath.Join(root, "artifacts", "pypi", "agentic_proofkit-1.2.3-py3-none-any.whl"), "wheel")
-	writeFile(t, filepath.Join(root, "artifacts", "release", "release-notes.md"), "# notes\n\nRollback: pin consumers with `npm install -D agentic-proofkit@<previous-version>`.\n")
+	writeFile(t, filepath.Join(root, "artifacts", "pypi", testPythonWheelName), "wheel")
+	writeFile(t, filepath.Join(root, "artifacts", "release", "release-notes.md"), "# notes\n\nRollback: pin consumers with `npm install -D @research-engineering/agentic-proofkit@<previous-version>`.\n")
 	writeJSON(t, filepath.Join(root, "artifacts", "release", "sbom.cdx.json"), map[string]any{"bomFormat": "CycloneDX", "specVersion": "1.6"})
 	writeReleaseManifest(t, root, releaseManifestFixture(true))
 	writeChecksumFile(t, root, "artifacts/release/checksums.sha256", []string{
-		"artifacts/package/agentic-proofkit-1.2.3.tgz",
-		"artifacts/pypi/agentic_proofkit-1.2.3-py3-none-any.whl",
+		"artifacts/package/" + testNPMTarballName,
+		"artifacts/pypi/" + testPythonWheelName,
 		"artifacts/release/sbom.cdx.json",
 	})
 	writeChecksumFile(t, root, "artifacts/release/sbom-subjects.sha256", []string{
-		"artifacts/package/agentic-proofkit-1.2.3.tgz",
-		"artifacts/pypi/agentic_proofkit-1.2.3-py3-none-any.whl",
+		"artifacts/package/" + testNPMTarballName,
+		"artifacts/pypi/" + testPythonWheelName,
 	})
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), coverageMetricsFixture())
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"), selfEvidenceReportFixture("proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"))
@@ -674,7 +685,7 @@ func selfEvidenceReportFixture(reportKind string, reportID string, ruleIDs ...st
 
 func proofReceiptFixture() map[string]any {
 	return map[string]any{
-		"artifactRefs":           []any{map[string]any{"kind": "artifact", "path": "artifacts/package/agentic-proofkit-1.2.3.tgz", "sha256": "sha256:abc"}},
+		"artifactRefs":           []any{map[string]any{"kind": "artifact", "path": "artifacts/package/" + testNPMTarballName, "sha256": "sha256:abc"}},
 		"environmentClass":       "local-go",
 		"evidenceRefs":           []any{"artifacts/package/npm-pack.json"},
 		"exitCode":               0,
@@ -705,7 +716,7 @@ func receiptProducerFixture() map[string]any {
 
 func receiptProducerReceiptFixture() map[string]any {
 	return map[string]any{
-		"artifactRefs":             []any{"artifacts/package/agentic-proofkit-1.2.3.tgz"},
+		"artifactRefs":             []any{"artifacts/package/" + testNPMTarballName},
 		"environmentClass":         "local-go",
 		"evidenceRef":              "artifacts/proofkit/self-hosting-proof-receipts.json",
 		"nonClaim":                 "Local advisory receipts do not satisfy merge obligations.",
@@ -795,7 +806,7 @@ func releaseManifestFixtureWithPyPI(status string, includePyPINonClaim bool) map
 	}
 	return map[string]any{
 		"artifactKind": "proofkit.release-manifest.v1",
-		"package":      map[string]any{"name": "agentic-proofkit", "version": "1.2.3"},
+		"package":      map[string]any{"name": testNPMPackageName, "version": "1.2.3"},
 		"channels": []any{
 			map[string]any{
 				"authorityChannel": "registry_release",
@@ -826,7 +837,7 @@ func trustedPublisherFixture(environment string, job string) map[string]any {
 	return map[string]any{
 		"environment": environment,
 		"job":         job,
-		"projectName": "agentic-proofkit",
+		"projectName": testNPMPackageName,
 		"provider":    "npm",
 		"registry":    "https://registry.npmjs.org",
 		"repository":  "research-engineering/agentic-proofkit",
@@ -953,7 +964,7 @@ func writeNPMArtifact(t *testing.T, root string, filename string, content []byte
 		map[string]any{
 			"filename":  filename,
 			"integrity": testNPMIntegrity(content),
-			"name":      "agentic-proofkit",
+			"name":      testNPMPackageName,
 			"shasum":    testSHA1(content),
 			"version":   "1.2.3",
 		},

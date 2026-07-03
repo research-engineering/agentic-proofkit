@@ -41,7 +41,7 @@ func verifyPythonPackagesForTargets(selectedTargets []target) error {
 	if packageSet.ArtifactKind != artifactKind || packageSet.SchemaVersion != schemaVersion {
 		return fmt.Errorf("python package set has unexpected artifact kind or schema version")
 	}
-	if packageSet.PackageName != manifest.Name || packageSet.PackageVersion != manifest.Version {
+	if packageSet.PackageName != packageName || packageSet.PackageVersion != manifest.Version {
 		return fmt.Errorf("python package set package identity mismatch")
 	}
 	if len(packageSet.Packages) != len(selectedTargets) {
@@ -71,7 +71,7 @@ func readPackageSet(path string) (packageSet, error) {
 }
 
 func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) error {
-	if record.Name != manifest.Name || record.Version != manifest.Version {
+	if record.Name != packageName || record.Version != manifest.Version {
 		return fmt.Errorf("python wheel %s package identity mismatch", record.Filename)
 	}
 	if record.Filename != wheelFilename(manifest.Version, target) {
