@@ -409,12 +409,40 @@
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-016",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement source transition reports validate caller-provided previous and next requirement source snapshots so both snapshots pass requirement source admission, both snapshots describe the same sourceId, specPackagePath, overviewPath, and requirementsPath, previous durable requirement records remain present, new requirements start active, terminal removed or superseded states and terminal superseded replacement sets do not change, deprecation, removal, supersession, and reactivation carry new lifecycle evidence, replacement targets are active in the next admitted source, and prior lifecycle evidence and replacement refs are preserved without discovering diffs, proving replacement semantic equivalence, executing witnesses, computing freshness, approving deletion, or approving merge.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-016"
+      ],
+      "nonClaims": [
+        "This requirement does not claim git diff discovery, replacement semantic equivalence, native witness execution, receipt freshness, requirement deletion approval, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
     }
   ],
   "nonClaims": [
     "Consumers still own requirement meaning, command policy, native witness execution, receipts, CI admission, and rollout decisions.",
     "Proofkit spec-proof core requirements describe reusable infrastructure primitives only.",
     "Proofkit spec-proof core requirements do not approve document deletion or infer document meaning from Markdown prose.",
+    "Proofkit spec-proof core requirements do not discover source diffs or approve requirement deletion.",
     "Proofkit spec-proof core requirements do not prove overview-claim extractor completeness."
   ]
 }

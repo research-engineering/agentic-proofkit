@@ -81,6 +81,9 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-015`: spec overview claim reports validate
   caller-provided overview claim extraction facts so durable overview claims
   cite known requirement records and non-durable claims remain non-normative.
+- `REQ-PROOFKIT-SPEC-016`: requirement source transition reports validate
+  caller-provided previous and next source snapshots so lifecycle changes are
+  monotonic, evidence-backed, package-boundary-stable, and repository-neutral.
 
 ## Non-Claims
 
@@ -92,3 +95,4 @@ execution receipts, and merge policy.
 - This spec does not approve document deletion or infer document meaning from
   Markdown prose.
 - This spec does not prove overview-claim extractor completeness.
+- This spec does not discover source diffs or approve requirement deletion.
