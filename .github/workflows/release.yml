@@ -1,0 +1,929 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run a release candidate proof or publish from a version tag.
+        required: true
+        default: candidate
+        type: choice
+        options:
+          - candidate
+          - publish
+      expected_version:
+        description: Exact package version expected by the caller.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  REGISTRY_URL: https://registry.npmjs.org
+
+jobs:
+  candidate:
+    name: release candidate / package evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          registry-url: ${{ env.REGISTRY_URL }}
+          package-manager-cache: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install pinned npm
+        run: |
+          set -euo pipefail
+          npm install -g npm@11.17.0
+
+      - name: Verify source package identity
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          name="$(node -p "require('./package.json').name")"
+          private_value="$(node -p "Object.prototype.hasOwnProperty.call(require('./package.json'), 'private') ? String(require('./package.json').private) : ''")"
+          repository_url="$(node -p "require('./package.json').repository.url")"
+          publish_registry="$(node -p "require('./package.json').publishConfig.registry")"
+          publish_access="$(node -p "require('./package.json').publishConfig.access")"
+          license="$(node -p "require('./package.json').license")"
+          test "$name" = "agentic-proofkit"
+          test "$repository_url" = "git+https://github.com/research-engineering/agentic-proofkit.git"
+          test "$publish_registry" = "$REGISTRY_URL"
+          test "$publish_access" = "public"
+          test "$license" = "MIT"
+          test -z "$private_value"
+          if [ -n "$EXPECTED_VERSION" ]; then
+            test "$version" = "$EXPECTED_VERSION"
+          fi
+          if [ "${GITHUB_EVENT_NAME}" = "push" ] || [ "${MODE}" = "publish" ]; then
+            test "$GITHUB_REF_TYPE" = "tag"
+            test "$GITHUB_REF_NAME" = "v$version"
+          fi
+
+      - name: Run package gate
+        run: npm run check
+
+      - name: Build publish dry-run evidence
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/publish
+          node <<'NODE' > artifacts/publish/publish-order.txt
+          const records = require("./artifacts/package/npm-pack.json");
+          for (const record of records) {
+            console.log(record.filename);
+          }
+          NODE
+          while IFS= read -r filename; do
+            report="artifacts/publish/dry-run-${filename%.tgz}.json"
+            npm publish "artifacts/package/${filename}" \
+              --dry-run \
+              --json \
+              --access public \
+              --registry="${REGISTRY_URL}" > "$report"
+          done < artifacts/publish/publish-order.txt
+          node <<'NODE'
+          const { readFileSync, readdirSync, writeFileSync } = require("node:fs");
+          const reports = readdirSync("artifacts/publish")
+            .filter((file) => file.startsWith("dry-run-") && file.endsWith(".json"))
+            .sort();
+          const records = reports.map((file) => {
+            const parsed = JSON.parse(readFileSync(`artifacts/publish/${file}`, "utf8"));
+            const values = Object.values(parsed);
+            if (values.length !== 1) {
+              throw new Error(`dry-run report ${file} must contain exactly one package`);
+            }
+            const record = values[0];
+            if (!record.name || !record.version || !record.filename || !record.integrity || !record.shasum) {
+              throw new Error(`dry-run report ${file} has incomplete package identity`);
+            }
+            return {
+              name: record.name,
+              version: record.version,
+              filename: record.filename,
+              shasum: record.shasum,
+              integrity: record.integrity,
+              unpackedSize: record.unpackedSize,
+              files: record.files.map((item) => item.path).sort()
+            };
+          });
+          records.sort((left, right) => left.name.localeCompare(right.name));
+          writeFileSync("artifacts/publish/npm-publish-dry-run.json", `${JSON.stringify(records, null, 2)}\n`);
+          NODE
+
+      - name: Upload release candidate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: |
+            artifacts/package/*.tgz
+            artifacts/package/npm-pack.json
+            artifacts/pypi/*.whl
+            artifacts/pypi/python-packages.json
+            artifacts/release/checksums.sha256
+            artifacts/release/metadata-checksums.sha256
+            artifacts/release/release-manifest.json
+            artifacts/release/release-notes.md
+            artifacts/release/sbom.cdx.json
+            artifacts/release/sbom-subjects.sha256
+            artifacts/proofkit/*.json
+            artifacts/publish/npm-publish-dry-run.json
+            artifacts/publish/publish-order.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+  publish-readiness:
+    name: release / publish readiness
+    needs: candidate
+    if: ${{ github.event_name == 'push' || inputs.mode == 'publish' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: artifacts
+
+      - name: Verify tag source and channel readiness
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+          GITHUB_TOKEN: ${{ github.token }}
+          REQUIRE_VERIFIED_TAG: ${{ vars.PROOFKIT_REQUIRE_VERIFIED_RELEASE_TAG }}
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
+          if [ -n "$EXPECTED_VERSION" ]; then
+            test "$version" = "$EXPECTED_VERSION"
+          fi
+          test "$GITHUB_REF_TYPE" = "tag"
+          test "$GITHUB_REF_NAME" = "v$version"
+          release_commit="$(git rev-list -n 1 "$GITHUB_REF_NAME")"
+          git merge-base --is-ancestor "$release_commit" "origin/main"
+          if [ "$REQUIRE_VERIFIED_TAG" = "true" ]; then
+            test "${GITHUB_REF_PROTECTED}" = "true"
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}/git/ref/tags/${GITHUB_REF_NAME}" \
+              > /tmp/proofkit-tag-ref.json
+            tag_sha="$(python3 -c 'import json; data=json.load(open("/tmp/proofkit-tag-ref.json", encoding="utf-8")); print(data["object"]["sha"])')"
+            tag_type="$(python3 -c 'import json; data=json.load(open("/tmp/proofkit-tag-ref.json", encoding="utf-8")); print(data["object"]["type"])')"
+            test "$tag_type" = "tag"
+            curl --fail --silent --show-error \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${GITHUB_API_URL:-https://api.github.com}/repos/${GITHUB_REPOSITORY}/git/tags/${tag_sha}" \
+              > /tmp/proofkit-tag-object.json
+            go run ./internal/tools/releasepreflight github-tag \
+              --ref-file /tmp/proofkit-tag-ref.json \
+              --tag-file /tmp/proofkit-tag-object.json \
+              --tag "$GITHUB_REF_NAME" \
+              --commit "$release_commit"
+          fi
+          test -s artifacts/publish/npm-publish-dry-run.json
+          test -s artifacts/pypi/python-packages.json
+          test "$(find artifacts/pypi -type f -name '*.whl' | wc -l | tr -d ' ')" -gt 0
+
+  publish:
+    name: publish / npm trusted publisher
+    needs: publish-readiness
+    if: ${{ github.event_name == 'push' || inputs.mode == 'publish' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: npm-production
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          registry-url: ${{ env.REGISTRY_URL }}
+          package-manager-cache: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Use pinned npm
+        run: |
+          set -euo pipefail
+          npm install -g npm@11.17.0
+          npm run npm:version
+
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: artifacts
+
+      - name: Verify release tag
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          set -euo pipefail
+          version="$(node -p "require('./package.json').version")"
+          if [ -n "$EXPECTED_VERSION" ]; then
+            test "$version" = "$EXPECTED_VERSION"
+          fi
+          test "$GITHUB_REF_TYPE" = "tag"
+          test "$GITHUB_REF_NAME" = "v$version"
+
+      - name: Publish to npm
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/registry
+          : > artifacts/registry/npm-published-filenames.txt
+          : > artifacts/registry/npm-existing-byte-match-filenames.txt
+          go run ./internal/tools/releasepreflight npm-candidate-artifacts \
+            --metadata-file artifacts/package/npm-pack.json \
+            --directory artifacts/package
+          while IFS= read -r filename; do
+            metadata="$(node -e "const records = require('./artifacts/package/npm-pack.json'); const filename = process.argv[1]; const record = records.find((item) => item.filename === filename); if (!record) { throw new Error('missing local pack record for ' + filename); } console.log(JSON.stringify({ name: record.name, version: record.version, filename: record.filename, shasum: record.shasum, integrity: record.integrity }));" "$filename")"
+            package_name="$(node -e 'console.log(JSON.parse(process.argv[1]).name)' "$metadata")"
+            package_version="$(node -e 'console.log(JSON.parse(process.argv[1]).version)' "$metadata")"
+            if npm view "${package_name}@${package_version}" name version dist --json --registry="${REGISTRY_URL}" >/tmp/proofkit-npm-view.json 2>/tmp/proofkit-npm-view.err; then
+              go run ./internal/tools/releasepreflight npm-existing \
+                --expected-json "$metadata" \
+                --actual-file /tmp/proofkit-npm-view.json
+              echo "${package_name}@${package_version} already exists and matches the candidate artifact; skipping publish" >&2
+              echo "$filename" >> artifacts/registry/npm-existing-byte-match-filenames.txt
+              continue
+            fi
+            if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-npm-view.err; then
+              cat /tmp/proofkit-npm-view.err >&2
+              exit 1
+            fi
+            npm publish "artifacts/package/${filename}" \
+              --access public \
+              --registry="${REGISTRY_URL}"
+            echo "$filename" >> artifacts/registry/npm-published-filenames.txt
+          done < artifacts/publish/publish-order.txt
+          if [ -s artifacts/registry/npm-existing-byte-match-filenames.txt ] && [ -s artifacts/registry/npm-published-filenames.txt ]; then
+            echo "mixed" > artifacts/registry/npm-publication-mode.txt
+          elif [ -s artifacts/registry/npm-existing-byte-match-filenames.txt ]; then
+            echo "existing_byte_match" > artifacts/registry/npm-publication-mode.txt
+          else
+            echo "published_by_workflow" > artifacts/registry/npm-publication-mode.txt
+          fi
+
+      - name: Capture published registry artifact identity
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/registry
+          node <<'NODE' > artifacts/registry/package-names.txt
+          const records = require("./artifacts/package/npm-pack.json");
+          for (const record of records) {
+            console.log(record.name);
+          }
+          NODE
+          while IFS= read -r package_name; do
+            package_version="$(node -p "require('./package.json').version")"
+            report="artifacts/registry/pack-${package_name}.json"
+            for attempt in $(seq 1 30); do
+              if npm pack "${package_name}@${package_version}" \
+                --json \
+                --registry="${REGISTRY_URL}" \
+                --pack-destination artifacts/registry > "$report"; then
+                break
+              fi
+              if [ "$attempt" = "30" ]; then
+                echo "registry artifact ${package_name}@${package_version} was not available after bounded propagation wait" >&2
+                exit 1
+              fi
+              echo "waiting for registry artifact ${package_name}@${package_version} propagation, attempt ${attempt}/30" >&2
+              sleep 10
+            done
+          done < artifacts/registry/package-names.txt
+          node <<'NODE'
+          const { readFileSync, readdirSync, writeFileSync } = require("node:fs");
+
+          const expectedRecords = require("./artifacts/package/npm-pack.json");
+          const publicationMode = readFileSync("artifacts/registry/npm-publication-mode.txt", "utf8").trim();
+          const expectedByName = new Map(expectedRecords.map((record) => [record.name, record]));
+          const files = readdirSync("artifacts/registry")
+            .filter((file) => file.startsWith("pack-") && file.endsWith(".json"))
+            .sort();
+          const records = files.map((file) => {
+            const parsed = JSON.parse(readFileSync(`artifacts/registry/${file}`, "utf8"));
+            if (!Array.isArray(parsed) || parsed.length !== 1) {
+              throw new Error(`registry npm pack report ${file} must contain exactly one record`);
+            }
+            return parsed[0];
+          });
+          records.sort((left, right) => left.name.localeCompare(right.name));
+          if (records.length !== expectedByName.size) {
+            throw new Error(`published registry package count mismatch: expected ${expectedByName.size}, got ${records.length}`);
+          }
+          const seen = new Set();
+          for (const record of records) {
+            const expected = expectedByName.get(record.name);
+            if (!expected) {
+              throw new Error(`unexpected published registry package ${record.name}`);
+            }
+            if (seen.has(record.name)) {
+              throw new Error(`duplicate published registry package ${record.name}`);
+            }
+            seen.add(record.name);
+            for (const field of ["version", "filename", "shasum", "integrity"]) {
+              if (record[field] !== expected[field]) {
+                throw new Error(`published registry ${record.name} ${field} mismatch: expected ${expected[field]}, got ${record[field]}`);
+              }
+            }
+          }
+          writeFileSync("artifacts/registry/npm-pack.json", `${JSON.stringify(records, null, 2)}\n`);
+          const summary = {
+            artifactKind: "proofkit.published-registry-artifact-set.v1",
+            publicationMode,
+            registry: "https://registry.npmjs.org",
+            source: publicationMode === "published_by_workflow"
+              ? "post-publish npm pack from registry"
+              : "registry npm pack byte-match for preexisting version",
+            packages: records.map((record) => ({
+              name: record.name,
+              version: record.version,
+              filename: record.filename,
+              shasum: record.shasum,
+              integrity: record.integrity
+            }))
+          };
+          writeFileSync("artifacts/registry/published-registry-artifact-set.json", `${JSON.stringify(summary, null, 2)}\n`);
+          NODE
+
+      - name: Verify root-only registry install and signatures
+        run: |
+          set -euo pipefail
+          package_version="$(node -p "require('./package.json').version")"
+          consumer="$(mktemp -d)"
+          trap 'rm -rf "$consumer"' EXIT
+          pushd "$consumer" >/dev/null
+          npm init -y >/dev/null
+          install_cache="$consumer/.npm-install-cache"
+          for attempt in $(seq 1 30); do
+            if npm install "agentic-proofkit@${package_version}" \
+              --ignore-scripts \
+              --cache "$install_cache" \
+              --prefer-online \
+              --no-audit \
+              --no-fund \
+              --registry="${REGISTRY_URL}"; then
+              break
+            fi
+            if [ "$attempt" = "30" ]; then
+              echo "registry install agentic-proofkit@${package_version} was not available after bounded propagation wait" >&2
+              exit 1
+            fi
+            echo "waiting for registry install agentic-proofkit@${package_version} propagation, attempt ${attempt}/30" >&2
+            sleep 10
+          done
+          npm audit signatures \
+            --registry="${REGISTRY_URL}" > registry-audit-signatures.txt
+          ./node_modules/.bin/agentic-proofkit --help > registry-install-help.txt
+          grep -q "CLI/JSON is the public cross-language contract" registry-install-help.txt
+          printf 'bad trailing \n' > unlisted-poison.md
+          cat > registry-install-json-success-input.json <<'JSON'
+          {"schemaVersion":1,"reportId":"proofkit.package-smoke.success","nonClaims":["Package smoke input does not claim repository discovery."],"policy":{"allowTab":true,"asciiOnly":true,"binarySuffixes":[".png"],"rejectTrailingWhitespace":true,"requireFinalNewline":true},"files":[{"contentBase64":"b2sK","path":"docs/ok.md","state":"present"}]}
+          JSON
+          ./node_modules/.bin/agentic-proofkit text-policy --input registry-install-json-success-input.json > registry-install-json-success.json 2> registry-install-json-success.stderr
+          test ! -s registry-install-json-success.stderr
+          node -e "const fs=require('node:fs'); const r=JSON.parse(fs.readFileSync('registry-install-json-success.json','utf8')); const s=r.summary||{}; if(r.reportKind!=='proofkit.text-policy'||r.reportId!=='proofkit.package-smoke.success'||r.state!=='passed'||s.inputFileCount!==1||s.checkedTextFileCount!==1||s.failureCount!==0){throw new Error('unexpected success smoke report '+JSON.stringify(r));}"
+          cat > registry-install-json-failed-input.json <<'JSON'
+          {"schemaVersion":1,"reportId":"proofkit.package-smoke.failure","nonClaims":["Package smoke input does not claim repository discovery."],"policy":{"allowTab":true,"asciiOnly":true,"binarySuffixes":[".png"],"rejectTrailingWhitespace":true,"requireFinalNewline":true},"files":[{"contentBase64":"bm8tbmV3bGluZQ==","path":"docs/bad.md","state":"present"}]}
+          JSON
+          set +e
+          ./node_modules/.bin/agentic-proofkit text-policy --input registry-install-json-failed-input.json > registry-install-json-failed.json 2> registry-install-json-failed.stderr
+          failed_code="$?"
+          set -e
+          test "$failed_code" = "1"
+          test ! -s registry-install-json-failed.stderr
+          node -e "const fs=require('node:fs'); const r=JSON.parse(fs.readFileSync('registry-install-json-failed.json','utf8')); const s=r.summary||{}; if(r.reportKind!=='proofkit.text-policy'||r.reportId!=='proofkit.package-smoke.failure'||r.state!=='failed'||s.inputFileCount!==1||s.checkedTextFileCount!==1||s.failureCount!==1){throw new Error('unexpected failed smoke report '+JSON.stringify(r));}"
+          popd >/dev/null
+          cp "$consumer/package-lock.json" artifacts/registry/root-install-package-lock.json
+          cp "$consumer/registry-install-help.txt" artifacts/registry/root-install-help.txt
+          cp "$consumer/registry-install-json-success.json" artifacts/registry/root-install-json-success.json
+          cp "$consumer/registry-install-json-failed.json" artifacts/registry/root-install-json-failed.json
+          cp "$consumer/registry-audit-signatures.txt" artifacts/registry/audit-signatures.txt
+
+      - name: Upload registry evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: registry-evidence-${{ github.sha }}
+          path: |
+            artifacts/registry/npm-pack.json
+            artifacts/registry/published-registry-artifact-set.json
+            artifacts/registry/root-install-package-lock.json
+            artifacts/registry/root-install-help.txt
+            artifacts/registry/root-install-json-success.json
+            artifacts/registry/root-install-json-failed.json
+            artifacts/registry/audit-signatures.txt
+            artifacts/registry/npm-publication-mode.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-pypi:
+    name: publish / pypi trusted publisher
+    needs: publish-readiness
+    if: ${{ (github.event_name == 'push' || inputs.mode == 'publish') && vars.PROOFKIT_ENABLE_PYPI_PUBLISH == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: pypi
+      url: https://pypi.org/p/agentic-proofkit
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: artifacts
+
+      - name: Verify release tag
+        env:
+          EXPECTED_VERSION: ${{ inputs.expected_version }}
+        run: |
+          set -euo pipefail
+          version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
+          if [ -n "$EXPECTED_VERSION" ]; then
+            test "$version" = "$EXPECTED_VERSION"
+          fi
+          test "$GITHUB_REF_TYPE" = "tag"
+          test "$GITHUB_REF_NAME" = "v$version"
+
+      - name: Prepare PyPI distributions
+        id: pypi-preflight
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/pypi-dist
+          mkdir -p artifacts/pypi-registry
+          cp artifacts/pypi/*.whl artifacts/pypi-dist/
+          test "$(find artifacts/pypi-dist -type f -name '*.whl' | wc -l | tr -d ' ')" -gt 0
+          test "$(find artifacts/pypi-dist -type f ! -name '*.whl' | wc -l | tr -d ' ')" = "0"
+          go run ./internal/tools/releasepreflight pypi-candidate-artifacts \
+            --candidate-file artifacts/pypi/python-packages.json \
+            --directory artifacts/pypi-dist
+          version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
+          package_name="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["name"])')"
+          status="$(curl --silent --show-error --location --output /tmp/proofkit-pypi-release.json --write-out '%{http_code}' "https://pypi.org/pypi/${package_name}/${version}/json")"
+          if [ "$status" = "200" ]; then
+            go run ./internal/tools/releasepreflight pypi-existing \
+              --candidate-file artifacts/pypi/python-packages.json \
+              --registry-file /tmp/proofkit-pypi-release.json
+            echo "skip_publish=true" >> "$GITHUB_OUTPUT"
+            echo "existing_byte_match" > artifacts/pypi-registry/pypi-publication-mode.txt
+            echo "${package_name}@${version} already exists on PyPI and matches the candidate wheels; skipping publish" >&2
+          elif [ "$status" = "404" ]; then
+            echo "skip_publish=false" >> "$GITHUB_OUTPUT"
+            echo "published_by_workflow" > artifacts/pypi-registry/pypi-publication-mode.txt
+          else
+            cat /tmp/proofkit-pypi-release.json >&2 || true
+            echo "unexpected PyPI status ${status}" >&2
+            exit 1
+          fi
+
+      - name: Publish to PyPI
+        if: steps.pypi-preflight.outputs.skip_publish != 'true'
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        with:
+          packages-dir: artifacts/pypi-dist
+          print-hash: true
+
+      - name: Capture published PyPI artifact identity
+        run: |
+          set -euo pipefail
+          go run ./internal/tools/pypiregistry
+
+      - name: Upload PyPI registry evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pypi-registry-evidence-${{ github.sha }}
+          path: |
+            artifacts/pypi-registry/pypi-release.json
+            artifacts/pypi-registry/pypi-publication-mode.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  release-metadata:
+    name: release / metadata
+    needs:
+      - candidate
+      - publish
+      - publish-pypi
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || inputs.mode == 'publish') &&
+        needs.candidate.result == 'success' &&
+        needs.publish.result == 'success' &&
+        (vars.PROOFKIT_ENABLE_PYPI_PUBLISH != 'true' || needs.publish-pypi.result == 'success')
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Install pinned npm
+        run: |
+          set -euo pipefail
+          npm install -g npm@11.17.0
+          npm run npm:version
+
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: artifacts
+
+      - name: Download registry evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: registry-evidence-${{ github.sha }}
+          path: artifacts/registry
+
+      - name: Download PyPI registry evidence
+        if: ${{ vars.PROOFKIT_ENABLE_PYPI_PUBLISH == 'true' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pypi-registry-evidence-${{ github.sha }}
+          path: artifacts/pypi-registry
+
+      - name: Build final release metadata
+        env:
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_ENVIRONMENT: npm-production
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_JOB: publish
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_PROJECT: agentic-proofkit
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_PROVIDER: npm
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_REGISTRY: ${{ env.REGISTRY_URL }}
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_REPOSITORY: ${{ github.repository }}
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_WORKFLOW_REF: ${{ github.workflow_ref }}
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_ENVIRONMENT: pypi
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_JOB: publish-pypi
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_PROJECT: agentic-proofkit
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_PROVIDER: pypi
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_REGISTRY: https://pypi.org
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_REPOSITORY: ${{ github.repository }}
+          PROOFKIT_PYPI_TRUSTED_PUBLISHER_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: go run ./internal/tools/releasemanifest
+
+      - name: Upload final release metadata
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-metadata-${{ github.sha }}
+          path: |
+            artifacts/release/checksums.sha256
+            artifacts/release/metadata-checksums.sha256
+            artifacts/release/release-manifest.json
+            artifacts/release/release-notes.md
+            artifacts/release/sbom-subjects.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  release-attestations:
+    name: release / artifact attestations
+    needs:
+      - candidate
+      - publish
+      - publish-pypi
+      - release-metadata
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || inputs.mode == 'publish') &&
+        vars.PROOFKIT_ENABLE_GITHUB_ATTESTATIONS == 'true' &&
+        github.event.repository.private == false &&
+        needs.candidate.result == 'success' &&
+        needs.publish.result == 'success' &&
+        needs.release-metadata.result == 'success' &&
+        (vars.PROOFKIT_ENABLE_PYPI_PUBLISH != 'true' || needs.publish-pypi.result == 'success')
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: artifacts
+
+      - name: Download final release metadata
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-metadata-${{ github.sha }}
+          path: artifacts/release
+
+      - name: Attest release artifact provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-checksums: artifacts/release/checksums.sha256
+
+      - name: Attest release metadata provenance
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-checksums: artifacts/release/metadata-checksums.sha256
+
+      - name: Attest release SBOM
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        with:
+          subject-checksums: artifacts/release/sbom-subjects.sha256
+          sbom-path: artifacts/release/sbom.cdx.json
+
+  release-assets:
+    name: release / github assets
+    needs:
+      - candidate
+      - publish
+      - publish-pypi
+      - release-metadata
+      - release-attestations
+    if: >-
+      ${{
+        always() &&
+        (github.event_name == 'push' || inputs.mode == 'publish') &&
+        needs.candidate.result == 'success' &&
+        needs.publish.result == 'success' &&
+        needs.release-metadata.result == 'success' &&
+        (vars.PROOFKIT_ENABLE_PYPI_PUBLISH != 'true' || needs.publish-pypi.result == 'success') &&
+        (
+          vars.PROOFKIT_ENABLE_GITHUB_ATTESTATIONS != 'true' ||
+          github.event.repository.private == true ||
+          needs.release-attestations.result == 'success'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 24.18.0
+          package-manager-cache: false
+
+      - name: Setup Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Download release candidate evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-candidate-evidence-${{ github.sha }}
+          path: artifacts
+
+      - name: Download registry evidence
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: registry-evidence-${{ github.sha }}
+          path: artifacts/registry
+
+      - name: Download PyPI registry evidence
+        if: ${{ vars.PROOFKIT_ENABLE_PYPI_PUBLISH == 'true' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: pypi-registry-evidence-${{ github.sha }}
+          path: artifacts/pypi-registry
+
+      - name: Download final release metadata
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-metadata-${{ github.sha }}
+          path: artifacts/release
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          expected_assets=(
+            artifacts/package/*.tgz
+            artifacts/pypi/*.whl
+            artifacts/release/checksums.sha256
+            artifacts/release/metadata-checksums.sha256
+            artifacts/release/release-manifest.json
+            artifacts/release/sbom.cdx.json
+          )
+          expected_asset_names=()
+          for asset in "${expected_assets[@]}"; do
+            expected_asset_names+=("$(basename "$asset")")
+          done
+          mapfile -t expected_asset_names < <(printf '%s\n' "${expected_asset_names[@]}" | sort)
+          printf '%s\n' "${expected_asset_names[@]}" >/tmp/proofkit-expected-release-assets.txt
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release view "$GITHUB_REF_NAME" --json tagName,name,body,isDraft,isPrerelease,assets >/tmp/proofkit-release-view.json
+            go run ./internal/tools/releasepreflight github-metadata \
+              --release-file /tmp/proofkit-release-view.json \
+              --tag "$GITHUB_REF_NAME" \
+              --notes-file artifacts/release/release-notes.md
+            existing_dir="$(mktemp -d)"
+            gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > /tmp/proofkit-existing-release-assets.txt
+            mapfile -t existing_asset_names < /tmp/proofkit-existing-release-assets.txt
+            comm -13 \
+              <(printf '%s\n' "${expected_asset_names[@]}") \
+              <(printf '%s\n' "${existing_asset_names[@]}") \
+              >/tmp/proofkit-extra-release-assets.txt
+            if [ -s /tmp/proofkit-extra-release-assets.txt ]; then
+              cat /tmp/proofkit-extra-release-assets.txt >&2
+              echo "release $GITHUB_REF_NAME contains unexpected assets" >&2
+              exit 1
+            fi
+            missing_assets=()
+            for asset in "${expected_assets[@]}"; do
+              asset_name="$(basename "$asset")"
+              if ! grep -Fxq "$asset_name" /tmp/proofkit-existing-release-assets.txt; then
+                missing_assets+=("$asset")
+                continue
+              fi
+              gh release download "$GITHUB_REF_NAME" --pattern "$asset_name" --dir "$existing_dir"
+              existing_asset="$existing_dir/$asset_name"
+              if ! cmp -s "$asset" "$existing_asset"; then
+                echo "release $GITHUB_REF_NAME asset $asset_name differs from the candidate artifact" >&2
+                sha256sum "$asset" "$existing_asset" >&2 || true
+                exit 1
+              fi
+            done
+            if [ "${#missing_assets[@]}" -gt 0 ]; then
+              gh release upload "$GITHUB_REF_NAME" "${missing_assets[@]}"
+            fi
+            gh release view "$GITHUB_REF_NAME" --json tagName,name,body,isDraft,isPrerelease,assets >/tmp/proofkit-release-view.json
+            go run ./internal/tools/releasepreflight github-release \
+              --release-file /tmp/proofkit-release-view.json \
+              --tag "$GITHUB_REF_NAME" \
+              --notes-file artifacts/release/release-notes.md \
+              --asset-names-file /tmp/proofkit-expected-release-assets.txt
+            cp /tmp/proofkit-release-view.json artifacts/release/github-release.json
+            final_dir="$(mktemp -d)"
+            for asset in "${expected_assets[@]}"; do
+              asset_name="$(basename "$asset")"
+              gh release download "$GITHUB_REF_NAME" --pattern "$asset_name" --dir "$final_dir"
+              final_asset="$final_dir/$asset_name"
+              if ! cmp -s "$asset" "$final_asset"; then
+                echo "release $GITHUB_REF_NAME final asset $asset_name differs from the candidate artifact" >&2
+                sha256sum "$asset" "$final_asset" >&2 || true
+                exit 1
+              fi
+            done
+            echo "release $GITHUB_REF_NAME already exists and matches the candidate artifacts" >&2
+            exit 0
+          fi
+          gh release create "$GITHUB_REF_NAME" \
+            "${expected_assets[@]}" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file artifacts/release/release-notes.md \
+            --verify-tag
+          gh release view "$GITHUB_REF_NAME" --json tagName,name,body,isDraft,isPrerelease,assets > artifacts/release/github-release.json
+          go run ./internal/tools/releasepreflight github-release \
+            --release-file artifacts/release/github-release.json \
+            --tag "$GITHUB_REF_NAME" \
+            --notes-file artifacts/release/release-notes.md \
+            --asset-names-file /tmp/proofkit-expected-release-assets.txt
+          final_dir="$(mktemp -d)"
+          for asset in "${expected_assets[@]}"; do
+            asset_name="$(basename "$asset")"
+            gh release download "$GITHUB_REF_NAME" --pattern "$asset_name" --dir "$final_dir"
+            final_asset="$final_dir/$asset_name"
+            if ! cmp -s "$asset" "$final_asset"; then
+              echo "release $GITHUB_REF_NAME final asset $asset_name differs from the candidate artifact" >&2
+              sha256sum "$asset" "$final_asset" >&2 || true
+              exit 1
+            fi
+          done
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: |
+            artifacts/package/*.tgz
+            artifacts/package/npm-pack.json
+            artifacts/pypi/*.whl
+            artifacts/pypi/python-packages.json
+            artifacts/publish/npm-publish-dry-run.json
+            artifacts/registry/npm-pack.json
+            artifacts/registry/npm-publication-mode.txt
+            artifacts/registry/published-registry-artifact-set.json
+            artifacts/registry/root-install-package-lock.json
+            artifacts/registry/root-install-help.txt
+            artifacts/registry/root-install-json-success.json
+            artifacts/registry/root-install-json-failed.json
+            artifacts/registry/audit-signatures.txt
+            artifacts/release/checksums.sha256
+            artifacts/release/github-release.json
+            artifacts/release/metadata-checksums.sha256
+            artifacts/release/release-manifest.json
+            artifacts/release/release-notes.md
+            artifacts/release/sbom.cdx.json
+            artifacts/release/sbom-subjects.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload PyPI release evidence
+        if: ${{ vars.PROOFKIT_ENABLE_PYPI_PUBLISH == 'true' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pypi-release-evidence-${{ github.sha }}
+          path: |
+            artifacts/pypi-registry/pypi-publication-mode.txt
+            artifacts/pypi-registry/pypi-release.json
+          if-no-files-found: error
+          retention-days: 30

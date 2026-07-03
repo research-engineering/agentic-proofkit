@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "proofkit.spec-proof-core.requirements",
+  "specPackagePath": "docs/specs/proofkit-spec-proof-core",
+  "overviewPath": "docs/specs/proofkit-spec-proof-core/overview.md",
+  "requirementsPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+  "requirements": [
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-001",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement source admission validates structured REQ-* records and source-package shape without owning requirement meaning or scanning overview prose as authority.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-001"
+      ],
+      "nonClaims": [
+        "This requirement does not claim product requirement meaning, proof freshness, native witness execution, or overview prose authority."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-002",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement proof binding reports validate caller-owned requirement-to-witness mappings, require compact scenarios to use admitted surface_id::stable_anchor identities, require compact witness selectors to use admitted repo/path::stable_anchor identities, admit caller-owned source-set fragments and selected-source resolver projections, and derive typed compact proof contract projections for surfaces, scenarios, witnesses, commands, environment classes, conformance facts, and falsification routes without executing witnesses or deciding proof freshness.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-002"
+      ],
+      "nonClaims": [
+        "This requirement does not claim native witness pass evidence, proof freshness, receipt authenticity, or merge approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-003",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Witness planning accepts caller-owned structured command metadata, scheduler constraints, and environment classes without executing commands or selecting repository policy.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-003"
+      ],
+      "nonClaims": [
+        "This requirement does not claim command execution, CI scheduling authority, credential approval, or repository-specific command policy."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Selective planning and selective evidence reports keep changed-path facts, planned commands, receipts, evidence class, producer-admission state, and obligation candidates explicit, keep merge approval consumer-owned, and fail closed for unknown or unmatched proof inputs.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-004"
+      ],
+      "nonClaims": [
+        "This requirement does not claim changed-path completeness, command success, receipt authenticity, proof freshness, or approval to skip caller-owned gates."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Rendered proof views and agent envelopes remain bounded, derived presentations over structured source and never become canonical proof or requirement authority.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-005"
+      ],
+      "nonClaims": [
+        "This requirement does not claim generated view authority, full graph context emission, proof freshness, or agent edit approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Test evidence inventory, proof-binding-derived inventory projections, normalized inventory projections, coverage-view input composition, and requirement coverage views classify or assemble caller-owned test-to-requirement, command, witness, owner-invariant, quality-finding, and declared-surface routes with stable machine-readable failure and warning classifications while preserving source-set entry provenance, failing closed on structured selector/sourcePath drift, command-ref collisions, missing requirement owners, scope widening, fabricated normalized inventory, nonsemantic command evidence, and declared dead zones in selected-owner or full-repository scopes, and without treating proof routes, nonsemantic command evidence, normalized projections, composed inputs, or rendered views as semantic test coverage.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-006"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, native test execution, proof freshness, receipt authenticity, merge approval, or global coverage completeness outside the caller-provided universe."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-007",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Proofkit commands admit caller-owned inputs into canonical immutable records before proof, policy, route, rendering, or report decisions consume them.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-007"
+      ],
+      "nonClaims": [
+        "This requirement does not claim consumer repository input authenticity, producer trust, native witness execution, proof freshness, merge approval, or mutable source control outside caller-provided Proofkit inputs."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-008",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement spec tree admission validates caller-owned meta, module, submodule, and capability spec hierarchy, source-reference modes, digest facts, overlay refs, deterministic output, and tree topology without scanning repositories, reading requirement sources, rendering views, or owning requirement/proof semantics.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-008"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, requirement meaning, source freshness computation, rendered output authority, native witness execution, proof adequacy, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement spec tree views render admitted caller-owned spec-tree hierarchy through shared safe browser document fragments, deterministic CLI JSON, Markdown, HTML, explicit output paths, and loopback browser serving without accepting caller-owned raw HTML or making rendered output authoritative.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-009"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, source freshness computation from files, requirement meaning, native witness execution, committed generated HTML, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-010",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement impact input composition converts caller-owned base and current requirement sources, single-current-binding compact proof contracts, changed-path facts, generated-artifact policy, local environment policy, and proof-like path policy into a direct impact command input while preserving downstream impact semantics and without scanning repositories, executing witnesses, deciding freshness, or becoming a second impact evaluator.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-010"
+      ],
+      "nonClaims": [
+        "This requirement does not claim changed-path completeness, generated-artifact verifier completeness, native witness execution, proof freshness, receipt authenticity, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-011",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Adoption contract envelope admission validates a complete caller-owned aggregate adoption envelope, selects one child adoption, bootstrap, guidance, workflow, or pilot route through orthogonal CLI flags, and delegates to existing child command contracts without scanning repositories, writing files, executing witnesses, or creating a second adoption readiness policy.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-011"
+      ],
+      "nonClaims": [
+        "This requirement does not claim consumer file materialization, native witness execution, proof freshness, receipt authenticity, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-012",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement authoring plans admit caller-provided design, implementation, pull request, code, test, and clarification facts into candidate-only requirement updates, delegate candidate source and lifecycle checks to requirement-source admission and transition, and emit owner-review plans without reading repositories, writing files, inferring requirement meaning, or approving promotion.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-012"
+      ],
+      "nonClaims": [
+        "This requirement does not claim extraction completeness, requirement meaning, file materialization, proof-binding adequacy, native witness execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Repeated cross-command proof vocabulary has one private owner for receipt statuses, merge-satisfaction classes, obligation classes, obligation decision states, selective unknown-edge classes, and selective unknown-edge coverage states, while command-local and caller-owned vocabularies remain outside the shared owner.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-013"
+      ],
+      "nonClaims": [
+        "This requirement does not claim public SDK vocabulary, consumer policy ownership, merge approval, receipt freshness, producer authentication, native witness execution, or ownership of one-command local vocabularies."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    }
+  ],
+  "nonClaims": [
+    "Consumers still own requirement meaning, command policy, native witness execution, receipts, CI admission, and rollout decisions.",
+    "Proofkit spec-proof core requirements describe reusable infrastructure primitives only."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "policyId": "proofkit.receipt-producer-policy",
+  "receiptKinds": [
+    "proofkit.package-gate"
+  ],
+  "environmentClasses": [
+    "local-go"
+  ],
+  "producers": [
+    {
+      "producerId": "github.actions.package",
+      "owner": "proofkit.package-boundary",
+      "admissionLevel": "advisory",
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "evidenceRefs": [
+        ".github/workflows/ci.yml"
+      ],
+      "nonClaim": "GitHub Actions package receipts are advisory until a separate CI-owned producer admission wrapper authenticates protected-run provenance."
+    },
+    {
+      "producerId": "local.developer",
+      "owner": "proofkit.package-boundary",
+      "admissionLevel": "advisory",
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "evidenceRefs": [
+        "AGENTS.md"
+      ],
+      "nonClaim": "Local developer receipts are advisory and do not satisfy merge obligations."
+    }
+  ],
+  "receipts": [],
+  "nonClaims": [
+    "Receipt producer policy does not admit merge-satisfying GitHub Actions receipts by environment variable alone.",
+    "Receipt producer policy does not approve package release or consumer rollout.",
+    "Receipt producer policy does not authenticate protected-ref or workflow state by itself.",
+    "Receipt producer policy does not compute receipt freshness."
+  ]
+}

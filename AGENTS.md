@@ -28,22 +28,19 @@ Use this order when instructions or evidence conflict:
 If owner surfaces conflict, preserve safety, identify the contradiction, and
 fix or report it. Do not silently choose the more convenient source.
 
-## Current Layer Scope
+## Current Imported Surface
 
-The repository is in a staged public cutover. This layer owns only public
-project contract files:
+The repository is in a staged public cutover. Treat only files present in this
+repository as authority for their exact behavior.
 
-- `README.md`;
-- `AGENTS.md`;
-- `CONTRIBUTING.md`;
-- `SECURITY.md`;
-- `NON_CLAIMS.md`;
-- `LICENSE`;
-- `.gitignore`.
+Imported source files, tests, package metadata, workflows, machine-readable
+contracts, and specifications own their bounded surfaces after the pull request
+that imports them has been reviewed and merged. Absent layers are non-claims.
 
-Do not infer runtime, package, CLI, release, or specification behavior from
-this layer. Those surfaces become authority only after their own reviewed pull
-requests import them.
+Do not infer package publication, public-source provenance, provider-side
+security ingestion, branch protection, Trusted Publisher, rollout, deployment,
+or production readiness from source presence alone. Those claims require their
+own release, provider, or deployment evidence.
 
 ## Deterministic Start
 
@@ -109,15 +106,21 @@ requests import them.
 Use the narrowest owner-valid proof first, then the current closeout gate for
 the imported surface.
 
-For this public contract layer:
+For public contract-only changes:
 
 ```bash
 git diff --check
 ```
 
-After runtime, package, CLI, workflow, or specification surfaces are imported,
-their owner pull requests must define and run their own closeout gates before
-merge.
+For runtime, package, CLI, workflow, or specification changes:
+
+```bash
+npm run check
+```
+
+Use narrower owner-valid gates first when iterating, then run the closeout gate
+against the final committed object before push or merge whenever the change is
+publishable.
 
 Skipped gates must state the exact blocker and must not be reported as success.
 

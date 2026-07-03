@@ -1,0 +1,1845 @@
+{
+  "schemaVersion": 1,
+  "bindingId": "proofkit.package-boundary.requirement-bindings",
+  "requirements": [
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-001",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim consumer adoption, registry publication, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim native witness execution, producer authentication, proof freshness, or merge approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-003",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim registry publication, registry consumer installation, execution for non-native platform binaries, or rollout readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-004",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not authenticate GitHub Actions, compute proof freshness, approve merge, approve release, or make local advisory receipts merge-satisfying evidence."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim semantic completeness, release approval, registry publication, consumer rollout, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim PyPI publication, PyPI registry install authority, a Python SDK contract, consumer rollout, or execution for non-native wheel platforms."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-001",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim product requirement meaning, proof freshness, native witness execution, or overview prose authority."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-002",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim native witness pass evidence, proof freshness, receipt authenticity, or merge approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-003",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim command execution, CI scheduling authority, credential approval, or repository-specific command policy."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim changed-path completeness, command success, receipt authenticity, proof freshness, or approval to skip caller-owned gates."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim generated view authority, full graph context emission, proof freshness, or agent edit approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, native test execution, proof freshness, receipt authenticity, merge approval, or global coverage completeness outside the caller-provided universe."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-007",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim consumer repository input authenticity, producer trust, native witness execution, proof freshness, merge approval, or mutable source control outside caller-provided Proofkit inputs."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-008",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, requirement meaning, source freshness computation, rendered output authority, native witness execution, proof adequacy, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, source freshness computation from files, requirement meaning, native witness execution, committed generated HTML, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-010",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim changed-path completeness, generated-artifact verifier completeness, native witness execution, proof freshness, receipt authenticity, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-011",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim consumer file materialization, native witness execution, proof freshness, receipt authenticity, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-012",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim extraction completeness, requirement meaning, file materialization, proof-binding adequacy, native witness execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim public SDK vocabulary, consumer policy ownership, merge approval, receipt freshness, producer authentication, native witness execution, or ownership of one-command local vocabularies."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-001",
+      "ownerId": "proofkit.receipt-authority",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim producer authentication, receipt freshness, native command execution, command result correctness, current-obligation matching, or merge approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-002",
+      "ownerId": "proofkit.receipt-authority",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim producer authentication, receipt freshness, command execution, command result correctness, CI log authority, or merge approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-003",
+      "ownerId": "proofkit.receipt-authority",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim producer authentication, receipt freshness, policy digest provenance, policy-diff discovery, migration exception approval, or merge approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-004",
+      "ownerId": "proofkit.receipt-authority",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim native witness execution, producer authentication, proof freshness, command result correctness, merge approval, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-001",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim file deletion, parity authenticity, native witness execution, proof freshness, merge approval, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-002",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim package resolution, manifest reads, lockfile reads, registry authentication, package-manager authority, native execution, proof freshness, merge approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-003",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim script execution, lockfile generation, lockfile freshness, registry authentication, package-manager behavior, CI scheduling, merge approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-004",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, tracked-file freshness, command execution, native proof coverage, CI readiness, merge approval, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-005",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim scenario appropriateness, repository scanning, command execution, receipt authentication, proof freshness, merge approval, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-006",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim parity authenticity, digest computation, native witness execution, proof freshness, semantic correctness, proof coverage adequacy, old-owner deletion approval, merge approval, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-007",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, semantic boundary correctness, automatic requirement extraction, native witness execution, proof freshness, owner approval, merge approval, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-008",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, semantic boundary correctness, automatic requirement extraction, native witness execution, receipt authenticity, proof freshness, owner approval, merge approval, release approval, rollout approval, or old proof-owner retirement approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-009",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, manifest freshness, workspace glob expansion, package-manager authority, dependency version policy, script policy, native command execution, lockfile freshness, CI scheduling, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-010",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim registry metadata authenticity, package publication, package access-control, package-manager execution, native smoke execution, rollback execution, release-authority producer trust, proof freshness, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-001",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim public-source provenance, release approval, registry identity, consumer adoption, or rollout readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-002",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim vulnerability absence, exploitability assessment, license approval, consumer deployment safety, or public-source provenance."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-003",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim exhaustive input-space proof, CLI fuzzing, filesystem fuzzing, server lifecycle fuzzing, or release readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim exhaustive command semantic completeness beyond the declared route inventory or byte-for-byte stability for diagnostics outside the public CLI ABI."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-005",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim provider-run success, CodeQL vulnerability absence, or replacement of go test, go vet, staticcheck, or govulncheck."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-006",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim provider-run success, vulnerability absence, exploitability assessment, reachable-code proof, license approval, or merge approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-007",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim provider-run success, branch-protection enforcement, required-review enforcement, provider settings completeness, merge approval, or release approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-008",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim workflow runtime success, external action safety, branch protection, or release approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-009",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim current performance maximum, CI wall-clock budget enforcement, or regression absence without benchmark evidence."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim line coverage, dead-code absence, exhaustive semantic completeness for every test, native witness execution, receipt freshness, or merge satisfaction."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim provider-run success, Windows support, performance budget enforcement, or release approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-012",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim provider-run success, registry publication, GitHub Release creation, consumer adoption, rollout approval, or release approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-013",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim full GitHub Actions interpretation, provider-run success, branch-protection enforcement, required-check enforcement, external action safety, registry publication, release approval, or rollout approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-014",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim public SDK stability, registry publication, package installation, consumer dependency policy, rollout approval, merge approval, provider provenance, proof freshness, or native witness execution."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim registry publication, provider authentication, GitHub artifact attestation, release approval, rollout approval, production readiness, or consumer adoption."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim Windows support, execution of non-native platform binaries, registry publication, artifact attestation, public SDK stability, consumer rollout, or release approval."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-017",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository-wide secret scanning, file traversal, credential validity detection, merge approval, release approval, rollout approval, or replacement of dedicated provider secret-scanning tools."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-018",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim provider UI configuration, provider-side OIDC acceptance, registry publication, artifact attestation, GitHub Release publication, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-019",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim registry publication, every command's runtime behavior, execution of non-native platform binaries, provider-side install freshness, consumer dependency admission, release approval, rollout approval, or production readiness."
+      ]
+    }
+  ],
+  "bindings": [
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-001",
+      "scenarioId": "proofkit.package-boundary.root-export-and-deep-import-denial",
+      "witnessId": "proofkit.package-artifact.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.cli-deterministic-report-boundary",
+      "witnessId": "proofkit.cli.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_contract_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.readiness-closeout-overclaim-grammar",
+      "witnessId": "proofkit.readiness-closeout.overclaim-grammar",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/readinesscloseout/readinesscloseout_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.text-policy-explicit-inventory",
+      "witnessId": "proofkit.text-policy.explicit-inventory",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/textpolicy/textpolicy_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.json-report-cli-adapter-source-generator",
+      "witnessId": "proofkit.json-report-cli-adapter-source.generator-boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/jsonreportcliadaptersource/json_report_cli_adapter_source_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.explicit-scanner-scope-class",
+      "witnessId": "proofkit.cli.explicit-scanner-scope-class",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_contract_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.explicit-scanner-agent-route",
+      "witnessId": "proofkit.agent-route.explicit-scanner-route",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentroute/agentroute_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-003",
+      "scenarioId": "proofkit.package-boundary.outside-consumer-artifact",
+      "witnessId": "proofkit.package-artifact.outside-consumer",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main.go",
+      "commandIds": [
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-004",
+      "scenarioId": "proofkit.package-boundary.ci-receipt-anchor",
+      "witnessId": "proofkit.ci.receipt-anchor",
+      "witnessKind": "contract",
+      "witnessPath": ".github/workflows/ci.yml",
+      "commandIds": [
+        "proofkit.ci-receipt-anchor",
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "scenarioId": "proofkit.package-boundary.go-format-static-vet-and-vulnerability-clean",
+      "witnessId": "proofkit.go.quality-gate",
+      "witnessKind": "contract",
+      "witnessPath": "package.json",
+      "commandIds": [
+        "proofkit.go-fmt",
+        "proofkit.go-staticcheck",
+        "proofkit.go-vet",
+        "proofkit.go-vulncheck"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-wheel-candidate",
+      "witnessId": "proofkit.python-package.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage",
+      "commandIds": [
+        "proofkit.python-package",
+        "proofkit.python-verify"
+      ],
+      "environmentClasses": [
+        "local-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-001",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-admission",
+      "witnessId": "proofkit.requirement-source-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-002",
+      "scenarioId": "proofkit.spec-proof-core.requirement-proof-binding-reporting",
+      "witnessId": "proofkit.requirement-proof-binding.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-002",
+      "scenarioId": "proofkit.spec-proof-core.requirement-proof-source-set-resolver-projection",
+      "witnessId": "proofkit.requirement-proof-source-set.resolver-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementproofsourceset/requirementproofsourceset_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-002",
+      "scenarioId": "proofkit.spec-proof-core.compact-proof-contract-typed-projections",
+      "witnessId": "proofkit.compact-proof-contract.typed-projections",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/compactproofcontract/compactproofcontract_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-003",
+      "scenarioId": "proofkit.spec-proof-core.witness-planning-boundary",
+      "witnessId": "proofkit.witness-planning.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
+      "witnessId": "proofkit.selective-proof.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.rendered-view-and-agent-envelope-non-authority",
+      "witnessId": "proofkit.rendered-proof-view.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-envelope-non-authority",
+      "witnessId": "proofkit.agent-route-envelope.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentroute/agentroute_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "scenarioId": "proofkit.spec-proof-core.test-inventory-normalized-output",
+      "witnessId": "proofkit.test-inventory.normalized-output",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/testevidenceinventory/testevidenceinventory_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "scenarioId": "proofkit.spec-proof-core.proof-binding-derived-test-inventory",
+      "witnessId": "proofkit.test-inventory.proof-binding-derived-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/proofbindingtestinventory/proofbindingtestinventory_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "scenarioId": "proofkit.spec-proof-core.test-inventory-and-coverage-view",
+      "witnessId": "proofkit.test-inventory-and-coverage-view.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcoverageview/requirementcoverageview_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "scenarioId": "proofkit.spec-proof-core.coverage-input-compose",
+      "witnessId": "proofkit.coverage-input-compose.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-007",
+      "scenarioId": "proofkit.spec-proof-core.canonical-input-admission",
+      "witnessId": "proofkit.admission.decode-typed-json-canonical-record",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/admission/json_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-008",
+      "scenarioId": "proofkit.spec-proof-core.requirement-spec-tree-admission",
+      "witnessId": "proofkit.requirement-spec-tree.topology-and-source-ref-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementspectree/requirementspectree_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.requirement-spec-tree-view-rendering",
+      "witnessId": "proofkit.requirement-spec-tree-view.rendering-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementspectree/requirementspectree_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.browserdoc-safe-fragments",
+      "witnessId": "proofkit.browserdoc.safe-fragment-and-download-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/browserdoc/browserdoc_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.requirement-spec-tree-view-cli-output",
+      "witnessId": "proofkit.requirement-spec-tree-view.cli-output-path-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_abi_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-009",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-spec-tree-route",
+      "witnessId": "proofkit.requirement-browser-server.spec-tree-route-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/server_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-010",
+      "scenarioId": "proofkit.spec-proof-core.requirement-impact-input-compose",
+      "witnessId": "proofkit.requirement-impact-input-compose.direct-impact-input",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementimpactinput/requirementimpactinput_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-011",
+      "scenarioId": "proofkit.spec-proof-core.adoption-contract-envelope-admission",
+      "witnessId": "proofkit.adoption-contract-envelope.aggregate-root-and-parity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptioncontract/adoptioncontract_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-011",
+      "scenarioId": "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi",
+      "witnessId": "proofkit.adoption-contract-envelope.public-cli-abi",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_abi_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-012",
+      "scenarioId": "proofkit.spec-proof-core.requirement-authoring-plan-candidate-only",
+      "witnessId": "proofkit.requirement-authoring-plan.semantic-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementauthoringplan/requirement_authoring_plan_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-012",
+      "scenarioId": "proofkit.spec-proof-core.requirement-authoring-plan-cli-abi",
+      "witnessId": "proofkit.requirement-authoring-plan.public-cli-abi",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_abi_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.private-proof-vocabulary-owner",
+      "witnessId": "proofkit.proofvocab.private-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/proofvocab/proofvocab_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.receipt-status-vocabulary-admission",
+      "witnessId": "proofkit.receipt-status-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/proofreceiptadmission/proofreceiptadmission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.receipt-producer-status-vocabulary-admission",
+      "witnessId": "proofkit.receipt-producer-status-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/receiptproduceradmission/receiptproduceradmission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.producer-policy-status-vocabulary-admission",
+      "witnessId": "proofkit.producer-policy-status-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/producerpolicyselfproof/producerpolicyselfproof_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.receipt-trust-status-vocabulary-admission",
+      "witnessId": "proofkit.receipt-trust-status-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/receipttrustclass/receipt_trust_class_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.obligation-vocabulary-admission",
+      "witnessId": "proofkit.obligation-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/obligationdecision/obligationdecision_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.selective-edge-vocabulary-admission",
+      "witnessId": "proofkit.selective-edge-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/selectivegateplan/selectivegateplan_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-013",
+      "scenarioId": "proofkit.spec-proof-core.selective-evidence-edge-vocabulary-admission",
+      "witnessId": "proofkit.selective-evidence-edge-vocabulary.command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/selectivegateevidence/selectivegateevidence_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-001",
+      "scenarioId": "proofkit.receipt-authority.proof-receipt-admission",
+      "witnessId": "proofkit.proof-receipt-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-002",
+      "scenarioId": "proofkit.receipt-authority.receipt-producer-admission",
+      "witnessId": "proofkit.receipt-producer-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-003",
+      "scenarioId": "proofkit.receipt-authority.producer-policy-self-proof",
+      "witnessId": "proofkit.producer-policy-self-proof.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RECEIPT-004",
+      "scenarioId": "proofkit.receipt-authority.spec-proof-bundle-linkage",
+      "witnessId": "proofkit.spec-proof-bundle-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-001",
+      "scenarioId": "proofkit.consumer-infra-retirement.migration-plan-retirement-gates",
+      "witnessId": "proofkit.migration-plan.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-002",
+      "scenarioId": "proofkit.consumer-infra-retirement.package-runtime-dependency-admission",
+      "witnessId": "proofkit.package-runtime-dependency-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-003",
+      "scenarioId": "proofkit.consumer-infra-retirement.workspace-registry-admission",
+      "witnessId": "proofkit.workspace-registry-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-004",
+      "scenarioId": "proofkit.consumer-infra-retirement.repo-profile-admission",
+      "witnessId": "proofkit.repo-profile-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-005",
+      "scenarioId": "proofkit.consumer-infra-retirement.adoption-workflow-routing",
+      "witnessId": "proofkit.adoption-workflow-plan.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptionworkflow/adoptionworkflow_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-006",
+      "scenarioId": "proofkit.consumer-infra-retirement.migration-parity-admission",
+      "witnessId": "proofkit.migration-parity-admission.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-007",
+      "scenarioId": "proofkit.consumer-infra-retirement.candidate-boundary-guidance",
+      "witnessId": "proofkit.gradual-adoption-guidance.candidate-boundary-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/gradualadoption/guidance_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-007",
+      "scenarioId": "proofkit.consumer-infra-retirement.candidate-boundary-cli-enforcement",
+      "witnessId": "proofkit.gradual-adoption-guidance.cli-candidate-boundary-enforcement",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/app_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-008",
+      "scenarioId": "proofkit.consumer-infra-retirement.adoption-doctor-enforcement",
+      "witnessId": "proofkit.adoption-doctor.enforcement-and-envelope",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptiondoctor/adoptiondoctor_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-009",
+      "scenarioId": "proofkit.consumer-infra-retirement.workspace-manifest-facts",
+      "witnessId": "proofkit.workspace-manifest-facts.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/workspacemanifestfacts/workspace_manifest_facts_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-010",
+      "scenarioId": "proofkit.consumer-infra-retirement.registry-consumer-proof-input-compose",
+      "witnessId": "proofkit.registry-consumer-proof-input-compose.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/registryconsumerinputcompose/registry_consumer_input_compose_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-008",
+      "scenarioId": "proofkit.supply-chain-quality.actionlint-local-gate",
+      "witnessId": "proofkit.actionlint.local-gate",
+      "witnessKind": "contract",
+      "witnessPath": "package.json",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-009",
+      "scenarioId": "proofkit.supply-chain-quality.benchmark-entrypoints",
+      "witnessId": "proofkit.kernel.benchmark-entrypoints",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/admission/json_fuzz_test.go",
+      "commandIds": [
+        "proofkit.go-bench",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.cli-abi-golden",
+      "witnessId": "proofkit.cli-abi.golden-corpus",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_abi_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.cli-contract-topology",
+      "witnessId": "proofkit.cli-contract.descriptor-parity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_contract_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-005",
+      "scenarioId": "proofkit.supply-chain-quality.codeql-workflow",
+      "witnessId": "proofkit.codeql.workflow-source",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/codeql.yml",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.coverage-metrics",
+      "witnessId": "proofkit.coverage-metrics.linkage-report",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/coveragemetrics/main.go",
+      "commandIds": [
+        "proofkit.coverage-metrics"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.command-descriptor-route-ownership",
+      "witnessId": "proofkit.command-coverage.descriptor-owner-routes",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/command_coverage_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "scenarioId": "proofkit.supply-chain-quality.proof-class-ci-split",
+      "witnessId": "proofkit.ci.proof-class-split",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/ci.yml",
+      "commandIds": [
+        "proofkit.actionlint",
+        "proofkit.package-gate",
+        "proofkit.platform-smoke",
+        "proofkit.python-package",
+        "proofkit.python-verify"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-012",
+      "scenarioId": "proofkit.supply-chain-quality.release-channel-authority-vocabulary",
+      "witnessId": "proofkit.release-channel.authority-vocabulary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/releasechannel/releasechannel.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-013",
+      "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
+      "witnessId": "proofkit.workflow-package-gate.typed-oracle",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_package_gate_oracle_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-014",
+      "scenarioId": "proofkit.supply-chain-quality.registry-release-authority-typed-projection",
+      "witnessId": "proofkit.registry-consumer.release-authority-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/registryconsumer/registryconsumer_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-014",
+      "scenarioId": "proofkit.supply-chain-quality.external-release-authority-typed-projection",
+      "witnessId": "proofkit.external-consumer.release-authority-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/externalconsumer/externalconsumer_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-015",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-completion-criteria",
+      "witnessId": "proofkit.release-closeout.completion-criteria-gate",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-owner",
+      "witnessId": "proofkit.release-platform.owner-targets",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/releaseplatform/releaseplatform_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-package-artifact",
+      "witnessId": "proofkit.packageverify.release-platform-parity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-package-build",
+      "witnessId": "proofkit.packagebuild.release-platform-wrapper-parity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packagebuild/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-python-wheels",
+      "witnessId": "proofkit.pythonpackage.release-platform-parity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/metadata_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.python-package",
+        "proofkit.python-verify"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-pypi-candidates",
+      "witnessId": "proofkit.pypiregistry.release-platform-completeness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pypiregistry/main_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-sbom-subjects",
+      "witnessId": "proofkit.releasesbom.release-platform-subjects",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasesbom/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.release-sbom"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-017",
+      "scenarioId": "proofkit.supply-chain-quality.secret-json-kernel-owner",
+      "witnessId": "proofkit.secretjson.private-kernel-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/secretjson/secretjson_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-017",
+      "scenarioId": "proofkit.supply-chain-quality.deployment-secret-json-scan",
+      "witnessId": "proofkit.deployment-evidence.secret-json-scan",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/deploymentevidenceadmission/deployment_evidence_admission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-017",
+      "scenarioId": "proofkit.supply-chain-quality.readiness-secret-taxonomy",
+      "witnessId": "proofkit.readiness-closeout.central-secret-taxonomy",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/readinesscloseout/readinesscloseout_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-017",
+      "scenarioId": "proofkit.supply-chain-quality.secret-json-owner-governance",
+      "witnessId": "proofkit.secret-json.owner-governance",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/secret_json_owner_governance_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-018",
+      "scenarioId": "proofkit.supply-chain-quality.trusted-publisher-identity-owner",
+      "witnessId": "proofkit.trusted-publisher.identity-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/trustedpublisher/trustedpublisher_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-018",
+      "scenarioId": "proofkit.supply-chain-quality.release-publisher-channel-mapping",
+      "witnessId": "proofkit.release-publisher.channel-mapping",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/releasepublisher/releasepublisher_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-018",
+      "scenarioId": "proofkit.supply-chain-quality.release-manifest-trusted-publisher-retention",
+      "witnessId": "proofkit.release-manifest.trusted-publisher-retention",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-018",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-trusted-publisher-rejection",
+      "witnessId": "proofkit.release-closeout.trusted-publisher-rejection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-018",
+      "scenarioId": "proofkit.supply-chain-quality.release-workflow-trusted-publisher-env",
+      "witnessId": "proofkit.release-workflow.trusted-publisher-env",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/release.yml",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-019",
+      "scenarioId": "proofkit.supply-chain-quality.installed-package-json-abi-smoke",
+      "witnessId": "proofkit.packageverify.installed-json-abi-smoke",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-019",
+      "scenarioId": "proofkit.supply-chain-quality.registry-install-json-abi-evidence",
+      "witnessId": "proofkit.release-workflow.registry-install-json-abi-evidence",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/release.yml",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-019",
+      "scenarioId": "proofkit.supply-chain-quality.release-manifest-json-abi-registry-evidence",
+      "witnessId": "proofkit.release-manifest.json-abi-registry-evidence",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-003",
+      "scenarioId": "proofkit.supply-chain-quality.fuzz-property-boundaries",
+      "witnessId": "proofkit.kernel.fuzz-property-boundaries",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/admission/json_fuzz_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-006",
+      "scenarioId": "proofkit.supply-chain-quality.osv-workflow",
+      "witnessId": "proofkit.osv.workflow-source",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/osv-scanner.yml",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-001",
+      "scenarioId": "proofkit.supply-chain-quality.release-attestation-wiring",
+      "witnessId": "proofkit.release-workflow.attestation-wiring",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/release.yml",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-002",
+      "scenarioId": "proofkit.supply-chain-quality.release-sbom",
+      "witnessId": "proofkit.release-sbom.deterministic-inventory",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasesbom/main.go",
+      "commandIds": [
+        "proofkit.release-sbom"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-007",
+      "scenarioId": "proofkit.supply-chain-quality.scorecard-workflow",
+      "witnessId": "proofkit.scorecard.workflow-source",
+      "witnessKind": "technical",
+      "witnessPath": ".github/workflows/scorecard.yml",
+      "commandIds": [
+        "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    }
+  ],
+  "witnessCommands": [
+    {
+      "commandId": "proofkit.ci-receipt-anchor",
+      "command": "npm run self:receipt",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.go-fmt",
+      "command": "npm run go:fmt",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.go-staticcheck",
+      "command": "npm run go:staticcheck",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.go-test",
+      "command": "go test ./...",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.go-vet",
+      "command": "go vet ./...",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.go-vulncheck",
+      "command": "npm run go:vulncheck",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.package-artifact",
+      "command": "npm run package:artifact",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.package-gate",
+      "command": "npm run check",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.platform-smoke",
+      "command": "npm run platform:smoke",
+      "environmentClasses": [
+        "local-go",
+        "local-python"
+      ]
+    },
+    {
+      "commandId": "proofkit.python-package",
+      "command": "npm run python:package",
+      "environmentClass": "local-python"
+    },
+    {
+      "commandId": "proofkit.python-verify",
+      "command": "npm run python:verify",
+      "environmentClass": "local-python"
+    },
+    {
+      "commandId": "proofkit.actionlint",
+      "command": "npm run go:actionlint",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.coverage-metrics",
+      "command": "npm run self:coverage",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.go-bench",
+      "command": "npm run go:bench",
+      "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.release-sbom",
+      "command": "npm run release:sbom",
+      "environmentClass": "local-go"
+    }
+  ],
+  "nonClaims": [
+    "Requirement proof bindings do not execute native witnesses.",
+    "Requirement proof bindings do not authenticate receipt producers or decide proof freshness.",
+    "Requirement proof bindings do not approve package release or consumer rollout."
+  ]
+}

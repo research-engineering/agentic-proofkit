@@ -1,0 +1,509 @@
+package app
+
+import (
+	"bytes"
+	"encoding/json"
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
+)
+
+func TestSupportedCommandsHaveExplicitCoverageRoutes(t *testing.T) {
+	contract := readCLIContract(t)
+	contractCommands := make(map[string]cliContractCommand, len(contract.Commands))
+	for _, command := range contract.Commands {
+		contractCommands[command.Command] = command
+	}
+	for command := range supportedCommands {
+		contractCommand, ok := contractCommands[command]
+		if !ok {
+			t.Fatalf("supported command %s missing from CLI contract", command)
+		}
+		routes := commandCoverageRoutes[command]
+		if len(routes) == 0 {
+			t.Fatalf("supported command %s has no explicit coverage route", command)
+		}
+		for _, route := range routes {
+			assertCommandCoverageRoute(t, command, contractCommand, route)
+		}
+	}
+	for command := range commandCoverageRoutes {
+		if _, ok := supportedCommands[command]; !ok {
+			t.Fatalf("coverage route references unsupported command %s", command)
+		}
+	}
+}
+
+func TestCommandCoverageRejectsPackageRouteToAppSmokeTest(t *testing.T) {
+	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke"), "Unrelated app smoke must not satisfy package-level semantic coverage.")
+	if problem := routeSemanticOwnerProblem("registry-consumer", route); problem == "" {
+		t.Fatal("package-level semantic route to app smoke test was admitted")
+	}
+}
+
+func TestCommandCoverageInventoryRejectsSemanticRouteOutsideOwnerScope(t *testing.T) {
+	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke"), "Unrelated app smoke must not satisfy package-level semantic coverage.")
+	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
+		t.Fatal("production command coverage inventory builder admitted a semantic route outside the command owner scope")
+	}
+}
+
+func TestCommandCoverageRejectsPackageRouteToDifferentCommandPackage(t *testing.T) {
+	route := packageFalsifierRoute("internal/command/externalconsumer/externalconsumer_test.go", "TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock", semanticRouteProof("test.unrelated_command_package"), "Unrelated command package must not satisfy registry-consumer semantic coverage.")
+	if problem := routeSemanticOwnerProblem("registry-consumer", route); problem == "" {
+		t.Fatal("package-level semantic route to unrelated command package was admitted")
+	}
+}
+
+func TestCommandCoverageRejectsDirectRouteToDifferentAppCommand(t *testing.T) {
+	route := directCLIRoute("internal/app/cli_abi_test.go", "TestRequirementBrowserServerSpecTreeCLIABI", semanticRouteProof("test.unrelated_app_cli_abi"), "Unrelated app CLI ABI test must not satisfy adoption-doctor semantic coverage.")
+	if problem := routeSemanticOwnerProblem("adoption-doctor", route); problem == "" {
+		t.Fatal("direct app semantic route to unrelated command was admitted")
+	}
+}
+
+func TestCommandCoverageRejectsRouteWithoutDescriptorOwner(t *testing.T) {
+	route := packageFalsifierRoute("internal/command/registryconsumer/registryconsumer_test.go", "TestRegistryConsumerAcceptsRegistryReleaseProof", semanticRouteProof("test.unsupported_descriptor_owner"), "Unsupported command must not satisfy package-level semantic coverage.")
+	if problem := routeSemanticOwnerProblem("unsupported-command", route); problem == "" {
+		t.Fatal("package-level semantic route without descriptor owner was admitted")
+	}
+}
+
+func TestCommandCoverageRejectsSemanticRouteWithoutProofMetadata(t *testing.T) {
+	route := commandCoverageRoute{
+		file:      "internal/command/registryconsumer/registryconsumer_test.go",
+		kind:      "package_level_falsifier",
+		rationale: "Semantic command route must not be admitted without owner-declared proof identity.",
+		testName:  "TestRegistryConsumerAcceptsRegistryReleaseProof",
+	}
+	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
+		t.Fatal("semantic route without proof metadata was admitted by production inventory builder")
+	}
+}
+
+func TestCommandCoverageRejectsRouteOnlyWithSemanticProofMetadata(t *testing.T) {
+	route := requiredInputAdmissionRoute
+	route.semanticProof = semanticRouteProof("test.route_only_with_semantic_proof")
+	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
+		t.Fatal("route-only smoke accepted semantic proof metadata in production inventory builder")
+	}
+}
+
+func TestCommandCoverageInventoryIsAdmittedAndBindsSemanticCommandRefs(t *testing.T) {
+	result, err := testevidenceinventory.Evaluate(mustCommandCoverageInventory(t))
+	if err != nil {
+		t.Fatalf("CommandCoverageInventory() admission error = %v", err)
+	}
+	if result.ExitCode != 0 {
+		t.Fatalf("CommandCoverageInventory() failed admission: %#v", result.Report.JSONValue())
+	}
+	semanticCommandRefs := map[string]struct{}{}
+	routeOnlyCount := 0
+	for _, entry := range result.Inventory.Entries {
+		if len(entry.CommandRefs) != 1 {
+			t.Fatalf("command coverage entry must bind exactly one command ref: %#v", entry)
+		}
+		switch entry.EvidenceClass {
+		case "semantic_falsifier":
+			if entry.Falsifier == nil || entry.Oracle == nil || entry.Oracle.AssertionSummary == "" {
+				t.Fatalf("semantic command coverage entry lacks strong oracle: %#v", entry)
+			}
+			for _, id := range []string{entry.TestID, entry.Falsifier.NegativeCaseID, entry.Oracle.OracleID} {
+				if strings.Contains(id, ".route_") {
+					t.Fatalf("semantic command coverage entry used index-derived proof identity %s: %#v", id, entry)
+				}
+			}
+			semanticCommandRefs[entry.CommandRefs[0]] = struct{}{}
+		case "routing_smoke_nonclaim":
+			if len(entry.OwnerInvariantRefs) != 0 || entry.Falsifier != nil || entry.Oracle != nil {
+				t.Fatalf("routing smoke entry claimed semantic evidence: %#v", entry)
+			}
+			routeOnlyCount++
+		default:
+			t.Fatalf("unexpected command coverage evidence class: %#v", entry)
+		}
+	}
+	if routeOnlyCount == 0 {
+		t.Fatal("command coverage inventory must preserve route-only smoke entries as non-claims")
+	}
+	for command := range supportedCommands {
+		ref := CommandCoverageCommandRef(command)
+		if _, ok := semanticCommandRefs[ref]; !ok {
+			t.Fatalf("supported command %s lacks admitted semantic command coverage entry", command)
+		}
+	}
+}
+
+func TestCommandCoverageInventoryProjectsExplicitSemanticProofRefs(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		semanticRouteProof("registryconsumer.accepts_registry_release_proof"),
+		"Registry consumer release proof must be tied to an owner-declared semantic proof identity.",
+	)
+	entry := route.inventoryEntry("registry-consumer", 99)
+	falsifier := entry["falsifier"].(map[string]any)
+	oracle := entry["oracle"].(map[string]any)
+
+	if entry["testId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.route" {
+		t.Fatalf("testId did not use explicit semantic proof ref: %#v", entry["testId"])
+	}
+	if falsifier["negativeCaseId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.negative_fixture" {
+		t.Fatalf("negativeCaseId did not use explicit semantic proof ref: %#v", falsifier["negativeCaseId"])
+	}
+	if oracle["oracleId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.oracle_assertion" {
+		t.Fatalf("oracleId did not use explicit semantic proof ref: %#v", oracle["oracleId"])
+	}
+}
+
+func TestCommandCoverageInventoryAdmissionRejectsWeakSemanticOracle(t *testing.T) {
+	inventory := mustCommandCoverageInventory(t)
+	entries := inventory["entries"].([]any)
+	for _, raw := range entries {
+		entry := raw.(map[string]any)
+		if entry["evidenceClass"] != "semantic_falsifier" {
+			continue
+		}
+		entry["oracle"].(map[string]any)["assertionSummary"] = ""
+		result, err := testevidenceinventory.Evaluate(inventory)
+		if err != nil {
+			t.Fatalf("mutated command coverage inventory admission error = %v", err)
+		}
+		if result.ExitCode == 0 {
+			t.Fatalf("weak semantic command coverage oracle passed admission: %#v", result.Report.JSONValue())
+		}
+		return
+	}
+	t.Fatal("command coverage inventory has no semantic entry to mutate")
+}
+
+func TestCommandCoverageInventoryAdmissionRejectsDuplicateFalsifierEquivalence(t *testing.T) {
+	inventory := mustCommandCoverageInventory(t)
+	entries := inventory["entries"].([]any)
+	var first map[string]any
+	var second map[string]any
+	for _, raw := range entries {
+		entry := raw.(map[string]any)
+		if entry["evidenceClass"] != "semantic_falsifier" {
+			continue
+		}
+		if first == nil {
+			first = entry
+			continue
+		}
+		second = entry
+		break
+	}
+	if first == nil || second == nil {
+		t.Fatal("command coverage inventory needs at least two semantic entries")
+	}
+	second["falsifier"].(map[string]any)["dominanceGroup"] = first["falsifier"].(map[string]any)["dominanceGroup"]
+	second["falsifier"].(map[string]any)["wrongImplementationClassId"] = first["falsifier"].(map[string]any)["wrongImplementationClassId"]
+	second["falsifier"].(map[string]any)["negativeCaseId"] = first["falsifier"].(map[string]any)["negativeCaseId"]
+	second["oracle"].(map[string]any)["oracleKind"] = first["oracle"].(map[string]any)["oracleKind"]
+
+	result, err := testevidenceinventory.Evaluate(inventory)
+	if err != nil {
+		t.Fatalf("mutated command coverage inventory admission error = %v", err)
+	}
+	if result.ExitCode == 0 {
+		t.Fatalf("duplicate falsifier equivalence passed admission: %#v", result.Report.JSONValue())
+	}
+}
+
+func TestGoTestFunctionProblemRejectsEmptyFunction(t *testing.T) {
+	filePath := writeGoTestFixture(t, `package fixture
+
+import "testing"
+
+func TestEmpty(t *testing.T) {}
+`)
+	problem := goTestFunctionProblem(filePath, "TestEmpty")
+	if !strings.Contains(problem, "has no executable body") {
+		t.Fatalf("empty test body was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestFunctionProblemRejectsUnconditionalSkip(t *testing.T) {
+	filePath := writeGoTestFixture(t, `package fixture
+
+import "testing"
+
+func TestSkipped(t *testing.T) {
+	t.Skip("not implemented")
+}
+`)
+	problem := goTestFunctionProblem(filePath, "TestSkipped")
+	if !strings.Contains(problem, "unconditional t.Skip") {
+		t.Fatalf("unconditional skip was not rejected: %q", problem)
+	}
+}
+
+func TestRequiredInputCommandsRejectMalformedCallerRecords(t *testing.T) {
+	for _, command := range readCLIContract(t).Commands {
+		if command.Input != "required" || command.Command == "self-check" {
+			continue
+		}
+		t.Run(command.Command, func(t *testing.T) {
+			args := append([]string{command.Command, "--input", "-"}, malformedInputExtraArgs(command.Command)...)
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), args, strings.NewReader(`{"schemaVersion":1,"unexpected":true}`), &stdout, &stderr)
+			if status == 0 {
+				t.Fatalf("%s accepted malformed caller record: stdout=%s stderr=%s", command.Command, stdout.String(), stderr.String())
+			}
+			output := stdout.String() + stderr.String()
+			if output == "" {
+				t.Fatalf("%s failed without diagnostics", command.Command)
+			}
+			for _, forbidden := range []string{"requires --input", "requires exactly one", "unsupported argument", "unsupported command"} {
+				if strings.Contains(output, forbidden) {
+					t.Fatalf("%s did not reach command-specific input admission, output=%s", command.Command, output)
+				}
+			}
+		})
+	}
+}
+
+func TestNoInputCommandsHaveCommandSpecificBehavior(t *testing.T) {
+	t.Run("stack-preset", func(t *testing.T) {
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		status := Run(t.Context(), []string{"stack-preset", "--preset", "typescript_workspace"}, strings.NewReader(""), &stdout, &stderr)
+		if status != 0 || stderr.Len() != 0 {
+			t.Fatalf("stack-preset failed status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+		}
+		var output map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &output); err != nil {
+			t.Fatalf("stack-preset stdout must be JSON: %v\n%s", err, stdout.String())
+		}
+		if output["reportKind"] != "proofkit.stack-preset" || output["state"] != "passed" {
+			t.Fatalf("unexpected stack-preset output: %#v", output)
+		}
+
+		stdout.Reset()
+		stderr.Reset()
+		status = Run(t.Context(), []string{"stack-preset", "--preset", "unknown"}, strings.NewReader(""), &stdout, &stderr)
+		if status == 0 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "known stack preset") {
+			t.Fatalf("stack-preset accepted unknown preset status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+		}
+	})
+}
+
+func TestNoInputCommandDescriptorsHaveRuntimeSmoke(t *testing.T) {
+	for _, descriptor := range commandDescriptors {
+		if descriptor.input != commandInputNone {
+			continue
+		}
+		t.Run(descriptor.name, func(t *testing.T) {
+			args, wantJSON := noInputRuntimeSmokeArgs(descriptor.name)
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), args, strings.NewReader(""), &stdout, &stderr)
+			if status != 0 || stderr.Len() != 0 {
+				t.Fatalf("%s smoke failed status=%d stdout=%s stderr=%s", descriptor.name, status, stdout.String(), stderr.String())
+			}
+			if wantJSON {
+				var output map[string]any
+				if err := json.Unmarshal(stdout.Bytes(), &output); err != nil {
+					t.Fatalf("%s smoke stdout must be JSON: %v\n%s", descriptor.name, err, stdout.String())
+				}
+				return
+			}
+			if !strings.Contains(stdout.String(), "Usage:") {
+				t.Fatalf("%s smoke stdout must be help text: %s", descriptor.name, stdout.String())
+			}
+		})
+	}
+}
+
+func noInputRuntimeSmokeArgs(command string) ([]string, bool) {
+	switch command {
+	case "help":
+		return []string{"help"}, false
+	case "json-report-cli-adapter-source":
+		return []string{"json-report-cli-adapter-source", "--language", "typescript"}, true
+	case "stack-preset":
+		return []string{"stack-preset", "--preset", "typescript_workspace"}, true
+	default:
+		panic("missing no-input command smoke args for " + command)
+	}
+}
+
+func assertCommandCoverageRoute(t *testing.T, command string, contractCommand cliContractCommand, route commandCoverageRoute) {
+	t.Helper()
+	if route.file == "" || route.kind == "" || route.rationale == "" || route.testName == "" {
+		t.Fatalf("%s has incomplete coverage route: %#v", command, route)
+	}
+	if problem := route.semanticProofProblem(); problem != "" {
+		t.Fatalf("%s has invalid semantic proof route metadata: %s", command, problem)
+	}
+	filePath := filepath.Join(repoRoot(t), route.file)
+	if _, err := os.Stat(filePath); err != nil {
+		t.Fatalf("%s coverage route file %s is not readable: %v", command, route.file, err)
+	}
+	assertGoTestFunctionExists(t, command, filePath, route.testName)
+	switch route.kind {
+	case "routing_admission_smoke_nonclaim":
+		if contractCommand.Input != "required" {
+			t.Fatalf("%s uses required-input admission smoke but contract input=%s", command, contractCommand.Input)
+		}
+		if route.testName != "TestRequiredInputCommandsRejectMalformedCallerRecords" {
+			t.Fatalf("%s required-input route points at unexpected test %s", command, route.testName)
+		}
+	case "direct_semantic_falsifier":
+		if problem := routeSemanticOwnerProblem(command, route); problem != "" {
+			t.Fatalf("%s direct semantic route is not owner-scoped: %s", command, problem)
+		}
+	case "package_level_falsifier":
+		if problem := routeSemanticOwnerProblem(command, route); problem != "" {
+			t.Fatalf("%s package-level semantic route is not owner-scoped: %s", command, problem)
+		}
+	default:
+		t.Fatalf("%s uses unsupported coverage route kind %s", command, route.kind)
+	}
+}
+
+func mustCommandCoverageInventory(t *testing.T) map[string]any {
+	t.Helper()
+	inventory, err := CommandCoverageInventory()
+	if err != nil {
+		t.Fatalf("CommandCoverageInventory() error = %v", err)
+	}
+	return inventory
+}
+
+func assertGoTestFunctionExists(t *testing.T, command string, filePath string, testName string) {
+	t.Helper()
+	if problem := goTestFunctionProblem(filePath, testName); problem != "" {
+		t.Fatalf("%s coverage route %s is invalid: %s", command, testName, problem)
+	}
+}
+
+func goTestFunctionProblem(filePath string, testName string) string {
+	parsed, err := parser.ParseFile(token.NewFileSet(), filePath, nil, 0)
+	if err != nil {
+		return "file " + filePath + " is not parseable: " + err.Error()
+	}
+	for _, declaration := range parsed.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Name.Name != testName {
+			continue
+		}
+		if !isTestingTFunction(function) {
+			return "not a Go test function with *testing.T"
+		}
+		if function.Body == nil || len(function.Body.List) == 0 {
+			return "has no executable body"
+		}
+		if hasUnconditionalTopLevelSkip(function) {
+			return "contains unconditional t.Skip at top level"
+		}
+		return ""
+	}
+	return "missing from " + filePath
+}
+
+func isTestingTFunction(function *ast.FuncDecl) bool {
+	if function.Type.Params == nil || len(function.Type.Params.List) != 1 {
+		return false
+	}
+	star, ok := function.Type.Params.List[0].Type.(*ast.StarExpr)
+	if !ok {
+		return false
+	}
+	selector, ok := star.X.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "T" {
+		return false
+	}
+	packageName, ok := selector.X.(*ast.Ident)
+	return ok && packageName.Name == "testing"
+}
+
+func hasUnconditionalTopLevelSkip(function *ast.FuncDecl) bool {
+	paramName := testingTParamName(function)
+	if paramName == "" {
+		return false
+	}
+	for _, statement := range function.Body.List {
+		if isUnconditionalTestSkip(statement, paramName) {
+			return true
+		}
+	}
+	return false
+}
+
+func testingTParamName(function *ast.FuncDecl) string {
+	if function.Type.Params == nil || len(function.Type.Params.List) != 1 {
+		return ""
+	}
+	if len(function.Type.Params.List[0].Names) != 1 {
+		return ""
+	}
+	return function.Type.Params.List[0].Names[0].Name
+}
+
+func isUnconditionalTestSkip(statement ast.Stmt, testParamName string) bool {
+	expression, ok := statement.(*ast.ExprStmt)
+	if !ok {
+		return false
+	}
+	call, ok := expression.X.(*ast.CallExpr)
+	if !ok {
+		return false
+	}
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+	receiver, ok := selector.X.(*ast.Ident)
+	if !ok || receiver.Name != testParamName {
+		return false
+	}
+	switch selector.Sel.Name {
+	case "Skip", "Skipf", "SkipNow":
+		return true
+	default:
+		return false
+	}
+}
+
+func writeGoTestFixture(t *testing.T, source string) string {
+	t.Helper()
+	filePath := filepath.Join(t.TempDir(), "fixture_test.go")
+	if err := os.WriteFile(filePath, []byte(source), 0o644); err != nil {
+		t.Fatalf("write Go test fixture: %v", err)
+	}
+	return filePath
+}
+
+func malformedInputExtraArgs(command string) []string {
+	switch command {
+	case "adoption-contract-envelope":
+		return []string{"--mode", "workflow"}
+	case "conformance-profile":
+		return []string{"--verify"}
+	case "pilot-admission":
+		return []string{"--pilot", "first"}
+	case "requirement-browser-server":
+		return []string{"--view", "source"}
+	case "requirement-proof-resolver":
+		return []string{"--empty-local-environment-policy"}
+	case "requirement-proof-view":
+		return []string{"--format", "json"}
+	case "requirement-source-view":
+		return []string{"--format", "json"}
+	case "requirement-spec-tree-view":
+		return []string{"--format", "json"}
+	case "typescript-public-api-surfaces":
+		return []string{"--repo-root", "."}
+	default:
+		return nil
+	}
+}

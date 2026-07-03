@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "proofkit.consumer-infra-retirement.requirements",
+  "specPackagePath": "docs/specs/proofkit-consumer-infra-retirement",
+  "overviewPath": "docs/specs/proofkit-consumer-infra-retirement/overview.md",
+  "requirementsPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+  "requirements": [
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-001",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Migration plans keep old and new proof owners explicit and block retirement unless caller-provided parity evidence and post-retirement validation commands exist.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-001"
+      ],
+      "nonClaims": [
+        "This requirement does not claim file deletion, parity authenticity, native witness execution, proof freshness, merge approval, release approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-002",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Package runtime dependency admission validates caller-provided installed package identity and location facts without reading package manager state or resolving packages.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-002"
+      ],
+      "nonClaims": [
+        "This requirement does not claim package resolution, manifest reads, lockfile reads, registry authentication, package-manager authority, native execution, proof freshness, merge approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-003",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Workspace registry admission validates caller-provided script, dependency, and lockfile facts against caller policy without owning repository command policy or lockfile freshness.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-003"
+      ],
+      "nonClaims": [
+        "This requirement does not claim script execution, lockfile generation, lockfile freshness, registry authentication, package-manager behavior, CI scheduling, merge approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-004",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Repo-profile structural and command admission validates caller-owned profile, path, command, and environment facts without scanning repositories or approving native proof coverage.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-004"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, tracked-file freshness, command execution, native proof coverage, CI readiness, merge approval, release approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-005",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Adoption workflow plans route legacy migration, gradual adoption, and release-channel scenarios to existing Proofkit primitives through bounded structured command refs.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-005"
+      ],
+      "nonClaims": [
+        "This requirement does not claim scenario appropriateness, repository scanning, command execution, receipt authentication, proof freshness, merge approval, release approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-006",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Migration parity admission validates caller-provided parity evidence shape, source/target closure, typed equivalence dimensions, and matched digest equality without owning evidence authenticity, freshness, semantic correctness, or retirement approval.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-006"
+      ],
+      "nonClaims": [
+        "This requirement does not claim parity authenticity, digest computation, native witness execution, proof freshness, semantic correctness, proof coverage adequacy, old-owner deletion approval, merge approval, release approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-007",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Gradual adoption guidance keeps caller-provided candidate semantic boundaries advisory, exposes owner-review questions and bounded agent routes, validates adoption mode and checked-scope semantics through one private vocabulary owner, and fails closed for enforcement modes until the consumer admits stable requirements and proof bindings.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-007"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, semantic boundary correctness, automatic requirement extraction, native witness execution, proof freshness, owner approval, merge approval, release approval, or rollout approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-008",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Adoption doctor reports classify caller-provided imperfect-repository migration gaps, non-passing child reports, and stale current authority vocabulary facts into advisory, failed, or blocked states, and emit bounded owner-specific agent guidance without scanning repositories or owning semantic boundary decisions.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-008"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, text extraction from files, semantic boundary correctness, automatic requirement extraction, native witness execution, receipt authenticity, proof freshness, owner approval, merge approval, release approval, rollout approval, or old proof-owner retirement approval."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-009",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Workspace manifest fact projection admits explicit caller-owned package manifest records and emits registry-compatible root/package facts, package-universe facts, and workspace planning inputs without reading manifest paths, interpreting package-manager policy, executing commands, or owning script/dependency policy.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-009"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, manifest freshness, workspace glob expansion, package-manager authority, dependency version policy, script policy, native command execution, lockfile freshness, CI scheduling, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-RETIRE-010",
+      "ownerId": "proofkit.consumer-infra-retirement",
+      "invariant": "Registry consumer proof input composition admits explicit caller-owned registry metadata, registry pack comparison, lock, smoke, rollback, precondition, and release-authority facts, emits a registry-consumer input only when those facts are complete and aligned, and preserves registry-consumer as the final proof-schema owner.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-RETIRE-010"
+      ],
+      "nonClaims": [
+        "This requirement does not claim registry metadata authenticity, package publication, package access-control, package-manager execution, native smoke execution, rollback execution, release-authority producer trust, proof freshness, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.consumer-infra-retirement",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    }
+  ],
+  "nonClaims": [
+    "Consumers still own old proof surfaces, new Proofkit inputs, parity evidence, native witness execution, command policy, receipts, CI admission, merge approval, release approval, rollout approval, and production decisions.",
+    "Proofkit consumer infrastructure retirement requirements describe reusable planning and admission primitives only."
+  ]
+}

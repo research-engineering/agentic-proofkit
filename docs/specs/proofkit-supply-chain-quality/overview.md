@@ -1,0 +1,95 @@
+# Proofkit Supply-Chain And Quality Spec
+
+This spec owns Proofkit's reusable supply-chain, release-provenance, CLI
+contract, property-test, performance-evidence, security-signal, and coverage
+metrics requirements.
+
+It is intentionally evidence-focused. Native tests, release workflows, advisory
+security workflows, and generated evidence files are distinct proof classes.
+No single green check proves release readiness, public-source provenance,
+vulnerability absence, or consumer rollout safety by itself.
+
+## Requirements
+
+- `REQ-PROOFKIT-QUALITY-001`: release artifacts carry deterministic digest
+  inventory and optional GitHub artifact attestations without claiming
+  public-source provenance before a public-source tag release exists.
+- `REQ-PROOFKIT-QUALITY-002`: release evidence includes a deterministic SBOM
+  for package, wheel, binary, and Go module inventory without claiming
+  vulnerability absence or license approval.
+- `REQ-PROOFKIT-QUALITY-003`: pure parser and canonicalization boundaries have
+  fuzz/property tests that prove no-panic and round-trip stability without
+  fuzzing side-effecting CLI or filesystem flows.
+- `REQ-PROOFKIT-QUALITY-004`: public CLI ABI has a small golden corpus and
+  canonical ABI hash covering command topology, exit code, stdout/stderr
+  channel discipline, JSON parseability, stable public diagnostics, and
+  descriptor/contract/help parity without making private descriptors public API.
+- `REQ-PROOFKIT-QUALITY-005`: CodeQL workflow source is admitted as an
+  independent semantic security analysis signal for Go source without replacing
+  native Go static gates.
+- `REQ-PROOFKIT-QUALITY-006`: OSV workflow source is admitted as an advisory
+  multi-ecosystem dependency signal without replacing `govulncheck`
+  reachable-code evidence.
+- `REQ-PROOFKIT-QUALITY-007`: Scorecard workflow source is admitted as an
+  advisory repository hygiene signal without claiming branch protection or
+  provider settings that the repository cannot prove from source.
+- `REQ-PROOFKIT-QUALITY-008`: GitHub Actions workflow syntax and expression
+  semantics are checked by actionlint in the local package gate.
+- `REQ-PROOFKIT-QUALITY-009`: performance-sensitive parser and serializer
+  paths expose benchmark entrypoints without making wall-clock budgets a
+  required PR gate before stable baselines exist.
+- `REQ-PROOFKIT-QUALITY-010`: coverage metrics report requirement, binding,
+  witness, CLI inventory linkage, and descriptor-owned command semantic-route
+  coverage from admitted test-evidence-inventory rows, failing closed on
+  explicit requirement/proof linkage dead zones, failed command-route
+  inventory admission, command semantic routes without owner-declared proof
+  identities, route-index-derived semantic proof identities, direct app
+  semantic routes outside the command-scoped app test, package-level semantic
+  routes outside the descriptor-owned command package, and missing matching
+  semantic command evidence without claiming line coverage or exhaustive test
+  semantic completeness.
+- `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
+  source/package gate from macOS platform smoke so parallel runners do not
+  duplicate proof classes while preserving platform execution evidence.
+- `REQ-PROOFKIT-QUALITY-012`: release and adoption channel identifiers use one
+  canonical authority vocabulary that separates durable authority channels from
+  display labels, publisher environments, statuses, and candidate evidence.
+- `REQ-PROOFKIT-QUALITY-013`: self-hosting workflow package-gate evidence is
+  checked by a typed workflow oracle instead of text search, proving the
+  package gate is reachable, exact, advisory, success-gated for always-running
+  downstream jobs and required evidence-publication steps, and ordered before
+  evidence publication.
+- `REQ-PROOFKIT-QUALITY-014`: release authority consumers compare downstream
+  policy against the admitted typed release-authority projection and admitted
+  report digest instead of rereading caller-owned raw `releaseAuthorityInput`
+  fields after validation.
+- `REQ-PROOFKIT-QUALITY-015`: the package gate includes an admitted release
+  closeout completion-criteria report so unit tests alone cannot satisfy
+  release closeout.
+- `REQ-PROOFKIT-QUALITY-016`: release platform targets use one private owner
+  that projects platform suffixes, Go build targets, npm OS/CPU metadata,
+  package tar entries, Python wheel tags, PyPI candidate completeness, and
+  SBOM binary subjects without becoming public API.
+- `REQ-PROOFKIT-QUALITY-017`: report-visible secret-shaped JSON traversal
+  uses one private kernel owner for deterministic paths and finding kinds while
+  command packages only map findings to their local report policy.
+- `REQ-PROOFKIT-QUALITY-018`: release metadata retains a Trusted Publisher
+  identity tuple with the exact version-tag workflow ref for workflow-published
+  npm and PyPI channels and release closeout rejects publication claims without
+  that tuple.
+- `REQ-PROOFKIT-QUALITY-019`: installed package smoke proof verifies one
+  successful JSON report command and one failed-report command from the
+  package-managed binary, including report identity, state, exit code, stdout,
+  stderr discipline, and exact explicit-input counts despite an unlisted
+  poison file in the consumer working directory.
+
+## Non-Claims
+
+- This spec does not claim public-source provenance until a public-source tag
+  release records admitted attestation evidence.
+- This spec does not claim absence of vulnerabilities, license approval,
+  branch-protection enforcement, consumer adoption, merge approval, release
+  approval, rollout approval, or production readiness.
+- This spec does not make advisory security scans substitute for native tests,
+  parser fuzz/property tests, CLI ABI tests, release manifest generation, or
+  registry identity evidence.

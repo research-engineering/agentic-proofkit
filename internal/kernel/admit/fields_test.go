@@ -86,7 +86,7 @@ func TestPreserveSortedTextRejectsCallerOrderingDrift(t *testing.T) {
 func TestSafeRepoRelativePathRejectsEscapesAndNormalization(t *testing.T) {
 	t.Parallel()
 
-	for _, value := range []string{"..", "../outside.md", "docs//INDEX.md", "/absolute.md", `docs\\INDEX.md`, ".", "C:/outside/report.json", "file:docs/report.json", "https://example.test/report.json", "packages/ghp_secretvalue/src/index.ts"} {
+	for _, value := range []string{"..", "../outside.md", "docs//INDEX.md", "/absolute.md", `docs\\INDEX.md`, ".", "C:/outside/report.json", "file:docs/report.json", "https://example.test/report.json", "packages/ghp_secretvalue/src/index.ts", "docs/index\n.md", "docs/index\r.md", "docs/index\t.md", "docs/index\x7f.md"} {
 		if _, err := SafeRepoRelativePath(value, "path"); err == nil {
 			t.Fatalf("expected unsafe path rejection for %q", value)
 		}

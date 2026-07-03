@@ -1,0 +1,1601 @@
+{
+  "schemaVersion": 1,
+  "contractId": "proofkit.cli-contract.v1",
+  "packageName": "agentic-proofkit",
+  "processContract": {
+    "successExitCode": 0,
+    "failureExitCode": 1,
+    "stdout": "Successful JSON commands write exactly one JSON value to stdout unless an admitted explicit output-file flag writes that JSON value to the selected path and leaves stdout empty. Successful text or help commands write text to stdout unless an admitted explicit output-file flag writes the selected representation to the selected path and leaves stdout empty. Commands do not write stderr on success.",
+    "stderr": "Argument parsing, unsupported command, input admission, and output serialization failures write human diagnostics to stderr. Failed report commands may still write a machine-readable failed report to stdout when admission succeeds. Opt-in agent-envelope repair packets may write deterministic invalid-input JSON to stdout with exit code 1 and empty stderr."
+  },
+  "commands": [
+    {
+      "command": "adoption-checklist",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "adoption-contract-envelope",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": false,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--checked-scope",
+        "--guidance-mode",
+        "--input",
+        "--materialization-manifest",
+        "--mode",
+        "--pilot",
+        "--touched-rule-id"
+      ]
+    },
+    {
+      "command": "adoption-doctor",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "adoption-workflow-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "contractEnvelope": true,
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--contract-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "agent-route",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ],
+      "inputContract": {
+        "contractId": "proofkit.agent-route.input.v1",
+        "schemaVersion": 1,
+        "authority": "agent-route input admission",
+        "fields": {
+          "availableInputs": {
+            "default": [],
+            "item": {
+              "kind": {
+                "enum": [
+                  "adoption_workflow",
+                  "authoring_plan",
+                  "changed_path_set",
+                  "coverage_view_input",
+                  "deployment_evidence_input",
+                  "impact_input",
+                  "migration_parity",
+                  "migration_plan",
+                  "obligation_decision",
+                  "overview_claims",
+                  "proof_binding",
+                  "readiness_closeout_input",
+                  "registry_consumer_input",
+                  "release_authority_input",
+                  "requirement_source",
+                  "requirement_source_transition",
+                  "scaffold_profile_plan",
+                  "scaffold_project_structure",
+                  "selective_evidence",
+                  "selective_gate_plan_input",
+                  "spec_tree_bundle",
+                  "test_inventory",
+                  "typescript_public_api_manifest",
+                  "typescript_public_api_repo_root",
+                  "witness_command_catalog"
+                ]
+              },
+              "ref": {
+                "format": "safe repo-relative caller-owned file, report ref, or scanner root ref; scanner root refs may be ."
+              }
+            },
+            "uniqueBy": "kind"
+          },
+          "browserMode": {
+            "default": "view_plan",
+            "enum": [
+              "serve_local_view",
+              "view_plan"
+            ],
+            "nonClaim": "serve_local_view only adds --serve to requirement-browser-server routes; it does not create a public server or approve rendered artifacts."
+          },
+          "goal": {
+            "required": true,
+            "enum": [
+              "admit_receipts",
+              "adopt_repository",
+              "author_requirements",
+              "bind_requirement_proofs",
+              "check_overview_claims",
+              "decide_obligations",
+              "inspect_coverage",
+              "inventory_tests",
+              "plan_selective_checks",
+              "release_or_deploy_evidence",
+              "render_human_view",
+              "retire_local_infrastructure",
+              "scaffold_first_module",
+              "unknown",
+              "validate_requirement_source",
+              "verify_typescript_public_api"
+            ]
+          },
+          "knownChangedPaths": {
+            "default": [],
+            "format": "safe repo-relative paths",
+            "nonClaim": "knownChangedPaths is diagnostic-only; selective routing requires a caller-owned changed_path_set input ref."
+          },
+          "mode": {
+            "required": true,
+            "enum": [
+              "enforce-all",
+              "enforce-touched",
+              "observe",
+              "warn"
+            ]
+          },
+          "nonClaims": {
+            "default": [],
+            "maxItems": 8,
+            "maxItemRunes": 240
+          },
+          "observedReports": {
+            "default": [],
+            "item": {
+              "kind": {
+                "enum": [
+                  "adoption",
+                  "coverage",
+                  "evidence",
+                  "obligation",
+                  "proof_binding",
+                  "release",
+                  "requirement_source",
+                  "transition"
+                ]
+              },
+              "ref": {
+                "format": "safe repo-relative report ref"
+              },
+              "state": {
+                "enum": [
+                  "blocked",
+                  "failed",
+                  "passed",
+                  "skipped",
+                  "warning"
+                ]
+              }
+            },
+            "blockingSemantics": "any observed report state other than passed blocks command emission",
+            "uniqueBy": "ref"
+          },
+          "openBrowser": {
+            "default": false,
+            "nonClaim": "openBrowser only adds --open when browserMode is serve_local_view."
+          },
+          "routeId": {
+            "required": true,
+            "format": "safe stable id",
+            "maxRunes": 96
+          },
+          "schemaVersion": {
+            "required": true,
+            "value": 1
+          }
+        },
+        "nonClaims": [
+          "This input contract describes agent-route admission only.",
+          "It does not validate referenced file contents, execute commands, read repositories, or approve merge."
+        ]
+      }
+    },
+    {
+      "command": "binding-partition",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "branch-authority",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "changed-path-set",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "completion-criteria",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "conformance-profile",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json",
+        "markdown"
+      ],
+      "allowedFlags": [
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--list",
+        "--profile",
+        "--verify"
+      ]
+    },
+    {
+      "command": "custom-rule-boundary",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "deployment-evidence-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "document-lifecycle-boundary",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "evidence-graph",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "external-consumer",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "gradual-adoption",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "contractEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--contract-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "gradual-adoption-bootstrap",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "contractEnvelope": true,
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--contract-envelope",
+        "--input",
+        "--input-pointer",
+        "--materialization-manifest"
+      ]
+    },
+    {
+      "command": "gradual-adoption-guidance",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "contractEnvelope": true,
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--checked-scope",
+        "--contract-envelope",
+        "--guidance-mode",
+        "--input",
+        "--input-pointer",
+        "--touched-rule-id"
+      ]
+    },
+    {
+      "command": "help",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "built_in_package_catalog",
+      "outputModes": [
+        "text"
+      ],
+      "allowedFlags": [
+        "--help",
+        "-h"
+      ]
+    },
+    {
+      "command": "impact",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "json-report-cli-adapter-source",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "built_in_package_catalog",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--format",
+        "--language"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.json-report-cli-adapter-source.output.v1",
+        "schemaVersion": 1,
+        "commonFields": [
+          "artifactKind",
+          "exportedSymbols",
+          "format",
+          "generatorId",
+          "language",
+          "nonClaims",
+          "schemaVersion",
+          "source",
+          "sourceFileName",
+          "sourceSha256",
+          "summary"
+        ],
+        "nonClaims": [
+          "The generated source is not a package-root SDK contract or npm subpath API.",
+          "The generated source does not resolve package pins, lockfiles, repository roots, installed binary paths, native witnesses, proof freshness, merge policy, or rollout policy."
+        ]
+      }
+    },
+    {
+      "command": "migration-parity-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "migration-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "obligation-decision",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "package-runtime-dependency-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "pilot-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "contractEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--contract-envelope",
+        "--input",
+        "--input-pointer",
+        "--pilot",
+        "--stack-diverse"
+      ]
+    },
+    {
+      "command": "producer-policy-self-proof",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "proof-obligation-algebra",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "proof-receipt-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "proof-slice",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "readiness-closeout",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "receipt-currentness-scope",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "receipt-producer-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "receipt-trust-class",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "registry-consumer",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "registry-consumer-proof-input-compose",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "release-authority",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "rendered-artifact-freshness",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "repo-profile-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-authoring-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-bindings",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-browser-server",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json",
+        "server"
+      ],
+      "allowedFlags": [
+        "--empty-local-environment-policy",
+        "--host",
+        "--input",
+        "--input-pointer",
+        "--local-environment-class",
+        "--open",
+        "--port",
+        "--scope",
+        "--serve",
+        "--view"
+      ]
+    },
+    {
+      "command": "requirement-coverage-input-compose",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.requirement-coverage-input-compose.output.v1",
+        "schemaVersion": 1,
+        "authority": "requirement coverage input compose output contract",
+        "requiredFields": [
+          "compactProofContract",
+          "coverageUniverse",
+          "localEnvironmentPolicy",
+          "options",
+          "ownerInvariantRegistry",
+          "requirementProofBinding",
+          "requirementSource",
+          "schemaVersion",
+          "testEvidenceInventory",
+          "viewInputId"
+        ],
+        "nonClaims": [
+          "Coverage input composition emits a direct requirement-coverage-view input and does not execute native tests, authenticate receipts, decide freshness, or approve merge."
+        ]
+      }
+    },
+    {
+      "command": "requirement-coverage-view",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "html",
+        "json",
+        "markdown"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--format",
+        "--input",
+        "--input-pointer"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.requirement-coverage-view.output.v1",
+        "schemaVersion": 1,
+        "authority": "requirement coverage view output contract",
+        "classificationRecords": {
+          "failureClassifications": {
+            "severity": "failure",
+            "sourceField": "failures"
+          },
+          "warningClassifications": {
+            "severity": "warning",
+            "sourceField": "warnings"
+          }
+        },
+        "classificationIds": [
+          "declared_dead_zone",
+          "failed_test_inventory",
+          "missing_requirement_binding",
+          "missing_semantic_test",
+          "nonsemantic_command_evidence",
+          "nonsemantic_governance_evidence",
+          "not_applicable_with_reason",
+          "owner_scope_violation",
+          "routing_smoke_only",
+          "unknown_reference"
+        ],
+        "requiredFields": [
+          "failureClassifications",
+          "failures",
+          "ownerInvariantCoverage",
+          "state",
+          "warningClassifications",
+          "warnings"
+        ],
+        "nonClaims": [
+          "Classification records describe Proofkit coverage diagnostics only; consumer repositories own severity policy, merge admission, escalation, and native witness execution."
+        ]
+      }
+    },
+    {
+      "command": "requirement-impact-input-compose",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.requirement-impact-input-compose.output.v1",
+        "schemaVersion": 1,
+        "authority": "requirement impact input compose output contract",
+        "requiredFields": [
+          "baseCommit",
+          "baseRef",
+          "changedBindingRecordIds",
+          "changedPaths",
+          "changedRecordIds",
+          "changedWitnessPathCoverage",
+          "generatedArtifactRules",
+          "headCommit",
+          "headRef",
+          "ignoredProofLikePaths",
+          "nonClaims",
+          "obligationCatalog",
+          "preexistingFailures",
+          "proofLikePaths",
+          "schemaVersion"
+        ],
+        "optionalFields": [
+          "unboundProofChangeRationale"
+        ],
+        "nonClaims": [
+          "Impact input composition emits a direct impact command input and does not execute native tests, authenticate receipts, decide freshness, or approve merge."
+        ]
+      }
+    },
+    {
+      "command": "requirement-proof-resolver",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--empty-local-environment-policy",
+        "--input",
+        "--input-pointer",
+        "--local-environment-class"
+      ]
+    },
+    {
+      "command": "requirement-proof-source-set",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ],
+      "inputContract": {
+        "contractId": "proofkit.requirement-proof-source-set.input.v1",
+        "schemaVersion": 1,
+        "authority": "requirement proof source-set input admission",
+        "requiredFields": [
+          "canonicalEnvelope",
+          "sourceSet",
+          "sources"
+        ],
+        "optionalFields": {
+          "projection": {
+            "default": {
+              "kind": "canonical_contract"
+            },
+            "fields": {
+              "kind": {
+                "default": "canonical_contract",
+                "enum": [
+                  "canonical_contract",
+                  "resolver_input"
+                ]
+              },
+              "selectedSourceIds": {
+                "default": "all sourceSet rows",
+                "format": "non-empty array of stable source_id values when provided",
+                "semantics": "Restricts output to caller-selected source rows while preserving source-set order."
+              }
+            }
+          }
+        },
+        "nonClaims": [
+          "The command does not discover repository files, infer source completeness, execute witnesses, decide proof freshness, approve merge, or approve rollout."
+        ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.requirement-proof-source-set.output.v1",
+        "schemaVersion": 1,
+        "commonFields": [
+          "inputPaths",
+          "projectionKind",
+          "selectedSourceIds",
+          "sourceCount",
+          "sourceSetCount"
+        ],
+        "variants": [
+          {
+            "projectionKind": "proofkit.requirement-proof-source-set.canonical_contract",
+            "payloadField": "contract"
+          },
+          {
+            "projectionKind": "proofkit.requirement-proof-source-set.resolver_input",
+            "payloadField": "resolverInput"
+          }
+        ],
+        "nonClaims": [
+          "Resolver projection is a shape-compatible data product, not proof freshness, native test execution, or consumer merge authority."
+        ]
+      }
+    },
+    {
+      "command": "requirement-proof-view",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "html",
+        "json",
+        "markdown"
+      ],
+      "allowedFlags": [
+        "--empty-local-environment-policy",
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--local-environment-class",
+        "--scope"
+      ]
+    },
+    {
+      "command": "requirement-source-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-source-transition",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-source-view",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "html",
+        "json",
+        "markdown"
+      ],
+      "allowedFlags": [
+        "--format",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-spec-tree",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "requirement-spec-tree-view",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "html",
+        "json",
+        "markdown"
+      ],
+      "allowedFlags": [
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--output"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.requirement-spec-tree-view.output.v1",
+        "schemaVersion": 1,
+        "authority": "requirement spec tree view output contract",
+        "requiredFields": [
+          "authority",
+          "nodeCount",
+          "rootNodeId",
+          "treeId",
+          "viewKind"
+        ],
+        "nonClaims": [
+          "Requirement spec tree views are presentation projections only.",
+          "Requirement spec tree views do not scan repositories, compute source freshness, execute witnesses, approve merge, or replace the requirement spec tree admission report."
+        ]
+      }
+    },
+    {
+      "command": "scaffold-profile-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "scaffold-project-structure",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "selective-gate-evidence",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "selective-gate-obligation-decision-input",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "selective-gate-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "self-check",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": false,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input"
+      ]
+    },
+    {
+      "command": "spec-overview-claims",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "spec-proof-bundle-admission",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "stack-preset",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "built_in_package_catalog",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--preset"
+      ]
+    },
+    {
+      "command": "test-evidence-inventory",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json",
+        "normalized-inventory"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer",
+        "--normalized-inventory",
+        "--projection"
+      ],
+      "inputContract": {
+        "contractId": "proofkit.test-evidence-inventory.proof-binding-derived.input.v1",
+        "schemaVersion": 1,
+        "authority": "proof-binding-derived test inventory projection admission",
+        "appliesWhen": "--projection proof-binding-derived",
+        "fields": {
+          "commandRefPolicy": {
+            "required": true,
+            "fields": {
+              "prefix": {
+                "required": true,
+                "format": "stable rule id namespace used to derive commandRefs"
+              }
+            }
+          },
+          "compactProofContract": {
+            "required": true,
+            "format": "compact requirement proof binding contract"
+          },
+          "inventoryId": {
+            "required": true,
+            "format": "stable rule id"
+          },
+          "nonClaims": {
+            "default": []
+          },
+          "requirementSource": {
+            "required": true,
+            "fields": {
+              "requirements": {
+                "required": true,
+                "itemFields": {
+                  "ownerId": "stable rule id",
+                  "requirementId": "stable rule id"
+                }
+              }
+            }
+          },
+          "schemaVersion": {
+            "required": true,
+            "value": 1
+          }
+        },
+        "nonClaims": [
+          "This projection input does not make Proofkit the owner of requirement meaning, native test execution, repository scanning, proof freshness, or merge policy.",
+          "The derived inventory remains caller-owned input for downstream coverage views."
+        ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.test-evidence-inventory.output.v1",
+        "schemaVersion": 1,
+        "authority": "test evidence inventory output contract",
+        "classificationRecords": {
+          "failureClassifications": {
+            "severity": "failure",
+            "sourceDiagnosticKey": "failures"
+          },
+          "warningClassifications": {
+            "severity": "warning",
+            "sourceDiagnosticKey": "warnings"
+          }
+        },
+        "classificationIds": [
+          "declared_duplicate_falsifier",
+          "duplicate_falsifier_candidate",
+          "empty_oracle",
+          "fixture_leak_risk",
+          "flaky_time",
+          "implementation_mirror",
+          "import_cost_leak",
+          "invalid_falsifier_supersession",
+          "missing_edge",
+          "missing_executable_command_ref",
+          "missing_semantic_anchor",
+          "mock_tests_mock",
+          "over_broad_integration",
+          "routing_smoke_only",
+          "snapshot_without_oracle",
+          "tautology",
+          "unasserted_diagnostic",
+          "weak_or_empty_oracle",
+          "wrong_boundary",
+          "wrong_evidence_boundary"
+        ],
+        "qualityFindingFields": {
+          "class": "known weak-test class",
+          "evidenceRefs": "sorted stable rule id refs",
+          "findingId": "stable rule id",
+          "nonClaims": "sorted caller-owned non-claims",
+          "ownerReviewState": "candidate|confirmed",
+          "severity": "failure|warning"
+        },
+        "nonClaims": [
+          "Test evidence inventory classifications describe admitted caller-owned inventory facts and Proofkit-derived structural diagnostics only.",
+          "Proofkit does not infer weak tests from names, prose, mocks, sleeps, snapshots, or repository scans."
+        ]
+      }
+    },
+    {
+      "command": "text-policy",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "typescript-public-api-surfaces",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer",
+        "--repo-root"
+      ]
+    },
+    {
+      "command": "witness-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "witness-scheduler-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "workspace-changed-package-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "workspace-manifest-facts",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.workspace-manifest-facts.output.v1",
+        "schemaVersion": 1,
+        "authority": "workspace manifest facts output contract",
+        "requiredFields": [
+          "changedPackagePlanPackages",
+          "diagnostics",
+          "knownPackageNames",
+          "manifestSources",
+          "nonClaims",
+          "packageUniverse",
+          "packages",
+          "projectionId",
+          "reportId",
+          "reportKind",
+          "root",
+          "schemaVersion",
+          "shardPartitionPackages",
+          "state",
+          "summary"
+        ],
+        "records": {
+          "root": {
+            "requiredFields": [
+              "dependencyRefs",
+              "name",
+              "scripts"
+            ]
+          },
+          "package": {
+            "requiredFields": [
+              "dependencyRefs",
+              "dirName",
+              "name",
+              "scripts"
+            ]
+          },
+          "script": {
+            "requiredFields": [
+              "command",
+              "name"
+            ]
+          },
+          "dependencyRef": {
+            "requiredFields": [
+              "field",
+              "name",
+              "version"
+            ]
+          },
+          "rootManifestSource": {
+            "requiredFields": [
+              "manifestPath",
+              "name",
+              "packageDir"
+            ]
+          },
+          "packageManifestSource": {
+            "requiredFields": [
+              "dirName",
+              "manifestPath",
+              "name",
+              "packageDir"
+            ]
+          },
+          "workspaceDependencyEdge": {
+            "requiredFields": [
+              "field",
+              "fromKind",
+              "fromName",
+              "toName",
+              "version"
+            ]
+          },
+          "changedPackagePlanPackage": {
+            "requiredFields": [
+              "dirName",
+              "name",
+              "workspaceDependencies"
+            ]
+          },
+          "shardPartitionPackage": {
+            "requiredFields": [
+              "name",
+              "workspaceDependencies"
+            ]
+          }
+        },
+        "nonClaims": [
+          "Workspace manifest facts project explicit caller-owned manifest records and do not scan repositories, read package files, interpret package-manager policy, execute commands, or approve merge."
+        ]
+      }
+    },
+    {
+      "command": "workspace-registry",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "workspace-shard-partition",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--input",
+        "--input-pointer"
+      ]
+    }
+  ]
+}

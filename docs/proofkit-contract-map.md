@@ -1,0 +1,147 @@
+# Proofkit Contract Map
+
+Status: maintained consumer routing surface.
+
+Owner: `proofkit`.
+
+## Purpose
+
+This map helps consuming repositories choose the smallest Proofkit CLI command
+or JSON contract without loading the full README or source tree. It is not an
+exhaustive schema reference. The canonical command inventory is
+`proofkit/cli-contract.v1.json`.
+
+Formal rule:
+
+```text
+Contract map routes humans and agents.
+CLI/JSON records own cross-language behavior.
+Go packages implement the shipped executable.
+Consumer repositories own product truth, local policy, and native witnesses.
+```
+
+Scope-class rule:
+
+```text
+Most commands consume explicit caller-owned JSON/input refs.
+Explicit filesystem scanners must be named in the CLI contract.
+Scanner commands require caller-selected roots or scopes.
+No command may infer ambient repository truth from the current directory.
+```
+
+## Families
+
+| Family | Main commands | Caller provides | Proofkit owns | Consumer owns | Output authority |
+|---|---|---|---|---|---|
+| Adoption and scaffolding | `adoption-contract-envelope`, `adoption-workflow-plan`, `adoption-doctor`, `gradual-adoption`, `gradual-adoption-bootstrap`, `gradual-adoption-guidance`, `scaffold-profile-plan`, `scaffold-project-structure`, `stack-preset` | adoption intent, aggregate adoption contract envelope, target paths, owner routes, caller-extracted stale authority vocabulary facts, stack preset id | aggregate contract-envelope admission, deterministic starter plans, bounded guidance envelopes, dry-run manifests, adoption gap and stale-authority classification | final files, final requirements, rollout policy, text extraction from files | selected child output, plan, report, or agent envelope |
+| Requirement source | `requirement-authoring-plan`, `requirement-source-admission`, `requirement-source-transition`, `spec-overview-claims`, `requirement-spec-tree`, `requirement-spec-tree-view`, `requirement-source-view`, `requirement-browser-server` | `requirements.v1.json`, caller-owned authoring facts, overview claim extraction, explicit spec hierarchy, view options | candidate-only authoring packets, source-shape admission, lifecycle checks, explicit tree topology/source-ref admission, shared safe renderer fragments, presentation-only views | requirement meaning, extraction completeness, Markdown extraction completeness, hierarchy ownership, proof adequacy, file materialization | authoring packet, source report, spec-tree report, rendered view, or browser presentation |
+| Requirement proof binding | `requirement-bindings`, `proof-slice`, `evidence-graph`, `requirement-proof-resolver`, `requirement-proof-source-set`, `requirement-proof-view`, `spec-proof-bundle-admission` | requirement records, bindings, witness commands, source-set facts, receipt reports | graph validation, compact slices, typed compact proof contract projections, resolver projections, bundle linkage checks | test semantics, witness execution, proof freshness, merge policy | proof report, slice, lookup graph, or view |
+| Test inventory and coverage | `test-evidence-inventory`, `test-evidence-inventory --normalized-inventory`, `requirement-coverage-input-compose`, `requirement-coverage-view`, `requirement-browser-server --view coverage` | caller-owned direct or source-set test inventory, declared quality findings, requirement source, proof binding or compact proof contract, coverage universe, optional owner-invariant registry | strict inventory/source-set admission, fail-closed normalized inventory projection, deterministic coverage-view input composition from explicit facts, weak-oracle and declared-quality classification, requirement/test/command/owner-invariant joins, nonsemantic command-evidence classification, stable coverage failure/warning classifications, presentation-only coverage view | inventory completeness, weak-test truth, native test execution, receipt freshness, producer trust, merge policy | inventory report, normalized inventory data product, coverage-view input, coverage view, or browser presentation |
+| Selective planning | `changed-path-set`, `requirement-impact-input-compose`, `impact`, `selective-gate-plan`, `selective-gate-evidence`, `selective-gate-obligation-decision-input`, `obligation-decision` | changed paths, base/current requirement sources, base/current single-binding-per-requirement proof contracts, generated-artifact policy, local environment policy, proof-like path policy, planned receipts, obligation routes | fail-closed impact input composition, fail-closed planning, receipt comparison, bounded agent packets | git diff truth, repository scanning, command execution, producer trust, final admission | composed impact input, plan, evidence report, or obligation input |
+| Receipts and producers | `proof-receipt-admission`, `receipt-producer-admission`, `receipt-currentness-scope`, `receipt-trust-class`, `producer-policy-self-proof` | receipt sets, producer policy, scope/currentness facts, trust classes | receipt shape, producer/receipt compatibility, self-proof diagnostics | producer authentication, freshness policy, CI trust roots | receipt/provenance report |
+| Release and deployment | `release-authority`, `external-consumer`, `registry-consumer-proof-input-compose`, `registry-consumer`, `deployment-evidence-admission`, `completion-criteria`, `branch-authority`, `readiness-closeout` | package facts, tarball/registry facts, explicit primitive registry/install/smoke facts, deployment evidence, criteria, branch facts | artifact/channel boundary checks, registry-consumer input composition, release diagnostics, falsifiable criteria shape | package publication, registry fetch, package-manager execution, deployment, rollback, approval | composed input, release/deployment/readiness report |
+| Supply-chain and quality | release workflow, `npm run release:sbom`, `npm run self:coverage`, `npm run go:actionlint`, `npm run go:bench` | release artifacts, source workflows, specs, bindings, witness plans, explicit benchmark invocation | deterministic SBOM candidate evidence, coverage metrics, workflow lint routing, benchmark entrypoints | public-source provenance, vulnerability triage, license approval, CI run admission, release approval | SBOM, metrics report, CI signal, or benchmark output |
+| Repository structure | `repo-profile-admission`, `workspace-manifest-facts`, `workspace-registry`, `workspace-changed-package-plan`, `workspace-shard-partition`, `typescript-public-api-surfaces`, `text-policy`, `package-runtime-dependency-admission` | explicit repo/profile facts, caller-owned manifest records, caller-owned roots, and caller-owned text file inventories | structural admission, manifest-to-workspace fact projection, workspace graph projections, TypeScript package public API checks, text policy admission, shard plans | repository freshness, git/file discovery, command policy, package manager truth | structural, fact, policy, or planning report |
+| Custom and generated artifacts | `custom-rule-boundary`, `document-lifecycle-boundary`, `rendered-artifact-freshness`, `conformance-profile`, `json-report-cli-adapter-source`, `witness-plan`, `witness-scheduler-plan` | custom rule metadata, document lifecycle records, artifact digests, profile manifests, command metadata, adapter language | boundary checks, generated-view freshness shape, deterministic adapter source generation, scheduler metadata checks | rule execution, document meaning, cache contents, CI scheduling, committed generated-source freshness | boundary report, generated source artifact, or scheduler report |
+
+## Migrating Repository Route
+
+For imperfect repositories, use Proofkit as a transition toolkit rather than a
+semantic judge.
+
+```text
+inventory facts from caller
+  -> adoption workflow or bootstrap guidance
+  -> owner-selected boundary
+  -> requirement source admission
+  -> proof-binding validation
+  -> native witnesses plus contract tests
+  -> selective plan and admitted receipts
+```
+
+Route ambiguous modernization work through the smallest matching family:
+
+| Question | First route | Why |
+|---|---|---|
+| Where should adoption start? | `adoption-workflow-plan` or `scaffold-project-structure`; use `adoption-contract-envelope` when one caller-owned aggregate adoption file already exists. | They route scenario steps and first-module starter records without scanning the repository; the aggregate route removes consumer-local root-key projection scripts without owning rollout policy. |
+| Is a candidate module ready for gradual enforcement? | `gradual-adoption-guidance` | It reports missing source, binding, witness, blocked-precondition, and advisory candidate-boundary facts by adoption mode. |
+| What still blocks an imperfect repository from enforcement? | `adoption-doctor` | It classifies caller-provided owner routes, candidate boundaries, child reports, blocked preconditions, and stale current authority vocabulary facts without scanning repository state or owning semantic boundary decisions. |
+| Does current documentation still name a retired proof package or proof owner? | `adoption-doctor --agent-envelope` with caller-extracted `staleAuthority` facts | It fails current authority surfaces, admits only explicitly scoped historical vocabulary, and emits bounded repair actions without substring-scanning files itself. |
+| Can old local proof infrastructure be retired? | `migration-parity-admission` then `migration-plan` | Parity evidence and post-retirement validation are required before retirement actions appear. |
+| Did a requirement move, split, or retire correctly? | `requirement-source-transition` | Requirement lifecycle and replacement ids belong to source transition, not proof binding. |
+| Should temporary design or PR facts become candidate requirements? | `requirement-authoring-plan` | It packages caller-owned extracted facts into candidate-only updates and owner-review questions without writing source files or approving meaning. |
+| Does a `REQ-*` have a route to execution? | `requirement-bindings` or `proof-slice` | Proof bindings own route closure, while tests own executable behavior. |
+| Which checks should run for a change? | `selective-gate-plan` then `selective-gate-evidence` | Planning and receipt comparison stay separate from command execution. |
+
+## Agent Decision Procedure
+
+Agents should use `agent-route` for executable routing and
+`agent-route --agent-envelope` when a bounded work packet is needed. The command
+returns deterministic JSON from explicit caller-owned facts; the envelope is an
+opt-in derived projection over the same report. This map explains the route
+families without becoming an execution, freshness, or merge decision.
+The exact route input vocabulary is machine-readable in
+`proofkit/cli-contract.v1.json` under `agent-route.inputContract`; the Go
+admission implementation and shipped CLI contract are parity-tested.
+
+Formal rule:
+
+```text
+goal plus caller-owned state
+  -> smallest matching command family
+  -> explicit required input
+  -> deterministic report or bounded envelope
+  -> caller-owned execution, proof freshness, and merge decision
+```
+
+Decision tree:
+
+| State or goal | Next Proofkit route | Stop or escalation condition |
+|---|---|---|
+| No admitted spec/profile exists. | `scaffold-project-structure`, `adoption-workflow-plan`, or `stack-preset` | Stop before writing files; the consumer owns materialization, overwrite policy, and final requirement text. |
+| Candidate boundary is uncertain. | `adoption-doctor` or `gradual-adoption-guidance --agent-envelope` | Escalate to owner review when the boundary is advisory, ambiguous, or missing native witnesses. |
+| Design, implementation plan, PR facts, or retrospective code/test summaries may contain durable requirements. | `requirement-authoring-plan` | Treat output as candidate-only; stop before writing `requirements.v1.json` or claiming requirement meaning. |
+| Requirement records exist. | `requirement-source-admission`; use `requirement-source-transition` for lifecycle changes. | Escalate when blocking requirements lack proof routes or lifecycle replacement ids are incomplete. |
+| Humans or agents need meta/module/submodule navigation. | `requirement-spec-tree`, then `requirement-spec-tree-view` or `requirement-browser-server --view spec-tree` from the same caller-owned tree input. | Stop before inferring hierarchy from paths. The consumer owns source hierarchy; CLI/browser outputs remain presentation only and are not committed by default. |
+| Overview prose may contain durable claims. | `spec-overview-claims` | Escalate when normative claims are not tied to `REQ-*` records. |
+| Requirements have no verified proof route. | `requirement-bindings`, `witness-plan`, `proof-slice`, or `requirement-proof-resolver` | Stop before claiming proof adequacy; native witness semantics stay with the consumer. |
+| Tests or proof evidence need inventory. | `test-evidence-inventory`, optionally `requirement-coverage-input-compose`, then `requirement-coverage-view` | Compose only from explicit caller-owned facts. Use `failureClassifications[]` and `warningClassifications[]` for machine routing. Escalate when tests are route-only, weak-oracle, unbound, or outside the caller-owned coverage universe. |
+| A change set is known. | `changed-path-set`, optionally `requirement-impact-input-compose`, `impact`, then `selective-gate-plan --agent-envelope` | Raw `knownChangedPaths` in `agent-route` are diagnostic only. Materialize a caller-owned `changed_path_set`, compose a caller-owned `impact_input` before `impact`, and compose a caller-owned `selective_gate_plan_input` before `selective-gate-plan`. Fail closed on unknown scope, dynamic edges, missing owner routes, unbound proof-like paths, or full-gate escalation. |
+| Does a TypeScript package public API match a caller-owned manifest? | `agent-route` with `goal: "verify_typescript_public_api"` and explicit `typescript_public_api_manifest` plus `typescript_public_api_repo_root`, then `typescript-public-api-surfaces --repo-root <caller-selected-root>` | This is an explicit filesystem scanner. Stop before guessing `repo-root`, claiming checkout freshness, package-manager truth, or merge readiness. |
+| Receipts are available for planned checks. | `selective-gate-evidence --agent-envelope`, then `obligation-decision --agent-envelope` | Escalate on missing, stale, invalid, untrusted, blocked, unavailable, or unknown-scope evidence. |
+| Human inspection is needed. | `requirement-source-view`, `requirement-proof-view`, `requirement-coverage-view`, `requirement-spec-tree-view`, or `requirement-browser-server` | `agent-route` emits browser commands as plan-only by default. Use `browserMode: "serve_local_view"` for `--serve` and `openBrowser: true` for `--open`. Rendered HTML and Markdown are presentation only unless the consumer admits a tracked artifact freshness gate. |
+| A JavaScript/TypeScript consumer needs less wrapper code. | `json-report-cli-adapter-source --language typescript` | Generated adapter source is caller-owned after materialization. The consumer still owns package pin, binary path, repo paths, local policy, and freshness proof. |
+| Local proof infrastructure may be retired. | `migration-parity-admission`, then `migration-plan` | Stop before deleting local owners unless parity and post-retirement validation are caller-approved. |
+| Release, package, or deploy evidence is in scope. | `release-authority`, `registry-consumer-proof-input-compose`, `registry-consumer`, `external-consumer`, `deployment-evidence-admission`, or `readiness-closeout` | Compose registry-consumer input from explicit primitive facts first when needed; final registry-consumer validation remains separate. Treat registry, release, CI, deployment, and readiness evidence as separate classes. |
+| The agent does not know which route applies. | `agent-route` with a known goal, or this map when no route input exists yet. | Escalate to the consumer owner instead of guessing, scanning ambient state, or executing commands. |
+
+## Routing Rules
+
+1. Start from `proofkit/cli-contract.v1.json` when a machine needs the exact
+   command, flags, input mode, output mode, scope class, or `agent-route` input
+   contract.
+2. Start from this map when a human or agent only needs the correct command
+   family.
+3. Use `agent-route` when a coding agent needs a deterministic next-command
+   packet from explicit current state. Use `agent-route --agent-envelope` when
+   the agent needs compact context refs, blockers, command refs, and non-claims
+   instead of a plain route report. Treat `blocked_*` states as stop signals,
+   not as permission to guess missing inputs. `knownChangedPaths` are
+   diagnostic-only until the caller supplies a `changed_path_set`; browser
+   server startup requires explicit `browserMode: "serve_local_view"`.
+4. Use agent-envelope output only when a coding agent needs bounded context;
+   do not expand whole proof graphs into chat.
+5. Treat generated views and rendered HTML as presentation only. They never
+   replace the structured source record.
+6. Escalate to the consuming repository's owner policy whenever Proofkit reports
+   unknown scope, missing receipts, unavailable preconditions, or command
+   execution requirements.
+7. Treat candidate boundaries from imperfect repositories as advisory until the
+   consuming repository commits stable requirement records and proof bindings.
+
+## Omitted Surfaces
+
+This map intentionally omits exhaustive per-field schema documentation,
+generated view instances, generated graph instances, receipt instances, and
+language-specific wrapper APIs. Those surfaces are either generated on demand,
+owned by the caller, or derived from the CLI/JSON contracts.

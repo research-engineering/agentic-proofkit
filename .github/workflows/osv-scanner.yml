@@ -1,0 +1,44 @@
+name: osv-scanner
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "29 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+concurrency:
+  group: osv-scanner-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan-pr:
+    name: osv / pr delta
+    if: ${{ github.event_name == 'pull_request' && (github.event.repository.private == false || vars.ENABLE_CODE_SCANNING == 'true') }}
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable-pr.yml@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+    with:
+      fail-on-vuln: false
+      upload-sarif: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
+      scan-args: |-
+        --include-git-root
+        -r
+        ./
+
+  scan-current:
+    name: osv / current tree
+    if: ${{ github.event_name != 'pull_request' && (github.event.repository.private == false || vars.ENABLE_CODE_SCANNING == 'true') }}
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a498708959aeaef5ef730655706c5a1df1edbc2 # v2.3.8
+    with:
+      fail-on-vuln: false
+      upload-sarif: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
+      scan-args: |-
+        --include-git-root
+        -r
+        ./
