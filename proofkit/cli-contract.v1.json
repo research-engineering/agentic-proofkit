@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "contractId": "proofkit.cli-contract.v1",
-  "packageName": "agentic-proofkit",
+  "packageName": "@research-engineering/agentic-proofkit",
   "processContract": {
     "successExitCode": 0,
     "failureExitCode": 1,

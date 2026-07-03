@@ -62,7 +62,7 @@ func buildPythonPackagesForTargets(selectedTargets []target) error {
 	packageSet := packageSet{
 		ArtifactKind:   artifactKind,
 		SchemaVersion:  schemaVersion,
-		PackageName:    manifest.Name,
+		PackageName:    packageName,
 		PackageVersion: manifest.Version,
 		Packages:       records,
 		NonClaims: []string{
@@ -101,7 +101,7 @@ func buildWheel(outputDir string, manifest packageJSON, target target) (wheelRec
 		AbiTag:         abiTag,
 		BinarySha256:   hex.EncodeToString(binarySha[:]),
 		Filename:       filename,
-		Name:           manifest.Name,
+		Name:           packageName,
 		PlatformSuffix: target.PlatformSuffix,
 		PlatformTag:    target.PlatformTag,
 		PythonTag:      pythonTag,
@@ -166,7 +166,7 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 func metadata(manifest packageJSON) string {
 	return strings.Join([]string{
 		"Metadata-Version: 2.1",
-		"Name: " + manifest.Name,
+		"Name: " + packageName,
 		"Version: " + manifest.Version,
 		"Summary: " + manifest.Description,
 		"License: " + manifest.License,

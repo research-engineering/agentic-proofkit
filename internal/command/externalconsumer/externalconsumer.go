@@ -946,8 +946,8 @@ func packageName(raw any) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if value != "agentic-proofkit" {
-		return "", fmt.Errorf("proofkit external-consumer input packageName must be agentic-proofkit")
+	if value != "@research-engineering/agentic-proofkit" {
+		return "", fmt.Errorf("proofkit external-consumer input packageName must be @research-engineering/agentic-proofkit")
 	}
 	return value, nil
 }

@@ -24,7 +24,7 @@ func TestPackageVerifyReadersRejectAmbiguousJSON(t *testing.T) {
 	}{
 		{
 			name:    "pack records duplicate key",
-			content: `[{"name":"agentic-proofkit","name":"other","version":"1.2.3","filename":"agentic-proofkit.tgz","integrity":"sha512-x","shasum":"abc"}]`,
+			content: `[{"name":"@research-engineering/agentic-proofkit","name":"other","version":"1.2.3","filename":"agentic-proofkit.tgz","integrity":"sha512-x","shasum":"abc"}]`,
 			read: func(path string) error {
 				_, err := readPackRecords(path)
 				return err
@@ -586,7 +586,7 @@ func testNPMIntegrity(content []byte) string {
 
 func packageManifestFixture(repositoryURL string) string {
 	return `{
-  "name": "agentic-proofkit",
+  "name": "@research-engineering/agentic-proofkit",
   "version": "1.2.3",
   "license": "MIT",
   "packageManager": "npm@11.18.0",

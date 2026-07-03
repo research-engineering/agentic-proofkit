@@ -8,6 +8,7 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -22,7 +23,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
-const rootPackageName = "agentic-proofkit"
+const rootPackageName = "@research-engineering/agentic-proofkit"
+const rootBinaryName = "agentic-proofkit"
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
 
@@ -461,7 +463,7 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.PublishConfig.Access != "public" || manifest.PublishConfig.Registry != "https://registry.npmjs.org" {
 		return fmt.Errorf("root package publishConfig must target public npm registry")
 	}
-	if len(manifest.Bin) != 1 || manifest.Bin[rootPackageName] != "dist/agentic-proofkit" {
+	if len(manifest.Bin) != 1 || manifest.Bin[rootBinaryName] != "dist/agentic-proofkit" {
 		return fmt.Errorf("root package bin must expose dist/agentic-proofkit only")
 	}
 	if len(manifest.Exports) != 1 || manifest.Exports["./package.json"] != "./package.json" {
@@ -818,23 +820,39 @@ func packageSmokeFailureInput() []byte {
 }
 
 func verifyOutsideConsumerImports(consumer string) error {
+	payload, err := json.Marshal(struct {
+		DeniedSpecifiers     []string `json:"deniedSpecifiers"`
+		ExpectedManifestName string   `json:"expectedManifestName"`
+		ManifestSpecifier    string   `json:"manifestSpecifier"`
+	}{
+		DeniedSpecifiers: []string{
+			rootPackageName,
+			rootPackageName + "/dist/agentic-proofkit",
+			rootPackageName + "/dist/command-descriptors.json",
+			rootPackageName + "/internal/app/command_descriptors",
+			rootPackageName + "/proofkit/cli-contract.v1.json",
+			rootPackageName + "/proofkit/command-descriptors.v1.json",
+			rootPackageName + "/internal/tools/packageverify",
+		},
+		ExpectedManifestName: rootPackageName,
+		ManifestSpecifier:    rootPackageName + "/package.json",
+	})
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(consumer, "proofkit-import-boundary.json"), payload, 0o600); err != nil {
+		return fmt.Errorf("write outside consumer import boundary payload: %w", err)
+	}
 	script := `
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
-const manifest = require("agentic-proofkit/package.json");
-if (manifest.name !== "agentic-proofkit") {
+const payload = JSON.parse(readFileSync("proofkit-import-boundary.json", "utf8"));
+const manifest = require(payload.manifestSpecifier);
+if (manifest.name !== payload.expectedManifestName) {
   throw new Error("package.json export did not resolve package manifest");
 }
-const denied = [
-  "agentic-proofkit",
-  "agentic-proofkit/dist/agentic-proofkit",
-  "agentic-proofkit/dist/command-descriptors.json",
-  "agentic-proofkit/internal/app/command_descriptors",
-  "agentic-proofkit/proofkit/cli-contract.v1.json",
-  "agentic-proofkit/proofkit/command-descriptors.v1.json",
-  "agentic-proofkit/internal/tools/packageverify"
-];
-for (const specifier of denied) {
+for (const specifier of payload.deniedSpecifiers) {
   let failed = false;
   try {
     await import(specifier);

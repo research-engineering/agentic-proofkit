@@ -17,7 +17,7 @@ func TestPythonPackageReadersRejectAmbiguousJSON(t *testing.T) {
 	}{
 		{
 			name:    "package manifest duplicate key",
-			content: `{"name":"agentic-proofkit","name":"other","version":"1.2.3","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
+			content: `{"name":"@research-engineering/agentic-proofkit","name":"other","version":"1.2.3","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
 			read: func(path string) error {
 				return withPackageJSON(t, path, func() error {
 					_, err := readPackageJSON()
@@ -58,17 +58,17 @@ func TestReadPackageJSONRejectsUnsafeWheelMetadata(t *testing.T) {
 	}{
 		{
 			name:    "filename unsafe semver prerelease",
-			content: `{"name":"agentic-proofkit","version":"1.2.3-beta.1","description":"Proofkit CLI","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
+			content: `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3-beta.1","description":"Proofkit CLI","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
 			want:    "PEP 440-compatible wheel version",
 		},
 		{
 			name:    "header injection",
-			content: `{"name":"agentic-proofkit","version":"1.2.3","description":"Proofkit CLI\nClassifier: unsafe","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
+			content: `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","description":"Proofkit CLI\nClassifier: unsafe","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
 			want:    "single-line metadata field",
 		},
 		{
 			name:    "missing description",
-			content: `{"name":"agentic-proofkit","version":"1.2.3","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
+			content: `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","license":"MIT","repository":{"url":"https://example.test/repo"}}`,
 			want:    "must include description",
 		},
 	}

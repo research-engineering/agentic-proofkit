@@ -23,6 +23,7 @@ import (
 const (
 	completionID         = "proofkit.release_closeout.current_package_gate"
 	npmCandidateNonClaim = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
+	pythonPackageName    = "agentic-proofkit"
 )
 
 type completionInput struct {
@@ -66,7 +67,9 @@ type packRecord struct {
 }
 
 type pythonPackageSet struct {
-	Packages []pythonWheel `json:"packages"`
+	PackageName    string        `json:"packageName"`
+	PackageVersion string        `json:"packageVersion"`
+	Packages       []pythonWheel `json:"packages"`
 }
 
 type pythonWheel struct {
@@ -980,11 +983,11 @@ func packRecordBytesMatch(root string, record packRecord) bool {
 
 func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pythonWheel, bool) {
 	packages, err := readTypedJSON[pythonPackageSet](root, path)
-	if err != nil || len(packages.Packages) == 0 {
+	if err != nil || packages.PackageName != pythonPackageName || packages.PackageVersion != manifest.Version || len(packages.Packages) == 0 {
 		return nil, false
 	}
 	for _, item := range packages.Packages {
-		if item.Name != manifest.Name || item.Version != manifest.Version || item.Filename == "" {
+		if item.Name != pythonPackageName || item.Version != manifest.Version || item.Filename == "" {
 			return packages.Packages, false
 		}
 		if !fileExists(root, filepath.Join("artifacts", "pypi", item.Filename)) {

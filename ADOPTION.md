@@ -23,10 +23,12 @@ Release archive is not enough to satisfy this predicate.
 ## Distribution Channels
 
 Public npm is the primary package-manager channel for JavaScript, TypeScript,
-Bun, and other Node-package consumers. PyPI is the Python/uv channel after its
-own Trusted Publisher and post-publish registry identity are admitted. GitHub
-Release assets are archive and provenance lookup, not package-manager
-dependency authority.
+Bun, and other Node-package consumers. The npm package identity is
+`@research-engineering/agentic-proofkit`; the installed CLI binary remains
+`agentic-proofkit`. PyPI is the Python/uv channel after its own Trusted
+Publisher and post-publish registry identity are admitted. GitHub Release
+assets are archive and provenance lookup, not package-manager dependency
+authority.
 
 Stable authority channel ids:
 

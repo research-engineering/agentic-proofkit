@@ -77,7 +77,7 @@ jobs:
           publish_registry="$(node -p "require('./package.json').publishConfig.registry")"
           publish_access="$(node -p "require('./package.json').publishConfig.access")"
           license="$(node -p "require('./package.json').license")"
-          test "$name" = "agentic-proofkit"
+          test "$name" = "@research-engineering/agentic-proofkit"
           test "$repository_url" = "git+https://github.com/research-engineering/agentic-proofkit.git"
           test "$publish_registry" = "$REGISTRY_URL"
           test "$publish_access" = "public"
@@ -329,7 +329,9 @@ jobs:
           NODE
           while IFS= read -r package_name; do
             package_version="$(node -p "require('./package.json').version")"
-            report="artifacts/registry/pack-${package_name}.json"
+            report_package_name="${package_name#@}"
+            report_package_name="${report_package_name//\//-}"
+            report="artifacts/registry/pack-${report_package_name}.json"
             for attempt in $(seq 1 30); do
               if npm pack "${package_name}@${package_version}" \
                 --json \
@@ -410,7 +412,8 @@ jobs:
           npm init -y >/dev/null
           install_cache="$consumer/.npm-install-cache"
           for attempt in $(seq 1 30); do
-            if npm install "agentic-proofkit@${package_version}" \
+            package_name="$(node -p "require('./package.json').name")"
+            if npm install "${package_name}@${package_version}" \
               --ignore-scripts \
               --cache "$install_cache" \
               --prefer-online \
@@ -420,10 +423,10 @@ jobs:
               break
             fi
             if [ "$attempt" = "30" ]; then
-              echo "registry install agentic-proofkit@${package_version} was not available after bounded propagation wait" >&2
+              echo "registry install ${package_name}@${package_version} was not available after bounded propagation wait" >&2
               exit 1
             fi
-            echo "waiting for registry install agentic-proofkit@${package_version} propagation, attempt ${attempt}/30" >&2
+            echo "waiting for registry install ${package_name}@${package_version} propagation, attempt ${attempt}/30" >&2
             sleep 10
           done
           npm audit signatures \
@@ -525,7 +528,7 @@ jobs:
             --candidate-file artifacts/pypi/python-packages.json \
             --directory artifacts/pypi-dist
           version="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["version"])')"
-          package_name="$(python3 -c 'import json; print(json.load(open("package.json", encoding="utf-8"))["name"])')"
+          package_name="agentic-proofkit"
           status="$(curl --silent --show-error --location --output /tmp/proofkit-pypi-release.json --write-out '%{http_code}' "https://pypi.org/pypi/${package_name}/${version}/json")"
           if [ "$status" = "200" ]; then
             go run ./internal/tools/releasepreflight pypi-existing \
@@ -630,7 +633,7 @@ jobs:
         env:
           PROOFKIT_NPM_TRUSTED_PUBLISHER_ENVIRONMENT: npm-production
           PROOFKIT_NPM_TRUSTED_PUBLISHER_JOB: publish
-          PROOFKIT_NPM_TRUSTED_PUBLISHER_PROJECT: agentic-proofkit
+          PROOFKIT_NPM_TRUSTED_PUBLISHER_PROJECT: "@research-engineering/agentic-proofkit"
           PROOFKIT_NPM_TRUSTED_PUBLISHER_PROVIDER: npm
           PROOFKIT_NPM_TRUSTED_PUBLISHER_REGISTRY: ${{ env.REGISTRY_URL }}
           PROOFKIT_NPM_TRUSTED_PUBLISHER_REPOSITORY: ${{ github.repository }}

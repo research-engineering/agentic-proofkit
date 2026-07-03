@@ -16,7 +16,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
-const cliContractPublicABISHA256 = "9998f2ff1e21aa9b8396fcfc0f4708167431b8fc9a84130eaaa305a79e2c233a"
+const cliContractPublicABISHA256 = "a95d29b529acaa06672c85ac9fb8fae343de1148e6b194fad3a0342de13abe76"
 
 func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	contract := readCLIContract(t)

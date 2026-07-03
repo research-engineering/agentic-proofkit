@@ -12,11 +12,11 @@ packets without copying verifier logic between projects.
 
 | Surface | State |
 |---|---|
-| Source visibility | Public-source release provenance is not claimed until a release is produced from public source |
-| Current layer | Staged public source import |
-| Runtime implementation | Source present; release readiness still requires release evidence |
-| Package release | Not claimed by this repository state |
-| Public-source provenance | Not claimed until a reviewed release is produced from public source |
+| Source visibility | Public |
+| Current layer | Public source with admitted unscoped npm release evidence; scoped npm identity is staged for the next release |
+| Runtime implementation | Go CLI with npm and Python wrapper packaging |
+| Package release | `agentic-proofkit@0.1.135` is admitted; `@research-engineering/agentic-proofkit@0.1.136` is pending release evidence |
+| Public-source provenance | Admitted for `v0.1.135`; scoped package provenance is pending a reviewed scoped release |
 | License | MIT |
 
 ## Project Boundary

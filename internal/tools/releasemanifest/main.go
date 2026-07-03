@@ -19,9 +19,10 @@ import (
 )
 
 const (
-	artifactKind  = "proofkit.release-manifest.v1"
-	schemaVersion = 1
-	npmRegistry   = releasechannel.NPMRegistryURL
+	artifactKind      = "proofkit.release-manifest.v1"
+	pythonPackageName = "agentic-proofkit"
+	schemaVersion     = 1
+	npmRegistry       = releasechannel.NPMRegistryURL
 )
 
 type packageJSON struct {
@@ -403,7 +404,7 @@ func trustedPublisherSetFromEnv(manifest packageJSON, npmPublicationMode string,
 		return trustedPublisherSet{}, err
 	}
 	if pypiRequiresIdentity {
-		identity, err := releasepublisher.FromEnvForAuthorityChannel(string(releasechannel.PyPIRegistryRelease), manifest.Name, manifest.Version, repository, getenv)
+		identity, err := releasepublisher.FromEnvForAuthorityChannel(string(releasechannel.PyPIRegistryRelease), pythonPackageName, manifest.Version, repository, getenv)
 		if err != nil {
 			return trustedPublisherSet{}, err
 		}
@@ -481,12 +482,12 @@ func requirePythonPackagesMatchPackage(manifest packageJSON, packageSet *pythonP
 	if packageSet == nil {
 		return nil
 	}
-	if packageSet.PackageName != manifest.Name || packageSet.PackageVersion != manifest.Version {
-		return fmt.Errorf("%s must match package.json identity %s@%s", label, manifest.Name, manifest.Version)
+	if packageSet.PackageName != pythonPackageName || packageSet.PackageVersion != manifest.Version {
+		return fmt.Errorf("%s must match Python package identity %s@%s", label, pythonPackageName, manifest.Version)
 	}
 	for _, record := range packageSet.Packages {
-		if record.Name != manifest.Name || record.Version != manifest.Version {
-			return fmt.Errorf("%s wheel %s must match package.json identity %s@%s", label, record.Filename, manifest.Name, manifest.Version)
+		if record.Name != pythonPackageName || record.Version != manifest.Version {
+			return fmt.Errorf("%s wheel %s must match Python package identity %s@%s", label, record.Filename, pythonPackageName, manifest.Version)
 		}
 	}
 	return nil
@@ -558,8 +559,8 @@ func requirePyPIRegistryMatchesLocal(registry *pypiRegistrySet, local *pythonPac
 	if local == nil {
 		return fmt.Errorf("PyPI registry evidence requires local Python package evidence")
 	}
-	if registry.PackageName != manifest.Name || registry.PackageVersion != manifest.Version {
-		return fmt.Errorf("PyPI registry evidence must match package.json identity %s@%s", manifest.Name, manifest.Version)
+	if registry.PackageName != pythonPackageName || registry.PackageVersion != manifest.Version {
+		return fmt.Errorf("PyPI registry evidence must match Python package identity %s@%s", pythonPackageName, manifest.Version)
 	}
 	if len(registry.Packages) != len(local.Packages) {
 		return fmt.Errorf("PyPI registry evidence package count must match local Python package evidence")
@@ -1017,7 +1018,7 @@ func releaseNotes(manifest packageJSON, pypiPublished bool) string {
 			"Python/uv install channel:",
 			"",
 			"```bash",
-			fmt.Sprintf("uv tool install %s==%s", manifest.Name, manifest.Version),
+			fmt.Sprintf("uv tool install %s==%s", pythonPackageName, manifest.Version),
 			"```",
 			"",
 			"PyPI registry identity is recorded in the release manifest.",

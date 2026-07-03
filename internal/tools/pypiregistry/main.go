@@ -19,6 +19,7 @@ import (
 
 const (
 	artifactKind  = "proofkit.pypi-registry-artifact-set.v1"
+	packageName   = "agentic-proofkit"
 	packageKind   = "proofkit.python-package-set.v1"
 	pypiRegistry  = releasechannel.PyPIRegistryURL
 	schemaVersion = 1
@@ -113,13 +114,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	if candidates.PackageName != manifest.Name || candidates.PackageVersion != manifest.Version {
+	if candidates.PackageName != packageName || candidates.PackageVersion != manifest.Version {
 		return fmt.Errorf("python package candidates do not match package.json identity")
 	}
 	if err := requireCandidatePlatformCompleteness(candidates.Packages); err != nil {
 		return err
 	}
-	registry, err := fetchPyPIRelease(manifest.Name, manifest.Version)
+	registry, err := fetchPyPIRelease(packageName, manifest.Version)
 	if err != nil {
 		return err
 	}
@@ -127,14 +128,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	output := registryArtifactOutput(manifest, evidence)
+	output := registryArtifactOutput(manifest.Version, evidence)
 	if err := os.MkdirAll(filepath.Join("artifacts", "pypi-registry"), 0o755); err != nil {
 		return err
 	}
 	return writeJSON(filepath.Join("artifacts", "pypi-registry", "pypi-release.json"), output)
 }
 
-func registryArtifactOutput(manifest packageJSON, evidence []registryWheelEvidence) registryArtifactSet {
+func registryArtifactOutput(version string, evidence []registryWheelEvidence) registryArtifactSet {
 	channel := releasechannel.Must(releasechannel.PyPIRegistryRelease)
 	return registryArtifactSet{
 		ArtifactKind:       artifactKind,
@@ -143,8 +144,8 @@ func registryArtifactOutput(manifest packageJSON, evidence []registryWheelEviden
 		SchemaVersion:      schemaVersion,
 		Registry:           pypiRegistry,
 		Source:             releasechannel.PyPIRegistryEvidenceSource,
-		PackageName:        manifest.Name,
-		PackageVersion:     manifest.Version,
+		PackageName:        packageName,
+		PackageVersion:     version,
 		Packages:           evidence,
 		NonClaims: []string{
 			"pypi registry identity does not prove consumer installation, consumer rollout, or native execution in every consumer environment.",
