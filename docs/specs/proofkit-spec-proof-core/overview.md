@@ -78,6 +78,9 @@ execution receipts, and merge policy.
   caller-owned document lifecycle metadata so temporary, historical, generated,
   rendered, router, work-ledger, and durable documents cannot silently retain
   the wrong authority role.
+- `REQ-PROOFKIT-SPEC-015`: spec overview claim reports validate
+  caller-provided overview claim extraction facts so durable overview claims
+  cite known requirement records and non-durable claims remain non-normative.
 
 ## Non-Claims
 
@@ -88,3 +91,4 @@ execution receipts, and merge policy.
   production readiness.
 - This spec does not approve document deletion or infer document meaning from
   Markdown prose.
+- This spec does not prove overview-claim extractor completeness.

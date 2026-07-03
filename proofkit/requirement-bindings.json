@@ -203,6 +203,16 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-015",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim Markdown reading, claim extractor completeness, requirement source validity, semantic support between overview prose and cited requirements, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-RECEIPT-001",
       "ownerId": "proofkit.receipt-authority",
       "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
@@ -1092,6 +1102,19 @@
       "witnessId": "proofkit.document-lifecycle-boundary.authority-classification",
       "witnessKind": "contract",
       "witnessPath": "internal/command/documentlifecycle/documentlifecycle_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-015",
+      "scenarioId": "proofkit.spec-proof-core.spec-overview-claim-boundary",
+      "witnessId": "proofkit.spec-overview-claims.citation-boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/specoverviewclaims/specoverviewclaims_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],
