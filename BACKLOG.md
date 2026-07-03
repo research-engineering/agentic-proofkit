@@ -66,7 +66,7 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | DONE | IMPORT-05 | Historical design and plan cleanup | Durable claims from pre-cutover design and implementation-plan work are represented by deterministic specs, proof bindings, tests, package-public docs, or open backlog rows. No source-repository design documents or implementation plans are retained as current authority. |
 | DONE | IMPORT-06 | Remaining source-local code delta audit | Non-document source comparison found no old source file missing from the public source tree. Old source bytes remain candidate evidence only and are not imported over current hardening. |
 | DONE | RELEASE-01 | Public source release | `v0.1.135` was published from this public repository through npm Trusted Publisher, post-publish npm registry identity was captured, root-only installed-package proof passed, and GitHub Release assets were published. PyPI publication and GitHub artifact attestations were skipped by explicit optional-channel policy and are not claimed. |
-| OPEN | RELEASE-02 | Scoped npm package identity | `@research-engineering/agentic-proofkit@0.1.136` created the scoped public package namespace and Trusted Publisher settings without claiming workflow release provenance. `@research-engineering/agentic-proofkit@0.1.137` proved scoped Trusted Publisher publication, then exposed a root-only install proof bug before release closeout. Source is staged for `@research-engineering/agentic-proofkit@0.1.138` while preserving the `agentic-proofkit` CLI binary and Python package identities. Completion requires a `v0.1.138` release from public source through the scoped Trusted Publisher path, post-publish scoped npm registry identity, root-only installed-package JSON CLI ABI proof, and an explicit compatibility or deprecation disposition for the unscoped npm package. |
+| DONE | RELEASE-02 | Scoped npm package identity | `@research-engineering/agentic-proofkit@0.1.138` was published from this public repository through the scoped npm Trusted Publisher path. Post-publish scoped npm registry identity was captured, root-only installed-package JSON CLI ABI proof passed, and GitHub Release assets were published. The `agentic-proofkit` CLI binary and Python package identities remain unchanged. The previous unscoped npm package remains a compatibility artifact, not the preferred dependency identity. |
 | DONE | SECURITY-01 | Provider security settings | Repository is public with collaborator-only PR creation, public issues, squash-only merges, branch protection on `main`, strict required CI, CodeQL, OSV source advisory scanning, Scorecard, Dependabot security updates, secret scanning, and push protection. Non-provider secret patterns and validity checks remain unavailable or disabled under the current provider plan and are not claimed. |
 | DONE | CONSUMER-01 | Public-package consumer proof | A private first consumer repository consumed exact public npm `agentic-proofkit@0.1.134` through its repository-owned external-consumer gate. The proof installed the package into an isolated temporary consumer, matched the admitted tarball integrity and shasum, proved lockfile resolution was not workspace based, ran installed CLI `self-check`, `witness-plan`, and `release-authority`, proved rollback by removing the dependency from the temporary lockfile, and preserved consumer-owned native witness authority. |
 | DONE | CONSUMER-02 | Second-consumer pilot | A private topology-distinct Python/FastAPI consumer module was run through explicit-input warn-mode `gradual-adoption-guidance` and `--agent-envelope` pilot records. Proofkit admitted the caller-owned route, reported one advisory candidate boundary, reported two missing proof-binding rule IDs as warnings, emitted route/bind/modernize/verify/promote agent actions, and kept enforcement blocked until consumer owners admit stable requirements and proof bindings. No generic Proofkit blocker was confirmed. |
@@ -102,6 +102,32 @@ environment `npm-production`. PyPI publication was disabled for this release,
 therefore PyPI registry identity is not claimed. GitHub artifact attestations
 were skipped by current repository policy, therefore artifact attestation is
 not claimed.
+
+`RELEASE-02` was admitted on 2026-07-03 from public repository
+`research-engineering/agentic-proofkit` at commit
+`d9398ec76ae672470d8c3f946cb7693cb134fb7c` and tag `v0.1.138`.
+
+Provider run:
+
+```text
+https://github.com/research-engineering/agentic-proofkit/actions/runs/28683622996
+```
+
+The release workflow completed successfully. It ran the release candidate
+package gate, publish readiness, scoped npm Trusted Publisher publish,
+post-publish registry capture, root-only installed-package JSON CLI ABI proof,
+final release metadata generation, and GitHub Release asset publication. The
+npm registry reports `@research-engineering/agentic-proofkit@0.1.138` with
+repository URL
+`git+https://github.com/research-engineering/agentic-proofkit.git`, tarball
+`https://registry.npmjs.org/@research-engineering/agentic-proofkit/-/agentic-proofkit-0.1.138.tgz`,
+integrity
+`sha512-6t9B7i+6gFW2s9zXGFankO7KnpWzSqgdcUlyOAVQFDzre5Y/wuJKDyJiKyiPAb+5CcgUuoiWo78lceyQ8JLvnA==`,
+shasum `e89fa467a34f3731c0540c86e3c482a3d7df522e`, and license `MIT`.
+The GitHub Release is
+`https://github.com/research-engineering/agentic-proofkit/releases/tag/v0.1.138`.
+PyPI publication remained disabled, and GitHub artifact attestations remained
+skipped by current repository policy.
 
 ## Consumer Evidence
 
