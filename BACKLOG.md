@@ -63,8 +63,8 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | DONE | IMPORT-02 | Deterministic kernel primitives | Core Go admission, stable JSON, digest, report, path, release-platform, and package helper primitives were imported with tests. |
 | DONE | IMPORT-03 | CLI command and release proof surface | CLI registry, command families, package/release tools, npm/PyPI wrapper surfaces, specs, proofkit JSON, and workflows were imported with local `npm run check`. Provider CI, protected-branch, registry, and release evidence remain separate open proof classes. |
 | DONE | IMPORT-04 | Adoption and backlog owner surfaces | Public-ready adoption and backlog routing were added without stale private release facts or consumer-specific claims. |
-| NEXT | IMPORT-05 | Design documents | Import or rewrite design documents in owner-scoped groups only after each claim is checked against current code and package shipping rules. |
-| OPEN | IMPORT-06 | Remaining source-local code delta audit | Treat remaining source-local code diff as candidate evidence only. Import no code unless the target branch lacks the invariant and the delta does not remove current hardening. |
+| DONE | IMPORT-05 | Design documents | Current durable design surfaces were imported, and the remaining pre-cutover design and implementation-plan files were adjudicated in `docs/design-import-adjudication.md`. |
+| NEXT | IMPORT-06 | Remaining source-local code delta audit | Treat remaining source-local code diff as candidate evidence only. Import no code unless the target branch lacks the invariant and the delta does not remove current hardening. |
 | OPEN | RELEASE-01 | Public source release | Publish a new version from this public repository and record npm, optional PyPI, GitHub Release, SBOM, and rollback evidence. |
 | OPEN | SECURITY-01 | Provider security settings | Verify CodeQL, dependency review or equivalent advisory scanning, secret scanning, push protection, branch protection, and issue/PR policy in provider settings. |
 | OPEN | CONSUMER-01 | Public-package consumer proof | Run at least one consumer through exact package adoption, installed CLI smoke, rollback proof, and native-witness delegation. |
@@ -114,9 +114,12 @@ Current import rule:
   design surfaces for the requirement source authority boundary.
 - `docs/requirement-source-transition-design.md` is admitted as the source-
   repository design surface for requirement lifecycle transition admission.
-- Implementation plans remain excluded from package-public docs and should be
-  deleted, rewritten into durable design notes, or left unimported after their
-  useful invariants have moved into code, tests, specs, or this backlog.
+- `docs/design-import-adjudication.md` is admitted as a source-repository
+  import ledger. It is not package authority; it records why remaining
+  pre-cutover design and implementation-plan files are not imported wholesale.
+- Implementation plans remain excluded from package-public docs and current
+  authority after their useful invariants have moved into code, tests, specs,
+  package-public docs, or this backlog.
 - Source-repository design docs are not package authority unless package files,
   package verification, and release evidence explicitly admit them.
 
