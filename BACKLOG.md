@@ -68,7 +68,7 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | BLOCKED | RELEASE-01 | Public source release | Public-source release candidate evidence passed from this repository. Final npm Trusted Publisher switch, version tag, publish, post-publish registry identity, optional PyPI evidence, GitHub Release assets, and rollback evidence are blocked on npm account recovery or maintainer authentication for `agentic-proofkit`. |
 | DONE | SECURITY-01 | Provider security settings | Repository is public with collaborator-only PR creation, public issues, squash-only merges, branch protection on `main`, strict required CI, CodeQL, OSV source advisory scanning, Scorecard, Dependabot security updates, secret scanning, and push protection. Non-provider secret patterns and validity checks remain unavailable or disabled under the current provider plan and are not claimed. |
 | DONE | CONSUMER-01 | Public-package consumer proof | A private first consumer repository consumed exact public npm `agentic-proofkit@0.1.134` through its repository-owned external-consumer gate. The proof installed the package into an isolated temporary consumer, matched the admitted tarball integrity and shasum, proved lockfile resolution was not workspace based, ran installed CLI `self-check`, `witness-plan`, and `release-authority`, proved rollback by removing the dependency from the temporary lockfile, and preserved consumer-owned native witness authority. |
-| OPEN | CONSUMER-02 | Second-consumer pilot | Run a small observe or warn pilot in a topology-distinct repository and classify every gap as generic Proofkit work or consumer-local adapter work. |
+| DONE | CONSUMER-02 | Second-consumer pilot | A private topology-distinct Python/FastAPI consumer module was run through explicit-input warn-mode `gradual-adoption-guidance` and `--agent-envelope` pilot records. Proofkit admitted the caller-owned route, reported one advisory candidate boundary, reported two missing proof-binding rule IDs as warnings, emitted route/bind/modernize/verify/promote agent actions, and kept enforcement blocked until consumer owners admit stable requirements and proof bindings. No generic Proofkit blocker was confirmed. |
 
 ## Consumer Evidence
 
@@ -98,6 +98,35 @@ repository, Trusted Publisher configuration, public-source release provenance,
 provider-side security ingestion, PyPI publication, second-consumer reuse,
 native consumer test execution by Proofkit, rollout readiness, production
 readiness, or retirement of consumer-owned product semantics.
+
+`CONSUMER-02` was admitted on 2026-07-03 from a private topology-distinct
+consumer module using explicit caller-owned warn-mode adoption facts. The
+Proofkit guidance report emitted `reportKind:
+proofkit.gradual-adoption-guidance`, `state: passed`, `guidanceMode: warn`,
+`candidateBoundaryCount: 1`, `proofBindingMissingCount: 2`, and warning rules
+for `proofkit.gradual-adoption-guidance.missing-proof-bindings` and
+`proofkit.gradual-adoption-guidance.candidate-boundaries`. The companion agent
+envelope emitted `route`, `bind`, `modernize-boundary`, `verify`, and
+`promote` actions, with candidate-boundary context refs and explicit
+instructions to keep native witness execution outside Proofkit.
+
+Gap classification:
+
+- Generic Proofkit work: no confirmed blocker. The current CLI accepted
+  explicit caller facts, preserved advisory candidate-boundary semantics, kept
+  missing binding records as warnings in warn mode, and emitted bounded agent
+  guidance without scanning repository state.
+- Consumer-local adapter work: the consumer still needs owner-reviewed
+  `requirements.v1.json` records, requirement-to-proof bindings, native witness
+  command records, and a repository-local environment that can run its existing
+  coverage-map and backend test commands. Native witness attempts were blocked
+  by consumer-local dependency/bootstrap preconditions, not by Proofkit command
+  semantics.
+
+This evidence does not claim second-consumer enforcement, native witness
+success, consumer rollout, production readiness, public package publication
+from this source repository, provider-side registry evidence, or retirement of
+consumer-owned coverage-map and test authority.
 
 ## Import Discipline
 
