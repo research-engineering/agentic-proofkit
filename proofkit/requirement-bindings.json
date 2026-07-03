@@ -193,6 +193,16 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-014",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim Markdown semantic extraction, generated artifact freshness, document deletion approval, merge approval, release approval, rollout approval, or production readiness."
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-RECEIPT-001",
       "ownerId": "proofkit.receipt-authority",
       "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
@@ -1069,6 +1079,19 @@
       "witnessId": "proofkit.selective-evidence-edge-vocabulary.command-admission",
       "witnessKind": "contract",
       "witnessPath": "internal/command/selectivegateevidence/selectivegateevidence_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-014",
+      "scenarioId": "proofkit.spec-proof-core.document-lifecycle-authority-classification",
+      "witnessId": "proofkit.document-lifecycle-boundary.authority-classification",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/documentlifecycle/documentlifecycle_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],

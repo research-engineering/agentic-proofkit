@@ -355,10 +355,38 @@
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-014",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Document lifecycle boundary reports validate caller-owned lifecycle metadata so active PR-local temporary documents, retained temporary documents, archived documents, generated lookup documents, rendered views, primary routers, work ledgers, and current durable documents keep the admitted authority role, routing role, source refs, freshness refs, forbidden payload boundaries, and non-claims for their lifecycle state without reading Markdown, approving deletion, proving generated freshness, or deciding document meaning.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-014"
+      ],
+      "nonClaims": [
+        "This requirement does not claim Markdown semantic extraction, generated artifact freshness, document deletion approval, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
     }
   ],
   "nonClaims": [
     "Consumers still own requirement meaning, command policy, native witness execution, receipts, CI admission, and rollout decisions.",
-    "Proofkit spec-proof core requirements describe reusable infrastructure primitives only."
+    "Proofkit spec-proof core requirements describe reusable infrastructure primitives only.",
+    "Proofkit spec-proof core requirements do not approve document deletion or infer document meaning from Markdown prose."
   ]
 }

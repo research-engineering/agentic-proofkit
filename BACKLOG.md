@@ -62,8 +62,8 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | DONE | IMPORT-01 | Public project contract | Initial public README, license, contribution, security, and source-hygiene boundaries were admitted. |
 | DONE | IMPORT-02 | Deterministic kernel primitives | Core Go admission, stable JSON, digest, report, path, release-platform, and package helper primitives were imported with tests. |
 | DONE | IMPORT-03 | CLI command and release proof surface | CLI registry, command families, package/release tools, npm/PyPI wrapper surfaces, specs, proofkit JSON, and workflows were imported with local `npm run check`. Provider CI, protected-branch, registry, and release evidence remain separate open proof classes. |
-| NEXT | IMPORT-04 | Adoption and backlog owner surfaces | Add public-ready adoption and backlog routing without stale private release facts or consumer-specific claims. |
-| OPEN | IMPORT-05 | Design documents | Import or rewrite design documents in owner-scoped groups only after each claim is checked against current code and package shipping rules. |
+| DONE | IMPORT-04 | Adoption and backlog owner surfaces | Public-ready adoption and backlog routing were added without stale private release facts or consumer-specific claims. |
+| NEXT | IMPORT-05 | Design documents | Import or rewrite design documents in owner-scoped groups only after each claim is checked against current code and package shipping rules. |
 | OPEN | IMPORT-06 | Remaining source-local code delta audit | Treat remaining source-local code diff as candidate evidence only. Import no code unless the target branch lacks the invariant and the delta does not remove current hardening. |
 | OPEN | RELEASE-01 | Public source release | Publish a new version from this public repository and record npm, optional PyPI, GitHub Release, SBOM, and rollback evidence. |
 | OPEN | SECURITY-01 | Provider security settings | Verify CodeQL, dependency review or equivalent advisory scanning, secret scanning, push protection, branch protection, and issue/PR policy in provider settings. |
@@ -103,6 +103,17 @@ Before importing each design document group, answer:
 5. Can the same useful content be expressed in `ADOPTION.md`,
    `docs/proofkit-contract-map.md`, a spec requirement, or the backlog with
    less token load?
+
+Current import rule:
+
+- `docs/document-lifecycle-boundary-design.md` is admitted as the first
+  source-repository design surface because it defines the lifecycle boundary
+  needed to review every later design document.
+- Implementation plans remain excluded from package-public docs and should be
+  deleted, rewritten into durable design notes, or left unimported after their
+  useful invariants have moved into code, tests, specs, or this backlog.
+- Source-repository design docs are not package authority unless package files,
+  package verification, and release evidence explicitly admit them.
 
 ## Non-Goals
 
