@@ -78,10 +78,12 @@ vulnerability absence, or consumer rollout safety by itself.
   npm and PyPI channels and release closeout rejects publication claims without
   that tuple.
 - `REQ-PROOFKIT-QUALITY-019`: installed package smoke proof verifies one
-  successful JSON report command and one failed-report command from the
+  successful JSON report command, one failed-report command, and the current
+  `json-report-cli-adapter-source` generated source artifact from the
   package-managed binary, including report identity, state, exit code, stdout,
-  stderr discipline, and exact explicit-input counts despite an unlisted
-  poison file in the consumer working directory.
+  stderr discipline, generated-source hash, owner-source parity, and exact
+  explicit-input counts despite an unlisted poison file in the consumer working
+  directory.
 
 ## Non-Claims
 

@@ -19,7 +19,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
@@ -99,6 +101,23 @@ type textPolicySmokeSummary struct {
 	CheckedTextFileCount int `json:"checkedTextFileCount"`
 	FailureCount         int `json:"failureCount"`
 	InputFileCount       int `json:"inputFileCount"`
+}
+
+type jsonAdapterSourceSmokeReport struct {
+	SchemaVersion  int                           `json:"schemaVersion"`
+	ArtifactKind   string                        `json:"artifactKind"`
+	Format         string                        `json:"format"`
+	GeneratorID    string                        `json:"generatorId"`
+	Language       string                        `json:"language"`
+	Source         string                        `json:"source"`
+	SourceFileName string                        `json:"sourceFileName"`
+	SourceSha256   string                        `json:"sourceSha256"`
+	Summary        jsonAdapterSourceSmokeSummary `json:"summary"`
+}
+
+type jsonAdapterSourceSmokeSummary struct {
+	ExportedSymbolCount int `json:"exportedSymbolCount"`
+	LineCount           int `json:"lineCount"`
 }
 
 func main() {
@@ -755,6 +774,89 @@ func verifyInstalledJSONABI(consumer string, binPath string) error {
 		InputFileCount:       1,
 	}); err != nil {
 		return fmt.Errorf("outside consumer JSON failure smoke failed: %w", err)
+	}
+	if err := verifyJSONAdapterSourceSmoke(consumer, binPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func verifyJSONAdapterSourceSmoke(consumer string, binPath string) error {
+	command := exec.Command(binPath, "json-report-cli-adapter-source", "--language", "typescript")
+	command.Dir = consumer
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+	if err := command.Run(); err != nil {
+		return fmt.Errorf("outside consumer JSON adapter source smoke failed to run: %w; stderr=%s", err, stderr.String())
+	}
+	return verifyJSONAdapterSourceSmokeReport(installedCommandResult{
+		ExitCode: 0,
+		Stdout:   stdout.Bytes(),
+		Stderr:   stderr.Bytes(),
+	}, jsonreportcliadaptersource.TypeScriptSource())
+}
+
+func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedSource string) error {
+	if result.ExitCode != 0 {
+		return fmt.Errorf("exit code %d, want 0; stdout=%s stderr=%s", result.ExitCode, result.Stdout, result.Stderr)
+	}
+	if len(result.Stderr) != 0 {
+		return fmt.Errorf("stderr must be empty for json adapter source smoke, got %q", string(result.Stderr))
+	}
+	report, err := admission.DecodeTypedJSON[jsonAdapterSourceSmokeReport](bytes.NewReader(result.Stdout), 8<<20)
+	if err != nil {
+		return fmt.Errorf("json adapter source smoke stdout must be one JSON report: %w; stdout=%s", err, result.Stdout)
+	}
+	if report.SchemaVersion != 1 {
+		return fmt.Errorf("schemaVersion=%d, want 1", report.SchemaVersion)
+	}
+	if report.ArtifactKind != "proofkit.json-report-cli-adapter-source" {
+		return fmt.Errorf("artifactKind=%s, want proofkit.json-report-cli-adapter-source", report.ArtifactKind)
+	}
+	if report.Language != "typescript" {
+		return fmt.Errorf("language=%s, want typescript", report.Language)
+	}
+	if report.Format != "json" {
+		return fmt.Errorf("format=%s, want json", report.Format)
+	}
+	if report.SourceFileName != "proofkit-json-report-cli-adapter.ts" {
+		return fmt.Errorf("sourceFileName=%s, want proofkit-json-report-cli-adapter.ts", report.SourceFileName)
+	}
+	if report.GeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v1" {
+		return fmt.Errorf("generatorId=%s, want proofkit.json-report-cli-adapter-source.typescript.v1", report.GeneratorID)
+	}
+	if report.Source != expectedSource {
+		return fmt.Errorf("json adapter source does not match current owner source")
+	}
+	if report.SourceSha256 != digest.SHA256TextRef(report.Source) {
+		return fmt.Errorf("json adapter source hash mismatch")
+	}
+	if report.Summary.ExportedSymbolCount < 20 {
+		return fmt.Errorf("summary.exportedSymbolCount=%d, want at least 20", report.Summary.ExportedSymbolCount)
+	}
+	if report.Summary.LineCount < 500 {
+		return fmt.Errorf("summary.lineCount=%d, want at least 500", report.Summary.LineCount)
+	}
+	for _, token := range []string{
+		"function readProofkitBoundedTextFile",
+		"export function runProofkitNoInputJsonCommand",
+		"options.inputMode === \"none\"",
+		"stable JSON value must not contain unsafe integer numbers",
+		"openSync(filePath, \"r\")",
+	} {
+		if !strings.Contains(report.Source, token) {
+			return fmt.Errorf("json adapter source missing required token %q", token)
+		}
+	}
+	for _, token := range []string{
+		"readFileSync(filePath, \"utf8\")",
+		"JSON.parse(text)",
+	} {
+		if strings.Contains(report.Source, token) {
+			return fmt.Errorf("json adapter source contains forbidden stale token %q", token)
+		}
 	}
 	return nil
 }

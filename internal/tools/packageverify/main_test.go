@@ -7,11 +7,13 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
@@ -483,8 +485,117 @@ func TestVerifyTextPolicySmokeReportRequiresJSONABI(t *testing.T) {
 	}
 }
 
+func TestVerifyJSONAdapterSourceSmokeReportRequiresHardenedGenerator(t *testing.T) {
+	source := hardenedAdapterSmokeSource()
+	valid := installedCommandResult{
+		ExitCode: 0,
+		Stdout:   jsonAdapterSmokeStdout(source, digest.SHA256TextRef(source), "proofkit.json-report-cli-adapter-source"),
+	}
+	if err := verifyJSONAdapterSourceSmokeReport(valid, source); err != nil {
+		t.Fatalf("verifyJSONAdapterSourceSmokeReport(valid) error = %v", err)
+	}
+	missingBoundedReader := strings.ReplaceAll(source, "function readProofkitBoundedTextFile", "function readProofkitTextFile")
+	staleUnboundedRead := source + "\nreadFileSync(filePath, \"utf8\");\n"
+	cases := []struct {
+		name           string
+		result         installedCommandResult
+		expectedSource string
+		want           string
+	}{
+		{
+			name: "stderr",
+			result: installedCommandResult{
+				ExitCode: 0,
+				Stdout:   valid.Stdout,
+				Stderr:   []byte("diagnostic"),
+			},
+			expectedSource: source,
+			want:           "stderr must be empty",
+		},
+		{
+			name: "wrong report kind",
+			result: installedCommandResult{
+				ExitCode: 0,
+				Stdout:   jsonAdapterSmokeStdout(source, digest.SHA256TextRef(source), "proofkit.other"),
+			},
+			expectedSource: source,
+			want:           "artifactKind=proofkit.other",
+		},
+		{
+			name: "stale hash",
+			result: installedCommandResult{
+				ExitCode: 0,
+				Stdout:   jsonAdapterSmokeStdout(source, "sha256:stale", "proofkit.json-report-cli-adapter-source"),
+			},
+			expectedSource: source,
+			want:           "hash mismatch",
+		},
+		{
+			name: "self consistent stale source",
+			result: installedCommandResult{
+				ExitCode: 0,
+				Stdout:   jsonAdapterSmokeStdout(missingBoundedReader, digest.SHA256TextRef(missingBoundedReader), "proofkit.json-report-cli-adapter-source"),
+			},
+			expectedSource: source,
+			want:           "does not match current owner source",
+		},
+		{
+			name: "missing bounded file reader",
+			result: installedCommandResult{
+				ExitCode: 0,
+				Stdout:   jsonAdapterSmokeStdout(missingBoundedReader, digest.SHA256TextRef(missingBoundedReader), "proofkit.json-report-cli-adapter-source"),
+			},
+			expectedSource: missingBoundedReader,
+			want:           "readProofkitBoundedTextFile",
+		},
+		{
+			name: "stale unbounded read token",
+			result: installedCommandResult{
+				ExitCode: 0,
+				Stdout:   jsonAdapterSmokeStdout(staleUnboundedRead, digest.SHA256TextRef(staleUnboundedRead), "proofkit.json-report-cli-adapter-source"),
+			},
+			expectedSource: staleUnboundedRead,
+			want:           "forbidden stale token",
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			err := verifyJSONAdapterSourceSmokeReport(item.result, item.expectedSource)
+			if err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("verifyJSONAdapterSourceSmokeReport() error=%v, want %q", err, item.want)
+			}
+		})
+	}
+}
+
 func samplePlatformBinaryEntry() string {
 	return releaseplatform.PackageTarEntries()[len(releaseplatform.PackageTarEntries())-1]
+}
+
+func hardenedAdapterSmokeSource() string {
+	return `function readProofkitBoundedTextFile(filePath: string): string {
+  const file = openSync(filePath, "r");
+  return String(file);
+}
+
+export function runProofkitNoInputJsonCommand(): void {
+  if (options.inputMode === "none") {
+    throw new Error("stable JSON value must not contain unsafe integer numbers");
+  }
+}
+`
+}
+
+func jsonAdapterSmokeStdout(source string, sourceHash string, artifactKind string) []byte {
+	return []byte(`{"schemaVersion":1,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v1","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
+}
+
+func quotedJSON(value string) string {
+	content, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return string(content)
 }
 
 func packageDocEntries(content string) map[string]string {

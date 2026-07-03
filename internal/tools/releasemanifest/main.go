@@ -166,6 +166,7 @@ type assetEvidence struct {
 type registryInstallEvidence struct {
 	Kind                       string `json:"kind"`
 	AuditSignaturesSha256      string `json:"auditSignaturesSha256,omitempty"`
+	AdapterSourceReportSha256  string `json:"adapterSourceReportSha256,omitempty"`
 	FailedReportSha256         string `json:"failedReportSha256,omitempty"`
 	HelpOutputSha256           string `json:"helpOutputSha256,omitempty"`
 	PackageLockSha256          string `json:"packageLockSha256,omitempty"`
@@ -905,7 +906,7 @@ func pythonPackageEvidenceSet(records []pythonWheelRecord) []packageEvidence {
 }
 
 func optionalRegistryInstallEvidence(dir string) (*registryInstallEvidence, error) {
-	var packageLock, helpOutput, auditSignatures, artifactSet, successReport, failedReport string
+	var packageLock, helpOutput, auditSignatures, artifactSet, adapterSourceReport, successReport, failedReport string
 	paths := []struct {
 		path   string
 		target *string
@@ -913,6 +914,7 @@ func optionalRegistryInstallEvidence(dir string) (*registryInstallEvidence, erro
 		{path: filepath.Join(dir, "audit-signatures.txt"), target: &auditSignatures},
 		{path: filepath.Join(dir, "published-registry-artifact-set.json"), target: &artifactSet},
 		{path: filepath.Join(dir, "root-install-help.txt"), target: &helpOutput},
+		{path: filepath.Join(dir, "root-install-json-adapter-source.json"), target: &adapterSourceReport},
 		{path: filepath.Join(dir, "root-install-json-failed.json"), target: &failedReport},
 		{path: filepath.Join(dir, "root-install-json-success.json"), target: &successReport},
 		{path: filepath.Join(dir, "root-install-package-lock.json"), target: &packageLock},
@@ -944,6 +946,7 @@ func optionalRegistryInstallEvidence(dir string) (*registryInstallEvidence, erro
 	return &registryInstallEvidence{
 		Kind:                       "root-only-npm-install",
 		AuditSignaturesSha256:      auditSignatures,
+		AdapterSourceReportSha256:  adapterSourceReport,
 		FailedReportSha256:         failedReport,
 		HelpOutputSha256:           helpOutput,
 		PackageLockSha256:          packageLock,
