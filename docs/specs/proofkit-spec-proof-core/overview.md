@@ -74,6 +74,10 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-013`: repeated cross-command proof vocabulary has one
   private owner for proof and selective-edge state while command-local and
   caller-owned vocabularies stay outside the shared owner.
+- `REQ-PROOFKIT-SPEC-014`: document lifecycle boundary reports classify
+  caller-owned document lifecycle metadata so temporary, historical, generated,
+  rendered, router, work-ledger, and durable documents cannot silently retain
+  the wrong authority role.
 
 ## Non-Claims
 
@@ -82,3 +86,5 @@ execution receipts, and merge policy.
 - This spec does not authenticate receipt producers or compute proof freshness.
 - This spec does not approve merge, release, registry publication, rollout, or
   production readiness.
+- This spec does not approve document deletion or infer document meaning from
+  Markdown prose.
