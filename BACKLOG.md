@@ -67,8 +67,37 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | DONE | IMPORT-06 | Remaining source-local code delta audit | Non-document source comparison found no old source file missing from the public source tree. Old source bytes remain candidate evidence only and are not imported over current hardening. |
 | BLOCKED | RELEASE-01 | Public source release | Public-source release candidate evidence passed from this repository. Final npm Trusted Publisher switch, version tag, publish, post-publish registry identity, optional PyPI evidence, GitHub Release assets, and rollback evidence are blocked on npm account recovery or maintainer authentication for `agentic-proofkit`. |
 | DONE | SECURITY-01 | Provider security settings | Repository is public with collaborator-only PR creation, public issues, squash-only merges, branch protection on `main`, strict required CI, CodeQL, OSV source advisory scanning, Scorecard, Dependabot security updates, secret scanning, and push protection. Non-provider secret patterns and validity checks remain unavailable or disabled under the current provider plan and are not claimed. |
-| OPEN | CONSUMER-01 | Public-package consumer proof | Run at least one consumer through exact package adoption, installed CLI smoke, rollback proof, and native-witness delegation. |
+| DONE | CONSUMER-01 | Public-package consumer proof | A private first consumer repository consumed exact public npm `agentic-proofkit@0.1.134` through its repository-owned external-consumer gate. The proof installed the package into an isolated temporary consumer, matched the admitted tarball integrity and shasum, proved lockfile resolution was not workspace based, ran installed CLI `self-check`, `witness-plan`, and `release-authority`, proved rollback by removing the dependency from the temporary lockfile, and preserved consumer-owned native witness authority. |
 | OPEN | CONSUMER-02 | Second-consumer pilot | Run a small observe or warn pilot in a topology-distinct repository and classify every gap as generic Proofkit work or consumer-local adapter work. |
+
+## Consumer Evidence
+
+`CONSUMER-01` was admitted on 2026-07-03 from a private first consumer
+repository checkout at `4cecdf8` using these consumer-owned gates:
+
+```bash
+bun run verify:proofkit-external-consumer
+bun scripts/report-proofkit-external-consumer.selftest.ts
+bun scripts/lib/proofkit-runtime.selftest.ts
+bun scripts/verify-workspace-script-registry.selftest.ts
+bun run verify:proofkit-pilot
+bun run verify:proofkit-requirement-source
+bun run verify:proofkit-requirement-coverage
+```
+
+The machine report for `bun scripts/report-proofkit-external-consumer.ts
+--format json` emitted `reportKind: proofkit.registry-consumer`, `state:
+passed`, `packageName: agentic-proofkit`, `packageVersion: 0.1.134`,
+`registryUrl: https://registry.npmjs.org`, `tarballShasum:
+6029a30b232c87f9aff659b4d8d5dbb4536a0d25`, `frozenLockUsesWorkspace:
+false`, `releaseAuthorityReportKind: proofkit.release-authority`,
+`releaseAuthorityState: passed`, and `rollbackLockContainsPackage: false`.
+
+This evidence does not claim npm publication from this public source
+repository, Trusted Publisher configuration, public-source release provenance,
+provider-side security ingestion, PyPI publication, second-consumer reuse,
+native consumer test execution by Proofkit, rollout readiness, production
+readiness, or retirement of consumer-owned product semantics.
 
 ## Import Discipline
 
