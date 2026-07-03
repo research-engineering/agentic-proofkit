@@ -949,7 +949,9 @@
     {
       "commandId": "proofkit.package-artifact",
       "inputSelectors": [
+        "ADOPTION.md",
         "AGENTS.md",
+        "BACKLOG.md",
         "CONTRIBUTING.md",
         "LICENSE",
         "NON_CLAIMS.md",
@@ -1004,7 +1006,9 @@
       "commandId": "proofkit.package-gate",
       "inputSelectors": [
         ".github/workflows",
+        "ADOPTION.md",
         "AGENTS.md",
+        "BACKLOG.md",
         "CONTRIBUTING.md",
         "LICENSE",
         "NON_CLAIMS.md",

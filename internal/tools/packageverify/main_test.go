@@ -155,7 +155,9 @@ func TestVerifyRootManifestBoundaryRejectsWrongRepository(t *testing.T) {
 
 func TestSnapshotReadersDoNotRereadMutableTarballPath(t *testing.T) {
 	tarball := writePackageTarball(t, map[string]string{
+		"package/ADOPTION.md":                             "package docs describe embedded Go binaries.",
 		"package/AGENTS.md":                               "package docs describe embedded Go binaries.",
+		"package/BACKLOG.md":                              "package docs describe embedded Go binaries.",
 		"package/docs/proofkit-contract-map.md":           "package docs describe embedded Go binaries.",
 		"package/package.json":                            packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"),
 		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}]}`,
@@ -192,6 +194,24 @@ func TestVerifyNoStalePackageDocsReadsTarballDocs(t *testing.T) {
 			path:      "package/README.md",
 			wantPath:  "package/README.md",
 			staleText: "runtime JavaScript",
+		},
+		{
+			name:      "adoption doc private namespace",
+			path:      "package/ADOPTION.md",
+			wantPath:  "package/ADOPTION.md",
+			staleText: "repository " + "W25" + "X80" + "/agentic-proofkit",
+		},
+		{
+			name:      "backlog doc personal namespace",
+			path:      "package/BACKLOG.md",
+			wantPath:  "package/BACKLOG.md",
+			staleText: "published by " + "ipe" + "rev",
+		},
+		{
+			name:      "adoption doc consumer scoped package",
+			path:      "package/ADOPTION.md",
+			wantPath:  "package/ADOPTION.md",
+			staleText: "old package " + "@" + "a" + "fc" + "/proofkit",
 		},
 		{
 			name:      "shipped contract map doc outside legacy short list",
@@ -325,6 +345,8 @@ func TestAllowedRootEntryRejectsDevelopmentPlans(t *testing.T) {
 		})
 	}
 	for _, path := range []string{
+		"package/ADOPTION.md",
+		"package/BACKLOG.md",
 		"package/docs/proofkit-contract-map.md",
 		"package/docs/release-process.md",
 	} {
@@ -363,6 +385,8 @@ func TestVerifyRequiredRootEntriesRequiresPackagePublicDocs(t *testing.T) {
 		entrySet[entry] = struct{}{}
 	}
 	for _, entry := range []string{
+		"package/ADOPTION.md",
+		"package/BACKLOG.md",
 		"package/docs/proofkit-contract-map.md",
 		"package/docs/release-process.md",
 	} {
@@ -465,7 +489,9 @@ func samplePlatformBinaryEntry() string {
 
 func packageDocEntries(content string) map[string]string {
 	return map[string]string{
+		"package/ADOPTION.md":                                      content,
 		"package/AGENTS.md":                                        content,
+		"package/BACKLOG.md":                                       content,
 		"package/CONTRIBUTING.md":                                  content,
 		"package/NON_CLAIMS.md":                                    content,
 		"package/README.md":                                        content,
@@ -587,7 +613,9 @@ func packageManifestFixture(repositoryURL string) string {
     "x64"
   ],
   "files": [
+    "ADOPTION.md",
     "AGENTS.md",
+    "BACKLOG.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "NON_CLAIMS.md",

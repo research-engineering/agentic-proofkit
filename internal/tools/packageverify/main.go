@@ -208,7 +208,9 @@ func verifyPackRecordContent(record packRecord, content []byte) error {
 
 func requiredRootEntries() []string {
 	required := []string{
+		"package/ADOPTION.md",
 		"package/AGENTS.md",
+		"package/BACKLOG.md",
 		"package/CONTRIBUTING.md",
 		"package/LICENSE",
 		"package/NON_CLAIMS.md",
@@ -384,7 +386,9 @@ func forbiddenRootEntry(path string) bool {
 
 func allowedRootEntry(path string) bool {
 	allowedExact := map[string]struct{}{
+		"package/ADOPTION.md":                                               {},
 		"package/AGENTS.md":                                                 {},
+		"package/BACKLOG.md":                                                {},
 		"package/CONTRIBUTING.md":                                           {},
 		"package/LICENSE":                                                   {},
 		"package/NON_CLAIMS.md":                                             {},
@@ -470,7 +474,9 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 		return fmt.Errorf("root package cpu must be %v, got %v", releaseplatform.NPMCPUValues(), manifest.CPU)
 	}
 	expectedFiles := []string{
+		"ADOPTION.md",
 		"AGENTS.md",
+		"BACKLOG.md",
 		"CONTRIBUTING.md",
 		"LICENSE",
 		"NON_CLAIMS.md",
@@ -504,17 +510,25 @@ func sameStrings(actual []string, expected []string) bool {
 }
 
 func verifyNoStalePackageDocs(artifact rootPackageArtifact) error {
+	previousPrivateNamespace := "W25" + "X80"
+	previousPersonalNamespace := "ipe" + "rev"
+	previousPersonalNamespaceLong := "ipe" + "reverziev"
+	legacyConsumerPackageScope := "@" + "a" + "fc"
 	staleTerms := map[string]string{
-		"runtime JavaScript": "package docs must describe Go binaries, not runtime JavaScript",
-		"declaration files":  "package docs must not claim declaration files",
-		"exported APIs":      "package docs must not route consumers to a package-root SDK",
-		"supported root API": "package docs must not claim a supported root API",
-		"public/root API":    "package docs must not claim a public root API",
-		"optional package":   "package docs must describe embedded platform binaries, not optional platform packages",
-		"optional packages":  "package docs must describe embedded platform binaries, not optional platform packages",
-		"platform optional":  "package docs must describe embedded platform binaries, not optional platform packages",
-		"platform package":   "package docs must describe embedded platform binaries, not optional platform packages",
-		"platform packages":  "package docs must describe embedded platform binaries, not optional platform packages",
+		"runtime JavaScript":          "package docs must describe Go binaries, not runtime JavaScript",
+		"declaration files":           "package docs must not claim declaration files",
+		"exported APIs":               "package docs must not route consumers to a package-root SDK",
+		"supported root API":          "package docs must not claim a supported root API",
+		"public/root API":             "package docs must not claim a public root API",
+		"optional package":            "package docs must describe embedded platform binaries, not optional platform packages",
+		"optional packages":           "package docs must describe embedded platform binaries, not optional platform packages",
+		"platform optional":           "package docs must describe embedded platform binaries, not optional platform packages",
+		"platform package":            "package docs must describe embedded platform binaries, not optional platform packages",
+		"platform packages":           "package docs must describe embedded platform binaries, not optional platform packages",
+		previousPrivateNamespace:      "package docs must not route public consumers to a previous private namespace",
+		previousPersonalNamespace:     "package docs must not route public consumers to a personal account namespace",
+		previousPersonalNamespaceLong: "package docs must not route public consumers to a personal account namespace",
+		legacyConsumerPackageScope:    "package docs must not retain consumer-specific package names",
 	}
 	textEntries, err := readTarTextEntriesFromBytes(artifact.Content)
 	if err != nil {
@@ -606,7 +620,9 @@ func readTarTextEntriesFromGzip(gzipReader io.Reader) (map[string]string, error)
 
 func packageTextEntry(path string) bool {
 	switch path {
-	case "package/AGENTS.md",
+	case "package/ADOPTION.md",
+		"package/AGENTS.md",
+		"package/BACKLOG.md",
 		"package/CONTRIBUTING.md",
 		"package/NON_CLAIMS.md",
 		"package/README.md",
