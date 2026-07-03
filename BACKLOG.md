@@ -63,8 +63,8 @@ only when these criteria are satisfied or explicitly retired by owner decision:
 | DONE | IMPORT-02 | Deterministic kernel primitives | Core Go admission, stable JSON, digest, report, path, release-platform, and package helper primitives were imported with tests. |
 | DONE | IMPORT-03 | CLI command and release proof surface | CLI registry, command families, package/release tools, npm/PyPI wrapper surfaces, specs, proofkit JSON, and workflows were imported with local `npm run check`. Provider CI, protected-branch, registry, and release evidence remain separate open proof classes. |
 | DONE | IMPORT-04 | Adoption and backlog owner surfaces | Public-ready adoption and backlog routing were added without stale private release facts or consumer-specific claims. |
-| DONE | IMPORT-05 | Design documents | Current durable design surfaces were imported, and the remaining pre-cutover design and implementation-plan files were adjudicated in `docs/design-import-adjudication.md`. |
-| DONE | IMPORT-06 | Remaining source-local code delta audit | Non-document source deltas were adjudicated in `docs/source-delta-adjudication.md`; no old source file is missing from the public source tree, and no old bytes are imported over current hardening. |
+| DONE | IMPORT-05 | Historical design and plan cleanup | Durable claims from pre-cutover design and implementation-plan work are represented by deterministic specs, proof bindings, tests, package-public docs, or open backlog rows. No source-repository design documents or implementation plans are retained as current authority. |
+| DONE | IMPORT-06 | Remaining source-local code delta audit | Non-document source comparison found no old source file missing from the public source tree. Old source bytes remain candidate evidence only and are not imported over current hardening. |
 | NEXT | RELEASE-01 | Public source release | Publish a new version from this public repository and record npm, optional PyPI, GitHub Release, SBOM, and rollback evidence. |
 | OPEN | SECURITY-01 | Provider security settings | Verify CodeQL, dependency review or equivalent advisory scanning, secret scanning, push protection, branch protection, and issue/PR policy in provider settings. |
 | OPEN | CONSUMER-01 | Public-package consumer proof | Run at least one consumer through exact package adoption, installed CLI smoke, rollback proof, and native-witness delegation. |
@@ -89,43 +89,31 @@ hardening, weaken package verification, remove non-disclosure tests, reduce
 semantic-route proof, or replace current public-source wording with private
 repository facts.
 
-## Open Design-Import Questions
+## Historical Import Discipline
 
-Before importing each design document group, answer:
+Pre-cutover design documents and implementation plans are not retained in this
+repository as current authority. Stable claims must move into deterministic
+surfaces:
 
-1. Does the document own current architecture, future work, or historical
-   context?
-2. Is every `must`, `shall`, `guarantee`, readiness, release, or security claim
-   still true on current `main`?
-3. Does the document name a stable owner surface and proof path?
-4. Would the document become package authority if shipped? If yes, is it
-   public-ready and covered by package verification?
-5. Can the same useful content be expressed in `ADOPTION.md`,
-   `docs/proofkit-contract-map.md`, a spec requirement, or the backlog with
-   less token load?
+- `docs/specs/**/requirements.v1.json` for durable requirements;
+- `proofkit/requirement-bindings.json` and `proofkit/witness-plan.json` for
+  proof routes;
+- source code and tests for executable behavior;
+- package-public docs only when consumers need stable operational guidance;
+- this backlog only for open, falsifiable work.
 
-Current import rule:
+Temporary design, implementation-plan, PR, code, or test observations may be
+caller-owned inputs to authoring commands, but they must not become tracked
+repository authority unless rewritten into one of the deterministic surfaces
+above.
 
-- `docs/document-lifecycle-boundary-design.md` is admitted as the first
-  source-repository design surface because it defines the lifecycle boundary
-  needed to review every later design document.
-- `docs/requirement-source-admission-design.md` and
-  `docs/spec-overview-claim-boundary-design.md` are admitted source-repository
-  design surfaces for the requirement source authority boundary.
-- `docs/requirement-source-transition-design.md` is admitted as the source-
-  repository design surface for requirement lifecycle transition admission.
-- `docs/design-import-adjudication.md` is admitted as a source-repository
-  import ledger. It is not package authority; it records why remaining
-  pre-cutover design and implementation-plan files are not imported wholesale.
-- `docs/source-delta-adjudication.md` is admitted as a source-repository import
-  ledger for non-document source deltas. It is not package authority; it records
-  why old source bytes are candidate evidence only and why no source overwrite
-  is part of the public cutover.
-- Implementation plans remain excluded from package-public docs and current
-  authority after their useful invariants have moved into code, tests, specs,
-  package-public docs, or this backlog.
-- Source-repository design docs are not package authority unless package files,
-  package verification, and release evidence explicitly admit them.
+Architecture documents, ADRs, or roadmap documents are not banned by type. They
+are admitted only when they are the lowest-cost current authority for a real
+architecture decision, migration sequence, release obligation, or adoption
+contract. An admitted architecture document must state its owner, scope, proof
+path, non-claims, and retirement or supersession condition; otherwise the claim
+belongs in `requirements.v1.json`, machine contracts, executable tests,
+package-public operational docs, or this backlog.
 
 ## Non-Goals
 

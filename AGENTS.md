@@ -76,6 +76,11 @@ own release, provider, or deployment evidence.
 - New commands, files, specs, or docs are admitted only when they own a named
   invariant, reusable algorithm, public contract, anti-corruption boundary, or
   documented adoption or release obligation.
+- Architecture documents, ADRs, and roadmaps are admissible only when a
+  deterministic requirement, machine contract, test, shipped operational guide,
+  or backlog row cannot express the same current authority with lower token
+  cost. They must name owner, scope, proof path, non-claims, and retirement or
+  supersession condition.
 
 ## Security And Trust Boundaries
 
