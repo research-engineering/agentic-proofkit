@@ -39,7 +39,7 @@ jobs:
       - name: Install pinned npm
         run: |
           set -euo pipefail
-          npm install -g npm@11.17.0
+          npm install -g npm@11.18.0
 
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -145,7 +145,7 @@ jobs:
       - name: Install pinned npm
         run: |
           set -euo pipefail
-          npm install -g npm@11.17.0
+          npm install -g npm@11.18.0
 
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0

@@ -62,7 +62,7 @@ jobs:
       - name: Install pinned npm
         run: |
           set -euo pipefail
-          npm install -g npm@11.17.0
+          npm install -g npm@11.18.0
 
       - name: Verify source package identity
         env:
@@ -258,7 +258,7 @@ jobs:
       - name: Use pinned npm
         run: |
           set -euo pipefail
-          npm install -g npm@11.17.0
+          npm install -g npm@11.18.0
           npm run npm:version
 
       - name: Download release candidate evidence
@@ -604,7 +604,7 @@ jobs:
       - name: Install pinned npm
         run: |
           set -euo pipefail
-          npm install -g npm@11.17.0
+          npm install -g npm@11.18.0
           npm run npm:version
 
       - name: Download release candidate evidence
@@ -706,17 +706,17 @@ jobs:
           path: artifacts/release
 
       - name: Attest release artifact provenance
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-checksums: artifacts/release/checksums.sha256
 
       - name: Attest release metadata provenance
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
         with:
           subject-checksums: artifacts/release/metadata-checksums.sha256
 
       - name: Attest release SBOM
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
+        uses: actions/attest@a1948c3f048ba23858d222213b7c278aabede763 # v4.1.1
         with:
           subject-checksums: artifacts/release/sbom-subjects.sha256
           sbom-path: artifacts/release/sbom.cdx.json
