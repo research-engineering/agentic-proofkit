@@ -107,6 +107,44 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			},
 		},
 		{
+			name:           "capability map code baseline emits candidate seeds JSON",
+			args:           []string{"capability-map-admission", "--input", "-"},
+			stdin:          cliCapabilityMapInput("code_baseline", true),
+			wantStatus:     0,
+			wantStdoutJSON: true,
+			wantStdoutHas: []string{
+				`"reportKind": "proofkit.capability-map-admission"`,
+				`"trustMode": "code_baseline"`,
+				`"candidateRequirementSeeds"`,
+				`"candidateProofBindingSeeds"`,
+				`"state": "passed"`,
+			},
+		},
+		{
+			name:           "capability map baseline failed report keeps stdout JSON",
+			args:           []string{"capability-map-admission", "--input", "-"},
+			stdin:          cliCapabilityMapInput("code_baseline", false),
+			wantStatus:     1,
+			wantStdoutJSON: true,
+			wantStdoutHas: []string{
+				`"reportKind": "proofkit.capability-map-admission"`,
+				`"state": "failed"`,
+				`active scenario anchor in code_baseline mode`,
+			},
+		},
+		{
+			name:           "capability map audit mode emits owner action JSON",
+			args:           []string{"capability-map-admission", "--input", "-"},
+			stdin:          cliCapabilityMapInput("audit_from_code", false),
+			wantStatus:     0,
+			wantStdoutJSON: true,
+			wantStdoutHas: []string{
+				`"trustMode": "audit_from_code"`,
+				`"add_scenario_anchor"`,
+				`"Treat code observations as untrusted hypotheses."`,
+			},
+		},
+		{
 			name:           "requirement spec tree emits passed report JSON",
 			args:           []string{"requirement-spec-tree", "--input", "-"},
 			stdin:          cliRequirementSpecTreeInput(),
@@ -1212,6 +1250,14 @@ func cliRequirementSpecTreeInput() string {
 
 func cliRequirementAuthoringPlanInput() string {
 	return `{"schemaVersion":1,"authoringPlanId":"proofkit.cli.requirement-authoring-plan","mode":"pull_request_design","currentRequirementSource":{"schemaVersion":1,"sourceId":"proofkit.cli.authoring.requirements","specPackagePath":"docs/specs/proofkit-cli-authoring","overviewPath":"docs/specs/proofkit-cli-authoring/overview.md","requirementsPath":"docs/specs/proofkit-cli-authoring/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-AUTHORING-000","ownerId":"proofkit.cli.authoring","invariant":"CLI authoring fixture source remains admissible.","claimLevel":"blocking","riskClass":"medium","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI authoring fixture does not execute witnesses."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.authoring","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI authoring fixture source does not own native witnesses."]},"authoringRefs":[{"refId":"proofkit.cli.authoring.design","kind":"design_doc","path":"docs/designs/cli-authoring.md","digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","summary":"The CLI fixture design proposes one durable candidate invariant.","nonClaims":["CLI authoring fixture ref is label-only."]}],"candidateUpdates":[{"candidateId":"proofkit.cli.authoring.candidate","operation":"add","requirementId":"REQ-PROOFKIT-CLI-AUTHORING-001","sourceRefIds":["proofkit.cli.authoring.design"],"rationale":"The design introduces a durable candidate invariant.","ownerQuestions":["Should this candidate become stable repository truth?"],"declaredProofObligations":[{"obligationId":"proofkit.cli.authoring.proof-binding","kind":"proof_binding","ownerId":"proofkit.cli.authoring","description":"Bind the candidate requirement to a semantic falsifier.","blocking":true,"evidenceRefs":["proofkit/requirement-bindings.json"]}],"candidateRequirement":{"requirementId":"REQ-PROOFKIT-CLI-AUTHORING-001","ownerId":"proofkit.cli.authoring","invariant":"CLI authoring plans preserve candidate-only source previews.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI authoring candidate does not approve materialization."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.authoring","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}],"nonClaims":["CLI authoring fixture does not approve requirement promotion."]}`
+}
+
+func cliCapabilityMapInput(trustMode string, includeAnchor bool) string {
+	anchors := `[]`
+	if includeAnchor {
+		anchors = `[{"scenarioId":"sample.backend.auth.missing_header_fails_closed","selector":"service/tests/auth_test.py::test_missing_header_fails_closed","sourcePath":"service/tests/auth_test.py","commandRefs":["sample.pytest.auth"],"status":"candidate","positiveWitness":false,"falsificationWitness":true,"nonClaims":["CLI capability anchor fixture does not execute tests."]}]`
+	}
+	return `{"schemaVersion":1,"mapId":"proofkit.cli.capability_map","authority":"caller_owned_observation","trustMode":"` + trustMode + `","repository":{"repositoryId":"sample_repo","primaryLanguages":["python","typescript"],"nonClaims":["CLI capability repository fixture is caller-owned."]},"proofScope":{"scopeId":"sample.backend.auth.scope","dirtyState":"clean","baseRef":"origin/main","headRef":"HEAD","nonClaims":["CLI capability scope fixture does not prove checkout freshness."]},"capabilities":[{"capabilityId":"sample.backend.auth","ownerId":"sample.backend","summary":"Authentication requests resolve authorization headers and fail closed when they are absent.","sourcePaths":["service/src/auth","service/tests/auth_test.py"],"riskClasses":["runtime","security"],"scenarioShapes":[{"scenarioId":"sample.backend.auth.missing_header_fails_closed","candidateRequirementId":"REQ-SAMPLE-AUTH-001","summary":"Requests without authentication headers fail closed before protected backend state is accessed.","requiredEvidence":["negative_test"],"ownerQuestions":["Should anonymous health checks bypass this invariant?"],"nonClaims":["CLI capability scenario fixture does not claim every auth edge case."]}],"nonClaims":["CLI capability fixture does not claim production auth readiness."]}],"scenarioAnchors":` + anchors + `,"requiredVerification":[{"commandId":"sample.pytest.auth","command":"uv run pytest service/tests/auth_test.py","environmentClass":"local_python","reason":"Auth failure mode needs an executable negative witness.","nonClaims":["CLI capability command fixture does not prove test freshness."]}],"nonClaims":["CLI capability map fixture is not merge evidence."]}`
 }
 
 func cliTestEvidenceInventoryMissingAnchor() string {

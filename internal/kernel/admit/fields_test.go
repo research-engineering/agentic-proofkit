@@ -168,3 +168,20 @@ func TestDisplayOnlyCommandTextRejectsShellControlTokens(t *testing.T) {
 		t.Fatalf("DisplayOnlyCommandText(valid) = %q, %v", got, err)
 	}
 }
+
+func TestStructuredSelectorSourcePathRejectsDrift(t *testing.T) {
+	t.Parallel()
+
+	if err := StructuredSelectorSourcePath("service/tests/auth_test.py::missing_header", "service/tests/auth_test.py", "selector"); err != nil {
+		t.Fatalf("expected matching selector source path: %v", err)
+	}
+	if err := StructuredSelectorSourcePath("service/tests/other_test.py::missing_header", "service/tests/auth_test.py", "selector"); err == nil || !strings.Contains(err.Error(), "sourcePath must match selector path") {
+		t.Fatalf("expected selector/sourcePath drift rejection, got %v", err)
+	}
+	if err := StructuredSelectorSourcePath("../auth_test.py::missing_header", "service/tests/auth_test.py", "selector"); err == nil || !strings.Contains(err.Error(), "must not escape the repository root") {
+		t.Fatalf("expected unsafe selector path rejection, got %v", err)
+	}
+	if err := StructuredSelectorSourcePath("service/tests/auth_test.py::bad anchor", "service/tests/auth_test.py", "selector"); err == nil || !strings.Contains(err.Error(), "must be stable rule identifier text") {
+		t.Fatalf("expected invalid selector anchor rejection, got %v", err)
+	}
+}
