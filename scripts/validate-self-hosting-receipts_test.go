@@ -353,6 +353,7 @@ func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T
 	required := []string{
 		"npm view \"${package_name}@${package_version}\"",
 		"go run ./internal/tools/releasepreflight npm-existing",
+		"node - \"$metadata\" \"$filename\" \"$report\" <<'NODE'",
 		"writeFileSync(report",
 		"continue",
 		"npm publish \"artifacts/package/${filename}\"",

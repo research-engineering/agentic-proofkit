@@ -113,7 +113,7 @@ jobs:
               go run ./internal/tools/releasepreflight npm-existing \
                 --expected-json "$metadata" \
                 --actual-file /tmp/proofkit-candidate-view.json
-              node <<'NODE' "$metadata" "$filename" "$report"
+              node - "$metadata" "$filename" "$report" <<'NODE'
           const { execFileSync } = require("node:child_process");
           const { writeFileSync } = require("node:fs");
           const metadata = JSON.parse(process.argv[2]);
