@@ -3,12 +3,14 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"compress/flate"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"os"
 	"path/filepath"
@@ -23,6 +25,8 @@ type wheelEntry struct {
 	Mode    os.FileMode
 	Path    string
 }
+
+const maxZip32Size = uint64(^uint32(0))
 
 func buildPythonPackages() error {
 	return buildPythonPackagesForTargets(releaseTargets())
@@ -218,21 +222,51 @@ func writeWheel(path string, entries []wheelEntry) error {
 	writer := zip.NewWriter(file)
 	defer writer.Close()
 	for _, entry := range entries {
-		header := &zip.FileHeader{
-			Name:     entry.Path,
-			Method:   zip.Deflate,
-			Modified: time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
+		if uint64(len(entry.Content)) > maxZip32Size {
+			return fmt.Errorf("wheel entry %s exceeds ZIP32 size limit", entry.Path)
 		}
-		header.SetMode(entry.Mode)
-		entryWriter, err := writer.CreateHeader(header)
+		compressed, err := deflateContent(entry.Content)
 		if err != nil {
 			return err
 		}
-		if _, err := entryWriter.Write(entry.Content); err != nil {
+		if uint64(len(compressed)) > maxZip32Size {
+			return fmt.Errorf("compressed wheel entry %s exceeds ZIP32 size limit", entry.Path)
+		}
+		header := &zip.FileHeader{
+			Name:               entry.Path,
+			Method:             zip.Deflate,
+			Modified:           time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
+			CRC32:              crc32.ChecksumIEEE(entry.Content),
+			CompressedSize:     uint32(len(compressed)),
+			CompressedSize64:   uint64(len(compressed)),
+			UncompressedSize:   uint32(len(entry.Content)),
+			UncompressedSize64: uint64(len(entry.Content)),
+		}
+		header.SetMode(entry.Mode)
+		entryWriter, err := writer.CreateRaw(header)
+		if err != nil {
+			return err
+		}
+		if _, err := entryWriter.Write(compressed); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func deflateContent(content []byte) ([]byte, error) {
+	var buffer bytes.Buffer
+	writer, err := flate.NewWriter(&buffer, flate.DefaultCompression)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := writer.Write(content); err != nil {
+		return nil, err
+	}
+	if err := writer.Close(); err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
 }
 
 func fileSHA256(path string) (string, error) {

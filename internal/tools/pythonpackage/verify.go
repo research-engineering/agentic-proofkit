@@ -17,6 +17,8 @@ import (
 	"strings"
 )
 
+const zipDataDescriptorFlag = 0x8
+
 func verifyPythonPackages() error {
 	return verifyPythonPackagesForTargets(releaseTargets())
 }
@@ -107,6 +109,9 @@ func verifyWheelContents(path string, version string, target target) error {
 	defer reader.Close()
 	entries := map[string]*zip.File{}
 	for _, file := range reader.File {
+		if file.Flags&zipDataDescriptorFlag != 0 {
+			return fmt.Errorf("%s entry %s uses a ZIP data descriptor", path, file.Name)
+		}
 		if _, exists := entries[file.Name]; exists {
 			return fmt.Errorf("%s contains duplicate entry %s", path, file.Name)
 		}
