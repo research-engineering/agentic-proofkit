@@ -561,6 +561,16 @@
       "nonClaims": [
         "This requirement does not claim registry publication, every command's runtime behavior, execution of non-native platform binaries, provider-side install freshness, consumer dependency admission, release approval, rollout approval, or production readiness."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-017",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim repository scanning, code correctness, extraction completeness, final requirement meaning, proof-binding adequacy, native witness execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."
+      ]
     }
   ],
   "bindings": [
@@ -1844,6 +1854,19 @@
       "witnessPath": ".github/workflows/scorecard.yml",
       "commandIds": [
         "proofkit.actionlint"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-017",
+      "scenarioId": "proofkit.spec-proof-core.capability-map-admission-trust-modes",
+      "witnessId": "proofkit.capability-map-admission.trust-mode-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/capabilitymapadmission/capability_map_admission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
       ],
       "environmentClasses": [
         "local-go"

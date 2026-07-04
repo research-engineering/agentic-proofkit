@@ -105,6 +105,7 @@
                 "enum": [
                   "adoption_workflow",
                   "authoring_plan",
+                  "capability_map",
                   "changed_path_set",
                   "coverage_view_input",
                   "deployment_evidence_input",
@@ -251,6 +252,20 @@
     },
     {
       "command": "branch-authority",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
+      "command": "capability-map-admission",
       "input": "required",
       "stdin": true,
       "inputPointer": true,
@@ -1353,7 +1368,10 @@
           }
         },
         "agentActionPlan": {
-          "sourceDiagnosticKeys": ["failures", "warnings"],
+          "sourceDiagnosticKeys": [
+            "failures",
+            "warnings"
+          ],
           "decisionOwner": "consumer_repository",
           "nonClaim": "Agent actions are deterministic guidance over admitted caller-owned inventory facts and do not execute tests, approve merge, or decide semantic truth."
         },

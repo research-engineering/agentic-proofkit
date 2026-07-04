@@ -430,7 +430,7 @@ func admitEntry(raw any) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
-	if err := admitStructuredSelectorSourcePath(selector, sourcePath, fmt.Sprintf("test evidence inventory %s selector", testID)); err != nil {
+	if err := admit.StructuredSelectorSourcePath(selector, sourcePath, fmt.Sprintf("test evidence inventory %s selector", testID)); err != nil {
 		return Entry{}, err
 	}
 	ownerID, err := admit.RuleID(record["ownerId"], fmt.Sprintf("test evidence inventory %s ownerId", testID))
@@ -479,27 +479,6 @@ func admitEntry(raw any) (Entry, error) {
 		QualityFindings: qualityFindings, RequirementRefs: requirementRefs, Selector: selector, SourcePath: sourcePath, TestID: testID,
 		WitnessRefs: witnessRefs,
 	}, nil
-}
-
-func admitStructuredSelectorSourcePath(selector string, sourcePath string, context string) error {
-	if !strings.Contains(selector, "::") {
-		return nil
-	}
-	parts := strings.Split(selector, "::")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return fmt.Errorf("%s must use repo/path::stable_anchor when it declares source identity", context)
-	}
-	selectorPath, err := admit.SafeRepoRelativePath(parts[0], context+" source path")
-	if err != nil {
-		return err
-	}
-	if _, err := admit.RuleID(parts[1], context+" anchor"); err != nil {
-		return err
-	}
-	if selectorPath != sourcePath {
-		return fmt.Errorf("%s sourcePath must match selector path: %s !== %s", context, sourcePath, selectorPath)
-	}
-	return nil
 }
 
 func admitFalsifier(raw any, testID string) (*Falsifier, error) {

@@ -63,6 +63,7 @@ var commandDescriptors = []commandDescriptor{
 	command("agent-route", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("agentroute"), withRunner(commandRunnerAgentRoute), withAgentEnvelope()),
 	command("binding-partition", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("bindingpartition")),
 	command("branch-authority", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("branchauthority")),
+	command("capability-map-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("capabilitymapadmission")),
 	command("changed-path-set", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("changedpathset"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("completion-criteria", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("completioncriteria")),
 	command("conformance-profile", commandInputRequired, flags("--format", "--input", "--input-pointer", "--list", "--profile", "--verify"), modes("json", "markdown"), ownerDirs("conformanceprofile"), withRunner(commandRunnerConformanceProfile)),

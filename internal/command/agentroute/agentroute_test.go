@@ -126,6 +126,74 @@ func TestBuildRoutesAuthoringPlanWithoutFalseTransitionInput(t *testing.T) {
 	}
 }
 
+func TestBuildRoutesCapabilityMapForAuthoringWithoutChangingAdoptionMode(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.capability_map",
+		"goal":          "author_requirements",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "capability_map",
+				"ref":  "docs/proofkit/capability-map.v1.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 {
+		t.Fatalf("nextCommands length = %d, want 1: %#v", len(commands), commands)
+	}
+	argv := findCommandArgv(t, commands, "capability-map-admission")
+	if got := argValue(argv, "--input"); got != "docs/proofkit/capability-map.v1.json" {
+		t.Fatalf("capability-map-admission input=%q, want capability_map ref", got)
+	}
+	if commandExists(commands, "requirement-authoring-plan") {
+		t.Fatalf("authoring plan must require an authoring_plan input: %#v", commands)
+	}
+	if report["summary"].(map[string]any)["mode"] != "observe" {
+		t.Fatalf("agent-route adoption mode drifted: %#v", report["summary"])
+	}
+}
+
+func TestBuildRoutesCapabilityMapForRepositoryAdoption(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.adopt.capability_map",
+		"goal":          "adopt_repository",
+		"mode":          "warn",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "capability_map",
+				"ref":  "docs/proofkit/capability-map.v1.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	argv := findCommandArgv(t, commands, "capability-map-admission")
+	if got := argValue(argv, "--input"); got != "docs/proofkit/capability-map.v1.json" {
+		t.Fatalf("capability-map-admission input=%q, want capability_map ref", got)
+	}
+	if commandExists(commands, "adoption-workflow-plan") || commandExists(commands, "scaffold-project-structure") {
+		t.Fatalf("adoption route must not invent missing adoption workflow or scaffold input: %#v", commands)
+	}
+}
+
 func TestBuildRoutesRequirementSourceTransitionOnlyWithTransitionInput(t *testing.T) {
 	t.Parallel()
 
@@ -1128,6 +1196,7 @@ func sameStringSet(left []string, right []string) bool {
 func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 	pairs := [][2]string{
 		{"adoption-workflow-plan", "adoption_workflow"},
+		{"capability-map-admission", "capability_map"},
 		{"changed-path-set", "changed_path_set"},
 		{"deployment-evidence-admission", "deployment_evidence_input"},
 		{"impact", "impact_input"},

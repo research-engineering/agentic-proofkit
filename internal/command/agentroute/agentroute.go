@@ -32,6 +32,7 @@ var (
 	inputKindValues = map[string]struct{}{
 		"adoption_workflow":               {},
 		"authoring_plan":                  {},
+		"capability_map":                  {},
 		"changed_path_set":                {},
 		"coverage_view_input":             {},
 		"deployment_evidence_input":       {},
@@ -141,9 +142,10 @@ var routeSpecs = map[string]routeSpec{
 	},
 	"adopt_repository": {
 		Family:      "adoption",
-		RequiredAny: [][]string{{"adoption_workflow", "scaffold_project_structure"}},
+		RequiredAny: [][]string{{"adoption_workflow", "capability_map", "scaffold_project_structure"}},
 		NextCommands: []commandSpec{
 			{Command: "adoption-workflow-plan", InputKind: "adoption_workflow", Why: "Repository adoption should start from a caller-owned workflow plan instead of ambient repository scanning."},
+			{Command: "capability-map-admission", InputKind: "capability_map", Why: "Repositories without durable specs may first admit caller-owned code, test, and document observations as candidate-only capability seeds."},
 			{Command: "scaffold-project-structure", InputKind: "scaffold_project_structure", Why: "Initial files may be planned as a dry-run scaffold; the caller owns materialization and overwrite policy."},
 		},
 		StopConditions: []string{"Stop before writing files or claiming module boundaries; Proofkit only returns deterministic adoption guidance."},
@@ -153,8 +155,9 @@ var routeSpecs = map[string]routeSpec{
 	},
 	"author_requirements": {
 		Family:      "requirement_source",
-		RequiredAny: [][]string{{"authoring_plan"}},
+		RequiredAny: [][]string{{"authoring_plan", "capability_map"}},
 		NextCommands: []commandSpec{
+			{Command: "capability-map-admission", InputKind: "capability_map", Why: "Capability maps convert caller-owned observations into candidate requirement and proof-binding seeds before any stable requirement source is materialized."},
 			{Command: "requirement-authoring-plan", InputKind: "authoring_plan", Why: "Temporary design, plan, PR, code, or test observations must become candidate-only requirement updates before owner materialization."},
 		},
 		StopConditions: []string{"Stop before writing requirements files, approving requirement meaning, or treating candidate previews as stable source authority; after owner materialization, route stable files through validate_requirement_source with a caller-owned requirement source or transition envelope."},

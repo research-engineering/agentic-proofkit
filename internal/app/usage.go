@@ -10,6 +10,7 @@ func usage() string {
 		"  agentic-proofkit agent-route --input <path|-> [--input-pointer <pointer>] [--agent-envelope]\n" +
 		"  agentic-proofkit binding-partition --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit branch-authority --input <path|-> [--input-pointer <pointer>]\n" +
+		"  agentic-proofkit capability-map-admission --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit changed-path-set --input <path|-> [--input-pointer <pointer>] [--agent-envelope]\n" +
 		"  agentic-proofkit completion-criteria --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit conformance-profile --input <path|-> [--input-pointer <pointer>] (--verify|--list|--profile <id>) [--format json|markdown]\n" +

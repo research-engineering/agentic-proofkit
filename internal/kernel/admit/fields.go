@@ -128,6 +128,27 @@ func DisplayOnlyCommandText(raw any, context string) (string, error) {
 	return value, nil
 }
 
+func StructuredSelectorSourcePath(selector string, sourcePath string, context string) error {
+	if !strings.Contains(selector, "::") {
+		return nil
+	}
+	parts := strings.Split(selector, "::")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return fmt.Errorf("%s must use repo/path::stable_anchor when it declares source identity", context)
+	}
+	selectorPath, err := SafeRepoRelativePath(parts[0], context+" source path")
+	if err != nil {
+		return err
+	}
+	if _, err := RuleID(parts[1], context+" anchor"); err != nil {
+		return err
+	}
+	if selectorPath != sourcePath {
+		return fmt.Errorf("%s sourcePath must match selector path: %s !== %s", context, sourcePath, selectorPath)
+	}
+	return nil
+}
+
 func diagnosticFieldLabels(values []string) []string {
 	labels := make([]string, 0, len(values))
 	redacted := 0

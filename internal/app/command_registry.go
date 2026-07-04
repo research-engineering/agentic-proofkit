@@ -7,6 +7,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/deploymentevidenceadmission"
@@ -111,6 +112,9 @@ func buildReport(command string, input any) (report.Record, int, error) {
 	if command == "branch-authority" {
 		record, exitCode := branchauthority.Build(input)
 		return record, exitCode, nil
+	}
+	if command == "capability-map-admission" {
+		return capabilitymapadmission.Build(input)
 	}
 	if command == "completion-criteria" {
 		return completioncriteria.Build(input)

@@ -16,7 +16,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
-const cliContractPublicABISHA256 = "a95d29b529acaa06672c85ac9fb8fae343de1148e6b194fad3a0342de13abe76"
+const cliContractPublicABISHA256 = "7a8c5c46d2f4c367bbb790f8428d28f357434287f721338a720c85b9ac28a19b"
 
 func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	contract := readCLIContract(t)
@@ -265,6 +265,7 @@ func TestCLIContractModeSpecificPromises(t *testing.T) {
 	assertScopeClass(t, commands["typescript-public-api-surfaces"], commandScopeExplicitFileSystemScan)
 	assertCommand(t, commands["adoption-contract-envelope"], "required", []string{"--agent-envelope", "--checked-scope", "--guidance-mode", "--input", "--materialization-manifest", "--mode", "--pilot", "--touched-rule-id"}, []string{"json"})
 	assertCommand(t, commands["agent-route"], "required", []string{"--agent-envelope", "--input", "--input-pointer"}, []string{"json"})
+	assertCommand(t, commands["capability-map-admission"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
 	assertCommand(t, commands["conformance-profile"], "required", []string{"--format", "--input", "--input-pointer", "--list", "--profile", "--verify"}, []string{"json", "markdown"})
 	assertCommand(t, commands["requirement-coverage-input-compose"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
 	assertCommand(t, commands["requirement-coverage-view"], "required", []string{"--agent-envelope", "--format", "--input", "--input-pointer"}, []string{"html", "json", "markdown"})

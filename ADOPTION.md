@@ -120,6 +120,20 @@ Candidate boundaries in `observe` and `warn` are advisory. Enforcement modes
 fail closed while candidate boundaries remain unresolved because enforcement
 requires owner-admitted requirements and proof bindings.
 
+Pre-spec trust modes:
+
+| Trust mode | Use case | Proofkit role | Required next owner step |
+|---|---|---|---|
+| `code_baseline` | no specs exist and maintainers intentionally freeze current behavior | admit caller-owned capability observations and emit bounded candidate requirement/proof-binding seeds only when scenarios have candidate ids and executable anchors | review seeds, materialize accepted `requirements.v1.json` and proof bindings, then run source, binding, inventory, and coverage gates |
+| `audit_from_code` | no specs exist and maintainers do not trust current behavior | admit caller-owned observations as hypotheses, keep missing anchors as owner actions, and emit questions without failing solely on missing anchors | answer owner questions, add falsification witnesses, then materialize only accepted requirements |
+
+`capability-map-admission` owns this pre-spec transition artifact. It does not
+replace `requirement-authoring-plan`: capability maps produce seeds from
+observed capabilities, while authoring plans compose owner-reviewed candidate
+updates into a non-authoritative requirement-source preview and transition
+check. Durable truth still starts only after the consumer commits and admits
+`requirements.v1.json`.
+
 ## Requirement, Contract, And Test Order
 
 The durable semantic source is the repository-owned requirement package:

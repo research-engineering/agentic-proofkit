@@ -436,6 +436,33 @@
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-017",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Capability map admission validates caller-owned pre-spec observations from code, tests, and documents with explicit trustMode semantics so code_baseline emits bounded candidate requirement and proof-binding seeds only when scenarios have candidate requirement ids and executable anchors, audit_from_code emits owner-review guidance for untrusted observations without failing solely on missing anchors, and neither mode scans repositories, writes files, executes witnesses, replaces requirement-authoring-plan, or makes stable requirement source truth.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-017"
+      ],
+      "nonClaims": [
+        "This requirement does not claim repository scanning, code correctness, extraction completeness, final requirement meaning, proof-binding adequacy, native witness execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
     }
   ],
   "nonClaims": [
@@ -443,6 +470,7 @@
     "Proofkit spec-proof core requirements describe reusable infrastructure primitives only.",
     "Proofkit spec-proof core requirements do not approve document deletion or infer document meaning from Markdown prose.",
     "Proofkit spec-proof core requirements do not discover source diffs or approve requirement deletion.",
+    "Proofkit spec-proof core requirements do not make capability-map seeds stable requirement truth.",
     "Proofkit spec-proof core requirements do not prove overview-claim extractor completeness."
   ]
 }
