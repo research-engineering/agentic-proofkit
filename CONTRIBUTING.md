@@ -15,7 +15,8 @@ admission, and rollout approval belong in consuming repositories.
 3. Use [docs/proofkit-contract-map.md](docs/proofkit-contract-map.md) to find
    the owner command or primitive.
 4. Use [ADOPTION.md](ADOPTION.md) for dependency and channel authority.
-5. Use [BACKLOG.md](BACKLOG.md) to check completion criteria and open work.
+5. Use [BACKLOG.md](BACKLOG.md) to check active work, blocked claims, and
+   deferred work.
 6. Use [NON_CLAIMS.md](NON_CLAIMS.md) to understand the boundary between
    Proofkit mechanics and consuming-repository authority.
 
