@@ -29,6 +29,9 @@ denial, and package artifact behavior only.
   wrapper over the same Go CLI, with wheel-safe package metadata, wheel tags,
   embedded binary identity, local install smoke proof, and explicit non-claims
   until PyPI publication.
+- `REQ-PROOFKIT-PACKAGE-007`: package-public Markdown records release-channel
+  state only and must not embed exact per-version provider facts that are owned
+  by immutable registry, release, and manifest artifacts.
 
 ## Non-Claims
 

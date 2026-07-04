@@ -245,6 +245,83 @@ func TestVerifyNoStalePackageDocsReadsTarballDocs(t *testing.T) {
 	}
 }
 
+func TestVerifyNoStalePackageDocsRejectsMutableReleaseFactsInMarkdown(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		text string
+	}{
+		{
+			name: "exact release version",
+			text: "Current release is @research-engineering/agentic-proofkit@0.1.143.",
+		},
+		{
+			name: "future major package coordinate",
+			text: "Current release is @research-engineering/agentic-proofkit@1.0.0.",
+		},
+		{
+			name: "tag version token",
+			text: "Public-source provenance is admitted for v1.2.3.",
+		},
+		{
+			name: "provider run URL",
+			text: "Provider run: https://github.com/research-engineering/agentic-proofkit/actions/runs/28703265655",
+		},
+		{
+			name: "provider run URL embedded in another URL",
+			text: "Provider run mirror: https://example.invalid/?next=https://github.com/research-engineering/agentic-proofkit/actions/runs/28703265655",
+		},
+		{
+			name: "registry tarball URL",
+			text: "Tarball: https://registry.npmjs.org/@research-engineering/agentic-proofkit/-/agentic-proofkit-0.1.143.tgz",
+		},
+		{
+			name: "integrity",
+			text: "integrity sha512-ilPzGnhVL2BJUXjY3bxGZ4w80gxTFCSyvOMH1kmvm1p+YX5XRl0EHF4uDvY35joXOanvjXxJj3qUGLvjfhcY2Q==",
+		},
+		{
+			name: "release sha",
+			text: "source commit 202909459f66af97013af209c2b2fc97e9c4981f",
+		},
+		{
+			name: "uppercase release sha",
+			text: "shasum 202909459F66AF97013AF209C2B2FC97E9C4981F",
+		},
+		{
+			name: "short source ref",
+			text: "source ref 2029094",
+		},
+	}
+	for _, item := range cases {
+		item := item
+		t.Run(item.name, func(t *testing.T) {
+			t.Parallel()
+
+			entries := packageDocEntries("package docs describe embedded Go binaries.")
+			entries["package/BACKLOG.md"] = item.text
+			tarball := writePackageTarball(t, entries)
+
+			err := verifyNoStalePackageDocs(tarballArtifact(t, tarball))
+			if err == nil || !strings.Contains(err.Error(), "package/BACKLOG.md contains mutable package-public release fact") {
+				t.Fatalf("verifyNoStalePackageDocs() error=%v, want mutable release fact failure", err)
+			}
+		})
+	}
+}
+
+func TestVerifyNoStalePackageDocsAllowsManifestVersionOutsideMarkdown(t *testing.T) {
+	t.Parallel()
+
+	entries := packageDocEntries("Use @research-engineering/agentic-proofkit@<version> for exact release installs.")
+	entries["package/package.json"] = packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git")
+	tarball := writePackageTarball(t, entries)
+
+	if err := verifyNoStalePackageDocs(tarballArtifact(t, tarball)); err != nil {
+		t.Fatalf("verifyNoStalePackageDocs() error=%v, want package manifest version accepted", err)
+	}
+}
+
 func TestVerifyNoStalePackageDocsDoesNotFlagCrossPlatformNonClaim(t *testing.T) {
 	t.Parallel()
 

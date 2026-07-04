@@ -166,6 +166,33 @@
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-007",
+      "ownerId": "proofkit.package-boundary",
+      "invariant": "Package-public Markdown records release-channel completion state only and must not embed exact package versions, source refs, provider run URLs, registry tarball URLs, integrity strings, shasums, or other per-version release facts that are owned by immutable registry records, GitHub Release artifacts, and generated release manifests.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-PACKAGE-007"
+      ],
+      "nonClaims": [
+        "This requirement does not claim registry publication, provider-run success, PyPI publication, GitHub artifact attestation, release approval, or that already-published immutable package versions can be corrected in place."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.package-boundary",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
     }
   ],
   "nonClaims": [

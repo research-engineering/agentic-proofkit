@@ -63,6 +63,16 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-007",
+      "ownerId": "proofkit.package-boundary",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim registry publication, provider-run success, PyPI publication, GitHub artifact attestation, release approval, or that already-published immutable package versions can be corrected in place."
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-001",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
@@ -560,6 +570,20 @@
       "witnessId": "proofkit.package-artifact.boundary",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/packageverify/main.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-007",
+      "scenarioId": "proofkit.package-boundary.package-public-docs-no-mutable-release-facts",
+      "witnessId": "proofkit.packageverify.package-public-docs-no-mutable-release-facts",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main_test.go",
       "commandIds": [
         "proofkit.go-test",
         "proofkit.package-artifact"

@@ -15,8 +15,8 @@ packets without copying verifier logic between projects.
 | Source visibility | Public |
 | Current layer | Public source with admitted scoped npm release evidence |
 | Runtime implementation | Go CLI with npm and Python wrapper packaging |
-| Package release | `@research-engineering/agentic-proofkit@0.1.138` is admitted; `agentic-proofkit@0.1.135` remains the previous unscoped release |
-| Public-source provenance | Admitted for `v0.1.138` |
+| Package release | Scoped npm release channel admitted; exact version and registry identity are owned by npm and GitHub Release artifacts |
+| Public-source provenance | Admitted through release artifacts and registry evidence, not by this overview |
 | License | MIT |
 
 ## Project Boundary

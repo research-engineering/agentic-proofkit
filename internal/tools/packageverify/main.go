@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -29,6 +30,48 @@ const rootPackageName = "@research-engineering/agentic-proofkit"
 const rootBinaryName = "agentic-proofkit"
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
+
+var (
+	packageCoordinatePattern = regexp.MustCompile(`(?:@research-engineering/agentic-proofkit|agentic-proofkit)@v?[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?`)
+	releaseVersionPattern    = regexp.MustCompile(`\bv?[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?\b`)
+	integrityPattern         = regexp.MustCompile(`sha512-[A-Za-z0-9+/=]{32,}`)
+	rawReleaseHashPattern    = regexp.MustCompile(`(?i)\b[0-9a-f]{40}\b`)
+	sourceRefPattern         = regexp.MustCompile(`(?i)\b(?:commit|source ref|source sha|head sha|headsha|checkout at|tagged commit)\s+[` + "`" + `'\"]?[0-9a-f]{7,40}\b`)
+)
+
+var mutableReleaseDocRules = []struct {
+	match   func(string) bool
+	message string
+}{
+	{
+		match:   packageCoordinatePattern.MatchString,
+		message: "shipped markdown must not embed exact package version coordinates",
+	},
+	{
+		match:   releaseVersionPattern.MatchString,
+		message: "shipped markdown must not embed exact release version tokens",
+	},
+	{
+		match:   containsGitHubActionsRunURL,
+		message: "shipped markdown must not embed provider run URLs",
+	},
+	{
+		match:   containsNPMRegistryTarballURL,
+		message: "shipped markdown must not embed registry tarball URLs",
+	},
+	{
+		match:   integrityPattern.MatchString,
+		message: "shipped markdown must not embed registry integrity strings",
+	},
+	{
+		match:   rawReleaseHashPattern.MatchString,
+		message: "shipped markdown must not embed raw release commit or shasum evidence",
+	},
+	{
+		match:   sourceRefPattern.MatchString,
+		message: "shipped markdown must not embed source ref evidence",
+	},
+}
 
 type tarEntry struct {
 	Mode     int64
@@ -567,6 +610,13 @@ func verifyNoStalePackageDocs(artifact rootPackageArtifact) error {
 				return fmt.Errorf("%s contains stale package-boundary term %q: %s", path, term, message)
 			}
 		}
+		if strings.HasSuffix(path, ".md") {
+			for _, rule := range mutableReleaseDocRules {
+				if rule.match(text) {
+					return fmt.Errorf("%s contains mutable package-public release fact: %s", path, rule.message)
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -588,6 +638,15 @@ func containsStaleTerm(text string, term string) bool {
 			return false
 		}
 	}
+}
+
+func containsGitHubActionsRunURL(text string) bool {
+	return strings.Contains(text, "https://github.com/research-engineering/agentic-proofkit/actions/runs/")
+}
+
+func containsNPMRegistryTarballURL(text string) bool {
+	return strings.Contains(text, "https://registry.npmjs.org/@research-engineering/agentic-proofkit/-/") ||
+		strings.Contains(text, "https://registry.npmjs.org/agentic-proofkit/-/")
 }
 
 func staleTermBoundary(text string, index int) bool {
