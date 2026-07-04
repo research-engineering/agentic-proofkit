@@ -166,12 +166,14 @@ func Evaluate(raw any) (Result, error) {
 		exitCode = 1
 	}
 	nonClaims := sortedUnique(append(append([]string{}, defaultNonClaims...), inventory.NonClaims...))
+	actionPlan := agentActionPlan(failures, warnings)
 	record := report.Record{
 		SchemaVersion: 1,
 		ReportKind:    ReportKind,
 		ReportID:      inventory.InventoryID,
 		State:         state,
 		Summary: map[string]any{
+			"agentActionCount":           len(actionPlan),
 			"entryCount":                 len(inventory.Entries),
 			"failureCount":               len(failures),
 			"inputPathCount":             len(inventory.InputPaths),
@@ -185,6 +187,7 @@ func Evaluate(raw any) (Result, error) {
 			"warningCount":               len(warnings),
 		},
 		Diagnostics: []report.Diagnostic{
+			{Key: "agentActionPlan", Value: mapsToAny(actionPlan)},
 			{Key: "failureClassifications", Value: mapsToAny(diagnosticClassifications(failures, "failure"))},
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
 			{Key: "warningClassifications", Value: mapsToAny(diagnosticClassifications(warnings, "warning"))},

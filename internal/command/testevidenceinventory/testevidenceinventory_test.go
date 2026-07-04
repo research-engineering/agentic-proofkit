@@ -25,6 +25,12 @@ func TestBuildAdmitsSemanticFalsifierInventory(t *testing.T) {
 	if record.Summary["semanticFalsifierCount"] != 1 {
 		t.Fatalf("semanticFalsifierCount=%v", record.Summary["semanticFalsifierCount"])
 	}
+	if record.Summary["agentActionCount"] != 0 {
+		t.Fatalf("clean inventory emitted agent actions: %#v", record.JSONValue())
+	}
+	if actions := agentActions(record.JSONValue()); len(actions) != 0 {
+		t.Fatalf("clean inventory agent actions=%#v, want none", actions)
+	}
 }
 
 func TestBuildRejectsWeakOracleAndDuplicateFalsifier(t *testing.T) {
@@ -67,6 +73,8 @@ func TestBuildRejectsWeakOracleAndDuplicateFalsifier(t *testing.T) {
 		"declared_duplicate_falsifier:test.inventory.duplicate:test.inventory.semantic": "declared_duplicate_falsifier",
 		"weak_or_empty_oracle:test.inventory.weak":                                      "weak_or_empty_oracle",
 	})
+	requireAgentAction(t, record.JSONValue(), "declared_duplicate_falsifier", "failure")
+	requireAgentAction(t, record.JSONValue(), "weak_or_empty_oracle", "failure")
 }
 
 func TestBuildRejectsArbitraryFalsifierSupersedes(t *testing.T) {
@@ -152,6 +160,29 @@ func TestBuildRejectsSemanticFalsifierWithoutCommandRefs(t *testing.T) {
 	requireDiagnosticClassifications(t, record.JSONValue(), "failureClassifications", "failure", map[string]string{
 		"missing_executable_command_ref:test.inventory.semantic": "missing_executable_command_ref",
 	})
+}
+
+func TestBuildAdmitsRouteOnlyNonClaimAndEmitsWarningGuidance(t *testing.T) {
+	input := validInventory(t)
+	entry := input.(map[string]any)["entries"].([]any)[0].(map[string]any)
+	entry["evidenceClass"] = "routing_smoke_nonclaim"
+	entry["requirementRefs"] = []any{}
+	entry["ownerInvariantRefs"] = []any{}
+	entry["falsifier"] = nil
+	entry["oracle"] = nil
+	entry["nonClaims"] = []any{"Route-only smoke proves wiring only."}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() rejected route-only nonclaim: %#v", record.JSONValue())
+	}
+	requireDiagnosticClassifications(t, record.JSONValue(), "warningClassifications", "warning", map[string]string{
+		"route_only_nonclaim:test.inventory.semantic": "routing_smoke_only",
+	})
+	requireAgentAction(t, record.JSONValue(), "routing_smoke_only", "warning")
 }
 
 func TestBuildClassifiesCallerOwnedQualityFindings(t *testing.T) {
@@ -829,6 +860,38 @@ func requireDiagnosticClassifications(t *testing.T, record map[string]any, key s
 			t.Fatalf("%s diagnostic %q severity=%v want %q", key, diagnostic, item["severity"], severity)
 		}
 	}
+}
+
+func requireAgentAction(t *testing.T, record map[string]any, classificationID string, severity string) {
+	t.Helper()
+	for _, action := range agentActions(record) {
+		if action["classificationId"] == classificationID && action["severity"] == severity {
+			if action["decisionOwner"] != "consumer_repository" {
+				t.Fatalf("agent action %s owner=%#v", classificationID, action["decisionOwner"])
+			}
+			if action["instruction"] == "" || action["nonClaim"] == "" {
+				t.Fatalf("agent action %s missing instruction/nonClaim: %#v", classificationID, action)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing agent action classification=%s severity=%s in %#v", classificationID, severity, agentActions(record))
+}
+
+func agentActions(record map[string]any) []map[string]any {
+	raw := diagnosticValue(record, "agentActionPlan")
+	values, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]map[string]any, 0, len(values))
+	for _, rawItem := range values {
+		item, ok := rawItem.(map[string]any)
+		if ok {
+			result = append(result, item)
+		}
+	}
+	return result
 }
 
 func diagnosticValue(record map[string]any, key string) any {
