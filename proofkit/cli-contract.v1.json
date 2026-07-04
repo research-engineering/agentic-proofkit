@@ -1352,6 +1352,11 @@
             "sourceDiagnosticKey": "warnings"
           }
         },
+        "agentActionPlan": {
+          "sourceDiagnosticKeys": ["failures", "warnings"],
+          "decisionOwner": "consumer_repository",
+          "nonClaim": "Agent actions are deterministic guidance over admitted caller-owned inventory facts and do not execute tests, approve merge, or decide semantic truth."
+        },
         "classificationIds": [
           "declared_duplicate_falsifier",
           "duplicate_falsifier_candidate",
