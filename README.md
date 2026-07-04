@@ -36,7 +36,7 @@ rollout, deployment, or production readiness.
 | Human orientation | This README |
 | Coding-agent startup | `AGENTS.md` |
 | Adoption and release-channel model | `ADOPTION.md` |
-| Completion criteria and remaining work | `BACKLOG.md` |
+| Active work ledger | `BACKLOG.md` |
 | Contribution rules | `CONTRIBUTING.md` |
 | Vulnerability reporting boundary | `SECURITY.md` |
 | Explicit boundary denials | `NON_CLAIMS.md` |

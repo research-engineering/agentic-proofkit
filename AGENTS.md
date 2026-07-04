@@ -19,7 +19,7 @@ Use this order when instructions or evidence conflict:
 4. nearest scoped `AGENTS.md`;
 5. this repository authority model;
 6. `README.md` as a human overview only;
-7. `BACKLOG.md` for current completion criteria, open work, and blocked claims;
+7. `BACKLOG.md` for active work, blocked claims, and deferred work;
 8. `ADOPTION.md`, `NON_CLAIMS.md`, `docs/proofkit-contract-map.md`, and
    `docs/specs/*` as owner surfaces for their stated boundaries;
 9. imported source files, tests, package metadata, workflows, and
@@ -51,7 +51,7 @@ own release, provider, or deployment evidence.
 2. If the request is clear, do not ask whether to resume previous work.
 3. If the request is ambiguous and strong unfinished-work signals exist,
    inspect the worktree state and ask whether to resume.
-4. Use `BACKLOG.md` for current completion state and open work.
+4. Use `BACKLOG.md` for active work, blocked claims, and deferred work.
 5. Load one primary owner surface for the task. Load a second owner surface only
    when the task clearly crosses another boundary.
 6. Stop context loading once the owner boundary, allowed mutation, proof path,
