@@ -101,7 +101,55 @@ func TestVerifyWheelContentsRequiresExactWheelMetadata(t *testing.T) {
 	}
 }
 
+func TestWriteWheelAvoidsDataDescriptors(t *testing.T) {
+	target := releaseTargets()[0]
+	version := "1.2.3"
+	path := filepath.Join(t.TempDir(), "wheel.whl")
+	writeMinimalWheel(t, path, version, wheelMetadata(target))
+
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatalf("open wheel: %v", err)
+	}
+	defer reader.Close()
+	for _, file := range reader.File {
+		if file.Flags&zipDataDescriptorFlag != 0 {
+			t.Fatalf("entry %s uses ZIP data descriptor flag", file.Name)
+		}
+	}
+}
+
+func TestVerifyWheelContentsRejectsDataDescriptors(t *testing.T) {
+	target := releaseTargets()[0]
+	version := "1.2.3"
+	path := filepath.Join(t.TempDir(), "wheel.whl")
+	writeDataDescriptorWheel(t, path, version, wheelMetadata(target))
+
+	err := verifyWheelContents(path, version, target)
+	if err == nil || !strings.Contains(err.Error(), "ZIP data descriptor") {
+		t.Fatalf("verifyWheelContents() error=%v, want data descriptor rejection", err)
+	}
+}
+
 func writeMinimalWheel(t *testing.T, path string, version string, wheel string) {
+	t.Helper()
+	distInfo := distInfoDir(version)
+	entries := []wheelEntry{
+		{Path: "agentic_proofkit/__init__.py", Mode: 0o644},
+		{Path: "agentic_proofkit/__main__.py", Mode: 0o644},
+		{Path: "agentic_proofkit/cli.py", Mode: 0o644},
+		{Path: "agentic_proofkit/bin/agentic-proofkit", Content: []byte("binary"), Mode: 0o755},
+		{Path: distInfo + "/METADATA", Content: []byte("Metadata-Version: 2.1\n"), Mode: 0o644},
+		{Path: distInfo + "/WHEEL", Content: []byte(wheel), Mode: 0o644},
+		{Path: distInfo + "/entry_points.txt", Content: []byte(entryPoints()), Mode: 0o644},
+		{Path: distInfo + "/RECORD", Mode: 0o644},
+	}
+	if err := writeWheel(path, entries); err != nil {
+		t.Fatalf("write wheel: %v", err)
+	}
+}
+
+func writeDataDescriptorWheel(t *testing.T, path string, version string, wheel string) {
 	t.Helper()
 	file, err := os.Create(path)
 	if err != nil {
