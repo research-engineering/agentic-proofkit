@@ -53,6 +53,23 @@ func TestChangedPackagePlanRejectsSchemaDrift(t *testing.T) {
 	}
 }
 
+func TestChangedPackagePlanRejectsSecretLikePackageName(t *testing.T) {
+	secret := "Authorization: Bearer abcdefghijklmnop"
+	input := validChangedPackagePlanInput()
+	input["packages"].([]any)[0].(map[string]any)["name"] = secret
+
+	_, err := BuildChangedPackagePlan(input)
+	if err == nil {
+		t.Fatal("BuildChangedPackagePlan() accepted secret-shaped package name")
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked secret-shaped caller text: %v", err)
+	}
+	if !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("error=%v, want secret-like rejection", err)
+	}
+}
+
 func TestShardPartitionRejectsUnknownNestedFields(t *testing.T) {
 	input := validShardPartitionInput()
 	input["packages"].([]any)[0].(map[string]any)["ambientAuthority"] = true

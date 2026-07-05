@@ -10,7 +10,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const invalidReportKind = "proofkit.readiness-closeout"
+const reportKind = "proofkit.readiness-closeout"
 
 var classifications = []string{"blocked", "failed", "out_of_scope", "passed"}
 var classificationSet = toSet(classifications)
@@ -145,7 +145,6 @@ type closeoutInput struct {
 	ReadinessRowPrefixes     []string
 	ReadinessSections        []string
 	ReportID                 string
-	ReportKind               string
 	RunIdentity              string
 }
 
@@ -290,7 +289,7 @@ func buildReport(input closeoutInput) (report.Record, int, error) {
 	}
 	record := report.Record{
 		SchemaVersion: 1,
-		ReportKind:    input.ReportKind,
+		ReportKind:    reportKind,
 		ReportID:      input.ReportID,
 		State:         state,
 		Summary: map[string]any{
@@ -462,7 +461,7 @@ func admitInput(raw any) (closeoutInput, error) {
 	if !ok {
 		return closeoutInput{}, fmt.Errorf("readiness closeout input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"environmentPreconditions", "exactCommand", "frontier", "inputDefinitions", "markdownText", "negatedNonClaimPhrases", "nonClaims", "phraseRules", "readinessRowPrefixes", "readinessSections", "reportId", "reportKind", "runIdentity", "schemaVersion"}, "readiness closeout input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"environmentPreconditions", "exactCommand", "frontier", "inputDefinitions", "markdownText", "negatedNonClaimPhrases", "nonClaims", "phraseRules", "readinessRowPrefixes", "readinessSections", "reportId", "runIdentity", "schemaVersion"}, "readiness closeout input"); err != nil {
 		return closeoutInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -499,10 +498,6 @@ func admitInput(raw any) (closeoutInput, error) {
 		return closeoutInput{}, err
 	}
 	reportID, err := admit.RuleID(record["reportId"], "readiness closeout reportId")
-	if err != nil {
-		return closeoutInput{}, err
-	}
-	reportKind, err := admit.RuleID(record["reportKind"], "readiness closeout reportKind")
 	if err != nil {
 		return closeoutInput{}, err
 	}
@@ -546,7 +541,6 @@ func admitInput(raw any) (closeoutInput, error) {
 		ReadinessRowPrefixes:     readinessRowPrefixes,
 		ReadinessSections:        readinessSections,
 		ReportID:                 reportID,
-		ReportKind:               reportKind,
 		RunIdentity:              runIdentity,
 	}, nil
 }
@@ -791,7 +785,7 @@ func hasNonClaimActionToken(normalized string) bool {
 func invalidInputReport(failure string) report.Record {
 	return report.Record{
 		SchemaVersion: 1,
-		ReportKind:    invalidReportKind,
+		ReportKind:    reportKind,
 		ReportID:      "invalid-input",
 		State:         "failed",
 		Summary: map[string]any{

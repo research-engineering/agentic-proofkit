@@ -508,6 +508,11 @@ func TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions(t *testi
 				if !ok {
 					t.Fatalf("%s missing provider job %q", item.path, jobID)
 				}
+				if item.name == "codeql" || item.name == "osv" {
+					if !providerUploadDisabledOnPullRequest(job.If) {
+						t.Fatalf("%s provider job %q must not upload provider evidence on pull_request: if=%q", item.path, jobID, job.If)
+					}
+				}
 				for scope, want := range permissions {
 					if !permissionHas(job.Permissions, scope, want) {
 						t.Fatalf("%s provider job %q permission %s=%#v, want %q", item.path, jobID, scope, job.Permissions, want)
@@ -516,6 +521,12 @@ func TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions(t *testi
 			}
 		})
 	}
+}
+
+func providerUploadDisabledOnPullRequest(expression string) bool {
+	normalized := normalizedExpression(expression)
+	return strings.Contains(normalized, "github.event_name != 'pull_request'") ||
+		strings.Contains(normalized, `github.event_name != "pull_request"`)
 }
 
 func TestScorecardPublicPublishDeclaresRequiredOutputInputs(t *testing.T) {

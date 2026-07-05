@@ -422,7 +422,7 @@ export function runProofkitJsonCommand<T = unknown>(
   if (child.status !== 0 && child.stdout.trim().length === 0) {
     throw new Error(formatProofkitCliError(child.stderr.trim() || command + " failed with exit code " + String(child.status)));
   }
-  const outputPath = outputPathFromArgs(command, args);
+  const outputPath = outputPathFromArgs(args);
   const jsonText = child.stdout.trim().length === 0 && outputPath !== null && outputPath !== "-" ?
     readProofkitTextReportInput(resolveOutputPath(options.cwd, outputPath)) :
     child.stdout;
@@ -453,11 +453,15 @@ export function runProofkitTextCommand(
   options: ProofkitCommandRunOptions,
 ): ProofkitTextCommandResult {
   const child = runProofkitCommand(command, input, args, options);
+  const outputPath = outputPathFromArgs(args);
+  const text = child.stdout.length === 0 && outputPath !== null && outputPath !== "-" ?
+    readProofkitTextReportInput(resolveOutputPath(options.cwd, outputPath)) :
+    child.stdout;
   return {
     status: child.status,
     stdout: child.stdout,
     stderr: child.stderr,
-    text: child.stdout,
+    text,
   };
 }
 
@@ -478,10 +482,7 @@ function runProofkitCommand(command: string, input: unknown, args: readonly stri
   return child;
 }
 
-function outputPathFromArgs(command: string, args: readonly string[]): string | null {
-  if (command !== "requirement-spec-tree-view") {
-    return null;
-  }
+function outputPathFromArgs(args: readonly string[]): string | null {
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === "--output") {
       const value = args[index + 1];

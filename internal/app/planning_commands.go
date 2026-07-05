@@ -72,6 +72,9 @@ func parsePlanningArgs(command string, args []string) (planningArgs, error) {
 			options.inputPointer = args[index+1]
 			index++
 		case "--agent-envelope":
+			if !isAgentEnvelopeCommand(command) {
+				return planningArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, args[index])
+			}
 			options.agentEnvelope = true
 		default:
 			return planningArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, args[index])

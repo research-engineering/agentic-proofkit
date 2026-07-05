@@ -87,6 +87,11 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-016`: requirement source transition reports validate
   caller-provided previous and next source snapshots so lifecycle changes are
   monotonic, evidence-backed, package-boundary-stable, and repository-neutral.
+- `REQ-PROOFKIT-SPEC-017`: test evidence inventory discovery-draft reports
+  convert explicit caller-owned repository and test discovery facts into
+  candidate-only inventory guidance with strict nested test title admission,
+  source guidance, and non-claims that prevent draft guidance from becoming
+  semantic coverage.
 
 ## Non-Claims
 

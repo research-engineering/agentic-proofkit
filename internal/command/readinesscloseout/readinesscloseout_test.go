@@ -112,6 +112,23 @@ func TestBuildRejectsSecretLikeReportTextThroughCentralAdmission(t *testing.T) {
 	assertRuleMessageContains(t, record, "readiness_closeout.input", "secret-like values")
 }
 
+func TestBuildRejectsCallerControlledReportKind(t *testing.T) {
+	input := minimalCloseoutInput(closedFrontierMarkdown())
+	input["reportKind"] = "caller.controlled.kind"
+
+	record, status, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error=%v", err)
+	}
+	if status == 0 || record.State != "failed" {
+		t.Fatalf("Build() status=%d state=%s, want failed", status, record.State)
+	}
+	if record.ReportKind != "proofkit.readiness-closeout" {
+		t.Fatalf("ReportKind=%q, want command-owned identity", record.ReportKind)
+	}
+	assertRuleMessageContains(t, record, "readiness_closeout.input", "unsupported field")
+}
+
 func TestBuildRejectsBroadNegationAndFrontierOverclaim(t *testing.T) {
 	markdown := closedFrontierMarkdown(
 		"Future authoring rows must not require separate owner proof before merge authority is established.",
@@ -196,7 +213,6 @@ func minimalCloseoutInput(markdown string) map[string]any {
 		"schemaVersion": json.Number("1"),
 		"markdownText":  markdown,
 		"reportId":      "PROD-09.closeout",
-		"reportKind":    "product_readiness_closeout",
 		"exactCommand":  "proofkit readiness closeout",
 		"runIdentity":   "test_run",
 		"environmentPreconditions": []any{

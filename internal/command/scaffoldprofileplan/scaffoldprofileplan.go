@@ -829,11 +829,7 @@ func anyArray(value any) []any {
 }
 
 func nonEmptyText(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || strings.TrimSpace(value) == "" {
-		return "", fmt.Errorf("%s must be non-empty text", context)
-	}
-	return strings.TrimSpace(value), nil
+	return admit.NonEmptyText(raw, context)
 }
 
 func safePath(raw any, context string) (string, error) {

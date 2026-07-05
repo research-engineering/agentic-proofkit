@@ -65,7 +65,7 @@ jobs:
 
   upload-sarif:
     name: codeql / provider upload
-    if: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
+    if: ${{ github.event_name != 'pull_request' && (github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true') }}
     needs: analyze
     runs-on: ubuntu-24.04
     timeout-minutes: 10

@@ -1372,6 +1372,7 @@
             "requiredFields": [
               "authority",
               "discoveredTests",
+              "discoveredTests[].title",
               "draftId",
               "repository",
               "runner",

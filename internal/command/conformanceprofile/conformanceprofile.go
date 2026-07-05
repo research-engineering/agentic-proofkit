@@ -821,9 +821,9 @@ func stringArray(raw any, context string, allowEmpty bool, requireSortedUnique b
 	}
 	result := make([]string, 0, len(values))
 	for _, item := range values {
-		text, ok := item.(string)
-		if !ok || text == "" {
-			return nil, fmt.Errorf("%s must be a string array", context)
+		text, err := nonEmptyText(item, context)
+		if err != nil {
+			return nil, err
 		}
 		result = append(result, text)
 	}
@@ -857,11 +857,14 @@ func displayCommandArray(raw any, context string, allowEmpty bool, requireSorted
 }
 
 func nonEmptyText(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || strings.TrimSpace(value) == "" || strings.ContainsRune(value, '\x00') {
-		return "", fmt.Errorf("%s must be non-empty text", context)
+	value, err := admit.NonEmptyText(raw, context)
+	if err != nil {
+		return "", err
 	}
-	return strings.TrimSpace(value), nil
+	if strings.ContainsRune(value, '\x00') {
+		return "", fmt.Errorf("%s must not contain NUL bytes", context)
+	}
+	return value, nil
 }
 
 func stateForFailures(failures []string) string {

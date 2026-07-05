@@ -337,6 +337,7 @@ func TestCLIRejectsUnadvertisedFlagsWithoutStdout(t *testing.T) {
 		{args: []string{"test-evidence-inventory", "--input", "-", "--normalized-inventory", "--normalized-inventory"}, wantStderrHas: "test-evidence-inventory accepts --normalized-inventory at most once"},
 		{args: []string{"test-evidence-inventory", "--input", "-", "--projection", "unknown"}, wantStderrHas: "test-evidence-inventory --projection must be proof-binding-derived or discovery-draft"},
 		{args: []string{"test-evidence-inventory", "--input", "-", "--projection"}, wantStderrHas: "test-evidence-inventory --projection requires proof-binding-derived or discovery-draft"},
+		{args: []string{"selective-gate-obligation-decision-input", "--input", "missing.json", "--agent-envelope"}, wantStderrHas: "unsupported argument for selective-gate-obligation-decision-input: --agent-envelope"},
 	}
 	for _, item := range cases {
 		t.Run(strings.Join(item.args, " "), func(t *testing.T) {

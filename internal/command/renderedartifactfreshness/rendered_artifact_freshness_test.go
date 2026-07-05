@@ -2,6 +2,7 @@ package renderedartifactfreshness
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -26,6 +27,23 @@ func TestBuildAdmitsFreshRenderedArtifactAndRejectsDigestDrift(t *testing.T) {
 	}
 	if exitCode == 0 || record.State != "failed" {
 		t.Fatalf("Build(mutated) exit=%d state=%s, want failed", exitCode, record.State)
+	}
+}
+
+func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
+	secret := "Authorization: Bearer abcdefghijklmnop"
+	input := validRenderedArtifactFreshnessInput()
+	input["nonClaims"] = []any{secret}
+
+	_, _, err := Build(input)
+	if err == nil {
+		t.Fatal("Build() accepted secret-shaped nonClaim")
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked secret-shaped caller text: %v", err)
+	}
+	if !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("error=%v, want secret-like rejection", err)
 	}
 }
 

@@ -2,6 +2,7 @@ package packageruntimedependency
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -19,6 +20,27 @@ func TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution(t *te
 	record, exitCode = Build(input)
 	if exitCode == 0 || record.State != "failed" {
 		t.Fatalf("Build(workspace) exit=%d state=%s, want failed", exitCode, record.State)
+	}
+}
+
+func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
+	secret := "Authorization: Bearer abcdefghijklmnop"
+	input := validPackageRuntimeDependencyInput()
+	input["nonClaims"] = []any{secret}
+
+	record, exitCode := Build(input)
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, err := json.Marshal(record)
+	if err != nil {
+		t.Fatalf("marshal report: %v", err)
+	}
+	if strings.Contains(string(encoded), secret) {
+		t.Fatalf("report leaked secret-shaped caller text: %s", string(encoded))
+	}
+	if !strings.Contains(string(encoded), "secret-like values") {
+		t.Fatalf("report=%s, want secret-like rejection", string(encoded))
 	}
 }
 
