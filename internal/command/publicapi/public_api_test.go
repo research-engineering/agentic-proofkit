@@ -236,13 +236,15 @@ func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testi
 	source := strings.Join([]string{
 		"export const a = {x: 1, b: 2}, c: Array<string> = [\"x\", \"y\"];",
 		"export let d = makeValue<{left: string, right: string}>();",
+		"export const genericCall = make<string, number>();",
+		"export const isSmall = limit < 10, fallback = 1;",
 	}, "\n")
 
 	runtimeExports, typeExports, err := CollectExports(source)
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{"a", "c", "d"})
+	assertStringSlice(t, runtimeExports, []string{"a", "c", "d", "fallback", "genericCall", "isSmall"})
 	assertStringSlice(t, typeExports, []string{})
 }
 

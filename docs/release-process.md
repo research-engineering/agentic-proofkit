@@ -47,7 +47,10 @@ The repository-owned `release:manifest` tool creates `release-manifest.json`,
 release notes, and deterministic SBOM candidate evidence from explicit package,
 registry, and release evidence. `checksums.sha256` covers distributable archive
 assets, including the SBOM file itself. `metadata-checksums.sha256` covers
-release metadata files such as `release-manifest.json` and release notes.
+public release metadata assets such as `release-manifest.json` and release
+notes. Post-create workflow evidence such as `github-release.json` and
+attestation records is retained under `retained-evidence-checksums.sha256`
+instead of being treated as public release assets.
 `sbom-subjects.sha256` covers only the package and wheel subjects described by
 that SBOM, so SBOM attestations do not make the SBOM file describe itself.
 Workflow-local scripts must not own a divergent release manifest or SBOM
@@ -148,14 +151,15 @@ The `release` workflow must:
 12. when `PROOFKIT_ENABLE_GITHUB_ATTESTATIONS=true` and the repository is
     public, publish GitHub artifact provenance and SBOM attestations for the
     checksum-bound release artifacts;
-13. create GitHub Release assets with checksums, metadata checksums, SBOM, and
-    a release manifest;
+13. create GitHub Release assets with checksums, metadata checksums, release
+    notes, SBOM, and a release manifest;
 14. retain normalized GitHub Release metadata as workflow release evidence at
     `artifacts/release/github-release.json` after byte-for-byte asset
-    verification. The release manifest records GitHub Release channel data as
-    candidate/archive inventory; `github-release.json` owns post-create GitHub
-    Release facts only inside retained workflow evidence, not as a public
-    release asset.
+    verification, and bind it plus any attestation record with
+    `artifacts/release/retained-evidence-checksums.sha256`. The release
+    manifest records GitHub Release channel data as candidate/archive inventory;
+    `github-release.json` owns post-create GitHub Release facts only inside
+    retained workflow evidence, not as a public release asset.
 
 When `PROOFKIT_REQUIRE_VERIFIED_RELEASE_TAG=true`, the readiness gate also
 requires `GITHUB_REF_PROTECTED=true` and a GitHub-verified signed annotated tag.
@@ -186,6 +190,8 @@ The evidence must distinguish:
 - Trusted Publisher identity tuples for workflow-published npm/PyPI channels;
 - GitHub Release archive publication facts from retained workflow evidence
   `github-release.json`;
+- retained workflow evidence checksum closure from
+  `retained-evidence-checksums.sha256`;
 - GitHub Release candidate asset inventory from `release-manifest.json`;
 - SBOM inventory facts;
 - optional GitHub artifact attestation facts;

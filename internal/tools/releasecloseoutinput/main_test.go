@@ -162,6 +162,27 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "missing retained evidence checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeJSON(t, filepath.Join(root, "artifacts", "release", "github-release.json"), map[string]any{
+					"tagName": "v1.2.3",
+					"assets":  []any{},
+				})
+			},
+		},
+		{
+			name:        "stale retained evidence checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeJSON(t, filepath.Join(root, "artifacts", "release", "github-release.json"), map[string]any{
+					"tagName": "v1.2.3",
+					"assets":  []any{},
+				})
+				writeFile(t, filepath.Join(root, "artifacts", "release", "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  github-release.json\n")
+			},
+		},
+		{
 			name:        "planned PyPI without non-claim",
 			criterionID: "proofkit.release_closeout.channel_scope",
 			mutate: func(root string) {

@@ -802,6 +802,42 @@ jobs:
           subject-checksums: artifacts/release/sbom-subjects.sha256
           sbom-path: artifacts/release/sbom.cdx.json
 
+      - name: Record attestation evidence
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/attestations
+          node <<'NODE'
+          const {writeFileSync} = require('node:fs');
+          const record = {
+            schemaVersion: 1,
+            artifactKind: "proofkit.github-artifact-attestation-evidence.v1",
+            repository: process.env.GITHUB_REPOSITORY,
+            workflowRef: process.env.GITHUB_WORKFLOW_REF,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            sourceSha: process.env.GITHUB_SHA,
+            attestationProvider: "github-actions",
+            subjectChecksumFiles: [
+              "artifacts/release/checksums.sha256",
+              "artifacts/release/metadata-checksums.sha256",
+              "artifacts/release/sbom-subjects.sha256"
+            ],
+            state: "published_by_workflow",
+            nonClaims: [
+              "This retained workflow record identifies completed attestation steps; provider dashboard ingestion remains provider-owned evidence."
+            ]
+          };
+          writeFileSync("artifacts/attestations/github-artifact-attestations.json", `${JSON.stringify(record, null, 2)}\n`);
+          NODE
+
+      - name: Upload attestation evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-attestation-evidence-${{ github.sha }}
+          path: artifacts/attestations/github-artifact-attestations.json
+          if-no-files-found: error
+          retention-days: 30
+
   release-assets:
     name: release / github assets
     needs:
@@ -871,6 +907,13 @@ jobs:
           name: release-metadata-${{ github.sha }}
           path: artifacts/release
 
+      - name: Download attestation evidence
+        if: ${{ vars.PROOFKIT_ENABLE_GITHUB_ATTESTATIONS == 'true' && github.event.repository.private == false }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-attestation-evidence-${{ github.sha }}
+          path: artifacts/attestations
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -882,6 +925,7 @@ jobs:
             artifacts/release/checksums.sha256
             artifacts/release/metadata-checksums.sha256
             artifacts/release/release-manifest.json
+            artifacts/release/release-notes.md
             artifacts/release/sbom.cdx.json
           )
           expected_asset_names=()
@@ -890,6 +934,36 @@ jobs:
           done
           mapfile -t expected_asset_names < <(printf '%s\n' "${expected_asset_names[@]}" | sort)
           printf '%s\n' "${expected_asset_names[@]}" >/tmp/proofkit-expected-release-assets.txt
+          mkdir -p artifacts/attestations
+          if ! compgen -G "artifacts/attestations/*.json" >/dev/null; then
+            node -e '
+            const {writeFileSync} = require("node:fs");
+            const env = process.env;
+            const record = {
+              schemaVersion: 1,
+              artifactKind: "proofkit.github-artifact-attestation-evidence.v1",
+              repository: env.GITHUB_REPOSITORY,
+              workflowRef: env.GITHUB_WORKFLOW_REF,
+              runId: env.GITHUB_RUN_ID,
+              runAttempt: env.GITHUB_RUN_ATTEMPT,
+              sourceSha: env.GITHUB_SHA,
+              attestationProvider: "github-actions",
+              subjectChecksumFiles: [
+                "artifacts/release/checksums.sha256",
+                "artifacts/release/metadata-checksums.sha256",
+                "artifacts/release/sbom-subjects.sha256"
+              ],
+              state: "not_published",
+              nonClaims: [
+                "GitHub artifact attestation provider evidence was not published in this release-assets job."
+              ]
+            };
+            writeFileSync(
+              "artifacts/attestations/github-artifact-attestations.json",
+              JSON.stringify(record, null, 2) + "\n"
+            );
+            '
+          fi
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release view "$GITHUB_REF_NAME" --json tagName,name,body,isDraft,isPrerelease,assets >/tmp/proofkit-release-view.json
             go run ./internal/tools/releasepreflight github-metadata \
@@ -933,6 +1007,18 @@ jobs:
               --notes-file artifacts/release/release-notes.md \
               --asset-names-file /tmp/proofkit-expected-release-assets.txt
             cp /tmp/proofkit-release-view.json artifacts/release/github-release.json
+            retained_evidence=(artifacts/release/github-release.json)
+            if compgen -G "artifacts/attestations/*.json" >/dev/null; then
+              while IFS= read -r evidence; do
+                retained_evidence+=("$evidence")
+              done < <(find artifacts/attestations -type f -name '*.json' | sort)
+            fi
+            mapfile -t retained_evidence < <(printf '%s\n' "${retained_evidence[@]}" | sort)
+            : > artifacts/release/retained-evidence-checksums.sha256
+            for evidence in "${retained_evidence[@]}"; do
+              sum="$(sha256sum "$evidence" | awk '{print $1}')"
+              printf '%s  %s\n' "$sum" "$(basename "$evidence")" >> artifacts/release/retained-evidence-checksums.sha256
+            done
             final_dir="$(mktemp -d)"
             for asset in "${expected_assets[@]}"; do
               asset_name="$(basename "$asset")"
@@ -958,6 +1044,18 @@ jobs:
             --tag "$GITHUB_REF_NAME" \
             --notes-file artifacts/release/release-notes.md \
             --asset-names-file /tmp/proofkit-expected-release-assets.txt
+          retained_evidence=(artifacts/release/github-release.json)
+          if compgen -G "artifacts/attestations/*.json" >/dev/null; then
+            while IFS= read -r evidence; do
+              retained_evidence+=("$evidence")
+            done < <(find artifacts/attestations -type f -name '*.json' | sort)
+          fi
+          mapfile -t retained_evidence < <(printf '%s\n' "${retained_evidence[@]}" | sort)
+          : > artifacts/release/retained-evidence-checksums.sha256
+          for evidence in "${retained_evidence[@]}"; do
+            sum="$(sha256sum "$evidence" | awk '{print $1}')"
+            printf '%s  %s\n' "$sum" "$(basename "$evidence")" >> artifacts/release/retained-evidence-checksums.sha256
+          done
           final_dir="$(mktemp -d)"
           for asset in "${expected_assets[@]}"; do
             asset_name="$(basename "$asset")"
@@ -989,9 +1087,11 @@ jobs:
             artifacts/registry/root-install-json-failed.json
             artifacts/registry/root-install-json-adapter-source.json
             artifacts/registry/audit-signatures.txt
+            artifacts/attestations/*.json
             artifacts/release/checksums.sha256
             artifacts/release/github-release.json
             artifacts/release/metadata-checksums.sha256
+            artifacts/release/retained-evidence-checksums.sha256
             artifacts/release/release-manifest.json
             artifacts/release/release-notes.md
             artifacts/release/sbom.cdx.json

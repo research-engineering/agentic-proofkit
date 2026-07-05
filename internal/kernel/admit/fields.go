@@ -73,6 +73,17 @@ func NonEmptyText(raw any, context string) (string, error) {
 	return value, nil
 }
 
+func LowercaseSHA256(raw any, context string) (string, error) {
+	value, err := NonEmptyText(raw, context)
+	if err != nil {
+		return "", err
+	}
+	if len(value) != 64 || strings.ToLower(value) != value || strings.Trim(value, "0123456789abcdef") != "" {
+		return "", fmt.Errorf("%s must be lowercase sha256", context)
+	}
+	return value, nil
+}
+
 func ContainsSecretLikeValue(value string) bool {
 	return ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value)
 }

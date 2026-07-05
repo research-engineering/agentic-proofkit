@@ -905,6 +905,10 @@
           "testEvidenceInventory",
           "viewInputId"
         ],
+        "optionalFields": [
+          "normalizedTestEvidenceInventory"
+        ],
+        "provenanceRule": "When normalizedTestEvidenceInventory is present, it preserves the admitted source-set envelope and its nested inventory must equal testEvidenceInventory.",
         "nonClaims": [
           "Coverage input composition emits a direct requirement-coverage-view input and does not execute native tests, authenticate receipts, decide freshness, or approve merge."
         ]

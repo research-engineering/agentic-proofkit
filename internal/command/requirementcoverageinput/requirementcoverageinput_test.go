@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"testing"
@@ -35,6 +36,10 @@ func TestBuildComposesInputPreservesDeclaredUniverseAndAllowsDownstreamFailures(
 	if viewExitCode == 0 {
 		t.Fatalf("downstream coverage view should still report declared missing command/test surface: %#v", view)
 	}
+	provenance := output["normalizedTestEvidenceInventory"].(map[string]any)
+	if !reflect.DeepEqual(provenance["inventory"], output["testEvidenceInventory"]) {
+		t.Fatalf("normalized provenance inventory must match direct inventory")
+	}
 }
 
 func TestBuildComposesDirectRequirementProofBindingAndInventory(t *testing.T) {
@@ -58,12 +63,83 @@ func TestBuildComposesDirectRequirementProofBindingAndInventory(t *testing.T) {
 	if output["requirementProofBinding"] == nil {
 		t.Fatalf("direct compose must preserve admitted requirementProofBinding")
 	}
+	if output["normalizedTestEvidenceInventory"] != nil {
+		t.Fatalf("direct compose must not synthesize normalized provenance: %#v", output["normalizedTestEvidenceInventory"])
+	}
 	view, viewExitCode, err := requirementcoverageview.BuildJSON(output, requirementcoverageview.Options{})
 	if err != nil {
 		t.Fatalf("direct composed input should be coverage-view admitted: %v", err)
 	}
 	if viewExitCode == 0 {
 		t.Fatalf("downstream coverage view should still report declared missing command/test surface: %#v", view)
+	}
+}
+
+func TestBuildPreservesNormalizedSourceSetProvenance(t *testing.T) {
+	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
+	normalized["sourceAuthority"] = "caller_owned_inventory_source_set"
+	normalized["sourceCount"] = json.Number("1")
+	normalized["sources"] = []any{
+		[]any{
+			"source.coverage.fragment",
+			"docs/contracts/test-inventory/coverage.v1.json",
+			strings.Repeat("a", 64),
+			"test_evidence_inventory_fragment",
+			[]any{"Source-set row fixture does not execute tests."},
+		},
+	}
+	normalized["inputPaths"] = []any{"docs/contracts/test-inventory/coverage.v1.json"}
+	normalized["entrySources"] = []any{
+		map[string]any{
+			"path":     "docs/contracts/test-inventory/coverage.v1.json",
+			"sourceId": "source.coverage.fragment",
+			"testId":   "test.coverage.semantic",
+		},
+	}
+
+	output, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() source-set input error = %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Build() source-set input exitCode=%d output=%#v", exitCode, output)
+	}
+	provenance := output["normalizedTestEvidenceInventory"].(map[string]any)
+	if provenance["sourceAuthority"] != "caller_owned_inventory_source_set" {
+		t.Fatalf("sourceAuthority=%#v", provenance["sourceAuthority"])
+	}
+	if !reflect.DeepEqual(provenance["inventory"], output["testEvidenceInventory"]) {
+		t.Fatalf("source-set provenance inventory must match direct inventory")
+	}
+	sourceRows := provenance["sources"].([]any)
+	if sourceRows[0].([]any)[2] != strings.Repeat("a", 64) {
+		t.Fatalf("source-set sha was not preserved: %#v", sourceRows)
+	}
+	if _, _, err := requirementcoverageview.BuildJSON(output, requirementcoverageview.Options{}); err != nil {
+		t.Fatalf("coverage view should admit provenance-bearing composed input: %v", err)
+	}
+}
+
+func TestBuildPreservesChildOwnedInventorySupersessionProofRef(t *testing.T) {
+	input := validComposeInput(t, supersedingInventoryEntries()).(map[string]any)
+	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
+	delete(input, "compactProofContract")
+	delete(input, "normalizedTestEvidenceInventory")
+	input["requirementProofBinding"] = directRequirementProofBinding(t)
+	input["testEvidenceInventory"] = normalized["inventory"]
+
+	output, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() direct supersession input error = %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Build() direct supersession input exitCode=%d output=%#v", exitCode, output)
+	}
+	inventory := output["testEvidenceInventory"].(map[string]any)
+	entries := inventory["entries"].([]any)
+	if !entryFalsifierHas(entries, "test.coverage.semantic_replacement", "supersessionProofRef", "proof.coverage.semantic_replacement") {
+		t.Fatalf("composed inventory lost supersessionProofRef: %#v", inventory)
 	}
 }
 
@@ -161,7 +237,7 @@ func TestBuildRejectsFabricatedDirectEnvelopeWithSourceMetadata(t *testing.T) {
 	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
 	normalized["sourceCount"] = json.Number("1")
 	normalized["sources"] = []any{
-		[]any{"source.coverage", "docs/contracts/test-inventory/coverage.v1.json", "sha256:abc", "test_evidence_inventory_fragment", []any{"Fabricated source metadata."}},
+		[]any{"source.coverage", "docs/contracts/test-inventory/coverage.v1.json", strings.Repeat("a", 64), "test_evidence_inventory_fragment", []any{"Fabricated source metadata."}},
 	}
 	normalized["inputPaths"] = []any{"docs/contracts/test-inventory/coverage.v1.json"}
 
@@ -177,7 +253,7 @@ func TestBuildRejectsSourceSetEnvelopeMissingEntrySourceCoverage(t *testing.T) {
 	normalized["sourceAuthority"] = "caller_owned_inventory_source_set"
 	normalized["sourceCount"] = json.Number("1")
 	normalized["sources"] = []any{
-		[]any{"source.coverage", "docs/contracts/test-inventory/coverage.v1.json", "sha256:abc", "test_evidence_inventory_fragment", []any{"Source metadata is fixture-only."}},
+		[]any{"source.coverage", "docs/contracts/test-inventory/coverage.v1.json", strings.Repeat("a", 64), "test_evidence_inventory_fragment", []any{"Source metadata is fixture-only."}},
 	}
 	normalized["inputPaths"] = []any{"docs/contracts/test-inventory/coverage.v1.json"}
 
@@ -451,6 +527,39 @@ func baseInventoryEntries() string {
 	)
 }
 
+func supersedingInventoryEntries() string {
+	return inventoryEntry(
+		"test.coverage.semantic",
+		"proofkit.coverage.command",
+		"internal/command/requirementcoverageinput/requirementcoverageinput_test.go",
+		"semantic",
+	) + `,` + `{
+  "testId": "test.coverage.semantic_replacement",
+  "selector": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go::semantic_replacement",
+  "sourcePath": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go",
+  "ownerId": "proofkit.coverage",
+  "evidenceClass": "semantic_falsifier",
+  "requirementRefs": ["REQ-PROOFKIT-COVERAGE-001"],
+  "ownerInvariantRefs": ["proof.coverage.semantic_replacement"],
+  "commandRefs": ["proofkit.coverage.command"],
+  "witnessRefs": [],
+  "falsifier": {
+    "falsifierId": "falsifier.coverage.semantic_replacement",
+    "negativeCaseId": "case.coverage.semantic",
+    "wrongImplementationClassId": "wrong.coverage.semantic",
+    "dominanceGroup": "coverage.semantic",
+    "supersedes": ["falsifier.coverage.semantic"],
+    "supersessionProofRef": "proof.coverage.semantic_replacement"
+  },
+  "oracle": {
+    "oracleId": "oracle.coverage.semantic_replacement",
+    "oracleKind": "negative_exit_and_diagnostic",
+    "assertionSummary": "Replacement coverage composer fixture dominates the original semantic falsifier."
+  },
+  "nonClaims": []
+}`
+}
+
 func inventoryEntry(testID string, commandRef string, sourcePath string, suffix string) string {
 	return `{
   "testId": "` + testID + `",
@@ -475,7 +584,19 @@ func inventoryEntry(testID string, commandRef string, sourcePath string, suffix 
     "assertionSummary": "Coverage composer fixture has a semantic falsifier."
   },
   "nonClaims": []
-}`
+	}`
+}
+
+func entryFalsifierHas(entries []any, testID string, key string, want any) bool {
+	for _, rawEntry := range entries {
+		entry := rawEntry.(map[string]any)
+		if entry["testId"] != testID {
+			continue
+		}
+		falsifier := entry["falsifier"].(map[string]any)
+		return falsifier[key] == want
+	}
+	return false
 }
 
 func stringsOf(raw any) []string {

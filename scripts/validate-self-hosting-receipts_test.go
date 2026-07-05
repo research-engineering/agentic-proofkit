@@ -371,6 +371,55 @@ func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T
 	}
 }
 
+func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatalf("read release workflow: %v", err)
+	}
+	var workflow githubWorkflow
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatalf("parse release workflow: %v", err)
+	}
+	assetJob := workflow.Jobs["release-assets"]
+	createIndex, err := uniqueStepIndex(assetJob.Steps, "Create GitHub Release")
+	if err != nil {
+		t.Fatalf("find release create step: %v", err)
+	}
+	if createIndex < 0 {
+		t.Fatal("Create GitHub Release step not found")
+	}
+	createRun := assetJob.Steps[createIndex].Run
+	for _, item := range []string{
+		"artifacts/release/release-notes.md",
+		"artifacts/release/github-release.json",
+		"artifacts/release/retained-evidence-checksums.sha256",
+		"artifacts/attestations/github-artifact-attestations.json",
+		"printf '%s  %s\\n' \"$sum\" \"$(basename \"$evidence\")\"",
+	} {
+		if !strings.Contains(createRun, item) {
+			t.Fatalf("Create GitHub Release step missing retained evidence token %q", item)
+		}
+	}
+	uploadIndex, err := uniqueStepIndex(assetJob.Steps, "Upload release evidence")
+	if err != nil {
+		t.Fatalf("find release evidence upload step: %v", err)
+	}
+	if uploadIndex < 0 {
+		t.Fatal("Upload release evidence step not found")
+	}
+	uploadPath := strings.Join(stringValues(assetJob.Steps[uploadIndex].With["path"]), "\n")
+	for _, item := range []string{
+		"artifacts/attestations/*.json",
+		"artifacts/release/github-release.json",
+		"artifacts/release/retained-evidence-checksums.sha256",
+		"artifacts/release/release-notes.md",
+	} {
+		if !strings.Contains(uploadPath, item) {
+			t.Fatalf("Upload release evidence path missing %q: %#v", item, uploadPath)
+		}
+	}
+}
+
 func TestReleaseWorkflowRegistryInstallUsesRootPackageName(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", ".github", "workflows", "release.yml"))
 	if err != nil {

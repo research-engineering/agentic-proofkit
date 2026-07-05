@@ -162,7 +162,9 @@ func buildReport(input input) (report.Record, int) {
 			if shape.CandidateRequirementID != nil {
 				candidateRequirements = append(candidateRequirements, candidateRequirement(input, capability, shape))
 				for _, anchor := range anchors {
-					candidateBindings = append(candidateBindings, candidateBinding(input, *shape.CandidateRequirementID, anchor))
+					if isExecutableAnchor(anchor) {
+						candidateBindings = append(candidateBindings, candidateBinding(input, *shape.CandidateRequirementID, shape.RequiredEvidence, anchor))
+					}
 				}
 			}
 
@@ -695,11 +697,15 @@ func activeAnchors(anchors []scenarioAnchor) []scenarioAnchor {
 
 func hasExecutableAnchor(anchors []scenarioAnchor) bool {
 	for _, anchor := range anchors {
-		if len(anchor.CommandRefs) > 0 && (anchor.PositiveWitness || anchor.FalsificationWitness) {
+		if isExecutableAnchor(anchor) {
 			return true
 		}
 	}
 	return false
+}
+
+func isExecutableAnchor(anchor scenarioAnchor) bool {
+	return len(anchor.CommandRefs) > 0 && (anchor.PositiveWitness || anchor.FalsificationWitness)
 }
 
 func candidateRequirement(input input, capability capability, shape scenarioShape) map[string]any {
@@ -710,13 +716,14 @@ func candidateRequirement(input input, capability capability, shape scenarioShap
 		"nonClaims":          admit.StringSliceToAny(sortedUnique(append(append([]string{}, capability.NonClaims...), shape.NonClaims...))),
 		"ownerId":            capability.OwnerID,
 		"requirementId":      *shape.CandidateRequirementID,
+		"requiredEvidence":   admit.StringSliceToAny(shape.RequiredEvidence),
 		"sourceCapabilityId": capability.CapabilityID,
 		"sourceScenarioId":   shape.ScenarioID,
 		"statementSeed":      shape.Summary,
 	}
 }
 
-func candidateBinding(input input, requirementID string, anchor scenarioAnchor) map[string]any {
+func candidateBinding(input input, requirementID string, requiredEvidence []string, anchor scenarioAnchor) map[string]any {
 	witnessKinds := []string{}
 	if anchor.PositiveWitness {
 		witnessKinds = append(witnessKinds, "positive")
@@ -730,6 +737,7 @@ func candidateBinding(input input, requirementID string, anchor scenarioAnchor) 
 		"executableEvidenceState": executableEvidenceState(input.TrustMode),
 		"nonClaims":               admit.StringSliceToAny(anchor.NonClaims),
 		"promotionState":          promotionState(input.TrustMode),
+		"requiredEvidence":        admit.StringSliceToAny(requiredEvidence),
 		"requirementId":           requirementID,
 		"scenarioId":              anchor.ScenarioID,
 		"selector":                anchor.Selector,

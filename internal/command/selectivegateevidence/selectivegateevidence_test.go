@@ -52,6 +52,40 @@ func TestProjectObligationDecisionBuildsInputAndRejectsUnroutedCommand(t *testin
 	}
 }
 
+func TestProjectObligationDecisionRejectsDuplicateObligationIDs(t *testing.T) {
+	input := validProjectionInput()
+	plan := evidencePlan(input["evidence"].(map[string]any))
+	plan["requiredCommands"] = []any{
+		plannedCommand(),
+		map[string]any{
+			"id":      "proofkit.go-vet",
+			"command": "go vet ./...",
+			"reason":  "Go vet is required by the synthetic selective plan.",
+		},
+	}
+	input["commandRoutes"] = []any{
+		input["commandRoutes"].([]any)[0],
+		map[string]any{
+			"commandId":       "proofkit.go-vet",
+			"command":         "go vet ./...",
+			"sourcePath":      nil,
+			"obligationId":    "proofkit.obligation.go-test",
+			"requirementId":   "REQ-PROOFKIT-001",
+			"proofRouteRef":   "proofkit.route.go-vet",
+			"obligationClass": "blocking",
+			"owner":           "proofkit.test",
+			"reason":          "Go vet command is required by the selective plan.",
+			"evidenceRefs":    []any{"docs/contracts/proof.json"},
+			"nonClaims":       []any{"Projection route test input does not approve merge."},
+		},
+	}
+
+	_, err := ProjectObligationDecision(input)
+	if err == nil || !strings.Contains(err.Error(), "obligationId values must be unique") {
+		t.Fatalf("ProjectObligationDecision() error=%v, want duplicate obligationId rejection", err)
+	}
+}
+
 func TestProjectObligationDecisionWithoutCurrentnessOrTrustDoesNotSatisfyBlockingObligation(t *testing.T) {
 	projected, err := ProjectObligationDecision(validProjectionInput())
 	if err != nil {
@@ -67,6 +101,24 @@ func TestProjectObligationDecisionWithoutCurrentnessOrTrustDoesNotSatisfyBlockin
 	encoded, _ := json.Marshal(result.Report.JSONValue())
 	if !strings.Contains(string(encoded), "invalid_producer") || !strings.Contains(string(encoded), "unknown_scope") {
 		t.Fatalf("obligation decision missing trust/currentness blockers: %s", encoded)
+	}
+}
+
+func TestProjectObligationDecisionUsesChildOwnedCurrentnessAndTrustProjection(t *testing.T) {
+	input := validProjectionInput()
+	input["receiptCurrentnessScopeAdmission"] = validCurrentnessScopeAdmission()
+	input["receiptTrustClassAdmission"] = validReceiptTrustAdmission()
+
+	projected, err := ProjectObligationDecision(input)
+	if err != nil {
+		t.Fatalf("ProjectObligationDecision() error=%v", err)
+	}
+	result, err := obligationdecision.Build(projected)
+	if err != nil {
+		t.Fatalf("obligationdecision.Build() error=%v", err)
+	}
+	if result.ExitCode != 0 || result.Report.State != "passed" {
+		t.Fatalf("obligation decision exit=%d state=%s, want passed: %#v", result.ExitCode, result.Report.State, result.Report.JSONValue())
 	}
 }
 
@@ -489,6 +541,98 @@ func validProjectionInput() map[string]any {
 		"receiptCurrentnessScopeAdmission": nil,
 		"receiptTrustClassAdmission":       nil,
 		"nonClaims":                        []any{"Projection test input is synthetic."},
+	}
+}
+
+func validCurrentnessScopeAdmission() map[string]any {
+	digest := "sha256:" + strings.Repeat("a", 64)
+	return map[string]any{
+		"schemaVersion": json.Number("1"),
+		"admissionId":   "proofkit.test.currentness",
+		"obligationReceipts": []any{
+			map[string]any{
+				"obligationId":  "proofkit.obligation.go-test",
+				"receiptId":     "receipt.producer.one",
+				"requirementId": "REQ-PROOFKIT-001",
+				"proofRouteRef": "proofkit.route.go-test",
+				"owner":         "proofkit.test",
+				"reason":        "Synthetic currentness record is current for projection tests.",
+				"evidenceRefs":  []any{"artifacts/test/currentness.json"},
+				"currentnessChecks": []any{
+					map[string]any{
+						"checkId":        "proofkit.test.currentness.digest",
+						"checkClass":     "proofkit.test.digest",
+						"recordedDigest": digest,
+						"currentDigest":  digest,
+						"evidenceRefs":   []any{"artifacts/test/currentness.json"},
+						"nonClaims":      []any{"Currentness fixture does not read files."},
+					},
+				},
+				"scopeChecks": []any{
+					map[string]any{
+						"checkId":             "proofkit.test.currentness.scope",
+						"scopeClass":          "proofkit.test.scope",
+						"admissionState":      "admitted_current_scope",
+						"recordedScopeDigest": digest,
+						"currentScopeDigest":  digest,
+						"reason":              "Synthetic scope matches.",
+						"evidenceRefs":        []any{"artifacts/test/currentness.json"},
+						"nonClaims":           []any{"Scope fixture does not prove checkout freshness."},
+					},
+				},
+				"nonClaims": []any{"Currentness obligation fixture is synthetic."},
+			},
+		},
+		"nonClaims": []any{"Currentness admission fixture is synthetic."},
+	}
+}
+
+func validReceiptTrustAdmission() map[string]any {
+	return map[string]any{
+		"schemaVersion": json.Number("1"),
+		"policyId":      "proofkit.test.receipt-trust",
+		"trustClasses": []any{
+			map[string]any{
+				"trustClassId":                   "proofkit.test.trusted",
+				"rank":                           json.Number("1"),
+				"allowedProducerAdmissionLevels": []any{"merge_satisfying"},
+				"allowedReceiptStatuses":         []any{"passed"},
+				"requiresArtifactRefs":           true,
+				"requiresProvenanceRef":          true,
+				"nonClaims":                      []any{"Trust class fixture does not authenticate providers."},
+			},
+		},
+		"proofClasses": []any{
+			map[string]any{
+				"proofClassId":              "proofkit.test.package-gate",
+				"minimumTrustClassId":       "proofkit.test.trusted",
+				"allowedEnvironmentClasses": []any{"local-go"},
+				"allowedReceiptKinds":       []any{"proofkit.package-gate"},
+				"owner":                     "proofkit.test",
+				"rationale":                 "Synthetic proof class admits package gate receipts.",
+				"riskClass":                 "proofkit.test.risk",
+				"nonClaims":                 []any{"Proof class fixture does not approve merge."},
+			},
+		},
+		"obligationReceipts": []any{
+			map[string]any{
+				"obligationId":           "proofkit.obligation.go-test",
+				"receiptId":              "receipt.producer.one",
+				"requirementId":          "REQ-PROOFKIT-001",
+				"proofRouteRef":          "proofkit.route.go-test",
+				"proofClassId":           "proofkit.test.package-gate",
+				"trustClassId":           "proofkit.test.trusted",
+				"receiptKind":            "proofkit.package-gate",
+				"environmentClass":       "local-go",
+				"receiptStatus":          "passed",
+				"producerAdmissionClass": "merge_satisfying",
+				"provenanceRef":          "artifacts/test/provenance.json",
+				"artifactRefs":           []any{"artifacts/test/report.json"},
+				"evidenceRefs":           []any{"artifacts/test/trust.json"},
+				"nonClaims":              []any{"Trust obligation fixture is synthetic."},
+			},
+		},
+		"nonClaims": []any{"Trust admission fixture is synthetic."},
 	}
 }
 

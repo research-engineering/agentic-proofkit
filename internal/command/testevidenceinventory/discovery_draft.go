@@ -113,7 +113,7 @@ func BuildDiscoveryDraft(raw any) (report.Record, int, error) {
 			rule("test_inventory.discovery_draft.input_admitted", "passed", "Discovery draft input used explicit caller-owned facts only."),
 			rule("test_inventory.discovery_draft.candidate_only", "passed", "Discovery draft projection emits candidate route-only inventory rows that cannot close semantic coverage."),
 		},
-		NonClaims: admit.StringSliceToAny(sortedUnique(append(discoveryDefaultNonClaims(), input.NonClaims...))),
+		NonClaims: admit.StringSliceToAny(discoveryScopeNonClaims(input)),
 	}
 	return record, 0, nil
 }
@@ -398,10 +398,12 @@ func discoveryActionMessage(actionType string) string {
 
 func discoveryCandidateInventory(input discoveryDraftInput) map[string]any {
 	entries := []any{}
+	scopeNonClaims := discoveryScopeNonClaims(input)
 	for _, test := range input.DiscoveredTests {
 		entryNonClaims := []string{
 			"Discovery draft rows are candidate-only and cannot close semantic coverage.",
 		}
+		entryNonClaims = append(entryNonClaims, scopeNonClaims...)
 		entryNonClaims = append(entryNonClaims, test.NonClaims...)
 		entries = append(entries, map[string]any{
 			"commandRefs":        admit.StringSliceToAny([]string{input.Runner.CommandRef}),
@@ -410,9 +412,9 @@ func discoveryCandidateInventory(input discoveryDraftInput) map[string]any {
 			"nonClaims":          admit.StringSliceToAny(sortedUnique(entryNonClaims)),
 			"oracle":             nil,
 			"ownerId":            test.OwnerID,
-			"ownerInvariantRefs": []any{},
+			"ownerInvariantRefs": admit.StringSliceToAny(test.OwnerInvariantRefs),
 			"qualityFindings":    discoveryQualityFindings(test),
-			"requirementRefs":    []any{},
+			"requirementRefs":    admit.StringSliceToAny(test.CandidateRequirementRefs),
 			"selector":           test.Selector,
 			"sourcePath":         test.SourcePath,
 			"testId":             test.TestID,
@@ -424,9 +426,17 @@ func discoveryCandidateInventory(input discoveryDraftInput) map[string]any {
 		"candidateKind": discoveryCandidateInventoryKind,
 		"entries":       entries,
 		"inventoryId":   input.DraftID + ".candidate_inventory",
-		"nonClaims":     admit.StringSliceToAny(discoveryDefaultNonClaims()),
+		"nonClaims":     admit.StringSliceToAny(scopeNonClaims),
 		"schemaVersion": 1,
 	}
+}
+
+func discoveryScopeNonClaims(input discoveryDraftInput) []string {
+	nonClaims := discoveryDefaultNonClaims()
+	nonClaims = append(nonClaims, input.NonClaims...)
+	nonClaims = append(nonClaims, input.Repository.NonClaims...)
+	nonClaims = append(nonClaims, input.Runner.NonClaims...)
+	return sortedUnique(nonClaims)
 }
 
 func discoveryQualityFindings(test discoveredTest) []any {

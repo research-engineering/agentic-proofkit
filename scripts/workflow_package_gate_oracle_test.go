@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -59,6 +60,7 @@ type githubStep struct {
 	Name            string         `yaml:"name"`
 	Run             string         `yaml:"run"`
 	Uses            string         `yaml:"uses"`
+	With            map[string]any `yaml:"with"`
 }
 
 func assertPackageGateWorkflowFile(t *testing.T, path string, expectation packageGateWorkflowExpectation) {
@@ -414,6 +416,19 @@ func permissionWrites(raw any) bool {
 	}
 }
 
+func permissionHas(raw any, key string, want string) bool {
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return false
+	}
+	value, ok := record[key]
+	if !ok {
+		return false
+	}
+	text, ok := value.(string)
+	return ok && strings.EqualFold(strings.TrimSpace(text), want)
+}
+
 func permissionDeclaredReadOnly(raw any) bool {
 	switch value := raw.(type) {
 	case string:
@@ -437,6 +452,82 @@ func permissionDeclaredReadOnly(raw any) bool {
 	default:
 		return false
 	}
+}
+
+func TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions(t *testing.T) {
+	cases := []struct {
+		name         string
+		path         string
+		advisoryJobs []string
+		providerJobs map[string]map[string]string
+	}{
+		{
+			name:         "codeql",
+			path:         filepath.Join("..", ".github", "workflows", "codeql.yml"),
+			advisoryJobs: []string{"analyze"},
+			providerJobs: map[string]map[string]string{
+				"upload-sarif": {"security-events": "write"},
+			},
+		},
+		{
+			name:         "osv",
+			path:         filepath.Join("..", ".github", "workflows", "osv-scanner.yml"),
+			advisoryJobs: []string{"scan"},
+			providerJobs: map[string]map[string]string{
+				"upload-sarif": {"security-events": "write"},
+			},
+		},
+		{
+			name:         "scorecard",
+			path:         filepath.Join("..", ".github", "workflows", "scorecard.yml"),
+			advisoryJobs: []string{"scorecard"},
+			providerJobs: map[string]map[string]string{
+				"upload-sarif": {"security-events": "write"},
+				"publish":      {"id-token": "write"},
+			},
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			workflow := readWorkflowForTest(t, item.path)
+			if permissionWrites(workflow.Permissions) {
+				t.Fatalf("%s workflow-level permissions grant write scopes", item.path)
+			}
+			for _, jobID := range item.advisoryJobs {
+				job, ok := workflow.Jobs[jobID]
+				if !ok {
+					t.Fatalf("%s missing advisory job %q", item.path, jobID)
+				}
+				if permissionWrites(job.Permissions) {
+					t.Fatalf("%s advisory job %q grants write scopes: %#v", item.path, jobID, job.Permissions)
+				}
+			}
+			for jobID, permissions := range item.providerJobs {
+				job, ok := workflow.Jobs[jobID]
+				if !ok {
+					t.Fatalf("%s missing provider job %q", item.path, jobID)
+				}
+				for scope, want := range permissions {
+					if !permissionHas(job.Permissions, scope, want) {
+						t.Fatalf("%s provider job %q permission %s=%#v, want %q", item.path, jobID, scope, job.Permissions, want)
+					}
+				}
+			}
+		})
+	}
+}
+
+func readWorkflowForTest(t *testing.T, path string) githubWorkflow {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read workflow %s: %v", path, err)
+	}
+	var workflow githubWorkflow
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatalf("parse workflow %s: %v", path, err)
+	}
+	return workflow
 }
 
 func truthy(raw any) bool {

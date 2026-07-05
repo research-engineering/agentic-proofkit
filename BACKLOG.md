@@ -9,7 +9,7 @@ historical completion archive.
 
 ## Current State
 
-There is no active backlog work.
+Active work is limited to the rows below.
 
 The public source cutover, scoped npm channel, optional PyPI channel, provider
 security setup, first-consumer proof, and second-consumer pilot have all been
@@ -50,4 +50,9 @@ records, generated release manifests, or the owning docs named above.
 
 ## Open Rows
 
-None.
+| Status | ID | Scope | Completion condition |
+|---|---|---|---|
+| NEXT | COVERAGE-01 | Strengthen command semantic coverage so `semantic_falsifier` cannot be satisfied by route metadata, prose rationale, test-function existence, or a weak same-package smoke. | Command coverage emits and counts `semantic_falsifier` only from an owner-authored executable proof identity that binds `commandRef`, selector, negative case, oracle ID, and expected public outcome. Add regression tests rejecting unrelated existing tests, assertionless or skipped tests, route-index/prose-synthesized proof IDs, and metadata-only semantic routes; keep route-only discovery as non-claim evidence. |
+| BLOCKED | RELEASE-01 | Decide whether normalized post-create GitHub Release facts need durable public evidence beyond retained workflow artifacts under immutable GitHub Releases. | Either keep `github-release.json` as retained workflow evidence with explicit non-claims, or design a provider-compatible public evidence channel that does not require post-create Release asset mutation. Completion requires a release-proof design and live provider proof; direct backfill/upload is blocked by immutable Release upload rejection. |
+| BLOCKED | RELEASE-02 | Resolve or explicitly retire the immutable historical GitHub Release asset-closure gap where release metadata references a notes asset that the published release does not contain. | Either attach the exact checksum-matching notes asset if provider policy allows, or record the provider-impossible closure in the release evidence model and prove future releases cannot repeat the gap. Completion requires live provider proof; direct backfill is currently blocked by immutable Release upload rejection. |
+| NEXT | RECEIPT-01 | Split the aggregate self-hosting package receipt only if Go and Python package evidence can be admitted as independent evidence classes without losing package-gate closure. | Either emit separate Go and Python receipt kinds with independent command, artifact, environment, and producer-admission projections, or retain the aggregate `local-go-python` receipt with explicit non-claims and no split-readiness claim. Add receipt-producer and self-hosting regression tests for whichever model is admitted. |

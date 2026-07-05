@@ -391,10 +391,12 @@ func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 		"artifacts/release/sbom-subjects.sha256",
 		"artifacts/release/sbom.cdx.json",
 	}
+	evidence = append(evidence, retainedReleaseEvidenceRefs(root)...)
 	ok := releaseManifestMatches(root, manifest) &&
 		validSBOM(root, "artifacts/release/sbom.cdx.json") &&
 		releaseNotesIncludeRollback(root, "artifacts/release/release-notes.md") &&
 		releaseChecksumInventoriesMatch(root, manifest) &&
+		retainedReleaseEvidenceMatches(root) &&
 		allFilesExist(root, evidence)
 	return blockingCriterion(
 		"proofkit.release_closeout.manifest_and_sbom",
@@ -1020,6 +1022,43 @@ func releaseChecksumInventoriesMatch(root string, manifest packageJSON) bool {
 	return checksumFileMatches(root, "artifacts/release/checksums.sha256", checksumTargets) &&
 		checksumFileMatches(root, "artifacts/release/sbom-subjects.sha256", packageTargets) &&
 		checksumFileMatches(root, "artifacts/release/metadata-checksums.sha256", metadataTargets)
+}
+
+func retainedReleaseEvidenceRefs(root string) []string {
+	targets := retainedReleaseEvidenceTargets(root)
+	if len(targets) == 0 {
+		return []string{}
+	}
+	return append([]string{"artifacts/release/retained-evidence-checksums.sha256"}, targets...)
+}
+
+func retainedReleaseEvidenceMatches(root string) bool {
+	targets := retainedReleaseEvidenceTargets(root)
+	if len(targets) == 0 {
+		return true
+	}
+	return checksumFileMatches(root, "artifacts/release/retained-evidence-checksums.sha256", targets)
+}
+
+func retainedReleaseEvidenceTargets(root string) []string {
+	targets := []string{}
+	if fileExists(root, "artifacts/release/github-release.json") {
+		targets = append(targets, "artifacts/release/github-release.json")
+	}
+	attestationRoot := filepath.Join(root, "artifacts", "attestations")
+	_ = filepath.WalkDir(attestationRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry == nil || entry.IsDir() || filepath.Ext(path) != ".json" {
+			return nil
+		}
+		relative, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return nil
+		}
+		targets = append(targets, filepath.ToSlash(relative))
+		return nil
+	})
+	sort.Strings(targets)
+	return targets
 }
 
 func checksumFileMatches(root string, checksumPath string, targetPaths []string) bool {

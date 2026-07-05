@@ -32,7 +32,6 @@ func TestBuildProjectsRequirementBindingsToWitnessPlan(t *testing.T) {
 		"projection":              "requirement-bindings",
 		"vocabulary":              validWitnessPlanInput()["vocabulary"],
 		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
-		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
 	}
 	plan, err := Build(input)
 	if err != nil {
@@ -58,7 +57,6 @@ func TestBuildRejectsRequirementBindingProjectionThatNeedsShellQuoting(t *testin
 		"projection":              "requirement-bindings",
 		"vocabulary":              validWitnessPlanInput()["vocabulary"],
 		"requirementProofBinding": validRequirementProofBindingInput(`go test "./path with space"`),
-		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
 	}
 	_, err := Build(input)
 	if err == nil || !strings.Contains(err.Error(), "provide an explicit witness-plan command catalog") {
@@ -72,7 +70,6 @@ func TestBuildRejectsRequirementBindingProjectionWithAmbiguousParallelGroups(t *
 		"projection":              "requirement-bindings",
 		"vocabulary":              validWitnessPlanInput()["vocabulary"],
 		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
-		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
 	}
 	vocabulary := input["vocabulary"].(map[string]any)
 	vocabulary["parallelGroups"] = []any{"destructive", "safe"}
@@ -89,7 +86,6 @@ func TestBuildRejectsRequirementBindingProjectionWithShellControl(t *testing.T) 
 		"projection":              "requirement-bindings",
 		"vocabulary":              validWitnessPlanInput()["vocabulary"],
 		"requirementProofBinding": validRequirementProofBindingInput(`go test ./internal/command/witnessplan && echo ok`),
-		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
 	}
 	_, err := Build(input)
 	if err == nil || !strings.Contains(err.Error(), "shell control tokens") {
@@ -102,11 +98,25 @@ func TestBuildRejectsRequirementBindingProjectionWithoutVocabulary(t *testing.T)
 		"schemaVersion":           json.Number("1"),
 		"projection":              "requirement-bindings",
 		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
-		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
 	}
 	_, err := Build(input)
 	if err == nil || !strings.Contains(err.Error(), "witness vocabulary") {
 		t.Fatalf("Build() error=%v, want vocabulary admission rejection", err)
+	}
+}
+
+func TestBuildRejectsProjectionNonClaimsUntilPlanOwnsRetainedMetadata(t *testing.T) {
+	input := map[string]any{
+		"schemaVersion":           json.Number("1"),
+		"projection":              "requirement-bindings",
+		"vocabulary":              validWitnessPlanInput()["vocabulary"],
+		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
+		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
+	}
+
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "unsupported field") {
+		t.Fatalf("Build() error=%v, want unsupported nonClaims rejection", err)
 	}
 }
 

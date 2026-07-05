@@ -44,6 +44,7 @@
     "Receipt producer policy does not admit merge-satisfying GitHub Actions receipts by environment variable alone.",
     "Receipt producer policy does not approve package release or consumer rollout.",
     "Receipt producer policy does not authenticate protected-ref or workflow state by itself.",
-    "Receipt producer policy does not compute receipt freshness."
+    "Receipt producer policy does not compute receipt freshness.",
+    "The local-go-python package receipt is an aggregate package-gate receipt and does not provide independent local-go and local-python receipt classes."
   ]
 }

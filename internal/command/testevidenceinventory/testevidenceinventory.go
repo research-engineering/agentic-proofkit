@@ -1,6 +1,7 @@
 package testevidenceinventory
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -152,6 +153,28 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 	return normalizedInventoryValue(result.Inventory), 0, nil
 }
 
+// InventoryValue returns the admitted direct inventory projection owned by this package.
+func InventoryValue(inventory Inventory) map[string]any {
+	nonClaims := make([]string, 0, len(defaultNonClaims)+len(inventory.NonClaims))
+	nonClaims = append(nonClaims, defaultNonClaims...)
+	nonClaims = append(nonClaims, inventory.NonClaims...)
+	nonClaims = sortedUnique(nonClaims)
+	record := map[string]any{
+		"schemaVersion": json.Number("1"),
+		"inventoryId":   inventory.InventoryID,
+		"authority":     directAuthority,
+		"entries":       entriesToAny(inventory.Entries),
+		"nonClaims":     admit.StringSliceToAny(nonClaims),
+	}
+	if inventory.OwnerID != "" {
+		record["ownerId"] = inventory.OwnerID
+	}
+	if inventory.SourceID != "" {
+		record["sourceId"] = inventory.SourceID
+	}
+	return record
+}
+
 func Evaluate(raw any) (Result, error) {
 	inventory, err := admitInventory(raw)
 	if err != nil {
@@ -201,12 +224,8 @@ func Evaluate(raw any) (Result, error) {
 }
 
 func normalizedInventoryValue(inventory Inventory) map[string]any {
-	nonClaims := make([]string, 0, len(defaultNonClaims)+len(inventory.NonClaims))
-	nonClaims = append(nonClaims, defaultNonClaims...)
-	nonClaims = append(nonClaims, inventory.NonClaims...)
-	nonClaims = sortedUnique(nonClaims)
 	return map[string]any{
-		"schemaVersion":         1,
+		"schemaVersion":         json.Number("1"),
 		"normalizedInventoryId": inventory.InventoryID + ".normalized",
 		"normalizedKind":        NormalizedInventoryKind,
 		"sourceAuthority":       inventory.Authority,
@@ -215,13 +234,7 @@ func normalizedInventoryValue(inventory Inventory) map[string]any {
 		"sources":               sourceRowsToAny(inventory.SourceRows),
 		"entrySources":          entrySourcesToAny(inventory.EntrySources),
 		"inputPaths":            admit.StringSliceToAny(inventory.InputPaths),
-		"inventory": map[string]any{
-			"schemaVersion": 1,
-			"inventoryId":   inventory.InventoryID,
-			"authority":     directAuthority,
-			"entries":       entriesToAny(inventory.Entries),
-			"nonClaims":     admit.StringSliceToAny(nonClaims),
-		},
+		"inventory":             InventoryValue(inventory),
 		"nonClaims": admit.StringSliceToAny(sortedUnique([]string{
 			"Normalized test evidence inventory is a deterministic projection over explicit caller-owned inventory input.",
 			"Normalized test evidence inventory does not discover repository files, execute tests, authenticate receipts, or approve merge, release, rollout, or repository policy.",
@@ -406,6 +419,9 @@ func entries(raw any) ([]Entry, error) {
 	}
 	sort.Slice(result, func(left, right int) bool { return result[left].TestID < result[right].TestID })
 	if err := assertUnique(entryIDs(result), "test evidence inventory testIds"); err != nil {
+		return nil, err
+	}
+	if err := assertUnique(falsifierIDs(result), "test evidence inventory falsifierIds"); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -656,6 +672,7 @@ func classify(inventory Inventory) ([]string, []string) {
 type falsifierLedgerEntry struct {
 	FalsifierID string
 	Key         string
+	ProofRefs   []string
 	Supersedes  []string
 	ProofRef    string
 	TestID      string
@@ -670,6 +687,7 @@ func inventoryFalsifiers(entries []Entry) []falsifierLedgerEntry {
 		out = append(out, falsifierLedgerEntry{
 			FalsifierID: entry.Falsifier.FalsifierID,
 			Key:         falsifierEquivalenceKey(entry),
+			ProofRefs:   entry.OwnerInvariantRefs,
 			ProofRef:    entry.Falsifier.SupersessionProofRef,
 			Supersedes:  entry.Falsifier.Supersedes,
 			TestID:      entry.TestID,
@@ -696,6 +714,11 @@ func classifyFalsifierSupersession(entries []falsifierLedgerEntry) []string {
 		for _, supersededID := range entry.Supersedes {
 			if entry.ProofRef == "" {
 				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:missing_dominance_proof:%s", entry.TestID, supersededID))
+				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
+				continue
+			}
+			if !containsString(entry.ProofRefs, entry.ProofRef) {
+				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:unowned_dominance_proof:%s", entry.TestID, entry.ProofRef))
 				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
 				continue
 			}
@@ -906,6 +929,17 @@ func entryIDs(entries []Entry) []string {
 	return values
 }
 
+func falsifierIDs(entries []Entry) []string {
+	values := []string{}
+	for _, entry := range entries {
+		if entry.Falsifier != nil {
+			values = append(values, entry.Falsifier.FalsifierID)
+		}
+	}
+	sort.Strings(values)
+	return values
+}
+
 func qualityFindingIDs(findings []QualityFinding) []string {
 	values := make([]string, 0, len(findings))
 	for _, finding := range findings {
@@ -948,6 +982,15 @@ func countPrefix(values []string, prefix string) int {
 func hasPrefix(values []string, prefix string) bool {
 	for _, value := range values {
 		if strings.HasPrefix(value, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
 			return true
 		}
 	}

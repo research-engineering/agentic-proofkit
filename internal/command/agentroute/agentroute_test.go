@@ -115,6 +115,44 @@ func TestBuildRoutesSelectiveEvidenceThroughObligationProjectionInput(t *testing
 	if !omittedCommandMissingInput(omitted, "selective-gate-obligation-decision-input", "obligation_decision_input") {
 		t.Fatalf("omitted=%#v, want missing obligation_decision_input projector command", omitted)
 	}
+	if reason := omittedCommandReason(omitted, "selective-gate-obligation-decision-input"); !strings.Contains(reason, "composed from the selective-gate-evidence output") {
+		t.Fatalf("omitted projector reason=%q, want composed evidence handoff guidance", reason)
+	}
+}
+
+func TestBuildRoutesMaterializedObligationDecisionInput(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.admit_receipts.phase2",
+		"goal":          "admit_receipts",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "obligation_decision_input",
+				"ref":  "artifacts/proofkit/obligation-decision-input.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	if state := report["state"]; state != "routed" {
+		t.Fatalf("state=%v, want routed", state)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 || commands[0].(map[string]any)["command"] != "selective-gate-obligation-decision-input" {
+		t.Fatalf("nextCommands=%#v, want selective-gate-obligation-decision-input", commands)
+	}
+	argv := toStringSlice(t, commands[0].(map[string]any)["argv"].([]any))
+	assertArgvContainsPair(t, argv, "--input", "artifacts/proofkit/obligation-decision-input.json")
+	if len(report["requiredInputs"].([]any)) != 0 {
+		t.Fatalf("requiredInputs=%#v, want none", report["requiredInputs"])
+	}
 }
 
 func TestBuildRoutesAuthoringPlanWithoutFalseTransitionInput(t *testing.T) {
@@ -1485,6 +1523,16 @@ func omittedCommandMissingInput(omitted []any, commandName string, inputKind str
 		}
 	}
 	return false
+}
+
+func omittedCommandReason(omitted []any, commandName string) string {
+	for _, item := range omitted {
+		record := item.(map[string]any)
+		if record["command"] == commandName {
+			return record["reason"].(string)
+		}
+	}
+	return ""
 }
 
 func assertArgvContainsPair(t *testing.T, argv []string, flag string, value string) {

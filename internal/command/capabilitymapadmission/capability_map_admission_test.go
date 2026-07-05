@@ -23,8 +23,14 @@ func TestBuildCodeBaselineEmitsCandidateRequirementsAndBindings(t *testing.T) {
 	if !diagnosticContains(diagnostics, "candidateRequirementSeeds", "REQ-SAMPLE-AUTH-001") {
 		t.Fatalf("candidate requirement missing from diagnostics: %#v", diagnostics)
 	}
+	if !diagnosticContains(diagnostics, "candidateRequirementSeeds", "negative_test") {
+		t.Fatalf("candidate requirement did not preserve requiredEvidence: %#v", diagnostics)
+	}
 	if !diagnosticContains(diagnostics, "candidateProofBindingSeeds", "service/tests/auth_test.py::test_missing_bearer_fails_closed") {
 		t.Fatalf("candidate proof binding missing from diagnostics: %#v", diagnostics)
+	}
+	if !diagnosticContains(diagnostics, "candidateProofBindingSeeds", "negative_test") {
+		t.Fatalf("candidate proof binding did not preserve requiredEvidence: %#v", diagnostics)
 	}
 }
 
@@ -49,6 +55,34 @@ func TestBuildCodeBaselineFailsMissingCandidateRequirementAndAnchor(t *testing.T
 	}
 	if !strings.Contains(string(encoded), "active scenario anchor in code_baseline mode") {
 		t.Fatalf("baseline failure did not mention missing anchor: %s", encoded)
+	}
+}
+
+func TestBuildCodeBaselineDoesNotEmitBindingSeedForNonExecutableAnchor(t *testing.T) {
+	t.Parallel()
+
+	input := validCapabilityMapInput("code_baseline")
+	anchor := firstScenarioAnchor(input)
+	anchor["commandRefs"] = []any{}
+	anchor["positiveWitness"] = false
+	anchor["falsificationWitness"] = false
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	if record.Summary["candidateRequirementSeedCount"] != 1 || record.Summary["candidateProofBindingSeedCount"] != 0 {
+		t.Fatalf("summary=%#v, want requirement seed without proof-binding seed", record.Summary)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if strings.Contains(string(encoded), `"candidateProofBindingSeeds":[{`) {
+		t.Fatalf("non-executable anchor emitted candidate proof binding seed: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), "must declare an executable positive or falsification anchor") {
+		t.Fatalf("failure did not mention missing executable anchor: %s", encoded)
 	}
 }
 

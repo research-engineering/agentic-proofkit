@@ -37,27 +37,9 @@ var canonicalSurfaceColumns = []string{
 	"mutation_resistance_state",
 }
 
-var canonicalBindingColumns = []string{
-	"requirement_id",
-	"surface_id",
-	"scenario_id",
-	"invariant_role",
-	"owned_invariant",
-	"proof_contract_state",
-	"blocking_status",
-	"required_environment_classes",
-	"positive_witness",
-	"falsification_witness",
-	"verify_commands",
-	"mutation_resistance_state",
-}
+var canonicalBindingColumns = append([]string{}, compactproofcontract.BindingColumns...)
 
-var canonicalWitnessColumns = []string{
-	"selector",
-	"environment_classes",
-	"verify_commands",
-	"resolution_order_index",
-}
+var canonicalWitnessColumns = append([]string{}, compactproofcontract.WitnessColumns...)
 
 type Input struct {
 	SourceSet         map[string]any

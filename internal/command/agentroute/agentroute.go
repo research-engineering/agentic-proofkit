@@ -134,7 +134,7 @@ type commandArgInput struct {
 var routeSpecs = map[string]routeSpec{
 	"admit_receipts": {
 		Family:      "selective_evidence",
-		RequiredAny: [][]string{{"selective_evidence"}},
+		RequiredAny: [][]string{{"selective_evidence", "obligation_decision_input", "obligation_decision"}},
 		NextCommands: []commandSpec{
 			{Command: "selective-gate-evidence", InputKind: "selective_evidence", Why: "Receipts must be admitted against the caller-owned selective plan before obligation decisions consume them."},
 			{Command: "selective-gate-obligation-decision-input", InputKind: "obligation_decision_input", Why: "Admitted evidence must be projected with caller-owned routes, currentness, and trust context before the final obligation decision."},
@@ -815,11 +815,18 @@ func omittedReports(commands []commandSpec, available map[string]string) []any {
 		result = append(result, map[string]any{
 			"command":            command.Command,
 			"missingInputKind":   command.InputKind,
-			"reason":             "Command is not emitted because the caller did not provide its required input ref.",
+			"reason":             omittedReason(command),
 			"safePlaceholderUse": false,
 		})
 	}
 	return result
+}
+
+func omittedReason(command commandSpec) string {
+	if command.Command == "selective-gate-obligation-decision-input" {
+		return "Command is not emitted because it requires a caller-owned obligation_decision_input composed from the selective-gate-evidence output plus command routes, currentness, and trust facts."
+	}
+	return "Command is not emitted because the caller did not provide its required input ref."
 }
 
 func diagnostics(input routeInput, state string, missing []map[string]any) []any {

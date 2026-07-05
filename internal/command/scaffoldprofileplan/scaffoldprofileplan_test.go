@@ -55,10 +55,42 @@ func TestBuildSupportsExactArgvMatcherVocabulary(t *testing.T) {
 	}
 	got := matcher["allowedArgv"].([]any)
 	want := []string{"go", "test", "./..."}
+	if len(got) != len(want) {
+		t.Fatalf("allowedArgv length=%d, want %d: %v", len(got), len(want), got)
+	}
 	for index, value := range want {
 		if got[index] != value {
 			t.Fatalf("allowedArgv[%d]=%v, want %s", index, got[index], value)
 		}
+	}
+}
+
+func TestBuildRejectsExactArgvMatcherShellTokens(t *testing.T) {
+	cases := []struct {
+		name  string
+		token string
+	}{
+		{name: "shell control", token: "&&"},
+		{name: "quoted", token: `"./..."`},
+		{name: "whitespace", token: "go test"},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			input := validScaffoldInput()
+			input["commandMatcherHints"] = []any{map[string]any{
+				"allowedArgv":     []any{"go", "test", item.token},
+				"credentialClass": "none",
+				"id":              "proofkit.go-test",
+				"kind":            "exact_argv",
+				"networkPolicy":   "none",
+				"parallelGroup":   "local",
+			}}
+
+			_, err := BuildResult(input)
+			if err == nil || !strings.Contains(err.Error(), "literal argv tokens only") {
+				t.Fatalf("BuildResult() error=%v, want literal argv rejection", err)
+			}
+		})
 	}
 }
 

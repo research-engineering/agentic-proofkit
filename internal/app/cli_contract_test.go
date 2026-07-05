@@ -840,6 +840,13 @@ func TestRequirementCoverageInputComposeContractDescribesDirectViewInput(t *test
 		"testEvidenceInventory",
 		"viewInputId",
 	}, "requirement coverage input compose required fields")
+	optionalFields := stringsFromAny(outputContract["optionalFields"].([]any))
+	assertStringSet(t, optionalFields, []string{
+		"normalizedTestEvidenceInventory",
+	}, "requirement coverage input compose optional fields")
+	if outputContract["provenanceRule"] == "" {
+		t.Fatalf("requirement coverage input compose output contract must describe normalized provenance")
+	}
 }
 
 func TestWitnessPlanContractDescribesBindingProjectionInput(t *testing.T) {

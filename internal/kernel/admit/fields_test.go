@@ -31,6 +31,24 @@ func TestNonEmptyTextRejectsSecretLikeDiagnostics(t *testing.T) {
 	}
 }
 
+func TestLowercaseSHA256AdmitsOnlyCanonicalHexDigest(t *testing.T) {
+	t.Parallel()
+
+	if value, err := LowercaseSHA256(strings.Repeat("a", 64), "sha"); err != nil || value != strings.Repeat("a", 64) {
+		t.Fatalf("expected canonical sha256 admission, got %q %v", value, err)
+	}
+	for _, value := range []any{
+		strings.Repeat("A", 64),
+		"sha256:" + strings.Repeat("a", 64),
+		strings.Repeat("a", 63),
+		strings.Repeat("g", 64),
+	} {
+		if _, err := LowercaseSHA256(value, "sha"); err == nil {
+			t.Fatalf("expected sha256 rejection for %#v", value)
+		}
+	}
+}
+
 func TestContainsSecretLikeValueRecognizesHyphenatedAndPasswdLabels(t *testing.T) {
 	t.Parallel()
 

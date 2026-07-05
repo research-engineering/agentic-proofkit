@@ -446,8 +446,7 @@ func verifyManifestTopLevelKeys(record map[string]any) error {
 	if len(unknown) == 0 {
 		return nil
 	}
-	sort.Strings(unknown)
-	return fmt.Errorf("package manifest has unsupported top-level field(s): %s", strings.Join(unknown, ", "))
+	return fmt.Errorf("package manifest has %d unsupported top-level field(s)", len(unknown))
 }
 
 func readTarFileFromBytes(content []byte, target string) ([]byte, error) {
@@ -565,6 +564,12 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	}
 	if manifest.PackageManager != "npm@11.18.0" {
 		return fmt.Errorf("root package packageManager must be npm@11.18.0, got %s", manifest.PackageManager)
+	}
+	if manifest.Type != "module" {
+		return fmt.Errorf("root package type must be module, got %s", manifest.Type)
+	}
+	if manifest.SideEffects {
+		return fmt.Errorf("root package sideEffects must be false")
 	}
 	if manifest.Repository.Type != "git" || manifest.Repository.URL != "git+https://github.com/research-engineering/agentic-proofkit.git" {
 		return fmt.Errorf("root package repository must be git+https://github.com/research-engineering/agentic-proofkit.git")

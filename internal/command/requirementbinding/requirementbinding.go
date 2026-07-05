@@ -638,12 +638,17 @@ func semanticFailures(input Input) []string {
 		commandIDs[command.CommandID] = struct{}{}
 		commandEnvironmentsByID[command.CommandID] = command.EnvironmentClasses
 	}
+	referencedCommandIDs := map[string]struct{}{}
 	bindingsByRequirement := map[string][]Binding{}
 	for _, binding := range input.Bindings {
 		if _, ok := requirementIDs[binding.RequirementID]; !ok {
 			failures = append(failures, fmt.Sprintf("binding references unknown requirementId=%s", binding.RequirementID))
 		}
+		if len(binding.CommandIDs) == 0 {
+			failures = append(failures, fmt.Sprintf("binding %s must cite at least one commandId", binding.ScenarioID))
+		}
 		for _, commandID := range binding.CommandIDs {
+			referencedCommandIDs[commandID] = struct{}{}
 			if _, ok := commandIDs[commandID]; !ok {
 				failures = append(failures, fmt.Sprintf("binding %s references unknown commandId=%s", binding.ScenarioID, commandID))
 				continue
@@ -655,6 +660,11 @@ func semanticFailures(input Input) []string {
 			}
 		}
 		bindingsByRequirement[binding.RequirementID] = append(bindingsByRequirement[binding.RequirementID], binding)
+	}
+	for _, commandID := range mapKeys(commandIDs) {
+		if _, ok := referencedCommandIDs[commandID]; !ok {
+			failures = append(failures, fmt.Sprintf("witness command is not referenced by any binding commandId: %s", commandID))
+		}
 	}
 	for _, requirement := range input.Requirements {
 		bindings := bindingsByRequirement[requirement.RequirementID]
@@ -978,6 +988,15 @@ func commandIDs(commands []WitnessCommand) []string {
 	for _, command := range commands {
 		result = append(result, command.CommandID)
 	}
+	return result
+}
+
+func mapKeys(values map[string]struct{}) []string {
+	result := make([]string, 0, len(values))
+	for value := range values {
+		result = append(result, value)
+	}
+	sort.Strings(result)
 	return result
 }
 

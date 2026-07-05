@@ -2,6 +2,7 @@ package scaffoldprofileplan
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -36,6 +37,24 @@ var supportedCredentialClasses = map[string]struct{}{
 	"local-secret": {},
 	"none":         {},
 }
+
+var scaffoldShellControlTokens = map[string]struct{}{
+	"&&": {},
+	"&":  {},
+	"(":  {},
+	")":  {},
+	";":  {},
+	"<":  {},
+	">":  {},
+	">>": {},
+	"|":  {},
+	"||": {},
+}
+
+var (
+	scaffoldArgvUnsafePattern = regexp.MustCompile(`[\s\x00]`)
+	scaffoldArgvQuotePattern  = regexp.MustCompile("[\"'\\x60\\\\]")
+)
 
 type input struct {
 	SchemaVersion       int
@@ -503,6 +522,9 @@ func admitCommandMatcher(raw any) (commandMatcher, error) {
 		if err != nil {
 			return commandMatcher{}, err
 		}
+		if err := validateLiteralArgv(argv, "repo-profile scaffold commandMatcher allowedArgv"); err != nil {
+			return commandMatcher{}, err
+		}
 		matcher.AllowedArgv = argv
 		matcher.HasAllowedArgv = true
 	}
@@ -820,6 +842,23 @@ func safePath(raw any, context string) (string, error) {
 		return "", fmt.Errorf("%s must be a repository-relative POSIX path", context)
 	}
 	return admit.SafeRepoRelativePath(value, context)
+}
+
+func validateLiteralArgv(values []string, context string) error {
+	if len(values) == 0 {
+		return fmt.Errorf("%s must be a non-empty argv array", context)
+	}
+	for _, token := range values {
+		if token == "" || scaffoldArgvUnsafePattern.MatchString(token) || scaffoldArgvQuotePattern.MatchString(token) || isScaffoldShellControlToken(token) {
+			return fmt.Errorf("%s must contain literal argv tokens only", context)
+		}
+	}
+	return nil
+}
+
+func isScaffoldShellControlToken(value string) bool {
+	_, ok := scaffoldShellControlTokens[value]
+	return ok
 }
 
 func enum(raw any, values map[string]struct{}, context string) (string, error) {

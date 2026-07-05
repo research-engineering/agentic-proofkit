@@ -12,7 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:4b25e1cd1f97c491d033cd2a6ec373782d147e27a4a5bef61c7ec1e22ece94ac"
+const expectedTypeScriptSourceSha256 = "sha256:2b2d3c84676dc513f521722a9abf8fea4b2cc942aa11fc03a9ceeeece780d812"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -326,6 +326,15 @@ assert.throws(
 );
 writeFileSync("oversize.json", "{\"ok\":true}");
 assert.throws(() => readProofkitJsonReportInput("oversize.json", {maxInputBytes: 4}), /exceeds maxInputBytes/);
+assert.throws(
+  () => readProofkitJsonReportInput("missing\napi_key=abc123456789.json"),
+  (error) =>
+    error instanceof Error &&
+    /<redacted-control-rune>/.test(error.message) &&
+    /\[REDACTED\]/.test(error.message) &&
+    !/abc123456789/.test(error.message) &&
+    !/\n/.test(error.message),
+);
 
 const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: "."});
 assert.equal(pass.status, 0);
@@ -380,6 +389,11 @@ runProofkitJsonReportCliMain({
 	const authorizationHeader = formatProofkitCliError("request failed: Authorization: Basic YWxpY2U6c2VjcmV0");
 	assert.match(authorizationHeader, /\[REDACTED\]/);
 	assert.doesNotMatch(authorizationHeader, /YWxpY2U6c2VjcmV0|Basic/);
+	const controlRunes = formatProofkitCliError("line one\nline two\t\u007fend");
+	assert.equal(controlRunes, "line one<redacted-control-rune>line two<redacted-control-rune>end");
+	const truncated = formatProofkitCliError("x".repeat(520));
+	assert.equal(truncated.length, 512 + "...<truncated-diagnostic>".length);
+	assert.match(truncated, /\.\.\.<truncated-diagnostic>$/);
 
 console.log("generated adapter semantics ok");
 `

@@ -37,6 +37,48 @@ func TestBuildReportRejectsBindingThatOmitsMultiEnvironmentCommandClass(t *testi
 	assertRuleDiagnosticContains(t, record.RuleResults, "binding proofkit.test.scenario.one omits command environmentClass=local-python")
 }
 
+func TestBuildReportRejectsBindingWithoutCommandIDs(t *testing.T) {
+	input := validRequirementBindingInput()
+	input["bindings"].([]any)[0].(map[string]any)["commandIds"] = []any{}
+
+	record, exitCode, err := BuildReport(input)
+	if err != nil {
+		t.Fatalf("BuildReport() unexpected error=%v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("BuildReport() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	assertRuleDiagnosticContains(t, record.RuleResults, "binding proofkit.test.scenario.one must cite at least one commandId")
+}
+
+func TestBuildReportRejectsUnboundWitnessCommand(t *testing.T) {
+	input := validRequirementBindingInput()
+	input["witnessCommands"] = append(input["witnessCommands"].([]any), map[string]any{
+		"command":          "go test ./internal/unbound",
+		"commandId":        "proofkit.unbound-command",
+		"environmentClass": "local-go",
+	})
+
+	record, exitCode, err := BuildReport(input)
+	if err != nil {
+		t.Fatalf("BuildReport() unexpected error=%v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("BuildReport() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	assertRuleDiagnosticContains(t, record.RuleResults, "witness command is not referenced by any binding commandId: proofkit.unbound-command")
+
+	_, err = BuildWitnessPlanInput(input, map[string]any{
+		"schemaVersion": json.Number("1"),
+		"parallelGroups": []any{
+			map[string]any{"id": "local", "maxParallel": json.Number("1")},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "cannot project witness-plan input from failed requirement proof bindings") {
+		t.Fatalf("BuildWitnessPlanInput() error=%v, want failed projection", err)
+	}
+}
+
 func TestBuildReportRejectsEmptyWitnessCommandEnvironmentClasses(t *testing.T) {
 	input := validRequirementBindingInput()
 	input["witnessCommands"].([]any)[0].(map[string]any)["environmentClasses"] = []any{}

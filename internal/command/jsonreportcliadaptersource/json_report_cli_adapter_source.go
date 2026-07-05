@@ -120,6 +120,7 @@ import { isAbsolute, resolve } from "node:path";
 
 const defaultMaxBuffer = 64 * 1024 * 1024;
 const defaultMaxInputBytes = 8 * 1024 * 1024;
+const maxDiagnosticRunes = 512;
 
 export type ProofkitJsonValue =
   | null
@@ -232,7 +233,37 @@ export function proofkitStableJsonString(value: unknown): string {
 }
 
 export function formatProofkitCliError(error: unknown): string {
-  return redactSecretLikeText(error instanceof Error ? error.message : String(error));
+  return redactDiagnosticValue(error instanceof Error ? error.message : String(error));
+}
+
+function redactDiagnosticValue(value: string): string {
+  return truncateDiagnosticValue(redactControlRunes(redactSecretLikeText(value)));
+}
+
+function truncateDiagnosticValue(value: string): string {
+  const runes = [...value];
+  if (runes.length <= maxDiagnosticRunes) {
+    return value;
+  }
+  return runes.slice(0, maxDiagnosticRunes).join("") + "...<truncated-diagnostic>";
+}
+
+function redactControlRunes(value: string): string {
+  let output = "";
+  let redacting = false;
+  for (const character of value) {
+    const codePoint = character.codePointAt(0) ?? 0;
+    if (codePoint < 0x20 || codePoint === 0x7f) {
+      if (!redacting) {
+        output += "<redacted-control-rune>";
+        redacting = true;
+      }
+      continue;
+    }
+    output += character;
+    redacting = false;
+  }
+  return output;
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(
@@ -780,7 +811,7 @@ function admitRunOptions(options: ProofkitCommandRunOptions): void {
 }
 
 function formatReadFailure(filePath: string, error: unknown, options: ProofkitReportInputReadOptions): string {
-  const message = redactSecretLikeText(filePath) + ": " + formatProofkitCliError(error);
+  const message = redactDiagnosticValue(filePath) + ": " + formatProofkitCliError(error);
   return options.failureMessagePrefix === undefined ? message : options.failureMessagePrefix + ": " + message;
 }
 

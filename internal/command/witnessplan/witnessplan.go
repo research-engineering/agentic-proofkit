@@ -52,7 +52,7 @@ func buildProjectedInput(raw any) (map[string]any, bool, error) {
 	if !hasProjection {
 		return nil, false, nil
 	}
-	if err := admit.KnownKeys(record, []string{"nonClaims", "projection", "requirementProofBinding", "schemaVersion", "vocabulary"}, "witness-plan projection input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"projection", "requirementProofBinding", "schemaVersion", "vocabulary"}, "witness-plan projection input"); err != nil {
 		return nil, true, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
