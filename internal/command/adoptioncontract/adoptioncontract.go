@@ -41,7 +41,7 @@ type aggregateEnvelope struct {
 }
 
 func Build(raw any, options Options) (any, int, error) {
-	if err := validateOptions(options); err != nil {
+	if err := ValidateOptions(options); err != nil {
 		return nil, 1, err
 	}
 	envelope, err := admitAggregate(raw)
@@ -140,7 +140,7 @@ func admitChildEnvelope(record map[string]any, expectedSchema string, keys []str
 	return nil
 }
 
-func validateOptions(options Options) error {
+func ValidateOptions(options Options) error {
 	if _, ok := modes[options.Mode]; !ok {
 		return fmt.Errorf("adoption contract envelope mode must be adoption, bootstrap, guidance, pilot, or workflow")
 	}

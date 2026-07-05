@@ -134,6 +134,38 @@ updates into a non-authoritative requirement-source preview and transition
 check. Durable truth still starts only after the consumer commits and admits
 `requirements.v1.json`.
 
+## First Adoption Loop
+
+Proofkit can reduce initial adoption glue, but it must not turn observation into
+truth. The first loop is:
+
+```text
+caller-owned capability or test observations
+  -> candidate-only Proofkit reports
+  -> owner review and materialization
+  -> strict requirement source, proof binding, and test inventory admission
+  -> coverage view from explicit admitted facts
+```
+
+Use `test-evidence-inventory --projection discovery-draft` only for explicit
+caller-owned test discovery facts. The command does not scan repositories,
+execute tests, emit `semantic_falsifier` evidence, or close coverage. It emits
+candidate inventory guidance with a non-strict candidate authority so an agent
+can ask the right owner questions and materialize strict inventory rows later.
+Candidate inventory diagnostics are rejected by strict inventory admission until
+the consumer rewrites them into owner-reviewed `caller_owned_inventory`.
+
+Use `requirement-coverage-input-compose` when the consumer already has explicit
+requirement source, proof binding, test inventory, coverage universe, and local
+environment policy records. The command may compose from direct child records
+or from previously normalized records, but it must reject failed child reports
+instead of repairing semantics.
+
+Use `witness-plan` with a `projection: "requirement-bindings"` input only when
+the proof binding already contains safe witness command facts and the caller
+provides witness command vocabulary. The projection avoids duplicated command
+identity; native execution and command freshness remain caller-owned.
+
 ## Requirement, Contract, And Test Order
 
 The durable semantic source is the repository-owned requirement package:

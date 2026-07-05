@@ -12,7 +12,6 @@ on:
 permissions:
   actions: read
   contents: read
-  security-events: write
 
 concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
@@ -51,9 +50,9 @@ jobs:
         uses: github/codeql-action/analyze@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
         with:
           output: codeql-results
-          upload: ${{ (github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true') && 'always' || 'never' }}
-          upload-database: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
-          wait-for-processing: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
+          upload: never
+          upload-database: false
+          wait-for-processing: false
 
       - name: Upload CodeQL SARIF artifact
         if: ${{ always() && steps.analyze.outputs.sarif-output != '' }}
@@ -63,3 +62,34 @@ jobs:
           path: codeql-results/*.sarif
           if-no-files-found: error
           retention-days: 14
+
+  upload-sarif:
+    name: codeql / provider upload
+    if: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
+    needs: analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    steps:
+      - name: Download CodeQL SARIF artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: codeql-sarif-${{ github.sha }}
+          path: codeql-results
+
+      - name: Locate CodeQL SARIF
+        id: sarif
+        run: |
+          set -euo pipefail
+          sarif_file="$(find codeql-results -type f -name '*.sarif' | sort | head -n 1)"
+          test -n "$sarif_file"
+          echo "path=$sarif_file" >> "$GITHUB_OUTPUT"
+
+      - name: Upload CodeQL SARIF
+        uses: github/codeql-action/upload-sarif@54f647b7e1bb85c95cddabcd46b0c578ec92bc1a # v4.36.3
+        with:
+          sarif_file: ${{ steps.sarif.outputs.path }}
+          category: codeql-go

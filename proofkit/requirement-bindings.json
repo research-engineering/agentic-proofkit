@@ -704,7 +704,7 @@
         "proofkit.package-gate"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go-python"
       ]
     },
     {
@@ -803,6 +803,19 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-003",
+      "scenarioId": "proofkit.spec-proof-core.binding-derived-witness-plan",
+      "witnessId": "proofkit.witness-plan.binding-derived-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/witnessplan/witnessplan_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-004",
       "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
       "witnessId": "proofkit.selective-proof.boundary",
@@ -845,6 +858,19 @@
       "requirementId": "REQ-PROOFKIT-SPEC-006",
       "scenarioId": "proofkit.spec-proof-core.test-inventory-normalized-output",
       "witnessId": "proofkit.test-inventory.normalized-output",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/testevidenceinventory/testevidenceinventory_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "scenarioId": "proofkit.spec-proof-core.test-discovery-draft-candidate-barrier",
+      "witnessId": "proofkit.test-inventory.discovery-draft-candidate-barrier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/testevidenceinventory/testevidenceinventory_test.go",
       "commandIds": [
@@ -1481,6 +1507,7 @@
       ],
       "environmentClasses": [
         "local-go",
+        "local-go-python",
         "local-python"
       ]
     },
@@ -1547,7 +1574,8 @@
         "proofkit.package-gate"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1737,7 +1765,8 @@
         "proofkit.package-gate"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1877,7 +1906,7 @@
     {
       "commandId": "proofkit.ci-receipt-anchor",
       "command": "npm run self:receipt",
-      "environmentClass": "local-go"
+      "environmentClass": "local-go-python"
     },
     {
       "commandId": "proofkit.go-fmt",
@@ -1912,7 +1941,9 @@
     {
       "commandId": "proofkit.package-gate",
       "command": "npm run check",
-      "environmentClass": "local-go"
+      "environmentClasses": [
+        "local-go-python"
+      ]
     },
     {
       "commandId": "proofkit.platform-smoke",

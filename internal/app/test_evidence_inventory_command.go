@@ -28,6 +28,10 @@ func runTestEvidenceInventory(args []string, stdin io.Reader, stdout io.Writer, 
 		}
 	}
 	if options.normalizedInventory {
+		if options.projection == "discovery-draft" {
+			writeDiagnostic(stderr, fmt.Errorf("test-evidence-inventory --projection discovery-draft does not support --normalized-inventory"))
+			return 1
+		}
 		if options.projection == "proof-binding-derived" {
 			output, exitCode, err := proofbindingtestinventory.BuildNormalized(input)
 			if err != nil {
@@ -45,6 +49,14 @@ func runTestEvidenceInventory(args []string, stdin io.Reader, stdout io.Writer, 
 	}
 	if options.projection == "proof-binding-derived" {
 		record, exitCode, err := proofbindingtestinventory.BuildReport(input)
+		if err != nil {
+			writeDiagnostic(stderr, err)
+			return 1
+		}
+		return writeJSON(record.JSONValue(), exitCode, nil, stdout, stderr)
+	}
+	if options.projection == "discovery-draft" {
+		record, exitCode, err := testevidenceinventory.BuildDiscoveryDraft(input)
 		if err != nil {
 			writeDiagnostic(stderr, err)
 			return 1
@@ -85,11 +97,11 @@ func parseTestEvidenceInventoryArgs(args []string) (testEvidenceInventoryArgs, e
 			options.normalizedInventory = true
 		case "--projection":
 			if projectionSeen || index+1 >= len(args) || args[index+1] == "" {
-				return testEvidenceInventoryArgs{}, fmt.Errorf("test-evidence-inventory --projection requires proof-binding-derived")
+				return testEvidenceInventoryArgs{}, fmt.Errorf("test-evidence-inventory --projection requires proof-binding-derived or discovery-draft")
 			}
 			projectionSeen = true
-			if args[index+1] != "proof-binding-derived" {
-				return testEvidenceInventoryArgs{}, fmt.Errorf("test-evidence-inventory --projection must be proof-binding-derived")
+			if args[index+1] != "proof-binding-derived" && args[index+1] != "discovery-draft" {
+				return testEvidenceInventoryArgs{}, fmt.Errorf("test-evidence-inventory --projection must be proof-binding-derived or discovery-draft")
 			}
 			options.projection = args[index+1]
 			index++

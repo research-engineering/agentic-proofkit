@@ -2,17 +2,18 @@
 
 ## Supported Versions
 
-No public source-based release is claimed by this repository state yet.
-Supported versions will be named after a reviewed public release exists.
+Supported versions are named only after a reviewed public release has
+artifact-closed release assets, registry identity, and checksum manifests.
+The current source tree may be ahead of the latest supported package version.
 
 ## Reporting A Vulnerability
 
-Private vulnerability intake is not claimed by this repository layer. Before a
-public release, maintainers must enable GitHub private vulnerability reporting
-or publish another private reporting channel.
+Use GitHub Private Vulnerability Reporting for this repository. If GitHub
+returns an unavailable route, open a public issue that requests a private
+security contact path and includes no exploit details, credentials, private
+data, or step-by-step reproduction.
 
-Until a private channel is available, do not open a public issue with exploit
-details.
+Do not open a public issue with exploit details.
 
 Do not include live credentials, private keys, access tokens, or third-party
 secrets in reports. Use redacted examples and describe how to reproduce the

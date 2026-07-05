@@ -162,6 +162,27 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "missing retained evidence checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeJSON(t, filepath.Join(root, "artifacts", "release", "github-release.json"), map[string]any{
+					"tagName": "v1.2.3",
+					"assets":  []any{},
+				})
+			},
+		},
+		{
+			name:        "stale retained evidence checksums",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeJSON(t, filepath.Join(root, "artifacts", "release", "github-release.json"), map[string]any{
+					"tagName": "v1.2.3",
+					"assets":  []any{},
+				})
+				writeFile(t, filepath.Join(root, "artifacts", "release", "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  github-release.json\n")
+			},
+		},
+		{
 			name:        "planned PyPI without non-claim",
 			criterionID: "proofkit.release_closeout.channel_scope",
 			mutate: func(root string) {
@@ -548,7 +569,7 @@ func completeFixture(t *testing.T) string {
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json"), map[string]any{
 		"policyId":           "proofkit.receipt-producer-policy",
 		"schemaVersion":      1,
-		"environmentClasses": []any{"local-go"},
+		"environmentClasses": []any{packageGateEnvironmentClass},
 		"producers":          []any{receiptProducerFixture()},
 		"receiptKinds":       []any{"proofkit.package-gate"},
 		"receipts":           []any{receiptProducerReceiptFixture()},
@@ -580,7 +601,7 @@ func writeGitHubActionsSelfEvidence(t *testing.T, root string) {
 	producerReceipt["producerId"] = "github.actions.package"
 	producerReceipt["nonClaim"] = "GitHub Actions advisory receipts do not satisfy merge obligations."
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json"), map[string]any{
-		"environmentClasses": []any{"local-go"},
+		"environmentClasses": []any{packageGateEnvironmentClass},
 		"nonClaims":          []any{"GitHub Actions receipts remain advisory."},
 		"policyId":           "proofkit.receipt-producer-policy",
 		"producers":          []any{producer},
@@ -608,7 +629,7 @@ func writeMixedSelfEvidenceIdentity(t *testing.T, root string) {
 	githubProducerReceipt["producerId"] = "github.actions.package"
 	githubProducerReceipt["nonClaim"] = "GitHub Actions advisory receipts do not satisfy merge obligations."
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json"), map[string]any{
-		"environmentClasses": []any{"local-go"},
+		"environmentClasses": []any{packageGateEnvironmentClass},
 		"nonClaims":          []any{"Mixed fixture must be rejected."},
 		"policyId":           "proofkit.receipt-producer-policy",
 		"producers":          []any{githubProducer},
@@ -686,7 +707,7 @@ func selfEvidenceReportFixture(reportKind string, reportID string, ruleIDs ...st
 func proofReceiptFixture() map[string]any {
 	return map[string]any{
 		"artifactRefs":           []any{map[string]any{"kind": "artifact", "path": "artifacts/package/" + testNPMTarballName, "sha256": "sha256:abc"}},
-		"environmentClass":       "local-go",
+		"environmentClass":       packageGateEnvironmentClass,
 		"evidenceRefs":           []any{"artifacts/package/npm-pack.json"},
 		"exitCode":               0,
 		"nonClaims":              []any{"Self-hosting proof receipts do not approve merge."},
@@ -705,7 +726,7 @@ func proofReceiptFixture() map[string]any {
 func receiptProducerFixture() map[string]any {
 	return map[string]any{
 		"admissionLevel":     "advisory",
-		"environmentClasses": []any{"local-go"},
+		"environmentClasses": []any{packageGateEnvironmentClass},
 		"evidenceRefs":       []any{"AGENTS.md"},
 		"nonClaim":           "Local developer receipts are advisory.",
 		"owner":              "proofkit.package-boundary",
@@ -717,7 +738,7 @@ func receiptProducerFixture() map[string]any {
 func receiptProducerReceiptFixture() map[string]any {
 	return map[string]any{
 		"artifactRefs":             []any{"artifacts/package/" + testNPMTarballName},
-		"environmentClass":         "local-go",
+		"environmentClass":         packageGateEnvironmentClass,
 		"evidenceRef":              "artifacts/proofkit/self-hosting-proof-receipts.json",
 		"nonClaim":                 "Local advisory receipts do not satisfy merge obligations.",
 		"producerId":               "local.developer",
@@ -743,7 +764,7 @@ func specProofBundleFixture() map[string]any {
 			"report":    selfEvidenceReportFixture("proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"),
 		},
 		"receiptProducerAdmission": map[string]any{
-			"environmentClasses": []any{"local-go"},
+			"environmentClasses": []any{packageGateEnvironmentClass},
 			"exitCode":           0,
 			"failures":           []any{},
 			"nonClaims":          []any{"Receipt producer admission remains local advisory evidence."},
@@ -756,7 +777,7 @@ func specProofBundleFixture() map[string]any {
 			"bindingId": "proofkit.package-boundary.requirement-bindings",
 			"bindings": []any{map[string]any{
 				"commandIds":         []any{"proofkit.ci-receipt-anchor", "proofkit.package-gate"},
-				"environmentClasses": []any{"local-go"},
+				"environmentClasses": []any{packageGateEnvironmentClass},
 				"requirementId":      "REQ-PROOFKIT-PACKAGE-004",
 				"scenarioId":         "proofkit.package-boundary.ci-receipt-anchor",
 				"witnessId":          "proofkit.ci.receipt-anchor",
@@ -771,7 +792,7 @@ func specProofBundleFixture() map[string]any {
 				"specPath":      "docs/specs/proofkit-package-boundary/requirements.v1.json",
 			}},
 			"schemaVersion":   1,
-			"witnessCommands": []any{map[string]any{"command": "npm run self:receipt", "commandId": "proofkit.ci-receipt-anchor", "environmentClass": "local-go"}},
+			"witnessCommands": []any{map[string]any{"command": "npm run self:receipt", "commandId": "proofkit.ci-receipt-anchor", "environmentClass": packageGateEnvironmentClass}},
 		},
 		"schemaVersion": 1,
 		"witnessPlan": map[string]any{
@@ -782,12 +803,12 @@ func specProofBundleFixture() map[string]any {
 			"nonClaims": []any{"Witness plan does not execute commands."},
 			"policies": []any{map[string]any{
 				"commandId":          "proofkit.ci-receipt-anchor",
-				"environmentClasses": []any{"local-go"},
+				"environmentClasses": []any{packageGateEnvironmentClass},
 				"sideEffectClass":    "write-local",
 			}},
 			"schedulerPlanId": "proofkit.self-hosting.witness-plan",
 			"schemaVersion":   1,
-			"vocabulary":      map[string]any{"environmentClasses": []any{"local-go"}},
+			"vocabulary":      map[string]any{"environmentClasses": []any{packageGateEnvironmentClass}},
 		},
 	}
 }

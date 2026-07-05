@@ -78,39 +78,31 @@ func TestBuildJSONCompactProjectionExposesScenarioAndInventoryCommandRefs(t *tes
 
 func TestBuildJSONStructuredProjectionDoesNotFallbackToInventoryCommandRefs(t *testing.T) {
 	input := validCoverageInput(t)
-	bindings := input.(map[string]any)["requirementProofBinding"].(map[string]any)["bindings"].([]any)
-	binding := bindings[0].(map[string]any)
-	binding["scenarioId"] = "proofkit.coverage.scenario.empty"
-	binding["commandIds"] = []any{}
-	input.(map[string]any)["requirementProofBinding"].(map[string]any)["bindings"] = append(bindings, map[string]any{
-		"commandIds":         []any{"proofkit.coverage.command"},
-		"environmentClasses": []any{"local-go"},
-		"requirementId":      "REQ-PROOFKIT-COVERAGE-001",
-		"scenarioId":         "proofkit.coverage.scenario.commanded",
-		"witnessId":          "proofkit.coverage.witness.commanded",
-		"witnessKind":        "contract",
-		"witnessPath":        "internal/command/requirementcoverageview/requirementcoverageview_test.go",
-	})
+	proofBinding := input.(map[string]any)["requirementProofBinding"].(map[string]any)
+	binding := proofBinding["bindings"].([]any)[0].(map[string]any)
+	binding["commandIds"] = []any{"proofkit.coverage.proof_command"}
+	proofBinding["witnessCommands"] = []any{map[string]any{
+		"commandId":        "proofkit.coverage.proof_command",
+		"command":          "go test ./internal/command/requirementcoverageview -run TestProofOwnedCommand",
+		"environmentClass": "local-go",
+	}}
 
 	view, exitCode, err := BuildJSON(input, Options{})
 	if err != nil {
-		t.Fatalf("BuildJSON(structured empty commands) error = %v", err)
+		t.Fatalf("BuildJSON(structured proof command) error = %v", err)
 	}
-	if exitCode != 0 {
-		t.Fatalf("structured empty commands should preserve proof-owned empty commandIds without failing semantic inventory coverage: %#v", view)
+	if exitCode == 0 {
+		t.Fatalf("structured proof command without matching semantic inventory must fail command coverage: %#v", view)
 	}
 	requirement := view.(map[string]any)["requirementCoverage"].([]any)[0].(map[string]any)
-	if got := stringArray(requirement["commandIds"]); len(got) != 1 || got[0] != "proofkit.coverage.command" {
-		t.Fatalf("structured requirement commandIds=%v, want sibling proof-owned commandId", got)
+	want := []string{"proofkit.coverage.proof_command"}
+	if got := stringArray(requirement["commandIds"]); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("structured requirement commandIds=%v, want proof-owned commandId %v", got, want)
 	}
 	scenarios := requirement["scenarios"].([]any)
-	emptyScenario := findScenario(t, scenarios, "proofkit.coverage.scenario.empty")
-	if got := stringArray(emptyScenario["commandIds"]); len(got) != 0 {
-		t.Fatalf("structured empty scenario commandIds=%v, want proof-owned empty commandIds", got)
-	}
-	commandedScenario := findScenario(t, scenarios, "proofkit.coverage.scenario.commanded")
-	if got := stringArray(commandedScenario["commandIds"]); len(got) != 1 || got[0] != "proofkit.coverage.command" {
-		t.Fatalf("structured commanded scenario commandIds=%v, want proof-owned commandId", got)
+	scenario := findScenario(t, scenarios, "proofkit.coverage.scenario")
+	if got := stringArray(scenario["commandIds"]); strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("structured scenario commandIds=%v, want proof-owned commandId %v", got, want)
 	}
 }
 

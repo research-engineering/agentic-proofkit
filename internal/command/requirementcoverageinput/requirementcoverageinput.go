@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
@@ -24,18 +25,20 @@ var normalizedSourceRoles = map[string]struct{}{
 }
 
 type input struct {
-	CompactProofContract   any
-	CoverageUniverse       universe
-	LocalEnvironmentPolicy any
-	NormalizedInventory    normalizedInventory
-	Options                any
-	OwnerInvariantRegistry any
-	RequirementSource      any
-	SelectedOwnerIDs       []string
-	ViewInputID            string
+	CompactProofContract    any
+	CoverageUniverse        universe
+	LocalEnvironmentPolicy  any
+	NormalizedInventory     normalizedInventory
+	Options                 any
+	OwnerInvariantRegistry  any
+	RequirementProofBinding any
+	RequirementSource       any
+	SelectedOwnerIDs        []string
+	ViewInputID             string
 }
 
 type normalizedInventory struct {
+	Envelope  map[string]any
 	Inventory map[string]any
 	Result    testevidenceinventory.Result
 }
@@ -92,7 +95,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("requirement coverage input compose input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"compactProofContract", "composerInputId", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}, "requirement coverage input compose input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"compactProofContract", "composerInputId", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementProofBinding", "requirementSource", "schemaVersion", "selectedOwnerIds", "testEvidenceInventory", "viewInputId"}, "requirement coverage input compose input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -116,10 +119,7 @@ func admitInput(raw any) (input, error) {
 	if source.ExitCode != 0 {
 		return input{}, fmt.Errorf("requirement coverage input compose requires passed requirement source admission")
 	}
-	if _, err := compactproofcontract.Admit(record["compactProofContract"]); err != nil {
-		return input{}, err
-	}
-	normalized, err := admitNormalizedInventory(record["normalizedTestEvidenceInventory"])
+	proofBinding, compactContract, normalized, err := admitProofAndInventory(record)
 	if err != nil {
 		return input{}, err
 	}
@@ -137,16 +137,63 @@ func admitInput(raw any) (input, error) {
 		}
 	}
 	return input{
-		CompactProofContract:   record["compactProofContract"],
-		CoverageUniverse:       universe,
-		LocalEnvironmentPolicy: record["localEnvironmentPolicy"],
-		NormalizedInventory:    normalized,
-		Options:                record["options"],
-		OwnerInvariantRegistry: record["ownerInvariantRegistry"],
-		RequirementSource:      record["requirementSource"],
-		SelectedOwnerIDs:       selectedOwnerIDs,
-		ViewInputID:            viewInputID,
+		CompactProofContract:    compactContract,
+		CoverageUniverse:        universe,
+		LocalEnvironmentPolicy:  record["localEnvironmentPolicy"],
+		NormalizedInventory:     normalized,
+		Options:                 record["options"],
+		OwnerInvariantRegistry:  record["ownerInvariantRegistry"],
+		RequirementProofBinding: proofBinding,
+		RequirementSource:       record["requirementSource"],
+		SelectedOwnerIDs:        selectedOwnerIDs,
+		ViewInputID:             viewInputID,
 	}, nil
+}
+
+func admitProofAndInventory(record map[string]any) (any, any, normalizedInventory, error) {
+	normalizedRaw, hasNormalized := record["normalizedTestEvidenceInventory"]
+	directRaw, hasDirectInventory := record["testEvidenceInventory"]
+	if hasNormalized == hasDirectInventory {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose must provide exactly one of normalizedTestEvidenceInventory or testEvidenceInventory")
+	}
+	if hasNormalized {
+		if _, hasDirectProof := record["requirementProofBinding"]; hasDirectProof {
+			return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose normalized mode must not provide requirementProofBinding")
+		}
+		if _, err := compactproofcontract.Admit(record["compactProofContract"]); err != nil {
+			return nil, nil, normalizedInventory{}, err
+		}
+		normalized, err := admitNormalizedInventory(normalizedRaw)
+		if err != nil {
+			return nil, nil, normalizedInventory{}, err
+		}
+		return nil, record["compactProofContract"], normalized, nil
+	}
+	if _, hasCompact := record["compactProofContract"]; hasCompact {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode must not provide compactProofContract")
+	}
+	proofRaw, ok := record["requirementProofBinding"]
+	if !ok {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode requires requirementProofBinding")
+	}
+	proofResult, err := requirementbinding.Build(proofRaw)
+	if err != nil {
+		return nil, nil, normalizedInventory{}, err
+	}
+	if proofResult.Record.State != "passed" {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose requires passed requirement proof binding admission")
+	}
+	inventoryResult, err := testevidenceinventory.Evaluate(directRaw)
+	if err != nil {
+		return nil, nil, normalizedInventory{}, err
+	}
+	if inventoryResult.ExitCode != 0 {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose requires passed test evidence inventory admission")
+	}
+	if inventoryResult.Inventory.Authority != "caller_owned_inventory" {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode requires caller_owned_inventory; use normalizedTestEvidenceInventory for source-set inventory")
+	}
+	return requirementbinding.InputValue(proofResult.Input), nil, normalizedInventory{Inventory: testevidenceinventory.InventoryValue(inventoryResult.Inventory), Result: inventoryResult}, nil
 }
 
 func admitNormalizedInventory(raw any) (normalizedInventory, error) {
@@ -225,7 +272,30 @@ func admitNormalizedInventory(raw any) (normalizedInventory, error) {
 			return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory projectionSummary must be an object when present")
 		}
 	}
-	return normalizedInventory{Inventory: inventoryValue(result.Inventory), Result: result}, nil
+	nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "normalizedTestEvidenceInventory nonClaims", false)
+	if err != nil {
+		return normalizedInventory{}, err
+	}
+	envelope := map[string]any{
+		"schemaVersion":         json.Number("1"),
+		"normalizedInventoryId": record["normalizedInventoryId"],
+		"normalizedKind":        record["normalizedKind"],
+		"sourceAuthority":       sourceAuthority,
+		"sourceCount":           json.Number(fmt.Sprintf("%d", sourceCount)),
+		"sourceColumns":         admit.StringSliceToAny(normalizedSourceColumns),
+		"sources":               normalizedSourcesValue(sources),
+		"entrySources":          normalizedEntrySourcesValue(entrySources),
+		"inputPaths":            admit.StringSliceToAny(inputPaths),
+		"inventory":             testevidenceinventory.InventoryValue(result.Inventory),
+		"nonClaims":             admit.StringSliceToAny(nonClaims),
+	}
+	if record["projectionKind"] != nil {
+		envelope["projectionKind"] = record["projectionKind"]
+	}
+	if record["projectionSummary"] != nil {
+		envelope["projectionSummary"] = record["projectionSummary"]
+	}
+	return normalizedInventory{Envelope: envelope, Inventory: testevidenceinventory.InventoryValue(result.Inventory), Result: result}, nil
 }
 
 func admitNormalizedSources(raw any) ([]normalizedSource, error) {
@@ -253,7 +323,7 @@ func admitNormalizedSources(raw any) ([]normalizedSource, error) {
 		if err != nil {
 			return nil, err
 		}
-		sha, err := admit.NonEmptyText(row[2], "normalizedTestEvidenceInventory source sha256")
+		sha, err := admit.LowercaseSHA256(row[2], "normalizedTestEvidenceInventory source sha256")
 		if err != nil {
 			return nil, err
 		}
@@ -480,18 +550,22 @@ func compose(input input) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
+	output := map[string]any{
 		"schemaVersion":           json.Number("1"),
 		"viewInputId":             input.ViewInputID,
 		"requirementSource":       input.RequirementSource,
-		"requirementProofBinding": nil,
+		"requirementProofBinding": input.RequirementProofBinding,
 		"compactProofContract":    input.CompactProofContract,
 		"ownerInvariantRegistry":  input.OwnerInvariantRegistry,
 		"coverageUniverse":        universeValue(universe),
 		"testEvidenceInventory":   input.NormalizedInventory.Inventory,
 		"localEnvironmentPolicy":  input.LocalEnvironmentPolicy,
 		"options":                 input.Options,
-	}, nil
+	}
+	if input.NormalizedInventory.Envelope != nil {
+		output["normalizedTestEvidenceInventory"] = input.NormalizedInventory.Envelope
+	}
+	return output, nil
 }
 
 func mergeUniverse(base universe, entries []testevidenceinventory.Entry) (universe, error) {
@@ -550,84 +624,6 @@ func universeValue(value universe) map[string]any {
 	}
 }
 
-func inventoryValue(value testevidenceinventory.Inventory) map[string]any {
-	record := map[string]any{
-		"schemaVersion": json.Number("1"),
-		"inventoryId":   value.InventoryID,
-		"authority":     value.Authority,
-		"entries":       inventoryEntriesValue(value.Entries),
-		"nonClaims":     admit.StringSliceToAny(value.NonClaims),
-	}
-	if value.OwnerID != "" {
-		record["ownerId"] = value.OwnerID
-	}
-	if value.SourceID != "" {
-		record["sourceId"] = value.SourceID
-	}
-	return record
-}
-
-func inventoryEntriesValue(values []testevidenceinventory.Entry) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, map[string]any{
-			"testId":             value.TestID,
-			"selector":           value.Selector,
-			"sourcePath":         value.SourcePath,
-			"ownerId":            value.OwnerID,
-			"evidenceClass":      value.EvidenceClass,
-			"requirementRefs":    admit.StringSliceToAny(value.RequirementRefs),
-			"ownerInvariantRefs": admit.StringSliceToAny(value.OwnerInvariantRefs),
-			"commandRefs":        admit.StringSliceToAny(value.CommandRefs),
-			"witnessRefs":        admit.StringSliceToAny(value.WitnessRefs),
-			"falsifier":          falsifierValue(value.Falsifier),
-			"oracle":             oracleValue(value.Oracle),
-			"qualityFindings":    qualityFindingsValue(value.QualityFindings),
-			"nonClaims":          admit.StringSliceToAny(value.NonClaims),
-		})
-	}
-	return result
-}
-
-func qualityFindingsValue(values []testevidenceinventory.QualityFinding) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, map[string]any{
-			"findingId":        value.FindingID,
-			"class":            value.Class,
-			"severity":         value.Severity,
-			"ownerReviewState": value.OwnerReviewState,
-			"evidenceRefs":     admit.StringSliceToAny(value.EvidenceRefs),
-			"nonClaims":        admit.StringSliceToAny(value.NonClaims),
-		})
-	}
-	return result
-}
-
-func falsifierValue(value *testevidenceinventory.Falsifier) any {
-	if value == nil {
-		return nil
-	}
-	return map[string]any{
-		"falsifierId":                value.FalsifierID,
-		"negativeCaseId":             value.NegativeCaseID,
-		"wrongImplementationClassId": value.WrongImplementationClassID,
-		"dominanceGroup":             value.DominanceGroup,
-		"supersedes":                 admit.StringSliceToAny(value.Supersedes),
-	}
-}
-
-func oracleValue(value *testevidenceinventory.Oracle) any {
-	if value == nil {
-		return nil
-	}
-	return map[string]any{
-		"oracleId":         value.OracleID,
-		"oracleKind":       value.OracleKind,
-		"assertionSummary": value.AssertionSummary,
-	}
-}
-
 func surfacesValue(values []surface) []any {
 	result := make([]any, 0, len(values))
 	for _, value := range values {
@@ -635,6 +631,32 @@ func surfacesValue(values []surface) []any {
 			"surfaceId": value.SurfaceID,
 			"ownerId":   value.OwnerID,
 			"path":      value.Path,
+		})
+	}
+	return result
+}
+
+func normalizedSourcesValue(values []normalizedSource) []any {
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		result = append(result, []any{
+			value.SourceID,
+			value.Path,
+			value.SHA256,
+			value.Role,
+			admit.StringSliceToAny(value.NonClaims),
+		})
+	}
+	return result
+}
+
+func normalizedEntrySourcesValue(values []normalizedEntrySource) []any {
+	result := make([]any, 0, len(values))
+	for _, value := range values {
+		result = append(result, map[string]any{
+			"path":     value.Path,
+			"sourceId": value.SourceID,
+			"testId":   value.TestID,
 		})
 	}
 	return result

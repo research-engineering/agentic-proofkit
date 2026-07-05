@@ -1,6 +1,7 @@
 package selectivegateevidence
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
 type currentnessProjectionDiagnostic struct {
@@ -86,6 +86,9 @@ func ProjectObligationDecision(raw any) (map[string]any, error) {
 		}
 		routes[key] = route
 		obligationID := route["obligationId"].(string)
+		if _, ok := routesByObligation[obligationID]; ok {
+			return nil, fmt.Errorf("selective evidence obligation projection obligationId values must be unique")
+		}
 		routesByObligation[obligationID] = route
 		routeKeys = append(routeKeys, key)
 	}
@@ -171,7 +174,7 @@ func ProjectObligationDecision(raw any) (map[string]any, error) {
 		"decisionId":    decisionID,
 		"nonClaims":     admit.StringSliceToAny(nonClaims),
 		"obligations":   obligations,
-		"schemaVersion": 1,
+		"schemaVersion": json.Number("1"),
 	}, nil
 }
 
@@ -252,24 +255,13 @@ func currentnessDiagnosticsByObligation(raw any, routes map[string]map[string]an
 	if raw == nil {
 		return map[string]*currentnessProjectionDiagnostic{}, nil
 	}
-	record, _, err := receiptcurrentnessscope.Build(raw)
-	if err != nil {
-		return nil, err
-	}
-	rawByObligation, err := rawObligationRecords(raw, "receiptCurrentnessScopeAdmission", "obligationReceipts")
-	if err != nil {
-		return nil, err
-	}
-	diagnostics, err := diagnosticsByKey(record, "receiptCurrentnessScope")
+	_, _, diagnostics, err := receiptcurrentnessscope.ProjectionDiagnostics(raw)
 	if err != nil {
 		return nil, err
 	}
 	result := map[string]*currentnessProjectionDiagnostic{}
 	for _, diagnostic := range diagnostics {
-		obligationID, err := requiredString(diagnostic["obligationId"], "receipt currentness-scope obligationId")
-		if err != nil {
-			return nil, err
-		}
+		obligationID := diagnostic.ObligationID
 		route := routes[obligationID]
 		if route == nil {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt currentness-scope diagnostic is unscoped: %s", obligationID)
@@ -278,28 +270,16 @@ func currentnessDiagnosticsByObligation(raw any, routes map[string]map[string]an
 		if err != nil {
 			return nil, err
 		}
-		if err := validateDiagnosticRouteBinding(diagnostic, route, "receipt currentness-scope", obligationID); err != nil {
+		if err := validateDiagnosticRouteBinding(diagnostic.RequirementID, diagnostic.ProofRouteRef, route, "receipt currentness-scope", obligationID); err != nil {
 			return nil, err
 		}
 		if receipt.ProducerReceiptID == nil {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt currentness-scope diagnostic requires producerReceiptId for obligation: %s", obligationID)
 		}
-		receiptID, err := requiredString(diagnostic["receiptId"], "receipt currentness-scope receiptId")
-		if err != nil {
-			return nil, err
-		}
-		if *receipt.ProducerReceiptID != receiptID {
+		if *receipt.ProducerReceiptID != diagnostic.ReceiptID {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt currentness-scope receiptId mismatch for obligation: %s", obligationID)
 		}
-		rawRecord := rawByObligation[obligationID]
-		if rawRecord == nil {
-			return nil, fmt.Errorf("selective evidence obligation projection missing receipt currentness-scope diagnostics for obligations: %s", obligationID)
-		}
-		projection, err := currentnessProjectionFromRaw(rawRecord, diagnostic)
-		if err != nil {
-			return nil, err
-		}
-		result[obligationID] = projection
+		result[obligationID] = currentnessProjectionFromDiagnostic(diagnostic)
 	}
 	missing := missingDiagnosticObligationIDs(routes, receiptGroups, result)
 	if len(missing) > 0 {
@@ -312,24 +292,13 @@ func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, rec
 	if raw == nil {
 		return map[string]*trustProjectionDiagnostic{}, nil
 	}
-	record, _, err := receipttrustclass.Build(raw)
-	if err != nil {
-		return nil, err
-	}
-	rawByObligation, err := rawObligationRecords(raw, "receiptTrustClassAdmission", "obligationReceipts")
-	if err != nil {
-		return nil, err
-	}
-	diagnostics, err := diagnosticsByKey(record, "obligationReceiptTrust")
+	_, _, diagnostics, err := receipttrustclass.ProjectionDiagnostics(raw)
 	if err != nil {
 		return nil, err
 	}
 	result := map[string]*trustProjectionDiagnostic{}
 	for _, diagnostic := range diagnostics {
-		obligationID, err := requiredString(diagnostic["obligationId"], "receipt trust-class obligationId")
-		if err != nil {
-			return nil, err
-		}
+		obligationID := diagnostic.ObligationID
 		route := routes[obligationID]
 		if route == nil {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt trust-class diagnostic is unscoped: %s", obligationID)
@@ -338,35 +307,19 @@ func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, rec
 		if err != nil {
 			return nil, err
 		}
-		if err := validateDiagnosticRouteBinding(diagnostic, route, "receipt trust-class", obligationID); err != nil {
+		if err := validateDiagnosticRouteBinding(diagnostic.RequirementID, diagnostic.ProofRouteRef, route, "receipt trust-class", obligationID); err != nil {
 			return nil, err
 		}
 		if receipt.ProducerReceiptID == nil {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt trust-class diagnostic requires producerReceiptId for obligation: %s", obligationID)
 		}
-		receiptID, err := requiredString(diagnostic["receiptId"], "receipt trust-class receiptId")
-		if err != nil {
-			return nil, err
-		}
-		if *receipt.ProducerReceiptID != receiptID {
+		if *receipt.ProducerReceiptID != diagnostic.ReceiptID {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt trust-class receiptId mismatch for obligation: %s", obligationID)
 		}
-		status, err := requiredString(diagnostic["receiptStatus"], "receipt trust-class receiptStatus")
-		if err != nil {
-			return nil, err
-		}
-		if receipt.Status != status {
+		if receipt.Status != diagnostic.ReceiptStatus {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt trust-class receiptStatus mismatch for obligation: %s", obligationID)
 		}
-		rawRecord := rawByObligation[obligationID]
-		if rawRecord == nil {
-			return nil, fmt.Errorf("selective evidence obligation projection missing receipt trust-class diagnostics for obligations: %s", obligationID)
-		}
-		projection, err := trustProjectionFromRaw(rawRecord, diagnostic)
-		if err != nil {
-			return nil, err
-		}
-		result[obligationID] = projection
+		result[obligationID] = trustProjectionFromDiagnostic(diagnostic)
 	}
 	missing := missingDiagnosticObligationIDs(routes, receiptGroups, result)
 	if len(missing) > 0 {
@@ -375,94 +328,52 @@ func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, rec
 	return result, nil
 }
 
-func currentnessProjectionFromRaw(raw map[string]any, diagnostic map[string]any) (*currentnessProjectionDiagnostic, error) {
-	evidenceRefs, err := sortedPathsFromAny(raw["evidenceRefs"], "selective evidence obligation projection receipt currentness-scope evidenceRefs", false)
-	if err != nil {
-		return nil, err
+func currentnessProjectionFromDiagnostic(diagnostic receiptcurrentnessscope.ProjectionDiagnostic) *currentnessProjectionDiagnostic {
+	return &currentnessProjectionDiagnostic{
+		CurrentnessCheckRefs: copyNestedStrings(diagnostic.CurrentnessCheckRefs),
+		DecisionStates:       append([]string{}, diagnostic.DecisionCandidateStates...),
+		EvidenceRefs:         append([]string{}, diagnostic.EvidenceRefs...),
+		ReceiptID:            diagnostic.ReceiptID,
+		RequirementID:        diagnostic.RequirementID,
+		ProofRouteRef:        diagnostic.ProofRouteRef,
+		ScopeCheckRefs:       copyNestedStrings(diagnostic.ScopeCheckRefs),
 	}
-	currentnessCheckRefs, err := checkEvidenceRefs(raw["currentnessChecks"], "selective evidence obligation projection receipt currentness-scope currentnessChecks")
-	if err != nil {
-		return nil, err
-	}
-	scopeCheckRefs, err := checkEvidenceRefs(raw["scopeChecks"], "selective evidence obligation projection receipt currentness-scope scopeChecks")
-	if err != nil {
-		return nil, err
-	}
-	states, err := stringSlice(diagnostic["decisionCandidateStates"], "receipt currentness-scope decisionCandidateStates")
-	if err != nil {
-		return nil, err
-	}
-	receiptID, err := requiredString(diagnostic["receiptId"], "receipt currentness-scope receiptId")
-	if err != nil {
-		return nil, err
-	}
-	requirementID, err := requiredString(diagnostic["requirementId"], "receipt currentness-scope requirementId")
-	if err != nil {
-		return nil, err
-	}
-	routeRef, err := requiredString(diagnostic["proofRouteRef"], "receipt currentness-scope proofRouteRef")
-	if err != nil {
-		return nil, err
-	}
-	return &currentnessProjectionDiagnostic{CurrentnessCheckRefs: currentnessCheckRefs, DecisionStates: states, EvidenceRefs: evidenceRefs, ReceiptID: receiptID, RequirementID: requirementID, ProofRouteRef: routeRef, ScopeCheckRefs: scopeCheckRefs}, nil
 }
 
-func trustProjectionFromRaw(raw map[string]any, diagnostic map[string]any) (*trustProjectionDiagnostic, error) {
-	evidenceRefs, err := sortedPathsFromAny(raw["evidenceRefs"], "selective evidence obligation projection receipt trust-class evidenceRefs", false)
-	if err != nil {
-		return nil, err
-	}
-	artifactRefs, err := sortedPathsFromAny(raw["artifactRefs"], "selective evidence obligation projection receipt trust-class artifactRefs", true)
-	if err != nil {
-		return nil, err
-	}
+func trustProjectionFromDiagnostic(diagnostic receipttrustclass.ProjectionDiagnostic) *trustProjectionDiagnostic {
 	var provenanceRef *string
-	if raw["provenanceRef"] != nil {
-		value, err := safePathAny(raw["provenanceRef"], "selective evidence obligation projection receipt trust-class provenanceRef")
-		if err != nil {
-			return nil, err
-		}
+	if diagnostic.ProvenanceRef != nil {
+		value := *diagnostic.ProvenanceRef
 		provenanceRef = &value
 	}
-	states, err := stringSlice(diagnostic["decisionCandidateStates"], "receipt trust-class decisionCandidateStates")
-	if err != nil {
-		return nil, err
+	return &trustProjectionDiagnostic{
+		ArtifactRefs:   append([]string{}, diagnostic.ArtifactRefs...),
+		DecisionStates: append([]string{}, diagnostic.DecisionCandidateStates...),
+		EvidenceRefs:   append([]string{}, diagnostic.EvidenceRefs...),
+		ProofRouteRef:  diagnostic.ProofRouteRef,
+		ProvenanceRef:  provenanceRef,
+		ReceiptID:      diagnostic.ReceiptID,
+		ReceiptStatus:  diagnostic.ReceiptStatus,
+		RequirementID:  diagnostic.RequirementID,
 	}
-	receiptID, err := requiredString(diagnostic["receiptId"], "receipt trust-class receiptId")
-	if err != nil {
-		return nil, err
-	}
-	receiptStatus, err := requiredString(diagnostic["receiptStatus"], "receipt trust-class receiptStatus")
-	if err != nil {
-		return nil, err
-	}
-	requirementID, err := requiredString(diagnostic["requirementId"], "receipt trust-class requirementId")
-	if err != nil {
-		return nil, err
-	}
-	routeRef, err := requiredString(diagnostic["proofRouteRef"], "receipt trust-class proofRouteRef")
-	if err != nil {
-		return nil, err
-	}
-	return &trustProjectionDiagnostic{ArtifactRefs: artifactRefs, DecisionStates: states, EvidenceRefs: evidenceRefs, ProofRouteRef: routeRef, ProvenanceRef: provenanceRef, ReceiptID: receiptID, ReceiptStatus: receiptStatus, RequirementID: requirementID}, nil
 }
 
-func validateDiagnosticRouteBinding(diagnostic map[string]any, route map[string]any, label string, obligationID string) error {
-	requirementID, err := requiredString(diagnostic["requirementId"], label+" requirementId")
-	if err != nil {
-		return err
-	}
+func validateDiagnosticRouteBinding(requirementID string, proofRouteRef string, route map[string]any, label string, obligationID string) error {
 	if route["requirementId"] != requirementID {
 		return fmt.Errorf("selective evidence obligation projection %s requirementId mismatch for obligation: %s", label, obligationID)
 	}
-	routeRef, err := requiredString(diagnostic["proofRouteRef"], label+" proofRouteRef")
-	if err != nil {
-		return err
-	}
-	if route["proofRouteRef"] != routeRef {
+	if route["proofRouteRef"] != proofRouteRef {
 		return fmt.Errorf("selective evidence obligation projection %s proofRouteRef mismatch for obligation: %s", label, obligationID)
 	}
 	return nil
+}
+
+func copyNestedStrings(values [][]string) [][]string {
+	result := make([][]string, 0, len(values))
+	for _, value := range values {
+		result = append(result, append([]string{}, value...))
+	}
+	return result
 }
 
 func exactlyOneReceiptForRoute(route map[string]any, receiptGroups map[string][]receiptSummary, label string, obligationID string) (receiptSummary, error) {
@@ -495,91 +406,6 @@ func routeKey(route map[string]any) commandKey {
 	return commandKey{ID: route["commandId"].(string), Command: route["command"].(string), SourcePath: source}
 }
 
-func rawObligationRecords(raw any, rootContext string, field string) (map[string]map[string]any, error) {
-	root, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("%s must be an object", rootContext)
-	}
-	records, err := arrayOfRecords(root[field], rootContext+" "+field)
-	if err != nil {
-		return nil, err
-	}
-	result := map[string]map[string]any{}
-	for _, record := range records {
-		obligationID, err := admit.RuleID(record["obligationId"], rootContext+" obligationId")
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := result[obligationID]; ok {
-			return nil, fmt.Errorf("%s obligation ids must be sorted and unique", rootContext)
-		}
-		result[obligationID] = record
-	}
-	return result, nil
-}
-
-func diagnosticsByKey(record report.Record, key string) ([]map[string]any, error) {
-	for _, diagnostic := range record.Diagnostics {
-		if diagnostic.Key != key {
-			continue
-		}
-		values, ok := diagnostic.Value.([]any)
-		if !ok {
-			return nil, fmt.Errorf("%s diagnostics must be an array", key)
-		}
-		result := make([]map[string]any, 0, len(values))
-		for _, value := range values {
-			item, ok := value.(map[string]any)
-			if !ok {
-				return nil, fmt.Errorf("%s diagnostics must contain objects", key)
-			}
-			result = append(result, item)
-		}
-		return result, nil
-	}
-	return nil, fmt.Errorf("%s diagnostics are missing", key)
-}
-
-func checkEvidenceRefs(raw any, context string) ([][]string, error) {
-	records, err := arrayOfRecords(raw, context)
-	if err != nil {
-		return nil, err
-	}
-	result := make([][]string, 0, len(records))
-	for _, record := range records {
-		refs, err := sortedPathsFromAny(record["evidenceRefs"], context+" evidenceRefs", false)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, refs)
-	}
-	return result, nil
-}
-
-func requiredString(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || strings.TrimSpace(value) == "" {
-		return "", fmt.Errorf("%s must be non-empty text", context)
-	}
-	return value, nil
-}
-
-func stringSlice(raw any, context string) ([]string, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("%s must be an array", context)
-	}
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		text, ok := value.(string)
-		if !ok || strings.TrimSpace(text) == "" {
-			return nil, fmt.Errorf("%s must contain non-empty text", context)
-		}
-		result = append(result, text)
-	}
-	return result, nil
-}
-
 func selectiveEvidenceStates(receipts []receiptSummary) []string {
 	if len(receipts) == 0 {
 		return []string{"missing_receipt"}
@@ -601,14 +427,14 @@ func selectiveEvidenceStates(receipts []receiptSummary) []string {
 
 func currentnessStates(diagnostic *currentnessProjectionDiagnostic) []string {
 	if diagnostic == nil {
-		return []string{}
+		return []string{"unknown_scope"}
 	}
 	return diagnostic.DecisionStates
 }
 
 func trustStates(diagnostic *trustProjectionDiagnostic) []string {
 	if diagnostic == nil {
-		return []string{}
+		return []string{"invalid_producer"}
 	}
 	return diagnostic.DecisionStates
 }

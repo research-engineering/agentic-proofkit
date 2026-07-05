@@ -120,6 +120,18 @@ func Build(presetID string) (report.Record, error) {
 		},
 		Diagnostics: []report.Diagnostic{
 			{
+				Key: "pathPolicy",
+				Value: map[string]any{
+					"consumerOverrideRequired":   true,
+					"defaultFilesAreSuggestions": true,
+					"nonClaims": admit.StringSliceToAny([]string{
+						"Stack presets do not override consuming repository documentation policy.",
+						"Stack presets do not prove that suggested paths are complete for a consuming repository.",
+					}),
+					"policyClass": "starter_suggestion",
+				},
+			},
+			{
 				Key: "preset",
 				Value: map[string]any{
 					"expectedFiles":         stringsToAny(preset.ExpectedFiles),

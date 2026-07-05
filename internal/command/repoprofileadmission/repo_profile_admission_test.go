@@ -109,6 +109,127 @@ func TestBuildRejectsSchemeAndDriveLikeRepoProfilePaths(t *testing.T) {
 			if !strings.Contains(record.RuleResults[0].Message, "repository-relative POSIX path") {
 				t.Fatalf("failure message=%q, want path rejection", record.RuleResults[0].Message)
 			}
+			encoded, _ := json.Marshal(record.JSONValue())
+			if strings.Contains(string(encoded), "file:docs/INDEX.md") || strings.Contains(string(encoded), "C:/outside/INDEX.md") {
+				t.Fatalf("Build() leaked rejected caller path: %s", encoded)
+			}
+		})
+	}
+}
+
+func TestBuildRedactsCallerPathDiagnostics(t *testing.T) {
+	input := validRepoProfileInput()
+	profile := input["profile"].(map[string]any)
+	documents := profile["documents"].(map[string]any)
+	documents["policyPath"] = "docs/sk-proj-abcdefghijklmnop.md"
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if strings.Contains(string(encoded), "abcdefghijklmnop") {
+		t.Fatalf("Build() leaked caller path diagnostic: %s", encoded)
+	}
+}
+
+func TestBuildRedactsGeneratedArtifactDiagnostics(t *testing.T) {
+	input := validRepoProfileInput()
+	profile := input["profile"].(map[string]any)
+	documents := profile["documents"].(map[string]any)
+	documents["generatedArtifacts"] = []any{
+		map[string]any{
+			"generator":     "scripts/generate-docs",
+			"path":          "docs/ordinary-caller-path",
+			"sourceOfTruth": []any{"docs/specs/example/requirements.v1.json"},
+		},
+	}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if strings.Contains(string(encoded), "ordinary-caller-path") {
+		t.Fatalf("Build() leaked generated artifact path diagnostic: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), "must be mirrored in docs policy") {
+		t.Fatalf("Build() lost generated artifact diagnostic class: %s", encoded)
+	}
+}
+
+func TestBuildMinimizesRejectedCallerPathDiagnostics(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{
+			name: "profile path escape",
+			mutate: func(input map[string]any) {
+				input["profile"].(map[string]any)["documents"].(map[string]any)["policyPath"] = "../ordinary-caller-path"
+			},
+		},
+		{
+			name: "profile glob escape",
+			mutate: func(input map[string]any) {
+				input["profile"].(map[string]any)["requirements"].(map[string]any)["specGlobs"] = []any{"../ordinary-caller-path"}
+			},
+		},
+		{
+			name: "command matcher allowed test glob escape",
+			mutate: func(input map[string]any) {
+				matcher := input["profile"].(map[string]any)["commandMatchers"].([]any)[0].(map[string]any)
+				matcher["allowedTestPathGlobs"] = []any{"../ordinary-caller-path"}
+			},
+		},
+		{
+			name: "unmatched valid spec glob",
+			mutate: func(input map[string]any) {
+				input["profile"].(map[string]any)["requirements"].(map[string]any)["specGlobs"] = []any{"docs/ordinary-caller-path/**/*.json"}
+			},
+			want: "matches no tracked files",
+		},
+		{
+			name: "retired proof-like path still tracked",
+			mutate: func(input map[string]any) {
+				profile := input["profile"].(map[string]any)
+				proofs := profile["proofs"].(map[string]any)
+				proofs["retiredProofLikePaths"] = []any{"docs/ordinary-caller-path.md"}
+				facts := input["facts"].(map[string]any)
+				facts["trackedFiles"] = append(facts["trackedFiles"].([]any), "docs/ordinary-caller-path.md")
+			},
+			want: "retired proof-like path must not exist",
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			input := validRepoProfileInput()
+			item.mutate(input)
+			record, exitCode, err := Build(input)
+			if err != nil {
+				t.Fatalf("Build() unexpected error = %v", err)
+			}
+			if exitCode == 0 || record.State != "failed" {
+				t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+			}
+			encoded, _ := json.Marshal(record.JSONValue())
+			if strings.Contains(string(encoded), "../ordinary-caller-path") || strings.Contains(string(encoded), "ordinary-caller-path") {
+				t.Fatalf("Build() echoed rejected caller path: %s", encoded)
+			}
+			want := item.want
+			if want == "" {
+				want = "must not escape the repository root"
+			}
+			if !strings.Contains(string(encoded), want) {
+				t.Fatalf("Build() lost stable diagnostic %q: %s", want, encoded)
+			}
 		})
 	}
 }

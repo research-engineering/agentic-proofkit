@@ -13,11 +13,27 @@
     ],
     "environmentClasses": [
       "local-go",
+      "local-go-python",
       "local-python"
     ],
     "environmentClassPolicies": [
       {
         "environmentClass": "local-go",
+        "networkPolicies": [
+          "external",
+          "none"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "cachePolicies": [
+          "disabled",
+          "read-only",
+          "write-local"
+        ]
+      },
+      {
+        "environmentClass": "local-go-python",
         "networkPolicies": [
           "external",
           "none"
@@ -89,7 +105,7 @@
           "PROOFKIT_MERGE_SATISFYING_PRODUCER"
         ],
         "classes": [
-          "local-go"
+          "local-go-python"
         ]
       },
       "timeoutMs": 600000,
@@ -296,7 +312,7 @@
         "inherit": "none",
         "allowlist": [],
         "classes": [
-          "local-go"
+          "local-go-python"
         ]
       },
       "timeoutMs": 600000,

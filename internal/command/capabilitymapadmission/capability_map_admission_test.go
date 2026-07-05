@@ -23,8 +23,14 @@ func TestBuildCodeBaselineEmitsCandidateRequirementsAndBindings(t *testing.T) {
 	if !diagnosticContains(diagnostics, "candidateRequirementSeeds", "REQ-SAMPLE-AUTH-001") {
 		t.Fatalf("candidate requirement missing from diagnostics: %#v", diagnostics)
 	}
+	if !diagnosticContains(diagnostics, "candidateRequirementSeeds", "negative_test") {
+		t.Fatalf("candidate requirement did not preserve requiredEvidence: %#v", diagnostics)
+	}
 	if !diagnosticContains(diagnostics, "candidateProofBindingSeeds", "service/tests/auth_test.py::test_missing_bearer_fails_closed") {
 		t.Fatalf("candidate proof binding missing from diagnostics: %#v", diagnostics)
+	}
+	if !diagnosticContains(diagnostics, "candidateProofBindingSeeds", "negative_test") {
+		t.Fatalf("candidate proof binding did not preserve requiredEvidence: %#v", diagnostics)
 	}
 }
 
@@ -52,6 +58,34 @@ func TestBuildCodeBaselineFailsMissingCandidateRequirementAndAnchor(t *testing.T
 	}
 }
 
+func TestBuildCodeBaselineDoesNotEmitBindingSeedForNonExecutableAnchor(t *testing.T) {
+	t.Parallel()
+
+	input := validCapabilityMapInput("code_baseline")
+	anchor := firstScenarioAnchor(input)
+	anchor["commandRefs"] = []any{}
+	anchor["positiveWitness"] = false
+	anchor["falsificationWitness"] = false
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	if record.Summary["candidateRequirementSeedCount"] != 1 || record.Summary["candidateProofBindingSeedCount"] != 0 {
+		t.Fatalf("summary=%#v, want requirement seed without proof-binding seed", record.Summary)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if strings.Contains(string(encoded), `"candidateProofBindingSeeds":[{`) {
+		t.Fatalf("non-executable anchor emitted candidate proof binding seed: %s", encoded)
+	}
+	if !strings.Contains(string(encoded), "must declare an executable positive or falsification anchor") {
+		t.Fatalf("failure did not mention missing executable anchor: %s", encoded)
+	}
+}
+
 func TestBuildAuditModeAllowsMissingAnchorAsOwnerAction(t *testing.T) {
 	t.Parallel()
 
@@ -71,6 +105,32 @@ func TestBuildAuditModeAllowsMissingAnchorAsOwnerAction(t *testing.T) {
 	}
 	if !strings.Contains(string(encoded), "Treat code observations as untrusted hypotheses") {
 		t.Fatalf("audit mode did not emit untrusted-code instruction: %s", encoded)
+	}
+}
+
+func TestBuildAuditModeMarksCandidateSeedsAsUntrustedOwnerDrafts(t *testing.T) {
+	t.Parallel()
+
+	record, exitCode, err := Build(validCapabilityMapInput("audit_from_code"))
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() exit=%d state=%s, want passed audit guidance", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	for _, want := range []string{
+		`"sourceTrustMode":"audit_from_code"`,
+		`"promotionState":"owner_review_required"`,
+		`"evidenceAuthority":"untrusted_code_observation"`,
+		`"executableEvidenceState":"not_executable_until_owner_materialized"`,
+	} {
+		if !strings.Contains(string(encoded), want) {
+			t.Fatalf("audit candidate seeds missing %s: %s", want, encoded)
+		}
+	}
+	if strings.Contains(string(encoded), `"executableEvidenceState":"candidate_executable_anchor"`) {
+		t.Fatalf("audit candidate seed looked executable before owner materialization: %s", encoded)
 	}
 }
 

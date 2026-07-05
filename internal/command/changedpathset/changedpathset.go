@@ -458,14 +458,9 @@ func omittedCount(items []map[string]any) int {
 }
 
 func sortedUniqueText(raw any, context string) ([]string, error) {
-	values, err := stringArray(raw, context)
+	values, err := admit.TextArray(raw, context, true)
 	if err != nil {
 		return nil, err
-	}
-	for _, value := range values {
-		if value == "" {
-			return nil, fmt.Errorf("%s must not contain empty strings", context)
-		}
 	}
 	sort.Strings(values)
 	result := []string{}

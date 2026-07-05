@@ -167,10 +167,10 @@ func verify(raw any) (admissionResult, error) {
 	}
 
 	for _, item := range profilePaths(input.Profile) {
-		safePath, ok := safePathOrFailure(item, fmt.Sprintf("repo profile path %s", item), &failures)
+		safePath, ok := safePathOrFailure(item, "repo profile path", &failures)
 		if ok {
 			if _, exists := trackedFiles[safePath]; !exists {
-				failures = append(failures, fmt.Sprintf("repo profile path %s does not exist: %s", item, item))
+				failures = append(failures, "repo profile path entry must exist in tracked files")
 			}
 		}
 	}
@@ -179,10 +179,10 @@ func verify(raw any) (admissionResult, error) {
 		failures = append(failures, err.Error())
 	}
 	for _, item := range input.Profile.Proofs.RetiredProofLikePaths {
-		safePath, ok := safePathOrFailure(item, fmt.Sprintf("repo profile retired proof-like path %s", item), &failures)
+		safePath, ok := safePathOrFailure(item, "repo profile retired proof-like path", &failures)
 		if ok {
 			if _, exists := trackedFiles[safePath]; exists {
-				failures = append(failures, fmt.Sprintf("repo profile retired proof-like path must not exist: %s", safePath))
+				failures = append(failures, "repo profile retired proof-like path must not exist in tracked files")
 			}
 		}
 	}
@@ -193,7 +193,7 @@ func verify(raw any) (admissionResult, error) {
 
 	for _, entry := range globEntries(input.Profile) {
 		for _, glob := range entry.Globs {
-			if err := pathpattern.Validate(glob, fmt.Sprintf("glob %s", glob)); err != nil {
+			if err := pathpattern.Validate(glob, entry.Label+" glob"); err != nil {
 				failures = append(failures, err.Error())
 				continue
 			}
@@ -205,7 +205,7 @@ func verify(raw any) (admissionResult, error) {
 				}
 			}
 			if !matched {
-				failures = append(failures, fmt.Sprintf("%s matches no tracked files: %s", entry.Label, glob))
+				failures = append(failures, entry.Label+" matches no tracked files")
 			}
 		}
 	}
@@ -217,14 +217,14 @@ func verify(raw any) (admissionResult, error) {
 	for _, artifact := range input.Profile.Documents.GeneratedArtifacts {
 		policyArtifact, ok := docsPolicyArtifacts[artifact.Path]
 		if !ok {
-			failures = append(failures, fmt.Sprintf("generated artifact %s must be mirrored in docs policy", artifact.Path))
+			failures = append(failures, "generated artifact entry must be mirrored in docs policy")
 			continue
 		}
 		if policyArtifact.Generator != artifact.Generator {
-			failures = append(failures, fmt.Sprintf("generated artifact %s generator must match docs policy", artifact.Path))
+			failures = append(failures, "generated artifact entry generator must match docs policy")
 		}
 		if !sameStringSet(policyArtifact.SourceOfTruth, artifact.SourceOfTruth) {
-			failures = append(failures, fmt.Sprintf("generated artifact %s sourceOfTruth must match docs policy", artifact.Path))
+			failures = append(failures, "generated artifact entry sourceOfTruth must match docs policy")
 		}
 	}
 
@@ -800,7 +800,7 @@ func validateMatchers(matchers []commandMatcher, failures *[]string) {
 		}
 		if matcher.HasAllowedTestGlobs {
 			for _, glob := range matcher.AllowedTestPathGlobs {
-				if err := pathpattern.Validate(glob, fmt.Sprintf("command matcher %s allowedTestPathGlobs entry %s", matcher.ID, glob)); err != nil {
+				if err := pathpattern.Validate(glob, fmt.Sprintf("command matcher %s allowedTestPathGlobs entry", matcher.ID)); err != nil {
 					*failures = append(*failures, err.Error())
 				}
 			}
@@ -1062,8 +1062,8 @@ func sortedUniquePaths(raw any, context string) ([]string, error) {
 		return nil, err
 	}
 	paths := make([]string, 0, len(values))
-	for _, value := range values {
-		pathValue, err := safeRepoRelativePath(value, fmt.Sprintf("%s entry %s", context, value))
+	for index, value := range values {
+		pathValue, err := safeRepoRelativePath(value, fmt.Sprintf("%s entry #%d", context, index+1))
 		if err != nil {
 			return nil, err
 		}

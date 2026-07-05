@@ -1,6 +1,7 @@
 package testevidenceinventory
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -115,6 +116,7 @@ type Falsifier struct {
 	FalsifierID                string
 	NegativeCaseID             string
 	Supersedes                 []string
+	SupersessionProofRef       string
 	WrongImplementationClassID string
 }
 
@@ -149,6 +151,28 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 		return result.Report.JSONValue(), result.ExitCode, nil
 	}
 	return normalizedInventoryValue(result.Inventory), 0, nil
+}
+
+// InventoryValue returns the admitted direct inventory projection owned by this package.
+func InventoryValue(inventory Inventory) map[string]any {
+	nonClaims := make([]string, 0, len(defaultNonClaims)+len(inventory.NonClaims))
+	nonClaims = append(nonClaims, defaultNonClaims...)
+	nonClaims = append(nonClaims, inventory.NonClaims...)
+	nonClaims = sortedUnique(nonClaims)
+	record := map[string]any{
+		"schemaVersion": json.Number("1"),
+		"inventoryId":   inventory.InventoryID,
+		"authority":     directAuthority,
+		"entries":       entriesToAny(inventory.Entries),
+		"nonClaims":     admit.StringSliceToAny(nonClaims),
+	}
+	if inventory.OwnerID != "" {
+		record["ownerId"] = inventory.OwnerID
+	}
+	if inventory.SourceID != "" {
+		record["sourceId"] = inventory.SourceID
+	}
+	return record
 }
 
 func Evaluate(raw any) (Result, error) {
@@ -200,12 +224,8 @@ func Evaluate(raw any) (Result, error) {
 }
 
 func normalizedInventoryValue(inventory Inventory) map[string]any {
-	nonClaims := make([]string, 0, len(defaultNonClaims)+len(inventory.NonClaims))
-	nonClaims = append(nonClaims, defaultNonClaims...)
-	nonClaims = append(nonClaims, inventory.NonClaims...)
-	nonClaims = sortedUnique(nonClaims)
 	return map[string]any{
-		"schemaVersion":         1,
+		"schemaVersion":         json.Number("1"),
 		"normalizedInventoryId": inventory.InventoryID + ".normalized",
 		"normalizedKind":        NormalizedInventoryKind,
 		"sourceAuthority":       inventory.Authority,
@@ -214,13 +234,7 @@ func normalizedInventoryValue(inventory Inventory) map[string]any {
 		"sources":               sourceRowsToAny(inventory.SourceRows),
 		"entrySources":          entrySourcesToAny(inventory.EntrySources),
 		"inputPaths":            admit.StringSliceToAny(inventory.InputPaths),
-		"inventory": map[string]any{
-			"schemaVersion": 1,
-			"inventoryId":   inventory.InventoryID,
-			"authority":     directAuthority,
-			"entries":       entriesToAny(inventory.Entries),
-			"nonClaims":     admit.StringSliceToAny(nonClaims),
-		},
+		"inventory":             InventoryValue(inventory),
 		"nonClaims": admit.StringSliceToAny(sortedUnique([]string{
 			"Normalized test evidence inventory is a deterministic projection over explicit caller-owned inventory input.",
 			"Normalized test evidence inventory does not discover repository files, execute tests, authenticate receipts, or approve merge, release, rollout, or repository policy.",
@@ -296,13 +310,17 @@ func falsifierToAny(falsifier *Falsifier) any {
 	if falsifier == nil {
 		return nil
 	}
-	return map[string]any{
+	record := map[string]any{
 		"dominanceGroup":             falsifier.DominanceGroup,
 		"falsifierId":                falsifier.FalsifierID,
 		"negativeCaseId":             falsifier.NegativeCaseID,
 		"supersedes":                 admit.StringSliceToAny(falsifier.Supersedes),
 		"wrongImplementationClassId": falsifier.WrongImplementationClassID,
 	}
+	if falsifier.SupersessionProofRef != "" {
+		record["supersessionProofRef"] = falsifier.SupersessionProofRef
+	}
+	return record
 }
 
 func oracleToAny(oracle *Oracle) any {
@@ -403,6 +421,9 @@ func entries(raw any) ([]Entry, error) {
 	if err := assertUnique(entryIDs(result), "test evidence inventory testIds"); err != nil {
 		return nil, err
 	}
+	if err := assertUnique(falsifierIDs(result), "test evidence inventory falsifierIds"); err != nil {
+		return nil, err
+	}
 	return result, nil
 }
 
@@ -489,7 +510,7 @@ func admitFalsifier(raw any, testID string) (*Falsifier, error) {
 	if !ok {
 		return nil, fmt.Errorf("test evidence inventory %s falsifier must be an object or null", testID)
 	}
-	if err := admit.KnownKeys(record, []string{"dominanceGroup", "falsifierId", "negativeCaseId", "supersedes", "wrongImplementationClassId"}, "test evidence inventory falsifier"); err != nil {
+	if err := admit.KnownKeys(record, []string{"dominanceGroup", "falsifierId", "negativeCaseId", "supersedes", "supersessionProofRef", "wrongImplementationClassId"}, "test evidence inventory falsifier"); err != nil {
 		return nil, err
 	}
 	falsifierID, err := admit.RuleID(record["falsifierId"], fmt.Sprintf("test evidence inventory %s falsifierId", testID))
@@ -512,9 +533,16 @@ func admitFalsifier(raw any, testID string) (*Falsifier, error) {
 	if err != nil {
 		return nil, err
 	}
+	supersessionProofRef := ""
+	if record["supersessionProofRef"] != nil {
+		supersessionProofRef, err = admit.RuleID(record["supersessionProofRef"], fmt.Sprintf("test evidence inventory %s supersessionProofRef", testID))
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &Falsifier{
 		DominanceGroup: dominanceGroup, FalsifierID: falsifierID,
-		NegativeCaseID: negativeCaseID, Supersedes: supersedes,
+		NegativeCaseID: negativeCaseID, Supersedes: supersedes, SupersessionProofRef: supersessionProofRef,
 		WrongImplementationClassID: wrongImplementationClassID,
 	}, nil
 }
@@ -644,7 +672,9 @@ func classify(inventory Inventory) ([]string, []string) {
 type falsifierLedgerEntry struct {
 	FalsifierID string
 	Key         string
+	ProofRefs   []string
 	Supersedes  []string
+	ProofRef    string
 	TestID      string
 }
 
@@ -657,6 +687,8 @@ func inventoryFalsifiers(entries []Entry) []falsifierLedgerEntry {
 		out = append(out, falsifierLedgerEntry{
 			FalsifierID: entry.Falsifier.FalsifierID,
 			Key:         falsifierEquivalenceKey(entry),
+			ProofRefs:   entry.OwnerInvariantRefs,
+			ProofRef:    entry.Falsifier.SupersessionProofRef,
 			Supersedes:  entry.Falsifier.Supersedes,
 			TestID:      entry.TestID,
 		})
@@ -680,6 +712,16 @@ func classifyFalsifierSupersession(entries []falsifierLedgerEntry) []string {
 	supersededByKey := map[string]map[string]struct{}{}
 	for _, entry := range entries {
 		for _, supersededID := range entry.Supersedes {
+			if entry.ProofRef == "" {
+				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:missing_dominance_proof:%s", entry.TestID, supersededID))
+				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
+				continue
+			}
+			if !containsString(entry.ProofRefs, entry.ProofRef) {
+				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:unowned_dominance_proof:%s", entry.TestID, entry.ProofRef))
+				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
+				continue
+			}
 			superseded, ok := byID[supersededID]
 			if !ok {
 				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:unknown:%s", entry.TestID, supersededID))
@@ -752,7 +794,7 @@ func ruleResults(failures []string, warnings []string) []report.RuleResult {
 		ruleStatus("test_inventory.semantic_entries_have_anchors", !hasPrefix(failures, "missing_semantic_anchor"), "Semantic test inventory entries must cite requirement refs or stable owner invariant refs."),
 		ruleStatus("test_inventory.semantic_falsifiers_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Semantic falsifier entries must cite executable command refs."),
 		ruleStatus("test_inventory.strong_oracles", !hasPrefix(failures, "weak_or_empty_oracle"), "Semantic falsifier entries must declare a falsifier and a non-empty assertion oracle."),
-		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession."),
+		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession with dominance proof."),
 		ruleStatus("test_inventory.route_only_boundaries", !hasPrefix(failures, "wrong_evidence_boundary"), "Route-only smoke evidence must remain a non-claim and cannot cite semantic requirement anchors."),
 		ruleStatus("test_inventory.route_only_warnings", len(warnings) == 0, "Route-only entries are admitted as non-claim warnings only."),
 	}
@@ -788,6 +830,8 @@ func diagnosticClassifications(diagnostics []string, severity string) []map[stri
 
 func diagnosticClassID(diagnostic string) string {
 	switch {
+	case strings.HasPrefix(diagnostic, "candidate_only:"):
+		return "candidate_only"
 	case strings.HasPrefix(diagnostic, "declared_duplicate_falsifier:"):
 		return "declared_duplicate_falsifier"
 	case strings.HasPrefix(diagnostic, "invalid_falsifier_supersession:"):
@@ -803,6 +847,8 @@ func diagnosticClassID(diagnostic string) string {
 		}
 	case strings.HasPrefix(diagnostic, "route_only_nonclaim:"):
 		return "routing_smoke_only"
+	case strings.HasPrefix(diagnostic, "selector_fragility:"):
+		return "selector_fragility"
 	case strings.HasPrefix(diagnostic, "weak_or_empty_oracle:"):
 		return "weak_or_empty_oracle"
 	case strings.HasPrefix(diagnostic, "wrong_evidence_boundary:"):
@@ -883,6 +929,17 @@ func entryIDs(entries []Entry) []string {
 	return values
 }
 
+func falsifierIDs(entries []Entry) []string {
+	values := []string{}
+	for _, entry := range entries {
+		if entry.Falsifier != nil {
+			values = append(values, entry.Falsifier.FalsifierID)
+		}
+	}
+	sort.Strings(values)
+	return values
+}
+
 func qualityFindingIDs(findings []QualityFinding) []string {
 	values := make([]string, 0, len(findings))
 	for _, finding := range findings {
@@ -925,6 +982,15 @@ func countPrefix(values []string, prefix string) int {
 func hasPrefix(values []string, prefix string) bool {
 	for _, value := range values {
 		if strings.HasPrefix(value, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
 			return true
 		}
 	}

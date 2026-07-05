@@ -16,15 +16,16 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 		t.Fatalf("read spec fixture: %v", err)
 	}
 	cases := []struct {
-		name           string
-		args           []string
-		stdin          string
-		wantStatus     int
-		wantStdoutJSON bool
-		wantStdout     string
-		wantStdoutHas  []string
-		wantStderr     string
-		wantStderrHas  []string
+		name             string
+		args             []string
+		stdin            string
+		wantStatus       int
+		wantStdoutJSON   bool
+		wantStdout       string
+		wantStdoutHas    []string
+		wantStdoutNotHas []string
+		wantStderr       string
+		wantStderrHas    []string
 	}{
 		{
 			name:          "unsupported command",
@@ -266,6 +267,24 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			},
 		},
 		{
+			name:           "test evidence inventory emits discovery draft candidate JSON",
+			args:           []string{"test-evidence-inventory", "--input", "-", "--projection", "discovery-draft"},
+			stdin:          cliTestDiscoveryDraftInput(),
+			wantStatus:     0,
+			wantStdoutJSON: true,
+			wantStdoutHas: []string{
+				`"reportKind": "proofkit.test-inventory-discovery-draft"`,
+				`"authority": "caller_owned_test_discovery_candidate_inventory"`,
+				`"candidateKind": "proofkit.test-inventory-discovery-draft.candidate-inventory"`,
+				`"key": "candidateInventory"`,
+				`"evidenceClass": "routing_smoke_nonclaim"`,
+				`"candidate_only:test.cli.discovery.test_missing_auth"`,
+			},
+			wantStdoutNotHas: []string{
+				`"evidenceClass": "semantic_falsifier"`,
+			},
+		},
+		{
 			name:           "test evidence inventory failed report keeps stdout JSON",
 			args:           []string{"test-evidence-inventory", "--input", "-"},
 			stdin:          cliTestEvidenceInventoryMissingAnchor(),
@@ -402,6 +421,11 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			for _, want := range item.wantStdoutHas {
 				if !strings.Contains(stdout.String(), want) {
 					t.Fatalf("stdout does not contain %q:\n%s", want, stdout.String())
+				}
+			}
+			for _, forbidden := range item.wantStdoutNotHas {
+				if strings.Contains(stdout.String(), forbidden) {
+					t.Fatalf("stdout contains forbidden %q:\n%s", forbidden, stdout.String())
 				}
 			}
 			if item.wantStdoutJSON {
@@ -1268,6 +1292,10 @@ func cliTestEvidenceInventoryMissingAnchor() string {
 
 func cliProofBindingDerivedInventoryInput() string {
 	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.derived.inventory","commandRefPolicy":{"prefix":"proofkit_cli"},"requirementSource":{"requirements":[{"requirementId":"REQ-PROOFKIT-CLI-001","ownerId":"proofkit.cli"}]},"compactProofContract":{"schema_version":1,"authority_state":"canonical","contract_id":"proofkit.cli.compact","contract_kind":"requirement_proof_binding","normalization_profile":"proofkit.compact.v1","non_claims":["CLI compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","proof_contract_state","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","mutation_resistance_state"],"bindings":[["REQ-PROOFKIT-CLI-001","proofkit.cli","proofkit.cli::scenario","contract","proofkit.cli.invariant","witness_backed","blocking",["local-go"],["internal/app/cli_positive_test.go::TestAcceptsCLIContract",["local-go"],["go test"],0],["internal/app/cli_falsification_test.go::TestRejectsCLIRegression",["local-go"],["go test"],1],["go test"],"no_known_advisory_gap"]]},"nonClaims":["CLI projection fixture does not execute native tests."]}`
+}
+
+func cliTestDiscoveryDraftInput() string {
+	return `{"schemaVersion":1,"draftId":"proofkit.cli.discovery_draft","authority":"caller_owned_test_discovery","repository":{"repositoryId":"proofkit.cli","nonClaims":["CLI discovery fixture does not scan the repository."]},"runner":{"runnerId":"proofkit.cli.go","runnerKind":"go_test","commandRef":"proofkit.cli.go.test","environmentClass":"local-go","nonClaims":["CLI discovery fixture does not execute go test."]},"discoveredTests":[{"testId":"test.cli.discovery.test_missing_auth","sourcePath":"internal/app/cli_abi_test.go","selector":"internal/app/cli_abi_test.go::TestMissingAuth","title":"TestMissingAuth","ownerId":"proofkit.cli.discovery","candidateRequirementRefs":["REQ-PROOFKIT-CLI-DISCOVERY-001"],"ownerInvariantRefs":[],"oracleSignals":["assertion_present"],"selectorSignals":["structured_selector"],"nonClaims":["CLI discovery test fact is caller-owned."]}],"nonClaims":["CLI discovery draft fixture is candidate-only."]}`
 }
 
 func cliCoverageInventory() string {

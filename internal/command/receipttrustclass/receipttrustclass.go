@@ -73,6 +73,18 @@ type diagnostic struct {
 	StructuralFindings      []string
 }
 
+type ProjectionDiagnostic struct {
+	ArtifactRefs            []string
+	DecisionCandidateStates []string
+	EvidenceRefs            []string
+	ObligationID            string
+	ProofRouteRef           string
+	ProvenanceRef           *string
+	ReceiptID               string
+	ReceiptStatus           string
+	RequirementID           string
+}
+
 type admittedInput struct {
 	NonClaims          []string
 	ObligationReceipts []obligationReceipt
@@ -82,9 +94,22 @@ type admittedInput struct {
 }
 
 func Build(raw any) (report.Record, int, error) {
+	record, exitCode, _, err := evaluate(raw)
+	return record, exitCode, err
+}
+
+func ProjectionDiagnostics(raw any) (report.Record, int, []ProjectionDiagnostic, error) {
+	record, exitCode, diagnostics, err := evaluate(raw)
+	if err != nil {
+		return report.Record{}, 1, nil, err
+	}
+	return record, exitCode, projectionDiagnostics(diagnostics), nil
+}
+
+func evaluate(raw any) (report.Record, int, []diagnostic, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return report.Record{}, 1, err
+		return report.Record{}, 1, nil, err
 	}
 	trustClassesByID := map[string]trustClass{}
 	for _, item := range input.TrustClasses {
@@ -110,7 +135,7 @@ func Build(raw any) (report.Record, int, error) {
 	}
 	nonClaims, err := sortedText(append(append([]string{}, boundaryNonClaims...), input.NonClaims...), "receipt trust-class nonClaims", false)
 	if err != nil {
-		return report.Record{}, 1, err
+		return report.Record{}, 1, nil, err
 	}
 	record := report.Record{
 		SchemaVersion: 1,
@@ -131,9 +156,9 @@ func Build(raw any) (report.Record, int, error) {
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
 	if state == "passed" {
-		return record, 0, nil
+		return record, 0, diagnostics, nil
 	}
-	return record, 1, nil
+	return record, 1, diagnostics, nil
 }
 
 func admitInput(raw any) (admittedInput, error) {
@@ -534,6 +559,29 @@ func ruleResults(diagnostics []diagnostic) []report.RuleResult {
 		})
 	}
 	return results
+}
+
+func projectionDiagnostics(diagnostics []diagnostic) []ProjectionDiagnostic {
+	result := make([]ProjectionDiagnostic, 0, len(diagnostics))
+	for _, item := range diagnostics {
+		var provenanceRef *string
+		if item.ProvenanceRef != nil {
+			value := *item.ProvenanceRef
+			provenanceRef = &value
+		}
+		result = append(result, ProjectionDiagnostic{
+			ArtifactRefs:            append([]string{}, item.ArtifactRefs...),
+			DecisionCandidateStates: append([]string{}, item.DecisionCandidateStates...),
+			EvidenceRefs:            append([]string{}, item.EvidenceRefs...),
+			ObligationID:            item.ObligationID,
+			ProofRouteRef:           item.ProofRouteRef,
+			ProvenanceRef:           provenanceRef,
+			ReceiptID:               item.ReceiptID,
+			ReceiptStatus:           item.ReceiptStatus,
+			RequirementID:           item.RequirementID,
+		})
+	}
+	return result
 }
 
 func reportDiagnostics(diagnostics []diagnostic) []any {

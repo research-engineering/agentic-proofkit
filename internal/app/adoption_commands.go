@@ -66,11 +66,7 @@ func parseAdoptionContractArgs(args []string) (adoptionContractArgs, error) {
 			if index+1 >= len(args) || args[index+1] == "" {
 				return adoptionContractArgs{}, fmt.Errorf("--mode requires adoption, bootstrap, guidance, pilot, or workflow")
 			}
-			mode := args[index+1]
-			if mode != "adoption" && mode != "bootstrap" && mode != "guidance" && mode != "pilot" && mode != "workflow" {
-				return adoptionContractArgs{}, fmt.Errorf("--mode requires adoption, bootstrap, guidance, pilot, or workflow")
-			}
-			options.mode = mode
+			options.mode = args[index+1]
 			index++
 		case "--agent-envelope":
 			options.agentEnvelope = true
@@ -80,11 +76,7 @@ func parseAdoptionContractArgs(args []string) (adoptionContractArgs, error) {
 			if index+1 >= len(args) {
 				return adoptionContractArgs{}, fmt.Errorf("--pilot requires first, stack-diverse, or all")
 			}
-			pilot := args[index+1]
-			if pilot != "first" && pilot != "stack-diverse" && pilot != "all" {
-				return adoptionContractArgs{}, fmt.Errorf("--pilot requires first, stack-diverse, or all")
-			}
-			options.pilot = pilot
+			options.pilot = args[index+1]
 			options.pilotSet = true
 			index++
 		case "--guidance-mode":
@@ -123,20 +115,18 @@ func parseAdoptionContractArgs(args []string) (adoptionContractArgs, error) {
 	if options.mode == "" {
 		return adoptionContractArgs{}, fmt.Errorf("--mode requires adoption, bootstrap, guidance, pilot, or workflow")
 	}
-	if options.agentEnvelope && options.mode != "workflow" && options.mode != "bootstrap" && options.mode != "guidance" {
-		return adoptionContractArgs{}, fmt.Errorf("--agent-envelope is valid only for workflow, bootstrap, or guidance modes")
-	}
-	if options.materializationManifest && options.mode != "bootstrap" {
-		return adoptionContractArgs{}, fmt.Errorf("--materialization-manifest is valid only for bootstrap mode")
-	}
-	if options.agentEnvelope && options.materializationManifest {
-		return adoptionContractArgs{}, fmt.Errorf("--agent-envelope and --materialization-manifest are mutually exclusive")
-	}
-	if options.pilotSet && options.mode != "pilot" {
-		return adoptionContractArgs{}, fmt.Errorf("--pilot is valid only for pilot mode")
-	}
-	if (options.guidanceMode != "" || options.checkedScope != "" || len(options.touchedRuleIDs) > 0) && options.mode != "guidance" {
-		return adoptionContractArgs{}, fmt.Errorf("--guidance-mode, --checked-scope, and --touched-rule-id are valid only for guidance mode")
+	if err := adoptioncontract.ValidateOptions(adoptioncontract.Options{
+		AgentEnvelope:           options.agentEnvelope,
+		MaterializationManifest: options.materializationManifest,
+		Mode:                    options.mode,
+		Pilot:                   options.explicitPilot(),
+		Guidance: gradualadoption.GuidanceOptions{
+			CheckedScope:   options.checkedScope,
+			GuidanceMode:   options.guidanceMode,
+			TouchedRuleIDs: options.touchedRuleIDs,
+		},
+	}); err != nil {
+		return adoptionContractArgs{}, err
 	}
 	return options, nil
 }

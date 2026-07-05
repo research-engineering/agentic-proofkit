@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"sort"
+	"strconv"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
@@ -442,9 +443,9 @@ func sanitizeValue(value any) any {
 	case int:
 		return typed
 	case int64:
-		return typed
+		return json.Number(strconv.FormatInt(typed, 10))
 	case float64:
-		return typed
+		return "<unsupported-report-visible-value>"
 	case json.Number:
 		return typed
 	case string:
@@ -506,11 +507,14 @@ func sanitizeReflectedValue(value reflect.Value) any {
 	case reflect.Bool:
 		return value.Bool()
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return value.Int()
+		if value.Kind() == reflect.Int {
+			return int(value.Int())
+		}
+		return json.Number(strconv.FormatInt(value.Int(), 10))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-		return value.Uint()
+		return json.Number(strconv.FormatUint(value.Uint(), 10))
 	case reflect.Float32, reflect.Float64:
-		return value.Float()
+		return "<unsupported-report-visible-value>"
 	default:
 		return "<unsupported-report-visible-value>"
 	}

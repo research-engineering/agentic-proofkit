@@ -47,7 +47,7 @@ func instructionForDiagnostic(diagnostic string, classificationID string) string
 	case "declared_duplicate_falsifier":
 		return "Keep one active falsifier per equivalence class, or use same-equivalence supersession to retire the older falsifier explicitly."
 	case "invalid_falsifier_supersession":
-		return "Point supersedes only at an existing falsifier with the same equivalence key, or remove the supersession claim."
+		return "Point supersedes only at an existing same-equivalence falsifier and cite a dominance proof ref, or remove the supersession claim."
 	case "missing_executable_command_ref":
 		return "Add the executable commandRef that runs this semantic falsifier, or reclassify the entry as nonsemantic evidence."
 	case "missing_semantic_anchor":

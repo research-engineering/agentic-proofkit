@@ -21,9 +21,10 @@ import (
 )
 
 const (
-	completionID         = "proofkit.release_closeout.current_package_gate"
-	npmCandidateNonClaim = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
-	pythonPackageName    = "agentic-proofkit"
+	completionID                = "proofkit.release_closeout.current_package_gate"
+	npmCandidateNonClaim        = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
+	packageGateEnvironmentClass = "local-go-python"
+	pythonPackageName           = "agentic-proofkit"
 )
 
 type completionInput struct {
@@ -390,10 +391,12 @@ func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 		"artifacts/release/sbom-subjects.sha256",
 		"artifacts/release/sbom.cdx.json",
 	}
+	evidence = append(evidence, retainedReleaseEvidenceRefs(root)...)
 	ok := releaseManifestMatches(root, manifest) &&
 		validSBOM(root, "artifacts/release/sbom.cdx.json") &&
 		releaseNotesIncludeRollback(root, "artifacts/release/release-notes.md") &&
 		releaseChecksumInventoriesMatch(root, manifest) &&
+		retainedReleaseEvidenceMatches(root) &&
 		allFilesExist(root, evidence)
 	return blockingCriterion(
 		"proofkit.release_closeout.manifest_and_sbom",
@@ -684,7 +687,7 @@ func proofReceiptMatches(record proofReceiptEvidence) bool {
 	return selfHostingReceiptIdentityMatches(record.ReceiptID, record.ProducerID, record.RunnerClass) &&
 		record.ReceiptKind == "proofkit.package-gate" &&
 		record.ProducerAdmissionClass == "advisory" &&
-		record.EnvironmentClass == "local-go" &&
+		record.EnvironmentClass == packageGateEnvironmentClass &&
 		record.Status == "passed" &&
 		record.ExitCode == 0 &&
 		record.ProofPlanID == "proofkit.self-hosting.witness-plan" &&
@@ -724,7 +727,7 @@ func receiptProducerPolicyCoversReceipt(record receiptProducerPolicyEvidence) bo
 func receiptProducerReceiptMatches(receipt receiptProducerReceipt) bool {
 	return selfHostingReceiptProducerMatches(receipt.ReceiptID, receipt.ProducerID) &&
 		receipt.ReceiptKind == "proofkit.package-gate" &&
-		receipt.EnvironmentClass == "local-go" &&
+		receipt.EnvironmentClass == packageGateEnvironmentClass &&
 		receipt.Status == "passed" &&
 		!receipt.SatisfiesMergeObligation &&
 		receipt.EvidenceRef == "artifacts/proofkit/self-hosting-proof-receipts.json" &&
@@ -813,8 +816,8 @@ func specBundleRequirementBindingsMatch(record specBundleRequirementBindings) bo
 		record.BindingID == "proofkit.package-boundary.requirement-bindings" &&
 		len(record.NonClaims) > 0 &&
 		specBundleHasRequirement(record.Requirements, "REQ-PROOFKIT-PACKAGE-004") &&
-		specBundleHasBinding(record.Bindings, "REQ-PROOFKIT-PACKAGE-004", "proofkit.ci-receipt-anchor", "local-go") &&
-		specBundleHasWitnessCommand(record.WitnessCommands, "proofkit.ci-receipt-anchor", "local-go")
+		specBundleHasBinding(record.Bindings, "REQ-PROOFKIT-PACKAGE-004", "proofkit.ci-receipt-anchor", packageGateEnvironmentClass) &&
+		specBundleHasWitnessCommand(record.WitnessCommands, "proofkit.ci-receipt-anchor", packageGateEnvironmentClass)
 }
 
 func specBundleWitnessPlanMatches(record specBundleWitnessPlan) bool {
@@ -823,7 +826,7 @@ func specBundleWitnessPlanMatches(record specBundleWitnessPlan) bool {
 		len(record.NonClaims) > 0 &&
 		specBundleHasPlanCommandArtifact(record.Commands, "proofkit.ci-receipt-anchor", "artifacts/proofkit/self-hosting-spec-proof-bundle.json") &&
 		specBundleHasPlanPolicy(record.Policies, "proofkit.ci-receipt-anchor") &&
-		stringSliceContains(record.Vocabulary.EnvironmentClasses, "local-go")
+		stringSliceContains(record.Vocabulary.EnvironmentClasses, packageGateEnvironmentClass)
 }
 
 func specBundleHasRequirement(records []specBundleRequirement, requirementID string) bool {
@@ -1019,6 +1022,43 @@ func releaseChecksumInventoriesMatch(root string, manifest packageJSON) bool {
 	return checksumFileMatches(root, "artifacts/release/checksums.sha256", checksumTargets) &&
 		checksumFileMatches(root, "artifacts/release/sbom-subjects.sha256", packageTargets) &&
 		checksumFileMatches(root, "artifacts/release/metadata-checksums.sha256", metadataTargets)
+}
+
+func retainedReleaseEvidenceRefs(root string) []string {
+	targets := retainedReleaseEvidenceTargets(root)
+	if len(targets) == 0 {
+		return []string{}
+	}
+	return append([]string{"artifacts/release/retained-evidence-checksums.sha256"}, targets...)
+}
+
+func retainedReleaseEvidenceMatches(root string) bool {
+	targets := retainedReleaseEvidenceTargets(root)
+	if len(targets) == 0 {
+		return true
+	}
+	return checksumFileMatches(root, "artifacts/release/retained-evidence-checksums.sha256", targets)
+}
+
+func retainedReleaseEvidenceTargets(root string) []string {
+	targets := []string{}
+	if fileExists(root, "artifacts/release/github-release.json") {
+		targets = append(targets, "artifacts/release/github-release.json")
+	}
+	attestationRoot := filepath.Join(root, "artifacts", "attestations")
+	_ = filepath.WalkDir(attestationRoot, func(path string, entry os.DirEntry, err error) error {
+		if err != nil || entry == nil || entry.IsDir() || filepath.Ext(path) != ".json" {
+			return nil
+		}
+		relative, relErr := filepath.Rel(root, path)
+		if relErr != nil {
+			return nil
+		}
+		targets = append(targets, filepath.ToSlash(relative))
+		return nil
+	})
+	sort.Strings(targets)
+	return targets
 }
 
 func checksumFileMatches(root string, checksumPath string, targetPaths []string) bool {

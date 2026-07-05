@@ -23,7 +23,7 @@ import (
 const (
 	artifactRoot                = "artifacts/proofkit"
 	packageArtifactRoot         = "artifacts/package"
-	packageGateEnvironmentClass = "local-go"
+	packageGateEnvironmentClass = "local-go-python"
 	pythonArtifactRoot          = "artifacts/pypi"
 	maxJSONBytes                = 8 << 20
 )
@@ -120,16 +120,21 @@ func run() error {
 		return err
 	}
 	receipt := map[string]any{
-		"artifactRefs":           artifactRefs,
-		"commandDigest":          commandDigest,
-		"dependencyDigest":       dependencyDigest,
-		"environmentClass":       packageGateEnvironmentClass,
-		"environmentDigest":      environmentDigest,
-		"evidenceRefs":           sortedStrings([]string{filepath.Join(packageArtifactRoot, "npm-pack.json"), filepath.Join(pythonArtifactRoot, "python-packages.json"), filepath.Join(artifactRoot, "ci-provenance.json"), filepath.Join(artifactRoot, "self-hosting-proof-receipts.json")}),
-		"exitCode":               0,
-		"finishedAt":             timestamp,
-		"lockfileDigest":         nil,
-		"nonClaims":              sortedStrings([]string{"Self-hosting proof receipts do not authenticate the producer inside Proofkit.", "Self-hosting proof receipts do not claim registry publication or consumer rollout.", "Self-hosting proof receipts do not compute freshness or approve merge."}),
+		"artifactRefs":      artifactRefs,
+		"commandDigest":     commandDigest,
+		"dependencyDigest":  dependencyDigest,
+		"environmentClass":  packageGateEnvironmentClass,
+		"environmentDigest": environmentDigest,
+		"evidenceRefs":      sortedStrings([]string{filepath.Join(packageArtifactRoot, "npm-pack.json"), filepath.Join(pythonArtifactRoot, "python-packages.json"), filepath.Join(artifactRoot, "ci-provenance.json"), filepath.Join(artifactRoot, "self-hosting-proof-receipts.json")}),
+		"exitCode":          0,
+		"finishedAt":        timestamp,
+		"lockfileDigest":    nil,
+		"nonClaims": sortedStrings([]string{
+			"Self-hosting package receipts aggregate Go and Python package-gate evidence and do not provide independent local-go and local-python receipt classes.",
+			"Self-hosting proof receipts do not authenticate the producer inside Proofkit.",
+			"Self-hosting proof receipts do not claim registry publication or consumer rollout.",
+			"Self-hosting proof receipts do not compute freshness or approve merge.",
+		}),
 		"preconditionDigest":     preconditionDigest,
 		"producerAdmissionClass": admission.ProducerAdmissionClass,
 		"producerId":             admission.ProducerID,

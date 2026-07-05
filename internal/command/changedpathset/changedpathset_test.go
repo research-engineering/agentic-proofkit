@@ -50,3 +50,42 @@ func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {
 		t.Fatalf("Build() leaked secret-shaped invalid path diagnostic: %s", string(encoded))
 	}
 }
+
+func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
+	secret := "sk-proj-abcdefghijklmnop"
+	result, err := Build(map[string]any{
+		"schemaVersion":       json.Number("1"),
+		"reportId":            "proofkit.test.changed-path-set",
+		"preexistingFailures": []any{},
+		"nonClaims":           []any{secret},
+		"sources":             []any{map[string]any{"sourceId": "git", "paths": []any{"a.ts"}}},
+	})
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	encoded, _ := json.Marshal(result.Report)
+	if result.ExitCode == 0 || result.Report.State != "failed" {
+		t.Fatalf("Build() exitCode=%d state=%s, want failed", result.ExitCode, result.Report.State)
+	}
+	if strings.Contains(string(encoded), "abcdefghijklmnop") {
+		t.Fatalf("Build() leaked secret text in report: %s", string(encoded))
+	}
+
+	result, err = Build(map[string]any{
+		"schemaVersion":       json.Number("1"),
+		"reportId":            "proofkit.test.changed-path-set",
+		"preexistingFailures": []any{"https://user:password@example.invalid"},
+		"nonClaims":           []any{"Changed-path test input does not prove git diff freshness."},
+		"sources":             []any{map[string]any{"sourceId": "git", "paths": []any{"a.ts"}}},
+	})
+	if err != nil {
+		t.Fatalf("Build() second error = %v", err)
+	}
+	encoded, _ = json.Marshal(result.Report)
+	if result.ExitCode == 0 || result.Report.State != "failed" {
+		t.Fatalf("Build() second exitCode=%d state=%s, want failed", result.ExitCode, result.Report.State)
+	}
+	if strings.Contains(string(encoded), "password") || strings.Contains(string(encoded), "example.invalid") {
+		t.Fatalf("Build() leaked URL credential text in report: %s", string(encoded))
+	}
+}

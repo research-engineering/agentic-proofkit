@@ -12,6 +12,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
+const expectedTypeScriptSourceSha256 = "sha256:2b2d3c84676dc513f521722a9abf8fea4b2cc942aa11fc03a9ceeeece780d812"
+
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
 		t.Fatalf("exported symbols must be sorted: %v", exportedSymbols)
@@ -41,6 +43,9 @@ func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	}
 	if first["sourceSha256"] != digest.SHA256TextRef(source) {
 		t.Fatalf("source hash mismatch: %v", first["sourceSha256"])
+	}
+	if first["sourceSha256"] != expectedTypeScriptSourceSha256 {
+		t.Fatalf("source hash=%v, want owner-approved ABI hash %s", first["sourceSha256"], expectedTypeScriptSourceSha256)
 	}
 	for _, symbol := range exportedSymbols {
 		if !strings.Contains(source, symbol) {
@@ -121,7 +126,11 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"status: child.status",
 		"stdout: child.stdout",
 		"stderr: child.stderr",
-		"value: parseProofkitJsonStrict(child.stdout)",
+		"value: parseProofkitJsonStrict(jsonText)",
+		"const outputPath = outputPathFromArgs(command, args)",
+		"function outputPathFromArgs(command: string, args: readonly string[])",
+		"command !== \"requirement-spec-tree-view\"",
+		"function resolveOutputPath",
 		"if (child.status !== 0 && child.stdout.trim().length === 0) {",
 	} {
 		if !strings.Contains(source, required) {
@@ -191,6 +200,8 @@ func exportedDeclarations(source string) []string {
 }
 
 const fakeProofkitBinarySource = `#!/usr/bin/env node
+import { writeFileSync } from "node:fs";
+
 const command = process.argv[2];
 let input = "";
 process.stdin.on("data", (chunk) => {
@@ -214,6 +225,19 @@ process.stdin.on("end", () => {
   if (command === "json-secret-process-fail") {
     process.stderr.write("Bearer abcdefghijklmnopqrstuvwxyz\n");
     process.exit(2);
+  }
+  if (command === "json-openai-secret-process-fail") {
+    process.stderr.write("sk-proj-abcdefghijklmnop\n");
+    process.exit(2);
+  }
+  if (command === "requirement-spec-tree-view") {
+    const outputIndex = process.argv.indexOf("--output");
+    if (outputIndex === -1 || process.argv[outputIndex + 1] === undefined) {
+      process.stderr.write("missing output flag");
+      process.exit(2);
+    }
+    writeFileSync(process.argv[outputIndex + 1], JSON.stringify({schemaVersion: 1, state: "passed", outputFile: true}) + "\n");
+    process.exit(0);
   }
   if (command === "text-pass") {
     process.stdout.write("text result");
@@ -302,6 +326,15 @@ assert.throws(
 );
 writeFileSync("oversize.json", "{\"ok\":true}");
 assert.throws(() => readProofkitJsonReportInput("oversize.json", {maxInputBytes: 4}), /exceeds maxInputBytes/);
+assert.throws(
+  () => readProofkitJsonReportInput("missing\napi_key=abc123456789.json"),
+  (error) =>
+    error instanceof Error &&
+    /<redacted-control-rune>/.test(error.message) &&
+    /\[REDACTED\]/.test(error.message) &&
+    !/abc123456789/.test(error.message) &&
+    !/\n/.test(error.message),
+);
 
 const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: "."});
 assert.equal(pass.status, 0);
@@ -320,6 +353,14 @@ assert.throws(
   () => runProofkitJsonCommand("json-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: "."}),
   /\[REDACTED\]/,
 );
+assert.throws(
+  () => runProofkitJsonCommand("json-openai-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: "."}),
+  /\[REDACTED\]/,
+);
+const outputPass = runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "proofkit-output.json"], {binaryPath: fakeProofkitPath, cwd: "."});
+assert.equal(outputPass.status, 0);
+assert.equal(outputPass.stdout, "");
+assert.equal(outputPass.value.outputFile, true);
 
 const text = runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: "."});
 assert.equal(text.status, 0);
@@ -338,10 +379,21 @@ runProofkitJsonReportCliMain({
   run: () => { throw new Error("ghp_123456789012345678901234567890123456"); },
   writeError: (value) => { errorText += value; },
 });
-assert.equal(process.exitCode, 1);
-assert.match(errorText, /\[REDACTED\]/);
-process.exitCode = 0;
-assert.equal(formatProofkitCliError("Bearer abcdefghijklmnopqrstuvwxyz"), "Bearer [REDACTED]");
+	assert.equal(process.exitCode, 1);
+	assert.match(errorText, /\[REDACTED\]/);
+	process.exitCode = 0;
+	assert.equal(formatProofkitCliError("Bearer abcdefghijklmnopqrstuvwxyz"), "Bearer [REDACTED]");
+	assert.equal(formatProofkitCliError("Bearer abcdefgh"), "Bearer [REDACTED]");
+	assert.equal(formatProofkitCliError("api_key=abc123456789"), "[REDACTED]");
+	assert.equal(formatProofkitCliError("ghp_short"), "[REDACTED]");
+	const authorizationHeader = formatProofkitCliError("request failed: Authorization: Basic YWxpY2U6c2VjcmV0");
+	assert.match(authorizationHeader, /\[REDACTED\]/);
+	assert.doesNotMatch(authorizationHeader, /YWxpY2U6c2VjcmV0|Basic/);
+	const controlRunes = formatProofkitCliError("line one\nline two\t\u007fend");
+	assert.equal(controlRunes, "line one<redacted-control-rune>line two<redacted-control-rune>end");
+	const truncated = formatProofkitCliError("x".repeat(520));
+	assert.equal(truncated.length, 512 + "...<truncated-diagnostic>".length);
+	assert.match(truncated, /\.\.\.<truncated-diagnostic>$/);
 
 console.log("generated adapter semantics ok");
 `

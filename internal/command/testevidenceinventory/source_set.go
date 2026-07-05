@@ -194,12 +194,9 @@ func admitSourceRow(raw any, index int) (sourceRow, error) {
 	if err != nil {
 		return sourceRow{}, err
 	}
-	sha, err := admit.NonEmptyText(values[2], "test evidence inventory source "+sourceID+".sha256")
+	sha, err := admit.LowercaseSHA256(values[2], "test evidence inventory source "+sourceID+".sha256")
 	if err != nil {
 		return sourceRow{}, err
-	}
-	if len(sha) != 64 || strings.ToLower(sha) != sha || strings.Trim(sha, "0123456789abcdef") != "" {
-		return sourceRow{}, fmt.Errorf("test evidence inventory source %s.sha256 must be lowercase sha256", sourceID)
 	}
 	role, err := admit.Enum(values[3], sourceRoles, "test evidence inventory source "+sourceID+".role")
 	if err != nil {

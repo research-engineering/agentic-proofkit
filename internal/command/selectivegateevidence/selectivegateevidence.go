@@ -138,6 +138,10 @@ func admitPlan(raw any) (plan, error) {
 	if !ok || (state != "ok" && state != "fail_closed") {
 		return plan{}, fmt.Errorf("selective gate evidence planState must be ok or fail_closed")
 	}
+	publicAPITouched, ok := record["publicApiContractTouched"].(bool)
+	if !ok {
+		return plan{}, fmt.Errorf("selective gate evidence publicApiContractTouched must be boolean")
+	}
 	commands, err := commandRecords(record["requiredCommands"])
 	if err != nil {
 		return plan{}, err
@@ -207,6 +211,7 @@ func admitPlan(raw any) (plan, error) {
 	normalized["secretScan"] = secretScan
 	normalized["skippedGates"] = skippedGates
 	normalized["nonClaims"] = admit.StringSliceToAny(nonClaims)
+	normalized["publicApiContractTouched"] = publicAPITouched
 	return plan{PlanState: state, RequiredCommands: commands, Failures: failures, ChangedPaths: changedPaths, Generated: generated, Raw: normalized}, nil
 }
 

@@ -3,6 +3,7 @@ package witnessplan
 import (
 	"fmt"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/witnesscommand"
 )
@@ -13,6 +14,12 @@ type input struct {
 }
 
 func Build(raw any) (map[string]any, error) {
+	if projected, ok, err := buildProjectedInput(raw); ok || err != nil {
+		if err != nil {
+			return nil, err
+		}
+		raw = projected
+	}
 	input, err := admitInput(raw)
 	if err != nil {
 		return nil, err
@@ -34,6 +41,35 @@ func Build(raw any) (map[string]any, error) {
 		return nil, err
 	}
 	return plan.JSONValue(), nil
+}
+
+func buildProjectedInput(raw any) (map[string]any, bool, error) {
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return nil, false, nil
+	}
+	projectionRaw, hasProjection := record["projection"]
+	if !hasProjection {
+		return nil, false, nil
+	}
+	if err := admit.KnownKeys(record, []string{"projection", "requirementProofBinding", "schemaVersion", "vocabulary"}, "witness-plan projection input"); err != nil {
+		return nil, true, err
+	}
+	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
+		return nil, true, fmt.Errorf("witness-plan projection input schemaVersion must be 1")
+	}
+	projection, err := admit.Enum(projectionRaw, map[string]struct{}{"requirement-bindings": {}}, "witness-plan projection")
+	if err != nil {
+		return nil, true, err
+	}
+	if projection != "requirement-bindings" {
+		return nil, true, fmt.Errorf("witness-plan projection is unsupported")
+	}
+	projected, err := requirementbinding.BuildWitnessPlanInput(record["requirementProofBinding"], record["vocabulary"])
+	if err != nil {
+		return nil, true, err
+	}
+	return projected, true, nil
 }
 
 func admitInput(raw any) (input, error) {

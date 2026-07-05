@@ -7,7 +7,8 @@ This repository state does not claim:
 
 - runtime implementation readiness;
 - package publication readiness;
-- public-source provenance for any existing package version;
+- public-source provenance for a package version unless that version's release
+  assets, registry identity, and checksum manifests are artifact-closed;
 - source-code completeness;
 - production readiness;
 - vulnerability absence;
@@ -25,7 +26,7 @@ This repository state does not claim:
 - deployment approval;
 - package-registry access-control proof;
 - provider-side CodeQL, OSV, Scorecard, secret-scanning, or dependency-scanning
-  ingestion;
+  absence-of-findings, ingestion freshness, or dashboard processing success;
 - GitHub branch-protection proof;
 - Trusted Publisher or OIDC publication proof;
 - generated HTML, Markdown, reports, lookup graphs, or agent envelopes as

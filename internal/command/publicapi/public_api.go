@@ -435,7 +435,11 @@ func isInlineTypeOnlyReexport(part string) bool {
 
 func variableExportNames(declarations string) ([]string, error) {
 	names := []string{}
-	for _, rawPart := range strings.Split(declarations, ",") {
+	parts, err := splitTopLevelComma(declarations)
+	if err != nil {
+		return nil, err
+	}
+	for _, rawPart := range parts {
 		part := strings.TrimSpace(rawPart)
 		if equals := strings.Index(part, "="); equals >= 0 {
 			part = strings.TrimSpace(part[:equals])
@@ -449,6 +453,131 @@ func variableExportNames(declarations string) ([]string, error) {
 		names = append(names, part)
 	}
 	return names, nil
+}
+
+func splitTopLevelComma(value string) ([]string, error) {
+	parts := []string{}
+	start := 0
+	parenDepth := 0
+	bracketDepth := 0
+	braceDepth := 0
+	angleDepth := 0
+	var quote rune
+	escaped := false
+	inInitializer := false
+	for index, char := range value {
+		if quote != 0 {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch char {
+		case '\'', '"', '`':
+			quote = char
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '=':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0 {
+				inInitializer = true
+			}
+		case '<':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && (!inInitializer || looksLikeTypeArgumentStart(value, index)) {
+				angleDepth++
+			}
+		case '>':
+			if angleDepth > 0 {
+				angleDepth--
+			}
+		case ',':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0 {
+				parts = append(parts, value[start:index])
+				start = index + len(string(char))
+				inInitializer = false
+			}
+		}
+	}
+	if quote != 0 {
+		return nil, fmt.Errorf("TypeScript public API variable exports must not contain unterminated string literals")
+	}
+	parts = append(parts, value[start:])
+	return parts, nil
+}
+
+func looksLikeTypeArgumentStart(value string, start int) bool {
+	depth := 0
+	var quote rune
+	escaped := false
+	for index, char := range value[start:] {
+		absolute := start + index
+		if quote != 0 {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if char == '\\' {
+				escaped = true
+				continue
+			}
+			if char == quote {
+				quote = 0
+			}
+			continue
+		}
+		switch char {
+		case '\'', '"', '`':
+			quote = char
+		case '<':
+			depth++
+		case '>':
+			if depth == 0 {
+				return false
+			}
+			depth--
+			if depth == 0 {
+				next := nextNonSpaceRune(value[absolute+len(string(char)):])
+				return next == '(' || next == '[' || next == '.' || next == ',' || next == ';'
+			}
+		case ';':
+			if depth == 0 {
+				return false
+			}
+		}
+	}
+	return false
+}
+
+func nextNonSpaceRune(value string) rune {
+	for _, char := range value {
+		if char != ' ' && char != '\t' && char != '\n' && char != '\r' {
+			return char
+		}
+	}
+	return 0
 }
 
 func verifyPackageExportMap(repoRoot string, packageDir string, item entry, failures *[]string) {
