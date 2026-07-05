@@ -517,6 +517,34 @@ func TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions(t *testi
 	}
 }
 
+func TestScorecardPublicPublishDeclaresRequiredOutputInputs(t *testing.T) {
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "scorecard.yml"))
+	job, ok := workflow.Jobs["publish"]
+	if !ok {
+		t.Fatalf("scorecard workflow missing public publish job")
+	}
+	stepIndex, err := uniqueStepIndex(job.Steps, "Publish Scorecard results")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stepIndex < 0 {
+		t.Fatalf("scorecard public publish job missing Scorecard action step")
+	}
+	step := job.Steps[stepIndex]
+	if !strings.HasPrefix(step.Uses, "ossf/scorecard-action@") {
+		t.Fatalf("public publish step uses %q, want ossf/scorecard-action", step.Uses)
+	}
+	if !withBool(step.With, "publish_results") {
+		t.Fatalf("public publish step must set publish_results=true")
+	}
+	if got := withString(step.With, "results_file"); got != "scorecard-public-results.json" {
+		t.Fatalf("public publish results_file=%q, want scorecard-public-results.json", got)
+	}
+	if got := withString(step.With, "results_format"); got != "json" {
+		t.Fatalf("public publish results_format=%q, want json", got)
+	}
+}
+
 func readWorkflowForTest(t *testing.T, path string) githubWorkflow {
 	t.Helper()
 	raw, err := os.ReadFile(path)
@@ -528,6 +556,31 @@ func readWorkflowForTest(t *testing.T, path string) githubWorkflow {
 		t.Fatalf("parse workflow %s: %v", path, err)
 	}
 	return workflow
+}
+
+func withString(values map[string]any, key string) string {
+	if values == nil {
+		return ""
+	}
+	value, ok := values[key].(string)
+	if !ok {
+		return ""
+	}
+	return value
+}
+
+func withBool(values map[string]any, key string) bool {
+	if values == nil {
+		return false
+	}
+	switch value := values[key].(type) {
+	case bool:
+		return value
+	case string:
+		return normalizedExpression(value) == "true"
+	default:
+		return false
+	}
 }
 
 func truthy(raw any) bool {
