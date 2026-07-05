@@ -25,7 +25,7 @@ jobs:
   analyze:
     name: codeql / go
     if: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -67,7 +67,7 @@ jobs:
     name: codeql / provider upload
     if: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
     needs: analyze
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: read

@@ -142,12 +142,12 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-011",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "CI separates the OS-independent full source/package gate from the platform-specific macOS execution smoke so parallel runners do not duplicate proof classes while preserving release-relevant platform evidence.",
+      "invariant": "CI separates the OS-independent full source/package gate from the platform-specific macOS execution smoke, uses explicit hosted runner labels instead of floating latest labels, and exposes one fail-closed aggregate quality gate that requires every required leaf check to finish with success so skipped, failed, or cancelled leaf jobs cannot satisfy branch-protection evidence.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-QUALITY-011"],
-      "nonClaims": ["This requirement does not claim provider-run success, Windows support, performance budget enforcement, or release approval."],
+      "nonClaims": ["This requirement does not claim provider-run success, branch-protection settings, Windows support, performance budget enforcement, or release approval."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}

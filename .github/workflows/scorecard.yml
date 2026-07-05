@@ -18,7 +18,7 @@ jobs:
   scorecard:
     name: scorecard / repository hygiene
     if: ${{ github.event.repository.private == false || vars.ENABLE_SCORECARD == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       checks: read
@@ -51,7 +51,7 @@ jobs:
     name: scorecard / provider upload
     if: ${{ github.event.repository.private == false || vars.ENABLE_SCORECARD_PUBLISH == 'true' }}
     needs: scorecard
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: read
@@ -73,7 +73,7 @@ jobs:
   publish:
     name: scorecard / public publish
     if: ${{ github.event.repository.private == false || vars.ENABLE_SCORECARD_PUBLISH == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       checks: read

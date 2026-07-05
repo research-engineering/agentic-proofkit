@@ -21,7 +21,7 @@ jobs:
   scan:
     name: osv / source advisory
     if: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout
@@ -68,7 +68,7 @@ jobs:
     name: osv / provider upload
     if: ${{ github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true' }}
     needs: scan
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       actions: read
