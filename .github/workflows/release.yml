@@ -36,7 +36,7 @@ env:
 jobs:
   candidate:
     name: release candidate / package evidence
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -195,7 +195,7 @@ jobs:
     name: release / publish readiness
     needs: candidate
     if: ${{ github.event_name == 'push' || inputs.mode == 'publish' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -258,7 +258,7 @@ jobs:
     name: publish / npm trusted publisher
     needs: publish-readiness
     if: ${{ github.event_name == 'push' || inputs.mode == 'publish' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: npm-production
     permissions:
@@ -555,7 +555,7 @@ jobs:
     name: publish / pypi trusted publisher
     needs: publish-readiness
     if: ${{ (github.event_name == 'push' || inputs.mode == 'publish') && vars.PROOFKIT_ENABLE_PYPI_PUBLISH == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment:
       name: pypi
@@ -660,7 +660,7 @@ jobs:
         needs.publish.result == 'success' &&
         (vars.PROOFKIT_ENABLE_PYPI_PUBLISH != 'true' || needs.publish-pypi.result == 'success')
       }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -756,7 +756,7 @@ jobs:
         needs.release-metadata.result == 'success' &&
         (vars.PROOFKIT_ENABLE_PYPI_PUBLISH != 'true' || needs.publish-pypi.result == 'success')
       }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       attestations: write
@@ -860,7 +860,7 @@ jobs:
           needs.release-attestations.result == 'success'
         )
       }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
       contents: write

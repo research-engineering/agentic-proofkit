@@ -49,8 +49,9 @@ vulnerability absence, or consumer rollout safety by itself.
   semantic command evidence without claiming line coverage or exhaustive test
   semantic completeness.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
-  source/package gate from macOS platform smoke so parallel runners do not
-  duplicate proof classes while preserving platform execution evidence.
+  source/package gate from macOS platform smoke, uses explicit hosted runner
+  labels instead of floating latest labels, and exposes one fail-closed
+  aggregate gate that requires every required leaf check to finish with success.
 - `REQ-PROOFKIT-QUALITY-012`: release and adoption channel identifiers use one
   canonical authority vocabulary that separates durable authority channels from
   display labels, publisher environments, statuses, and candidate evidence.

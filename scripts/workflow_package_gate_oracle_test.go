@@ -50,6 +50,7 @@ type githubJob struct {
 	If              string         `yaml:"if"`
 	Needs           any            `yaml:"needs"`
 	Permissions     any            `yaml:"permissions"`
+	RunsOn          any            `yaml:"runs-on"`
 	Steps           []githubStep   `yaml:"steps"`
 }
 
@@ -558,6 +559,73 @@ func readWorkflowForTest(t *testing.T, path string) githubWorkflow {
 	return workflow
 }
 
+func TestWorkflowsUseExplicitHostedRunnerLabels(t *testing.T) {
+	for _, path := range workflowPathsForTest(t) {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			workflow := readWorkflowForTest(t, path)
+			for jobID, job := range workflow.Jobs {
+				for _, label := range runnerLabels(job.RunsOn) {
+					if strings.HasSuffix(label, "-latest") {
+						t.Fatalf("%s job %q uses floating hosted runner label %q", path, jobID, label)
+					}
+				}
+			}
+		})
+	}
+}
+
+func workflowPathsForTest(t *testing.T) []string {
+	t.Helper()
+	patterns := []string{
+		filepath.Join("..", ".github", "workflows", "*.yml"),
+		filepath.Join("..", ".github", "workflows", "*.yaml"),
+	}
+	var paths []string
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			t.Fatalf("glob workflows with %s: %v", pattern, err)
+		}
+		paths = append(paths, matches...)
+	}
+	sort.Strings(paths)
+	if len(paths) == 0 {
+		t.Fatalf("no workflow files found")
+	}
+	return paths
+}
+
+func TestCIWorkflowDeclaresFailClosedRequiredAggregate(t *testing.T) {
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
+	gate, ok := workflow.Jobs["ci-required-gate"]
+	if !ok {
+		t.Fatalf("ci workflow missing ci-required-gate job")
+	}
+	if truthy(gate.ContinueOnError) {
+		t.Fatalf("ci-required-gate must not continue on errors")
+	}
+	if permissionWrites(gate.Permissions) {
+		t.Fatalf("ci-required-gate permissions grant write scopes: %#v", gate.Permissions)
+	}
+	if !usesAlwaysStatusCheck(gate.If) {
+		t.Fatalf("ci-required-gate if=%q, want always() so failed or skipped needs are inspected", gate.If)
+	}
+	wantNeeds := []string{"platform-smoke", "source-quality"}
+	if got := needsList(gate.Needs); !reflect.DeepEqual(got, wantNeeds) {
+		t.Fatalf("ci-required-gate needs=%#v, want %#v", got, wantNeeds)
+	}
+	if len(gate.Steps) != 1 {
+		t.Fatalf("ci-required-gate steps=%d, want one aggregate assertion step", len(gate.Steps))
+	}
+	run := gate.Steps[0].Run
+	for _, need := range wantNeeds {
+		want := fmt.Sprintf(`test "${{ needs.%s.result }}" = "success"`, need)
+		if !strings.Contains(run, want) {
+			t.Fatalf("ci-required-gate run must require %s success, run=%q", need, run)
+		}
+	}
+}
+
 func withString(values map[string]any, key string) string {
 	if values == nil {
 		return ""
@@ -567,6 +635,26 @@ func withString(values map[string]any, key string) string {
 		return ""
 	}
 	return value
+}
+
+func runnerLabels(raw any) []string {
+	switch value := raw.(type) {
+	case nil:
+		return nil
+	case string:
+		return []string{value}
+	case []any:
+		result := make([]string, 0, len(value))
+		for _, item := range value {
+			if text, ok := item.(string); ok {
+				result = append(result, text)
+			}
+		}
+		sort.Strings(result)
+		return result
+	default:
+		return nil
+	}
 }
 
 func withBool(values map[string]any, key string) bool {
