@@ -36,6 +36,7 @@ func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T
 		if record.Summary["expectedFileCount"] != len(profile.ExpectedFiles) {
 			t.Fatalf("Build(%q) summary=%#v, want expected file count", presetID, record.Summary)
 		}
+		assertPathPolicyNonAuthoritative(t, presetID, record.JSONValue())
 		for _, command := range profile.SuggestedCommands {
 			assertPackageExecutableCommand(t, command)
 			if command == cliexec.DisplayCommand("witness-plan", "--input", "proofkit/witness-plan.json") {
@@ -109,4 +110,26 @@ func assertPackageExecutableCommand(t *testing.T, command string) {
 	if fields[0] != cliexec.BinaryName {
 		t.Fatalf("generated command %q uses binary %q, want %q", command, fields[0], cliexec.BinaryName)
 	}
+}
+
+func assertPathPolicyNonAuthoritative(t *testing.T, presetID string, record map[string]any) {
+	t.Helper()
+	for _, raw := range record["diagnostics"].([]any) {
+		diagnostic := raw.(map[string]any)
+		if diagnostic["key"] != "pathPolicy" {
+			continue
+		}
+		policy := diagnostic["value"].(map[string]any)
+		if policy["policyClass"] != "starter_suggestion" || policy["consumerOverrideRequired"] != true || policy["defaultFilesAreSuggestions"] != true {
+			t.Fatalf("preset %s path policy is authoritative or incomplete: %#v", presetID, policy)
+		}
+		nonClaims := policy["nonClaims"].([]any)
+		for _, value := range nonClaims {
+			if strings.Contains(value.(string), "do not override consuming repository documentation policy") {
+				return
+			}
+		}
+		t.Fatalf("preset %s path policy lacks consumer-policy non-claim: %#v", presetID, policy)
+	}
+	t.Fatalf("preset %s missing pathPolicy diagnostic", presetID)
 }

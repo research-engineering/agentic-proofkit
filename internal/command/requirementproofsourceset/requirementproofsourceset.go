@@ -11,6 +11,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 )
 
 var sourceRoles = map[string]struct{}{
@@ -648,7 +649,7 @@ func resolverProjection(raw map[string]any, envelope Envelope) (map[string]any, 
 	for index, column := range envelope.SurfaceColumns {
 		surfaceColumnIndex[column] = index
 	}
-	requiredColumns := []string{"surface_id", "required_environment_classes", "preconditioned_environment_classes"}
+	requiredColumns := compactproofcontract.SurfaceColumns
 	projectedSurfaces := make([]any, 0, len(surfaceValues))
 	for rowIndex, value := range surfaceValues {
 		row, ok := value.([]any)
@@ -666,15 +667,15 @@ func resolverProjection(raw map[string]any, envelope Envelope) (map[string]any, 
 		projectedSurfaces = append(projectedSurfaces, projected)
 	}
 	return map[string]any{
-		"authority_state":       "canonical",
+		"authority_state":       compactproofcontract.AuthorityState,
 		"binding_columns":       raw["binding_columns"],
 		"bindings":              raw["bindings"],
 		"contract_id":           raw["contract_id"],
-		"contract_kind":         "requirement_proof_binding",
-		"normalization_profile": "proofkit.compact.v1",
+		"contract_kind":         compactproofcontract.ContractKind,
+		"normalization_profile": compactproofcontract.NormalizationProfile,
 		"non_claims":            raw["non_claims"],
 		"schema_version":        json.Number("1"),
-		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
+		"surface_columns":       stringSliceToAny(compactproofcontract.SurfaceColumns),
 		"surfaces":              projectedSurfaces,
 		"witness_columns":       raw["witness_columns"],
 	}, nil

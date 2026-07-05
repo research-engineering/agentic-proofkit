@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
 )
@@ -20,12 +21,22 @@ func TestBuildAcceptsProducerBoundPassedReceipt(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsNonBooleanPublicAPIPlanFlag(t *testing.T) {
+	input := validEvidenceInput()
+	evidencePlan(input)["publicApiContractTouched"] = "false"
+
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "publicApiContractTouched must be boolean") {
+		t.Fatalf("Build() error=%v, want publicApiContractTouched boolean rejection", err)
+	}
+}
+
 func TestProjectObligationDecisionBuildsInputAndRejectsUnroutedCommand(t *testing.T) {
 	projected, err := ProjectObligationDecision(validProjectionInput())
 	if err != nil {
 		t.Fatalf("ProjectObligationDecision() error=%v", err)
 	}
-	if projected["schemaVersion"] != 1 || projected["decisionId"] == "" {
+	if projected["schemaVersion"] != json.Number("1") || projected["decisionId"] == "" {
 		t.Fatalf("projected obligation decision is malformed: %#v", projected)
 	}
 	obligations := projected["obligations"].([]any)
@@ -38,6 +49,24 @@ func TestProjectObligationDecisionBuildsInputAndRejectsUnroutedCommand(t *testin
 	_, err = ProjectObligationDecision(input)
 	if err == nil || !strings.Contains(err.Error(), "missing route for command") {
 		t.Fatalf("ProjectObligationDecision() error=%v, want missing route", err)
+	}
+}
+
+func TestProjectObligationDecisionWithoutCurrentnessOrTrustDoesNotSatisfyBlockingObligation(t *testing.T) {
+	projected, err := ProjectObligationDecision(validProjectionInput())
+	if err != nil {
+		t.Fatalf("ProjectObligationDecision() error=%v", err)
+	}
+	result, err := obligationdecision.Build(projected)
+	if err != nil {
+		t.Fatalf("obligationdecision.Build() error=%v", err)
+	}
+	if result.ExitCode == 0 || result.Report.State != "failed" {
+		t.Fatalf("obligation decision exit=%d state=%s, want failed", result.ExitCode, result.Report.State)
+	}
+	encoded, _ := json.Marshal(result.Report.JSONValue())
+	if !strings.Contains(string(encoded), "invalid_producer") || !strings.Contains(string(encoded), "unknown_scope") {
+		t.Fatalf("obligation decision missing trust/currentness blockers: %s", encoded)
 	}
 }
 

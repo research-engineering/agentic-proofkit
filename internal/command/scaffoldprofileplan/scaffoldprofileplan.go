@@ -20,6 +20,7 @@ var scaffoldNonClaims = []string{
 var supportedMatcherKinds = map[string]struct{}{
 	"bun_repo_script":              {},
 	"bun_workspace_package_script": {},
+	"exact_argv":                   {},
 	"python_pytest_contract":       {},
 }
 
@@ -80,11 +81,13 @@ type generatedArtifact struct {
 type commandMatcher struct {
 	ID                   string
 	Kind                 string
+	AllowedArgv          []string
 	AllowedScripts       []string
 	AllowedTestPathGlobs []string
 	NetworkPolicy        string
 	CredentialClass      string
 	ParallelGroup        string
+	HasAllowedArgv       bool
 	HasAllowedScripts    bool
 	HasAllowedTestGlobs  bool
 }
@@ -427,16 +430,25 @@ func admitCommandMatchers(raw any) ([]commandMatcher, error) {
 		return nil, err
 	}
 	for _, matcher := range matchers {
+		if matcher.Kind == "exact_argv" && !matcher.HasAllowedArgv {
+			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must declare allowedArgv", matcher.ID)
+		}
+		if matcher.Kind == "exact_argv" && (matcher.HasAllowedScripts || matcher.HasAllowedTestGlobs) {
+			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must not declare script or test path matchers", matcher.ID)
+		}
+		if matcher.Kind != "exact_argv" && matcher.HasAllowedArgv {
+			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must not declare allowedArgv", matcher.ID)
+		}
 		if matcher.Kind == "python_pytest_contract" && !matcher.HasAllowedTestGlobs {
 			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must declare allowedTestPathGlobs", matcher.ID)
 		}
 		if matcher.Kind == "python_pytest_contract" && matcher.HasAllowedScripts {
 			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must not declare allowedScripts", matcher.ID)
 		}
-		if matcher.Kind != "python_pytest_contract" && !matcher.HasAllowedScripts {
+		if matcher.Kind != "python_pytest_contract" && matcher.Kind != "exact_argv" && !matcher.HasAllowedScripts {
 			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must declare allowedScripts", matcher.ID)
 		}
-		if matcher.Kind != "python_pytest_contract" && matcher.HasAllowedTestGlobs {
+		if matcher.Kind != "python_pytest_contract" && matcher.Kind != "exact_argv" && matcher.HasAllowedTestGlobs {
 			return nil, fmt.Errorf("repo-profile scaffold commandMatcher %s must not declare allowedTestPathGlobs", matcher.ID)
 		}
 	}
@@ -448,7 +460,7 @@ func admitCommandMatcher(raw any) (commandMatcher, error) {
 	if !ok {
 		return commandMatcher{}, fmt.Errorf("repo-profile scaffold commandMatcher must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"allowedScripts", "allowedTestPathGlobs", "credentialClass", "id", "kind", "networkPolicy", "parallelGroup"}, "repo-profile scaffold commandMatcher"); err != nil {
+	if err := admit.KnownKeys(record, []string{"allowedArgv", "allowedScripts", "allowedTestPathGlobs", "credentialClass", "id", "kind", "networkPolicy", "parallelGroup"}, "repo-profile scaffold commandMatcher"); err != nil {
 		return commandMatcher{}, err
 	}
 	id, err := nonEmptyText(record["id"], "repo-profile scaffold commandMatcher id")
@@ -485,6 +497,14 @@ func admitCommandMatcher(raw any) (commandMatcher, error) {
 		}
 		matcher.AllowedScripts = scripts
 		matcher.HasAllowedScripts = true
+	}
+	if value, ok := record["allowedArgv"]; ok {
+		argv, err := admit.TextArray(value, "repo-profile scaffold commandMatcher allowedArgv", false)
+		if err != nil {
+			return commandMatcher{}, err
+		}
+		matcher.AllowedArgv = argv
+		matcher.HasAllowedArgv = true
 	}
 	if value, ok := record["allowedTestPathGlobs"]; ok {
 		globs, err := sortedUniquePathsRaw(value, "repo-profile scaffold commandMatcher allowedTestPathGlobs", false)
@@ -690,6 +710,9 @@ func commandMatchersJSON(matchers []commandMatcher) []any {
 		}
 		if matcher.HasAllowedScripts {
 			item["allowedScripts"] = admit.StringSliceToAny(matcher.AllowedScripts)
+		}
+		if matcher.HasAllowedArgv {
+			item["allowedArgv"] = admit.StringSliceToAny(matcher.AllowedArgv)
 		}
 		if matcher.HasAllowedTestGlobs {
 			item["allowedTestPathGlobs"] = admit.StringSliceToAny(matcher.AllowedTestPathGlobs)

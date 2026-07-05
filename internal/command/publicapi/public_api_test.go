@@ -232,6 +232,20 @@ func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 	assertStringSlice(t, typeExports, []string{"Mode", "Options", "PublicThing"})
 }
 
+func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testing.T) {
+	source := strings.Join([]string{
+		"export const a = {x: 1, b: 2}, c: Array<string> = [\"x\", \"y\"];",
+		"export let d = makeValue<{left: string, right: string}>();",
+	}, "\n")
+
+	runtimeExports, typeExports, err := CollectExports(source)
+	if err != nil {
+		t.Fatalf("collect exports: %v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"a", "c", "d"})
+	assertStringSlice(t, typeExports, []string{})
+}
+
 func writeTypeScriptPackageFixture(t *testing.T) string {
 	t.Helper()
 	repoRoot := t.TempDir()

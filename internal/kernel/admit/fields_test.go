@@ -65,6 +65,12 @@ func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) 
 	if !strings.Contains(redacted, "<truncated-diagnostic>") {
 		t.Fatalf("RedactDiagnosticValue(%q) = %q, want truncation marker", diagnostic, redacted)
 	}
+
+	headerDiagnostic := "request failed: Authorization: Basic YWxpY2U6c2VjcmV0"
+	headerRedacted := RedactDiagnosticValue(headerDiagnostic)
+	if strings.Contains(headerRedacted, "YWxpY2U6c2VjcmV0") || strings.Contains(headerRedacted, "Basic") {
+		t.Fatalf("RedactDiagnosticValue leaked authorization header value: %q", headerRedacted)
+	}
 }
 
 func TestSortedTextEnforcesUniquenessAndNonEmptyPolicy(t *testing.T) {

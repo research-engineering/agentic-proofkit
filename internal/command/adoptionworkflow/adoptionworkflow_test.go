@@ -24,10 +24,27 @@ func TestBuildGeneratesBoundedCommandArgv(t *testing.T) {
 	if result.ExitCode != 0 {
 		t.Fatalf("BuildResult() exit=%d, want ready workflow", result.ExitCode)
 	}
+	if result.Plan["planState"] != "ready_for_caller_review" || len(result.Plan["blockers"].([]any)) != 0 {
+		t.Fatalf("plan state/blockers=%v/%#v, want ready without blockers", result.Plan["planState"], result.Plan["blockers"])
+	}
 	command := firstWorkflowCommand(t, result.Plan)
 	argv := command["argv"].([]any)
 	if strings.Join([]string{argv[0].(string), argv[1].(string), argv[2].(string)}, " ") != "agentic-proofkit release-authority --input" {
 		t.Fatalf("argv prefix=%#v, want fixed proofkit command route", argv)
+	}
+	if got := argv[3].(string); got != "proofkit/release-authority.v1.json" {
+		t.Fatalf("release authority input path=%q", got)
+	}
+	inputRefIDs := command["inputRefIds"].([]any)
+	if len(inputRefIDs) != 1 || inputRefIDs[0] != "proofkit.release-authority" {
+		t.Fatalf("inputRefIds=%#v, want release authority ref", inputRefIDs)
+	}
+	if command["owner"] != "consumer_repository" || !strings.Contains(command["nonClaim"].(string), "do not execute commands") {
+		t.Fatalf("command route lost caller-owned non-claim boundary: %#v", command)
+	}
+	nonClaims := result.Plan["nonClaims"].([]any)
+	if !anyStringContains(nonClaims, "Adoption workflow plans do not execute native witnesses or planned commands.") {
+		t.Fatalf("workflow nonClaims missing execution boundary: %#v", nonClaims)
 	}
 }
 
@@ -120,4 +137,13 @@ func workflowCommand(t *testing.T, plan map[string]any, commandID string) map[st
 	}
 	t.Fatalf("%s command not found", commandID)
 	return nil
+}
+
+func anyStringContains(values []any, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

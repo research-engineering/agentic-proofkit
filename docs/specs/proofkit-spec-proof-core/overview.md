@@ -23,8 +23,10 @@ execution receipts, and merge policy.
   commands, environment classes, conformance facts, and falsification routes
   without executing witnesses or deciding proof freshness.
 - `REQ-PROOFKIT-SPEC-003`: witness planning accepts caller-owned structured
-  command metadata, scheduler constraints, and environment classes without
-  executing commands or selecting repository policy.
+  command metadata, scheduler constraints, environment classes, and
+  binding-derived command projections only through admitted witness vocabulary
+  and conservative safe argv policy, without executing commands or selecting
+  repository policy.
 - `REQ-PROOFKIT-SPEC-004`: selective planning and selective evidence reports
   keep changed-path facts, planned commands, receipts, evidence class,
   producer-admission state, and obligation candidates explicit, keep merge
@@ -33,17 +35,18 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-005`: rendered proof views and agent envelopes remain
   bounded, derived presentations over structured source and never become
   canonical proof or requirement authority.
-- `REQ-PROOFKIT-SPEC-006`: test evidence inventory, proof-binding-derived
-  inventory projections, normalized inventory projections, coverage-view input
-  composition, and requirement coverage views classify or assemble
-  caller-owned test-to-requirement, command, witness, owner-invariant,
-  quality-finding, and declared-surface routes, preserve source-set entry
-  provenance, fail closed on structured selector/sourcePath drift, command-ref
-  collisions, missing requirement owners, scope widening, fabricated normalized
-  inventory, nonsemantic command evidence, and declared dead zones in
-  selected-owner or full-repository scopes, and do not treat proof routes,
-  nonsemantic command evidence, normalized projections, composed inputs, or
-  rendered views as semantic test coverage.
+- `REQ-PROOFKIT-SPEC-006`: test evidence inventory, explicit test-discovery
+  draft projections, proof-binding-derived inventory projections, normalized
+  inventory projections, coverage-view input composition, and requirement
+  coverage views classify or assemble caller-owned test-to-requirement,
+  command, witness, owner-invariant, quality-finding, and declared-surface
+  routes, preserve source-set entry provenance, fail closed on structured
+  selector/sourcePath drift, command-ref collisions, missing requirement
+  owners, scope widening, fabricated normalized inventory, non-strict
+  discovery candidate inventory, nonsemantic command evidence, and declared
+  dead zones in selected-owner or full-repository scopes, and do not treat
+  proof routes, discovery drafts, nonsemantic command evidence, normalized
+  projections, composed inputs, or rendered views as semantic test coverage.
 - `REQ-PROOFKIT-SPEC-007`: caller-owned inputs are admitted into canonical
   immutable records before any proof, policy, route, rendering, or report
   decision consumes them.

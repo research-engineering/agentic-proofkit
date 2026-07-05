@@ -155,6 +155,42 @@ func TestVerifyRootManifestBoundaryRejectsWrongRepository(t *testing.T) {
 	}
 }
 
+func TestReadManifestFromTarRejectsUnknownPackageManifestFields(t *testing.T) {
+	tarball := writePackageTarball(t, map[string]string{
+		"package/package.json": strings.Replace(packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"), "\n}", ",\n  \"publicApi\": true\n}", 1),
+	})
+
+	_, err := readManifestFromTar(tarballArtifact(t, tarball))
+	if err == nil || !strings.Contains(err.Error(), "unsupported top-level field") {
+		t.Fatalf("readManifestFromTar() error=%v, want unsupported field rejection", err)
+	}
+}
+
+func TestVerifyRootManifestBoundaryRejectsLifecycleScripts(t *testing.T) {
+	root := t.TempDir()
+	withWorkingDirectory(t, root)
+	filename := "agentic-proofkit-1.2.3.tgz"
+	manifest := strings.Replace(packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"), "\n}", ",\n  \"scripts\": {\"preinstall\": \"node install.js\"}\n}", 1)
+	tarball := writePackageTarball(t, map[string]string{"package/package.json": manifest})
+	content, err := os.ReadFile(tarball)
+	if err != nil {
+		t.Fatalf("read package tarball: %v", err)
+	}
+	writeFileBytes(t, filepath.Join(root, "artifacts", "package", filename), content)
+	record := packRecord{
+		Filename:  filename,
+		Integrity: testNPMIntegrity(content),
+		Name:      rootPackageName,
+		Shasum:    testSHA1(content),
+		Version:   "1.2.3",
+	}
+
+	err = verifyRootManifestBoundary(rootPackageArtifact{Content: content, Record: record})
+	if err == nil || !strings.Contains(err.Error(), "lifecycle script preinstall") {
+		t.Fatalf("verifyRootManifestBoundary() error=%v, want lifecycle script rejection", err)
+	}
+}
+
 func TestSnapshotReadersDoNotRereadMutableTarballPath(t *testing.T) {
 	tarball := writePackageTarball(t, map[string]string{
 		"package/ADOPTION.md":                             "package docs describe embedded Go binaries.",

@@ -162,7 +162,7 @@ func buildReport(input input) (report.Record, int) {
 			if shape.CandidateRequirementID != nil {
 				candidateRequirements = append(candidateRequirements, candidateRequirement(input, capability, shape))
 				for _, anchor := range anchors {
-					candidateBindings = append(candidateBindings, candidateBinding(*shape.CandidateRequirementID, anchor))
+					candidateBindings = append(candidateBindings, candidateBinding(input, *shape.CandidateRequirementID, anchor))
 				}
 			}
 
@@ -706,6 +706,7 @@ func candidateRequirement(input input, capability capability, shape scenarioShap
 	return map[string]any{
 		"claimLevel":         "candidate",
 		"sourceTrustMode":    input.TrustMode,
+		"promotionState":     promotionState(input.TrustMode),
 		"nonClaims":          admit.StringSliceToAny(sortedUnique(append(append([]string{}, capability.NonClaims...), shape.NonClaims...))),
 		"ownerId":            capability.OwnerID,
 		"requirementId":      *shape.CandidateRequirementID,
@@ -715,7 +716,7 @@ func candidateRequirement(input input, capability capability, shape scenarioShap
 	}
 }
 
-func candidateBinding(requirementID string, anchor scenarioAnchor) map[string]any {
+func candidateBinding(input input, requirementID string, anchor scenarioAnchor) map[string]any {
 	witnessKinds := []string{}
 	if anchor.PositiveWitness {
 		witnessKinds = append(witnessKinds, "positive")
@@ -724,15 +725,39 @@ func candidateBinding(requirementID string, anchor scenarioAnchor) map[string]an
 		witnessKinds = append(witnessKinds, "falsification")
 	}
 	return map[string]any{
-		"commandRefs":   admit.StringSliceToAny(anchor.CommandRefs),
-		"nonClaims":     admit.StringSliceToAny(anchor.NonClaims),
-		"requirementId": requirementID,
-		"scenarioId":    anchor.ScenarioID,
-		"selector":      anchor.Selector,
-		"sourcePath":    anchor.SourcePath,
-		"state":         "candidate",
-		"witnessKinds":  admit.StringSliceToAny(witnessKinds),
+		"commandRefs":             admit.StringSliceToAny(anchor.CommandRefs),
+		"evidenceAuthority":       evidenceAuthority(input.TrustMode),
+		"executableEvidenceState": executableEvidenceState(input.TrustMode),
+		"nonClaims":               admit.StringSliceToAny(anchor.NonClaims),
+		"promotionState":          promotionState(input.TrustMode),
+		"requirementId":           requirementID,
+		"scenarioId":              anchor.ScenarioID,
+		"selector":                anchor.Selector,
+		"sourcePath":              anchor.SourcePath,
+		"state":                   "candidate",
+		"witnessKinds":            admit.StringSliceToAny(witnessKinds),
 	}
+}
+
+func evidenceAuthority(mode string) string {
+	if mode == "code_baseline" {
+		return "caller_owned_executable_anchor"
+	}
+	return "untrusted_code_observation"
+}
+
+func executableEvidenceState(mode string) string {
+	if mode == "code_baseline" {
+		return "candidate_executable_anchor"
+	}
+	return "not_executable_until_owner_materialized"
+}
+
+func promotionState(mode string) string {
+	if mode == "code_baseline" {
+		return "candidate_requires_admission"
+	}
+	return "owner_review_required"
 }
 
 func instructions(mode string) []any {

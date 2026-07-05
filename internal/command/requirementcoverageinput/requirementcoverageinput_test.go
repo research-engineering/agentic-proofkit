@@ -1,7 +1,9 @@
 package requirementcoverageinput
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 	"testing"
@@ -32,6 +34,114 @@ func TestBuildComposesInputPreservesDeclaredUniverseAndAllowsDownstreamFailures(
 	}
 	if viewExitCode == 0 {
 		t.Fatalf("downstream coverage view should still report declared missing command/test surface: %#v", view)
+	}
+}
+
+func TestBuildComposesDirectRequirementProofBindingAndInventory(t *testing.T) {
+	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
+	delete(input, "compactProofContract")
+	delete(input, "normalizedTestEvidenceInventory")
+	input["requirementProofBinding"] = directRequirementProofBinding(t)
+	input["testEvidenceInventory"] = normalized["inventory"]
+
+	output, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() direct input error = %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Build() direct input exitCode=%d output=%#v", exitCode, output)
+	}
+	if output["compactProofContract"] != nil {
+		t.Fatalf("direct compose must not synthesize compact proof contract: %#v", output["compactProofContract"])
+	}
+	if output["requirementProofBinding"] == nil {
+		t.Fatalf("direct compose must preserve admitted requirementProofBinding")
+	}
+	view, viewExitCode, err := requirementcoverageview.BuildJSON(output, requirementcoverageview.Options{})
+	if err != nil {
+		t.Fatalf("direct composed input should be coverage-view admitted: %v", err)
+	}
+	if viewExitCode == 0 {
+		t.Fatalf("downstream coverage view should still report declared missing command/test surface: %#v", view)
+	}
+}
+
+func TestBuildRejectsDirectFailedChildReports(t *testing.T) {
+	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
+	delete(input, "compactProofContract")
+	delete(input, "normalizedTestEvidenceInventory")
+	proof := directRequirementProofBinding(t)
+	proof["bindings"].([]any)[0].(map[string]any)["commandIds"] = []any{"proofkit.coverage.unknown"}
+	input["requirementProofBinding"] = proof
+	input["testEvidenceInventory"] = normalized["inventory"]
+
+	_, _, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "requires passed requirement proof binding admission") {
+		t.Fatalf("Build() error=%v, want failed proof binding child rejection", err)
+	}
+}
+
+func TestBuildRejectsDiscoveryDraftCandidateInventoryAsStrictInventory(t *testing.T) {
+	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	delete(input, "compactProofContract")
+	delete(input, "normalizedTestEvidenceInventory")
+	input["requirementProofBinding"] = directRequirementProofBinding(t)
+	input["testEvidenceInventory"] = map[string]any{
+		"schemaVersion": json.Number("1"),
+		"inventoryId":   "proofkit.coverage.discovery_candidate",
+		"candidateKind": "proofkit.test-inventory-discovery-draft.candidate-inventory",
+		"authority":     "caller_owned_test_discovery_candidate_inventory",
+		"entries":       []any{},
+		"nonClaims":     []any{"Candidate inventory is not strict test evidence."},
+	}
+
+	_, _, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "candidateKind") {
+		t.Fatalf("Build() error=%v, want candidate inventory rejection", err)
+	}
+}
+
+func TestBuildRejectsDirectSourceSetInventoryWithoutNormalizedEnvelope(t *testing.T) {
+	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	delete(input, "compactProofContract")
+	delete(input, "normalizedTestEvidenceInventory")
+	input["requirementProofBinding"] = directRequirementProofBinding(t)
+	sourceText := `{
+  "schemaVersion": 1,
+  "inventoryId": "proofkit.coverage.inventory.fragment",
+  "authority": "caller_owned_inventory",
+  "sourceId": "source.coverage.fragment",
+  "entries": [` + baseInventoryEntries() + `],
+  "nonClaims": ["Source-set fragment fixture does not execute tests."]
+}`
+	input["testEvidenceInventory"] = map[string]any{
+		"schemaVersion": json.Number("1"),
+		"inventoryId":   "proofkit.coverage.inventory.source_set",
+		"authority":     "caller_owned_inventory_source_set",
+		"sourceColumns": []any{"source_id", "path", "sha256", "role", "non_claims"},
+		"sources": []any{
+			[]any{
+				"source.coverage.fragment",
+				"docs/contracts/test-inventory/coverage.v1.json",
+				fmt.Sprintf("%x", sha256.Sum256([]byte(sourceText))),
+				"test_evidence_inventory_fragment",
+				[]any{"Source-set row fixture does not execute tests."},
+			},
+		},
+		"sourceTexts": []any{
+			map[string]any{
+				"path": "docs/contracts/test-inventory/coverage.v1.json",
+				"text": sourceText,
+			},
+		},
+		"nonClaims": []any{"Source-set fixture must use normalized envelope before coverage compose."},
+	}
+
+	_, _, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "use normalizedTestEvidenceInventory for source-set inventory") {
+		t.Fatalf("Build() error=%v, want source-set direct-mode rejection", err)
 	}
 }
 
@@ -288,6 +398,48 @@ func validComposeInput(t *testing.T, inventoryEntries string) any {
 		t.Fatalf("decode fixture: %v", err)
 	}
 	return input
+}
+
+func directRequirementProofBinding(t *testing.T) map[string]any {
+	t.Helper()
+	input, err := admission.DecodeJSON(strings.NewReader(`{
+  "schemaVersion": 1,
+  "bindingId": "proofkit.coverage.binding",
+  "requirements": [
+    {
+      "requirementId": "REQ-PROOFKIT-COVERAGE-001",
+      "ownerId": "proofkit.coverage",
+      "specPath": "docs/specs/proofkit-coverage/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Coverage direct binding fixture does not execute witnesses."]
+    }
+  ],
+  "bindings": [
+    {
+      "requirementId": "REQ-PROOFKIT-COVERAGE-001",
+      "scenarioId": "proofkit.coverage.scenario",
+      "witnessId": "proofkit.coverage.witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go",
+      "commandIds": ["proofkit.coverage.command"],
+      "environmentClasses": ["local-go"]
+    }
+  ],
+  "witnessCommands": [
+    {
+      "commandId": "proofkit.coverage.command",
+      "command": "go test ./internal/command/requirementcoverageinput",
+      "environmentClass": "local-go"
+    }
+  ],
+  "selection": {"changedPaths": [], "ownerIds": [], "requirementIds": []},
+  "nonClaims": ["Coverage direct binding fixture does not prove command pass evidence."]
+}`), 1<<20)
+	if err != nil {
+		t.Fatalf("decode direct requirement proof binding fixture: %v", err)
+	}
+	return input.(map[string]any)
 }
 
 func baseInventoryEntries() string {

@@ -23,7 +23,7 @@ import (
 const (
 	artifactRoot                = "artifacts/proofkit"
 	packageArtifactRoot         = "artifacts/package"
-	packageGateEnvironmentClass = "local-go"
+	packageGateEnvironmentClass = "local-go-python"
 	pythonArtifactRoot          = "artifacts/pypi"
 	maxJSONBytes                = 8 << 20
 )

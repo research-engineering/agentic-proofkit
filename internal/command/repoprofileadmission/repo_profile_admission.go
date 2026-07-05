@@ -167,10 +167,11 @@ func verify(raw any) (admissionResult, error) {
 	}
 
 	for _, item := range profilePaths(input.Profile) {
-		safePath, ok := safePathOrFailure(item, fmt.Sprintf("repo profile path %s", item), &failures)
+		label := diagnosticLabel(item)
+		safePath, ok := safePathOrFailure(item, fmt.Sprintf("repo profile path %s", label), &failures)
 		if ok {
 			if _, exists := trackedFiles[safePath]; !exists {
-				failures = append(failures, fmt.Sprintf("repo profile path %s does not exist: %s", item, item))
+				failures = append(failures, fmt.Sprintf("repo profile path %s does not exist: %s", label, label))
 			}
 		}
 	}
@@ -179,10 +180,11 @@ func verify(raw any) (admissionResult, error) {
 		failures = append(failures, err.Error())
 	}
 	for _, item := range input.Profile.Proofs.RetiredProofLikePaths {
-		safePath, ok := safePathOrFailure(item, fmt.Sprintf("repo profile retired proof-like path %s", item), &failures)
+		label := diagnosticLabel(item)
+		safePath, ok := safePathOrFailure(item, fmt.Sprintf("repo profile retired proof-like path %s", label), &failures)
 		if ok {
 			if _, exists := trackedFiles[safePath]; exists {
-				failures = append(failures, fmt.Sprintf("repo profile retired proof-like path must not exist: %s", safePath))
+				failures = append(failures, fmt.Sprintf("repo profile retired proof-like path must not exist: %s", diagnosticLabel(safePath)))
 			}
 		}
 	}
@@ -193,7 +195,8 @@ func verify(raw any) (admissionResult, error) {
 
 	for _, entry := range globEntries(input.Profile) {
 		for _, glob := range entry.Globs {
-			if err := pathpattern.Validate(glob, fmt.Sprintf("glob %s", glob)); err != nil {
+			label := diagnosticLabel(glob)
+			if err := pathpattern.Validate(glob, fmt.Sprintf("glob %s", label)); err != nil {
 				failures = append(failures, err.Error())
 				continue
 			}
@@ -205,7 +208,7 @@ func verify(raw any) (admissionResult, error) {
 				}
 			}
 			if !matched {
-				failures = append(failures, fmt.Sprintf("%s matches no tracked files: %s", entry.Label, glob))
+				failures = append(failures, fmt.Sprintf("%s matches no tracked files: %s", entry.Label, label))
 			}
 		}
 	}
@@ -1016,6 +1019,10 @@ func safePathOrFailure(value string, context string, failures *[]string) (string
 
 func safeRepoRelativePath(value string, context string) (string, error) {
 	return admit.SafeRepoRelativePath(value, context)
+}
+
+func diagnosticLabel(value string) string {
+	return admit.RedactDiagnosticValue(value)
 }
 
 func stringField(record map[string]any, field string, context string) (string, error) {

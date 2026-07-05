@@ -66,7 +66,7 @@ func usage() string {
 		"  agentic-proofkit spec-overview-claims --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit spec-proof-bundle-admission --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit stack-preset --preset <id>\n" +
-		"  agentic-proofkit test-evidence-inventory --input <path|-> [--input-pointer <pointer>] [--projection proof-binding-derived] [--normalized-inventory]\n" +
+		"  agentic-proofkit test-evidence-inventory --input <path|-> [--input-pointer <pointer>] [--projection proof-binding-derived|discovery-draft] [--normalized-inventory]\n" +
 		"  agentic-proofkit text-policy --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit witness-plan --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit witness-scheduler-plan --input <path|-> [--input-pointer <pointer>]\n" +

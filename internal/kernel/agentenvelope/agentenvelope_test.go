@@ -295,6 +295,9 @@ func TestBuildRedactsTypedContainersAndUnsupportedValues(t *testing.T) {
 				"typedStrings": typedStrings,
 				"defined":      defined,
 				"jsonNumber":   json.Number("1"),
+				"int64Number":  int64(2),
+				"uint64Number": uint64(3),
+				"floatValue":   1.5,
 				"unsupported":  struct{ Token string }{Token: secret},
 			},
 		},
@@ -314,6 +317,12 @@ func TestBuildRedactsTypedContainersAndUnsupportedValues(t *testing.T) {
 	}
 	if !strings.Contains(string(serialized), `"jsonNumber": 1`) {
 		t.Fatalf("json.Number was not preserved as a JSON number:\n%s", serialized)
+	}
+	if !strings.Contains(string(serialized), `"int64Number": 2`) || !strings.Contains(string(serialized), `"uint64Number": 3`) {
+		t.Fatalf("integer values were not converted to stable JSON numbers:\n%s", serialized)
+	}
+	if strings.Contains(string(serialized), `"floatValue": 1.5`) {
+		t.Fatalf("float value should not be emitted as stable JSON number:\n%s", serialized)
 	}
 }
 

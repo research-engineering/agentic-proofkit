@@ -32,14 +32,17 @@ var (
 	inputKindValues = map[string]struct{}{
 		"adoption_workflow":               {},
 		"authoring_plan":                  {},
+		"binding_witness_plan_input":      {},
 		"capability_map":                  {},
 		"changed_path_set":                {},
+		"coverage_compose_input":          {},
 		"coverage_view_input":             {},
 		"deployment_evidence_input":       {},
 		"impact_input":                    {},
 		"migration_plan":                  {},
 		"migration_parity":                {},
 		"obligation_decision":             {},
+		"obligation_decision_input":       {},
 		"overview_claims":                 {},
 		"proof_binding":                   {},
 		"readiness_closeout_input":        {},
@@ -52,6 +55,7 @@ var (
 		"selective_evidence":              {},
 		"selective_gate_plan_input":       {},
 		"spec_tree_bundle":                {},
+		"test_discovery":                  {},
 		"test_inventory":                  {},
 		"typescript_public_api_manifest":  {},
 		"typescript_public_api_repo_root": {},
@@ -133,6 +137,7 @@ var routeSpecs = map[string]routeSpec{
 		RequiredAny: [][]string{{"selective_evidence"}},
 		NextCommands: []commandSpec{
 			{Command: "selective-gate-evidence", InputKind: "selective_evidence", Why: "Receipts must be admitted against the caller-owned selective plan before obligation decisions consume them."},
+			{Command: "selective-gate-obligation-decision-input", InputKind: "obligation_decision_input", Why: "Admitted evidence must be projected with caller-owned routes, currentness, and trust context before the final obligation decision."},
 			{Command: "obligation-decision", InputKind: "obligation_decision", Why: "Blocking proof obligations must be decided from admitted evidence, not from raw receipt presence."},
 		},
 		StopConditions: []string{"Stop on missing, stale, invalid, untrusted, blocked, unavailable, or unknown-scope evidence."},
@@ -167,9 +172,10 @@ var routeSpecs = map[string]routeSpec{
 	},
 	"bind_requirement_proofs": {
 		Family:      "requirement_proof_binding",
-		RequiredAny: [][]string{{"proof_binding"}},
+		RequiredAny: [][]string{{"proof_binding", "binding_witness_plan_input", "witness_command_catalog"}},
 		NextCommands: []commandSpec{
 			{Command: "requirement-bindings", InputKind: "proof_binding", Why: "Proof bindings own the route from requirements to scenarios, witnesses, commands, and environment classes."},
+			{Command: "witness-plan", InputKind: "binding_witness_plan_input", Why: "Binding-derived witness-plan inputs combine admitted proof bindings with witness vocabulary before native command safety is projected."},
 			{Command: "witness-plan", InputKind: "witness_command_catalog", Why: "Witness command safety should be checked before native execution is treated as proof evidence."},
 			{Command: "proof-slice", InputKind: "proof_binding", Why: "Bounded proof slices give agents local route context without loading full graphs."},
 		},
@@ -202,8 +208,9 @@ var routeSpecs = map[string]routeSpec{
 	},
 	"inspect_coverage": {
 		Family:      "test_inventory_and_coverage",
-		RequiredAny: [][]string{{"coverage_view_input"}},
+		RequiredAny: [][]string{{"coverage_compose_input", "coverage_view_input"}},
 		NextCommands: []commandSpec{
+			{Command: "requirement-coverage-input-compose", InputKind: "coverage_compose_input", Why: "Coverage views should be composed from explicit caller-owned requirement source, proof binding, test inventory, universe, and local environment policy before inspection."},
 			{Command: "requirement-coverage-view", InputKind: "coverage_view_input", Why: "Coverage inspection should join admitted requirement, proof-binding, and test-inventory inputs."},
 			{Command: "requirement-browser-server", InputKind: "coverage_view_input", ExtraArgs: []string{"--view", "coverage"}, Why: "Browser views are presentation-only inspection surfaces over caller-owned coverage input."},
 		},
@@ -214,14 +221,16 @@ var routeSpecs = map[string]routeSpec{
 	},
 	"inventory_tests": {
 		Family:      "test_inventory_and_coverage",
-		RequiredAny: [][]string{{"test_inventory"}},
+		RequiredAny: [][]string{{"test_discovery", "test_inventory", "coverage_compose_input", "coverage_view_input"}},
 		NextCommands: []commandSpec{
+			{Command: "test-evidence-inventory", InputKind: "test_discovery", ExtraArgs: []string{"--projection", "discovery-draft"}, Why: "Caller-owned discovered test facts must become candidate-only inventory guidance before any strict semantic inventory is materialized."},
 			{Command: "test-evidence-inventory", InputKind: "test_inventory", Why: "Test evidence must be inventoried with semantic oracle and falsifier metadata before coverage views consume it."},
+			{Command: "requirement-coverage-input-compose", InputKind: "coverage_compose_input", Why: "Coverage input composition removes consumer-local glue after strict source, binding, inventory, universe, and environment-policy facts exist."},
 			{Command: "requirement-coverage-view", InputKind: "coverage_view_input", Why: "Coverage reports should be derived from admitted inventory plus requirement and proof-binding facts."},
 		},
-		StopConditions: []string{"Stop when an inventory entry lacks a semantic oracle, falsifier, command reference, or source selector."},
+		StopConditions: []string{"Stop when discovered tests are candidate-only, or when an inventory entry lacks a semantic oracle, falsifier, command reference, or source selector."},
 		Escalations:    []string{"Escalate test intent and native execution to the consuming repository."},
-		SliceSummary:   "Route test inventory work through explicit semantic evidence records before coverage views consume them.",
+		SliceSummary:   "Route test inventory work from explicit discovery facts to strict semantic evidence records before coverage views consume them.",
 		SliceNonClaims: []string{"The test inventory slice does not infer test intent from source code or execute tests."},
 	},
 	"plan_selective_checks": {

@@ -115,6 +115,7 @@ type Falsifier struct {
 	FalsifierID                string
 	NegativeCaseID             string
 	Supersedes                 []string
+	SupersessionProofRef       string
 	WrongImplementationClassID string
 }
 
@@ -296,13 +297,17 @@ func falsifierToAny(falsifier *Falsifier) any {
 	if falsifier == nil {
 		return nil
 	}
-	return map[string]any{
+	record := map[string]any{
 		"dominanceGroup":             falsifier.DominanceGroup,
 		"falsifierId":                falsifier.FalsifierID,
 		"negativeCaseId":             falsifier.NegativeCaseID,
 		"supersedes":                 admit.StringSliceToAny(falsifier.Supersedes),
 		"wrongImplementationClassId": falsifier.WrongImplementationClassID,
 	}
+	if falsifier.SupersessionProofRef != "" {
+		record["supersessionProofRef"] = falsifier.SupersessionProofRef
+	}
+	return record
 }
 
 func oracleToAny(oracle *Oracle) any {
@@ -489,7 +494,7 @@ func admitFalsifier(raw any, testID string) (*Falsifier, error) {
 	if !ok {
 		return nil, fmt.Errorf("test evidence inventory %s falsifier must be an object or null", testID)
 	}
-	if err := admit.KnownKeys(record, []string{"dominanceGroup", "falsifierId", "negativeCaseId", "supersedes", "wrongImplementationClassId"}, "test evidence inventory falsifier"); err != nil {
+	if err := admit.KnownKeys(record, []string{"dominanceGroup", "falsifierId", "negativeCaseId", "supersedes", "supersessionProofRef", "wrongImplementationClassId"}, "test evidence inventory falsifier"); err != nil {
 		return nil, err
 	}
 	falsifierID, err := admit.RuleID(record["falsifierId"], fmt.Sprintf("test evidence inventory %s falsifierId", testID))
@@ -512,9 +517,16 @@ func admitFalsifier(raw any, testID string) (*Falsifier, error) {
 	if err != nil {
 		return nil, err
 	}
+	supersessionProofRef := ""
+	if record["supersessionProofRef"] != nil {
+		supersessionProofRef, err = admit.RuleID(record["supersessionProofRef"], fmt.Sprintf("test evidence inventory %s supersessionProofRef", testID))
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &Falsifier{
 		DominanceGroup: dominanceGroup, FalsifierID: falsifierID,
-		NegativeCaseID: negativeCaseID, Supersedes: supersedes,
+		NegativeCaseID: negativeCaseID, Supersedes: supersedes, SupersessionProofRef: supersessionProofRef,
 		WrongImplementationClassID: wrongImplementationClassID,
 	}, nil
 }
@@ -645,6 +657,7 @@ type falsifierLedgerEntry struct {
 	FalsifierID string
 	Key         string
 	Supersedes  []string
+	ProofRef    string
 	TestID      string
 }
 
@@ -657,6 +670,7 @@ func inventoryFalsifiers(entries []Entry) []falsifierLedgerEntry {
 		out = append(out, falsifierLedgerEntry{
 			FalsifierID: entry.Falsifier.FalsifierID,
 			Key:         falsifierEquivalenceKey(entry),
+			ProofRef:    entry.Falsifier.SupersessionProofRef,
 			Supersedes:  entry.Falsifier.Supersedes,
 			TestID:      entry.TestID,
 		})
@@ -680,6 +694,11 @@ func classifyFalsifierSupersession(entries []falsifierLedgerEntry) []string {
 	supersededByKey := map[string]map[string]struct{}{}
 	for _, entry := range entries {
 		for _, supersededID := range entry.Supersedes {
+			if entry.ProofRef == "" {
+				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:missing_dominance_proof:%s", entry.TestID, supersededID))
+				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
+				continue
+			}
 			superseded, ok := byID[supersededID]
 			if !ok {
 				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:unknown:%s", entry.TestID, supersededID))
@@ -752,7 +771,7 @@ func ruleResults(failures []string, warnings []string) []report.RuleResult {
 		ruleStatus("test_inventory.semantic_entries_have_anchors", !hasPrefix(failures, "missing_semantic_anchor"), "Semantic test inventory entries must cite requirement refs or stable owner invariant refs."),
 		ruleStatus("test_inventory.semantic_falsifiers_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Semantic falsifier entries must cite executable command refs."),
 		ruleStatus("test_inventory.strong_oracles", !hasPrefix(failures, "weak_or_empty_oracle"), "Semantic falsifier entries must declare a falsifier and a non-empty assertion oracle."),
-		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession."),
+		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession with dominance proof."),
 		ruleStatus("test_inventory.route_only_boundaries", !hasPrefix(failures, "wrong_evidence_boundary"), "Route-only smoke evidence must remain a non-claim and cannot cite semantic requirement anchors."),
 		ruleStatus("test_inventory.route_only_warnings", len(warnings) == 0, "Route-only entries are admitted as non-claim warnings only."),
 	}
@@ -788,6 +807,8 @@ func diagnosticClassifications(diagnostics []string, severity string) []map[stri
 
 func diagnosticClassID(diagnostic string) string {
 	switch {
+	case strings.HasPrefix(diagnostic, "candidate_only:"):
+		return "candidate_only"
 	case strings.HasPrefix(diagnostic, "declared_duplicate_falsifier:"):
 		return "declared_duplicate_falsifier"
 	case strings.HasPrefix(diagnostic, "invalid_falsifier_supersession:"):
@@ -803,6 +824,8 @@ func diagnosticClassID(diagnostic string) string {
 		}
 	case strings.HasPrefix(diagnostic, "route_only_nonclaim:"):
 		return "routing_smoke_only"
+	case strings.HasPrefix(diagnostic, "selector_fragility:"):
+		return "selector_fragility"
 	case strings.HasPrefix(diagnostic, "weak_or_empty_oracle:"):
 		return "weak_or_empty_oracle"
 	case strings.HasPrefix(diagnostic, "wrong_evidence_boundary:"):

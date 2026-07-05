@@ -104,6 +104,7 @@ type requirementBindings struct {
 type packageManifest struct {
 	Bin                  map[string]string `json:"bin"`
 	CPU                  []string          `json:"cpu"`
+	Description          string            `json:"description"`
 	Exports              map[string]string `json:"exports"`
 	Files                []string          `json:"files"`
 	License              string            `json:"license"`
@@ -114,6 +115,9 @@ type packageManifest struct {
 	Private              bool              `json:"private"`
 	PublishConfig        publishConfig     `json:"publishConfig"`
 	Repository           repository        `json:"repository"`
+	Scripts              map[string]string `json:"scripts"`
+	SideEffects          bool              `json:"sideEffects"`
+	Type                 string            `json:"type"`
 	Version              string            `json:"version"`
 }
 
@@ -400,7 +404,50 @@ func readManifestFromTar(artifact rootPackageArtifact) (packageManifest, error) 
 	if err != nil {
 		return packageManifest{}, err
 	}
+	raw, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		return packageManifest{}, err
+	}
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return packageManifest{}, fmt.Errorf("package manifest must be an object")
+	}
+	if err := verifyManifestTopLevelKeys(record); err != nil {
+		return packageManifest{}, err
+	}
 	return admission.DecodeTypedJSON[packageManifest](bytes.NewReader(content), int64(len(content)))
+}
+
+func verifyManifestTopLevelKeys(record map[string]any) error {
+	allowed := map[string]struct{}{
+		"bin":            {},
+		"cpu":            {},
+		"description":    {},
+		"exports":        {},
+		"files":          {},
+		"license":        {},
+		"name":           {},
+		"os":             {},
+		"packageManager": {},
+		"private":        {},
+		"publishConfig":  {},
+		"repository":     {},
+		"scripts":        {},
+		"sideEffects":    {},
+		"type":           {},
+		"version":        {},
+	}
+	unknown := []string{}
+	for key := range record {
+		if _, ok := allowed[key]; !ok {
+			unknown = append(unknown, key)
+		}
+	}
+	if len(unknown) == 0 {
+		return nil
+	}
+	sort.Strings(unknown)
+	return fmt.Errorf("package manifest has unsupported top-level field(s): %s", strings.Join(unknown, ", "))
 }
 
 func readTarFileFromBytes(content []byte, target string) ([]byte, error) {
@@ -525,6 +572,9 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.PublishConfig.Access != "public" || manifest.PublishConfig.Registry != "https://registry.npmjs.org" {
 		return fmt.Errorf("root package publishConfig must target public npm registry")
 	}
+	if err := verifyNoLifecycleScripts(manifest.Scripts); err != nil {
+		return err
+	}
 	if len(manifest.Bin) != 1 || manifest.Bin[rootBinaryName] != "dist/agentic-proofkit" {
 		return fmt.Errorf("root package bin must expose dist/agentic-proofkit only")
 	}
@@ -557,6 +607,25 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	}
 	if len(manifest.OptionalDependencies) != 0 {
 		return fmt.Errorf("root package must not declare optional platform dependencies")
+	}
+	return nil
+}
+
+func verifyNoLifecycleScripts(scripts map[string]string) error {
+	lifecycleScripts := map[string]struct{}{
+		"preinstall":     {},
+		"install":        {},
+		"postinstall":    {},
+		"prepack":        {},
+		"postpack":       {},
+		"prepare":        {},
+		"prepublish":     {},
+		"prepublishOnly": {},
+	}
+	for name := range scripts {
+		if _, ok := lifecycleScripts[name]; ok {
+			return fmt.Errorf("root package must not declare lifecycle script %s", name)
+		}
 	}
 	return nil
 }

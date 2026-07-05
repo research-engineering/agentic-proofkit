@@ -1,6 +1,7 @@
 package selectivegateevidence
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -171,7 +172,7 @@ func ProjectObligationDecision(raw any) (map[string]any, error) {
 		"decisionId":    decisionID,
 		"nonClaims":     admit.StringSliceToAny(nonClaims),
 		"obligations":   obligations,
-		"schemaVersion": 1,
+		"schemaVersion": json.Number("1"),
 	}, nil
 }
 
@@ -601,14 +602,14 @@ func selectiveEvidenceStates(receipts []receiptSummary) []string {
 
 func currentnessStates(diagnostic *currentnessProjectionDiagnostic) []string {
 	if diagnostic == nil {
-		return []string{}
+		return []string{"unknown_scope"}
 	}
 	return diagnostic.DecisionStates
 }
 
 func trustStates(diagnostic *trustProjectionDiagnostic) []string {
 	if diagnostic == nil {
-		return []string{}
+		return []string{"invalid_producer"}
 	}
 	return diagnostic.DecisionStates
 }

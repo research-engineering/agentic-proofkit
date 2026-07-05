@@ -86,6 +86,37 @@ func TestBuildRejectsUnknownAdoptionMode(t *testing.T) {
 	}
 }
 
+func TestBuildRoutesSelectiveEvidenceThroughObligationProjectionInput(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.admit_receipts",
+		"goal":          "admit_receipts",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "selective_evidence",
+				"ref":  "artifacts/proofkit/selective-evidence-input.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 || commands[0].(map[string]any)["command"] != "selective-gate-evidence" {
+		t.Fatalf("nextCommands=%#v, want only selective-gate-evidence until projection input exists", commands)
+	}
+	omitted := report["omitted"].([]any)
+	if !omittedCommandMissingInput(omitted, "selective-gate-obligation-decision-input", "obligation_decision_input") {
+		t.Fatalf("omitted=%#v, want missing obligation_decision_input projector command", omitted)
+	}
+}
+
 func TestBuildRoutesAuthoringPlanWithoutFalseTransitionInput(t *testing.T) {
 	t.Parallel()
 
@@ -123,6 +154,76 @@ func TestBuildRoutesAuthoringPlanWithoutFalseTransitionInput(t *testing.T) {
 		if item.(map[string]any)["command"] == "requirement-source-transition" {
 			t.Fatalf("author_requirements must not emit transition with authoring_plan input: %#v", commands)
 		}
+	}
+}
+
+func TestBuildRoutesBindingDerivedWitnessPlanInput(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.binding_witness_plan",
+		"goal":          "bind_requirement_proofs",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "binding_witness_plan_input",
+				"ref":  "proofkit/witness-plan-input.v1.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 {
+		t.Fatalf("nextCommands length = %d, want 1: %#v", len(commands), commands)
+	}
+	command := commands[0].(map[string]any)
+	if command["command"] != "witness-plan" {
+		t.Fatalf("command=%v, want witness-plan", command["command"])
+	}
+	argv := toStringSlice(t, command["argv"].([]any))
+	if got := argValue(argv, "--input"); got != "proofkit/witness-plan-input.v1.json" {
+		t.Fatalf("witness-plan argv input=%q, want binding_witness_plan_input ref", got)
+	}
+}
+
+func TestBuildRoutesExplicitWitnessCommandCatalog(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.witness_command_catalog",
+		"goal":          "bind_requirement_proofs",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "witness_command_catalog",
+				"ref":  "proofkit/witness-command-catalog.v1.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 {
+		t.Fatalf("nextCommands length = %d, want 1: %#v", len(commands), commands)
+	}
+	command := commands[0].(map[string]any)
+	if command["command"] != "witness-plan" {
+		t.Fatalf("command=%v, want witness-plan", command["command"])
+	}
+	argv := toStringSlice(t, command["argv"].([]any))
+	if got := argValue(argv, "--input"); got != "proofkit/witness-command-catalog.v1.json" {
+		t.Fatalf("witness-plan argv input=%q, want witness_command_catalog ref", got)
 	}
 }
 
@@ -191,6 +292,77 @@ func TestBuildRoutesCapabilityMapForRepositoryAdoption(t *testing.T) {
 	}
 	if commandExists(commands, "adoption-workflow-plan") || commandExists(commands, "scaffold-project-structure") {
 		t.Fatalf("adoption route must not invent missing adoption workflow or scaffold input: %#v", commands)
+	}
+}
+
+func TestBuildRoutesTestDiscoveryToDraftInventoryProjection(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.test_discovery",
+		"goal":          "inventory_tests",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "test_discovery",
+				"ref":  "proofkit/test-discovery.v1.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 {
+		t.Fatalf("nextCommands length = %d, want 1: %#v", len(commands), commands)
+	}
+	argv := findCommandArgv(t, commands, "test-evidence-inventory")
+	if got := argValue(argv, "--projection"); got != "discovery-draft" {
+		t.Fatalf("test-evidence-inventory projection=%q, want discovery-draft", got)
+	}
+	if got := argValue(argv, "--input"); got != "proofkit/test-discovery.v1.json" {
+		t.Fatalf("test-evidence-inventory input=%q, want test_discovery ref", got)
+	}
+	if commandExists(commands, "requirement-coverage-view") {
+		t.Fatalf("test discovery must not close coverage directly: %#v", commands)
+	}
+}
+
+func TestBuildRoutesCoverageComposeInputBeforeCoverageView(t *testing.T) {
+	t.Parallel()
+
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.coverage_compose",
+		"goal":          "inspect_coverage",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{
+				"kind": "coverage_compose_input",
+				"ref":  "proofkit/coverage-compose-input.v1.json",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Build returned error: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
+	}
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 1 {
+		t.Fatalf("nextCommands length = %d, want 1: %#v", len(commands), commands)
+	}
+	argv := findCommandArgv(t, commands, "requirement-coverage-input-compose")
+	if got := argValue(argv, "--input"); got != "proofkit/coverage-compose-input.v1.json" {
+		t.Fatalf("requirement-coverage-input-compose input=%q, want coverage_compose_input ref", got)
+	}
+	if commandExists(commands, "requirement-coverage-view") {
+		t.Fatalf("coverage compose route must not require prebuilt coverage_view_input: %#v", commands)
 	}
 }
 
@@ -950,8 +1122,8 @@ func TestBuildEnvelopeProjectsBoundedGuidanceSlice(t *testing.T) {
 		t.Fatalf("commands length = %d, want 2: %#v", len(commands), commands)
 	}
 	cost := envelope["costContract"].(map[string]any)
-	if stop := cost["stopReason"]; stop != "caller_review_required" {
-		t.Fatalf("stopReason = %v, want caller_review_required", stop)
+	if stop := cost["stopReason"]; stop != "wide_or_full_gate_required" {
+		t.Fatalf("stopReason = %v, want wide_or_full_gate_required", stop)
 	}
 }
 
@@ -1196,6 +1368,7 @@ func sameStringSet(left []string, right []string) bool {
 func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 	pairs := [][2]string{
 		{"adoption-workflow-plan", "adoption_workflow"},
+		{"witness-plan", "binding_witness_plan_input"},
 		{"capability-map-admission", "capability_map"},
 		{"changed-path-set", "changed_path_set"},
 		{"deployment-evidence-admission", "deployment_evidence_input"},
@@ -1207,6 +1380,7 @@ func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 		{"readiness-closeout", "readiness_closeout_input"},
 		{"registry-consumer", "registry_consumer_input"},
 		{"release-authority", "release_authority_input"},
+		{"requirement-coverage-input-compose", "coverage_compose_input"},
 		{"requirement-authoring-plan", "authoring_plan"},
 		{"requirement-bindings", "proof_binding"},
 		{"requirement-browser-server", "coverage_view_input"},
@@ -1220,8 +1394,10 @@ func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 		{"scaffold-profile-plan", "scaffold_profile_plan"},
 		{"scaffold-project-structure", "scaffold_project_structure"},
 		{"selective-gate-evidence", "selective_evidence"},
+		{"selective-gate-obligation-decision-input", "obligation_decision_input"},
 		{"selective-gate-plan", "selective_gate_plan_input"},
 		{"spec-overview-claims", "overview_claims"},
+		{"test-evidence-inventory", "test_discovery"},
 		{"test-evidence-inventory", "test_inventory"},
 		{"typescript-public-api-surfaces", "typescript_public_api_manifest"},
 		{"typescript-public-api-surfaces", "typescript_public_api_repo_root"},
@@ -1295,6 +1471,16 @@ func commandExists(commands []any, name string) bool {
 	for _, item := range commands {
 		command := item.(map[string]any)
 		if command["command"] == name {
+			return true
+		}
+	}
+	return false
+}
+
+func omittedCommandMissingInput(omitted []any, commandName string, inputKind string) bool {
+	for _, item := range omitted {
+		record := item.(map[string]any)
+		if record["command"] == commandName && record["missingInputKind"] == inputKind {
 			return true
 		}
 	}

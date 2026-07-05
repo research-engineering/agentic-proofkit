@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 )
 
 func TestParseJSONObjectRejectsAmbiguousSourceText(t *testing.T) {
@@ -84,6 +85,9 @@ func TestBuildSelectsSourceSetRowsAndEmitsResolverInput(t *testing.T) {
 	}
 	if got := resolverInput["surface_columns"]; !equalAnyStringSlice(got, []string{"surface_id", "required_environment_classes", "preconditioned_environment_classes"}) {
 		t.Fatalf("resolverInput surface_columns=%v", got)
+	}
+	if got := resolverInput["surface_columns"]; !equalAnyStringSlice(got, compactproofcontract.SurfaceColumns) {
+		t.Fatalf("resolverInput surface_columns drifted from compact owner=%v", got)
 	}
 	rows := resolverInput["bindings"].([]any)
 	if got := []any{rows[0].([]any)[0], rows[1].([]any)[0]}; !equalAnyStringSlice(got, []string{"REQ-PROOFKIT-ALPHA-001", "REQ-PROOFKIT-BETA-001"}) {

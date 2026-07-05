@@ -26,6 +26,90 @@ func TestBuildAdmitsSafeCommandAndRejectsShellCommand(t *testing.T) {
 	}
 }
 
+func TestBuildProjectsRequirementBindingsToWitnessPlan(t *testing.T) {
+	input := map[string]any{
+		"schemaVersion":           json.Number("1"),
+		"projection":              "requirement-bindings",
+		"vocabulary":              validWitnessPlanInput()["vocabulary"],
+		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
+		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
+	}
+	plan, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() projection error = %v", err)
+	}
+	commands := plan["commands"].([]any)
+	if len(commands) != 1 {
+		t.Fatalf("projected commands=%#v, want one", commands)
+	}
+	command := commands[0].(map[string]any)
+	argv := command["argv"].([]any)
+	if strings.Join([]string{argv[0].(string), argv[1].(string), argv[2].(string)}, " ") != "go test ./internal/command/witnessplan" {
+		t.Fatalf("projected argv=%#v", argv)
+	}
+	if command["networkPolicy"] != "none" || command["credentialClass"] != "none" || command["cachePolicy"] != "disabled" {
+		t.Fatalf("projected command did not use conservative policy: %#v", command)
+	}
+}
+
+func TestBuildRejectsRequirementBindingProjectionThatNeedsShellQuoting(t *testing.T) {
+	input := map[string]any{
+		"schemaVersion":           json.Number("1"),
+		"projection":              "requirement-bindings",
+		"vocabulary":              validWitnessPlanInput()["vocabulary"],
+		"requirementProofBinding": validRequirementProofBindingInput(`go test "./path with space"`),
+		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
+	}
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "provide an explicit witness-plan command catalog") {
+		t.Fatalf("Build() error=%v, want explicit catalog rejection", err)
+	}
+}
+
+func TestBuildRejectsRequirementBindingProjectionWithAmbiguousParallelGroups(t *testing.T) {
+	input := map[string]any{
+		"schemaVersion":           json.Number("1"),
+		"projection":              "requirement-bindings",
+		"vocabulary":              validWitnessPlanInput()["vocabulary"],
+		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
+		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
+	}
+	vocabulary := input["vocabulary"].(map[string]any)
+	vocabulary["parallelGroups"] = []any{"destructive", "safe"}
+
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "exactly one parallelGroup") {
+		t.Fatalf("Build() error=%v, want ambiguous parallel group rejection", err)
+	}
+}
+
+func TestBuildRejectsRequirementBindingProjectionWithShellControl(t *testing.T) {
+	input := map[string]any{
+		"schemaVersion":           json.Number("1"),
+		"projection":              "requirement-bindings",
+		"vocabulary":              validWitnessPlanInput()["vocabulary"],
+		"requirementProofBinding": validRequirementProofBindingInput(`go test ./internal/command/witnessplan && echo ok`),
+		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
+	}
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "shell control tokens") {
+		t.Fatalf("Build() error=%v, want shell-control rejection", err)
+	}
+}
+
+func TestBuildRejectsRequirementBindingProjectionWithoutVocabulary(t *testing.T) {
+	input := map[string]any{
+		"schemaVersion":           json.Number("1"),
+		"projection":              "requirement-bindings",
+		"requirementProofBinding": validRequirementProofBindingInput("go test ./internal/command/witnessplan"),
+		"nonClaims":               []any{"Projection fixture does not execute witnesses."},
+	}
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "witness vocabulary") {
+		t.Fatalf("Build() error=%v, want vocabulary admission rejection", err)
+	}
+}
+
 func validWitnessPlanInput() map[string]any {
 	return map[string]any{
 		"vocabulary": map[string]any{
@@ -69,5 +153,46 @@ func validWitnessPlanInput() map[string]any {
 				},
 			},
 		},
+	}
+}
+
+func validRequirementProofBindingInput(command string) map[string]any {
+	return map[string]any{
+		"schemaVersion": json.Number("1"),
+		"bindingId":     "proofkit.witnessplan.binding",
+		"requirements": []any{
+			map[string]any{
+				"claimLevel":    "blocking",
+				"nonClaims":     []any{"Witness-plan projection requirement fixture does not execute commands."},
+				"ownerId":       "proofkit.witnessplan",
+				"proofState":    "witness_backed",
+				"requirementId": "REQ-PROOFKIT-WITNESSPLAN-001",
+				"specPath":      "docs/specs/proofkit-witnessplan/requirements.v1.json",
+			},
+		},
+		"bindings": []any{
+			map[string]any{
+				"commandIds":         []any{"proofkit.test-command"},
+				"environmentClasses": []any{"local-go"},
+				"requirementId":      "REQ-PROOFKIT-WITNESSPLAN-001",
+				"scenarioId":         "proofkit.witnessplan.scenario",
+				"witnessId":          "proofkit.witnessplan.witness",
+				"witnessKind":        "contract",
+				"witnessPath":        "internal/command/witnessplan/witnessplan_test.go",
+			},
+		},
+		"witnessCommands": []any{
+			map[string]any{
+				"command":          command,
+				"commandId":        "proofkit.test-command",
+				"environmentClass": "local-go",
+			},
+		},
+		"selection": map[string]any{
+			"changedPaths":   []any{},
+			"ownerIds":       []any{},
+			"requirementIds": []any{},
+		},
+		"nonClaims": []any{"Witness-plan projection binding fixture does not prove command pass evidence."},
 	}
 }

@@ -16,6 +16,31 @@ func TestChangedPackagePlanAdmitsPackagesRootAndSchema(t *testing.T) {
 	if plan["fullWorkspace"] != false {
 		t.Fatalf("fullWorkspace=%v, want false", plan["fullWorkspace"])
 	}
+	rootNames := plan["rootPackageNames"].([]any)
+	if len(rootNames) != 2 || rootNames[0] != "alpha" || rootNames[1] != "beta" {
+		t.Fatalf("rootPackageNames=%#v, want changed root plus reverse dependent", rootNames)
+	}
+	directRootNames := plan["directRootPackageNames"].([]any)
+	if len(directRootNames) != 1 || directRootNames[0] != "alpha" {
+		t.Fatalf("directRootPackageNames=%#v, want only alpha", directRootNames)
+	}
+}
+
+func TestChangedPackagePlanEscalatesToFullWorkspaceForMatchedRule(t *testing.T) {
+	input := validChangedPackagePlanInput()
+	input["escalationRules"] = []any{map[string]any{"pattern": "modules/**", "reason": "workspace.global"}}
+
+	plan, err := BuildChangedPackagePlan(input)
+	if err != nil {
+		t.Fatalf("BuildChangedPackagePlan() error=%v", err)
+	}
+	if plan["fullWorkspace"] != true {
+		t.Fatalf("fullWorkspace=%v, want true", plan["fullWorkspace"])
+	}
+	reasons := plan["escalationReasons"].([]any)
+	if len(reasons) != 1 || reasons[0] != "workspace.global" {
+		t.Fatalf("escalationReasons=%#v, want workspace.global", reasons)
+	}
 }
 
 func TestChangedPackagePlanRejectsSchemaDrift(t *testing.T) {
@@ -72,7 +97,10 @@ func validChangedPackagePlanInput() map[string]any {
 		"includeReverseDependents": true,
 		"packagesRoot":             "modules",
 		"escalationRules":          []any{},
-		"packages":                 []any{map[string]any{"dirName": "alpha", "name": "alpha", "workspaceDependencies": []any{}}},
+		"packages": []any{
+			map[string]any{"dirName": "alpha", "name": "alpha", "workspaceDependencies": []any{}},
+			map[string]any{"dirName": "beta", "name": "beta", "workspaceDependencies": []any{"alpha"}},
+		},
 	}
 }
 

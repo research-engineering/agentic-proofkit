@@ -113,6 +113,25 @@ func TestBuildRejectsSchemeAndDriveLikeRepoProfilePaths(t *testing.T) {
 	}
 }
 
+func TestBuildRedactsCallerPathDiagnostics(t *testing.T) {
+	input := validRepoProfileInput()
+	profile := input["profile"].(map[string]any)
+	documents := profile["documents"].(map[string]any)
+	documents["policyPath"] = "docs/sk-proj-abcdefghijklmnop.md"
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if strings.Contains(string(encoded), "abcdefghijklmnop") {
+		t.Fatalf("Build() leaked caller path diagnostic: %s", encoded)
+	}
+}
+
 func TestBuildRejectsShellControlCommandEnvironmentPair(t *testing.T) {
 	input := validRepoProfileInput()
 	input["facts"].(map[string]any)["commandEnvironmentPairs"] = []any{

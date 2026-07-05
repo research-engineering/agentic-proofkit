@@ -8,6 +8,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
@@ -24,15 +25,16 @@ var normalizedSourceRoles = map[string]struct{}{
 }
 
 type input struct {
-	CompactProofContract   any
-	CoverageUniverse       universe
-	LocalEnvironmentPolicy any
-	NormalizedInventory    normalizedInventory
-	Options                any
-	OwnerInvariantRegistry any
-	RequirementSource      any
-	SelectedOwnerIDs       []string
-	ViewInputID            string
+	CompactProofContract    any
+	CoverageUniverse        universe
+	LocalEnvironmentPolicy  any
+	NormalizedInventory     normalizedInventory
+	Options                 any
+	OwnerInvariantRegistry  any
+	RequirementProofBinding any
+	RequirementSource       any
+	SelectedOwnerIDs        []string
+	ViewInputID             string
 }
 
 type normalizedInventory struct {
@@ -92,7 +94,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("requirement coverage input compose input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"compactProofContract", "composerInputId", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}, "requirement coverage input compose input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"compactProofContract", "composerInputId", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementProofBinding", "requirementSource", "schemaVersion", "selectedOwnerIds", "testEvidenceInventory", "viewInputId"}, "requirement coverage input compose input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -116,10 +118,7 @@ func admitInput(raw any) (input, error) {
 	if source.ExitCode != 0 {
 		return input{}, fmt.Errorf("requirement coverage input compose requires passed requirement source admission")
 	}
-	if _, err := compactproofcontract.Admit(record["compactProofContract"]); err != nil {
-		return input{}, err
-	}
-	normalized, err := admitNormalizedInventory(record["normalizedTestEvidenceInventory"])
+	proofBinding, compactContract, normalized, err := admitProofAndInventory(record)
 	if err != nil {
 		return input{}, err
 	}
@@ -137,16 +136,63 @@ func admitInput(raw any) (input, error) {
 		}
 	}
 	return input{
-		CompactProofContract:   record["compactProofContract"],
-		CoverageUniverse:       universe,
-		LocalEnvironmentPolicy: record["localEnvironmentPolicy"],
-		NormalizedInventory:    normalized,
-		Options:                record["options"],
-		OwnerInvariantRegistry: record["ownerInvariantRegistry"],
-		RequirementSource:      record["requirementSource"],
-		SelectedOwnerIDs:       selectedOwnerIDs,
-		ViewInputID:            viewInputID,
+		CompactProofContract:    compactContract,
+		CoverageUniverse:        universe,
+		LocalEnvironmentPolicy:  record["localEnvironmentPolicy"],
+		NormalizedInventory:     normalized,
+		Options:                 record["options"],
+		OwnerInvariantRegistry:  record["ownerInvariantRegistry"],
+		RequirementProofBinding: proofBinding,
+		RequirementSource:       record["requirementSource"],
+		SelectedOwnerIDs:        selectedOwnerIDs,
+		ViewInputID:             viewInputID,
 	}, nil
+}
+
+func admitProofAndInventory(record map[string]any) (any, any, normalizedInventory, error) {
+	normalizedRaw, hasNormalized := record["normalizedTestEvidenceInventory"]
+	directRaw, hasDirectInventory := record["testEvidenceInventory"]
+	if hasNormalized == hasDirectInventory {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose must provide exactly one of normalizedTestEvidenceInventory or testEvidenceInventory")
+	}
+	if hasNormalized {
+		if _, hasDirectProof := record["requirementProofBinding"]; hasDirectProof {
+			return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose normalized mode must not provide requirementProofBinding")
+		}
+		if _, err := compactproofcontract.Admit(record["compactProofContract"]); err != nil {
+			return nil, nil, normalizedInventory{}, err
+		}
+		normalized, err := admitNormalizedInventory(normalizedRaw)
+		if err != nil {
+			return nil, nil, normalizedInventory{}, err
+		}
+		return nil, record["compactProofContract"], normalized, nil
+	}
+	if _, hasCompact := record["compactProofContract"]; hasCompact {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode must not provide compactProofContract")
+	}
+	proofRaw, ok := record["requirementProofBinding"]
+	if !ok {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode requires requirementProofBinding")
+	}
+	proofResult, err := requirementbinding.Build(proofRaw)
+	if err != nil {
+		return nil, nil, normalizedInventory{}, err
+	}
+	if proofResult.Record.State != "passed" {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose requires passed requirement proof binding admission")
+	}
+	inventoryResult, err := testevidenceinventory.Evaluate(directRaw)
+	if err != nil {
+		return nil, nil, normalizedInventory{}, err
+	}
+	if inventoryResult.ExitCode != 0 {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose requires passed test evidence inventory admission")
+	}
+	if inventoryResult.Inventory.Authority != "caller_owned_inventory" {
+		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode requires caller_owned_inventory; use normalizedTestEvidenceInventory for source-set inventory")
+	}
+	return requirementbinding.InputValue(proofResult.Input), nil, normalizedInventory{Inventory: inventoryValue(inventoryResult.Inventory), Result: inventoryResult}, nil
 }
 
 func admitNormalizedInventory(raw any) (normalizedInventory, error) {
@@ -484,7 +530,7 @@ func compose(input input) (map[string]any, error) {
 		"schemaVersion":           json.Number("1"),
 		"viewInputId":             input.ViewInputID,
 		"requirementSource":       input.RequirementSource,
-		"requirementProofBinding": nil,
+		"requirementProofBinding": input.RequirementProofBinding,
 		"compactProofContract":    input.CompactProofContract,
 		"ownerInvariantRegistry":  input.OwnerInvariantRegistry,
 		"coverageUniverse":        universeValue(universe),

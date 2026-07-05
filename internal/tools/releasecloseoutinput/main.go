@@ -21,9 +21,10 @@ import (
 )
 
 const (
-	completionID         = "proofkit.release_closeout.current_package_gate"
-	npmCandidateNonClaim = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
-	pythonPackageName    = "agentic-proofkit"
+	completionID                = "proofkit.release_closeout.current_package_gate"
+	npmCandidateNonClaim        = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
+	packageGateEnvironmentClass = "local-go-python"
+	pythonPackageName           = "agentic-proofkit"
 )
 
 type completionInput struct {
@@ -684,7 +685,7 @@ func proofReceiptMatches(record proofReceiptEvidence) bool {
 	return selfHostingReceiptIdentityMatches(record.ReceiptID, record.ProducerID, record.RunnerClass) &&
 		record.ReceiptKind == "proofkit.package-gate" &&
 		record.ProducerAdmissionClass == "advisory" &&
-		record.EnvironmentClass == "local-go" &&
+		record.EnvironmentClass == packageGateEnvironmentClass &&
 		record.Status == "passed" &&
 		record.ExitCode == 0 &&
 		record.ProofPlanID == "proofkit.self-hosting.witness-plan" &&
@@ -724,7 +725,7 @@ func receiptProducerPolicyCoversReceipt(record receiptProducerPolicyEvidence) bo
 func receiptProducerReceiptMatches(receipt receiptProducerReceipt) bool {
 	return selfHostingReceiptProducerMatches(receipt.ReceiptID, receipt.ProducerID) &&
 		receipt.ReceiptKind == "proofkit.package-gate" &&
-		receipt.EnvironmentClass == "local-go" &&
+		receipt.EnvironmentClass == packageGateEnvironmentClass &&
 		receipt.Status == "passed" &&
 		!receipt.SatisfiesMergeObligation &&
 		receipt.EvidenceRef == "artifacts/proofkit/self-hosting-proof-receipts.json" &&
@@ -813,8 +814,8 @@ func specBundleRequirementBindingsMatch(record specBundleRequirementBindings) bo
 		record.BindingID == "proofkit.package-boundary.requirement-bindings" &&
 		len(record.NonClaims) > 0 &&
 		specBundleHasRequirement(record.Requirements, "REQ-PROOFKIT-PACKAGE-004") &&
-		specBundleHasBinding(record.Bindings, "REQ-PROOFKIT-PACKAGE-004", "proofkit.ci-receipt-anchor", "local-go") &&
-		specBundleHasWitnessCommand(record.WitnessCommands, "proofkit.ci-receipt-anchor", "local-go")
+		specBundleHasBinding(record.Bindings, "REQ-PROOFKIT-PACKAGE-004", "proofkit.ci-receipt-anchor", packageGateEnvironmentClass) &&
+		specBundleHasWitnessCommand(record.WitnessCommands, "proofkit.ci-receipt-anchor", packageGateEnvironmentClass)
 }
 
 func specBundleWitnessPlanMatches(record specBundleWitnessPlan) bool {
@@ -823,7 +824,7 @@ func specBundleWitnessPlanMatches(record specBundleWitnessPlan) bool {
 		len(record.NonClaims) > 0 &&
 		specBundleHasPlanCommandArtifact(record.Commands, "proofkit.ci-receipt-anchor", "artifacts/proofkit/self-hosting-spec-proof-bundle.json") &&
 		specBundleHasPlanPolicy(record.Policies, "proofkit.ci-receipt-anchor") &&
-		stringSliceContains(record.Vocabulary.EnvironmentClasses, "local-go")
+		stringSliceContains(record.Vocabulary.EnvironmentClasses, packageGateEnvironmentClass)
 }
 
 func specBundleHasRequirement(records []specBundleRequirement, requirementID string) bool {

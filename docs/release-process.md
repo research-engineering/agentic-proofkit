@@ -150,11 +150,12 @@ The `release` workflow must:
     checksum-bound release artifacts;
 13. create GitHub Release assets with checksums, metadata checksums, SBOM, and
     a release manifest;
-14. retain normalized GitHub Release metadata as
+14. retain normalized GitHub Release metadata as workflow release evidence at
     `artifacts/release/github-release.json` after byte-for-byte asset
     verification. The release manifest records GitHub Release channel data as
     candidate/archive inventory; `github-release.json` owns post-create GitHub
-    Release facts.
+    Release facts only inside retained workflow evidence, not as a public
+    release asset.
 
 When `PROOFKIT_REQUIRE_VERIFIED_RELEASE_TAG=true`, the readiness gate also
 requires `GITHUB_REF_PROTECTED=true` and a GitHub-verified signed annotated tag.
@@ -183,7 +184,8 @@ The evidence must distinguish:
 - post-publish npm registry facts;
 - optional post-publish PyPI registry facts;
 - Trusted Publisher identity tuples for workflow-published npm/PyPI channels;
-- GitHub Release archive publication facts from retained `github-release.json`;
+- GitHub Release archive publication facts from retained workflow evidence
+  `github-release.json`;
 - GitHub Release candidate asset inventory from `release-manifest.json`;
 - SBOM inventory facts;
 - optional GitHub artifact attestation facts;

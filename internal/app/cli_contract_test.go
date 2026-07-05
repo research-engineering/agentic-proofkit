@@ -119,6 +119,23 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	}
 }
 
+func TestProofkitContractMapRoutesRequiredInputCommands(t *testing.T) {
+	contract := readCLIContract(t)
+	documentBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "docs", "proofkit-contract-map.md"))
+	if err != nil {
+		t.Fatalf("read proofkit contract map: %v", err)
+	}
+	document := string(documentBytes)
+	for _, command := range contract.Commands {
+		if command.Input != "required" {
+			continue
+		}
+		if !strings.Contains(document, "`"+command.Command+"`") {
+			t.Fatalf("docs/proofkit-contract-map.md does not route required-input command %s", command.Command)
+		}
+	}
+}
+
 func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 	contract := readCLIContract(t)
 	commands := []any{}
@@ -739,6 +756,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 	}, "test evidence inventory quality finding fields")
 	ids := stringsFromAny(outputContract["classificationIds"].([]any))
 	assertStringSet(t, ids, []string{
+		"candidate_only",
 		"declared_duplicate_falsifier",
 		"duplicate_falsifier_candidate",
 		"empty_oracle",
@@ -753,6 +771,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"mock_tests_mock",
 		"over_broad_integration",
 		"routing_smoke_only",
+		"selector_fragility",
 		"snapshot_without_oracle",
 		"tautology",
 		"unasserted_diagnostic",
@@ -777,6 +796,36 @@ func TestRequirementCoverageInputComposeContractDescribesDirectViewInput(t *test
 	if compose.OutputContract == nil {
 		t.Fatal("requirement-coverage-input-compose must expose outputContract")
 	}
+	if compose.InputContract == nil {
+		t.Fatal("requirement-coverage-input-compose must expose inputContract")
+	}
+	inputContract := canonicalJSONValue(t, compose.InputContract).(map[string]any)
+	modes := inputContract["modes"].(map[string]any)
+	normalized := modes["normalized"].(map[string]any)
+	assertStringSet(t, stringsFromAny(normalized["requires"].([]any)), []string{
+		"compactProofContract",
+		"normalizedTestEvidenceInventory",
+	}, "requirement coverage input compose normalized required fields")
+	assertStringSet(t, stringsFromAny(normalized["forbids"].([]any)), []string{
+		"requirementProofBinding",
+		"testEvidenceInventory",
+	}, "requirement coverage input compose normalized forbidden fields")
+	direct := modes["direct"].(map[string]any)
+	assertStringSet(t, stringsFromAny(direct["requires"].([]any)), []string{
+		"requirementProofBinding",
+		"testEvidenceInventory",
+	}, "requirement coverage input compose direct required fields")
+	assertStringSet(t, stringsFromAny(direct["forbids"].([]any)), []string{
+		"compactProofContract",
+		"normalizedTestEvidenceInventory",
+	}, "requirement coverage input compose direct forbidden fields")
+	if direct["admittedInventoryAuthority"] != "caller_owned_inventory" {
+		t.Fatalf("direct admittedInventoryAuthority=%#v want caller_owned_inventory", direct["admittedInventoryAuthority"])
+	}
+	assertStringSet(t, stringsFromAny(direct["rejects"].([]any)), []string{
+		"caller_owned_inventory_source_set",
+		"caller_owned_test_discovery_candidate_inventory",
+	}, "requirement coverage input compose direct rejected authorities")
 	outputContract := canonicalJSONValue(t, compose.OutputContract).(map[string]any)
 	fields := stringsFromAny(outputContract["requiredFields"].([]any))
 	assertStringSet(t, fields, []string{
@@ -791,6 +840,39 @@ func TestRequirementCoverageInputComposeContractDescribesDirectViewInput(t *test
 		"testEvidenceInventory",
 		"viewInputId",
 	}, "requirement coverage input compose required fields")
+}
+
+func TestWitnessPlanContractDescribesBindingProjectionInput(t *testing.T) {
+	contract := readCLIContract(t)
+	var witnessPlan *cliContractCommand
+	for index := range contract.Commands {
+		if contract.Commands[index].Command == "witness-plan" {
+			witnessPlan = &contract.Commands[index]
+			break
+		}
+	}
+	if witnessPlan == nil {
+		t.Fatal("witness-plan missing from CLI contract")
+	}
+	if witnessPlan.InputContract == nil {
+		t.Fatal("witness-plan must expose inputContract")
+	}
+	inputContract := canonicalJSONValue(t, witnessPlan.InputContract).(map[string]any)
+	variants := inputContract["variants"].(map[string]any)
+	bindingProjection := variants["requirement-bindings"].(map[string]any)
+	assertStringSet(t, stringsFromAny(bindingProjection["requires"].([]any)), []string{
+		"projection",
+		"requirementProofBinding",
+		"schemaVersion",
+		"vocabulary",
+	}, "witness-plan requirement-bindings required fields")
+	assertStringSet(t, stringsFromAny(bindingProjection["admissionRules"].([]any)), []string{
+		"requirementProofBinding must pass requirement-bindings admission",
+		"vocabulary must pass witness command vocabulary admission",
+		"binding-derived projection requires exactly one admitted parallelGroup; multi-group vocabularies require an explicit witness command catalog",
+		"display command text must be display-only command text without shell control tokens, quoting, escaping, or secret-like tokens",
+		"each referenced environment class must admit networkPolicy none, credentialClass none, and cachePolicy disabled",
+	}, "witness-plan requirement-bindings admission rules")
 }
 
 func TestRequirementImpactInputComposeContractDescribesDirectImpactInput(t *testing.T) {

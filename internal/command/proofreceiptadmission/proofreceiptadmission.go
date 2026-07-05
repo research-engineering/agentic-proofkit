@@ -75,10 +75,31 @@ type admittedInput struct {
 	Receipts     []receipt
 }
 
+type Projection struct {
+	ReceiptSetID string
+	Receipts     []ReceiptProjection
+}
+
+type ReceiptProjection struct {
+	EnvironmentClass       string
+	ProducerAdmissionClass string
+	ProducerID             string
+	ProofPlanID            string
+	ReceiptID              string
+	ReceiptKind            string
+	Status                 string
+	WitnessSelectors       []string
+}
+
 func Build(raw any) (report.Record, int, error) {
+	_, record, exitCode, err := Evaluate(raw)
+	return record, exitCode, err
+}
+
+func Evaluate(raw any) (Projection, report.Record, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return report.Record{}, 1, err
+		return Projection{}, report.Record{}, 1, err
 	}
 	failures := receiptFailures(input.Receipts)
 	sort.Strings(failures)
@@ -118,9 +139,26 @@ func Build(raw any) (report.Record, int, error) {
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
 	if state == "passed" {
-		return record, 0, nil
+		return projection(input), record, 0, nil
 	}
-	return record, 1, nil
+	return projection(input), record, 1, nil
+}
+
+func projection(input admittedInput) Projection {
+	receipts := make([]ReceiptProjection, 0, len(input.Receipts))
+	for _, item := range input.Receipts {
+		receipts = append(receipts, ReceiptProjection{
+			EnvironmentClass:       item.EnvironmentClass,
+			ProducerAdmissionClass: item.ProducerAdmissionClass,
+			ProducerID:             item.ProducerID,
+			ProofPlanID:            item.ProofPlanID,
+			ReceiptID:              item.ReceiptID,
+			ReceiptKind:            item.ReceiptKind,
+			Status:                 item.Status,
+			WitnessSelectors:       append([]string{}, item.WitnessSelectors...),
+		})
+	}
+	return Projection{ReceiptSetID: input.ReceiptSetID, Receipts: receipts}
 }
 
 func admitInput(raw any) (admittedInput, error) {

@@ -13,10 +13,10 @@ packets without copying verifier logic between projects.
 | Surface | State |
 |---|---|
 | Source visibility | Public |
-| Current layer | Public source with admitted scoped npm release evidence |
+| Current layer | Public source; release evidence is version-specific |
 | Runtime implementation | Go CLI with npm and Python wrapper packaging |
-| Package release | Scoped npm release channel admitted; exact version and registry identity are owned by npm and GitHub Release artifacts |
-| Public-source provenance | Admitted through release artifacts and registry evidence, not by this overview |
+| Package release | Scoped npm release channel configured; exact version and registry identity are owned by npm and GitHub Release artifacts |
+| Public-source provenance | Claimed only for a version whose release assets, registry identity, and checksum manifests are artifact-closed |
 | License | MIT |
 
 ## Project Boundary
@@ -28,6 +28,42 @@ reports, and bounded guidance for coding agents.
 Proofkit does not own a consuming repository's product requirements, native
 witness execution, receipt authenticity, proof freshness, merge admission,
 rollout, deployment, or production readiness.
+
+## How It Works
+
+```mermaid
+flowchart LR
+    A["Repository state<br/>code, docs, tests, CI"] --> B["Adoption mode<br/>baseline code or audit code"]
+    B --> C["Repo-owned inputs<br/>requirements, profile, bindings, witness plan"]
+    C --> D["Proofkit admission<br/>schema, source, boundary, and non-claim checks"]
+    D --> E["Proof graph<br/>requirements -> scenarios -> witnesses -> commands"]
+    E --> F["Derived views<br/>browser, Markdown, JSON reports, agent envelopes"]
+    E --> G["Selective planning<br/>changed paths -> bounded checks"]
+    G --> H["Repo-owned execution<br/>tests, linters, CI, native witnesses"]
+    H --> I["Receipt admission<br/>shape, producer policy, evidence class"]
+    I --> J["Consumer decision<br/>warn, enforce-touched, enforce-all"]
+
+    F -. "derived, not authority" .-> J
+    C -. "consumer truth" .-> J
+```
+
+The core invariant is separation of authority. The consuming repository owns
+what the product must do and which native checks prove it. Proofkit owns the
+reusable mechanics: admitting structured inputs, preserving provenance,
+checking proof-binding shape, planning bounded verification, rendering derived
+views, and returning agent-readable next-action packets.
+
+For a repository with no specification, Proofkit can guide an agent through two
+different starting modes:
+
+| Mode | Use when | Result |
+|---|---|---|
+| Code baseline | Current behavior is accepted as the starting contract | Candidate requirements and bindings that preserve current behavior until owners review them |
+| Code audit | Current behavior may be wrong or incomplete | Untrusted observations and questions that must be promoted by a repository owner before becoming requirements |
+
+In both modes, generated records remain candidates until the consuming
+repository admits them as repo-owned requirements, proof bindings, and witness
+plans.
 
 ## Start Here
 

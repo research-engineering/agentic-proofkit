@@ -125,6 +125,35 @@ func TestBuildRejectsMalformedAggregateRoot(t *testing.T) {
 	}
 }
 
+func TestValidateOptionsOwnsModePilotAndCompatibilityPolicy(t *testing.T) {
+	cases := []struct {
+		name    string
+		options Options
+		want    string
+	}{
+		{name: "unknown mode", options: Options{Mode: "unknown"}, want: "mode must be adoption, bootstrap, guidance, pilot, or workflow"},
+		{name: "unknown pilot", options: Options{Mode: "pilot", Pilot: "later"}, want: "--pilot requires first, stack-diverse, or all"},
+		{name: "agent envelope incompatible mode", options: Options{Mode: "adoption", AgentEnvelope: true}, want: "--agent-envelope is valid only"},
+		{name: "materialization manifest incompatible mode", options: Options{Mode: "workflow", MaterializationManifest: true}, want: "--materialization-manifest is valid only"},
+		{name: "mutually exclusive output modes", options: Options{Mode: "bootstrap", AgentEnvelope: true, MaterializationManifest: true}, want: "mutually exclusive"},
+		{name: "pilot flag incompatible mode", options: Options{Mode: "workflow", Pilot: "all"}, want: "--pilot is valid only"},
+		{name: "guidance flag incompatible mode", options: Options{Mode: "workflow", Guidance: gradualadoption.GuidanceOptions{GuidanceMode: "observe"}}, want: "valid only for guidance mode"},
+	}
+
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			err := ValidateOptions(item.options)
+			if err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("ValidateOptions() error=%v, want %q", err, item.want)
+			}
+		})
+	}
+
+	if err := ValidateOptions(Options{Mode: "guidance", Guidance: gradualadoption.GuidanceOptions{GuidanceMode: "observe"}}); err != nil {
+		t.Fatalf("ValidateOptions() rejected valid guidance override: %v", err)
+	}
+}
+
 func TestBuildDelegatesModesWithParity(t *testing.T) {
 	cases := []struct {
 		name    string

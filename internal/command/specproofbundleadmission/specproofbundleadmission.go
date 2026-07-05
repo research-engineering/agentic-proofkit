@@ -29,6 +29,7 @@ type childReport struct {
 	Failures           []any
 	NonClaims          []any
 	ProducerProjection receiptproduceradmission.Projection
+	ReceiptProjection  proofreceiptadmission.Projection
 	Producers          []map[string]any
 	ReceiptKinds       []string
 	Report             map[string]any
@@ -233,10 +234,11 @@ func optionalChild(raw any, label string, expectedKind string) (*childReport, er
 		Receipts:           result,
 		State:              state,
 	}
-	producerProjection, err := validateChildWithOwner(child, label, expectedKind, reportID)
+	receiptProjection, producerProjection, err := validateChildWithOwner(child, label, expectedKind, reportID)
 	if err != nil {
 		return nil, err
 	}
+	child.ReceiptProjection = receiptProjection
 	child.ProducerProjection = producerProjection
 	return child, nil
 }
@@ -251,16 +253,17 @@ func childReportSchemaVersionOne(raw any) bool {
 	return false
 }
 
-func validateChildWithOwner(child *childReport, label string, expectedKind string, reportID string) (receiptproduceradmission.Projection, error) {
+func validateChildWithOwner(child *childReport, label string, expectedKind string, reportID string) (proofreceiptadmission.Projection, receiptproduceradmission.Projection, error) {
 	var (
 		ownerReport        report.Record
 		ownerExit          int
+		receiptProjection  proofreceiptadmission.Projection
 		producerProjection receiptproduceradmission.Projection
 		err                error
 	)
 	switch expectedKind {
 	case "proofkit.proof-receipt-admission":
-		ownerReport, ownerExit, err = proofreceiptadmission.Build(map[string]any{
+		receiptProjection, ownerReport, ownerExit, err = proofreceiptadmission.Evaluate(map[string]any{
 			"schemaVersion": json.Number("1"),
 			"receiptSetId":  reportID,
 			"receipts":      mapsToAny(child.Receipts),
@@ -277,18 +280,18 @@ func validateChildWithOwner(child *childReport, label string, expectedKind strin
 			"nonClaims":          child.NonClaims,
 		})
 	default:
-		return receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s has unsupported child report kind: %s", label, expectedKind)
+		return proofreceiptadmission.Projection{}, receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s has unsupported child report kind: %s", label, expectedKind)
 	}
 	if err != nil {
-		return receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s is not admitted by owner validator: %w", label, err)
+		return proofreceiptadmission.Projection{}, receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s is not admitted by owner validator: %w", label, err)
 	}
 	if ownerReport.State != child.State || ownerExit != child.ExitCode {
-		return receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s does not match owner validator result", label)
+		return proofreceiptadmission.Projection{}, receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s does not match owner validator result", label)
 	}
 	if !sameStableJSON(ownerReport.JSONValue(), child.Report) {
-		return receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s report body does not match owner validator result", label)
+		return proofreceiptadmission.Projection{}, receiptproduceradmission.Projection{}, fmt.Errorf("spec proof bundle %s report body does not match owner validator result", label)
 	}
-	return producerProjection, nil
+	return receiptProjection, producerProjection, nil
 }
 
 func sameStableJSON(left any, right any) bool {
@@ -371,10 +374,9 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 		}
 		return failures
 	}
-	receiptByID := map[string]map[string]any{}
-	for _, receipt := range receiptAdmission.Receipts {
-		receiptID, _ := text(receipt["receiptId"], "receiptId")
-		receiptByID[receiptID] = receipt
+	receiptByID := map[string]proofreceiptadmission.ReceiptProjection{}
+	for _, receipt := range receiptAdmission.ReceiptProjection.Receipts {
+		receiptByID[receipt.ReceiptID] = receipt
 	}
 	for _, receiptID := range mergeRequiredReceiptIDs {
 		receipt, ok := receiptByID[receiptID]
@@ -382,23 +384,23 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 			failures = append(failures, "merge-required receipt is missing from receiptAdmission: "+receiptID)
 			continue
 		}
-		if receipt["status"] != "passed" {
+		if receipt.Status != "passed" {
 			failures = append(failures, "merge-required receipt must pass: "+receiptID)
 		}
-		if receipt["producerAdmissionClass"] != "merge_satisfying" {
+		if receipt.ProducerAdmissionClass != "merge_satisfying" {
 			failures = append(failures, "merge-required receipt must use merge_satisfying producer admission: "+receiptID)
 		}
 	}
-	for _, receipt := range receiptAdmission.Receipts {
-		receiptID, _ := text(receipt["receiptId"], "receiptId")
-		receiptKind := fmt.Sprint(receipt["receiptKind"])
-		if receipt["proofPlanId"] != witnessPlan.SchedulerPlanID {
+	for _, receipt := range receiptAdmission.ReceiptProjection.Receipts {
+		receiptID := receipt.ReceiptID
+		receiptKind := receipt.ReceiptKind
+		if receipt.ProofPlanID != witnessPlan.SchedulerPlanID {
 			failures = append(failures, "receipt "+receiptID+" proofPlanId does not match witness scheduler plan")
 		}
 		if _, ok := bindingCommandIDs[receiptKind]; !ok {
 			failures = append(failures, "receipt "+receiptID+" receiptKind must match a requirement binding command id")
 		}
-		for _, selector := range stringArrayFromAny(receipt["witnessSelectors"]) {
+		for _, selector := range receipt.WitnessSelectors {
 			commandSet, ok := selectorCommandIDs[selector]
 			if !ok {
 				failures = append(failures, "receipt "+receiptID+" witness selector is not a requirement or scenario id: "+selector)
@@ -410,8 +412,8 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 		}
 	}
 	if receiptProducer == nil {
-		for _, receipt := range receiptAdmission.Receipts {
-			if receipt["producerAdmissionClass"] == "merge_satisfying" {
+		for _, receipt := range receiptAdmission.ReceiptProjection.Receipts {
+			if receipt.ProducerAdmissionClass == "merge_satisfying" {
 				failures = append(failures, "merge_satisfying receipts require an attached receiptProducerAdmission report")
 				break
 			}
@@ -422,11 +424,11 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 	for _, receipt := range receiptProducer.ProducerProjection.Receipts {
 		producerReceipts[receipt.ReceiptID] = receipt
 	}
-	for _, receipt := range receiptAdmission.Receipts {
-		if receipt["producerAdmissionClass"] != "merge_satisfying" {
+	for _, receipt := range receiptAdmission.ReceiptProjection.Receipts {
+		if receipt.ProducerAdmissionClass != "merge_satisfying" {
 			continue
 		}
-		receiptID, _ := text(receipt["receiptId"], "receiptId")
+		receiptID := receipt.ReceiptID
 		producerReceipt, ok := producerReceipts[receiptID]
 		if !ok {
 			failures = append(failures, "merge_satisfying receipt lacks producer admission row: "+receiptID)
@@ -442,7 +444,7 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 			{producerReceipt.EnvironmentClass, "environmentClass", "environmentClass"},
 			{producerReceipt.Status, "status", "status"},
 		} {
-			if pair.value != receipt[pair.field] {
+			if pair.value != receiptProjectionField(receipt, pair.field) {
 				failures = append(failures, fmt.Sprintf("merge_satisfying receipt %s does not match producer admission row: %s", pair.message, receiptID))
 			}
 		}
@@ -475,6 +477,21 @@ func graphScenarios(requirement map[string]any) []map[string]any {
 		}
 	}
 	return result
+}
+
+func receiptProjectionField(receipt proofreceiptadmission.ReceiptProjection, field string) string {
+	switch field {
+	case "producerId":
+		return receipt.ProducerID
+	case "receiptKind":
+		return receipt.ReceiptKind
+	case "environmentClass":
+		return receipt.EnvironmentClass
+	case "status":
+		return receipt.Status
+	default:
+		return ""
+	}
 }
 
 func graphCommandCount(graph map[string]any) int {

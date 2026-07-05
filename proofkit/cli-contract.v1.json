@@ -103,16 +103,19 @@
             "item": {
               "kind": {
                 "enum": [
-                  "adoption_workflow",
-                  "authoring_plan",
-                  "capability_map",
+              "adoption_workflow",
+              "authoring_plan",
+              "binding_witness_plan_input",
+              "capability_map",
                   "changed_path_set",
+                  "coverage_compose_input",
                   "coverage_view_input",
                   "deployment_evidence_input",
                   "impact_input",
                   "migration_parity",
                   "migration_plan",
                   "obligation_decision",
+                  "obligation_decision_input",
                   "overview_claims",
                   "proof_binding",
                   "readiness_closeout_input",
@@ -125,6 +128,7 @@
                   "selective_evidence",
                   "selective_gate_plan_input",
                   "spec_tree_bundle",
+                  "test_discovery",
                   "test_inventory",
                   "typescript_public_api_manifest",
                   "typescript_public_api_repo_root",
@@ -838,6 +842,53 @@
         "--input",
         "--input-pointer"
       ],
+      "inputContract": {
+        "contractId": "proofkit.requirement-coverage-input-compose.input.v1",
+        "schemaVersion": 1,
+        "authority": "requirement coverage input compose input contract",
+        "commonRequiredFields": [
+          "coverageUniverse",
+          "localEnvironmentPolicy",
+          "options",
+          "ownerInvariantRegistry",
+          "requirementSource",
+          "schemaVersion",
+          "selectedOwnerIds",
+          "viewInputId"
+        ],
+        "modes": {
+          "normalized": {
+            "requires": [
+              "compactProofContract",
+              "normalizedTestEvidenceInventory"
+            ],
+            "forbids": [
+              "requirementProofBinding",
+              "testEvidenceInventory"
+            ],
+            "nonClaim": "Normalized mode preserves source-set provenance through normalizedTestEvidenceInventory."
+          },
+          "direct": {
+            "requires": [
+              "requirementProofBinding",
+              "testEvidenceInventory"
+            ],
+            "forbids": [
+              "compactProofContract",
+              "normalizedTestEvidenceInventory"
+            ],
+            "admittedInventoryAuthority": "caller_owned_inventory",
+            "rejects": [
+              "caller_owned_inventory_source_set",
+              "caller_owned_test_discovery_candidate_inventory"
+            ],
+            "nonClaim": "Direct mode admits passed child reports and rejects source-set or candidate inventory inputs that need an explicit normalization/materialization envelope."
+          }
+        },
+        "nonClaims": [
+          "Coverage input composition does not execute native tests, authenticate receipts, decide freshness, or approve merge."
+        ]
+      },
       "outputContract": {
         "contractId": "proofkit.requirement-coverage-input-compose.output.v1",
         "schemaVersion": 1,
@@ -1306,50 +1357,97 @@
         "--projection"
       ],
       "inputContract": {
-        "contractId": "proofkit.test-evidence-inventory.proof-binding-derived.input.v1",
+        "contractId": "proofkit.test-evidence-inventory.input.v1",
         "schemaVersion": 1,
-        "authority": "proof-binding-derived test inventory projection admission",
-        "appliesWhen": "--projection proof-binding-derived",
-        "fields": {
-          "commandRefPolicy": {
-            "required": true,
+        "authority": "test evidence inventory admission and projection admission",
+        "projectionVariants": {
+          "discovery-draft": {
+            "authority": "caller-owned test discovery draft projection admission",
+            "appliesWhen": "--projection discovery-draft",
+            "normalizedInventory": "not_supported",
+            "requiredFields": [
+              "authority",
+              "discoveredTests",
+              "draftId",
+              "repository",
+              "runner",
+              "schemaVersion"
+            ],
             "fields": {
-              "prefix": {
-                "required": true,
-                "format": "stable rule id namespace used to derive commandRefs"
+              "nonClaims": {
+                "default": []
+              },
+              "repository.nonClaims": {
+                "default": []
+              },
+              "runner.nonClaims": {
+                "default": []
+              },
+              "discoveredTests[].nonClaims": {
+                "default": []
               }
-            }
+            },
+            "candidateOutput": {
+              "authority": "caller_owned_test_discovery_candidate_inventory",
+              "candidateKind": "proofkit.test-inventory-discovery-draft.candidate-inventory",
+              "strictInventoryAdmission": "rejected_until_owner_materialized"
+            },
+            "nonClaim": "Discovery draft reports candidate-only guidance from explicit caller-owned facts; it does not scan repositories, execute tests, emit semantic_falsifier evidence, or close coverage."
           },
-          "compactProofContract": {
-            "required": true,
-            "format": "compact requirement proof binding contract"
-          },
-          "inventoryId": {
-            "required": true,
-            "format": "stable rule id"
-          },
-          "nonClaims": {
-            "default": []
-          },
-          "requirementSource": {
-            "required": true,
+          "proof-binding-derived": {
+            "authority": "proof-binding-derived test inventory projection admission",
+            "appliesWhen": "--projection proof-binding-derived",
+            "normalizedInventory": "supported",
             "fields": {
-              "requirements": {
+              "commandRefPolicy": {
                 "required": true,
-                "itemFields": {
-                  "ownerId": "stable rule id",
-                  "requirementId": "stable rule id"
+                "fields": {
+                  "prefix": {
+                    "required": true,
+                    "format": "stable rule id namespace used to derive commandRefs"
+                  }
                 }
+              },
+              "compactProofContract": {
+                "required": true,
+                "format": "compact requirement proof binding contract"
+              },
+              "inventoryId": {
+                "required": true,
+                "format": "stable rule id"
+              },
+              "nonClaims": {
+                "default": []
+              },
+              "requirementSource": {
+                "required": true,
+                "fields": {
+                  "requirements": {
+                    "required": true,
+                    "itemFields": {
+                      "ownerId": "stable rule id",
+                      "requirementId": "stable rule id"
+                    }
+                  }
+                }
+              },
+              "schemaVersion": {
+                "required": true,
+                "value": 1
               }
-            }
+            },
+            "nonClaim": "This projection input does not make Proofkit the owner of requirement meaning, native test execution, repository scanning, proof freshness, or merge policy."
           },
-          "schemaVersion": {
-            "required": true,
-            "value": 1
+          "strict-inventory": {
+            "authority": "caller-owned strict test inventory admission",
+            "appliesWhen": "default without --projection",
+            "normalizedInventory": "supported",
+            "nonClaim": "Strict inventory admission validates caller-owned evidence records; Proofkit does not execute those tests."
           }
         },
         "nonClaims": [
-          "This projection input does not make Proofkit the owner of requirement meaning, native test execution, repository scanning, proof freshness, or merge policy.",
+          "Projection modes are closed vocabulary: proof-binding-derived or discovery-draft.",
+          "Discovery draft candidate output must be materialized into strict inventory before it can affect coverage.",
           "The derived inventory remains caller-owned input for downstream coverage views."
         ]
       },
@@ -1376,6 +1474,7 @@
           "nonClaim": "Agent actions are deterministic guidance over admitted caller-owned inventory facts and do not execute tests, approve merge, or decide semantic truth."
         },
         "classificationIds": [
+          "candidate_only",
           "declared_duplicate_falsifier",
           "duplicate_falsifier_candidate",
           "empty_oracle",
@@ -1390,6 +1489,7 @@
           "mock_tests_mock",
           "over_broad_integration",
           "routing_smoke_only",
+          "selector_fragility",
           "snapshot_without_oracle",
           "tautology",
           "unasserted_diagnostic",
@@ -1452,7 +1552,40 @@
       "allowedFlags": [
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.witness-plan.input.v1",
+        "schemaVersion": 1,
+        "authority": "witness plan input admission and projection admission",
+        "variants": {
+          "explicit-command-catalog": {
+            "appliesWhen": "projection is absent",
+            "requires": [
+              "commands",
+              "vocabulary"
+            ],
+            "nonClaim": "Explicit command catalogs are caller-owned; Proofkit admits command safety shape but does not execute commands."
+          },
+          "requirement-bindings": {
+            "appliesWhen": "projection == requirement-bindings",
+            "requires": [
+              "projection",
+              "requirementProofBinding",
+              "schemaVersion",
+              "vocabulary"
+            ],
+            "projection": "requirement-bindings",
+            "admissionRules": [
+              "requirementProofBinding must pass requirement-bindings admission",
+              "vocabulary must pass witness command vocabulary admission",
+              "binding-derived projection requires exactly one admitted parallelGroup; multi-group vocabularies require an explicit witness command catalog",
+              "display command text must be display-only command text without shell control tokens, quoting, escaping, or secret-like tokens",
+              "each referenced environment class must admit networkPolicy none, credentialClass none, and cachePolicy disabled"
+            ],
+            "nonClaim": "Binding-derived witness-plan projection avoids duplicate command identity but does not prove command pass evidence or native witness freshness."
+          }
+        }
+      }
     },
     {
       "command": "witness-scheduler-plan",

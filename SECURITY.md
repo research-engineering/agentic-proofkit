@@ -2,8 +2,9 @@
 
 ## Supported Versions
 
-No public source-based release is claimed by this repository state yet.
-Supported versions will be named after a reviewed public release exists.
+Supported versions are named only after a reviewed public release has
+artifact-closed release assets, registry identity, and checksum manifests.
+The current source tree may be ahead of the latest supported package version.
 
 ## Reporting A Vulnerability
 

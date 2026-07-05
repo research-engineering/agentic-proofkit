@@ -1,6 +1,7 @@
 package requirementbinding
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/witnesscommand"
 )
 
 var claimLevels = map[string]struct{}{
@@ -78,6 +80,7 @@ type Selection struct {
 type Result struct {
 	Record report.Record
 	Graph  map[string]any
+	Input  Input
 	Slice  map[string]any
 }
 
@@ -170,7 +173,181 @@ func Build(raw any) (Result, error) {
 	graph := buildGraph(input)
 	slice := buildSlice(input, graph)
 	record := buildReport(input, graph, slice, failures)
-	return Result{Record: record, Graph: graph, Slice: slice}, nil
+	return Result{Record: record, Graph: graph, Input: input, Slice: slice}, nil
+}
+
+func InputValue(input Input) map[string]any {
+	requirements := make([]any, 0, len(input.Requirements))
+	for _, requirement := range input.Requirements {
+		requirements = append(requirements, map[string]any{
+			"claimLevel":    requirement.ClaimLevel,
+			"nonClaims":     admit.StringSliceToAny(requirement.NonClaims),
+			"ownerId":       requirement.OwnerID,
+			"proofState":    requirement.ProofState,
+			"requirementId": requirement.RequirementID,
+			"specPath":      requirement.SpecPath,
+		})
+	}
+	bindings := make([]any, 0, len(input.Bindings))
+	for _, binding := range input.Bindings {
+		bindings = append(bindings, map[string]any{
+			"commandIds":         admit.StringSliceToAny(binding.CommandIDs),
+			"environmentClasses": admit.StringSliceToAny(binding.EnvironmentClasses),
+			"requirementId":      binding.RequirementID,
+			"scenarioId":         binding.ScenarioID,
+			"witnessId":          binding.WitnessID,
+			"witnessKind":        binding.WitnessKind,
+			"witnessPath":        binding.WitnessPath,
+		})
+	}
+	witnessCommands := make([]any, 0, len(input.WitnessCommands))
+	for _, command := range input.WitnessCommands {
+		witnessCommands = append(witnessCommands, map[string]any{
+			"command":            command.Command,
+			"commandId":          command.CommandID,
+			"environmentClasses": admit.StringSliceToAny(command.EnvironmentClasses),
+		})
+	}
+	return map[string]any{
+		"schemaVersion":   json.Number("1"),
+		"bindingId":       input.BindingID,
+		"requirements":    requirements,
+		"bindings":        bindings,
+		"witnessCommands": witnessCommands,
+		"selection": map[string]any{
+			"changedPaths":   admit.StringSliceToAny(input.Selection.ChangedPaths),
+			"ownerIds":       admit.StringSliceToAny(input.Selection.OwnerIDs),
+			"requirementIds": admit.StringSliceToAny(input.Selection.RequirementIDs),
+		},
+		"nonClaims": admit.StringSliceToAny(callerOwnedNonClaims(input.NonClaims)),
+	}
+}
+
+func callerOwnedNonClaims(values []string) []string {
+	defaults := map[string]struct{}{}
+	for _, value := range defaultNonClaims {
+		defaults[value] = struct{}{}
+	}
+	out := []string{}
+	for _, value := range values {
+		if _, ok := defaults[value]; ok {
+			continue
+		}
+		out = append(out, value)
+	}
+	return out
+}
+
+func BuildWitnessPlanInput(raw any, vocabularyRaw any) (map[string]any, error) {
+	failures := []string{}
+	input, err := admitInput(raw, &failures)
+	if err != nil {
+		return nil, err
+	}
+	failures = append(failures, semanticFailures(input)...)
+	failures = sortedUnique(failures)
+	if len(failures) > 0 {
+		return nil, fmt.Errorf("cannot project witness-plan input from failed requirement proof bindings: %s", strings.Join(failures, "; "))
+	}
+	vocabulary, err := witnesscommand.AdmitVocabulary(vocabularyRaw)
+	if err != nil {
+		return nil, err
+	}
+	commands, err := witnessCommandsToPlanInput(input.WitnessCommands, vocabulary)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{
+		"commands":   commands,
+		"vocabulary": vocabularyRaw,
+	}, nil
+}
+
+func witnessCommandsToPlanInput(commands []WitnessCommand, vocabulary witnesscommand.Vocabulary) ([]any, error) {
+	out := make([]any, 0, len(commands))
+	for _, command := range commands {
+		argv, err := displayCommandArgv(command.Command)
+		if err != nil {
+			return nil, fmt.Errorf("witness command %s cannot be projected to argv: %w", command.CommandID, err)
+		}
+		if len(vocabulary.ParallelGroups) != 1 {
+			return nil, fmt.Errorf("binding-derived witness-plan projection requires exactly one parallelGroup; provide an explicit witness-plan command catalog")
+		}
+		policy, err := conservativeWitnessPolicy(command.EnvironmentClasses, vocabulary)
+		if err != nil {
+			return nil, fmt.Errorf("witness command %s policy projection failed: %w", command.CommandID, err)
+		}
+		out = append(out, map[string]any{
+			"schemaVersion":   json.Number("1"),
+			"id":              command.CommandID,
+			"cwd":             ".",
+			"argv":            admit.StringSliceToAny(argv),
+			"timeoutMs":       json.Number(fmt.Sprintf("%d", vocabulary.MaxTimeoutMs)),
+			"networkPolicy":   policy.network,
+			"credentialClass": policy.credential,
+			"cachePolicy":     policy.cache,
+			"parallelGroup":   vocabulary.ParallelGroups[0],
+			"environment": map[string]any{
+				"inherit":   "none",
+				"allowlist": []any{},
+				"classes":   admit.StringSliceToAny(command.EnvironmentClasses),
+			},
+			"expectedArtifacts": []any{},
+			"exitCodePolicy": map[string]any{
+				"kind":         "zero",
+				"successCodes": []any{json.Number("0")},
+			},
+		})
+	}
+	return out, nil
+}
+
+type projectedWitnessPolicy struct {
+	cache      string
+	credential string
+	network    string
+}
+
+func conservativeWitnessPolicy(environmentClasses []string, vocabulary witnesscommand.Vocabulary) (projectedWitnessPolicy, error) {
+	byClass := map[string]witnesscommand.EnvironmentClassPolicy{}
+	for _, policy := range vocabulary.EnvironmentClassPolicies {
+		byClass[policy.EnvironmentClass] = policy
+	}
+	for _, environmentClass := range environmentClasses {
+		policy, ok := byClass[environmentClass]
+		if !ok {
+			return projectedWitnessPolicy{}, fmt.Errorf("environment class %s must declare a policy", environmentClass)
+		}
+		if !contains(policy.NetworkPolicies, "none") {
+			return projectedWitnessPolicy{}, fmt.Errorf("environment class %s must admit networkPolicy none for binding-derived projection", environmentClass)
+		}
+		if !contains(policy.CredentialClasses, "none") {
+			return projectedWitnessPolicy{}, fmt.Errorf("environment class %s must admit credentialClass none for binding-derived projection", environmentClass)
+		}
+		if !contains(policy.CachePolicies, "disabled") {
+			return projectedWitnessPolicy{}, fmt.Errorf("environment class %s must admit cachePolicy disabled for binding-derived projection", environmentClass)
+		}
+	}
+	return projectedWitnessPolicy{cache: "disabled", credential: "none", network: "none"}, nil
+}
+
+func displayCommandArgv(command string) ([]string, error) {
+	if _, err := admit.DisplayOnlyCommandText(command, "binding-derived display command"); err != nil {
+		return nil, err
+	}
+	if strings.ContainsAny(command, `'"\\`) {
+		return nil, fmt.Errorf("display command contains quoting or escaping; provide an explicit witness-plan command catalog")
+	}
+	fields := strings.Fields(command)
+	if len(fields) == 0 {
+		return nil, fmt.Errorf("display command is empty")
+	}
+	for _, field := range fields {
+		if strings.TrimSpace(field) == "" || admit.ContainsSecretLikeValue(field) {
+			return nil, fmt.Errorf("display command contains unsafe argv token")
+		}
+	}
+	return fields, nil
 }
 
 func admitInput(raw any, failures *[]string) (Input, error) {

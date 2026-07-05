@@ -74,6 +74,32 @@ func TestBuildAuditModeAllowsMissingAnchorAsOwnerAction(t *testing.T) {
 	}
 }
 
+func TestBuildAuditModeMarksCandidateSeedsAsUntrustedOwnerDrafts(t *testing.T) {
+	t.Parallel()
+
+	record, exitCode, err := Build(validCapabilityMapInput("audit_from_code"))
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() exit=%d state=%s, want passed audit guidance", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	for _, want := range []string{
+		`"sourceTrustMode":"audit_from_code"`,
+		`"promotionState":"owner_review_required"`,
+		`"evidenceAuthority":"untrusted_code_observation"`,
+		`"executableEvidenceState":"not_executable_until_owner_materialized"`,
+	} {
+		if !strings.Contains(string(encoded), want) {
+			t.Fatalf("audit candidate seeds missing %s: %s", want, encoded)
+		}
+	}
+	if strings.Contains(string(encoded), `"executableEvidenceState":"candidate_executable_anchor"`) {
+		t.Fatalf("audit candidate seed looked executable before owner materialization: %s", encoded)
+	}
+}
+
 func TestBuildRejectsUnsafePathsUnknownModeAndSecretText(t *testing.T) {
 	t.Parallel()
 
