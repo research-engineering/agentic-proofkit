@@ -1,0 +1,133 @@
+name: semantic-diff
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: semantic-diff-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  sem-entity-diff:
+    name: advisory / sem entity diff
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      DO_NOT_TRACK: "1"
+      SEM_LOCAL: "1"
+      SEM_NO_TELEMETRY: "1"
+      SEM_NO_UPDATE_CHECK: "1"
+      SEM_VERSION: v0.20.0
+      SEM_LINUX_X86_64_SHA256: cf7249d797bed05d59e16cfa1b417e872087d558611e9f675a13810edba33dbf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install sem with pinned checksum
+        run: |
+          set -euo pipefail
+          sem_asset="sem-linux-x86_64.tar.gz"
+          sem_url="https://github.com/Ataraxy-Labs/sem/releases/download/${SEM_VERSION}/${sem_asset}"
+          sem_archive="${RUNNER_TEMP}/${sem_asset}"
+          sem_bin_dir="${RUNNER_TEMP}/sem-bin"
+          sem_cache_dir="${RUNNER_TEMP}/sem-cache"
+
+          curl -fsSL --retry 3 --proto '=https' --tlsv1.2 "$sem_url" -o "$sem_archive"
+          printf '%s  %s\n' "$SEM_LINUX_X86_64_SHA256" "$sem_archive" | sha256sum -c -
+
+          mkdir -p "$sem_bin_dir"
+          mkdir -p "$sem_cache_dir"
+          tar -xzf "$sem_archive" -C "$sem_bin_dir"
+          test -f "$sem_bin_dir/sem"
+          chmod +x "$sem_bin_dir/sem"
+          echo "SEM_CACHE_DIR=$sem_cache_dir" >> "$GITHUB_ENV"
+          echo "$sem_bin_dir" >> "$GITHUB_PATH"
+          "$sem_bin_dir/sem" --version
+
+      - name: Compute semantic entity diff
+        id: sem
+        env:
+          PULL_REQUEST_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PULL_REQUEST_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/semantic-diff
+
+          if [ -n "${PULL_REQUEST_BASE_SHA:-}" ] && [ -n "${PULL_REQUEST_HEAD_SHA:-}" ]; then
+            base_sha="$PULL_REQUEST_BASE_SHA"
+            head_sha="$PULL_REQUEST_HEAD_SHA"
+            git fetch --no-tags --force origin "$base_sha" "$head_sha" >/dev/null 2>&1 || true
+          else
+            head_sha="$(git rev-parse HEAD)"
+            base_sha="$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)"
+          fi
+
+          {
+            echo "base_sha=$base_sha"
+            echo "head_sha=$head_sha"
+          } > artifacts/semantic-diff/refs.env
+
+          set +e
+          sem diff --from "$base_sha" --to "$head_sha" --format markdown \
+            > artifacts/semantic-diff/sem-diff.md \
+            2> artifacts/semantic-diff/sem-diff.stderr
+          sem_status="$?"
+          set -e
+
+          echo "status=$sem_status" >> "$GITHUB_OUTPUT"
+          if [ "$sem_status" -ne 0 ]; then
+            echo "::warning::sem diff failed; this advisory workflow does not block PR quality gates"
+          fi
+
+      - name: Write semantic diff summary
+        if: ${{ always() }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## sem entity diff"
+            echo ""
+            echo "Sem output is advisory PR navigation. It is not release evidence, branch-protection proof, merge approval, or proof freshness."
+            echo ""
+            if [ "${{ steps.sem.outputs.status }}" = "0" ] && [ -s artifacts/semantic-diff/sem-diff.md ]; then
+              head -c 60000 artifacts/semantic-diff/sem-diff.md
+              if [ "$(wc -c < artifacts/semantic-diff/sem-diff.md)" -gt 60000 ]; then
+                echo ""
+                echo ""
+                echo "_Output truncated in the step summary; download the artifact for the complete advisory diff._"
+              fi
+            else
+              echo "_sem diff did not produce an advisory diff. See the uploaded stderr artifact._"
+              if [ -s artifacts/semantic-diff/sem-diff.stderr ]; then
+                echo ""
+                echo '```text'
+                head -c 2000 artifacts/semantic-diff/sem-diff.stderr
+                echo ""
+                echo '```'
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload semantic diff artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sem-entity-diff-${{ github.sha }}
+          path: artifacts/semantic-diff
+          if-no-files-found: error
+          retention-days: 14
