@@ -37,7 +37,7 @@
   ],
   "scripts": {
     "build": "go run ./internal/tools/packagebuild",
-    "check": "npm run npm:version && npm run source-hygiene && npm run text-policy && npm run go:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
+    "check": "npm run npm:version && npm run source-hygiene && npm run text-policy && npm run mermaid:check && npm run go:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
     "go:actionlint": "go tool actionlint",
     "go:bench": "go test ./internal/kernel/admission ./internal/kernel/stablejson -run '^$' -bench . -benchmem -count=10",
     "go:check": "npm run go:fmt && npm run go:test && npm run go:vet && npm run go:staticcheck && npm run go:actionlint && npm run go:vulncheck",
@@ -57,6 +57,7 @@
     "self:coverage": "go run ./internal/tools/coveragemetrics",
     "source-hygiene": "node scripts/source-hygiene.mjs",
     "text-policy": "go run ./internal/tools/textpolicyinput | go run ./cmd/agentic-proofkit text-policy --input -",
+    "mermaid:check": "go run ./internal/tools/mermaidcheck",
     "go:staticcheck": "go tool staticcheck ./...",
     "go:vulncheck": "go tool govulncheck ./..."
   },
