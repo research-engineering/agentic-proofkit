@@ -3,6 +3,7 @@ package witnessschedulerplan
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -21,6 +22,7 @@ func TestBuildRejectsNetworkMetadataContradictions(t *testing.T) {
 }
 
 func TestBuildRejectsUnsafeParallelWriteCollision(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.075339797262506844817194666452374470457527789495842132120572392330493764265328")
 	input := validSchedulerPlanInput()
 	command(input)["id"] = "proofkit.left"
 	schedulerPolicy(input)["commandId"] = "proofkit.left"

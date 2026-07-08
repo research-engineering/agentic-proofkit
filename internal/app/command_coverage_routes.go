@@ -1,8 +1,10 @@
 package app
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"sort"
 	"strings"
 )
@@ -18,6 +20,21 @@ type commandCoverageRoute struct {
 type commandCoverageSemanticProof struct {
 	ref                   string
 	expectedPublicOutcome string
+}
+
+type commandCoverageSourceOracleBinding struct {
+	SchemaVersion            int    `json:"schemaVersion"`
+	CommandRef               string `json:"commandRef"`
+	Selector                 string `json:"selector"`
+	SourcePath               string `json:"sourcePath"`
+	TestID                   string `json:"testId"`
+	SemanticRouteInvariantID string `json:"semanticRouteInvariantId"`
+	FalsifierID              string `json:"falsifierId"`
+	NegativeCaseID           string `json:"negativeCaseId"`
+	WrongImplementationClass string `json:"wrongImplementationClassId"`
+	OracleID                 string `json:"oracleId"`
+	OracleKind               string `json:"oracleKind"`
+	ExpectedPublicOutcome    string `json:"expectedPublicOutcome"`
 }
 
 const commandCoverageExpectedPublicOutcome = "referenced owner test asserts the bound command's public pass/fail outcome, diagnostics, or emitted packet contract"
@@ -196,6 +213,9 @@ func commandCoverageInventoryFrom(routes map[string][]commandCoverageRoute) (map
 			if problem := routeSemanticOwnerProblem(command, route); problem != "" {
 				return nil, fmt.Errorf("%s coverage route %s has invalid semantic owner scope: %s", command, route.testName, problem)
 			}
+			if problem := routeSemanticSourceProblem(command, route); problem != "" {
+				return nil, fmt.Errorf("%s coverage route %s has invalid source oracle: %s", command, route.testName, problem)
+			}
 			entries = append(entries, route.inventoryEntry(command, index))
 		}
 	}
@@ -253,6 +273,34 @@ func (route commandCoverageRoute) inventoryEntry(command string, index int) map[
 		}
 	}
 	return entry
+}
+
+func (route commandCoverageRoute) sourceOracleBinding(command string) commandCoverageSourceOracleBinding {
+	proof := route.semanticProof
+	return commandCoverageSourceOracleBinding{
+		SchemaVersion:            1,
+		CommandRef:               CommandCoverageCommandRef(command),
+		Selector:                 route.file + "::" + route.testName,
+		SourcePath:               route.file,
+		TestID:                   proof.routeTestID(),
+		SemanticRouteInvariantID: proof.semanticRouteInvariantID(),
+		FalsifierID:              proof.falsifierID(),
+		NegativeCaseID:           proof.negativeCaseID(),
+		WrongImplementationClass: proof.wrongImplementationClassID(),
+		OracleID:                 proof.oracleID(),
+		OracleKind:               "semantic_route_falsifier",
+		ExpectedPublicOutcome:    proof.expectedPublicOutcome,
+	}
+}
+
+func (route commandCoverageRoute) sourceOracleMarker(command string) string {
+	raw, err := json.Marshal(route.sourceOracleBinding(command))
+	if err != nil {
+		panic(err)
+	}
+	digest := sha256.Sum256(raw)
+	decimal := new(big.Int).SetBytes(digest[:]).Text(10)
+	return "proofkit.command_coverage.source_oracle.v1." + strings.Repeat("0", 78-len(decimal)) + decimal
 }
 
 func (route commandCoverageRoute) isSemantic() bool {

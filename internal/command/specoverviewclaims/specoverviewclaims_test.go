@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAcceptsDurableClaimWithKnownRequirementCitation(t *testing.T) {
@@ -102,6 +103,7 @@ func TestBuildRejectsPathDrift(t *testing.T) {
 }
 
 func TestBuildRejectsInvalidOverviewClaimBoundaryFacts(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.025280307180968926567211146624399965026613890974304865664816068083127351219786")
 	cases := []struct {
 		name string
 		err  string
@@ -164,6 +166,7 @@ func TestBuildRejectsInvalidOverviewClaimBoundaryFacts(t *testing.T) {
 }
 
 func TestBuildRejectsNonDurableRequirementCitationsForEveryNonDurableKind(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.088402325428378402231209410729523974270570645927538147014098755159352586154144")
 	for _, claimKind := range []string{"example_or_rationale", "quoted_or_code", "section_heading"} {
 		t.Run(claimKind, func(t *testing.T) {
 			input := validBoundary()

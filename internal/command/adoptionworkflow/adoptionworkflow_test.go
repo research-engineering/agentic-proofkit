@@ -2,6 +2,7 @@ package adoptionworkflow
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -17,6 +18,7 @@ func TestBuildRejectsUnknownInputRefField(t *testing.T) {
 }
 
 func TestBuildGeneratesBoundedCommandArgv(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.037862658707003067560912417742828567812344707083894145862800768783923813459857")
 	result, err := BuildResult(validWorkflowInput())
 	if err != nil {
 		t.Fatalf("BuildResult() error=%v", err)

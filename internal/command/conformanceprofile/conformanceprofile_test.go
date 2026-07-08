@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildProfileResolvesRequiredSurfaceAndRejectsMissingSurface(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.058560543430386671975862540474631351828433682994553568983923953081174649721029")
 	result, err := BuildProfile(validConformanceProfileInput(), "local")
 	if err != nil {
 		t.Fatalf("BuildProfile() error=%v", err)
@@ -36,6 +38,7 @@ func TestBuildProfileResolvesRequiredSurfaceAndRejectsMissingSurface(t *testing.
 }
 
 func TestBuildVerificationRejectsDuplicateProfiles(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059839663405963145056826817506435791735368004114196862540174073017127636205209")
 	input := validConformanceProfileInput()
 	profiles := input["manifest"].(map[string]any)["profiles"].([]any)
 	input["manifest"].(map[string]any)["profiles"] = append(profiles, profiles[0])
@@ -73,6 +76,7 @@ func TestBuildVerificationRejectsSecretLikeReportVisibleText(t *testing.T) {
 }
 
 func TestListReturnsSortedProfileIDsAndRejectsInvalidInput(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.087092535541262698904962014459883891376365242892684917393349609831025338348503")
 	input := validConformanceProfileInput()
 	manifest := input["manifest"].(map[string]any)
 	profile := manifest["profiles"].([]any)[0].(map[string]any)

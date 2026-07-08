@@ -719,8 +719,12 @@
       "commandId": "proofkit.coverage-metrics",
       "inputSelectors": [
         "docs/specs",
+        "internal/app",
         "internal/app/command_coverage_routes.go",
+        "internal/app/command_coverage_source.go",
         "internal/app/command_registry.go",
+        "internal/command",
+        "internal/testsupport/commandcoverage",
         "internal/tools/coveragemetrics",
         "proofkit/cli-contract.v1.json",
         "proofkit/requirement-bindings.json",

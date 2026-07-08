@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsSatisfiedBlockingObligationsAndRejectsMissingReceipt(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.050614412851824410481957717232202238484677067491629728235402344049400709677602")
 	result, err := Build(validObligationDecisionInput("satisfied", "not_applicable"))
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

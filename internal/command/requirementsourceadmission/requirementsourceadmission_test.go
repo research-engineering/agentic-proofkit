@@ -2,6 +2,7 @@ package requirementsourceadmission
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -17,6 +18,7 @@ func TestEvaluateAcceptsActiveBlockingRequirementWithProofRoute(t *testing.T) {
 }
 
 func TestEvaluateRejectsBlockingRequirementWithoutProofRoute(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.100459756653360126553817815808542023226844129025849093125858776155160578989149")
 	input := validSource()
 	requirement := input["requirements"].([]any)[0].(map[string]any)
 	requirement["proofBindingRefs"] = []any{}

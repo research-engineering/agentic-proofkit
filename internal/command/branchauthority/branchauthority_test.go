@@ -2,11 +2,13 @@ package branchauthority
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAdmitsAlignedRequiredBranchAndRejectsRequiredDrift(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059237477459693884008799222027390418858342772482064960101818015827014505791733")
 	record, exitCode := Build(validBranchAuthorityInput("main"))
 	if exitCode != 0 || record.State != "passed" {
 		t.Fatalf("Build() exitCode=%d state=%s, want passed", exitCode, record.State)

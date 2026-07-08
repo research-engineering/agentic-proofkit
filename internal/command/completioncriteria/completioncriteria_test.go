@@ -2,11 +2,13 @@ package completioncriteria
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildBlocksUnsatisfiedBlockingCriterion(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.080845831970041108238055543444258074502099931881803185088012985084173569192906")
 	record, exitCode, err := Build(validCompletionCriteriaInput("satisfied"))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

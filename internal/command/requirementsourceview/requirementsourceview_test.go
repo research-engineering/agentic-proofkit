@@ -2,11 +2,13 @@ package requirementsourceview
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079155125739683862685982535478403487660808558239998414186036088598924884165357")
 	input := validRequirementSource()
 	input["specPackagePath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`"
 	input["overviewPath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`/overview.md"

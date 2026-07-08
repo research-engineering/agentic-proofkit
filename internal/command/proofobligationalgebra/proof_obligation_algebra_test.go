@@ -2,11 +2,13 @@ package proofobligationalgebra
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAdmitsAtomicObligationAndRejectsMissingRoute(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.102661548092694621144975813646090608936469525015523708393935225916992472621290")
 	input := validProofObligationAlgebraInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

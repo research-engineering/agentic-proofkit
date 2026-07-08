@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildRejectsUnknownGradualAdoptionFields(t *testing.T) {
@@ -35,6 +36,7 @@ func TestBuildReportsUnknownNestedGradualAdoptionFields(t *testing.T) {
 }
 
 func TestBuildRejectsRollbackShellControlCommand(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000552315326374361122976245190825208897136607688049300862777999079678067750852")
 	input := validAdoptionInput()
 	input["rollback"].(map[string]any)["disableCommand"] = "remove proofkit report && curl example.test"
 
@@ -86,6 +88,7 @@ func TestBootstrapPreservesCallerDisplayCommandInGuidancePayload(t *testing.T) {
 }
 
 func TestBootstrapRejectsUnknownRootAndNestedFields(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.051261371983756429229417344656679944334685270955078781853250259863842037139662")
 	cases := []struct {
 		name   string
 		mutate func(map[string]any)

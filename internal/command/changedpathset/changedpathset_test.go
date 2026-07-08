@@ -2,11 +2,13 @@ package changedpathset
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.020996495977209692976965486603091189537178619363476268911749132800454063351641")
 	result, err := Build(map[string]any{
 		"schemaVersion":       json.Number("1"),
 		"reportId":            "proofkit.test.changed-path-set",

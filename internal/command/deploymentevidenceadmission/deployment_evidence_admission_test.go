@@ -2,11 +2,13 @@ package deploymentevidenceadmission
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAdmitsCandidateEvidenceAndRejectsUnpinnedImages(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079783886865424080333074209821707019130265643884720844463730606151075706943505")
 	record, exitCode, err := Build(validDeploymentEvidenceInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

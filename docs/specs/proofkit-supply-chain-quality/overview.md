@@ -45,9 +45,11 @@ vulnerability absence, or consumer rollout safety by itself.
   inventory admission, command semantic routes without owner-declared proof
   identities, route-index-derived semantic proof identities, direct app
   semantic routes outside the command-scoped app test, package-level semantic
-  routes outside the descriptor-owned command package, and missing matching
-  semantic command evidence without claiming line coverage or exhaustive test
-  semantic completeness.
+  routes outside the descriptor-owned command package, semantic command routes
+  whose parsed Go test body lacks the source-owned executable oracle marker for
+  the exact emitted command route fact, and missing matching semantic command
+  evidence without claiming line coverage or exhaustive test semantic
+  completeness.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
   source/package gate from macOS platform smoke, uses explicit hosted runner
   labels instead of floating latest labels, and exposes one fail-closed

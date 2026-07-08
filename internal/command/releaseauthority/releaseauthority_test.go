@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAcceptsPrivateSourceTrustedPublisherRelease(t *testing.T) {
@@ -96,6 +97,7 @@ func TestAdmitConsumerProjectionInputJSONRoundTripsThroughOwner(t *testing.T) {
 }
 
 func TestBuildRejectsPrivateSourceNPMProvenanceClaim(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.040417136410336177429000613084048687335976405838137408436642719228824047433829")
 	input := validRegistryReleaseInput("npm_provenance", "private")
 
 	record, exitCode, err := Build(input)

@@ -3,6 +3,7 @@ package publicapi
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,6 +84,7 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsNonTypeScriptSource(t *testing.T
 }
 
 func TestVerifyTypeScriptPackagePublicAPIRejectsExportTargetDifferentFromScannedSource(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.006943269310710743628834650487878767615578781676283703895362243693196266764140")
 	repoRoot := writeTypeScriptPackageFixture(t)
 	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
 	if err := os.WriteFile(filepath.Join(packageRoot, "src", "other.ts"), []byte(`export const OTHER = 1;`), 0o600); err != nil {
@@ -118,6 +120,7 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsExportTargetDifferentFromScanned
 }
 
 func TestVerifyTypeScriptPackagePublicAPIRejectsExportStar(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.115680445627116622094001089796073200022717487136984640379014309614998296843761")
 	repoRoot := writeTypeScriptPackageFixture(t)
 	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
 	if err := os.WriteFile(sourcePath, []byte(`export * from "./internal";`), 0o600); err != nil {

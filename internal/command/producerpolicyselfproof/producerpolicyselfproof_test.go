@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildRejectsPolicyChangeProvedByNewlyAdmittedProducerTuple(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.051973025282364233365946493539636279354221690599943144823854134459401810936427")
 	record, exitCode, err := Build(validProducerPolicySelfProofInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

@@ -12,6 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestOptionalChildRejectsInconsistentChildResult(t *testing.T) {
@@ -184,6 +185,7 @@ func childReportValueWithReceipts(state string, exitCode string, failures []any,
 }
 
 func TestBuildRejectsForgedReceiptAdmissionChild(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.032888675717298205828739761733737136832901453189109010451175224295171303909603")
 	input := validBundleInput(t)
 	receiptAdmission := input["receiptAdmission"].(map[string]any)
 	receiptAdmission["receipts"] = []any{

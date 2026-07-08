@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"net/http"
 	"os"
 	"os/exec"
@@ -54,6 +55,7 @@ func TestSelfCheckReadsExplicitJSONAndEmitsReport(t *testing.T) {
 }
 
 func TestSelfCheckRejectsDuplicateKeys(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.061049109061347524269448772857617649849822202469664158122537165529475398131547")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	status := Run(t.Context(), []string{"self-check", "--input", "-"}, strings.NewReader(`{"schemaVersion":1,"schemaVersion":2}`), &stdout, &stderr)

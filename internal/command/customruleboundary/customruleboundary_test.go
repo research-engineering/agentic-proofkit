@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsBoundedCustomRuleAndRejectsUnsafeEffects(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.106806151242803002240171487302316779109328290727609414333938322871488003612890")
 	record, exitCode, err := Build(validCustomRuleBoundaryInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

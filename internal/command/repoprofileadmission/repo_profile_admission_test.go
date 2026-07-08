@@ -2,11 +2,13 @@ package repoprofileadmission
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAdmitsValidRepoProfileAndRejectsRootPackageMismatch(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.043504337756050392884249498699771665633165590624042065689844493508169838701202")
 	record, exitCode, err := Build(validRepoProfileInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

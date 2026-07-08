@@ -9,6 +9,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAcceptsProducerBoundPassedReceipt(t *testing.T) {
@@ -32,6 +33,7 @@ func TestBuildRejectsNonBooleanPublicAPIPlanFlag(t *testing.T) {
 }
 
 func TestProjectObligationDecisionBuildsInputAndRejectsUnroutedCommand(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070349223224769520259517966591709325720249553798073685946672869745658628533890")
 	projected, err := ProjectObligationDecision(validProjectionInput())
 	if err != nil {
 		t.Fatalf("ProjectObligationDecision() error=%v", err)
@@ -245,6 +247,7 @@ func TestBuildRejectsFailedProducerAdmissionReport(t *testing.T) {
 }
 
 func TestBuildRejectsMergeSatisfyingEvidenceWithoutProducerAdmission(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.084832385498800555802011138719665130606367582119329227221618245501473605705603")
 	input := validEvidenceInput()
 	delete(input, "producerAdmission")
 
@@ -470,6 +473,7 @@ func TestBuildAddsBoundaryNonClaims(t *testing.T) {
 }
 
 func TestBuildReportsMergeEvidenceWithoutApprovingMerge(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.062399083186293634119152170193059006692728517643142400331042963092772385607972")
 	result, err := Build(validEvidenceInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

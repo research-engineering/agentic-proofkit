@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.021096613433872109936380474204032410537184334172715554175894648026752262369407")
 	if len(presetIDs) != len(presets) {
 		t.Fatalf("presetIDs=%d presets=%d, want one id per preset", len(presetIDs), len(presets))
 	}
@@ -77,6 +79,7 @@ func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T
 }
 
 func TestUnknownPresetIsRejected(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.086360966252379017579457694274778024752791571205403533089233505435328802293079")
 	if IsPresetID("unknown") {
 		t.Fatal("IsPresetID accepted unknown preset")
 	}

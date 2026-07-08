@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildRejectsUnknownRootPolicyFields(t *testing.T) {
@@ -83,6 +84,7 @@ func TestBuildRejectsDisplayOnlyCommandShellControlTokens(t *testing.T) {
 }
 
 func TestBuildFailsClosedForUncoveredUnknownEdge(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.114223091652506300873298948515061679816313892419980290837569919004743321148207")
 	input := validPlanInput()
 	input["unknownEdges"] = []any{unknownEdgeInput("edge.dynamic", "dynamic_or_unknown")}
 

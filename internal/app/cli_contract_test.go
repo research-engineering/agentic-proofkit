@@ -14,6 +14,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 const cliContractPublicABISHA256 = "7a8c5c46d2f4c367bbb790f8428d28f357434287f721338a720c85b9ac28a19b"
@@ -498,6 +499,7 @@ func stringsAsAny(values []string) []any {
 }
 
 func TestHelpCommandContractForms(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012212946147973847974188673193955565304078130183905790171739464374424221304025")
 	for _, args := range [][]string{{"help"}, {"help", "--help"}, {"help", "-h"}, {"--help"}, {"-h"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var stdout bytes.Buffer

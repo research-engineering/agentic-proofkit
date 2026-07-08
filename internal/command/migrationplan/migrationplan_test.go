@@ -2,11 +2,13 @@ package migrationplan
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestSortedFollowUpCommandsRejectsShellControlTokens(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.082298967063760496779599754309164283301628231265151485187770019052237054259416")
 	_, err := sortedFollowUpCommands([]any{map[string]any{
 		"command":   "go test ./... && curl example.test",
 		"commandId": "proofkit.followup",

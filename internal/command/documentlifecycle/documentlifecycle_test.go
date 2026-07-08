@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsCurrentDurableDocumentAndRejectsAuthorityDrift(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.062727261506172699203502066235963181372003705299463204256348067594015852290549")
 	record, exitCode, err := Build(validDocumentLifecycleInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

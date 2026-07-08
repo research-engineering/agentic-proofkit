@@ -2,6 +2,7 @@ package adoptiondoctor
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -28,6 +29,7 @@ func TestBuildReportsObserveAndWarnWithoutBlockingAdvisoryGaps(t *testing.T) {
 }
 
 func TestBuildFailsEnforcementForCandidateBoundaryAndMissingRoutes(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.007421917124002404912211613315239198743059540465995158650367800592497462368119")
 	input := baseInput()
 	input["mode"] = "enforce-all"
 	input["checkedScope"] = "all"

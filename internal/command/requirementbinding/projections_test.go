@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildReportFailsUnknownRequirementBinding(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000376648692213538787264617164821843651034132903736657977168045531003514534050")
 	input := validRequirementBindingInput()
 	input["bindings"].([]any)[0].(map[string]any)["requirementId"] = "REQ-PROOFKIT-MISSING"
 
@@ -91,6 +93,7 @@ func TestBuildReportRejectsEmptyWitnessCommandEnvironmentClasses(t *testing.T) {
 }
 
 func TestBuildEvidenceGraphBuildsGraphAndRejectsFailedReport(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.107818454717962585697455608706257308689211271216669906752699392232450827006825")
 	graph, exitCode, err := BuildEvidenceGraph(validRequirementBindingInput())
 	if err != nil {
 		t.Fatalf("BuildEvidenceGraph() error=%v", err)
@@ -112,6 +115,7 @@ func TestBuildEvidenceGraphBuildsGraphAndRejectsFailedReport(t *testing.T) {
 }
 
 func TestBuildProofSliceSelectsRequirementsAndRejectsFailedReport(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.057814514043290257871128107874680755541616706843803515635545866062242868890363")
 	input := validRequirementBindingInput()
 	input["selection"] = map[string]any{
 		"changedPaths":   []any{},

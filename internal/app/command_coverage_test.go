@@ -3,15 +3,13 @@ package app
 import (
 	"bytes"
 	"encoding/json"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestSupportedCommandsHaveExplicitCoverageRoutes(t *testing.T) {
@@ -51,6 +49,19 @@ func TestCommandCoverageInventoryRejectsSemanticRouteOutsideOwnerScope(t *testin
 	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke", commandCoverageExpectedPublicOutcome), "Unrelated app smoke must not satisfy package-level semantic coverage.")
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
 		t.Fatal("production command coverage inventory builder admitted a semantic route outside the command owner scope")
+	}
+}
+
+func TestCommandCoverageInventoryRejectsSameOwnerUnrelatedNonEmptyTest(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAddsMandatoryBoundaryNonClaims",
+		semanticRouteProof("registryconsumer.registry_consumer_accepts_registry_release_proof", commandCoverageExpectedPublicOutcome),
+		"Same-owner unrelated assertion must not satisfy registry-consumer release-proof semantic coverage.",
+	)
+	_, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}})
+	if err == nil || !strings.Contains(err.Error(), "source oracle") {
+		t.Fatalf("same-owner unrelated non-empty test was admitted: %v", err)
 	}
 }
 
@@ -320,6 +331,99 @@ func TestSkipped(t *testing.T) {
 	}
 }
 
+func TestGoTestSemanticOracleProblemRequiresSourceOwnedMarker(t *testing.T) {
+	marker := "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001"
+	filePath := writeGoTestFixture(t, `package fixture
+
+import "testing"
+
+func TestHasAssertionButNoMarker(t *testing.T) {
+	t.Fatal("intentional falsifier")
+}
+`)
+	problem := goTestSemanticOracleProblem(filePath, "TestHasAssertionButNoMarker", marker)
+	if !strings.Contains(problem, "missing source-owned semantic oracle import") {
+		t.Fatalf("missing marker was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestSemanticOracleProblemRejectsUnrelatedSourceMarker(t *testing.T) {
+	marker := "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001"
+	filePath := writeGoTestFixture(t, `package fixture
+
+import (
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+)
+
+func TestHasWrongMarker(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000002")
+	t.Fatal("intentional falsifier")
+}
+`)
+	problem := goTestSemanticOracleProblem(filePath, "TestHasWrongMarker", marker)
+	if !strings.Contains(problem, "missing source-owned semantic oracle binding "+marker) {
+		t.Fatalf("wrong marker was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestSemanticOracleProblemRejectsBareStringMarker(t *testing.T) {
+	marker := "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001"
+	filePath := writeGoTestFixture(t, `package fixture
+
+import (
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+)
+
+func TestHasBareMarker(t *testing.T) {
+	_ = "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001"
+	t.Fatal("intentional falsifier")
+}
+`)
+	problem := goTestSemanticOracleProblem(filePath, "TestHasBareMarker", marker)
+	if !strings.Contains(problem, "missing source-owned semantic oracle binding "+marker) {
+		t.Fatalf("bare marker was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestSemanticOracleProblemRejectsMismatchedBindingFact(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		semanticRouteProof("registryconsumer.registry_consumer_accepts_registry_release_proof", commandCoverageExpectedPublicOutcome),
+		"Registry consumer release proof must be tied to an owner-declared semantic proof identity.",
+	)
+	filePath := filepath.Join(repoRoot(t), route.file)
+	mismatchedCommandRefMarker := route.sourceOracleMarker("external-consumer")
+	problem := goTestSemanticOracleProblem(filePath, route.testName, mismatchedCommandRefMarker)
+	if !strings.Contains(problem, "missing source-owned semantic oracle binding "+mismatchedCommandRefMarker) {
+		t.Fatalf("mismatched commandRef marker was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestSemanticOracleProblemAdmitsSourceOwnedMarker(t *testing.T) {
+	marker := "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001"
+	filePath := writeGoTestFixture(t, `package fixture
+
+import (
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+)
+
+func TestHasMarker(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001")
+	t.Fatal("intentional falsifier")
+}
+`)
+	if problem := goTestSemanticOracleProblem(filePath, "TestHasMarker", marker); problem != "" {
+		t.Fatalf("source-owned marker was rejected: %q", problem)
+	}
+}
+
 func TestRequiredInputCommandsRejectMalformedCallerRecords(t *testing.T) {
 	for _, command := range readCLIContract(t).Commands {
 		if command.Input != "required" || command.Command == "self-check" {
@@ -347,6 +451,7 @@ func TestRequiredInputCommandsRejectMalformedCallerRecords(t *testing.T) {
 }
 
 func TestNoInputCommandsHaveCommandSpecificBehavior(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069735802754139690645953016388349571937723357477618679005916661691281309389599")
 	t.Run("stack-preset", func(t *testing.T) {
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
@@ -458,130 +563,6 @@ func assertGoTestFunctionExists(t *testing.T, command string, filePath string, t
 	t.Helper()
 	if problem := goTestFunctionProblem(filePath, testName); problem != "" {
 		t.Fatalf("%s coverage route %s is invalid: %s", command, testName, problem)
-	}
-}
-
-func goTestFunctionProblem(filePath string, testName string) string {
-	parsed, err := parser.ParseFile(token.NewFileSet(), filePath, nil, 0)
-	if err != nil {
-		return "file " + filePath + " is not parseable: " + err.Error()
-	}
-	for _, declaration := range parsed.Decls {
-		function, ok := declaration.(*ast.FuncDecl)
-		if !ok || function.Name.Name != testName {
-			continue
-		}
-		if !isTestingTFunction(function) {
-			return "not a Go test function with *testing.T"
-		}
-		if function.Body == nil || len(function.Body.List) == 0 {
-			return "has no executable body"
-		}
-		if hasUnconditionalTopLevelSkip(function) {
-			return "contains unconditional t.Skip at top level"
-		}
-		if !hasFailureCapableAssertion(function) {
-			return "has no direct failure-capable assertion"
-		}
-		return ""
-	}
-	return "missing from " + filePath
-}
-
-func isTestingTFunction(function *ast.FuncDecl) bool {
-	if function.Type.Params == nil || len(function.Type.Params.List) != 1 {
-		return false
-	}
-	star, ok := function.Type.Params.List[0].Type.(*ast.StarExpr)
-	if !ok {
-		return false
-	}
-	selector, ok := star.X.(*ast.SelectorExpr)
-	if !ok || selector.Sel.Name != "T" {
-		return false
-	}
-	packageName, ok := selector.X.(*ast.Ident)
-	return ok && packageName.Name == "testing"
-}
-
-func hasUnconditionalTopLevelSkip(function *ast.FuncDecl) bool {
-	paramName := testingTParamName(function)
-	if paramName == "" {
-		return false
-	}
-	for _, statement := range function.Body.List {
-		if isUnconditionalTestSkip(statement, paramName) {
-			return true
-		}
-	}
-	return false
-}
-
-func hasFailureCapableAssertion(function *ast.FuncDecl) bool {
-	paramName := testingTParamName(function)
-	if paramName == "" || function.Body == nil {
-		return false
-	}
-	found := false
-	ast.Inspect(function.Body, func(node ast.Node) bool {
-		if found {
-			return false
-		}
-		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		selector, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-		receiver, ok := selector.X.(*ast.Ident)
-		if !ok || receiver.Name != paramName {
-			return true
-		}
-		switch selector.Sel.Name {
-		case "Error", "Errorf", "Fail", "FailNow", "Fatal", "Fatalf":
-			found = true
-			return false
-		default:
-			return true
-		}
-	})
-	return found
-}
-
-func testingTParamName(function *ast.FuncDecl) string {
-	if function.Type.Params == nil || len(function.Type.Params.List) != 1 {
-		return ""
-	}
-	if len(function.Type.Params.List[0].Names) != 1 {
-		return ""
-	}
-	return function.Type.Params.List[0].Names[0].Name
-}
-
-func isUnconditionalTestSkip(statement ast.Stmt, testParamName string) bool {
-	expression, ok := statement.(*ast.ExprStmt)
-	if !ok {
-		return false
-	}
-	call, ok := expression.X.(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	receiver, ok := selector.X.(*ast.Ident)
-	if !ok || receiver.Name != testParamName {
-		return false
-	}
-	switch selector.Sel.Name {
-	case "Skip", "Skipf", "SkipNow":
-		return true
-	default:
-		return false
 	}
 }
 

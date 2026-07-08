@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildJSONBuildsSemanticRequirementAndCommandCoverage(t *testing.T) {
@@ -282,6 +283,7 @@ func TestBuildJSONAgentEnvelopeUsesSharedEnvelopeKernel(t *testing.T) {
 }
 
 func TestBuildJSONRejectsRouteOnlyCoverageForBlockingRequirement(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031691819956938118822991045596460919977101593213780644803440154333791119868791")
 	input := validCoverageInput(t)
 	entry := inventoryEntry(input)
 	entry["evidenceClass"] = "routing_smoke_nonclaim"

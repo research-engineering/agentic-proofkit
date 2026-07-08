@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"os"
 	"path/filepath"
 	"strings"
@@ -521,6 +522,7 @@ func TestRequirementSpecTreeViewOutputPathAdmission(t *testing.T) {
 }
 
 func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.006501090000492450297502395866607916441745680520470690190439229497945905166304")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	status := Run(t.Context(), []string{"requirement-browser-server", "--input", "-", "--view", "spec-tree"}, strings.NewReader(cliRequirementSpecTreeInput()), &stdout, &stderr)
@@ -540,6 +542,7 @@ func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
 }
 
 func TestAdoptionDoctorCLIABI(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.018061704360080936767110902235369680299779598229946624164723476412925521966788")
 	cases := []struct {
 		name       string
 		args       []string

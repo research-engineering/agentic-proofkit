@@ -2,6 +2,7 @@ package capabilitymapadmission
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,7 @@ func TestBuildCodeBaselineEmitsCandidateRequirementsAndBindings(t *testing.T) {
 }
 
 func TestBuildCodeBaselineFailsMissingCandidateRequirementAndAnchor(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059300390373196834575756311871568010867803598706625444326212661238632859496824")
 	t.Parallel()
 
 	input := validCapabilityMapInput("code_baseline")

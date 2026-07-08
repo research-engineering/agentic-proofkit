@@ -2,6 +2,7 @@ package requirementproofview
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strconv"
 	"strings"
 	"testing"
@@ -120,6 +121,7 @@ func TestBuildHTMLEscapesCallerControlledCompactFields(t *testing.T) {
 }
 
 func TestBuildMarkdownEscapesCallerControlledCompactFields(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.002958980837736388688570945636786727657668783716021703161976564587172015017594")
 	output, exitCode, err := BuildMarkdown(maliciousCompactContract(), Options{LocalEnvironmentClasses: []string{"local-go"}})
 	if err != nil {
 		t.Fatalf("BuildMarkdown() error = %v", err)
