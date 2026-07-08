@@ -29,9 +29,11 @@ func scenariosToAny(scenarios []scenario) []any {
 func testEntriesToAny(entries []testevidenceinventory.Entry) []any {
 	result := make([]any, 0, len(entries))
 	for _, entry := range entries {
+		expectedPublicOutcome := ""
 		oracleSummary := ""
 		oracleKind := ""
 		if entry.Oracle != nil {
+			expectedPublicOutcome = entry.Oracle.ExpectedPublicOutcome
 			oracleSummary = entry.Oracle.AssertionSummary
 			oracleKind = entry.Oracle.OracleKind
 		}
@@ -44,6 +46,7 @@ func testEntriesToAny(entries []testevidenceinventory.Entry) []any {
 		result = append(result, map[string]any{
 			"commandRefs":                admit.StringSliceToAny(entry.CommandRefs),
 			"evidenceClass":              entry.EvidenceClass,
+			"expectedPublicOutcome":      expectedPublicOutcome,
 			"negativeCaseId":             negativeCaseID,
 			"nonClaims":                  admit.StringSliceToAny(entry.NonClaims),
 			"oracleKind":                 oracleKind,

@@ -1510,6 +1510,12 @@
           "ownerReviewState": "candidate|confirmed",
           "severity": "failure|warning"
         },
+        "oracleFields": {
+          "assertionSummary": "non-empty assertion summary for semantic_falsifier, contract_admission, and property_or_fuzz entries",
+          "expectedPublicOutcome": "non-empty expected public outcome for semantic_falsifier, contract_admission, and property_or_fuzz entries",
+          "oracleId": "stable rule id",
+          "oracleKind": "stable rule id"
+        },
         "nonClaims": [
           "Test evidence inventory classifications describe admitted caller-owned inventory facts and Proofkit-derived structural diagnostics only.",
           "Proofkit does not infer weak tests from names, prose, mocks, sleeps, snapshots, or repository scans."

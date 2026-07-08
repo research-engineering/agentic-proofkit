@@ -320,9 +320,10 @@ func falsifierValue(surfaceID string, requirementSlug string, invariantSlug stri
 
 func oracleValue(requirementID string, surfaceID string, requirementSlug string) map[string]any {
 	return map[string]any{
-		"assertionSummary": "The selected canonical proof binding supplies a falsification witness for " + requirementID + ".",
-		"oracleId":         "oracle." + surfaceID + "." + requirementSlug,
-		"oracleKind":       "canonical_binding_falsification_witness",
+		"assertionSummary":      "The selected canonical proof binding supplies a falsification witness for " + requirementID + ".",
+		"expectedPublicOutcome": "coverage remains failed unless the selected requirement has an admitted falsification witness and executable command ref",
+		"oracleId":              "oracle." + surfaceID + "." + requirementSlug,
+		"oracleKind":            "canonical_binding_falsification_witness",
 	}
 }
 

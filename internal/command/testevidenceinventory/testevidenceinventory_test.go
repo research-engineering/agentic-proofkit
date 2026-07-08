@@ -254,9 +254,10 @@ func TestBuildRejectsWeakOracleAndDuplicateFalsifier(t *testing.T) {
 		"wrongImplementationClassId": "wrong.inventory.weak",
 	}
 	weak["oracle"] = map[string]any{
-		"assertionSummary": "",
-		"oracleId":         "oracle.inventory.weak",
-		"oracleKind":       "negative_exit_and_diagnostic",
+		"assertionSummary":      "",
+		"expectedPublicOutcome": "failed report with diagnostic",
+		"oracleId":              "oracle.inventory.weak",
+		"oracleKind":            "negative_exit_and_diagnostic",
 	}
 	entries = append(entries, weak)
 	input.(map[string]any)["entries"] = entries
@@ -437,6 +438,24 @@ func TestBuildRejectsSemanticFalsifierWithoutCommandRefs(t *testing.T) {
 	requireDiagnosticClassifications(t, record.JSONValue(), "failureClassifications", "failure", map[string]string{
 		"missing_executable_command_ref:test.inventory.semantic": "missing_executable_command_ref",
 	})
+}
+
+func TestBuildRejectsSemanticFalsifierWithoutExpectedPublicOutcome(t *testing.T) {
+	input := validInventory(t)
+	entry := input.(map[string]any)["entries"].([]any)[0].(map[string]any)
+	entry["oracle"].(map[string]any)["expectedPublicOutcome"] = ""
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() accepted semantic falsifier without expected public outcome: %#v", record.JSONValue())
+	}
+	failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n")
+	if !strings.Contains(failures, "weak_or_empty_oracle:test.inventory.semantic") {
+		t.Fatalf("failures missing weak oracle diagnostic: %s", failures)
+	}
 }
 
 func TestBuildAdmitsRouteOnlyNonClaimAndEmitsWarningGuidance(t *testing.T) {
@@ -942,6 +961,7 @@ func validInventory(t *testing.T) any {
       "oracle": {
         "oracleId": "oracle.inventory.semantic",
         "oracleKind": "negative_exit_and_diagnostic",
+        "expectedPublicOutcome": "failed report with diagnostic",
         "assertionSummary": "A bad implementation is rejected with a failed report and diagnostic."
       },
       "nonClaims": []
@@ -1109,9 +1129,10 @@ func sourceInventoryEntry(t *testing.T, sourceID string, label string) map[strin
 		"wrongImplementationClassId": "wrong.inventory." + token + "." + label,
 	}
 	entry["oracle"] = map[string]any{
-		"assertionSummary": "A bad " + sourceID + " " + label + " implementation is rejected with a failed report and diagnostic.",
-		"oracleId":         "oracle.inventory." + token + "." + label,
-		"oracleKind":       "negative_exit_and_diagnostic",
+		"assertionSummary":      "A bad " + sourceID + " " + label + " implementation is rejected with a failed report and diagnostic.",
+		"expectedPublicOutcome": "failed report with diagnostic",
+		"oracleId":              "oracle.inventory." + token + "." + label,
+		"oracleKind":            "negative_exit_and_diagnostic",
 	}
 	return entry
 }
