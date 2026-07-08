@@ -507,6 +507,8 @@ func noInputRuntimeSmokeArgs(command string) ([]string, bool) {
 	switch command {
 	case "help":
 		return []string{"help"}, false
+	case "init":
+		return []string{"init", "--preset", "fresh"}, true
 	case "json-report-cli-adapter-source":
 		return []string{"json-report-cli-adapter-source", "--language", "typescript"}, true
 	case "stack-preset":

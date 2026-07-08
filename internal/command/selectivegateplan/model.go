@@ -5,10 +5,20 @@ import "github.com/research-engineering/agentic-proofkit/internal/kernel/proofvo
 var edgeClassSet = proofvocab.SelectiveEdgeClassSet()
 
 type command struct {
-	Command    string
-	ID         string
-	Reason     string
-	SourcePath *string
+	Command          string
+	CommandOwnership *string
+	ID               string
+	Reason           string
+	SourcePath       *string
+}
+
+type scanObligation struct {
+	Command          string
+	CommandID        string
+	CommandOwnership string
+	Mode             string
+	Reason           string
+	Required         bool
 }
 
 type generatedArtifactRule struct {
@@ -98,9 +108,7 @@ type input struct {
 	PublicAPITouched            bool
 	RequirementImpactCommand    string
 	RequirementImpactTouched    bool
-	SecretScanCommand           string
-	SecretScanMode              string
-	SecretScanRequired          bool
+	ScanObligation              scanObligation
 	TouchedRequirementWitnesses []witnessObligation
 	UnknownEdges                []unknownEdge
 }

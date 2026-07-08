@@ -77,8 +77,11 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("witness-plan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"commands", "vocabulary"}, "witness-plan input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"commands", "schemaVersion", "vocabulary"}, "witness-plan input"); err != nil {
 		return input{}, err
+	}
+	if value, ok := record["schemaVersion"]; ok && !admit.JSONNumberEquals(value, 1) {
+		return input{}, fmt.Errorf("witness-plan input schemaVersion must be 1")
 	}
 	if _, ok := record["vocabulary"].(map[string]any); !ok {
 		return input{}, fmt.Errorf("witness-plan input must include object vocabulary")

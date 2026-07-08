@@ -28,6 +28,21 @@ func TestBuildAdmitsSafeCommandAndRejectsShellCommand(t *testing.T) {
 	}
 }
 
+func TestBuildAdmitsOptionalDirectInputSchemaVersionOne(t *testing.T) {
+	input := validWitnessPlanInput()
+	input["schemaVersion"] = json.Number("1")
+	if _, err := Build(input); err != nil {
+		t.Fatalf("Build() rejected schemaVersion=1: %v", err)
+	}
+
+	input = validWitnessPlanInput()
+	input["schemaVersion"] = json.Number("2")
+	_, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "schemaVersion must be 1") {
+		t.Fatalf("Build() error=%v, want schemaVersion rejection", err)
+	}
+}
+
 func TestBuildProjectsRequirementBindingsToWitnessPlan(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.033949758224172503973560419980040060865660836625689337975156681518110461106337")
 	input := map[string]any{

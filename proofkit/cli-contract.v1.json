@@ -103,10 +103,10 @@
             "item": {
               "kind": {
                 "enum": [
-              "adoption_workflow",
-              "authoring_plan",
-              "binding_witness_plan_input",
-              "capability_map",
+                  "adoption_workflow",
+                  "authoring_plan",
+                  "binding_witness_plan_input",
+                  "capability_map",
                   "changed_path_set",
                   "coverage_compose_input",
                   "coverage_view_input",
@@ -486,6 +486,43 @@
       ]
     },
     {
+      "command": "init",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "built_in_package_catalog",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--preset"
+      ],
+      "outputContract": {
+        "contractId": "proofkit.init.output.v1",
+        "schemaVersion": 1,
+        "authority": "dry-run adoption route guidance",
+        "presets": [
+          "all",
+          "change-set",
+          "code-audit",
+          "code-baseline",
+          "fresh",
+          "legacy"
+        ],
+        "requiredReportFields": [
+          "diagnostics",
+          "nonClaims",
+          "reportId",
+          "reportKind",
+          "ruleResults",
+          "schemaVersion",
+          "state",
+          "summary"
+        ],
+        "nonClaim": "Init does not read repository files, discover tests, write files, create requirements, or approve merge/release/rollout."
+      }
+    },
+    {
       "command": "json-report-cli-adapter-source",
       "input": "none",
       "stdin": false,
@@ -776,7 +813,29 @@
       "allowedFlags": [
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.repo-profile-admission.input.v1",
+        "schemaVersion": 1,
+        "authority": "repo profile input admission",
+        "compatibility": {
+          "schemaVersion": "optional transitional top-level field; if present it must be 1",
+          "profile.schema": "required proofkit.repo-profile.v1"
+        },
+        "environmentPolicy": {
+          "legacyFields": [
+            "liveGithubRequiredClasses",
+            "localSecretRequiredClasses"
+          ],
+          "preferredField": "environmentClassPolicies",
+          "tupleFields": [
+            "environmentClass",
+            "networkPolicy",
+            "credentialClass"
+          ],
+          "nonClaim": "Repo-profile admission checks explicit caller-owned command policy facts and does not execute commands or discover repository files."
+        }
+      }
     },
     {
       "command": "requirement-authoring-plan",
@@ -1245,6 +1304,62 @@
       ]
     },
     {
+      "command": "secret-scan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ],
+      "inputContract": {
+        "contractId": "proofkit.secret-scan.input.v1",
+        "schemaVersion": 1,
+        "authority": "caller-owned explicit file inventory",
+        "requiredFields": [
+          "files",
+          "nonClaims",
+          "reportId",
+          "schemaVersion"
+        ],
+        "fileRecord": {
+          "requiredFields": [
+            "path",
+            "state"
+          ],
+          "optionalFields": [
+            "contentBase64"
+          ],
+          "state": [
+            "missing",
+            "present"
+          ],
+          "rules": [
+            "paths must be sorted unique repository-relative POSIX paths",
+            "present files must include contentBase64",
+            "missing files must not include contentBase64"
+          ]
+        },
+        "nonClaim": "Secret scan does not discover repository files or replace provider secret scanning."
+      },
+      "outputContract": {
+        "contractId": "proofkit.secret-scan.output.v1",
+        "schemaVersion": 1,
+        "authority": "secret-like text pattern findings over admitted explicit inventory",
+        "findingFields": [
+          "findingClass",
+          "line",
+          "path"
+        ],
+        "redactionRule": "matched secret-like values are never emitted to stdout reports",
+        "nonClaim": "Findings are pattern detections, not credential validity proof."
+      }
+    },
+    {
       "command": "selective-gate-evidence",
       "input": "required",
       "stdin": true,
@@ -1288,7 +1403,35 @@
         "--agent-envelope",
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.selective-gate-plan.input.v1",
+        "schemaVersion": 1,
+        "authority": "selective gate plan input admission",
+        "scanObligation": {
+          "preferred": true,
+          "fields": [
+            "command",
+            "commandId",
+            "commandOwnership",
+            "mode",
+            "reason",
+            "required"
+          ],
+          "commandOwnership": [
+            "proofkit_secret_scan",
+            "proofkit_text_policy",
+            "caller_owned_external"
+          ],
+          "reason": [
+            "secret_scan",
+            "text_policy",
+            "external_secret_scan"
+          ],
+          "legacyAlias": "secretScan",
+          "nonClaim": "Selective gate planning admits scan obligations but does not execute scanner commands or prove repository-wide credential absence."
+        }
+      }
     },
     {
       "command": "self-check",
@@ -1575,6 +1718,10 @@
               "commands",
               "vocabulary"
             ],
+            "optional": [
+              "schemaVersion"
+            ],
+            "schemaVersionRule": "If present, schemaVersion must be 1.",
             "nonClaim": "Explicit command catalogs are caller-owned; Proofkit admits command safety shape but does not execute commands."
           },
           "requirement-bindings": {

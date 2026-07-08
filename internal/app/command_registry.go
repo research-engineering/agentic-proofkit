@@ -14,6 +14,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/externalconsumer"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
+	"github.com/research-engineering/agentic-proofkit/internal/command/initplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationparityadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
@@ -39,6 +40,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/scaffoldprofileplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/secretscan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specoverviewclaims"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
@@ -204,5 +206,12 @@ func buildReport(command string, input any) (report.Record, int, error) {
 	if command == "self-check" {
 		return report.BuildSelfCheckReport(input), 0, nil
 	}
+	if command == "secret-scan" {
+		return secretscan.Build(input)
+	}
 	return report.Record{}, 1, fmt.Errorf("unsupported command: %s", command)
+}
+
+func buildInitReport(preset string) (report.Record, error) {
+	return initplan.Build(preset)
 }

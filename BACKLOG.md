@@ -50,7 +50,4 @@ records, generated release manifests, or the owning docs named above.
 
 ## Open Rows
 
-| Status | ID | Scope | Completion condition |
-|---|---|---|---|
-| BLOCKED | RELEASE-01 | Decide whether normalized post-create GitHub Release facts need durable public evidence beyond retained workflow artifacts under immutable GitHub Releases. | Either keep `github-release.json` as retained workflow evidence with explicit non-claims, or design a provider-compatible public evidence channel that does not require post-create Release asset mutation. Completion requires a release-proof design and live provider proof; direct backfill/upload is blocked by immutable Release upload rejection. |
-| BLOCKED | RELEASE-02 | Resolve or explicitly retire the immutable historical GitHub Release asset-closure gap where release metadata references a notes asset that the published release does not contain. | Either attach the exact checksum-matching notes asset if provider policy allows, or record the provider-impossible closure in the release evidence model and prove future releases cannot repeat the gap. Completion requires live provider proof; direct backfill is currently blocked by immutable Release upload rejection. |
+No open rows.

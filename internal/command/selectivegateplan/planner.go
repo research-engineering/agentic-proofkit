@@ -27,7 +27,8 @@ func buildPlan(input input) map[string]any {
 	for _, item := range input.BaseCommands {
 		push(item)
 	}
-	push(command{ID: "secret-scan", Command: input.SecretScanCommand, Reason: "diff_scoped_secret_scan"})
+	scanOwnership := input.ScanObligation.CommandOwnership
+	push(command{ID: input.ScanObligation.CommandID, Command: input.ScanObligation.Command, CommandOwnership: &scanOwnership, Reason: input.ScanObligation.Reason})
 	if input.FullWorkspaceCommand != nil {
 		push(*input.FullWorkspaceCommand)
 	}
@@ -126,12 +127,20 @@ func buildPlan(input input) map[string]any {
 		"proofLikePaths":           admit.StringSliceToAny(proofLikePaths),
 		"publicApiContractTouched": input.PublicAPITouched,
 		"requiredCommands":         requiredCommands,
-		"schemaVersion":            1,
+		"scanObligation": map[string]any{
+			"command":          input.ScanObligation.Command,
+			"commandId":        input.ScanObligation.CommandID,
+			"commandOwnership": input.ScanObligation.CommandOwnership,
+			"mode":             input.ScanObligation.Mode,
+			"reason":           input.ScanObligation.Reason,
+			"required":         input.ScanObligation.Required,
+		},
+		"schemaVersion": 1,
 		"secretScan": map[string]any{
 			"changedArchiveOrBinaryPaths": admit.StringSliceToAny(changedArchiveOrBinary),
-			"command":                     input.SecretScanCommand,
-			"mode":                        input.SecretScanMode,
-			"required":                    input.SecretScanRequired,
+			"command":                     input.ScanObligation.Command,
+			"mode":                        input.ScanObligation.Mode,
+			"required":                    input.ScanObligation.Required,
 		},
 		"skippedGates":                skippedGatesJSON(skippedGates(input, generatedArtifacts, artifactIntegrity, requirementImpactTouched)),
 		"touchedRequirementWitnesses": witnessObligationsJSON(input.TouchedRequirementWitnesses),

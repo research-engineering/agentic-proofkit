@@ -30,6 +30,30 @@ func TestBuildAdmitsValidRepoProfileAndRejectsRootPackageMismatch(t *testing.T) 
 	assertRecordContains(t, record.JSONValue(), "rootPackageName must match")
 }
 
+func TestBuildAdmitsOptionalInputSchemaVersionOne(t *testing.T) {
+	input := validRepoProfileInput()
+	input["schemaVersion"] = json.Number("1")
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || record.State != "passed" {
+		encoded, _ := json.Marshal(record)
+		t.Fatalf("Build() exit=%d record=%s, want passed", exitCode, string(encoded))
+	}
+
+	input = validRepoProfileInput()
+	input["schemaVersion"] = json.Number("2")
+	record, exitCode, err = Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() admitted invalid schemaVersion: exit=%d state=%s", exitCode, record.State)
+	}
+	assertRecordContains(t, record.JSONValue(), "schemaVersion must be 1")
+}
+
 func TestBuildRejectsUnknownRepoProfileAdmissionFields(t *testing.T) {
 	cases := []struct {
 		name   string
@@ -234,6 +258,75 @@ func TestBuildMinimizesRejectedCallerPathDiagnostics(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildAdmitsExternalNetworkWithoutCredentialsThroughEnvironmentClassPolicy(t *testing.T) {
+	input := validRepoProfileInput()
+	profile := input["profile"].(map[string]any)
+	proofs := profile["proofs"].(map[string]any)
+	proofs["environmentClasses"] = []any{"external-public"}
+	profile["commandMatchers"] = []any{
+		map[string]any{
+			"allowedArgv":     []any{"npm", "ci", "--dry-run"},
+			"credentialClass": "none",
+			"id":              "proofkit.test.npm-dry-run",
+			"kind":            "exact_argv",
+			"networkPolicy":   "external",
+			"parallelGroup":   "network",
+		},
+	}
+	input["facts"].(map[string]any)["commandEnvironmentPairs"] = []any{
+		map[string]any{"command": "npm ci --dry-run", "environmentClasses": []any{"external-public"}},
+	}
+	input["policy"].(map[string]any)["environmentPolicy"] = map[string]any{
+		"environmentClassPolicies": []any{
+			map[string]any{
+				"credentialClass":  "none",
+				"environmentClass": "external-public",
+				"networkPolicy":    "external",
+			},
+		},
+		"liveGithubRequiredClasses":  []any{},
+		"localSecretRequiredClasses": []any{},
+	}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || record.State != "passed" {
+		encoded, _ := json.Marshal(record)
+		t.Fatalf("Build() exit=%d record=%s, want passed", exitCode, string(encoded))
+	}
+}
+
+func TestBuildRejectsExternalNetworkWithoutEnvironmentClassPolicy(t *testing.T) {
+	input := validRepoProfileInput()
+	profile := input["profile"].(map[string]any)
+	proofs := profile["proofs"].(map[string]any)
+	proofs["environmentClasses"] = []any{"external-public"}
+	profile["commandMatchers"] = []any{
+		map[string]any{
+			"allowedArgv":     []any{"npm", "ci", "--dry-run"},
+			"credentialClass": "none",
+			"id":              "proofkit.test.npm-dry-run",
+			"kind":            "exact_argv",
+			"networkPolicy":   "external",
+			"parallelGroup":   "network",
+		},
+	}
+	input["facts"].(map[string]any)["commandEnvironmentPairs"] = []any{
+		map[string]any{"command": "npm ci --dry-run", "environmentClasses": []any{"external-public"}},
+	}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() admitted external network without tuple policy: exit=%d state=%s", exitCode, record.State)
+	}
+	assertRecordContains(t, record.JSONValue(), "command matchers admit no witness command/environment pair")
 }
 
 func TestBuildRejectsShellControlCommandEnvironmentPair(t *testing.T) {

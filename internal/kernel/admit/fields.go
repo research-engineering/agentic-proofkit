@@ -10,16 +10,18 @@ import (
 )
 
 var (
-	ruleIDPattern              = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*$`)
-	timestampLikePattern       = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
-	isoDateComponentPattern    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
-	compactDateComponentRegexp = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
-	driveLikePathPattern       = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
-	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
-	secretValuePattern         = regexp.MustCompile(`(?i)(authorization\s*:\s*[^\r\n]+|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
-	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
-	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
-	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
+	ruleIDPattern               = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*$`)
+	timestampLikePattern        = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
+	isoDateComponentPattern     = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
+	compactDateComponentRegexp  = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
+	driveLikePathPattern        = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
+	schemeLikePathPattern       = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+	secretValuePattern          = regexp.MustCompile(`(?i)(authorization\s*:\s*[^\r\n]+|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
+	secretPathAssignmentPattern = regexp.MustCompile(`(?i)(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+`)
+	secretPathTokenPattern      = regexp.MustCompile(`(?i)^(?:github_pat_[A-Za-z0-9_]{10,}|gh[pousr]_[A-Za-z0-9_]{10,}|sk-(?:proj-)?[A-Za-z0-9_-]{16,}|xox[abprs]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{10,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)(?:\.[A-Za-z0-9_-]+)?$`)
+	urlUserInfoPattern          = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
+	controlRunePattern          = regexp.MustCompile(`[\x00-\x1f\x7f]`)
+	shellControlTokenPattern    = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
 
 const maxDiagnosticRunes = 512
@@ -121,6 +123,18 @@ func LowercaseSHA256(raw any, context string) (string, error) {
 
 func ContainsSecretLikeValue(value string) bool {
 	return ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value)
+}
+
+func ContainsSecretLikePathValue(value string) bool {
+	if ContainsURLCredentialValue(value) {
+		return true
+	}
+	for _, component := range strings.Split(value, "/") {
+		if secretPathAssignmentPattern.MatchString(component) || secretPathTokenPattern.MatchString(component) {
+			return true
+		}
+	}
+	return false
 }
 
 func ContainsSecretTokenLikeValue(value string) bool {
@@ -323,7 +337,7 @@ func SafeRepoRelativePath(value string, context string) (string, error) {
 		strings.HasPrefix(value, "/") ||
 		strings.Contains(value, `\`) ||
 		containsControlRune(value) ||
-		ContainsSecretLikeValue(value) ||
+		ContainsSecretLikePathValue(value) ||
 		driveLikePathPattern.MatchString(value) ||
 		schemeLikePathPattern.MatchString(value) {
 		return "", fmt.Errorf("%s must be a repository-relative POSIX path", context)
