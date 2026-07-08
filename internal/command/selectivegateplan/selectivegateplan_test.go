@@ -106,6 +106,34 @@ func TestBuildEmitsOwnerMarkedScanObligation(t *testing.T) {
 	}
 }
 
+func TestBuildEmitsProofkitSecretScanObligation(t *testing.T) {
+	input := validPlanInput()
+	delete(input, "secretScan")
+	input["scanObligation"] = map[string]any{
+		"command":          "agentic-proofkit secret-scan --input artifacts/secret-scan.json",
+		"commandId":        "secret-scan",
+		"commandOwnership": "proofkit_secret_scan",
+		"mode":             "diff-scoped",
+		"reason":           "secret_scan",
+		"required":         true,
+	}
+	output, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || output["planState"] != "ok" {
+		t.Fatalf("Build() exitCode=%d planState=%v, want ok", exitCode, output["planState"])
+	}
+	projection, err := AdmitEvidencePlan(jsonRoundTrip(t, output))
+	if err != nil {
+		t.Fatalf("AdmitEvidencePlan() error = %v", err)
+	}
+	scan := projection.Raw["scanObligation"].(map[string]any)
+	if scan["commandId"] != "secret-scan" || scan["commandOwnership"] != "proofkit_secret_scan" || scan["reason"] != "secret_scan" {
+		t.Fatalf("scanObligation lost secret scan ownership semantics: %#v", scan)
+	}
+}
+
 func TestBuildRejectsConflictingScanObligationAliases(t *testing.T) {
 	input := validPlanInput()
 	input["scanObligation"] = map[string]any{

@@ -93,3 +93,20 @@ func commandInputHelp(descriptor commandDescriptor) string {
 	}
 	return "Does not accept caller JSON input and never reads stdin."
 }
+
+func parseInitArgs(args []string) (string, error) {
+	preset := ""
+	for index := 0; index < len(args); index++ {
+		switch args[index] {
+		case "--preset":
+			if index+1 >= len(args) {
+				return "", fmt.Errorf("init --preset requires all, fresh, code-baseline, code-audit, legacy, or change-set")
+			}
+			preset = args[index+1]
+			index++
+		default:
+			return "", fmt.Errorf("unsupported argument for init: %s", args[index])
+		}
+	}
+	return preset, nil
+}

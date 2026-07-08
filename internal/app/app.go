@@ -45,6 +45,14 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 			return 1
 		}
 		return writeText(usage(), 0, nil, stdout, stderr)
+	case commandRunnerInit:
+		preset, err := parseInitArgs(args[1:])
+		if err != nil {
+			writeDiagnostic(stderr, err)
+			return 1
+		}
+		record, err := buildInitReport(preset)
+		return writeJSON(record.JSONValue(), 0, err, stdout, stderr)
 	case commandRunnerAdoptionDoctor:
 		return runAgentEnvelopeCommand(args[0], args[1:], stdin, stdout, stderr, agentEnvelopeBuilders{
 			build:         adoptiondoctor.Build,

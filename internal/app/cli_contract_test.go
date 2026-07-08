@@ -17,7 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const cliContractPublicABISHA256 = "7a8c5c46d2f4c367bbb790f8428d28f357434287f721338a720c85b9ac28a19b"
+const cliContractPublicABISHA256 = "66da4976d622a8f4866585ab0442ff46884ab6ee2001f30618323751852c81d0"
 
 func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	contract := readCLIContract(t)

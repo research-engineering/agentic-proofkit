@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"os"
@@ -11,6 +12,7 @@ import (
 )
 
 func TestCLIABIGoldenCorpus(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.072652008964654291511814074625765716851058391430332230195872382093981424771505")
 	specPath := filepath.Join(repoRoot(t), "docs/specs/proofkit-package-boundary/requirements.v1.json")
 	specContent, err := os.ReadFile(specPath)
 	if err != nil {
@@ -83,6 +85,39 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 				"    \"inputKind\": \"object\"\n" +
 				"  }\n" +
 				"}\n",
+		},
+		{
+			name:           "init emits dry run route guidance without reading stdin",
+			args:           []string{"init", "--preset", "fresh"},
+			stdin:          `{"bad":`,
+			wantStatus:     0,
+			wantStdoutJSON: true,
+			wantStdoutHas: []string{
+				`"reportKind": "proofkit.init"`,
+				`"selectedPreset": "fresh"`,
+				`"dryRunOnly": true`,
+			},
+			wantStdoutNotHas: []string{"bad"},
+		},
+		{
+			name:          "init rejects unsupported input flags",
+			args:          []string{"init", "--input", "-"},
+			stdin:         `{}`,
+			wantStatus:    1,
+			wantStderrHas: []string{"unsupported argument for init: --input"},
+		},
+		{
+			name:           "secret scan emits failed report without leaking secret",
+			args:           []string{"secret-scan", "--input", "-"},
+			stdin:          cliSecretScanInput("api_key=abc123456789\n"),
+			wantStatus:     1,
+			wantStdoutJSON: true,
+			wantStdoutHas: []string{
+				`"reportKind": "proofkit.secret-scan"`,
+				`"findingClass": "secret_like_value"`,
+				`"state": "failed"`,
+			},
+			wantStdoutNotHas: []string{"abc123456789", "api_key"},
 		},
 		{
 			name:           "requirement source admission emits report JSON",
@@ -1269,6 +1304,10 @@ func cliImpactDemo(demoID string, stackDiverse bool) map[string]any {
 
 func cliTestEvidenceInventory() string {
 	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.semantic","selector":"go test ./internal/app -run TestCLI","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli","evidenceClass":"semantic_falsifier","requirementRefs":["REQ-PROOFKIT-CLI-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.command"],"witnessRefs":["proofkit.cli.witness"],"falsifier":{"falsifierId":"falsifier.cli.semantic","negativeCaseId":"case.cli.semantic","wrongImplementationClassId":"wrong.cli.semantic","dominanceGroup":"cli.semantic","supersedes":[]},"oracle":{"oracleId":"oracle.cli.semantic","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"The CLI emits a failed report on invalid semantic coverage."},"nonClaims":[]}],"nonClaims":["CLI ABI fixture does not execute native tests."]}`
+}
+
+func cliSecretScanInput(content string) string {
+	return `{"schemaVersion":1,"reportId":"proofkit.cli.secret-scan","nonClaims":["CLI secret-scan fixture does not discover repository files."],"files":[{"path":"src/settings.env","state":"present","contentBase64":"` + base64.StdEncoding.EncodeToString([]byte(content)) + `"}]}`
 }
 
 func cliRequirementSpecTreeInput() string {

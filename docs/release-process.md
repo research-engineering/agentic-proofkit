@@ -200,6 +200,15 @@ The evidence must distinguish:
 
 These evidence classes are not interchangeable.
 
+Historical GitHub Releases are immutable provider state. If an older release
+metadata record names an asset that is absent from the provider release and the
+provider rejects exact backfill, the repository records that as a historical
+archive-evidence exception instead of mutating the release model around it.
+Future releases must prevent recurrence by verifying the expected public asset
+set, byte-for-byte Release asset content, `release-notes.md` presence, release
+manifest and metadata checksum closure, and retained workflow evidence checksum
+closure before reporting GitHub Release archive evidence as passed.
+
 ## Rollback
 
 Published npm versions are immutable. Rollback means pinning consumers back to

@@ -24,6 +24,7 @@ func usage() string {
 		"  agentic-proofkit gradual-adoption-guidance --input <path|-> [--input-pointer <pointer>] [--contract-envelope] [--agent-envelope] [--guidance-mode <mode>] [--checked-scope <scope>] [--touched-rule-id <id>]\n" +
 		"  agentic-proofkit help [<command>|-h|--help]\n" +
 		"  agentic-proofkit impact --input <path|-> [--input-pointer <pointer>]\n" +
+		"  agentic-proofkit init [--preset all|fresh|code-baseline|code-audit|legacy|change-set]\n" +
 		"  agentic-proofkit json-report-cli-adapter-source --language typescript [--format json]\n" +
 		"  agentic-proofkit migration-parity-admission --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit migration-plan --input <path|-> [--input-pointer <pointer>]\n" +
@@ -63,6 +64,7 @@ func usage() string {
 		"  agentic-proofkit selective-gate-evidence --input <path|-> [--input-pointer <pointer>] [--agent-envelope]\n" +
 		"  agentic-proofkit selective-gate-obligation-decision-input --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit selective-gate-plan --input <path|-> [--input-pointer <pointer>] [--agent-envelope]\n" +
+		"  agentic-proofkit secret-scan --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit spec-overview-claims --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit spec-proof-bundle-admission --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit stack-preset --preset <id>\n" +

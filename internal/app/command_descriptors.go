@@ -22,6 +22,7 @@ const (
 	commandRunnerGradualAdoptionBootstrap    commandRunner = "gradual_adoption_bootstrap"
 	commandRunnerGradualAdoptionGuidance     commandRunner = "gradual_adoption_guidance"
 	commandRunnerHelp                        commandRunner = "help"
+	commandRunnerInit                        commandRunner = "init"
 	commandRunnerJSONReportCLIAdapterSource  commandRunner = "json_report_cli_adapter_source"
 	commandRunnerPilotAdmission              commandRunner = "pilot_admission"
 	commandRunnerPlanning                    commandRunner = "planning"
@@ -77,6 +78,7 @@ var commandDescriptors = []commandDescriptor{
 	command("gradual-adoption-guidance", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--contract-envelope", "--guidance-mode", "--input", "--input-pointer", "--touched-rule-id"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerGradualAdoptionGuidance), withAgentEnvelope(), withContractEnvelope()),
 	command("help", commandInputNone, flags("--help", "-h"), modes("text"), ownerDirs("help"), withRunner(commandRunnerHelp), withSemanticAppTests("TestHelpCommandContractForms")),
 	command("impact", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("impact")),
+	command("init", commandInputNone, flags("--preset"), modes("json"), ownerDirs("initplan"), withRunner(commandRunnerInit), withSemanticAppTests("TestCLIABIGoldenCorpus")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource)),
 	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
@@ -115,6 +117,7 @@ var commandDescriptors = []commandDescriptor{
 	command("selective-gate-evidence", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("selectivegateevidence"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("selective-gate-obligation-decision-input", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("selectivegateevidence"), withRunner(commandRunnerPlanning)),
 	command("selective-gate-plan", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("selectivegateplan"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
+	command("secret-scan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("secretscan")),
 	command("self-check", commandInputRequired, flags("--input"), modes("json"), ownerDirs("selfcheck"), withSemanticAppTests("TestSelfCheckRejectsDuplicateKeys")),
 	command("spec-overview-claims", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specoverviewclaims")),
 	command("spec-proof-bundle-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specproofbundleadmission")),
@@ -141,6 +144,7 @@ var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerGradualAdoptionBootstrap:    {},
 	commandRunnerGradualAdoptionGuidance:     {},
 	commandRunnerHelp:                        {},
+	commandRunnerInit:                        {},
 	commandRunnerJSONReportCLIAdapterSource:  {},
 	commandRunnerPilotAdmission:              {},
 	commandRunnerPlanning:                    {},

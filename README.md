@@ -147,6 +147,7 @@ Use the CLI help route before reading source:
 
 ```bash
 agentic-proofkit help
+agentic-proofkit init
 agentic-proofkit help repo-profile-admission
 agentic-proofkit repo-profile-admission --help
 ```
@@ -158,11 +159,17 @@ does not read stdin. The full machine-readable command inventory remains
 
 | Repository state | Minimal first route | Stop condition |
 |---|---|---|
-| Fresh repository with no specs and no extracted observations | `scaffold-project-structure` or `gradual-adoption-bootstrap` | Stop before writing files or inventing requirement meaning |
+| Unknown starting point | `init` | Stop before reading repository files, writing files, or treating route guidance as proof |
+| Fresh repository with no specs and no extracted observations | `init --preset fresh`, then `scaffold-project-structure` or `gradual-adoption-bootstrap` | Stop before writing files or inventing requirement meaning |
 | Current code is trusted as the initial contract | `capability-map-admission` with `trustMode: "code_baseline"` | Stop before treating generated seeds as admitted requirements |
 | Current code must be audited before it becomes a contract | `capability-map-admission` with `trustMode: "audit_from_code"` | Stop at owner questions and candidate-only records |
 | Legacy repository has local proof infrastructure | `migration-parity-admission`, then `migration-plan` | Stop before deleting local proof owners without parity evidence |
 | A change set needs bounded checks | `changed-path-set`, optional `impact`, then `selective-gate-plan` and `selective-gate-evidence` | Stop on unknown scope, missing routes, or stale receipts |
+
+Use `secret-scan` only when the caller provides an explicit file inventory with
+content. It is a dedicated secret-like text detector for admitted inventory
+records; it does not traverse the repository, validate credential liveness, or
+replace provider secret scanning.
 
 For TypeScript consumers that want a small wrapper instead of hand-written
 child-process code:
