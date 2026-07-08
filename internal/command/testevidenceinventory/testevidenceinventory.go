@@ -230,7 +230,7 @@ func normalizedInventoryValue(inventory Inventory) map[string]any {
 		"normalizedInventoryId": inventory.InventoryID + ".normalized",
 		"normalizedKind":        NormalizedInventoryKind,
 		"sourceAuthority":       inventory.Authority,
-		"sourceCount":           inventory.SourceCount,
+		"sourceCount":           json.Number(fmt.Sprintf("%d", inventory.SourceCount)),
 		"sourceColumns":         admit.StringSliceToAny(sourceSetColumns),
 		"sources":               sourceRowsToAny(inventory.SourceRows),
 		"entrySources":          entrySourcesToAny(inventory.EntrySources),

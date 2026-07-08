@@ -52,13 +52,9 @@ func TestLowercaseSHA256AdmitsOnlyCanonicalHexDigest(t *testing.T) {
 func TestContainsSecretLikeValueRecognizesHyphenatedAndPasswdLabels(t *testing.T) {
 	t.Parallel()
 
-	for _, value := range []string{
-		"api-key=abcdefghijklmnopqrstuvwxyz",
-		"access-token=abcdefghijklmnopqrstuvwxyz",
-		"passwd=abcdefghijklmnopqrstuvwxyz",
-	} {
-		if !ContainsSecretLikeValue(value) {
-			t.Fatalf("ContainsSecretLikeValue(%q) = false, want true", value)
+	for _, fixture := range ReportVisibleRedactionFixtures() {
+		if !ContainsSecretLikeValue(fixture.Input) {
+			t.Fatalf("ContainsSecretLikeValue(%s=%q) = false, want true", fixture.Name, fixture.Input)
 		}
 	}
 	if ContainsSecretLikeValue("credentialClass=github-token") {
@@ -114,6 +110,15 @@ func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) 
 	headerRedacted := RedactDiagnosticValue(headerDiagnostic)
 	if strings.Contains(headerRedacted, "YWxpY2U6c2VjcmV0") || strings.Contains(headerRedacted, "Basic") {
 		t.Fatalf("RedactDiagnosticValue leaked authorization header value: %q", headerRedacted)
+	}
+
+	for _, fixture := range ReportVisibleRedactionFixtures() {
+		redacted := RedactDiagnosticValue(fixture.Input)
+		for _, needle := range fixture.SensitiveNeedles {
+			if strings.Contains(redacted, needle) {
+				t.Fatalf("RedactDiagnosticValue leaked %s needle %q in %q", fixture.Name, needle, redacted)
+			}
+		}
 	}
 }
 

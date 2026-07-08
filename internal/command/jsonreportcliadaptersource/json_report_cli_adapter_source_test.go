@@ -1,6 +1,7 @@
 package jsonreportcliadaptersource
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
@@ -278,6 +280,7 @@ import {
 } from "./proofkit-json-report-cli-adapter.ts";
 
 const fakeProofkitPath = ` + quoteJavaScriptString(fakeProofkitPath) + `;
+const redactionFixtures = ` + redactionFixturesLiteral() + `;
 
 const parsed = parseProofkitJsonReportCli(["--input", "in.json", "--output", "out.json"], {
   flags: [{flag: "--input", key: "inputPath", required: true}],
@@ -402,9 +405,32 @@ runProofkitJsonReportCliMain({
 	const truncated = formatProofkitCliError("x".repeat(520));
 	assert.equal(truncated.length, 512 + "...<truncated-diagnostic>".length);
 	assert.match(truncated, /\.\.\.<truncated-diagnostic>$/);
+	for (const fixture of redactionFixtures) {
+	  const redacted = formatProofkitCliError(fixture.input);
+	  for (const needle of fixture.sensitiveNeedles) {
+	    assert.equal(redacted.includes(needle), false, fixture.name + " leaked " + needle + " via " + redacted);
+	  }
+	}
 
 console.log("generated adapter semantics ok");
 `
+}
+
+func redactionFixturesLiteral() string {
+	type fixture struct {
+		Input            string   `json:"input"`
+		Name             string   `json:"name"`
+		SensitiveNeedles []string `json:"sensitiveNeedles"`
+	}
+	fixtures := []fixture{}
+	for _, item := range admit.ReportVisibleRedactionFixtures() {
+		fixtures = append(fixtures, fixture{Name: item.Name, Input: item.Input, SensitiveNeedles: item.SensitiveNeedles})
+	}
+	encoded, err := json.Marshal(fixtures)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
 }
 
 func quoteJavaScriptString(value string) string {

@@ -16,31 +16,17 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 )
 
-const NormalizedInventoryKind = "proofkit.test-evidence-inventory.normalized"
-
-var normalizedSourceColumns = []string{"source_id", "path", "sha256", "role", "non_claims"}
-var normalizedSourceRoles = map[string]struct{}{
-	"test_evidence_inventory_contract": {},
-	"test_evidence_inventory_fragment": {},
-}
-
 type input struct {
 	CompactProofContract    any
 	CoverageUniverse        universe
 	LocalEnvironmentPolicy  any
-	NormalizedInventory     normalizedInventory
+	NormalizedInventory     testevidenceinventory.NormalizedProjection
 	Options                 any
 	OwnerInvariantRegistry  any
 	RequirementProofBinding any
 	RequirementSource       any
 	SelectedOwnerIDs        []string
 	ViewInputID             string
-}
-
-type normalizedInventory struct {
-	Envelope  map[string]any
-	Inventory map[string]any
-	Result    testevidenceinventory.Result
 }
 
 type universe struct {
@@ -59,20 +45,6 @@ type surface struct {
 	OwnerID   string
 	Path      string
 	SurfaceID string
-}
-
-type normalizedSource struct {
-	NonClaims []string
-	Path      string
-	Role      string
-	SHA256    string
-	SourceID  string
-}
-
-type normalizedEntrySource struct {
-	Path     string
-	SourceID string
-	TestID   string
 }
 
 func Build(raw any) (map[string]any, int, error) {
@@ -150,288 +122,50 @@ func admitInput(raw any) (input, error) {
 	}, nil
 }
 
-func admitProofAndInventory(record map[string]any) (any, any, normalizedInventory, error) {
+func admitProofAndInventory(record map[string]any) (any, any, testevidenceinventory.NormalizedProjection, error) {
 	normalizedRaw, hasNormalized := record["normalizedTestEvidenceInventory"]
 	directRaw, hasDirectInventory := record["testEvidenceInventory"]
 	if hasNormalized == hasDirectInventory {
-		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose must provide exactly one of normalizedTestEvidenceInventory or testEvidenceInventory")
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose must provide exactly one of normalizedTestEvidenceInventory or testEvidenceInventory")
 	}
 	if hasNormalized {
 		if _, hasDirectProof := record["requirementProofBinding"]; hasDirectProof {
-			return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose normalized mode must not provide requirementProofBinding")
+			return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose normalized mode must not provide requirementProofBinding")
 		}
 		if _, err := compactproofcontract.Admit(record["compactProofContract"]); err != nil {
-			return nil, nil, normalizedInventory{}, err
+			return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 		}
-		normalized, err := admitNormalizedInventory(normalizedRaw)
+		normalized, err := testevidenceinventory.AdmitNormalizedProjection(normalizedRaw, nil, "normalizedTestEvidenceInventory")
 		if err != nil {
-			return nil, nil, normalizedInventory{}, err
+			return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 		}
 		return nil, record["compactProofContract"], normalized, nil
 	}
 	if _, hasCompact := record["compactProofContract"]; hasCompact {
-		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode must not provide compactProofContract")
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose direct mode must not provide compactProofContract")
 	}
 	proofRaw, ok := record["requirementProofBinding"]
 	if !ok {
-		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode requires requirementProofBinding")
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose direct mode requires requirementProofBinding")
 	}
 	proofResult, err := requirementbinding.Build(proofRaw)
 	if err != nil {
-		return nil, nil, normalizedInventory{}, err
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 	}
 	if proofResult.Record.State != "passed" {
-		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose requires passed requirement proof binding admission")
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose requires passed requirement proof binding admission")
 	}
 	inventoryResult, err := testevidenceinventory.Evaluate(directRaw)
 	if err != nil {
-		return nil, nil, normalizedInventory{}, err
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 	}
 	if inventoryResult.ExitCode != 0 {
-		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose requires passed test evidence inventory admission")
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose requires passed test evidence inventory admission")
 	}
 	if inventoryResult.Inventory.Authority != "caller_owned_inventory" {
-		return nil, nil, normalizedInventory{}, fmt.Errorf("requirement coverage input compose direct mode requires caller_owned_inventory; use normalizedTestEvidenceInventory for source-set inventory")
+		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose direct mode requires caller_owned_inventory; use normalizedTestEvidenceInventory for source-set inventory")
 	}
-	return requirementbinding.InputValue(proofResult.Input), nil, normalizedInventory{Inventory: testevidenceinventory.InventoryValue(inventoryResult.Inventory), Result: inventoryResult}, nil
-}
-
-func admitNormalizedInventory(raw any) (normalizedInventory, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"entrySources", "inputPaths", "inventory", "nonClaims", "normalizedInventoryId", "normalizedKind", "projectionKind", "projectionSummary", "schemaVersion", "sourceAuthority", "sourceColumns", "sourceCount", "sources"}, "normalizedTestEvidenceInventory"); err != nil {
-		return normalizedInventory{}, err
-	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory schemaVersion must be 1")
-	}
-	if record["normalizedKind"] != NormalizedInventoryKind {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory normalizedKind must be %s", NormalizedInventoryKind)
-	}
-	if _, err := admit.RuleID(record["normalizedInventoryId"], "normalizedTestEvidenceInventory normalizedInventoryId"); err != nil {
-		return normalizedInventory{}, err
-	}
-	sourceAuthority, err := admit.Enum(record["sourceAuthority"], map[string]struct{}{"caller_owned_inventory": {}, "caller_owned_inventory_source_set": {}}, "normalizedTestEvidenceInventory sourceAuthority")
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	sourceCount, err := nonNegativeInteger(record["sourceCount"], "normalizedTestEvidenceInventory sourceCount")
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	if err := admitExactTextArray(record["sourceColumns"], normalizedSourceColumns, "normalizedTestEvidenceInventory sourceColumns"); err != nil {
-		return normalizedInventory{}, err
-	}
-	sources, err := admitNormalizedSources(record["sources"])
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	if sourceCount != len(sources) {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory sourceCount must equal sources length")
-	}
-	inputPaths, err := admit.PreserveSortedPathArray(record["inputPaths"], "normalizedTestEvidenceInventory inputPaths", true)
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	if !equalStrings(inputPaths, sourcePaths(sources)) {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory inputPaths must equal source paths")
-	}
-	inventory, ok := record["inventory"].(map[string]any)
-	if !ok {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory inventory must be an object")
-	}
-	result, err := testevidenceinventory.Evaluate(inventory)
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	if result.ExitCode != 0 {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory nested inventory must pass test-evidence-inventory admission")
-	}
-	if result.Inventory.Authority != "caller_owned_inventory" {
-		return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory nested inventory authority must be caller_owned_inventory")
-	}
-	entrySources, err := admitNormalizedEntrySources(record["entrySources"])
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	if err := validateSourceEnvelope(sourceAuthority, sources, inputPaths, entrySources, result.Inventory.Entries); err != nil {
-		return normalizedInventory{}, err
-	}
-	if _, err := admit.PreserveSortedTextArray(record["nonClaims"], "normalizedTestEvidenceInventory nonClaims", false); err != nil {
-		return normalizedInventory{}, err
-	}
-	if record["projectionKind"] != nil {
-		if _, err := admit.RuleID(record["projectionKind"], "normalizedTestEvidenceInventory projectionKind"); err != nil {
-			return normalizedInventory{}, err
-		}
-	}
-	if record["projectionSummary"] != nil {
-		if _, ok := record["projectionSummary"].(map[string]any); !ok {
-			return normalizedInventory{}, fmt.Errorf("normalizedTestEvidenceInventory projectionSummary must be an object when present")
-		}
-	}
-	nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "normalizedTestEvidenceInventory nonClaims", false)
-	if err != nil {
-		return normalizedInventory{}, err
-	}
-	envelope := map[string]any{
-		"schemaVersion":         json.Number("1"),
-		"normalizedInventoryId": record["normalizedInventoryId"],
-		"normalizedKind":        record["normalizedKind"],
-		"sourceAuthority":       sourceAuthority,
-		"sourceCount":           json.Number(fmt.Sprintf("%d", sourceCount)),
-		"sourceColumns":         admit.StringSliceToAny(normalizedSourceColumns),
-		"sources":               normalizedSourcesValue(sources),
-		"entrySources":          normalizedEntrySourcesValue(entrySources),
-		"inputPaths":            admit.StringSliceToAny(inputPaths),
-		"inventory":             testevidenceinventory.InventoryValue(result.Inventory),
-		"nonClaims":             admit.StringSliceToAny(nonClaims),
-	}
-	if record["projectionKind"] != nil {
-		envelope["projectionKind"] = record["projectionKind"]
-	}
-	if record["projectionSummary"] != nil {
-		envelope["projectionSummary"] = record["projectionSummary"]
-	}
-	return normalizedInventory{Envelope: envelope, Inventory: testevidenceinventory.InventoryValue(result.Inventory), Result: result}, nil
-}
-
-func admitNormalizedSources(raw any) ([]normalizedSource, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("normalizedTestEvidenceInventory sources must be an array")
-	}
-	result := make([]normalizedSource, 0, len(values))
-	ids := []string{}
-	paths := []string{}
-	for index, value := range values {
-		row, ok := value.([]any)
-		if !ok || len(row) != len(normalizedSourceColumns) {
-			return nil, fmt.Errorf("normalizedTestEvidenceInventory sources row #%d must match sourceColumns", index+1)
-		}
-		sourceID, err := admit.RuleID(row[0], "normalizedTestEvidenceInventory source source_id")
-		if err != nil {
-			return nil, err
-		}
-		pathText, err := admit.NonEmptyText(row[1], "normalizedTestEvidenceInventory source path")
-		if err != nil {
-			return nil, err
-		}
-		pathValue, err := admit.SafeRepoRelativePath(pathText, "normalizedTestEvidenceInventory source path")
-		if err != nil {
-			return nil, err
-		}
-		sha, err := admit.LowercaseSHA256(row[2], "normalizedTestEvidenceInventory source sha256")
-		if err != nil {
-			return nil, err
-		}
-		role, err := admit.RuleID(row[3], "normalizedTestEvidenceInventory source role")
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := normalizedSourceRoles[role]; !ok {
-			return nil, fmt.Errorf("normalizedTestEvidenceInventory source role must be test_evidence_inventory_contract or test_evidence_inventory_fragment")
-		}
-		nonClaims, err := admit.PreserveSortedTextArray(row[4], "normalizedTestEvidenceInventory source non_claims", false)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, normalizedSource{NonClaims: nonClaims, Path: pathValue, Role: role, SHA256: sha, SourceID: sourceID})
-		ids = append(ids, sourceID)
-		paths = append(paths, pathValue)
-	}
-	if _, err := admit.PreserveSortedText(ids, "normalizedTestEvidenceInventory source ids", true); err != nil {
-		return nil, err
-	}
-	if _, err := admit.SortedText(paths, "normalizedTestEvidenceInventory source paths", true); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func admitNormalizedEntrySources(raw any) ([]normalizedEntrySource, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("normalizedTestEvidenceInventory entrySources must be an array")
-	}
-	result := make([]normalizedEntrySource, 0, len(values))
-	testIDs := []string{}
-	for index, value := range values {
-		record, ok := value.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("normalizedTestEvidenceInventory entrySources item #%d must be an object", index+1)
-		}
-		if err := admit.KnownKeys(record, []string{"path", "sourceId", "testId"}, "normalizedTestEvidenceInventory entrySources item"); err != nil {
-			return nil, err
-		}
-		pathText, err := admit.NonEmptyText(record["path"], "normalizedTestEvidenceInventory entrySources path")
-		if err != nil {
-			return nil, err
-		}
-		pathValue, err := admit.SafeRepoRelativePath(pathText, "normalizedTestEvidenceInventory entrySources path")
-		if err != nil {
-			return nil, err
-		}
-		sourceID, err := admit.RuleID(record["sourceId"], "normalizedTestEvidenceInventory entrySources sourceId")
-		if err != nil {
-			return nil, err
-		}
-		testID, err := admit.RuleID(record["testId"], "normalizedTestEvidenceInventory entrySources testId")
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, normalizedEntrySource{Path: pathValue, SourceID: sourceID, TestID: testID})
-		testIDs = append(testIDs, testID)
-	}
-	if _, err := admit.PreserveSortedText(testIDs, "normalizedTestEvidenceInventory entrySources testIds", true); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func validateSourceEnvelope(sourceAuthority string, sources []normalizedSource, inputPaths []string, entrySources []normalizedEntrySource, entries []testevidenceinventory.Entry) error {
-	if sourceAuthority == "caller_owned_inventory" {
-		if len(sources) != 0 || len(inputPaths) != 0 || len(entrySources) != 0 {
-			return fmt.Errorf("normalizedTestEvidenceInventory direct inventory envelope must not declare source-set metadata")
-		}
-		return nil
-	}
-	if sourceAuthority != "caller_owned_inventory_source_set" {
-		return fmt.Errorf("normalizedTestEvidenceInventory sourceAuthority is unsupported")
-	}
-	if len(sources) == 0 {
-		return fmt.Errorf("normalizedTestEvidenceInventory source-set envelope must declare sources")
-	}
-	if len(entrySources) != len(entries) {
-		return fmt.Errorf("normalizedTestEvidenceInventory entrySources must cover every nested inventory entry")
-	}
-	sourceSet := map[string]string{}
-	for _, source := range sources {
-		sourceSet[source.SourceID] = source.Path
-	}
-	entrySet := map[string]struct{}{}
-	for _, entry := range entries {
-		entrySet[entry.TestID] = struct{}{}
-	}
-	for _, entrySource := range entrySources {
-		path, ok := sourceSet[entrySource.SourceID]
-		if !ok {
-			return fmt.Errorf("normalizedTestEvidenceInventory entrySources sourceId %s must reference sources", entrySource.SourceID)
-		}
-		if path != entrySource.Path {
-			return fmt.Errorf("normalizedTestEvidenceInventory entrySources path must match source path for %s", entrySource.SourceID)
-		}
-		if _, ok := entrySet[entrySource.TestID]; !ok {
-			return fmt.Errorf("normalizedTestEvidenceInventory entrySources testId %s must reference nested inventory entries", entrySource.TestID)
-		}
-		delete(entrySet, entrySource.TestID)
-	}
-	if len(entrySet) != 0 {
-		return fmt.Errorf("normalizedTestEvidenceInventory entrySources must cover every nested inventory entry")
-	}
-	return nil
+	return requirementbinding.InputValue(proofResult.Input), nil, testevidenceinventory.NormalizedProjection{Inventory: testevidenceinventory.InventoryValue(inventoryResult.Inventory), Result: inventoryResult}, nil
 }
 
 func admitUniverse(raw any) (universe, error) {
@@ -636,32 +370,6 @@ func surfacesValue(values []surface) []any {
 	return result
 }
 
-func normalizedSourcesValue(values []normalizedSource) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, []any{
-			value.SourceID,
-			value.Path,
-			value.SHA256,
-			value.Role,
-			admit.StringSliceToAny(value.NonClaims),
-		})
-	}
-	return result
-}
-
-func normalizedEntrySourcesValue(values []normalizedEntrySource) []any {
-	result := make([]any, 0, len(values))
-	for _, value := range values {
-		result = append(result, map[string]any{
-			"path":     value.Path,
-			"sourceId": value.SourceID,
-			"testId":   value.TestID,
-		})
-	}
-	return result
-}
-
 func observedTestSurfaceID(ownerID string, sourcePath string) string {
 	sum := sha256.Sum256([]byte(ownerID + "\x00" + sourcePath))
 	return "surface.observed_test." + ruleFragment(ownerID) + "." + letters(sum[:8])
@@ -711,38 +419,6 @@ func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {
 		result = append(result, value)
 	}
 	return admit.PreserveSortedText(result, context, allowEmpty)
-}
-
-func nonNegativeInteger(raw any, context string) (int, error) {
-	number, ok := raw.(json.Number)
-	if !ok {
-		return 0, fmt.Errorf("%s must be a non-negative integer", context)
-	}
-	value, err := number.Int64()
-	if err != nil || value < 0 || int64(int(value)) != value {
-		return 0, fmt.Errorf("%s must be a non-negative integer", context)
-	}
-	return int(value), nil
-}
-
-func admitExactTextArray(raw any, expected []string, context string) error {
-	values, err := admit.TextArray(raw, context, false)
-	if err != nil {
-		return err
-	}
-	if !equalStrings(values, expected) {
-		return fmt.Errorf("%s must equal %s", context, strings.Join(expected, ", "))
-	}
-	return nil
-}
-
-func sourcePaths(values []normalizedSource) []string {
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		result = append(result, value.Path)
-	}
-	sort.Strings(result)
-	return result
 }
 
 func sortedUnique(values []string) []string {
