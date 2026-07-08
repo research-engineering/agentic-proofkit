@@ -111,6 +111,10 @@ func RedactDiagnosticValue(value string) string {
 	return string(runes[:maxDiagnosticRunes]) + "...<truncated-diagnostic>"
 }
 
+func RedactStructuralText(value string) string {
+	return redactControlRunes(RedactSecretLikeValue(value))
+}
+
 func redactControlRunes(value string) string {
 	var builder strings.Builder
 	redacting := false
@@ -223,6 +227,35 @@ func SortedTextArray(raw any, context string, allowEmpty bool) ([]string, error)
 		return nil, err
 	}
 	return SortedText(values, context, allowEmpty)
+}
+
+func MergeNonClaims(required []string, caller []string, context string) ([]string, error) {
+	values := make([]string, 0, len(required)+len(caller))
+	for index, value := range required {
+		text, err := NonEmptyText(value, fmt.Sprintf("%s required nonClaims[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, text)
+	}
+	for index, value := range caller {
+		text, err := NonEmptyText(value, fmt.Sprintf("%s caller nonClaims[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, text)
+	}
+	sort.Strings(values)
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if len(result) == 0 || result[len(result)-1] != value {
+			result = append(result, value)
+		}
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("%s nonClaims must be non-empty", context)
+	}
+	return result, nil
 }
 
 func PreserveSortedText(values []string, context string, allowEmpty bool) ([]string, error) {

@@ -429,9 +429,38 @@ func sanitizeMap(value map[string]any) map[string]any {
 	}
 	result := make(map[string]any, len(value))
 	for key, item := range value {
-		result[admit.RedactDiagnosticValue(key)] = sanitizeValue(item)
+		sanitizedKey := admit.RedactDiagnosticValue(key)
+		if key == "argv" {
+			result[sanitizedKey] = sanitizeArgvValue(item)
+			continue
+		}
+		result[sanitizedKey] = sanitizeValue(item)
 	}
 	return result
+}
+
+func sanitizeArgvValue(value any) any {
+	switch typed := value.(type) {
+	case []any:
+		result := make([]any, 0, len(typed))
+		for _, item := range typed {
+			text, ok := item.(string)
+			if !ok {
+				result = append(result, "<unsupported-report-visible-value>")
+				continue
+			}
+			result = append(result, admit.RedactStructuralText(text))
+		}
+		return result
+	case []string:
+		result := make([]any, 0, len(typed))
+		for _, item := range typed {
+			result = append(result, admit.RedactStructuralText(item))
+		}
+		return result
+	default:
+		return "<unsupported-report-visible-value>"
+	}
 }
 
 func sanitizeValue(value any) any {

@@ -66,6 +66,32 @@ func TestContainsSecretLikeValueRecognizesHyphenatedAndPasswdLabels(t *testing.T
 	}
 }
 
+func TestMergeNonClaimsPreservesRequiredClaimsAndRejectsSecretLikeCallerText(t *testing.T) {
+	t.Parallel()
+
+	merged, err := MergeNonClaims(
+		[]string{"Command reports do not approve merge."},
+		[]string{"Caller fixture does not execute tests.", "Command reports do not approve merge."},
+		"test command",
+	)
+	if err != nil {
+		t.Fatalf("MergeNonClaims() error = %v", err)
+	}
+	want := []string{"Caller fixture does not execute tests.", "Command reports do not approve merge."}
+	if len(merged) != len(want) {
+		t.Fatalf("MergeNonClaims()=%#v, want %#v", merged, want)
+	}
+	for index := range want {
+		if merged[index] != want[index] {
+			t.Fatalf("MergeNonClaims()=%#v, want %#v", merged, want)
+		}
+	}
+
+	if _, err := MergeNonClaims([]string{"Command reports do not approve merge."}, []string{"Authorization: Bearer abcdefghijklmnop"}, "test command"); err == nil {
+		t.Fatal("MergeNonClaims() accepted secret-like caller nonClaim")
+	}
+}
+
 func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) {
 	t.Parallel()
 
@@ -88,6 +114,25 @@ func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) 
 	headerRedacted := RedactDiagnosticValue(headerDiagnostic)
 	if strings.Contains(headerRedacted, "YWxpY2U6c2VjcmV0") || strings.Contains(headerRedacted, "Basic") {
 		t.Fatalf("RedactDiagnosticValue leaked authorization header value: %q", headerRedacted)
+	}
+}
+
+func TestRedactStructuralTextPreservesLongStructureAndRedactsSensitiveTokens(t *testing.T) {
+	t.Parallel()
+
+	longToken := strings.Repeat("x", maxDiagnosticRunes+20)
+	structural := RedactStructuralText(longToken + "\n" + "Authorization: Bearer abcdefghijklmnop")
+	if strings.Contains(structural, "<truncated-diagnostic>") {
+		t.Fatalf("RedactStructuralText truncated structural token: %q", structural)
+	}
+	if !strings.Contains(structural, longToken) {
+		t.Fatalf("RedactStructuralText lost long structural token: %q", structural)
+	}
+	if !strings.Contains(structural, "<redacted-control-rune>") {
+		t.Fatalf("RedactStructuralText(%q) = %q, want control placeholder", longToken, structural)
+	}
+	if !strings.Contains(structural, "<redacted-secret-like-value>") {
+		t.Fatalf("RedactStructuralText(%q) = %q, want secret placeholder", longToken, structural)
 	}
 }
 

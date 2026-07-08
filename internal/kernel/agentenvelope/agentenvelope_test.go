@@ -270,6 +270,37 @@ func TestBuildRedactsReportVisibleCallerTextAndSnapshotsInput(t *testing.T) {
 	}
 }
 
+func TestBuildPreservesStructuralArgvWithoutDiagnosticTruncation(t *testing.T) {
+	longArg := "docs/" + strings.Repeat("x", 640) + "/coverage-input.json"
+	envelope := Build(Input{
+		EnvelopeID: "proofkit.test.envelope",
+		SourceReport: map[string]any{
+			"reportId":   "proofkit.test.report",
+			"reportKind": "proofkit.test",
+			"state":      "passed",
+		},
+		Commands: []map[string]any{
+			{
+				"argv":      []any{"agentic-proofkit", "requirement-coverage-view", "--input", longArg},
+				"commandId": "proofkit.command.coverage",
+			},
+		},
+	})
+
+	commands := envelope["commands"].([]any)
+	argv := commands[0].(map[string]any)["argv"].([]any)
+	if got := argv[3]; got != longArg {
+		t.Fatalf("argv[3]=%v, want untruncated structural arg", got)
+	}
+	serialized, err := stablejson.Marshal(envelope)
+	if err != nil {
+		t.Fatalf("stable serialize envelope: %v", err)
+	}
+	if strings.Contains(string(serialized), "<truncated-diagnostic>") {
+		t.Fatalf("structural argv was diagnostic-truncated:\n%s", serialized)
+	}
+}
+
 func TestBuildRedactsTypedContainersAndUnsupportedValues(t *testing.T) {
 	secret := "ghp_TYPEDSECRET1234567890"
 	typedMap := map[string]string{"note": secret}

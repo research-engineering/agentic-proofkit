@@ -64,9 +64,12 @@ func TestBuildRejectsUnknownNestedPolicyFields(t *testing.T) {
 }
 
 func TestBuildAcceptsMinimalExplicitPlanInput(t *testing.T) {
-	_, _, err := Build(validPlanInput())
+	output, _, err := Build(validPlanInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
+	}
+	if !stringArrayContains(output["nonClaims"], "Selective gate plans do not execute commands, authenticate receipts, approve merge, or prove proof freshness.") {
+		t.Fatalf("nonClaims missing command-owned boundary denial: %#v", output["nonClaims"])
 	}
 }
 

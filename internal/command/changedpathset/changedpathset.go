@@ -51,6 +51,12 @@ type Result struct {
 	SourceSummaries    []SourceSummary
 }
 
+var changedPathSetNonClaims = []string{
+	"Changed path set reports do not run git, inspect the filesystem, or discover changed paths.",
+	"Changed path set reports do not infer proof routes, command ids, gate selection, or fallback policy.",
+	"Changed path set reports do not prove source freshness, source completeness, receipt freshness, merge approval, release approval, or rollout approval.",
+}
+
 func Build(raw any) (Result, error) {
 	input, err := admitInput(raw)
 	if err != nil {
@@ -315,6 +321,10 @@ func admitInput(raw any) (Input, error) {
 		return Input{}, err
 	}
 	nonClaims, err := sortedUniqueText(record["nonClaims"], "changed path set nonClaims")
+	if err != nil {
+		return Input{}, err
+	}
+	nonClaims, err = admit.MergeNonClaims(changedPathSetNonClaims, nonClaims, "changed path set")
 	if err != nil {
 		return Input{}, err
 	}

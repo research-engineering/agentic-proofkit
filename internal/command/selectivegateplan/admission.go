@@ -8,6 +8,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
+var selectiveGatePlanNonClaims = []string{
+	"Selective gate plans classify caller-owned change and policy facts only.",
+	"Selective gate plans do not execute commands, authenticate receipts, approve merge, or prove proof freshness.",
+	"Selective gate plans do not decide consumer fallback policy for unknown edges or unbound proof-like paths.",
+}
+
 func admitInput(raw any) (input, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -148,6 +154,10 @@ func admitInput(raw any) (input, error) {
 		return input{}, err
 	}
 	nonClaims, err := sortedTextArray(record["nonClaims"], "selective gate nonClaims", false)
+	if err != nil {
+		return input{}, err
+	}
+	nonClaims, err = admit.MergeNonClaims(selectiveGatePlanNonClaims, nonClaims, "selective gate")
 	if err != nil {
 		return input{}, err
 	}

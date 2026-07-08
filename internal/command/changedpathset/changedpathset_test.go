@@ -29,6 +29,9 @@ func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {
 	if len(result.DuplicatePaths) != 4 {
 		t.Fatalf("DuplicatePaths=%d, want input and cross-source duplicate diagnostics", len(result.DuplicatePaths))
 	}
+	if !containsAnyString(result.Report.NonClaims, "Changed path set reports do not run git, inspect the filesystem, or discover changed paths.") {
+		t.Fatalf("NonClaims missing command-owned boundary denial: %#v", result.Report.NonClaims)
+	}
 
 	result, err = Build(map[string]any{
 		"schemaVersion":       json.Number("1"),
@@ -88,4 +91,13 @@ func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
 	if strings.Contains(string(encoded), "password") || strings.Contains(string(encoded), "example.invalid") {
 		t.Fatalf("Build() leaked URL credential text in report: %s", string(encoded))
 	}
+}
+
+func containsAnyString(values []any, want string) bool {
+	for _, value := range values {
+		if text, ok := value.(string); ok && text == want {
+			return true
+		}
+	}
+	return false
 }

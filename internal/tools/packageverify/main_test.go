@@ -247,7 +247,6 @@ func TestSnapshotReadersDoNotRereadMutableTarballPath(t *testing.T) {
 	tarball := writePackageTarball(t, map[string]string{
 		"package/ADOPTION.md":                             "package docs describe embedded Go binaries.",
 		"package/AGENTS.md":                               "package docs describe embedded Go binaries.",
-		"package/BACKLOG.md":                              "package docs describe embedded Go binaries.",
 		"package/docs/proofkit-contract-map.md":           "package docs describe embedded Go binaries.",
 		"package/package.json":                            packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"),
 		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}]}`,
@@ -292,9 +291,9 @@ func TestVerifyNoStalePackageDocsReadsTarballDocs(t *testing.T) {
 			staleText: "repository " + "W25" + "X80" + "/agentic-proofkit",
 		},
 		{
-			name:      "backlog doc personal namespace",
-			path:      "package/BACKLOG.md",
-			wantPath:  "package/BACKLOG.md",
+			name:      "security doc personal namespace",
+			path:      "package/SECURITY.md",
+			wantPath:  "package/SECURITY.md",
 			staleText: "published by " + "ipe" + "rev",
 		},
 		{
@@ -387,11 +386,11 @@ func TestVerifyNoStalePackageDocsRejectsMutableReleaseFactsInMarkdown(t *testing
 			t.Parallel()
 
 			entries := packageDocEntries("package docs describe embedded Go binaries.")
-			entries["package/BACKLOG.md"] = item.text
+			entries["package/README.md"] = item.text
 			tarball := writePackageTarball(t, entries)
 
 			err := verifyNoStalePackageDocs(tarballArtifact(t, tarball))
-			if err == nil || !strings.Contains(err.Error(), "package/BACKLOG.md contains mutable package-public release fact") {
+			if err == nil || !strings.Contains(err.Error(), "package/README.md contains mutable package-public release fact") {
 				t.Fatalf("verifyNoStalePackageDocs() error=%v, want mutable release fact failure", err)
 			}
 		})
@@ -513,7 +512,6 @@ func TestAllowedRootEntryRejectsDevelopmentPlans(t *testing.T) {
 	}
 	for _, path := range []string{
 		"package/ADOPTION.md",
-		"package/BACKLOG.md",
 		"package/docs/proofkit-contract-map.md",
 		"package/docs/release-process.md",
 	} {
@@ -553,7 +551,6 @@ func TestVerifyRequiredRootEntriesRequiresPackagePublicDocs(t *testing.T) {
 	}
 	for _, entry := range []string{
 		"package/ADOPTION.md",
-		"package/BACKLOG.md",
 		"package/docs/proofkit-contract-map.md",
 		"package/docs/release-process.md",
 	} {
@@ -767,7 +764,6 @@ func packageDocEntries(content string) map[string]string {
 	return map[string]string{
 		"package/ADOPTION.md":                                      content,
 		"package/AGENTS.md":                                        content,
-		"package/BACKLOG.md":                                       content,
 		"package/CONTRIBUTING.md":                                  content,
 		"package/NON_CLAIMS.md":                                    content,
 		"package/README.md":                                        content,
@@ -893,7 +889,6 @@ func packageManifestFixture(repositoryURL string) string {
   "files": [
     "ADOPTION.md",
     "AGENTS.md",
-    "BACKLOG.md",
     "CONTRIBUTING.md",
     "LICENSE",
     "NON_CLAIMS.md",

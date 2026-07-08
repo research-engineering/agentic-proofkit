@@ -129,6 +129,49 @@ func TestBuildRejectsCallerControlledReportKind(t *testing.T) {
 	assertRuleMessageContains(t, record, "readiness_closeout.input", "unsupported field")
 }
 
+func TestBuildRejectsPassedClassificationForBlockedOwnerRow(t *testing.T) {
+	markdown := strings.Join([]string{
+		"### Production Readiness Roadmap",
+		"| Status | ID | Owner scope | Completion condition |",
+		"|---|---|---|---|",
+		"| BLOCKED | PROD-01 | Alpha input | Alpha phrase |",
+		"| DONE | PROD-09 | Closeout | Frontier closed Closure gates: |",
+	}, "\n")
+	input := minimalCloseoutInput(markdown)
+	input["inputDefinitions"] = []any{
+		map[string]any{
+			"rowId":          "PROD-01",
+			"expectedStatus": "BLOCKED",
+			"classification": "passed",
+			"evidenceClass":  "local_contract_gate",
+			"reason":         "test input",
+			"requiredText":   []any{"Alpha phrase"},
+		},
+	}
+
+	record, status, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
+	if status == 0 || record.State != "failed" {
+		t.Fatalf("Build() status=%d state=%s, want failed", status, record.State)
+	}
+	assertRuleMessageContains(t, record, "PROD-09.PROD-01.classification", "passed classification requires DONE owner status")
+}
+
+func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
+	record, status, err := Build(minimalCloseoutInput(closedFrontierMarkdown()))
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
+	if status != 0 || record.State != "passed" {
+		t.Fatalf("Build() status=%d state=%s, want passed", status, record.State)
+	}
+	if !recordNonClaimContains(record, "Readiness closeout reports do not execute gates, authenticate receipts, publish artifacts, approve merge, or prove deployment readiness.") {
+		t.Fatalf("NonClaims missing command-owned boundary denial: %#v", record.NonClaims)
+	}
+}
+
 func TestBuildRejectsBroadNegationAndFrontierOverclaim(t *testing.T) {
 	markdown := closedFrontierMarkdown(
 		"Future authoring rows must not require separate owner proof before merge authority is established.",
@@ -289,4 +332,13 @@ func assertRuleMessageContains(t *testing.T, record report.Record, ruleID string
 		}
 	}
 	t.Fatalf("missing %s rule message containing %q: %#v", ruleID, messagePart, record.RuleResults)
+}
+
+func recordNonClaimContains(record report.Record, want string) bool {
+	for _, value := range record.NonClaims {
+		if text, ok := value.(string); ok && text == want {
+			return true
+		}
+	}
+	return false
 }

@@ -28,7 +28,7 @@ var orderedObligationKinds = []string{
 	"waived_until",
 }
 
-var proofBearingKinds = map[string]struct{}{
+var routeBearingKinds = map[string]struct{}{
 	"all_of":      {},
 	"any_of":      {},
 	"atomic":      {},
@@ -62,7 +62,7 @@ type obligationInput struct {
 type obligation struct {
 	obligationInput
 	GraphDepth                   int
-	ProofBearing                 bool
+	RouteBearing                 bool
 	StructuralFindings           []string
 	TransitiveChildObligationIDs []string
 }
@@ -92,7 +92,7 @@ func Build(raw any) (report.Record, int, error) {
 	}
 	failedObligationIDs := []string{}
 	rootObligationIDs := []string{}
-	nonProofBearingObligationIDs := []string{}
+	nonRouteBearingObligationIDs := []string{}
 	for _, item := range obligations {
 		if len(item.StructuralFindings) > 0 {
 			failedObligationIDs = append(failedObligationIDs, item.ObligationID)
@@ -100,8 +100,8 @@ func Build(raw any) (report.Record, int, error) {
 		if _, ok := childSet[item.ObligationID]; !ok {
 			rootObligationIDs = append(rootObligationIDs, item.ObligationID)
 		}
-		if !item.ProofBearing {
-			nonProofBearingObligationIDs = append(nonProofBearingObligationIDs, item.ObligationID)
+		if !item.RouteBearing {
+			nonRouteBearingObligationIDs = append(nonRouteBearingObligationIDs, item.ObligationID)
 		}
 	}
 	sort.Strings(rootObligationIDs)
@@ -118,14 +118,14 @@ func Build(raw any) (report.Record, int, error) {
 			"crossRequirementDelegationCount": countCrossRequirementDelegations(obligations, byID),
 			"failedObligationCount":           len(failedObligationIDs),
 			"kindCounts":                      kindCounts(obligations),
-			"nonProofBearingObligationCount":  len(nonProofBearingObligationIDs),
+			"nonRouteBearingObligationCount":  len(nonRouteBearingObligationIDs),
 			"obligationCount":                 len(obligations),
-			"proofBearingObligationCount":     len(obligations) - len(nonProofBearingObligationIDs),
+			"routeBearingObligationCount":     len(obligations) - len(nonRouteBearingObligationIDs),
 			"rootObligationCount":             len(rootObligationIDs),
 		},
 		Diagnostics: []report.Diagnostic{
 			{Key: "failedObligationIds", Value: admit.StringSliceToAny(failedObligationIDs)},
-			{Key: "nonProofBearingObligationIds", Value: admit.StringSliceToAny(nonProofBearingObligationIDs)},
+			{Key: "nonRouteBearingObligationIds", Value: admit.StringSliceToAny(nonRouteBearingObligationIDs)},
 			{Key: "obligations", Value: obligationsJSON(obligations)},
 			{Key: "rootObligationIds", Value: admit.StringSliceToAny(rootObligationIDs)},
 		},
@@ -285,13 +285,13 @@ func evaluate(item obligationInput, byID map[string]obligationInput) obligation 
 	findings = append(findings, childReferenceFindings(item, byID)...)
 	findings = append(findings, cycleFindings(item, byID)...)
 	findings = append(findings, crossRequirementFindings(item, byID)...)
-	findings = append(findings, nonProofBearingChildFindings(item, byID)...)
+	findings = append(findings, nonRouteBearingChildFindings(item, byID)...)
 	sort.Strings(findings)
-	_, proofBearing := proofBearingKinds[item.ObligationKind]
+	_, routeBearing := routeBearingKinds[item.ObligationKind]
 	return obligation{
 		obligationInput:              item,
 		GraphDepth:                   graphDepth(item.ObligationID, byID, map[string]struct{}{}),
-		ProofBearing:                 proofBearing,
+		RouteBearing:                 routeBearing,
 		StructuralFindings:           findings,
 		TransitiveChildObligationIDs: transitiveChildIDs(item.ObligationID, byID, map[string]struct{}{}),
 	}
@@ -362,8 +362,8 @@ func crossRequirementFindings(item obligationInput, byID map[string]obligationIn
 	return findings
 }
 
-func nonProofBearingChildFindings(item obligationInput, byID map[string]obligationInput) []string {
-	if _, proofBearing := proofBearingKinds[item.ObligationKind]; !proofBearing {
+func nonRouteBearingChildFindings(item obligationInput, byID map[string]obligationInput) []string {
+	if _, routeBearing := routeBearingKinds[item.ObligationKind]; !routeBearing {
 		return []string{}
 	}
 	findings := []string{}
@@ -372,8 +372,8 @@ func nonProofBearingChildFindings(item obligationInput, byID map[string]obligati
 		if !ok {
 			continue
 		}
-		if _, proofBearing := proofBearingKinds[child.ObligationKind]; !proofBearing {
-			findings = append(findings, fmt.Sprintf("child obligation %s is %s and cannot count as proof", child.ObligationID, child.ObligationKind))
+		if _, routeBearing := routeBearingKinds[child.ObligationKind]; !routeBearing {
+			findings = append(findings, fmt.Sprintf("child obligation %s is %s and cannot carry proof routes", child.ObligationID, child.ObligationKind))
 		}
 	}
 	return findings
@@ -471,7 +471,7 @@ func obligationJSON(item obligation) map[string]any {
 		"obligationId":                 item.ObligationID,
 		"obligationKind":               item.ObligationKind,
 		"owner":                        item.Owner,
-		"proofBearing":                 item.ProofBearing,
+		"routeBearing":                 item.RouteBearing,
 		"proofRouteRefs":               admit.StringSliceToAny(item.ProofRouteRefs),
 		"rationale":                    item.Rationale,
 		"requirementId":                item.RequirementID,
@@ -494,7 +494,7 @@ func ruleResults(obligations []obligation) []report.RuleResult {
 		status := "passed"
 		if len(item.StructuralFindings) > 0 {
 			status = "failed"
-		} else if !item.ProofBearing {
+		} else if !item.RouteBearing {
 			status = "skipped"
 		}
 		message := fmt.Sprintf("obligation %s has admitted %s shape", item.ObligationID, item.ObligationKind)

@@ -61,8 +61,12 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 		}
 		inventoryResult = &result
 	}
-	if err := admitNormalizedInventoryProvenance(record["normalizedTestEvidenceInventory"], record["testEvidenceInventory"]); err != nil {
+	normalizedInventoryResult, err := admitNormalizedInventoryProvenance(record["normalizedTestEvidenceInventory"], record["testEvidenceInventory"])
+	if err != nil {
 		return compositeInput{}, err
+	}
+	if inventoryResult == nil && normalizedInventoryResult != nil {
+		inventoryResult = normalizedInventoryResult
 	}
 	return compositeInput{
 		CoverageUniverse: universe, Inventory: inventoryResult,
@@ -71,87 +75,87 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 	}, nil
 }
 
-func admitNormalizedInventoryProvenance(raw any, directInventory any) error {
+func admitNormalizedInventoryProvenance(raw any, directInventory any) (*testevidenceinventory.Result, error) {
 	if raw == nil {
-		return nil
+		return nil, nil
 	}
 	record, ok := raw.(map[string]any)
 	if !ok {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory must be an object")
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory must be an object")
 	}
 	if err := admit.KnownKeys(record, []string{"entrySources", "inputPaths", "inventory", "nonClaims", "normalizedInventoryId", "normalizedKind", "projectionKind", "projectionSummary", "schemaVersion", "sourceAuthority", "sourceColumns", "sourceCount", "sources"}, "requirement coverage view normalizedTestEvidenceInventory"); err != nil {
-		return err
+		return nil, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory schemaVersion must be 1")
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory schemaVersion must be 1")
 	}
 	if _, err := admit.RuleID(record["normalizedInventoryId"], "requirement coverage view normalizedTestEvidenceInventory normalizedInventoryId"); err != nil {
-		return err
+		return nil, err
 	}
 	if record["normalizedKind"] != testevidenceinventory.NormalizedInventoryKind {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory normalizedKind must be %s", testevidenceinventory.NormalizedInventoryKind)
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory normalizedKind must be %s", testevidenceinventory.NormalizedInventoryKind)
 	}
 	sourceAuthority, err := admit.Enum(record["sourceAuthority"], map[string]struct{}{"caller_owned_inventory": {}, "caller_owned_inventory_source_set": {}}, "requirement coverage view normalizedTestEvidenceInventory sourceAuthority")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	sourceCount, err := nonNegativeInt(record["sourceCount"], "requirement coverage view normalizedTestEvidenceInventory sourceCount")
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := exactTextArray(record["sourceColumns"], []string{"source_id", "path", "sha256", "role", "non_claims"}, "requirement coverage view normalizedTestEvidenceInventory sourceColumns"); err != nil {
-		return err
+		return nil, err
 	}
 	sourcePaths, sourcePathsByID, err := provenanceSources(record["sources"])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if sourceCount != len(sourcePaths) {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory sourceCount must equal sources length")
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory sourceCount must equal sources length")
 	}
 	inputPaths, err := admit.PreserveSortedPathArray(record["inputPaths"], "requirement coverage view normalizedTestEvidenceInventory inputPaths", true)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !equalStringSets(inputPaths, sourcePaths) {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory inputPaths must equal source paths")
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory inputPaths must equal source paths")
 	}
 	if _, err := admit.PreserveSortedTextArray(record["nonClaims"], "requirement coverage view normalizedTestEvidenceInventory nonClaims", false); err != nil {
-		return err
+		return nil, err
 	}
 	inventoryResult, err := testevidenceinventory.Evaluate(record["inventory"])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	entrySources, err := provenanceEntrySources(record["entrySources"], sourcePathsByID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if sourceAuthority == "caller_owned_inventory_source_set" {
 		if len(sourcePaths) == 0 {
-			return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory source-set provenance must declare sources")
+			return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory source-set provenance must declare sources")
 		}
 		if err := requireEntrySourceCoverage(entrySources, inventoryResult.Inventory.Entries); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if sourceAuthority == "caller_owned_inventory" && (len(sourcePaths) > 0 || len(entrySources) > 0) {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory direct inventory provenance must not declare source-set metadata")
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory direct inventory provenance must not declare source-set metadata")
 	}
 	if directInventory != nil && !reflect.DeepEqual(record["inventory"], directInventory) {
-		return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory inventory must match testEvidenceInventory")
+		return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory inventory must match testEvidenceInventory")
 	}
 	if record["projectionKind"] != nil {
 		if _, err := admit.RuleID(record["projectionKind"], "requirement coverage view normalizedTestEvidenceInventory projectionKind"); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if record["projectionSummary"] != nil {
 		if _, ok := record["projectionSummary"].(map[string]any); !ok {
-			return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory projectionSummary must be an object when present")
+			return nil, fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory projectionSummary must be an object when present")
 		}
 	}
-	return nil
+	return &inventoryResult, nil
 }
 
 type provenanceEntrySource struct {

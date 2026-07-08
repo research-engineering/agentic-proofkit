@@ -2,6 +2,7 @@ package proofobligationalgebra
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +14,13 @@ func TestBuildAdmitsAtomicObligationAndRejectsMissingRoute(t *testing.T) {
 	}
 	if exitCode != 0 || record.State != "passed" {
 		t.Fatalf("Build() exit=%d state=%s, want passed", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if !strings.Contains(string(encoded), `"routeBearing":true`) {
+		t.Fatalf("Build() output=%s, want routeBearing diagnostic", encoded)
+	}
+	if strings.Contains(string(encoded), "proofBearing") {
+		t.Fatalf("Build() output=%s, must not claim proofBearing diagnostic", encoded)
 	}
 
 	input = validProofObligationAlgebraInput()

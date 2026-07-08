@@ -50,10 +50,6 @@ func stringValue(raw any) string {
 	return value
 }
 
-func stringTrim(value string) string {
-	return strings.TrimSpace(value)
-}
-
 func containsString(values []any, expected string) bool {
 	for _, value := range values {
 		if value == expected {

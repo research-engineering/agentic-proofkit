@@ -41,6 +41,9 @@ func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
 		t.Fatalf("obligations = %#v, want REQ-PROOFKIT-IMPACT-001", obligations)
 	}
 	assertStringArray(t, impactReport["nonClaims"], []string{
+		"Impact reports classify caller-owned changed paths and proof records only.",
+		"Impact reports do not decide the consuming repository fallback policy for unbound or unknown proof changes.",
+		"Impact reports do not run git, scan repositories, execute witnesses, authenticate receipts, approve merge, or prove proof freshness.",
 		"Requirement impact input composition is caller-owned route input and does not execute native witnesses.",
 		"Requirement impact input composition treats proof-like paths as policy hints, not proof evidence.",
 	})

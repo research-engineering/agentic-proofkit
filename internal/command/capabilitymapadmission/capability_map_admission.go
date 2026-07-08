@@ -19,6 +19,10 @@ var (
 		"audit_from_code": {},
 		"code_baseline":   {},
 	}
+	requiredEvidenceWitnessKind = map[string]string{
+		"negative_test": "falsification",
+		"positive_test": "positive",
+	}
 	anchorStatusValues = map[string]struct{}{
 		"admitted":  {},
 		"candidate": {},
@@ -156,13 +160,13 @@ func buildReport(input input) (report.Record, int) {
 		for _, shape := range capability.ScenarioShapes {
 			anchors := activeAnchors(anchorsByScenario[shape.ScenarioID])
 			missingAnchor := len(anchors) == 0
-			missingExecutableAnchor := !hasExecutableAnchor(anchors)
+			missingExecutableAnchor := !hasRequiredExecutableAnchor(anchors, shape.RequiredEvidence)
 			missingCandidateRequirement := shape.CandidateRequirementID == nil
 
 			if shape.CandidateRequirementID != nil {
 				candidateRequirements = append(candidateRequirements, candidateRequirement(input, capability, shape))
 				for _, anchor := range anchors {
-					if isExecutableAnchor(anchor) {
+					if isExecutableAnchor(anchor) && anchorSatisfiesRequiredEvidence(anchor, shape.RequiredEvidence) {
 						candidateBindings = append(candidateBindings, candidateBinding(input, *shape.CandidateRequirementID, shape.RequiredEvidence, anchor))
 					}
 				}
@@ -175,8 +179,9 @@ func buildReport(input input) (report.Record, int) {
 				if missingAnchor {
 					failures = append(failures, fmt.Sprintf("scenario %s must declare an active scenario anchor in code_baseline mode", shape.ScenarioID))
 				} else if missingExecutableAnchor {
-					failures = append(failures, fmt.Sprintf("scenario %s must declare an executable positive or falsification anchor in code_baseline mode", shape.ScenarioID))
+					failures = append(failures, fmt.Sprintf("scenario %s must declare an executable anchor satisfying requiredEvidence in code_baseline mode", shape.ScenarioID))
 				}
+				failures = append(failures, requiredEvidenceFailures(shape, anchors)...)
 			}
 
 			if missingAnchor {
@@ -695,9 +700,9 @@ func activeAnchors(anchors []scenarioAnchor) []scenarioAnchor {
 	return result
 }
 
-func hasExecutableAnchor(anchors []scenarioAnchor) bool {
+func hasRequiredExecutableAnchor(anchors []scenarioAnchor, requiredEvidence []string) bool {
 	for _, anchor := range anchors {
-		if isExecutableAnchor(anchor) {
+		if isExecutableAnchor(anchor) && anchorSatisfiesRequiredEvidence(anchor, requiredEvidence) {
 			return true
 		}
 	}
@@ -706,6 +711,51 @@ func hasExecutableAnchor(anchors []scenarioAnchor) bool {
 
 func isExecutableAnchor(anchor scenarioAnchor) bool {
 	return len(anchor.CommandRefs) > 0 && (anchor.PositiveWitness || anchor.FalsificationWitness)
+}
+
+func anchorSatisfiesRequiredEvidence(anchor scenarioAnchor, requiredEvidence []string) bool {
+	for _, required := range requiredEvidence {
+		switch requiredEvidenceWitnessKind[required] {
+		case "positive":
+			if !anchor.PositiveWitness {
+				return false
+			}
+		case "falsification":
+			if !anchor.FalsificationWitness {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func requiredEvidenceFailures(shape scenarioShape, anchors []scenarioAnchor) []string {
+	failures := []string{}
+	for _, required := range shape.RequiredEvidence {
+		requiredKind, ok := requiredEvidenceWitnessKind[required]
+		if !ok {
+			failures = append(failures, fmt.Sprintf("scenario %s requiredEvidence %s is unsupported", shape.ScenarioID, required))
+			continue
+		}
+		satisfied := false
+		for _, anchor := range anchors {
+			if !isExecutableAnchor(anchor) {
+				continue
+			}
+			if requiredKind == "positive" && anchor.PositiveWitness {
+				satisfied = true
+			}
+			if requiredKind == "falsification" && anchor.FalsificationWitness {
+				satisfied = true
+			}
+		}
+		if !satisfied {
+			failures = append(failures, fmt.Sprintf("scenario %s requiredEvidence %s requires an executable %s witness anchor", shape.ScenarioID, required, requiredKind))
+		}
+	}
+	return failures
 }
 
 func candidateRequirement(input input, capability capability, shape scenarioShape) map[string]any {

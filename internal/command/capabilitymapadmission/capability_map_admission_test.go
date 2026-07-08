@@ -81,8 +81,51 @@ func TestBuildCodeBaselineDoesNotEmitBindingSeedForNonExecutableAnchor(t *testin
 	if strings.Contains(string(encoded), `"candidateProofBindingSeeds":[{`) {
 		t.Fatalf("non-executable anchor emitted candidate proof binding seed: %s", encoded)
 	}
-	if !strings.Contains(string(encoded), "must declare an executable positive or falsification anchor") {
+	if !strings.Contains(string(encoded), "must declare an executable anchor satisfying requiredEvidence") {
 		t.Fatalf("failure did not mention missing executable anchor: %s", encoded)
+	}
+}
+
+func TestBuildCodeBaselineRequiresAnchorsToSatisfyRequiredEvidence(t *testing.T) {
+	t.Parallel()
+
+	input := validCapabilityMapInput("code_baseline")
+	anchor := firstScenarioAnchor(input)
+	anchor["positiveWitness"] = true
+	anchor["falsificationWitness"] = false
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if !strings.Contains(string(encoded), "requiredEvidence negative_test requires an executable falsification witness anchor") {
+		t.Fatalf("failure did not mention requiredEvidence mismatch: %s", encoded)
+	}
+	if strings.Contains(string(encoded), `"candidateProofBindingSeeds":[{`) {
+		t.Fatalf("requiredEvidence-mismatched anchor emitted binding seed: %s", encoded)
+	}
+}
+
+func TestBuildCodeBaselineRejectsUnsupportedRequiredEvidence(t *testing.T) {
+	t.Parallel()
+
+	input := validCapabilityMapInput("code_baseline")
+	firstScenarioShape(input)["requiredEvidence"] = []any{"mutation_test"}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if !strings.Contains(string(encoded), "requiredEvidence mutation_test is unsupported") {
+		t.Fatalf("failure did not mention unsupported requiredEvidence: %s", encoded)
 	}
 }
 
