@@ -243,6 +243,48 @@ func TestReceiptProducerPolicyRejectsPlainGitHubActionsMergeObligation(t *testin
 	assertReceiptProducerDiagnostic(t, record, "claims merge obligation with advisory producer: github.actions.package")
 }
 
+func TestReceiptProducerPolicyRetainsAggregatePackageGateOnly(t *testing.T) {
+	policy := receiptProducerPolicy(t)
+	if got := anyStrings(policy["receiptKinds"]); !reflect.DeepEqual(got, []string{"proofkit.package-gate"}) {
+		t.Fatalf("receiptKinds=%#v, want aggregate package-gate only", got)
+	}
+	if got := anyStrings(policy["environmentClasses"]); !reflect.DeepEqual(got, []string{packageGateEnvironmentClass}) {
+		t.Fatalf("environmentClasses=%#v, want aggregate %s only", got, packageGateEnvironmentClass)
+	}
+	nonClaims := strings.Join(anyStrings(policy["nonClaims"]), "\n")
+	if !strings.Contains(nonClaims, "does not provide independent local-go and local-python receipt classes") {
+		t.Fatalf("policy nonClaims do not deny split receipt readiness: %s", nonClaims)
+	}
+	for _, raw := range policy["producers"].([]any) {
+		producer := raw.(map[string]any)
+		if got := anyStrings(producer["receiptKinds"]); !reflect.DeepEqual(got, []string{"proofkit.package-gate"}) {
+			t.Fatalf("producer %s receiptKinds=%#v, want aggregate package-gate only", producer["producerId"], got)
+		}
+		if got := anyStrings(producer["environmentClasses"]); !reflect.DeepEqual(got, []string{packageGateEnvironmentClass}) {
+			t.Fatalf("producer %s environmentClasses=%#v, want aggregate %s only", producer["producerId"], got, packageGateEnvironmentClass)
+		}
+	}
+}
+
+func TestSelfHostingPackageGateReceiptKeepsAggregateEvidenceModel(t *testing.T) {
+	evidenceRefs := anyStrings(packageGateEvidenceRefs())
+	for _, want := range []string{
+		"artifacts/package/npm-pack.json",
+		"artifacts/pypi/python-packages.json",
+		"artifacts/proofkit/ci-provenance.json",
+		"artifacts/proofkit/self-hosting-proof-receipts.json",
+	} {
+		if !stringSliceContains(evidenceRefs, want) {
+			t.Fatalf("packageGateEvidenceRefs() missing %q: %#v", want, evidenceRefs)
+		}
+	}
+	nonClaims := strings.Join(anyStrings(aggregatePackageGateNonClaims()), "\n")
+	if !strings.Contains(nonClaims, "aggregate Go and Python package-gate evidence") ||
+		!strings.Contains(nonClaims, "do not provide independent local-go and local-python receipt classes") {
+		t.Fatalf("aggregate package gate nonClaims do not preserve split-readiness denial: %s", nonClaims)
+	}
+}
+
 func receiptProducerPolicy(t *testing.T) map[string]any {
 	t.Helper()
 	decoded := readRepoJSON(t, "proofkit/receipt-producer-policy.json")
@@ -251,6 +293,24 @@ func receiptProducerPolicy(t *testing.T) map[string]any {
 		t.Fatalf("receipt producer policy must decode to object: %#v", decoded)
 	}
 	return policy
+}
+
+func anyStrings(raw any) []string {
+	items := raw.([]any)
+	result := make([]string, 0, len(items))
+	for _, item := range items {
+		result = append(result, item.(string))
+	}
+	return result
+}
+
+func stringSliceContains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func readRepoJSON(t *testing.T, path string) any {
