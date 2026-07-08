@@ -669,11 +669,7 @@ func pathField(raw any, context string) (string, error) {
 }
 
 func text(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || value == "" {
-		return "", fmt.Errorf("%s must be non-empty text", context)
-	}
-	return value, nil
+	return admit.NonEmptyText(raw, context)
 }
 
 func boolField(raw any, context string) (bool, error) {

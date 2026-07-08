@@ -469,11 +469,12 @@ func stringArray(raw any, context string, allowEmpty bool) ([]string, error) {
 }
 
 func nonEmptyText(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || strings.TrimSpace(value) == "" {
-		return "", fmt.Errorf("%s must be non-empty text", context)
+	value, err := admit.NonEmptyText(raw, context)
+	if err != nil {
+		return "", err
 	}
-	if value != strings.TrimSpace(value) {
+	rawText := raw.(string)
+	if rawText != strings.TrimSpace(rawText) {
 		return "", fmt.Errorf("%s must not contain leading or trailing whitespace", context)
 	}
 	return value, nil

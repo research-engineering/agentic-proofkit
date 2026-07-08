@@ -12,7 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:2b2d3c84676dc513f521722a9abf8fea4b2cc942aa11fc03a9ceeeece780d812"
+const expectedTypeScriptSourceSha256 = "sha256:a99667de4613773e941acc6968dd3ed883cec16915ce22e86bbd214ef46bfd8f"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -127,9 +127,8 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"stdout: child.stdout",
 		"stderr: child.stderr",
 		"value: parseProofkitJsonStrict(jsonText)",
-		"const outputPath = outputPathFromArgs(command, args)",
-		"function outputPathFromArgs(command: string, args: readonly string[])",
-		"command !== \"requirement-spec-tree-view\"",
+		"const outputPath = outputPathFromArgs(args)",
+		"function outputPathFromArgs(args: readonly string[])",
 		"function resolveOutputPath",
 		"if (child.status !== 0 && child.stdout.trim().length === 0) {",
 	} {
@@ -240,6 +239,11 @@ process.stdin.on("end", () => {
     process.exit(0);
   }
   if (command === "text-pass") {
+    const outputIndex = process.argv.indexOf("--output");
+    if (outputIndex !== -1 && process.argv[outputIndex + 1] !== undefined) {
+      writeFileSync(process.argv[outputIndex + 1], "text output file");
+      process.exit(0);
+    }
     process.stdout.write("text result");
     process.exit(0);
   }
@@ -365,6 +369,10 @@ assert.equal(outputPass.value.outputFile, true);
 const text = runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: "."});
 assert.equal(text.status, 0);
 assert.equal(text.text, "text result");
+const textOutput = runProofkitTextCommand("text-pass", {}, ["--output", "proofkit-output.txt"], {binaryPath: fakeProofkitPath, cwd: "."});
+assert.equal(textOutput.status, 0);
+assert.equal(textOutput.stdout, "");
+assert.equal(textOutput.text, "text output file");
 const noInput = runProofkitNoInputJsonCommand("json-no-input", [], {binaryPath: fakeProofkitPath, cwd: "."});
 assert.equal(noInput.status, 0);
 assert.equal(noInput.value.inputless, true);

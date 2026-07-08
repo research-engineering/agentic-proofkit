@@ -114,6 +114,23 @@ func TestBuildRejectsUnknownCommandMatcherField(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
+	secret := "Authorization: Bearer abcdefghijklmnop"
+	input := validScaffoldInput()
+	input["nonClaims"] = []any{secret}
+
+	_, err := BuildResult(input)
+	if err == nil {
+		t.Fatal("BuildResult() accepted secret-shaped nonClaim")
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked secret-shaped caller text: %v", err)
+	}
+	if !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("error=%v, want secret-like rejection", err)
+	}
+}
+
 func validScaffoldInput() map[string]any {
 	return map[string]any{
 		"schemaVersion": json.Number("1"),

@@ -56,6 +56,23 @@ func TestBuildRejectsDestructiveAutomaticRetry(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
+	secret := "Authorization: Bearer abcdefghijklmnop"
+	input := validSchedulerPlanInput()
+	input["nonClaims"] = []any{secret}
+
+	_, _, err := Build(input)
+	if err == nil {
+		t.Fatal("Build() accepted secret-shaped nonClaim")
+	}
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked secret-shaped caller text: %v", err)
+	}
+	if !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("error=%v, want secret-like rejection", err)
+	}
+}
+
 func TestEvaluateProjectsAdmittedCommandLinkageFacts(t *testing.T) {
 	projection, record, exitCode, err := Evaluate(validSchedulerPlanInput())
 	if err != nil {

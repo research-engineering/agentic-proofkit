@@ -383,7 +383,7 @@ func TestBuildRejectsUnknownPlanEdgeClassAndCoverageState(t *testing.T) {
 					"reason":             "Synthetic unknown edge.",
 				}}
 			},
-			want: "plan unknownEdge edgeClass must be one of",
+			want: "unknownEdge edgeClass must be one of",
 		},
 		{
 			name: "coverage state",
@@ -397,7 +397,7 @@ func TestBuildRejectsUnknownPlanEdgeClassAndCoverageState(t *testing.T) {
 					"reason":             "Synthetic unknown edge.",
 				}}
 			},
-			want: "plan unknownEdge coverageState must be one of",
+			want: "unknownEdge coverageState must be one of",
 		},
 	}
 

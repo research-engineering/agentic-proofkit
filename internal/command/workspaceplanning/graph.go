@@ -2,7 +2,6 @@ package workspaceplanning
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
@@ -144,9 +143,5 @@ func sortedNonEmptyText(raw any, context string) ([]string, error) {
 }
 
 func nonEmptyText(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || strings.TrimSpace(value) == "" {
-		return "", fmt.Errorf("%s must be non-empty text", context)
-	}
-	return strings.TrimSpace(value), nil
+	return admit.NonEmptyText(raw, context)
 }

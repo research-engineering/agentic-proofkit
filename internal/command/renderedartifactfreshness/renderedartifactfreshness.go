@@ -440,11 +440,7 @@ func preserveSortedUnique(values []string, context string, allowEmpty bool) ([]s
 }
 
 func text(raw any, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok || value == "" {
-		return "", fmt.Errorf("%s must be non-empty text", context)
-	}
-	return value, nil
+	return admit.NonEmptyText(raw, context)
 }
 
 func digest(raw any, context string) (string, error) {

@@ -259,9 +259,16 @@ func requireEntrySourceCoverage(entrySources []provenanceEntrySource, entries []
 	for _, entrySource := range entrySources {
 		covered[entrySource.TestID] = struct{}{}
 	}
+	entrySet := map[string]struct{}{}
 	for _, entry := range entries {
+		entrySet[entry.TestID] = struct{}{}
 		if _, ok := covered[entry.TestID]; !ok {
 			return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory entrySources must cover every nested inventory entry")
+		}
+	}
+	for _, entrySource := range entrySources {
+		if _, ok := entrySet[entrySource.TestID]; !ok {
+			return fmt.Errorf("requirement coverage view normalizedTestEvidenceInventory entrySources must reference nested inventory entries")
 		}
 	}
 	return nil
@@ -643,5 +650,13 @@ func admitOptions(raw any) error {
 	if !ok {
 		return fmt.Errorf("requirement coverage view options must be an object or null")
 	}
-	return admit.KnownKeys(record, []string{"scope"}, "requirement coverage view options")
+	if err := admit.KnownKeys(record, []string{"scope"}, "requirement coverage view options"); err != nil {
+		return err
+	}
+	if _, ok := record["scope"]; ok {
+		if _, err := admit.RuleID(record["scope"], "requirement coverage view options scope"); err != nil {
+			return err
+		}
+	}
+	return nil
 }

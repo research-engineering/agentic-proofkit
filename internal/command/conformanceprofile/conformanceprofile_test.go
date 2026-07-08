@@ -50,6 +50,28 @@ func TestBuildVerificationRejectsDuplicateProfiles(t *testing.T) {
 	assertRuleDiagnosticContains(t, record.RuleResults, "duplicate profileId=local")
 }
 
+func TestBuildVerificationRejectsSecretLikeReportVisibleText(t *testing.T) {
+	secret := "Authorization: Bearer abcdefghijklmnop"
+	input := validConformanceProfileInput()
+	input["manifest"].(map[string]any)["nonClaims"] = []any{secret}
+
+	record, exitCode, err := BuildVerification(input)
+	if err != nil {
+		t.Fatalf("BuildVerification() unexpected error=%v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("BuildVerification() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	encoded, err := json.Marshal(record)
+	if err != nil {
+		t.Fatalf("marshal report: %v", err)
+	}
+	if strings.Contains(string(encoded), secret) {
+		t.Fatalf("report leaked secret-shaped caller text: %s", string(encoded))
+	}
+	assertRuleDiagnosticContains(t, record.RuleResults, "secret-like values")
+}
+
 func TestListReturnsSortedProfileIDsAndRejectsInvalidInput(t *testing.T) {
 	input := validConformanceProfileInput()
 	manifest := input["manifest"].(map[string]any)

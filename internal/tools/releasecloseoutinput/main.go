@@ -1206,7 +1206,11 @@ func publishedWorkflowIdentitiesValid(manifest releaseManifest, packageManifest 
 		if channel.TrustedPublisher == nil {
 			return false
 		}
-		if _, err := releasepublisher.AdmitForAuthorityChannel(*channel.TrustedPublisher, channel.AuthorityChannel, packageManifest.Name, packageManifest.Version, repository); err != nil {
+		projectName := packageManifest.Name
+		if channel.AuthorityChannel == string(releasechannel.PyPIRegistryRelease) {
+			projectName = pythonPackageName
+		}
+		if _, err := releasepublisher.AdmitForAuthorityChannel(*channel.TrustedPublisher, channel.AuthorityChannel, projectName, packageManifest.Version, repository); err != nil {
 			return false
 		}
 	}
