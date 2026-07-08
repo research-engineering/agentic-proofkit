@@ -50,19 +50,48 @@ rollout, deployment, or production readiness.
 
 ## How It Works
 
+Proofkit has two related but separate loops:
+
+- an **authoring loop** for turning observations into candidate invariants and
+  repo-owned specifications;
+- a **proof loop** for admitting those specifications, binding them to evidence,
+  and producing derived views or bounded next actions.
+
+The loops are separate because generated observations are not product truth.
+Only the consuming repository can promote a candidate invariant into an
+admitted requirement.
+
+### Proof Loop
+
 ```mermaid
-flowchart LR
-    A[Repository state] --> B[Adoption mode]
-    B --> C[Repo-owned inputs]
-    C --> D[Proofkit admission]
-    D --> E[Proof graph]
-    E --> F[Derived views]
-    E --> G[Selective planning]
-    G --> H[Repo-owned execution]
-    H --> I[Receipt admission]
-    I --> J[Consumer decision]
-    C --> J
-    F --> J
+flowchart TB
+    subgraph Repo["Consumer repository authority"]
+        Requirements["Requirements and invariants"]
+        Bindings["Proof bindings and witness commands"]
+        Execution["Native test and CI execution"]
+        Decision["Owner decision"]
+    end
+
+    subgraph Proofkit["Proofkit reusable mechanics"]
+        Admission["Admit and normalize JSON"]
+        Graph["Build proof graph"]
+        Planning["Plan selected checks"]
+        Receipts["Admit receipt-shaped evidence"]
+        Views["Render derived views"]
+        Packets["Emit bounded agent packets"]
+    end
+
+    Requirements --> Admission
+    Bindings --> Admission
+    Admission --> Graph
+    Graph --> Planning
+    Planning --> Execution
+    Execution --> Receipts
+    Receipts --> Decision
+    Graph --> Views
+    Graph --> Packets
+    Views --> Decision
+    Packets --> Decision
 ```
 
 The core invariant is separation of authority. The consuming repository owns
@@ -72,11 +101,30 @@ checking proof-binding shape, planning bounded verification, rendering derived
 views, and returning agent-readable next-action packets.
 
 The diagram keeps the rendering syntax intentionally simple for GitHub README
-compatibility. `Repo-owned inputs` are the consumer truth path. `Derived views`
-are navigation and presentation outputs, not authority.
+compatibility. Requirements, bindings, witness commands, native execution, and
+final decisions stay in the consumer repository. Proofkit outputs are admitted
+reports, plans, views, receipts, or agent packets; they do not become product
+truth unless the consumer explicitly admits them.
+
+### Invariant Authoring Loop
 
 For a repository with no specification, Proofkit can guide an agent through two
 different starting modes:
+
+```mermaid
+flowchart TB
+    Start["Code, docs, tests, issues, and maintainer intent"] --> Mode["Choose trust mode"]
+    Mode --> Baseline["Code baseline mode"]
+    Mode --> Audit["Code audit mode"]
+    Baseline --> Observations["Caller-owned capability observations"]
+    Audit --> Observations
+    Observations --> Seeds["Candidate invariants and requirement seeds"]
+    Seeds --> Review["Owner review and promotion"]
+    Review --> Specs["Repo-owned requirements.v1.json"]
+    Specs --> Obligations["Proof obligations"]
+    Obligations --> Evidence["Proof bindings and test inventory"]
+    Evidence --> Admission["Proofkit admission and coverage"]
+```
 
 | Mode | Use when | Result |
 |---|---|---|
@@ -85,7 +133,9 @@ different starting modes:
 
 In both modes, generated records remain candidates until the consuming
 repository admits them as repo-owned requirements, proof bindings, and witness
-plans.
+plans. Proofkit can structure and validate candidate packets, but it does not
+extract complete behavior from arbitrary source code, invent product policy, or
+make generated invariants authoritative by itself.
 
 ## Start Here
 
