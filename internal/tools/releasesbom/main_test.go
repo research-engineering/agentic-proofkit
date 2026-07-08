@@ -69,6 +69,33 @@ func TestReleaseFilePathsRequireReleasePlatformBinarySet(t *testing.T) {
 	})
 }
 
+func TestSBOMSerialNumberIsDeterministicCycloneDXURN(t *testing.T) {
+	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3"}
+	got := sbomSerialNumber(manifest)
+	if !strings.HasPrefix(got, "urn:uuid:") {
+		t.Fatalf("sbomSerialNumber()=%q, want urn:uuid prefix", got)
+	}
+	uuid := strings.TrimPrefix(got, "urn:uuid:")
+	if len(uuid) != len("00000000-0000-0000-0000-000000000000") {
+		t.Fatalf("sbomSerialNumber()=%q, want RFC 4122 UUID length", got)
+	}
+	for _, index := range []int{8, 13, 18, 23} {
+		if uuid[index] != '-' {
+			t.Fatalf("sbomSerialNumber()=%q, want UUID hyphen at %d", got, index)
+		}
+	}
+	if uuid[14] != '5' {
+		t.Fatalf("sbomSerialNumber()=%q, want UUID v5 version nibble", got)
+	}
+	if got != sbomSerialNumber(manifest) {
+		t.Fatalf("sbomSerialNumber() must be deterministic")
+	}
+	changed := sbomSerialNumber(packageJSON{Name: manifest.Name, Version: "1.2.4"})
+	if got == changed {
+		t.Fatalf("sbomSerialNumber()=%q did not change when package version changed", got)
+	}
+}
+
 func writeReleasePlatformBinaries(t *testing.T, paths []string) {
 	t.Helper()
 	for _, path := range paths {

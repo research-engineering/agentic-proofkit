@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -24,6 +25,8 @@ const (
 	toolComponent = "pkg:generic/agentic-proofkit"
 )
 
+var uuidNamespaceURL = [16]byte{0x6b, 0xa7, 0xb8, 0x11, 0x9d, 0xad, 0x11, 0xd1, 0x80, 0xb4, 0x00, 0xc0, 0x4f, 0xd4, 0x30, 0xc8}
+
 type packageJSON struct {
 	License    string         `json:"license"`
 	Name       string         `json:"name"`
@@ -45,6 +48,7 @@ type goModuleRecord struct {
 type cyclonedxBOM struct {
 	BOMFormat    string                `json:"bomFormat"`
 	SpecVersion  string                `json:"specVersion"`
+	SerialNumber string                `json:"serialNumber"`
 	Version      int                   `json:"version"`
 	Metadata     cyclonedxMetadata     `json:"metadata"`
 	Components   []cyclonedxComponent  `json:"components"`
@@ -120,9 +124,10 @@ func run() error {
 		DependsOn: componentRefs(components, rootRef(manifest)),
 	}}
 	out := cyclonedxBOM{
-		BOMFormat:   bomFormat,
-		SpecVersion: specVersion,
-		Version:     1,
+		BOMFormat:    bomFormat,
+		SpecVersion:  specVersion,
+		SerialNumber: sbomSerialNumber(manifest),
+		Version:      1,
 		Metadata: cyclonedxMetadata{
 			Component: rootComponent(manifest),
 			Tools: []cyclonedxTool{{
@@ -321,6 +326,22 @@ func rootComponent(manifest packageJSON) cyclonedxComponent {
 
 func rootRef(manifest packageJSON) string {
 	return "pkg:generic/" + manifest.Name + "@" + manifest.Version
+}
+
+func sbomSerialNumber(manifest packageJSON) string {
+	return "urn:uuid:" + uuidV5(uuidNamespaceURL, rootRef(manifest))
+}
+
+func uuidV5(namespace [16]byte, name string) string {
+	hash := sha1.New() // UUID v5 requires SHA-1; this is an identifier, not a security boundary.
+	_, _ = hash.Write(namespace[:])
+	_, _ = hash.Write([]byte(name))
+	sum := hash.Sum(nil)
+	uuid := make([]byte, 16)
+	copy(uuid, sum)
+	uuid[6] = (uuid[6] & 0x0f) | 0x50
+	uuid[8] = (uuid[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:16])
 }
 
 func componentRefs(components []cyclonedxComponent, root string) []string {
