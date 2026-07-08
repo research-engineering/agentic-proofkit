@@ -44,16 +44,17 @@ const (
 )
 
 type commandDescriptor struct {
-	name              string
-	input             commandInputMode
-	runner            commandRunner
-	scopeClass        commandScopeClass
-	allowedFlags      []string
-	outputModes       []string
-	agentEnvelope     bool
-	contractEnvelope  bool
-	semanticAppTests  []string
-	semanticOwnerDirs []string
+	name               string
+	input              commandInputMode
+	runner             commandRunner
+	scopeClass         commandScopeClass
+	allowedFlags       []string
+	inputSchemaSummary []string
+	outputModes        []string
+	agentEnvelope      bool
+	contractEnvelope   bool
+	semanticAppTests   []string
+	semanticOwnerDirs  []string
 }
 
 var commandDescriptors = []commandDescriptor{
@@ -80,10 +81,10 @@ var commandDescriptors = []commandDescriptor{
 	command("impact", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("impact")),
 	command("init", commandInputNone, flags("--preset"), modes("json"), ownerDirs("initplan"), withRunner(commandRunnerInit), withSemanticAppTests("TestCLIABIGoldenCorpus")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource)),
-	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
-	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
+	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission"), withInputSchemaSummary("schemaVersion=1", "paritySetId", "sourceProofOwners[]", "targetProofkitRefs[]", "parityRecords[]", "nonClaims[]")),
+	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan"), withInputSchemaSummary("schemaVersion=1", "migrationId", "sourceProofOwners[]", "targetProofkitRefs[]", "parityEvidenceRefs[]", "retainedOwners[]", "retirementCandidates[]", "followUpCommands[]", "nonClaims[]")),
 	command("obligation-decision", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("obligationdecision"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
-	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency")),
+	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency"), withInputSchemaSummary("schemaVersion=1", "reportId", "expectedDependencySpec", "expectedLockfileIntegrity", "expectedPackageName", "expectedPackageVersion", "admissibleLocations{}", "packageResolution{}", "nonClaims[]")),
 	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope()),
 	command("producer-policy-self-proof", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("producerpolicyselfproof")),
 	command("proof-obligation-algebra", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("proofobligationalgebra")),
@@ -221,6 +222,12 @@ func withSemanticAppTests(testNames ...string) commandDescriptorOption {
 	}
 }
 
+func withInputSchemaSummary(fields ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.inputSchemaSummary = cloneStrings(fields)
+	}
+}
+
 func flags(values ...string) []string {
 	return cloneStrings(values)
 }
@@ -326,6 +333,7 @@ func isSortedUnique(values []string) bool {
 
 func (descriptor commandDescriptor) clone() commandDescriptor {
 	descriptor.allowedFlags = cloneStrings(descriptor.allowedFlags)
+	descriptor.inputSchemaSummary = cloneStrings(descriptor.inputSchemaSummary)
 	descriptor.outputModes = cloneStrings(descriptor.outputModes)
 	descriptor.semanticAppTests = cloneStrings(descriptor.semanticAppTests)
 	descriptor.semanticOwnerDirs = cloneStrings(descriptor.semanticOwnerDirs)

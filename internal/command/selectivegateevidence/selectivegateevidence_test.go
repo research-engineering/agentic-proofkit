@@ -340,7 +340,7 @@ func TestBuildRejectsUnknownNestedPlanFields(t *testing.T) {
 		{
 			name: "secret scan",
 			mutate: func(input map[string]any) {
-				evidencePlan(input)["secretScan"].(map[string]any)["skipOnFork"] = true
+				evidencePlan(input)["scanObligation"].(map[string]any)["skipOnFork"] = true
 			},
 		},
 	}
@@ -512,8 +512,7 @@ func validEvidenceInput() map[string]any {
 			"proofLikePaths":              []any{},
 			"publicApiContractTouched":    false,
 			"requiredCommands":            []any{plannedCommand()},
-			"scanObligation":              map[string]any{"command": "agentic-proofkit secret-scan", "commandId": "secret-scan", "commandOwnership": "caller_owned_external", "mode": "diff-scoped", "reason": "external_secret_scan", "required": true},
-			"secretScan":                  map[string]any{"changedArchiveOrBinaryPaths": []any{}, "command": "agentic-proofkit secret-scan", "mode": "diff-scoped", "required": true},
+			"scanObligation":              map[string]any{"command": "agentic-proofkit secret-scan --input artifacts/secret-scan.json", "commandId": "secret-scan", "commandOwnership": "proofkit_secret_scan", "mode": "diff-scoped", "reason": "secret_scan", "required": true},
 			"skippedGates":                []any{},
 			"touchedRequirementWitnesses": []any{},
 			"unknownEdges":                []any{},

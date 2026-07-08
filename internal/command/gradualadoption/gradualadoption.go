@@ -13,6 +13,12 @@ import (
 
 var standardQuestions = []string{"what changed", "what proves it", "who owns it"}
 
+var gradualAdoptionNonClaims = []string{
+	"Gradual adoption reports do not approve rollout, merge, release, deployment, or production readiness.",
+	"Gradual adoption reports do not execute native witnesses or prove proof freshness.",
+	"Gradual adoption reports admit caller-owned profile facts only.",
+}
+
 type adoptionInput struct {
 	AdoptionID        string
 	AdoptionMode      string
@@ -172,6 +178,10 @@ func admitAdoptionInput(raw any) (adoptionInput, error) {
 		return adoptionInput{}, err
 	}
 	nonClaims, err := admit.SortedTextArray(record["nonClaims"], "gradual adoption nonClaims", false)
+	if err != nil {
+		return adoptionInput{}, err
+	}
+	nonClaims, err = admit.MergeNonClaims(gradualAdoptionNonClaims, nonClaims, "gradual adoption")
 	if err != nil {
 		return adoptionInput{}, err
 	}
@@ -350,7 +360,8 @@ func admitBudget(raw map[string]any, failures *[]string) map[string]any {
 	maxProfileLines := nonNegativeInt(raw["maxProfileLines"], "maxProfileLines", failures, 1)
 	customRuleCount := nonNegativeInt(raw["customRuleCount"], "customRuleCount", failures, 0)
 	maxCustomRuleCount := nonNegativeInt(raw["maxCustomRuleCount"], "maxCustomRuleCount", failures, 0)
-	if intFromRaw(raw["copiedVerifierFileCount"]) != 0 {
+	copiedVerifierFileCount := nonNegativeInt(raw["copiedVerifierFileCount"], "copiedVerifierFileCount", failures, 0)
+	if copiedVerifierFileCount != 0 {
 		*failures = append(*failures, "copiedVerifierFileCount must be 0")
 	}
 	if profileLines > maxProfileLines {
@@ -448,7 +459,11 @@ func sortedRuleIDArray(raw any, context string) ([]string, error) {
 }
 
 func nonNegativeInt(raw any, context string, failures *[]string, min int) int {
-	value := intFromRaw(raw)
+	value, err := intFromRaw(raw)
+	if err != nil {
+		*failures = append(*failures, fmt.Sprintf("%s %s", context, err.Error()))
+		return 0
+	}
 	if value < min {
 		*failures = append(*failures, fmt.Sprintf("%s must be an integer >= %d", context, min))
 		return 0
@@ -456,16 +471,16 @@ func nonNegativeInt(raw any, context string, failures *[]string, min int) int {
 	return value
 }
 
-func intFromRaw(raw any) int {
+func intFromRaw(raw any) (int, error) {
 	number, ok := raw.(json.Number)
 	if !ok {
-		return 0
+		return 0, fmt.Errorf("must be a JSON integer")
 	}
 	value, err := number.Int64()
-	if err != nil {
-		return 0
+	if err != nil || int64(int(value)) != value {
+		return 0, fmt.Errorf("must be a JSON integer")
 	}
-	return int(value)
+	return int(value), nil
 }
 
 func addErr(failures *[]string, err error) {

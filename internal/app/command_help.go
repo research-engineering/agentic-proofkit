@@ -31,6 +31,12 @@ func commandUsage(descriptor commandDescriptor) string {
 	for _, flag := range descriptor.allowedFlags {
 		lines = append(lines, "  "+flag)
 	}
+	if len(descriptor.inputSchemaSummary) > 0 {
+		lines = append(lines, "", "Input schema summary:")
+		for _, field := range descriptor.inputSchemaSummary {
+			lines = append(lines, "  "+field)
+		}
+	}
 	if descriptor.agentEnvelope || descriptor.contractEnvelope {
 		lines = append(lines, "", "Derived projections:")
 		if descriptor.agentEnvelope {

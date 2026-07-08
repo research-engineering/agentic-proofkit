@@ -197,6 +197,26 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "planned PyPI with unrelated non-claim",
+			criterionID: "proofkit.release_closeout.channel_scope",
+			mutate: func(root string) {
+				manifest := releaseManifestFixture(true)
+				channels := manifest["channels"].([]any)
+				channels[3].(map[string]any)["nonClaims"] = []any{"This does not claim vulnerability absence."}
+				writeJSON(t, filepath.Join(root, "artifacts", "release", "release-manifest.json"), manifest)
+			},
+		},
+		{
+			name:        "planned PyPI with inverted non-claim",
+			criterionID: "proofkit.release_closeout.channel_scope",
+			mutate: func(root string) {
+				manifest := releaseManifestFixture(true)
+				channels := manifest["channels"].([]any)
+				channels[3].(map[string]any)["nonClaims"] = []any{"PyPI is a dependency authority for this version without PyPI package evidence."}
+				writeJSON(t, filepath.Join(root, "artifacts", "release", "release-manifest.json"), manifest)
+			},
+		},
+		{
 			name:        "candidate PyPI registry authority",
 			criterionID: "proofkit.release_closeout.channel_scope",
 			mutate: func(root string) {
@@ -830,7 +850,7 @@ func releaseManifestFixtureWithPyPI(status string, includePyPINonClaim bool) map
 		"status":           status,
 	}
 	if includePyPINonClaim {
-		pypi["nonClaims"] = []any{"PyPI is not registry authority for this candidate."}
+		pypi["nonClaims"] = []any{pypiPlannedNonClaim}
 	}
 	return map[string]any{
 		"artifactKind": "proofkit.release-manifest.v1",

@@ -25,6 +25,19 @@ func TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution(t *te
 	}
 }
 
+func TestBuildRejectsLockfileIntegrityDrift(t *testing.T) {
+	input := validPackageRuntimeDependencyInput()
+	input["packageResolution"].(map[string]any)["lockfileIntegrity"] = "sha512-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+	record, exitCode := Build(input)
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	}
+	if !strings.Contains(record.RuleResults[1].Message, "lockfile integrity does not match") {
+		t.Fatalf("lockfile rule message=%q, want integrity drift", record.RuleResults[1].Message)
+	}
+}
+
 func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
 	secret := "Authorization: Bearer abcdefghijklmnop"
 	input := validPackageRuntimeDependencyInput()
@@ -48,13 +61,14 @@ func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
 
 func validPackageRuntimeDependencyInput() map[string]any {
 	return map[string]any{
-		"schemaVersion":          json.Number("1"),
-		"reportId":               "proofkit.test.runtime_dependency",
-		"expectedDependencySpec": "agentic-proofkit@0.1.95",
-		"expectedPackageName":    "agentic-proofkit",
-		"expectedPackageVersion": "0.1.95",
-		"nonClaims":              []any{"Package runtime dependency test input does not read package manifests."},
-		"admissibleLocations":    map[string]any{"expectedPackageRoot": "/repo/node_modules/agentic-proofkit", "localWorkspaceRoot": "/repo/packages", "nodeModulesRoot": "/repo/node_modules"},
-		"packageResolution":      map[string]any{"dependencySpec": "agentic-proofkit@0.1.95", "lockfileEntryPresent": true, "packageName": "agentic-proofkit", "packageVersion": "0.1.95", "packageRoot": "/repo/node_modules/agentic-proofkit", "realPackageRoot": "/repo/node_modules/agentic-proofkit", "resolvedEntryPoint": "/repo/node_modules/agentic-proofkit/bin/agentic-proofkit"},
+		"schemaVersion":             json.Number("1"),
+		"reportId":                  "proofkit.test.runtime_dependency",
+		"expectedDependencySpec":    "agentic-proofkit@0.1.95",
+		"expectedLockfileIntegrity": "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		"expectedPackageName":       "agentic-proofkit",
+		"expectedPackageVersion":    "0.1.95",
+		"nonClaims":                 []any{"Package runtime dependency test input does not read package manifests."},
+		"admissibleLocations":       map[string]any{"expectedPackageRoot": "/repo/node_modules/agentic-proofkit", "localWorkspaceRoot": "/repo/packages", "nodeModulesRoot": "/repo/node_modules"},
+		"packageResolution":         map[string]any{"dependencySpec": "agentic-proofkit@0.1.95", "lockfileEntryPresent": true, "lockfileIntegrity": "sha512-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "packageName": "agentic-proofkit", "packageVersion": "0.1.95", "packageRoot": "/repo/node_modules/agentic-proofkit", "realPackageRoot": "/repo/node_modules/agentic-proofkit", "resolvedEntryPoint": "/repo/node_modules/agentic-proofkit/bin/agentic-proofkit"},
 	}
 }

@@ -528,6 +528,29 @@ func TestHelpCommandContractForms(t *testing.T) {
 	if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "unsupported help target: unknown-command") {
 		t.Fatalf("unexpected unknown help result status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
 	}
+
+	for _, item := range []struct {
+		command string
+		needles []string
+	}{
+		{command: "migration-parity-admission", needles: []string{"Input schema summary:", "parityRecords[]", "targetProofkitRefs[]"}},
+		{command: "migration-plan", needles: []string{"Input schema summary:", "retirementCandidates[]", "followUpCommands[]"}},
+		{command: "package-runtime-dependency-admission", needles: []string{"Input schema summary:", "expectedLockfileIntegrity", "packageResolution{}"}},
+	} {
+		t.Run("schema summary "+item.command, func(t *testing.T) {
+			stdout.Reset()
+			stderr.Reset()
+			status = Run(t.Context(), []string{"help", item.command}, strings.NewReader(""), &stdout, &stderr)
+			if status != 0 || stderr.Len() != 0 {
+				t.Fatalf("help %s failed status=%d stdout=%s stderr=%s", item.command, status, stdout.String(), stderr.String())
+			}
+			for _, needle := range item.needles {
+				if !strings.Contains(stdout.String(), needle) {
+					t.Fatalf("help %s missing %q: %s", item.command, needle, stdout.String())
+				}
+			}
+		})
+	}
 }
 
 func TestConformanceProfileContractRejectsHTMLMode(t *testing.T) {

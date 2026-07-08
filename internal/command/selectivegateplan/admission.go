@@ -19,7 +19,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("selective gate plan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"archiveOrBinaryPathPatterns", "artifactIntegrityPolicies", "baseCommands", "changedPaths", "dependencyFreshness", "fallbackCoverage", "fullWorkspaceCommand", "generatedArtifactRules", "ignoredProofLikePaths", "nonClaims", "packageCommands", "pathTriggeredCommands", "preexistingFailures", "privatePathPrefixes", "proofLikePathPatterns", "publicApi", "requirementImpact", "scanObligation", "schemaVersion", "secretScan", "touchedRequirementWitnesses", "unknownEdges"}, "selective gate plan input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"archiveOrBinaryPathPatterns", "artifactIntegrityPolicies", "baseCommands", "changedPaths", "dependencyFreshness", "fallbackCoverage", "fullWorkspaceCommand", "generatedArtifactRules", "ignoredProofLikePaths", "nonClaims", "packageCommands", "pathTriggeredCommands", "preexistingFailures", "privatePathPrefixes", "proofLikePathPatterns", "publicApi", "requirementImpact", "scanObligation", "schemaVersion", "touchedRequirementWitnesses", "unknownEdges"}, "selective gate plan input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -175,9 +175,6 @@ func admitInput(raw any) (input, error) {
 
 func admitScanObligation(record map[string]any) (scanObligation, error) {
 	if raw, ok := record["scanObligation"]; ok {
-		if _, legacyOK := record["secretScan"]; legacyOK {
-			return scanObligation{}, fmt.Errorf("selective gate input must include either scanObligation or secretScan, not both")
-		}
 		scan, ok := raw.(map[string]any)
 		if !ok {
 			return scanObligation{}, fmt.Errorf("selective gate scanObligation must be an object")
@@ -212,45 +209,43 @@ func admitScanObligation(record map[string]any) (scanObligation, error) {
 		if err != nil {
 			return scanObligation{}, err
 		}
-		return scanObligation{
+		obligation := scanObligation{
 			Command:          commandText,
 			CommandID:        commandID,
 			CommandOwnership: commandOwnership,
 			Mode:             mode,
 			Reason:           reason,
 			Required:         required,
-		}, nil
+		}
+		if err := validateScanObligation(obligation, "selective gate scanObligation"); err != nil {
+			return scanObligation{}, err
+		}
+		return obligation, nil
 	}
-	secretScan, ok := record["secretScan"].(map[string]any)
-	if !ok {
-		return scanObligation{}, fmt.Errorf("selective gate scanObligation or secretScan must be an object")
+	return scanObligation{}, fmt.Errorf("selective gate scanObligation must be an object")
+}
+
+func validateScanObligation(value scanObligation, context string) error {
+	switch value.CommandOwnership {
+	case "proofkit_text_policy":
+		if value.CommandID != "text-policy" || value.Reason != "text_policy" {
+			return fmt.Errorf("%s proofkit_text_policy requires commandId text-policy and reason text_policy", context)
+		}
+	case "proofkit_secret_scan":
+		if value.CommandID != "secret-scan" || value.Reason != "secret_scan" {
+			return fmt.Errorf("%s proofkit_secret_scan requires commandId secret-scan and reason secret_scan", context)
+		}
+	case "caller_owned_external":
+		if value.Reason != "external_secret_scan" {
+			return fmt.Errorf("%s caller_owned_external requires reason external_secret_scan", context)
+		}
+		if value.CommandID == "text-policy" || value.CommandID == "secret-scan" {
+			return fmt.Errorf("%s caller_owned_external must not reuse Proofkit-owned commandId %s", context, value.CommandID)
+		}
+	default:
+		return fmt.Errorf("%s commandOwnership is unsupported", context)
 	}
-	if err := admit.KnownKeys(secretScan, []string{"command", "mode", "required"}, "selective gate secretScan"); err != nil {
-		return scanObligation{}, err
-	}
-	secretMode, err := admit.Enum(secretScan["mode"], map[string]struct{}{"diff-scoped": {}}, "secret scan mode")
-	if err != nil {
-		return scanObligation{}, err
-	}
-	secretRequired, err := admit.Bool(secretScan["required"], "secret scan required")
-	if err != nil {
-		return scanObligation{}, err
-	}
-	if !secretRequired {
-		return scanObligation{}, fmt.Errorf("secret scan required must be true")
-	}
-	secretCommand, err := admit.DisplayOnlyCommandText(secretScan["command"], "secret scan command")
-	if err != nil {
-		return scanObligation{}, err
-	}
-	return scanObligation{
-		Command:          secretCommand,
-		CommandID:        "secret-scan",
-		CommandOwnership: "caller_owned_external",
-		Mode:             secretMode,
-		Reason:           "external_secret_scan",
-		Required:         secretRequired,
-	}, nil
+	return nil
 }
 
 func commandArray(raw any, context string, allowEmpty bool) ([]command, error) {

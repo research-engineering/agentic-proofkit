@@ -911,7 +911,7 @@ func TestBuildDoesNotGuessMissingStackPreset(t *testing.T) {
 	}
 }
 
-func TestBuildDoesNotTreatSpecTreeBundleAsBrowserInput(t *testing.T) {
+func TestBuildRoutesSpecTreeBundleToHumanViews(t *testing.T) {
 	t.Parallel()
 
 	report, exitCode, err := Build(map[string]any{
@@ -929,14 +929,25 @@ func TestBuildDoesNotTreatSpecTreeBundleAsBrowserInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build returned error: %v", err)
 	}
-	if exitCode != 1 {
-		t.Fatalf("exitCode = %d, want 1", exitCode)
+	if exitCode != 0 {
+		t.Fatalf("exitCode = %d, want 0", exitCode)
 	}
-	if state := report["state"]; state != "blocked_missing_input" {
-		t.Fatalf("state = %v, want blocked_missing_input", state)
+	if state := report["state"]; state != "routed" {
+		t.Fatalf("state = %v, want routed", state)
 	}
-	if commands := report["nextCommands"].([]any); len(commands) != 0 {
-		t.Fatalf("nextCommands length = %d, want 0", len(commands))
+	commands := report["nextCommands"].([]any)
+	if len(commands) != 2 {
+		t.Fatalf("nextCommands length = %d, want spec-tree view and browser commands: %#v", len(commands), commands)
+	}
+	if got := argValue(findCommandArgv(t, commands, "requirement-spec-tree-view"), "--input"); got != "docs/spec-tree-bundle.v1.json" {
+		t.Fatalf("requirement-spec-tree-view input=%q, want spec tree bundle ref", got)
+	}
+	browserArgv := findCommandArgv(t, commands, "requirement-browser-server")
+	if got := argValue(browserArgv, "--view"); got != "spec-tree" {
+		t.Fatalf("browser --view=%q, want spec-tree", got)
+	}
+	if got := argValue(browserArgv, "--input"); got != "docs/spec-tree-bundle.v1.json" {
+		t.Fatalf("browser --input=%q, want spec tree bundle ref", got)
 	}
 }
 
@@ -1428,11 +1439,13 @@ func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 		{"requirement-browser-server", "coverage_view_input"},
 		{"requirement-browser-server", "proof_binding"},
 		{"requirement-browser-server", "requirement_source"},
+		{"requirement-browser-server", "spec_tree_bundle"},
 		{"requirement-coverage-view", "coverage_view_input"},
 		{"requirement-proof-view", "proof_binding"},
 		{"requirement-source-admission", "requirement_source"},
 		{"requirement-source-transition", "requirement_source_transition"},
 		{"requirement-source-view", "requirement_source"},
+		{"requirement-spec-tree-view", "spec_tree_bundle"},
 		{"scaffold-profile-plan", "scaffold_profile_plan"},
 		{"scaffold-project-structure", "scaffold_project_structure"},
 		{"selective-gate-evidence", "selective_evidence"},
@@ -1486,8 +1499,8 @@ func assertNoInvalidSpecialCommandArgv(t *testing.T, commands []any) {
 			assertArgvContainsPair(t, argv, "--preset", "")
 		case "requirement-browser-server":
 			view := argValue(argv, "--view")
-			if view != "source" && view != "proof" && view != "coverage" {
-				t.Fatalf("requirement-browser-server argv = %v, want --view source|proof|coverage", argv)
+			if view != "source" && view != "proof" && view != "coverage" && view != "spec-tree" {
+				t.Fatalf("requirement-browser-server argv = %v, want --view source|proof|coverage|spec-tree", argv)
 			}
 			if argValue(argv, "--input") == "" {
 				t.Fatalf("requirement-browser-server argv = %v, want --input <ref>", argv)

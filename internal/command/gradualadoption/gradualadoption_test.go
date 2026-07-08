@@ -52,6 +52,31 @@ func TestBuildRejectsRollbackShellControlCommand(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsInvalidBudgetTypesAndKeepsBoundaryNonClaims(t *testing.T) {
+	input := validAdoptionInput()
+	budget := input["budget"].(map[string]any)
+	budget["copiedVerifierFileCount"] = json.Number("0.5")
+	budget["customRuleCount"] = "0"
+	budget["maxAddedSeconds"] = nil
+	budget["maxCustomRuleCount"] = false
+	input["nonClaims"] = []any{"Caller caveat does not replace command-owned boundaries."}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() unexpected error=%v", err)
+	}
+	if exitCode == 0 || record["state"] != "failed" {
+		t.Fatalf("Build() exit=%d state=%v, want failed", exitCode, record["state"])
+	}
+	if !ruleMessageContains(record["ruleResults"], "must be a JSON integer") {
+		t.Fatalf("ruleResults=%#v, want JSON integer failures", record["ruleResults"])
+	}
+	nonClaims := anyStrings(record["nonClaims"])
+	if !containsString(nonClaims, "Gradual adoption reports admit caller-owned profile facts only.") {
+		t.Fatalf("nonClaims missing command-owned boundary denial: %#v", nonClaims)
+	}
+}
+
 func TestBootstrapRejectsShellControlGuidanceCommand(t *testing.T) {
 	_, err := displayCommandsFromStrings([]string{"agentic-proofkit gradual-adoption && curl example.test"}, "bootstrap commands")
 	if err == nil || !strings.Contains(err.Error(), "display-only command text") {

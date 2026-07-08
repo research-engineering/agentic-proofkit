@@ -23,6 +23,7 @@ import (
 const (
 	completionID                = "proofkit.release_closeout.current_package_gate"
 	npmCandidateNonClaim        = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
+	pypiPlannedNonClaim         = "PyPI is not a dependency authority for this version until PyPI package evidence exists."
 	packageGateEnvironmentClass = "local-go-python"
 	pythonPackageName           = "agentic-proofkit"
 )
@@ -1173,7 +1174,16 @@ func hasPlannedPyPIWithNonClaim(manifest releaseManifest) bool {
 		if channel.Status == "published" {
 			return true
 		}
-		return channel.Status == "planned" && len(channel.NonClaims) > 0
+		return channel.Status == "planned" && containsExact(channel.NonClaims, pypiPlannedNonClaim)
+	}
+	return false
+}
+
+func containsExact(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
 	}
 	return false
 }
