@@ -177,13 +177,15 @@ func TestPreserveSortedTextRejectsCallerOrderingDrift(t *testing.T) {
 func TestSafeRepoRelativePathRejectsEscapesAndNormalization(t *testing.T) {
 	t.Parallel()
 
-	for _, value := range []string{"..", "../outside.md", "docs//INDEX.md", "/absolute.md", `docs\\INDEX.md`, ".", "C:/outside/report.json", "file:docs/report.json", "https://example.test/report.json", "packages/ghp_secretvalue/src/index.ts", "docs/index\n.md", "docs/index\r.md", "docs/index\t.md", "docs/index\x7f.md"} {
+	for _, value := range []string{"..", "../outside.md", "docs//INDEX.md", "/absolute.md", `docs\\INDEX.md`, ".", "C:/outside/report.json", "file:docs/report.json", "https://example.test/report.json", "packages/ghp_secretvalue/src/index.ts", "docs/api_key=abc123456789.md", "docs/sk-proj-abcdefghijklmnop.md", "docs/index\n.md", "docs/index\r.md", "docs/index\t.md", "docs/index\x7f.md"} {
 		if _, err := SafeRepoRelativePath(value, "path"); err == nil {
 			t.Fatalf("expected unsafe path rejection for %q", value)
 		}
 	}
-	if value, err := SafeRepoRelativePath("docs/INDEX.md", "path"); err != nil || value != "docs/INDEX.md" {
-		t.Fatalf("expected stable repo-relative path, got %q %v", value, err)
+	for _, path := range []string{"docs/INDEX.md", "docs/risk-escalation.md", "docs/ai-risk-escalation.md", "docs/secrets-incident-prevention.md", "docs/api-key-rotation.md", "docs/sk-project-key.md"} {
+		if value, err := SafeRepoRelativePath(path, "path"); err != nil || value != path {
+			t.Fatalf("expected stable repo-relative path for %q, got %q %v", path, value, err)
+		}
 	}
 }
 

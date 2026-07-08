@@ -24,7 +24,7 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	if !ok {
 		return EvidencePlanProjection{}, fmt.Errorf("selective gate plan output must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"artifactIntegrity", "changedPaths", "failures", "fallbackCoverage", "generatedArtifacts", "nonClaims", "planState", "privatePathExclusions", "proofLikePaths", "publicApiContractTouched", "requiredCommands", "schemaVersion", "secretScan", "skippedGates", "touchedRequirementWitnesses", "unknownEdges"}, "selective gate plan output"); err != nil {
+	if err := admit.KnownKeys(record, []string{"artifactIntegrity", "changedPaths", "failures", "fallbackCoverage", "generatedArtifacts", "nonClaims", "planState", "privatePathExclusions", "proofLikePaths", "publicApiContractTouched", "requiredCommands", "scanObligation", "schemaVersion", "secretScan", "skippedGates", "touchedRequirementWitnesses", "unknownEdges"}, "selective gate plan output"); err != nil {
 		return EvidencePlanProjection{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -82,6 +82,18 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	if err != nil {
 		return EvidencePlanProjection{}, err
 	}
+	var scanObligation map[string]any
+	if rawScanObligation, ok := record["scanObligation"]; ok {
+		scanObligation, err = outputScanObligationRecord(rawScanObligation)
+		if err != nil {
+			return EvidencePlanProjection{}, err
+		}
+		if err := requireLegacySecretScanParity(scanObligation, secretScan); err != nil {
+			return EvidencePlanProjection{}, err
+		}
+	} else {
+		scanObligation = legacySecretScanObligation(secretScan)
+	}
 	skippedGates, err := outputSkippedGateRecords(record["skippedGates"])
 	if err != nil {
 		return EvidencePlanProjection{}, err
@@ -104,12 +116,33 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	normalized["proofLikePaths"] = admit.StringSliceToAny(proofLikePaths)
 	normalized["publicApiContractTouched"] = publicAPITouched
 	normalized["requiredCommands"] = mapsToAny(commands)
+	normalized["scanObligation"] = scanObligation
 	normalized["schemaVersion"] = 1
 	normalized["secretScan"] = secretScan
 	normalized["skippedGates"] = skippedGates
 	normalized["touchedRequirementWitnesses"] = touchedWitnesses
 	normalized["unknownEdges"] = unknownEdges
 	return EvidencePlanProjection{PlanState: state, RequiredCommands: commands, Failures: failures, ChangedPaths: changedPaths, Generated: generated, Raw: normalized}, nil
+}
+
+func legacySecretScanObligation(secretScan map[string]any) map[string]any {
+	return map[string]any{
+		"command":          secretScan["command"],
+		"commandId":        "secret-scan",
+		"commandOwnership": "caller_owned_external",
+		"mode":             secretScan["mode"],
+		"reason":           "external_secret_scan",
+		"required":         secretScan["required"],
+	}
+}
+
+func requireLegacySecretScanParity(scanObligation map[string]any, secretScan map[string]any) error {
+	for _, key := range []string{"command", "mode", "required"} {
+		if scanObligation[key] != secretScan[key] {
+			return fmt.Errorf("selective gate plan output scanObligation must match legacy secretScan %s", key)
+		}
+	}
+	return nil
 }
 
 func outputCommandRecords(raw any) ([]map[string]any, error) {
@@ -136,7 +169,7 @@ func outputCommandRecord(raw any, context string) (map[string]any, error) {
 	if !ok {
 		return nil, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"command", "id", "reason", "sourcePath"}, context); err != nil {
+	if err := admit.KnownKeys(record, []string{"command", "commandOwnership", "id", "reason", "sourcePath"}, context); err != nil {
 		return nil, err
 	}
 	id, err := admit.RuleID(record["id"], context+" id")
@@ -152,6 +185,13 @@ func outputCommandRecord(raw any, context string) (map[string]any, error) {
 		return nil, err
 	}
 	item := map[string]any{"command": commandText, "id": id, "reason": reason}
+	if rawOwnership, ok := record["commandOwnership"]; ok {
+		ownership, err := admit.Enum(rawOwnership, map[string]struct{}{"caller_owned_external": {}, "proofkit_text_policy": {}}, context+" commandOwnership")
+		if err != nil {
+			return nil, err
+		}
+		item["commandOwnership"] = ownership
+	}
 	if rawSource, ok := record["sourcePath"]; ok {
 		source, err := safePath(rawSource, context+" sourcePath")
 		if err != nil {
@@ -160,6 +200,44 @@ func outputCommandRecord(raw any, context string) (map[string]any, error) {
 		item["sourcePath"] = source
 	}
 	return item, nil
+}
+
+func outputScanObligationRecord(raw any) (map[string]any, error) {
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("selective gate plan output scanObligation must be an object")
+	}
+	if err := admit.KnownKeys(record, []string{"command", "commandId", "commandOwnership", "mode", "reason", "required"}, "selective gate plan output scanObligation"); err != nil {
+		return nil, err
+	}
+	commandID, err := admit.RuleID(record["commandId"], "selective gate plan output scanObligation commandId")
+	if err != nil {
+		return nil, err
+	}
+	command, err := admit.DisplayOnlyCommandText(record["command"], "selective gate plan output scanObligation command")
+	if err != nil {
+		return nil, err
+	}
+	commandOwnership, err := admit.Enum(record["commandOwnership"], map[string]struct{}{"caller_owned_external": {}, "proofkit_text_policy": {}}, "selective gate plan output scanObligation commandOwnership")
+	if err != nil {
+		return nil, err
+	}
+	mode, err := admit.Enum(record["mode"], map[string]struct{}{"diff-scoped": {}}, "selective gate plan output scanObligation mode")
+	if err != nil {
+		return nil, err
+	}
+	reason, err := admit.Enum(record["reason"], map[string]struct{}{"external_secret_scan": {}, "text_policy": {}}, "selective gate plan output scanObligation reason")
+	if err != nil {
+		return nil, err
+	}
+	required, err := admit.Bool(record["required"], "selective gate plan output scanObligation required")
+	if err != nil {
+		return nil, err
+	}
+	if !required {
+		return nil, fmt.Errorf("selective gate plan output scanObligation required must be true")
+	}
+	return map[string]any{"command": command, "commandId": commandID, "commandOwnership": commandOwnership, "mode": mode, "reason": reason, "required": required}, nil
 }
 
 func outputGeneratedArtifactRecords(raw any) ([]any, error) {

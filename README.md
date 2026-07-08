@@ -38,6 +38,10 @@ registry identity, `dist.integrity`, `dist.shasum`, `npm pack`, and root-only
 registry install evidence. Bun is a supported consumer/developer package
 manager path, not a replacement for npm release evidence.
 
+Python consumers use the Python package as a runner wrapper over the same Go
+CLI, not as a Python SDK. Python projects should still treat CLI/JSON records,
+exit codes, and package metadata as the public contract.
+
 ## Project Boundary
 
 `agentic-proofkit` is intended to provide reusable proof-workflow mechanics for
@@ -138,6 +142,38 @@ extract complete behavior from arbitrary source code, invent product policy, or
 make generated invariants authoritative by itself.
 
 ## Start Here
+
+Use the CLI help route before reading source:
+
+```bash
+agentic-proofkit help
+agentic-proofkit help repo-profile-admission
+agentic-proofkit repo-profile-admission --help
+```
+
+Command-specific help is derived from the private command descriptor table and
+does not read stdin. The full machine-readable command inventory remains
+`proofkit/cli-contract.v1.json`; the human route map is
+`docs/proofkit-contract-map.md`.
+
+| Repository state | Minimal first route | Stop condition |
+|---|---|---|
+| Fresh repository with no specs and no extracted observations | `scaffold-project-structure` or `gradual-adoption-bootstrap` | Stop before writing files or inventing requirement meaning |
+| Current code is trusted as the initial contract | `capability-map-admission` with `trustMode: "code_baseline"` | Stop before treating generated seeds as admitted requirements |
+| Current code must be audited before it becomes a contract | `capability-map-admission` with `trustMode: "audit_from_code"` | Stop at owner questions and candidate-only records |
+| Legacy repository has local proof infrastructure | `migration-parity-admission`, then `migration-plan` | Stop before deleting local proof owners without parity evidence |
+| A change set needs bounded checks | `changed-path-set`, optional `impact`, then `selective-gate-plan` and `selective-gate-evidence` | Stop on unknown scope, missing routes, or stale receipts |
+
+For TypeScript consumers that want a small wrapper instead of hand-written
+child-process code:
+
+```bash
+agentic-proofkit json-report-cli-adapter-source --language typescript --format json
+```
+
+The generated adapter remains caller-owned after materialization. It must be
+reviewed, pinned to the installed package, and kept behind the same CLI/JSON
+contract; it does not become a separate public SDK or proof authority.
 
 | Need | Owner |
 |---|---|

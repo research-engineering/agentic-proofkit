@@ -115,6 +115,14 @@ type facts struct {
 type environmentPolicy struct {
 	LiveGithubRequiredClasses  []string
 	LocalSecretRequiredClasses []string
+	ClassPolicies              []environmentClassPolicy
+	HasClassPolicies           bool
+}
+
+type environmentClassPolicy struct {
+	EnvironmentClass string
+	NetworkPolicy    string
+	CredentialClass  string
 }
 
 type policy struct {
@@ -288,8 +296,11 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("repo profile must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"facts", "policy", "profile"}, "repo profile input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"facts", "policy", "profile", "schemaVersion"}, "repo profile input"); err != nil {
 		return input{}, err
+	}
+	if value, ok := record["schemaVersion"]; ok && !admit.JSONNumberEquals(value, 1) {
+		return input{}, fmt.Errorf("repo profile input schemaVersion must be 1")
 	}
 	profileValue, err := admitProfile(record["profile"])
 	if err != nil {
@@ -623,7 +634,7 @@ func admitPolicy(raw any) (policy, error) {
 	if !ok {
 		return policy{}, fmt.Errorf("repo profile policy.environmentPolicy must be an object")
 	}
-	if err := admit.KnownKeys(environment, []string{"liveGithubRequiredClasses", "localSecretRequiredClasses"}, "repo profile policy.environmentPolicy"); err != nil {
+	if err := admit.KnownKeys(environment, []string{"environmentClassPolicies", "liveGithubRequiredClasses", "localSecretRequiredClasses"}, "repo profile policy.environmentPolicy"); err != nil {
 		return policy{}, err
 	}
 	liveGithub, err := arrayOfNonEmptyStrings(environment["liveGithubRequiredClasses"], "repo profile environmentPolicy.liveGithubRequiredClasses", true)
@@ -631,6 +642,10 @@ func admitPolicy(raw any) (policy, error) {
 		return policy{}, err
 	}
 	localSecret, err := arrayOfNonEmptyStrings(environment["localSecretRequiredClasses"], "repo profile environmentPolicy.localSecretRequiredClasses", true)
+	if err != nil {
+		return policy{}, err
+	}
+	classPolicies, hasClassPolicies, err := admitEnvironmentClassPolicies(environment["environmentClassPolicies"])
 	if err != nil {
 		return policy{}, err
 	}
@@ -646,9 +661,60 @@ func admitPolicy(raw any) (policy, error) {
 		EnvironmentPolicy: environmentPolicy{
 			LiveGithubRequiredClasses:  liveGithub,
 			LocalSecretRequiredClasses: localSecret,
+			ClassPolicies:              classPolicies,
+			HasClassPolicies:           hasClassPolicies,
 		},
 		PackageNamePattern: pattern,
 	}, nil
+}
+
+func admitEnvironmentClassPolicies(raw any) ([]environmentClassPolicy, bool, error) {
+	if raw == nil {
+		return nil, false, nil
+	}
+	values, ok := raw.([]any)
+	if !ok {
+		return nil, true, fmt.Errorf("repo profile environmentPolicy.environmentClassPolicies must be an array")
+	}
+	policies := make([]environmentClassPolicy, 0, len(values))
+	classes := make([]string, 0, len(values))
+	for index, rawItem := range values {
+		record, ok := rawItem.(map[string]any)
+		if !ok {
+			return nil, true, fmt.Errorf("repo profile environmentClassPolicies #%d must be an object", index+1)
+		}
+		if err := admit.KnownKeys(record, []string{"credentialClass", "environmentClass", "networkPolicy"}, fmt.Sprintf("repo profile environmentClassPolicies #%d", index+1)); err != nil {
+			return nil, true, err
+		}
+		environmentClass, err := nonEmptyString(record["environmentClass"], fmt.Sprintf("repo profile environmentClassPolicies #%d environmentClass", index+1))
+		if err != nil {
+			return nil, true, err
+		}
+		networkPolicy, err := nonEmptyString(record["networkPolicy"], fmt.Sprintf("repo profile environmentClassPolicies #%d networkPolicy", index+1))
+		if err != nil {
+			return nil, true, err
+		}
+		if !contains([]string{"none", "loopback", "external"}, networkPolicy) {
+			return nil, true, fmt.Errorf("repo profile environmentClassPolicies #%d has unsupported networkPolicy", index+1)
+		}
+		credentialClass, err := nonEmptyString(record["credentialClass"], fmt.Sprintf("repo profile environmentClassPolicies #%d credentialClass", index+1))
+		if err != nil {
+			return nil, true, err
+		}
+		if !contains([]string{"none", "local-secret", "live-github", "live-cloud"}, credentialClass) {
+			return nil, true, fmt.Errorf("repo profile environmentClassPolicies #%d has unsupported credentialClass", index+1)
+		}
+		policies = append(policies, environmentClassPolicy{
+			EnvironmentClass: environmentClass,
+			NetworkPolicy:    networkPolicy,
+			CredentialClass:  credentialClass,
+		})
+		classes = append(classes, environmentClass)
+	}
+	if err := preserveSortedUnique(classes, "repo profile environmentPolicy.environmentClassPolicies.environmentClass", true); err != nil {
+		return nil, true, err
+	}
+	return policies, true, nil
 }
 
 func parseGeneratedArtifact(raw any, context string) (generatedArtifact, error) {
@@ -943,6 +1009,26 @@ func matcherAcceptsCommand(input commandMatchInput) bool {
 
 func matcherPolicyMatchesEnvironment(matcher commandMatcher, environmentClasses []string, policy environmentPolicy) bool {
 	required := toSet(environmentClasses)
+	if policy.HasClassPolicies {
+		networkPolicy := ""
+		credentialClass := ""
+		for environmentClass := range required {
+			classNetworkPolicy, classCredentialClass := explicitEnvironmentClassPolicy(environmentClass, policy)
+			if networkPolicy == "" {
+				networkPolicy = classNetworkPolicy
+				credentialClass = classCredentialClass
+				continue
+			}
+			if networkPolicy != classNetworkPolicy || credentialClass != classCredentialClass {
+				return false
+			}
+		}
+		if networkPolicy == "" {
+			networkPolicy = "none"
+			credentialClass = "none"
+		}
+		return matcher.NetworkPolicy == networkPolicy && matcher.CredentialClass == credentialClass
+	}
 	requiresLiveGithub := intersects(required, policy.LiveGithubRequiredClasses)
 	requiresLocalSecret := intersects(required, policy.LocalSecretRequiredClasses)
 	if requiresLiveGithub && requiresLocalSecret {
@@ -955,6 +1041,15 @@ func matcherPolicyMatchesEnvironment(matcher commandMatcher, environmentClasses 
 		return matcher.NetworkPolicy == "loopback" && matcher.CredentialClass == "local-secret"
 	}
 	return matcher.NetworkPolicy == "none" && matcher.CredentialClass == "none"
+}
+
+func explicitEnvironmentClassPolicy(environmentClass string, policy environmentPolicy) (string, string) {
+	for _, item := range policy.ClassPolicies {
+		if item.EnvironmentClass == environmentClass {
+			return item.NetworkPolicy, item.CredentialClass
+		}
+	}
+	return "none", "none"
 }
 
 func strictCommandStringToArgv(command string) []string {

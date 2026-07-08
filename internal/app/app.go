@@ -27,8 +27,19 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 		writeDiagnosticf(stderr, "unsupported command: %s", args[0])
 		return 1
 	}
+	if isCommandHelpRequest(args) {
+		return writeText(commandUsage(descriptor), 0, nil, stdout, stderr)
+	}
 	switch descriptor.runner {
 	case commandRunnerHelp:
+		if len(args) == 2 && args[1] != "--help" && args[1] != "-h" {
+			target, targetOK := commandDescriptorFor(args[1])
+			if !targetOK {
+				writeDiagnosticf(stderr, "unsupported help target: %s", args[1])
+				return 1
+			}
+			return writeText(commandUsage(target), 0, nil, stdout, stderr)
+		}
 		if len(args) != 1 && !(len(args) == 2 && (args[1] == "--help" || args[1] == "-h")) {
 			_, _ = fmt.Fprintln(stderr, "help supports only --help or -h")
 			return 1

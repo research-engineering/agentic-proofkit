@@ -22,7 +22,7 @@ func usage() string {
 		"  agentic-proofkit gradual-adoption --input <path|-> [--input-pointer <pointer>] [--contract-envelope]\n" +
 		"  agentic-proofkit gradual-adoption-bootstrap --input <path|-> [--input-pointer <pointer>] [--contract-envelope] [--agent-envelope] [--materialization-manifest]\n" +
 		"  agentic-proofkit gradual-adoption-guidance --input <path|-> [--input-pointer <pointer>] [--contract-envelope] [--agent-envelope] [--guidance-mode <mode>] [--checked-scope <scope>] [--touched-rule-id <id>]\n" +
-		"  agentic-proofkit help [-h|--help]\n" +
+		"  agentic-proofkit help [<command>|-h|--help]\n" +
 		"  agentic-proofkit impact --input <path|-> [--input-pointer <pointer>]\n" +
 		"  agentic-proofkit json-report-cli-adapter-source --language typescript [--format json]\n" +
 		"  agentic-proofkit migration-parity-admission --input <path|-> [--input-pointer <pointer>]\n" +

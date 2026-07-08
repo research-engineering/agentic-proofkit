@@ -512,6 +512,7 @@ func validEvidenceInput() map[string]any {
 			"proofLikePaths":              []any{},
 			"publicApiContractTouched":    false,
 			"requiredCommands":            []any{plannedCommand()},
+			"scanObligation":              map[string]any{"command": "agentic-proofkit secret-scan", "commandId": "secret-scan", "commandOwnership": "caller_owned_external", "mode": "diff-scoped", "reason": "external_secret_scan", "required": true},
 			"secretScan":                  map[string]any{"changedArchiveOrBinaryPaths": []any{}, "command": "agentic-proofkit secret-scan", "mode": "diff-scoped", "required": true},
 			"skippedGates":                []any{},
 			"touchedRequirementWitnesses": []any{},

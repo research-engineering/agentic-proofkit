@@ -12,6 +12,9 @@ func commandsJSON(values commandAccumulator) []any {
 
 func commandJSON(item command) map[string]any {
 	value := map[string]any{"command": item.Command, "id": item.ID, "reason": item.Reason}
+	if item.CommandOwnership != nil {
+		value["commandOwnership"] = *item.CommandOwnership
+	}
 	if item.SourcePath != nil {
 		value["sourcePath"] = *item.SourcePath
 	}

@@ -500,16 +500,19 @@ func stringsAsAny(values []string) []any {
 
 func TestHelpCommandContractForms(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012212946147973847974188673193955565304078130183905790171739464374424221304025")
-	for _, args := range [][]string{{"help"}, {"help", "--help"}, {"help", "-h"}, {"--help"}, {"-h"}} {
+	for _, args := range [][]string{{"help"}, {"help", "--help"}, {"help", "-h"}, {"--help"}, {"-h"}, {"help", "repo-profile-admission"}, {"repo-profile-admission", "--help"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
-			status := Run(t.Context(), args, strings.NewReader(""), &stdout, &stderr)
+			status := Run(t.Context(), args, strings.NewReader(`{"bad":`), &stdout, &stderr)
 			if status != 0 || stderr.Len() != 0 {
 				t.Fatalf("help failed status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
 			}
-			if !strings.Contains(stdout.String(), "agentic-proofkit help") {
+			if !strings.Contains(stdout.String(), "agentic-proofkit help") && !strings.Contains(stdout.String(), "agentic-proofkit repo-profile-admission") {
 				t.Fatalf("help output missing help route: %s", stdout.String())
+			}
+			if strings.Contains(stdout.String(), "bad") {
+				t.Fatalf("help output read stdin: %s", stdout.String())
 			}
 		})
 	}
@@ -518,6 +521,12 @@ func TestHelpCommandContractForms(t *testing.T) {
 	status := Run(t.Context(), []string{"help", "--input", "-"}, strings.NewReader(""), &stdout, &stderr)
 	if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "help supports only") {
 		t.Fatalf("unexpected invalid help result status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	status = Run(t.Context(), []string{"help", "unknown-command"}, strings.NewReader(""), &stdout, &stderr)
+	if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "unsupported help target: unknown-command") {
+		t.Fatalf("unexpected unknown help result status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
 	}
 }
 

@@ -103,10 +103,10 @@
             "item": {
               "kind": {
                 "enum": [
-              "adoption_workflow",
-              "authoring_plan",
-              "binding_witness_plan_input",
-              "capability_map",
+                  "adoption_workflow",
+                  "authoring_plan",
+                  "binding_witness_plan_input",
+                  "capability_map",
                   "changed_path_set",
                   "coverage_compose_input",
                   "coverage_view_input",
@@ -776,7 +776,29 @@
       "allowedFlags": [
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.repo-profile-admission.input.v1",
+        "schemaVersion": 1,
+        "authority": "repo profile input admission",
+        "compatibility": {
+          "schemaVersion": "optional transitional top-level field; if present it must be 1",
+          "profile.schema": "required proofkit.repo-profile.v1"
+        },
+        "environmentPolicy": {
+          "legacyFields": [
+            "liveGithubRequiredClasses",
+            "localSecretRequiredClasses"
+          ],
+          "preferredField": "environmentClassPolicies",
+          "tupleFields": [
+            "environmentClass",
+            "networkPolicy",
+            "credentialClass"
+          ],
+          "nonClaim": "Repo-profile admission checks explicit caller-owned command policy facts and does not execute commands or discover repository files."
+        }
+      }
     },
     {
       "command": "requirement-authoring-plan",
@@ -1288,7 +1310,33 @@
         "--agent-envelope",
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.selective-gate-plan.input.v1",
+        "schemaVersion": 1,
+        "authority": "selective gate plan input admission",
+        "scanObligation": {
+          "preferred": true,
+          "fields": [
+            "command",
+            "commandId",
+            "commandOwnership",
+            "mode",
+            "reason",
+            "required"
+          ],
+          "commandOwnership": [
+            "proofkit_text_policy",
+            "caller_owned_external"
+          ],
+          "reason": [
+            "text_policy",
+            "external_secret_scan"
+          ],
+          "legacyAlias": "secretScan",
+          "nonClaim": "Selective gate planning admits scan obligations but does not execute scanner commands or prove repository-wide credential absence."
+        }
+      }
     },
     {
       "command": "self-check",
@@ -1575,6 +1623,10 @@
               "commands",
               "vocabulary"
             ],
+            "optional": [
+              "schemaVersion"
+            ],
+            "schemaVersionRule": "If present, schemaVersion must be 1.",
             "nonClaim": "Explicit command catalogs are caller-owned; Proofkit admits command safety shape but does not execute commands."
           },
           "requirement-bindings": {

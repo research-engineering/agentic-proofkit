@@ -1,6 +1,7 @@
 package selectivegateplan
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -72,6 +73,97 @@ func TestBuildAcceptsMinimalExplicitPlanInput(t *testing.T) {
 	if !stringArrayContains(output["nonClaims"], "Selective gate plans do not execute commands, authenticate receipts, approve merge, or prove proof freshness.") {
 		t.Fatalf("nonClaims missing command-owned boundary denial: %#v", output["nonClaims"])
 	}
+}
+
+func TestBuildEmitsOwnerMarkedScanObligation(t *testing.T) {
+	input := validPlanInput()
+	delete(input, "secretScan")
+	input["scanObligation"] = map[string]any{
+		"command":          "agentic-proofkit text-policy --input artifacts/text-policy.json",
+		"commandId":        "text-policy",
+		"commandOwnership": "proofkit_text_policy",
+		"mode":             "diff-scoped",
+		"reason":           "text_policy",
+		"required":         true,
+	}
+	output, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || output["planState"] != "ok" {
+		t.Fatalf("Build() exitCode=%d planState=%v, want ok", exitCode, output["planState"])
+	}
+	projection, err := AdmitEvidencePlan(jsonRoundTrip(t, output))
+	if err != nil {
+		t.Fatalf("AdmitEvidencePlan() error = %v", err)
+	}
+	scan := projection.Raw["scanObligation"].(map[string]any)
+	if scan["commandId"] != "text-policy" || scan["commandOwnership"] != "proofkit_text_policy" || scan["reason"] != "text_policy" {
+		t.Fatalf("scanObligation lost ownership semantics: %#v", scan)
+	}
+	if !commandOwnershipExists(projection.RequiredCommands, "text-policy", "proofkit_text_policy") {
+		t.Fatalf("requiredCommands missing text-policy ownership: %#v", projection.RequiredCommands)
+	}
+}
+
+func TestBuildRejectsConflictingScanObligationAliases(t *testing.T) {
+	input := validPlanInput()
+	input["scanObligation"] = map[string]any{
+		"command":          "agentic-proofkit text-policy --input artifacts/text-policy.json",
+		"commandId":        "text-policy",
+		"commandOwnership": "proofkit_text_policy",
+		"mode":             "diff-scoped",
+		"reason":           "text_policy",
+		"required":         true,
+	}
+	_, _, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "either scanObligation or secretScan") {
+		t.Fatalf("Build() error=%v, want conflicting scan aliases rejection", err)
+	}
+}
+
+func TestAdmitEvidencePlanNormalizesLegacySecretScanOutput(t *testing.T) {
+	output, _, err := Build(validPlanInput())
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	delete(output, "scanObligation")
+	projection, err := AdmitEvidencePlan(jsonRoundTrip(t, output))
+	if err != nil {
+		t.Fatalf("AdmitEvidencePlan() rejected legacy secretScan output: %v", err)
+	}
+	scan := projection.Raw["scanObligation"].(map[string]any)
+	if scan["commandId"] != "secret-scan" || scan["commandOwnership"] != "caller_owned_external" || scan["reason"] != "external_secret_scan" {
+		t.Fatalf("legacy secretScan was not normalized as caller-owned external scan: %#v", scan)
+	}
+}
+
+func TestAdmitEvidencePlanRejectsConflictingScanObligationAliases(t *testing.T) {
+	output, _, err := Build(validPlanInput())
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	scan := output["scanObligation"].(map[string]any)
+	scan["command"] = "agentic-proofkit text-policy --input artifacts/text-policy.json"
+	_, err = AdmitEvidencePlan(jsonRoundTrip(t, output))
+	if err == nil || !strings.Contains(err.Error(), "must match legacy secretScan command") {
+		t.Fatalf("AdmitEvidencePlan() error=%v, want scan alias parity rejection", err)
+	}
+}
+
+func jsonRoundTrip(t *testing.T, value any) map[string]any {
+	t.Helper()
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("marshal JSON round trip: %v", err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.UseNumber()
+	var decoded map[string]any
+	if err := decoder.Decode(&decoded); err != nil {
+		t.Fatalf("decode JSON round trip: %v", err)
+	}
+	return decoded
 }
 
 func TestBuildRejectsDisplayOnlyCommandShellControlTokens(t *testing.T) {
@@ -253,6 +345,15 @@ func commandIDExists(raw any, id string) bool {
 	for _, value := range values {
 		record, ok := value.(map[string]any)
 		if ok && record["id"] == id {
+			return true
+		}
+	}
+	return false
+}
+
+func commandOwnershipExists(values []map[string]any, id string, ownership string) bool {
+	for _, value := range values {
+		if value["id"] == id && value["commandOwnership"] == ownership {
 			return true
 		}
 	}
