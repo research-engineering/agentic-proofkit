@@ -120,6 +120,61 @@ func TestCompareRegistryFilesRejectsInvalidRegistryEvidence(t *testing.T) {
 	}
 }
 
+func TestFetchPyPIRegistryEvidenceRetriesUntilRegistryIsArtifactClosed(t *testing.T) {
+	candidates, completeRegistry := matchingCandidateAndRegistry()
+	incompleteRegistry := completeRegistry
+	incompleteRegistry.URLs = nil
+	calls := 0
+	evidence, err := fetchPyPIRegistryEvidence(candidates, "agentic-proofkit", "1.2.3", 3, 0, func(string, string) (pypiResponse, error) {
+		calls++
+		if calls == 1 {
+			return incompleteRegistry, nil
+		}
+		return completeRegistry, nil
+	})
+
+	if err != nil {
+		t.Fatalf("fetchPyPIRegistryEvidence() error = %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("fetchPyPIRegistryEvidence() calls = %d, want 2", calls)
+	}
+	if len(evidence) != 1 || evidence[0].Filename != candidates.Packages[0].Filename {
+		t.Fatalf("fetchPyPIRegistryEvidence() evidence = %#v", evidence)
+	}
+}
+
+func TestFetchPyPIRegistryEvidenceFailsAfterIncompleteRegistry(t *testing.T) {
+	candidates, incompleteRegistry := matchingCandidateAndRegistry()
+	incompleteRegistry.URLs = nil
+
+	_, err := fetchPyPIRegistryEvidence(candidates, "agentic-proofkit", "1.2.3", 2, 0, func(string, string) (pypiResponse, error) {
+		return incompleteRegistry, nil
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "missing wheel") {
+		t.Fatalf("fetchPyPIRegistryEvidence() error = %v, want missing wheel", err)
+	}
+}
+
+func TestFetchPyPIRegistryEvidenceDoesNotRetryNonRecoverableMismatch(t *testing.T) {
+	candidates, registry := matchingCandidateAndRegistry()
+	registry.URLs[0].Digests.SHA256 = "other"
+	calls := 0
+
+	_, err := fetchPyPIRegistryEvidence(candidates, "agentic-proofkit", "1.2.3", 3, 0, func(string, string) (pypiResponse, error) {
+		calls++
+		return registry, nil
+	})
+
+	if err == nil || !strings.Contains(err.Error(), "sha256 mismatch") {
+		t.Fatalf("fetchPyPIRegistryEvidence() error = %v, want sha256 mismatch", err)
+	}
+	if calls != 1 {
+		t.Fatalf("fetchPyPIRegistryEvidence() calls = %d, want fail-fast", calls)
+	}
+}
+
 func TestRegistryArtifactOutputCarriesPyPIAuthorityMetadata(t *testing.T) {
 	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3"}
 	evidence := []registryWheelEvidence{{

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -23,6 +24,9 @@ const (
 	packageKind   = "proofkit.python-package-set.v1"
 	pypiRegistry  = releasechannel.PyPIRegistryURL
 	schemaVersion = 1
+
+	pypiRegistryAttemptLimit = 24
+	pypiRegistryRetryDelay   = 10 * time.Second
 )
 
 type packageJSON struct {
@@ -68,6 +72,16 @@ type pypiFile struct {
 	PythonVersion string `json:"python_version"`
 	URL           string `json:"url"`
 	Yanked        bool   `json:"yanked"`
+}
+
+type pypiHTTPStatusError struct {
+	StatusCode int
+	Status     string
+	Body       string
+}
+
+func (err pypiHTTPStatusError) Error() string {
+	return fmt.Sprintf("pypi returned %s: %s", err.Status, err.Body)
 }
 
 type registryArtifactSet struct {
@@ -120,11 +134,7 @@ func run() error {
 	if err := requireCandidatePlatformCompleteness(candidates.Packages); err != nil {
 		return err
 	}
-	registry, err := fetchPyPIRelease(packageName, manifest.Version)
-	if err != nil {
-		return err
-	}
-	evidence, err := compareRegistryFiles(candidates, registry)
+	evidence, err := fetchPyPIRegistryEvidence(candidates, packageName, manifest.Version, pypiRegistryAttemptLimit, pypiRegistryRetryDelay, fetchPyPIRelease)
 	if err != nil {
 		return err
 	}
@@ -179,36 +189,73 @@ func readPythonPackageSet(path string) (pythonPackageSet, error) {
 	return out, nil
 }
 
+func fetchPyPIRegistryEvidence(candidates pythonPackageSet, name string, version string, attempts int, delay time.Duration, fetch func(string, string) (pypiResponse, error)) ([]registryWheelEvidence, error) {
+	if attempts < 1 {
+		return nil, fmt.Errorf("pypi registry evidence fetch requires at least one attempt")
+	}
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		registry, err := fetch(name, version)
+		if err == nil {
+			evidence, err := compareRegistryFiles(candidates, registry)
+			if err == nil {
+				return evidence, nil
+			}
+			if !retryableRegistryEvidenceError(err) {
+				return nil, err
+			}
+			lastErr = err
+		} else {
+			if !retryablePyPIFetchError(err) {
+				return nil, err
+			}
+			lastErr = err
+		}
+		if attempt < attempts {
+			time.Sleep(delay)
+		}
+	}
+	return nil, fmt.Errorf("fetch complete pypi registry evidence %s@%s: %w", name, version, lastErr)
+}
+
 func fetchPyPIRelease(name string, version string) (pypiResponse, error) {
 	url := fmt.Sprintf("%s/pypi/%s/%s/json", pypiRegistry, name, version)
 	client := http.Client{Timeout: 30 * time.Second}
-	var lastErr error
-	for attempt := 1; attempt <= 6; attempt++ {
-		response, err := client.Get(url)
-		if err == nil {
-			if response.StatusCode == http.StatusOK {
-				body, err := io.ReadAll(response.Body)
-				_ = response.Body.Close()
-				if err != nil {
-					return pypiResponse{}, err
-				}
-				out, err := admission.DecodeTypedJSON[pypiResponse](bytes.NewReader(body), int64(len(body)))
-				if err != nil {
-					return pypiResponse{}, err
-				}
-				return out, nil
-			}
-			body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-			_ = response.Body.Close()
-			lastErr = fmt.Errorf("pypi returned %s: %s", response.Status, strings.TrimSpace(string(body)))
-		} else {
-			lastErr = err
-		}
-		if attempt < 6 {
-			time.Sleep(time.Duration(attempt*5) * time.Second)
+	response, err := client.Get(url)
+	if err != nil {
+		return pypiResponse{}, err
+	}
+	if response.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		_ = response.Body.Close()
+		return pypiResponse{}, pypiHTTPStatusError{
+			StatusCode: response.StatusCode,
+			Status:     response.Status,
+			Body:       strings.TrimSpace(string(body)),
 		}
 	}
-	return pypiResponse{}, fmt.Errorf("fetch pypi release %s@%s: %w", name, version, lastErr)
+	body, err := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if err != nil {
+		return pypiResponse{}, err
+	}
+	out, err := admission.DecodeTypedJSON[pypiResponse](bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		return pypiResponse{}, err
+	}
+	return out, nil
+}
+
+func retryablePyPIFetchError(err error) bool {
+	var statusErr pypiHTTPStatusError
+	if errors.As(err, &statusErr) {
+		return statusErr.StatusCode == http.StatusNotFound || statusErr.StatusCode >= http.StatusInternalServerError
+	}
+	return true
+}
+
+func retryableRegistryEvidenceError(err error) bool {
+	return strings.Contains(err.Error(), "pypi release is missing wheel")
 }
 
 func requireCandidatePlatformCompleteness(records []wheelRecord) error {
