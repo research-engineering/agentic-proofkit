@@ -29,6 +29,10 @@ npm run check
 git diff --check
 ```
 
+If your local project uses Bun, `bun run check` is acceptable as a convenience
+runner only when it invokes the same scripts and leaves `npm run check`
+equivalent. Release and package-authority proof remains npm-owned.
+
 For CLI or Go changes, run focused Go tests first. For package or release
 changes, inspect [docs/release-process.md](docs/release-process.md).
 

@@ -1,0 +1,53 @@
+name: setup verified npm
+description: Install the repository-pinned npm CLI from a checksum-verified tarball.
+
+runs:
+  using: composite
+  steps:
+    - name: Install checksum-verified npm
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        npm_version="$(node -p "require('./package.json').packageManager.split('@').at(-1)")"
+        expected_version="11.18.0"
+        if [ "$npm_version" != "$expected_version" ]; then
+          echo "packageManager npm version drift: expected $expected_version, got $npm_version" >&2
+          exit 1
+        fi
+
+        tarball_url="https://registry.npmjs.org/npm/-/npm-11.18.0.tgz"
+        tarball_integrity="sha512-T67M4L5wNm0cZ7EBLErcEkY1SmzEW/WJ+SADBzsFUY1UdAPfFHXFQtZ6SEXiK0+vzXysCvAsepbMaBTwnrAD+w=="
+        tool_root="$RUNNER_TEMP/proofkit-verified-npm"
+        archive="$tool_root/npm.tgz"
+        bin_dir="$tool_root/bin"
+
+        rm -rf "$tool_root"
+        mkdir -p "$tool_root" "$bin_dir"
+        curl --fail --silent --show-error --location "$tarball_url" --output "$archive"
+
+        node - "$archive" "$tarball_integrity" <<'NODE'
+        const { createHash } = require("node:crypto");
+        const { readFileSync } = require("node:fs");
+
+        const [archive, expected] = process.argv.slice(2);
+        const digest = `sha512-${createHash("sha512").update(readFileSync(archive)).digest("base64")}`;
+        if (digest !== expected) {
+          throw new Error(`npm tarball integrity mismatch: expected ${expected}, got ${digest}`);
+        }
+        NODE
+
+        tar -xzf "$archive" -C "$tool_root"
+
+        cat > "$bin_dir/npm" <<EOF
+        #!/usr/bin/env bash
+        exec node "$tool_root/package/bin/npm-cli.js" "\$@"
+        EOF
+
+        cat > "$bin_dir/npx" <<EOF
+        #!/usr/bin/env bash
+        exec node "$tool_root/package/bin/npx-cli.js" "\$@"
+        EOF
+
+        chmod +x "$bin_dir/npm" "$bin_dir/npx"
+        echo "$bin_dir" >> "$GITHUB_PATH"

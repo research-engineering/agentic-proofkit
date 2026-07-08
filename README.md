@@ -19,6 +19,25 @@ packets without copying verifier logic between projects.
 | Public-source provenance | Claimed only for a version whose release assets, registry identity, and checksum manifests are artifact-closed |
 | License | MIT |
 
+## Install
+
+The canonical registry identity is npm:
+
+```bash
+npm install -D @research-engineering/agentic-proofkit
+```
+
+Bun consumers may install the same npm registry package with Bun:
+
+```bash
+bun add -d @research-engineering/agentic-proofkit
+```
+
+npm remains the release-authority toolchain because release proof records npm
+registry identity, `dist.integrity`, `dist.shasum`, `npm pack`, and root-only
+registry install evidence. Bun is a supported consumer/developer package
+manager path, not a replacement for npm release evidence.
+
 ## Project Boundary
 
 `agentic-proofkit` is intended to provide reusable proof-workflow mechanics for
