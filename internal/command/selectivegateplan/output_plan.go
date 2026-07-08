@@ -24,7 +24,7 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	if !ok {
 		return EvidencePlanProjection{}, fmt.Errorf("selective gate plan output must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"artifactIntegrity", "changedPaths", "failures", "fallbackCoverage", "generatedArtifacts", "nonClaims", "planState", "privatePathExclusions", "proofLikePaths", "publicApiContractTouched", "requiredCommands", "scanObligation", "schemaVersion", "secretScan", "skippedGates", "touchedRequirementWitnesses", "unknownEdges"}, "selective gate plan output"); err != nil {
+	if err := admit.KnownKeys(record, []string{"artifactIntegrity", "changedPaths", "failures", "fallbackCoverage", "generatedArtifacts", "nonClaims", "planState", "privatePathExclusions", "proofLikePaths", "publicApiContractTouched", "requiredCommands", "scanObligation", "schemaVersion", "skippedGates", "touchedRequirementWitnesses", "unknownEdges"}, "selective gate plan output"); err != nil {
 		return EvidencePlanProjection{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -78,21 +78,14 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	if err != nil {
 		return EvidencePlanProjection{}, err
 	}
-	secretScan, err := outputSecretScanRecord(record["secretScan"])
-	if err != nil {
-		return EvidencePlanProjection{}, err
-	}
 	var scanObligation map[string]any
 	if rawScanObligation, ok := record["scanObligation"]; ok {
 		scanObligation, err = outputScanObligationRecord(rawScanObligation)
 		if err != nil {
 			return EvidencePlanProjection{}, err
 		}
-		if err := requireLegacySecretScanParity(scanObligation, secretScan); err != nil {
-			return EvidencePlanProjection{}, err
-		}
 	} else {
-		scanObligation = legacySecretScanObligation(secretScan)
+		return EvidencePlanProjection{}, fmt.Errorf("selective gate plan output scanObligation must be an object")
 	}
 	skippedGates, err := outputSkippedGateRecords(record["skippedGates"])
 	if err != nil {
@@ -118,31 +111,10 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	normalized["requiredCommands"] = mapsToAny(commands)
 	normalized["scanObligation"] = scanObligation
 	normalized["schemaVersion"] = 1
-	normalized["secretScan"] = secretScan
 	normalized["skippedGates"] = skippedGates
 	normalized["touchedRequirementWitnesses"] = touchedWitnesses
 	normalized["unknownEdges"] = unknownEdges
 	return EvidencePlanProjection{PlanState: state, RequiredCommands: commands, Failures: failures, ChangedPaths: changedPaths, Generated: generated, Raw: normalized}, nil
-}
-
-func legacySecretScanObligation(secretScan map[string]any) map[string]any {
-	return map[string]any{
-		"command":          secretScan["command"],
-		"commandId":        "secret-scan",
-		"commandOwnership": "caller_owned_external",
-		"mode":             secretScan["mode"],
-		"reason":           "external_secret_scan",
-		"required":         secretScan["required"],
-	}
-}
-
-func requireLegacySecretScanParity(scanObligation map[string]any, secretScan map[string]any) error {
-	for _, key := range []string{"command", "mode", "required"} {
-		if scanObligation[key] != secretScan[key] {
-			return fmt.Errorf("selective gate plan output scanObligation must match legacy secretScan %s", key)
-		}
-	}
-	return nil
 }
 
 func outputCommandRecords(raw any) ([]map[string]any, error) {
@@ -236,6 +208,9 @@ func outputScanObligationRecord(raw any) (map[string]any, error) {
 	}
 	if !required {
 		return nil, fmt.Errorf("selective gate plan output scanObligation required must be true")
+	}
+	if err := validateScanObligation(scanObligation{Command: command, CommandID: commandID, CommandOwnership: commandOwnership, Mode: mode, Reason: reason, Required: required}, "selective gate plan output scanObligation"); err != nil {
+		return nil, err
 	}
 	return map[string]any{"command": command, "commandId": commandID, "commandOwnership": commandOwnership, "mode": mode, "reason": reason, "required": required}, nil
 }
@@ -427,36 +402,6 @@ func outputPrivatePathExclusionsRecord(raw any) (map[string]any, error) {
 		return nil, err
 	}
 	return map[string]any{"appliesTo": admit.StringSliceToAny(appliesTo), "pathPrefixes": admit.StringSliceToAny(prefixes)}, nil
-}
-
-func outputSecretScanRecord(raw any) (map[string]any, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("selective gate plan output secretScan must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"changedArchiveOrBinaryPaths", "command", "mode", "required"}, "selective gate plan output secretScan"); err != nil {
-		return nil, err
-	}
-	mode, err := admit.Enum(record["mode"], map[string]struct{}{"diff-scoped": {}}, "selective gate plan output secretScan mode")
-	if err != nil {
-		return nil, err
-	}
-	changed, err := sortedPaths(record["changedArchiveOrBinaryPaths"], "selective gate plan output secretScan changedArchiveOrBinaryPaths", true)
-	if err != nil {
-		return nil, err
-	}
-	required, err := admit.Bool(record["required"], "selective gate plan output secretScan required")
-	if err != nil {
-		return nil, err
-	}
-	if !required {
-		return nil, fmt.Errorf("selective gate plan output secretScan required must be true")
-	}
-	command, err := admit.DisplayOnlyCommandText(record["command"], "selective gate plan output secretScan command")
-	if err != nil {
-		return nil, err
-	}
-	return map[string]any{"changedArchiveOrBinaryPaths": admit.StringSliceToAny(changed), "command": command, "mode": mode, "required": required}, nil
 }
 
 func outputSkippedGateRecords(raw any) ([]any, error) {

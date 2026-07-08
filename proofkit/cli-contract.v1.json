@@ -569,7 +569,21 @@
       "allowedFlags": [
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.migration-parity-admission.input.v1",
+        "schemaVersion": 1,
+        "authority": "caller-owned migration parity evidence",
+        "requiredFields": [
+          "nonClaims",
+          "parityRecords",
+          "paritySetId",
+          "schemaVersion",
+          "sourceProofOwners",
+          "targetProofkitRefs"
+        ],
+        "nonClaim": "Migration parity admission does not approve old-owner deletion, execute native witnesses, authenticate evidence, or prove semantic equivalence."
+      }
     },
     {
       "command": "migration-plan",
@@ -583,7 +597,24 @@
       "allowedFlags": [
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.migration-plan.input.v1",
+        "schemaVersion": 1,
+        "authority": "caller-owned migration retirement planning facts",
+        "requiredFields": [
+          "followUpCommands",
+          "migrationId",
+          "nonClaims",
+          "parityEvidenceRefs",
+          "retainedOwners",
+          "retirementCandidates",
+          "schemaVersion",
+          "sourceProofOwners",
+          "targetProofkitRefs"
+        ],
+        "nonClaim": "Migration plans route caller-owned review work only and do not edit files, delete old owners, approve merge, or prove proof freshness."
+      }
     },
     {
       "command": "obligation-decision",
@@ -613,7 +644,35 @@
       "allowedFlags": [
         "--input",
         "--input-pointer"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.package-runtime-dependency-admission.input.v1",
+        "schemaVersion": 1,
+        "authority": "caller-owned runtime dependency resolution and lockfile identity facts",
+        "requiredFields": [
+          "admissibleLocations",
+          "expectedDependencySpec",
+          "expectedLockfileIntegrity",
+          "expectedPackageName",
+          "expectedPackageVersion",
+          "nonClaims",
+          "packageResolution",
+          "reportId",
+          "schemaVersion"
+        ],
+        "packageResolutionRequiredFields": [
+          "dependencySpec",
+          "lockfileEntryPresent",
+          "lockfileIntegrity",
+          "packageName",
+          "packageRoot",
+          "packageVersion",
+          "realPackageRoot",
+          "resolvedEntryPoint"
+        ],
+        "lockfileIntegrity": "npm-style sha256, sha384, or sha512 integrity string admitted from caller-owned lockfile facts",
+        "nonClaim": "The command does not read lockfiles, resolve packages, authenticate registry access, execute witnesses, or prove proof freshness."
+      }
     },
     {
       "command": "pilot-admission",
@@ -1344,6 +1403,21 @@
             "missing files must not include contentBase64"
           ]
         },
+        "suppressionRecord": {
+          "optional": true,
+          "requiredFields": [
+            "findingClass",
+            "line",
+            "path",
+            "reason",
+            "suppressionId"
+          ],
+          "rules": [
+            "suppressions match exact findingClass, path, and line",
+            "unused suppressions fail closed",
+            "suppression reason is report-visible caller text and is admitted through secret-like text rejection"
+          ]
+        },
         "nonClaim": "Secret scan does not discover repository files or replace provider secret scanning."
       },
       "outputContract": {
@@ -1354,6 +1428,10 @@
           "findingClass",
           "line",
           "path"
+        ],
+        "suppressionFields": [
+          "suppressedFindings",
+          "unusedSuppressions"
         ],
         "redactionRule": "matched secret-like values are never emitted to stdout reports",
         "nonClaim": "Findings are pattern detections, not credential validity proof."
@@ -1428,7 +1506,11 @@
             "text_policy",
             "external_secret_scan"
           ],
-          "legacyAlias": "secretScan",
+          "relationRules": [
+            "proofkit_text_policy requires commandId text-policy and reason text_policy",
+            "proofkit_secret_scan requires commandId secret-scan and reason secret_scan",
+            "caller_owned_external requires reason external_secret_scan and must not use Proofkit-owned command ids text-policy or secret-scan"
+          ],
           "nonClaim": "Selective gate planning admits scan obligations but does not execute scanner commands or prove repository-wide credential absence."
         }
       }

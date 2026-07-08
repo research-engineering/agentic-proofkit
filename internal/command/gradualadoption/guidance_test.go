@@ -41,6 +41,26 @@ func TestGuidanceReportsCandidateBoundariesAsAdvisoryOnly(t *testing.T) {
 	}
 }
 
+func TestGuidanceKeepsCommandOwnedNonClaims(t *testing.T) {
+	input := guidanceInput("warn")
+	input["nonClaims"] = []any{"Caller guidance caveat."}
+
+	output, exitCode, err := BuildGuidance(input, GuidanceOptions{})
+	if err != nil {
+		t.Fatalf("BuildGuidance returned error: %v", err)
+	}
+	if exitCode != 0 || output["state"] != "passed" {
+		t.Fatalf("BuildGuidance exit=%d output=%#v, want passed", exitCode, output)
+	}
+	nonClaims := anyStrings(output["nonClaims"])
+	if !containsString(nonClaims, "Gradual adoption guidance reports caller-owned facts and derived action routing only.") {
+		t.Fatalf("nonClaims missing command-owned guidance boundary: %#v", nonClaims)
+	}
+	if !containsString(nonClaims, candidateBoundaryNonClaim) {
+		t.Fatalf("nonClaims missing candidate boundary non-claim: %#v", nonClaims)
+	}
+}
+
 func TestGuidanceEnforcementFailsClosedForCandidateBoundaries(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.014122077686373699171401312512146978765072555275124478915795819268469905855861")
 	cases := []struct {

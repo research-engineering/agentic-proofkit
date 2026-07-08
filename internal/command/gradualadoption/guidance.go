@@ -22,6 +22,12 @@ var sourceReportStates = map[string]struct{}{
 
 const candidateBoundaryNonClaim = "Candidate boundary guidance is advisory until the consuming repository owner admits it in stable requirements and proof bindings."
 
+var guidanceNonClaims = []string{
+	candidateBoundaryNonClaim,
+	"Gradual adoption guidance does not approve enforcement, merge, release, rollout, deployment, or production readiness.",
+	"Gradual adoption guidance reports caller-owned facts and derived action routing only.",
+}
+
 type GuidanceOptions struct {
 	CheckedScope   string
 	GuidanceMode   string
@@ -178,6 +184,10 @@ func buildGuidance(raw any, options GuidanceOptions) (guidanceResult, error) {
 	agentGuidance := admitAgentGuidance(object(record["agentGuidance"]), &failures)
 	modernization := admitModernization(record["modernization"], &failures)
 	nonClaims, err := admit.SortedTextArray(record["nonClaims"], "gradual adoption guidance nonClaims", false)
+	if err != nil {
+		return guidanceResult{}, err
+	}
+	nonClaims, err = admit.MergeNonClaims(guidanceNonClaims, nonClaims, "gradual adoption guidance")
 	if err != nil {
 		return guidanceResult{}, err
 	}

@@ -26,9 +26,9 @@ func TestBuildRejectsUnknownNestedPolicyFields(t *testing.T) {
 		mutate func(map[string]any)
 	}{
 		{
-			name: "secret scan",
+			name: "scan obligation",
 			mutate: func(input map[string]any) {
-				input["secretScan"].(map[string]any)["skipOnFork"] = true
+				input["scanObligation"].(map[string]any)["skipOnFork"] = true
 			},
 		},
 		{
@@ -77,7 +77,6 @@ func TestBuildAcceptsMinimalExplicitPlanInput(t *testing.T) {
 
 func TestBuildEmitsOwnerMarkedScanObligation(t *testing.T) {
 	input := validPlanInput()
-	delete(input, "secretScan")
 	input["scanObligation"] = map[string]any{
 		"command":          "agentic-proofkit text-policy --input artifacts/text-policy.json",
 		"commandId":        "text-policy",
@@ -108,7 +107,6 @@ func TestBuildEmitsOwnerMarkedScanObligation(t *testing.T) {
 
 func TestBuildEmitsProofkitSecretScanObligation(t *testing.T) {
 	input := validPlanInput()
-	delete(input, "secretScan")
 	input["scanObligation"] = map[string]any{
 		"command":          "agentic-proofkit secret-scan --input artifacts/secret-scan.json",
 		"commandId":        "secret-scan",
@@ -134,48 +132,28 @@ func TestBuildEmitsProofkitSecretScanObligation(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsConflictingScanObligationAliases(t *testing.T) {
+func TestBuildRejectsLegacySecretScanAlias(t *testing.T) {
+	input := validPlanInput()
+	input["secretScan"] = map[string]any{"command": "agentic-proofkit secret-scan", "mode": "diff-scoped", "required": true}
+	_, _, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "unsupported field") {
+		t.Fatalf("Build() error=%v, want legacy secretScan rejection", err)
+	}
+}
+
+func TestBuildRejectsImpossibleScanObligationRelation(t *testing.T) {
 	input := validPlanInput()
 	input["scanObligation"] = map[string]any{
-		"command":          "agentic-proofkit text-policy --input artifacts/text-policy.json",
-		"commandId":        "text-policy",
+		"command":          "agentic-proofkit secret-scan --input artifacts/secret-scan.json",
+		"commandId":        "secret-scan",
 		"commandOwnership": "proofkit_text_policy",
 		"mode":             "diff-scoped",
 		"reason":           "text_policy",
 		"required":         true,
 	}
 	_, _, err := Build(input)
-	if err == nil || !strings.Contains(err.Error(), "either scanObligation or secretScan") {
-		t.Fatalf("Build() error=%v, want conflicting scan aliases rejection", err)
-	}
-}
-
-func TestAdmitEvidencePlanNormalizesLegacySecretScanOutput(t *testing.T) {
-	output, _, err := Build(validPlanInput())
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
-	}
-	delete(output, "scanObligation")
-	projection, err := AdmitEvidencePlan(jsonRoundTrip(t, output))
-	if err != nil {
-		t.Fatalf("AdmitEvidencePlan() rejected legacy secretScan output: %v", err)
-	}
-	scan := projection.Raw["scanObligation"].(map[string]any)
-	if scan["commandId"] != "secret-scan" || scan["commandOwnership"] != "caller_owned_external" || scan["reason"] != "external_secret_scan" {
-		t.Fatalf("legacy secretScan was not normalized as caller-owned external scan: %#v", scan)
-	}
-}
-
-func TestAdmitEvidencePlanRejectsConflictingScanObligationAliases(t *testing.T) {
-	output, _, err := Build(validPlanInput())
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
-	}
-	scan := output["scanObligation"].(map[string]any)
-	scan["command"] = "agentic-proofkit text-policy --input artifacts/text-policy.json"
-	_, err = AdmitEvidencePlan(jsonRoundTrip(t, output))
-	if err == nil || !strings.Contains(err.Error(), "must match legacy secretScan command") {
-		t.Fatalf("AdmitEvidencePlan() error=%v, want scan alias parity rejection", err)
+	if err == nil || !strings.Contains(err.Error(), "proofkit_text_policy requires commandId text-policy") {
+		t.Fatalf("Build() error=%v, want impossible scan relation rejection", err)
 	}
 }
 
@@ -351,7 +329,7 @@ func validPlanInput() map[string]any {
 		"proofLikePathPatterns":       []any{},
 		"publicApi":                   map[string]any{"command": "agentic-proofkit public-api", "touched": false},
 		"requirementImpact":           map[string]any{"command": "agentic-proofkit requirement-bindings", "touched": false},
-		"secretScan":                  map[string]any{"command": "agentic-proofkit secret-scan", "mode": "diff-scoped", "required": true},
+		"scanObligation":              map[string]any{"command": "agentic-proofkit secret-scan --input artifacts/secret-scan.json", "commandId": "secret-scan", "commandOwnership": "proofkit_secret_scan", "mode": "diff-scoped", "reason": "secret_scan", "required": true},
 		"touchedRequirementWitnesses": []any{},
 		"unknownEdges":                []any{},
 	}

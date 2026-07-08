@@ -9,12 +9,8 @@ historical completion archive.
 
 ## Current State
 
-Active work is limited to the rows below.
-
-The public source cutover, scoped npm channel, optional PyPI channel, provider
-security setup, first-consumer proof, and second-consumer pilot have all been
-closed. Durable rules and reusable architecture now live in their owner
-surfaces:
+Active work is limited to the rows below. Durable rules and reusable
+architecture live in their owner surfaces:
 
 - `README.md` for human orientation;
 - `ADOPTION.md` for adoption, distribution, rendering, requirement, contract,
@@ -50,4 +46,7 @@ records, generated release manifests, or the owning docs named above.
 
 ## Open Rows
 
-No open rows.
+| Status | ID | Scope | Completion condition |
+|---|---|---|---|
+| NEXT | COVERAGE-01 | Upgrade command semantic coverage from route-authored proof metadata to an owner-admitted executable oracle ledger. | `CommandCoverageInventory` consumes a separate source-owned oracle ledger whose rows bind `commandRef`, selector, negative case, assertion oracle, expected public outcome, and owner invariant; route metadata alone cannot emit `semantic_falsifier`; `npm run self:coverage` and targeted negative fixtures prove weak/no-op route tests stay non-semantic. |
+| BLOCKED | RELEASE-01 | Prove signed protected-tag release policy as provider-side release governance, not source-only intent. | Repository tag protection/ruleset and release workflow variables require signed annotated release tags; the next public release records provider-side evidence or the row is explicitly retired as an accepted non-claim. |

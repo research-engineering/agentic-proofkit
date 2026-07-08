@@ -262,14 +262,16 @@ var routeSpecs = map[string]routeSpec{
 	},
 	"render_human_view": {
 		Family:      "rendered_views",
-		RequiredAny: [][]string{{"requirement_source", "proof_binding", "coverage_view_input"}},
+		RequiredAny: [][]string{{"requirement_source", "proof_binding", "coverage_view_input", "spec_tree_bundle"}},
 		NextCommands: []commandSpec{
 			{Command: "requirement-source-view", InputKind: "requirement_source", Why: "Human source views render structured requirement records without becoming authority."},
 			{Command: "requirement-proof-view", InputKind: "proof_binding", Why: "Human proof views render proof routes without replacing bindings."},
 			{Command: "requirement-coverage-view", InputKind: "coverage_view_input", Why: "Coverage views show tests and scenarios linked to requirements."},
+			{Command: "requirement-spec-tree-view", InputKind: "spec_tree_bundle", Why: "Spec-tree views render caller-owned hierarchy records without inferring hierarchy from paths."},
 			{Command: "requirement-browser-server", InputKind: "requirement_source", ExtraArgs: []string{"--view", "source"}, Why: "The browser server presents caller-owned requirement source inputs over loopback only."},
 			{Command: "requirement-browser-server", InputKind: "proof_binding", ExtraArgs: []string{"--view", "proof"}, Why: "The browser server presents caller-owned proof binding inputs over loopback only."},
 			{Command: "requirement-browser-server", InputKind: "coverage_view_input", ExtraArgs: []string{"--view", "coverage"}, Why: "The browser server presents caller-owned coverage inputs over loopback only."},
+			{Command: "requirement-browser-server", InputKind: "spec_tree_bundle", ExtraArgs: []string{"--view", "spec-tree"}, Why: "The browser server presents caller-owned spec-tree inputs over loopback only."},
 		},
 		StopConditions: []string{"Stop before treating generated HTML or Markdown as structured source authority."},
 		Escalations:    []string{"Escalate tracked rendered-artifact freshness to the consuming repository when generated files are committed."},

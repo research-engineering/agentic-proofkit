@@ -7,7 +7,8 @@ This repository state does not claim:
 
 - runtime implementation readiness;
 - package publication readiness;
-- public-source provenance for a package version unless that version's release
+- public-source provenance for a package version unless that version was
+  released from an intentionally public source repository and its release
   assets, registry identity, and checksum manifests are artifact-closed;
 - source-code completeness;
 - production readiness;

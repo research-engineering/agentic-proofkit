@@ -64,6 +64,9 @@ jobs:
       - name: Verify text policy
         run: npm run text-policy
 
+      - name: Verify Mermaid diagrams
+        run: npm run mermaid:check
+
       - name: Verify Go formatting
         run: npm run go:fmt
 

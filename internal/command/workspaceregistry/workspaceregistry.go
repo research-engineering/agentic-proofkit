@@ -103,7 +103,8 @@ func Build(raw any) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	return buildReport(input), exitCode(input), nil
+	record := buildReport(input)
+	return record, exitCode(record), nil
 }
 
 func buildReport(input registryInput) report.Record {
@@ -145,15 +146,8 @@ func buildReport(input registryInput) report.Record {
 	}
 }
 
-func exitCode(input registryInput) int {
-	if len(aggregateFailures([]report.RuleResult{
-		knownPackageFactsRule(input.KnownPackageName, input.Packages),
-		rootScriptPolicyRule(input.Root.Scripts, input.ScriptPolicy),
-		packageScriptPolicyRule(input.Packages, input.ScriptPolicy),
-		scriptTargetsRule(input.KnownPackageName, input.Root.Scripts, input.Packages, input.ScriptPolicy),
-		dependencyPolicyRule(input.KnownPackageName, input.Root.DependencyRefs, input.Packages, input.DependencyPolicy),
-		lockfilePolicyRule(input.Root.Name, input.Packages, input.LockfilePolicy),
-	})) == 0 {
+func exitCode(record report.Record) int {
+	if record.State == "passed" {
 		return 0
 	}
 	return 1

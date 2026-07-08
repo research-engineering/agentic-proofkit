@@ -2,6 +2,7 @@ package secretscan
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -18,9 +19,10 @@ var fileStates = map[string]struct{}{
 }
 
 type input struct {
-	Files     []fileRecord
-	NonClaims []string
-	ReportID  string
+	Files        []fileRecord
+	NonClaims    []string
+	ReportID     string
+	Suppressions []suppressionRecord
 }
 
 type fileRecord struct {
@@ -29,12 +31,32 @@ type fileRecord struct {
 	State         string
 }
 
+type findingRecord struct {
+	FindingClass string
+	Line         int
+	Path         string
+}
+
+type suppressionRecord struct {
+	FindingClass  string
+	Line          int
+	Path          string
+	Reason        string
+	SuppressionID string
+}
+
+type suppressedFindingRecord struct {
+	findingRecord
+	Reason        string
+	SuppressionID string
+}
+
 func Build(raw any) (report.Record, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	findings := []map[string]any{}
+	findings := []findingRecord{}
 	checkedCount := 0
 	missingSkippedCount := 0
 	for _, file := range input.Files {
@@ -52,17 +74,11 @@ func Build(raw any) (report.Record, int, error) {
 		checkedCount++
 		findings = append(findings, scanFile(file.Path, string(content))...)
 	}
-	sort.Slice(findings, func(i int, j int) bool {
-		left := findings[i]["path"].(string)
-		right := findings[j]["path"].(string)
-		if left != right {
-			return left < right
-		}
-		return findings[i]["line"].(int) < findings[j]["line"].(int)
-	})
+	sortFindings(findings)
+	unsuppressed, suppressed, unusedSuppressions := applySuppressions(findings, input.Suppressions)
 	state := "passed"
 	exitCode := 0
-	if len(findings) > 0 {
+	if len(unsuppressed) > 0 || len(unusedSuppressions) > 0 {
 		state = "failed"
 		exitCode = 1
 	}
@@ -77,13 +93,19 @@ func Build(raw any) (report.Record, int, error) {
 		ReportID:      input.ReportID,
 		State:         state,
 		Summary: map[string]any{
-			"checkedFileCount":        checkedCount,
-			"findingCount":            len(findings),
-			"inputFileCount":          len(input.Files),
-			"missingSkippedFileCount": missingSkippedCount,
+			"checkedFileCount":         checkedCount,
+			"findingCount":             len(findings),
+			"inputFileCount":           len(input.Files),
+			"missingSkippedFileCount":  missingSkippedCount,
+			"suppressedFindingCount":   len(suppressed),
+			"suppressionCount":         len(input.Suppressions),
+			"unusedSuppressionCount":   len(unusedSuppressions),
+			"unsuppressedFindingCount": len(unsuppressed),
 		},
 		Diagnostics: []report.Diagnostic{
-			{Key: "findings", Value: mapsToAny(findings)},
+			{Key: "findings", Value: findingsToAny(unsuppressed)},
+			{Key: "suppressedFindings", Value: suppressedFindingsToAny(suppressed)},
+			{Key: "unusedSuppressions", Value: suppressionsToAny(unusedSuppressions)},
 		},
 		RuleResults: []report.RuleResult{
 			{
@@ -92,6 +114,9 @@ func Build(raw any) (report.Record, int, error) {
 				Message: ruleMessage(state),
 				Diagnostics: []report.Diagnostic{
 					{Key: "findingCount", Value: len(findings)},
+					{Key: "suppressedFindingCount", Value: len(suppressed)},
+					{Key: "unusedSuppressionCount", Value: len(unusedSuppressions)},
+					{Key: "unsuppressedFindingCount", Value: len(unsuppressed)},
 				},
 			},
 		},
@@ -105,7 +130,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("secret scan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"files", "nonClaims", "reportId", "schemaVersion"}, "secret scan input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"files", "nonClaims", "reportId", "schemaVersion", "suppressions"}, "secret scan input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -123,7 +148,11 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	return input{Files: files, NonClaims: nonClaims, ReportID: reportID}, nil
+	suppressions, err := admitSuppressions(record["suppressions"])
+	if err != nil {
+		return input{}, err
+	}
+	return input{Files: files, NonClaims: nonClaims, ReportID: reportID, Suppressions: suppressions}, nil
 }
 
 func admitFiles(raw any) ([]fileRecord, error) {
@@ -173,32 +202,180 @@ func admitFiles(raw any) ([]fileRecord, error) {
 	return files, nil
 }
 
-func scanFile(path string, content string) []map[string]any {
+func admitSuppressions(raw any) ([]suppressionRecord, error) {
+	if raw == nil {
+		return []suppressionRecord{}, nil
+	}
+	values, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("secret scan suppressions must be an array")
+	}
+	result := make([]suppressionRecord, 0, len(values))
+	seenIDs := map[string]struct{}{}
+	seenKeys := map[string]struct{}{}
+	for index, value := range values {
+		record, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("secret scan suppressions[%d] must be an object", index)
+		}
+		if err := admit.KnownKeys(record, []string{"findingClass", "line", "path", "reason", "suppressionId"}, fmt.Sprintf("secret scan suppressions[%d]", index)); err != nil {
+			return nil, err
+		}
+		suppressionID, err := admit.RuleID(record["suppressionId"], fmt.Sprintf("secret scan suppressions[%d].suppressionId", index))
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := seenIDs[suppressionID]; exists {
+			return nil, fmt.Errorf("secret scan suppressionId must be unique")
+		}
+		seenIDs[suppressionID] = struct{}{}
+		pathValue, ok := record["path"].(string)
+		if !ok {
+			return nil, fmt.Errorf("secret scan suppressions[%d].path must be a repository-relative POSIX path", index)
+		}
+		pathValue, err = admit.SafeRepoRelativePath(pathValue, fmt.Sprintf("secret scan suppressions[%d].path", index))
+		if err != nil {
+			return nil, err
+		}
+		findingClass, err := admit.Enum(record["findingClass"], map[string]struct{}{"secret_like_value": {}}, fmt.Sprintf("secret scan suppressions[%d].findingClass", index))
+		if err != nil {
+			return nil, err
+		}
+		line, err := positiveJSONInt(record["line"], fmt.Sprintf("secret scan suppressions[%d].line", index))
+		if err != nil {
+			return nil, err
+		}
+		reason, err := admit.NonEmptyText(record["reason"], fmt.Sprintf("secret scan suppressions[%d].reason", index))
+		if err != nil {
+			return nil, err
+		}
+		item := suppressionRecord{FindingClass: findingClass, Line: line, Path: pathValue, Reason: reason, SuppressionID: suppressionID}
+		key := suppressionKey(item)
+		if _, exists := seenKeys[key]; exists {
+			return nil, fmt.Errorf("secret scan suppressions must not duplicate path, line, and findingClass")
+		}
+		seenKeys[key] = struct{}{}
+		result = append(result, item)
+	}
+	sort.Slice(result, func(left int, right int) bool {
+		return result[left].SuppressionID < result[right].SuppressionID
+	})
+	return result, nil
+}
+
+func positiveJSONInt(raw any, context string) (int, error) {
+	number, ok := raw.(json.Number)
+	if !ok {
+		return 0, fmt.Errorf("%s must be a positive JSON integer", context)
+	}
+	value, err := number.Int64()
+	if err != nil || value < 1 || int64(int(value)) != value {
+		return 0, fmt.Errorf("%s must be a positive JSON integer", context)
+	}
+	return int(value), nil
+}
+
+func scanFile(path string, content string) []findingRecord {
 	lines := strings.Split(content, "\n")
-	findings := []map[string]any{}
+	findings := []findingRecord{}
 	for index, line := range lines {
 		if admit.ContainsSecretLikeValue(line) {
-			findings = append(findings, map[string]any{
-				"findingClass": "secret_like_value",
-				"line":         index + 1,
-				"path":         path,
-			})
+			findings = append(findings, findingRecord{FindingClass: "secret_like_value", Line: index + 1, Path: path})
 		}
 	}
 	return findings
 }
 
-func ruleMessage(state string) string {
-	if state == "passed" {
-		return "Caller-provided file inventory does not contain admitted secret-like text patterns."
+func applySuppressions(findings []findingRecord, suppressions []suppressionRecord) ([]findingRecord, []suppressedFindingRecord, []suppressionRecord) {
+	byKey := map[string]suppressionRecord{}
+	used := map[string]struct{}{}
+	for _, suppression := range suppressions {
+		byKey[suppressionKey(suppression)] = suppression
 	}
-	return "Caller-provided file inventory contains secret-like text patterns."
+	unsuppressed := []findingRecord{}
+	suppressed := []suppressedFindingRecord{}
+	for _, finding := range findings {
+		suppression, ok := byKey[findingKey(finding)]
+		if !ok {
+			unsuppressed = append(unsuppressed, finding)
+			continue
+		}
+		used[suppression.SuppressionID] = struct{}{}
+		suppressed = append(suppressed, suppressedFindingRecord{findingRecord: finding, Reason: suppression.Reason, SuppressionID: suppression.SuppressionID})
+	}
+	unused := []suppressionRecord{}
+	for _, suppression := range suppressions {
+		if _, ok := used[suppression.SuppressionID]; !ok {
+			unused = append(unused, suppression)
+		}
+	}
+	sortFindings(unsuppressed)
+	sort.Slice(suppressed, func(left int, right int) bool {
+		return findingKey(suppressed[left].findingRecord) < findingKey(suppressed[right].findingRecord)
+	})
+	sort.Slice(unused, func(left int, right int) bool {
+		return unused[left].SuppressionID < unused[right].SuppressionID
+	})
+	return unsuppressed, suppressed, unused
 }
 
-func mapsToAny(values []map[string]any) []any {
+func findingKey(finding findingRecord) string {
+	return fmt.Sprintf("%s\x00%09d\x00%s", finding.Path, finding.Line, finding.FindingClass)
+}
+
+func suppressionKey(suppression suppressionRecord) string {
+	return fmt.Sprintf("%s\x00%09d\x00%s", suppression.Path, suppression.Line, suppression.FindingClass)
+}
+
+func sortFindings(findings []findingRecord) {
+	sort.Slice(findings, func(i int, j int) bool {
+		return findingKey(findings[i]) < findingKey(findings[j])
+	})
+}
+
+func ruleMessage(state string) string {
+	if state == "passed" {
+		return "Caller-provided file inventory has no unsuppressed secret-like text patterns."
+	}
+	return "Caller-provided file inventory contains unsuppressed secret-like text patterns or stale suppressions."
+}
+
+func findingsToAny(values []findingRecord) []any {
 	out := make([]any, 0, len(values))
 	for _, value := range values {
-		out = append(out, value)
+		out = append(out, map[string]any{
+			"findingClass": value.FindingClass,
+			"line":         value.Line,
+			"path":         value.Path,
+		})
+	}
+	return out
+}
+
+func suppressedFindingsToAny(values []suppressedFindingRecord) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, map[string]any{
+			"findingClass":  value.FindingClass,
+			"line":          value.Line,
+			"path":          value.Path,
+			"reason":        value.Reason,
+			"suppressionId": value.SuppressionID,
+		})
+	}
+	return out
+}
+
+func suppressionsToAny(values []suppressionRecord) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, map[string]any{
+			"findingClass":  value.FindingClass,
+			"line":          value.Line,
+			"path":          value.Path,
+			"reason":        value.Reason,
+			"suppressionId": value.SuppressionID,
+		})
 	}
 	return out
 }

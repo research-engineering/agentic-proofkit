@@ -50,6 +50,67 @@ func TestBuildPassesCleanExplicitInventory(t *testing.T) {
 	}
 }
 
+func TestBuildSuppressesExplicitFindingAndRejectsStaleSuppression(t *testing.T) {
+	input := validInput(map[string][]byte{
+		".github/workflows/publish.yml": []byte("permissions:\n  id-token: write\n"),
+	})
+	input["suppressions"] = []any{map[string]any{
+		"suppressionId": "proofkit.test.oidc_permission_fixture",
+		"path":          ".github/workflows/publish.yml",
+		"line":          json.Number("2"),
+		"findingClass":  "secret_like_value",
+		"reason":        "OIDC permission fixture text is expected in this caller-owned test inventory.",
+	}}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() exit=%d state=%s, want passed", exitCode, record.State)
+	}
+	if record.Summary["findingCount"] != 1 || record.Summary["suppressedFindingCount"] != 1 || record.Summary["unsuppressedFindingCount"] != 0 {
+		t.Fatalf("summary=%#v, want one suppressed finding and no unsuppressed findings", record.Summary)
+	}
+	encoded, err := json.Marshal(record.JSONValue())
+	if err != nil {
+		t.Fatalf("marshal report: %v", err)
+	}
+	if strings.Contains(string(encoded), "id-token: write") {
+		t.Fatalf("suppressed report leaked matched line: %s", encoded)
+	}
+
+	input = validInput(map[string][]byte{
+		".github/workflows/publish.yml": []byte("permissions:\n  contents: read\n"),
+	})
+	input["suppressions"] = []any{map[string]any{
+		"suppressionId": "proofkit.test.stale_suppression",
+		"path":          ".github/workflows/publish.yml",
+		"line":          json.Number("2"),
+		"findingClass":  "secret_like_value",
+		"reason":        "This suppression should fail when no matching finding remains.",
+	}}
+	record, exitCode, err = Build(input)
+	if err != nil {
+		t.Fatalf("Build(stale suppression) error = %v", err)
+	}
+	if exitCode != 1 || record.State != "failed" || record.Summary["unusedSuppressionCount"] != 1 {
+		t.Fatalf("Build(stale suppression) exit=%d state=%s summary=%#v, want failed stale suppression", exitCode, record.State, record.Summary)
+	}
+}
+
+func TestBuildAcceptsPathWithSecretLikeSyllable(t *testing.T) {
+	_, exitCode, err := Build(validInput(map[string][]byte{
+		"docs/features/ai-risk-escalation.md": []byte("safe text\n"),
+	}))
+	if err != nil {
+		t.Fatalf("Build() rejected legitimate path component: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Build() exit=%d, want clean path to pass", exitCode)
+	}
+}
+
 func TestBuildRejectsMalformedInventoryInsteadOfScanningRepository(t *testing.T) {
 	cases := []struct {
 		name  string

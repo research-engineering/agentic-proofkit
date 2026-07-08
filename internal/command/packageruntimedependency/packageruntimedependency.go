@@ -13,20 +13,22 @@ import (
 const reportKind = "proofkit.package-runtime-dependency-admission"
 
 var (
-	packageNamePattern    = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
-	packageVersionPattern = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
-	secretLikeTextPattern = regexp.MustCompile(`(?i)(?:authorization\s*:|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access_?token|api_?key|password|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
+	packageNamePattern       = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
+	packageVersionPattern    = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+	lockfileIntegrityPattern = regexp.MustCompile(`^sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}$`)
+	secretLikeTextPattern    = regexp.MustCompile(`(?i)(?:authorization\s*:|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access_?token|api_?key|password|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
 )
 
 var standardNonClaims = []any{
 	"Package runtime dependency admission does not resolve packages or read package manifests.",
-	"Package runtime dependency admission does not read lockfiles or authenticate registry access.",
+	"Package runtime dependency admission admits caller-provided lockfile identity and integrity facts; it does not read lockfiles or authenticate registry access.",
 	"Package runtime dependency admission does not execute native witnesses or prove proof freshness.",
 }
 
 type resolutionInput struct {
 	DependencySpec       *string
 	LockfileEntryPresent bool
+	LockfileIntegrity    string
 	PackageName          string
 	PackageRoot          string
 	PackageVersion       string
@@ -41,13 +43,14 @@ type locationsInput struct {
 }
 
 type input struct {
-	AdmissibleLocations    locationsInput
-	ExpectedDependencySpec string
-	ExpectedPackageName    string
-	ExpectedPackageVersion string
-	NonClaims              []string
-	PackageResolution      resolutionInput
-	ReportID               string
+	AdmissibleLocations       locationsInput
+	ExpectedDependencySpec    string
+	ExpectedLockfileIntegrity string
+	ExpectedPackageName       string
+	ExpectedPackageVersion    string
+	NonClaims                 []string
+	PackageResolution         resolutionInput
+	ReportID                  string
 }
 
 type locationFacts struct {
@@ -85,6 +88,9 @@ func Build(raw any) (report.Record, int) {
 	if !input.PackageResolution.LockfileEntryPresent {
 		lockfileFailures = append(lockfileFailures, "lockfile entry for runtime dependency is missing")
 	}
+	if input.PackageResolution.LockfileIntegrity != input.ExpectedLockfileIntegrity {
+		lockfileFailures = append(lockfileFailures, "runtime dependency lockfile integrity does not match expected lockfile integrity")
+	}
 	locationFailures := []string{}
 	if mode != "external_package" {
 		locationFailures = append(locationFailures, fmt.Sprintf("runtime dependency resolved as %s", mode))
@@ -105,15 +111,16 @@ func Build(raw any) (report.Record, int) {
 		ReportID:      input.ReportID,
 		State:         state,
 		Summary: map[string]any{
-			"accepted":                len(failures) == 0,
-			"dependencySpecMatched":   len(dependencyFailures) == 0,
-			"expectedPackageName":     input.ExpectedPackageName,
-			"expectedPackageVersion":  input.ExpectedPackageVersion,
-			"failureCount":            len(failures),
-			"lockfileEntryPresent":    input.PackageResolution.LockfileEntryPresent,
-			"mode":                    mode,
-			"packageIdentityMatched":  len(packageIdentityFailures) == 0,
-			"runtimeLocationAdmitted": mode == "external_package",
+			"accepted":                 len(failures) == 0,
+			"dependencySpecMatched":    len(dependencyFailures) == 0,
+			"expectedPackageName":      input.ExpectedPackageName,
+			"expectedPackageVersion":   input.ExpectedPackageVersion,
+			"failureCount":             len(failures),
+			"lockfileEntryPresent":     input.PackageResolution.LockfileEntryPresent,
+			"lockfileIntegrityMatched": input.PackageResolution.LockfileIntegrity == input.ExpectedLockfileIntegrity,
+			"mode":                     mode,
+			"packageIdentityMatched":   len(packageIdentityFailures) == 0,
+			"runtimeLocationAdmitted":  mode == "external_package",
 		},
 		Diagnostics: locationDiagnostics(mode, facts),
 		RuleResults: []report.RuleResult{
@@ -122,6 +129,7 @@ func Build(raw any) (report.Record, int) {
 			}),
 			ruleResult("proofkit.package-runtime-dependency-admission.lockfile-entry", lockfileFailures, "runtime dependency lockfile entry is present", []report.Diagnostic{
 				{Key: "lockfileEntryPresent", Value: input.PackageResolution.LockfileEntryPresent},
+				{Key: "lockfileIntegrityMatched", Value: input.PackageResolution.LockfileIntegrity == input.ExpectedLockfileIntegrity},
 			}),
 			ruleResult("proofkit.package-runtime-dependency-admission.package-identity", packageIdentityFailures, "resolved package identity matches expected package identity", []report.Diagnostic{
 				{Key: "expectedPackageName", Value: input.ExpectedPackageName},
@@ -144,7 +152,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("package runtime dependency admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"admissibleLocations", "expectedDependencySpec", "expectedPackageName", "expectedPackageVersion", "nonClaims", "packageResolution", "reportId", "schemaVersion"}, "package runtime dependency admission input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"admissibleLocations", "expectedDependencySpec", "expectedLockfileIntegrity", "expectedPackageName", "expectedPackageVersion", "nonClaims", "packageResolution", "reportId", "schemaVersion"}, "package runtime dependency admission input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -170,6 +178,10 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
+	expectedLockfileIntegrity, err := lockfileIntegrity(record["expectedLockfileIntegrity"], "expectedLockfileIntegrity")
+	if err != nil {
+		return input{}, err
+	}
 	expectedPackageName, err := packageName(record["expectedPackageName"], "expectedPackageName")
 	if err != nil {
 		return input{}, err
@@ -179,13 +191,14 @@ func admitInput(raw any) (input, error) {
 		return input{}, err
 	}
 	return input{
-		AdmissibleLocations:    locations,
-		ExpectedDependencySpec: expectedDependencySpec,
-		ExpectedPackageName:    expectedPackageName,
-		ExpectedPackageVersion: expectedPackageVersion,
-		NonClaims:              nonClaims,
-		PackageResolution:      resolution,
-		ReportID:               reportID,
+		AdmissibleLocations:       locations,
+		ExpectedDependencySpec:    expectedDependencySpec,
+		ExpectedLockfileIntegrity: expectedLockfileIntegrity,
+		ExpectedPackageName:       expectedPackageName,
+		ExpectedPackageVersion:    expectedPackageVersion,
+		NonClaims:                 nonClaims,
+		PackageResolution:         resolution,
+		ReportID:                  reportID,
 	}, nil
 }
 
@@ -194,7 +207,7 @@ func admitResolution(raw any) (resolutionInput, error) {
 	if !ok {
 		return resolutionInput{}, fmt.Errorf("package runtime dependency resolution must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencySpec", "lockfileEntryPresent", "packageName", "packageRoot", "packageVersion", "realPackageRoot", "resolvedEntryPoint"}, "package runtime dependency resolution"); err != nil {
+	if err := admit.KnownKeys(record, []string{"dependencySpec", "lockfileEntryPresent", "lockfileIntegrity", "packageName", "packageRoot", "packageVersion", "realPackageRoot", "resolvedEntryPoint"}, "package runtime dependency resolution"); err != nil {
 		return resolutionInput{}, err
 	}
 	lockfileEntryPresent, ok := record["lockfileEntryPresent"].(bool)
@@ -208,6 +221,10 @@ func admitResolution(raw any) (resolutionInput, error) {
 			return resolutionInput{}, err
 		}
 		admittedDependencySpec = &value
+	}
+	lockfileIntegrity, err := lockfileIntegrity(record["lockfileIntegrity"], "packageResolution.lockfileIntegrity")
+	if err != nil {
+		return resolutionInput{}, err
 	}
 	packageName, err := packageName(record["packageName"], "packageResolution.packageName")
 	if err != nil {
@@ -232,6 +249,7 @@ func admitResolution(raw any) (resolutionInput, error) {
 	return resolutionInput{
 		DependencySpec:       admittedDependencySpec,
 		LockfileEntryPresent: lockfileEntryPresent,
+		LockfileIntegrity:    lockfileIntegrity,
 		PackageName:          packageName,
 		PackageRoot:          packageRoot,
 		PackageVersion:       packageVersion,
@@ -396,6 +414,17 @@ func dependencySpec(raw any, context string) (string, error) {
 	}
 	if strings.ContainsAny(text, "\x00\r\n") {
 		return "", fmt.Errorf("%s must be single-line text", context)
+	}
+	return text, nil
+}
+
+func lockfileIntegrity(raw any, context string) (string, error) {
+	text, err := nonEmptyText(raw, context)
+	if err != nil {
+		return "", err
+	}
+	if !lockfileIntegrityPattern.MatchString(text) {
+		return "", fmt.Errorf("%s must be npm-style sha256, sha384, or sha512 integrity text", context)
 	}
 	return text, nil
 }
