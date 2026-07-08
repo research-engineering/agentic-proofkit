@@ -6,9 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsAdvisoryReceiptAndRejectsMergeSatisfyingWithoutProvenance(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.076311225906412383451940890026527143214204102348303993661137717946500939722995")
 	record, exitCode, err := Build(validProofReceiptInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

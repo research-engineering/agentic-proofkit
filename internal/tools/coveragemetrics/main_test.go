@@ -191,6 +191,9 @@ func TestReadCommandCoverageInventoryRejectsSelectorSourcePathDrift(t *testing.T
 }
 
 func TestRunWritesCurrentMetricsWhenCommandCoverageInventoryFails(t *testing.T) {
+	inventory := mustAppCommandCoverageInventory(t)
+	firstSemanticInventoryEntry(t, inventory)["oracle"].(map[string]any)["assertionSummary"] = ""
+
 	root := t.TempDir()
 	oldwd, err := os.Getwd()
 	if err != nil {
@@ -208,8 +211,6 @@ func TestRunWritesCurrentMetricsWhenCommandCoverageInventoryFails(t *testing.T) 
 	previousInput := commandCoverageInventoryInput
 	t.Cleanup(func() { commandCoverageInventoryInput = previousInput })
 	commandCoverageInventoryInput = func() (map[string]any, error) {
-		inventory := mustAppCommandCoverageInventory(t)
-		firstSemanticInventoryEntry(t, inventory)["oracle"].(map[string]any)["assertionSummary"] = ""
 		return inventory, nil
 	}
 

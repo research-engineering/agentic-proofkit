@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildRejectsLifecycleTransitionWithoutNewEvidence(t *testing.T) {
@@ -28,6 +29,7 @@ func TestBuildRejectsLifecycleTransitionWithoutNewEvidence(t *testing.T) {
 }
 
 func TestBuildRejectsRequirementSourceTransitionContractViolations(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000338353607129616419889377401978351258590626306307683363645508835961369207418")
 	cases := []struct {
 		name      string
 		want      string

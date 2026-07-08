@@ -8,9 +8,11 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestRegistryConsumerAcceptsRegistryReleaseProof(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.078570628200989177884060697900986161263859706648466286899141113980107918828824")
 	record, exitCode, err := Build(validRegistryConsumerInput(t))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -180,6 +182,7 @@ func TestRegistryExpectedReleaseAuthorityOutputUsesOwnerDigest(t *testing.T) {
 }
 
 func TestRegistryConsumerRejectsLegacyRootImportProof(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.039930770239161369599321884905894984519351217077585815477648288469771222069580")
 	input := validRegistryConsumerInput(t)
 	proof := input["proof"].(map[string]any)
 	proof["rootImportOutputSha256"] = sha256Hex()

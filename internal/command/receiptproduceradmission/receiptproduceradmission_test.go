@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAcceptsMergeSatisfyingProducerReceipt(t *testing.T) {
@@ -19,6 +20,7 @@ func TestBuildAcceptsMergeSatisfyingProducerReceipt(t *testing.T) {
 }
 
 func TestBuildRejectsAdvisoryProducerForMergeSatisfyingReceipt(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.016058221490407979556173242304898277468063189448256779462558039961547903134881")
 	input := validAdmission()
 	producer := input["producers"].([]any)[0].(map[string]any)
 	producer["admissionLevel"] = "advisory"

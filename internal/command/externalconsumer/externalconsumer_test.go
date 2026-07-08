@@ -7,9 +7,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012498104838553757060272339493203313996229216776537383465605902427034061329443")
 	input := validExternalConsumerInput(t)
 	record, exitCode, err := Build(input)
 	if err != nil {

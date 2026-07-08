@@ -2,11 +2,13 @@ package bindingpartition
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildRejectsCrossSurfaceRouteReferenceWithoutDelegation(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.007367819136484564623482005833685691497213272711615520825513165365000892708767")
 	record, exitCode, err := Build(validBindingPartitionInput(false))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

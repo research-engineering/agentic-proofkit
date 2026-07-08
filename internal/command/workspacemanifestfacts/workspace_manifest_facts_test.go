@@ -9,9 +9,11 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/workspaceplanning"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildProjectsManifestFactsAndPlanningInputs(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.045131377523903059328620085892776244655592414046718681948892749746792823542716")
 	output, exitCode, err := Build(validInput(t))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -77,6 +79,7 @@ func TestBuildOutputsAreAdmittedByWorkspacePlanningCommands(t *testing.T) {
 }
 
 func TestBuildRejectsUnsafeManifestPathAndDuplicatePackageIdentity(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.042789860620987407196887112869252006583828805316041850684999615267856780669343")
 	t.Run("unsafe manifest path", func(t *testing.T) {
 		input := validInput(t).(map[string]any)
 		input["packages"].([]any)[0].(map[string]any)["manifestPath"] = "../package.json"

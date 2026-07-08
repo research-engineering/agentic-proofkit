@@ -2,6 +2,7 @@ package proofbindingtestinventory
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -104,6 +105,7 @@ func TestBuildRejectsUnsafeStructuredFalsificationSelector(t *testing.T) {
 }
 
 func TestBuildRejectsDerivedCommandRefCollision(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.045998791748895126484384867727425029606933562065763381226241226336418593975574")
 	input := validInput()
 	binding := input["compactProofContract"].(map[string]any)["bindings"].([]any)[0].([]any)
 	falsification := binding[9].([]any)

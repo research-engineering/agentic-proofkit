@@ -2,11 +2,13 @@ package workspaceregistry
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAdmitsWorkspaceRegistryAndRejectsMissingScriptTarget(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.038162518284450631435313163265663645080169886890779400608856160417454162064127")
 	record, exitCode, err := Build(validWorkspaceRegistryInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

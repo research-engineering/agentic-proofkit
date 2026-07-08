@@ -8,6 +8,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/pilotadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildRejectsMalformedAggregateRoot(t *testing.T) {
@@ -155,6 +156,7 @@ func TestValidateOptionsOwnsModePilotAndCompatibilityPolicy(t *testing.T) {
 }
 
 func TestBuildDelegatesModesWithParity(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.064840772979561884532437014395024443929767634378814122316392969426222714882392")
 	cases := []struct {
 		name    string
 		options Options

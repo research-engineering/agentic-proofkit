@@ -7,9 +7,11 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsProjectStructureScaffoldAndEmitsBoundedEnvelope(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059212367917167148851747700357371540728657804008449562600146109586760618366690")
 	result, err := BuildResult(validProjectStructureInput())
 	if err != nil {
 		t.Fatalf("BuildResult() error=%v", err)
@@ -57,6 +59,7 @@ func TestBuildRejectsSecretLikeProjectStructureNonClaims(t *testing.T) {
 }
 
 func TestBuildRejectsProjectStructurePathDriftAndUnsafePaths(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.036326342746928185666570492555700463770379515182536792074657611113385319861032")
 	cases := []struct {
 		name      string
 		mutate    func(map[string]any)

@@ -3,12 +3,14 @@ package agentroute
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"sort"
 	"strings"
 	"testing"
 )
 
 func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.108125484608845771285185958596730048384317499814813362270908806756918268107297")
 	t.Parallel()
 
 	report, exitCode, err := Build(map[string]any{
@@ -1238,6 +1240,7 @@ func TestBuildEnvelopeKeepsMachineRefIDsBoundedForLongInputRefs(t *testing.T) {
 }
 
 func TestBuildEnvelopeKeepsBlockedRoutesAsStopSignals(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022893294120171709584005915658023363866013069336456249164413421169696538215866")
 	t.Parallel()
 
 	envelope, exitCode, err := BuildEnvelope(map[string]any{
@@ -1269,6 +1272,7 @@ func TestBuildEnvelopeKeepsBlockedRoutesAsStopSignals(t *testing.T) {
 }
 
 func TestBuildEnvelopeCarriesBlockedObservedReportPreconditions(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070004323406011051259833433994481535056161810177395705776549338061243536668298")
 	t.Parallel()
 
 	envelope, exitCode, err := BuildEnvelope(map[string]any{

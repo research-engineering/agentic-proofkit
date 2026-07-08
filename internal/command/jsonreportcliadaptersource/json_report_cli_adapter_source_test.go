@@ -12,6 +12,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 const expectedTypeScriptSourceSha256 = "sha256:a99667de4613773e941acc6968dd3ed883cec16915ce22e86bbd214ef46bfd8f"
@@ -161,6 +162,7 @@ func TestGeneratedSourceAvoidsGenericIndexedAssignmentDrift(t *testing.T) {
 }
 
 func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.113810164796311271953578736163663817358813962387525070369353049827898529598997")
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		t.Fatalf("node is required to prove generated TypeScript semantics: %v", err)

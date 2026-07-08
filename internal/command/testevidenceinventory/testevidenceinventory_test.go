@@ -9,6 +9,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsSemanticFalsifierInventory(t *testing.T) {
@@ -34,6 +35,7 @@ func TestBuildAdmitsSemanticFalsifierInventory(t *testing.T) {
 }
 
 func TestBuildDiscoveryDraftEmitsCandidateOnlyInventory(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.091914923857893189235410404218309297051671488437122754346751725931508712189132")
 	record, exitCode, err := BuildDiscoveryDraft(validDiscoveryDraft())
 	if err != nil {
 		t.Fatalf("BuildDiscoveryDraft() error = %v", err)
@@ -237,6 +239,7 @@ func TestBuildDiscoveryDraftRejectsUnsafeAndContradictoryFacts(t *testing.T) {
 }
 
 func TestBuildRejectsWeakOracleAndDuplicateFalsifier(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.081636031828961563284031836832627984765244046916564856218652240189648812663526")
 	input := validInventory(t)
 	entries := input.(map[string]any)["entries"].([]any)
 	first := cloneMap(entries[0].(map[string]any))

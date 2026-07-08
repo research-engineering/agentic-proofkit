@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestStartServerServesExplicitSourceViews(t *testing.T) {
@@ -305,6 +306,7 @@ func (writer readyWriter) Write(bytes []byte) (int, error) {
 }
 
 func TestStartServerFailsClosedForNonLoopbackHosts(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.094034782477634282784990120509101846539349621662349085355544682336212659794052")
 	for _, host := range []string{"0.0.0.0", "localhost"} {
 		t.Run(host, func(t *testing.T) {
 			_, err := StartServer(sourceInput(t), Options{

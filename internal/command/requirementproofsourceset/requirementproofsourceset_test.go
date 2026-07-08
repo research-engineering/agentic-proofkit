@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestParseJSONObjectRejectsAmbiguousSourceText(t *testing.T) {
@@ -53,6 +54,7 @@ func TestBuildCombinesCanonicalSourceAndRejectsSHADrift(t *testing.T) {
 }
 
 func TestBuildSelectsSourceSetRowsAndEmitsResolverInput(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.103606270231233266473620303120670087653439368563763197580781857201403855835422")
 	input := validFragmentSourceSetInput(t)
 	input["projection"] = map[string]any{
 		"kind":              "resolver_input",

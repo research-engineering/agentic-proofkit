@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildComposesCandidateSourceAcceptedByAdmissionAndTransition(t *testing.T) {
@@ -88,6 +89,7 @@ func TestBuildRejectsCandidateMissingRequiredAuthoringFields(t *testing.T) {
 }
 
 func TestBuildRejectsCandidateSourceAdmissionFailure(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.085104032906462850481973845525599803854236430725230974151578780375965864330575")
 	input := validInput()
 	candidate := firstUpdate(input)["candidateRequirement"].(map[string]any)
 	candidate["proofBindingRefs"] = []any{}

@@ -10,9 +10,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012669526642153953357021471326490174173967306322522257377004543076904982321781")
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
 	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition must route changed blocking requirement records to caller-owned proof obligations."

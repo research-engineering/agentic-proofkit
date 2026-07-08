@@ -2,6 +2,7 @@ package gradualadoption
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -41,6 +42,7 @@ func TestGuidanceReportsCandidateBoundariesAsAdvisoryOnly(t *testing.T) {
 }
 
 func TestGuidanceEnforcementFailsClosedForCandidateBoundaries(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.014122077686373699171401312512146978765072555275124478915795819268469905855861")
 	cases := []struct {
 		name           string
 		mode           string

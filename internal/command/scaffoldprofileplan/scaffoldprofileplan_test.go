@@ -2,11 +2,13 @@ package scaffoldprofileplan
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAcceptsCommandMatcherHints(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.013321323303874251949085998799870857902727560387311658432878441406042996018615")
 	result, err := BuildResult(validScaffoldInput())
 	if err != nil {
 		t.Fatalf("BuildResult() error = %v", err)

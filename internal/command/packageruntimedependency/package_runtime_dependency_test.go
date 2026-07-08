@@ -2,11 +2,13 @@ package packageruntimedependency
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.027617011738725950397530096345580960352335933116627715389463795934691621119686")
 	input := validPackageRuntimeDependencyInput()
 	record, exitCode := Build(input)
 	if exitCode != 0 || record.State != "passed" {

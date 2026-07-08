@@ -5,9 +5,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsTrustedReceiptAndRejectsMissingProvenance(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.105335073905306761462059630478323546719954632613931373419064614644871938990973")
 	input := validReceiptTrustClassInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

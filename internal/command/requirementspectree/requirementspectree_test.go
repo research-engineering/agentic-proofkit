@@ -10,6 +10,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildAdmitsSpecTree(t *testing.T) {
@@ -29,6 +30,7 @@ func TestBuildAdmitsSpecTree(t *testing.T) {
 }
 
 func TestBuildRejectsDAGAndStaleDigest(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.004274152517249135682493047858886787225089847311761896341362471207420838269909")
 	input := validTreeInput()
 	edges := input["edges"].([]any)
 	input["edges"] = append(edges, map[string]any{"parentNodeId": "meta", "childNodeId": "submodule"})
@@ -630,6 +632,7 @@ func TestBuildViewFailsClosedForInvalidTree(t *testing.T) {
 }
 
 func TestBuildViewMarkdownAndHTMLAreDeterministicAndEscaped(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.015614885815453293453950599593189230449223881412117163077427726161271792555871")
 	input := validTreeInput()
 	nodeMap(input, "module")["label"] = "Module <script>alert(1)</script>"
 	overlayMap(input, "overlay.rendered.module")["label"] = "Rendered <img src=x onerror=alert(1)>"

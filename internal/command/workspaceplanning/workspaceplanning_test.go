@@ -2,11 +2,13 @@ package workspaceplanning
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
 
 func TestChangedPackagePlanAdmitsPackagesRootAndSchema(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012483302559028244967785281995194599578244586042338061566707694834914436961975")
 	input := validChangedPackagePlanInput()
 
 	plan, err := BuildChangedPackagePlan(input)
@@ -81,6 +83,7 @@ func TestShardPartitionRejectsUnknownNestedFields(t *testing.T) {
 }
 
 func TestShardPartitionAdmitsCoveredRootsAndRejectsMissingDependency(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.067233922180114604656007812711586055552725961620481057364664589070016617853243")
 	partition, exitCode, err := BuildShardPartition(validShardPartitionInput())
 	if err != nil {
 		t.Fatalf("BuildShardPartition() error=%v", err)

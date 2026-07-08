@@ -3,12 +3,14 @@ package textpolicy
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"sort"
 	"strings"
 	"testing"
 )
 
 func TestEvaluatePreservesUTF8ASCIIWhitespaceAndBinaryFalsifiers(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.086855865554772597777106065642397508247799514617063694794143213323987594296092")
 	result, err := Evaluate(validInput(map[string][]byte{
 		"binary.ZIP":         []byte{0xff, 0xfe},
 		"docs/empty.md":      {},

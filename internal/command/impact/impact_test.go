@@ -2,6 +2,7 @@ package impact
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
 )
@@ -84,6 +85,7 @@ func TestBuildRejectsShellControlTokensInObligationCommands(t *testing.T) {
 }
 
 func TestBuildRoutesChangedRecordToObligationAndRejectsUnboundProofChange(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.015680759158531317531499583930144280843140752606638002248368777967073648841036")
 	input := validImpactInput()
 	input["changedRecordIds"] = []any{"REQ-PROOFKIT-001"}
 	input["obligationCatalog"] = []any{

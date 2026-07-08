@@ -2,6 +2,7 @@ package receiptcurrentnessscope
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"testing"
 )
 
@@ -9,6 +10,7 @@ const digestA = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const digestB = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 func TestBuildAdmitsCurrentScopedReceiptAndRejectsStaleDigest(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.086966962808690097804613007060988808190045007706377086217228560067889861834248")
 	input := validReceiptCurrentnessScopeInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/registryconsumer"
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 var testRequiredPreconditionIDs = []string{
@@ -22,6 +23,7 @@ var testRequiredPreconditionIDs = []string{
 }
 
 func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.013286022796687848436579723494873862332245131771566454685280914078856550358560")
 	input := validComposeInput(t)
 	output, exitCode, err := Build(input)
 	if err != nil {
@@ -42,6 +44,7 @@ func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
 }
 
 func TestBuildBlocksUnavailableRequiredPreconditionsWithoutAcceptedInput(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.014640206555303265838366804019420074169369289515355674136620238515916737123108")
 	for _, preconditionID := range testRequiredPreconditionIDs {
 		t.Run(preconditionID, func(t *testing.T) {
 			input := validComposeInput(t)

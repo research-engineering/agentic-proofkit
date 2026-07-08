@@ -2,6 +2,7 @@ package migrationparityadmission
 
 import (
 	"encoding/json"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"testing"
 )
 
@@ -9,6 +10,7 @@ const testDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const otherDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 func TestBuildAdmitsMatchedParityAndRejectsDigestDrift(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.030283783580216032239035834806346340389755580763262728864296008708349716751941")
 	input := validMigrationParityInput()
 	record, exitCode, err := Build(input)
 	if err != nil {
