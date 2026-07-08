@@ -8,10 +8,12 @@ The current source tree may be ahead of the latest supported package version.
 
 ## Reporting A Vulnerability
 
-Use GitHub Private Vulnerability Reporting for this repository. If GitHub
-returns an unavailable route, open a public issue that requests a private
-security contact path and includes no exploit details, credentials, private
-data, or step-by-step reproduction.
+Use GitHub Private Vulnerability Reporting for this repository:
+https://github.com/research-engineering/agentic-proofkit/security/advisories/new
+
+If GitHub returns an unavailable route, open a public issue that requests a
+private security contact path and includes no exploit details, credentials,
+private data, or step-by-step reproduction.
 
 Do not open a public issue with exploit details.
 

@@ -36,10 +36,8 @@ jobs:
           node-version: 24.18.0
           package-manager-cache: false
 
-      - name: Install pinned npm
-        run: |
-          set -euo pipefail
-          npm install -g npm@11.18.0
+      - name: Install verified npm
+        uses: ./.github/actions/setup-verified-npm
 
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
@@ -142,10 +140,8 @@ jobs:
           node-version: 24.18.0
           package-manager-cache: false
 
-      - name: Install pinned npm
-        run: |
-          set -euo pipefail
-          npm install -g npm@11.18.0
+      - name: Install verified npm
+        uses: ./.github/actions/setup-verified-npm
 
       - name: Setup Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
