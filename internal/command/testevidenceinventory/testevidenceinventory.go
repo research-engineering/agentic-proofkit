@@ -121,9 +121,10 @@ type Falsifier struct {
 }
 
 type Oracle struct {
-	AssertionSummary string
-	OracleID         string
-	OracleKind       string
+	AssertionSummary      string
+	ExpectedPublicOutcome string
+	OracleID              string
+	OracleKind            string
 }
 
 type Result struct {
@@ -328,9 +329,10 @@ func oracleToAny(oracle *Oracle) any {
 		return nil
 	}
 	return map[string]any{
-		"assertionSummary": oracle.AssertionSummary,
-		"oracleId":         oracle.OracleID,
-		"oracleKind":       oracle.OracleKind,
+		"assertionSummary":      oracle.AssertionSummary,
+		"expectedPublicOutcome": oracle.ExpectedPublicOutcome,
+		"oracleId":              oracle.OracleID,
+		"oracleKind":            oracle.OracleKind,
 	}
 }
 
@@ -555,7 +557,7 @@ func admitOracle(raw any, testID string) (*Oracle, error) {
 	if !ok {
 		return nil, fmt.Errorf("test evidence inventory %s oracle must be an object or null", testID)
 	}
-	if err := admit.KnownKeys(record, []string{"assertionSummary", "oracleId", "oracleKind"}, "test evidence inventory oracle"); err != nil {
+	if err := admit.KnownKeys(record, []string{"assertionSummary", "expectedPublicOutcome", "oracleId", "oracleKind"}, "test evidence inventory oracle"); err != nil {
 		return nil, err
 	}
 	oracleID, err := admit.RuleID(record["oracleId"], fmt.Sprintf("test evidence inventory %s oracleId", testID))
@@ -570,7 +572,16 @@ func admitOracle(raw any, testID string) (*Oracle, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Oracle{AssertionSummary: assertionSummary, OracleID: oracleID, OracleKind: oracleKind}, nil
+	expectedPublicOutcome, err := optionalText(record["expectedPublicOutcome"], fmt.Sprintf("test evidence inventory %s expectedPublicOutcome", testID))
+	if err != nil {
+		return nil, err
+	}
+	return &Oracle{
+		AssertionSummary:      assertionSummary,
+		ExpectedPublicOutcome: expectedPublicOutcome,
+		OracleID:              oracleID,
+		OracleKind:            oracleKind,
+	}, nil
 }
 
 func admitQualityFindings(raw any, testID string) ([]QualityFinding, error) {
@@ -785,7 +796,10 @@ func requiresExecutableCommandRefs(evidenceClass string) bool {
 }
 
 func hasStrongOracle(entry Entry) bool {
-	return entry.Falsifier != nil && entry.Oracle != nil && strings.TrimSpace(entry.Oracle.AssertionSummary) != ""
+	return entry.Falsifier != nil &&
+		entry.Oracle != nil &&
+		strings.TrimSpace(entry.Oracle.AssertionSummary) != "" &&
+		strings.TrimSpace(entry.Oracle.ExpectedPublicOutcome) != ""
 }
 
 func ruleResults(failures []string, warnings []string) []report.RuleResult {
@@ -793,7 +807,7 @@ func ruleResults(failures []string, warnings []string) []report.RuleResult {
 		rule("test_inventory.input_admitted", "passed", "Test inventory input used strict known-key admission."),
 		ruleStatus("test_inventory.semantic_entries_have_anchors", !hasPrefix(failures, "missing_semantic_anchor"), "Semantic test inventory entries must cite requirement refs or stable owner invariant refs."),
 		ruleStatus("test_inventory.semantic_falsifiers_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Semantic falsifier entries must cite executable command refs."),
-		ruleStatus("test_inventory.strong_oracles", !hasPrefix(failures, "weak_or_empty_oracle"), "Semantic falsifier entries must declare a falsifier and a non-empty assertion oracle."),
+		ruleStatus("test_inventory.strong_oracles", !hasPrefix(failures, "weak_or_empty_oracle"), "Semantic falsifier entries must declare a falsifier, assertion oracle, and expected public outcome."),
 		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession with dominance proof."),
 		ruleStatus("test_inventory.route_only_boundaries", !hasPrefix(failures, "wrong_evidence_boundary"), "Route-only smoke evidence must remain a non-claim and cannot cite semantic requirement anchors."),
 		ruleStatus("test_inventory.route_only_warnings", len(warnings) == 0, "Route-only entries are admitted as non-claim warnings only."),

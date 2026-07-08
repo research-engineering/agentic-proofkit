@@ -159,9 +159,10 @@ func TestBuildJSONCompactProjectionAggregatesScenariosAndRequirementLocalCommand
 			"supersedes":                 []any{},
 		},
 		"oracle": map[string]any{
-			"oracleId":         "oracle.coverage.unrelated",
-			"oracleKind":       "negative_exit_and_diagnostic",
-			"assertionSummary": "Unrelated fixture.",
+			"assertionSummary":      "Unrelated fixture.",
+			"expectedPublicOutcome": "failed report with diagnostic",
+			"oracleId":              "oracle.coverage.unrelated",
+			"oracleKind":            "negative_exit_and_diagnostic",
 		},
 		"nonClaims": []any{},
 	})
@@ -1075,6 +1076,7 @@ func validCoverageInput(t *testing.T) any {
         "oracle": {
           "oracleId": "oracle.coverage.semantic",
           "oracleKind": "negative_exit_and_diagnostic",
+          "expectedPublicOutcome": "failed report with diagnostic",
           "assertionSummary": "Route-only evidence leaves blocking semantic coverage failed."
         },
         "nonClaims": []

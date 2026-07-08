@@ -41,35 +41,35 @@ func TestSupportedCommandsHaveExplicitCoverageRoutes(t *testing.T) {
 }
 
 func TestCommandCoverageRejectsPackageRouteToAppSmokeTest(t *testing.T) {
-	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke"), "Unrelated app smoke must not satisfy package-level semantic coverage.")
+	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke", commandCoverageExpectedPublicOutcome), "Unrelated app smoke must not satisfy package-level semantic coverage.")
 	if problem := routeSemanticOwnerProblem("registry-consumer", route); problem == "" {
 		t.Fatal("package-level semantic route to app smoke test was admitted")
 	}
 }
 
 func TestCommandCoverageInventoryRejectsSemanticRouteOutsideOwnerScope(t *testing.T) {
-	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke"), "Unrelated app smoke must not satisfy package-level semantic coverage.")
+	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke", commandCoverageExpectedPublicOutcome), "Unrelated app smoke must not satisfy package-level semantic coverage.")
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
 		t.Fatal("production command coverage inventory builder admitted a semantic route outside the command owner scope")
 	}
 }
 
 func TestCommandCoverageRejectsPackageRouteToDifferentCommandPackage(t *testing.T) {
-	route := packageFalsifierRoute("internal/command/externalconsumer/externalconsumer_test.go", "TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock", semanticRouteProof("test.unrelated_command_package"), "Unrelated command package must not satisfy registry-consumer semantic coverage.")
+	route := packageFalsifierRoute("internal/command/externalconsumer/externalconsumer_test.go", "TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock", semanticRouteProof("test.unrelated_command_package", commandCoverageExpectedPublicOutcome), "Unrelated command package must not satisfy registry-consumer semantic coverage.")
 	if problem := routeSemanticOwnerProblem("registry-consumer", route); problem == "" {
 		t.Fatal("package-level semantic route to unrelated command package was admitted")
 	}
 }
 
 func TestCommandCoverageRejectsDirectRouteToDifferentAppCommand(t *testing.T) {
-	route := directCLIRoute("internal/app/cli_abi_test.go", "TestRequirementBrowserServerSpecTreeCLIABI", semanticRouteProof("test.unrelated_app_cli_abi"), "Unrelated app CLI ABI test must not satisfy adoption-doctor semantic coverage.")
+	route := directCLIRoute("internal/app/cli_abi_test.go", "TestRequirementBrowserServerSpecTreeCLIABI", semanticRouteProof("test.unrelated_app_cli_abi", commandCoverageExpectedPublicOutcome), "Unrelated app CLI ABI test must not satisfy adoption-doctor semantic coverage.")
 	if problem := routeSemanticOwnerProblem("adoption-doctor", route); problem == "" {
 		t.Fatal("direct app semantic route to unrelated command was admitted")
 	}
 }
 
 func TestCommandCoverageRejectsRouteWithoutDescriptorOwner(t *testing.T) {
-	route := packageFalsifierRoute("internal/command/registryconsumer/registryconsumer_test.go", "TestRegistryConsumerAcceptsRegistryReleaseProof", semanticRouteProof("test.unsupported_descriptor_owner"), "Unsupported command must not satisfy package-level semantic coverage.")
+	route := packageFalsifierRoute("internal/command/registryconsumer/registryconsumer_test.go", "TestRegistryConsumerAcceptsRegistryReleaseProof", semanticRouteProof("test.unsupported_descriptor_owner", commandCoverageExpectedPublicOutcome), "Unsupported command must not satisfy package-level semantic coverage.")
 	if problem := routeSemanticOwnerProblem("unsupported-command", route); problem == "" {
 		t.Fatal("package-level semantic route without descriptor owner was admitted")
 	}
@@ -87,9 +87,45 @@ func TestCommandCoverageRejectsSemanticRouteWithoutProofMetadata(t *testing.T) {
 	}
 }
 
+func TestCommandCoverageRejectsSemanticRouteWithoutExpectedOutcome(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		commandCoverageSemanticProof{ref: "registryconsumer.accepts_registry_release_proof"},
+		"Semantic command route must bind an expected public outcome.",
+	)
+	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
+		t.Fatal("semantic route without expected public outcome was admitted by production inventory builder")
+	}
+}
+
+func TestCommandCoverageRejectsRouteIndexDerivedSemanticProofID(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		semanticRouteProof("registryconsumer.route_7", commandCoverageExpectedPublicOutcome),
+		"Semantic command route must not derive proof identity from route order.",
+	)
+	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
+		t.Fatal("route-index-derived semantic proof ID was admitted by production inventory builder")
+	}
+}
+
+func TestCommandCoverageRejectsProseDerivedSemanticProofID(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		semanticRouteProof("Registry consumer accepts release proof", commandCoverageExpectedPublicOutcome),
+		"Semantic command route must not derive proof identity from prose.",
+	)
+	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
+		t.Fatal("prose-derived semantic proof ID was admitted by production inventory builder")
+	}
+}
+
 func TestCommandCoverageRejectsRouteOnlyWithSemanticProofMetadata(t *testing.T) {
 	route := requiredInputAdmissionRoute
-	route.semanticProof = semanticRouteProof("test.route_only_with_semantic_proof")
+	route.semanticProof = semanticRouteProof("test.route_only_with_semantic_proof", commandCoverageExpectedPublicOutcome)
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
 		t.Fatal("route-only smoke accepted semantic proof metadata in production inventory builder")
 	}
@@ -111,7 +147,7 @@ func TestCommandCoverageInventoryIsAdmittedAndBindsSemanticCommandRefs(t *testin
 		}
 		switch entry.EvidenceClass {
 		case "semantic_falsifier":
-			if entry.Falsifier == nil || entry.Oracle == nil || entry.Oracle.AssertionSummary == "" {
+			if entry.Falsifier == nil || entry.Oracle == nil || entry.Oracle.AssertionSummary == "" || entry.Oracle.ExpectedPublicOutcome == "" {
 				t.Fatalf("semantic command coverage entry lacks strong oracle: %#v", entry)
 			}
 			for _, id := range []string{entry.TestID, entry.Falsifier.NegativeCaseID, entry.Oracle.OracleID} {
@@ -144,7 +180,7 @@ func TestCommandCoverageInventoryProjectsExplicitSemanticProofRefs(t *testing.T)
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		semanticRouteProof("registryconsumer.accepts_registry_release_proof"),
+		semanticRouteProof("registryconsumer.accepts_registry_release_proof", commandCoverageExpectedPublicOutcome),
 		"Registry consumer release proof must be tied to an owner-declared semantic proof identity.",
 	)
 	entry := route.inventoryEntry("registry-consumer", 99)
@@ -159,6 +195,9 @@ func TestCommandCoverageInventoryProjectsExplicitSemanticProofRefs(t *testing.T)
 	}
 	if oracle["oracleId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.oracle_assertion" {
 		t.Fatalf("oracleId did not use explicit semantic proof ref: %#v", oracle["oracleId"])
+	}
+	if oracle["expectedPublicOutcome"] != commandCoverageExpectedPublicOutcome {
+		t.Fatalf("expectedPublicOutcome did not use owner-authored semantic proof metadata: %#v", oracle["expectedPublicOutcome"])
 	}
 }
 
@@ -177,6 +216,27 @@ func TestCommandCoverageInventoryAdmissionRejectsWeakSemanticOracle(t *testing.T
 		}
 		if result.ExitCode == 0 {
 			t.Fatalf("weak semantic command coverage oracle passed admission: %#v", result.Report.JSONValue())
+		}
+		return
+	}
+	t.Fatal("command coverage inventory has no semantic entry to mutate")
+}
+
+func TestCommandCoverageInventoryAdmissionRejectsMissingExpectedOutcome(t *testing.T) {
+	inventory := mustCommandCoverageInventory(t)
+	entries := inventory["entries"].([]any)
+	for _, raw := range entries {
+		entry := raw.(map[string]any)
+		if entry["evidenceClass"] != "semantic_falsifier" {
+			continue
+		}
+		entry["oracle"].(map[string]any)["expectedPublicOutcome"] = ""
+		result, err := testevidenceinventory.Evaluate(inventory)
+		if err != nil {
+			t.Fatalf("mutated command coverage inventory admission error = %v", err)
+		}
+		if result.ExitCode == 0 {
+			t.Fatalf("semantic command coverage oracle without expected public outcome passed admission: %#v", result.Report.JSONValue())
 		}
 		return
 	}
@@ -227,6 +287,21 @@ func TestEmpty(t *testing.T) {}
 	problem := goTestFunctionProblem(filePath, "TestEmpty")
 	if !strings.Contains(problem, "has no executable body") {
 		t.Fatalf("empty test body was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestFunctionProblemRejectsAssertionlessBody(t *testing.T) {
+	filePath := writeGoTestFixture(t, `package fixture
+
+import "testing"
+
+func TestAssertionless(t *testing.T) {
+	_ = "not an oracle"
+}
+`)
+	problem := goTestFunctionProblem(filePath, "TestAssertionless")
+	if !strings.Contains(problem, "has no direct failure-capable assertion") {
+		t.Fatalf("assertionless test body was not rejected: %q", problem)
 	}
 }
 
@@ -405,6 +480,9 @@ func goTestFunctionProblem(filePath string, testName string) string {
 		if hasUnconditionalTopLevelSkip(function) {
 			return "contains unconditional t.Skip at top level"
 		}
+		if !hasFailureCapableAssertion(function) {
+			return "has no direct failure-capable assertion"
+		}
 		return ""
 	}
 	return "missing from " + filePath
@@ -437,6 +515,39 @@ func hasUnconditionalTopLevelSkip(function *ast.FuncDecl) bool {
 		}
 	}
 	return false
+}
+
+func hasFailureCapableAssertion(function *ast.FuncDecl) bool {
+	paramName := testingTParamName(function)
+	if paramName == "" || function.Body == nil {
+		return false
+	}
+	found := false
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		if found {
+			return false
+		}
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		receiver, ok := selector.X.(*ast.Ident)
+		if !ok || receiver.Name != paramName {
+			return true
+		}
+		switch selector.Sel.Name {
+		case "Error", "Errorf", "Fail", "FailNow", "Fatal", "Fatalf":
+			found = true
+			return false
+		default:
+			return true
+		}
+	})
+	return found
 }
 
 func testingTParamName(function *ast.FuncDecl) string {

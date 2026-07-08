@@ -506,6 +506,7 @@ func coverageInput(t *testing.T) any {
         "oracle": {
           "oracleId": "oracle.browser.coverage",
           "oracleKind": "html_contains_test_detail",
+          "expectedPublicOutcome": "rendered report contains semantic test detail",
           "assertionSummary": "Route-only evidence remains insufficient."
         },
         "nonClaims": []

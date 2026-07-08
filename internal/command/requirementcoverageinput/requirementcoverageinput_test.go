@@ -554,6 +554,7 @@ func supersedingInventoryEntries() string {
   "oracle": {
     "oracleId": "oracle.coverage.semantic_replacement",
     "oracleKind": "negative_exit_and_diagnostic",
+    "expectedPublicOutcome": "failed report with diagnostic",
     "assertionSummary": "Replacement coverage composer fixture dominates the original semantic falsifier."
   },
   "nonClaims": []
@@ -581,6 +582,7 @@ func inventoryEntry(testID string, commandRef string, sourcePath string, suffix 
   "oracle": {
     "oracleId": "oracle.coverage.` + suffix + `",
     "oracleKind": "negative_exit_and_diagnostic",
+    "expectedPublicOutcome": "failed report with diagnostic",
     "assertionSummary": "Coverage composer fixture has a semantic falsifier."
   },
   "nonClaims": []
