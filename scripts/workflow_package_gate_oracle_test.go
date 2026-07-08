@@ -484,7 +484,6 @@ func TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions(t *testi
 			advisoryJobs: []string{"scorecard"},
 			providerJobs: map[string]map[string]string{
 				"upload-sarif": {"security-events": "write"},
-				"publish":      {"id-token": "write"},
 			},
 		},
 	}
@@ -530,10 +529,19 @@ func providerUploadDisabledOnPullRequest(expression string) bool {
 }
 
 func TestScorecardPublicPublishDeclaresRequiredOutputInputs(t *testing.T) {
-	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "scorecard.yml"))
-	job, ok := workflow.Jobs["publish"]
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "scorecard-publish.yml"))
+	if permissionWrites(workflow.Permissions) {
+		t.Fatalf("scorecard publish workflow-level permissions grant write scopes")
+	}
+	if len(workflow.Jobs) != 1 {
+		t.Fatalf("scorecard publish workflow must contain exactly one job, got %d", len(workflow.Jobs))
+	}
+	job, ok := workflow.Jobs["scorecard"]
 	if !ok {
 		t.Fatalf("scorecard workflow missing public publish job")
+	}
+	if !permissionHas(job.Permissions, "id-token", "write") {
+		t.Fatalf("scorecard public publish job must declare id-token=write, got %#v", job.Permissions)
 	}
 	stepIndex, err := uniqueStepIndex(job.Steps, "Publish Scorecard results")
 	if err != nil {

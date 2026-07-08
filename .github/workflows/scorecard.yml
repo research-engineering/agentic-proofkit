@@ -69,27 +69,3 @@ jobs:
         with:
           sarif_file: artifacts/scorecard/scorecard-results.sarif
           category: scorecard-repository-hygiene
-
-  publish:
-    name: scorecard / public publish
-    if: ${{ github.event.repository.private == false || vars.ENABLE_SCORECARD_PUBLISH == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    permissions:
-      checks: read
-      contents: read
-      id-token: write
-      issues: read
-      pull-requests: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Publish Scorecard results
-        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
-        with:
-          publish_results: true
-          results_file: scorecard-public-results.json
-          results_format: json
