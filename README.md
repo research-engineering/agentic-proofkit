@@ -52,18 +52,17 @@ rollout, deployment, or production readiness.
 
 ```mermaid
 flowchart LR
-    A["Repository state<br/>code, docs, tests, CI"] --> B["Adoption mode<br/>baseline code or audit code"]
-    B --> C["Repo-owned inputs<br/>requirements, profile, bindings, witness plan"]
-    C --> D["Proofkit admission<br/>schema, source, boundary, and non-claim checks"]
-    D --> E["Proof graph<br/>requirements -> scenarios -> witnesses -> commands"]
-    E --> F["Derived views<br/>browser, Markdown, JSON reports, agent envelopes"]
-    E --> G["Selective planning<br/>changed paths -> bounded checks"]
-    G --> H["Repo-owned execution<br/>tests, linters, CI, native witnesses"]
-    H --> I["Receipt admission<br/>shape, producer policy, evidence class"]
-    I --> J["Consumer decision<br/>warn, enforce-touched, enforce-all"]
-
-    F -. "derived, not authority" .-> J
-    C -. "consumer truth" .-> J
+    A[Repository state] --> B[Adoption mode]
+    B --> C[Repo-owned inputs]
+    C --> D[Proofkit admission]
+    D --> E[Proof graph]
+    E --> F[Derived views]
+    E --> G[Selective planning]
+    G --> H[Repo-owned execution]
+    H --> I[Receipt admission]
+    I --> J[Consumer decision]
+    C --> J
+    F --> J
 ```
 
 The core invariant is separation of authority. The consuming repository owns
@@ -71,6 +70,10 @@ what the product must do and which native checks prove it. Proofkit owns the
 reusable mechanics: admitting structured inputs, preserving provenance,
 checking proof-binding shape, planning bounded verification, rendering derived
 views, and returning agent-readable next-action packets.
+
+The diagram keeps the rendering syntax intentionally simple for GitHub README
+compatibility. `Repo-owned inputs` are the consumer truth path. `Derived views`
+are navigation and presentation outputs, not authority.
 
 For a repository with no specification, Proofkit can guide an agent through two
 different starting modes:
