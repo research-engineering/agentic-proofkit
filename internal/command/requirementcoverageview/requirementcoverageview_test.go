@@ -33,6 +33,40 @@ func TestBuildJSONBuildsSemanticRequirementAndCommandCoverage(t *testing.T) {
 	}
 }
 
+func TestBuildJSONUsesNormalizedOnlyInventoryProjection(t *testing.T) {
+	input := validCoverageInput(t).(map[string]any)
+	inventory := input["testEvidenceInventory"]
+	delete(input, "testEvidenceInventory")
+	input["normalizedTestEvidenceInventory"] = map[string]any{
+		"schemaVersion":         json.Number("1"),
+		"normalizedInventoryId": "proofkit.coverage.inventory.normalized",
+		"normalizedKind":        "proofkit.test-evidence-inventory.normalized",
+		"sourceAuthority":       "caller_owned_inventory",
+		"sourceCount":           json.Number("0"),
+		"sourceColumns":         []any{"source_id", "path", "sha256", "role", "non_claims"},
+		"sources":               []any{},
+		"entrySources":          []any{},
+		"inputPaths":            []any{},
+		"inventory":             inventory,
+		"nonClaims":             []any{"Normalized inventory fixture does not execute native tests."},
+	}
+
+	view, exitCode, err := BuildJSON(input, Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON(normalized-only) error = %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("BuildJSON(normalized-only) exitCode=%d view=%#v", exitCode, view)
+	}
+	record := view.(map[string]any)
+	if record["testInventoryId"] != "proofkit.coverage.inventory" {
+		t.Fatalf("testInventoryId=%v, want nested inventory id", record["testInventoryId"])
+	}
+	if stringArrayContains(record["warnings"], "missing_test_inventory:input") {
+		t.Fatalf("normalized-only inventory was validated but treated as missing: %#v", record["warnings"])
+	}
+}
+
 func TestBuildJSONCompactProjectionExposesScenarioAndInventoryCommandRefs(t *testing.T) {
 	input := validCoverageInput(t)
 	record := input.(map[string]any)
@@ -1182,4 +1216,13 @@ func addUnboundCodeSurface(input any, declaration string) {
 func sourceRequirement(input any) map[string]any {
 	source := input.(map[string]any)["requirementSource"].(map[string]any)
 	return source["requirements"].([]any)[0].(map[string]any)
+}
+
+func stringArrayContains(raw any, want string) bool {
+	for _, value := range stringArray(raw) {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }

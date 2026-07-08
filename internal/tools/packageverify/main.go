@@ -278,7 +278,6 @@ func requiredRootEntries() []string {
 	required := []string{
 		"package/ADOPTION.md",
 		"package/AGENTS.md",
-		"package/BACKLOG.md",
 		"package/CONTRIBUTING.md",
 		"package/LICENSE",
 		"package/NON_CLAIMS.md",
@@ -498,7 +497,6 @@ func allowedRootEntry(path string) bool {
 	allowedExact := map[string]struct{}{
 		"package/ADOPTION.md":                                               {},
 		"package/AGENTS.md":                                                 {},
-		"package/BACKLOG.md":                                                {},
 		"package/CONTRIBUTING.md":                                           {},
 		"package/LICENSE":                                                   {},
 		"package/NON_CLAIMS.md":                                             {},
@@ -595,7 +593,6 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	expectedFiles := []string{
 		"ADOPTION.md",
 		"AGENTS.md",
-		"BACKLOG.md",
 		"CONTRIBUTING.md",
 		"LICENSE",
 		"NON_CLAIMS.md",
@@ -776,7 +773,6 @@ func packageTextEntry(path string) bool {
 	switch path {
 	case "package/ADOPTION.md",
 		"package/AGENTS.md",
-		"package/BACKLOG.md",
 		"package/CONTRIBUTING.md",
 		"package/NON_CLAIMS.md",
 		"package/README.md",

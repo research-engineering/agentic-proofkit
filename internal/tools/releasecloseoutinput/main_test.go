@@ -148,6 +148,13 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "release notes without package rollback target",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeFile(t, filepath.Join(root, "artifacts", "release", "release-notes.md"), "# notes\n\nrollback with npm install\n")
+			},
+		},
+		{
 			name:        "missing metadata checksums",
 			criterionID: "proofkit.release_closeout.manifest_and_sbom",
 			mutate: func(root string) {

@@ -833,6 +833,32 @@ func TestBuildNormalizedInventoryFlattensSourceSet(t *testing.T) {
 	}
 }
 
+func TestAdmitNormalizedProjectionOwnsSourceSetEnvelope(t *testing.T) {
+	output, exitCode, err := BuildNormalized(validSourceSetInventory(t))
+	if err != nil || exitCode != 0 {
+		t.Fatalf("BuildNormalized() exit=%d error=%v output=%#v", exitCode, err, output)
+	}
+	projection, err := AdmitNormalizedProjection(output, nil, "normalizedTestEvidenceInventory")
+	if err != nil {
+		t.Fatalf("AdmitNormalizedProjection() error = %v", err)
+	}
+	if projection.Result.Inventory.Authority != directAuthority {
+		t.Fatalf("projection nested inventory authority=%q", projection.Result.Inventory.Authority)
+	}
+	if projection.Envelope["sourceAuthority"] != sourceSetAuthority {
+		t.Fatalf("projection sourceAuthority=%#v", projection.Envelope["sourceAuthority"])
+	}
+	if projection.Inventory["authority"] != directAuthority {
+		t.Fatalf("projection direct inventory=%#v", projection.Inventory)
+	}
+
+	tampered := cloneMap(output)
+	tampered["entrySources"] = []any{}
+	if _, err := AdmitNormalizedProjection(tampered, nil, "normalizedTestEvidenceInventory"); err == nil || !strings.Contains(err.Error(), "entrySources must cover every nested inventory entry") {
+		t.Fatalf("AdmitNormalizedProjection() error=%v, want source-set coverage failure", err)
+	}
+}
+
 func TestBuildNormalizedInventoryFailsClosedForWeakInventory(t *testing.T) {
 	input := validInventory(t)
 	entry := input.(map[string]any)["entries"].([]any)[0].(map[string]any)

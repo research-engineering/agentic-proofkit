@@ -48,6 +48,12 @@ type input struct {
 	UnboundProofChangeRationale string
 }
 
+var impactNonClaims = []string{
+	"Impact reports classify caller-owned changed paths and proof records only.",
+	"Impact reports do not run git, scan repositories, execute witnesses, authenticate receipts, approve merge, or prove proof freshness.",
+	"Impact reports do not decide the consuming repository fallback policy for unbound or unknown proof changes.",
+}
+
 func Build(raw any) (map[string]any, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
@@ -194,6 +200,10 @@ func admitInput(raw any) (input, error) {
 		return input{}, err
 	}
 	nonClaims, err := optionalFailureText(record["nonClaims"])
+	if err != nil {
+		return input{}, err
+	}
+	nonClaims, err = admit.MergeNonClaims(impactNonClaims, nonClaims, "proof impact")
 	if err != nil {
 		return input{}, err
 	}

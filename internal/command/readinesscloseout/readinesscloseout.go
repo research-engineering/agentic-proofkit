@@ -15,6 +15,12 @@ const reportKind = "proofkit.readiness-closeout"
 var classifications = []string{"blocked", "failed", "out_of_scope", "passed"}
 var classificationSet = toSet(classifications)
 
+var readinessCloseoutNonClaims = []string{
+	"Readiness closeout reports classify caller-owned backlog text only.",
+	"Readiness closeout reports do not execute gates, authenticate receipts, publish artifacts, approve merge, or prove deployment readiness.",
+	"Readiness closeout reports cannot convert blocked, open, missing, or failed owner rows into passed readiness evidence.",
+}
+
 var statusPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)?$`)
 var rowIDPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)*-\d+[A-Z]?$`)
 var splitSegmentPattern = regexp.MustCompile(`[\n.;|]+`)
@@ -196,6 +202,9 @@ func buildReport(input closeoutInput) (report.Record, int, error) {
 		} else {
 			if row.Status != definition.ExpectedStatus {
 				rowFailures = append(rowFailures, fmt.Sprintf("%s must be %s, got %s", definition.RowID, definition.ExpectedStatus, row.Status))
+			}
+			if definition.Classification == "passed" && row.Status != input.Frontier.ClosedStatus {
+				rowFailures = append(rowFailures, fmt.Sprintf("%s passed classification requires %s owner status, got %s", definition.RowID, input.Frontier.ClosedStatus, row.Status))
 			}
 			searchable := row.OwnerScope + " " + row.CompletionCondition
 			for _, required := range definition.RequiredText {
@@ -526,6 +535,10 @@ func admitInput(raw any) (closeoutInput, error) {
 		return closeoutInput{}, err
 	}
 	nonClaims, err := textArray(record["nonClaims"], "readiness closeout nonClaims")
+	if err != nil {
+		return closeoutInput{}, err
+	}
+	nonClaims, err = admit.MergeNonClaims(readinessCloseoutNonClaims, nonClaims, "readiness closeout")
 	if err != nil {
 		return closeoutInput{}, err
 	}

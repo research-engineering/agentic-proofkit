@@ -46,6 +46,16 @@ func TestBuildAdmitsProjectStructureScaffoldAndEmitsBoundedEnvelope(t *testing.T
 	}
 }
 
+func TestBuildRejectsSecretLikeProjectStructureNonClaims(t *testing.T) {
+	input := validProjectStructureInput()
+	input["nonClaims"] = []any{"Authorization: Bearer abcdefghijklmnop"}
+
+	_, err := BuildResult(input)
+	if err == nil || !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("BuildResult() error=%v, want secret-like rejection", err)
+	}
+}
+
 func TestBuildRejectsProjectStructurePathDriftAndUnsafePaths(t *testing.T) {
 	cases := []struct {
 		name      string

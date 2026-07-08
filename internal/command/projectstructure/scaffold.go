@@ -3,7 +3,6 @@ package projectstructure
 import (
 	"encoding/json"
 	"fmt"
-	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
@@ -195,14 +194,14 @@ func adoptionWorkflowInput(bootstrapInput map[string]any, repoProfilePlan map[st
 	if err != nil {
 		return nil, err
 	}
-	workflowNonClaims, err := sortedUniqueText(rawStringArray(workflow["nonClaims"]), "project structure scaffold workflow nonClaims", false)
+	workflowNonClaims, err := admit.TextArray(workflow["nonClaims"], "project structure scaffold workflow nonClaims", false)
 	if err != nil {
 		return nil, err
 	}
-	nonClaims, err := sortedUniqueText(append([]string{
+	nonClaims, err := admit.MergeNonClaims([]string{
 		"Adoption workflow input does not prove file materialization or native witness execution.",
 		"Adoption workflow input is starter routing only.",
-	}, workflowNonClaims...), "project structure scaffold workflow nonClaims", false)
+	}, workflowNonClaims, "project structure scaffold workflow")
 	if err != nil {
 		return nil, err
 	}
@@ -248,11 +247,11 @@ func pathConsistencyFailures(bootstrapInput map[string]any, repoProfilePlan map[
 }
 
 func mergedNonClaims(raw any) ([]string, error) {
-	caller, err := sortedUniqueText(rawStringArray(raw), "project structure scaffold nonClaims", false)
+	caller, err := admit.TextArray(raw, "project structure scaffold nonClaims", false)
 	if err != nil {
 		return nil, err
 	}
-	return sortedUniqueText(append(append([]string{}, scaffoldNonClaims...), caller...), "project structure scaffold nonClaims", false)
+	return admit.MergeNonClaims(scaffoldNonClaims, caller, "project structure scaffold")
 }
 
 func ruleResults(failures []string) []report.RuleResult {
@@ -274,34 +273,4 @@ func ruleResults(failures []string) []report.RuleResult {
 		})
 	}
 	return results
-}
-
-func sortedUniqueText(values []string, context string, allowEmpty bool) ([]string, error) {
-	for index, value := range values {
-		if value == "" {
-			return nil, fmt.Errorf("%s must be a string array", context)
-		}
-		values[index] = stringTrim(value)
-	}
-	sort.Strings(values)
-	if !allowEmpty && len(values) == 0 {
-		return nil, fmt.Errorf("%s must not be empty", context)
-	}
-	for index := 1; index < len(values); index++ {
-		if values[index-1] == values[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
-		}
-	}
-	return values, nil
-}
-
-func rawStringArray(raw any) []string {
-	values := anyArray(raw)
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		if text, ok := value.(string); ok {
-			result = append(result, text)
-		}
-	}
-	return result
 }

@@ -52,17 +52,39 @@ func TestLowercaseSHA256AdmitsOnlyCanonicalHexDigest(t *testing.T) {
 func TestContainsSecretLikeValueRecognizesHyphenatedAndPasswdLabels(t *testing.T) {
 	t.Parallel()
 
-	for _, value := range []string{
-		"api-key=abcdefghijklmnopqrstuvwxyz",
-		"access-token=abcdefghijklmnopqrstuvwxyz",
-		"passwd=abcdefghijklmnopqrstuvwxyz",
-	} {
-		if !ContainsSecretLikeValue(value) {
-			t.Fatalf("ContainsSecretLikeValue(%q) = false, want true", value)
+	for _, fixture := range ReportVisibleRedactionFixtures() {
+		if !ContainsSecretLikeValue(fixture.Input) {
+			t.Fatalf("ContainsSecretLikeValue(%s=%q) = false, want true", fixture.Name, fixture.Input)
 		}
 	}
 	if ContainsSecretLikeValue("credentialClass=github-token") {
 		t.Fatal("ContainsSecretLikeValue flagged a non-secret credential class label")
+	}
+}
+
+func TestMergeNonClaimsPreservesRequiredClaimsAndRejectsSecretLikeCallerText(t *testing.T) {
+	t.Parallel()
+
+	merged, err := MergeNonClaims(
+		[]string{"Command reports do not approve merge."},
+		[]string{"Caller fixture does not execute tests.", "Command reports do not approve merge."},
+		"test command",
+	)
+	if err != nil {
+		t.Fatalf("MergeNonClaims() error = %v", err)
+	}
+	want := []string{"Caller fixture does not execute tests.", "Command reports do not approve merge."}
+	if len(merged) != len(want) {
+		t.Fatalf("MergeNonClaims()=%#v, want %#v", merged, want)
+	}
+	for index := range want {
+		if merged[index] != want[index] {
+			t.Fatalf("MergeNonClaims()=%#v, want %#v", merged, want)
+		}
+	}
+
+	if _, err := MergeNonClaims([]string{"Command reports do not approve merge."}, []string{"Authorization: Bearer abcdefghijklmnop"}, "test command"); err == nil {
+		t.Fatal("MergeNonClaims() accepted secret-like caller nonClaim")
 	}
 }
 
@@ -88,6 +110,34 @@ func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) 
 	headerRedacted := RedactDiagnosticValue(headerDiagnostic)
 	if strings.Contains(headerRedacted, "YWxpY2U6c2VjcmV0") || strings.Contains(headerRedacted, "Basic") {
 		t.Fatalf("RedactDiagnosticValue leaked authorization header value: %q", headerRedacted)
+	}
+
+	for _, fixture := range ReportVisibleRedactionFixtures() {
+		redacted := RedactDiagnosticValue(fixture.Input)
+		for _, needle := range fixture.SensitiveNeedles {
+			if strings.Contains(redacted, needle) {
+				t.Fatalf("RedactDiagnosticValue leaked %s needle %q in %q", fixture.Name, needle, redacted)
+			}
+		}
+	}
+}
+
+func TestRedactStructuralTextPreservesLongStructureAndRedactsSensitiveTokens(t *testing.T) {
+	t.Parallel()
+
+	longToken := strings.Repeat("x", maxDiagnosticRunes+20)
+	structural := RedactStructuralText(longToken + "\n" + "Authorization: Bearer abcdefghijklmnop")
+	if strings.Contains(structural, "<truncated-diagnostic>") {
+		t.Fatalf("RedactStructuralText truncated structural token: %q", structural)
+	}
+	if !strings.Contains(structural, longToken) {
+		t.Fatalf("RedactStructuralText lost long structural token: %q", structural)
+	}
+	if !strings.Contains(structural, "<redacted-control-rune>") {
+		t.Fatalf("RedactStructuralText(%q) = %q, want control placeholder", longToken, structural)
+	}
+	if !strings.Contains(structural, "<redacted-secret-like-value>") {
+		t.Fatalf("RedactStructuralText(%q) = %q, want secret placeholder", longToken, structural)
 	}
 }
 

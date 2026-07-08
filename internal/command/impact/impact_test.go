@@ -109,6 +109,9 @@ func TestBuildRoutesChangedRecordToObligationAndRejectsUnboundProofChange(t *tes
 	if len(obligations) != 1 {
 		t.Fatalf("proofObligations len=%d, want 1: %#v", len(obligations), obligations)
 	}
+	if !containsStringValue(result["nonClaims"].([]any), "Impact reports do not run git, scan repositories, execute witnesses, authenticate receipts, approve merge, or prove proof freshness.") {
+		t.Fatalf("impact nonClaims missing command-owned boundary denial: %#v", result["nonClaims"])
+	}
 
 	input = validImpactInput()
 	input["changedPaths"] = []any{"docs/contracts/proof.json"}
@@ -144,5 +147,15 @@ func validImpactInput() map[string]any {
 		"preexistingFailures":         []any{},
 		"proofLikePaths":              []any{},
 		"unboundProofChangeRationale": "No proof-like path changed.",
+		"nonClaims":                   []any{"Impact fixture is not merge evidence."},
 	}
+}
+
+func containsStringValue(values []any, want string) bool {
+	for _, value := range values {
+		if text, ok := value.(string); ok && text == want {
+			return true
+		}
+	}
+	return false
 }

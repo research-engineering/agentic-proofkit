@@ -24,6 +24,41 @@ var (
 
 const maxDiagnosticRunes = 512
 
+type RedactionFixture struct {
+	Input            string
+	Name             string
+	SensitiveNeedles []string
+}
+
+func ReportVisibleRedactionFixtures() []RedactionFixture {
+	githubPAT := secretFixtureText("github", "_pat_", "abcdefghijklmnopqrstuvwxyz")
+	githubToken := secretFixtureText("gh", "p_", "123456789012345678901234567890123456")
+	openAIKey := secretFixtureText("sk", "-proj-", "abcdefghijklmnop")
+	slackToken := secretFixtureText("xox", "b-", "1234567890-", "abcdefghijklmnop")
+	gitLabToken := secretFixtureText("gl", "pat-", "abcdefghijklmnop")
+	privateKeyHeader := secretFixtureText("-----BEGIN OPENSSH ", "PRIVATE KEY-----")
+	jwtLike := secretFixtureText("eyJhbGciOiJIUzI1NiJ9", ".", "eyJzdWIiOiIxMjMifQ", ".", "signature")
+	return []RedactionFixture{
+		{Name: "authorization_header", Input: "request failed: Authorization: Basic YWxpY2U6c2VjcmV0", SensitiveNeedles: []string{"Authorization", "Basic", "YWxpY2U6c2VjcmV0"}},
+		{Name: "bearer_token", Input: "Bearer abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
+		{Name: "api_key_label", Input: "api_key=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
+		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
+		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
+		{Name: "github_pat", Input: githubPAT, SensitiveNeedles: []string{githubPAT}},
+		{Name: "github_ghp", Input: githubToken, SensitiveNeedles: []string{githubToken}},
+		{Name: "openai_key", Input: openAIKey, SensitiveNeedles: []string{"abcdefghijklmnop"}},
+		{Name: "slack_token", Input: slackToken, SensitiveNeedles: []string{"1234567890", "abcdefghijklmnop"}},
+		{Name: "gitlab_token", Input: gitLabToken, SensitiveNeedles: []string{"abcdefghijklmnop"}},
+		{Name: "url_credentials", Input: "https://user:password@example.test/repo.git", SensitiveNeedles: []string{"user:password"}},
+		{Name: "private_key_header", Input: privateKeyHeader, SensitiveNeedles: []string{"PRIVATE KEY"}},
+		{Name: "jwt_like", Input: jwtLike, SensitiveNeedles: []string{"eyJhbGciOiJIUzI1NiJ9", "eyJzdWIiOiIxMjMifQ", "signature"}},
+	}
+}
+
+func secretFixtureText(parts ...string) string {
+	return strings.Join(parts, "")
+}
+
 func KnownKeys(record map[string]any, admitted []string, context string) error {
 	admittedSet := map[string]struct{}{}
 	for _, key := range admitted {
@@ -109,6 +144,10 @@ func RedactDiagnosticValue(value string) string {
 		return value
 	}
 	return string(runes[:maxDiagnosticRunes]) + "...<truncated-diagnostic>"
+}
+
+func RedactStructuralText(value string) string {
+	return redactControlRunes(RedactSecretLikeValue(value))
 }
 
 func redactControlRunes(value string) string {
@@ -223,6 +262,35 @@ func SortedTextArray(raw any, context string, allowEmpty bool) ([]string, error)
 		return nil, err
 	}
 	return SortedText(values, context, allowEmpty)
+}
+
+func MergeNonClaims(required []string, caller []string, context string) ([]string, error) {
+	values := make([]string, 0, len(required)+len(caller))
+	for index, value := range required {
+		text, err := NonEmptyText(value, fmt.Sprintf("%s required nonClaims[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, text)
+	}
+	for index, value := range caller {
+		text, err := NonEmptyText(value, fmt.Sprintf("%s caller nonClaims[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, text)
+	}
+	sort.Strings(values)
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if len(result) == 0 || result[len(result)-1] != value {
+			result = append(result, value)
+		}
+	}
+	if len(result) == 0 {
+		return nil, fmt.Errorf("%s nonClaims must be non-empty", context)
+	}
+	return result, nil
 }
 
 func PreserveSortedText(values []string, context string, allowEmpty bool) ([]string, error) {

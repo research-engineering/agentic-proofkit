@@ -394,7 +394,7 @@ func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 	evidence = append(evidence, retainedReleaseEvidenceRefs(root)...)
 	ok := releaseManifestMatches(root, manifest) &&
 		validSBOM(root, "artifacts/release/sbom.cdx.json") &&
-		releaseNotesIncludeRollback(root, "artifacts/release/release-notes.md") &&
+		releaseNotesIncludeRollback(root, "artifacts/release/release-notes.md", manifest.Name) &&
 		releaseChecksumInventoriesMatch(root, manifest) &&
 		retainedReleaseEvidenceMatches(root) &&
 		allFilesExist(root, evidence)
@@ -1112,13 +1112,16 @@ func validSBOM(root string, path string) bool {
 	return err == nil && sbom.BOMFormat == "CycloneDX" && sbom.SpecVersion != ""
 }
 
-func releaseNotesIncludeRollback(root string, path string) bool {
+func releaseNotesIncludeRollback(root string, path string, packageName string) bool {
 	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
 	if err != nil || len(content) == 0 {
 		return false
 	}
 	normalized := strings.ToLower(string(content))
-	return strings.Contains(normalized, "rollback") && strings.Contains(normalized, "npm install")
+	packageRef := strings.ToLower(packageName) + "@"
+	return strings.Contains(normalized, "rollback") &&
+		strings.Contains(normalized, "npm install") &&
+		strings.Contains(normalized, packageRef)
 }
 
 func hasChannelStatus(manifest releaseManifest, authority string, allowed ...string) bool {

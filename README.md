@@ -12,8 +12,8 @@ packets without copying verifier logic between projects.
 
 | Surface | State |
 |---|---|
-| Source visibility | Public |
-| Current layer | Public source; release evidence is version-specific |
+| Source repository | Declared in package metadata; provider visibility is a live GitHub fact |
+| Current layer | Public-source workflow; release evidence is version-specific |
 | Runtime implementation | Go CLI with npm and Python wrapper packaging |
 | Package release | Scoped npm release channel configured; exact version and registry identity are owned by npm and GitHub Release artifacts |
 | Public-source provenance | Claimed only for a version whose release assets, registry identity, and checksum manifests are artifact-closed |
