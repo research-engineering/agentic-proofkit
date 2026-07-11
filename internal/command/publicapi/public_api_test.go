@@ -26,7 +26,7 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 	}
 }
 
-func TestVerifyTypeScriptPackagePublicAPIAcceptsCompiledTargetsForScannedSource(t *testing.T) {
+func TestVerifyTypeScriptPackagePublicAPIAcceptsExplicitSourceMappingsForCompiledTargets(t *testing.T) {
 	repoRoot := writeTypeScriptPackageFixture(t)
 	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
 	writeJSON(t, filepath.Join(packageRoot, "package.json"), map[string]any{
@@ -42,8 +42,8 @@ func TestVerifyTypeScriptPackagePublicAPIAcceptsCompiledTargetsForScannedSource(
 	input := publicAPIManifest()
 	entry := input["entries"].([]any)[0].(map[string]any)
 	entry["exportConditions"] = []any{
-		map[string]any{"condition": "default", "path": "./dist/index.js"},
-		map[string]any{"condition": "types", "path": "./dist/index.d.ts"},
+		map[string]any{"condition": "default", "path": "./dist/index.js", "sourcePath": "packages/alpha/src/index.ts"},
+		map[string]any{"condition": "types", "path": "./dist/index.d.ts", "sourcePath": "packages/alpha/src/index.ts"},
 	}
 
 	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
@@ -71,20 +71,24 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsSecretLikeManifestText(t *testin
 	}
 }
 
-func TestVerifyTypeScriptPackagePublicAPIRejectsNonTypeScriptSource(t *testing.T) {
-	repoRoot := writeTypeScriptPackageFixture(t)
-	input := publicAPIManifest()
-	entry := input["entries"].([]any)[0].(map[string]any)
-	entry["source"] = "src/index.go"
+func TestVerifyTypeScriptPackagePublicAPIRejectsUnsupportedSourceSyntaxExtensions(t *testing.T) {
+	for _, sourcePath := range []string{"packages/alpha/src/index.go", "packages/alpha/src/index.tsx"} {
+		t.Run(filepath.Ext(sourcePath), func(t *testing.T) {
+			repoRoot := writeTypeScriptPackageFixture(t)
+			input := publicAPIManifest()
+			entry := input["entries"].([]any)[0].(map[string]any)
+			entry["exportConditions"].([]any)[0].(map[string]any)["sourcePath"] = sourcePath
 
-	_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "src/*.ts") {
-		t.Fatalf("expected TypeScript source boundary failure, exitCode=%d err=%v", exitCode, err)
+			_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+			if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source") {
+				t.Fatalf("expected source syntax boundary failure, exitCode=%d err=%v", exitCode, err)
+			}
+		})
 	}
 }
 
-func TestVerifyTypeScriptPackagePublicAPIRejectsExportTargetDifferentFromScannedSource(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.006943269310710743628834650487878767615578781676283703895362243693196266764140")
+func TestVerifyTypeScriptPackagePublicAPIRejectsExportsFromDifferentDeclaredSource(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.045293983925342815526031937349730030851244261191887869042173792304502947213298")
 	repoRoot := writeTypeScriptPackageFixture(t)
 	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
 	if err := os.WriteFile(filepath.Join(packageRoot, "src", "other.ts"), []byte(`export const OTHER = 1;`), 0o600); err != nil {
@@ -103,8 +107,8 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsExportTargetDifferentFromScanned
 	input := publicAPIManifest()
 	entry := input["entries"].([]any)[0].(map[string]any)
 	entry["exportConditions"] = []any{
-		map[string]any{"condition": "import", "path": "./src/other.ts"},
-		map[string]any{"condition": "types", "path": "./src/other.ts"},
+		map[string]any{"condition": "import", "path": "./src/other.ts", "sourcePath": "packages/alpha/src/other.ts"},
+		map[string]any{"condition": "types", "path": "./src/other.ts", "sourcePath": "packages/alpha/src/other.ts"},
 	}
 
 	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
@@ -114,8 +118,8 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsExportTargetDifferentFromScanned
 	if exitCode != 1 {
 		t.Fatalf("Verify() exitCode=%d output=%#v, want target/source failure", exitCode, output)
 	}
-	if !strings.Contains(fmt.Sprint(output["failures"]), "must match scanned source") {
-		t.Fatalf("failures=%#v, want scanned source mismatch", output["failures"])
+	if !strings.Contains(fmt.Sprint(output["failures"]), "runtime exports drift") {
+		t.Fatalf("failures=%#v, want declared source export mismatch", output["failures"])
 	}
 }
 
@@ -191,8 +195,15 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsDuplicatePackageIdentity(t *test
 		"exports": map[string]any{},
 	})
 
-	_, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "duplicate package name @example/alpha") {
+	input := publicAPIManifest()
+	second := map[string]any{}
+	for key, value := range input["entries"].([]any)[0].(map[string]any) {
+		second[key] = value
+	}
+	second["packageManifestPath"] = "packages/beta/package.json"
+	input["entries"] = append(input["entries"].([]any), second)
+	_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "duplicate referenced package name @example/alpha") {
 		t.Fatalf("Verify() exitCode=%d error=%v, want duplicate package identity", exitCode, err)
 	}
 }
@@ -261,6 +272,32 @@ func TestCollectExportsAcceptsRegexLiteralReturnedByArrowInitializer(t *testing.
 	assertStringSlice(t, typeExports, []string{})
 }
 
+func TestCollectExportsFindsMultipleTopLevelExportsOnOneLine(t *testing.T) {
+	runtimeExports, typeExports, err := CollectExports("export const A = 1; export const B = 2;")
+	if err != nil {
+		t.Fatalf("CollectExports() error = %v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"A", "B"})
+	assertStringSlice(t, typeExports, []string{})
+}
+
+func TestCollectExportsPreservesStatementOffsetsAcrossMaskedLiterals(t *testing.T) {
+	source := "export const FIRST = \"\u00e9; } export\"; export const SECOND = /[;}]/; export type Third = { value: string };"
+	runtimeExports, typeExports, err := CollectExports(source)
+	if err != nil {
+		t.Fatalf("CollectExports() error = %v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"FIRST", "SECOND"})
+	assertStringSlice(t, typeExports, []string{"Third"})
+}
+
+func TestCollectExportsRejectsNamedReexportAliasedAsDefault(t *testing.T) {
+	_, _, err := CollectExports(`export { PublicThing as default } from "./thing.js";`)
+	if err == nil || !strings.Contains(err.Error(), "default alias") {
+		t.Fatalf("CollectExports() error=%v, want default alias rejection", err)
+	}
+}
+
 func TestCollectExportsIgnoresCommentsStringsAndTemplates(t *testing.T) {
 	source := strings.Join([]string{
 		"/* export const BLOCK_GHOST = 1; */",
@@ -325,15 +362,15 @@ func TestVerifyTypeScriptPackagePublicAPICachesRepeatedCanonicalSources(t *testi
 	})
 	input := publicAPIManifest()
 	input["entries"] = append(input["entries"].([]any), map[string]any{
-		"packageName":      "@example/alpha",
-		"exportKey":        "./secondary",
-		"source":           "src/index.ts",
-		"runtimeExports":   []any{"VALUE", "makeThing"},
-		"typeExports":      []any{"Mode", "Thing"},
-		"deniedExportKeys": []any{"./internal"},
+		"packageName":         "@example/alpha",
+		"packageManifestPath": "packages/alpha/package.json",
+		"exportKey":           "./secondary",
+		"runtimeExports":      []any{"VALUE", "makeThing"},
+		"typeExports":         []any{"Mode", "Thing"},
+		"deniedExportKeys":    []any{"./internal"},
 		"exportConditions": []any{
-			map[string]any{"condition": "import", "path": "./src/index.ts"},
-			map[string]any{"condition": "types", "path": "./src/index.ts"},
+			map[string]any{"condition": "import", "path": "./src/index.ts", "sourcePath": "packages/alpha/src/index.ts"},
+			map[string]any{"condition": "types", "path": "./src/index.ts", "sourcePath": "packages/alpha/src/index.ts"},
 		},
 	})
 	manifestInfo, err := os.Stat(manifestPath)
@@ -405,23 +442,34 @@ func TestPublicAPIAdmissionRejectsAggregateResourceBudgets(t *testing.T) {
 	if _, err := admitManifest(manifest, defaultMachineContract); err == nil || !strings.Contains(err.Error(), "entry limit") {
 		t.Fatalf("admitManifest() error=%v, want aggregate entry limit", err)
 	}
+}
 
+func TestVerifyEmptyManifestDoesNotRequireAConventionalPackagesDirectory(t *testing.T) {
 	repoRoot := t.TempDir()
-	packagesRoot := filepath.Join(repoRoot, "packages")
-	if err := os.MkdirAll(packagesRoot, 0o755); err != nil {
+	input := map[string]any{
+		"schemaVersion":   json.Number("1"),
+		"machineContract": defaultMachineContract,
+		"entries":         []any{},
+	}
+	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if err != nil || exitCode != 0 || output["entryCount"] != 0 {
+		t.Fatalf("Verify(empty) output=%#v exitCode=%d error=%v", output, exitCode, err)
+	}
+}
+
+func TestVerifyCollectsMultipleSameLineExportsThroughFilesystemBoundary(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	if err := os.WriteFile(sourcePath, []byte("export const A = 1; export const B = 2;"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	for index := 0; index <= maxPackageDirEntries; index++ {
-		if err := os.WriteFile(filepath.Join(packagesRoot, fmt.Sprintf("entry-%04d", index)), nil, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := packageDirs(newScanCache(resolvedRoot, maxAggregateScanBytes), "packages"); err == nil || !strings.Contains(err.Error(), "entry limit") {
-		t.Fatalf("packageDirs() error=%v, want bounded directory admission", err)
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["runtimeExports"] = []any{"A", "B"}
+	entry["typeExports"] = []any{}
+	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Verify() output=%#v exitCode=%d error=%v", output, exitCode, err)
 	}
 }
 
@@ -459,15 +507,15 @@ func publicAPIManifest() map[string]any {
 		"machineContract": "public_api_surfaces",
 		"entries": []any{
 			map[string]any{
-				"packageName":      "@example/alpha",
-				"exportKey":        ".",
-				"source":           "src/index.ts",
-				"runtimeExports":   []any{"VALUE", "makeThing"},
-				"typeExports":      []any{"Mode", "Thing"},
-				"deniedExportKeys": []any{"./internal"},
+				"packageName":         "@example/alpha",
+				"packageManifestPath": "packages/alpha/package.json",
+				"exportKey":           ".",
+				"runtimeExports":      []any{"VALUE", "makeThing"},
+				"typeExports":         []any{"Mode", "Thing"},
+				"deniedExportKeys":    []any{"./internal"},
 				"exportConditions": []any{
-					map[string]any{"condition": "import", "path": "./src/index.ts"},
-					map[string]any{"condition": "types", "path": "./src/index.ts"},
+					map[string]any{"condition": "import", "path": "./src/index.ts", "sourcePath": "packages/alpha/src/index.ts"},
+					map[string]any{"condition": "types", "path": "./src/index.ts", "sourcePath": "packages/alpha/src/index.ts"},
 				},
 			},
 		},

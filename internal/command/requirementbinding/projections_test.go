@@ -2,12 +2,74 @@ package requirementbinding
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
+
+func TestSelfHostingWitnessCommandIdentityMatchesWitnessPlan(t *testing.T) {
+	repositoryRoot := filepath.Join("..", "..", "..")
+	bindingRaw := readOwnerJSON(t, filepath.Join(repositoryRoot, "proofkit", "requirement-bindings.json"))
+	result, err := Build(bindingRaw)
+	if err != nil {
+		t.Fatalf("Build(requirement-bindings.json) error=%v", err)
+	}
+	if result.Record.State != "passed" {
+		t.Fatalf("requirement-bindings.json state=%s, want passed", result.Record.State)
+	}
+
+	witnessPlan := readOwnerJSON(t, filepath.Join(repositoryRoot, "proofkit", "witness-plan.json")).(map[string]any)
+	planCommands := map[string]map[string]any{}
+	for _, rawCommand := range witnessPlan["commands"].([]any) {
+		command := rawCommand.(map[string]any)
+		commandID := command["id"].(string)
+		if _, exists := planCommands[commandID]; exists {
+			t.Fatalf("witness-plan.json repeats command id %s", commandID)
+		}
+		planCommands[commandID] = command
+	}
+	if len(planCommands) != len(result.Input.WitnessCommands) {
+		t.Fatalf("witness command count binding=%d plan=%d", len(result.Input.WitnessCommands), len(planCommands))
+	}
+	for _, bindingCommand := range result.Input.WitnessCommands {
+		planCommand, ok := planCommands[bindingCommand.CommandID]
+		if !ok {
+			t.Errorf("binding witness command %s is absent from witness-plan.json", bindingCommand.CommandID)
+			continue
+		}
+		argv, err := displayCommandArgv(bindingCommand.Command)
+		if err != nil {
+			t.Fatalf("parse binding command %s: %v", bindingCommand.CommandID, err)
+		}
+		if got := stringValues(planCommand["argv"].([]any)); !reflect.DeepEqual(got, argv) {
+			t.Errorf("command %s argv=%q, want %q", bindingCommand.CommandID, got, argv)
+		}
+		environment := planCommand["environment"].(map[string]any)
+		if got := stringValues(environment["classes"].([]any)); !reflect.DeepEqual(got, bindingCommand.EnvironmentClasses) {
+			t.Errorf("command %s environment classes=%q, want %q", bindingCommand.CommandID, got, bindingCommand.EnvironmentClasses)
+		}
+	}
+}
+
+func readOwnerJSON(t *testing.T, path string) any {
+	t.Helper()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = file.Close() })
+	value, err := admission.DecodeJSON(file, 8<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return value
+}
 
 func TestBuildReportFailsUnknownRequirementBinding(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000376648692213538787264617164821843651034132903736657977168045531003514534050")

@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
-	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
@@ -33,7 +32,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
-	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementimpactinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofsourceset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
@@ -43,7 +41,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/secretscan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specoverviewclaims"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
-	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
@@ -52,164 +49,120 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
+type genericCommandBuilder func(any) (any, int, error)
+
+var genericCommandBuilders = mustGenericCommandBuilders(map[string]genericCommandBuilder{
+	"adoption-checklist":                   reportOutput(adoptionchecklist.Build),
+	"binding-partition":                    reportOutput(bindingpartition.Build),
+	"branch-authority":                     reportOutputWithoutError(branchauthority.Build),
+	"capability-map-admission":             reportOutput(capabilitymapadmission.Build),
+	"completion-criteria":                  reportOutput(completioncriteria.Build),
+	"custom-rule-boundary":                 reportOutput(customruleboundary.Build),
+	"deployment-evidence-admission":        reportOutput(deploymentevidenceadmission.Build),
+	"document-lifecycle-boundary":          reportOutput(documentlifecycle.Build),
+	"evidence-graph":                       requirementbinding.BuildEvidenceGraph,
+	"external-consumer":                    reportOutput(externalconsumer.Build),
+	"impact":                               outputWithExit(impact.Build),
+	"migration-parity-admission":           reportOutput(migrationparityadmission.Build),
+	"migration-plan":                       outputWithExit(migrationplan.Build),
+	"package-runtime-dependency-admission": reportOutputWithoutError(packageruntimedependency.Build),
+	"producer-policy-self-proof":           reportOutput(producerpolicyselfproof.Build),
+	"proof-obligation-algebra":             reportOutput(proofobligationalgebra.Build),
+	"proof-receipt-admission":              reportOutput(proofreceiptadmission.Build),
+	"proof-slice":                          requirementbinding.BuildProofSlice,
+	"readiness-closeout":                   reportOutput(readinesscloseout.Build),
+	"receipt-currentness-scope":            reportOutput(receiptcurrentnessscope.Build),
+	"receipt-producer-admission":           reportOutput(receiptproduceradmission.Build),
+	"receipt-trust-class":                  reportOutput(receipttrustclass.Build),
+	"registry-consumer":                    reportOutput(registryconsumer.Build),
+	"registry-consumer-proof-input-compose": outputWithExit(
+		registryconsumerinputcompose.Build,
+	),
+	"release-authority":                  reportOutput(releaseauthority.Build),
+	"rendered-artifact-freshness":        reportOutput(renderedartifactfreshness.Build),
+	"repo-profile-admission":             reportOutput(repoprofileadmission.Build),
+	"requirement-authoring-plan":         outputWithExit(requirementauthoringplan.Build),
+	"requirement-bindings":               reportOutput(requirementbinding.BuildReport),
+	"requirement-coverage-input-compose": outputWithExit(requirementcoverageinput.Build),
+	"requirement-impact-input-compose":   outputWithExit(requirementimpactinput.Build),
+	"requirement-proof-source-set":       requirementproofsourceset.Build,
+	"requirement-source-admission":       reportOutput(requirementsourceadmission.Build),
+	"requirement-source-transition":      reportOutput(requirementsourcetransition.Build),
+	"requirement-spec-tree":              reportOutput(requirementspectree.Build),
+	"scaffold-profile-plan":              zeroExitOutput(scaffoldprofileplan.Build),
+	"secret-scan":                        reportOutput(secretscan.Build),
+	"self-check":                         selfCheckOutput,
+	"spec-overview-claims":               reportOutput(specoverviewclaims.Build),
+	"spec-proof-bundle-admission":        reportOutput(specproofbundleadmission.Build),
+	"text-policy":                        reportOutput(textpolicy.Build),
+	"witness-plan":                       zeroExitOutput(witnessplan.Build),
+	"witness-scheduler-plan":             reportOutput(witnessschedulerplan.Build),
+	"workspace-manifest-facts":           outputWithExit(workspacemanifestfacts.Build),
+	"workspace-registry":                 reportOutput(workspaceregistry.Build),
+})
+
 func buildOutput(command string, input any) (any, int, error) {
-	if command == "impact" {
-		return impact.Build(input)
+	builder, ok := genericCommandBuilders[command]
+	if !ok {
+		return nil, 1, fmt.Errorf("unsupported generic command: %s", command)
 	}
-	if command == "migration-plan" {
-		return migrationplan.Build(input)
-	}
-	if command == "witness-plan" {
-		output, err := witnessplan.Build(input)
-		return output, 0, err
-	}
-	if command == "evidence-graph" {
-		return requirementbinding.BuildEvidenceGraph(input)
-	}
-	if command == "proof-slice" {
-		return requirementbinding.BuildProofSlice(input)
-	}
-	if command == "requirement-proof-source-set" {
-		return requirementproofsourceset.Build(input)
-	}
-	if command == "requirement-coverage-view" {
-		return requirementcoverageview.BuildJSON(input, requirementcoverageview.Options{})
-	}
-	if command == "requirement-coverage-input-compose" {
-		return requirementcoverageinput.Build(input)
-	}
-	if command == "requirement-impact-input-compose" {
-		return requirementimpactinput.Build(input)
-	}
-	if command == "requirement-authoring-plan" {
-		return requirementauthoringplan.Build(input)
-	}
-	if command == "registry-consumer-proof-input-compose" {
-		return registryconsumerinputcompose.Build(input)
-	}
-	if command == "workspace-manifest-facts" {
-		return workspacemanifestfacts.Build(input)
-	}
-	if command == "scaffold-profile-plan" {
-		output, err := scaffoldprofileplan.Build(input)
-		return output, 0, err
-	}
-	if command == "agent-route" {
-		return agentroute.Build(input)
-	}
-	record, exitCode, err := buildReport(command, input)
-	if err != nil {
-		return nil, exitCode, err
-	}
-	return record.JSONValue(), exitCode, nil
+	return builder(input)
 }
 
-func buildReport(command string, input any) (report.Record, int, error) {
-	if command == "adoption-checklist" {
-		return adoptionchecklist.Build(input)
+func outputWithExit[T any](builder func(any) (T, int, error)) genericCommandBuilder {
+	return func(input any) (any, int, error) {
+		return builder(input)
 	}
-	if command == "binding-partition" {
-		return bindingpartition.Build(input)
+}
+
+func zeroExitOutput[T any](builder func(any) (T, error)) genericCommandBuilder {
+	return func(input any) (any, int, error) {
+		output, err := builder(input)
+		return output, 0, err
 	}
-	if command == "branch-authority" {
-		record, exitCode := branchauthority.Build(input)
-		return record, exitCode, nil
+}
+
+func reportOutput(builder func(any) (report.Record, int, error)) genericCommandBuilder {
+	return func(input any) (any, int, error) {
+		record, exitCode, err := builder(input)
+		if err != nil {
+			return nil, exitCode, err
+		}
+		return record.JSONValue(), exitCode, nil
 	}
-	if command == "capability-map-admission" {
-		return capabilitymapadmission.Build(input)
+}
+
+func reportOutputWithoutError(builder func(any) (report.Record, int)) genericCommandBuilder {
+	return func(input any) (any, int, error) {
+		record, exitCode := builder(input)
+		return record.JSONValue(), exitCode, nil
 	}
-	if command == "completion-criteria" {
-		return completioncriteria.Build(input)
+}
+
+func selfCheckOutput(input any) (any, int, error) {
+	return report.BuildSelfCheckReport(input).JSONValue(), 0, nil
+}
+
+func mustGenericCommandBuilders(builders map[string]genericCommandBuilder) map[string]genericCommandBuilder {
+	for _, descriptor := range commandDescriptors {
+		_, registered := builders[descriptor.name]
+		if descriptor.runner == commandRunnerGenericInput && !registered {
+			panic("generic command has no builder: " + descriptor.name)
+		}
+		if descriptor.runner != commandRunnerGenericInput && registered {
+			panic("non-generic command has an unreachable generic builder: " + descriptor.name)
+		}
 	}
-	if command == "custom-rule-boundary" {
-		return customruleboundary.Build(input)
+	for command, builder := range builders {
+		descriptor, exists := commandDescriptorByName[command]
+		if !exists || descriptor.runner != commandRunnerGenericInput {
+			panic("generic builder has no generic command descriptor: " + command)
+		}
+		if builder == nil {
+			panic("generic command has a nil builder: " + command)
+		}
 	}
-	if command == "deployment-evidence-admission" {
-		return deploymentevidenceadmission.Build(input)
-	}
-	if command == "document-lifecycle-boundary" {
-		return documentlifecycle.Build(input)
-	}
-	if command == "external-consumer" {
-		return externalconsumer.Build(input)
-	}
-	if command == "migration-parity-admission" {
-		return migrationparityadmission.Build(input)
-	}
-	if command == "package-runtime-dependency-admission" {
-		record, exitCode := packageruntimedependency.Build(input)
-		return record, exitCode, nil
-	}
-	if command == "proof-obligation-algebra" {
-		return proofobligationalgebra.Build(input)
-	}
-	if command == "producer-policy-self-proof" {
-		return producerpolicyselfproof.Build(input)
-	}
-	if command == "proof-receipt-admission" {
-		return proofreceiptadmission.Build(input)
-	}
-	if command == "readiness-closeout" {
-		return readinesscloseout.Build(input)
-	}
-	if command == "receipt-currentness-scope" {
-		return receiptcurrentnessscope.Build(input)
-	}
-	if command == "receipt-producer-admission" {
-		return receiptproduceradmission.Build(input)
-	}
-	if command == "receipt-trust-class" {
-		return receipttrustclass.Build(input)
-	}
-	if command == "registry-consumer" {
-		return registryconsumer.Build(input)
-	}
-	if command == "rendered-artifact-freshness" {
-		return renderedartifactfreshness.Build(input)
-	}
-	if command == "requirement-bindings" {
-		return requirementbinding.BuildReport(input)
-	}
-	if command == "release-authority" {
-		return releaseauthority.Build(input)
-	}
-	if command == "repo-profile-admission" {
-		return repoprofileadmission.Build(input)
-	}
-	if command == "requirement-source-admission" {
-		return requirementsourceadmission.Build(input)
-	}
-	if command == "requirement-spec-tree" {
-		return requirementspectree.Build(input)
-	}
-	if command == "requirement-source-transition" {
-		return requirementsourcetransition.Build(input)
-	}
-	if command == "spec-overview-claims" {
-		return specoverviewclaims.Build(input)
-	}
-	if command == "spec-proof-bundle-admission" {
-		return specproofbundleadmission.Build(input)
-	}
-	if command == "test-evidence-inventory" {
-		return testevidenceinventory.Build(input)
-	}
-	if command == "text-policy" {
-		return textpolicy.Build(input)
-	}
-	if command == "witness-scheduler-plan" {
-		return witnessschedulerplan.Build(input)
-	}
-	if command == "workspace-registry" {
-		return workspaceregistry.Build(input)
-	}
-	if command == "self-check" {
-		return report.BuildSelfCheckReport(input), 0, nil
-	}
-	if command == "secret-scan" {
-		return secretscan.Build(input)
-	}
-	return report.Record{}, 1, fmt.Errorf("unsupported command: %s", command)
+	return builders
 }
 
 func buildInitReport(preset string) (report.Record, error) {

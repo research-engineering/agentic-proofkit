@@ -1,6 +1,9 @@
 package selectivegateplan
 
-import "github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+import (
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathpattern"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
+)
 
 var edgeClassSet = proofvocab.SelectiveEdgeClassSet()
 
@@ -22,10 +25,10 @@ type scanObligation struct {
 }
 
 type generatedArtifactRule struct {
-	Command              string
-	Generator            string
-	Path                 string
-	SourceOfTruthPattern []string
+	Command               string
+	Generator             string
+	Path                  string
+	SourceOfTruthPatterns []pathpattern.Pattern
 }
 
 type generatedArtifactObligation struct {
@@ -37,7 +40,7 @@ type generatedArtifactObligation struct {
 
 type artifactIntegrityPolicy struct {
 	Command     string
-	PathPattern string
+	PathPattern pathpattern.Pattern
 	Policy      string
 }
 
@@ -79,7 +82,7 @@ type skippedGate struct {
 
 type pathTriggeredCommand struct {
 	Command      command
-	PathPatterns []string
+	PathPatterns []pathpattern.Pattern
 }
 
 type commandAccumulator struct {
@@ -88,7 +91,7 @@ type commandAccumulator struct {
 }
 
 type input struct {
-	ArchiveOrBinaryPathPatterns []string
+	ArchiveOrBinaryPathPatterns []pathpattern.Pattern
 	ArtifactIntegrityPolicies   []artifactIntegrityPolicy
 	BaseCommands                []command
 	ChangedPaths                []string
@@ -103,7 +106,7 @@ type input struct {
 	PathTriggeredCommands       []pathTriggeredCommand
 	PreexistingFailures         []string
 	PrivatePathPrefixes         []string
-	ProofLikePathPatterns       []string
+	ProofLikePathPatterns       []pathpattern.Pattern
 	PublicAPICommand            string
 	PublicAPITouched            bool
 	RequirementImpactCommand    string

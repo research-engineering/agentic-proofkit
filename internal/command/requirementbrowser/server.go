@@ -16,7 +16,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-const serverShutdownTimeout = 5 * time.Second
+const (
+	serverIdleTimeout       = 30 * time.Second
+	serverReadHeaderTimeout = 5 * time.Second
+	serverShutdownTimeout   = 5 * time.Second
+	serverWriteTimeout      = 15 * time.Second
+)
 
 type ServerHandle struct {
 	Host string
@@ -64,8 +69,12 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 		_ = listener.Close()
 		return ServerHandle{}, err
 	}
+	expectedAuthority := net.JoinHostPort(options.Host, strconv.Itoa(actualPort))
 	server := &http.Server{
-		Handler: browserHandler(options.View, rendered),
+		Handler:           browserHandler(options.View, rendered, expectedAuthority),
+		IdleTimeout:       serverIdleTimeout,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		WriteTimeout:      serverWriteTimeout,
 	}
 	done := make(chan error, 1)
 	go func() {
@@ -81,7 +90,11 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 		Port: actualPort,
 		URL:  browserURL(options.Host, actualPort),
 		close: func(ctx context.Context) error {
-			return server.Shutdown(ctx)
+			shutdownErr := server.Shutdown(ctx)
+			if shutdownErr == nil {
+				return nil
+			}
+			return errors.Join(shutdownErr, server.Close())
 		},
 		done: done,
 	}, nil
@@ -92,12 +105,7 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 	if err != nil {
 		return err
 	}
-	closed := false
-	defer func() {
-		if !closed {
-			_ = closeHandle(handle)
-		}
-	}()
+	defer func() { _ = closeHandle(handle) }()
 	if options.Open {
 		if err := openBrowser(ctx, handle.URL); err != nil {
 			return err
@@ -108,21 +116,30 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 	}
 	select {
 	case <-ctx.Done():
-		closed = true
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
+		closeErr := closeHandle(handle)
+		waitCtx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 		defer cancel()
-		if err := handle.Close(shutdownCtx); err != nil {
-			return err
-		}
-		return waitServerDone(shutdownCtx, handle)
+		return errors.Join(closeErr, waitServerDone(waitCtx, handle))
 	case err := <-handle.Done():
-		closed = true
 		return err
 	}
 }
 
-func browserHandler(view string, rendered renderedView) http.Handler {
+func browserHandler(view string, rendered renderedView, expectedAuthority string) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		if request.Host != expectedAuthority {
+			response.Header().Set("content-type", "text/plain; charset=utf-8")
+			response.WriteHeader(http.StatusForbidden)
+			writeBody(response, request.Method, []byte("forbidden host\n"))
+			return
+		}
+		expectedOrigin := "http://" + expectedAuthority
+		if origin := request.Header.Get("origin"); origin != "" && origin != expectedOrigin {
+			response.Header().Set("content-type", "text/plain; charset=utf-8")
+			response.WriteHeader(http.StatusForbidden)
+			writeBody(response, request.Method, []byte("forbidden origin\n"))
+			return
+		}
 		method := request.Method
 		if method != http.MethodGet && method != http.MethodHead {
 			response.Header().Set("allow", "GET, HEAD")

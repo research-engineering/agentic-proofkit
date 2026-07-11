@@ -2,6 +2,8 @@ package main
 
 import (
 	"archive/zip"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -95,7 +97,7 @@ func TestVerifyWheelContentsRequiresExactWheelMetadata(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheel(t, path, version, wheelMetadata(target)+"Tag: py3-none-conflicting\n")
 
-	err := verifyWheelContents(path, version, target)
+	err := verifyWheelContents(path, version, target, binarySHA256([]byte("binary")))
 	if err == nil || !strings.Contains(err.Error(), "WHEEL metadata must match release platform target") {
 		t.Fatalf("verifyWheelContents() error=%v, want exact WHEEL metadata rejection", err)
 	}
@@ -125,20 +127,36 @@ func TestVerifyWheelContentsRejectsDataDescriptors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeDataDescriptorWheel(t, path, version, wheelMetadata(target))
 
-	err := verifyWheelContents(path, version, target)
+	err := verifyWheelContents(path, version, target, binarySHA256([]byte("binary")))
 	if err == nil || !strings.Contains(err.Error(), "ZIP data descriptor") {
 		t.Fatalf("verifyWheelContents() error=%v, want data descriptor rejection", err)
 	}
 }
 
+func TestVerifyWheelContentsRejectsEmbeddedBinaryDifferentFromSourceRecord(t *testing.T) {
+	target := releaseTargets()[0]
+	version := "1.2.3"
+	path := filepath.Join(t.TempDir(), "wheel.whl")
+	writeMinimalWheelWithBinary(t, path, version, wheelMetadata(target), []byte("corrupted-binary"))
+
+	err := verifyWheelContents(path, version, target, binarySHA256([]byte("source-binary")))
+	if err == nil || !strings.Contains(err.Error(), "embedded binary sha256 mismatch") {
+		t.Fatalf("verifyWheelContents() error=%v, want embedded/source binary identity rejection", err)
+	}
+}
+
 func writeMinimalWheel(t *testing.T, path string, version string, wheel string) {
+	writeMinimalWheelWithBinary(t, path, version, wheel, []byte("binary"))
+}
+
+func writeMinimalWheelWithBinary(t *testing.T, path string, version string, wheel string, binary []byte) {
 	t.Helper()
 	distInfo := distInfoDir(version)
 	entries := []wheelEntry{
 		{Path: "agentic_proofkit/__init__.py", Mode: 0o644},
 		{Path: "agentic_proofkit/__main__.py", Mode: 0o644},
 		{Path: "agentic_proofkit/cli.py", Mode: 0o644},
-		{Path: "agentic_proofkit/bin/agentic-proofkit", Content: []byte("binary"), Mode: 0o755},
+		{Path: "agentic_proofkit/bin/agentic-proofkit", Content: binary, Mode: 0o755},
 		{Path: distInfo + "/METADATA", Content: []byte("Metadata-Version: 2.1\n"), Mode: 0o644},
 		{Path: distInfo + "/WHEEL", Content: []byte(wheel), Mode: 0o644},
 		{Path: distInfo + "/entry_points.txt", Content: []byte(entryPoints()), Mode: 0o644},
@@ -147,6 +165,11 @@ func writeMinimalWheel(t *testing.T, path string, version string, wheel string) 
 	if err := writeWheel(path, entries); err != nil {
 		t.Fatalf("write wheel: %v", err)
 	}
+}
+
+func binarySHA256(content []byte) string {
+	sum := sha256.Sum256(content)
+	return fmt.Sprintf("%x", sum[:])
 }
 
 func writeDataDescriptorWheel(t *testing.T, path string, version string, wheel string) {

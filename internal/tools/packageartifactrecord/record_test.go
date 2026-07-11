@@ -209,6 +209,55 @@ func TestPrepareCandidateArtifactOutputsRejectsProviderDerivedReleaseManifestBef
 	}
 }
 
+func TestPrepareCandidateArtifactOutputsRejectsTopLevelRegistryInstallEvidenceBeforeMutation(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "artifacts/package/package.tgz", "candidate")
+	writeFixture(t, root, "artifacts/release/release-manifest.json", `{"artifactKind":"proofkit.release-manifest.v1","channels":[{"status":"candidate"}],"registryInstallEvidence":{"kind":"proofkit.registry-install-evidence.v1"},"schemaVersion":1}`)
+
+	err := PrepareCandidateArtifactOutputs(root)
+	if err == nil || !strings.Contains(err.Error(), "rejects provider-derived release manifest") {
+		t.Fatalf("PrepareCandidateArtifactOutputs() error = %v", err)
+	}
+	if content, readErr := os.ReadFile(filepath.Join(root, "artifacts/package/package.tgz")); readErr != nil || string(content) != "candidate" {
+		t.Fatalf("candidate output changed before registry-install-evidence rejection: content=%q err=%v", content, readErr)
+	}
+}
+
+func TestExecutionRecordOperationsRejectSymlinkEscape(t *testing.T) {
+	operations := []struct {
+		name string
+		run  func(string) error
+	}{
+		{name: "read", run: func(root string) error { _, err := Read(root); return err }},
+		{name: "write", run: func(root string) error { return Write(root, Record{SchemaVersion: SchemaVersion}) }},
+		{name: "invalidate", run: Invalidate},
+	}
+	for _, operation := range operations {
+		t.Run(operation.name, func(t *testing.T) {
+			root := t.TempDir()
+			external := t.TempDir()
+			if err := os.MkdirAll(filepath.Join(root, "artifacts"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink(external, filepath.Join(root, "artifacts", "proofkit")); err != nil {
+				t.Skipf("symlink unavailable: %v", err)
+			}
+			externalRecord := filepath.Join(external, filepath.Base(RecordPath))
+			if err := os.WriteFile(externalRecord, []byte("external-sentinel"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+
+			if err := operation.run(root); err == nil {
+				t.Fatalf("%s accepted an execution-record symlink escape", operation.name)
+			}
+			content, err := os.ReadFile(externalRecord)
+			if err != nil || string(content) != "external-sentinel" {
+				t.Fatalf("%s changed external record: content=%q err=%v", operation.name, content, err)
+			}
+		})
+	}
+}
+
 func TestPrepareCandidateArtifactOutputsDoesNotFollowArtifactSymlink(t *testing.T) {
 	root := t.TempDir()
 	external := t.TempDir()

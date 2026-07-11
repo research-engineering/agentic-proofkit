@@ -911,6 +911,56 @@ func TestRequirementProofSourceSetContractDescribesProjection(t *testing.T) {
 	}
 }
 
+func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
+	contract := readCLIContract(t)
+	var publicAPI *cliContractCommand
+	for index := range contract.Commands {
+		if contract.Commands[index].Command == "typescript-public-api-surfaces" {
+			publicAPI = &contract.Commands[index]
+			break
+		}
+	}
+	if publicAPI == nil || publicAPI.InputContract == nil {
+		t.Fatal("typescript-public-api-surfaces must expose its input topology contract")
+	}
+	inputContract := canonicalJSONValue(t, publicAPI.InputContract).(map[string]any)
+	fields := inputContract["fields"].(map[string]any)
+	entries := fields["entries"].(map[string]any)
+	item := entries["item"].(map[string]any)
+	required := stringsFromAny(item["requiredFields"].([]any))
+	assertStringSet(t, required, []string{
+		"exportConditions",
+		"exportKey",
+		"packageManifestPath",
+		"packageName",
+		"runtimeExports",
+		"typeExports",
+	}, "TypeScript public API required fields")
+	pathAuthority := item["pathAuthority"].(string)
+	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") {
+		t.Fatalf("TypeScript public API path authority is incomplete: %q", pathAuthority)
+	}
+	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
+	joinedNonClaims := strings.Join(nonClaims, " ")
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") {
+		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
+	}
+}
+
+func TestGenericCommandBuilderRegistryExactlyMatchesGenericDescriptors(t *testing.T) {
+	want := commandNamesMatching(func(descriptor commandDescriptor) bool {
+		return descriptor.runner == commandRunnerGenericInput
+	})
+	got := make([]string, 0, len(genericCommandBuilders))
+	for command := range genericCommandBuilders {
+		got = append(got, command)
+	}
+	sort.Strings(got)
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("generic command builder registry=%v, want descriptor-owned commands=%v", got, want)
+	}
+}
+
 func TestRequirementCoverageViewContractDescribesMachineClassifications(t *testing.T) {
 	contract := readCLIContract(t)
 	var coverage *cliContractCommand

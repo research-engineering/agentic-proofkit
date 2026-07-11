@@ -1,6 +1,7 @@
 package packageartifactrecord
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -112,7 +113,12 @@ type ArtifactEvidence struct {
 }
 
 func Read(root string) (Record, error) {
-	file, err := os.Open(filepath.Join(root, filepath.FromSlash(RecordPath)))
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return Record{}, fmt.Errorf("open package artifact execution root: %w", err)
+	}
+	defer rootFS.Close()
+	file, err := rootFS.Open(filepath.FromSlash(RecordPath))
 	if err != nil {
 		return Record{}, err
 	}
@@ -159,36 +165,65 @@ func Write(root string, record Record) error {
 	if err != nil {
 		return err
 	}
-	path := filepath.Join(root, filepath.FromSlash(RecordPath))
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return fmt.Errorf("open package artifact execution root: %w", err)
+	}
+	defer rootFS.Close()
+	path := filepath.FromSlash(RecordPath)
+	directory := filepath.Dir(path)
+	if err := rootFS.MkdirAll(directory, 0o755); err != nil {
 		return err
 	}
-	temporary, err := os.CreateTemp(filepath.Dir(path), ".package-artifact-execution-*")
+	temporary, temporaryPath, err := createRootedTemporary(rootFS, directory)
 	if err != nil {
 		return err
 	}
-	temporaryPath := temporary.Name()
-	defer os.Remove(temporaryPath)
-	if err := temporary.Chmod(0o600); err != nil {
+	defer rootFS.Remove(temporaryPath)
+	if _, err := temporary.Write(content); err != nil {
 		temporary.Close()
 		return err
 	}
-	if _, err := temporary.Write(content); err != nil {
+	if err := temporary.Sync(); err != nil {
 		temporary.Close()
 		return err
 	}
 	if err := temporary.Close(); err != nil {
 		return err
 	}
-	return os.Rename(temporaryPath, path)
+	return rootFS.Rename(temporaryPath, path)
 }
 
 func Invalidate(root string) error {
-	err := os.Remove(filepath.Join(root, filepath.FromSlash(RecordPath)))
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return fmt.Errorf("open package artifact execution root: %w", err)
+	}
+	defer rootFS.Close()
+	err = rootFS.Remove(filepath.FromSlash(RecordPath))
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("invalidate package artifact execution record: %w", err)
 	}
 	return nil
+}
+
+func createRootedTemporary(rootFS *os.Root, directory string) (*os.File, string, error) {
+	for attempt := 0; attempt < 16; attempt++ {
+		var nonce [16]byte
+		if _, err := rand.Read(nonce[:]); err != nil {
+			return nil, "", fmt.Errorf("create package artifact execution nonce: %w", err)
+		}
+		path := filepath.Join(directory, ".package-artifact-execution-"+hex.EncodeToString(nonce[:])+".tmp")
+		file, err := rootFS.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if errors.Is(err, fs.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		return file, path, nil
+	}
+	return nil, "", fmt.Errorf("create package artifact execution temporary file: exhausted collision budget")
 }
 
 func PrepareCandidateArtifactOutputs(root string) error {
@@ -266,6 +301,9 @@ func admitCandidateReleaseManifest(rootFS *os.Root) error {
 	if !ok {
 		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
 	}
+	if err := admit.KnownKeys(object, []string{"artifactKind", "channels", "localPackEvidence", "nonClaims", "package", "registryInstallEvidence", "schemaVersion", "source", "toolchain", "workflow"}, "candidate release manifest"); err != nil {
+		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest: %w", err)
+	}
 	artifactKind, kindOK := object["artifactKind"].(string)
 	schemaVersion, versionOK := object["schemaVersion"].(json.Number)
 	if !kindOK || artifactKind != "proofkit.release-manifest.v1" || !versionOK || schemaVersion.String() != "1" {
@@ -275,10 +313,16 @@ func admitCandidateReleaseManifest(rootFS *os.Root) error {
 	if !ok || len(channels) == 0 {
 		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
 	}
+	if _, present := object["registryInstallEvidence"]; present {
+		return fmt.Errorf("candidate package artifact execution rejects provider-derived release manifest at %s", relativePath)
+	}
 	for _, value := range channels {
 		channel, ok := value.(map[string]any)
 		if !ok {
 			return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
+		}
+		if err := admit.KnownKeys(channel, []string{"assets", "authorityChannel", "authorityValidator", "kind", "nonClaims", "packages", "publicationMode", "publisherEnvironment", "registry", "role", "status", "trustedPublisher"}, "candidate release manifest channel"); err != nil {
+			return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest: %w", err)
 		}
 		status, ok := channel["status"].(string)
 		if !ok || (status != "candidate" && status != "planned" && status != "not_applicable") {

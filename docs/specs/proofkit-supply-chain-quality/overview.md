@@ -45,9 +45,10 @@ vulnerability absence, or consumer rollout safety by itself.
   unknown command refs, contract-only commands, or route-only commands. Static
   route metadata and source syntax never become semantic falsifier evidence.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
-  source/package gate from macOS platform smoke, uses explicit hosted runner
-  labels instead of floating latest labels, and exposes one fail-closed
-  aggregate gate that requires every required leaf check to finish with success.
+  source/package gate from macOS platform smoke, executes the complete Go
+  package set through its owner command, uses explicit hosted runner labels
+  instead of floating latest labels, and exposes one fail-closed aggregate gate
+  that requires every required leaf check to finish with success.
 - `REQ-PROOFKIT-QUALITY-012`: release and adoption channel identifiers use one
   canonical authority vocabulary that separates durable authority channels from
   display labels, publisher environments, statuses, and candidate evidence.
@@ -65,8 +66,9 @@ vulnerability absence, or consumer rollout safety by itself.
   release closeout.
 - `REQ-PROOFKIT-QUALITY-016`: release platform targets use one private owner
   that projects platform suffixes, Go build targets, npm OS/CPU metadata,
-  package tar entries, Python wheel tags, PyPI candidate completeness, and
-  SBOM binary subjects without becoming public API.
+  package tar entries, Python wheel tags, PyPI candidate completeness,
+  self-hosting native binary selection, and SBOM binary subjects without
+  becoming public API.
 - `REQ-PROOFKIT-QUALITY-017`: report-visible secret-shaped JSON traversal
   uses one private kernel owner for deterministic paths and finding kinds while
   command packages only map findings to their local report policy.

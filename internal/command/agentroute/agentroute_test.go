@@ -34,8 +34,8 @@ func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
 	if state := report["state"]; state != "routed" {
 		t.Fatalf("state = %v, want routed", state)
 	}
-	if family := report["selectedFamily"]; family != "requirement_source" {
-		t.Fatalf("selectedFamily = %v, want requirement_source", family)
+	if family := report["selectedRouteFamily"]; family != "requirement_source" {
+		t.Fatalf("selectedRouteFamily = %v, want requirement_source", family)
 	}
 	commands := report["nextCommands"].([]any)
 	if len(commands) != 1 {
@@ -825,8 +825,8 @@ func TestBuildRoutesTypeScriptPublicAPIAsExplicitScanner(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("exitCode = %d, want 0", exitCode)
 	}
-	if family := report["selectedFamily"]; family != "repository_structure" {
-		t.Fatalf("selectedFamily = %v, want repository_structure", family)
+	if family := report["selectedRouteFamily"]; family != "repository_structure" {
+		t.Fatalf("selectedRouteFamily = %v, want repository_structure", family)
 	}
 	argv := findCommandArgv(t, report["nextCommands"].([]any), "typescript-public-api-surfaces")
 	assertArgvContainsPair(t, argv, "--input", "docs/contracts/public-api-surfaces.v1.json")

@@ -13,18 +13,21 @@ denial, and package artifact behavior only.
 - `REQ-PROOFKIT-PACKAGE-002`: the CLI builds deterministic reports, plans,
   generated source artifacts, and policy-admission results from explicit
   caller-owned JSON, declared no-input command parameters, or declared explicit
-  scanner scope classes without executing native witnesses, scanning implicit
-  repository state, deciding proof freshness, or accepting broad caller-supplied
-  phrase suppressors that can hide readiness overclaims.
+  scanner scope classes. Explicit scanners consume only caller-named bounded
+  files rather than guessing conventional layouts; no command executes native
+  witnesses, scans implicit repository state, decides proof freshness, or
+  accepts broad caller-supplied phrase suppressors that can hide readiness
+  overclaims.
 - `REQ-PROOFKIT-PACKAGE-003`: the root package remains installable and
   executable by an outside consumer on the current native platform without
   claiming registry publication.
 - `REQ-PROOFKIT-PACKAGE-004`: CI package-gate receipts used as merge evidence
   are admitted through a declared producer policy and proof-receipt shape
   validator instead of current-build output alone.
-- `REQ-PROOFKIT-PACKAGE-005`: the Go source, static analysis, package gate,
-  and vulnerability gates remain the native merge-critical quality floor for
-  the current Proofkit source tree.
+- `REQ-PROOFKIT-PACKAGE-005`: tracked source hygiene covers each admitted text
+  language in staged blobs and the current worktree; Go formatting, static
+  analysis, test, package, and vulnerability gates remain the native
+  merge-critical quality floor for the current Proofkit source tree.
 - `REQ-PROOFKIT-PACKAGE-006`: Python/uv distribution is a platform wheel
   wrapper over the same Go CLI, with wheel-safe package metadata, wheel tags,
   embedded binary identity, local install smoke proof, and explicit non-claims

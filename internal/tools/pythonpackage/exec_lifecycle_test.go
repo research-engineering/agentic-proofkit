@@ -42,8 +42,13 @@ def raise_exit():
 
 signal.signal(signal.SIGTERM, lambda _signum, _frame: raise_exit())
 
-with open(os.environ["PROOFKIT_TEST_PID_FILE"], "w", encoding="utf-8") as handle:
+pid_path = os.environ["PROOFKIT_TEST_PID_FILE"]
+temporary_pid_path = pid_path + ".tmp"
+with open(temporary_pid_path, "w", encoding="utf-8") as handle:
     handle.write(str(os.getpid()))
+    handle.flush()
+    os.fsync(handle.fileno())
+os.replace(temporary_pid_path, pid_path)
 
 while True:
     time.sleep(0.1)
@@ -63,7 +68,7 @@ while True:
 			_, _ = command.Process.Wait()
 		}
 	})
-	pid := waitForPID(t, pidFile)
+	pid := waitForPID(t, pidFile, command.Process.Pid)
 	if pid != command.Process.Pid {
 		t.Fatalf("wrapper pid=%d embedded CLI pid=%d, want exec-preserved identity", command.Process.Pid, pid)
 	}
@@ -88,20 +93,36 @@ func copyFixtureFile(t *testing.T, source string, target string) {
 	}
 }
 
-func waitForPID(t *testing.T, path string) int {
+func waitForPID(t *testing.T, path string, expected int) int {
 	t.Helper()
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		content, err := os.ReadFile(path)
 		if err == nil {
 			pid, err := strconv.Atoi(strings.TrimSpace(string(content)))
-			if err != nil {
-				t.Fatal(err)
+			if err == nil && pid == expected {
+				return pid
 			}
-			return pid
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatal(fmt.Errorf("timed out waiting for embedded CLI pid"))
 	return 0
+}
+
+func TestWaitForPIDIgnoresPartialMalformedAndStaleValues(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "child.pid")
+	expected := 424242
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for _, content := range []string{"", "not-a-pid", "123", strconv.Itoa(expected)} {
+			_ = os.WriteFile(path, []byte(content), 0o600)
+			time.Sleep(15 * time.Millisecond)
+		}
+	}()
+	if got := waitForPID(t, path, expected); got != expected {
+		t.Fatalf("waitForPID()=%d, want %d", got, expected)
+	}
+	<-done
 }

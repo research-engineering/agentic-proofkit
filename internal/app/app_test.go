@@ -6,15 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 var processTestBinary = struct {
@@ -404,6 +407,95 @@ func TestCLIDiagnosticsRedactSecretLikeCallerLabels(t *testing.T) {
 				t.Fatalf("stderr=%q, want redaction placeholder", stderr.String())
 			}
 		})
+	}
+}
+
+func TestLocalEnvironmentClassAdmissionRejectsSecretsAcrossResolverAndViews(t *testing.T) {
+	secret := "api_key=local-environment-secret-sentinel"
+	cases := [][]string{
+		{"requirement-proof-resolver", "--input", "-", "--local-environment-class", secret},
+		{"requirement-proof-view", "--input", "-", "--local-environment-class", secret},
+		{"requirement-browser-server", "--input", "-", "--view", "proof", "--local-environment-class", secret},
+	}
+	for _, args := range cases {
+		t.Run(args[0], func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), args, strings.NewReader(`{}`), &stdout, &stderr)
+			combined := stdout.String() + stderr.String()
+			if status != 1 || !strings.Contains(stderr.String(), "must not contain secret-like values") {
+				t.Fatalf("Run(%s) status=%d stdout=%q stderr=%q", args[0], status, stdout.String(), stderr.String())
+			}
+			if stdout.Len() != 0 || strings.Contains(combined, secret) || strings.Contains(combined, "local-environment-secret-sentinel") {
+				t.Fatalf("Run(%s) disclosed rejected local environment class: stdout=%q stderr=%q", args[0], stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestEveryAgentRouteArgvSatisfiesCommandDescriptorAdmission(t *testing.T) {
+	contract := agentroute.InputContract()
+	fields := contract["fields"].(map[string]any)
+	goals := fields["goal"].(map[string]any)["enum"].([]any)
+	kinds := fields["availableInputs"].(map[string]any)["item"].(map[string]any)["kind"].(map[string]any)["enum"].([]any)
+	available := make([]any, 0, len(kinds))
+	for _, value := range kinds {
+		kind := value.(string)
+		ref := "inputs/" + kind + ".json"
+		if kind == "typescript_public_api_repo_root" {
+			ref = "."
+		}
+		available = append(available, map[string]any{"kind": kind, "ref": ref})
+	}
+	for _, value := range goals {
+		goal := value.(string)
+		t.Run(goal, func(t *testing.T) {
+			report, _, err := agentroute.Build(map[string]any{
+				"schemaVersion":   json.Number("1"),
+				"routeId":         "proofkit.test.route." + strings.ReplaceAll(goal, "_", "-"),
+				"goal":            goal,
+				"mode":            "observe",
+				"availableInputs": available,
+			})
+			if err != nil {
+				t.Fatalf("agentroute.Build() error = %v", err)
+			}
+			for _, rawCommand := range report["nextCommands"].([]any) {
+				command := rawCommand.(map[string]any)
+				rawArgv := command["argv"].([]any)
+				argv := make([]string, len(rawArgv))
+				for index, raw := range rawArgv {
+					argv[index] = raw.(string)
+				}
+				assertDescriptorAdmitsAgentArgv(t, argv)
+			}
+		})
+	}
+}
+
+func assertDescriptorAdmitsAgentArgv(t *testing.T, argv []string) {
+	t.Helper()
+	if len(argv) < 2 || argv[0] != "agentic-proofkit" {
+		t.Fatalf("agent route emitted invalid process argv: %v", argv)
+	}
+	descriptor, ok := commandDescriptorFor(argv[1])
+	if !ok {
+		t.Fatalf("agent route emitted unknown command argv: %v", argv)
+	}
+	for index := 2; index < len(argv); index++ {
+		flag := argv[index]
+		if !slices.Contains(descriptor.allowedFlags, flag) {
+			t.Fatalf("agent route emitted unsupported flag %q for %s: %v", flag, descriptor.name, argv)
+		}
+		if flagRequiresValue(flag) {
+			if index+1 >= len(argv) || slices.Contains(descriptor.allowedFlags, argv[index+1]) {
+				t.Fatalf("agent route emitted flag %q without value for %s: %v", flag, descriptor.name, argv)
+			}
+			index++
+		}
+	}
+	if err := validateFlagConstraints(descriptor, argv[2:]); err != nil {
+		t.Fatalf("agent route argv is rejected by %s descriptor: %v; argv=%v", descriptor.name, err, argv)
 	}
 }
 

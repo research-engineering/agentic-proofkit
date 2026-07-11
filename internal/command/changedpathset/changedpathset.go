@@ -51,6 +51,17 @@ type Result struct {
 	SourceSummaries    []SourceSummary
 }
 
+func (result Result) JSONValue() map[string]any {
+	value := result.Report.JSONValue()
+	value["changedPathSetHash"] = result.ChangedPathSetHash
+	value["changedPaths"] = admit.StringSliceToAny(result.ChangedPaths)
+	value["duplicatePaths"] = diagnosticsJSON(result.DuplicatePaths)
+	value["failures"] = admit.StringSliceToAny(result.Failures)
+	value["invalidPaths"] = diagnosticsJSON(result.InvalidPaths)
+	value["sourceSummaries"] = sourceSummariesJSON(result.SourceSummaries)
+	return value
+}
+
 var changedPathSetNonClaims = []string{
 	"Changed path set reports do not run git, inspect the filesystem, or discover changed paths.",
 	"Changed path set reports do not infer proof routes, command ids, gate selection, or fallback policy.",

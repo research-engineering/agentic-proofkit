@@ -88,6 +88,15 @@ func TestExistingHelpEntrypointsRemainCompatible(t *testing.T) {
 	}
 }
 
+func TestHelpCommandUsageIncludesGeneratedFamilyGrammar(t *testing.T) {
+	output := runTextCommand(t, []string{"help", "help"})
+	for _, form := range generatedCommandFamilyCatalog().HelpForms {
+		if !strings.Contains(output, "agentic-proofkit "+form) {
+			t.Fatalf("help help output is missing generated family form %q:\n%s", form, output)
+		}
+	}
+}
+
 func TestCommandFamilyHelpRejectsInvalidFormsBeforeReadingInput(t *testing.T) {
 	cases := []struct {
 		args []string

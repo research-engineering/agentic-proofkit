@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
@@ -333,12 +333,11 @@ func runProofkit(command string, inputPath string, outputPath string) error {
 }
 
 func currentPlatformBinary() (string, error) {
-	osName := runtime.GOOS
-	cpuName := runtime.GOARCH
-	if cpuName == "amd64" {
-		cpuName = "x64"
+	target, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		return "", err
 	}
-	path := filepath.Join("dist", "platform", osName+"-"+cpuName, "agentic-proofkit")
+	path := filepath.FromSlash(target.BinaryPath)
 	if stat, err := os.Stat(path); err != nil {
 		return "", fmt.Errorf("current platform binary is unavailable at %s: %w", path, err)
 	} else if stat.IsDir() {

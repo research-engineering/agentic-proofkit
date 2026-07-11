@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 )
 
@@ -109,7 +110,11 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			if index+1 >= len(args) || args[index+1] == "" {
 				return requirementBrowserArgs{}, fmt.Errorf("--local-environment-class requires an id")
 			}
-			options.localEnvironmentClasses = append(options.localEnvironmentClasses, args[index+1])
+			class, err := compactproofcontract.AdmitLocalEnvironmentClass(args[index+1])
+			if err != nil {
+				return requirementBrowserArgs{}, err
+			}
+			options.localEnvironmentClasses = append(options.localEnvironmentClasses, class)
 			index++
 		case "--empty-local-environment-policy":
 			options.emptyLocalEnvironmentPolicy = true

@@ -104,6 +104,49 @@ func TestBuildMarksOversizedBoundedEnvelopeAsWide(t *testing.T) {
 	}
 }
 
+func TestBuildPrunesReferencesToTruncatedLocalTargets(t *testing.T) {
+	commands := make([]map[string]any, hardMaxCommandRefs+1)
+	evidenceRefs := make([]any, len(commands))
+	for index := range commands {
+		id := "proofkit.command." + string(rune('a'+index))
+		commands[index] = map[string]any{"commandId": id}
+		evidenceRefs[index] = id
+	}
+	envelope := Build(Input{
+		EnvelopeID: "proofkit.test.envelope",
+		SourceReport: map[string]any{
+			"reportId":   "proofkit.test.report",
+			"reportKind": "proofkit.test",
+			"state":      "passed",
+		},
+		ActionPlan: []map[string]any{{"stepId": "proofkit.step", "evidenceRefs": evidenceRefs}},
+		Commands:   commands,
+	})
+	retained := map[string]struct{}{}
+	for _, value := range envelope["commands"].([]any) {
+		retained[value.(map[string]any)["commandId"].(string)] = struct{}{}
+	}
+	refs := envelope["actionPlan"].([]any)[0].(map[string]any)["evidenceRefs"].([]any)
+	for _, value := range refs {
+		if _, ok := retained[value.(string)]; !ok {
+			t.Fatalf("action plan retained dangling local command ref %q", value)
+		}
+	}
+	if len(refs) != hardMaxCommandRefs {
+		t.Fatalf("retained action evidence refs=%d, want %d closure-preserved refs", len(refs), hardMaxCommandRefs)
+	}
+	cost := envelope["costContract"].(map[string]any)
+	if cost["referenceClosurePreserved"] != true {
+		t.Fatalf("cost contract does not attest local reference closure: %#v", cost)
+	}
+	if cost["prunedLocalReferenceCount"] != 1 {
+		t.Fatalf("cost contract prunedLocalReferenceCount=%v, want 1", cost["prunedLocalReferenceCount"])
+	}
+	if cost["omittedEdgeCount"] != 1 {
+		t.Fatalf("pruned derived references must not double-count the omitted target: %#v", cost)
+	}
+}
+
 func TestBuildPreservesSemanticOmittedCountWhenOmissionRecordsAreCapped(t *testing.T) {
 	envelope := Build(Input{
 		EnvelopeID: "proofkit.test.envelope",

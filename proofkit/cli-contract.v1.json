@@ -1836,7 +1836,46 @@
       ],
       "requiredFlags": [
         "--repo-root"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.typescript-public-api-surfaces.input.v1",
+        "schemaVersion": 1,
+        "authority": "caller-owned manifest plus explicitly selected filesystem snapshot",
+        "fields": {
+          "schemaVersion": {
+            "required": true,
+            "value": 1
+          },
+          "machineContract": {
+            "required": true,
+            "value": "public_api_surfaces"
+          },
+          "entries": {
+            "required": true,
+            "maxItems": 1024,
+            "item": {
+              "requiredFields": [
+                "exportConditions",
+                "exportKey",
+                "packageManifestPath",
+                "packageName",
+                "runtimeExports",
+                "typeExports"
+              ],
+              "optionalFields": [
+                "deniedExportKeys"
+              ],
+              "pathAuthority": "packageManifestPath names an explicit repo-relative package.json; every export condition names its explicit repo-relative non-JSX TypeScript sourcePath with .ts, .mts, or .cts extension",
+              "setFields": "deniedExportKeys, runtimeExports, and typeExports are sorted unique arrays"
+            }
+          }
+        },
+        "nonClaims": [
+          "The command does not infer conventional package or source layouts.",
+          "The command does not parse JSX or admit TSX source files.",
+          "Caller-owned source-to-condition mappings do not prove compiler output provenance, checkout freshness, package-manager truth, merge readiness, or rollout."
+        ]
+      }
     },
     {
       "command": "witness-plan",

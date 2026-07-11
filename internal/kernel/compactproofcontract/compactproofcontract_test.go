@@ -29,6 +29,21 @@ func TestResolverProjectionIsColumnOrderIndependent(t *testing.T) {
 	}
 }
 
+func TestResolverProjectionRejectsSecretLikeLocalEnvironmentClass(t *testing.T) {
+	contract, err := Admit(validCompactContract())
+	if err != nil {
+		t.Fatalf("Admit() error = %v", err)
+	}
+	secret := "api_key=environment-secret-sentinel"
+	_, err = contract.ResolverProjection(ResolverOptions{LocalEnvironmentClasses: []string{secret}})
+	if err == nil || !strings.Contains(err.Error(), "must not contain secret-like values") {
+		t.Fatalf("ResolverProjection() error=%v, want secret-like environment rejection", err)
+	}
+	if strings.Contains(err.Error(), secret) || strings.Contains(err.Error(), "environment-secret-sentinel") {
+		t.Fatalf("ResolverProjection() leaked local environment value: %v", err)
+	}
+}
+
 func TestAdmitRejectsUnknownCompactColumn(t *testing.T) {
 	input := validCompactContract()
 	input["binding_columns"] = append(input["binding_columns"].([]any), "unexpected_column")

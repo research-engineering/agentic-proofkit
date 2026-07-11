@@ -5,7 +5,34 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 )
+
+func TestAgentEnvelopeContextPointersResolveAgainstCanonicalOutput(t *testing.T) {
+	result, err := Build(map[string]any{
+		"schemaVersion":       json.Number("1"),
+		"reportId":            "proofkit.test.changed-path-set",
+		"preexistingFailures": []any{},
+		"nonClaims":           []any{"Changed-path test input does not prove git diff freshness."},
+		"sources":             []any{map[string]any{"sourceId": "git", "paths": []any{"a.ts"}}},
+	})
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	output := result.JSONValue()
+	envelope := AgentEnvelope(result)
+	for _, value := range envelope["contextRefs"].([]any) {
+		ref := value.(map[string]any)
+		selector, _ := ref["selector"].(string)
+		if !strings.HasPrefix(selector, "/") {
+			continue
+		}
+		if _, err := jsonpointer.Select(output, selector); err != nil {
+			t.Fatalf("context ref %s has dangling selector %s: %v", ref["refId"], selector, err)
+		}
+	}
+}
 
 func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.020996495977209692976965486603091189537178619363476268911749132800454063351641")

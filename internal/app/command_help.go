@@ -11,24 +11,29 @@ func isCommandHelpRequest(args []string) bool {
 }
 
 func commandUsage(descriptor commandDescriptor) string {
-	lines := []string{
-		"Usage:",
-		"  " + commandUsageLine(descriptor),
+	lines := []string{"Usage:"}
+	lines = append(lines, "  "+commandUsageLine(descriptor))
+	if descriptor.name == "help" {
+		for _, form := range generatedCommandFamilyCatalog().HelpForms {
+			lines = append(lines, "  agentic-proofkit "+form)
+		}
+	}
+	lines = append(lines,
 		"",
 		"Command:",
-		"  " + descriptor.name,
+		"  "+descriptor.name,
 		"",
 		"Input:",
-		"  " + commandInputHelp(descriptor),
+		"  "+commandInputHelp(descriptor),
 		"",
 		"Output modes:",
-		"  " + strings.Join(descriptor.outputModes, ", "),
+		"  "+strings.Join(descriptor.outputModes, ", "),
 		"",
 		"Scope class:",
-		"  " + string(descriptor.scopeClass),
+		"  "+string(descriptor.scopeClass),
 		"",
 		"Allowed flags:",
-	}
+	)
 	for _, flag := range descriptor.allowedFlags {
 		lines = append(lines, "  "+flag)
 	}

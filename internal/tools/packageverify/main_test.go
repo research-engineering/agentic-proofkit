@@ -75,6 +75,29 @@ func TestVerifySpecReferenceClosureReadsTarballBindings(t *testing.T) {
 	}
 }
 
+func TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift(t *testing.T) {
+	root := t.TempDir()
+	withWorkingDirectory(t, root)
+	entries := []string{
+		"package/LICENSE",
+		"package/package.json",
+		"package/docs/specs/example/requirements.v1.json",
+		"package/proofkit/cli-contract.v1.json",
+	}
+	for _, entry := range entries {
+		sourcePath := strings.TrimPrefix(entry, "package/")
+		writeFileBytes(t, filepath.Join(root, filepath.FromSlash(sourcePath)), []byte("source-owner\n"))
+		tarball := writePackageTarball(t, map[string]string{entry: "corrupted-packed-owner\n"})
+		artifact := tarballArtifact(t, tarball)
+		artifact.Entries = []string{entry}
+
+		err := verifyPackedOwnerRecordsMatchSource(artifact)
+		if err == nil || !strings.Contains(err.Error(), "does not match source owner") {
+			t.Fatalf("verifyPackedOwnerRecordsMatchSource(%s) error=%v, want content-identity failure", entry, err)
+		}
+	}
+}
+
 func TestVerifyPackRecordBytesRejectsStaleMetadata(t *testing.T) {
 	root := t.TempDir()
 	withWorkingDirectory(t, root)

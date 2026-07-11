@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +34,20 @@ const (
 	testPythonWheelName   = "agentic_proofkit-1.2.3-py3-none-any.whl"
 )
 
+var (
+	completeFixtureBaseErr  error
+	completeFixtureBaseOnce sync.Once
+	completeFixtureBaseRoot string
+)
+
+func TestMain(m *testing.M) {
+	exitCode := m.Run()
+	if completeFixtureBaseRoot != "" {
+		_ = os.RemoveAll(completeFixtureBaseRoot)
+	}
+	os.Exit(exitCode)
+}
+
 func TestBuildInputProducesAdmittedSatisfiedCloseout(t *testing.T) {
 	root := completeFixture(t)
 
@@ -44,6 +59,21 @@ func TestBuildInputProducesAdmittedSatisfiedCloseout(t *testing.T) {
 	assertCriterionStatus(t, input, "proofkit.release_closeout.package_artifacts", "satisfied")
 	assertCriterionStatus(t, input, "proofkit.release_closeout.provider_publication_advisory", "advisory_skipped")
 	assertCriterionInventory(t, input)
+}
+
+func TestCompleteFixtureCopiesAreIsolated(t *testing.T) {
+	first := completeFixture(t)
+	second := completeFixture(t)
+	firstSource := filepath.Join(first, "source.txt")
+	secondSource := filepath.Join(second, "source.txt")
+	writeFile(t, firstSource, "mutated\n")
+	content, err := os.ReadFile(secondSource)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(content) != "source-v1\n" {
+		t.Fatalf("fixture copy mutation leaked across tests: %q", content)
+	}
 }
 
 func TestBuildInputAdmitsGitHubActionsAdvisorySelfEvidence(t *testing.T) {
@@ -703,6 +733,32 @@ func TestSelfEvidenceBindsReceiptFieldsToPackageArtifactExecution(t *testing.T) 
 	}
 }
 
+func TestSelfEvidenceRejectsLossyReceiptProjectionCollisions(t *testing.T) {
+	cases := []struct {
+		field string
+		value any
+	}{
+		{field: "runnerIdentity", value: "local.other-runner"},
+		{field: "lockfileDigest", value: testDigest("different-lockfile")},
+	}
+	for _, item := range cases {
+		t.Run(item.field, func(t *testing.T) {
+			root := completeFixture(t)
+			receiptsPath := filepath.Join(root, filepath.FromSlash(proofReceiptsPath))
+			receiptSet := readJSONMap(t, receiptsPath)
+			receiptSet["receipts"].([]any)[0].(map[string]any)[item.field] = item.value
+			writeJSON(t, receiptsPath, receiptSet)
+			writeOwnerSelfEvidenceReports(t, root)
+
+			input, err := buildInput(root)
+			if err != nil {
+				t.Fatalf("buildInput() error = %v", err)
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+		})
+	}
+}
+
 func TestSelfEvidenceRejectsTagOnlyJSONStubs(t *testing.T) {
 	root := completeFixture(t)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"), map[string]any{
@@ -788,7 +844,25 @@ func mutateSelfEvidenceReceiptField(t *testing.T, root string, field string, val
 
 func completeFixture(t *testing.T) string {
 	t.Helper()
+	completeFixtureBaseOnce.Do(func() {
+		completeFixtureBaseRoot, completeFixtureBaseErr = os.MkdirTemp("", "proofkit-release-closeout-fixture-")
+		if completeFixtureBaseErr != nil {
+			return
+		}
+		populateCompleteFixture(t, completeFixtureBaseRoot)
+	})
+	if completeFixtureBaseErr != nil {
+		t.Fatalf("create complete fixture base: %v", completeFixtureBaseErr)
+	}
 	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS(completeFixtureBaseRoot)); err != nil {
+		t.Fatalf("copy complete fixture base: %v", err)
+	}
+	return root
+}
+
+func populateCompleteFixture(t *testing.T, root string) {
+	t.Helper()
 	runFixtureGit(t, root, "init")
 	runFixtureGit(t, root, "config", "user.email", "proofkit@example.invalid")
 	runFixtureGit(t, root, "config", "user.name", "Proofkit Test")
@@ -828,7 +902,6 @@ func completeFixture(t *testing.T) string {
 	})
 	execution := writePackageArtifactExecutionFixture(t, root)
 	writeLocalSelfEvidence(t, root, execution)
-	return root
 }
 
 func writeLocalSelfEvidence(t *testing.T, root string, execution packageartifactrecord.Record) {

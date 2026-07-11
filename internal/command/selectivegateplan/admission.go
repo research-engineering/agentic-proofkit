@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathpattern"
 )
 
 var selectiveGatePlanNonClaims = []string{
@@ -126,7 +127,7 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	archivePatterns, err := sortedPaths(record["archiveOrBinaryPathPatterns"], "selective gate archiveOrBinaryPathPatterns", true)
+	archivePatterns, err := compiledPatterns(record["archiveOrBinaryPathPatterns"], "selective gate archiveOrBinaryPathPatterns", true)
 	if err != nil {
 		return input{}, err
 	}
@@ -134,7 +135,7 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	proofLikePatterns, err := sortedPaths(record["proofLikePathPatterns"], "selective gate proofLikePathPatterns", true)
+	proofLikePatterns, err := compiledPatterns(record["proofLikePathPatterns"], "selective gate proofLikePathPatterns", true)
 	if err != nil {
 		return input{}, err
 	}
@@ -325,11 +326,11 @@ func generatedArtifactRules(raw any) ([]generatedArtifactRule, error) {
 		if err != nil {
 			return nil, err
 		}
-		sourcePatterns, err := sortedPaths(record["sourceOfTruthPatterns"], "generated artifact "+pathValue+" sourceOfTruthPatterns", true)
+		sourcePatterns, err := compiledPatterns(record["sourceOfTruthPatterns"], "generated artifact "+pathValue+" sourceOfTruthPatterns", true)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, generatedArtifactRule{Command: commandText, Generator: generator, Path: pathValue, SourceOfTruthPattern: sourcePatterns})
+		result = append(result, generatedArtifactRule{Command: commandText, Generator: generator, Path: pathValue, SourceOfTruthPatterns: sourcePatterns})
 	}
 	sort.Slice(result, func(left int, right int) bool {
 		return result[left].Path < result[right].Path
@@ -355,7 +356,11 @@ func artifactPolicies(raw any) ([]artifactIntegrityPolicy, error) {
 		if err != nil {
 			return nil, err
 		}
-		pathPattern, err := safePath(record["pathPattern"], "artifact integrity pathPattern")
+		pathPatternValue, err := safePath(record["pathPattern"], "artifact integrity pathPattern")
+		if err != nil {
+			return nil, err
+		}
+		pathPattern, err := pathpattern.Compile(pathPatternValue, "artifact integrity pathPattern")
 		if err != nil {
 			return nil, err
 		}
@@ -423,7 +428,7 @@ func pathTriggeredCommandArray(raw any) ([]pathTriggeredCommand, error) {
 		if err != nil {
 			return nil, err
 		}
-		patterns, err := sortedPaths(record["pathPatterns"], commandValue.ID+" pathTriggeredCommands pathPatterns", false)
+		patterns, err := compiledPatterns(record["pathPatterns"], commandValue.ID+" pathTriggeredCommands pathPatterns", false)
 		if err != nil {
 			return nil, err
 		}
@@ -538,6 +543,14 @@ func sortedPaths(raw any, context string, allowEmpty bool) ([]string, error) {
 	}
 	sort.Strings(result)
 	return unique(result, context, allowEmpty)
+}
+
+func compiledPatterns(raw any, context string, allowEmpty bool) ([]pathpattern.Pattern, error) {
+	values, err := sortedPaths(raw, context, allowEmpty)
+	if err != nil {
+		return nil, err
+	}
+	return pathpattern.CompileAll(values, context)
 }
 
 func sortedPrefixes(raw any) ([]string, error) {

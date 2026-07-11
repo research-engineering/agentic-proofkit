@@ -167,11 +167,15 @@ func generatedArtifactObligations(rules []generatedArtifactRule, changedPaths []
 	result := []generatedArtifactObligation{}
 	for _, rule := range rules {
 		sourceChanged := false
-		for _, pattern := range rule.SourceOfTruthPattern {
+		for _, pattern := range rule.SourceOfTruthPatterns {
 			for _, path := range changedPaths {
-				if pathpattern.Match(pattern, path) {
+				if pattern.MatchAdmitted(path) {
 					sourceChanged = true
+					break
 				}
+			}
+			if sourceChanged {
+				break
 			}
 		}
 		_, generatedChanged := changed[rule.Path]
@@ -183,7 +187,7 @@ func generatedArtifactObligations(rules []generatedArtifactRule, changedPaths []
 			if sourceChanged {
 				reason = "source_changed"
 			}
-			result = append(result, generatedArtifactObligation{Generator: rule.Generator, Path: rule.Path, Reason: reason, SourceOfTruth: rule.SourceOfTruthPattern})
+			result = append(result, generatedArtifactObligation{Generator: rule.Generator, Path: rule.Path, Reason: reason, SourceOfTruth: patternStrings(rule.SourceOfTruthPatterns)})
 		}
 	}
 	return result
@@ -194,7 +198,7 @@ func artifactIntegrityObligations(policies []artifactIntegrityPolicy, paths []st
 	for _, path := range paths {
 		var matched *artifactIntegrityPolicy
 		for _, policy := range policies {
-			if pathpattern.Match(policy.PathPattern, path) {
+			if policy.PathPattern.MatchAdmitted(path) {
 				policyCopy := policy
 				matched = &policyCopy
 				break
@@ -214,7 +218,7 @@ func pathTriggeredCommands(rules []pathTriggeredCommand, changedPaths []string) 
 	for _, rule := range rules {
 		for _, pattern := range rule.PathPatterns {
 			for _, path := range changedPaths {
-				if pathpattern.Match(pattern, path) {
+				if pattern.MatchAdmitted(path) {
 					result = append(result, rule.Command)
 					goto nextRule
 				}
@@ -270,8 +274,21 @@ func uniqueSorted(values []string) []string {
 	return result
 }
 
-func matchesAny(patterns []string, path string) bool {
-	return pathpattern.MatchAny(patterns, path)
+func matchesAny(patterns []pathpattern.Pattern, path string) bool {
+	for _, pattern := range patterns {
+		if pattern.MatchAdmitted(path) {
+			return true
+		}
+	}
+	return false
+}
+
+func patternStrings(patterns []pathpattern.Pattern) []string {
+	values := make([]string, 0, len(patterns))
+	for _, pattern := range patterns {
+		values = append(values, pattern.String())
+	}
+	return values
 }
 
 func isPrivatePath(path string, prefixes []string) bool {

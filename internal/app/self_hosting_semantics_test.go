@@ -91,6 +91,65 @@ func TestSelfHostingWitnessBackedBindingsReferenceExistingSurfaces(t *testing.T)
 	}
 }
 
+func TestSelfHostingRequirementBindingRecordsPreserveSourceAuthority(t *testing.T) {
+	type sourceRequirement struct {
+		claimLevel string
+		nonClaims  map[string]struct{}
+		ownerID    string
+		specPath   string
+	}
+	sources := map[string]sourceRequirement{}
+	for _, path := range requirementSourcePaths(t) {
+		record := readJSONFile(t, path).(map[string]any)
+		for _, value := range record["requirements"].([]any) {
+			requirement := value.(map[string]any)
+			requirementID := requirement["requirementId"].(string)
+			if _, exists := sources[requirementID]; exists {
+				t.Fatalf("duplicate source requirementId %s", requirementID)
+			}
+			nonClaims := map[string]struct{}{}
+			for _, nonClaim := range requirement["nonClaims"].([]any) {
+				nonClaims[nonClaim.(string)] = struct{}{}
+			}
+			sources[requirementID] = sourceRequirement{
+				claimLevel: requirement["claimLevel"].(string),
+				nonClaims:  nonClaims,
+				ownerID:    requirement["ownerId"].(string),
+				specPath:   path,
+			}
+		}
+	}
+
+	bindings := readJSONFile(t, "proofkit/requirement-bindings.json").(map[string]any)
+	bound := map[string]struct{}{}
+	for _, value := range bindings["requirements"].([]any) {
+		requirement := value.(map[string]any)
+		requirementID := requirement["requirementId"].(string)
+		source, ok := sources[requirementID]
+		if !ok {
+			t.Fatalf("binding requirement %s has no source owner record", requirementID)
+		}
+		bound[requirementID] = struct{}{}
+		if requirement["ownerId"] != source.ownerID || requirement["claimLevel"] != source.claimLevel || requirement["specPath"] != source.specPath {
+			t.Fatalf("binding requirement %s changed source identity: binding=%#v source=%#v", requirementID, requirement, source)
+		}
+		bindingNonClaims := map[string]struct{}{}
+		for _, nonClaim := range requirement["nonClaims"].([]any) {
+			bindingNonClaims[nonClaim.(string)] = struct{}{}
+		}
+		for nonClaim := range source.nonClaims {
+			if _, ok := bindingNonClaims[nonClaim]; !ok {
+				t.Fatalf("binding requirement %s dropped source nonClaim %q", requirementID, nonClaim)
+			}
+		}
+	}
+	for requirementID := range sources {
+		if _, ok := bound[requirementID]; !ok {
+			t.Fatalf("source requirement %s has no binding requirement record", requirementID)
+		}
+	}
+}
+
 func TestSelfHostingProofCoreCommandsRejectBrokenLinkage(t *testing.T) {
 	bindings := readJSONFile(t, "proofkit/requirement-bindings.json")
 	bindingRecord := bindings.(map[string]any)

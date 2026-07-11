@@ -25,16 +25,18 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-003`: witness planning accepts caller-owned structured
   command metadata, scheduler constraints, environment classes, and
   binding-derived command projections only through admitted witness vocabulary
-  and conservative safe argv policy, without executing commands or selecting
-  repository policy.
+  and conservative safe argv policy. Self-hosting bindings and witness plans
+  preserve command ids, argv, and environment classes without executing
+  commands or selecting repository policy.
 - `REQ-PROOFKIT-SPEC-004`: selective planning and selective evidence reports
-  keep changed-path facts, planned commands, receipts, evidence class,
-  producer-admission state, and obligation candidates explicit, keep merge
-  approval consumer-owned, and fail closed for unknown or unmatched proof
-  inputs.
+  keep canonical changed-path facts, resolvable agent references, planned
+  commands, receipts, evidence class, producer-admission state, and obligation
+  candidates explicit, keep merge approval consumer-owned, and fail closed for
+  unknown or unmatched proof inputs.
 - `REQ-PROOFKIT-SPEC-005`: rendered proof views and agent envelopes remain
-  bounded, derived presentations over structured source and never become
-  canonical proof or requirement authority.
+  bounded, reference-closed derived presentations over structured source,
+  count each semantic omission once, and never become canonical proof or
+  requirement authority.
 - `REQ-PROOFKIT-SPEC-006`: test evidence inventory, explicit test-discovery
   draft projections, proof-binding-derived inventory projections, normalized
   inventory projections, coverage-view input composition, and requirement

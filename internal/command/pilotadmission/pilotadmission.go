@@ -159,7 +159,7 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	primaryLanguages, err := sortedTextArray(profile["primaryLanguages"], "proofkit pilot primaryLanguages", false)
+	primaryLanguages, err := admit.SortedTextArray(profile["primaryLanguages"], "proofkit pilot primaryLanguages", false)
 	if err != nil {
 		return report.Record{}, 1, err
 	}
@@ -223,7 +223,7 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if err != nil {
 		return report.Record{}, 1, err
 	}
-	nonClaims, err := sortedTextArray(input["nonClaims"], "proofkit pilot nonClaims", false)
+	nonClaims, err := admit.SortedTextArray(input["nonClaims"], "proofkit pilot nonClaims", false)
 	if err != nil {
 		return report.Record{}, 1, err
 	}
@@ -481,7 +481,7 @@ func admitCacheScheduler(raw any, failures *[]string) (admittedCacheScheduler, e
 	}
 	cacheKeyInputs := safePathArray(record["cacheKeyInputs"], "cacheKeyInputs", failures)
 	invalidationInputs := safePathArray(record["invalidationInputs"], "invalidationInputs", failures)
-	parallelGroups, err := sortedTextArray(record["parallelGroups"], "parallelGroups", false)
+	parallelGroups, err := admit.SortedTextArray(record["parallelGroups"], "parallelGroups", false)
 	if err != nil {
 		return admittedCacheScheduler{}, err
 	}
@@ -973,31 +973,6 @@ func stringValue(raw any) string {
 
 func nonEmptyText(raw any, context string) (string, error) {
 	return admit.NonEmptyText(raw, context)
-}
-
-func sortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("%s must be an array", context)
-	}
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		text, err := nonEmptyText(value, context)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, text)
-	}
-	sort.Strings(result)
-	if !allowEmpty && len(result) == 0 {
-		return nil, fmt.Errorf("%s must be non-empty", context)
-	}
-	for index := 1; index < len(result); index++ {
-		if result[index-1] == result[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
-		}
-	}
-	return result, nil
 }
 
 func safePath(raw any, context string) (string, error) {

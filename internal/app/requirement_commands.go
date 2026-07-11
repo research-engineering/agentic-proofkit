@@ -12,6 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -115,7 +116,11 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			if index+1 >= len(args) || args[index+1] == "" {
 				return requirementViewArgs{}, fmt.Errorf("--local-environment-class requires an id")
 			}
-			options.localEnvironmentClasses = append(options.localEnvironmentClasses, args[index+1])
+			class, err := compactproofcontract.AdmitLocalEnvironmentClass(args[index+1])
+			if err != nil {
+				return requirementViewArgs{}, err
+			}
+			options.localEnvironmentClasses = append(options.localEnvironmentClasses, class)
 			index++
 		case "--empty-local-environment-policy":
 			if command != "requirement-proof-view" {

@@ -498,6 +498,11 @@ func admitScenarioShape(raw any, context string) (scenarioShape, error) {
 	if err != nil {
 		return scenarioShape{}, err
 	}
+	for _, required := range requiredEvidence {
+		if _, ok := requiredEvidenceWitnessKind[required]; !ok {
+			return scenarioShape{}, fmt.Errorf("%s.requiredEvidence %s is unsupported", context, required)
+		}
+	}
 	ownerQuestions, err := admitOptionalSortedText(record["ownerQuestions"], context+".ownerQuestions", true)
 	if err != nil {
 		return scenarioShape{}, err
@@ -734,11 +739,7 @@ func anchorSatisfiesRequiredEvidence(anchor scenarioAnchor, requiredEvidence []s
 func requiredEvidenceFailures(shape scenarioShape, anchors []scenarioAnchor) []string {
 	failures := []string{}
 	for _, required := range shape.RequiredEvidence {
-		requiredKind, ok := requiredEvidenceWitnessKind[required]
-		if !ok {
-			failures = append(failures, fmt.Sprintf("scenario %s requiredEvidence %s is unsupported", shape.ScenarioID, required))
-			continue
-		}
+		requiredKind := requiredEvidenceWitnessKind[required]
 		satisfied := false
 		for _, anchor := range anchors {
 			if !isExecutableAnchor(anchor) {

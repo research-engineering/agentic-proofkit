@@ -19,7 +19,7 @@ var (
 func CollectExports(source string) ([]string, []string, error) {
 	runtimeExports := map[string]struct{}{}
 	typeExports := map[string]struct{}{}
-	for _, statement := range exportStatements(maskTypeScriptNonCode(source)) {
+	for _, statement := range exportStatements(source) {
 		if strings.HasPrefix(statement, "export *") {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use export *")
 		}
@@ -30,11 +30,15 @@ func CollectExports(source string) ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
 		}
 		if match := typeExportPattern.FindStringSubmatch(statement); match != nil {
-			addTypeClauseExports(match[1], typeExports)
+			if err := addTypeClauseExports(match[1], typeExports); err != nil {
+				return nil, nil, err
+			}
 			continue
 		}
 		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
-			addNamedClauseExports(match[1], runtimeExports, typeExports)
+			if err := addNamedClauseExports(match[1], runtimeExports, typeExports); err != nil {
+				return nil, nil, err
+			}
 			continue
 		}
 		if match := runtimeDeclPattern.FindStringSubmatch(statement); match != nil {
@@ -68,70 +72,164 @@ func maskTypeScriptNonCode(source string) string {
 		singleQuoted
 		doubleQuoted
 		templateQuoted
+		regexLiteral
 	)
-	runes := []rune(source)
+	masked := []byte(source)
 	state := code
 	escaped := false
-	maskQuotedContent := false
-	for index := 0; index < len(runes); index++ {
-		current := runes[index]
-		next := rune(0)
-		if index+1 < len(runes) {
-			next = runes[index+1]
+	regexClass := false
+	for index := 0; index < len(masked); index++ {
+		current := source[index]
+		next := byte(0)
+		if index+1 < len(masked) {
+			next = source[index+1]
 		}
 		switch state {
 		case code:
 			switch {
 			case current == '/' && next == '/':
-				runes[index], runes[index+1] = ' ', ' '
+				masked[index], masked[index+1] = ' ', ' '
 				index++
 				state = lineComment
 			case current == '/' && next == '*':
-				runes[index], runes[index+1] = ' ', ' '
+				masked[index], masked[index+1] = ' ', ' '
 				index++
 				state = blockComment
 			case current == '\'':
-				maskQuotedContent = false
 				state = singleQuoted
 			case current == '"':
-				maskQuotedContent = false
 				state = doubleQuoted
 			case current == '`':
-				runes[index] = ' '
+				masked[index] = ' '
 				state = templateQuoted
+			case current == '/' && looksLikeRegexLiteralStart(source, index):
+				masked[index] = ' '
+				state = regexLiteral
+				regexClass = false
 			}
 		case lineComment:
 			if current == '\n' {
 				state = code
 			} else {
-				runes[index] = ' '
+				masked[index] = ' '
 			}
 		case blockComment:
 			if current == '*' && next == '/' {
-				runes[index], runes[index+1] = ' ', ' '
+				masked[index], masked[index+1] = ' ', ' '
 				index++
 				state = code
 			} else if current != '\n' {
-				runes[index] = ' '
+				masked[index] = ' '
 			}
-		case singleQuoted, doubleQuoted, templateQuoted:
-			if current == '\n' && state != templateQuoted {
-				if escaped {
-					escaped = false
-					maskQuotedContent = true
-					continue
-				}
+		case singleQuoted, doubleQuoted:
+			if current == '\n' && !escaped {
 				state = code
 				continue
 			}
-			closing := rune('\'')
+			closing := byte('\'')
+			if state == doubleQuoted {
+				closing = '"'
+			}
+			if escaped {
+				masked[index] = ' '
+				escaped = false
+			} else if current == '\\' {
+				masked[index] = ' '
+				escaped = true
+			} else if current == closing {
+				state = code
+			} else if current != '\n' {
+				masked[index] = ' '
+			}
+		case templateQuoted:
+			if current != '\n' {
+				masked[index] = ' '
+			}
+			if escaped {
+				escaped = false
+			} else if current == '\\' {
+				escaped = true
+			} else if current == '`' {
+				state = code
+			}
+		case regexLiteral:
+			if current != '\n' {
+				masked[index] = ' '
+			}
+			if escaped {
+				escaped = false
+			} else if current == '\\' {
+				escaped = true
+			} else if current == '[' {
+				regexClass = true
+			} else if current == ']' {
+				regexClass = false
+			} else if current == '/' && !regexClass {
+				state = code
+			}
+		}
+	}
+	return string(masked)
+}
+
+func exportStatements(source string) []string {
+	starts := topLevelExportStarts(source)
+	statements := make([]string, 0, len(starts))
+	for index, start := range starts {
+		limit := len(source)
+		if index+1 < len(starts) {
+			limit = starts[index+1]
+		}
+		end := exportStatementEnd(source, start, limit)
+		statement := strings.Join(strings.Fields(maskTypeScriptNonCode(source[start:end])), " ")
+		if statement != "" {
+			statements = append(statements, statement)
+		}
+	}
+	return statements
+}
+
+func topLevelExportStarts(source string) []int {
+	const (
+		code = iota
+		lineComment
+		blockComment
+		singleQuoted
+		doubleQuoted
+		templateQuoted
+		regexLiteral
+	)
+	starts := []int{}
+	state := code
+	escaped := false
+	regexClass := false
+	braceDepth := 0
+	bracketDepth := 0
+	parenDepth := 0
+	for index := 0; index < len(source); index++ {
+		current := source[index]
+		next := byte(0)
+		if index+1 < len(source) {
+			next = source[index+1]
+		}
+		switch state {
+		case lineComment:
+			if current == '\n' {
+				state = code
+			}
+			continue
+		case blockComment:
+			if current == '*' && next == '/' {
+				state = code
+				index++
+			}
+			continue
+		case singleQuoted, doubleQuoted, templateQuoted:
+			closing := byte('\'')
 			if state == doubleQuoted {
 				closing = '"'
 			} else if state == templateQuoted {
 				closing = '`'
-			}
-			if current != '\n' && (state == templateQuoted || maskQuotedContent) {
-				runes[index] = ' '
 			}
 			if escaped {
 				escaped = false
@@ -139,54 +237,126 @@ func maskTypeScriptNonCode(source string) string {
 				escaped = true
 			} else if current == closing {
 				state = code
-				maskQuotedContent = false
 			}
-		}
-	}
-	return string(runes)
-}
-
-func exportStatements(source string) []string {
-	statements := []string{}
-	pending := []string{}
-	for _, rawLine := range strings.Split(source, "\n") {
-		line := strings.TrimSpace(rawLine)
-		if len(pending) > 0 {
-			pending = append(pending, line)
-			if strings.Contains(line, ";") {
-				statements = append(statements, strings.Join(pending, " "))
-				pending = nil
+			continue
+		case regexLiteral:
+			if escaped {
+				escaped = false
+			} else if current == '\\' {
+				escaped = true
+			} else if current == '[' {
+				regexClass = true
+			} else if current == ']' {
+				regexClass = false
+			} else if current == '/' && !regexClass {
+				state = code
 			}
 			continue
 		}
-		if !strings.HasPrefix(line, "export ") && line != "export" {
+		switch {
+		case current == '/' && next == '/':
+			state = lineComment
+			index++
+			continue
+		case current == '/' && next == '*':
+			state = blockComment
+			index++
+			continue
+		case current == '\'':
+			state = singleQuoted
+			continue
+		case current == '"':
+			state = doubleQuoted
+			continue
+		case current == '`':
+			state = templateQuoted
+			continue
+		case current == '/' && looksLikeRegexLiteralStart(source, index):
+			state = regexLiteral
+			regexClass = false
 			continue
 		}
-		if startsMultilineReexport(line) && !strings.Contains(line, ";") {
-			pending = append(pending, line)
+		switch current {
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		}
+		if braceDepth != 0 || bracketDepth != 0 || parenDepth != 0 || !strings.HasPrefix(source[index:], "export") {
 			continue
 		}
-		statements = append(statements, line)
+		beforeOK := index == 0 || !isTypeScriptIdentifierByte(source[index-1]) && source[index-1] != '.'
+		after := index + len("export")
+		afterOK := after == len(source) || !isTypeScriptIdentifierByte(source[after])
+		if beforeOK && afterOK {
+			starts = append(starts, index)
+			index = after - 1
+		}
 	}
-	if len(pending) > 0 {
-		statements = append(statements, strings.Join(pending, " "))
+	return starts
+}
+
+func exportStatementEnd(source string, start int, limit int) int {
+	masked := maskTypeScriptNonCode(source[start:limit])
+	parenDepth := 0
+	bracketDepth := 0
+	braceDepth := 0
+	for index := 0; index < len(masked); index++ {
+		switch masked[index] {
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case ';':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
+				return start + index + 1
+			}
+		}
 	}
-	return statements
+	return limit
 }
 
-func startsMultilineReexport(line string) bool {
-	return strings.HasPrefix(line, "export {") || strings.HasPrefix(line, "export type {")
+func isTypeScriptIdentifierByte(value byte) bool {
+	return value == '_' || value == '$' || value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
 }
 
-func addTypeClauseExports(clause string, target map[string]struct{}) {
-	addClauseExports(clause, nil, target, true)
+func addTypeClauseExports(clause string, target map[string]struct{}) error {
+	return addClauseExports(clause, nil, target, true)
 }
 
-func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) {
-	addClauseExports(clause, runtimeTarget, typeTarget, false)
+func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) error {
+	return addClauseExports(clause, runtimeTarget, typeTarget, false)
 }
 
-func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) {
+func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) error {
 	body := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(clause), "{"), "}")
 	for _, rawPart := range strings.Split(body, ",") {
 		part := strings.TrimSpace(rawPart)
@@ -202,12 +372,19 @@ func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarg
 		if match := exportClauseNameRegex.FindStringSubmatch(part); match != nil {
 			name = match[1]
 		}
+		if name == "default" {
+			return fmt.Errorf("TypeScript public API entrypoints must not export a default alias")
+		}
+		if !identifierRegex.MatchString(name) {
+			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
+		}
 		if typeOnly {
 			typeTarget[name] = struct{}{}
 			continue
 		}
 		runtimeTarget[name] = struct{}{}
 	}
+	return nil
 }
 
 func isInlineTypeOnlyReexport(part string) bool {
