@@ -17,10 +17,6 @@ func TestValidateCurrentBindsSourceAndArtifactSnapshots(t *testing.T) {
 	writeFixture(t, root, ".gitignore", "artifacts/\n")
 	runGit(t, root, "add", "source.txt", ".gitignore")
 	runGit(t, root, "commit", "-m", "fixture")
-	baseline, err := ArtifactEvidenceBaseline(root)
-	if err != nil {
-		t.Fatal(err)
-	}
 	writeFixture(t, root, "artifacts/package/package.tgz", "artifact-v1")
 
 	revision, sourceDigest, err := SourceSnapshot(root)
@@ -32,24 +28,27 @@ func TestValidateCurrentBindsSourceAndArtifactSnapshots(t *testing.T) {
 		t.Fatal(err)
 	}
 	record := Record{
-		Argv:                            CanonicalCommandArgv(),
-		ArtifactFreshnessBaselineDigest: baseline.FreshnessDigest,
-		ArtifactFreshnessDigest:         artifactEvidence.FreshnessDigest,
-		ArtifactSnapshotDigest:          artifactEvidence.SnapshotDigest,
-		CommandID:                       CommandID,
-		EnvironmentDigest:               strings.Repeat("a", 64),
-		ExecutionArgv:                   CanonicalExecutionArgv(),
-		ExitCode:                        0,
-		FinishedAt:                      "2026-07-11T10:00:01Z",
-		SchemaVersion:                   SchemaVersion,
-		SourceRevision:                  revision,
-		SourceSnapshotDigest:            sourceDigest,
-		StartedAt:                       "2026-07-11T10:00:00Z",
-		Status:                          "passed",
-		ToolchainDigest:                 strings.Repeat("b", 64),
+		Argv:                   CanonicalCommandArgv(),
+		ArtifactSnapshotDigest: artifactEvidence.SnapshotDigest,
+		CommandID:              CommandID,
+		EnvironmentDigest:      strings.Repeat("a", 64),
+		ExecutionArgv:          CanonicalExecutionArgv(),
+		ExitCode:               0,
+		FinishedAt:             "2026-07-11T10:00:01Z",
+		SchemaVersion:          SchemaVersion,
+		SourceRevision:         revision,
+		SourceSnapshotDigest:   sourceDigest,
+		StartedAt:              "2026-07-11T10:00:00Z",
+		Status:                 "passed",
+		ToolchainDigest:        strings.Repeat("b", 64),
 	}
 	if err := ValidateCurrent(root, record); err != nil {
 		t.Fatalf("ValidateCurrent() valid record error = %v", err)
+	}
+	legacyRecord := record
+	legacyRecord.SchemaVersion = 1
+	if err := ValidateCurrent(root, legacyRecord); err == nil {
+		t.Fatal("ValidateCurrent() accepted legacy pre-clean-materialization record")
 	}
 
 	writeFixture(t, root, "source.txt", "source-v2")
@@ -143,6 +142,93 @@ func TestArtifactSnapshotIgnoresFilesOutsideOwnedOutputRoots(t *testing.T) {
 	}
 }
 
+func TestPrepareCandidateArtifactOutputsRemovesOnlyCandidateOwnedOutputs(t *testing.T) {
+	root := t.TempDir()
+	for _, path := range []string{
+		"artifacts/package/package.tgz",
+		"artifacts/pypi/package.whl",
+	} {
+		writeFixture(t, root, path, "generated")
+	}
+	writeFixture(t, root, "artifacts/release/release-manifest.json", `{"artifactKind":"proofkit.release-manifest.v1","channels":[{"status":"candidate"},{"status":"planned"}],"schemaVersion":1}`)
+	retainedPath := "artifacts/proofkit/retained.json"
+	writeFixture(t, root, retainedPath, "retained")
+
+	if err := PrepareCandidateArtifactOutputs(root); err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"artifacts/package", "artifacts/pypi", "artifacts/release"} {
+		if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(path))); !os.IsNotExist(err) {
+			t.Fatalf("owned output root %s still exists: %v", path, err)
+		}
+	}
+	if content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(retainedPath))); err != nil || string(content) != "retained" {
+		t.Fatalf("non-owned proof artifact changed: content=%q err=%v", content, err)
+	}
+}
+
+func TestPrepareCandidateArtifactOutputsRejectsProviderEvidenceBeforeMutation(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "artifacts/package/package.tgz", "candidate")
+	writeFixture(t, root, "artifacts/registry/npm-registry.json", "provider")
+
+	err := PrepareCandidateArtifactOutputs(root)
+	if err == nil || !strings.Contains(err.Error(), "rejects ambient provider evidence") {
+		t.Fatalf("PrepareCandidateArtifactOutputs() error = %v", err)
+	}
+	if content, readErr := os.ReadFile(filepath.Join(root, "artifacts/package/package.tgz")); readErr != nil || string(content) != "candidate" {
+		t.Fatalf("candidate output changed before provider-evidence rejection: content=%q err=%v", content, readErr)
+	}
+}
+
+func TestPrepareCandidateArtifactOutputsRejectsUnownedReleaseStateBeforeMutation(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "artifacts/package/package.tgz", "candidate")
+	writeFixture(t, root, "artifacts/release/unowned.json", "unowned")
+
+	err := PrepareCandidateArtifactOutputs(root)
+	if err == nil || !strings.Contains(err.Error(), "rejects unowned release state") {
+		t.Fatalf("PrepareCandidateArtifactOutputs() error = %v", err)
+	}
+	if content, readErr := os.ReadFile(filepath.Join(root, "artifacts/package/package.tgz")); readErr != nil || string(content) != "candidate" {
+		t.Fatalf("candidate output changed before unowned-state rejection: content=%q err=%v", content, readErr)
+	}
+}
+
+func TestPrepareCandidateArtifactOutputsRejectsProviderDerivedReleaseManifestBeforeMutation(t *testing.T) {
+	root := t.TempDir()
+	writeFixture(t, root, "artifacts/package/package.tgz", "candidate")
+	writeFixture(t, root, "artifacts/release/release-manifest.json", `{"artifactKind":"proofkit.release-manifest.v1","channels":[{"publicationMode":"published_by_workflow","status":"published"}],"schemaVersion":1}`)
+
+	err := PrepareCandidateArtifactOutputs(root)
+	if err == nil || !strings.Contains(err.Error(), "rejects provider-derived release manifest") {
+		t.Fatalf("PrepareCandidateArtifactOutputs() error = %v", err)
+	}
+	if content, readErr := os.ReadFile(filepath.Join(root, "artifacts/package/package.tgz")); readErr != nil || string(content) != "candidate" {
+		t.Fatalf("candidate output changed before provider-manifest rejection: content=%q err=%v", content, readErr)
+	}
+}
+
+func TestPrepareCandidateArtifactOutputsDoesNotFollowArtifactSymlink(t *testing.T) {
+	root := t.TempDir()
+	external := t.TempDir()
+	externalPath := filepath.Join(external, "sentinel.txt")
+	if err := os.WriteFile(externalPath, []byte("retained"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(external, filepath.Join(root, "artifacts")); err != nil {
+		t.Fatal(err)
+	}
+
+	err := PrepareCandidateArtifactOutputs(root)
+	if err == nil || !strings.Contains(err.Error(), "traverses a symlink") {
+		t.Fatalf("PrepareCandidateArtifactOutputs() error = %v", err)
+	}
+	if content, readErr := os.ReadFile(externalPath); readErr != nil || string(content) != "retained" {
+		t.Fatalf("external sentinel changed through artifact symlink: content=%q err=%v", content, readErr)
+	}
+}
+
 func TestSnapshotDigestBindsNormalizedMode(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, "source.txt", "source")
@@ -171,6 +257,23 @@ func TestSnapshotDigestRejectsNonRegularFile(t *testing.T) {
 	_, err := digestPaths(root, []string{"not-a-file"})
 	if err == nil || !strings.Contains(err.Error(), "non-regular files are not admitted") {
 		t.Fatalf("digestPaths() non-regular file error = %v", err)
+	}
+}
+
+func TestSnapshotDigestRejectsIntermediateSymlinkEscape(t *testing.T) {
+	root := t.TempDir()
+	external := t.TempDir()
+	writeFixture(t, external, "package.tgz", "external")
+	if err := os.MkdirAll(filepath.Join(root, "artifacts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(external, filepath.Join(root, "artifacts", "package")); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := digestPaths(root, []string{"artifacts/package/package.tgz"})
+	if err == nil || !strings.Contains(err.Error(), "traverses a symlink") {
+		t.Fatalf("digestPaths() intermediate symlink error = %v", err)
 	}
 }
 

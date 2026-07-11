@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -21,10 +22,11 @@ import (
 )
 
 const (
-	CommandID      = "proofkit.package-artifact"
-	RecordPath     = "artifacts/proofkit/package-artifact-execution.json"
-	SchemaVersion  = 1
-	maxRecordBytes = 1 << 20
+	CommandID               = "proofkit.package-artifact"
+	RecordPath              = "artifacts/proofkit/package-artifact-execution.json"
+	SchemaVersion           = 2
+	maxRecordBytes          = 1 << 20
+	maxReleaseManifestBytes = 8 << 20
 )
 
 var (
@@ -58,6 +60,28 @@ var artifactEvidenceRoots = []string{
 	"artifacts/release",
 }
 
+var candidateArtifactResetRoots = []string{
+	"artifacts/package",
+	"artifacts/pypi",
+}
+
+var candidateReleaseOutputPaths = []string{
+	"artifacts/release/checksums.sha256",
+	"artifacts/release/metadata-checksums.sha256",
+	"artifacts/release/release-manifest.json",
+	"artifacts/release/release-notes.md",
+	"artifacts/release/sbom-subjects.sha256",
+	"artifacts/release/sbom.cdx.json",
+}
+
+var providerEvidencePaths = []string{
+	"artifacts/attestations",
+	"artifacts/pypi-registry",
+	"artifacts/registry",
+	"artifacts/release/github-release.json",
+	"artifacts/release/retained-evidence-checksums.sha256",
+}
+
 func CanonicalCommandArgv() []string {
 	return append([]string(nil), commandArgv...)
 }
@@ -67,27 +91,24 @@ func CanonicalExecutionArgv() []string {
 }
 
 type Record struct {
-	Argv                            []string `json:"argv"`
-	ArtifactFreshnessBaselineDigest string   `json:"artifactFreshnessBaselineDigest"`
-	ArtifactFreshnessDigest         string   `json:"artifactFreshnessDigest"`
-	ArtifactSnapshotDigest          string   `json:"artifactSnapshotDigest"`
-	CommandID                       string   `json:"commandId"`
-	EnvironmentDigest               string   `json:"environmentDigest"`
-	ExecutionArgv                   []string `json:"executionArgv"`
-	ExitCode                        int      `json:"exitCode"`
-	FinishedAt                      string   `json:"finishedAt"`
-	SchemaVersion                   int      `json:"schemaVersion"`
-	SourceRevision                  string   `json:"sourceRevision"`
-	SourceSnapshotDigest            string   `json:"sourceSnapshotDigest"`
-	StartedAt                       string   `json:"startedAt"`
-	Status                          string   `json:"status"`
-	ToolchainDigest                 string   `json:"toolchainDigest"`
+	Argv                   []string `json:"argv"`
+	ArtifactSnapshotDigest string   `json:"artifactSnapshotDigest"`
+	CommandID              string   `json:"commandId"`
+	EnvironmentDigest      string   `json:"environmentDigest"`
+	ExecutionArgv          []string `json:"executionArgv"`
+	ExitCode               int      `json:"exitCode"`
+	FinishedAt             string   `json:"finishedAt"`
+	SchemaVersion          int      `json:"schemaVersion"`
+	SourceRevision         string   `json:"sourceRevision"`
+	SourceSnapshotDigest   string   `json:"sourceSnapshotDigest"`
+	StartedAt              string   `json:"startedAt"`
+	Status                 string   `json:"status"`
+	ToolchainDigest        string   `json:"toolchainDigest"`
 }
 
 type ArtifactEvidence struct {
-	FileCount       int
-	FreshnessDigest string
-	SnapshotDigest  string
+	FileCount      int
+	SnapshotDigest string
 }
 
 func Read(root string) (Record, error) {
@@ -104,7 +125,7 @@ func Read(root string) (Record, error) {
 	if !ok {
 		return Record{}, fmt.Errorf("package artifact execution record must be an object")
 	}
-	if err := admit.KnownKeys(object, []string{"argv", "artifactFreshnessBaselineDigest", "artifactFreshnessDigest", "artifactSnapshotDigest", "commandId", "environmentDigest", "executionArgv", "exitCode", "finishedAt", "schemaVersion", "sourceRevision", "sourceSnapshotDigest", "startedAt", "status", "toolchainDigest"}, "package artifact execution record"); err != nil {
+	if err := admit.KnownKeys(object, []string{"argv", "artifactSnapshotDigest", "commandId", "environmentDigest", "executionArgv", "exitCode", "finishedAt", "schemaVersion", "sourceRevision", "sourceSnapshotDigest", "startedAt", "status", "toolchainDigest"}, "package artifact execution record"); err != nil {
 		return Record{}, err
 	}
 	content, err := json.Marshal(raw)
@@ -120,21 +141,19 @@ func Read(root string) (Record, error) {
 
 func Write(root string, record Record) error {
 	value := map[string]any{
-		"argv":                            stringsToAny(record.Argv),
-		"artifactFreshnessBaselineDigest": record.ArtifactFreshnessBaselineDigest,
-		"artifactFreshnessDigest":         record.ArtifactFreshnessDigest,
-		"artifactSnapshotDigest":          record.ArtifactSnapshotDigest,
-		"commandId":                       record.CommandID,
-		"environmentDigest":               record.EnvironmentDigest,
-		"executionArgv":                   stringsToAny(record.ExecutionArgv),
-		"exitCode":                        record.ExitCode,
-		"finishedAt":                      record.FinishedAt,
-		"schemaVersion":                   record.SchemaVersion,
-		"sourceRevision":                  record.SourceRevision,
-		"sourceSnapshotDigest":            record.SourceSnapshotDigest,
-		"startedAt":                       record.StartedAt,
-		"status":                          record.Status,
-		"toolchainDigest":                 record.ToolchainDigest,
+		"argv":                   stringsToAny(record.Argv),
+		"artifactSnapshotDigest": record.ArtifactSnapshotDigest,
+		"commandId":              record.CommandID,
+		"environmentDigest":      record.EnvironmentDigest,
+		"executionArgv":          stringsToAny(record.ExecutionArgv),
+		"exitCode":               record.ExitCode,
+		"finishedAt":             record.FinishedAt,
+		"schemaVersion":          record.SchemaVersion,
+		"sourceRevision":         record.SourceRevision,
+		"sourceSnapshotDigest":   record.SourceSnapshotDigest,
+		"startedAt":              record.StartedAt,
+		"status":                 record.Status,
+		"toolchainDigest":        record.ToolchainDigest,
 	}
 	content, err := stablejson.Marshal(value)
 	if err != nil {
@@ -172,6 +191,170 @@ func Invalidate(root string) error {
 	return nil
 }
 
+func PrepareCandidateArtifactOutputs(root string) error {
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return fmt.Errorf("open artifact repository root: %w", err)
+	}
+	defer rootFS.Close()
+
+	for _, relativePath := range providerEvidencePaths {
+		_, exists, err := artifactPathState(rootFS, relativePath)
+		if err != nil {
+			return err
+		}
+		if exists {
+			return fmt.Errorf("candidate package artifact execution rejects ambient provider evidence at %s", relativePath)
+		}
+	}
+	if err := admitCandidateReleaseManifest(rootFS); err != nil {
+		return err
+	}
+	if err := admitCandidateReleaseOutputs(rootFS); err != nil {
+		return err
+	}
+
+	for _, relativeRoot := range candidateArtifactResetRoots {
+		path, exists, err := artifactPathState(rootFS, relativeRoot)
+		if err != nil {
+			return err
+		}
+		if exists {
+			if err := rootFS.RemoveAll(path); err != nil {
+				return fmt.Errorf("reset candidate artifact root %s: %w", relativeRoot, err)
+			}
+		}
+	}
+	for _, relativePath := range candidateReleaseOutputPaths {
+		path, exists, err := artifactPathState(rootFS, relativePath)
+		if err != nil {
+			return err
+		}
+		if exists {
+			if err := rootFS.Remove(path); err != nil {
+				return fmt.Errorf("reset candidate release output %s: %w", relativePath, err)
+			}
+		}
+	}
+	releaseRoot := "artifacts/release"
+	releasePath, exists, err := artifactPathState(rootFS, releaseRoot)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	return rootFS.Remove(releasePath)
+}
+
+func admitCandidateReleaseManifest(rootFS *os.Root) error {
+	const relativePath = "artifacts/release/release-manifest.json"
+	path, exists, err := artifactPathState(rootFS, relativePath)
+	if err != nil || !exists {
+		return err
+	}
+	file, err := rootFS.Open(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	raw, err := admission.DecodeJSON(file, maxReleaseManifestBytes)
+	if err != nil {
+		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest: %w", err)
+	}
+	object, ok := raw.(map[string]any)
+	if !ok {
+		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
+	}
+	artifactKind, kindOK := object["artifactKind"].(string)
+	schemaVersion, versionOK := object["schemaVersion"].(json.Number)
+	if !kindOK || artifactKind != "proofkit.release-manifest.v1" || !versionOK || schemaVersion.String() != "1" {
+		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
+	}
+	channels, ok := object["channels"].([]any)
+	if !ok || len(channels) == 0 {
+		return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
+	}
+	for _, value := range channels {
+		channel, ok := value.(map[string]any)
+		if !ok {
+			return fmt.Errorf("candidate package artifact execution cannot classify existing release manifest")
+		}
+		status, ok := channel["status"].(string)
+		if !ok || (status != "candidate" && status != "planned" && status != "not_applicable") {
+			return fmt.Errorf("candidate package artifact execution rejects provider-derived release manifest at %s", relativePath)
+		}
+		if _, present := channel["publicationMode"]; present {
+			return fmt.Errorf("candidate package artifact execution rejects provider-derived release manifest at %s", relativePath)
+		}
+		if _, present := channel["trustedPublisher"]; present {
+			return fmt.Errorf("candidate package artifact execution rejects provider-derived release manifest at %s", relativePath)
+		}
+	}
+	return nil
+}
+
+func admitCandidateReleaseOutputs(rootFS *os.Root) error {
+	releaseRoot, exists, err := artifactPathState(rootFS, "artifacts/release")
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	directory, err := rootFS.Open(releaseRoot)
+	if err != nil {
+		return err
+	}
+	entries, readErr := directory.ReadDir(-1)
+	closeErr := directory.Close()
+	if readErr != nil {
+		return readErr
+	}
+	if closeErr != nil {
+		return closeErr
+	}
+	allowed := map[string]struct{}{}
+	for _, relativePath := range candidateReleaseOutputPaths {
+		allowed[filepath.Base(filepath.FromSlash(relativePath))] = struct{}{}
+	}
+	for _, entry := range entries {
+		if _, ok := allowed[entry.Name()]; !ok {
+			return fmt.Errorf("candidate package artifact execution rejects unowned release state at artifacts/release")
+		}
+		if entry.Type()&os.ModeSymlink != 0 || !entry.Type().IsRegular() {
+			return fmt.Errorf("candidate release output artifacts/release/%s must be a regular file", entry.Name())
+		}
+	}
+	return nil
+}
+
+func artifactPathState(rootFS *os.Root, relativePath string) (string, bool, error) {
+	cleanPath := filepath.Clean(filepath.FromSlash(relativePath))
+	if cleanPath == "." || !filepath.IsLocal(cleanPath) {
+		return "", false, fmt.Errorf("artifact path must stay repository-relative: %s", relativePath)
+	}
+	parts := strings.Split(cleanPath, string(filepath.Separator))
+	current := ""
+	for index, part := range parts {
+		current = filepath.Join(current, part)
+		info, err := rootFS.Lstat(current)
+		if os.IsNotExist(err) {
+			return filepath.Join(append([]string{current}, parts[index+1:]...)...), false, nil
+		}
+		if err != nil {
+			return "", false, err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return "", false, fmt.Errorf("artifact path %s traverses a symlink; symlinks are not admitted", relativePath)
+		}
+		if index < len(parts)-1 && !info.IsDir() {
+			return "", false, fmt.Errorf("artifact path %s traverses a non-directory", relativePath)
+		}
+	}
+	return current, true, nil
+}
+
 func ValidateCurrent(root string, record Record) error {
 	if record.SchemaVersion != SchemaVersion || record.CommandID != CommandID || !equalStrings(record.Argv, commandArgv) || !equalStrings(record.ExecutionArgv, executionArgv) {
 		return fmt.Errorf("package artifact execution record identity is invalid")
@@ -189,14 +372,9 @@ func ValidateCurrent(root string, record Record) error {
 	}
 	if !isSHA256(record.SourceSnapshotDigest) ||
 		!isSHA256(record.ArtifactSnapshotDigest) ||
-		!isSHA256(record.ArtifactFreshnessBaselineDigest) ||
-		!isSHA256(record.ArtifactFreshnessDigest) ||
 		!isSHA256(record.EnvironmentDigest) ||
 		!isSHA256(record.ToolchainDigest) {
 		return fmt.Errorf("package artifact execution record snapshot digests must be lowercase sha256")
-	}
-	if record.ArtifactFreshnessBaselineDigest == record.ArtifactFreshnessDigest {
-		return fmt.Errorf("package artifact execution record does not prove fresh artifacts")
 	}
 	revision, sourceDigest, err := SourceSnapshot(root)
 	if err != nil {
@@ -211,9 +389,6 @@ func ValidateCurrent(root string, record Record) error {
 	}
 	if artifactEvidence.SnapshotDigest != record.ArtifactSnapshotDigest {
 		return fmt.Errorf("package artifact execution record artifact snapshot is stale: recorded %s current %s", record.ArtifactSnapshotDigest, artifactEvidence.SnapshotDigest)
-	}
-	if artifactEvidence.FreshnessDigest != record.ArtifactFreshnessDigest {
-		return fmt.Errorf("package artifact execution record artifact freshness is stale: recorded %s current %s", record.ArtifactFreshnessDigest, artifactEvidence.FreshnessDigest)
 	}
 	return nil
 }
@@ -262,55 +437,36 @@ func ArtifactSnapshot(root string) (string, error) {
 	return evidence.SnapshotDigest, nil
 }
 
-func ArtifactEvidenceBaseline(root string) (ArtifactEvidence, error) {
-	return artifactEvidenceSnapshot(root, false)
-}
-
 func ArtifactEvidenceSnapshot(root string) (ArtifactEvidence, error) {
-	return artifactEvidenceSnapshot(root, true)
-}
-
-func artifactEvidenceSnapshot(root string, requireFiles bool) (ArtifactEvidence, error) {
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return ArtifactEvidence{}, fmt.Errorf("open artifact snapshot root: %w", err)
+	}
+	defer rootFS.Close()
 	paths := []string{}
 	for _, relativeRoot := range artifactEvidenceRoots {
-		artifactRoot := filepath.Join(root, filepath.FromSlash(relativeRoot))
-		err := filepath.WalkDir(artifactRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		artifactRoot := filepath.ToSlash(filepath.Clean(filepath.FromSlash(relativeRoot)))
+		err := fs.WalkDir(rootFS.FS(), artifactRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 			if walkErr != nil {
 				return walkErr
 			}
 			if !entry.IsDir() {
-				relative, err := filepath.Rel(root, path)
-				if err != nil {
-					return err
-				}
-				paths = append(paths, filepath.ToSlash(relative))
+				paths = append(paths, path)
 			}
 			return nil
 		})
-		if err != nil && !os.IsNotExist(err) {
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return ArtifactEvidence{}, err
 		}
 	}
 	if len(paths) == 0 {
-		if !requireFiles {
-			return emptyArtifactEvidence(), nil
-		}
 		return ArtifactEvidence{}, fmt.Errorf("package artifact execution produced no artifacts")
 	}
-	snapshotDigest, err := digestPaths(root, paths)
+	snapshotDigest, err := digestPathsAtRoot(rootFS, paths)
 	if err != nil {
 		return ArtifactEvidence{}, err
 	}
-	freshnessDigest, err := digestPathFreshness(root, paths)
-	if err != nil {
-		return ArtifactEvidence{}, err
-	}
-	return ArtifactEvidence{FileCount: len(paths), FreshnessDigest: freshnessDigest, SnapshotDigest: snapshotDigest}, nil
-}
-
-func emptyArtifactEvidence() ArtifactEvidence {
-	emptyDigest := hex.EncodeToString(sha256.New().Sum(nil))
-	return ArtifactEvidence{FreshnessDigest: emptyDigest, SnapshotDigest: emptyDigest}
+	return ArtifactEvidence{FileCount: len(paths), SnapshotDigest: snapshotDigest}, nil
 }
 
 func EnvironmentDigest(environment []string) string {
@@ -385,15 +541,41 @@ func gitOutput(root string, args ...string) (string, error) {
 }
 
 func digestPaths(root string, paths []string) (string, error) {
+	rootFS, err := os.OpenRoot(root)
+	if err != nil {
+		return "", fmt.Errorf("open snapshot root: %w", err)
+	}
+	defer rootFS.Close()
+	return digestPathsAtRoot(rootFS, paths)
+}
+
+func digestPathsAtRoot(rootFS *os.Root, paths []string) (string, error) {
 	orderedPaths := append([]string(nil), paths...)
 	sort.Strings(orderedPaths)
 	hash := sha256.New()
 	for _, path := range orderedPaths {
-		normalizedPath, fullPath, err := normalizedSnapshotPath(root, path)
+		normalizedPath, err := normalizedSnapshotPath(path)
 		if err != nil {
 			return "", err
 		}
-		info, content, err := readRegularFile(fullPath)
+		_, exists, err := artifactPathState(rootFS, normalizedPath)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return "", fmt.Errorf("snapshot %s: file does not exist", normalizedPath)
+		}
+		info, err := rootFS.Lstat(filepath.FromSlash(normalizedPath))
+		if err != nil {
+			return "", fmt.Errorf("snapshot %s: %w", normalizedPath, err)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return "", fmt.Errorf("snapshot %s: symlinks are not admitted", normalizedPath)
+		}
+		if !info.Mode().IsRegular() {
+			return "", fmt.Errorf("snapshot %s: non-regular files are not admitted: mode %s", normalizedPath, info.Mode())
+		}
+		content, err := rootFS.ReadFile(filepath.FromSlash(normalizedPath))
 		if err != nil {
 			return "", fmt.Errorf("snapshot %s: %w", normalizedPath, err)
 		}
@@ -405,37 +587,15 @@ func digestPaths(root string, paths []string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
-func digestPathFreshness(root string, paths []string) (string, error) {
-	orderedPaths := append([]string(nil), paths...)
-	sort.Strings(orderedPaths)
-	hash := sha256.New()
-	for _, path := range orderedPaths {
-		normalizedPath, fullPath, err := normalizedSnapshotPath(root, path)
-		if err != nil {
-			return "", err
-		}
-		info, _, err := readRegularFile(fullPath)
-		if err != nil {
-			return "", fmt.Errorf("snapshot freshness %s: %w", normalizedPath, err)
-		}
-		writeDigestField(hash, []byte(normalizedPath))
-		writeDigestField(hash, []byte("regular"))
-		writeDigestField(hash, []byte(normalizedFileMode(info)))
-		writeDigestField(hash, []byte(fmt.Sprintf("%d", info.Size())))
-		writeDigestField(hash, []byte(fmt.Sprintf("%d", info.ModTime().UnixNano())))
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-func normalizedSnapshotPath(root string, path string) (string, string, error) {
+func normalizedSnapshotPath(path string) (string, error) {
 	normalizedPath := filepath.ToSlash(filepath.Clean(filepath.FromSlash(path)))
 	if normalizedPath == "." || filepath.IsAbs(filepath.FromSlash(path)) || normalizedPath == ".." || strings.HasPrefix(normalizedPath, "../") {
-		return "", "", fmt.Errorf("snapshot path %q must be a normalized relative path", path)
+		return "", fmt.Errorf("snapshot path %q must be a normalized relative path", path)
 	}
 	if path != normalizedPath {
-		return "", "", fmt.Errorf("snapshot path %q is not normalized as %q", path, normalizedPath)
+		return "", fmt.Errorf("snapshot path %q is not normalized as %q", path, normalizedPath)
 	}
-	return normalizedPath, filepath.Join(root, filepath.FromSlash(normalizedPath)), nil
+	return normalizedPath, nil
 }
 
 func readRegularFile(path string) (fs.FileInfo, []byte, error) {

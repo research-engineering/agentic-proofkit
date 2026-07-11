@@ -680,9 +680,46 @@ func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
 	if _, err := parseConformanceProfileArgs([]string{"--input", "-", "--list", "--format", "markdown"}); err == nil {
 		t.Fatal("conformance markdown without --profile was accepted")
 	}
-	usage := commandUsageLine(commandDescriptorByName["adoption-contract-envelope"])
-	if !strings.Contains(usage, " --mode <mode>") || strings.Contains(usage, "[--mode <mode>]") {
-		t.Fatalf("required --mode rendered as optional: %s", usage)
+}
+
+func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
+	expectedConstrainedUsage := map[string]string{
+		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
+		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
+		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
+		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host 127.0.0.1|::1] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <scope>] [--serve] --view <value>",
+		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
+		"stack-preset":                   "agentic-proofkit stack-preset --preset <value>",
+		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
+	}
+	constrainedCount := 0
+	for _, descriptor := range commandDescriptors {
+		usageLine := commandUsageLine(descriptor)
+		for _, flag := range descriptor.requiredFlags {
+			if !strings.Contains(usageLine, " "+flag) || strings.Contains(usageLine, "["+flag) {
+				t.Fatalf("%s required flag %s is not rendered as required: %s", descriptor.name, flag, usageLine)
+			}
+		}
+		if len(descriptor.requiredFlags) > 0 || len(descriptor.exactlyOneOfFlagGroups) > 0 {
+			constrainedCount++
+			expected, admitted := expectedConstrainedUsage[descriptor.name]
+			if !admitted {
+				t.Fatalf("%s has constraints but no independent help oracle", descriptor.name)
+			}
+			if usageLine != expected {
+				t.Fatalf("%s constrained usage = %q, want %q", descriptor.name, usageLine, expected)
+			}
+		}
+		commandHelp := commandUsage(descriptor)
+		for _, requirement := range descriptor.flagValueRequirements {
+			expected := fmt.Sprintf("  %s %s requires: %s", requirement.Flag, requirement.Value, strings.Join(requirement.RequiredFlags, ", "))
+			if !strings.Contains(commandHelp, expected) {
+				t.Fatalf("%s value constraint %q is missing from command help", descriptor.name, expected)
+			}
+		}
+	}
+	if constrainedCount != len(expectedConstrainedUsage) {
+		t.Fatalf("constrained descriptor count = %d, independent help oracle count = %d", constrainedCount, len(expectedConstrainedUsage))
 	}
 }
 

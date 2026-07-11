@@ -563,6 +563,16 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-020",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim producer authentication, hermetic or reproducible builds, registry publication, provider evidence freshness, release approval, rollout approval, production readiness, or exact artifact closure outside downstream package and release validators."
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
@@ -579,7 +589,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim command recommendation, command execution through family membership, consumer policy, native witness execution, merge approval, release approval, rollout approval, or production readiness."
+        "This requirement does not claim byte-for-byte help text compatibility across owner-approved CLI contract corrections, command recommendation, command execution through family membership, consumer policy, native witness execution, merge approval, release approval, rollout approval, or production readiness."
       ]
     }
   ],
@@ -1576,6 +1586,36 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-020",
+      "scenarioId": "proofkit.supply-chain-quality.package-artifact-clean-materialization",
+      "witnessId": "proofkit.package-artifact.clean-materialization-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageartifact/main_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-go-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-020",
+      "scenarioId": "proofkit.supply-chain-quality.package-artifact-output-ownership-and-confinement",
+      "witnessId": "proofkit.package-artifact.output-ownership-and-confinement-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageartifactrecord/record_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-go-python"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-QUALITY-015",
       "scenarioId": "proofkit.supply-chain-quality.release-closeout-completion-criteria",
       "witnessId": "proofkit.release-closeout.completion-criteria-gate",
@@ -1911,6 +1951,19 @@
       "witnessId": "proofkit.capability-map-admission.trust-mode-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/capabilitymapadmission/capability_map_admission_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-018",
+      "scenarioId": "proofkit.spec-proof-core.command-family-help-compatibility",
+      "witnessId": "proofkit.command-family-navigation.help-compatibility-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/command_family_catalog_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],

@@ -255,6 +255,19 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-020",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Package artifact execution rejects ambient provider evidence and unowned release state before mutating candidate outputs, removes only candidate-owned package, wheel, and release outputs through a repository-confined filesystem root without following symlinks outside that root, invalidates prior execution evidence, executes the canonical package pipeline against stable source, environment, and toolchain snapshots, requires a non-empty content-bound artifact snapshot, and emits a schema-versioned execution record.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-020"],
+      "nonClaims": ["This requirement does not claim producer authentication, hermetic or reproducible builds, registry publication, provider evidence freshness, release approval, rollout approval, production readiness, or exact artifact closure outside downstream package and release validators."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ]
 }

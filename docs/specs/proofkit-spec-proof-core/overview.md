@@ -92,8 +92,9 @@ execution receipts, and merge policy.
   and emits only bounded candidate requirements, bindings, or owner guidance.
 - `REQ-PROOFKIT-SPEC-018`: an authored command-family catalog covers every
   public CLI command exactly once, deterministically generates the private
-  runtime navigation projection, and adds opt-in family help without changing
-  root help, per-command help, or leaf dispatch.
+  runtime navigation projection, and adds opt-in family help while preserving
+  existing help invocation forms, process channels, no-input behavior, and leaf
+  dispatch; descriptor and help truth remains owned by `REQ-PROOFKIT-QUALITY-004`.
 
 ## Non-Claims
 

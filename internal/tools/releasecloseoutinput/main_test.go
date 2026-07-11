@@ -879,21 +879,19 @@ func writePackageArtifactExecutionFixture(t *testing.T, root string) packagearti
 		t.Fatal(err)
 	}
 	record := packageartifactrecord.Record{
-		Argv:                            packageartifactrecord.CanonicalCommandArgv(),
-		ArtifactFreshnessBaselineDigest: strings.Repeat("0", 64),
-		ArtifactFreshnessDigest:         artifactEvidence.FreshnessDigest,
-		ArtifactSnapshotDigest:          artifactEvidence.SnapshotDigest,
-		CommandID:                       packageartifactrecord.CommandID,
-		EnvironmentDigest:               strings.Repeat("1", 64),
-		ExecutionArgv:                   packageartifactrecord.CanonicalExecutionArgv(),
-		ExitCode:                        0,
-		FinishedAt:                      "2026-07-01T10:00:01Z",
-		SchemaVersion:                   packageartifactrecord.SchemaVersion,
-		SourceRevision:                  revision,
-		SourceSnapshotDigest:            sourceDigest,
-		StartedAt:                       "2026-07-01T10:00:00Z",
-		Status:                          "passed",
-		ToolchainDigest:                 strings.Repeat("2", 64),
+		Argv:                   packageartifactrecord.CanonicalCommandArgv(),
+		ArtifactSnapshotDigest: artifactEvidence.SnapshotDigest,
+		CommandID:              packageartifactrecord.CommandID,
+		EnvironmentDigest:      strings.Repeat("1", 64),
+		ExecutionArgv:          packageartifactrecord.CanonicalExecutionArgv(),
+		ExitCode:               0,
+		FinishedAt:             "2026-07-01T10:00:01Z",
+		SchemaVersion:          packageartifactrecord.SchemaVersion,
+		SourceRevision:         revision,
+		SourceSnapshotDigest:   sourceDigest,
+		StartedAt:              "2026-07-01T10:00:00Z",
+		Status:                 "passed",
+		ToolchainDigest:        strings.Repeat("2", 64),
 	}
 	if err := packageartifactrecord.Write(root, record); err != nil {
 		t.Fatal(err)

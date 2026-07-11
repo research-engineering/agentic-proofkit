@@ -59,14 +59,18 @@ func TestRunWithDependenciesRecordsCanonicalAndExecutionArgv(t *testing.T) {
 	}
 }
 
-func TestRunWithDependenciesRejectsTrueRunnerWithoutArtifactMutation(t *testing.T) {
+func TestRunWithDependenciesRejectsTimestampOnlyMutationOfPreexistingArtifact(t *testing.T) {
 	root := packageArtifactFixture(t)
 	writeArtifactFixture(t, root, "artifact-v1")
+	artifactPath := filepath.Join(root, "artifacts", "package", "package.tgz")
 
 	err := runWithDependencies(root, runnerFunc(func(string, []string) (int, error) {
+		if touchErr := os.Chtimes(artifactPath, time.Now(), time.Now()); !os.IsNotExist(touchErr) {
+			t.Fatalf("preexisting artifact remained available for timestamp-only mutation: %v", touchErr)
+		}
 		return 0, nil
 	}), stableDependencies())
-	if err == nil || !strings.Contains(err.Error(), "produced no fresh artifact state") {
+	if err == nil || !strings.Contains(err.Error(), "produced no artifacts") {
 		t.Fatalf("runWithDependencies() error = %v", err)
 	}
 	record, readErr := packageartifactrecord.Read(root)
@@ -77,7 +81,58 @@ func TestRunWithDependenciesRejectsTrueRunnerWithoutArtifactMutation(t *testing.
 		t.Fatalf("record result = %s/%d, want failed/0", record.Status, record.ExitCode)
 	}
 	if validateErr := packageartifactrecord.ValidateCurrent(root, record); validateErr == nil {
-		t.Fatal("ValidateCurrent() accepted evidence from a no-op true runner")
+		t.Fatal("ValidateCurrent() accepted evidence from a timestamp-only runner")
+	}
+}
+
+func TestRunWithDependenciesInvalidatesPriorRecordButRetainsCandidateOutputsOnProviderEvidence(t *testing.T) {
+	root := packageArtifactFixture(t)
+	writeArtifactFixture(t, root, "candidate")
+	writeFileFixture(t, root, "artifacts/registry/npm-registry.json", "provider")
+	if err := packageartifactrecord.Write(root, packageartifactrecord.Record{Status: "passed"}); err != nil {
+		t.Fatal(err)
+	}
+	runnerCalled := false
+
+	err := runWithDependencies(root, runnerFunc(func(string, []string) (int, error) {
+		runnerCalled = true
+		return 0, nil
+	}), stableDependencies())
+	if err == nil || !strings.Contains(err.Error(), "rejects ambient provider evidence") {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+	if runnerCalled {
+		t.Fatal("runner executed after ambient provider evidence rejection")
+	}
+	if _, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(packageartifactrecord.RecordPath))); !os.IsNotExist(statErr) {
+		t.Fatalf("prior execution record survived rejected package run: %v", statErr)
+	}
+	if content, readErr := os.ReadFile(filepath.Join(root, "artifacts/package/package.tgz")); readErr != nil || string(content) != "candidate" {
+		t.Fatalf("candidate output changed before provider-evidence rejection: content=%q err=%v", content, readErr)
+	}
+}
+
+func TestRunWithDependenciesAcceptsCleanRegenerationWithIdenticalBytes(t *testing.T) {
+	root := packageArtifactFixture(t)
+	writeArtifactFixture(t, root, "artifact-v1")
+	artifactPath := filepath.Join(root, "artifacts", "package", "package.tgz")
+
+	err := runWithDependencies(root, runnerFunc(func(root string, _ []string) (int, error) {
+		if _, statErr := os.Stat(artifactPath); !os.IsNotExist(statErr) {
+			t.Fatalf("preexisting artifact was not removed before regeneration: %v", statErr)
+		}
+		writeArtifactFixture(t, root, "artifact-v1")
+		return 0, nil
+	}), stableDependencies())
+	if err != nil {
+		t.Fatalf("runWithDependencies() error = %v", err)
+	}
+	record, readErr := packageartifactrecord.Read(root)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if record.Status != "passed" || record.ExitCode != 0 {
+		t.Fatalf("record result = %s/%d, want passed/0", record.Status, record.ExitCode)
 	}
 }
 
