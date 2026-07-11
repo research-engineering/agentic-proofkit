@@ -35,26 +35,32 @@ func TestBuildProjectsCompactProofBindingToAdmittedInventory(t *testing.T) {
 	if entry["sourcePath"] != "tests/proofkit_falsification_test.go" || entry["selector"] != "tests/proofkit_falsification_test.go::TestRejectsCompactRegression" {
 		t.Fatalf("selector/sourcePath drift: %#v", entry)
 	}
-	if entry["ownerId"] != "proofkit.spec" || entry["evidenceClass"] != "semantic_falsifier" {
+	if entry["ownerId"] != "proofkit.spec" || entry["evidenceClass"] != "proof_route_candidate" {
 		t.Fatalf("owner/evidence drift: %#v", entry)
 	}
 	if got := stringValues(entry["commandRefs"].([]any)); len(got) != 1 || got[0] != commandRefs[0] {
 		t.Fatalf("entry commandRefs=%v outer=%v", got, commandRefs)
 	}
-	oracle := entry["oracle"].(map[string]any)
-	if oracle["oracleKind"] != "canonical_binding_falsification_witness" {
-		t.Fatalf("oracle=%#v", oracle)
-	}
-	falsifier := entry["falsifier"].(map[string]any)
-	if falsifier["negativeCaseId"] != "case.proofkit.surface.req_proofkit_compact_001.falsification_witness" ||
-		falsifier["wrongImplementationClassId"] != "wrong.proofkit.surface.proofkit_compact" {
-		t.Fatalf("falsifier=%#v", falsifier)
+	if entry["oracle"] != nil || entry["falsifier"] != nil {
+		t.Fatalf("proof-route projection must not synthesize a semantic oracle: %#v", entry)
 	}
 	nonClaims := stringValues(entry["nonClaims"].([]any))
 	if len(nonClaims) != 2 ||
-		nonClaims[0] != "This inventory entry declares selected-owner semantic falsifier coverage and must remain consistent with canonical proof-binding falsification witnesses." ||
-		nonClaims[1] != "This inventory entry does not execute native tests or authenticate receipts." {
+		nonClaims[0] != "This inventory entry does not execute native tests or authenticate receipts." ||
+		nonClaims[1] != "This inventory entry projects proof-route wiring only and cannot satisfy semantic coverage." {
 		t.Fatalf("entry nonClaims=%v", nonClaims)
+	}
+	report, reportExitCode, err := BuildReport(validInput())
+	if err != nil || reportExitCode != 0 {
+		t.Fatalf("BuildReport() exit=%d err=%v", reportExitCode, err)
+	}
+	if report.Summary["proofRouteCandidateCount"] != 1 || report.Summary["semanticFalsifierCount"] != 0 {
+		t.Fatalf("downstream evidence classification summary=%#v", report.Summary)
+	}
+	for _, rule := range report.RuleResults {
+		if rule.RuleID == "test_inventory.route_only_warnings_are_advisory" && rule.Status != "passed" {
+			t.Fatalf("proof-route candidate incorrectly failed route-only rule: %#v", rule)
+		}
 	}
 }
 
@@ -87,7 +93,7 @@ func TestBuildRejectsSemanticFalsifierWithoutVerifyCommand(t *testing.T) {
 	falsification[2] = []any{}
 
 	_, exitCode, err := Build(input)
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "semantic falsifier requires at least one verify command") {
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "proof route requires at least one verify command") {
 		t.Fatalf("Build() exit=%d err=%v, want missing verify command rejection", exitCode, err)
 	}
 }

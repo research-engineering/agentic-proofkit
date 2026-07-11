@@ -54,6 +54,8 @@ func instructionForDiagnostic(diagnostic string, classificationID string) string
 		return "Bind this test to at least one requirementRef or ownerInvariantRef, or reclassify it as helper or route-only evidence."
 	case "routing_smoke_only":
 		return "Treat this entry as wiring-only evidence; add a separate semantic_falsifier entry if a requirement or command must be satisfied."
+	case "proof_route_candidate":
+		return "Review the projected proof route, bind it to an owner-authored executable oracle, and only then materialize a semantic_falsifier entry."
 	case "weak_or_empty_oracle":
 		return "Declare a falsifier and a non-empty assertion oracle that distinguishes the intended failure from the implementation under test."
 	case "wrong_evidence_boundary":

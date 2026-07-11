@@ -29,7 +29,13 @@ Scanner commands require caller-selected roots or scopes.
 No command may infer ambient repository truth from the current directory.
 ```
 
-## Families
+## Capability Routes
+
+Exact, non-overlapping CLI navigation membership is owned by
+`proofkit/command-families.v1.json` and exposed through `help families` and
+`help family <family-id>`. The table below is a cross-cutting capability map:
+commands may appear in more than one row because a workflow can cross several
+owner boundaries. It is not a second command-family inventory.
 
 | Family | Main commands | Caller provides | Proofkit owns | Consumer owns | Output authority |
 |---|---|---|---|---|---|
@@ -148,6 +154,25 @@ Decision tree:
    execution requirements.
 7. Treat candidate boundaries from imperfect repositories as advisory until the
    consuming repository commits stable requirement records and proof bindings.
+
+## Contract Classification
+
+Contract ceremony is determined by independent consumer-owned dimensions, not
+by an inferred universal tier:
+
+| Dimension | Cardinality | Typical values |
+|---|---|---|
+| `authorityClasses[]` | sorted set | `trust_boundary`, `public_contract`, `internal_behavior`, `derived_artifact` |
+| `stabilityClass` | exactly one | `durable`, `evolutionary`, `local`, `generated` |
+| `enforcementClass` | exactly one | `blocking`, `advisory`, `derived` |
+| `evidenceClasses[]` | sorted set | `dedicated_binding`, `shared_native_test`, `rendered_freshness` |
+
+Set-valued classes may coexist: a public API can also be a trust boundary, and
+a generated view can also be a public contract. Proofkit admits explicit facts
+and mechanics; it does not infer requirement meaning, a contract profile, or
+ceremony from prose, `riskClass`, `claimLevel`, or code layout. A future
+machine-readable classification field requires its own versioned caller-owned
+contract and producer-to-consumer round-trip proof.
 
 ## Omitted Surfaces
 

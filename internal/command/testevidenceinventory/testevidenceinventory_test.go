@@ -34,6 +34,28 @@ func TestBuildAdmitsSemanticFalsifierInventory(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsUnanchoredProofRouteCandidate(t *testing.T) {
+	input := validInventory(t).(map[string]any)
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["evidenceClass"] = "proof_route_candidate"
+	entry["requirementRefs"] = []any{}
+	entry["ownerInvariantRefs"] = []any{}
+	entry["commandRefs"] = []any{}
+	entry["falsifier"] = nil
+	entry["oracle"] = nil
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if exitCode != 1 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want failed candidate admission", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if !strings.Contains(string(encoded), "missing_semantic_anchor") || !strings.Contains(string(encoded), "missing_executable_command_ref") {
+		t.Fatalf("candidate failures=%s", encoded)
+	}
+}
+
 func TestBuildDiscoveryDraftEmitsCandidateOnlyInventory(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.091914923857893189235410404218309297051671488437122754346751725931508712189132")
 	record, exitCode, err := BuildDiscoveryDraft(validDiscoveryDraft())

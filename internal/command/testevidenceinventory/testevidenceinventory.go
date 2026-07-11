@@ -22,6 +22,7 @@ var evidenceClassSet = map[string]struct{}{
 	"governance_or_release":  {},
 	"helper_or_testkit":      {},
 	"property_or_fuzz":       {},
+	"proof_route_candidate":  {},
 	"routing_smoke_nonclaim": {},
 	"semantic_falsifier":     {},
 }
@@ -205,6 +206,7 @@ func Evaluate(raw any) (Result, error) {
 			"qualityFindingFailureCount": countPrefix(failures, "quality_finding:"),
 			"qualityFindingWarningCount": countPrefix(warnings, "quality_finding:"),
 			"routeOnlyNonClaimCount":     countEvidenceClass(inventory.Entries, "routing_smoke_nonclaim"),
+			"proofRouteCandidateCount":   countEvidenceClass(inventory.Entries, "proof_route_candidate"),
 			"semanticFalsifierCount":     countEvidenceClass(inventory.Entries, "semantic_falsifier"),
 			"sourceCount":                inventory.SourceCount,
 			"weakOracleFailureCount":     countContains(failures, "weak_or_empty_oracle"),
@@ -667,6 +669,9 @@ func classify(inventory Inventory) ([]string, []string) {
 				warnings = append(warnings, fmt.Sprintf("route_only_nonclaim:%s", entry.TestID))
 			}
 		}
+		if entry.EvidenceClass == "proof_route_candidate" {
+			warnings = append(warnings, fmt.Sprintf("proof_route_candidate:%s", entry.TestID))
+		}
 		for _, finding := range entry.QualityFindings {
 			diagnostic := fmt.Sprintf("quality_finding:%s:%s:%s", finding.Class, entry.TestID, finding.FindingID)
 			if finding.Severity == "failure" {
@@ -775,7 +780,7 @@ func classifyFalsifierSupersession(entries []falsifierLedgerEntry) []string {
 
 func requiresSemanticAnchor(evidenceClass string) bool {
 	switch evidenceClass {
-	case "semantic_falsifier", "contract_admission", "property_or_fuzz", "governance_or_release", "benchmark":
+	case "semantic_falsifier", "proof_route_candidate", "contract_admission", "property_or_fuzz", "governance_or_release", "benchmark":
 		return true
 	default:
 		return false
@@ -792,7 +797,7 @@ func requiresStrongOracle(evidenceClass string) bool {
 }
 
 func requiresExecutableCommandRefs(evidenceClass string) bool {
-	return evidenceClass == "semantic_falsifier"
+	return evidenceClass == "semantic_falsifier" || evidenceClass == "proof_route_candidate"
 }
 
 func hasStrongOracle(entry Entry) bool {
@@ -806,11 +811,12 @@ func ruleResults(failures []string, warnings []string) []report.RuleResult {
 	return []report.RuleResult{
 		rule("test_inventory.input_admitted", "passed", "Test inventory input used strict known-key admission."),
 		ruleStatus("test_inventory.semantic_entries_have_anchors", !hasPrefix(failures, "missing_semantic_anchor"), "Semantic test inventory entries must cite requirement refs or stable owner invariant refs."),
-		ruleStatus("test_inventory.semantic_falsifiers_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Semantic falsifier entries must cite executable command refs."),
+		ruleStatus("test_inventory.route_bearing_entries_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Semantic falsifier and proof-route candidate entries must cite executable command refs."),
 		ruleStatus("test_inventory.strong_oracles", !hasPrefix(failures, "weak_or_empty_oracle"), "Semantic falsifier entries must declare a falsifier, assertion oracle, and expected public outcome."),
 		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession with dominance proof."),
 		ruleStatus("test_inventory.route_only_boundaries", !hasPrefix(failures, "wrong_evidence_boundary"), "Route-only smoke evidence must remain a non-claim and cannot cite semantic requirement anchors."),
-		ruleStatus("test_inventory.route_only_warnings", len(warnings) == 0, "Route-only entries are admitted as non-claim warnings only."),
+		rule("test_inventory.route_only_warnings_are_advisory", "passed", "Route-only entries remain admitted advisory non-claim warnings and do not fail the report."),
+		rule("test_inventory.proof_route_candidates_are_advisory", "passed", "Proof-route candidates remain advisory until a consumer owner supplies executable semantic evidence."),
 	}
 }
 
@@ -859,6 +865,8 @@ func diagnosticClassID(diagnostic string) string {
 		if len(parts) >= 2 {
 			return parts[1]
 		}
+	case strings.HasPrefix(diagnostic, "proof_route_candidate:"):
+		return "proof_route_candidate"
 	case strings.HasPrefix(diagnostic, "route_only_nonclaim:"):
 		return "routing_smoke_only"
 	case strings.HasPrefix(diagnostic, "selector_fragility:"):

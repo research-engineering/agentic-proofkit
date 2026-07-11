@@ -10,6 +10,12 @@ import (
 
 const reportKind = "proofkit.proof-obligation-algebra"
 
+const (
+	maxObligationCount          = 2048
+	maxObligationEdgeCount      = 16384
+	maxTransitiveReferenceCount = 65_536
+)
+
 var obligationKinds = map[string]struct{}{
 	"all_of":       {},
 	"any_of":       {},
@@ -61,7 +67,7 @@ type obligationInput struct {
 
 type obligation struct {
 	obligationInput
-	GraphDepth                   int
+	GraphDepth                   *int
 	RouteBearing                 bool
 	StructuralFindings           []string
 	TransitiveChildObligationIDs []string
@@ -71,6 +77,13 @@ type admittedInput struct {
 	AlgebraID   string
 	NonClaims   []string
 	Obligations []obligationInput
+}
+
+type graphAnalysis struct {
+	blockedByCycle map[string]bool
+	cycleAffected  map[string]bool
+	depthByID      map[string]int
+	transitiveByID map[string][]string
 }
 
 func Build(raw any) (report.Record, int, error) {
@@ -86,9 +99,13 @@ func Build(raw any) (report.Record, int, error) {
 			childSet[childID] = struct{}{}
 		}
 	}
+	analysis, err := analyzeGraph(input.Obligations, byID)
+	if err != nil {
+		return report.Record{}, 1, err
+	}
 	obligations := make([]obligation, 0, len(input.Obligations))
 	for _, item := range input.Obligations {
-		obligations = append(obligations, evaluate(item, byID))
+		obligations = append(obligations, evaluate(item, byID, analysis))
 	}
 	failedObligationIDs := []string{}
 	rootObligationIDs := []string{}
@@ -177,6 +194,9 @@ func obligationArray(raw any) ([]obligationInput, error) {
 	if !ok || len(values) == 0 {
 		return nil, fmt.Errorf("proof obligation algebra obligations must be a non-empty array")
 	}
+	if len(values) > maxObligationCount {
+		return nil, fmt.Errorf("proof obligation algebra obligations exceed the %d-obligation limit", maxObligationCount)
+	}
 	obligations := make([]obligationInput, 0, len(values))
 	for _, value := range values {
 		item, err := admitObligation(value)
@@ -194,6 +214,13 @@ func obligationArray(raw any) ([]obligationInput, error) {
 	}
 	if _, err := preserveSortedUnique(ids, "proof obligation ids", false); err != nil {
 		return nil, err
+	}
+	edgeCount := 0
+	for _, item := range obligations {
+		edgeCount += len(item.ChildObligationIDs)
+	}
+	if edgeCount > maxObligationEdgeCount {
+		return nil, fmt.Errorf("proof obligation algebra edges exceed the %d-edge limit", maxObligationEdgeCount)
 	}
 	return obligations, nil
 }
@@ -279,21 +306,25 @@ func admitObligation(raw any) (obligationInput, error) {
 	}, nil
 }
 
-func evaluate(item obligationInput, byID map[string]obligationInput) obligation {
+func evaluate(item obligationInput, byID map[string]obligationInput, analysis graphAnalysis) obligation {
 	findings := []string{}
 	findings = append(findings, kindFindings(item)...)
 	findings = append(findings, childReferenceFindings(item, byID)...)
-	findings = append(findings, cycleFindings(item, byID)...)
+	if analysis.blockedByCycle[item.ObligationID] {
+		findings = append(findings, fmt.Sprintf("obligation graph cycle prevents analysis for %s", item.ObligationID))
+	} else if analysis.cycleAffected[item.ObligationID] {
+		findings = append(findings, fmt.Sprintf("obligation graph depth is undefined because %s reaches a cycle", item.ObligationID))
+	}
 	findings = append(findings, crossRequirementFindings(item, byID)...)
 	findings = append(findings, nonRouteBearingChildFindings(item, byID)...)
 	sort.Strings(findings)
 	_, routeBearing := routeBearingKinds[item.ObligationKind]
 	return obligation{
 		obligationInput:              item,
-		GraphDepth:                   graphDepth(item.ObligationID, byID, map[string]struct{}{}),
+		GraphDepth:                   optionalDepth(analysis.depthByID[item.ObligationID], !analysis.cycleAffected[item.ObligationID]),
 		RouteBearing:                 routeBearing,
 		StructuralFindings:           findings,
-		TransitiveChildObligationIDs: transitiveChildIDs(item.ObligationID, byID, map[string]struct{}{}),
+		TransitiveChildObligationIDs: append([]string{}, analysis.transitiveByID[item.ObligationID]...),
 	}
 }
 
@@ -344,13 +375,6 @@ func childReferenceFindings(item obligationInput, byID map[string]obligationInpu
 	return findings
 }
 
-func cycleFindings(item obligationInput, byID map[string]obligationInput) []string {
-	if hasCycle(item.ObligationID, item.ObligationID, byID, map[string]struct{}{}) {
-		return []string{fmt.Sprintf("obligation graph contains a cycle through %s", item.ObligationID)}
-	}
-	return []string{}
-}
-
 func crossRequirementFindings(item obligationInput, byID map[string]obligationInput) []string {
 	findings := []string{}
 	for _, childID := range item.ChildObligationIDs {
@@ -379,78 +403,6 @@ func nonRouteBearingChildFindings(item obligationInput, byID map[string]obligati
 	return findings
 }
 
-func hasCycle(rootID string, currentID string, byID map[string]obligationInput, visited map[string]struct{}) bool {
-	current, ok := byID[currentID]
-	if !ok {
-		return false
-	}
-	for _, childID := range current.ChildObligationIDs {
-		if childID == rootID {
-			return true
-		}
-		if _, seen := visited[childID]; seen {
-			continue
-		}
-		visited[childID] = struct{}{}
-		if hasCycle(rootID, childID, byID, visited) {
-			return true
-		}
-	}
-	return false
-}
-
-func graphDepth(obligationID string, byID map[string]obligationInput, visited map[string]struct{}) int {
-	item, ok := byID[obligationID]
-	if !ok || len(item.ChildObligationIDs) == 0 {
-		return 0
-	}
-	if _, seen := visited[obligationID]; seen {
-		return 0
-	}
-	visited[obligationID] = struct{}{}
-	maxDepth := 0
-	for _, childID := range item.ChildObligationIDs {
-		childVisited := copySet(visited)
-		depth := graphDepth(childID, byID, childVisited)
-		if depth > maxDepth {
-			maxDepth = depth
-		}
-	}
-	return 1 + maxDepth
-}
-
-func transitiveChildIDs(obligationID string, byID map[string]obligationInput, visited map[string]struct{}) []string {
-	item, ok := byID[obligationID]
-	if !ok {
-		return []string{}
-	}
-	if _, seen := visited[obligationID]; seen {
-		return []string{}
-	}
-	visited[obligationID] = struct{}{}
-	ids := map[string]struct{}{}
-	for _, childID := range item.ChildObligationIDs {
-		ids[childID] = struct{}{}
-		for _, nestedID := range transitiveChildIDs(childID, byID, copySet(visited)) {
-			ids[nestedID] = struct{}{}
-		}
-	}
-	result := make([]string, 0, len(ids))
-	for id := range ids {
-		result = append(result, id)
-	}
-	sort.Strings(result)
-	return result
-}
-
-func copySet(input map[string]struct{}) map[string]struct{} {
-	output := map[string]struct{}{}
-	for key := range input {
-		output[key] = struct{}{}
-	}
-	return output
-}
-
 func obligationsJSON(obligations []obligation) []any {
 	result := make([]any, 0, len(obligations))
 	for _, item := range obligations {
@@ -466,7 +418,7 @@ func obligationJSON(item obligation) map[string]any {
 		"delegationRefs":               admit.StringSliceToAny(item.DelegationRefs),
 		"evidenceRefs":                 admit.StringSliceToAny(item.EvidenceRefs),
 		"expiryRef":                    nullableStringJSON(item.ExpiryRef),
-		"graphDepth":                   item.GraphDepth,
+		"graphDepth":                   nullableInt(item.GraphDepth),
 		"nonClaims":                    admit.StringSliceToAny(item.NonClaims),
 		"obligationId":                 item.ObligationID,
 		"obligationKind":               item.ObligationKind,
@@ -479,6 +431,21 @@ func obligationJSON(item obligation) map[string]any {
 		"structuralFindings":           admit.StringSliceToAny(item.StructuralFindings),
 		"transitiveChildObligationIds": admit.StringSliceToAny(item.TransitiveChildObligationIDs),
 	}
+}
+
+func optionalDepth(value int, defined bool) *int {
+	if !defined {
+		return nil
+	}
+	result := value
+	return &result
+}
+
+func nullableInt(value *int) any {
+	if value == nil {
+		return nil
+	}
+	return *value
 }
 
 func nullableStringJSON(value *string) any {

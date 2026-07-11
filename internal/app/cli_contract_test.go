@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -17,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const cliContractPublicABISHA256 = "66da4976d622a8f4866585ab0442ff46884ab6ee2001f30618323751852c81d0"
+const cliContractPublicABISHA256 = "9923feb596ae4334e24d728b6156df3dbc6ac3464ed0b593e924a86c4d934b84"
 
 func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	contract := readCLIContract(t)
@@ -142,13 +143,16 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 	commands := []any{}
 	for _, command := range contract.Commands {
 		record := map[string]any{
-			"allowedFlags": stringsAsAny(command.AllowedFlags),
-			"command":      command.Command,
-			"input":        command.Input,
-			"inputPointer": command.InputPointer,
-			"outputModes":  stringsAsAny(command.OutputModes),
-			"scopeClass":   command.ScopeClass,
-			"stdin":        command.Stdin,
+			"allowedFlags":           stringsAsAny(command.AllowedFlags),
+			"command":                command.Command,
+			"exactlyOneOfFlagGroups": stringMatrixAsAny(command.ExactlyOneOfFlagGroups),
+			"flagValueRequirements":  command.FlagValueRequirements,
+			"input":                  command.Input,
+			"inputPointer":           command.InputPointer,
+			"outputModes":            stringsAsAny(command.OutputModes),
+			"requiredFlags":          stringsAsAny(command.RequiredFlags),
+			"scopeClass":             command.ScopeClass,
+			"stdin":                  command.Stdin,
 		}
 		if command.AgentEnvelope != nil {
 			record["agentEnvelope"] = *command.AgentEnvelope
@@ -216,6 +220,20 @@ func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
 			name: "output drift",
 			descriptors: mutateDescriptor("adoption-checklist", func(descriptor *commandDescriptor) {
 				descriptor.outputModes = []string{"json", "markdown"}
+			}),
+			commands: contract.Commands,
+		},
+		{
+			name: "exactly-one constraint drift",
+			descriptors: mutateDescriptor("conformance-profile", func(descriptor *commandDescriptor) {
+				descriptor.exactlyOneOfFlagGroups = nil
+			}),
+			commands: contract.Commands,
+		},
+		{
+			name: "flag value requirement drift",
+			descriptors: mutateDescriptor("conformance-profile", func(descriptor *commandDescriptor) {
+				descriptor.flagValueRequirements = nil
 			}),
 			commands: contract.Commands,
 		},
@@ -380,6 +398,15 @@ func commandDescriptorContractParityProblems(descriptors []commandDescriptor, co
 		if !equalStringSets(descriptor.allowedFlags, command.AllowedFlags) {
 			problems = append(problems, "flag drift "+name)
 		}
+		if !equalStringSets(descriptor.requiredFlags, command.RequiredFlags) {
+			problems = append(problems, "required flag drift "+name)
+		}
+		if !reflect.DeepEqual(descriptor.exactlyOneOfFlagGroups, command.ExactlyOneOfFlagGroups) {
+			problems = append(problems, "exactly-one flag group drift "+name)
+		}
+		if !reflect.DeepEqual(descriptor.flagValueRequirements, command.FlagValueRequirements) {
+			problems = append(problems, "flag value requirement drift "+name)
+		}
 		if !equalStringSets(descriptor.outputModes, command.OutputModes) {
 			problems = append(problems, "output mode drift "+name)
 		}
@@ -417,8 +444,33 @@ func commandDescriptorTopologyProblems(descriptors []commandDescriptor) []string
 		if len(descriptor.semanticOwnerDirs) == 0 {
 			problems = append(problems, "missing semantic owner dirs "+descriptor.name)
 		}
-		if !isSortedUnique(descriptor.allowedFlags) || !isSortedUnique(descriptor.outputModes) || !isSortedUnique(descriptor.semanticOwnerDirs) || !isSortedUnique(descriptor.semanticAppTests) {
+		if !isSortedUnique(descriptor.allowedFlags) || !isSortedUnique(descriptor.requiredFlags) || !isSortedUnique(descriptor.outputModes) || !isSortedUnique(descriptor.semanticOwnerDirs) || !isSortedUnique(descriptor.semanticAppTests) {
 			problems = append(problems, "unsorted descriptor list "+descriptor.name)
+		}
+		for _, requiredFlag := range descriptor.requiredFlags {
+			if !slices.Contains(descriptor.allowedFlags, requiredFlag) {
+				problems = append(problems, "required flag is not allowed "+descriptor.name+" "+requiredFlag)
+			}
+		}
+		for _, group := range descriptor.exactlyOneOfFlagGroups {
+			if len(group) < 2 || !isSortedUnique(group) {
+				problems = append(problems, "invalid exactly-one flag group "+descriptor.name)
+			}
+			for _, flag := range group {
+				if !slices.Contains(descriptor.allowedFlags, flag) {
+					problems = append(problems, "exactly-one flag is not allowed "+descriptor.name+" "+flag)
+				}
+			}
+		}
+		for _, requirement := range descriptor.flagValueRequirements {
+			if requirement.Flag == "" || requirement.Value == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) {
+				problems = append(problems, "invalid flag value requirement "+descriptor.name)
+			}
+			for _, flag := range requirement.RequiredFlags {
+				if !slices.Contains(descriptor.allowedFlags, flag) {
+					problems = append(problems, "value-required flag is not allowed "+descriptor.name+" "+flag)
+				}
+			}
 		}
 		if descriptor.input == commandInputNone && descriptor.runner == commandRunnerGenericInput {
 			problems = append(problems, "no-input command uses generic input runner "+descriptor.name)
@@ -441,6 +493,9 @@ func cloneCLIContractCommands(commands []cliContractCommand) []cliContractComman
 	for _, command := range commands {
 		copied := command
 		copied.AllowedFlags = cloneStrings(command.AllowedFlags)
+		copied.RequiredFlags = cloneStrings(command.RequiredFlags)
+		copied.ExactlyOneOfFlagGroups = cloneStringMatrix(command.ExactlyOneOfFlagGroups)
+		copied.FlagValueRequirements = cloneFlagValueRequirements(command.FlagValueRequirements)
 		copied.OutputModes = cloneStrings(command.OutputModes)
 		clone = append(clone, copied)
 	}
@@ -570,6 +625,85 @@ func TestConformanceProfileContractRejectsHTMLMode(t *testing.T) {
 	}
 }
 
+func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
+	tests := []struct {
+		name       string
+		descriptor string
+		valid      func() error
+		invalid    func() error
+	}{
+		{
+			name: "adoption mode required", descriptor: "adoption-contract-envelope",
+			valid: func() error {
+				_, err := parseAdoptionContractArgs([]string{"--input", "-", "--mode", "adoption"})
+				return err
+			},
+			invalid: func() error { _, err := parseAdoptionContractArgs([]string{"--input", "-"}); return err },
+		},
+		{
+			name: "conformance exactly one mode", descriptor: "conformance-profile",
+			valid: func() error {
+				_, err := parseConformanceProfileArgs([]string{"--input", "-", "--profile", "core"})
+				return err
+			},
+			invalid: func() error {
+				_, err := parseConformanceProfileArgs([]string{"--input", "-", "--list", "--verify"})
+				return err
+			},
+		},
+		{
+			name: "resolver exactly one environment policy", descriptor: "requirement-proof-resolver",
+			valid: func() error {
+				_, err := parseRequirementProofResolverArgs([]string{"--input", "-", "--empty-local-environment-policy"})
+				return err
+			},
+			invalid: func() error {
+				_, err := parseRequirementProofResolverArgs([]string{"--input", "-", "--empty-local-environment-policy", "--local-environment-class", "local-go"})
+				return err
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			descriptor, ok := commandDescriptorFor(test.descriptor)
+			if !ok || (len(descriptor.requiredFlags) == 0 && len(descriptor.exactlyOneOfFlagGroups) == 0) {
+				t.Fatalf("%s lacks a machine-readable flag constraint", test.descriptor)
+			}
+			if err := test.valid(); err != nil {
+				t.Fatalf("valid constrained argv rejected: %v", err)
+			}
+			if err := test.invalid(); err == nil {
+				t.Fatal("invalid constrained argv was accepted")
+			}
+		})
+	}
+	if _, err := parseConformanceProfileArgs([]string{"--input", "-", "--list", "--format", "markdown"}); err == nil {
+		t.Fatal("conformance markdown without --profile was accepted")
+	}
+	usage := commandUsageLine(commandDescriptorByName["adoption-contract-envelope"])
+	if !strings.Contains(usage, " --mode <mode>") || strings.Contains(usage, "[--mode <mode>]") {
+		t.Fatalf("required --mode rendered as optional: %s", usage)
+	}
+}
+
+func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
+	cases := []struct {
+		command string
+		args    []string
+	}{
+		{command: "adoption-contract-envelope", args: []string{"--input", "-"}},
+		{command: "conformance-profile", args: []string{"--input", "-", "--list", "--verify"}},
+		{command: "requirement-proof-resolver", args: []string{"--input", "-"}},
+		{command: "stack-preset", args: nil},
+	}
+	for _, item := range cases {
+		descriptor := commandDescriptorByName[item.command]
+		if err := validateFlagConstraints(descriptor, item.args); err == nil {
+			t.Fatalf("%s invalid argv was admitted by descriptor owner", item.command)
+		}
+	}
+}
+
 type cliContract struct {
 	Commands        []cliContractCommand `json:"commands"`
 	ContractID      string               `json:"contractId"`
@@ -579,17 +713,20 @@ type cliContract struct {
 }
 
 type cliContractCommand struct {
-	AgentEnvelope    *bool    `json:"agentEnvelope,omitempty"`
-	AllowedFlags     []string `json:"allowedFlags"`
-	Command          string   `json:"command"`
-	ContractEnvelope *bool    `json:"contractEnvelope,omitempty"`
-	Input            string   `json:"input"`
-	InputContract    any      `json:"inputContract,omitempty"`
-	InputPointer     bool     `json:"inputPointer"`
-	OutputContract   any      `json:"outputContract,omitempty"`
-	OutputModes      []string `json:"outputModes"`
-	ScopeClass       string   `json:"scopeClass"`
-	Stdin            bool     `json:"stdin"`
+	AgentEnvelope          *bool                  `json:"agentEnvelope,omitempty"`
+	AllowedFlags           []string               `json:"allowedFlags"`
+	Command                string                 `json:"command"`
+	ContractEnvelope       *bool                  `json:"contractEnvelope,omitempty"`
+	ExactlyOneOfFlagGroups [][]string             `json:"exactlyOneOfFlagGroups,omitempty"`
+	FlagValueRequirements  []flagValueRequirement `json:"flagValueRequirements,omitempty"`
+	Input                  string                 `json:"input"`
+	InputContract          any                    `json:"inputContract,omitempty"`
+	InputPointer           bool                   `json:"inputPointer"`
+	OutputContract         any                    `json:"outputContract,omitempty"`
+	OutputModes            []string               `json:"outputModes"`
+	RequiredFlags          []string               `json:"requiredFlags,omitempty"`
+	ScopeClass             string                 `json:"scopeClass"`
+	Stdin                  bool                   `json:"stdin"`
 }
 
 func readCLIContract(t *testing.T) cliContract {
@@ -622,7 +759,19 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(record["processContract"], &processContract); err != nil {
 		t.Fatalf("decode process contract: %v", err)
 	}
-	assertKeys(t, "CLI process contract", keys(processContract), []string{"failureExitCode", "stderr", "stdout", "successExitCode"})
+	assertKeys(t, "CLI process contract", keys(processContract), []string{"failureExitCode", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	var helpGrammar map[string]any
+	if err := json.Unmarshal(processContract["helpGrammar"], &helpGrammar); err != nil {
+		t.Fatalf("decode help grammar: %v", err)
+	}
+	assertKeys(t, "CLI help grammar", keysAny(helpGrammar), []string{"commandHelpFlags", "helpCatalogFormsSource", "helpCommandPositionalTarget", "helpReadsCommandInput", "rootHelpFlags"})
+	assertStringSet(t, stringsFromAny(helpGrammar["rootHelpFlags"].([]any)), []string{"--help", "-h"}, "root help flags")
+	assertStringSet(t, stringsFromAny(helpGrammar["commandHelpFlags"].([]any)), []string{"--help", "-h"}, "command help flags")
+	if helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command" ||
+		helpGrammar["helpCatalogFormsSource"] != "proofkit/command-families.v1.json" ||
+		helpGrammar["helpReadsCommandInput"] != false {
+		t.Fatalf("CLI help grammar does not describe runtime help routing: %#v", helpGrammar)
+	}
 	var successExitCode int
 	if err := json.Unmarshal(processContract["successExitCode"], &successExitCode); err != nil || successExitCode != 0 {
 		t.Fatalf("successExitCode=%d err=%v, want 0", successExitCode, err)
@@ -636,17 +785,20 @@ func assertCLIContractSchema(t *testing.T) {
 		t.Fatalf("decode raw CLI commands: %v", err)
 	}
 	allowedCommandKeys := map[string]struct{}{
-		"agentEnvelope":    {},
-		"allowedFlags":     {},
-		"command":          {},
-		"contractEnvelope": {},
-		"input":            {},
-		"inputContract":    {},
-		"inputPointer":     {},
-		"outputContract":   {},
-		"outputModes":      {},
-		"scopeClass":       {},
-		"stdin":            {},
+		"agentEnvelope":          {},
+		"allowedFlags":           {},
+		"command":                {},
+		"contractEnvelope":       {},
+		"exactlyOneOfFlagGroups": {},
+		"flagValueRequirements":  {},
+		"input":                  {},
+		"inputContract":          {},
+		"inputPointer":           {},
+		"outputContract":         {},
+		"outputModes":            {},
+		"requiredFlags":          {},
+		"scopeClass":             {},
+		"stdin":                  {},
 	}
 	for index, command := range commands {
 		for key := range command {
@@ -660,6 +812,14 @@ func assertCLIContractSchema(t *testing.T) {
 			}
 		}
 	}
+}
+
+func stringMatrixAsAny(values [][]string) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, stringsAsAny(value))
+	}
+	return out
 }
 
 func TestRequirementProofSourceSetContractDescribesProjection(t *testing.T) {
@@ -804,6 +964,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"missing_semantic_anchor",
 		"mock_tests_mock",
 		"over_broad_integration",
+		"proof_route_candidate",
 		"routing_smoke_only",
 		"selector_fragility",
 		"snapshot_without_oracle",
@@ -1097,6 +1258,14 @@ func assertKeys(t *testing.T, context string, got []string, want []string) {
 }
 
 func keys(record map[string]json.RawMessage) []string {
+	result := make([]string, 0, len(record))
+	for key := range record {
+		result = append(result, key)
+	}
+	return result
+}
+
+func keysAny(record map[string]any) []string {
 	result := make([]string, 0, len(record))
 	for key := range record {
 		result = append(result, key)

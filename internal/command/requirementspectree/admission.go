@@ -3,9 +3,15 @@ package requirementspectree
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+)
+
+const (
+	maxSpecTreeNodes    = 4096
+	maxSpecTreeEdges    = 8192
+	maxSpecTreeOverlays = 4096
+	maxSpecTreeDepth    = 512
 )
 
 func admitInput(raw any) (admittedInput, error) {
@@ -13,11 +19,11 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("requirement spec tree input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"callerNonClaims", "edges", "nodes", "overlays", "rootNodeId", "schemaVersion", "treeId"}, "requirement spec tree input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"callerAnnotations", "edges", "nodes", "overlays", "rootNodeId", "schemaVersion", "treeId"}, "requirement spec tree input"); err != nil {
 		return admittedInput{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return admittedInput{}, fmt.Errorf("requirement spec tree schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return admittedInput{}, fmt.Errorf("requirement spec tree schemaVersion must be 2")
 	}
 	treeID, err := admit.RuleID(record["treeId"], "requirement spec tree treeId")
 	if err != nil {
@@ -39,17 +45,17 @@ func admitInput(raw any) (admittedInput, error) {
 	if err != nil {
 		return admittedInput{}, err
 	}
-	callerNonClaims, err := admitCallerNonClaims(record["callerNonClaims"], "requirement spec tree callerNonClaims")
+	callerAnnotations, err := admitCallerAnnotations(record["callerAnnotations"], "requirement spec tree callerAnnotations")
 	if err != nil {
 		return admittedInput{}, err
 	}
 	return admittedInput{
-		CallerNonClaims: callerNonClaims,
-		Edges:           edges,
-		Nodes:           nodes,
-		Overlays:        overlays,
-		RootNodeID:      rootNodeID,
-		TreeID:          treeID,
+		CallerAnnotations: callerAnnotations,
+		Edges:             edges,
+		Nodes:             nodes,
+		Overlays:          overlays,
+		RootNodeID:        rootNodeID,
+		TreeID:            treeID,
 	}, nil
 }
 
@@ -57,6 +63,9 @@ func admitNodes(raw any) ([]node, error) {
 	values, ok := raw.([]any)
 	if !ok || len(values) == 0 {
 		return nil, fmt.Errorf("requirement spec tree nodes must be a non-empty array")
+	}
+	if len(values) > maxSpecTreeNodes {
+		return nil, fmt.Errorf("requirement spec tree nodes exceed the %d-node limit", maxSpecTreeNodes)
 	}
 	nodes := make([]node, 0, len(values))
 	for index, value := range values {
@@ -81,7 +90,7 @@ func admitNodes(raw any) ([]node, error) {
 
 func admitNode(record map[string]any, index int) (node, error) {
 	context := fmt.Sprintf("requirement spec tree nodes[%d]", index)
-	if err := admit.KnownKeys(record, []string{"callerNonClaims", "displayOrder", "label", "nodeId", "nodeKind", "sourceRefs"}, context); err != nil {
+	if err := admit.KnownKeys(record, []string{"callerAnnotations", "displayOrder", "label", "nodeId", "nodeKind", "sourceRefs"}, context); err != nil {
 		return node{}, err
 	}
 	nodeID, err := admit.RuleID(record["nodeId"], context+" nodeId")
@@ -104,17 +113,17 @@ func admitNode(record map[string]any, index int) (node, error) {
 	if err != nil {
 		return node{}, err
 	}
-	callerNonClaims, err := admitCallerNonClaims(record["callerNonClaims"], fmt.Sprintf("requirement spec tree node %s callerNonClaims", nodeID))
+	callerAnnotations, err := admitCallerAnnotations(record["callerAnnotations"], fmt.Sprintf("requirement spec tree node %s callerAnnotations", nodeID))
 	if err != nil {
 		return node{}, err
 	}
 	return node{
-		CallerNonClaims: callerNonClaims,
-		DisplayOrder:    displayOrder,
-		Label:           label,
-		NodeID:          nodeID,
-		NodeKind:        nodeKind,
-		SourceRefs:      sourceRefs,
+		CallerAnnotations: callerAnnotations,
+		DisplayOrder:      displayOrder,
+		Label:             label,
+		NodeID:            nodeID,
+		NodeKind:          nodeKind,
+		SourceRefs:        sourceRefs,
 	}, nil
 }
 
@@ -206,6 +215,9 @@ func admitEdges(raw any) ([]edge, error) {
 	if !ok {
 		return nil, fmt.Errorf("requirement spec tree edges must be an array")
 	}
+	if len(values) > maxSpecTreeEdges {
+		return nil, fmt.Errorf("requirement spec tree edges exceed the %d-edge limit", maxSpecTreeEdges)
+	}
 	edges := make([]edge, 0, len(values))
 	for index, value := range values {
 		record, ok := value.(map[string]any)
@@ -239,6 +251,9 @@ func admitOverlays(raw any) ([]overlay, error) {
 	if !ok {
 		return nil, fmt.Errorf("requirement spec tree overlays must be an array")
 	}
+	if len(values) > maxSpecTreeOverlays {
+		return nil, fmt.Errorf("requirement spec tree overlays exceed the %d-overlay limit", maxSpecTreeOverlays)
+	}
 	overlays := make([]overlay, 0, len(values))
 	for index, value := range values {
 		record, ok := value.(map[string]any)
@@ -259,7 +274,7 @@ func admitOverlays(raw any) ([]overlay, error) {
 
 func admitOverlay(record map[string]any, index int) (overlay, error) {
 	context := fmt.Sprintf("requirement spec tree overlays[%d]", index)
-	if err := admit.KnownKeys(record, []string{"callerNonClaims", "digestAlgorithm", "label", "overlayId", "overlayKind", "refDigest", "refId", "refKind", "refPath", "targetNodeId"}, context); err != nil {
+	if err := admit.KnownKeys(record, []string{"callerAnnotations", "digestAlgorithm", "label", "overlayId", "overlayKind", "refDigest", "refId", "refKind", "refPath", "targetNodeId"}, context); err != nil {
 		return overlay{}, err
 	}
 	overlayID, err := admit.RuleID(record["overlayId"], context+" overlayId")
@@ -286,18 +301,18 @@ func admitOverlay(record map[string]any, index int) (overlay, error) {
 	if err != nil {
 		return overlay{}, err
 	}
-	callerNonClaims, err := admitCallerNonClaims(record["callerNonClaims"], fmt.Sprintf("requirement spec tree overlay %s callerNonClaims", overlayID))
+	callerAnnotations, err := admitCallerAnnotations(record["callerAnnotations"], fmt.Sprintf("requirement spec tree overlay %s callerAnnotations", overlayID))
 	if err != nil {
 		return overlay{}, err
 	}
 	item := overlay{
-		CallerNonClaims: callerNonClaims,
-		Label:           label,
-		OverlayID:       overlayID,
-		OverlayKind:     overlayKind,
-		RefID:           refID,
-		RefKind:         refKind,
-		TargetNodeID:    targetNodeID,
+		CallerAnnotations: callerAnnotations,
+		Label:             label,
+		OverlayID:         overlayID,
+		OverlayKind:       overlayKind,
+		RefID:             refID,
+		RefKind:           refKind,
+		TargetNodeID:      targetNodeID,
 	}
 	if hasKey(record, "refPath") {
 		refPathText, err := admit.NonEmptyText(record["refPath"], fmt.Sprintf("requirement spec tree overlay %s refPath", overlayID))
@@ -327,27 +342,12 @@ func admitOverlay(record map[string]any, index int) (overlay, error) {
 	return item, nil
 }
 
-func admitCallerNonClaims(raw any, context string) ([]string, error) {
+func admitCallerAnnotations(raw any, context string) ([]string, error) {
 	values, err := admit.TextArray(raw, context, true)
 	if err != nil {
 		return nil, err
 	}
-	for _, value := range values {
-		if containsAuthorityClaim(value) {
-			return nil, fmt.Errorf("%s must not contain authority-confusing claims", context)
-		}
-	}
 	return admit.SortedText(values, context, true)
-}
-
-func containsAuthorityClaim(value string) bool {
-	normalized := strings.ToLower(value)
-	for _, phrase := range authorityClaimPhrases {
-		if strings.Contains(normalized, phrase) {
-			return true
-		}
-	}
-	return false
 }
 
 func digest(raw any, context string) (string, error) {

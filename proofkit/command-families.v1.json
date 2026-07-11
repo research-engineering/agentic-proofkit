@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "proofkit.command-families.v1",
+  "families": [
+    {
+      "familyId": "adoption-lifecycle",
+      "label": "Adoption lifecycle",
+      "purpose": "Select and assess repository adoption stages.",
+      "commands": [
+        "adoption-checklist",
+        "adoption-doctor",
+        "adoption-workflow-plan",
+        "gradual-adoption",
+        "gradual-adoption-bootstrap",
+        "gradual-adoption-guidance",
+        "init",
+        "pilot-admission"
+      ]
+    },
+    {
+      "familyId": "cli-metadata-and-conformance",
+      "label": "CLI metadata and conformance",
+      "purpose": "Expose, route, generate, and self-check CLI contract surfaces.",
+      "commands": [
+        "agent-route",
+        "conformance-profile",
+        "help",
+        "json-report-cli-adapter-source",
+        "self-check"
+      ]
+    },
+    {
+      "familyId": "deployment-and-readiness",
+      "label": "Deployment and readiness",
+      "purpose": "Admit deployment evidence and bounded closeout decisions.",
+      "commands": [
+        "branch-authority",
+        "completion-criteria",
+        "deployment-evidence-admission",
+        "readiness-closeout"
+      ]
+    },
+    {
+      "familyId": "migration-and-retirement",
+      "label": "Migration and retirement",
+      "purpose": "Prove parity and plan retirement of consumer-local infrastructure.",
+      "commands": [
+        "migration-parity-admission",
+        "migration-plan"
+      ]
+    },
+    {
+      "familyId": "proof-artifact-governance",
+      "label": "Proof artifact governance",
+      "purpose": "Govern custom rules, document lifecycle, freshness, and witness plans.",
+      "commands": [
+        "custom-rule-boundary",
+        "document-lifecycle-boundary",
+        "rendered-artifact-freshness",
+        "witness-plan",
+        "witness-scheduler-plan"
+      ]
+    },
+    {
+      "familyId": "proof-binding-topology",
+      "label": "Proof binding topology",
+      "purpose": "Admit, resolve, partition, and inspect requirement proof topology.",
+      "commands": [
+        "binding-partition",
+        "evidence-graph",
+        "proof-slice",
+        "requirement-bindings",
+        "requirement-proof-resolver",
+        "requirement-proof-source-set",
+        "spec-proof-bundle-admission"
+      ]
+    },
+    {
+      "familyId": "receipt-authority",
+      "label": "Receipt authority",
+      "purpose": "Admit receipts, producer compatibility, currentness, and trust classes.",
+      "commands": [
+        "producer-policy-self-proof",
+        "proof-receipt-admission",
+        "receipt-currentness-scope",
+        "receipt-producer-admission",
+        "receipt-trust-class"
+      ]
+    },
+    {
+      "familyId": "release-artifact-consumption",
+      "label": "Release artifact consumption",
+      "purpose": "Check package release facts and external or registry consumption.",
+      "commands": [
+        "external-consumer",
+        "registry-consumer",
+        "registry-consumer-proof-input-compose",
+        "release-authority"
+      ]
+    },
+    {
+      "familyId": "repository-facts-and-scanning",
+      "label": "Repository facts and scanning",
+      "purpose": "Admit explicit repository facts and bounded policy scans.",
+      "commands": [
+        "repo-profile-admission",
+        "secret-scan",
+        "text-policy",
+        "typescript-public-api-surfaces",
+        "workspace-manifest-facts"
+      ]
+    },
+    {
+      "familyId": "requirement-navigation-and-rendering",
+      "label": "Requirement navigation and rendering",
+      "purpose": "Build and present requirement, proof, and coverage views.",
+      "commands": [
+        "requirement-browser-server",
+        "requirement-coverage-view",
+        "requirement-proof-view",
+        "requirement-source-view",
+        "requirement-spec-tree",
+        "requirement-spec-tree-view"
+      ]
+    },
+    {
+      "familyId": "requirement-source-lifecycle",
+      "label": "Requirement source lifecycle",
+      "purpose": "Author, admit, transition, and check requirement source claims.",
+      "commands": [
+        "requirement-authoring-plan",
+        "requirement-source-admission",
+        "requirement-source-transition",
+        "spec-overview-claims"
+      ]
+    },
+    {
+      "familyId": "scaffolding-and-capability-capture",
+      "label": "Scaffolding and capability capture",
+      "purpose": "Produce candidate adoption structures and capability seeds.",
+      "commands": [
+        "adoption-contract-envelope",
+        "capability-map-admission",
+        "scaffold-profile-plan",
+        "scaffold-project-structure",
+        "stack-preset"
+      ]
+    },
+    {
+      "familyId": "selective-evidence-and-obligations",
+      "label": "Selective evidence and obligations",
+      "purpose": "Admit selective evidence and decide proof obligations.",
+      "commands": [
+        "obligation-decision",
+        "proof-obligation-algebra",
+        "selective-gate-evidence",
+        "selective-gate-obligation-decision-input"
+      ]
+    },
+    {
+      "familyId": "selective-impact-planning",
+      "label": "Selective impact planning",
+      "purpose": "Convert explicit change facts into bounded verification plans.",
+      "commands": [
+        "changed-path-set",
+        "impact",
+        "requirement-impact-input-compose",
+        "selective-gate-plan"
+      ]
+    },
+    {
+      "familyId": "test-evidence-and-coverage-input",
+      "label": "Test evidence and coverage input",
+      "purpose": "Admit test evidence and compose coverage inputs.",
+      "commands": [
+        "requirement-coverage-input-compose",
+        "test-evidence-inventory"
+      ]
+    },
+    {
+      "familyId": "workspace-topology-and-package-policy",
+      "label": "Workspace topology and package policy",
+      "purpose": "Model workspace topology, shards, and package runtime policy.",
+      "commands": [
+        "package-runtime-dependency-admission",
+        "workspace-changed-package-plan",
+        "workspace-registry",
+        "workspace-shard-partition"
+      ]
+    }
+  ],
+  "helpForms": [
+    "help families",
+    "help family <family-id>"
+  ],
+  "reservedHelpOperands": [
+    "families",
+    "family"
+  ],
+  "nonClaims": [
+    "Command families do not change leaf command dispatch or execution authority.",
+    "Command families do not infer which command a caller should execute.",
+    "Command families group the public command inventory for navigation only."
+  ]
+}

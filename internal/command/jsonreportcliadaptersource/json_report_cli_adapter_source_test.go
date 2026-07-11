@@ -15,7 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:a99667de4613773e941acc6968dd3ed883cec16915ce22e86bbd214ef46bfd8f"
+const expectedTypeScriptSourceSha256 = "sha256:a3b55d9b408d13bc0094dd08c21d9f29a8c9662bab7f7bb2a864b16e9d40ddbb"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -130,9 +130,10 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"stdout: child.stdout",
 		"stderr: child.stderr",
 		"value: parseProofkitJsonStrict(jsonText)",
-		"const outputPath = outputPathFromArgs(args)",
+		"const {child, outputFile} = runProofkitCommand(command, input, args, options)",
 		"function outputPathFromArgs(args: readonly string[])",
-		"function resolveOutputPath",
+		"function admitWritableOutputTarget",
+		"prepared = prepareOutputArgs(options.cwd, args)",
 		"if (child.status !== 0 && child.stdout.trim().length === 0) {",
 	} {
 		if !strings.Contains(source, required) {
@@ -251,6 +252,10 @@ process.stdin.on("end", () => {
     process.stdout.write("text result");
     process.exit(0);
   }
+  if (command === "text-fail") {
+    process.stderr.write("text process failure");
+    process.exit(2);
+  }
   if (command === "json-no-input") {
     if (process.argv.includes("--input")) {
       process.stderr.write("unexpected input flag");
@@ -266,7 +271,8 @@ process.stdin.on("end", () => {
 
 func generatedAdapterHarnessSource(fakeProofkitPath string) string {
 	return `import assert from "node:assert/strict";
-import { writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   formatProofkitCliError,
   parseProofkitJsonReportCli,
@@ -283,12 +289,20 @@ import {
 
 const fakeProofkitPath = ` + quoteJavaScriptString(fakeProofkitPath) + `;
 const redactionFixtures = ` + redactionFixturesLiteral() + `;
+const repositoryRoot = "repository";
+const outsideRoot = "outside";
+mkdirSync(repositoryRoot);
+mkdirSync(outsideRoot);
 
 const parsed = parseProofkitJsonReportCli(["--input", "in.json", "--output", "out.json"], {
   flags: [{flag: "--input", key: "inputPath", required: true}],
 });
 assert.equal(parsed.inputPath, "in.json");
 assert.equal(parsed.outputPath, "out.json");
+assert.throws(
+  () => parseProofkitJsonReportCli(["--output", "first.json", "--output", "second.json"], {flags: []}),
+  /at most once/,
+);
 assert.throws(() => parseProofkitJsonReportCli(["--unknown"], {flags: []}), /unknown argument/);
 assert.throws(() => parseProofkitJsonReportCli([], {flags: [{flag: "--input", key: "inputPath", required: true}]}), /missing required/);
 let helpText = "";
@@ -304,11 +318,75 @@ assert.throws(
 assert.equal(helpText, "help text");
 
 assert.equal(proofkitStableJsonString({z: 1, a: true}), "{\n  \"a\": true,\n  \"z\": 1\n}\n");
+const prototypeKey = JSON.parse('{"__proto__":{"polluted":true}}');
+assert.equal(proofkitStableJsonString(prototypeKey), '{\n  "__proto__": {\n    "polluted": true\n  }\n}\n');
+assert.equal(({}).polluted, undefined);
 assert.throws(() => proofkitStableJsonValue(Number.POSITIVE_INFINITY), /non-finite/);
 assert.throws(() => proofkitStableJsonValue(9007199254740993), /unsafe integer/);
+const cyclic = {};
+cyclic["self"] = cyclic;
+assert.throws(() => proofkitStableJsonValue(cyclic), /cycles/);
+
+function nestedJson(kind, wrappers) {
+  let value = "0";
+  for (let index = 0; index < wrappers; index += 1) {
+    value = kind === "array" || (kind === "mixed" && index % 2 === 0) ? "[" + value + "]" : "{\"value\":" + value + "}";
+  }
+  return value;
+}
+
+function nestedStableValue(kind, wrappers) {
+  let value = 0;
+  for (let index = 0; index < wrappers; index += 1) {
+    value = kind === "array" || (kind === "mixed" && index % 2 === 0) ? [value] : {value};
+  }
+  return value;
+}
+
+for (const kind of ["array", "object", "mixed"]) {
+  assert.doesNotThrow(() => parseProofkitJsonStrict(nestedJson(kind, 511)), kind + " JSON must pass exactly at depth 512");
+  assert.throws(() => parseProofkitJsonStrict(nestedJson(kind, 512)), /nesting depth limit/, kind + " JSON must fail at depth 513");
+  assert.doesNotThrow(() => proofkitStableJsonValue(nestedStableValue(kind, 511)), kind + " value must pass exactly at depth 512");
+  assert.throws(() => proofkitStableJsonValue(nestedStableValue(kind, 512)), /nesting depth limit/, kind + " value must fail at depth 513");
+}
+
+assert.throws(() => proofkitStableJsonValue(new Date()), /plain or null prototype/);
+const customPrototype = Object.create({inherited: true});
+customPrototype.value = 1;
+assert.throws(() => proofkitStableJsonValue(customPrototype), /plain or null prototype/);
+const sparseArray = new Array(1);
+assert.throws(() => proofkitStableJsonValue(sparseArray), /dense/);
+const customPropertyArray = [1];
+customPropertyArray.extra = 2;
+assert.throws(() => proofkitStableJsonValue(customPropertyArray), /custom properties/);
+const customNumericPropertyArray = [1];
+customNumericPropertyArray["4294967295"] = 2;
+assert.throws(() => proofkitStableJsonValue(customNumericPropertyArray), /custom properties/);
+const symbolArray = [1];
+symbolArray[Symbol("secret")] = 2;
+assert.throws(() => proofkitStableJsonValue(symbolArray), /custom properties/);
+const symbolObject = {value: 1};
+symbolObject[Symbol("secret")] = 2;
+assert.throws(() => proofkitStableJsonValue(symbolObject), /symbol keys/);
+const hiddenObject = {value: 1};
+Object.defineProperty(hiddenObject, "hidden", {enumerable: false, value: 2});
+assert.throws(() => proofkitStableJsonValue(hiddenObject), /own data properties/);
+let accessorExecutions = 0;
+const accessorObject = {};
+Object.defineProperty(accessorObject, "value", {enumerable: true, get: () => { accessorExecutions += 1; return 1; }});
+assert.throws(() => proofkitStableJsonValue(accessorObject), /own data properties/);
+const accessorArray = [0];
+Object.defineProperty(accessorArray, "0", {enumerable: true, get: () => { accessorExecutions += 1; return 1; }});
+assert.throws(() => proofkitStableJsonValue(accessorArray), /own data elements/);
+assert.equal(accessorExecutions, 0, "stable JSON must never execute accessors");
 let stdout = "";
 writeProofkitJsonReportOutput({z: 1, a: true}, null, {writeStdout: (value) => { stdout += value; }});
 assert.equal(stdout, "{\n  \"a\": true,\n  \"z\": 1\n}\n");
+assert.throws(() => writeProofkitJsonReportOutput({ok: true}, "missing-cwd.json"), /cwd is required/);
+writeFileSync(repositoryRoot + "/atomic.json", "old");
+writeProofkitJsonReportOutput({z: 1, a: true}, "atomic.json", {cwd: repositoryRoot});
+assert.equal(readFileSync(repositoryRoot + "/atomic.json", "utf8"), "{\n  \"a\": true,\n  \"z\": 1\n}\n");
+assert.deepEqual(readdirSync(repositoryRoot).filter((name) => name.includes(".tmp-")), []);
 
 assert.deepEqual(parseProofkitJsonStrict("{\"a\":1,\"b\":[true,null]}"), {a: 1, b: [true, null]});
 assert.deepEqual(parseProofkitJsonStrict("{\"a\":1.25,\"b\":1e-3}"), {a: 1.25, b: 0.001});
@@ -344,41 +422,113 @@ assert.throws(
     !/abc123456789/.test(error.message) &&
     !/\n/.test(error.message),
 );
+assert.throws(
+  () => readProofkitJsonReportInput("missing-prefix.json", {failureMessagePrefix: "Bearer prefixsecret123456789"}),
+  (error) => error instanceof Error && /Bearer \[REDACTED\]/.test(error.message) && !/prefixsecret123456789/.test(error.message),
+);
 
-const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: "."});
+const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(pass.status, 0);
 assert.equal(pass.value.state, "passed");
 assert.deepEqual(pass.value.received, {a: true, z: 1});
 
-const fail = runProofkitJsonCommand("json-fail", {ok: false}, [], {binaryPath: fakeProofkitPath, cwd: "."});
+const fail = runProofkitJsonCommand("json-fail", {ok: false}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(fail.status, 1);
 assert.equal(fail.value.state, "failed");
 assert.equal(fail.stderr, "diagnostic\n");
 assert.throws(
-  () => runProofkitJsonCommand("json-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: "."}),
+  () => runProofkitJsonCommand("json-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
   /process failure/,
 );
 assert.throws(
-  () => runProofkitJsonCommand("json-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: "."}),
+  () => runProofkitJsonCommand("json-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
   /\[REDACTED\]/,
 );
 assert.throws(
-  () => runProofkitJsonCommand("json-openai-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: "."}),
+  () => runProofkitJsonCommand("json-openai-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
   /\[REDACTED\]/,
 );
-const outputPass = runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "proofkit-output.json"], {binaryPath: fakeProofkitPath, cwd: "."});
+const outputPass = runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "proofkit-output.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(outputPass.status, 0);
 assert.equal(outputPass.stdout, "");
 assert.equal(outputPass.value.outputFile, true);
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "-"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /other than -/,
+);
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "first.json", "--output", "second.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /at most once/,
+);
+assert.equal(existsSync(repositoryRoot + "/first.json"), false);
+assert.equal(existsSync(repositoryRoot + "/second.json"), false);
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", resolve(outsideRoot, "absolute.json")], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /repository-relative/,
+);
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "../outside/traversal.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /inside the repository/,
+);
+assert.equal(existsSync(outsideRoot + "/absolute.json"), false);
+assert.equal(existsSync(outsideRoot + "/traversal.json"), false);
 
-const text = runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: "."});
+mkdirSync(repositoryRoot + "/canonical-parent");
+symlinkSync("canonical-parent", repositoryRoot + "/inside-parent-link", "dir");
+assert.throws(
+  () => runProofkitJsonCommand(
+    "requirement-spec-tree-view",
+    {ok: true},
+    ["--output", "inside-parent-link/canonical.json"],
+    {binaryPath: fakeProofkitPath, cwd: repositoryRoot},
+  ),
+  /non-symlink directories/,
+);
+assert.equal(existsSync(repositoryRoot + "/canonical-parent/canonical.json"), false);
+
+symlinkSync("../outside", repositoryRoot + "/outside-parent-link", "dir");
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "outside-parent-link/escaped.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /non-symlink directories/,
+);
+assert.equal(existsSync(outsideRoot + "/escaped.json"), false);
+writeFileSync(outsideRoot + "/symlink-target.json", "unchanged");
+symlinkSync("../outside/symlink-target.json", repositoryRoot + "/symlink-output.json");
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "symlink-output.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /regular non-symlink file/,
+);
+assert.throws(
+  () => writeProofkitJsonReportOutput({ok: true}, "symlink-output.json", {cwd: repositoryRoot}),
+  /regular non-symlink file/,
+);
+assert.equal(readFileSync(outsideRoot + "/symlink-target.json", "utf8"), "unchanged");
+mkdirSync(repositoryRoot + "/nonregular-output");
+assert.throws(
+  () => runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "nonregular-output"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /regular non-symlink file/,
+);
+
+const text = runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(text.status, 0);
 assert.equal(text.text, "text result");
-const textOutput = runProofkitTextCommand("text-pass", {}, ["--output", "proofkit-output.txt"], {binaryPath: fakeProofkitPath, cwd: "."});
+const textOutput = runProofkitTextCommand("text-pass", {}, ["--output", "proofkit-output.txt"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(textOutput.status, 0);
 assert.equal(textOutput.stdout, "");
 assert.equal(textOutput.text, "text output file");
-const noInput = runProofkitNoInputJsonCommand("json-no-input", [], {binaryPath: fakeProofkitPath, cwd: "."});
+const nestedTextOutput = runProofkitTextCommand("text-pass", {}, ["--output", "new-parent/nested-output.txt"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+assert.equal(nestedTextOutput.status, 0);
+assert.equal(nestedTextOutput.text, "text output file");
+assert.equal(readFileSync(repositoryRoot + "/new-parent/nested-output.txt", "utf8"), "text output file");
+assert.throws(
+  () => runProofkitTextCommand("text-fail", {}, ["--output", "proofkit-output.txt"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /text process failure/,
+);
+assert.throws(
+  () => runProofkitTextCommand("text-pass", {}, ["--output", "../outside.txt"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  /repository-relative|inside the repository/,
+);
+const noInput = runProofkitNoInputJsonCommand("json-no-input", [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(noInput.status, 0);
 assert.equal(noInput.value.inputless, true);
 

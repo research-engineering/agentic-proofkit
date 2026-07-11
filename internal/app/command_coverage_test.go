@@ -142,7 +142,7 @@ func TestCommandCoverageRejectsRouteOnlyWithSemanticProofMetadata(t *testing.T) 
 	}
 }
 
-func TestCommandCoverageInventoryIsAdmittedAndBindsSemanticCommandRefs(t *testing.T) {
+func TestCommandCoverageInventoryIsAdmittedAndBindsProofRouteCandidates(t *testing.T) {
 	result, err := testevidenceinventory.Evaluate(mustCommandCoverageInventory(t))
 	if err != nil {
 		t.Fatalf("CommandCoverageInventory() admission error = %v", err)
@@ -150,23 +150,20 @@ func TestCommandCoverageInventoryIsAdmittedAndBindsSemanticCommandRefs(t *testin
 	if result.ExitCode != 0 {
 		t.Fatalf("CommandCoverageInventory() failed admission: %#v", result.Report.JSONValue())
 	}
-	semanticCommandRefs := map[string]struct{}{}
+	candidateCommandRefs := map[string]struct{}{}
 	routeOnlyCount := 0
 	for _, entry := range result.Inventory.Entries {
 		if len(entry.CommandRefs) != 1 {
 			t.Fatalf("command coverage entry must bind exactly one command ref: %#v", entry)
 		}
 		switch entry.EvidenceClass {
+		case "proof_route_candidate":
+			if len(entry.OwnerInvariantRefs) != 1 || entry.Falsifier != nil || entry.Oracle != nil {
+				t.Fatalf("proof-route candidate laundered semantic evidence: %#v", entry)
+			}
+			candidateCommandRefs[entry.CommandRefs[0]] = struct{}{}
 		case "semantic_falsifier":
-			if entry.Falsifier == nil || entry.Oracle == nil || entry.Oracle.AssertionSummary == "" || entry.Oracle.ExpectedPublicOutcome == "" {
-				t.Fatalf("semantic command coverage entry lacks strong oracle: %#v", entry)
-			}
-			for _, id := range []string{entry.TestID, entry.Falsifier.NegativeCaseID, entry.Oracle.OracleID} {
-				if strings.Contains(id, ".route_") {
-					t.Fatalf("semantic command coverage entry used index-derived proof identity %s: %#v", id, entry)
-				}
-			}
-			semanticCommandRefs[entry.CommandRefs[0]] = struct{}{}
+			t.Fatalf("static command coverage route became semantic evidence: %#v", entry)
 		case "routing_smoke_nonclaim":
 			if len(entry.OwnerInvariantRefs) != 0 || entry.Falsifier != nil || entry.Oracle != nil {
 				t.Fatalf("routing smoke entry claimed semantic evidence: %#v", entry)
@@ -181,13 +178,13 @@ func TestCommandCoverageInventoryIsAdmittedAndBindsSemanticCommandRefs(t *testin
 	}
 	for command := range supportedCommands {
 		ref := CommandCoverageCommandRef(command)
-		if _, ok := semanticCommandRefs[ref]; !ok {
-			t.Fatalf("supported command %s lacks admitted semantic command coverage entry", command)
+		if _, ok := candidateCommandRefs[ref]; !ok {
+			t.Fatalf("supported command %s lacks admitted proof-route candidate", command)
 		}
 	}
 }
 
-func TestCommandCoverageInventoryProjectsExplicitSemanticProofRefs(t *testing.T) {
+func TestCommandCoverageInventoryProjectsStableCandidateRefWithoutSemanticProof(t *testing.T) {
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
@@ -195,96 +192,15 @@ func TestCommandCoverageInventoryProjectsExplicitSemanticProofRefs(t *testing.T)
 		"Registry consumer release proof must be tied to an owner-declared semantic proof identity.",
 	)
 	entry := route.inventoryEntry("registry-consumer", 99)
-	falsifier := entry["falsifier"].(map[string]any)
-	oracle := entry["oracle"].(map[string]any)
 
 	if entry["testId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.route" {
-		t.Fatalf("testId did not use explicit semantic proof ref: %#v", entry["testId"])
+		t.Fatalf("testId did not use stable candidate ref: %#v", entry["testId"])
 	}
-	if falsifier["negativeCaseId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.negative_fixture" {
-		t.Fatalf("negativeCaseId did not use explicit semantic proof ref: %#v", falsifier["negativeCaseId"])
+	if entry["evidenceClass"] != "proof_route_candidate" {
+		t.Fatalf("static route evidenceClass=%#v, want proof_route_candidate", entry["evidenceClass"])
 	}
-	if oracle["oracleId"] != "proofkit.command_coverage.registryconsumer.accepts_registry_release_proof.oracle_assertion" {
-		t.Fatalf("oracleId did not use explicit semantic proof ref: %#v", oracle["oracleId"])
-	}
-	if oracle["expectedPublicOutcome"] != commandCoverageExpectedPublicOutcome {
-		t.Fatalf("expectedPublicOutcome did not use owner-authored semantic proof metadata: %#v", oracle["expectedPublicOutcome"])
-	}
-}
-
-func TestCommandCoverageInventoryAdmissionRejectsWeakSemanticOracle(t *testing.T) {
-	inventory := mustCommandCoverageInventory(t)
-	entries := inventory["entries"].([]any)
-	for _, raw := range entries {
-		entry := raw.(map[string]any)
-		if entry["evidenceClass"] != "semantic_falsifier" {
-			continue
-		}
-		entry["oracle"].(map[string]any)["assertionSummary"] = ""
-		result, err := testevidenceinventory.Evaluate(inventory)
-		if err != nil {
-			t.Fatalf("mutated command coverage inventory admission error = %v", err)
-		}
-		if result.ExitCode == 0 {
-			t.Fatalf("weak semantic command coverage oracle passed admission: %#v", result.Report.JSONValue())
-		}
-		return
-	}
-	t.Fatal("command coverage inventory has no semantic entry to mutate")
-}
-
-func TestCommandCoverageInventoryAdmissionRejectsMissingExpectedOutcome(t *testing.T) {
-	inventory := mustCommandCoverageInventory(t)
-	entries := inventory["entries"].([]any)
-	for _, raw := range entries {
-		entry := raw.(map[string]any)
-		if entry["evidenceClass"] != "semantic_falsifier" {
-			continue
-		}
-		entry["oracle"].(map[string]any)["expectedPublicOutcome"] = ""
-		result, err := testevidenceinventory.Evaluate(inventory)
-		if err != nil {
-			t.Fatalf("mutated command coverage inventory admission error = %v", err)
-		}
-		if result.ExitCode == 0 {
-			t.Fatalf("semantic command coverage oracle without expected public outcome passed admission: %#v", result.Report.JSONValue())
-		}
-		return
-	}
-	t.Fatal("command coverage inventory has no semantic entry to mutate")
-}
-
-func TestCommandCoverageInventoryAdmissionRejectsDuplicateFalsifierEquivalence(t *testing.T) {
-	inventory := mustCommandCoverageInventory(t)
-	entries := inventory["entries"].([]any)
-	var first map[string]any
-	var second map[string]any
-	for _, raw := range entries {
-		entry := raw.(map[string]any)
-		if entry["evidenceClass"] != "semantic_falsifier" {
-			continue
-		}
-		if first == nil {
-			first = entry
-			continue
-		}
-		second = entry
-		break
-	}
-	if first == nil || second == nil {
-		t.Fatal("command coverage inventory needs at least two semantic entries")
-	}
-	second["falsifier"].(map[string]any)["dominanceGroup"] = first["falsifier"].(map[string]any)["dominanceGroup"]
-	second["falsifier"].(map[string]any)["wrongImplementationClassId"] = first["falsifier"].(map[string]any)["wrongImplementationClassId"]
-	second["falsifier"].(map[string]any)["negativeCaseId"] = first["falsifier"].(map[string]any)["negativeCaseId"]
-	second["oracle"].(map[string]any)["oracleKind"] = first["oracle"].(map[string]any)["oracleKind"]
-
-	result, err := testevidenceinventory.Evaluate(inventory)
-	if err != nil {
-		t.Fatalf("mutated command coverage inventory admission error = %v", err)
-	}
-	if result.ExitCode == 0 {
-		t.Fatalf("duplicate falsifier equivalence passed admission: %#v", result.Report.JSONValue())
+	if entry["falsifier"] != nil || entry["oracle"] != nil {
+		t.Fatalf("static route projected semantic proof fields: %#v", entry)
 	}
 }
 
@@ -326,8 +242,26 @@ func TestSkipped(t *testing.T) {
 }
 `)
 	problem := goTestFunctionProblem(filePath, "TestSkipped")
-	if !strings.Contains(problem, "unconditional t.Skip") {
+	if !strings.Contains(problem, "contains t.Skip") {
 		t.Fatalf("unconditional skip was not rejected: %q", problem)
+	}
+}
+
+func TestGoTestFunctionProblemRejectsNestedSkipBeforeAssertion(t *testing.T) {
+	filePath := writeGoTestFixture(t, `package fixture
+
+import "testing"
+
+func TestConditionallySkipped(t *testing.T) {
+	if true {
+		t.Skip("not implemented")
+	}
+	t.Fatal("unreachable")
+}
+`)
+	problem := goTestFunctionProblem(filePath, "TestConditionallySkipped")
+	if !strings.Contains(problem, "contains t.Skip") {
+		t.Fatalf("nested skip was not rejected: %q", problem)
 	}
 }
 
@@ -421,6 +355,40 @@ func TestHasMarker(t *testing.T) {
 `)
 	if problem := goTestSemanticOracleProblem(filePath, "TestHasMarker", marker); problem != "" {
 		t.Fatalf("source-owned marker was rejected: %q", problem)
+	}
+}
+
+func TestUnreachableFatalCannotBecomeSemanticEvidence(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		semanticRouteProof("registryconsumer.unreachable_fatal_regression", commandCoverageExpectedPublicOutcome),
+		"An unreachable assertion must remain candidate-only.",
+	)
+	marker := route.sourceOracleMarker("registry-consumer")
+	source := strings.ReplaceAll(`package fixture
+
+import (
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+)
+
+func TestUnreachableFatal(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "{{MARKER}}")
+	if false {
+		t.Fatal("unreachable")
+	}
+}
+`, "{{MARKER}}", marker)
+	filePath := writeGoTestFixture(t, source)
+	if problem := goTestSemanticOracleProblem(filePath, "TestUnreachableFatal", marker); problem != "" {
+		t.Fatalf("regression fixture must satisfy static route hygiene, got %q", problem)
+	}
+
+	entry := route.inventoryEntry("registry-consumer", 0)
+	if entry["evidenceClass"] != "proof_route_candidate" || entry["falsifier"] != nil || entry["oracle"] != nil {
+		t.Fatalf("unreachable failure assertion became semantic evidence: %#v", entry)
 	}
 }
 

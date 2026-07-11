@@ -56,6 +56,7 @@ func runRequirementBrowserServer(ctx context.Context, args []string, stdin io.Re
 
 func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) {
 	options := requirementBrowserArgs{host: "127.0.0.1", port: 4177}
+	inputPointerSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -65,9 +66,10 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			options.inputPath = args[index+1]
 			index++
 		case "--input-pointer":
-			if index+1 >= len(args) {
+			if inputPointerSeen || index+1 >= len(args) {
 				return requirementBrowserArgs{}, fmt.Errorf("--input-pointer requires a JSON pointer")
 			}
+			inputPointerSeen = true
 			options.inputPointer = args[index+1]
 			index++
 		case "--view":

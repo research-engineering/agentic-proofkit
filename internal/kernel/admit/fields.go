@@ -24,7 +24,10 @@ var (
 	shellControlTokenPattern    = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
 
-const maxDiagnosticRunes = 512
+const (
+	maxDiagnosticRunes = 512
+	maxRuleIDBytes     = 256
+)
 
 type RedactionFixture struct {
 	Input            string
@@ -83,6 +86,9 @@ func RuleID(raw any, context string) (string, error) {
 	value, ok := raw.(string)
 	if !ok || !ruleIDPattern.MatchString(value) {
 		return "", fmt.Errorf("%s must be stable rule identifier text", context)
+	}
+	if len(value) > maxRuleIDBytes {
+		return "", fmt.Errorf("%s exceeds the %d-byte stable identifier limit", context, maxRuleIDBytes)
 	}
 	if ContainsSecretLikeValue(value) {
 		return "", fmt.Errorf("%s must not contain secret-like values", context)

@@ -39,13 +39,25 @@ func BuildViewHTML(raw any) (string, int, error) {
 	if err != nil {
 		return "", 1, err
 	}
+	return buildViewHTML(view), 0, nil
+}
+
+func buildViewHTML(view map[string]any) string {
 	markdownOutput := markdown(view) + "\n"
 	baseHTML := html(view, nil)
 	exports := []browserdoc.ExportFile{
 		browserdoc.Export("Download Markdown", stringValue(view["treeId"])+".md", markdownOutput),
 		browserdoc.Export("Download HTML", stringValue(view["treeId"])+".html", baseHTML),
 	}
-	return html(view, exports), 0, nil
+	return html(view, exports)
+}
+
+func BuildBrowserDocument(raw any) (map[string]any, string, error) {
+	view, err := buildView(raw)
+	if err != nil {
+		return nil, "", err
+	}
+	return view, buildViewHTML(view), nil
 }
 
 func buildView(raw any) (map[string]any, error) {
@@ -60,24 +72,24 @@ func buildView(raw any) (map[string]any, error) {
 	projection := treeProjection(input)
 	nonClaims := append([]string{}, viewNonClaims...)
 	nonClaims = append(nonClaims, boundaryNonClaims...)
-	nonClaims = append(nonClaims, input.CallerNonClaims...)
 	return map[string]any{
-		"authority":                  "presentation_only",
-		"edgeCount":                  len(input.Edges),
-		"maxDepth":                   validation.MaxDepth,
-		"nodeCount":                  len(input.Nodes),
-		"nodes":                      projection.Nodes,
-		"nonClaims":                  admit.StringSliceToAny(sortedUnique(nonClaims)),
-		"overlayCount":               len(input.Overlays),
-		"rootNodeId":                 input.RootNodeID,
-		"schemaVersion":              1,
-		"sourceRefCount":             len(validation.SourceRefIDs),
-		"staleSourceRefCount":        len(validation.StaleSourceRefIDs),
-		"state":                      "passed",
-		"treeId":                     input.TreeID,
-		"viewKind":                   "proofkit.requirement-spec-tree-view",
-		"visibleCallerNonClaims":     admit.StringSliceToAny(allCallerNonClaims(input)),
-		"visibleCallerNonClaimCount": len(allCallerNonClaims(input)),
+		"authority":                 "presentation_only",
+		"edgeCount":                 len(input.Edges),
+		"maxDepth":                  validation.MaxDepth,
+		"nodeCount":                 len(input.Nodes),
+		"nodes":                     projection.Nodes,
+		"nonClaims":                 admit.StringSliceToAny(sortedUnique(nonClaims)),
+		"overlayCount":              len(input.Overlays),
+		"rootNodeId":                input.RootNodeID,
+		"schemaVersion":             2,
+		"sourceRefCount":            len(validation.SourceRefIDs),
+		"staleSourceRefCount":       len(validation.StaleSourceRefIDs),
+		"state":                     "passed",
+		"treeId":                    input.TreeID,
+		"viewKind":                  "proofkit.requirement-spec-tree-view",
+		"callerAnnotations":         admit.StringSliceToAny(allCallerAnnotations(input)),
+		"callerAnnotationCount":     len(allCallerAnnotations(input)),
+		"callerAnnotationAuthority": "untrusted_caller_text",
 	}, nil
 }
 
@@ -110,41 +122,46 @@ func treeProjection(input admittedInput) projectedTree {
 	for _, item := range input.Overlays {
 		overlaysByNode[item.TargetNodeID] = append(overlaysByNode[item.TargetNodeID], item)
 	}
-	depthByID := map[string]int{}
-	assignDepth(input.RootNodeID, 1, childrenByParent, depthByID)
-	orderedIDs := preorder(input.RootNodeID, childrenByParent)
+	orderedIDs, depthByID := preorderWithDepth(input.RootNodeID, childrenByParent, len(input.Nodes))
 	nodes := make([]any, 0, len(orderedIDs))
 	for _, nodeID := range orderedIDs {
 		item := nodeByID[nodeID]
 		nodes = append(nodes, map[string]any{
-			"callerNonClaims": admit.StringSliceToAny(item.CallerNonClaims),
-			"childNodeIds":    admit.StringSliceToAny(childrenByParent[item.NodeID]),
-			"depth":           depthByID[item.NodeID],
-			"displayOrder":    item.DisplayOrder,
-			"label":           item.Label,
-			"nodeId":          item.NodeID,
-			"nodeKind":        item.NodeKind,
-			"overlays":        overlayViews(overlaysByNode[item.NodeID]),
-			"parentNodeId":    parentByChild[item.NodeID],
-			"sourceRefs":      sourceRefViews(item.SourceRefs),
+			"callerAnnotations": admit.StringSliceToAny(item.CallerAnnotations),
+			"childNodeIds":      admit.StringSliceToAny(childrenByParent[item.NodeID]),
+			"depth":             depthByID[item.NodeID],
+			"displayOrder":      item.DisplayOrder,
+			"label":             item.Label,
+			"nodeId":            item.NodeID,
+			"nodeKind":          item.NodeKind,
+			"overlays":          overlayViews(overlaysByNode[item.NodeID]),
+			"parentNodeId":      parentByChild[item.NodeID],
+			"sourceRefs":        sourceRefViews(item.SourceRefs),
 		})
 	}
 	return projectedTree{Nodes: nodes}
 }
 
-func assignDepth(nodeID string, depth int, childrenByParent map[string][]string, depthByID map[string]int) {
-	depthByID[nodeID] = depth
-	for _, childID := range childrenByParent[nodeID] {
-		assignDepth(childID, depth+1, childrenByParent, depthByID)
+func preorderWithDepth(rootID string, childrenByParent map[string][]string, capacity int) ([]string, map[string]int) {
+	type pendingNode struct {
+		depth  int
+		nodeID string
 	}
-}
-
-func preorder(rootID string, childrenByParent map[string][]string) []string {
-	result := []string{rootID}
-	for _, childID := range childrenByParent[rootID] {
-		result = append(result, preorder(childID, childrenByParent)...)
+	result := make([]string, 0, capacity)
+	depthByID := make(map[string]int, capacity)
+	stack := []pendingNode{{depth: 1, nodeID: rootID}}
+	for len(stack) > 0 {
+		last := len(stack) - 1
+		current := stack[last]
+		stack = stack[:last]
+		result = append(result, current.nodeID)
+		depthByID[current.nodeID] = current.depth
+		children := childrenByParent[current.nodeID]
+		for index := len(children) - 1; index >= 0; index-- {
+			stack = append(stack, pendingNode{depth: current.depth + 1, nodeID: children[index]})
+		}
 	}
-	return result
+	return result, depthByID
 }
 
 func sourceRefViews(refs []sourceRef) []any {
@@ -173,13 +190,13 @@ func overlayViews(overlays []overlay) []any {
 	values := make([]any, 0, len(overlays))
 	for _, item := range overlays {
 		value := map[string]any{
-			"callerNonClaims": admit.StringSliceToAny(item.CallerNonClaims),
-			"label":           item.Label,
-			"overlayId":       item.OverlayID,
-			"overlayKind":     item.OverlayKind,
-			"refId":           item.RefID,
-			"refKind":         item.RefKind,
-			"targetNodeId":    item.TargetNodeID,
+			"callerAnnotations": admit.StringSliceToAny(item.CallerAnnotations),
+			"label":             item.Label,
+			"overlayId":         item.OverlayID,
+			"overlayKind":       item.OverlayKind,
+			"refId":             item.RefID,
+			"refKind":           item.RefKind,
+			"targetNodeId":      item.TargetNodeID,
 		}
 		if item.RefPath != "" {
 			value["digestAlgorithm"] = item.DigestAlgorithm
@@ -214,6 +231,10 @@ func markdown(view map[string]any) string {
 			prefix+"  Source refs: "+markdownfmt.CodeListOrNone(sourceRefIDs(anyArray(node["sourceRefs"]))),
 			prefix+"  Overlays: "+markdownfmt.CodeListOrNone(overlayIDs(anyArray(node["overlays"]))),
 		)
+	}
+	lines = append(lines, "", "## Caller Annotations (Untrusted)", "")
+	for _, annotation := range stringArray(view["callerAnnotations"]) {
+		lines = append(lines, "- "+markdownfmt.Text(annotation))
 	}
 	lines = append(lines, "", "## View Non-Claims", "")
 	for _, claim := range stringArray(view["nonClaims"]) {
@@ -290,6 +311,7 @@ func html(view map[string]any, exports []browserdoc.ExportFile) string {
 			browserdoc.Summary("Edges", fmt.Sprint(intValue(view["edgeCount"])), false),
 			browserdoc.Summary("Overlays", fmt.Sprint(intValue(view["overlayCount"])), false),
 			browserdoc.Summary("Max depth", fmt.Sprint(intValue(view["maxDepth"])), false),
+			browserdoc.Summary("Caller annotations (untrusted)", strings.Join(stringArray(view["callerAnnotations"]), "; "), false),
 		},
 		HierarchySections: []browserdoc.HierarchySection{
 			{Title: "Specification tree", Items: treeHierarchy(nodes)},
@@ -324,13 +346,13 @@ func nodeBody(node map[string]any) browserdoc.Fragment {
 			browserdoc.Definition("Source refs", browserdoc.ListOrNone(sourceRefIDs(anyArray(node["sourceRefs"])), true)),
 			browserdoc.Definition("Overlays", browserdoc.ListOrNone(overlayIDs(anyArray(node["overlays"])), true)),
 		),
-		browserdoc.Details("Source refs, overlays, and caller non-claims",
+		browserdoc.Details("Source refs, overlays, and caller annotations",
 			browserdoc.Heading(3, "Source refs"),
 			sourceRefsHTML(anyArray(node["sourceRefs"])),
 			browserdoc.Heading(3, "Overlays"),
 			overlaysHTML(anyArray(node["overlays"])),
-			browserdoc.Heading(3, "Caller non-claims"),
-			browserdoc.ListOrNone(stringArray(node["callerNonClaims"]), false),
+			browserdoc.Heading(3, "Caller annotations (untrusted)"),
+			browserdoc.ListOrNone(stringArray(node["callerAnnotations"]), false),
 		),
 	)
 }
@@ -382,7 +404,7 @@ func overlaysHTML(overlays []any) browserdoc.Fragment {
 				browserdoc.Definition("Digest algorithm", browserdoc.Text(stringValue(overlay["digestAlgorithm"]))),
 			)
 		}
-		items = append(items, browserdoc.Definition("Caller non-claims", browserdoc.ListOrNone(stringArray(overlay["callerNonClaims"]), false)))
+		items = append(items, browserdoc.Definition("Caller annotations (untrusted)", browserdoc.ListOrNone(stringArray(overlay["callerAnnotations"]), false)))
 		parts = append(parts, browserdoc.Section(stringValue(overlay["overlayId"]), browserdoc.DefinitionList(items...)))
 	}
 	return browserdoc.Concat(parts...)
@@ -463,13 +485,13 @@ func countHierarchy(nodes []any, key string, anchorPrefix string) []browserdoc.H
 	return items
 }
 
-func allCallerNonClaims(input admittedInput) []string {
-	values := append([]string{}, input.CallerNonClaims...)
+func allCallerAnnotations(input admittedInput) []string {
+	values := append([]string{}, input.CallerAnnotations...)
 	for _, item := range input.Nodes {
-		values = append(values, item.CallerNonClaims...)
+		values = append(values, item.CallerAnnotations...)
 	}
 	for _, item := range input.Overlays {
-		values = append(values, item.CallerNonClaims...)
+		values = append(values, item.CallerAnnotations...)
 	}
 	return sortedUnique(values)
 }

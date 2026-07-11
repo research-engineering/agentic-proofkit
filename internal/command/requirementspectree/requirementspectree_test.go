@@ -3,6 +3,7 @@ package requirementspectree
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,8 +25,8 @@ func TestBuildAdmitsSpecTree(t *testing.T) {
 	if containsAny(record.NonClaims, "Caller tree fixture is display-only.") {
 		t.Fatalf("caller non-claim leaked into boundary nonClaims: %#v", record.NonClaims)
 	}
-	if !recordJSONContains(t, record, `"callerNonClaims"`) {
-		t.Fatalf("report diagnostics must preserve caller non-claims")
+	if !recordJSONContains(t, record, `"callerAnnotations"`) {
+		t.Fatalf("report diagnostics must preserve caller text as untrusted annotations")
 	}
 }
 
@@ -391,12 +392,6 @@ func TestBuildRejectsOverlayFalsifiers(t *testing.T) {
 				overlayMap(input, "overlay.source.module")["state"] = "passed"
 			},
 		},
-		{
-			name: "authority claim",
-			mutate: func(input map[string]any) {
-				overlayMap(input, "overlay.source.module")["callerNonClaims"] = []any{"This overlay proves freshness."}
-			},
-		},
 	}
 	for _, item := range errorCases {
 		t.Run(item.name, func(t *testing.T) {
@@ -409,72 +404,89 @@ func TestBuildRejectsOverlayFalsifiers(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsAuthorityConfusingCallerNonClaims(t *testing.T) {
+func TestBuildIsolatesCallerAnnotationsFromCommandNonClaims(t *testing.T) {
+	texts := []string{
+		"This tree is ready for production.",
+		"This node claims merge authority.",
+		"This overlay controls final decisions.",
+	}
+	input := validTreeInput()
+	input["callerAnnotations"] = []any{texts[0]}
+	nodeMap(input, "meta")["callerAnnotations"] = []any{texts[1]}
+	overlayMap(input, "overlay.source.module")["callerAnnotations"] = []any{texts[2]}
+	record, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Build() exit=%d err=%v", exitCode, err)
+	}
+	for _, text := range texts {
+		if containsAny(record.NonClaims, text) {
+			t.Fatalf("caller annotation entered command-owned nonClaims: %q", text)
+		}
+	}
+	if !recordJSONContains(t, record, `"callerAnnotations"`) || recordJSONContains(t, record, `"callerNonClaims"`) {
+		t.Fatalf("report must expose caller text only as callerAnnotations")
+	}
+	view, viewExitCode, err := BuildViewJSON(input)
+	if err != nil || viewExitCode != 0 {
+		t.Fatalf("BuildViewJSON() exit=%d err=%v", viewExitCode, err)
+	}
+	viewRecord := view.(map[string]any)
+	if viewRecord["callerAnnotationAuthority"] != "untrusted_caller_text" {
+		t.Fatalf("caller annotation authority=%v", viewRecord["callerAnnotationAuthority"])
+	}
+	for _, text := range texts {
+		if containsAny(viewRecord["nonClaims"].([]any), text) {
+			t.Fatalf("caller annotation entered view nonClaims: %q", text)
+		}
+	}
+}
+
+func TestBuildRejectsTreeCollectionsBeyondResourceBudget(t *testing.T) {
 	cases := []struct {
-		name   string
-		mutate func(map[string]any, string)
-		claim  string
+		field string
+		limit int
+		want  string
 	}{
-		{
-			name: "root merge approval",
-			mutate: func(input map[string]any, claim string) {
-				input["callerNonClaims"] = []any{claim}
-			},
-			claim: "This caller text claims merge approval.",
-		},
-		{
-			name: "node release approval",
-			mutate: func(input map[string]any, claim string) {
-				nodeMap(input, "meta")["callerNonClaims"] = []any{claim}
-			},
-			claim: "This node text claims release approval.",
-		},
-		{
-			name: "node rollout approval",
-			mutate: func(input map[string]any, claim string) {
-				nodeMap(input, "module")["callerNonClaims"] = []any{claim}
-			},
-			claim: "This node text claims rollout approval.",
-		},
-		{
-			name: "overlay production readiness",
-			mutate: func(input map[string]any, claim string) {
-				overlayMap(input, "overlay.source.module")["callerNonClaims"] = []any{claim}
-			},
-			claim: "This overlay text claims production readiness.",
-		},
-		{
-			name: "overlay proof freshness",
-			mutate: func(input map[string]any, claim string) {
-				overlayMap(input, "overlay.source.module")["callerNonClaims"] = []any{claim}
-			},
-			claim: "This overlay text claims proof freshness.",
-		},
-		{
-			name: "overlay rendered authority",
-			mutate: func(input map[string]any, claim string) {
-				overlayMap(input, "overlay.source.module")["callerNonClaims"] = []any{claim}
-			},
-			claim: "This overlay text claims rendered view authority.",
-		},
-		{
-			name: "overlay coverage completeness",
-			mutate: func(input map[string]any, claim string) {
-				overlayMap(input, "overlay.source.module")["callerNonClaims"] = []any{claim}
-			},
-			claim: "This overlay text claims coverage completeness.",
-		},
+		{field: "nodes", limit: maxSpecTreeNodes, want: "node limit"},
+		{field: "edges", limit: maxSpecTreeEdges, want: "edge limit"},
+		{field: "overlays", limit: maxSpecTreeOverlays, want: "overlay limit"},
 	}
 	for _, item := range cases {
-		t.Run(item.name, func(t *testing.T) {
+		t.Run(item.field, func(t *testing.T) {
 			input := validTreeInput()
-			item.mutate(input, item.claim)
-			if _, _, err := Build(input); err == nil {
-				t.Fatalf("expected authority-confusing admission error")
-			} else if !strings.Contains(err.Error(), "authority-confusing claims") {
-				t.Fatalf("error %q does not contain authority-confusing claims", err.Error())
+			input[item.field] = make([]any, item.limit+1)
+			if _, _, err := Build(input); err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("Build() error=%v, want %s rejection", err, item.want)
 			}
 		})
+	}
+}
+
+func TestBuildEnforcesExactTreeDepthBoundary(t *testing.T) {
+	if record, exitCode, err := Build(chainTreeInput(maxSpecTreeDepth - 1)); err != nil || exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() depth limit exit=%d state=%s err=%v", exitCode, record.State, err)
+	}
+	record, exitCode, err := Build(chainTreeInput(maxSpecTreeDepth))
+	if err != nil {
+		t.Fatalf("Build() should return a failed report for excessive depth, got error=%v", err)
+	} else if exitCode != 1 || record.State != "failed" {
+		t.Fatalf("Build() excessive depth exit=%d state=%s, want failed report", exitCode, record.State)
+	}
+}
+
+func chainTreeInput(depth int) map[string]any {
+	nodes := make([]any, 0, depth+1)
+	edges := make([]any, 0, depth)
+	for index := 0; index <= depth; index++ {
+		id := fmt.Sprintf("node.%04d", index)
+		nodes = append(nodes, nodeRecord(id, "module_spec", id, int64(index+1), sourceIDRef("source."+id, "spec."+id)))
+		if index > 0 {
+			edges = append(edges, map[string]any{"parentNodeId": fmt.Sprintf("node.%04d", index-1), "childNodeId": id})
+		}
+	}
+	return map[string]any{
+		"schemaVersion": json.Number("2"), "treeId": "proofkit.spec_tree.depth_fixture", "rootNodeId": "node.0000",
+		"callerAnnotations": []any{"Caller tree fixture is display-only."}, "nodes": nodes, "edges": edges, "overlays": []any{},
 	}
 }
 
@@ -485,8 +497,8 @@ func TestBuildRejectsSchemaVersionDrift(t *testing.T) {
 		remove bool
 	}{
 		{name: "missing", remove: true},
-		{name: "future", value: json.Number("2")},
-		{name: "string", value: "1"},
+		{name: "future", value: json.Number("3")},
+		{name: "string", value: "2"},
 		{name: "null", value: nil},
 	}
 	for _, item := range cases {
@@ -580,13 +592,13 @@ func TestBuildDoesNotAliasRawInput(t *testing.T) {
 		t.Fatalf("marshal before: %v", err)
 	}
 	input["treeId"] = "proofkit.spec_tree.mutated"
-	input["callerNonClaims"].([]any)[0] = "Mutated root non-claim."
+	input["callerAnnotations"].([]any)[0] = "Mutated root non-claim."
 	input["edges"].([]any)[0].(map[string]any)["childNodeId"] = "mutated.child"
 	nodeMap(input, "meta")["label"] = "Mutated"
-	nodeMap(input, "meta")["callerNonClaims"].([]any)[0] = "Mutated node non-claim."
+	nodeMap(input, "meta")["callerAnnotations"].([]any)[0] = "Mutated node non-claim."
 	overlayMap(input, "overlay.rendered.module")["label"] = "Mutated overlay"
 	overlayMap(input, "overlay.rendered.module")["refPath"] = "artifacts/mutated.html"
-	overlayMap(input, "overlay.rendered.module")["callerNonClaims"].([]any)[0] = "Mutated overlay non-claim."
+	overlayMap(input, "overlay.rendered.module")["callerAnnotations"].([]any)[0] = "Mutated overlay non-claim."
 	after, err := stablejson.Marshal(record.JSONValue())
 	if err != nil {
 		t.Fatalf("marshal after: %v", err)
@@ -733,10 +745,10 @@ func invalidTreeInput() map[string]any {
 
 func validTreeInput() map[string]any {
 	return map[string]any{
-		"schemaVersion":   json.Number("1"),
-		"treeId":          "proofkit.spec_tree.fixture",
-		"rootNodeId":      "meta",
-		"callerNonClaims": []any{"Caller tree fixture is display-only."},
+		"schemaVersion":     json.Number("2"),
+		"treeId":            "proofkit.spec_tree.fixture",
+		"rootNodeId":        "meta",
+		"callerAnnotations": []any{"Caller tree fixture is display-only."},
 		"nodes": []any{
 			nodeRecord("meta", "meta_spec", "Meta specification", 1, sourceIDRef("source.meta", "spec.meta")),
 			nodeRecord("module", "module_spec", "Module specification", 1, sourceIDRef("source.module", "spec.module")),
@@ -749,16 +761,16 @@ func validTreeInput() map[string]any {
 		"overlays": []any{
 			overlayRecord("overlay.source.module", "module", "source.module"),
 			map[string]any{
-				"overlayId":       "overlay.rendered.module",
-				"overlayKind":     "rendered_view",
-				"targetNodeId":    "module",
-				"refKind":         "rendered_artifact",
-				"refId":           "artifact.module.view",
-				"refPath":         "artifacts/module-view.html",
-				"refDigest":       digestA(),
-				"digestAlgorithm": "sha256",
-				"label":           "Module rendered view",
-				"callerNonClaims": []any{"Caller rendered overlay fixture is presentation only."},
+				"overlayId":         "overlay.rendered.module",
+				"overlayKind":       "rendered_view",
+				"targetNodeId":      "module",
+				"refKind":           "rendered_artifact",
+				"refId":             "artifact.module.view",
+				"refPath":           "artifacts/module-view.html",
+				"refDigest":         digestA(),
+				"digestAlgorithm":   "sha256",
+				"label":             "Module rendered view",
+				"callerAnnotations": []any{"Caller rendered overlay fixture is presentation only."},
 			},
 		},
 	}
@@ -770,12 +782,12 @@ func nodeRecord(nodeID string, nodeKind string, label string, displayOrder int64
 		sourceRefs = append(sourceRefs, ref)
 	}
 	return map[string]any{
-		"nodeId":          nodeID,
-		"nodeKind":        nodeKind,
-		"label":           label,
-		"displayOrder":    json.Number(strconv.FormatInt(displayOrder, 10)),
-		"sourceRefs":      sourceRefs,
-		"callerNonClaims": []any{"Caller node fixture is display-only."},
+		"nodeId":            nodeID,
+		"nodeKind":          nodeKind,
+		"label":             label,
+		"displayOrder":      json.Number(strconv.FormatInt(displayOrder, 10)),
+		"sourceRefs":        sourceRefs,
+		"callerAnnotations": []any{"Caller node fixture is display-only."},
 	}
 }
 
@@ -802,13 +814,13 @@ func pathDigestRef(sourceRefID string, sourcePath string, recorded string, curre
 
 func overlayRecord(overlayID string, targetNodeID string, refID string) map[string]any {
 	return map[string]any{
-		"overlayId":       overlayID,
-		"overlayKind":     "source",
-		"targetNodeId":    targetNodeID,
-		"refKind":         "source_ref",
-		"refId":           refID,
-		"label":           "Source overlay",
-		"callerNonClaims": []any{"Caller overlay fixture is display-only."},
+		"overlayId":         overlayID,
+		"overlayKind":       "source",
+		"targetNodeId":      targetNodeID,
+		"refKind":           "source_ref",
+		"refId":             refID,
+		"label":             "Source overlay",
+		"callerAnnotations": []any{"Caller overlay fixture is display-only."},
 	}
 }
 

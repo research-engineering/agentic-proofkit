@@ -57,6 +57,7 @@ func isExplicitPlanningCommand(command string) bool {
 
 func parsePlanningArgs(command string, args []string) (planningArgs, error) {
 	options := planningArgs{}
+	inputPointerSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -66,9 +67,10 @@ func parsePlanningArgs(command string, args []string) (planningArgs, error) {
 			options.inputPath = args[index+1]
 			index++
 		case "--input-pointer":
-			if index+1 >= len(args) {
+			if inputPointerSeen || index+1 >= len(args) {
 				return planningArgs{}, fmt.Errorf("--input-pointer requires a JSON pointer")
 			}
+			inputPointerSeen = true
 			options.inputPointer = args[index+1]
 			index++
 		case "--agent-envelope":

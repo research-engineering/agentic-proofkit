@@ -9,6 +9,8 @@ import (
 	"unicode"
 )
 
+const maxJSONNestingDepth = 512
+
 func DecodeJSON(reader io.Reader, maxBytes int64) (any, error) {
 	source, err := readBounded(reader, maxBytes)
 	if err != nil {
@@ -63,6 +65,7 @@ func readBounded(reader io.Reader, maxBytes int64) ([]byte, error) {
 type jsonKeyScanner struct {
 	source []byte
 	index  int
+	depth  int
 }
 
 func assertUniqueObjectKeys(source []byte) error {
@@ -84,6 +87,11 @@ func (scanner *jsonKeyScanner) skipWhitespace() {
 }
 
 func (scanner *jsonKeyScanner) parseValue() error {
+	scanner.depth++
+	defer func() { scanner.depth-- }()
+	if scanner.depth > maxJSONNestingDepth {
+		return errors.New("invalid JSON input: exceeds nesting depth limit")
+	}
 	scanner.skipWhitespace()
 	if scanner.index >= len(scanner.source) {
 		return errors.New("invalid JSON input: unexpected end")

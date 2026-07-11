@@ -469,7 +469,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim line coverage, dead-code absence, exhaustive semantic completeness for every test, native witness execution, receipt freshness, or merge satisfaction."
+        "This requirement does not claim semantic command coverage, line coverage, dead-code absence, exhaustive semantic completeness for any test, native witness execution, receipt freshness, or merge satisfaction."
       ]
     },
     {
@@ -571,6 +571,16 @@
       "nonClaims": [
         "This requirement does not claim repository scanning, code correctness, extraction completeness, final requirement meaning, proof-binding adequacy, native witness execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-018",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This requirement does not claim command recommendation, command execution through family membership, consumer policy, native witness execution, merge approval, release approval, rollout approval, or production readiness."
+      ]
     }
   ],
   "bindings": [
@@ -585,7 +595,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -599,7 +610,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -690,7 +702,7 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go-python"
       ]
     },
     {
@@ -1602,7 +1614,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1616,7 +1629,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1751,7 +1765,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1793,7 +1808,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1820,7 +1836,8 @@
         "proofkit.package-artifact"
       ],
       "environmentClasses": [
-        "local-go"
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1900,6 +1917,19 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-018",
+      "scenarioId": "proofkit.spec-proof-core.command-family-navigation-parity",
+      "witnessId": "proofkit.command-family-navigation.parity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandfamilygen/main_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [
@@ -1936,7 +1966,7 @@
     {
       "commandId": "proofkit.package-artifact",
       "command": "npm run package:artifact",
-      "environmentClass": "local-go"
+      "environmentClass": "local-go-python"
     },
     {
       "commandId": "proofkit.package-gate",

@@ -528,10 +528,10 @@ func coverageInput(t *testing.T) any {
 func specTreeInput(t *testing.T) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "treeId": "proofkit.browser.spec_tree",
   "rootNodeId": "meta",
-  "callerNonClaims": ["Browser spec tree fixture is presentation-only."],
+  "callerAnnotations": ["Browser spec tree fixture is presentation-only."],
   "nodes": [
     {
       "nodeId": "meta",
@@ -541,7 +541,7 @@ func specTreeInput(t *testing.T) any {
       "sourceRefs": [
         {"sourceRefId": "source.meta", "sourceRole": "requirements", "sourceRefKind": "source_id", "sourceId": "spec.meta"}
       ],
-      "callerNonClaims": []
+      "callerAnnotations": []
     },
     {
       "nodeId": "module",
@@ -559,7 +559,7 @@ func specTreeInput(t *testing.T) any {
           "digestAlgorithm": "sha256"
         }
       ],
-      "callerNonClaims": []
+      "callerAnnotations": []
     }
   ],
   "edges": [{"parentNodeId": "meta", "childNodeId": "module"}],
@@ -571,7 +571,7 @@ func specTreeInput(t *testing.T) any {
       "refKind": "source_ref",
       "refId": "source.module",
       "label": "Module source",
-      "callerNonClaims": []
+      "callerAnnotations": []
     }
   ]
 }`), 1<<20)

@@ -40,11 +40,12 @@ type commandCoverageSourceOracleBinding struct {
 const commandCoverageExpectedPublicOutcome = "referenced owner test asserts the bound command's public pass/fail outcome, diagnostics, or emitted packet contract"
 
 type CommandCoverageSummary struct {
-	Command            string
-	CommandRef         string
-	RouteCount         int
-	SemanticRouteCount int
-	RouteSmokeCount    int
+	Command                  string
+	CommandRef               string
+	ProofRouteCandidateCount int
+	RouteCount               int
+	SemanticRouteCount       int
+	RouteSmokeCount          int
 }
 
 var requiredInputAdmissionRoute = commandCoverageRoute{
@@ -186,7 +187,7 @@ func CommandCoverageSummaries() []CommandCoverageSummary {
 		for _, route := range routes {
 			switch route.kind {
 			case "direct_semantic_falsifier", "package_level_falsifier":
-				summary.SemanticRouteCount++
+				summary.ProofRouteCandidateCount++
 			case "routing_admission_smoke_nonclaim":
 				summary.RouteSmokeCount++
 			}
@@ -232,6 +233,7 @@ func commandCoverageInventoryFrom(routes map[string][]commandCoverageRoute) (map
 			"Command coverage inventory does not execute tests.",
 			"Command coverage inventory does not prove native command success, receipt freshness, or merge satisfaction.",
 			"Routing smoke entries prove CLI input routing only and cannot satisfy semantic command coverage.",
+			"Static route metadata, prose, source markers, test existence, and failure-capable AST nodes are proof-route candidates only; they cannot emit semantic_falsifier evidence.",
 		},
 	}, nil
 }
@@ -256,23 +258,10 @@ func (route commandCoverageRoute) inventoryEntry(command string, index int) map[
 		"oracle":             nil,
 		"nonClaims":          route.nonClaims(),
 	}
-	if route.isSemantic() {
+	if route.isSemanticCandidate() {
 		proof := route.semanticProof
 		entry["testId"] = proof.routeTestID()
 		entry["ownerInvariantRefs"] = []any{proof.semanticRouteInvariantID()}
-		entry["falsifier"] = map[string]any{
-			"falsifierId":                proof.falsifierID(),
-			"negativeCaseId":             proof.negativeCaseID(),
-			"wrongImplementationClassId": proof.wrongImplementationClassID(),
-			"dominanceGroup":             proof.dominanceGroup(),
-			"supersedes":                 []any{},
-		}
-		entry["oracle"] = map[string]any{
-			"assertionSummary":      route.rationale,
-			"expectedPublicOutcome": proof.expectedPublicOutcome,
-			"oracleId":              proof.oracleID(),
-			"oracleKind":            "semantic_route_falsifier",
-		}
 	}
 	return entry
 }
@@ -305,20 +294,23 @@ func (route commandCoverageRoute) sourceOracleMarker(command string) string {
 	return "proofkit.command_coverage.source_oracle.v1." + strings.Repeat("0", 78-len(decimal)) + decimal
 }
 
-func (route commandCoverageRoute) isSemantic() bool {
+func (route commandCoverageRoute) isSemanticCandidate() bool {
 	return route.kind == "direct_semantic_falsifier" || route.kind == "package_level_falsifier"
 }
 
 func (route commandCoverageRoute) evidenceClass() string {
-	if route.isSemantic() {
-		return "semantic_falsifier"
+	if route.isSemanticCandidate() {
+		return "proof_route_candidate"
 	}
 	return "routing_smoke_nonclaim"
 }
 
 func (route commandCoverageRoute) nonClaims() []any {
-	if route.isSemantic() {
-		return []any{"This inventory entry does not execute the referenced test or claim runtime pass evidence."}
+	if route.isSemanticCandidate() {
+		return []any{
+			"Route metadata, prose, source markers, test existence, and failure-capable AST nodes do not prove a semantic falsification event.",
+			"This proof-route candidate does not execute the referenced test or claim runtime pass evidence.",
+		}
 	}
 	return []any{"This route-only inventory entry is a non-claim for semantic command coverage."}
 }
@@ -328,7 +320,7 @@ func commandCoverageIDComponent(command string) string {
 }
 
 func (route commandCoverageRoute) semanticProofProblem() string {
-	if !route.isSemantic() {
+	if !route.isSemanticCandidate() {
 		if route.semanticProof.ref != "" {
 			return "route-only coverage must not carry semantic proof metadata"
 		}
@@ -414,10 +406,6 @@ func containsRouteIndexToken(value string) bool {
 
 func (proof commandCoverageSemanticProof) baseID() string {
 	return "proofkit.command_coverage." + proof.ref
-}
-
-func (proof commandCoverageSemanticProof) dominanceGroup() string {
-	return proof.baseID()
 }
 
 func (proof commandCoverageSemanticProof) falsifierID() string {

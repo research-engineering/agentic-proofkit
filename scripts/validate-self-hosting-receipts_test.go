@@ -199,7 +199,7 @@ func TestReceiptProducerPolicyDoesNotAdmitProtectedOptInProducer(t *testing.T) {
 			"nonClaim":                 "Test receipt does not prove live workflow identity.",
 			"producerId":               "github.actions.package.protected",
 			"receiptId":                "proofkit.test.protected-receipt",
-			"receiptKind":              "proofkit.package-gate",
+			"receiptKind":              "proofkit.package-artifact",
 			"satisfiesMergeObligation": true,
 			"status":                   "passed",
 			"subjectRef":               "proofkit.package-boundary.self-hosting",
@@ -226,7 +226,7 @@ func TestReceiptProducerPolicyRejectsPlainGitHubActionsMergeObligation(t *testin
 			"nonClaim":                 "Test receipt does not prove live workflow identity.",
 			"producerId":               "github.actions.package",
 			"receiptId":                "proofkit.test.plain-github-receipt",
-			"receiptKind":              "proofkit.package-gate",
+			"receiptKind":              "proofkit.package-artifact",
 			"satisfiesMergeObligation": true,
 			"status":                   "passed",
 			"subjectRef":               "proofkit.package-boundary.self-hosting",
@@ -245,8 +245,8 @@ func TestReceiptProducerPolicyRejectsPlainGitHubActionsMergeObligation(t *testin
 
 func TestReceiptProducerPolicyRetainsAggregatePackageGateOnly(t *testing.T) {
 	policy := receiptProducerPolicy(t)
-	if got := anyStrings(policy["receiptKinds"]); !reflect.DeepEqual(got, []string{"proofkit.package-gate"}) {
-		t.Fatalf("receiptKinds=%#v, want aggregate package-gate only", got)
+	if got := anyStrings(policy["receiptKinds"]); !reflect.DeepEqual(got, []string{"proofkit.package-artifact"}) {
+		t.Fatalf("receiptKinds=%#v, want package-artifact only", got)
 	}
 	if got := anyStrings(policy["environmentClasses"]); !reflect.DeepEqual(got, []string{packageGateEnvironmentClass}) {
 		t.Fatalf("environmentClasses=%#v, want aggregate %s only", got, packageGateEnvironmentClass)
@@ -257,8 +257,8 @@ func TestReceiptProducerPolicyRetainsAggregatePackageGateOnly(t *testing.T) {
 	}
 	for _, raw := range policy["producers"].([]any) {
 		producer := raw.(map[string]any)
-		if got := anyStrings(producer["receiptKinds"]); !reflect.DeepEqual(got, []string{"proofkit.package-gate"}) {
-			t.Fatalf("producer %s receiptKinds=%#v, want aggregate package-gate only", producer["producerId"], got)
+		if got := anyStrings(producer["receiptKinds"]); !reflect.DeepEqual(got, []string{"proofkit.package-artifact"}) {
+			t.Fatalf("producer %s receiptKinds=%#v, want package-artifact only", producer["producerId"], got)
 		}
 		if got := anyStrings(producer["environmentClasses"]); !reflect.DeepEqual(got, []string{packageGateEnvironmentClass}) {
 			t.Fatalf("producer %s environmentClasses=%#v, want aggregate %s only", producer["producerId"], got, packageGateEnvironmentClass)

@@ -41,6 +41,7 @@ var overlayRefKinds = map[string]struct{}{
 }
 
 var boundaryNonClaims = []string{
+	"Requirement spec tree caller annotations are untrusted display text and are not non-claim authority.",
 	"Requirement spec tree reports do not approve merge, release, rollout, or production readiness.",
 	"Requirement spec tree reports do not compute source digest freshness from repository files.",
 	"Requirement spec tree reports do not execute native witnesses.",
@@ -48,42 +49,6 @@ var boundaryNonClaims = []string{
 	"Requirement spec tree reports do not make rendered output authoritative.",
 	"Requirement spec tree reports do not read requirement source files.",
 	"Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness.",
-}
-
-var authorityClaimPhrases = []string{
-	"approve merge",
-	"approves merge",
-	"merge approved",
-	"merge approval",
-	"merge authority",
-	"merge-ready",
-	"release approved",
-	"release approval",
-	"release authority",
-	"release-ready",
-	"rollout approved",
-	"rollout approval",
-	"rollout authority",
-	"rollout-ready",
-	"production ready",
-	"production-ready",
-	"production readiness",
-	"production authority",
-	"proof freshness",
-	"proves freshness",
-	"freshness approved",
-	"freshness authority",
-	"freshness proof",
-	"source freshness",
-	"receipt freshness",
-	"coverage complete",
-	"coverage-complete",
-	"coverage completeness",
-	"complete coverage",
-	"rendered output authority",
-	"rendered output authoritative",
-	"rendered view authority",
-	"rendered view authoritative",
 }
 
 type sourceRef struct {
@@ -98,12 +63,12 @@ type sourceRef struct {
 }
 
 type node struct {
-	CallerNonClaims []string
-	DisplayOrder    int
-	Label           string
-	NodeID          string
-	NodeKind        string
-	SourceRefs      []sourceRef
+	CallerAnnotations []string
+	DisplayOrder      int
+	Label             string
+	NodeID            string
+	NodeKind          string
+	SourceRefs        []sourceRef
 }
 
 type edge struct {
@@ -112,23 +77,23 @@ type edge struct {
 }
 
 type overlay struct {
-	CallerNonClaims []string
-	DigestAlgorithm string
-	Label           string
-	OverlayID       string
-	OverlayKind     string
-	RefDigest       string
-	RefID           string
-	RefKind         string
-	RefPath         string
-	TargetNodeID    string
+	CallerAnnotations []string
+	DigestAlgorithm   string
+	Label             string
+	OverlayID         string
+	OverlayKind       string
+	RefDigest         string
+	RefID             string
+	RefKind           string
+	RefPath           string
+	TargetNodeID      string
 }
 
 type admittedInput struct {
-	CallerNonClaims []string
-	Edges           []edge
-	Nodes           []node
-	Overlays        []overlay
-	RootNodeID      string
-	TreeID          string
+	CallerAnnotations []string
+	Edges             []edge
+	Nodes             []node
+	Overlays          []overlay
+	RootNodeID        string
+	TreeID            string
 }

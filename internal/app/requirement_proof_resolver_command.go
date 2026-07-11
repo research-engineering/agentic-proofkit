@@ -34,6 +34,7 @@ func runRequirementProofResolver(args []string, stdin io.Reader, stdout io.Write
 
 func parseRequirementProofResolverArgs(args []string) (requirementProofResolverArgs, error) {
 	options := requirementProofResolverArgs{}
+	inputPointerSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -43,9 +44,10 @@ func parseRequirementProofResolverArgs(args []string) (requirementProofResolverA
 			options.inputPath = args[index+1]
 			index++
 		case "--input-pointer":
-			if index+1 >= len(args) {
+			if inputPointerSeen || index+1 >= len(args) {
 				return requirementProofResolverArgs{}, fmt.Errorf("--input-pointer requires a JSON pointer")
 			}
+			inputPointerSeen = true
 			options.inputPointer = args[index+1]
 			index++
 		case "--local-environment-class":

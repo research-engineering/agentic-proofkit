@@ -495,6 +495,9 @@ func commandPolicyFailures(command witnesscommand.Command, policy policy) []stri
 func parallelGroupFailures(groups []executionGroup, policiesByCommandID map[string]policy) []string {
 	failures := []string{}
 	for _, group := range groups {
+		if parallelGroupIsConflictFreeByConstruction(group, policiesByCommandID) {
+			continue
+		}
 		for leftIndex := 0; leftIndex < len(group.CommandIDs); leftIndex++ {
 			left, ok := policiesByCommandID[group.CommandIDs[leftIndex]]
 			if !ok {
@@ -510,6 +513,16 @@ func parallelGroupFailures(groups []executionGroup, policiesByCommandID map[stri
 		}
 	}
 	return failures
+}
+
+func parallelGroupIsConflictFreeByConstruction(group executionGroup, policiesByCommandID map[string]policy) bool {
+	for _, commandID := range group.CommandIDs {
+		policy, ok := policiesByCommandID[commandID]
+		if !ok || policy.SideEffectClass != "none" || len(policy.ExclusiveLocks) > 0 || len(policy.ResourceReads) > 0 || len(policy.ResourceWrites) > 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func policyPairFailures(parallelGroup string, left policy, right policy) []string {

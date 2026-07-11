@@ -18,6 +18,9 @@ func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	if _, err := RuleID("proofkit.rule.valid_id", "rule id"); err != nil {
 		t.Fatalf("expected stable rule id: %v", err)
 	}
+	if _, err := RuleID("proofkit."+strings.Repeat("a", maxRuleIDBytes), "rule id"); err == nil {
+		t.Fatal("expected oversized rule id rejection")
+	}
 }
 
 func TestNonEmptyTextRejectsSecretLikeDiagnostics(t *testing.T) {

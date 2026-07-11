@@ -266,7 +266,7 @@ func TestConformanceProfileRejectsAmbiguousModesAndHTML(t *testing.T) {
 		{
 			name: "markdown without profile",
 			args: []string{"conformance-profile", "--input", "-", "--list", "--format", "markdown"},
-			want: "--format markdown is valid only with --profile",
+			want: "--format markdown requires --profile",
 		},
 		{
 			name: "duplicate input",

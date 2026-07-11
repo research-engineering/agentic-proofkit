@@ -2,9 +2,9 @@ package publicapi
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -13,20 +13,15 @@ import (
 )
 
 const (
-	defaultMachineContract = "public_api_surfaces"
-	defaultPackagesRoot    = "packages"
-	defaultSourceExtension = ".ts"
-	defaultSourcePrefix    = "src/"
-)
-
-var (
-	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
-	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
-	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b`)
-	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b`)
-	varDeclPattern        = regexp.MustCompile(`^export\s+(?:const|let|var)\s+(.+?);?$`)
-	exportClauseNameRegex = regexp.MustCompile(`\bas\s+([A-Za-z_$][A-Za-z0-9_$]*)$`)
-	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+	defaultMachineContract  = "public_api_surfaces"
+	defaultPackagesRoot     = "packages"
+	defaultSourceExtension  = ".ts"
+	defaultSourcePrefix     = "src/"
+	maxSourceFileBytes      = 8 << 20
+	maxPackageManifestBytes = 256 << 10
+	maxAggregateScanBytes   = 64 << 20
+	maxManifestEntries      = 1024
+	maxPackageDirEntries    = 1024
 )
 
 type Options struct {
@@ -52,7 +47,29 @@ type exportCondition struct {
 	Path      string
 }
 
+type packageSnapshot struct {
+	dir      string
+	manifest map[string]any
+}
+
+type sourceExportSnapshot struct {
+	runtimeExports []string
+	typeExports    []string
+}
+
+type scanCache struct {
+	repoRoot      string
+	maxBytes      int64
+	bytesRead     int64
+	files         map[string][]byte
+	sourceExports map[string]sourceExportSnapshot
+}
+
 func Verify(raw any, options Options) (map[string]any, int, error) {
+	return verifyWithScanBudget(raw, options, maxAggregateScanBytes)
+}
+
+func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[string]any, int, error) {
 	if options.MachineContract == "" {
 		options.MachineContract = defaultMachineContract
 	}
@@ -69,16 +86,17 @@ func Verify(raw any, options Options) (map[string]any, int, error) {
 	if err != nil {
 		return nil, 1, err
 	}
+	scan := newScanCache(repoRoot, scanBudget)
 	manifest, err := admitManifest(raw, options.MachineContract)
 	if err != nil {
 		return nil, 1, err
 	}
-	packages, err := packageDirs(repoRoot, options.PackagesRoot)
+	packages, err := packageDirs(scan, options.PackagesRoot)
 	if err != nil {
 		return nil, 1, err
 	}
 	failures := []string{}
-	verifyCoveredPackageExportKeys(repoRoot, packages, manifest, &failures)
+	verifyCoveredPackageExportKeys(packages, manifest, &failures)
 	seenKeys := map[string]struct{}{}
 	for _, item := range manifest {
 		manifestKey := item.PackageName + ":" + item.ExportKey
@@ -87,7 +105,7 @@ func Verify(raw any, options Options) (map[string]any, int, error) {
 			continue
 		}
 		seenKeys[manifestKey] = struct{}{}
-		packageDir, ok := packages[item.PackageName]
+		pkg, ok := packages[item.PackageName]
 		if !ok {
 			failures = append(failures, "TypeScript public API manifest references missing package "+item.PackageName)
 			continue
@@ -96,8 +114,8 @@ func Verify(raw any, options Options) (map[string]any, int, error) {
 		if err != nil {
 			return nil, 1, err
 		}
-		sourcePath := filepath.Join(packageDir, filepath.FromSlash(source))
-		sourceBytes, err := readFileUnderRoot(repoRoot, sourcePath, manifestKey+" source")
+		sourcePath := filepath.Join(pkg.dir, filepath.FromSlash(source))
+		actualRuntime, actualTypes, err := scan.collectSourceExports(sourcePath, manifestKey+" source")
 		if err != nil {
 			if os.IsNotExist(err) {
 				failures = append(failures, fmt.Sprintf("%s source does not exist: %s", manifestKey, source))
@@ -105,11 +123,7 @@ func Verify(raw any, options Options) (map[string]any, int, error) {
 			}
 			return nil, 1, err
 		}
-		verifyPackageExportMap(repoRoot, packageDir, item, &failures)
-		actualRuntime, actualTypes, err := CollectExports(string(sourceBytes))
-		if err != nil {
-			return nil, 1, err
-		}
+		verifyPackageExportMap(pkg, item, &failures)
 		compareExports(item.RuntimeExports, actualRuntime, manifestKey+" runtime exports", &failures)
 		compareExports(item.TypeExports, actualTypes, manifestKey+" type exports", &failures)
 	}
@@ -146,6 +160,9 @@ func admitManifest(raw any, machineContract string) ([]entry, error) {
 	values, ok := record["entries"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("TypeScript public API manifest entries must be an array")
+	}
+	if len(values) > maxManifestEntries {
+		return nil, fmt.Errorf("TypeScript public API manifest exceeds the %d-entry limit", maxManifestEntries)
 	}
 	entries := make([]entry, 0, len(values))
 	for index, value := range values {
@@ -233,16 +250,24 @@ func exportConditions(raw any, context string) ([]exportCondition, error) {
 	return conditions, nil
 }
 
-func packageDirs(repoRoot string, packagesRootPath string) (map[string]string, error) {
-	packagesRoot := filepath.Join(repoRoot, filepath.FromSlash(packagesRootPath))
-	if _, err := resolvedPathUnderRoot(repoRoot, packagesRoot, "TypeScript public API packages root"); err != nil {
+func packageDirs(scan *scanCache, packagesRootPath string) (map[string]packageSnapshot, error) {
+	packagesRoot := filepath.Join(scan.repoRoot, filepath.FromSlash(packagesRootPath))
+	if _, err := resolvedPathUnderRoot(scan.repoRoot, packagesRoot, "TypeScript public API packages root"); err != nil {
 		return nil, err
 	}
-	entries, err := os.ReadDir(packagesRoot)
+	directory, err := os.Open(packagesRoot)
 	if err != nil {
 		return nil, err
 	}
-	byName := map[string]string{}
+	defer directory.Close()
+	entries, err := directory.ReadDir(maxPackageDirEntries + 1)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) > maxPackageDirEntries {
+		return nil, fmt.Errorf("TypeScript public API packages root exceeds the %d-entry limit", maxPackageDirEntries)
+	}
+	byName := map[string]packageSnapshot{}
 	for _, dirent := range entries {
 		if !dirent.IsDir() {
 			continue
@@ -252,22 +277,22 @@ func packageDirs(repoRoot string, packagesRootPath string) (map[string]string, e
 		if _, err := os.Lstat(manifestPath); err != nil {
 			continue
 		}
-		manifest, err := readPackageManifest(repoRoot, manifestPath)
+		manifest, err := readPackageManifest(scan, manifestPath)
 		if err != nil {
 			return nil, err
 		}
 		if name, ok := manifest["name"].(string); ok {
 			if previous, exists := byName[name]; exists {
-				return nil, fmt.Errorf("duplicate package name %s in %s and %s", name, filepath.ToSlash(previous), filepath.ToSlash(packageDir))
+				return nil, fmt.Errorf("duplicate package name %s in %s and %s", name, filepath.ToSlash(previous.dir), filepath.ToSlash(packageDir))
 			}
-			byName[name] = packageDir
+			byName[name] = packageSnapshot{dir: packageDir, manifest: manifest}
 		}
 	}
 	return byName, nil
 }
 
-func readPackageManifest(repoRoot string, path string) (map[string]any, error) {
-	source, err := readFileUnderRoot(repoRoot, path, "TypeScript public API package manifest")
+func readPackageManifest(scan *scanCache, path string) (map[string]any, error) {
+	source, _, err := scan.readFile(path, "TypeScript public API package manifest", maxPackageManifestBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -282,12 +307,78 @@ func readPackageManifest(repoRoot string, path string) (map[string]any, error) {
 	return record, nil
 }
 
-func readFileUnderRoot(repoRoot string, filePath string, context string) ([]byte, error) {
-	resolved, err := resolvedPathUnderRoot(repoRoot, filePath, context)
-	if err != nil {
-		return nil, err
+func newScanCache(repoRoot string, maxBytes int64) *scanCache {
+	return &scanCache{
+		repoRoot:      repoRoot,
+		maxBytes:      maxBytes,
+		files:         map[string][]byte{},
+		sourceExports: map[string]sourceExportSnapshot{},
 	}
-	return os.ReadFile(resolved)
+}
+
+func (scan *scanCache) readFile(filePath string, context string, maxFileBytes int64) ([]byte, string, error) {
+	resolved, err := resolvedPathUnderRoot(scan.repoRoot, filePath, context)
+	if err != nil {
+		return nil, "", err
+	}
+	if content, ok := scan.files[resolved]; ok {
+		if int64(len(content)) > maxFileBytes {
+			return nil, "", fmt.Errorf("%s exceeds the %s file limit", context, byteLimitLabel(maxFileBytes))
+		}
+		return content, resolved, nil
+	}
+	file, err := os.Open(resolved)
+	if err != nil {
+		return nil, "", err
+	}
+	defer file.Close()
+	remaining := scan.maxBytes - scan.bytesRead
+	readLimit := maxFileBytes
+	if remaining < readLimit {
+		readLimit = remaining
+	}
+	if readLimit < 0 {
+		readLimit = 0
+	}
+	content, err := io.ReadAll(io.LimitReader(file, readLimit+1))
+	if err != nil {
+		return nil, "", err
+	}
+	if int64(len(content)) > readLimit {
+		if maxFileBytes <= remaining {
+			return nil, "", fmt.Errorf("%s exceeds the %s file limit", context, byteLimitLabel(maxFileBytes))
+		}
+		return nil, "", fmt.Errorf("TypeScript public API scan exceeds the %s aggregate file-read limit", byteLimitLabel(scan.maxBytes))
+	}
+	scan.bytesRead += int64(len(content))
+	scan.files[resolved] = content
+	return content, resolved, nil
+}
+
+func (scan *scanCache) collectSourceExports(filePath string, context string) ([]string, []string, error) {
+	source, resolved, err := scan.readFile(filePath, context, maxSourceFileBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+	if snapshot, ok := scan.sourceExports[resolved]; ok {
+		return snapshot.runtimeExports, snapshot.typeExports, nil
+	}
+	runtimeExports, typeExports, err := CollectExports(string(source))
+	if err != nil {
+		return nil, nil, err
+	}
+	scan.sourceExports[resolved] = sourceExportSnapshot{runtimeExports: runtimeExports, typeExports: typeExports}
+	return runtimeExports, typeExports, nil
+}
+
+func byteLimitLabel(limit int64) string {
+	if limit%(1<<20) == 0 {
+		return fmt.Sprintf("%d MiB", limit/(1<<20))
+	}
+	if limit%(1<<10) == 0 {
+		return fmt.Sprintf("%d KiB", limit/(1<<10))
+	}
+	return fmt.Sprintf("%d-byte", limit)
 }
 
 func resolvedPathUnderRoot(repoRoot string, filePath string, context string) (string, error) {
@@ -317,276 +408,8 @@ func safePackageRelativePath(path string, context string, sourcePrefix string, s
 	return path, nil
 }
 
-func CollectExports(source string) ([]string, []string, error) {
-	runtimeExports := map[string]struct{}{}
-	typeExports := map[string]struct{}{}
-	for _, statement := range exportStatements(source) {
-		if strings.HasPrefix(statement, "export *") {
-			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use export *")
-		}
-		if strings.HasPrefix(statement, "export default") || strings.HasPrefix(statement, "export =") {
-			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use default exports")
-		}
-		if strings.HasPrefix(statement, "export declare") {
-			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
-		}
-		if match := typeExportPattern.FindStringSubmatch(statement); match != nil {
-			addTypeClauseExports(match[1], typeExports)
-			continue
-		}
-		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
-			addNamedClauseExports(match[1], runtimeExports, typeExports)
-			continue
-		}
-		if match := runtimeDeclPattern.FindStringSubmatch(statement); match != nil {
-			runtimeExports[match[1]] = struct{}{}
-			continue
-		}
-		if match := typeDeclPattern.FindStringSubmatch(statement); match != nil {
-			typeExports[match[1]] = struct{}{}
-			continue
-		}
-		if match := varDeclPattern.FindStringSubmatch(statement); match != nil {
-			names, err := variableExportNames(match[1])
-			if err != nil {
-				return nil, nil, err
-			}
-			for _, name := range names {
-				runtimeExports[name] = struct{}{}
-			}
-			continue
-		}
-		return nil, nil, fmt.Errorf("unsupported public export statement")
-	}
-	return sortedSet(runtimeExports), sortedSet(typeExports), nil
-}
-
-func exportStatements(source string) []string {
-	statements := []string{}
-	pending := []string{}
-	for _, rawLine := range strings.Split(source, "\n") {
-		line := strings.TrimSpace(rawLine)
-		if len(pending) > 0 {
-			pending = append(pending, line)
-			if strings.Contains(line, ";") {
-				statements = append(statements, strings.Join(pending, " "))
-				pending = nil
-			}
-			continue
-		}
-		if !strings.HasPrefix(line, "export ") && line != "export" {
-			continue
-		}
-		if startsMultilineReexport(line) && !strings.Contains(line, ";") {
-			pending = append(pending, line)
-			continue
-		}
-		statements = append(statements, line)
-	}
-	if len(pending) > 0 {
-		statements = append(statements, strings.Join(pending, " "))
-	}
-	return statements
-}
-
-func startsMultilineReexport(line string) bool {
-	return strings.HasPrefix(line, "export {") || strings.HasPrefix(line, "export type {")
-}
-
-func addTypeClauseExports(clause string, target map[string]struct{}) {
-	addClauseExports(clause, nil, target, true)
-}
-
-func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) {
-	addClauseExports(clause, runtimeTarget, typeTarget, false)
-}
-
-func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) {
-	body := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(clause), "{"), "}")
-	for _, rawPart := range strings.Split(body, ",") {
-		part := strings.TrimSpace(rawPart)
-		if part == "" {
-			continue
-		}
-		typeOnly := typeClause
-		if isInlineTypeOnlyReexport(part) {
-			typeOnly = true
-			part = strings.TrimSpace(strings.TrimPrefix(part, "type "))
-		}
-		name := part
-		if match := exportClauseNameRegex.FindStringSubmatch(part); match != nil {
-			name = match[1]
-		}
-		if typeOnly {
-			typeTarget[name] = struct{}{}
-			continue
-		}
-		runtimeTarget[name] = struct{}{}
-	}
-}
-
-func isInlineTypeOnlyReexport(part string) bool {
-	if !strings.HasPrefix(part, "type ") {
-		return false
-	}
-	rest := strings.TrimSpace(strings.TrimPrefix(part, "type "))
-	return rest != "" && !strings.HasPrefix(rest, "as ")
-}
-
-func variableExportNames(declarations string) ([]string, error) {
-	names := []string{}
-	parts, err := splitTopLevelComma(declarations)
-	if err != nil {
-		return nil, err
-	}
-	for _, rawPart := range parts {
-		part := strings.TrimSpace(rawPart)
-		if equals := strings.Index(part, "="); equals >= 0 {
-			part = strings.TrimSpace(part[:equals])
-		}
-		if colon := strings.Index(part, ":"); colon >= 0 {
-			part = strings.TrimSpace(part[:colon])
-		}
-		if !identifierRegex.MatchString(part) {
-			return nil, fmt.Errorf("TypeScript public API variable exports must use identifier declarations")
-		}
-		names = append(names, part)
-	}
-	return names, nil
-}
-
-func splitTopLevelComma(value string) ([]string, error) {
-	parts := []string{}
-	start := 0
-	parenDepth := 0
-	bracketDepth := 0
-	braceDepth := 0
-	angleDepth := 0
-	var quote rune
-	escaped := false
-	inInitializer := false
-	for index, char := range value {
-		if quote != 0 {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if char == '\\' {
-				escaped = true
-				continue
-			}
-			if char == quote {
-				quote = 0
-			}
-			continue
-		}
-		switch char {
-		case '\'', '"', '`':
-			quote = char
-		case '(':
-			parenDepth++
-		case ')':
-			if parenDepth > 0 {
-				parenDepth--
-			}
-		case '[':
-			bracketDepth++
-		case ']':
-			if bracketDepth > 0 {
-				bracketDepth--
-			}
-		case '{':
-			braceDepth++
-		case '}':
-			if braceDepth > 0 {
-				braceDepth--
-			}
-		case '=':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0 {
-				inInitializer = true
-			}
-		case '<':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && (!inInitializer || looksLikeTypeArgumentStart(value, index)) {
-				angleDepth++
-			}
-		case '>':
-			if angleDepth > 0 {
-				angleDepth--
-			}
-		case ',':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0 {
-				parts = append(parts, value[start:index])
-				start = index + len(string(char))
-				inInitializer = false
-			}
-		}
-	}
-	if quote != 0 {
-		return nil, fmt.Errorf("TypeScript public API variable exports must not contain unterminated string literals")
-	}
-	parts = append(parts, value[start:])
-	return parts, nil
-}
-
-func looksLikeTypeArgumentStart(value string, start int) bool {
-	depth := 0
-	var quote rune
-	escaped := false
-	for index, char := range value[start:] {
-		absolute := start + index
-		if quote != 0 {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if char == '\\' {
-				escaped = true
-				continue
-			}
-			if char == quote {
-				quote = 0
-			}
-			continue
-		}
-		switch char {
-		case '\'', '"', '`':
-			quote = char
-		case '<':
-			depth++
-		case '>':
-			if depth == 0 {
-				return false
-			}
-			depth--
-			if depth == 0 {
-				next := nextNonSpaceRune(value[absolute+len(string(char)):])
-				return next == '(' || next == '[' || next == '.' || next == ',' || next == ';'
-			}
-		case ';':
-			if depth == 0 {
-				return false
-			}
-		}
-	}
-	return false
-}
-
-func nextNonSpaceRune(value string) rune {
-	for _, char := range value {
-		if char != ' ' && char != '\t' && char != '\n' && char != '\r' {
-			return char
-		}
-	}
-	return 0
-}
-
-func verifyPackageExportMap(repoRoot string, packageDir string, item entry, failures *[]string) {
-	manifest, err := readPackageManifest(repoRoot, filepath.Join(packageDir, "package.json"))
-	if err != nil {
-		*failures = append(*failures, err.Error())
-		return
-	}
-	exportsField, ok := manifest["exports"].(map[string]any)
+func verifyPackageExportMap(pkg packageSnapshot, item entry, failures *[]string) {
+	exportsField, ok := pkg.manifest["exports"].(map[string]any)
 	if !ok {
 		*failures = append(*failures, item.PackageName+" package.json must declare an exports object")
 		return
@@ -635,7 +458,7 @@ func compiledExportTargetForSource(source string, condition string) (string, boo
 	return "./dist/" + stem + ".js", true
 }
 
-func verifyCoveredPackageExportKeys(repoRoot string, packages map[string]string, entries []entry, failures *[]string) {
+func verifyCoveredPackageExportKeys(packages map[string]packageSnapshot, entries []entry, failures *[]string) {
 	expectedByPackage := map[string]map[string]struct{}{}
 	for _, item := range entries {
 		keys := expectedByPackage[item.PackageName]
@@ -655,16 +478,11 @@ func verifyCoveredPackageExportKeys(repoRoot string, packages map[string]string,
 	sort.Strings(packageNames)
 	for _, packageName := range packageNames {
 		expectedSet := expectedByPackage[packageName]
-		packageDir, ok := packages[packageName]
+		pkg, ok := packages[packageName]
 		if !ok {
 			continue
 		}
-		manifest, err := readPackageManifest(repoRoot, filepath.Join(packageDir, "package.json"))
-		if err != nil {
-			*failures = append(*failures, err.Error())
-			continue
-		}
-		exportsField, ok := manifest["exports"].(map[string]any)
+		exportsField, ok := pkg.manifest["exports"].(map[string]any)
 		if !ok {
 			continue
 		}
