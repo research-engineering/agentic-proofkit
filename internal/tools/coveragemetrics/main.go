@@ -7,11 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
 const outputPath = "artifacts/proofkit/coverage-metrics.json"
@@ -74,6 +76,14 @@ type metrics struct {
 	CommandRoutes commandRouteMetrics `json:"commandRoutes"`
 	DeadZones     deadZoneMetrics     `json:"deadZones"`
 	NonClaims     []string            `json:"nonClaims"`
+	Provenance    coverageProvenance  `json:"provenance"`
+}
+
+type coverageProvenance struct {
+	GeneratedAt          string `json:"generatedAt"`
+	ProducerCommandID    string `json:"producerCommandId"`
+	SourceRevision       string `json:"sourceRevision"`
+	SourceSnapshotDigest string `json:"sourceSnapshotDigest"`
 }
 
 type requirementMetrics struct {
@@ -100,6 +110,8 @@ type cliContractMetrics struct {
 type commandRouteMetrics struct {
 	AdmittedInventoryEntryCount               int      `json:"admittedInventoryEntryCount"`
 	CommandCount                              int      `json:"commandCount"`
+	CommandWithoutProofRouteCandidateCount    int      `json:"commandWithoutProofRouteCandidateCount"`
+	CommandsWithoutProofRouteCandidate        []string `json:"commandsWithoutProofRouteCandidate"`
 	ContractOnlyCommandCount                  int      `json:"contractOnlyCommandCount"`
 	ContractOnlyCommands                      []string `json:"contractOnlyCommands"`
 	CommandWithoutSemanticFalsifierRouteCount int      `json:"commandWithoutSemanticFalsifierRouteCount"`
@@ -108,8 +120,12 @@ type commandRouteMetrics struct {
 	RouteOnlyCommandCount                     int      `json:"routeOnlyCommandCount"`
 	RouteOnlyCommands                         []string `json:"routeOnlyCommands"`
 	RouteSmokeCount                           int      `json:"routeSmokeCount"`
+	ProofRouteCandidateInventoryEntryCount    int      `json:"proofRouteCandidateInventoryEntryCount"`
+	ProofRouteCandidateRouteCount             int      `json:"proofRouteCandidateRouteCount"`
 	SemanticInventoryEntryCount               int      `json:"semanticInventoryEntryCount"`
 	SemanticRouteCount                        int      `json:"semanticRouteCount"`
+	UnknownProofRouteCandidateRefs            []string `json:"unknownProofRouteCandidateRefs"`
+	UnknownProofRouteCandidateRefCount        int      `json:"unknownProofRouteCandidateRefCount"`
 	UnknownSemanticCommandRefs                []string `json:"unknownSemanticCommandRefs"`
 	UnknownSemanticCommandRefCount            int      `json:"unknownSemanticCommandRefCount"`
 }
@@ -151,11 +167,28 @@ func run() error {
 		return writeMetrics(out, err)
 	}
 	out := buildMetrics(requirements, bindings, witnesses, contract, commandInventory)
+	if err := bindCurrentSourceProvenance(&out); err != nil {
+		return writeMetrics(out, err)
+	}
 	closeoutErr := errors.Join(
-		requireCommandSemanticFalsifierRoutes(out.CommandRoutes),
+		requireCommandRouteInventoryClosure(out.CommandRoutes),
 		requireNoLinkageDeadZones(out.DeadZones),
 	)
 	return writeMetrics(out, closeoutErr)
+}
+
+func bindCurrentSourceProvenance(out *metrics) error {
+	revision, sourceDigest, err := packageartifactrecord.SourceSnapshot(".")
+	if err != nil {
+		return fmt.Errorf("bind coverage metrics source snapshot: %w", err)
+	}
+	out.Provenance = coverageProvenance{
+		GeneratedAt:          time.Now().UTC().Format(time.RFC3339Nano),
+		ProducerCommandID:    "proofkit.coverage-metrics",
+		SourceRevision:       revision,
+		SourceSnapshotDigest: sourceDigest,
+	}
+	return nil
 }
 
 func writeMetrics(out metrics, routeErr error) error {
@@ -322,7 +355,8 @@ func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnes
 		},
 		NonClaims: []string{
 			"Coverage metrics report explicit requirement, binding, witness, and CLI inventory linkage only.",
-			"Coverage metrics report command semantic-route inventory but do not execute those tests or claim exhaustive test semantic completeness.",
+			"Coverage metrics classify static command route metadata as proof_route_candidate; route prose, source markers, test existence, and failure-capable AST nodes do not count as semantic_falsifier evidence.",
+			"Coverage metrics do not execute command route candidates or observe a concrete falsification event.",
 			"Coverage metrics do not claim line coverage, semantic correctness, command execution, receipt freshness, or merge satisfaction.",
 		},
 	}
@@ -348,11 +382,14 @@ func readCommandCoverageInventoryFrom(raw any) (testevidenceinventory.Inventory,
 }
 
 func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCoverageSummary, inventory testevidenceinventory.Inventory) commandRouteMetrics {
-	missing := []string{}
+	missingCandidates := []string{}
+	missingSemantic := []string{}
 	contractRefs := map[string]string{}
 	knownRefs := map[string]struct{}{}
+	candidateRefs := map[string]struct{}{}
 	semanticRefs := map[string]struct{}{}
 	routeOnlyCount := 0
+	candidateEntryCount := 0
 	semanticEntryCount := 0
 	for _, command := range contract.Commands {
 		contractRefs[app.CommandCoverageCommandRef(command.Command)] = command.Command
@@ -367,6 +404,11 @@ func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCover
 			for _, commandRef := range entry.CommandRefs {
 				semanticRefs[commandRef] = struct{}{}
 			}
+		case "proof_route_candidate":
+			candidateEntryCount++
+			for _, commandRef := range entry.CommandRefs {
+				candidateRefs[commandRef] = struct{}{}
+			}
 		case "routing_smoke_nonclaim":
 			routeOnlyCount++
 		}
@@ -375,6 +417,12 @@ func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCover
 	for ref := range semanticRefs {
 		if _, ok := knownRefs[ref]; !ok {
 			unknownRefs = append(unknownRefs, ref)
+		}
+	}
+	unknownCandidateRefs := []string{}
+	for ref := range candidateRefs {
+		if _, ok := knownRefs[ref]; !ok {
+			unknownCandidateRefs = append(unknownCandidateRefs, ref)
 		}
 	}
 	contractOnly := []string{}
@@ -391,41 +439,54 @@ func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCover
 	}
 	sort.Strings(contractOnly)
 	sort.Strings(routeOnly)
+	sort.Strings(unknownCandidateRefs)
 	sort.Strings(unknownRefs)
 	out := commandRouteMetrics{
-		AdmittedInventoryEntryCount:    len(inventory.Entries),
-		CommandCount:                   len(summaries),
-		ContractOnlyCommands:           contractOnly,
-		ContractOnlyCommandCount:       len(contractOnly),
-		RouteOnlyCommands:              routeOnly,
-		RouteOnlyCommandCount:          len(routeOnly),
-		RouteSmokeCount:                routeOnlyCount,
-		SemanticInventoryEntryCount:    semanticEntryCount,
-		UnknownSemanticCommandRefs:     unknownRefs,
-		UnknownSemanticCommandRefCount: len(unknownRefs),
+		AdmittedInventoryEntryCount:            len(inventory.Entries),
+		CommandCount:                           len(summaries),
+		ContractOnlyCommands:                   contractOnly,
+		ContractOnlyCommandCount:               len(contractOnly),
+		RouteOnlyCommands:                      routeOnly,
+		RouteOnlyCommandCount:                  len(routeOnly),
+		RouteSmokeCount:                        routeOnlyCount,
+		ProofRouteCandidateInventoryEntryCount: candidateEntryCount,
+		SemanticInventoryEntryCount:            semanticEntryCount,
+		UnknownProofRouteCandidateRefs:         unknownCandidateRefs,
+		UnknownProofRouteCandidateRefCount:     len(unknownCandidateRefs),
+		UnknownSemanticCommandRefs:             unknownRefs,
+		UnknownSemanticCommandRefCount:         len(unknownRefs),
 	}
 	for _, summary := range summaries {
 		out.RouteCount += summary.RouteCount
+		out.ProofRouteCandidateRouteCount += summary.ProofRouteCandidateCount
 		out.SemanticRouteCount += summary.SemanticRouteCount
+		if _, ok := candidateRefs[summary.CommandRef]; !ok {
+			missingCandidates = append(missingCandidates, summary.Command)
+		}
 		if _, ok := semanticRefs[summary.CommandRef]; !ok {
-			missing = append(missing, summary.Command)
+			missingSemantic = append(missingSemantic, summary.Command)
 		}
 	}
-	sort.Strings(missing)
-	out.CommandsWithoutSemanticFalsifierRoute = missing
-	out.CommandWithoutSemanticFalsifierRouteCount = len(missing)
+	sort.Strings(missingCandidates)
+	sort.Strings(missingSemantic)
+	out.CommandsWithoutProofRouteCandidate = missingCandidates
+	out.CommandWithoutProofRouteCandidateCount = len(missingCandidates)
+	out.CommandsWithoutSemanticFalsifierRoute = missingSemantic
+	out.CommandWithoutSemanticFalsifierRouteCount = len(missingSemantic)
 	return out
 }
 
-func requireCommandSemanticFalsifierRoutes(metrics commandRouteMetrics) error {
-	if len(metrics.CommandsWithoutSemanticFalsifierRoute) == 0 &&
+func requireCommandRouteInventoryClosure(metrics commandRouteMetrics) error {
+	if len(metrics.CommandsWithoutProofRouteCandidate) == 0 &&
+		len(metrics.UnknownProofRouteCandidateRefs) == 0 &&
 		len(metrics.UnknownSemanticCommandRefs) == 0 &&
 		len(metrics.ContractOnlyCommands) == 0 &&
 		len(metrics.RouteOnlyCommands) == 0 {
 		return nil
 	}
-	return fmt.Errorf("command semantic falsifier route defects: missing=%v unknownRefs=%v contractOnly=%v routeOnly=%v",
-		metrics.CommandsWithoutSemanticFalsifierRoute,
+	return fmt.Errorf("command proof-route inventory defects: missingCandidates=%v unknownCandidateRefs=%v unknownSemanticRefs=%v contractOnly=%v routeOnly=%v",
+		metrics.CommandsWithoutProofRouteCandidate,
+		metrics.UnknownProofRouteCandidateRefs,
 		metrics.UnknownSemanticCommandRefs,
 		metrics.ContractOnlyCommands,
 		metrics.RouteOnlyCommands,

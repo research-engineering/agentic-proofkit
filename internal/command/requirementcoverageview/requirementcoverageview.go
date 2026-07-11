@@ -24,3 +24,11 @@ func BuildHTML(raw any) (string, int, error) {
 	}
 	return html(view), exitCode(view), nil
 }
+
+func BuildBrowserDocument(raw any) (map[string]any, string, error) {
+	view, err := build(raw)
+	if err != nil {
+		return nil, "", err
+	}
+	return view, html(view), nil
+}

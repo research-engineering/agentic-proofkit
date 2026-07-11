@@ -12,7 +12,7 @@ import (
 const commandCoverageSourceOracleImport = "github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 
 func routeSemanticSourceProblem(command string, route commandCoverageRoute) string {
-	if !route.isSemantic() {
+	if !route.isSemanticCandidate() {
 		return ""
 	}
 	filePath, err := commandCoverageRouteFilePath(route.file)
@@ -77,8 +77,8 @@ func goTestFunctionProblemWithMarker(filePath string, testName string, marker st
 		if function.Body == nil || len(function.Body.List) == 0 {
 			return "has no executable body"
 		}
-		if hasUnconditionalTopLevelSkip(function) {
-			return "contains unconditional t.Skip at top level"
+		if hasTestSkip(function) {
+			return "contains t.Skip and cannot serve as an always-executable semantic oracle"
 		}
 		if !hasFailureCapableAssertion(function) {
 			return "has no direct failure-capable assertion"
@@ -203,40 +203,35 @@ func testingTParamName(function *ast.FuncDecl) string {
 	return function.Type.Params.List[0].Names[0].Name
 }
 
-func hasUnconditionalTopLevelSkip(function *ast.FuncDecl) bool {
+func hasTestSkip(function *ast.FuncDecl) bool {
 	paramName := testingTParamName(function)
-	if paramName == "" {
+	if paramName == "" || function.Body == nil {
 		return false
 	}
-	for _, statement := range function.Body.List {
-		if isUnconditionalTestSkip(statement, paramName) {
+	found := false
+	ast.Inspect(function.Body, func(node ast.Node) bool {
+		if found {
+			return false
+		}
+		call, ok := node.(*ast.CallExpr)
+		if !ok {
 			return true
 		}
-	}
-	return false
-}
-
-func isUnconditionalTestSkip(statement ast.Stmt, testParamName string) bool {
-	expression, ok := statement.(*ast.ExprStmt)
-	if !ok {
-		return false
-	}
-	call, ok := expression.X.(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
-		return false
-	}
-	receiver, ok := selector.X.(*ast.Ident)
-	if !ok || receiver.Name != testParamName {
-		return false
-	}
-	switch selector.Sel.Name {
-	case "Skip", "Skipf", "SkipNow":
-		return true
-	default:
-		return false
-	}
+		selector, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		receiver, ok := selector.X.(*ast.Ident)
+		if !ok || receiver.Name != paramName {
+			return true
+		}
+		switch selector.Sel.Name {
+		case "Skip", "Skipf", "SkipNow":
+			found = true
+			return false
+		default:
+			return true
+		}
+	})
+	return found
 }

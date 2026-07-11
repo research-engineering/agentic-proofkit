@@ -34,6 +34,8 @@ func diagnosticClassID(diagnostic string) string {
 		return "missing_semantic_test"
 	case strings.HasPrefix(diagnostic, "nonsemantic_command_evidence:"):
 		return "nonsemantic_command_evidence"
+	case strings.HasPrefix(diagnostic, "proof_route_candidate_only:") || strings.HasPrefix(diagnostic, "command_proof_route_candidate_only:"):
+		return "proof_route_candidate_only"
 	case strings.HasPrefix(diagnostic, "route_only_nonclaim:") ||
 		strings.HasPrefix(diagnostic, "command_route_only_nonclaim:") ||
 		strings.HasPrefix(diagnostic, "covered_by_routing_smoke_nonclaim:"):

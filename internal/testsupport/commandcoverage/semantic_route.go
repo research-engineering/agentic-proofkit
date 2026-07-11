@@ -7,7 +7,8 @@ import (
 
 const semanticRoutePrefix = "proofkit.command_coverage.source_oracle.v1."
 
-// SemanticRoute binds a Go test body to a command-coverage semantic oracle row.
+// SemanticRoute validates a legacy source marker for a proof-route candidate.
+// It does not execute a falsification event or produce semantic evidence.
 func SemanticRoute(t testing.TB, marker string) {
 	t.Helper()
 	if !strings.HasPrefix(marker, semanticRoutePrefix) || len(marker) != len(semanticRoutePrefix)+78 {

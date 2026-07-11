@@ -163,6 +163,7 @@ func runContractEnvelopeCommand(command string, args []string, stdin io.Reader, 
 
 func parseEnvelopeCommandArgs(command string, args []string, builders agentEnvelopeBuilders) (envelopeCommandArgs, error) {
 	options := envelopeCommandArgs{}
+	inputPointerSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -172,9 +173,10 @@ func parseEnvelopeCommandArgs(command string, args []string, builders agentEnvel
 			options.inputPath = args[index+1]
 			index++
 		case "--input-pointer":
-			if index+1 >= len(args) {
+			if inputPointerSeen || index+1 >= len(args) {
 				return envelopeCommandArgs{}, fmt.Errorf("--input-pointer requires a JSON pointer")
 			}
+			inputPointerSeen = true
 			options.inputPointer = args[index+1]
 			index++
 		case "--contract-envelope":

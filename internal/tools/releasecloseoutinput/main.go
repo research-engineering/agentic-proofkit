@@ -11,17 +11,32 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
 const (
 	completionID                = "proofkit.release_closeout.current_package_gate"
+	ciProvenancePath            = "artifacts/proofkit/ci-provenance.json"
+	coverageMetricsPath         = "artifacts/proofkit/coverage-metrics.json"
+	proofReceiptReportPath      = "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"
+	proofReceiptsPath           = "artifacts/proofkit/self-hosting-proof-receipts.json"
+	producerReportPath          = "artifacts/proofkit/self-hosting-receipt-producer-admission-report.json"
+	producerPolicyPath          = "artifacts/proofkit/self-hosting-receipt-producer-admission.json"
+	specProofBundleReportPath   = "artifacts/proofkit/self-hosting-spec-proof-bundle-admission-report.json"
+	specProofBundlePath         = "artifacts/proofkit/self-hosting-spec-proof-bundle.json"
 	npmCandidateNonClaim        = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
 	pypiPlannedNonClaim         = "PyPI is not a dependency authority for this version until PyPI package evidence exists."
 	packageGateEnvironmentClass = "local-go-python"
@@ -107,14 +122,24 @@ type coverageMetricsEvidence struct {
 	DeadZones     coverageDeadZoneMetrics     `json:"deadZones"`
 	NonClaims     []string                    `json:"nonClaims"`
 	ProofBindings map[string]any              `json:"proofBindings"`
+	Provenance    coverageMetricsProvenance   `json:"provenance"`
 	Requirements  map[string]any              `json:"requirements"`
 	SchemaVersion int                         `json:"schemaVersion"`
 	WitnessPlan   map[string]any              `json:"witnessPlan"`
 }
 
+type coverageMetricsProvenance struct {
+	GeneratedAt          string `json:"generatedAt"`
+	ProducerCommandID    string `json:"producerCommandId"`
+	SourceRevision       string `json:"sourceRevision"`
+	SourceSnapshotDigest string `json:"sourceSnapshotDigest"`
+}
+
 type coverageCommandRouteMetrics struct {
 	AdmittedInventoryEntryCount               *int      `json:"admittedInventoryEntryCount"`
 	CommandCount                              *int      `json:"commandCount"`
+	CommandWithoutProofRouteCandidateCount    *int      `json:"commandWithoutProofRouteCandidateCount"`
+	CommandsWithoutProofRouteCandidate        *[]string `json:"commandsWithoutProofRouteCandidate"`
 	ContractOnlyCommandCount                  *int      `json:"contractOnlyCommandCount"`
 	ContractOnlyCommands                      *[]string `json:"contractOnlyCommands"`
 	CommandWithoutSemanticFalsifierRouteCount *int      `json:"commandWithoutSemanticFalsifierRouteCount"`
@@ -123,8 +148,12 @@ type coverageCommandRouteMetrics struct {
 	RouteOnlyCommandCount                     *int      `json:"routeOnlyCommandCount"`
 	RouteOnlyCommands                         *[]string `json:"routeOnlyCommands"`
 	RouteSmokeCount                           *int      `json:"routeSmokeCount"`
+	ProofRouteCandidateInventoryEntryCount    *int      `json:"proofRouteCandidateInventoryEntryCount"`
+	ProofRouteCandidateRouteCount             *int      `json:"proofRouteCandidateRouteCount"`
 	SemanticInventoryEntryCount               *int      `json:"semanticInventoryEntryCount"`
 	SemanticRouteCount                        *int      `json:"semanticRouteCount"`
+	UnknownProofRouteCandidateRefCount        *int      `json:"unknownProofRouteCandidateRefCount"`
+	UnknownProofRouteCandidateRefs            *[]string `json:"unknownProofRouteCandidateRefs"`
 	UnknownSemanticCommandRefCount            *int      `json:"unknownSemanticCommandRefCount"`
 	UnknownSemanticCommandRefs                *[]string `json:"unknownSemanticCommandRefs"`
 }
@@ -161,19 +190,48 @@ type proofReceiptSetEvidence struct {
 
 type proofReceiptEvidence struct {
 	ArtifactRefs           []any    `json:"artifactRefs"`
+	CommandDigest          string   `json:"commandDigest"`
+	DependencyDigest       string   `json:"dependencyDigest"`
 	EnvironmentClass       string   `json:"environmentClass"`
+	EnvironmentDigest      string   `json:"environmentDigest"`
 	EvidenceRefs           []string `json:"evidenceRefs"`
 	ExitCode               int      `json:"exitCode"`
+	FinishedAt             string   `json:"finishedAt"`
 	NonClaims              []string `json:"nonClaims"`
 	ProducerAdmissionClass string   `json:"producerAdmissionClass"`
 	ProducerID             string   `json:"producerId"`
+	PreconditionDigest     string   `json:"preconditionDigest"`
+	ProofBindingDigest     string   `json:"proofBindingDigest"`
 	ProofPlanID            string   `json:"proofPlanId"`
 	ProvenanceRef          string   `json:"provenanceRef"`
 	ReceiptID              string   `json:"receiptId"`
 	ReceiptKind            string   `json:"receiptKind"`
 	RunnerClass            string   `json:"runnerClass"`
+	SourceRevision         string   `json:"sourceRevision"`
+	StartedAt              string   `json:"startedAt"`
 	Status                 string   `json:"status"`
+	ToolchainDigest        string   `json:"toolchainDigest"`
+	WitnessSelectorDigest  string   `json:"witnessSelectorDigest"`
 	WitnessSelectors       []string `json:"witnessSelectors"`
+}
+
+type selfEvidenceDocument[T any] struct {
+	raw   any
+	value T
+}
+
+// SelfEvidenceSnapshot is constructed once and exposes no mutable document state.
+type SelfEvidenceSnapshot struct {
+	root                  string
+	ciProvenance          selfEvidenceDocument[map[string]any]
+	coverageMetrics       selfEvidenceDocument[coverageMetricsEvidence]
+	execution             packageartifactrecord.Record
+	proofReceiptReport    selfEvidenceDocument[selfEvidenceReport]
+	proofReceipts         selfEvidenceDocument[proofReceiptSetEvidence]
+	producerReport        selfEvidenceDocument[selfEvidenceReport]
+	producerPolicy        selfEvidenceDocument[receiptProducerPolicyEvidence]
+	specProofBundleReport selfEvidenceDocument[selfEvidenceReport]
+	specProofBundle       selfEvidenceDocument[specProofBundleEvidence]
 }
 
 type receiptProducerPolicyEvidence struct {
@@ -385,6 +443,7 @@ func pythonArtifactCriterion(root string, manifest packageJSON) criterion {
 
 func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 	evidence := []string{
+		ciProvenancePath,
 		"artifacts/release/checksums.sha256",
 		"artifacts/release/metadata-checksums.sha256",
 		"artifacts/release/release-manifest.json",
@@ -432,35 +491,148 @@ func releaseChannelClassificationCriterion(root string, packageManifest packageJ
 
 func selfEvidenceCriterion(root string) criterion {
 	evidence := []string{
-		"artifacts/proofkit/coverage-metrics.json",
-		"artifacts/proofkit/self-hosting-proof-receipt-admission-report.json",
-		"artifacts/proofkit/self-hosting-proof-receipts.json",
-		"artifacts/proofkit/self-hosting-receipt-producer-admission-report.json",
-		"artifacts/proofkit/self-hosting-receipt-producer-admission.json",
-		"artifacts/proofkit/self-hosting-spec-proof-bundle-admission-report.json",
-		"artifacts/proofkit/self-hosting-spec-proof-bundle.json",
+		coverageMetricsPath,
+		packageartifactrecord.RecordPath,
+		proofReceiptReportPath,
+		proofReceiptsPath,
+		producerReportPath,
+		producerPolicyPath,
+		specProofBundleReportPath,
+		specProofBundlePath,
 	}
 	ok := selfEvidenceValid(root)
 	return blockingCriterion(
 		"proofkit.release_closeout.self_evidence",
-		"Self-hosting receipt, producer admission, spec-proof bundle, and coverage metrics evidence must exist as local advisory closeout evidence.",
+		"Current package-artifact execution, self-hosting receipt, producer admission, spec-proof bundle, and coverage metrics evidence must form one coherent local advisory closeout snapshot.",
 		ok,
 		evidence,
 		[]string{"npm:self:receipt", "npm:self:coverage"},
-		[]string{"Self-hosting receipt, producer admission, spec-proof bundle, or coverage metrics evidence is missing or invalid."},
+		[]string{"Package-artifact execution is missing, stale, invalid, or mismatched with the self receipt.", "Self-hosting receipt, producer admission, spec-proof bundle, or coverage metrics evidence is missing or invalid."},
 		[]string{"This criterion does not make local advisory receipts merge-satisfying or release-satisfying provider evidence."},
 	)
 }
 
 func selfEvidenceValid(root string) bool {
-	return coverageMetricsMatches(root, "artifacts/proofkit/coverage-metrics.json") &&
-		selfEvidenceIdentityConsistent(root) &&
-		reportMatches(root, "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json", "proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "passed", []string{"proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"}) &&
-		proofReceiptSetMatches(root, "artifacts/proofkit/self-hosting-proof-receipts.json") &&
-		reportMatches(root, "artifacts/proofkit/self-hosting-receipt-producer-admission-report.json", "proofkit.receipt-producer-admission", "proofkit.receipt-producer-policy", "passed", []string{"proofkit.receipt-producer-admission.boundary", "proofkit.receipt-producer-admission.coverage", "proofkit.receipt-producer-admission.receipts"}) &&
-		receiptProducerPolicyMatches(root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json") &&
-		reportMatches(root, "artifacts/proofkit/self-hosting-spec-proof-bundle-admission-report.json", "proofkit.spec-proof-bundle-admission", "proofkit.self-hosting.spec-proof-bundle", "passed", []string{"proofkit.spec-proof-bundle-admission.accepted"}) &&
-		specProofBundleMatches(root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json")
+	snapshot, err := readSelfEvidenceSnapshot(root)
+	if err != nil {
+		return false
+	}
+	return snapshot.valid()
+}
+
+func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
+	ciProvenance, err := readSelfEvidenceDocument[map[string]any](root, ciProvenancePath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	coverageMetrics, err := readSelfEvidenceDocument[coverageMetricsEvidence](root, coverageMetricsPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	proofReceiptReport, err := readSelfEvidenceDocument[selfEvidenceReport](root, proofReceiptReportPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	proofReceipts, err := readSelfEvidenceDocument[proofReceiptSetEvidence](root, proofReceiptsPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	producerReport, err := readSelfEvidenceDocument[selfEvidenceReport](root, producerReportPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	producerPolicy, err := readSelfEvidenceDocument[receiptProducerPolicyEvidence](root, producerPolicyPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	specProofBundleReport, err := readSelfEvidenceDocument[selfEvidenceReport](root, specProofBundleReportPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	specProofBundle, err := readSelfEvidenceDocument[specProofBundleEvidence](root, specProofBundlePath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	execution, err := packageartifactrecord.Read(root)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	if err := packageartifactrecord.ValidateCurrent(root, execution); err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	return SelfEvidenceSnapshot{
+		root:                  root,
+		ciProvenance:          ciProvenance,
+		coverageMetrics:       coverageMetrics,
+		execution:             execution,
+		proofReceiptReport:    proofReceiptReport,
+		proofReceipts:         proofReceipts,
+		producerReport:        producerReport,
+		producerPolicy:        producerPolicy,
+		specProofBundleReport: specProofBundleReport,
+		specProofBundle:       specProofBundle,
+	}, nil
+}
+
+func readSelfEvidenceDocument[T any](root string, path string) (selfEvidenceDocument[T], error) {
+	raw, err := readAdmittedJSON(root, path)
+	if err != nil {
+		return selfEvidenceDocument[T]{}, err
+	}
+	value, err := projectAdmittedJSON[T](raw)
+	if err != nil {
+		return selfEvidenceDocument[T]{}, err
+	}
+	return selfEvidenceDocument[T]{raw: raw, value: value}, nil
+}
+
+func (snapshot SelfEvidenceSnapshot) valid() bool {
+	return coverageMetricsRecordMatches(snapshot.coverageMetrics.value) &&
+		coverageMetricsMatchExecution(snapshot.coverageMetrics.value, snapshot.execution) &&
+		proofReceiptReportMatchesDocument(snapshot.proofReceiptReport, snapshot.proofReceipts) &&
+		proofReceiptDocumentMatches(snapshot.proofReceipts) &&
+		receiptProducerReportMatchesDocument(snapshot.producerReport, snapshot.producerPolicy) &&
+		receiptProducerDocumentMatches(snapshot.producerPolicy) &&
+		specProofBundleReportMatchesDocument(snapshot.specProofBundleReport, snapshot.specProofBundle) &&
+		specProofBundleDocumentMatches(snapshot.specProofBundle) &&
+		snapshot.identityConsistent(snapshot.execution) &&
+		snapshot.receiptDigestsConsistent(snapshot.execution)
+}
+
+func coverageMetricsMatchExecution(record coverageMetricsEvidence, execution packageartifactrecord.Record) bool {
+	generatedAt, err := time.Parse(time.RFC3339Nano, record.Provenance.GeneratedAt)
+	if err != nil {
+		return false
+	}
+	finishedAt, err := time.Parse(time.RFC3339Nano, execution.FinishedAt)
+	return err == nil && !generatedAt.Before(finishedAt) &&
+		record.Provenance.ProducerCommandID == "proofkit.coverage-metrics" &&
+		record.Provenance.SourceRevision == execution.SourceRevision &&
+		record.Provenance.SourceSnapshotDigest == execution.SourceSnapshotDigest
+}
+
+func proofReceiptReportMatchesDocument(reportDocument selfEvidenceDocument[selfEvidenceReport], inputDocument selfEvidenceDocument[proofReceiptSetEvidence]) bool {
+	ownerReport, exitCode, err := proofreceiptadmission.Build(inputDocument.raw)
+	return err == nil && exitCode == 0 && ownerReport.State == "passed" && reportDocumentMatchesOwner(reportDocument.raw, ownerReport.JSONValue())
+}
+
+func receiptProducerReportMatchesDocument(reportDocument selfEvidenceDocument[selfEvidenceReport], inputDocument selfEvidenceDocument[receiptProducerPolicyEvidence]) bool {
+	ownerReport, exitCode, err := receiptproduceradmission.Build(inputDocument.raw)
+	return err == nil && exitCode == 0 && ownerReport.State == "passed" && reportDocumentMatchesOwner(reportDocument.raw, ownerReport.JSONValue())
+}
+
+func specProofBundleReportMatchesDocument(reportDocument selfEvidenceDocument[selfEvidenceReport], inputDocument selfEvidenceDocument[specProofBundleEvidence]) bool {
+	ownerReport, exitCode, err := specproofbundleadmission.Build(inputDocument.raw)
+	return err == nil && exitCode == 0 && ownerReport.State == "passed" && reportDocumentMatchesOwner(reportDocument.raw, ownerReport.JSONValue())
+}
+
+func reportDocumentMatchesOwner(stored any, owner any) bool {
+	storedDigest, err := digest.StableJSONSHA256Ref(stored)
+	if err != nil {
+		return false
+	}
+	ownerDigest, err := digest.StableJSONSHA256Ref(owner)
+	return err == nil && storedDigest == ownerDigest
 }
 
 type selfHostingReceiptIdentity struct {
@@ -468,35 +640,37 @@ type selfHostingReceiptIdentity struct {
 	ReceiptID  string
 }
 
-func selfEvidenceIdentityConsistent(root string) bool {
-	receiptSet, err := readTypedJSON[proofReceiptSetEvidence](root, "artifacts/proofkit/self-hosting-proof-receipts.json")
-	if err != nil || len(receiptSet.Receipts) != 1 {
+func (snapshot SelfEvidenceSnapshot) identityConsistent(execution packageartifactrecord.Record) bool {
+	receiptSet := snapshot.proofReceipts.value
+	if len(receiptSet.Receipts) != 1 {
 		return false
 	}
 	proofIdentity, ok := proofReceiptIdentity(receiptSet.Receipts[0])
-	if !ok {
+	if !ok || !proofReceiptMatchesExecution(receiptSet.Receipts[0], execution) {
 		return false
 	}
-	producerPolicy, err := readTypedJSON[receiptProducerPolicyEvidence](root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json")
-	if err != nil || len(producerPolicy.Receipts) != 1 {
+	producerPolicy := snapshot.producerPolicy.value
+	if len(producerPolicy.Receipts) != 1 {
 		return false
 	}
 	producerIdentity, ok := producerReceiptIdentity(producerPolicy.Receipts[0])
 	if !ok || producerIdentity != proofIdentity {
 		return false
 	}
-	bundle, err := readTypedJSON[specProofBundleEvidence](root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json")
-	if err != nil ||
-		len(bundle.ReceiptAdmission.Receipts) != 1 ||
+	bundle := snapshot.specProofBundle.value
+	if len(bundle.ReceiptAdmission.Receipts) != 1 ||
 		len(bundle.ReceiptProducerAdmission.Receipts) != 1 {
 		return false
 	}
 	bundleProofIdentity, ok := proofReceiptIdentity(bundle.ReceiptAdmission.Receipts[0])
-	if !ok || bundleProofIdentity != proofIdentity {
+	if !ok || bundleProofIdentity != proofIdentity ||
+		!reflect.DeepEqual(bundle.ReceiptAdmission.Receipts[0], receiptSet.Receipts[0]) ||
+		!proofReceiptMatchesExecution(bundle.ReceiptAdmission.Receipts[0], execution) {
 		return false
 	}
 	bundleProducerIdentity, ok := producerReceiptIdentity(bundle.ReceiptProducerAdmission.Receipts[0])
-	return ok && bundleProducerIdentity == proofIdentity
+	return ok && bundleProducerIdentity == proofIdentity &&
+		reflect.DeepEqual(bundle.ReceiptProducerAdmission.Receipts[0], producerPolicy.Receipts[0])
 }
 
 func proofReceiptIdentity(record proofReceiptEvidence) (selfHostingReceiptIdentity, bool) {
@@ -513,10 +687,130 @@ func producerReceiptIdentity(record receiptProducerReceipt) (selfHostingReceiptI
 	return selfHostingReceiptIdentity{ProducerID: record.ProducerID, ReceiptID: record.ReceiptID}, true
 }
 
-func coverageMetricsMatches(root string, path string) bool {
-	record, err := readTypedJSON[coverageMetricsEvidence](root, path)
-	return err == nil &&
-		record.SchemaVersion == 1 &&
+func proofReceiptMatchesExecution(receipt proofReceiptEvidence, execution packageartifactrecord.Record) bool {
+	commandDigest, err := packageArtifactCommandDigest(execution)
+	if err != nil || receipt.SourceRevision != execution.SourceRevision ||
+		receipt.StartedAt != execution.StartedAt ||
+		receipt.FinishedAt != execution.FinishedAt ||
+		receipt.CommandDigest != commandDigest ||
+		(execution.EnvironmentDigest != "" && receipt.EnvironmentDigest != executionDigestRef(execution.EnvironmentDigest)) ||
+		(execution.ToolchainDigest != "" && receipt.ToolchainDigest != executionDigestRef(execution.ToolchainDigest)) {
+		return false
+	}
+	return true
+}
+
+func (snapshot SelfEvidenceSnapshot) receiptDigestsConsistent(execution packageartifactrecord.Record) bool {
+	if len(snapshot.proofReceipts.value.Receipts) != 1 {
+		return false
+	}
+	receipt := snapshot.proofReceipts.value.Receipts[0]
+	proofBindingDigest, err := fileDigestRef(snapshot.root, "proofkit/requirement-bindings.json")
+	if err != nil {
+		return false
+	}
+	goModDigest, err := fileDigestRef(snapshot.root, "go.mod")
+	if err != nil {
+		return false
+	}
+	goSumDigest, err := fileDigestRef(snapshot.root, "go.sum")
+	if err != nil {
+		return false
+	}
+	packageJSONDigest, err := fileDigestRef(snapshot.root, "package.json")
+	if err != nil {
+		return false
+	}
+	witnessPlanDigest, err := fileDigestRef(snapshot.root, "proofkit/witness-plan.json")
+	if err != nil {
+		return false
+	}
+	trustInputs, ok := snapshot.ciProvenance.value["ciTrustInputs"]
+	if !ok {
+		return false
+	}
+	ciTrustInputDigest, err := digest.StableJSONSHA256Ref(trustInputs)
+	if err != nil {
+		return false
+	}
+	dependencyDigest, err := digest.StableJSONSHA256Ref(map[string]any{
+		"goModDigest": goModDigest,
+		"goSumDigest": goSumDigest,
+	})
+	if err != nil {
+		return false
+	}
+	preconditionDigest, err := digest.StableJSONSHA256Ref(map[string]any{
+		"artifactSnapshotDigest": execution.ArtifactSnapshotDigest,
+		"ciTrustInputDigest":     ciTrustInputDigest,
+		"goModDigest":            goModDigest,
+		"goSumDigest":            goSumDigest,
+		"packageJsonDigest":      packageJSONDigest,
+		"sourceSnapshotDigest":   execution.SourceSnapshotDigest,
+		"witnessPlanDigest":      witnessPlanDigest,
+	})
+	if err != nil {
+		return false
+	}
+	selectorValues := make([]any, 0, len(receipt.WitnessSelectors))
+	for _, selector := range receipt.WitnessSelectors {
+		selectorValues = append(selectorValues, selector)
+	}
+	witnessSelectorDigest, err := digest.StableJSONSHA256Ref(selectorValues)
+	if err != nil {
+		return false
+	}
+	return receipt.DependencyDigest == dependencyDigest &&
+		receipt.PreconditionDigest == preconditionDigest &&
+		receipt.ProofBindingDigest == proofBindingDigest &&
+		receipt.WitnessSelectorDigest == witnessSelectorDigest &&
+		provenanceMatchesExecution(snapshot.ciProvenance.value, execution)
+}
+
+func provenanceMatchesExecution(record map[string]any, execution packageartifactrecord.Record) bool {
+	if record["sourceRevision"] != execution.SourceRevision {
+		return false
+	}
+	generatedAt, ok := record["generatedAt"].(string)
+	if !ok {
+		return false
+	}
+	generated, err := time.Parse(time.RFC3339Nano, generatedAt)
+	if err != nil {
+		return false
+	}
+	finished, err := time.Parse(time.RFC3339Nano, execution.FinishedAt)
+	return err == nil && !generated.Before(finished)
+}
+
+func fileDigestRef(root string, path string) (string, error) {
+	value, err := fileSHA256(filepath.Join(root, filepath.FromSlash(path)))
+	if err != nil {
+		return "", err
+	}
+	return "sha256:" + value, nil
+}
+
+func packageArtifactCommandDigest(execution packageartifactrecord.Record) (string, error) {
+	argv := make([]any, 0, len(execution.Argv))
+	for _, argument := range execution.Argv {
+		argv = append(argv, argument)
+	}
+	return digest.StableJSONSHA256Ref(map[string]any{
+		"argv": argv,
+		"id":   execution.CommandID,
+	})
+}
+
+func executionDigestRef(value string) string {
+	if strings.HasPrefix(value, "sha256:") {
+		return value
+	}
+	return "sha256:" + value
+}
+
+func coverageMetricsRecordMatches(record coverageMetricsEvidence) bool {
+	return record.SchemaVersion == 1 &&
 		record.ArtifactKind == "proofkit.coverage-metrics.v1" &&
 		len(record.CLIContract) > 0 &&
 		len(record.NonClaims) > 0 &&
@@ -525,11 +819,6 @@ func coverageMetricsMatches(root string, path string) bool {
 		len(record.WitnessPlan) > 0 &&
 		coverageDeadZonesEmpty(record.DeadZones) &&
 		commandRouteDefectsEmpty(record.CommandRoutes)
-}
-
-func reportMatches(root string, path string, wantKind string, wantID string, wantState string, wantRuleIDs []string) bool {
-	record, err := readTypedJSON[selfEvidenceReport](root, path)
-	return err == nil && reportRecordMatches(record, wantKind, wantID, wantState, wantRuleIDs)
 }
 
 func reportRecordMatches(record selfEvidenceReport, wantKind string, wantID string, wantState string, wantRuleIDs []string) bool {
@@ -626,15 +915,21 @@ func commandRouteDefectsEmpty(routes coverageCommandRouteMetrics) bool {
 		positiveInt(routes.CommandCount) &&
 		positiveInt(routes.RouteCount) &&
 		nonNegativeInt(routes.RouteSmokeCount) &&
-		positiveInt(routes.SemanticInventoryEntryCount) &&
-		positiveInt(routes.SemanticRouteCount) &&
-		zeroInt(routes.CommandWithoutSemanticFalsifierRouteCount) &&
+		positiveInt(routes.ProofRouteCandidateInventoryEntryCount) &&
+		positiveInt(routes.ProofRouteCandidateRouteCount) &&
+		nonNegativeInt(routes.SemanticInventoryEntryCount) &&
+		nonNegativeInt(routes.SemanticRouteCount) &&
+		nonNegativeInt(routes.CommandWithoutSemanticFalsifierRouteCount) &&
+		zeroInt(routes.CommandWithoutProofRouteCandidateCount) &&
 		zeroInt(routes.ContractOnlyCommandCount) &&
 		zeroInt(routes.RouteOnlyCommandCount) &&
+		zeroInt(routes.UnknownProofRouteCandidateRefCount) &&
 		zeroInt(routes.UnknownSemanticCommandRefCount) &&
-		emptyStringSlice(routes.CommandsWithoutSemanticFalsifierRoute) &&
+		emptyStringSlice(routes.CommandsWithoutProofRouteCandidate) &&
 		emptyStringSlice(routes.ContractOnlyCommands) &&
 		emptyStringSlice(routes.RouteOnlyCommands) &&
+		emptyStringSlice(routes.UnknownProofRouteCandidateRefs) &&
+		nonNilStringSlice(routes.CommandsWithoutSemanticFalsifierRoute) &&
 		emptyStringSlice(routes.UnknownSemanticCommandRefs)
 }
 
@@ -652,6 +947,10 @@ func nonNegativeInt(value *int) bool {
 
 func emptyStringSlice(value *[]string) bool {
 	return value != nil && len(*value) == 0
+}
+
+func nonNilStringSlice(value *[]string) bool {
+	return value != nil
 }
 
 func numericValueIsZero(value any) bool {
@@ -675,9 +974,23 @@ func arrayValueIsEmpty(value any) bool {
 }
 
 func proofReceiptSetMatches(root string, path string) bool {
-	record, err := readTypedJSON[proofReceiptSetEvidence](root, path)
-	return err == nil &&
-		record.SchemaVersion == 1 &&
+	document, err := readSelfEvidenceDocument[proofReceiptSetEvidence](root, path)
+	if err != nil {
+		return false
+	}
+	return proofReceiptDocumentMatches(document)
+}
+
+func proofReceiptDocumentMatches(document selfEvidenceDocument[proofReceiptSetEvidence]) bool {
+	ownerReport, ownerExitCode, err := proofreceiptadmission.Build(document.raw)
+	if err != nil || ownerExitCode != 0 || ownerReport.State != "passed" {
+		return false
+	}
+	return proofReceiptSetRecordMatches(document.value)
+}
+
+func proofReceiptSetRecordMatches(record proofReceiptSetEvidence) bool {
+	return record.SchemaVersion == 1 &&
 		record.ReceiptSetID == "proofkit.self-hosting.proof-receipts" &&
 		len(record.NonClaims) > 0 &&
 		len(record.Receipts) == 1 &&
@@ -686,7 +999,7 @@ func proofReceiptSetMatches(root string, path string) bool {
 
 func proofReceiptMatches(record proofReceiptEvidence) bool {
 	return selfHostingReceiptIdentityMatches(record.ReceiptID, record.ProducerID, record.RunnerClass) &&
-		record.ReceiptKind == "proofkit.package-gate" &&
+		record.ReceiptKind == "proofkit.package-artifact" &&
 		record.ProducerAdmissionClass == "advisory" &&
 		record.EnvironmentClass == packageGateEnvironmentClass &&
 		record.Status == "passed" &&
@@ -700,9 +1013,23 @@ func proofReceiptMatches(record proofReceiptEvidence) bool {
 }
 
 func receiptProducerPolicyMatches(root string, path string) bool {
-	record, err := readTypedJSON[receiptProducerPolicyEvidence](root, path)
-	return err == nil &&
-		record.SchemaVersion == 1 &&
+	document, err := readSelfEvidenceDocument[receiptProducerPolicyEvidence](root, path)
+	if err != nil {
+		return false
+	}
+	return receiptProducerDocumentMatches(document)
+}
+
+func receiptProducerDocumentMatches(document selfEvidenceDocument[receiptProducerPolicyEvidence]) bool {
+	ownerReport, ownerExitCode, err := receiptproduceradmission.Build(document.raw)
+	if err != nil || ownerExitCode != 0 || ownerReport.State != "passed" {
+		return false
+	}
+	return receiptProducerPolicyRecordMatches(document.value)
+}
+
+func receiptProducerPolicyRecordMatches(record receiptProducerPolicyEvidence) bool {
+	return record.SchemaVersion == 1 &&
 		record.PolicyID == "proofkit.receipt-producer-policy" &&
 		len(record.EnvironmentClasses) > 0 &&
 		len(record.NonClaims) > 0 &&
@@ -727,7 +1054,7 @@ func receiptProducerPolicyCoversReceipt(record receiptProducerPolicyEvidence) bo
 
 func receiptProducerReceiptMatches(receipt receiptProducerReceipt) bool {
 	return selfHostingReceiptProducerMatches(receipt.ReceiptID, receipt.ProducerID) &&
-		receipt.ReceiptKind == "proofkit.package-gate" &&
+		receipt.ReceiptKind == "proofkit.package-artifact" &&
 		receipt.EnvironmentClass == packageGateEnvironmentClass &&
 		receipt.Status == "passed" &&
 		!receipt.SatisfiesMergeObligation &&
@@ -741,9 +1068,9 @@ func receiptProducerReceiptMatches(receipt receiptProducerReceipt) bool {
 func selfHostingReceiptIdentityMatches(receiptID string, producerID string, runnerClass string) bool {
 	switch producerID {
 	case "local.developer":
-		return receiptID == "receipt.local.package-gate" && runnerClass == "local"
+		return receiptID == "receipt.local.package-artifact" && runnerClass == "local"
 	case "github.actions.package":
-		return receiptID == "receipt.github.actions.package-gate" && runnerClass == "github.actions.hosted"
+		return receiptID == "receipt.github.actions.package-artifact" && runnerClass == "github.actions.hosted"
 	default:
 		return false
 	}
@@ -752,9 +1079,9 @@ func selfHostingReceiptIdentityMatches(receiptID string, producerID string, runn
 func selfHostingReceiptProducerMatches(receiptID string, producerID string) bool {
 	switch producerID {
 	case "local.developer":
-		return receiptID == "receipt.local.package-gate"
+		return receiptID == "receipt.local.package-artifact"
 	case "github.actions.package":
-		return receiptID == "receipt.github.actions.package-gate"
+		return receiptID == "receipt.github.actions.package-artifact"
 	default:
 		return false
 	}
@@ -771,9 +1098,23 @@ func receiptProducerMatches(producer receiptProducerEvidence, receipt receiptPro
 }
 
 func specProofBundleMatches(root string, path string) bool {
-	record, err := readTypedJSON[specProofBundleEvidence](root, path)
-	return err == nil &&
-		record.SchemaVersion == 1 &&
+	document, err := readSelfEvidenceDocument[specProofBundleEvidence](root, path)
+	if err != nil {
+		return false
+	}
+	return specProofBundleDocumentMatches(document)
+}
+
+func specProofBundleDocumentMatches(document selfEvidenceDocument[specProofBundleEvidence]) bool {
+	ownerReport, ownerExitCode, err := specproofbundleadmission.Build(document.raw)
+	if err != nil || ownerExitCode != 0 || ownerReport.State != "passed" {
+		return false
+	}
+	return specProofBundleRecordMatches(document.value)
+}
+
+func specProofBundleRecordMatches(record specProofBundleEvidence) bool {
+	return record.SchemaVersion == 1 &&
 		record.BundleID == "proofkit.self-hosting.spec-proof-bundle" &&
 		len(record.NonClaims) > 0 &&
 		len(record.MergeRequiredReceiptIDs) == 0 &&
@@ -781,6 +1122,27 @@ func specProofBundleMatches(root string, path string) bool {
 		specBundleReceiptProducerAdmissionMatches(record.ReceiptProducerAdmission) &&
 		specBundleRequirementBindingsMatch(record.RequirementBindings) &&
 		specBundleWitnessPlanMatches(record.WitnessPlan)
+}
+
+func readAdmittedJSON(root string, path string) (any, error) {
+	file, err := os.Open(filepath.Join(root, filepath.FromSlash(path)))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return admission.DecodeJSON(file, 16<<20)
+}
+
+func projectAdmittedJSON[T any](raw any) (T, error) {
+	var output T
+	encoded, err := json.Marshal(raw)
+	if err != nil {
+		return output, err
+	}
+	if err := json.Unmarshal(encoded, &output); err != nil {
+		return output, err
+	}
+	return output, nil
 }
 
 func specBundleReceiptAdmissionMatches(record specBundleReceiptAdmission) bool {
@@ -816,17 +1178,17 @@ func specBundleRequirementBindingsMatch(record specBundleRequirementBindings) bo
 	return record.SchemaVersion == 1 &&
 		record.BindingID == "proofkit.package-boundary.requirement-bindings" &&
 		len(record.NonClaims) > 0 &&
-		specBundleHasRequirement(record.Requirements, "REQ-PROOFKIT-PACKAGE-004") &&
-		specBundleHasBinding(record.Bindings, "REQ-PROOFKIT-PACKAGE-004", "proofkit.ci-receipt-anchor", packageGateEnvironmentClass) &&
-		specBundleHasWitnessCommand(record.WitnessCommands, "proofkit.ci-receipt-anchor", packageGateEnvironmentClass)
+		specBundleHasRequirement(record.Requirements, "REQ-PROOFKIT-PACKAGE-003") &&
+		specBundleHasBinding(record.Bindings, "REQ-PROOFKIT-PACKAGE-003", "proofkit.package-artifact", packageGateEnvironmentClass) &&
+		specBundleHasWitnessCommand(record.WitnessCommands, "proofkit.package-artifact", packageGateEnvironmentClass)
 }
 
 func specBundleWitnessPlanMatches(record specBundleWitnessPlan) bool {
 	return record.SchemaVersion == 1 &&
 		record.SchedulerPlanID == "proofkit.self-hosting.witness-plan" &&
 		len(record.NonClaims) > 0 &&
-		specBundleHasPlanCommandArtifact(record.Commands, "proofkit.ci-receipt-anchor", "artifacts/proofkit/self-hosting-spec-proof-bundle.json") &&
-		specBundleHasPlanPolicy(record.Policies, "proofkit.ci-receipt-anchor") &&
+		specBundleHasPlanCommandArtifact(record.Commands, "proofkit.package-artifact", "artifacts/package/npm-pack.json") &&
+		specBundleHasPlanPolicy(record.Policies, "proofkit.package-artifact") &&
 		stringSliceContains(record.Vocabulary.EnvironmentClasses, packageGateEnvironmentClass)
 }
 

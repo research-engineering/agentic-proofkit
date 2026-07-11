@@ -63,18 +63,19 @@ func TestReadRequirementsRequiresOwnerAdmission(t *testing.T) {
 
 func TestBuildCommandRouteMetricsReportsMissingSemanticRoutes(t *testing.T) {
 	metrics := buildCommandRouteMetrics(cliContractWithCommands("covered", "z-route-only", "a-route-only"), []app.CommandCoverageSummary{
-		{Command: "covered", CommandRef: app.CommandCoverageCommandRef("covered"), RouteCount: 2, SemanticRouteCount: 1},
-		{Command: "z-route-only", CommandRef: app.CommandCoverageCommandRef("z-route-only"), RouteCount: 1, SemanticRouteCount: 1},
-		{Command: "a-route-only", CommandRef: app.CommandCoverageCommandRef("a-route-only"), RouteCount: 1, SemanticRouteCount: 1},
+		{Command: "covered", CommandRef: app.CommandCoverageCommandRef("covered"), RouteCount: 2, ProofRouteCandidateCount: 1},
+		{Command: "z-route-only", CommandRef: app.CommandCoverageCommandRef("z-route-only"), RouteCount: 1, ProofRouteCandidateCount: 1},
+		{Command: "a-route-only", CommandRef: app.CommandCoverageCommandRef("a-route-only"), RouteCount: 1, ProofRouteCandidateCount: 1},
 	}, testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
 		{CommandRefs: []string{app.CommandCoverageCommandRef("covered")}, EvidenceClass: "semantic_falsifier"},
+		{CommandRefs: []string{app.CommandCoverageCommandRef("z-route-only")}, EvidenceClass: "proof_route_candidate"},
 		{CommandRefs: []string{app.CommandCoverageCommandRef("covered")}, EvidenceClass: "routing_smoke_nonclaim"},
 	}})
 
-	if metrics.CommandCount != 3 || metrics.RouteCount != 4 || metrics.SemanticRouteCount != 3 || metrics.RouteSmokeCount != 1 {
+	if metrics.CommandCount != 3 || metrics.RouteCount != 4 || metrics.ProofRouteCandidateRouteCount != 3 || metrics.SemanticRouteCount != 0 || metrics.RouteSmokeCount != 1 {
 		t.Fatalf("unexpected metrics: %#v", metrics)
 	}
-	if metrics.AdmittedInventoryEntryCount != 2 || metrics.SemanticInventoryEntryCount != 1 {
+	if metrics.AdmittedInventoryEntryCount != 3 || metrics.ProofRouteCandidateInventoryEntryCount != 1 || metrics.SemanticInventoryEntryCount != 1 {
 		t.Fatalf("unexpected inventory metrics: %#v", metrics)
 	}
 	if metrics.CommandWithoutSemanticFalsifierRouteCount != 2 {
@@ -114,6 +115,12 @@ func TestBuildCommandRouteMetricsRequiresMatchingSemanticInventoryCommandRef(t *
 			}},
 		},
 		{
+			name: "proof route candidate is not semantic evidence",
+			inventory: testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
+				{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "proof_route_candidate"},
+			}},
+		},
+		{
 			name: "contract evidence is not semantic command falsifier",
 			inventory: testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
 				{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "contract_admission"},
@@ -146,8 +153,8 @@ func TestBuildCommandRouteMetricsReportsUnknownSemanticCommandRefs(t *testing.T)
 	if metrics.UnknownSemanticCommandRefCount != 1 || strings.Join(metrics.UnknownSemanticCommandRefs, ",") != "proofkit.cli.unknown" {
 		t.Fatalf("unknown semantic command refs not reported: %#v", metrics)
 	}
-	if err := requireCommandSemanticFalsifierRoutes(metrics); err == nil || !strings.Contains(err.Error(), "unknownRefs") {
-		t.Fatalf("requireCommandSemanticFalsifierRoutes() error=%v, want unknown ref failure", err)
+	if err := requireCommandRouteInventoryClosure(metrics); err == nil || !strings.Contains(err.Error(), "unknownSemanticRefs") {
+		t.Fatalf("requireCommandRouteInventoryClosure() error=%v, want unknown ref failure", err)
 	}
 }
 
@@ -165,24 +172,24 @@ func TestBuildCommandRouteMetricsReportsContractRouteDrift(t *testing.T) {
 	if got := strings.Join(metrics.RouteOnlyCommands, ","); got != "route-only" {
 		t.Fatalf("RouteOnlyCommands=%#v, want route-only", metrics.RouteOnlyCommands)
 	}
-	if err := requireCommandSemanticFalsifierRoutes(metrics); err == nil || !strings.Contains(err.Error(), "contractOnly=[contract-only]") || !strings.Contains(err.Error(), "routeOnly=[route-only]") {
-		t.Fatalf("requireCommandSemanticFalsifierRoutes() error=%v, want contract/route drift failure", err)
+	if err := requireCommandRouteInventoryClosure(metrics); err == nil || !strings.Contains(err.Error(), "contractOnly=[contract-only]") || !strings.Contains(err.Error(), "routeOnly=[route-only]") {
+		t.Fatalf("requireCommandRouteInventoryClosure() error=%v, want contract/route drift failure", err)
 	}
 }
 
-func TestReadCommandCoverageInventoryRejectsFailedInventory(t *testing.T) {
+func TestReadCommandCoverageInventoryRejectsUnanchoredCandidate(t *testing.T) {
 	mutated := mustAppCommandCoverageInventory(t)
-	firstSemanticInventoryEntry(t, mutated)["oracle"].(map[string]any)["assertionSummary"] = ""
+	firstCandidateInventoryEntry(t, mutated)["ownerInvariantRefs"] = []any{}
 
 	_, err := readCommandCoverageInventoryFrom(mutated)
-	if err == nil || !strings.Contains(err.Error(), "weak_or_empty_oracle") {
-		t.Fatalf("readCommandCoverageInventoryFrom() error = %v, want weak oracle failure", err)
+	if err == nil || !strings.Contains(err.Error(), "missing_semantic_anchor") {
+		t.Fatalf("readCommandCoverageInventoryFrom() error = %v, want missing candidate anchor failure", err)
 	}
 }
 
 func TestReadCommandCoverageInventoryRejectsSelectorSourcePathDrift(t *testing.T) {
 	mutated := mustAppCommandCoverageInventory(t)
-	firstSemanticInventoryEntry(t, mutated)["selector"] = "internal/app/other_test.go::TestDrift"
+	firstCandidateInventoryEntry(t, mutated)["selector"] = "internal/app/other_test.go::TestDrift"
 
 	_, err := readCommandCoverageInventoryFrom(mutated)
 	if err == nil || !strings.Contains(err.Error(), "sourcePath must match selector path") {
@@ -192,7 +199,7 @@ func TestReadCommandCoverageInventoryRejectsSelectorSourcePathDrift(t *testing.T
 
 func TestRunWritesCurrentMetricsWhenCommandCoverageInventoryFails(t *testing.T) {
 	inventory := mustAppCommandCoverageInventory(t)
-	firstSemanticInventoryEntry(t, inventory)["oracle"].(map[string]any)["assertionSummary"] = ""
+	firstCandidateInventoryEntry(t, inventory)["ownerInvariantRefs"] = []any{}
 
 	root := t.TempDir()
 	oldwd, err := os.Getwd()
@@ -224,7 +231,7 @@ func TestRunWritesCurrentMetricsWhenCommandCoverageInventoryFails(t *testing.T) 
 		t.Fatalf("write stale success: %v", err)
 	}
 	err = run()
-	if err == nil || !strings.Contains(err.Error(), "weak_or_empty_oracle") {
+	if err == nil || !strings.Contains(err.Error(), "missing_semantic_anchor") {
 		t.Fatalf("run() error = %v, want failed inventory error", err)
 	}
 	content, err := os.ReadFile(outputPath)
@@ -282,16 +289,16 @@ func TestRunWritesCurrentMetricsWhenCommandRouteInventoryBuilderFails(t *testing
 	}
 }
 
-func TestRequireCommandSemanticFalsifierRoutesFailsClosed(t *testing.T) {
-	err := requireCommandSemanticFalsifierRoutes(commandRouteMetrics{
-		CommandsWithoutSemanticFalsifierRoute: []string{"route-only"},
+func TestRequireCommandRouteInventoryClosureFailsClosed(t *testing.T) {
+	err := requireCommandRouteInventoryClosure(commandRouteMetrics{
+		CommandsWithoutProofRouteCandidate: []string{"route-only"},
 	})
-	if err == nil || !strings.Contains(err.Error(), "missing=[route-only]") {
-		t.Fatalf("requireCommandSemanticFalsifierRoutes() error = %v, want semantic-route failure", err)
+	if err == nil || !strings.Contains(err.Error(), "missingCandidates=[route-only]") {
+		t.Fatalf("requireCommandRouteInventoryClosure() error = %v, want candidate-route failure", err)
 	}
 
-	if err := requireCommandSemanticFalsifierRoutes(commandRouteMetrics{}); err != nil {
-		t.Fatalf("requireCommandSemanticFalsifierRoutes() error = %v, want nil", err)
+	if err := requireCommandRouteInventoryClosure(commandRouteMetrics{}); err != nil {
+		t.Fatalf("requireCommandRouteInventoryClosure() error = %v, want nil", err)
 	}
 }
 
@@ -375,7 +382,7 @@ func cliContractWithCommands(commands ...string) cliContract {
 	return contract
 }
 
-func TestBuildMetricsCarriesRealCommandRouteInventoryAndNonClaim(t *testing.T) {
+func TestBuildMetricsCarriesRealCommandRouteCandidatesAndNonClaim(t *testing.T) {
 	metrics := buildMetrics(
 		[]requirementRecord{{RequirementID: "REQ-1", ClaimLevel: "blocking", Lifecycle: lifecycle{State: "active"}}},
 		bindingFile{
@@ -398,14 +405,17 @@ func TestBuildMetricsCarriesRealCommandRouteInventoryAndNonClaim(t *testing.T) {
 		mustReadCommandCoverageInventory(t),
 	)
 
-	if metrics.CommandRoutes.CommandCount == 0 || metrics.CommandRoutes.SemanticRouteCount == 0 {
+	if metrics.CommandRoutes.CommandCount == 0 || metrics.CommandRoutes.ProofRouteCandidateRouteCount == 0 || metrics.CommandRoutes.ProofRouteCandidateInventoryEntryCount == 0 {
 		t.Fatalf("real command route inventory was not loaded: %#v", metrics.CommandRoutes)
 	}
-	if metrics.CommandRoutes.CommandWithoutSemanticFalsifierRouteCount != 0 {
-		t.Fatalf("real command route inventory has missing semantic routes: %#v", metrics.CommandRoutes)
+	if metrics.CommandRoutes.SemanticRouteCount != 0 || metrics.CommandRoutes.SemanticInventoryEntryCount != 0 {
+		t.Fatalf("static command routes were counted as semantic evidence: %#v", metrics.CommandRoutes)
 	}
-	if !containsNonClaim(metrics.NonClaims, "do not execute those tests") {
-		t.Fatalf("metrics nonClaims=%#v, want command-route execution non-claim", metrics.NonClaims)
+	if metrics.CommandRoutes.CommandWithoutSemanticFalsifierRouteCount != metrics.CommandRoutes.CommandCount {
+		t.Fatalf("candidate-only commands did not remain missing semantic evidence: %#v", metrics.CommandRoutes)
+	}
+	if !containsNonClaim(metrics.NonClaims, "do not execute command route candidates") {
+		t.Fatalf("metrics nonClaims=%#v, want candidate execution non-claim", metrics.NonClaims)
 	}
 }
 
@@ -427,15 +437,15 @@ func mustAppCommandCoverageInventory(t *testing.T) map[string]any {
 	return inventory
 }
 
-func firstSemanticInventoryEntry(t *testing.T, inventory map[string]any) map[string]any {
+func firstCandidateInventoryEntry(t *testing.T, inventory map[string]any) map[string]any {
 	t.Helper()
 	for _, raw := range inventory["entries"].([]any) {
 		entry := raw.(map[string]any)
-		if entry["evidenceClass"] == "semantic_falsifier" {
+		if entry["evidenceClass"] == "proof_route_candidate" {
 			return entry
 		}
 	}
-	t.Fatal("inventory has no semantic entry")
+	t.Fatal("inventory has no proof-route candidate entry")
 	return nil
 }
 

@@ -570,6 +570,13 @@ func TestBuildEmitsExecutableBrowserViewRoutes(t *testing.T) {
 			view:      "proof",
 		},
 		{
+			name:      "render compact proof",
+			goal:      "render_human_view",
+			inputKind: "compact_proof_binding",
+			inputRef:  "docs/contracts/requirement-proof-bindings.compact.json",
+			view:      "proof",
+		},
+		{
 			name:      "render coverage",
 			goal:      "render_human_view",
 			inputKind: "coverage_view_input",
@@ -605,6 +612,9 @@ func TestBuildEmitsExecutableBrowserViewRoutes(t *testing.T) {
 			argv := findCommandArgv(t, commands, "requirement-browser-server")
 			assertArgvContainsPair(t, argv, "--view", tt.view)
 			assertArgvContainsPair(t, argv, "--input", tt.inputRef)
+			if tt.inputKind == "compact_proof_binding" {
+				assertArgvContains(t, argv, "--empty-local-environment-policy")
+			}
 		})
 	}
 }
@@ -1437,11 +1447,13 @@ func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 		{"requirement-authoring-plan", "authoring_plan"},
 		{"requirement-bindings", "proof_binding"},
 		{"requirement-browser-server", "coverage_view_input"},
+		{"requirement-browser-server", "compact_proof_binding"},
 		{"requirement-browser-server", "proof_binding"},
 		{"requirement-browser-server", "requirement_source"},
 		{"requirement-browser-server", "spec_tree_bundle"},
 		{"requirement-coverage-view", "coverage_view_input"},
 		{"requirement-proof-view", "proof_binding"},
+		{"requirement-proof-view", "compact_proof_binding"},
 		{"requirement-source-admission", "requirement_source"},
 		{"requirement-source-transition", "requirement_source_transition"},
 		{"requirement-source-view", "requirement_source"},

@@ -38,6 +38,7 @@ func runTypeScriptPublicAPI(args []string, stdin io.Reader, stdout io.Writer, st
 
 func parsePublicAPIArgs(args []string) (publicAPIArgs, error) {
 	options := publicAPIArgs{}
+	inputPointerSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -47,9 +48,10 @@ func parsePublicAPIArgs(args []string) (publicAPIArgs, error) {
 			options.inputPath = args[index+1]
 			index++
 		case "--input-pointer":
-			if index+1 >= len(args) {
+			if inputPointerSeen || index+1 >= len(args) {
 				return publicAPIArgs{}, fmt.Errorf("--input-pointer requires a JSON pointer")
 			}
+			inputPointerSeen = true
 			options.inputPointer = args[index+1]
 			index++
 		case "--repo-root":

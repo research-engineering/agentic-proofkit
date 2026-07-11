@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -31,6 +32,15 @@ func commandUsage(descriptor commandDescriptor) string {
 	for _, flag := range descriptor.allowedFlags {
 		lines = append(lines, "  "+flag)
 	}
+	if len(descriptor.exactlyOneOfFlagGroups) > 0 || len(descriptor.flagValueRequirements) > 0 {
+		lines = append(lines, "", "Flag constraints:")
+		for _, group := range descriptor.exactlyOneOfFlagGroups {
+			lines = append(lines, "  Exactly one of: "+strings.Join(group, ", "))
+		}
+		for _, requirement := range descriptor.flagValueRequirements {
+			lines = append(lines, fmt.Sprintf("  %s %s requires: %s", requirement.Flag, requirement.Value, strings.Join(requirement.RequiredFlags, ", ")))
+		}
+	}
 	if len(descriptor.inputSchemaSummary) > 0 {
 		lines = append(lines, "", "Input schema summary:")
 		for _, field := range descriptor.inputSchemaSummary {
@@ -57,6 +67,10 @@ func commandUsageLine(descriptor commandDescriptor) string {
 		segments = append(segments, "--input <path|->")
 	}
 	for _, flag := range descriptor.allowedFlags {
+		if flagInExactlyOneGroup(descriptor.exactlyOneOfFlagGroups, flag) {
+			continue
+		}
+		required := slices.Contains(descriptor.requiredFlags, flag)
 		switch flag {
 		case "--input":
 			continue
@@ -65,7 +79,7 @@ func commandUsageLine(descriptor commandDescriptor) string {
 		case "--format":
 			segments = append(segments, "[--format <mode>]")
 		case "--repo-root":
-			segments = append(segments, "--repo-root <path>")
+			segments = append(segments, optionalUsageSegment(flag+" <path>", required))
 		case "--host":
 			segments = append(segments, "[--host 127.0.0.1|::1]")
 		case "--port":
@@ -77,9 +91,9 @@ func commandUsageLine(descriptor commandDescriptor) string {
 		case "--checked-scope":
 			segments = append(segments, "[--checked-scope <scope>]")
 		case "--guidance-mode", "--mode":
-			segments = append(segments, fmt.Sprintf("[%s <mode>]", flag))
+			segments = append(segments, optionalUsageSegment(fmt.Sprintf("%s <mode>", flag), required))
 		case "--pilot", "--profile", "--preset", "--projection", "--view", "--language":
-			segments = append(segments, fmt.Sprintf("[%s <value>]", flag))
+			segments = append(segments, optionalUsageSegment(fmt.Sprintf("%s <value>", flag), required))
 		case "--touched-rule-id":
 			segments = append(segments, "[--touched-rule-id <id>]")
 		case "--agent-envelope", "--contract-envelope", "--empty-local-environment-policy", "--help", "-h", "--list", "--materialization-manifest", "--normalized-inventory", "--open", "--serve", "--stack-diverse", "--verify":
@@ -90,7 +104,41 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			segments = append(segments, "["+flag+"]")
 		}
 	}
+	for _, group := range descriptor.exactlyOneOfFlagGroups {
+		alternatives := make([]string, 0, len(group))
+		for _, flag := range group {
+			alternatives = append(alternatives, usageFlagValue(flag))
+		}
+		segments = append(segments, "("+strings.Join(alternatives, " | ")+")")
+	}
 	return strings.Join(segments, " ")
+}
+
+func flagInExactlyOneGroup(groups [][]string, flag string) bool {
+	for _, group := range groups {
+		if slices.Contains(group, flag) {
+			return true
+		}
+	}
+	return false
+}
+
+func usageFlagValue(flag string) string {
+	switch flag {
+	case "--local-environment-class":
+		return flag + " <id>"
+	case "--profile":
+		return flag + " <value>"
+	default:
+		return flag
+	}
+}
+
+func optionalUsageSegment(value string, required bool) string {
+	if required {
+		return value
+	}
+	return "[" + value + "]"
 }
 
 func commandInputHelp(descriptor commandDescriptor) string {

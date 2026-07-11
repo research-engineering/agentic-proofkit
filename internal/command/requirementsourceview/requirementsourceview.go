@@ -44,6 +44,14 @@ func BuildHTML(raw any) (string, int, error) {
 	return html(view), 0, nil
 }
 
+func BuildBrowserDocument(raw any) (map[string]any, string, error) {
+	view, err := build(raw)
+	if err != nil {
+		return nil, "", err
+	}
+	return view, html(view), nil
+}
+
 func build(raw any) (map[string]any, error) {
 	result, err := requirementsourceadmission.Evaluate(raw)
 	if err != nil {

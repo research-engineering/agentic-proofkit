@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "proofkit.receipt-producer-policy",
   "receiptKinds": [
-    "proofkit.package-gate"
+    "proofkit.package-artifact"
   ],
   "environmentClasses": [
     "local-go-python"
@@ -13,7 +13,7 @@
       "owner": "proofkit.package-boundary",
       "admissionLevel": "advisory",
       "receiptKinds": [
-        "proofkit.package-gate"
+        "proofkit.package-artifact"
       ],
       "environmentClasses": [
         "local-go-python"
@@ -28,7 +28,7 @@
       "owner": "proofkit.package-boundary",
       "admissionLevel": "advisory",
       "receiptKinds": [
-        "proofkit.package-gate"
+        "proofkit.package-artifact"
       ],
       "environmentClasses": [
         "local-go-python"

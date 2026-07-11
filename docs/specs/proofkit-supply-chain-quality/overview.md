@@ -39,17 +39,11 @@ vulnerability absence, or consumer rollout safety by itself.
   paths expose benchmark entrypoints without making wall-clock budgets a
   required PR gate before stable baselines exist.
 - `REQ-PROOFKIT-QUALITY-010`: coverage metrics report requirement, binding,
-  witness, CLI inventory linkage, and descriptor-owned command semantic-route
-  coverage from admitted test-evidence-inventory rows, failing closed on
-  explicit requirement/proof linkage dead zones, failed command-route
-  inventory admission, command semantic routes without owner-declared proof
-  identities, route-index-derived semantic proof identities, direct app
-  semantic routes outside the command-scoped app test, package-level semantic
-  routes outside the descriptor-owned command package, semantic command routes
-  whose parsed Go test body lacks the source-owned executable oracle marker for
-  the exact emitted command route fact, and missing matching semantic command
-  evidence without claiming line coverage or exhaustive test semantic
-  completeness.
+  witness, CLI inventory linkage, and descriptor-owned command proof-route
+  candidates from admitted test-evidence-inventory rows. The gate fails closed
+  on linkage dead zones, failed inventory admission, missing candidates,
+  unknown command refs, contract-only commands, or route-only commands. Static
+  route metadata and source syntax never become semantic falsifier evidence.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
   source/package gate from macOS platform smoke, uses explicit hosted runner
   labels instead of floating latest labels, and exposes one fail-closed

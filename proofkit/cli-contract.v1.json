@@ -6,7 +6,14 @@
     "successExitCode": 0,
     "failureExitCode": 1,
     "stdout": "Successful JSON commands write exactly one JSON value to stdout unless an admitted explicit output-file flag writes that JSON value to the selected path and leaves stdout empty. Successful text or help commands write text to stdout unless an admitted explicit output-file flag writes the selected representation to the selected path and leaves stdout empty. Commands do not write stderr on success.",
-    "stderr": "Argument parsing, unsupported command, input admission, and output serialization failures write human diagnostics to stderr. Failed report commands may still write a machine-readable failed report to stdout when admission succeeds. Opt-in agent-envelope repair packets may write deterministic invalid-input JSON to stdout with exit code 1 and empty stderr."
+    "stderr": "Argument parsing, unsupported command, input admission, and output serialization failures write human diagnostics to stderr. Failed report commands may still write a machine-readable failed report to stdout when admission succeeds. Opt-in agent-envelope repair packets may write deterministic invalid-input JSON to stdout with exit code 1 and empty stderr.",
+    "helpGrammar": {
+      "rootHelpFlags": ["--help", "-h"],
+      "commandHelpFlags": ["--help", "-h"],
+      "helpCommandPositionalTarget": "optional_supported_command",
+      "helpCatalogFormsSource": "proofkit/command-families.v1.json",
+      "helpReadsCommandInput": false
+    }
   },
   "commands": [
     {
@@ -42,6 +49,9 @@
         "--mode",
         "--pilot",
         "--touched-rule-id"
+      ],
+      "requiredFlags": [
+        "--mode"
       ]
     },
     {
@@ -108,6 +118,7 @@
                   "binding_witness_plan_input",
                   "capability_map",
                   "changed_path_set",
+                  "compact_proof_binding",
                   "coverage_compose_input",
                   "coverage_view_input",
                   "deployment_evidence_input",
@@ -329,6 +340,22 @@
         "--list",
         "--profile",
         "--verify"
+      ],
+      "exactlyOneOfFlagGroups": [
+        [
+          "--list",
+          "--profile",
+          "--verify"
+        ]
+      ],
+      "flagValueRequirements": [
+        {
+          "flag": "--format",
+          "requiredFlags": [
+            "--profile"
+          ],
+          "value": "markdown"
+        }
       ]
     },
     {
@@ -533,6 +560,9 @@
       ],
       "allowedFlags": [
         "--format",
+        "--language"
+      ],
+      "requiredFlags": [
         "--language"
       ],
       "outputContract": {
@@ -945,6 +975,9 @@
         "--scope",
         "--serve",
         "--view"
+      ],
+      "requiredFlags": [
+        "--view"
       ]
     },
     {
@@ -1145,6 +1178,12 @@
         "--input",
         "--input-pointer",
         "--local-environment-class"
+      ],
+      "exactlyOneOfFlagGroups": [
+        [
+          "--empty-local-environment-policy",
+          "--local-environment-class"
+        ]
       ]
     },
     {
@@ -1290,6 +1329,11 @@
       "stdin": true,
       "inputPointer": true,
       "scopeClass": "explicit_caller_input",
+      "inputContract": {
+        "schemaVersion": 2,
+        "requiredFields": ["schemaVersion", "treeId", "rootNodeId", "callerAnnotations", "nodes", "edges", "overlays"],
+        "callerTextAuthority": "callerAnnotations fields are untrusted presentation annotations and never command-owned nonClaims"
+      },
       "outputModes": [
         "json"
       ],
@@ -1304,6 +1348,11 @@
       "stdin": true,
       "inputPointer": true,
       "scopeClass": "explicit_caller_input",
+      "inputContract": {
+        "schemaVersion": 2,
+        "requiredFields": ["schemaVersion", "treeId", "rootNodeId", "callerAnnotations", "nodes", "edges", "overlays"],
+        "callerTextAuthority": "callerAnnotations fields are untrusted presentation annotations and never command-owned nonClaims"
+      },
       "outputModes": [
         "html",
         "json",
@@ -1316,9 +1365,10 @@
         "--output"
       ],
       "outputContract": {
-        "contractId": "proofkit.requirement-spec-tree-view.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-spec-tree-view.output.v2",
+        "schemaVersion": 2,
         "authority": "requirement spec tree view output contract",
+        "nonJsonFormats": ["html", "markdown"],
         "requiredFields": [
           "authority",
           "nodeCount",
@@ -1567,6 +1617,9 @@
       ],
       "allowedFlags": [
         "--preset"
+      ],
+      "requiredFlags": [
+        "--preset"
       ]
     },
     {
@@ -1666,7 +1719,11 @@
                 "value": 1
               }
             },
-            "nonClaim": "This projection input does not make Proofkit the owner of requirement meaning, native test execution, repository scanning, proof freshness, or merge policy."
+            "candidateOutput": {
+              "evidenceClass": "proof_route_candidate",
+              "semanticCoverage": "not_satisfied_until_owner_materialized"
+            },
+            "nonClaim": "This projection input does not make Proofkit the owner of requirement meaning, native test execution, semantic coverage, repository scanning, proof freshness, or merge policy."
           },
           "strict-inventory": {
             "authority": "caller-owned strict test inventory admission",
@@ -1678,6 +1735,7 @@
         "nonClaims": [
           "Projection modes are closed vocabulary: proof-binding-derived or discovery-draft.",
           "Discovery draft candidate output must be materialized into strict inventory before it can affect coverage.",
+          "Proof-binding-derived routes remain proof_route_candidate entries until a consumer owner materializes an executable semantic oracle.",
           "The derived inventory remains caller-owned input for downstream coverage views."
         ]
       },
@@ -1718,6 +1776,7 @@
           "missing_semantic_anchor",
           "mock_tests_mock",
           "over_broad_integration",
+          "proof_route_candidate",
           "routing_smoke_only",
           "selector_fragility",
           "snapshot_without_oracle",
@@ -1773,6 +1832,9 @@
       "allowedFlags": [
         "--input",
         "--input-pointer",
+        "--repo-root"
+      ],
+      "requiredFlags": [
         "--repo-root"
       ]
     },

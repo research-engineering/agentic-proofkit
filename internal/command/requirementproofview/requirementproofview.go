@@ -61,6 +61,17 @@ func BuildHTML(raw any, options Options) (string, int, error) {
 	return html(view), 0, nil
 }
 
+func BuildBrowserDocument(raw any, options Options) (map[string]any, string, error) {
+	view, err := build(raw, options)
+	if err != nil {
+		return nil, "", err
+	}
+	if stringValue(view["viewKind"]) == "proofkit.compact-requirement-proof-view" {
+		return view, compactHTML(view), nil
+	}
+	return view, html(view), nil
+}
+
 func build(raw any, options Options) (map[string]any, error) {
 	if IsCompact(raw) {
 		return compactView(raw, options)

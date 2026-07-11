@@ -133,11 +133,15 @@ func (validator *treeValidator) detectCycles() {
 	}
 	sort.Strings(nodeIDs)
 	for _, nodeID := range nodeIDs {
-		validator.detectCycleFrom(nodeID, color, stack)
+		validator.detectCycleFrom(nodeID, color, stack, 1)
 	}
 }
 
-func (validator *treeValidator) detectCycleFrom(nodeID string, color map[string]int, stack map[string]struct{}) {
+func (validator *treeValidator) detectCycleFrom(nodeID string, color map[string]int, stack map[string]struct{}, depth int) {
+	if depth > maxSpecTreeDepth {
+		validator.fail("topology.depth_limit", nodeID)
+		return
+	}
 	if color[nodeID] == 2 {
 		return
 	}
@@ -151,7 +155,7 @@ func (validator *treeValidator) detectCycleFrom(nodeID string, color map[string]
 	stack[nodeID] = struct{}{}
 	for _, childID := range validator.childrenByParent[nodeID] {
 		if _, ok := validator.nodeByID[childID]; ok {
-			validator.detectCycleFrom(childID, color, stack)
+			validator.detectCycleFrom(childID, color, stack, depth+1)
 		}
 	}
 	delete(stack, nodeID)
@@ -176,6 +180,10 @@ func (validator *treeValidator) validateSiblingOrder() {
 }
 
 func (validator *treeValidator) walk(nodeID string, depth int) {
+	if depth > maxSpecTreeDepth {
+		validator.fail("topology.depth_limit", nodeID)
+		return
+	}
 	if _, ok := validator.visiting[nodeID]; ok {
 		validator.fail("topology.cycle", nodeID)
 		return

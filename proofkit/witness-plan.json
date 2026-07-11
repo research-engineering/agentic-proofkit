@@ -257,7 +257,7 @@
         "inherit": "none",
         "allowlist": [],
         "classes": [
-          "local-go"
+          "local-go-python"
         ]
       },
       "timeoutMs": 600000,
@@ -273,6 +273,11 @@
         {
           "kind": "npm-package-artifact",
           "path": "artifacts/package/*.tgz",
+          "required": true
+        },
+        {
+          "kind": "report",
+          "path": "artifacts/proofkit/package-artifact-execution.json",
           "required": true
         },
         {

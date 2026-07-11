@@ -30,8 +30,35 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 	if isCommandHelpRequest(args) {
 		return writeText(commandUsage(descriptor), 0, nil, stdout, stderr)
 	}
+	if err := validateFlagConstraints(descriptor, args[1:]); err != nil {
+		writeDiagnostic(stderr, err)
+		return 1
+	}
 	switch descriptor.runner {
 	case commandRunnerHelp:
+		if len(args) >= 2 && args[1] == "families" {
+			if len(args) != 2 {
+				writeDiagnosticf(stderr, "help families accepts no additional operands")
+				return 1
+			}
+			return writeText(commandFamiliesUsage(), 0, nil, stdout, stderr)
+		}
+		if len(args) >= 2 && args[1] == "family" {
+			if len(args) < 3 {
+				writeDiagnosticf(stderr, "help family requires a family id")
+				return 1
+			}
+			if len(args) != 3 {
+				writeDiagnosticf(stderr, "help family accepts exactly one family id")
+				return 1
+			}
+			output, err := commandFamilyUsage(args[2])
+			if err != nil {
+				writeDiagnostic(stderr, err)
+				return 1
+			}
+			return writeText(output, 0, nil, stdout, stderr)
+		}
 		if len(args) == 2 && args[1] != "--help" && args[1] != "-h" {
 			target, targetOK := commandDescriptorFor(args[1])
 			if !targetOK {

@@ -87,11 +87,13 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-016`: requirement source transition reports validate
   caller-provided previous and next source snapshots so lifecycle changes are
   monotonic, evidence-backed, package-boundary-stable, and repository-neutral.
-- `REQ-PROOFKIT-SPEC-017`: test evidence inventory discovery-draft reports
-  convert explicit caller-owned repository and test discovery facts into
-  candidate-only inventory guidance with strict nested test title admission,
-  source guidance, and non-claims that prevent draft guidance from becoming
-  semantic coverage.
+- `REQ-PROOFKIT-SPEC-017`: capability map admission validates caller-owned
+  pre-spec observations under explicit code-baseline or code-audit trust modes
+  and emits only bounded candidate requirements, bindings, or owner guidance.
+- `REQ-PROOFKIT-SPEC-018`: an authored command-family catalog covers every
+  public CLI command exactly once, deterministically generates the private
+  runtime navigation projection, and adds opt-in family help without changing
+  root help, per-command help, or leaf dispatch.
 
 ## Non-Claims
 

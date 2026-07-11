@@ -8,13 +8,22 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
 const (
@@ -47,6 +56,83 @@ func TestBuildInputAdmitsGitHubActionsAdvisorySelfEvidence(t *testing.T) {
 	}
 	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "satisfied")
 	assertCloseoutOutcome(t, input, 0, "passed")
+}
+
+func TestCompleteFixtureSelfEvidenceComponentsMatch(t *testing.T) {
+	root := completeFixture(t)
+	cases := []struct {
+		name  string
+		match func(string, string) bool
+		path  string
+	}{
+		{name: "proof receipts", match: proofReceiptSetMatches, path: "artifacts/proofkit/self-hosting-proof-receipts.json"},
+		{name: "producer policy", match: receiptProducerPolicyMatches, path: "artifacts/proofkit/self-hosting-receipt-producer-admission.json"},
+		{name: "spec proof bundle", match: specProofBundleMatches, path: "artifacts/proofkit/self-hosting-spec-proof-bundle.json"},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			if !item.match(root, item.path) {
+				if item.path == "artifacts/proofkit/self-hosting-spec-proof-bundle.json" {
+					raw := readJSONMap(t, filepath.Join(root, filepath.FromSlash(item.path)))
+					report, exitCode, ownerErr := specproofbundleadmission.Build(raw)
+					t.Logf("spec bundle owner exit=%d state=%s err=%v diagnostics=%#v", exitCode, report.State, ownerErr, report.Diagnostics)
+				}
+				t.Fatalf("%s must match its owner-admitted closeout contract", item.path)
+			}
+		})
+	}
+}
+
+func TestCompleteFixtureSelfEvidenceSnapshotMatches(t *testing.T) {
+	root := completeFixture(t)
+	snapshot, err := readSelfEvidenceSnapshot(root)
+	if err != nil {
+		t.Fatalf("readSelfEvidenceSnapshot() error = %v", err)
+	}
+	checks := []struct {
+		name string
+		ok   bool
+	}{
+		{name: "coverage metrics", ok: coverageMetricsRecordMatches(snapshot.coverageMetrics.value)},
+		{name: "proof receipt report", ok: reportRecordMatches(snapshot.proofReceiptReport.value, "proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "passed", []string{"proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"})},
+		{name: "proof receipts", ok: proofReceiptDocumentMatches(snapshot.proofReceipts)},
+		{name: "producer report", ok: reportRecordMatches(snapshot.producerReport.value, "proofkit.receipt-producer-admission", "proofkit.receipt-producer-policy", "passed", []string{"proofkit.receipt-producer-admission.boundary", "proofkit.receipt-producer-admission.coverage", "proofkit.receipt-producer-admission.receipts"})},
+		{name: "producer policy", ok: receiptProducerDocumentMatches(snapshot.producerPolicy)},
+		{name: "bundle report", ok: reportRecordMatches(snapshot.specProofBundleReport.value, "proofkit.spec-proof-bundle-admission", "proofkit.self-hosting.spec-proof-bundle", "passed", []string{"proofkit.spec-proof-bundle-admission.accepted"})},
+		{name: "bundle", ok: specProofBundleDocumentMatches(snapshot.specProofBundle)},
+		{name: "cross-file identity", ok: snapshot.identityConsistent(snapshot.execution)},
+	}
+	for _, check := range checks {
+		if !check.ok {
+			t.Errorf("coherent snapshot rejected %s", check.name)
+		}
+	}
+	if !snapshot.valid() {
+		t.Fatal("coherent snapshot must be valid")
+	}
+}
+
+func TestSelfEvidenceRejectsFieldsUnknownToCanonicalOwners(t *testing.T) {
+	cases := []struct {
+		match func(string, string) bool
+		path  string
+	}{
+		{match: proofReceiptSetMatches, path: "artifacts/proofkit/self-hosting-proof-receipts.json"},
+		{match: receiptProducerPolicyMatches, path: "artifacts/proofkit/self-hosting-receipt-producer-admission.json"},
+		{match: specProofBundleMatches, path: "artifacts/proofkit/self-hosting-spec-proof-bundle.json"},
+	}
+	for _, item := range cases {
+		t.Run(filepath.Base(item.path), func(t *testing.T) {
+			root := completeFixture(t)
+			path := filepath.Join(root, filepath.FromSlash(item.path))
+			record := readJSONMap(t, path)
+			record["unknownOwnerField"] = true
+			writeJSON(t, path, record)
+			if item.match(root, item.path) {
+				t.Fatalf("%s accepted a field rejected by its canonical owner", item.path)
+			}
+		})
+	}
 }
 
 func TestBuildInputRejectsMixedSelfEvidenceIdentity(t *testing.T) {
@@ -397,8 +483,8 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "self evidence spec bundle with merge required receipt",
 			criterionID: "proofkit.release_closeout.self_evidence",
 			mutate: func(root string) {
-				bundle := specProofBundleFixture()
-				bundle["mergeRequiredReceiptIds"] = []any{"receipt.local.package-gate"}
+				bundle := specProofBundleFixture(readPackageArtifactExecutionFixture(t, root))
+				bundle["mergeRequiredReceiptIds"] = []any{"receipt.local.package-artifact"}
 				writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json"), bundle)
 			},
 		},
@@ -406,7 +492,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "self evidence spec bundle with failed receipt admission child",
 			criterionID: "proofkit.release_closeout.self_evidence",
 			mutate: func(root string) {
-				bundle := specProofBundleFixture()
+				bundle := specProofBundleFixture(readPackageArtifactExecutionFixture(t, root))
 				receiptAdmission := bundle["receiptAdmission"].(map[string]any)
 				receiptAdmission["failures"] = []any{"child failed"}
 				receiptAdmission["report"] = selfEvidenceReportFixture("proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts")
@@ -434,7 +520,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "self evidence spec bundle with arbitrary binding records",
 			criterionID: "proofkit.release_closeout.self_evidence",
 			mutate: func(root string) {
-				bundle := specProofBundleFixture()
+				bundle := specProofBundleFixture(readPackageArtifactExecutionFixture(t, root))
 				bindings := bundle["requirementBindings"].(map[string]any)
 				bindings["requirements"] = []any{map[string]any{"anything": true}}
 				bindings["bindings"] = []any{map[string]any{"anything": true}}
@@ -446,7 +532,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "self evidence spec bundle with arbitrary witness plan records",
 			criterionID: "proofkit.release_closeout.self_evidence",
 			mutate: func(root string) {
-				bundle := specProofBundleFixture()
+				bundle := specProofBundleFixture(readPackageArtifactExecutionFixture(t, root))
 				plan := bundle["witnessPlan"].(map[string]any)
 				plan["commands"] = []any{map[string]any{"anything": true}}
 				plan["policies"] = []any{map[string]any{"anything": true}}
@@ -476,6 +562,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 func TestBuildInputAdmitsWorkflowPublicationTrustedPublisherIdentity(t *testing.T) {
 	root := completeFixture(t)
 	writeReleaseManifest(t, root, releaseManifestFixtureWithNpmPublication("published_by_workflow", trustedPublisherFixture("npm-production", "publish")))
+	writeLocalSelfEvidence(t, root, writePackageArtifactExecutionFixture(t, root))
 
 	input, err := buildInput(root)
 	if err != nil {
@@ -488,6 +575,7 @@ func TestBuildInputAdmitsWorkflowPublicationTrustedPublisherIdentity(t *testing.
 func TestBuildInputAdmitsMixedPublicationTrustedPublisherIdentity(t *testing.T) {
 	root := completeFixture(t)
 	writeReleaseManifest(t, root, releaseManifestFixtureWithNpmPublication("mixed", trustedPublisherFixture("npm-production", "publish")))
+	writeLocalSelfEvidence(t, root, writePackageArtifactExecutionFixture(t, root))
 
 	input, err := buildInput(root)
 	if err != nil {
@@ -538,6 +626,83 @@ func TestSelfEvidenceRejectsArbitraryValidJSON(t *testing.T) {
 	assertCloseoutOutcome(t, input, 1, "failed")
 }
 
+func TestSelfEvidenceRequiresCurrentMatchingPackageArtifactExecution(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(string)
+	}{
+		{
+			name: "missing execution record",
+			mutate: func(root string) {
+				mustRemove(t, filepath.Join(root, filepath.FromSlash(packageartifactrecord.RecordPath)))
+			},
+		},
+		{
+			name: "arbitrary execution JSON",
+			mutate: func(root string) {
+				writeJSON(t, filepath.Join(root, filepath.FromSlash(packageartifactrecord.RecordPath)), map[string]any{"ok": true})
+			},
+		},
+		{
+			name: "stale execution record",
+			mutate: func(root string) {
+				writeFile(t, filepath.Join(root, "source.txt"), "source-v2\n")
+			},
+		},
+		{
+			name: "receipt execution mismatch",
+			mutate: func(root string) {
+				record := readPackageArtifactExecutionFixture(t, root)
+				record.StartedAt = "2026-07-01T09:59:59Z"
+				if err := packageartifactrecord.Write(root, record); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			root := completeFixture(t)
+			item.mutate(root)
+			input, err := buildInput(root)
+			if err != nil {
+				t.Fatalf("buildInput() error = %v", err)
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+			assertCloseoutOutcome(t, input, 1, "failed")
+		})
+	}
+}
+
+func TestSelfEvidenceBindsReceiptFieldsToPackageArtifactExecution(t *testing.T) {
+	cases := []struct {
+		field string
+		value any
+	}{
+		{field: "sourceRevision", value: "different-revision"},
+		{field: "startedAt", value: "2026-07-01T09:59:59Z"},
+		{field: "finishedAt", value: "2026-07-01T10:00:02Z"},
+		{field: "commandDigest", value: testDigest("different-command")},
+		{field: "environmentDigest", value: testDigest("different-environment")},
+		{field: "toolchainDigest", value: testDigest("different-toolchain")},
+		{field: "dependencyDigest", value: testDigest("different-dependency")},
+		{field: "preconditionDigest", value: testDigest("different-precondition")},
+		{field: "proofBindingDigest", value: testDigest("different-proof-binding")},
+		{field: "witnessSelectorDigest", value: testDigest("different-witness-selector")},
+	}
+	for _, item := range cases {
+		t.Run(item.field, func(t *testing.T) {
+			root := completeFixture(t)
+			mutateSelfEvidenceReceiptField(t, root, item.field, item.value)
+			input, err := buildInput(root)
+			if err != nil {
+				t.Fatalf("buildInput() error = %v", err)
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+		})
+	}
+}
+
 func TestSelfEvidenceRejectsTagOnlyJSONStubs(t *testing.T) {
 	root := completeFixture(t)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"), map[string]any{
@@ -555,14 +720,91 @@ func TestSelfEvidenceRejectsTagOnlyJSONStubs(t *testing.T) {
 	assertCloseoutOutcome(t, input, 1, "failed")
 }
 
+func TestSelfEvidenceRejectsReportNotEqualToOwnerProjection(t *testing.T) {
+	root := completeFixture(t)
+	reportPath := filepath.Join(root, filepath.FromSlash(proofReceiptReportPath))
+	record := readJSONMap(t, reportPath)
+	record["diagnostics"] = []any{"malformed diagnostic"}
+	record["nonClaims"] = []any{"This report approves merge and production readiness."}
+	writeJSON(t, reportPath, record)
+	input, err := buildInput(root)
+	if err != nil {
+		t.Fatalf("buildInput() error = %v", err)
+	}
+	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+}
+
+func TestSelfEvidenceBindsCoverageProvenanceToExecution(t *testing.T) {
+	for _, field := range []string{"generatedAt", "producerCommandId", "sourceRevision", "sourceSnapshotDigest"} {
+		t.Run(field, func(t *testing.T) {
+			root := completeFixture(t)
+			path := filepath.Join(root, filepath.FromSlash(coverageMetricsPath))
+			record := readJSONMap(t, path)
+			record["provenance"].(map[string]any)[field] = "mismatched"
+			writeJSON(t, path, record)
+			input, err := buildInput(root)
+			if err != nil {
+				t.Fatalf("buildInput() error = %v", err)
+			}
+			assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+		})
+	}
+}
+
+func TestSelfEvidenceRejectsReceiptRejectedByReceiptOwner(t *testing.T) {
+	root := completeFixture(t)
+	receiptSetPath := filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipts.json")
+	receiptSet := map[string]any{
+		"receiptSetId":  "proofkit.self-hosting.proof-receipts",
+		"schemaVersion": 1,
+		"receipts":      []any{proofReceiptFixture(readPackageArtifactExecutionFixture(t, root))},
+		"nonClaims":     []any{"Self-hosting receipts are local advisory evidence."},
+	}
+	delete(receiptSet["receipts"].([]any)[0].(map[string]any), "sourceRevision")
+	writeJSON(t, receiptSetPath, receiptSet)
+
+	input, err := buildInput(root)
+	if err != nil {
+		t.Fatalf("buildInput() error = %v", err)
+	}
+	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+}
+
+func mutateSelfEvidenceReceiptField(t *testing.T, root string, field string, value any) {
+	t.Helper()
+	receiptsPath := filepath.Join(root, filepath.FromSlash(proofReceiptsPath))
+	receiptSet := readJSONMap(t, receiptsPath)
+	receiptSet["receipts"].([]any)[0].(map[string]any)[field] = value
+	writeJSON(t, receiptsPath, receiptSet)
+
+	bundlePath := filepath.Join(root, filepath.FromSlash(specProofBundlePath))
+	bundle := readJSONMap(t, bundlePath)
+	receiptAdmission := bundle["receiptAdmission"].(map[string]any)
+	receiptAdmission["receipts"].([]any)[0].(map[string]any)[field] = value
+	refreshBundleChildReports(bundle)
+	writeJSON(t, bundlePath, bundle)
+	writeOwnerSelfEvidenceReports(t, root)
+}
+
 func completeFixture(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
+	runFixtureGit(t, root, "init")
+	runFixtureGit(t, root, "config", "user.email", "proofkit@example.invalid")
+	runFixtureGit(t, root, "config", "user.name", "Proofkit Test")
+	writeFile(t, filepath.Join(root, ".gitignore"), "artifacts/\n")
+	writeFile(t, filepath.Join(root, "go.mod"), "module example.invalid/proofkit-fixture\n\ngo 1.24\n")
+	writeFile(t, filepath.Join(root, "go.sum"), "")
+	writeJSON(t, filepath.Join(root, "proofkit", "requirement-bindings.json"), map[string]any{"schemaVersion": 1})
+	writeJSON(t, filepath.Join(root, "proofkit", "witness-plan.json"), map[string]any{"schemaVersion": 1})
+	writeFile(t, filepath.Join(root, "source.txt"), "source-v1\n")
 	writeJSON(t, filepath.Join(root, "package.json"), map[string]any{
 		"name":       testNPMPackageName,
 		"version":    "1.2.3",
 		"repository": map[string]any{"url": "git+https://github.com/research-engineering/agentic-proofkit.git"},
 	})
+	runFixtureGit(t, root, "add", ".gitignore", "go.mod", "go.sum", "package.json", "proofkit", "source.txt")
+	runFixtureGit(t, root, "commit", "-m", "fixture")
 	writeNPMArtifact(t, root, testNPMTarballName, []byte("package"))
 	writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
 		"packageName":    testPythonPackageName,
@@ -584,12 +826,28 @@ func completeFixture(t *testing.T) string {
 		"artifacts/package/" + testNPMTarballName,
 		"artifacts/pypi/" + testPythonWheelName,
 	})
-	writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), coverageMetricsFixture())
+	execution := writePackageArtifactExecutionFixture(t, root)
+	writeLocalSelfEvidence(t, root, execution)
+	return root
+}
+
+func writeLocalSelfEvidence(t *testing.T, root string, execution packageartifactrecord.Record) {
+	t.Helper()
+	writeJSON(t, filepath.Join(root, filepath.FromSlash(ciProvenancePath)), map[string]any{
+		"ciTrustInputs":  map[string]any{"githubActions": false},
+		"generatedAt":    "2026-07-01T10:00:02Z",
+		"sourceRevision": execution.SourceRevision,
+	})
+	coverage := coverageMetricsFixture()
+	coverage["provenance"] = coverageMetricsProvenanceFixture(execution)
+	writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), coverage)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"), selfEvidenceReportFixture("proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"))
+	receipt := proofReceiptFixture(execution)
+	alignProofReceiptDigests(t, root, receipt, execution)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipts.json"), map[string]any{
 		"receiptSetId":  "proofkit.self-hosting.proof-receipts",
 		"schemaVersion": 1,
-		"receipts":      []any{proofReceiptFixture()},
+		"receipts":      []any{receipt},
 		"nonClaims":     []any{"Self-hosting receipts are local advisory evidence."},
 	})
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-receipt-producer-admission-report.json"), selfEvidenceReportFixture("proofkit.receipt-producer-admission", "proofkit.receipt-producer-policy", "proofkit.receipt-producer-admission.boundary", "proofkit.receipt-producer-admission.coverage", "proofkit.receipt-producer-admission.receipts"))
@@ -598,19 +856,75 @@ func completeFixture(t *testing.T) string {
 		"schemaVersion":      1,
 		"environmentClasses": []any{packageGateEnvironmentClass},
 		"producers":          []any{receiptProducerFixture()},
-		"receiptKinds":       []any{"proofkit.package-gate"},
+		"receiptKinds":       []any{"proofkit.package-artifact"},
 		"receipts":           []any{receiptProducerReceiptFixture()},
 		"nonClaims":          []any{"Local receipts are advisory evidence."},
 	})
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-spec-proof-bundle-admission-report.json"), selfEvidenceReportFixture("proofkit.spec-proof-bundle-admission", "proofkit.self-hosting.spec-proof-bundle", "proofkit.spec-proof-bundle-admission.accepted"))
-	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json"), specProofBundleFixture())
-	return root
+	bundle := specProofBundleFixture(execution)
+	bundle["receiptAdmission"].(map[string]any)["receipts"] = []any{receipt}
+	refreshBundleChildReports(bundle)
+	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json"), bundle)
+	writeOwnerSelfEvidenceReports(t, root)
+}
+
+func writePackageArtifactExecutionFixture(t *testing.T, root string) packageartifactrecord.Record {
+	t.Helper()
+	revision, sourceDigest, err := packageartifactrecord.SourceSnapshot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifactEvidence, err := packageartifactrecord.ArtifactEvidenceSnapshot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := packageartifactrecord.Record{
+		Argv:                            packageartifactrecord.CanonicalCommandArgv(),
+		ArtifactFreshnessBaselineDigest: strings.Repeat("0", 64),
+		ArtifactFreshnessDigest:         artifactEvidence.FreshnessDigest,
+		ArtifactSnapshotDigest:          artifactEvidence.SnapshotDigest,
+		CommandID:                       packageartifactrecord.CommandID,
+		EnvironmentDigest:               strings.Repeat("1", 64),
+		ExecutionArgv:                   packageartifactrecord.CanonicalExecutionArgv(),
+		ExitCode:                        0,
+		FinishedAt:                      "2026-07-01T10:00:01Z",
+		SchemaVersion:                   packageartifactrecord.SchemaVersion,
+		SourceRevision:                  revision,
+		SourceSnapshotDigest:            sourceDigest,
+		StartedAt:                       "2026-07-01T10:00:00Z",
+		Status:                          "passed",
+		ToolchainDigest:                 strings.Repeat("2", 64),
+	}
+	if err := packageartifactrecord.Write(root, record); err != nil {
+		t.Fatal(err)
+	}
+	return record
+}
+
+func readPackageArtifactExecutionFixture(t *testing.T, root string) packageartifactrecord.Record {
+	t.Helper()
+	record, err := packageartifactrecord.Read(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return record
+}
+
+func runFixtureGit(t *testing.T, root string, args ...string) {
+	t.Helper()
+	command := exec.Command("git", args...)
+	command.Dir = root
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("git %v: %v: %s", args, err, output)
+	}
 }
 
 func writeGitHubActionsSelfEvidence(t *testing.T, root string) {
 	t.Helper()
-	receipt := proofReceiptFixture()
-	receipt["receiptId"] = "receipt.github.actions.package-gate"
+	execution := readPackageArtifactExecutionFixture(t, root)
+	receipt := proofReceiptFixture(execution)
+	alignProofReceiptDigests(t, root, receipt, execution)
+	receipt["receiptId"] = "receipt.github.actions.package-artifact"
 	receipt["producerId"] = "github.actions.package"
 	receipt["runnerClass"] = "github.actions.hosted"
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipts.json"), map[string]any{
@@ -624,7 +938,7 @@ func writeGitHubActionsSelfEvidence(t *testing.T, root string) {
 	producer["producerId"] = "github.actions.package"
 	producer["nonClaim"] = "GitHub Actions package receipts are advisory."
 	producerReceipt := receiptProducerReceiptFixture()
-	producerReceipt["receiptId"] = "receipt.github.actions.package-gate"
+	producerReceipt["receiptId"] = "receipt.github.actions.package-artifact"
 	producerReceipt["producerId"] = "github.actions.package"
 	producerReceipt["nonClaim"] = "GitHub Actions advisory receipts do not satisfy merge obligations."
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json"), map[string]any{
@@ -632,27 +946,63 @@ func writeGitHubActionsSelfEvidence(t *testing.T, root string) {
 		"nonClaims":          []any{"GitHub Actions receipts remain advisory."},
 		"policyId":           "proofkit.receipt-producer-policy",
 		"producers":          []any{producer},
-		"receiptKinds":       []any{"proofkit.package-gate"},
+		"receiptKinds":       []any{"proofkit.package-artifact"},
 		"receipts":           []any{producerReceipt},
 		"schemaVersion":      1,
 	})
 
-	bundle := specProofBundleFixture()
+	bundle := specProofBundleFixture(execution)
 	receiptAdmission := bundle["receiptAdmission"].(map[string]any)
 	receiptAdmission["receipts"] = []any{receipt}
 	producerAdmission := bundle["receiptProducerAdmission"].(map[string]any)
 	producerAdmission["producers"] = []any{producer}
 	producerAdmission["receipts"] = []any{producerReceipt}
+	refreshBundleChildReports(bundle)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json"), bundle)
+	writeOwnerSelfEvidenceReports(t, root)
+}
+
+func writeOwnerSelfEvidenceReports(t *testing.T, root string) {
+	t.Helper()
+	proofRaw, err := readAdmittedJSON(root, proofReceiptsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	proofReport, proofExit, err := proofreceiptadmission.Build(proofRaw)
+	if err != nil || proofExit != 0 {
+		t.Fatalf("build proof receipt report: exit=%d err=%v", proofExit, err)
+	}
+	writeJSON(t, filepath.Join(root, filepath.FromSlash(proofReceiptReportPath)), proofReport.JSONValue())
+
+	producerRaw, err := readAdmittedJSON(root, producerPolicyPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	producerReport, producerExit, err := receiptproduceradmission.Build(producerRaw)
+	if err != nil || producerExit != 0 {
+		t.Fatalf("build producer report: exit=%d err=%v", producerExit, err)
+	}
+	writeJSON(t, filepath.Join(root, filepath.FromSlash(producerReportPath)), producerReport.JSONValue())
+
+	bundleRaw, err := readAdmittedJSON(root, specProofBundlePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bundleReport, bundleExit, err := specproofbundleadmission.Build(bundleRaw)
+	if err != nil || bundleExit != 0 {
+		t.Fatalf("build spec proof bundle report: exit=%d err=%v", bundleExit, err)
+	}
+	writeJSON(t, filepath.Join(root, filepath.FromSlash(specProofBundleReportPath)), bundleReport.JSONValue())
 }
 
 func writeMixedSelfEvidenceIdentity(t *testing.T, root string) {
 	t.Helper()
+	execution := readPackageArtifactExecutionFixture(t, root)
 	githubProducer := receiptProducerFixture()
 	githubProducer["producerId"] = "github.actions.package"
 	githubProducer["nonClaim"] = "GitHub Actions package receipts are advisory."
 	githubProducerReceipt := receiptProducerReceiptFixture()
-	githubProducerReceipt["receiptId"] = "receipt.github.actions.package-gate"
+	githubProducerReceipt["receiptId"] = "receipt.github.actions.package-artifact"
 	githubProducerReceipt["producerId"] = "github.actions.package"
 	githubProducerReceipt["nonClaim"] = "GitHub Actions advisory receipts do not satisfy merge obligations."
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-receipt-producer-admission.json"), map[string]any{
@@ -660,15 +1010,41 @@ func writeMixedSelfEvidenceIdentity(t *testing.T, root string) {
 		"nonClaims":          []any{"Mixed fixture must be rejected."},
 		"policyId":           "proofkit.receipt-producer-policy",
 		"producers":          []any{githubProducer},
-		"receiptKinds":       []any{"proofkit.package-gate"},
+		"receiptKinds":       []any{"proofkit.package-artifact"},
 		"receipts":           []any{githubProducerReceipt},
 		"schemaVersion":      1,
 	})
-	bundle := specProofBundleFixture()
+	bundle := specProofBundleFixture(execution)
 	producerAdmission := bundle["receiptProducerAdmission"].(map[string]any)
 	producerAdmission["producers"] = []any{githubProducer}
 	producerAdmission["receipts"] = []any{githubProducerReceipt}
+	refreshBundleChildReports(bundle)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-spec-proof-bundle.json"), bundle)
+}
+
+func refreshBundleChildReports(bundle map[string]any) {
+	proofChild := bundle["receiptAdmission"].(map[string]any)
+	proofInput := map[string]any{
+		"schemaVersion": json.Number("1"), "receiptSetId": "proofkit.self-hosting.proof-receipts",
+		"receipts": proofChild["receipts"], "nonClaims": proofChild["nonClaims"],
+	}
+	proofReport, proofExit, proofErr := proofreceiptadmission.Build(decodedFixture(proofInput))
+	if proofErr != nil || proofExit != 0 {
+		panic(fmt.Sprintf("refresh proof receipt fixture report: exit=%d err=%v", proofExit, proofErr))
+	}
+	proofChild["report"] = proofReport.JSONValue()
+
+	producerChild := bundle["receiptProducerAdmission"].(map[string]any)
+	producerInput := map[string]any{
+		"schemaVersion": json.Number("1"), "policyId": "proofkit.receipt-producer-policy",
+		"environmentClasses": producerChild["environmentClasses"], "receiptKinds": producerChild["receiptKinds"],
+		"producers": producerChild["producers"], "receipts": producerChild["receipts"], "nonClaims": producerChild["nonClaims"],
+	}
+	producerReport, producerExit, producerErr := receiptproduceradmission.Build(decodedFixture(producerInput))
+	if producerErr != nil || producerExit != 0 {
+		panic(fmt.Sprintf("refresh producer fixture report: exit=%d err=%v", producerExit, producerErr))
+	}
+	producerChild["report"] = producerReport.JSONValue()
 }
 
 func coverageMetricsFixture() map[string]any {
@@ -682,6 +1058,8 @@ func coverageMetricsFixture() map[string]any {
 		"commandRoutes": map[string]any{
 			"admittedInventoryEntryCount":               1,
 			"commandCount":                              1,
+			"commandWithoutProofRouteCandidateCount":    0,
+			"commandsWithoutProofRouteCandidate":        []any{},
 			"commandWithoutSemanticFalsifierRouteCount": 0,
 			"commandsWithoutSemanticFalsifierRoute":     []any{},
 			"contractOnlyCommandCount":                  0,
@@ -690,8 +1068,12 @@ func coverageMetricsFixture() map[string]any {
 			"routeOnlyCommandCount":                     0,
 			"routeOnlyCommands":                         []any{},
 			"routeSmokeCount":                           0,
+			"proofRouteCandidateInventoryEntryCount":    1,
+			"proofRouteCandidateRouteCount":             1,
 			"semanticInventoryEntryCount":               1,
 			"semanticRouteCount":                        1,
+			"unknownProofRouteCandidateRefCount":        0,
+			"unknownProofRouteCandidateRefs":            []any{},
 			"unknownSemanticCommandRefCount":            0,
 			"unknownSemanticCommandRefs":                []any{},
 		},
@@ -702,6 +1084,25 @@ func coverageMetricsFixture() map[string]any {
 			"scenarioWithoutRequirementIds": []any{},
 		},
 		"nonClaims": []any{"Coverage metrics do not prove runtime readiness."},
+		"provenance": map[string]any{
+			"generatedAt":          "2026-01-01T00:00:01Z",
+			"producerCommandId":    "proofkit.coverage-metrics",
+			"sourceRevision":       "mismatched-source",
+			"sourceSnapshotDigest": strings.Repeat("0", 64),
+		},
+	}
+}
+
+func coverageMetricsProvenanceFixture(execution packageartifactrecord.Record) map[string]any {
+	finishedAt, err := time.Parse(time.RFC3339Nano, execution.FinishedAt)
+	if err != nil {
+		panic(err)
+	}
+	return map[string]any{
+		"generatedAt":          finishedAt.Add(time.Nanosecond).Format(time.RFC3339Nano),
+		"producerCommandId":    "proofkit.coverage-metrics",
+		"sourceRevision":       execution.SourceRevision,
+		"sourceSnapshotDigest": execution.SourceSnapshotDigest,
 	}
 }
 
@@ -731,23 +1132,97 @@ func selfEvidenceReportFixture(reportKind string, reportID string, ruleIDs ...st
 	}
 }
 
-func proofReceiptFixture() map[string]any {
+func proofReceiptFixture(execution packageartifactrecord.Record) map[string]any {
+	commandDigest, err := packageArtifactCommandDigest(execution)
+	if err != nil {
+		panic(err)
+	}
 	return map[string]any{
-		"artifactRefs":           []any{map[string]any{"kind": "artifact", "path": "artifacts/package/" + testNPMTarballName, "sha256": "sha256:abc"}},
+		"artifactRefs":           []any{map[string]any{"kind": "artifact", "path": "artifacts/package/" + testNPMTarballName, "sha256": testDigest("artifact")}},
+		"commandDigest":          commandDigest,
+		"dependencyDigest":       testDigest("dependency"),
 		"environmentClass":       packageGateEnvironmentClass,
+		"environmentDigest":      "sha256:" + execution.EnvironmentDigest,
 		"evidenceRefs":           []any{"artifacts/package/npm-pack.json"},
 		"exitCode":               0,
+		"finishedAt":             execution.FinishedAt,
+		"lockfileDigest":         nil,
 		"nonClaims":              []any{"Self-hosting proof receipts do not approve merge."},
+		"preconditionDigest":     testDigest("precondition"),
 		"producerAdmissionClass": "advisory",
 		"producerId":             "local.developer",
+		"proofBindingDigest":     testDigest("binding"),
 		"proofPlanId":            "proofkit.self-hosting.witness-plan",
 		"provenanceRef":          "artifacts/proofkit/ci-provenance.json",
-		"receiptId":              "receipt.local.package-gate",
-		"receiptKind":            "proofkit.package-gate",
+		"receiptId":              "receipt.local.package-artifact",
+		"receiptKind":            "proofkit.package-artifact",
 		"runnerClass":            "local",
+		"runnerIdentity":         "local.developer",
+		"sourceRevision":         execution.SourceRevision,
+		"startedAt":              execution.StartedAt,
 		"status":                 "passed",
-		"witnessSelectors":       []any{"REQ-PROOFKIT-PACKAGE-004"},
+		"toolchainDigest":        "sha256:" + execution.ToolchainDigest,
+		"witnessSelectorDigest":  testDigest("selector"),
+		"witnessSelectors":       []any{"REQ-PROOFKIT-PACKAGE-003"},
 	}
+}
+
+func alignProofReceiptDigests(t *testing.T, root string, receipt map[string]any, execution packageartifactrecord.Record) {
+	t.Helper()
+	goModDigest, err := fileDigestRef(root, "go.mod")
+	if err != nil {
+		t.Fatal(err)
+	}
+	goSumDigest, err := fileDigestRef(root, "go.sum")
+	if err != nil {
+		t.Fatal(err)
+	}
+	packageJSONDigest, err := fileDigestRef(root, "package.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	witnessPlanDigest, err := fileDigestRef(root, "proofkit/witness-plan.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	proofBindingDigest, err := fileDigestRef(root, "proofkit/requirement-bindings.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	provenance := readJSONMap(t, filepath.Join(root, filepath.FromSlash(ciProvenancePath)))
+	ciTrustInputDigest, err := digest.StableJSONSHA256Ref(provenance["ciTrustInputs"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	dependencyDigest, err := digest.StableJSONSHA256Ref(map[string]any{"goModDigest": goModDigest, "goSumDigest": goSumDigest})
+	if err != nil {
+		t.Fatal(err)
+	}
+	preconditionDigest, err := digest.StableJSONSHA256Ref(map[string]any{
+		"artifactSnapshotDigest": execution.ArtifactSnapshotDigest,
+		"ciTrustInputDigest":     ciTrustInputDigest,
+		"goModDigest":            goModDigest,
+		"goSumDigest":            goSumDigest,
+		"packageJsonDigest":      packageJSONDigest,
+		"sourceSnapshotDigest":   execution.SourceSnapshotDigest,
+		"witnessPlanDigest":      witnessPlanDigest,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	witnessSelectorDigest, err := digest.StableJSONSHA256Ref(receipt["witnessSelectors"])
+	if err != nil {
+		t.Fatal(err)
+	}
+	receipt["dependencyDigest"] = dependencyDigest
+	receipt["preconditionDigest"] = preconditionDigest
+	receipt["proofBindingDigest"] = proofBindingDigest
+	receipt["witnessSelectorDigest"] = witnessSelectorDigest
+}
+
+func testDigest(seed string) string {
+	hexDigits := "abcdef0123456789"
+	return "sha256:" + strings.Repeat(hexDigits[len(seed)%len(hexDigits):len(seed)%len(hexDigits)+1], 64)
 }
 
 func receiptProducerFixture() map[string]any {
@@ -758,7 +1233,7 @@ func receiptProducerFixture() map[string]any {
 		"nonClaim":           "Local developer receipts are advisory.",
 		"owner":              "proofkit.package-boundary",
 		"producerId":         "local.developer",
-		"receiptKinds":       []any{"proofkit.package-gate"},
+		"receiptKinds":       []any{"proofkit.package-artifact"},
 	}
 }
 
@@ -770,15 +1245,31 @@ func receiptProducerReceiptFixture() map[string]any {
 		"nonClaim":                 "Local advisory receipts do not satisfy merge obligations.",
 		"producerId":               "local.developer",
 		"provenanceRef":            "artifacts/proofkit/ci-provenance.json",
-		"receiptId":                "receipt.local.package-gate",
-		"receiptKind":              "proofkit.package-gate",
+		"receiptId":                "receipt.local.package-artifact",
+		"receiptKind":              "proofkit.package-artifact",
 		"satisfiesMergeObligation": false,
 		"status":                   "passed",
 		"subjectRef":               "proofkit.package-boundary.self-hosting",
 	}
 }
 
-func specProofBundleFixture() map[string]any {
+func specProofBundleFixture(execution packageartifactrecord.Record) map[string]any {
+	proofNonClaims := []any{"Proof receipt admission remains local advisory evidence."}
+	proofInput := map[string]any{"schemaVersion": json.Number("1"), "receiptSetId": "proofkit.self-hosting.proof-receipts", "receipts": []any{proofReceiptFixture(execution)}, "nonClaims": proofNonClaims}
+	proofReport, proofExit, proofErr := proofreceiptadmission.Build(decodedFixture(proofInput))
+	if proofErr != nil || proofExit != 0 {
+		panic(fmt.Sprintf("build proof receipt fixture report: exit=%d err=%v", proofExit, proofErr))
+	}
+	producerNonClaims := []any{"Receipt producer admission remains local advisory evidence."}
+	producerInput := map[string]any{
+		"schemaVersion": json.Number("1"), "policyId": "proofkit.receipt-producer-policy",
+		"environmentClasses": []any{packageGateEnvironmentClass}, "receiptKinds": []any{"proofkit.package-artifact"},
+		"producers": []any{receiptProducerFixture()}, "receipts": []any{receiptProducerReceiptFixture()}, "nonClaims": producerNonClaims,
+	}
+	producerReport, producerExit, producerErr := receiptproduceradmission.Build(decodedFixture(producerInput))
+	if producerErr != nil || producerExit != 0 {
+		panic(fmt.Sprintf("build producer fixture report: exit=%d err=%v", producerExit, producerErr))
+	}
 	return map[string]any{
 		"bundleId":                "proofkit.self-hosting.spec-proof-bundle",
 		"mergeRequiredReceiptIds": []any{},
@@ -786,26 +1277,27 @@ func specProofBundleFixture() map[string]any {
 		"receiptAdmission": map[string]any{
 			"exitCode":  0,
 			"failures":  []any{},
-			"nonClaims": []any{"Proof receipt admission remains local advisory evidence."},
-			"receipts":  []any{proofReceiptFixture()},
-			"report":    selfEvidenceReportFixture("proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"),
+			"nonClaims": proofNonClaims,
+			"producers": []any{},
+			"receipts":  []any{proofReceiptFixture(execution)},
+			"report":    proofReport.JSONValue(),
 		},
 		"receiptProducerAdmission": map[string]any{
 			"environmentClasses": []any{packageGateEnvironmentClass},
 			"exitCode":           0,
 			"failures":           []any{},
-			"nonClaims":          []any{"Receipt producer admission remains local advisory evidence."},
+			"nonClaims":          producerNonClaims,
 			"producers":          []any{receiptProducerFixture()},
-			"receiptKinds":       []any{"proofkit.package-gate"},
+			"receiptKinds":       []any{"proofkit.package-artifact"},
 			"receipts":           []any{receiptProducerReceiptFixture()},
-			"report":             selfEvidenceReportFixture("proofkit.receipt-producer-admission", "proofkit.receipt-producer-policy", "proofkit.receipt-producer-admission.boundary", "proofkit.receipt-producer-admission.coverage", "proofkit.receipt-producer-admission.receipts"),
+			"report":             producerReport.JSONValue(),
 		},
 		"requirementBindings": map[string]any{
 			"bindingId": "proofkit.package-boundary.requirement-bindings",
 			"bindings": []any{map[string]any{
-				"commandIds":         []any{"proofkit.ci-receipt-anchor", "proofkit.package-gate"},
+				"commandIds":         []any{"proofkit.package-artifact"},
 				"environmentClasses": []any{packageGateEnvironmentClass},
-				"requirementId":      "REQ-PROOFKIT-PACKAGE-004",
+				"requirementId":      "REQ-PROOFKIT-PACKAGE-003",
 				"scenarioId":         "proofkit.package-boundary.ci-receipt-anchor",
 				"witnessId":          "proofkit.ci.receipt-anchor",
 				"witnessKind":        "contract",
@@ -813,31 +1305,73 @@ func specProofBundleFixture() map[string]any {
 			}},
 			"nonClaims": []any{"Requirement bindings do not execute witnesses."},
 			"requirements": []any{map[string]any{
+				"claimLevel":    "blocking",
+				"nonClaims":     []any{"Fixture requirement does not claim publication."},
 				"ownerId":       "proofkit.package-boundary",
 				"proofState":    "witness_backed",
-				"requirementId": "REQ-PROOFKIT-PACKAGE-004",
+				"requirementId": "REQ-PROOFKIT-PACKAGE-003",
 				"specPath":      "docs/specs/proofkit-package-boundary/requirements.v1.json",
 			}},
 			"schemaVersion":   1,
-			"witnessCommands": []any{map[string]any{"command": "npm run self:receipt", "commandId": "proofkit.ci-receipt-anchor", "environmentClass": packageGateEnvironmentClass}},
+			"witnessCommands": []any{map[string]any{"command": "npm run package:artifact", "commandId": "proofkit.package-artifact", "environmentClass": packageGateEnvironmentClass}},
 		},
 		"schemaVersion": 1,
 		"witnessPlan": map[string]any{
 			"commands": []any{map[string]any{
-				"expectedArtifacts": []any{map[string]any{"kind": "report", "path": "artifacts/proofkit/self-hosting-spec-proof-bundle.json", "required": true}},
-				"id":                "proofkit.ci-receipt-anchor",
+				"argv":              []any{"npm", "run", "package:artifact"},
+				"cachePolicy":       "disabled",
+				"credentialClass":   "none",
+				"cwd":               ".",
+				"environment":       map[string]any{"allowlist": []any{}, "classes": []any{packageGateEnvironmentClass}, "inherit": "none"},
+				"exitCodePolicy":    map[string]any{"kind": "zero", "successCodes": []any{0}},
+				"expectedArtifacts": []any{map[string]any{"kind": "report", "path": "artifacts/package/npm-pack.json", "required": true}},
+				"id":                "proofkit.package-artifact",
+				"networkPolicy":     "none",
+				"parallelGroup":     "package-artifact",
+				"schemaVersion":     1,
+				"timeoutMs":         600000,
 			}},
 			"nonClaims": []any{"Witness plan does not execute commands."},
 			"policies": []any{map[string]any{
-				"commandId":          "proofkit.ci-receipt-anchor",
-				"environmentClasses": []any{packageGateEnvironmentClass},
-				"sideEffectClass":    "write-local",
+				"cacheAdmissionRefs":  []any{},
+				"cancellationPolicy":  map[string]any{"graceMs": 5000, "kind": "cooperative"},
+				"commandId":           "proofkit.package-artifact",
+				"deterministicOutput": false,
+				"exclusiveLocks":      []any{},
+				"inputSelectors":      []any{"package.json"},
+				"nonClaims":           []any{"Fixture witness policy does not prove execution."},
+				"outputSelectors":     []any{"artifacts/package/npm-pack.json"},
+				"resourceReads":       []any{"resource.proofkit.source"},
+				"resourceWrites":      []any{"resource.proofkit.package-artifacts"},
+				"retryPolicy":         map[string]any{"kind": "none", "maxAttempts": 1},
+				"sideEffectClass":     "local_write",
+				"timeoutPolicy":       map[string]any{"kind": "bounded", "timeoutMs": 600000},
 			}},
 			"schedulerPlanId": "proofkit.self-hosting.witness-plan",
 			"schemaVersion":   1,
-			"vocabulary":      map[string]any{"environmentClasses": []any{packageGateEnvironmentClass}},
+			"vocabulary": map[string]any{
+				"artifactKinds":                 []any{"report"},
+				"credentialClasses":             []any{"none"},
+				"environmentClasses":            []any{packageGateEnvironmentClass},
+				"environmentClassPolicies":      []any{map[string]any{"cachePolicies": []any{"disabled"}, "credentialClasses": []any{"none"}, "environmentClass": packageGateEnvironmentClass, "networkPolicies": []any{"none"}}},
+				"maxTimeoutMs":                  600000,
+				"nonCacheableCredentialClasses": []any{},
+				"parallelGroups":                []any{"package-artifact"},
+			},
 		},
 	}
+}
+
+func decodedFixture(value any) any {
+	content, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		panic(err)
+	}
+	return decoded
 }
 
 func releaseManifestFixture(includePyPINonClaim bool) map[string]any {
@@ -998,6 +1532,24 @@ func writeJSON(t *testing.T, path string, value any) {
 		t.Fatal(err)
 	}
 	writeFile(t, path, string(content))
+}
+
+func readJSONMap(t *testing.T, path string) map[string]any {
+	t.Helper()
+	file, err := os.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	value, err := admission.DecodeJSON(file, 16<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("%s must contain an object", path)
+	}
+	return record
 }
 
 func writeNPMArtifact(t *testing.T, root string, filename string, content []byte) {

@@ -21,19 +21,19 @@ func buildRecord(input admittedInput, validation validationResult) report.Record
 		ReportID:      input.TreeID,
 		State:         state,
 		Summary: map[string]any{
-			"callerNonClaimCount": callerNonClaimCount(input),
-			"edgeCount":           len(input.Edges),
-			"failureCount":        len(validation.Failures),
-			"maxDepth":            validation.MaxDepth,
-			"nodeCount":           len(input.Nodes),
-			"overlayCount":        len(input.Overlays),
-			"sourceRefCount":      len(validation.SourceRefIDs),
-			"staleSourceRefCount": len(validation.StaleSourceRefIDs),
-			"visitedNodeCount":    validation.VisitedNodeCount,
+			"callerAnnotationCount": callerAnnotationCount(input),
+			"edgeCount":             len(input.Edges),
+			"failureCount":          len(validation.Failures),
+			"maxDepth":              validation.MaxDepth,
+			"nodeCount":             len(input.Nodes),
+			"overlayCount":          len(input.Overlays),
+			"sourceRefCount":        len(validation.SourceRefIDs),
+			"staleSourceRefCount":   len(validation.StaleSourceRefIDs),
+			"visitedNodeCount":      validation.VisitedNodeCount,
 		},
 		Diagnostics: []report.Diagnostic{
 			{Key: "boundaryNonClaims", Value: admit.StringSliceToAny(nonClaims)},
-			{Key: "callerNonClaims", Value: callerNonClaimsDiagnostic(input)},
+			{Key: "callerAnnotations", Value: callerAnnotationsDiagnostic(input)},
 			{Key: "edges", Value: edgesDiagnostic(input.Edges)},
 			{Key: "failures", Value: admit.StringSliceToAny(validation.Failures)},
 			{Key: "nodes", Value: nodesDiagnostic(input.Nodes)},
@@ -53,12 +53,12 @@ func nodesDiagnostic(nodes []node) []any {
 		}
 		sort.Strings(sourceRefIDs)
 		values = append(values, map[string]any{
-			"callerNonClaims": admit.StringSliceToAny(item.CallerNonClaims),
-			"displayOrder":    item.DisplayOrder,
-			"label":           item.Label,
-			"nodeId":          item.NodeID,
-			"nodeKind":        item.NodeKind,
-			"sourceRefIds":    admit.StringSliceToAny(sourceRefIDs),
+			"callerAnnotations": admit.StringSliceToAny(item.CallerAnnotations),
+			"displayOrder":      item.DisplayOrder,
+			"label":             item.Label,
+			"nodeId":            item.NodeID,
+			"nodeKind":          item.NodeKind,
+			"sourceRefIds":      admit.StringSliceToAny(sourceRefIDs),
 		})
 	}
 	sort.SliceStable(values, func(left int, right int) bool {
@@ -89,13 +89,13 @@ func overlaysDiagnostic(overlays []overlay) []any {
 	values := make([]any, 0, len(overlays))
 	for _, item := range overlays {
 		value := map[string]any{
-			"callerNonClaims": admit.StringSliceToAny(item.CallerNonClaims),
-			"label":           item.Label,
-			"overlayId":       item.OverlayID,
-			"overlayKind":     item.OverlayKind,
-			"refId":           item.RefID,
-			"refKind":         item.RefKind,
-			"targetNodeId":    item.TargetNodeID,
+			"callerAnnotations": admit.StringSliceToAny(item.CallerAnnotations),
+			"label":             item.Label,
+			"overlayId":         item.OverlayID,
+			"overlayKind":       item.OverlayKind,
+			"refId":             item.RefID,
+			"refKind":           item.RefKind,
+			"targetNodeId":      item.TargetNodeID,
 		}
 		if item.RefPath != "" {
 			value["digestAlgorithm"] = item.DigestAlgorithm
@@ -107,41 +107,41 @@ func overlaysDiagnostic(overlays []overlay) []any {
 	return values
 }
 
-func callerNonClaimsDiagnostic(input admittedInput) map[string]any {
+func callerAnnotationsDiagnostic(input admittedInput) map[string]any {
 	nodeClaims := []any{}
 	for _, item := range input.Nodes {
-		if len(item.CallerNonClaims) == 0 {
+		if len(item.CallerAnnotations) == 0 {
 			continue
 		}
 		nodeClaims = append(nodeClaims, map[string]any{
-			"nodeId":    item.NodeID,
-			"nonClaims": admit.StringSliceToAny(item.CallerNonClaims),
+			"nodeId":      item.NodeID,
+			"annotations": admit.StringSliceToAny(item.CallerAnnotations),
 		})
 	}
 	overlayClaims := []any{}
 	for _, item := range input.Overlays {
-		if len(item.CallerNonClaims) == 0 {
+		if len(item.CallerAnnotations) == 0 {
 			continue
 		}
 		overlayClaims = append(overlayClaims, map[string]any{
-			"nonClaims": admit.StringSliceToAny(item.CallerNonClaims),
-			"overlayId": item.OverlayID,
+			"annotations": admit.StringSliceToAny(item.CallerAnnotations),
+			"overlayId":   item.OverlayID,
 		})
 	}
 	return map[string]any{
 		"nodes":    nodeClaims,
 		"overlays": overlayClaims,
-		"root":     admit.StringSliceToAny(input.CallerNonClaims),
+		"root":     admit.StringSliceToAny(input.CallerAnnotations),
 	}
 }
 
-func callerNonClaimCount(input admittedInput) int {
-	total := len(input.CallerNonClaims)
+func callerAnnotationCount(input admittedInput) int {
+	total := len(input.CallerAnnotations)
 	for _, item := range input.Nodes {
-		total += len(item.CallerNonClaims)
+		total += len(item.CallerAnnotations)
 	}
 	for _, item := range input.Overlays {
-		total += len(item.CallerNonClaims)
+		total += len(item.CallerAnnotations)
 	}
 	return total
 }
@@ -154,7 +154,7 @@ func ruleResults(failures []string) []report.RuleResult {
 		{
 			RuleID:      "proofkit.requirement-spec-tree.non_claims",
 			Status:      "passed",
-			Message:     "Caller non-claims were admitted as display-only text and kept separate from Proofkit boundary non-claims.",
+			Message:     "Caller annotations (untrusted) were admitted as display-only text and kept separate from Proofkit boundary non-claims.",
 			Diagnostics: []report.Diagnostic{},
 		},
 	}

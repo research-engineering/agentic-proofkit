@@ -61,6 +61,7 @@ func runRequirementView(command string, args []string, stdin io.Reader, stdout i
 
 func parseRequirementViewArgs(command string, args []string) (requirementViewArgs, error) {
 	options := requirementViewArgs{format: "json"}
+	inputPointerSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -70,9 +71,10 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			options.inputPath = args[index+1]
 			index++
 		case "--input-pointer":
-			if index+1 >= len(args) {
+			if inputPointerSeen || index+1 >= len(args) {
 				return requirementViewArgs{}, fmt.Errorf("--input-pointer requires a JSON pointer")
 			}
+			inputPointerSeen = true
 			options.inputPointer = args[index+1]
 			index++
 		case "--format":
@@ -87,6 +89,9 @@ func parseRequirementViewArgs(command string, args []string) (requirementViewArg
 			}
 			if options.outputPath != "" || index+1 >= len(args) || args[index+1] == "" {
 				return requirementViewArgs{}, fmt.Errorf("--output requires a repository-relative POSIX path")
+			}
+			if args[index+1] == "-" {
+				return requirementViewArgs{}, fmt.Errorf("--output requires a repository-relative POSIX path other than -")
 			}
 			outputPath, err := admit.SafeRepoRelativePath(args[index+1], "requirement-spec-tree-view output")
 			if err != nil {

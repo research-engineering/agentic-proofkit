@@ -240,6 +240,7 @@ func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testi
 		"export const a = {x: 1, b: 2}, c: Array<string> = [\"x\", \"y\"];",
 		"export let d = makeValue<{left: string, right: string}>();",
 		"export const genericCall = make<string, number>();",
+		"export const directMatcher = /,/, matcherWithClass = /[a,b]/;",
 		"export const isSmall = limit < 10, fallback = 1;",
 	}, "\n")
 
@@ -247,8 +248,181 @@ func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testi
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{"a", "c", "d", "fallback", "genericCall", "isSmall"})
+	assertStringSlice(t, runtimeExports, []string{"a", "c", "d", "directMatcher", "fallback", "genericCall", "isSmall", "matcherWithClass"})
 	assertStringSlice(t, typeExports, []string{})
+}
+
+func TestCollectExportsAcceptsRegexLiteralReturnedByArrowInitializer(t *testing.T) {
+	runtimeExports, typeExports, err := CollectExports("export const matcher = () => /,/, next = 1;")
+	if err != nil {
+		t.Fatalf("collect arrow regex initializer exports: %v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"matcher", "next"})
+	assertStringSlice(t, typeExports, []string{})
+}
+
+func TestCollectExportsIgnoresCommentsStringsAndTemplates(t *testing.T) {
+	source := strings.Join([]string{
+		"/* export const BLOCK_GHOST = 1; */",
+		"// export const LINE_GHOST = 1;",
+		`const text = "export const STRING_GHOST = 1;";`,
+		`const continued = "still a string \`,
+		`export const CONTINUATION_GHOST = 1;";`,
+		"const template = `export const TEMPLATE_GHOST = 1;`;",
+		"export const REAL = 1;",
+	}, "\n")
+
+	runtimeExports, typeExports, err := CollectExports(source)
+	if err != nil {
+		t.Fatalf("collect exports: %v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"REAL"})
+	assertStringSlice(t, typeExports, []string{})
+}
+
+func TestScanCacheRejectsOversizedSource(t *testing.T) {
+	repoRoot := t.TempDir()
+	resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+	path := filepath.Join(repoRoot, "oversized.ts")
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create oversized source: %v", err)
+	}
+	if err := file.Truncate(maxSourceFileBytes + 1); err != nil {
+		file.Close()
+		t.Fatalf("truncate oversized source: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatalf("close oversized source: %v", err)
+	}
+	scan := newScanCache(resolvedRoot, maxAggregateScanBytes)
+	if _, _, err := scan.readFile(path, "fixture source", maxSourceFileBytes); err == nil || !strings.Contains(err.Error(), "8 MiB") {
+		t.Fatalf("scan.readFile() error=%v, want bounded file rejection", err)
+	}
+}
+
+func TestVerifyTypeScriptPackagePublicAPICachesRepeatedCanonicalSources(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
+	manifestPath := filepath.Join(packageRoot, "package.json")
+	sourcePath := filepath.Join(packageRoot, "src", "index.ts")
+	writeJSON(t, manifestPath, map[string]any{
+		"name": "@example/alpha",
+		"exports": map[string]any{
+			".": map[string]any{
+				"import": "./src/index.ts",
+				"types":  "./src/index.ts",
+			},
+			"./internal": nil,
+			"./secondary": map[string]any{
+				"import": "./src/index.ts",
+				"types":  "./src/index.ts",
+			},
+		},
+	})
+	input := publicAPIManifest()
+	input["entries"] = append(input["entries"].([]any), map[string]any{
+		"packageName":      "@example/alpha",
+		"exportKey":        "./secondary",
+		"source":           "src/index.ts",
+		"runtimeExports":   []any{"VALUE", "makeThing"},
+		"typeExports":      []any{"Mode", "Thing"},
+		"deniedExportKeys": []any{"./internal"},
+		"exportConditions": []any{
+			map[string]any{"condition": "import", "path": "./src/index.ts"},
+			map[string]any{"condition": "types", "path": "./src/index.ts"},
+		},
+	})
+	manifestInfo, err := os.Stat(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceInfo, err := os.Stat(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	output, exitCode, err := verifyWithScanBudget(input, Options{RepoRoot: repoRoot}, manifestInfo.Size()+sourceInfo.Size())
+	if err != nil || exitCode != 0 {
+		t.Fatalf("verify repeated source: exitCode=%d error=%v output=%#v", exitCode, err, output)
+	}
+}
+
+func TestScanCacheRejectsAggregateBytesAcrossUniqueFiles(t *testing.T) {
+	repoRoot := t.TempDir()
+	firstPath := filepath.Join(repoRoot, "first.ts")
+	secondPath := filepath.Join(repoRoot, "second.ts")
+	if err := os.WriteFile(firstPath, []byte("first"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(secondPath, []byte("second"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scan := newScanCache(resolvedRoot, 10)
+	if _, _, err := scan.readFile(firstPath, "first source", maxSourceFileBytes); err != nil {
+		t.Fatalf("read first source: %v", err)
+	}
+	if _, _, err := scan.readFile(secondPath, "second source", maxSourceFileBytes); err == nil || !strings.Contains(err.Error(), "aggregate file-read limit") {
+		t.Fatalf("scan.readFile() error=%v, want aggregate budget rejection", err)
+	}
+}
+
+func TestReadPackageManifestRejectsOversizedMetadata(t *testing.T) {
+	repoRoot := t.TempDir()
+	manifestPath := filepath.Join(repoRoot, "package.json")
+	file, err := os.Create(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Truncate(maxPackageManifestBytes + 1); err != nil {
+		file.Close()
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := readPackageManifest(newScanCache(resolvedRoot, maxAggregateScanBytes), manifestPath); err == nil || !strings.Contains(err.Error(), "256 KiB") {
+		t.Fatalf("readPackageManifest() error=%v, want package metadata bound rejection", err)
+	}
+}
+
+func TestPublicAPIAdmissionRejectsAggregateResourceBudgets(t *testing.T) {
+	manifest := map[string]any{
+		"schemaVersion": json.Number("1"), "machineContract": defaultMachineContract,
+		"entries": make([]any, maxManifestEntries+1),
+	}
+	if _, err := admitManifest(manifest, defaultMachineContract); err == nil || !strings.Contains(err.Error(), "entry limit") {
+		t.Fatalf("admitManifest() error=%v, want aggregate entry limit", err)
+	}
+
+	repoRoot := t.TempDir()
+	packagesRoot := filepath.Join(repoRoot, "packages")
+	if err := os.MkdirAll(packagesRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index <= maxPackageDirEntries; index++ {
+		if err := os.WriteFile(filepath.Join(packagesRoot, fmt.Sprintf("entry-%04d", index)), nil, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	resolvedRoot, err := filepath.EvalSymlinks(repoRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := packageDirs(newScanCache(resolvedRoot, maxAggregateScanBytes), "packages"); err == nil || !strings.Contains(err.Error(), "entry limit") {
+		t.Fatalf("packageDirs() error=%v, want bounded directory admission", err)
+	}
 }
 
 func writeTypeScriptPackageFixture(t *testing.T) string {

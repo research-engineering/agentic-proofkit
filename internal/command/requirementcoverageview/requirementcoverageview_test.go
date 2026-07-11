@@ -34,6 +34,30 @@ func TestBuildJSONBuildsSemanticRequirementAndCommandCoverage(t *testing.T) {
 	}
 }
 
+func TestBuildJSONDoesNotPromoteProofRouteCandidateToSemanticCoverage(t *testing.T) {
+	input := validCoverageInput(t)
+	entry := inventoryEntry(input)
+	entry["evidenceClass"] = "proof_route_candidate"
+	entry["falsifier"] = nil
+	entry["oracle"] = nil
+	view, exitCode, err := BuildJSON(input, Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	if exitCode != 1 {
+		t.Fatalf("BuildJSON() exitCode=%d, want uncovered failure", exitCode)
+	}
+	record := view.(map[string]any)
+	requirement := record["requirementCoverage"].([]any)[0].(map[string]any)
+	if requirement["coverageState"] != "proof_route_candidate_only" {
+		t.Fatalf("proof-route candidate state=%v, want explicit candidate-only state", requirement["coverageState"])
+	}
+	command := record["commandCoverage"].([]any)[0].(map[string]any)
+	if command["coverageState"] != "command_proof_route_candidate_only" {
+		t.Fatalf("proof-route command state=%v, want explicit candidate-only state", command["coverageState"])
+	}
+}
+
 func TestBuildJSONUsesNormalizedOnlyInventoryProjection(t *testing.T) {
 	input := validCoverageInput(t).(map[string]any)
 	inventory := input["testEvidenceInventory"]

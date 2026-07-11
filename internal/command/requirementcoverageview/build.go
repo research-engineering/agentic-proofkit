@@ -111,7 +111,7 @@ func buildOwnerInvariantCoverage(input compositeInput, entries []testevidenceinv
 			state, evidenceClass = strongestEntryState(matches)
 		}
 		invariantWarnings := []string{}
-		if state == "missing_test_inventory" || state == "route_only_nonclaim" || state == "helper_or_testkit_nonclaim" || state == "benchmark_advisory_missing_policy" {
+		if state == "missing_test_inventory" || state == "proof_route_candidate_only" || state == "route_only_nonclaim" || state == "helper_or_testkit_nonclaim" || state == "benchmark_advisory_missing_policy" {
 			warning := "missing_owner_invariant_inventory:" + invariant.OwnerInvariantID
 			invariantWarnings = append(invariantWarnings, warning)
 			*warnings = append(*warnings, warning)
@@ -217,6 +217,15 @@ func buildCommandCoverage(input compositeInput, entries []testevidenceinventory.
 		}
 		if state == "command_route_only_nonclaim" {
 			*warnings = append(*warnings, state+":"+commandID)
+		}
+		if state == "command_proof_route_candidate_only" {
+			diagnostic := state + ":" + commandID
+			if input.CoverageUniverse.CompletenessDeclaration == "selected_paths_advisory" {
+				*warnings = append(*warnings, diagnostic)
+			} else {
+				commandFailures = append(commandFailures, diagnostic)
+				*failures = append(*failures, diagnostic)
+			}
 		}
 		result = append(result, map[string]any{
 			"commandId":     commandID,
@@ -375,6 +384,7 @@ func strongestEntryState(entries []testevidenceinventory.Entry) (string, string)
 		{"contract_admission", "covered_by_contract_admission"},
 		{"governance_or_release", "covered_by_governance_invariant_nonproduct"},
 		{"benchmark", "benchmark_advisory_missing_policy"},
+		{"proof_route_candidate", "proof_route_candidate_only"},
 		{"routing_smoke_nonclaim", "route_only_nonclaim"},
 		{"helper_or_testkit", "helper_or_testkit_nonclaim"},
 	}
@@ -400,6 +410,11 @@ func commandState(entries []testevidenceinventory.Entry) string {
 			entry.EvidenceClass == "helper_or_testkit" ||
 			entry.EvidenceClass == "property_or_fuzz" {
 			return "command_owner_nonsemantic_evidence"
+		}
+	}
+	for _, entry := range entries {
+		if entry.EvidenceClass == "proof_route_candidate" {
+			return "command_proof_route_candidate_only"
 		}
 	}
 	for _, entry := range entries {

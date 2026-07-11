@@ -75,51 +75,36 @@ type renderedView struct {
 
 func render(raw any, options Options) (renderedView, error) {
 	if options.View == "source" {
-		view, _, err := requirementsourceview.BuildJSON(raw)
+		view, html, err := requirementsourceview.BuildBrowserDocument(raw)
 		if err != nil {
 			return renderedView{}, err
 		}
-		html, _, err := requirementsourceview.BuildHTML(raw)
-		if err != nil {
-			return renderedView{}, err
-		}
-		record := view.(map[string]any)
 		return renderedView{
-			authority: stringValue(record["authority"]),
+			authority: stringValue(view["authority"]),
 			html:      html,
-			viewKind:  stringValue(record["viewKind"]),
+			viewKind:  stringValue(view["viewKind"]),
 		}, nil
 	}
 	if options.View == "coverage" {
-		view, _, err := requirementcoverageview.BuildJSON(raw, requirementcoverageview.Options{})
+		view, html, err := requirementcoverageview.BuildBrowserDocument(raw)
 		if err != nil {
 			return renderedView{}, err
 		}
-		html, _, err := requirementcoverageview.BuildHTML(raw)
-		if err != nil {
-			return renderedView{}, err
-		}
-		record := view.(map[string]any)
 		return renderedView{
-			authority: stringValue(record["authority"]),
+			authority: stringValue(view["authority"]),
 			html:      html,
-			viewKind:  stringValue(record["viewKind"]),
+			viewKind:  stringValue(view["viewKind"]),
 		}, nil
 	}
 	if options.View == "spec-tree" {
-		view, _, err := requirementspectree.BuildViewJSON(raw)
+		view, html, err := requirementspectree.BuildBrowserDocument(raw)
 		if err != nil {
 			return renderedView{}, err
 		}
-		html, _, err := requirementspectree.BuildViewHTML(raw)
-		if err != nil {
-			return renderedView{}, err
-		}
-		record := view.(map[string]any)
 		return renderedView{
-			authority: stringValue(record["authority"]),
+			authority: stringValue(view["authority"]),
 			html:      html,
-			viewKind:  stringValue(record["viewKind"]),
+			viewKind:  stringValue(view["viewKind"]),
 		}, nil
 	}
 	if options.View != "proof" {
@@ -133,19 +118,14 @@ func render(raw any, options Options) (renderedView, error) {
 		Scope:                   options.ProofViewScope,
 		LocalEnvironmentClasses: options.LocalEnvironmentClasses,
 	}
-	view, _, err := requirementproofview.BuildJSON(raw, viewOptions)
+	view, html, err := requirementproofview.BuildBrowserDocument(raw, viewOptions)
 	if err != nil {
 		return renderedView{}, err
 	}
-	html, _, err := requirementproofview.BuildHTML(raw, viewOptions)
-	if err != nil {
-		return renderedView{}, err
-	}
-	record := view.(map[string]any)
 	return renderedView{
-		authority: stringValue(record["authority"]),
+		authority: stringValue(view["authority"]),
 		html:      html,
-		viewKind:  stringValue(record["viewKind"]),
+		viewKind:  stringValue(view["viewKind"]),
 	}, nil
 }
 

@@ -262,7 +262,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			args:          []string{"json-report-cli-adapter-source", "--input", "-"},
 			stdin:         `{}`,
 			wantStatus:    1,
-			wantStderrHas: []string{"not valid for json-report-cli-adapter-source"},
+			wantStderrHas: []string{"requires --language"},
 		},
 		{
 			name:           "test evidence inventory emits passed report JSON",
@@ -475,6 +475,38 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			}
 			if item.wantStatus != 0 && stdout.Len() != 0 && !item.wantStdoutJSON {
 				t.Fatalf("failed ABI case must keep stdout empty: %s", stdout.String())
+			}
+		})
+	}
+}
+
+func TestSpecializedParsersRejectDuplicateInputPointer(t *testing.T) {
+	duplicate := []string{"--input", "-", "--input-pointer", "", "--input-pointer", "/nested"}
+	cases := []struct {
+		name  string
+		parse func() error
+	}{
+		{name: "browser", parse: func() error {
+			_, err := parseRequirementBrowserArgs(append(append([]string{}, duplicate...), "--view", "source"))
+			return err
+		}},
+		{name: "envelope", parse: func() error {
+			_, err := parseEnvelopeCommandArgs("adoption-workflow-plan", duplicate, agentEnvelopeBuilders{})
+			return err
+		}},
+		{name: "pilot", parse: func() error { _, err := parsePilotAdmissionArgs(duplicate); return err }},
+		{name: "planning", parse: func() error { _, err := parsePlanningArgs("changed-path-set", duplicate); return err }},
+		{name: "proof resolver", parse: func() error { _, err := parseRequirementProofResolverArgs(duplicate); return err }},
+		{name: "public api", parse: func() error {
+			_, err := parsePublicAPIArgs(append(append([]string{}, duplicate...), "--repo-root", "."))
+			return err
+		}},
+		{name: "requirement view", parse: func() error { _, err := parseRequirementViewArgs("requirement-source-view", duplicate); return err }},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			if err := item.parse(); err == nil || !strings.Contains(err.Error(), "--input-pointer requires") {
+				t.Fatalf("parser error=%v, want duplicate --input-pointer rejection", err)
 			}
 		})
 	}
@@ -1311,7 +1343,7 @@ func cliSecretScanInput(content string) string {
 }
 
 func cliRequirementSpecTreeInput() string {
-	return `{"schemaVersion":1,"treeId":"proofkit.cli.spec_tree","rootNodeId":"meta","callerNonClaims":["CLI spec tree fixture is display-only."],"nodes":[{"nodeId":"meta","nodeKind":"meta_spec","label":"Meta spec","displayOrder":1,"sourceRefs":[{"sourceRefId":"source.meta","sourceRole":"requirements","sourceRefKind":"source_id","sourceId":"spec.meta"}],"callerNonClaims":[]},{"nodeId":"module","nodeKind":"module_spec","label":"Module spec","displayOrder":1,"sourceRefs":[{"sourceRefId":"source.module","sourceRole":"requirements","sourceRefKind":"path_digest","sourcePath":"docs/specs/module/requirements.v1.json","recordedSourceDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","currentSourceDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","digestAlgorithm":"sha256"}],"callerNonClaims":[]}],"edges":[{"parentNodeId":"meta","childNodeId":"module"}],"overlays":[{"overlayId":"overlay.module.source","overlayKind":"source","targetNodeId":"module","refKind":"source_ref","refId":"source.module","label":"Module source","callerNonClaims":[]}]}`
+	return `{"schemaVersion":2,"treeId":"proofkit.cli.spec_tree","rootNodeId":"meta","callerAnnotations":["CLI spec tree fixture is display-only."],"nodes":[{"nodeId":"meta","nodeKind":"meta_spec","label":"Meta spec","displayOrder":1,"sourceRefs":[{"sourceRefId":"source.meta","sourceRole":"requirements","sourceRefKind":"source_id","sourceId":"spec.meta"}],"callerAnnotations":[]},{"nodeId":"module","nodeKind":"module_spec","label":"Module spec","displayOrder":1,"sourceRefs":[{"sourceRefId":"source.module","sourceRole":"requirements","sourceRefKind":"path_digest","sourcePath":"docs/specs/module/requirements.v1.json","recordedSourceDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","currentSourceDigest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","digestAlgorithm":"sha256"}],"callerAnnotations":[]}],"edges":[{"parentNodeId":"meta","childNodeId":"module"}],"overlays":[{"overlayId":"overlay.module.source","overlayKind":"source","targetNodeId":"module","refKind":"source_ref","refId":"source.module","label":"Module source","callerAnnotations":[]}]}`
 }
 
 func cliRequirementAuthoringPlanInput() string {

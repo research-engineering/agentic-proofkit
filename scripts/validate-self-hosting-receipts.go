@@ -18,6 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
 const (
@@ -43,6 +44,13 @@ func run() error {
 	admission := producerAdmissionFromEnvironment(isGitHubActions, os.Getenv("GITHUB_REF_PROTECTED"), os.Getenv("PROOFKIT_MERGE_SATISFYING_PRODUCER"))
 	trustInputs := ciTrustInputs()
 	trustInputDigest := digestJSON(trustInputs)
+	executionRecord, err := packageartifactrecord.Read(".")
+	if err != nil {
+		return fmt.Errorf("read package artifact execution record: %w", err)
+	}
+	if err := packageartifactrecord.ValidateCurrent(".", executionRecord); err != nil {
+		return err
+	}
 
 	packageJSON, err := readJSONObject("package.json")
 	if err != nil {
@@ -61,10 +69,7 @@ func run() error {
 		return err
 	}
 
-	sourceRevision := os.Getenv("GITHUB_SHA")
-	if sourceRevision == "" {
-		sourceRevision = gitHead()
-	}
+	sourceRevision := executionRecord.SourceRevision
 	timestamp := time.Now().UTC().Format(time.RFC3339Nano)
 	provenance := map[string]any{
 		"ciTrustInputs":          trustInputs,
@@ -94,28 +99,20 @@ func run() error {
 		"goSumDigest": goSumDigest,
 	})
 	commandDigest := digestJSON(map[string]any{
-		"argv": []any{"npm", "run", "self:receipt"},
-		"id":   "proofkit.ci-receipt-anchor",
+		"argv": stringsToAny(executionRecord.Argv),
+		"id":   executionRecord.CommandID,
 	})
-	environmentDigest := digestJSON(map[string]any{
-		"ciTrustInputDigest":       trustInputDigest,
-		"environmentClass":         packageGateEnvironmentClass,
-		"go":                       goVersion(),
-		"packageManager":           stringField(packageJSON, "packageManager"),
-		"producerAdmissionClass":   admission.ProducerAdmissionClass,
-		"producerId":               admission.ProducerID,
-		"python":                   pythonVersion(),
-		"runner":                   admission.RunnerClass,
-		"satisfiesMergeObligation": admission.SatisfiesMergeObligation,
-	})
+	environmentDigest := "sha256:" + executionRecord.EnvironmentDigest
 	preconditionDigest := digestJSON(map[string]any{
-		"ciTrustInputDigest": trustInputDigest,
-		"goModDigest":        goModDigest,
-		"goSumDigest":        goSumDigest,
-		"packageJsonDigest":  packageJSONDigest,
-		"witnessPlanDigest":  witnessPlanDigest,
+		"artifactSnapshotDigest": executionRecord.ArtifactSnapshotDigest,
+		"ciTrustInputDigest":     trustInputDigest,
+		"goModDigest":            goModDigest,
+		"goSumDigest":            goSumDigest,
+		"packageJsonDigest":      packageJSONDigest,
+		"sourceSnapshotDigest":   executionRecord.SourceSnapshotDigest,
+		"witnessPlanDigest":      witnessPlanDigest,
 	})
-	witnessSelectors, err := requirementIDsForCommand(requirementBindingsInput, "proofkit.package-gate")
+	witnessSelectors, err := requirementIDsForCommand(requirementBindingsInput, "proofkit.package-artifact")
 	if err != nil {
 		return err
 	}
@@ -127,7 +124,7 @@ func run() error {
 		"environmentDigest":      environmentDigest,
 		"evidenceRefs":           packageGateEvidenceRefs(),
 		"exitCode":               0,
-		"finishedAt":             timestamp,
+		"finishedAt":             executionRecord.FinishedAt,
 		"lockfileDigest":         nil,
 		"nonClaims":              aggregatePackageGateNonClaims(),
 		"preconditionDigest":     preconditionDigest,
@@ -137,13 +134,13 @@ func run() error {
 		"proofPlanId":            stringField(witnessPlanInput, "schedulerPlanId"),
 		"provenanceRef":          filepath.Join(artifactRoot, "ci-provenance.json"),
 		"receiptId":              receiptID(admission.IsGitHubActions),
-		"receiptKind":            "proofkit.package-gate",
+		"receiptKind":            "proofkit.package-artifact",
 		"runnerClass":            admission.RunnerClass,
 		"runnerIdentity":         admission.RunnerIdentity,
 		"sourceRevision":         sourceRevision,
-		"startedAt":              timestamp,
+		"startedAt":              executionRecord.StartedAt,
 		"status":                 "passed",
-		"toolchainDigest":        environmentDigest,
+		"toolchainDigest":        "sha256:" + executionRecord.ToolchainDigest,
 		"witnessSelectorDigest":  digestJSON(stringsToAny(witnessSelectors)),
 		"witnessSelectors":       stringsToAny(witnessSelectors),
 	}
@@ -152,8 +149,9 @@ func run() error {
 		"receiptSetId":  "proofkit.self-hosting.proof-receipts",
 		"receipts":      []any{receipt},
 		"nonClaims": sortedStrings([]string{
-			"Proofkit self-hosting receipt input is generated from the current CI or local package gate run.",
+			"Proofkit self-hosting receipt input projects one completed package-artifact execution record and its current source and artifact snapshots.",
 			"Proofkit self-hosting receipt input does not replace native package gate execution.",
+			"Proofkit self-hosting receipt input does not attest later self-coverage or release-closeout steps.",
 		}),
 	}
 	if err := writeJSON(filepath.Join(artifactRoot, "self-hosting-proof-receipts.json"), proofReceiptInput); err != nil {
@@ -229,6 +227,7 @@ func packageGateEvidenceRefs() []any {
 	return sortedStrings([]string{
 		filepath.Join(artifactRoot, "ci-provenance.json"),
 		filepath.Join(artifactRoot, "self-hosting-proof-receipts.json"),
+		filepath.FromSlash(packageartifactrecord.RecordPath),
 		filepath.Join(packageArtifactRoot, "npm-pack.json"),
 		filepath.Join(pythonArtifactRoot, "python-packages.json"),
 	})
@@ -239,7 +238,7 @@ func aggregatePackageGateNonClaims() []any {
 		"Self-hosting package receipts aggregate Go and Python package-gate evidence and do not provide independent local-go and local-python receipt classes.",
 		"Self-hosting proof receipts do not authenticate the producer inside Proofkit.",
 		"Self-hosting proof receipts do not claim registry publication or consumer rollout.",
-		"Self-hosting proof receipts do not compute freshness or approve merge.",
+		"Self-hosting proof receipts do not prove freshness after the bound local execution-record snapshot, external-provider freshness, or merge approval.",
 	})
 }
 
@@ -529,30 +528,6 @@ func digestJSON(value any) string {
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 
-func gitHead() string {
-	output, err := exec.Command("git", "rev-parse", "HEAD").Output()
-	if err != nil {
-		return "local-unversioned"
-	}
-	return string(bytes.TrimSpace(output))
-}
-
-func goVersion() string {
-	output, err := exec.Command("go", "version").Output()
-	if err != nil {
-		return "unknown"
-	}
-	return string(bytes.TrimSpace(output))
-}
-
-func pythonVersion() string {
-	output, err := exec.Command("python3", "--version").Output()
-	if err != nil {
-		return "unknown"
-	}
-	return string(bytes.TrimSpace(output))
-}
-
 func nullableEnv(name string) any {
 	if value := os.Getenv(name); value != "" {
 		return value
@@ -569,9 +544,9 @@ func runURL(isGitHubActions bool) any {
 
 func receiptID(isGitHubActions bool) string {
 	if isGitHubActions {
-		return "receipt.github.actions.package-gate"
+		return "receipt.github.actions.package-artifact"
 	}
-	return "receipt.local.package-gate"
+	return "receipt.local.package-artifact"
 }
 
 func producerNonClaim(admission producerAdmission) string {

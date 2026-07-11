@@ -6,6 +6,31 @@ import (
 	"testing"
 )
 
+func TestDecodeJSONRejectsExcessiveNestingDepth(t *testing.T) {
+	cases := []struct {
+		name  string
+		input string
+		valid bool
+	}{
+		{name: "array at limit", input: strings.Repeat("[", maxJSONNestingDepth-1) + "0" + strings.Repeat("]", maxJSONNestingDepth-1), valid: true},
+		{name: "array beyond limit", input: strings.Repeat("[", maxJSONNestingDepth) + "0" + strings.Repeat("]", maxJSONNestingDepth), valid: false},
+		{name: "object at limit", input: strings.Repeat(`{"v":`, maxJSONNestingDepth-1) + "0" + strings.Repeat("}", maxJSONNestingDepth-1), valid: true},
+		{name: "object beyond limit", input: strings.Repeat(`{"v":`, maxJSONNestingDepth) + "0" + strings.Repeat("}", maxJSONNestingDepth), valid: false},
+		{name: "mixed beyond limit", input: strings.Repeat(`[{"v":`, maxJSONNestingDepth/2) + "0" + strings.Repeat("}]", maxJSONNestingDepth/2), valid: false},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			_, err := DecodeJSON(strings.NewReader(item.input), int64(len(item.input)))
+			if item.valid && err != nil {
+				t.Fatalf("DecodeJSON() valid boundary error=%v", err)
+			}
+			if !item.valid && (err == nil || !strings.Contains(err.Error(), "nesting depth limit")) {
+				t.Fatalf("DecodeJSON() error=%v, want bounded nesting rejection", err)
+			}
+		})
+	}
+}
+
 func TestDecodeJSONRejectsDuplicateKeysWithoutEchoingKey(t *testing.T) {
 	_, err := DecodeJSON(strings.NewReader(`{"token": 1, "token": 2}`), 1024)
 	if err == nil {

@@ -129,12 +129,12 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-010",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Coverage metrics report requirement, binding, witness, CLI inventory linkage, and descriptor-owned command semantic-route coverage from admitted test-evidence-inventory rows, failing closed on explicit requirement/proof linkage dead zones, failed command-route inventory admission, command semantic routes without owner-declared proof identities, route-index-derived semantic proof identities, direct app semantic routes outside the command-scoped app test, package-level semantic routes outside the descriptor-owned command package, semantic command routes whose parsed Go test body lacks the source-owned executable oracle marker for the exact emitted command ref, selector, source path, falsifier ids, oracle id, and expected public outcome, or missing matching semantic command evidence without claiming line coverage or exhaustive test semantic completeness.",
+      "invariant": "Coverage metrics report requirement, binding, witness, CLI inventory linkage, and descriptor-owned command proof-route candidates from admitted test-evidence-inventory rows, failing closed on explicit requirement/proof linkage dead zones, failed command-route inventory admission, missing candidate routes, unknown command refs, contract-only commands, or route-only commands; static route metadata, prose, source markers, test existence, and failure-capable syntax remain candidate evidence and cannot satisfy semantic_falsifier coverage.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-QUALITY-010"],
-      "nonClaims": ["This requirement does not claim line coverage, dead-code absence, exhaustive semantic completeness for every test, native witness execution, receipt freshness, or merge satisfaction."],
+      "nonClaims": ["This requirement does not claim semantic command coverage, line coverage, dead-code absence, exhaustive semantic completeness for any test, native witness execution, receipt freshness, or merge satisfaction."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}

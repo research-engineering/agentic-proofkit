@@ -19,7 +19,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 127
     ensure_executable(binary)
-    return subprocess.run([str(binary), *argv], check=False).returncode
+    command = [str(binary), *argv]
+    if os.name != "nt":
+        os.execv(str(binary), command)
+        raise AssertionError("os.execv returned unexpectedly")
+    return subprocess.run(command, check=False).returncode
 
 
 def ensure_executable(path: Path) -> None:

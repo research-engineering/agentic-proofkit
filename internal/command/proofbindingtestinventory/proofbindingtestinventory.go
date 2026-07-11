@@ -210,19 +210,18 @@ func project(input Input) (Projection, error) {
 			return Projection{}, err
 		}
 		if len(entryCommandRefs) == 0 {
-			return Projection{}, fmt.Errorf("proof-binding test inventory %s semantic falsifier requires at least one verify command", route.RequirementID)
+			return Projection{}, fmt.Errorf("proof-binding test inventory %s proof route requires at least one verify command", route.RequirementID)
 		}
 		for _, ref := range entryCommandRefs {
 			commandRefs[ref] = struct{}{}
 		}
 		requirementSlug := ruleFragment(route.RequirementID)
-		invariantSlug := truncateRuleFragment(ruleFragment(route.OwnedInvariant), 64)
 		entries = append(entries, map[string]any{
 			"commandRefs":        admit.StringSliceToAny(entryCommandRefs),
-			"evidenceClass":      "semantic_falsifier",
-			"falsifier":          falsifierValue(route.SurfaceID, requirementSlug, invariantSlug),
+			"evidenceClass":      "proof_route_candidate",
+			"falsifier":          nil,
 			"nonClaims":          admit.StringSliceToAny(entryNonClaims()),
-			"oracle":             oracleValue(route.RequirementID, route.SurfaceID, requirementSlug),
+			"oracle":             nil,
 			"ownerId":            ownerID,
 			"ownerInvariantRefs": []any{},
 			"requirementRefs":    []any{route.RequirementID},
@@ -308,29 +307,10 @@ func truncateRuleFragment(value string, limit int) string {
 	return string(runes[:limit])
 }
 
-func falsifierValue(surfaceID string, requirementSlug string, invariantSlug string) map[string]any {
-	return map[string]any{
-		"dominanceGroup":             surfaceID + "." + invariantSlug,
-		"falsifierId":                "falsifier." + surfaceID + "." + requirementSlug,
-		"negativeCaseId":             "case." + surfaceID + "." + requirementSlug + ".falsification_witness",
-		"supersedes":                 []any{},
-		"wrongImplementationClassId": "wrong." + surfaceID + "." + invariantSlug,
-	}
-}
-
-func oracleValue(requirementID string, surfaceID string, requirementSlug string) map[string]any {
-	return map[string]any{
-		"assertionSummary":      "The selected canonical proof binding supplies a falsification witness for " + requirementID + ".",
-		"expectedPublicOutcome": "coverage remains failed unless the selected requirement has an admitted falsification witness and executable command ref",
-		"oracleId":              "oracle." + surfaceID + "." + requirementSlug,
-		"oracleKind":            "canonical_binding_falsification_witness",
-	}
-}
-
 func entryNonClaims() []string {
 	return []string{
-		"This inventory entry declares selected-owner semantic falsifier coverage and must remain consistent with canonical proof-binding falsification witnesses.",
 		"This inventory entry does not execute native tests or authenticate receipts.",
+		"This inventory entry projects proof-route wiring only and cannot satisfy semantic coverage.",
 	}
 }
 
