@@ -62,6 +62,9 @@ func commandUsage(descriptor commandDescriptor) string {
 }
 
 func commandUsageLine(descriptor commandDescriptor) string {
+	if descriptor.name == "help" {
+		return "agentic-proofkit help [<command>|-h|--help]"
+	}
 	segments := []string{"agentic-proofkit", descriptor.name}
 	if descriptor.input == commandInputRequired {
 		segments = append(segments, "--input <path|->")

@@ -81,6 +81,11 @@ vulnerability absence, or consumer rollout safety by itself.
   stderr discipline, generated-source hash, owner-source parity, and exact
   explicit-input counts despite an unlisted poison file in the consumer working
   directory.
+- `REQ-PROOFKIT-QUALITY-020`: package artifact execution starts from admitted
+  candidate-owned output roots, rejects ambient provider or unowned release
+  state before mutation, stays confined to the repository across symlinks,
+  binds non-empty generated content to stable source and execution-context
+  snapshots, and emits a schema-versioned execution record.
 
 ## Non-Claims
 

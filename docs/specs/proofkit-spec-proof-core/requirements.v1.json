@@ -467,7 +467,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-018",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Command family navigation projects the complete public CLI command inventory from one authored family catalog into a deterministic private runtime projection, preserves existing root and per-command help and leaf dispatch, admits only opt-in family help forms, rejects missing, duplicated, oversized, unsorted, or reserved-operand-colliding families, and does not infer command selection, execute commands through family membership, or create a second command inventory owner.",
+      "invariant": "Command family navigation projects the complete public CLI command inventory from one authored family catalog into a deterministic private runtime projection, preserves root and per-command help invocation forms, stdout and stderr channel discipline, no-input behavior, and leaf dispatch, admits only opt-in family help forms, rejects missing, duplicated, oversized, unsorted, or reserved-operand-colliding families, and does not infer command selection, execute commands through family membership, or create a second command inventory owner.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": [
@@ -477,7 +477,7 @@
         "NC-PROOFKIT-SPEC-018"
       ],
       "nonClaims": [
-        "This requirement does not claim command recommendation, command execution through family membership, consumer policy, native witness execution, merge approval, release approval, rollout approval, or production readiness."
+        "This requirement does not claim byte-for-byte help text compatibility across owner-approved CLI contract corrections, command recommendation, command execution through family membership, consumer policy, native witness execution, merge approval, release approval, rollout approval, or production readiness."
       ],
       "lifecycle": {
         "state": "active",

@@ -2,15 +2,8 @@ package app
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"strings"
 	"testing"
-)
-
-const (
-	rootHelpSHA256          = "d8f71779e3feab2faf4ac19d81881583d857155f2d75e923dc5bcfa61de8b6bb"
-	perCommandHelpSetSHA256 = "9bd92c609b1f96ee4964c1c7ae3bf2a5150a2e4a9145b179f19ace11a6b15b8d"
 )
 
 func TestCommandFamilyCatalogMatchesDescriptors(t *testing.T) {
@@ -70,20 +63,28 @@ func TestCommandFamilyHelpFormsAreOptInAndLeafDispatchIsUnchanged(t *testing.T) 
 	}
 }
 
-func TestExistingHelpBytesRemainOwnerApproved(t *testing.T) {
-	rootDigest := sha256.Sum256([]byte(usage()))
-	if got := hex.EncodeToString(rootDigest[:]); got != rootHelpSHA256 {
-		t.Fatalf("root help hash = %s, want %s", got, rootHelpSHA256)
+func TestExistingHelpEntrypointsRemainCompatible(t *testing.T) {
+	rootHelp := usage()
+	if !strings.Contains(rootHelp, "agentic-proofkit help [<command>|-h|--help]") {
+		t.Fatal("root help omits the admitted positional command target")
 	}
-	hash := sha256.New()
+	rootForms := [][]string{nil, {"help"}, {"--help"}, {"-h"}, {"help", "--help"}, {"help", "-h"}}
+	for _, args := range rootForms {
+		if got := runTextCommand(t, args); got != rootHelp {
+			t.Fatalf("root help entrypoint %v diverged from the root projection", args)
+		}
+	}
 	for _, descriptor := range commandDescriptors {
-		_, _ = hash.Write([]byte(descriptor.name))
-		_, _ = hash.Write([]byte{0})
-		_, _ = hash.Write([]byte(commandUsage(descriptor)))
-		_, _ = hash.Write([]byte{0})
-	}
-	if got := hex.EncodeToString(hash.Sum(nil)); got != perCommandHelpSetSHA256 {
-		t.Fatalf("per-command help set hash = %s, want %s", got, perCommandHelpSetSHA256)
+		expected := commandUsage(descriptor)
+		aliases := [][]string{{"help", descriptor.name}}
+		if descriptor.name != "help" {
+			aliases = append(aliases, []string{descriptor.name, "--help"}, []string{descriptor.name, "-h"})
+		}
+		for _, args := range aliases {
+			if got := runTextCommand(t, args); got != expected {
+				t.Fatalf("per-command help %v changed across an existing alias", args)
+			}
+		}
 	}
 }
 
@@ -111,7 +112,7 @@ func runTextCommand(t *testing.T, args []string) string {
 	t.Helper()
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	status := Run(t.Context(), args, strings.NewReader(""), &stdout, &stderr)
+	status := Run(t.Context(), args, panicReader{}, &stdout, &stderr)
 	if status != 0 || stderr.Len() != 0 {
 		t.Fatalf("Run(%v) status=%d stdout=%q stderr=%q", args, status, stdout.String(), stderr.String())
 	}

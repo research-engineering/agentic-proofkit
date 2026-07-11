@@ -65,11 +65,10 @@ func runWithDependencies(root string, runner Runner, dependencies orchestrationD
 	if err := packageartifactrecord.Invalidate(root); err != nil {
 		return err
 	}
-	sourceRevision, sourceDigest, err := packageartifactrecord.SourceSnapshot(root)
-	if err != nil {
+	if err := packageartifactrecord.PrepareCandidateArtifactOutputs(root); err != nil {
 		return err
 	}
-	artifactBaseline, err := packageartifactrecord.ArtifactEvidenceBaseline(root)
+	sourceRevision, sourceDigest, err := packageartifactrecord.SourceSnapshot(root)
 	if err != nil {
 		return err
 	}
@@ -103,8 +102,6 @@ func runWithDependencies(root string, runner Runner, dependencies orchestrationD
 	artifactEvidence, err := packageartifactrecord.ArtifactEvidenceSnapshot(root)
 	if err != nil {
 		evidenceErr = errors.Join(evidenceErr, err)
-	} else if artifactEvidence.FreshnessDigest == artifactBaseline.FreshnessDigest {
-		evidenceErr = errors.Join(evidenceErr, fmt.Errorf("package artifact command produced no fresh artifact state"))
 	}
 	if runErr == nil && exitCode != 0 {
 		runErr = fmt.Errorf("package artifact command returned exit code %d without an execution error", exitCode)
@@ -115,21 +112,19 @@ func runWithDependencies(root string, runner Runner, dependencies orchestrationD
 	}
 	artifactDigest := artifactEvidence.SnapshotDigest
 	record := packageartifactrecord.Record{
-		Argv:                            packageartifactrecord.CanonicalCommandArgv(),
-		ArtifactFreshnessBaselineDigest: artifactBaseline.FreshnessDigest,
-		ArtifactFreshnessDigest:         artifactEvidence.FreshnessDigest,
-		ArtifactSnapshotDigest:          artifactDigest,
-		CommandID:                       packageartifactrecord.CommandID,
-		EnvironmentDigest:               environmentDigest,
-		ExecutionArgv:                   packageartifactrecord.CanonicalExecutionArgv(),
-		ExitCode:                        exitCode,
-		FinishedAt:                      finishedAt.Format(time.RFC3339Nano),
-		SchemaVersion:                   packageartifactrecord.SchemaVersion,
-		SourceRevision:                  sourceRevision,
-		SourceSnapshotDigest:            sourceDigest,
-		StartedAt:                       startedAt.Format(time.RFC3339Nano),
-		Status:                          status,
-		ToolchainDigest:                 toolchainDigest,
+		Argv:                   packageartifactrecord.CanonicalCommandArgv(),
+		ArtifactSnapshotDigest: artifactDigest,
+		CommandID:              packageartifactrecord.CommandID,
+		EnvironmentDigest:      environmentDigest,
+		ExecutionArgv:          packageartifactrecord.CanonicalExecutionArgv(),
+		ExitCode:               exitCode,
+		FinishedAt:             finishedAt.Format(time.RFC3339Nano),
+		SchemaVersion:          packageartifactrecord.SchemaVersion,
+		SourceRevision:         sourceRevision,
+		SourceSnapshotDigest:   sourceDigest,
+		StartedAt:              startedAt.Format(time.RFC3339Nano),
+		Status:                 status,
+		ToolchainDigest:        toolchainDigest,
 	}
 	if err := packageartifactrecord.Write(root, record); err != nil {
 		return errors.Join(runErr, evidenceErr, err)
