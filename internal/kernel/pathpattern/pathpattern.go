@@ -1,25 +1,67 @@
 package pathpattern
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
-func Match(pattern string, target string) bool {
-	safePattern, err := admit.SafeRepoRelativePath(pattern, "path pattern")
+type Pattern struct {
+	exactPrefix string
+	regexp      *regexp.Regexp
+	source      string
+}
+
+func Compile(pattern string, context string) (Pattern, error) {
+	safePattern, err := admit.SafeRepoRelativePath(pattern, context)
 	if err != nil {
-		return false
+		return Pattern{}, err
 	}
-	safeTarget, err := admit.SafeRepoRelativePath(target, "path")
-	if err != nil {
-		return false
-	}
+	compiled := Pattern{source: safePattern}
 	if strings.Contains(safePattern, "*") {
-		return globToRegexp(safePattern).MatchString(safeTarget)
+		compiled.regexp = globToRegexp(safePattern)
+	} else {
+		compiled.exactPrefix = strings.TrimSuffix(safePattern, "/")
 	}
-	return safeTarget == safePattern || strings.HasPrefix(safeTarget, strings.TrimSuffix(safePattern, "/")+"/")
+	return compiled, nil
+}
+
+func CompileAll(patterns []string, context string) ([]Pattern, error) {
+	compiled := make([]Pattern, 0, len(patterns))
+	for index, pattern := range patterns {
+		value, err := Compile(pattern, fmt.Sprintf("%s[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		compiled = append(compiled, value)
+	}
+	return compiled, nil
+}
+
+func (pattern Pattern) String() string {
+	return pattern.source
+}
+
+func (pattern Pattern) MatchAdmitted(target string) bool {
+	if pattern.regexp != nil {
+		return pattern.regexp.MatchString(target)
+	}
+	return target == pattern.exactPrefix || strings.HasPrefix(target, pattern.exactPrefix+"/")
+}
+
+func (pattern Pattern) Match(target string) bool {
+	safeTarget, err := admit.SafeRepoRelativePath(target, "path")
+	return err == nil && pattern.MatchAdmitted(safeTarget)
+}
+
+func Match(pattern string, target string) bool {
+	compiled, err := Compile(pattern, "path pattern")
+	if err != nil {
+		return false
+	}
+	return compiled.Match(target)
 }
 
 func MatchAny(patterns []string, target string) bool {
@@ -32,7 +74,7 @@ func MatchAny(patterns []string, target string) bool {
 }
 
 func Validate(pattern string, context string) error {
-	_, err := admit.SafeRepoRelativePath(pattern, context)
+	_, err := Compile(pattern, context)
 	return err
 }
 

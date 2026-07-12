@@ -249,6 +249,49 @@
           "This input contract describes agent-route admission only.",
           "It does not validate referenced file contents, execute commands, read repositories, or approve merge."
         ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.agent-route.output.v2",
+        "schemaVersion": 2,
+        "authority": "deterministic route report derived from admitted agent-route input",
+        "requiredFields": [
+          "guidanceSlice",
+          "reportId",
+          "reportKind",
+          "schemaVersion",
+          "selectedRouteFamily",
+          "state"
+        ],
+        "fields": {
+          "schemaVersion": {
+            "value": 2
+          },
+          "selectedRouteFamily": {
+            "enum": [
+              "adoption",
+              "migration",
+              "release_and_deployment",
+              "rendered_views",
+              "repository_structure",
+              "requirement_proof_binding",
+              "requirement_source",
+              "selective_evidence",
+              "selective_planning",
+              "test_inventory_and_coverage",
+              "unknown"
+            ]
+          },
+          "guidanceSlice": {
+            "requiredFields": [
+              "routeFamily"
+            ],
+            "routeFamilyRule": "must equal selectedRouteFamily"
+          }
+        },
+        "changesFromV1": [
+          "selectedFamily is replaced by selectedRouteFamily",
+          "guidanceSlice.family is replaced by guidanceSlice.routeFamily"
+        ]
       }
     },
     {
@@ -1836,7 +1879,71 @@
       ],
       "requiredFlags": [
         "--repo-root"
-      ]
+      ],
+      "inputContract": {
+        "contractId": "proofkit.typescript-public-api-surfaces.input.v1",
+        "schemaVersion": 1,
+        "authority": "caller-owned manifest plus explicitly selected filesystem snapshot",
+        "fields": {
+          "schemaVersion": {
+            "required": true,
+            "value": 1
+          },
+          "machineContract": {
+            "required": true,
+            "value": "public_api_surfaces"
+          },
+          "entries": {
+            "required": true,
+            "maxItems": 1024,
+            "item": {
+              "requiredFields": [
+                "exportConditions",
+                "exportKey",
+                "packageManifestPath",
+                "packageName",
+                "runtimeExports",
+                "typeExports"
+              ],
+              "optionalFields": [
+                "deniedExportKeys"
+              ],
+              "pathAuthority": "packageManifestPath names an explicit repo-relative package.json; every export condition names its explicit repo-relative non-JSX TypeScript sourcePath, and the canonical resolved source target must also have a .ts, .mts, or .cts extension",
+              "setFields": "deniedExportKeys, runtimeExports, and typeExports are sorted unique arrays",
+              "exportConditionsRule": "non-empty and sorted unique by condition"
+            }
+          }
+        },
+        "resourceBudgets": {
+          "maxSourceFileBytes": 8388608,
+          "maxPackageManifestBytes": 262144,
+          "maxAggregateFileReadBytes": 67108864
+        },
+        "sourceGrammar": {
+          "grammarId": "proofkit.typescript-public-api.export-subset.v1",
+          "mode": "fail_closed",
+          "identifierDomain": "direct ASCII identifiers in code; Unicode remains permitted inside comments and literals",
+          "admittedExportForms": [
+            "named runtime re-exports from a string module specifier",
+            "named type re-exports from a string module specifier",
+            "ASCII-named function, class, enum, interface, type, const, let, and var exports"
+          ],
+          "rejectedLexicalForms": [
+            "slash tokens outside comments, including division and regular-expression literals",
+            "template interpolation",
+            "escaped or direct non-ASCII code identifiers",
+            "unterminated comments or literals",
+            "unbalanced delimiters",
+            "top-level angle-bracket syntax in variable export declarations"
+          ]
+        },
+        "nonClaims": [
+          "The command does not infer conventional package or source layouts.",
+          "The command does not parse JSX or admit TSX source files.",
+          "The command does not parse unrestricted TypeScript; sources outside the documented export grammar fail closed.",
+          "Caller-owned source-to-condition mappings do not prove compiler output provenance, checkout freshness, package-manager truth, merge readiness, or rollout."
+        ]
+      }
     },
     {
       "command": "witness-plan",

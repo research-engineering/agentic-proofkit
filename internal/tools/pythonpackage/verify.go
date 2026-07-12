@@ -98,10 +98,10 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 	if record.BinarySha256 != fmt.Sprintf("%x", binarySHA[:]) {
 		return fmt.Errorf("python wheel binary sha256 mismatch for %s", record.Filename)
 	}
-	return verifyWheelContents(wheelPath, manifest.Version, target)
+	return verifyWheelContents(wheelPath, manifest.Version, target, record.BinarySha256)
 }
 
-func verifyWheelContents(path string, version string, target target) error {
+func verifyWheelContents(path string, version string, target target, expectedBinarySHA256 string) error {
 	reader, err := zip.OpenReader(path)
 	if err != nil {
 		return err
@@ -151,6 +151,14 @@ func verifyWheelContents(path string, version string, target target) error {
 	}
 	if string(entryPointsContent) != entryPoints() {
 		return fmt.Errorf("%s entry_points.txt mismatch", path)
+	}
+	embeddedBinary, err := readZipFile(entries["agentic_proofkit/bin/agentic-proofkit"])
+	if err != nil {
+		return err
+	}
+	embeddedBinarySHA256 := sha256.Sum256(embeddedBinary)
+	if fmt.Sprintf("%x", embeddedBinarySHA256[:]) != expectedBinarySHA256 {
+		return fmt.Errorf("%s embedded binary sha256 mismatch", path)
 	}
 	return verifyRecord(entries, distInfo+"/RECORD")
 }

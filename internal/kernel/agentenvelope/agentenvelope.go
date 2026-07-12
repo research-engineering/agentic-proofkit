@@ -75,14 +75,32 @@ func Build(input Input) map[string]any {
 		}
 	}
 	truncated := false
+	originalTargets := collectLocalReferenceTargets(commands, contextRefs, receiptRefs)
 	actionPlan, omitted, truncated = limitActionPlan(actionPlan, omitted, bounds)
 	blockedPreconditions, omitted, truncated = limitList(blockedPreconditions, "blockedPrecondition", "preconditionId", "maxBlockedPreconditions", hardMaxBlockedPreconditions, omitted, bounds, truncated)
 	clarificationQuestions, omitted, truncated = limitList(clarificationQuestions, "clarificationQuestion", "questionId", "maxClarificationQuestions", hardMaxClarificationQuestions, omitted, bounds, truncated)
-	commands, omitted, truncated = limitList(commands, "commandRef", "commandId", "maxCommandRefs", hardMaxCommandRefs, omitted, bounds, truncated)
-	contextRefs, omitted, truncated = limitList(contextRefs, "contextRef", "refId", "maxContextRefs", hardMaxContextRefs, omitted, bounds, truncated)
-	receiptRefs, omitted, truncated = limitList(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, omitted, bounds, truncated)
 	routeQuestions, omitted, truncated = limitList(routeQuestions, "routeQuestion", "questionId", "maxRouteQuestions", hardMaxRouteQuestions, omitted, bounds, truncated)
+	priorities := collectLocalReferencePriorities(originalTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
+	commands, omitted, truncated = limitListPrioritized(commands, "commandRef", "commandId", "maxCommandRefs", hardMaxCommandRefs, priorities.commands, omitted, bounds, truncated)
+	contextRefs, omitted, truncated = limitListPrioritized(contextRefs, "contextRef", "refId", "maxContextRefs", hardMaxContextRefs, priorities.contexts, omitted, bounds, truncated)
+	receiptRefs, omitted, truncated = limitListPrioritized(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, priorities.receipts, omitted, bounds, truncated)
 	omitted, truncated = limitOmitted(omitted, bounds, truncated)
+	retainedTargets := collectLocalReferenceTargets(commands, contextRefs, receiptRefs)
+	removedReferenceCount := 0
+	for _, records := range []*[]map[string]any{&actionPlan, &blockedPreconditions, &clarificationQuestions, &routeQuestions, &omitted, &commands, &contextRefs, &receiptRefs} {
+		var removed int
+		*records, removed = pruneDanglingLocalReferences(*records, originalTargets, retainedTargets)
+		removedReferenceCount += removed
+	}
+	referenceClosurePreserved := localReferenceClosurePreserved(originalTargets, retainedTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
+	if removedReferenceCount > 0 {
+		bounds["prunedLocalReferenceCount"] = removedReferenceCount
+		truncated = true
+	}
+	if !referenceClosurePreserved {
+		bounds["referenceClosurePreserved"] = false
+		truncated = true
+	}
 	sourceReport := projectSourceReport(sanitizeMap(input.SourceReport))
 	omittedCount = 0
 	for _, item := range omitted {
@@ -126,6 +144,8 @@ func Build(input Input) map[string]any {
 		"nonClaim":                   "Compatibility cost contracts do not prove tokenizer-specific cost, proof completeness, native witness execution, receipt freshness, or merge satisfaction.",
 		"omittedEdgeCount":           omittedCount,
 		"omittedEdgesCounted":        true,
+		"referenceClosurePreserved":  referenceClosurePreserved,
+		"prunedLocalReferenceCount":  removedReferenceCount,
 		"receiptRecordCount":         len(receiptRefs),
 		"routeQuestionCount":         len(routeQuestions),
 		"boundsViolationCount":       len(boundsViolations),
@@ -323,6 +343,166 @@ func limitList(values []map[string]any, kind string, idKey string, limitKey stri
 	}
 	omitted = append(omitted, omissionRecord(kind, idKey, len(values)-limit))
 	return values[:limit], omitted, true
+}
+
+func limitListPrioritized(values []map[string]any, kind string, idKey string, limitKey string, hardMax int, priorities map[string]struct{}, omitted []map[string]any, bounds map[string]any, truncated bool) ([]map[string]any, []map[string]any, bool) {
+	limit := itemLimit(bounds, limitKey, hardMax)
+	if len(values) <= limit {
+		return values, omitted, truncated
+	}
+	selected := make([]map[string]any, 0, limit)
+	for _, prioritized := range []bool{true, false} {
+		for _, value := range values {
+			_, isPriority := priorities[stringValue(value[idKey])]
+			if isPriority != prioritized || len(selected) >= limit {
+				continue
+			}
+			selected = append(selected, value)
+		}
+	}
+	omitted = append(omitted, omissionRecord(kind, idKey, len(values)-len(selected)))
+	return sortMaps(selected, idKey), omitted, true
+}
+
+type localReferenceTargets struct {
+	all      map[string]struct{}
+	commands map[string]struct{}
+	contexts map[string]struct{}
+	receipts map[string]struct{}
+}
+
+func collectLocalReferenceTargets(commands []map[string]any, contexts []map[string]any, receipts []map[string]any) localReferenceTargets {
+	targets := localReferenceTargets{
+		all:      map[string]struct{}{},
+		commands: idSet(commands, "commandId"),
+		contexts: idSet(contexts, "refId"),
+		receipts: idSet(receipts, "receiptRefId"),
+	}
+	for _, values := range []map[string]struct{}{targets.commands, targets.contexts, targets.receipts} {
+		for value := range values {
+			targets.all[value] = struct{}{}
+		}
+	}
+	return targets
+}
+
+func collectLocalReferencePriorities(targets localReferenceTargets, groups ...[]map[string]any) localReferenceTargets {
+	priorities := localReferenceTargets{all: map[string]struct{}{}, commands: map[string]struct{}{}, contexts: map[string]struct{}{}, receipts: map[string]struct{}{}}
+	for _, values := range groups {
+		for _, value := range values {
+			for _, ref := range stringReferences(value["evidenceRefs"]) {
+				if _, ok := targets.commands[ref]; ok {
+					priorities.commands[ref] = struct{}{}
+				}
+				if _, ok := targets.contexts[ref]; ok {
+					priorities.contexts[ref] = struct{}{}
+				}
+				if _, ok := targets.receipts[ref]; ok {
+					priorities.receipts[ref] = struct{}{}
+				}
+			}
+			for _, ref := range stringReferences(value["commandIds"]) {
+				if _, ok := targets.commands[ref]; ok {
+					priorities.commands[ref] = struct{}{}
+				}
+			}
+		}
+	}
+	return priorities
+}
+
+func pruneDanglingLocalReferences(values []map[string]any, original localReferenceTargets, retained localReferenceTargets) ([]map[string]any, int) {
+	removed := 0
+	result := make([]map[string]any, len(values))
+	for index, value := range values {
+		cloned := copyMap(value)
+		for _, field := range []struct {
+			key             string
+			original        map[string]struct{}
+			retained        map[string]struct{}
+			requireRetained bool
+		}{
+			{key: "evidenceRefs", original: original.all, retained: retained.all},
+			{key: "commandIds", original: original.commands, retained: retained.commands, requireRetained: true},
+		} {
+			refs, ok := cloned[field.key]
+			if !ok {
+				continue
+			}
+			kept := []any{}
+			for _, ref := range stringReferences(refs) {
+				if field.requireRetained {
+					if _, present := field.retained[ref]; !present {
+						removed++
+						continue
+					}
+					kept = append(kept, ref)
+					continue
+				}
+				if _, local := field.original[ref]; local {
+					if _, present := field.retained[ref]; !present {
+						removed++
+						continue
+					}
+				}
+				kept = append(kept, ref)
+			}
+			cloned[field.key] = kept
+		}
+		result[index] = cloned
+	}
+	return result, removed
+}
+
+func localReferenceClosurePreserved(original localReferenceTargets, retained localReferenceTargets, groups ...[]map[string]any) bool {
+	for _, values := range groups {
+		for _, value := range values {
+			for _, ref := range stringReferences(value["commandIds"]) {
+				if _, ok := retained.commands[ref]; !ok {
+					return false
+				}
+			}
+			for _, ref := range stringReferences(value["evidenceRefs"]) {
+				if _, wasLocal := original.all[ref]; !wasLocal {
+					continue
+				}
+				if _, ok := retained.all[ref]; !ok {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+func idSet(values []map[string]any, key string) map[string]struct{} {
+	result := map[string]struct{}{}
+	for _, value := range values {
+		if id := stringValue(value[key]); id != "" {
+			result[id] = struct{}{}
+		}
+	}
+	return result
+}
+
+func stringReferences(raw any) []string {
+	result := []string{}
+	switch values := raw.(type) {
+	case []any:
+		for _, value := range values {
+			if text, ok := value.(string); ok {
+				result = append(result, text)
+			}
+		}
+	case []string:
+		result = append(result, values...)
+	}
+	return result
+}
+
+func stringValue(raw any) string {
+	value, _ := raw.(string)
+	return value
 }
 
 func limitOmitted(values []map[string]any, bounds map[string]any, truncated bool) ([]map[string]any, bool) {

@@ -11,56 +11,66 @@ import (
 func TestSourceHygieneReadsStagedBlob(t *testing.T) {
 	t.Parallel()
 
-	scriptPath := sourceHygieneScriptPath(t)
-	tempDir := t.TempDir()
-	runCommand(t, tempDir, "git", "init")
+	for _, file := range []string{"README.md", "proof.py"} {
+		file := file
+		t.Run(file, func(t *testing.T) {
+			t.Parallel()
+			scriptPath := sourceHygieneScriptPath(t)
+			tempDir := t.TempDir()
+			runCommand(t, tempDir, "git", "init")
 
-	bannedToken := strings.Join([]string{"a", "fc"}, "")
-	readmePath := filepath.Join(tempDir, "README.md")
-	if err := os.WriteFile(readmePath, []byte("leaked "+bannedToken+"\n"), 0o644); err != nil {
-		t.Fatalf("write staged README: %v", err)
-	}
-	runCommand(t, tempDir, "git", "add", "README.md")
-	if err := os.WriteFile(readmePath, []byte("clean\n"), 0o644); err != nil {
-		t.Fatalf("clean worktree README: %v", err)
-	}
+			bannedToken := strings.Join([]string{"a", "fc"}, "")
+			path := filepath.Join(tempDir, file)
+			if err := os.WriteFile(path, []byte("leaked "+bannedToken+"\n"), 0o644); err != nil {
+				t.Fatalf("write staged file: %v", err)
+			}
+			runCommand(t, tempDir, "git", "add", file)
+			if err := os.WriteFile(path, []byte("clean\n"), 0o644); err != nil {
+				t.Fatalf("clean worktree file: %v", err)
+			}
 
-	command := exec.Command("node", scriptPath)
-	command.Dir = tempDir
-	output, err := command.CombinedOutput()
-	if err == nil {
-		t.Fatalf("source hygiene passed despite staged banned token:\n%s", output)
-	}
-	if !strings.Contains(string(output), "organization-specific text leaked into Proofkit: README.md") {
-		t.Fatalf("source hygiene output=%s, want staged README failure", output)
+			assertSourceHygieneRejects(t, scriptPath, tempDir, file, "staged")
+		})
 	}
 }
 
 func TestSourceHygieneReadsTrackedWorktree(t *testing.T) {
 	t.Parallel()
 
-	scriptPath := sourceHygieneScriptPath(t)
-	tempDir := t.TempDir()
-	runCommand(t, tempDir, "git", "init")
+	for _, file := range []string{"README.md", "proof.py"} {
+		file := file
+		t.Run(file, func(t *testing.T) {
+			t.Parallel()
+			scriptPath := sourceHygieneScriptPath(t)
+			tempDir := t.TempDir()
+			runCommand(t, tempDir, "git", "init")
 
-	readmePath := filepath.Join(tempDir, "README.md")
-	if err := os.WriteFile(readmePath, []byte("clean\n"), 0o644); err != nil {
-		t.Fatalf("write clean README: %v", err)
-	}
-	runCommand(t, tempDir, "git", "add", "README.md")
-	bannedToken := strings.Join([]string{"a", "fc"}, "")
-	if err := os.WriteFile(readmePath, []byte("leaked "+bannedToken+"\n"), 0o644); err != nil {
-		t.Fatalf("dirty worktree README: %v", err)
-	}
+			path := filepath.Join(tempDir, file)
+			if err := os.WriteFile(path, []byte("clean\n"), 0o644); err != nil {
+				t.Fatalf("write clean file: %v", err)
+			}
+			runCommand(t, tempDir, "git", "add", file)
+			bannedToken := strings.Join([]string{"a", "fc"}, "")
+			if err := os.WriteFile(path, []byte("leaked "+bannedToken+"\n"), 0o644); err != nil {
+				t.Fatalf("dirty worktree file: %v", err)
+			}
 
+			assertSourceHygieneRejects(t, scriptPath, tempDir, file, "tracked worktree")
+		})
+	}
+}
+
+func assertSourceHygieneRejects(t *testing.T, scriptPath string, repoRoot string, file string, evidenceClass string) {
+	t.Helper()
 	command := exec.Command("node", scriptPath)
-	command.Dir = tempDir
+	command.Dir = repoRoot
 	output, err := command.CombinedOutput()
 	if err == nil {
-		t.Fatalf("source hygiene passed despite tracked worktree banned token:\n%s", output)
+		t.Fatalf("source hygiene passed despite %s banned token:\n%s", evidenceClass, output)
 	}
-	if !strings.Contains(string(output), "organization-specific text leaked into Proofkit: README.md") {
-		t.Fatalf("source hygiene output=%s, want tracked worktree README failure", output)
+	want := "organization-specific text leaked into Proofkit: " + file
+	if !strings.Contains(string(output), want) {
+		t.Fatalf("source hygiene output=%s, want %s failure", output, file)
 	}
 }
 

@@ -51,7 +51,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-004",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Public CLI ABI has a small golden corpus and canonical ABI hash covering command topology, exit code, stdout and stderr channel discipline, JSON parseability, stable public diagnostics, and descriptor/contract/help parity without making private descriptors a public API.",
+      "invariant": "Public CLI ABI has a small golden corpus and canonical ABI hash covering command topology, exit code, stdout and stderr channel discipline, JSON parseability, stable public diagnostics, explicit output schema evolution for breaking JSON field changes, and descriptor/contract/help parity without making private descriptors a public API.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -142,7 +142,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-011",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "CI separates the OS-independent full source/package gate from the platform-specific macOS execution smoke, uses explicit hosted runner labels instead of floating latest labels, and exposes one fail-closed aggregate quality gate that requires every required leaf check to finish with success so skipped, failed, or cancelled leaf jobs cannot satisfy branch-protection evidence.",
+      "invariant": "CI separates the OS-independent full source/package gate from the platform-specific macOS execution smoke, executes the complete Go package set through the owner command rather than a partial package list, uses explicit hosted runner labels instead of floating latest labels, and exposes one fail-closed aggregate quality gate that requires every required leaf check to finish with success so skipped, failed, or cancelled leaf jobs cannot satisfy branch-protection evidence.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -207,7 +207,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-016",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Release platform targets have one private owner that projects exact platform suffixes, Go build targets, npm OS/CPU metadata, package tar binary entries, Python wheel tags, PyPI candidate completeness, and SBOM binary subjects without turning the platform matrix into public API.",
+      "invariant": "Release platform targets have one private owner that projects exact platform suffixes, Go build targets, npm OS/CPU metadata, package tar binary entries, Python wheel tags, PyPI candidate completeness, self-hosting native binary selection, and SBOM binary subjects without turning the platform matrix into public API.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

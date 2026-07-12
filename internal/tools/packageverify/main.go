@@ -209,6 +209,9 @@ func runVerifier() error {
 	if err := verifyRootManifestBoundary(rootPackage); err != nil {
 		return err
 	}
+	if err := verifyPackedOwnerRecordsMatchSource(rootPackage); err != nil {
+		return err
+	}
 	if err := verifyNoStalePackageDocs(rootPackage); err != nil {
 		return err
 	}
@@ -216,6 +219,36 @@ func runVerifier() error {
 		return err
 	}
 	return verifyOutsideConsumer(rootPackage)
+}
+
+func verifyPackedOwnerRecordsMatchSource(artifact rootPackageArtifact) error {
+	for _, entry := range artifact.Entries {
+		if !sourceOwnedPackageEntry(entry) {
+			continue
+		}
+		packed, err := readTarFileFromBytes(artifact.Content, entry)
+		if err != nil {
+			return err
+		}
+		sourcePath := strings.TrimPrefix(entry, "package/")
+		source, err := os.ReadFile(filepath.FromSlash(sourcePath))
+		if err != nil {
+			return fmt.Errorf("read source owner for packed entry %s: %w", entry, err)
+		}
+		if !bytes.Equal(packed, source) {
+			return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
+		}
+	}
+	return nil
+}
+
+func sourceOwnedPackageEntry(entry string) bool {
+	switch entry {
+	case "package/LICENSE", "package/package.json":
+		return true
+	default:
+		return packageTextEntry(entry)
+	}
 }
 
 func verifyRootPackage(record packRecord) (rootPackageArtifact, error) {

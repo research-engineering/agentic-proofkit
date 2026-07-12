@@ -62,7 +62,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-003",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Witness planning accepts caller-owned structured command metadata, scheduler constraints, environment classes, and binding-derived command projections only through admitted witness vocabulary and conservative safe argv policy, without executing commands or selecting repository policy.",
+      "invariant": "Witness planning accepts caller-owned structured command metadata, scheduler constraints, environment classes, and binding-derived command projections only through admitted witness vocabulary and conservative safe argv policy; self-hosting requirement bindings and witness plans preserve the same command ids, argv, and environment classes without executing commands or selecting repository policy.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -89,7 +89,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-004",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Selective planning and selective evidence reports keep changed-path facts, planned commands, receipts, evidence class, producer-admission state, and obligation candidates explicit, keep merge approval consumer-owned, and fail closed for unknown or unmatched proof inputs.",
+      "invariant": "Selective planning and selective evidence reports keep canonical changed-path facts, resolvable agent references, planned commands, receipts, evidence class, producer-admission state, and obligation candidates explicit, keep merge approval consumer-owned, and fail closed for unknown or unmatched proof inputs.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -116,7 +116,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-005",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Rendered proof views and agent envelopes remain bounded, derived presentations over structured source and never become canonical proof or requirement authority.",
+      "invariant": "Rendered proof views and agent envelopes remain bounded, reference-closed derived presentations over structured source, count each semantic omission once, and never become canonical proof or requirement authority.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": [

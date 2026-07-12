@@ -2,10 +2,68 @@ package changedpathset
 
 import (
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
+
+func TestAgentEnvelopeContextPointersResolveAgainstCanonicalOutput(t *testing.T) {
+	result, err := Build(map[string]any{
+		"schemaVersion":       json.Number("1"),
+		"reportId":            "proofkit.test.changed-path-set",
+		"preexistingFailures": []any{},
+		"nonClaims":           []any{"Changed-path test input does not prove git diff freshness."},
+		"sources":             []any{map[string]any{"sourceId": "git", "paths": []any{"a.ts"}}},
+	})
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	output := result.JSONValue()
+	envelope := AgentEnvelope(result)
+	contextRefs := envelope["contextRefs"].([]any)
+	checked, err := validateContextJSONPointers(output, contextRefs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checked == 0 {
+		t.Fatal("agent envelope exposed no JSON-pointer context refs")
+	}
+	invalidRefs := append([]any{}, contextRefs...)
+	invalid := map[string]any{}
+	for key, value := range contextRefs[0].(map[string]any) {
+		invalid[key] = value
+	}
+	invalid["ref"] = "/missing"
+	invalidRefs[0] = invalid
+	if _, err := validateContextJSONPointers(output, invalidRefs); err == nil {
+		t.Fatal("context-ref oracle accepted a selected missing pointer")
+	}
+}
+
+func validateContextJSONPointers(output any, contextRefs []any) (int, error) {
+	checked := 0
+	for _, value := range contextRefs {
+		ref, ok := value.(map[string]any)
+		if !ok {
+			return checked, fmt.Errorf("context ref is not an object: %T", value)
+		}
+		if kind := ref["kind"]; kind != "json-pointer" {
+			return checked, fmt.Errorf("context ref %v kind=%v, want json-pointer", ref["refId"], kind)
+		}
+		selector, ok := ref["ref"].(string)
+		if !ok || !strings.HasPrefix(selector, "/") {
+			return checked, fmt.Errorf("context ref %v has malformed JSON pointer %v", ref["refId"], ref["ref"])
+		}
+		checked++
+		if _, err := jsonpointer.Select(output, selector); err != nil {
+			return checked, fmt.Errorf("context ref %v has dangling selector %s: %w", ref["refId"], selector, err)
+		}
+	}
+	return checked, nil
+}
 
 func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.020996495977209692976965486603091189537178619363476268911749132800454063351641")

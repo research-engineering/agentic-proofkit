@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -93,6 +95,36 @@ func TestStartServerServesExplicitSourceViews(t *testing.T) {
 	defer missing.Body.Close()
 	if missing.StatusCode != http.StatusNotFound {
 		t.Fatalf("unexpected missing status: %d", missing.StatusCode)
+	}
+
+	for _, item := range []struct {
+		name   string
+		host   string
+		origin string
+	}{
+		{name: "foreign host", host: "attacker.invalid"},
+		{name: "foreign origin", origin: "https://attacker.invalid"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			request, err := http.NewRequest(http.MethodGet, handle.URL, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if item.host != "" {
+				request.Host = item.host
+			}
+			if item.origin != "" {
+				request.Header.Set("origin", item.origin)
+			}
+			response, err := client.Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusForbidden {
+				t.Fatalf("status=%d, want forbidden", response.StatusCode)
+			}
+		})
 	}
 }
 
@@ -290,6 +322,30 @@ func TestServeStopsOnContextCancellation(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("serve did not stop after context cancellation")
+	}
+}
+
+func TestServerCloseForcesTerminationAfterGracefulDeadline(t *testing.T) {
+	handle, err := StartServer(sourceInput(t), Options{Host: "127.0.0.1", Port: 0, PortSet: true, View: "source"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	connection, err := net.Dial("tcp", net.JoinHostPort(handle.Host, strconv.Itoa(handle.Port)))
+	if err != nil {
+		closeTestServer(t, handle)
+		t.Fatal(err)
+	}
+	defer connection.Close()
+	if _, err := io.WriteString(connection, "GET / HTTP/1.1\r\nHost: "+net.JoinHostPort(handle.Host, strconv.Itoa(handle.Port))+"\r\n"); err != nil {
+		t.Fatal(err)
+	}
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	_ = handle.Close(shutdownCtx)
+	select {
+	case <-handle.Done():
+	case <-time.After(time.Second):
+		t.Fatal("server did not reach terminal state after forced close")
 	}
 }
 

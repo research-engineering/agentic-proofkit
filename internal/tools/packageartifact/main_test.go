@@ -112,6 +112,36 @@ func TestRunWithDependenciesInvalidatesPriorRecordButRetainsCandidateOutputsOnPr
 	}
 }
 
+func TestRunWithDependenciesRejectsExecutionRecordSymlinkBeforeRunner(t *testing.T) {
+	root := packageArtifactFixture(t)
+	external := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "artifacts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(external, filepath.Join(root, "artifacts", "proofkit")); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	externalRecord := filepath.Join(external, filepath.Base(packageartifactrecord.RecordPath))
+	if err := os.WriteFile(externalRecord, []byte("external-sentinel"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runnerCalled := false
+
+	err := runWithDependencies(root, runnerFunc(func(string, []string) (int, error) {
+		runnerCalled = true
+		return 0, nil
+	}), stableDependencies())
+	if err == nil {
+		t.Fatal("runWithDependencies() accepted an execution-record symlink escape")
+	}
+	if runnerCalled {
+		t.Fatal("runner executed after execution-record root rejection")
+	}
+	if content, readErr := os.ReadFile(externalRecord); readErr != nil || string(content) != "external-sentinel" {
+		t.Fatalf("external record changed: content=%q err=%v", content, readErr)
+	}
+}
+
 func TestRunWithDependenciesAcceptsCleanRegenerationWithIdenticalBytes(t *testing.T) {
 	root := packageArtifactFixture(t)
 	writeArtifactFixture(t, root, "artifact-v1")

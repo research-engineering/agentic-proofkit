@@ -146,9 +146,8 @@ func Admit(raw any) (Contract, error) {
 }
 
 func (contract Contract) ResolverProjection(options ResolverOptions) (map[string]any, error) {
-	localClasses := append([]string{}, options.LocalEnvironmentClasses...)
-	sort.Strings(localClasses)
-	if err := assertSortedUnique(localClasses, "compact requirement proof resolver localEnvironmentClasses"); err != nil {
+	localClasses, err := AdmitLocalEnvironmentClasses(options.LocalEnvironmentClasses)
+	if err != nil {
 		return nil, err
 	}
 	requirements := contract.resolverRequirements(localClasses)
@@ -166,6 +165,29 @@ func (contract Contract) ResolverProjection(options ResolverOptions) (map[string
 		"surfaces":                 resolverSurfaces(contract.Surfaces, requirements),
 		"witnessSelectors":         resolverWitnessSelectors(requirements),
 	}, nil
+}
+
+func AdmitLocalEnvironmentClass(value string) (string, error) {
+	if admit.ContainsSecretLikeValue(value) {
+		return "", fmt.Errorf("compact requirement proof local environment class must not contain secret-like values")
+	}
+	return admit.RuleID(value, "compact requirement proof local environment class")
+}
+
+func AdmitLocalEnvironmentClasses(values []string) ([]string, error) {
+	admitted := make([]string, 0, len(values))
+	for _, value := range values {
+		class, err := AdmitLocalEnvironmentClass(value)
+		if err != nil {
+			return nil, err
+		}
+		admitted = append(admitted, class)
+	}
+	sort.Strings(admitted)
+	if err := assertSortedUnique(admitted, "compact requirement proof resolver localEnvironmentClasses"); err != nil {
+		return nil, err
+	}
+	return admitted, nil
 }
 
 func (contract Contract) FalsificationRoutes() []FalsificationRoute {

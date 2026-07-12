@@ -9,9 +9,33 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"go.yaml.in/yaml/v3"
 )
+
+func TestCurrentPlatformBinaryUsesReleasePlatformOwner(t *testing.T) {
+	target, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		t.Skipf("current platform is outside the release matrix: %v", err)
+	}
+	root := t.TempDir()
+	t.Chdir(root)
+	path := filepath.FromSlash(target.BinaryPath)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("fixture"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := currentPlatformBinary()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != path {
+		t.Fatalf("currentPlatformBinary()=%q, release platform owner=%q", got, path)
+	}
+}
 
 func TestProducerAdmissionFromEnvironmentDoesNotMintMergeSatisfyingReceipts(t *testing.T) {
 	cases := []struct {
@@ -352,14 +376,10 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 		{name: "Verify npm version", runCommand: "npm run npm:version"},
 		{name: "Verify source hygiene", runCommand: "npm run source-hygiene"},
 		{name: "Verify text policy", runCommand: "npm run text-policy"},
+		{name: "Verify Mermaid diagrams", runCommand: "npm run mermaid:check"},
 		{name: "Verify Go formatting", runCommand: "npm run go:fmt"},
-		{name: "Run Go tests for app", runCommand: "go test ./cmd/agentic-proofkit ./internal/app"},
-		{name: "Run Go tests for kernel", runCommand: "go test ./internal/kernel/..."},
-		{name: "Run Go tests for commands", runCommand: "go test ./internal/command/..."},
-		{name: "Run Go tests for coverage and package tools", runCommand: "go test ./internal/tools/coveragemetrics ./internal/tools/packagebuild ./internal/tools/packagepack ./internal/tools/packageverify"},
-		{name: "Run Go tests for registry and Python tools", runCommand: "go test ./internal/tools/pypiregistry ./internal/tools/pythonpackage"},
-		{name: "Run Go tests for release tools", runCommand: "go test ./internal/tools/releasecloseoutinput ./internal/tools/releasemanifest ./internal/tools/releasepreflight ./internal/tools/releasesbom ./internal/tools/textpolicyinput"},
-		{name: "Run Go tests for scripts", runCommand: "go test ./scripts"},
+		{name: "Verify generated command family catalog", runCommand: "npm run command-family:check"},
+		{name: "Run all Go tests", runCommand: "npm run go:test"},
 		{name: "Run Go vet", runCommand: "npm run go:vet"},
 		{name: "Run staticcheck", runCommand: "npm run go:staticcheck"},
 		{name: "Run actionlint", runCommand: "npm run go:actionlint"},

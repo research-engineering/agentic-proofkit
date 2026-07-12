@@ -110,7 +110,7 @@ type observedReport struct {
 }
 
 type routeSpec struct {
-	Family         string
+	RouteFamily    routeFamily
 	RequiredAny    [][]string
 	NextCommands   []commandSpec
 	StopConditions []string
@@ -118,6 +118,22 @@ type routeSpec struct {
 	SliceSummary   string
 	SliceNonClaims []string
 }
+
+type routeFamily string
+
+const (
+	routeFamilyAdoption                 routeFamily = "adoption"
+	routeFamilyMigration                routeFamily = "migration"
+	routeFamilyReleaseAndDeployment     routeFamily = "release_and_deployment"
+	routeFamilyRenderedViews            routeFamily = "rendered_views"
+	routeFamilyRepositoryStructure      routeFamily = "repository_structure"
+	routeFamilyRequirementProofBinding  routeFamily = "requirement_proof_binding"
+	routeFamilyRequirementSource        routeFamily = "requirement_source"
+	routeFamilySelectiveEvidence        routeFamily = "selective_evidence"
+	routeFamilySelectivePlanning        routeFamily = "selective_planning"
+	routeFamilyTestInventoryAndCoverage routeFamily = "test_inventory_and_coverage"
+	routeFamilyUnknown                  routeFamily = "unknown"
+)
 
 type commandSpec struct {
 	Command   string
@@ -134,7 +150,7 @@ type commandArgInput struct {
 
 var routeSpecs = map[string]routeSpec{
 	"admit_receipts": {
-		Family:      "selective_evidence",
+		RouteFamily: routeFamilySelectiveEvidence,
 		RequiredAny: [][]string{{"selective_evidence", "obligation_decision_input", "obligation_decision"}},
 		NextCommands: []commandSpec{
 			{Command: "selective-gate-evidence", InputKind: "selective_evidence", Why: "Receipts must be admitted against the caller-owned selective plan before obligation decisions consume them."},
@@ -147,7 +163,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The selective evidence slice does not authenticate producers or approve merge."},
 	},
 	"adopt_repository": {
-		Family:      "adoption",
+		RouteFamily: routeFamilyAdoption,
 		RequiredAny: [][]string{{"adoption_workflow", "capability_map", "scaffold_project_structure"}},
 		NextCommands: []commandSpec{
 			{Command: "adoption-workflow-plan", InputKind: "adoption_workflow", Why: "Repository adoption should start from a caller-owned workflow plan instead of ambient repository scanning."},
@@ -160,7 +176,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The adoption slice does not select final module boundaries or write files."},
 	},
 	"author_requirements": {
-		Family:      "requirement_source",
+		RouteFamily: routeFamilyRequirementSource,
 		RequiredAny: [][]string{{"authoring_plan", "capability_map"}},
 		NextCommands: []commandSpec{
 			{Command: "capability-map-admission", InputKind: "capability_map", Why: "Capability maps convert caller-owned observations into candidate requirement and proof-binding seeds before any stable requirement source is materialized."},
@@ -172,7 +188,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The authoring slice does not infer requirement meaning or materialize stable requirement source files."},
 	},
 	"bind_requirement_proofs": {
-		Family:      "requirement_proof_binding",
+		RouteFamily: routeFamilyRequirementProofBinding,
 		RequiredAny: [][]string{{"proof_binding", "binding_witness_plan_input", "witness_command_catalog"}},
 		NextCommands: []commandSpec{
 			{Command: "requirement-bindings", InputKind: "proof_binding", Why: "Proof bindings own the route from requirements to scenarios, witnesses, commands, and environment classes."},
@@ -186,7 +202,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The proof-binding slice does not execute native witnesses or prove semantic adequacy."},
 	},
 	"check_overview_claims": {
-		Family:      "requirement_source",
+		RouteFamily: routeFamilyRequirementSource,
 		RequiredAny: [][]string{{"overview_claims"}},
 		NextCommands: []commandSpec{
 			{Command: "spec-overview-claims", InputKind: "overview_claims", Why: "Durable overview claims must cite REQ-* records or remain non-normative prose."},
@@ -197,7 +213,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The overview slice does not parse Markdown or judge product claim adequacy."},
 	},
 	"decide_obligations": {
-		Family:      "selective_evidence",
+		RouteFamily: routeFamilySelectiveEvidence,
 		RequiredAny: [][]string{{"obligation_decision"}},
 		NextCommands: []commandSpec{
 			{Command: "obligation-decision", InputKind: "obligation_decision", Why: "Merge-relevant proof obligations need an explicit decision input instead of raw command results."},
@@ -208,7 +224,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The obligation slice does not make consumer merge decisions."},
 	},
 	"inspect_coverage": {
-		Family:      "test_inventory_and_coverage",
+		RouteFamily: routeFamilyTestInventoryAndCoverage,
 		RequiredAny: [][]string{{"coverage_compose_input", "coverage_view_input"}},
 		NextCommands: []commandSpec{
 			{Command: "requirement-coverage-input-compose", InputKind: "coverage_compose_input", Why: "Coverage views should be composed from explicit caller-owned requirement source, proof binding, test inventory, universe, and local environment policy before inspection."},
@@ -221,7 +237,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The coverage slice does not claim inventory completeness outside the caller-owned universe."},
 	},
 	"inventory_tests": {
-		Family:      "test_inventory_and_coverage",
+		RouteFamily: routeFamilyTestInventoryAndCoverage,
 		RequiredAny: [][]string{{"test_discovery", "test_inventory", "coverage_compose_input", "coverage_view_input"}},
 		NextCommands: []commandSpec{
 			{Command: "test-evidence-inventory", InputKind: "test_discovery", ExtraArgs: []string{"--projection", "discovery-draft"}, Why: "Caller-owned discovered test facts must become candidate-only inventory guidance before any strict semantic inventory is materialized."},
@@ -235,7 +251,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The test inventory slice does not infer test intent from source code or execute tests."},
 	},
 	"plan_selective_checks": {
-		Family:      "selective_planning",
+		RouteFamily: routeFamilySelectivePlanning,
 		RequiredAny: [][]string{{"changed_path_set", "impact_input", "selective_gate_plan_input"}},
 		NextCommands: []commandSpec{
 			{Command: "changed-path-set", InputKind: "changed_path_set", Why: "Changed paths must be admitted from caller-owned git facts before impact analysis."},
@@ -248,7 +264,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The selective planning slice does not discover git state or run CI commands."},
 	},
 	"release_or_deploy_evidence": {
-		Family:      "release_and_deployment",
+		RouteFamily: routeFamilyReleaseAndDeployment,
 		RequiredAny: [][]string{{"release_authority_input", "registry_consumer_input", "deployment_evidence_input", "readiness_closeout_input"}},
 		NextCommands: []commandSpec{
 			{Command: "release-authority", InputKind: "release_authority_input", Why: "Release authority checks package and provenance facts without becoming the publisher."},
@@ -262,7 +278,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The release slice does not publish packages, deploy services, or approve readiness."},
 	},
 	"render_human_view": {
-		Family:      "rendered_views",
+		RouteFamily: routeFamilyRenderedViews,
 		RequiredAny: [][]string{{"requirement_source", "proof_binding", "compact_proof_binding", "coverage_view_input", "spec_tree_bundle"}},
 		NextCommands: []commandSpec{
 			{Command: "requirement-source-view", InputKind: "requirement_source", Why: "Human source views render structured requirement records without becoming authority."},
@@ -282,7 +298,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The rendered view slice does not make HTML or Markdown canonical authority."},
 	},
 	"retire_local_infrastructure": {
-		Family:      "migration",
+		RouteFamily: routeFamilyMigration,
 		RequiredAny: [][]string{{"migration_parity", "migration_plan"}},
 		NextCommands: []commandSpec{
 			{Command: "migration-parity-admission", InputKind: "migration_parity", Why: "Local proof infrastructure can be retired only after caller-owned parity evidence is admitted."},
@@ -294,7 +310,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The migration slice does not approve deletion of consumer-owned proof owners."},
 	},
 	"scaffold_first_module": {
-		Family:      "adoption",
+		RouteFamily: routeFamilyAdoption,
 		RequiredAny: [][]string{{"scaffold_profile_plan", "scaffold_project_structure"}},
 		NextCommands: []commandSpec{
 			{Command: "scaffold-profile-plan", InputKind: "scaffold_profile_plan", Why: "Scaffold profile planning turns caller-reviewed hints into deterministic profile draft data."},
@@ -306,7 +322,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The scaffold slice does not invent final requirement text or materialize files."},
 	},
 	"validate_requirement_source": {
-		Family:      "requirement_source",
+		RouteFamily: routeFamilyRequirementSource,
 		RequiredAny: [][]string{{"requirement_source", "requirement_source_transition"}},
 		NextCommands: []commandSpec{
 			{Command: "requirement-source-admission", InputKind: "requirement_source", Why: "Structured requirement records are the machine-admissible source for requirement state."},
@@ -318,7 +334,7 @@ var routeSpecs = map[string]routeSpec{
 		SliceNonClaims: []string{"The requirement source slice does not own product meaning or proof adequacy."},
 	},
 	"verify_typescript_public_api": {
-		Family:      "repository_structure",
+		RouteFamily: routeFamilyRepositoryStructure,
 		RequiredAny: [][]string{{"typescript_public_api_manifest"}, {"typescript_public_api_repo_root"}},
 		NextCommands: []commandSpec{
 			{Command: "typescript-public-api-surfaces", InputKind: "typescript_public_api_manifest", ArgInputs: []commandArgInput{{Flag: "--repo-root", InputKind: "typescript_public_api_repo_root"}}, Why: "This is an explicit filesystem-scan command: it verifies a caller-owned TypeScript public API manifest against a caller-selected checkout root."},
@@ -427,6 +443,44 @@ func InputContract() map[string]any {
 			"It does not validate referenced file contents, execute commands, read repositories, or approve merge.",
 		},
 	}
+}
+
+func OutputContract() map[string]any {
+	return map[string]any{
+		"contractId":    "proofkit.agent-route.output.v2",
+		"schemaVersion": 2,
+		"authority":     "deterministic route report derived from admitted agent-route input",
+		"requiredFields": []any{
+			"guidanceSlice",
+			"reportId",
+			"reportKind",
+			"schemaVersion",
+			"selectedRouteFamily",
+			"state",
+		},
+		"fields": map[string]any{
+			"schemaVersion": map[string]any{"value": 2},
+			"selectedRouteFamily": map[string]any{
+				"enum": routeFamilyContractValues(),
+			},
+			"guidanceSlice": map[string]any{
+				"requiredFields":  []any{"routeFamily"},
+				"routeFamilyRule": "must equal selectedRouteFamily",
+			},
+		},
+		"changesFromV1": []any{
+			"selectedFamily is replaced by selectedRouteFamily",
+			"guidanceSlice.family is replaced by guidanceSlice.routeFamily",
+		},
+	}
+}
+
+func routeFamilyContractValues() []any {
+	values := map[string]struct{}{string(routeFamilyUnknown): {}}
+	for _, spec := range routeSpecs {
+		values[string(spec.RouteFamily)] = struct{}{}
+	}
+	return sortedKeys(values)
 }
 
 func admitInput(raw any) (routeInput, error) {
@@ -689,7 +743,7 @@ func inputGroupSatisfied(group []string, available map[string]string) bool {
 
 func buildUnknownGoal(input routeInput) map[string]any {
 	spec := routeSpec{
-		Family:       "unknown",
+		RouteFamily:  routeFamilyUnknown,
 		SliceSummary: "Unknown goals are deliberately not routed.",
 		SliceNonClaims: []string{
 			"The unknown-goal slice does not choose commands from ambiguous caller intent.",
@@ -705,15 +759,15 @@ func buildUnknownGoal(input routeInput) map[string]any {
 		"omitted": []any{
 			map[string]any{"reason": "Unknown goals are not routed because that would create an implicit policy owner inside Proofkit."},
 		},
-		"reportId":        input.RouteID,
-		"reportKind":      "proofkit.agent-route",
-		"requiredInputs":  []any{},
-		"schemaVersion":   1,
-		"selectedFamily":  "unknown",
-		"state":           "blocked_unknown_goal",
-		"stopConditions":  []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
-		"callerNonClaims": toAnySlice(input.CallerNonClaims),
-		"guidanceSlice":   guidanceSliceReport(input.Goal, spec),
+		"reportId":            input.RouteID,
+		"reportKind":          "proofkit.agent-route",
+		"requiredInputs":      []any{},
+		"schemaVersion":       2,
+		"selectedRouteFamily": string(routeFamilyUnknown),
+		"state":               "blocked_unknown_goal",
+		"stopConditions":      []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
+		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
+		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
 			"browserMode":         input.BrowserMode,
 			"availableInputCount": len(input.AvailableInputs),
@@ -733,21 +787,21 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		nextCommands = []any{}
 	}
 	return map[string]any{
-		"diagnostics":     diagnostics(input, state, missing),
-		"escalations":     toAnySlice(spec.Escalations),
-		"nextCommands":    nextCommands,
-		"nonClaims":       mergedNonClaims(input.CallerNonClaims),
-		"omitted":         omittedReports(spec.NextCommands, input.AvailableInputs),
-		"observedReports": observedReportReports(input.ObservedReports),
-		"reportId":        input.RouteID,
-		"reportKind":      "proofkit.agent-route",
-		"requiredInputs":  requiredInputReports(missing),
-		"schemaVersion":   1,
-		"selectedFamily":  spec.Family,
-		"state":           state,
-		"stopConditions":  toAnySlice(spec.StopConditions),
-		"callerNonClaims": toAnySlice(input.CallerNonClaims),
-		"guidanceSlice":   guidanceSliceReport(input.Goal, spec),
+		"diagnostics":         diagnostics(input, state, missing),
+		"escalations":         toAnySlice(spec.Escalations),
+		"nextCommands":        nextCommands,
+		"nonClaims":           mergedNonClaims(input.CallerNonClaims),
+		"omitted":             omittedReports(spec.NextCommands, input.AvailableInputs),
+		"observedReports":     observedReportReports(input.ObservedReports),
+		"reportId":            input.RouteID,
+		"reportKind":          "proofkit.agent-route",
+		"requiredInputs":      requiredInputReports(missing),
+		"schemaVersion":       2,
+		"selectedRouteFamily": string(spec.RouteFamily),
+		"state":               state,
+		"stopConditions":      toAnySlice(spec.StopConditions),
+		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
+		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
 			"browserMode":         input.BrowserMode,
 			"availableInputCount": len(input.AvailableInputs),
@@ -940,7 +994,7 @@ func guidanceSliceReport(goal string, spec routeSpec) map[string]any {
 				"selector": "agent guidance envelopes",
 			},
 		},
-		"family":          spec.Family,
+		"routeFamily":     string(spec.RouteFamily),
 		"lookupOnly":      true,
 		"nonClaims":       toAnySlice(spec.SliceNonClaims),
 		"sliceId":         "proofkit.agent-route.slice." + strings.ReplaceAll(goal, "_", "-"),

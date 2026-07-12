@@ -14,42 +14,37 @@ import (
 
 const (
 	defaultMachineContract  = "public_api_surfaces"
-	defaultPackagesRoot     = "packages"
-	defaultSourceExtension  = ".ts"
-	defaultSourcePrefix     = "src/"
 	maxSourceFileBytes      = 8 << 20
 	maxPackageManifestBytes = 256 << 10
 	maxAggregateScanBytes   = 64 << 20
 	maxManifestEntries      = 1024
-	maxPackageDirEntries    = 1024
 )
 
 type Options struct {
 	MachineContract string
-	PackagesRoot    string
 	RepoRoot        string
-	SourceExtension string
-	SourcePrefix    string
 }
 
 type entry struct {
-	DeniedExportKeys []string
-	ExportConditions []exportCondition
-	ExportKey        string
-	PackageName      string
-	RuntimeExports   []string
-	Source           string
-	TypeExports      []string
+	DeniedExportKeys    []string
+	ExportConditions    []exportCondition
+	ExportKey           string
+	PackageManifestPath string
+	PackageName         string
+	RuntimeExports      []string
+	TypeExports         []string
 }
 
 type exportCondition struct {
-	Condition string
-	Path      string
+	Condition  string
+	Path       string
+	SourcePath string
 }
 
 type packageSnapshot struct {
 	dir      string
 	manifest map[string]any
+	name     string
 }
 
 type sourceExportSnapshot struct {
@@ -73,15 +68,6 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 	if options.MachineContract == "" {
 		options.MachineContract = defaultMachineContract
 	}
-	if options.PackagesRoot == "" {
-		options.PackagesRoot = defaultPackagesRoot
-	}
-	if options.SourceExtension == "" {
-		options.SourceExtension = defaultSourceExtension
-	}
-	if options.SourcePrefix == "" {
-		options.SourcePrefix = defaultSourcePrefix
-	}
 	repoRoot, err := filepath.EvalSymlinks(options.RepoRoot)
 	if err != nil {
 		return nil, 1, err
@@ -91,7 +77,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 	if err != nil {
 		return nil, 1, err
 	}
-	packages, err := packageDirs(scan, options.PackagesRoot)
+	packages, err := referencedPackages(scan, manifest)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -105,27 +91,40 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 			continue
 		}
 		seenKeys[manifestKey] = struct{}{}
-		pkg, ok := packages[item.PackageName]
+		pkg, ok := packages[item.PackageManifestPath]
 		if !ok {
-			failures = append(failures, "TypeScript public API manifest references missing package "+item.PackageName)
+			failures = append(failures, "TypeScript public API manifest references missing package manifest "+item.PackageManifestPath)
 			continue
 		}
-		source, err := safePackageRelativePath(item.Source, manifestKey, options.SourcePrefix, options.SourceExtension)
-		if err != nil {
-			return nil, 1, err
+		if pkg.name != item.PackageName {
+			failures = append(failures, fmt.Sprintf("%s package manifest name is %s", manifestKey, pkg.name))
+			continue
 		}
-		sourcePath := filepath.Join(pkg.dir, filepath.FromSlash(source))
-		actualRuntime, actualTypes, err := scan.collectSourceExports(sourcePath, manifestKey+" source")
-		if err != nil {
-			if os.IsNotExist(err) {
-				failures = append(failures, fmt.Sprintf("%s source does not exist: %s", manifestKey, source))
-				continue
+		actualRuntimeSet := map[string]struct{}{}
+		actualTypeSet := map[string]struct{}{}
+		for _, sourcePath := range entrySourcePaths(item) {
+			resolvedSource, err := resolvePackageSource(scan.repoRoot, pkg.dir, sourcePath, manifestKey+" source")
+			if err != nil {
+				if os.IsNotExist(err) {
+					failures = append(failures, fmt.Sprintf("%s source does not exist: %s", manifestKey, sourcePath))
+					continue
+				}
+				return nil, 1, err
 			}
-			return nil, 1, err
+			actualRuntime, actualTypes, err := scan.collectSourceExports(resolvedSource, manifestKey+" source")
+			if err != nil {
+				return nil, 1, err
+			}
+			for _, value := range actualRuntime {
+				actualRuntimeSet[value] = struct{}{}
+			}
+			for _, value := range actualTypes {
+				actualTypeSet[value] = struct{}{}
+			}
 		}
 		verifyPackageExportMap(pkg, item, &failures)
-		compareExports(item.RuntimeExports, actualRuntime, manifestKey+" runtime exports", &failures)
-		compareExports(item.TypeExports, actualTypes, manifestKey+" type exports", &failures)
+		compareExports(item.RuntimeExports, sortedSet(actualRuntimeSet), manifestKey+" runtime exports", &failures)
+		compareExports(item.TypeExports, sortedSet(actualTypeSet), manifestKey+" type exports", &failures)
 	}
 	exitCode := 0
 	if len(failures) > 0 {
@@ -138,6 +137,9 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 		"inputAuthority": "caller_manifest_plus_filesystem_snapshot",
 		"nonClaims": []any{
 			"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
+			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
+			"TypeScript public API verification does not parse JSX or admit TSX source files.",
+			"TypeScript public API verification admits a documented fail-closed export grammar subset; it does not parse unrestricted TypeScript.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},
 	}, exitCode, nil
@@ -180,7 +182,7 @@ func manifestEntry(raw any, context string) (entry, error) {
 	if !ok {
 		return entry{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"deniedExportKeys", "exportConditions", "exportKey", "packageName", "runtimeExports", "source", "typeExports"}, context); err != nil {
+	if err := admit.KnownKeys(record, []string{"deniedExportKeys", "exportConditions", "exportKey", "packageManifestPath", "packageName", "runtimeExports", "typeExports"}, context); err != nil {
 		return entry{}, err
 	}
 	conditions, err := exportConditions(record["exportConditions"], context+".exportConditions")
@@ -203,9 +205,12 @@ func manifestEntry(raw any, context string) (entry, error) {
 	if err != nil {
 		return entry{}, err
 	}
-	source, err := nonEmptyString(record["source"], context+".source")
+	packageManifestPath, err := safeRepoPath(record["packageManifestPath"], context+".packageManifestPath")
 	if err != nil {
 		return entry{}, err
+	}
+	if filepath.Base(filepath.FromSlash(packageManifestPath)) != "package.json" {
+		return entry{}, fmt.Errorf("%s.packageManifestPath must identify package.json", context)
 	}
 	exportKey, err := nonEmptyString(record["exportKey"], context+".exportKey")
 	if err != nil {
@@ -213,7 +218,7 @@ func manifestEntry(raw any, context string) (entry, error) {
 	}
 	return entry{
 		DeniedExportKeys: denied, ExportConditions: conditions, ExportKey: exportKey,
-		PackageName: packageName, RuntimeExports: runtimeExports, Source: source, TypeExports: typeExports,
+		PackageManifestPath: packageManifestPath, PackageName: packageName, RuntimeExports: runtimeExports, TypeExports: typeExports,
 	}, nil
 }
 
@@ -231,7 +236,7 @@ func exportConditions(raw any, context string) ([]exportCondition, error) {
 		if !ok {
 			return nil, fmt.Errorf("%s[%d] must be an object", context, index)
 		}
-		if err := admit.KnownKeys(record, []string{"condition", "path"}, fmt.Sprintf("%s[%d]", context, index)); err != nil {
+		if err := admit.KnownKeys(record, []string{"condition", "path", "sourcePath"}, fmt.Sprintf("%s[%d]", context, index)); err != nil {
 			return nil, err
 		}
 		condition, err := nonEmptyString(record["condition"], fmt.Sprintf("%s[%d].condition", context, index))
@@ -242,7 +247,11 @@ func exportConditions(raw any, context string) ([]exportCondition, error) {
 		if err != nil {
 			return nil, err
 		}
-		conditions = append(conditions, exportCondition{Condition: condition, Path: path})
+		sourcePath, err := safeTypeScriptSourcePath(record["sourcePath"], fmt.Sprintf("%s[%d].sourcePath", context, index))
+		if err != nil {
+			return nil, err
+		}
+		conditions = append(conditions, exportCondition{Condition: condition, Path: path, SourcePath: sourcePath})
 	}
 	if err := assertSortedUnique(exportConditionNames(conditions), context+" conditions"); err != nil {
 		return nil, err
@@ -250,45 +259,33 @@ func exportConditions(raw any, context string) ([]exportCondition, error) {
 	return conditions, nil
 }
 
-func packageDirs(scan *scanCache, packagesRootPath string) (map[string]packageSnapshot, error) {
-	packagesRoot := filepath.Join(scan.repoRoot, filepath.FromSlash(packagesRootPath))
-	if _, err := resolvedPathUnderRoot(scan.repoRoot, packagesRoot, "TypeScript public API packages root"); err != nil {
-		return nil, err
-	}
-	directory, err := os.Open(packagesRoot)
-	if err != nil {
-		return nil, err
-	}
-	defer directory.Close()
-	entries, err := directory.ReadDir(maxPackageDirEntries + 1)
-	if err != nil {
-		return nil, err
-	}
-	if len(entries) > maxPackageDirEntries {
-		return nil, fmt.Errorf("TypeScript public API packages root exceeds the %d-entry limit", maxPackageDirEntries)
-	}
-	byName := map[string]packageSnapshot{}
-	for _, dirent := range entries {
-		if !dirent.IsDir() {
+func referencedPackages(scan *scanCache, entries []entry) (map[string]packageSnapshot, error) {
+	byManifest := map[string]packageSnapshot{}
+	manifestByName := map[string]string{}
+	for _, item := range entries {
+		if _, exists := byManifest[item.PackageManifestPath]; exists {
 			continue
 		}
-		packageDir := filepath.Join(packagesRoot, dirent.Name())
-		manifestPath := filepath.Join(packageDir, "package.json")
-		if _, err := os.Lstat(manifestPath); err != nil {
-			continue
-		}
-		manifest, err := readPackageManifest(scan, manifestPath)
+		manifestPath := filepath.Join(scan.repoRoot, filepath.FromSlash(item.PackageManifestPath))
+		resolvedManifest, err := resolvedPathUnderRoot(scan.repoRoot, manifestPath, "TypeScript public API package manifest")
 		if err != nil {
 			return nil, err
 		}
-		if name, ok := manifest["name"].(string); ok {
-			if previous, exists := byName[name]; exists {
-				return nil, fmt.Errorf("duplicate package name %s in %s and %s", name, filepath.ToSlash(previous.dir), filepath.ToSlash(packageDir))
-			}
-			byName[name] = packageSnapshot{dir: packageDir, manifest: manifest}
+		manifest, err := readPackageManifest(scan, resolvedManifest)
+		if err != nil {
+			return nil, err
 		}
+		name, err := nonEmptyString(manifest["name"], item.PackageManifestPath+" name")
+		if err != nil {
+			return nil, err
+		}
+		if previous, exists := manifestByName[name]; exists && previous != item.PackageManifestPath {
+			return nil, fmt.Errorf("duplicate referenced package name %s in %s and %s", name, previous, item.PackageManifestPath)
+		}
+		manifestByName[name] = item.PackageManifestPath
+		byManifest[item.PackageManifestPath] = packageSnapshot{dir: filepath.Dir(resolvedManifest), manifest: manifest, name: name}
 	}
-	return byName, nil
+	return byManifest, nil
 }
 
 func readPackageManifest(scan *scanCache, path string) (map[string]any, error) {
@@ -393,19 +390,47 @@ func resolvedPathUnderRoot(repoRoot string, filePath string, context string) (st
 	return resolved, nil
 }
 
-func safePackageRelativePath(path string, context string, sourcePrefix string, sourceExtension string) (string, error) {
-	if filepath.IsAbs(path) ||
-		strings.Contains(path, `\`) ||
-		strings.ContainsRune(path, '\x00') ||
-		path == "." ||
-		path == ".." ||
-		strings.HasPrefix(path, "../") ||
-		strings.Contains(path, "/../") ||
-		!strings.HasPrefix(path, sourcePrefix) ||
-		!strings.HasSuffix(path, sourceExtension) {
-		return "", fmt.Errorf("%s must be a package-relative %s*%s path without traversal", context, sourcePrefix, sourceExtension)
+func safeRepoPath(raw any, context string) (string, error) {
+	value, err := nonEmptyString(raw, context)
+	if err != nil {
+		return "", err
 	}
-	return path, nil
+	return admit.SafeRepoRelativePath(value, context)
+}
+
+func safeTypeScriptSourcePath(raw any, context string) (string, error) {
+	value, err := safeRepoPath(raw, context)
+	if err != nil {
+		return "", err
+	}
+	if err := requireTypeScriptSourceExtension(value, context); err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func requireTypeScriptSourceExtension(path string, context string) error {
+	switch strings.ToLower(filepath.Ext(filepath.FromSlash(path))) {
+	case ".ts", ".mts", ".cts":
+		return nil
+	default:
+		return fmt.Errorf("%s must identify a non-JSX TypeScript source (.ts, .mts, or .cts)", context)
+	}
+}
+
+func resolvePackageSource(repoRoot string, packageDir string, sourcePath string, context string) (string, error) {
+	resolved, err := resolvedPathUnderRoot(repoRoot, filepath.Join(repoRoot, filepath.FromSlash(sourcePath)), context)
+	if err != nil {
+		return "", err
+	}
+	relative, err := filepath.Rel(packageDir, resolved)
+	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
+		return "", fmt.Errorf("%s must resolve under its referenced package manifest directory", context)
+	}
+	if err := requireTypeScriptSourceExtension(resolved, context+" canonical target"); err != nil {
+		return "", err
+	}
+	return resolved, nil
 }
 
 func verifyPackageExportMap(pkg packageSnapshot, item entry, failures *[]string) {
@@ -427,9 +452,6 @@ func verifyPackageExportMap(pkg packageSnapshot, item entry, failures *[]string)
 		if exportEntry[condition.Condition] != condition.Path {
 			*failures = append(*failures, fmt.Sprintf("%s exports[%s].%s must be %s", item.PackageName, item.ExportKey, condition.Condition, condition.Path))
 		}
-		if !isAdmittedSourceExportTarget(item.Source, condition) {
-			*failures = append(*failures, fmt.Sprintf("%s exports[%s].%s target %s must match scanned source %s or its compiled target", item.PackageName, item.ExportKey, condition.Condition, condition.Path, "./"+item.Source))
-		}
 	}
 	for _, deniedKey := range item.DeniedExportKeys {
 		deniedValue, ok := exportsField[deniedKey]
@@ -439,46 +461,27 @@ func verifyPackageExportMap(pkg packageSnapshot, item entry, failures *[]string)
 	}
 }
 
-func isAdmittedSourceExportTarget(source string, condition exportCondition) bool {
-	if condition.Path == "./"+source {
-		return true
-	}
-	compiledTarget, ok := compiledExportTargetForSource(source, condition.Condition)
-	return ok && condition.Path == compiledTarget
-}
-
-func compiledExportTargetForSource(source string, condition string) (string, bool) {
-	if !strings.HasPrefix(source, "src/") || !strings.HasSuffix(source, ".ts") {
-		return "", false
-	}
-	stem := strings.TrimSuffix(strings.TrimPrefix(source, "src/"), ".ts")
-	if condition == "types" {
-		return "./dist/" + stem + ".d.ts", true
-	}
-	return "./dist/" + stem + ".js", true
-}
-
 func verifyCoveredPackageExportKeys(packages map[string]packageSnapshot, entries []entry, failures *[]string) {
 	expectedByPackage := map[string]map[string]struct{}{}
 	for _, item := range entries {
-		keys := expectedByPackage[item.PackageName]
+		keys := expectedByPackage[item.PackageManifestPath]
 		if keys == nil {
 			keys = map[string]struct{}{}
-			expectedByPackage[item.PackageName] = keys
+			expectedByPackage[item.PackageManifestPath] = keys
 		}
 		keys[item.ExportKey] = struct{}{}
 		for _, denied := range item.DeniedExportKeys {
 			keys[denied] = struct{}{}
 		}
 	}
-	packageNames := make([]string, 0, len(expectedByPackage))
-	for packageName := range expectedByPackage {
-		packageNames = append(packageNames, packageName)
+	packagePaths := make([]string, 0, len(expectedByPackage))
+	for packagePath := range expectedByPackage {
+		packagePaths = append(packagePaths, packagePath)
 	}
-	sort.Strings(packageNames)
-	for _, packageName := range packageNames {
-		expectedSet := expectedByPackage[packageName]
-		pkg, ok := packages[packageName]
+	sort.Strings(packagePaths)
+	for _, packagePath := range packagePaths {
+		expectedSet := expectedByPackage[packagePath]
+		pkg, ok := packages[packagePath]
 		if !ok {
 			continue
 		}
@@ -486,8 +489,16 @@ func verifyCoveredPackageExportKeys(packages map[string]packageSnapshot, entries
 		if !ok {
 			continue
 		}
-		compareExports(sortedSet(expectedSet), sortedKeys(exportsField), packageName+" package.json export keys", failures)
+		compareExports(sortedSet(expectedSet), sortedKeys(exportsField), pkg.name+" package.json export keys", failures)
 	}
+}
+
+func entrySourcePaths(item entry) []string {
+	set := map[string]struct{}{}
+	for _, condition := range item.ExportConditions {
+		set[condition.SourcePath] = struct{}{}
+	}
+	return sortedSet(set)
 }
 
 func compareExports(expected []string, actual []string, label string, failures *[]string) {

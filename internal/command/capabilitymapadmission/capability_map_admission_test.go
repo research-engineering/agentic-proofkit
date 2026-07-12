@@ -118,16 +118,21 @@ func TestBuildCodeBaselineRejectsUnsupportedRequiredEvidence(t *testing.T) {
 	input := validCapabilityMapInput("code_baseline")
 	firstScenarioShape(input)["requiredEvidence"] = []any{"mutation_test"}
 
-	record, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "requiredEvidence mutation_test is unsupported") {
+		t.Fatalf("Build() exit=%d error=%v, want unsupported requiredEvidence admission failure", exitCode, err)
 	}
-	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
-	}
-	encoded, _ := json.Marshal(record.JSONValue())
-	if !strings.Contains(string(encoded), "requiredEvidence mutation_test is unsupported") {
-		t.Fatalf("failure did not mention unsupported requiredEvidence: %s", encoded)
+}
+
+func TestBuildAuditModeRejectsUnsupportedRequiredEvidence(t *testing.T) {
+	t.Parallel()
+
+	input := validCapabilityMapInput("audit_from_code")
+	firstScenarioShape(input)["requiredEvidence"] = []any{"mutation_test"}
+
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "requiredEvidence mutation_test is unsupported") {
+		t.Fatalf("Build() exit=%d error=%v, want audit-mode vocabulary admission failure", exitCode, err)
 	}
 }
 

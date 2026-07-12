@@ -197,6 +197,7 @@ type proofReceiptEvidence struct {
 	EvidenceRefs           []string `json:"evidenceRefs"`
 	ExitCode               int      `json:"exitCode"`
 	FinishedAt             string   `json:"finishedAt"`
+	LockfileDigest         *string  `json:"lockfileDigest"`
 	NonClaims              []string `json:"nonClaims"`
 	ProducerAdmissionClass string   `json:"producerAdmissionClass"`
 	ProducerID             string   `json:"producerId"`
@@ -207,6 +208,7 @@ type proofReceiptEvidence struct {
 	ReceiptID              string   `json:"receiptId"`
 	ReceiptKind            string   `json:"receiptKind"`
 	RunnerClass            string   `json:"runnerClass"`
+	RunnerIdentity         string   `json:"runnerIdentity"`
 	SourceRevision         string   `json:"sourceRevision"`
 	StartedAt              string   `json:"startedAt"`
 	Status                 string   `json:"status"`
@@ -662,6 +664,14 @@ func (snapshot SelfEvidenceSnapshot) identityConsistent(execution packageartifac
 		len(bundle.ReceiptProducerAdmission.Receipts) != 1 {
 		return false
 	}
+	receiptRaw, receiptRawOK := firstNestedRecord(snapshot.proofReceipts.raw, "receipts")
+	bundleReceiptRaw, bundleReceiptRawOK := firstNestedRecord(snapshot.specProofBundle.raw, "receiptAdmission", "receipts")
+	producerRaw, producerRawOK := firstNestedRecord(snapshot.producerPolicy.raw, "receipts")
+	bundleProducerRaw, bundleProducerRawOK := firstNestedRecord(snapshot.specProofBundle.raw, "receiptProducerAdmission", "receipts")
+	if !receiptRawOK || !bundleReceiptRawOK || !producerRawOK || !bundleProducerRawOK ||
+		!canonicalRecordsEqual(receiptRaw, bundleReceiptRaw) || !canonicalRecordsEqual(producerRaw, bundleProducerRaw) {
+		return false
+	}
 	bundleProofIdentity, ok := proofReceiptIdentity(bundle.ReceiptAdmission.Receipts[0])
 	if !ok || bundleProofIdentity != proofIdentity ||
 		!reflect.DeepEqual(bundle.ReceiptAdmission.Receipts[0], receiptSet.Receipts[0]) ||
@@ -671,6 +681,34 @@ func (snapshot SelfEvidenceSnapshot) identityConsistent(execution packageartifac
 	bundleProducerIdentity, ok := producerReceiptIdentity(bundle.ReceiptProducerAdmission.Receipts[0])
 	return ok && bundleProducerIdentity == proofIdentity &&
 		reflect.DeepEqual(bundle.ReceiptProducerAdmission.Receipts[0], producerPolicy.Receipts[0])
+}
+
+func firstNestedRecord(raw any, objectPath ...string) (any, bool) {
+	current := raw
+	for _, key := range objectPath {
+		record, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		current, ok = record[key]
+		if !ok {
+			return nil, false
+		}
+	}
+	values, ok := current.([]any)
+	if !ok || len(values) != 1 {
+		return nil, false
+	}
+	return values[0], true
+}
+
+func canonicalRecordsEqual(left any, right any) bool {
+	leftDigest, err := digest.StableJSONSHA256Ref(left)
+	if err != nil {
+		return false
+	}
+	rightDigest, err := digest.StableJSONSHA256Ref(right)
+	return err == nil && leftDigest == rightDigest
 }
 
 func proofReceiptIdentity(record proofReceiptEvidence) (selfHostingReceiptIdentity, bool) {

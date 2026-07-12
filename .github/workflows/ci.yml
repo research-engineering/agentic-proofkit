@@ -45,6 +45,11 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Setup Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.14.6'
+
       - name: Verify diff hygiene
         run: |
           set -euo pipefail
@@ -70,26 +75,11 @@ jobs:
       - name: Verify Go formatting
         run: npm run go:fmt
 
-      - name: Run Go tests for app
-        run: go test ./cmd/agentic-proofkit ./internal/app
+      - name: Verify generated command family catalog
+        run: npm run command-family:check
 
-      - name: Run Go tests for kernel
-        run: go test ./internal/kernel/...
-
-      - name: Run Go tests for commands
-        run: go test ./internal/command/...
-
-      - name: Run Go tests for coverage and package tools
-        run: go test ./internal/tools/coveragemetrics ./internal/tools/packagebuild ./internal/tools/packagepack ./internal/tools/packageverify
-
-      - name: Run Go tests for registry and Python tools
-        run: go test ./internal/tools/pypiregistry ./internal/tools/pythonpackage
-
-      - name: Run Go tests for release tools
-        run: go test ./internal/tools/releasecloseoutinput ./internal/tools/releasemanifest ./internal/tools/releasepreflight ./internal/tools/releasesbom ./internal/tools/textpolicyinput
-
-      - name: Run Go tests for scripts
-        run: go test ./scripts
+      - name: Run all Go tests
+        run: npm run go:test
 
       - name: Run Go vet
         run: npm run go:vet

@@ -349,7 +349,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim repository scanning, semantic boundary correctness, automatic requirement extraction, native witness execution, receipt authenticity, proof freshness, owner approval, merge approval, release approval, rollout approval, or old proof-owner retirement approval."
+        "This requirement does not claim repository scanning, text extraction from files, semantic boundary correctness, automatic requirement extraction, native witness execution, receipt authenticity, proof freshness, owner approval, merge approval, release approval, rollout approval, or old proof-owner retirement approval."
       ]
     },
     {
@@ -479,7 +479,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim provider-run success, Windows support, performance budget enforcement, or release approval."
+        "This requirement does not claim provider-run success, branch-protection settings, Windows support, performance budget enforcement, or release approval."
       ]
     },
     {
@@ -703,6 +703,32 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.typescript-explicit-scan-topology",
+      "witnessId": "proofkit.typescript-public-api.explicit-scan-topology",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/publicapi/public_api_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.typescript-fail-closed-source-grammar",
+      "witnessId": "proofkit.typescript-public-api.fail-closed-source-grammar",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/publicapi/public_api_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-PACKAGE-003",
       "scenarioId": "proofkit.package-boundary.outside-consumer-artifact",
       "witnessId": "proofkit.package-artifact.outside-consumer",
@@ -746,6 +772,32 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "scenarioId": "proofkit.package-boundary.staged-and-worktree-source-hygiene",
+      "witnessId": "proofkit.source-hygiene.tracked-language-closure",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/source_hygiene_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "scenarioId": "proofkit.package-boundary.merge-critical-runtime-preconditions",
+      "witnessId": "proofkit.ci.merge-critical-runtime-preconditions",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_package_gate_oracle_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-PACKAGE-006",
       "scenarioId": "proofkit.package-boundary.python-wheel-candidate",
       "witnessId": "proofkit.python-package.boundary",
@@ -757,6 +809,19 @@
       ],
       "environmentClasses": [
         "local-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-wrapper-posix-lifecycle",
+      "witnessId": "proofkit.python-package.posix-exec-lifecycle",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/exec_lifecycle_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
       ]
     },
     {
@@ -838,11 +903,37 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-003",
+      "scenarioId": "proofkit.spec-proof-core.self-hosting-witness-command-identity",
+      "witnessId": "proofkit.witness-plan.self-hosting-command-identity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbinding/projections_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-004",
       "scenarioId": "proofkit.spec-proof-core.selective-planning-and-evidence",
       "witnessId": "proofkit.selective-proof.boundary",
       "witnessKind": "contract",
       "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-004",
+      "scenarioId": "proofkit.spec-proof-core.changed-path-agent-reference-closure",
+      "witnessId": "proofkit.changed-path-set.agent-reference-closure",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/changedpathset/changedpathset_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -869,6 +960,19 @@
       "witnessId": "proofkit.agent-route-envelope.boundary",
       "witnessKind": "contract",
       "witnessPath": "internal/command/agentroute/agentroute_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-reference-closure",
+      "witnessId": "proofkit.agent-envelope.reference-closure",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/agentenvelope/agentenvelope_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -1476,6 +1580,19 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.cli-output-schema-evolution",
+      "witnessId": "proofkit.cli-contract.output-schema-evolution",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/app_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-QUALITY-005",
       "scenarioId": "proofkit.supply-chain-quality.codeql-workflow",
       "witnessId": "proofkit.codeql.workflow-source",
@@ -1531,6 +1648,21 @@
         "local-go",
         "local-go-python",
         "local-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "scenarioId": "proofkit.supply-chain-quality.ci-complete-go-package-set",
+      "witnessId": "proofkit.ci.complete-go-package-set-oracle",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/validate-self-hosting-receipts_test.go",
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-gate"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -1636,6 +1768,19 @@
       "witnessId": "proofkit.release-platform.owner-targets",
       "witnessKind": "contract",
       "witnessPath": "internal/kernel/releaseplatform/releaseplatform_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-016",
+      "scenarioId": "proofkit.supply-chain-quality.release-platform-self-hosting-binary",
+      "witnessId": "proofkit.self-hosting.release-platform-binary-projection",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/validate-self-hosting-receipts_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],

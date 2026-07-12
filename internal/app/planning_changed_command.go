@@ -15,5 +15,5 @@ func runChangedPathSetPlanning(input any, options planningArgs, stdout io.Writer
 	if options.agentEnvelope {
 		return writeJSON(changedpathset.AgentEnvelope(result), result.ExitCode, nil, stdout, stderr)
 	}
-	return writeJSON(result.Report.JSONValue(), result.ExitCode, nil, stdout, stderr)
+	return writeJSON(result.JSONValue(), result.ExitCode, nil, stdout, stderr)
 }

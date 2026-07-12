@@ -19,7 +19,11 @@ var (
 func CollectExports(source string) ([]string, []string, error) {
 	runtimeExports := map[string]struct{}{}
 	typeExports := map[string]struct{}{}
-	for _, statement := range exportStatements(maskTypeScriptNonCode(source)) {
+	statements, err := exportStatements(source)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, statement := range statements {
 		if strings.HasPrefix(statement, "export *") {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use export *")
 		}
@@ -30,11 +34,15 @@ func CollectExports(source string) ([]string, []string, error) {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
 		}
 		if match := typeExportPattern.FindStringSubmatch(statement); match != nil {
-			addTypeClauseExports(match[1], typeExports)
+			if err := addTypeClauseExports(match[1], typeExports); err != nil {
+				return nil, nil, err
+			}
 			continue
 		}
 		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
-			addNamedClauseExports(match[1], runtimeExports, typeExports)
+			if err := addNamedClauseExports(match[1], runtimeExports, typeExports); err != nil {
+				return nil, nil, err
+			}
 			continue
 		}
 		if match := runtimeDeclPattern.FindStringSubmatch(statement); match != nil {
@@ -60,133 +68,262 @@ func CollectExports(source string) ([]string, []string, error) {
 	return sortedSet(runtimeExports), sortedSet(typeExports), nil
 }
 
-func maskTypeScriptNonCode(source string) string {
-	const (
-		code = iota
-		lineComment
-		blockComment
-		singleQuoted
-		doubleQuoted
-		templateQuoted
-	)
-	runes := []rune(source)
-	state := code
+type typeScriptLexicalState uint8
+
+const (
+	typeScriptCode typeScriptLexicalState = iota
+	typeScriptLineComment
+	typeScriptBlockComment
+	typeScriptSingleQuoted
+	typeScriptDoubleQuoted
+	typeScriptTemplateQuoted
+)
+
+type typeScriptLexicalScan struct {
+	masked                string
+	topLevelExportOffsets []int
+}
+
+func exportStatements(source string) ([]string, error) {
+	scan, err := scanTypeScriptSource(source)
+	if err != nil {
+		return nil, err
+	}
+	statements := make([]string, 0, len(scan.topLevelExportOffsets))
+	for index, start := range scan.topLevelExportOffsets {
+		limit := len(source)
+		if index+1 < len(scan.topLevelExportOffsets) {
+			limit = scan.topLevelExportOffsets[index+1]
+		}
+		end := exportStatementEnd(scan.masked, start, limit)
+		statement := strings.Join(strings.Fields(scan.masked[start:end]), " ")
+		if statement != "" {
+			statements = append(statements, statement)
+		}
+	}
+	return statements, nil
+}
+
+func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
+	masked := []byte(source)
+	starts := make([]int, 0)
+	state := typeScriptCode
 	escaped := false
-	maskQuotedContent := false
-	for index := 0; index < len(runes); index++ {
-		current := runes[index]
-		next := rune(0)
-		if index+1 < len(runes) {
-			next = runes[index+1]
+	braceDepth := 0
+	bracketDepth := 0
+	parenDepth := 0
+	for index := 0; index < len(source); index++ {
+		current := source[index]
+		next := byte(0)
+		if index+1 < len(source) {
+			next = source[index+1]
 		}
 		switch state {
-		case code:
-			switch {
-			case current == '/' && next == '/':
-				runes[index], runes[index+1] = ' ', ' '
-				index++
-				state = lineComment
-			case current == '/' && next == '*':
-				runes[index], runes[index+1] = ' ', ' '
-				index++
-				state = blockComment
-			case current == '\'':
-				maskQuotedContent = false
-				state = singleQuoted
-			case current == '"':
-				maskQuotedContent = false
-				state = doubleQuoted
-			case current == '`':
-				runes[index] = ' '
-				state = templateQuoted
-			}
-		case lineComment:
-			if current == '\n' {
-				state = code
-			} else {
-				runes[index] = ' '
-			}
-		case blockComment:
-			if current == '*' && next == '/' {
-				runes[index], runes[index+1] = ' ', ' '
-				index++
-				state = code
-			} else if current != '\n' {
-				runes[index] = ' '
-			}
-		case singleQuoted, doubleQuoted, templateQuoted:
-			if current == '\n' && state != templateQuoted {
-				if escaped {
-					escaped = false
-					maskQuotedContent = true
-					continue
-				}
-				state = code
+		case typeScriptLineComment:
+			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
+				state = typeScriptCode
+				index += width - 1
 				continue
 			}
-			closing := rune('\'')
-			if state == doubleQuoted {
-				closing = '"'
-			} else if state == templateQuoted {
-				closing = '`'
+			if current == '\n' || current == '\r' {
+				state = typeScriptCode
+			} else {
+				masked[index] = ' '
 			}
-			if current != '\n' && (state == templateQuoted || maskQuotedContent) {
-				runes[index] = ' '
+			continue
+		case typeScriptBlockComment:
+			if current == '*' && next == '/' {
+				masked[index], masked[index+1] = ' ', ' '
+				state = typeScriptCode
+				index++
+			} else if current != '\n' {
+				masked[index] = ' '
+			}
+			continue
+		case typeScriptSingleQuoted, typeScriptDoubleQuoted:
+			closing := byte('\'')
+			if state == typeScriptDoubleQuoted {
+				closing = '"'
+			}
+			unicodeLineWidth := unicodeLineTerminatorWidth(source, index)
+			if (current == '\n' || current == '\r' || unicodeLineWidth > 0) && !escaped {
+				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("quoted strings must terminate before an unescaped newline")
+			}
+			if escaped {
+				if unicodeLineWidth > 0 {
+					escaped = false
+					index += unicodeLineWidth - 1
+					continue
+				}
+				if current == '\r' && next == '\n' {
+					escaped = false
+					index++
+					continue
+				}
+				if current != '\n' && current != '\r' {
+					masked[index] = ' '
+				}
+				escaped = false
+			} else if current == '\\' {
+				masked[index] = ' '
+				escaped = true
+			} else if current == closing {
+				state = typeScriptCode
+			} else if current != '\n' {
+				masked[index] = ' '
+			}
+			continue
+		case typeScriptTemplateQuoted:
+			if current != '\n' {
+				masked[index] = ' '
 			}
 			if escaped {
 				escaped = false
 			} else if current == '\\' {
 				escaped = true
-			} else if current == closing {
-				state = code
-				maskQuotedContent = false
-			}
-		}
-	}
-	return string(runes)
-}
-
-func exportStatements(source string) []string {
-	statements := []string{}
-	pending := []string{}
-	for _, rawLine := range strings.Split(source, "\n") {
-		line := strings.TrimSpace(rawLine)
-		if len(pending) > 0 {
-			pending = append(pending, line)
-			if strings.Contains(line, ";") {
-				statements = append(statements, strings.Join(pending, " "))
-				pending = nil
+			} else if current == '$' && next == '{' {
+				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("template interpolation is not admitted")
+			} else if current == '`' {
+				state = typeScriptCode
 			}
 			continue
 		}
-		if !strings.HasPrefix(line, "export ") && line != "export" {
-			continue
+		if current >= 0x80 {
+			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("code tokens must use direct ASCII identifiers")
 		}
-		if startsMultilineReexport(line) && !strings.Contains(line, ";") {
-			pending = append(pending, line)
+		switch {
+		case current == '/' && next == '/':
+			masked[index], masked[index+1] = ' ', ' '
+			state = typeScriptLineComment
+			index++
 			continue
+		case current == '/' && next == '*':
+			masked[index], masked[index+1] = ' ', ' '
+			state = typeScriptBlockComment
+			index++
+			continue
+		case current == '/':
+			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("slash tokens outside comments are not admitted")
+		case current == '\'':
+			state = typeScriptSingleQuoted
+			continue
+		case current == '"':
+			state = typeScriptDoubleQuoted
+			continue
+		case current == '`':
+			masked[index] = ' '
+			state = typeScriptTemplateQuoted
+			continue
+		case current == '\\':
+			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("escaped code identifiers are not admitted")
 		}
-		statements = append(statements, line)
+		if braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 && strings.HasPrefix(source[index:], "export") {
+			beforeOK := index == 0 || !isASCIITypeScriptIdentifierByte(source[index-1]) && source[index-1] != '.'
+			after := index + len("export")
+			afterOK := after == len(source) || !isASCIITypeScriptIdentifierByte(source[after])
+			if beforeOK && afterOK {
+				starts = append(starts, index)
+			}
+		}
+		switch current {
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth == 0 {
+				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("closing brace has no matching opener")
+			}
+			braceDepth--
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth == 0 {
+				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("closing bracket has no matching opener")
+			}
+			bracketDepth--
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth == 0 {
+				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("closing parenthesis has no matching opener")
+			}
+			parenDepth--
+		}
 	}
-	if len(pending) > 0 {
-		statements = append(statements, strings.Join(pending, " "))
+	switch state {
+	case typeScriptCode, typeScriptLineComment:
+	case typeScriptBlockComment:
+		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("block comments must terminate")
+	case typeScriptSingleQuoted, typeScriptDoubleQuoted:
+		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("quoted strings must terminate")
+	case typeScriptTemplateQuoted:
+		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("template literals must terminate")
 	}
-	return statements
+	if braceDepth != 0 || bracketDepth != 0 || parenDepth != 0 {
+		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("delimiters must be balanced")
+	}
+	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts}, nil
 }
 
-func startsMultilineReexport(line string) bool {
-	return strings.HasPrefix(line, "export {") || strings.HasPrefix(line, "export type {")
+func exportStatementEnd(masked string, start int, limit int) int {
+	parenDepth := 0
+	bracketDepth := 0
+	braceDepth := 0
+	for index := start; index < limit; index++ {
+		switch masked[index] {
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case ';':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
+				return index + 1
+			}
+		}
+	}
+	return limit
 }
 
-func addTypeClauseExports(clause string, target map[string]struct{}) {
-	addClauseExports(clause, nil, target, true)
+func isASCIITypeScriptIdentifierByte(value byte) bool {
+	return value == '_' || value == '$' || value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
 }
 
-func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) {
-	addClauseExports(clause, runtimeTarget, typeTarget, false)
+func unicodeLineTerminatorWidth(source string, index int) int {
+	if index+2 >= len(source) || source[index] != 0xe2 || source[index+1] != 0x80 {
+		return 0
+	}
+	if source[index+2] == 0xa8 || source[index+2] == 0xa9 {
+		return 3
+	}
+	return 0
 }
 
-func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) {
+func unsupportedTypeScriptSourceGrammar(reason string) error {
+	return fmt.Errorf("unsupported TypeScript public API source grammar: %s", reason)
+}
+
+func addTypeClauseExports(clause string, target map[string]struct{}) error {
+	return addClauseExports(clause, nil, target, true)
+}
+
+func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) error {
+	return addClauseExports(clause, runtimeTarget, typeTarget, false)
+}
+
+func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) error {
 	body := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(clause), "{"), "}")
 	for _, rawPart := range strings.Split(body, ",") {
 		part := strings.TrimSpace(rawPart)
@@ -202,12 +339,19 @@ func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarg
 		if match := exportClauseNameRegex.FindStringSubmatch(part); match != nil {
 			name = match[1]
 		}
+		if name == "default" {
+			return fmt.Errorf("TypeScript public API entrypoints must not export a default alias")
+		}
+		if !identifierRegex.MatchString(name) {
+			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
+		}
 		if typeOnly {
 			typeTarget[name] = struct{}{}
 			continue
 		}
 		runtimeTarget[name] = struct{}{}
 	}
+	return nil
 }
 
 func isInlineTypeOnlyReexport(part string) bool {
@@ -246,52 +390,8 @@ func splitTopLevelComma(value string) ([]string, error) {
 	parenDepth := 0
 	bracketDepth := 0
 	braceDepth := 0
-	angleDepth := 0
-	var quote rune
-	escaped := false
-	inRegex := false
-	inRegexClass := false
-	inInitializer := false
 	for index, char := range value {
-		if inRegex {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if char == '\\' {
-				escaped = true
-				continue
-			}
-			if char == '[' {
-				inRegexClass = true
-				continue
-			}
-			if char == ']' && inRegexClass {
-				inRegexClass = false
-				continue
-			}
-			if char == '/' && !inRegexClass {
-				inRegex = false
-			}
-			continue
-		}
-		if quote != 0 {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if char == '\\' {
-				escaped = true
-				continue
-			}
-			if char == quote {
-				quote = 0
-			}
-			continue
-		}
 		switch char {
-		case '\'', '"', '`':
-			quote = char
 		case '(':
 			parenDepth++
 		case ')':
@@ -310,102 +410,19 @@ func splitTopLevelComma(value string) ([]string, error) {
 			if braceDepth > 0 {
 				braceDepth--
 			}
-		case '=':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0 {
-				inInitializer = true
-			}
-		case '<':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && (!inInitializer || looksLikeTypeArgumentStart(value, index)) {
-				angleDepth++
-			}
-		case '>':
-			if angleDepth > 0 {
-				angleDepth--
-			}
-		case '/':
-			if inInitializer && looksLikeRegexLiteralStart(value, index) {
-				inRegex = true
-				inRegexClass = false
+		case '<', '>':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
+				if char != '>' || index == 0 || value[index-1] != '=' {
+					return nil, unsupportedTypeScriptSourceGrammar("top-level angle-bracket syntax in variable exports is not admitted")
+				}
 			}
 		case ',':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 && angleDepth == 0 {
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
 				parts = append(parts, value[start:index])
 				start = index + len(string(char))
-				inInitializer = false
 			}
 		}
-	}
-	if quote != 0 || inRegex || inRegexClass {
-		return nil, fmt.Errorf("TypeScript public API variable exports must not contain unterminated literals")
 	}
 	parts = append(parts, value[start:])
 	return parts, nil
-}
-
-func looksLikeRegexLiteralStart(value string, start int) bool {
-	for index := start - 1; index >= 0; index-- {
-		switch value[index] {
-		case ' ', '\t', '\n', '\r':
-			continue
-		case '=', '(', '[', '{', ',', ':', ';', '!', '&', '|', '?':
-			return true
-		case '>':
-			return index > 0 && value[index-1] == '='
-		default:
-			return false
-		}
-	}
-	return true
-}
-
-func looksLikeTypeArgumentStart(value string, start int) bool {
-	depth := 0
-	var quote rune
-	escaped := false
-	for index, char := range value[start:] {
-		absolute := start + index
-		if quote != 0 {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if char == '\\' {
-				escaped = true
-				continue
-			}
-			if char == quote {
-				quote = 0
-			}
-			continue
-		}
-		switch char {
-		case '\'', '"', '`':
-			quote = char
-		case '<':
-			depth++
-		case '>':
-			if depth == 0 {
-				return false
-			}
-			depth--
-			if depth == 0 {
-				next := nextNonSpaceRune(value[absolute+len(string(char)):])
-				return next == '(' || next == '[' || next == '.' || next == ',' || next == ';'
-			}
-		case ';':
-			if depth == 0 {
-				return false
-			}
-		}
-	}
-	return false
-}
-
-func nextNonSpaceRune(value string) rune {
-	for _, char := range value {
-		if char != ' ' && char != '\t' && char != '\n' && char != '\r' {
-			return char
-		}
-	}
-	return 0
 }
