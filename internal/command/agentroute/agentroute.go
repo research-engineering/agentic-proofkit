@@ -445,6 +445,44 @@ func InputContract() map[string]any {
 	}
 }
 
+func OutputContract() map[string]any {
+	return map[string]any{
+		"contractId":    "proofkit.agent-route.output.v2",
+		"schemaVersion": 2,
+		"authority":     "deterministic route report derived from admitted agent-route input",
+		"requiredFields": []any{
+			"guidanceSlice",
+			"reportId",
+			"reportKind",
+			"schemaVersion",
+			"selectedRouteFamily",
+			"state",
+		},
+		"fields": map[string]any{
+			"schemaVersion": map[string]any{"value": 2},
+			"selectedRouteFamily": map[string]any{
+				"enum": routeFamilyContractValues(),
+			},
+			"guidanceSlice": map[string]any{
+				"requiredFields":  []any{"routeFamily"},
+				"routeFamilyRule": "must equal selectedRouteFamily",
+			},
+		},
+		"changesFromV1": []any{
+			"selectedFamily is replaced by selectedRouteFamily",
+			"guidanceSlice.family is replaced by guidanceSlice.routeFamily",
+		},
+	}
+}
+
+func routeFamilyContractValues() []any {
+	values := map[string]struct{}{string(routeFamilyUnknown): {}}
+	for _, spec := range routeSpecs {
+		values[string(spec.RouteFamily)] = struct{}{}
+	}
+	return sortedKeys(values)
+}
+
 func admitInput(raw any) (routeInput, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -724,7 +762,7 @@ func buildUnknownGoal(input routeInput) map[string]any {
 		"reportId":            input.RouteID,
 		"reportKind":          "proofkit.agent-route",
 		"requiredInputs":      []any{},
-		"schemaVersion":       1,
+		"schemaVersion":       2,
 		"selectedRouteFamily": string(routeFamilyUnknown),
 		"state":               "blocked_unknown_goal",
 		"stopConditions":      []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
@@ -758,7 +796,7 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		"reportId":            input.RouteID,
 		"reportKind":          "proofkit.agent-route",
 		"requiredInputs":      requiredInputReports(missing),
-		"schemaVersion":       1,
+		"schemaVersion":       2,
 		"selectedRouteFamily": string(spec.RouteFamily),
 		"state":               state,
 		"stopConditions":      toAnySlice(spec.StopConditions),

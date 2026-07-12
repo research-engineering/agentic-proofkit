@@ -51,7 +51,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-004",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Public CLI ABI has a small golden corpus and canonical ABI hash covering command topology, exit code, stdout and stderr channel discipline, JSON parseability, stable public diagnostics, and descriptor/contract/help parity without making private descriptors a public API.",
+      "invariant": "Public CLI ABI has a small golden corpus and canonical ABI hash covering command topology, exit code, stdout and stderr channel discipline, JSON parseability, stable public diagnostics, explicit output schema evolution for breaking JSON field changes, and descriptor/contract/help parity without making private descriptors a public API.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

@@ -107,6 +107,33 @@ func TestSelfCheckRejectsInputPointer(t *testing.T) {
 	}
 }
 
+func TestAgentRouteCLIOutputUsesVersionedRouteFamilyFields(t *testing.T) {
+	input := `{"schemaVersion":1,"routeId":"consumer.route.requirement_source","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/module/requirements.v1.json"}]}`
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(t.Context(), []string{"agent-route", "--input", "-"}, strings.NewReader(input), &stdout, &stderr)
+	if status != 0 || stderr.Len() != 0 {
+		t.Fatalf("agent-route failed status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+	}
+	var report map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
+		t.Fatalf("stdout must be a JSON route report: %v", err)
+	}
+	if report["schemaVersion"] != float64(2) || report["selectedRouteFamily"] != "requirement_source" {
+		t.Fatalf("agent-route output does not satisfy schema v2 route-family contract: %#v", report)
+	}
+	if _, legacy := report["selectedFamily"]; legacy {
+		t.Fatalf("agent-route schema v2 retained selectedFamily: %#v", report)
+	}
+	guidance := report["guidanceSlice"].(map[string]any)
+	if guidance["routeFamily"] != report["selectedRouteFamily"] {
+		t.Fatalf("guidance routeFamily=%v selectedRouteFamily=%v", guidance["routeFamily"], report["selectedRouteFamily"])
+	}
+	if _, legacy := guidance["family"]; legacy {
+		t.Fatalf("agent-route schema v2 retained guidanceSlice.family: %#v", guidance)
+	}
+}
+
 func TestAgentRouteAgentEnvelopeCLIABI(t *testing.T) {
 	input := `{"schemaVersion":1,"routeId":"consumer.route.requirement_source","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/module/requirements.v1.json"}],"nonClaims":["Caller route fixture is not merge proof."]}`
 	var stdout bytes.Buffer

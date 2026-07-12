@@ -139,6 +139,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 			"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
 			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
 			"TypeScript public API verification does not parse JSX or admit TSX source files.",
+			"TypeScript public API verification admits a documented fail-closed export grammar subset; it does not parse unrestricted TypeScript.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},
 	}, exitCode, nil
@@ -402,11 +403,18 @@ func safeTypeScriptSourcePath(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	switch strings.ToLower(filepath.Ext(filepath.FromSlash(value))) {
+	if err := requireTypeScriptSourceExtension(value, context); err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func requireTypeScriptSourceExtension(path string, context string) error {
+	switch strings.ToLower(filepath.Ext(filepath.FromSlash(path))) {
 	case ".ts", ".mts", ".cts":
-		return value, nil
+		return nil
 	default:
-		return "", fmt.Errorf("%s must identify a non-JSX TypeScript source (.ts, .mts, or .cts)", context)
+		return fmt.Errorf("%s must identify a non-JSX TypeScript source (.ts, .mts, or .cts)", context)
 	}
 }
 
@@ -418,6 +426,9 @@ func resolvePackageSource(repoRoot string, packageDir string, sourcePath string,
 	relative, err := filepath.Rel(packageDir, resolved)
 	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
 		return "", fmt.Errorf("%s must resolve under its referenced package manifest directory", context)
+	}
+	if err := requireTypeScriptSourceExtension(resolved, context+" canonical target"); err != nil {
+		return "", err
 	}
 	return resolved, nil
 }

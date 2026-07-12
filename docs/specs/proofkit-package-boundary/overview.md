@@ -14,10 +14,10 @@ denial, and package artifact behavior only.
   generated source artifacts, and policy-admission results from explicit
   caller-owned JSON, declared no-input command parameters, or declared explicit
   scanner scope classes. Explicit scanners consume only caller-named bounded
-  files rather than guessing conventional layouts; no command executes native
-  witnesses, scans implicit repository state, decides proof freshness, or
-  accepts broad caller-supplied phrase suppressors that can hide readiness
-  overclaims.
+  canonical files under documented fail-closed grammars rather than guessing
+  layouts or silently accepting unsupported syntax; no command executes native
+  witnesses, scans implicit repository state, decides proof freshness, or accepts
+  broad caller-supplied phrase suppressors that can hide readiness overclaims.
 - `REQ-PROOFKIT-PACKAGE-003`: the root package remains installable and
   executable by an outside consumer on the current native platform without
   claiming registry publication.
@@ -27,11 +27,13 @@ denial, and package artifact behavior only.
 - `REQ-PROOFKIT-PACKAGE-005`: tracked source hygiene covers each admitted text
   language in staged blobs and the current worktree; Go formatting, static
   analysis, test, package, and vulnerability gates remain the native
-  merge-critical quality floor for the current Proofkit source tree.
+  merge-critical quality floor and explicitly provision every runtime required
+  by a merge-critical oracle.
 - `REQ-PROOFKIT-PACKAGE-006`: Python/uv distribution is a platform wheel
   wrapper over the same Go CLI, with wheel-safe package metadata, wheel tags,
-  embedded binary identity, local install smoke proof, and explicit non-claims
-  until PyPI publication.
+  embedded binary identity, local install smoke proof, POSIX exec
+  process-identity and signal preservation, and explicit non-claims until PyPI
+  publication.
 - `REQ-PROOFKIT-PACKAGE-007`: package-public Markdown records release-channel
   state only and must not embed exact per-version provider facts that are owned
   by immutable registry, release, and manifest artifacts.

@@ -2,11 +2,12 @@ package changedpathset
 
 import (
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestAgentEnvelopeContextPointersResolveAgainstCanonicalOutput(t *testing.T) {
@@ -22,16 +23,46 @@ func TestAgentEnvelopeContextPointersResolveAgainstCanonicalOutput(t *testing.T)
 	}
 	output := result.JSONValue()
 	envelope := AgentEnvelope(result)
-	for _, value := range envelope["contextRefs"].([]any) {
-		ref := value.(map[string]any)
-		selector, _ := ref["selector"].(string)
-		if !strings.HasPrefix(selector, "/") {
-			continue
+	contextRefs := envelope["contextRefs"].([]any)
+	checked, err := validateContextJSONPointers(output, contextRefs)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if checked == 0 {
+		t.Fatal("agent envelope exposed no JSON-pointer context refs")
+	}
+	invalidRefs := append([]any{}, contextRefs...)
+	invalid := map[string]any{}
+	for key, value := range contextRefs[0].(map[string]any) {
+		invalid[key] = value
+	}
+	invalid["ref"] = "/missing"
+	invalidRefs[0] = invalid
+	if _, err := validateContextJSONPointers(output, invalidRefs); err == nil {
+		t.Fatal("context-ref oracle accepted a selected missing pointer")
+	}
+}
+
+func validateContextJSONPointers(output any, contextRefs []any) (int, error) {
+	checked := 0
+	for _, value := range contextRefs {
+		ref, ok := value.(map[string]any)
+		if !ok {
+			return checked, fmt.Errorf("context ref is not an object: %T", value)
 		}
+		if kind := ref["kind"]; kind != "json-pointer" {
+			return checked, fmt.Errorf("context ref %v kind=%v, want json-pointer", ref["refId"], kind)
+		}
+		selector, ok := ref["ref"].(string)
+		if !ok || !strings.HasPrefix(selector, "/") {
+			return checked, fmt.Errorf("context ref %v has malformed JSON pointer %v", ref["refId"], ref["ref"])
+		}
+		checked++
 		if _, err := jsonpointer.Select(output, selector); err != nil {
-			t.Fatalf("context ref %s has dangling selector %s: %v", ref["refId"], selector, err)
+			return checked, fmt.Errorf("context ref %v has dangling selector %s: %w", ref["refId"], selector, err)
 		}
 	}
+	return checked, nil
 }
 
 func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {

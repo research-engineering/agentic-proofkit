@@ -18,7 +18,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const cliContractPublicABISHA256 = "9923feb596ae4334e24d728b6156df3dbc6ac3464ed0b593e924a86c4d934b84"
+const (
+	cliContractPublicABISHA256               = "9923feb596ae4334e24d728b6156df3dbc6ac3464ed0b593e924a86c4d934b84"
+	maxAggregateFileReadBytesForContractTest = 64 << 20
+	maxPackageManifestBytesForContractTest   = 256 << 10
+	maxSourceFileBytesForContractTest        = 8 << 20
+)
 
 func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	contract := readCLIContract(t)
@@ -937,12 +942,31 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"typeExports",
 	}, "TypeScript public API required fields")
 	pathAuthority := item["pathAuthority"].(string)
-	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") {
+	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") || !strings.Contains(pathAuthority, "canonical resolved source target") {
 		t.Fatalf("TypeScript public API path authority is incomplete: %q", pathAuthority)
+	}
+	if rule := item["exportConditionsRule"]; rule != "non-empty and sorted unique by condition" {
+		t.Fatalf("TypeScript public API export condition rule=%v", rule)
+	}
+	budgets := inputContract["resourceBudgets"].(map[string]any)
+	if budgets["maxSourceFileBytes"] != float64(maxSourceFileBytesForContractTest) ||
+		budgets["maxPackageManifestBytes"] != float64(maxPackageManifestBytesForContractTest) ||
+		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) {
+		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
+	}
+	grammar := inputContract["sourceGrammar"].(map[string]any)
+	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v1" || grammar["mode"] != "fail_closed" {
+		t.Fatalf("TypeScript public API source grammar is not fail-closed: %#v", grammar)
+	}
+	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax"} {
+		if !strings.Contains(rejected, required) {
+			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
+		}
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }
@@ -1271,10 +1295,18 @@ func TestAgentRouteInputContractMatchesAdmission(t *testing.T) {
 	if route.InputContract == nil {
 		t.Fatal("agent-route must expose inputContract")
 	}
+	if route.OutputContract == nil {
+		t.Fatal("agent-route must expose its versioned output contract")
+	}
 	got := canonicalJSONValue(t, route.InputContract)
 	want := canonicalJSONValue(t, agentroute.InputContract())
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("agent-route input contract drift\ngot:  %#v\nwant: %#v", got, want)
+	}
+	gotOutput := canonicalJSONValue(t, route.OutputContract)
+	wantOutput := canonicalJSONValue(t, agentroute.OutputContract())
+	if !reflect.DeepEqual(gotOutput, wantOutput) {
+		t.Fatalf("agent-route output contract drift\ngot:  %#v\nwant: %#v", gotOutput, wantOutput)
 	}
 }
 

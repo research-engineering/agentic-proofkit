@@ -22,7 +22,8 @@ vulnerability absence, or consumer rollout safety by itself.
   fuzzing side-effecting CLI or filesystem flows.
 - `REQ-PROOFKIT-QUALITY-004`: public CLI ABI has a small golden corpus and
   canonical ABI hash covering command topology, exit code, stdout/stderr
-  channel discipline, JSON parseability, stable public diagnostics, and
+  channel discipline, JSON parseability, stable public diagnostics, explicit
+  output schema evolution for breaking JSON field changes, and
   descriptor/contract/help parity without making private descriptors public API.
 - `REQ-PROOFKIT-QUALITY-005`: CodeQL workflow source is admitted as an
   independent semantic security analysis signal for Go source without replacing

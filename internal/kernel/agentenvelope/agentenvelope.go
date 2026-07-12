@@ -92,8 +92,13 @@ func Build(input Input) map[string]any {
 		*records, removed = pruneDanglingLocalReferences(*records, originalTargets, retainedTargets)
 		removedReferenceCount += removed
 	}
+	referenceClosurePreserved := localReferenceClosurePreserved(originalTargets, retainedTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
 	if removedReferenceCount > 0 {
 		bounds["prunedLocalReferenceCount"] = removedReferenceCount
+		truncated = true
+	}
+	if !referenceClosurePreserved {
+		bounds["referenceClosurePreserved"] = false
 		truncated = true
 	}
 	sourceReport := projectSourceReport(sanitizeMap(input.SourceReport))
@@ -139,7 +144,7 @@ func Build(input Input) map[string]any {
 		"nonClaim":                   "Compatibility cost contracts do not prove tokenizer-specific cost, proof completeness, native witness execution, receipt freshness, or merge satisfaction.",
 		"omittedEdgeCount":           omittedCount,
 		"omittedEdgesCounted":        true,
-		"referenceClosurePreserved":  true,
+		"referenceClosurePreserved":  referenceClosurePreserved,
 		"prunedLocalReferenceCount":  removedReferenceCount,
 		"receiptRecordCount":         len(receiptRefs),
 		"routeQuestionCount":         len(routeQuestions),
@@ -412,12 +417,13 @@ func pruneDanglingLocalReferences(values []map[string]any, original localReferen
 	for index, value := range values {
 		cloned := copyMap(value)
 		for _, field := range []struct {
-			key      string
-			original map[string]struct{}
-			retained map[string]struct{}
+			key             string
+			original        map[string]struct{}
+			retained        map[string]struct{}
+			requireRetained bool
 		}{
 			{key: "evidenceRefs", original: original.all, retained: retained.all},
-			{key: "commandIds", original: original.commands, retained: retained.commands},
+			{key: "commandIds", original: original.commands, retained: retained.commands, requireRetained: true},
 		} {
 			refs, ok := cloned[field.key]
 			if !ok {
@@ -425,6 +431,14 @@ func pruneDanglingLocalReferences(values []map[string]any, original localReferen
 			}
 			kept := []any{}
 			for _, ref := range stringReferences(refs) {
+				if field.requireRetained {
+					if _, present := field.retained[ref]; !present {
+						removed++
+						continue
+					}
+					kept = append(kept, ref)
+					continue
+				}
 				if _, local := field.original[ref]; local {
 					if _, present := field.retained[ref]; !present {
 						removed++
@@ -438,6 +452,27 @@ func pruneDanglingLocalReferences(values []map[string]any, original localReferen
 		result[index] = cloned
 	}
 	return result, removed
+}
+
+func localReferenceClosurePreserved(original localReferenceTargets, retained localReferenceTargets, groups ...[]map[string]any) bool {
+	for _, values := range groups {
+		for _, value := range values {
+			for _, ref := range stringReferences(value["commandIds"]) {
+				if _, ok := retained.commands[ref]; !ok {
+					return false
+				}
+			}
+			for _, ref := range stringReferences(value["evidenceRefs"]) {
+				if _, wasLocal := original.all[ref]; !wasLocal {
+					continue
+				}
+				if _, ok := retained.all[ref]; !ok {
+					return false
+				}
+			}
+		}
+	}
+	return true
 }
 
 func idSet(values []map[string]any, key string) map[string]struct{} {

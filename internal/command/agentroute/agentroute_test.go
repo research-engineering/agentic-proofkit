@@ -34,8 +34,14 @@ func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
 	if state := report["state"]; state != "routed" {
 		t.Fatalf("state = %v, want routed", state)
 	}
+	if schemaVersion := report["schemaVersion"]; schemaVersion != 2 {
+		t.Fatalf("schemaVersion = %v, want 2 for selectedRouteFamily output", schemaVersion)
+	}
 	if family := report["selectedRouteFamily"]; family != "requirement_source" {
 		t.Fatalf("selectedRouteFamily = %v, want requirement_source", family)
+	}
+	if _, legacy := report["selectedFamily"]; legacy {
+		t.Fatalf("schema v2 report retained legacy selectedFamily alias: %#v", report)
 	}
 	commands := report["nextCommands"].([]any)
 	if len(commands) != 1 {
@@ -68,6 +74,9 @@ func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
 	}
 	if state := blocked["state"]; state != "blocked_unknown_goal" {
 		t.Fatalf("unknown state = %v, want blocked_unknown_goal", state)
+	}
+	if schemaVersion := blocked["schemaVersion"]; schemaVersion != 2 {
+		t.Fatalf("unknown schemaVersion = %v, want 2", schemaVersion)
 	}
 	if commands := blocked["nextCommands"].([]any); len(commands) != 0 {
 		t.Fatalf("unknown nextCommands length = %d, want 0", len(commands))

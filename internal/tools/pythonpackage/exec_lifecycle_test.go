@@ -19,7 +19,7 @@ func TestPOSIXWrapperExecPreservesProcessIdentityAndSignals(t *testing.T) {
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil {
-		t.Skipf("python3 unavailable: %v", err)
+		t.Fatalf("python3 is required for the POSIX wrapper lifecycle oracle: %v", err)
 	}
 	root := t.TempDir()
 	packageRoot := filepath.Join(root, "agentic_proofkit")

@@ -147,6 +147,29 @@ func TestBuildPrunesReferencesToTruncatedLocalTargets(t *testing.T) {
 	}
 }
 
+func TestBuildPrunesCommandIDsWithoutRetainedCommands(t *testing.T) {
+	envelope := Build(Input{
+		EnvelopeID: "proofkit.test.envelope",
+		SourceReport: map[string]any{
+			"reportId":   "proofkit.test.report",
+			"reportKind": "proofkit.test",
+			"state":      "passed",
+		},
+		ActionPlan: []map[string]any{{
+			"stepId":     "proofkit.step",
+			"commandIds": []any{"proofkit.command.missing"},
+		}},
+	})
+	action := envelope["actionPlan"].([]any)[0].(map[string]any)
+	if refs := action["commandIds"].([]any); len(refs) != 0 {
+		t.Fatalf("action plan retained command IDs without command records: %#v", refs)
+	}
+	cost := envelope["costContract"].(map[string]any)
+	if cost["referenceClosurePreserved"] != true || cost["prunedLocalReferenceCount"] != 1 {
+		t.Fatalf("cost contract does not prove repaired command closure: %#v", cost)
+	}
+}
+
 func TestBuildPreservesSemanticOmittedCountWhenOmissionRecordsAreCapped(t *testing.T) {
 	envelope := Build(Input{
 		EnvelopeID: "proofkit.test.envelope",

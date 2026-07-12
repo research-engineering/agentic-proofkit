@@ -158,6 +158,30 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsSymlinkEscapedSource(t *testing.
 	}
 }
 
+func TestVerifyTypeScriptPackagePublicAPIRejectsSymlinkToTSX(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	tsxPath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.tsx")
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(tsxPath, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(sourcePath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(tsxPath, sourcePath); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+
+	_, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source") {
+		t.Fatalf("Verify() exitCode=%d error=%v, want canonical TSX target rejection", exitCode, err)
+	}
+}
+
 func TestVerifyTypeScriptPackagePublicAPIRejectsAmbiguousPackageManifest(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -248,28 +272,25 @@ func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 
 func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testing.T) {
 	source := strings.Join([]string{
-		"export const a = {x: 1, b: 2}, c: Array<string> = [\"x\", \"y\"];",
-		"export let d = makeValue<{left: string, right: string}>();",
-		"export const genericCall = make<string, number>();",
-		"export const directMatcher = /,/, matcherWithClass = /[a,b]/;",
-		"export const isSmall = limit < 10, fallback = 1;",
+		"export const a = {x: 1, b: 2}, c = [\"x\", \"y\"];",
+		"export let d = makeValue({left: \"x\", right: \"y\"});",
+		"export const ordinaryCall = make(\"x\", \"y\");",
+		"export const isSmall = (limit < 10), fallback = 1;",
 	}, "\n")
 
 	runtimeExports, typeExports, err := CollectExports(source)
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{"a", "c", "d", "directMatcher", "fallback", "genericCall", "isSmall", "matcherWithClass"})
+	assertStringSlice(t, runtimeExports, []string{"a", "c", "d", "fallback", "isSmall", "ordinaryCall"})
 	assertStringSlice(t, typeExports, []string{})
 }
 
-func TestCollectExportsAcceptsRegexLiteralReturnedByArrowInitializer(t *testing.T) {
-	runtimeExports, typeExports, err := CollectExports("export const matcher = () => /,/, next = 1;")
-	if err != nil {
-		t.Fatalf("collect arrow regex initializer exports: %v", err)
+func TestCollectExportsRejectsRegexLiteralReturnedByArrowInitializer(t *testing.T) {
+	_, _, err := CollectExports("export const matcher = () => /,/, next = 1;")
+	if err == nil || !strings.Contains(err.Error(), "slash tokens outside comments") {
+		t.Fatalf("CollectExports() error=%v, want fail-closed regex rejection", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{"matcher", "next"})
-	assertStringSlice(t, typeExports, []string{})
 }
 
 func TestCollectExportsFindsMultipleTopLevelExportsOnOneLine(t *testing.T) {
@@ -281,14 +302,68 @@ func TestCollectExportsFindsMultipleTopLevelExportsOnOneLine(t *testing.T) {
 	assertStringSlice(t, typeExports, []string{})
 }
 
+func TestCollectExportsRecognizesAllLineCommentTerminators(t *testing.T) {
+	for _, source := range []string{
+		"// comment terminated by CR\rexport const Public = 3;",
+		"// comment terminated by LS\u2028export const Public = 3;",
+		"// comment terminated by PS\u2029export const Public = 3;",
+	} {
+		runtimeExports, typeExports, err := CollectExports(source)
+		if err != nil {
+			t.Fatalf("CollectExports() error = %v", err)
+		}
+		assertStringSlice(t, runtimeExports, []string{"Public"})
+		assertStringSlice(t, typeExports, []string{})
+	}
+}
+
 func TestCollectExportsPreservesStatementOffsetsAcrossMaskedLiterals(t *testing.T) {
-	source := "export const FIRST = \"\u00e9; } export\"; export const SECOND = /[;}]/; export type Third = { value: string };"
+	source := "export const FIRST = \"\u00e9; } export\"; export const SECOND = `; } export`; export type Third = { value: string };"
 	runtimeExports, typeExports, err := CollectExports(source)
 	if err != nil {
 		t.Fatalf("CollectExports() error = %v", err)
 	}
 	assertStringSlice(t, runtimeExports, []string{"FIRST", "SECOND"})
 	assertStringSlice(t, typeExports, []string{"Third"})
+}
+
+func TestVerifyTypeScriptPackagePublicAPIFailsClosedOnAmbiguousSourceGrammar(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	if err := os.WriteFile(sourcePath, []byte("const ratio = 1 / /\\{/.test(\"{\") ? 1 : 2;\nexport const Public = 3;\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["runtimeExports"] = []any{}
+	entry["typeExports"] = []any{}
+
+	_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "unsupported TypeScript public API source grammar") {
+		t.Fatalf("Verify() exitCode=%d error=%v, want fail-closed grammar rejection", exitCode, err)
+	}
+}
+
+func TestCollectExportsRejectsLexicallyAmbiguousOrOutOfGrammarSources(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+	}{
+		{name: "division and regex", source: "const ratio = 1 / /\\{/.test(\"{\") ? 1 : 2; export const Public = 3;"},
+		{name: "unicode code identifier", source: "const \u03c0 = 1; export const Public = 3;"},
+		{name: "template interpolation", source: "const value = `prefix ${1}`; export const Public = 3;"},
+		{name: "escaped code identifier", source: "const \\u0061 = 1; export const Public = 3;"},
+		{name: "top-level angle syntax", source: "export const values: Array<string> = [];"},
+		{name: "unterminated block comment", source: "/* hidden export const Ghost = 1;"},
+		{name: "unbalanced delimiter", source: "if (true) { export const Nested = 1;"},
+	}
+	for _, item := range tests {
+		t.Run(item.name, func(t *testing.T) {
+			if _, _, err := CollectExports(item.source); err == nil || !strings.Contains(err.Error(), "unsupported TypeScript public API source grammar") {
+				t.Fatalf("CollectExports() error=%v, want fail-closed grammar rejection", err)
+			}
+		})
+	}
 }
 
 func TestCollectExportsRejectsNamedReexportAliasedAsDefault(t *testing.T) {

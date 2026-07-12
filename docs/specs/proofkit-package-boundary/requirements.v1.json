@@ -35,7 +35,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
       "ownerId": "proofkit.package-boundary",
-      "invariant": "The CLI builds deterministic reports, plans, generated source artifacts, and policy-admission results from explicit caller-owned JSON, declared no-input command parameters, or declared explicit scanner scope classes; explicit scanners consume only caller-named bounded files rather than guessing conventional layouts, and no command executes native witnesses, scans implicit repository state, decides proof freshness, or accepts broad caller-supplied phrase suppressors that can hide readiness overclaims.",
+      "invariant": "The CLI builds deterministic reports, plans, generated source artifacts, and policy-admission results from explicit caller-owned JSON, declared no-input command parameters, or declared explicit scanner scope classes; explicit scanners consume only caller-named bounded canonical files under documented fail-closed grammars rather than guessing layouts or silently accepting unsupported syntax, and no command executes native witnesses, scans implicit repository state, decides proof freshness, or accepts broad caller-supplied phrase suppressors that can hide readiness overclaims.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -116,7 +116,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-005",
       "ownerId": "proofkit.package-boundary",
-      "invariant": "Tracked source hygiene covers every admitted project text language in both staged blobs and the current worktree, while Go formatting, static analysis, vet, test, package artifact, and vulnerability gates remain the native merge-critical quality floor for the current Proofkit source tree.",
+      "invariant": "Tracked source hygiene covers every admitted project text language in both staged blobs and the current worktree, while Go formatting, static analysis, vet, test, package artifact, and vulnerability gates remain the native merge-critical quality floor and explicitly provision every runtime required by a merge-critical oracle.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -143,7 +143,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-006",
       "ownerId": "proofkit.package-boundary",
-      "invariant": "Python/uv distribution is a platform wheel wrapper over the same Go CLI, with wheel-safe package metadata, wheel tags, embedded binary identity, local install smoke proof, and explicit non-claims until PyPI publication.",
+      "invariant": "Python/uv distribution is a platform wheel wrapper over the same Go CLI, with wheel-safe package metadata, wheel tags, embedded binary identity, local install smoke proof, POSIX exec process-identity and signal preservation, and explicit non-claims until PyPI publication.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": [

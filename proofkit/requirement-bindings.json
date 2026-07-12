@@ -716,6 +716,19 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.typescript-fail-closed-source-grammar",
+      "witnessId": "proofkit.typescript-public-api.fail-closed-source-grammar",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/publicapi/public_api_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-PACKAGE-003",
       "scenarioId": "proofkit.package-boundary.outside-consumer-artifact",
       "witnessId": "proofkit.package-artifact.outside-consumer",
@@ -772,6 +785,19 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "scenarioId": "proofkit.package-boundary.merge-critical-runtime-preconditions",
+      "witnessId": "proofkit.ci.merge-critical-runtime-preconditions",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_package_gate_oracle_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-PACKAGE-006",
       "scenarioId": "proofkit.package-boundary.python-wheel-candidate",
       "witnessId": "proofkit.python-package.boundary",
@@ -783,6 +809,19 @@
       ],
       "environmentClasses": [
         "local-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-wrapper-posix-lifecycle",
+      "witnessId": "proofkit.python-package.posix-exec-lifecycle",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/exec_lifecycle_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
       ]
     },
     {
@@ -1533,6 +1572,19 @@
       "witnessId": "proofkit.cli-contract.descriptor-parity",
       "witnessKind": "contract",
       "witnessPath": "internal/app/cli_contract_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.cli-output-schema-evolution",
+      "witnessId": "proofkit.cli-contract.output-schema-evolution",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/app_test.go",
       "commandIds": [
         "proofkit.go-test"
       ],
