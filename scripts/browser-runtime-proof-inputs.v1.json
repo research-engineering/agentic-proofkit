@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "proofKind": "proofkit.browser-runtime-proof-inputs",
+  "serverTarget": "./internal/tools/browsertestserver",
+  "testRoot": "tests/browser",
+  "writerPath": "scripts/write-browser-proof.mjs",
+  "paths": [
+    "go.mod",
+    "go.sum",
+    "package-lock.json",
+    "package.json",
+    "playwright.config.mjs",
+    "proofkit/witness-plan.json",
+    "scripts/browser-proof-execution.mjs",
+    "scripts/browser-proof-execution.test.mjs",
+    "scripts/browser-proof-inputs.mjs",
+    "scripts/browser-proof-inputs.test.mjs",
+    "scripts/browser-selection-authority.test.mjs",
+    "tsconfig.browser.json"
+  ]
+}

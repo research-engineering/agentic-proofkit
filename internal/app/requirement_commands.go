@@ -200,17 +200,17 @@ func writeSpecTreeView(input any, options requirementViewArgs, stdout io.Writer,
 	}
 	output, exitCode, err := requirementspectree.BuildViewJSON(input)
 	if options.outputPath != "" {
-		return writeViewJSON(output, exitCode, err, options.outputPath, stderr)
+		return writeViewJSON(output, exitCode, err, options.outputPath, jsonLayoutFromWriter(stdout), stderr)
 	}
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
-func writeViewJSON(output any, exitCode int, err error, outputPath string, stderr io.Writer) int {
+func writeViewJSON(output any, exitCode int, err error, outputPath string, layout stablejson.Layout, stderr io.Writer) int {
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	bytes, err := stablejson.Marshal(output)
+	bytes, err := stablejson.MarshalLayout(output, layout)
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1

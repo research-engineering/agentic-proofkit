@@ -154,7 +154,7 @@ agentic-proofkit repo-profile-admission --help
 
 Command-specific help is derived from the private command descriptor table and
 does not read stdin. The full machine-readable command inventory remains
-`proofkit/cli-contract.v1.json`; the human route map is
+`proofkit/cli-contract.v2.json`; the human route map is
 `docs/proofkit-contract-map.md`.
 
 | Repository state | Minimal first route | Stop condition |
@@ -165,6 +165,16 @@ does not read stdin. The full machine-readable command inventory remains
 | Current code must be audited before it becomes a contract | `capability-map-admission` with `trustMode: "audit_from_code"` | Stop at owner questions and candidate-only records |
 | Legacy repository has local proof infrastructure | `migration-parity-admission`, then `migration-plan` | Stop before deleting local proof owners without parity evidence |
 | A change set needs bounded checks | `changed-path-set`, optional `impact`, then `selective-gate-plan` and `selective-gate-evidence` | Stop on unknown scope, missing routes, or stale receipts |
+| An agent needs only one specification subtree | `requirement-context-compose --repo-root . --input context-catalog.json`, then `requirement-context-slice` | Stop before treating a bounded slice as complete repository truth |
+| A human needs semantic navigation, comparison, or traceability | `requirement-browser-server --view workspace --serve` over an admitted workspace input | Browser output, annotations, diff, and graph remain derived and non-authoritative |
+
+JSON commands default to readable output. Agents can request the same JSON
+value with lower transport overhead by placing the process option before the
+command:
+
+```bash
+agentic-proofkit --json-layout compact requirement-context-slice --input slice-input.json
+```
 
 Use `secret-scan` only when the caller provides an explicit file inventory with
 content. It is a dedicated secret-like text detector for admitted inventory

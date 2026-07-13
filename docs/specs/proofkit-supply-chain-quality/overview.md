@@ -89,6 +89,15 @@ vulnerability absence, or consumer rollout safety by itself.
   state before mutation, stays confined to the repository across symlinks,
   binds non-empty generated content to stable source and execution-context
   snapshots, and emits a schema-versioned execution record.
+- `REQ-PROOFKIT-QUALITY-021`: CLI contract v2 owns one leading pretty or
+  compact JSON layout option through a descriptor-aware token-role
+  preclassification at process output boundaries while canonical identity
+  serialization remains unchanged.
+- `REQ-PROOFKIT-QUALITY-022`: the requirement workspace uses an explicit
+  embedded asset set, strict authored-JavaScript type checking, exact secured
+  routes, bounded server cleanup, repository-confined non-symlink proof
+  artifacts, and machine-admitted per-project rendered engine evidence without
+  runtime dependencies or a production bundler.
 
 ## Non-Claims
 

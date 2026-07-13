@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -105,6 +106,7 @@ type packageManifest struct {
 	Bin                  map[string]string `json:"bin"`
 	CPU                  []string          `json:"cpu"`
 	Description          string            `json:"description"`
+	DevDependencies      map[string]string `json:"devDependencies"`
 	Exports              map[string]string `json:"exports"`
 	Files                []string          `json:"files"`
 	License              string            `json:"license"`
@@ -320,7 +322,7 @@ func requiredRootEntries() []string {
 		"package/docs/proofkit-contract-map.md",
 		"package/docs/release-process.md",
 		"package/package.json",
-		"package/proofkit/cli-contract.v1.json",
+		"package/proofkit/cli-contract.v2.json",
 		"package/proofkit/command-families.v1.json",
 		"package/proofkit/receipt-producer-policy.json",
 		"package/proofkit/requirement-bindings.json",
@@ -453,22 +455,23 @@ func readManifestFromTar(artifact rootPackageArtifact) (packageManifest, error) 
 
 func verifyManifestTopLevelKeys(record map[string]any) error {
 	allowed := map[string]struct{}{
-		"bin":            {},
-		"cpu":            {},
-		"description":    {},
-		"exports":        {},
-		"files":          {},
-		"license":        {},
-		"name":           {},
-		"os":             {},
-		"packageManager": {},
-		"private":        {},
-		"publishConfig":  {},
-		"repository":     {},
-		"scripts":        {},
-		"sideEffects":    {},
-		"type":           {},
-		"version":        {},
+		"bin":             {},
+		"cpu":             {},
+		"description":     {},
+		"devDependencies": {},
+		"exports":         {},
+		"files":           {},
+		"license":         {},
+		"name":            {},
+		"os":              {},
+		"packageManager":  {},
+		"private":         {},
+		"publishConfig":   {},
+		"repository":      {},
+		"scripts":         {},
+		"sideEffects":     {},
+		"type":            {},
+		"version":         {},
 	}
 	unknown := []string{}
 	for key := range record {
@@ -540,7 +543,7 @@ func allowedRootEntry(path string) bool {
 		"package/docs/proofkit-contract-map.md":                             {},
 		"package/docs/release-process.md":                                   {},
 		"package/package.json":                                              {},
-		"package/proofkit/cli-contract.v1.json":                             {},
+		"package/proofkit/cli-contract.v2.json":                             {},
 		"package/proofkit/command-families.v1.json":                         {},
 		"package/proofkit/receipt-producer-policy.json":                     {},
 		"package/proofkit/requirement-bindings.json":                        {},
@@ -603,6 +606,10 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	}
 	if manifest.SideEffects {
 		return fmt.Errorf("root package sideEffects must be false")
+	}
+	expectedDevDependencies := map[string]string{"@axe-core/playwright": "4.12.1", "@playwright/test": "1.61.1", "typescript": "7.0.2"}
+	if !maps.Equal(manifest.DevDependencies, expectedDevDependencies) {
+		return fmt.Errorf("root package devDependencies must equal the source-only browser proof toolchain")
 	}
 	if manifest.Repository.Type != "git" || manifest.Repository.URL != "git+https://github.com/research-engineering/agentic-proofkit.git" {
 		return fmt.Errorf("root package repository must be git+https://github.com/research-engineering/agentic-proofkit.git")
@@ -928,6 +935,13 @@ func verifyInstalledJSONABI(consumer string, binPath string) error {
 	}); err != nil {
 		return fmt.Errorf("outside consumer JSON success smoke failed: %w", err)
 	}
+	compactSuccess, err := runWithInput(consumer, binPath, packageSmokeSuccessInput(), "--json-layout", "compact", "text-policy", "--input", "-")
+	if err != nil {
+		return fmt.Errorf("outside consumer compact JSON success smoke failed to run: %w", err)
+	}
+	if err := verifyTextPolicySmokeReport(compactSuccess, "proofkit.package-smoke.success", "passed", 0, textPolicySmokeSummary{CheckedTextFileCount: 1, FailureCount: 0, InputFileCount: 1}); err != nil {
+		return fmt.Errorf("outside consumer compact JSON success smoke failed: %w", err)
+	}
 	failed, err := runWithInput(consumer, binPath, packageSmokeFailureInput(), "text-policy", "--input", "-")
 	if err != nil {
 		return fmt.Errorf("outside consumer JSON failure smoke failed to run: %w", err)
@@ -938,6 +952,13 @@ func verifyInstalledJSONABI(consumer string, binPath string) error {
 		InputFileCount:       1,
 	}); err != nil {
 		return fmt.Errorf("outside consumer JSON failure smoke failed: %w", err)
+	}
+	compactFailed, err := runWithInput(consumer, binPath, packageSmokeFailureInput(), "--json-layout", "compact", "text-policy", "--input", "-")
+	if err != nil {
+		return fmt.Errorf("outside consumer compact JSON failure smoke failed to run: %w", err)
+	}
+	if err := verifyTextPolicySmokeReport(compactFailed, "proofkit.package-smoke.failure", "failed", 1, textPolicySmokeSummary{CheckedTextFileCount: 1, FailureCount: 1, InputFileCount: 1}); err != nil {
+		return fmt.Errorf("outside consumer compact JSON failure smoke failed: %w", err)
 	}
 	if err := verifyJSONAdapterSourceSmoke(consumer, binPath); err != nil {
 		return err
@@ -1096,7 +1117,7 @@ func verifyOutsideConsumerImports(consumer string) error {
 			rootPackageName + "/dist/agentic-proofkit",
 			rootPackageName + "/dist/command-descriptors.json",
 			rootPackageName + "/internal/app/command_descriptors",
-			rootPackageName + "/proofkit/cli-contract.v1.json",
+			rootPackageName + "/proofkit/cli-contract.v2.json",
 			rootPackageName + "/proofkit/command-descriptors.v1.json",
 			rootPackageName + "/internal/tools/packageverify",
 		},

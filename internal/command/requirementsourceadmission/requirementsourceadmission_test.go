@@ -3,9 +3,41 @@ package requirementsourceadmission
 import (
 	"encoding/json"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"sort"
 	"strings"
 	"testing"
 )
+
+func TestComparisonFieldsExhaustRequirementProjection(t *testing.T) {
+	result, err := Evaluate(validSource())
+	if err != nil {
+		t.Fatalf("Evaluate() error = %v", err)
+	}
+	requirement := result.Source.Requirements[0]
+	requirement.Deferral = &Deferral{}
+	projection := RequirementValue(requirement)
+	want := make([]string, 0, len(projection)-1)
+	for key := range projection {
+		if key != "requirementId" {
+			want = append(want, key)
+		}
+	}
+	sort.Strings(want)
+	fields := ComparisonFields(requirement)
+	got := make([]string, 0, len(fields))
+	seen := map[string]struct{}{}
+	for _, field := range fields {
+		if _, exists := seen[field.Name]; exists {
+			t.Fatalf("ComparisonFields() contains duplicate %q", field.Name)
+		}
+		seen[field.Name] = struct{}{}
+		got = append(got, field.Name)
+	}
+	sort.Strings(got)
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("ComparisonFields()=%v, want exhaustive projection fields %v", got, want)
+	}
+}
 
 func TestEvaluateAcceptsActiveBlockingRequirementWithProofRoute(t *testing.T) {
 	result, err := Evaluate(validSource())

@@ -1,0 +1,21 @@
+:root { color-scheme: light dark; font-family: ui-sans-serif, system-ui, sans-serif; }
+body { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) 22rem; min-height: 100vh; }
+header, main, aside { padding: 1rem 1.5rem; }
+header { grid-column: 1 / -1; border-bottom: 1px solid CanvasText; }
+header p { margin: 0; font-size: .8rem; text-transform: uppercase; }
+h1 { margin: .25rem 0; }
+nav { display: flex; gap: .5rem; margin-bottom: 1rem; }
+button { min-height: 2.5rem; }
+article { border-top: 1px solid color-mix(in srgb, CanvasText 25%, transparent); padding: .75rem 0; }
+aside { border-left: 1px solid CanvasText; }
+textarea { box-sizing: border-box; min-height: 8rem; width: 100%; }
+pre { max-width: 100%; overflow: auto; white-space: pre-wrap; }
+svg { display: block; min-width: 50rem; width: 100%; }
+.graph-viewport { border: 1px solid color-mix(in srgb, CanvasText 35%, transparent); max-height: 42rem; overflow: auto; }
+[data-select-anchor][aria-pressed="true"] { outline: 3px solid #1f6feb; outline-offset: 2px; }
+svg rect { fill: Canvas; stroke: CanvasText; }
+svg line { stroke: CanvasText; stroke-width: 1.5; }
+svg text { fill: CanvasText; font-size: 13px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border: 1px solid color-mix(in srgb, CanvasText 35%, transparent); padding: .4rem; text-align: left; }
+@media (max-width: 48rem) { body { display: block; } aside { border-left: 0; border-top: 1px solid CanvasText; } }

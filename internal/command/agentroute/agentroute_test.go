@@ -873,6 +873,50 @@ func TestInputContractMatchesAdmissionVocabulary(t *testing.T) {
 	}
 }
 
+func TestSemanticContextGoalsEmitOnlyMaterializedExecutableRoutes(t *testing.T) {
+	t.Parallel()
+
+	contextReport, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"), "routeId": "consumer.route.context", "goal": "inspect_requirement_context", "mode": "observe",
+		"availableInputs": []any{
+			map[string]any{"kind": "requirement_context_catalog", "ref": "proofkit/context-catalog.json"},
+			map[string]any{"kind": "requirement_context_repo_root", "ref": "."},
+		},
+	})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("context route error=%v exitCode=%d", err, exitCode)
+	}
+	argv := findCommandArgv(t, contextReport["nextCommands"].([]any), "requirement-context-compose")
+	assertArgvContainsPair(t, argv, "--input", "proofkit/context-catalog.json")
+	assertArgvContainsPair(t, argv, "--repo-root", ".")
+
+	for _, test := range []struct {
+		goal    string
+		kind    string
+		command string
+	}{
+		{goal: "review_requirement_change", kind: "requirement_semantic_diff_input", command: "requirement-semantic-diff"},
+		{goal: "inspect_requirement_traceability", kind: "requirement_traceability_graph_input", command: "requirement-traceability-graph"},
+	} {
+		report, code, err := Build(map[string]any{
+			"schemaVersion": jsonNumber("1"), "routeId": "consumer.route." + test.kind, "goal": test.goal, "mode": "observe",
+			"availableInputs": []any{map[string]any{"kind": test.kind, "ref": "artifacts/" + test.kind + ".json"}},
+		})
+		if err != nil || code != 0 {
+			t.Fatalf("%s route error=%v exitCode=%d", test.goal, err, code)
+		}
+		findCommandArgv(t, report["nextCommands"].([]any), test.command)
+	}
+
+	blocked, code, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"), "routeId": "consumer.route.context.blocked", "goal": "inspect_requirement_context", "mode": "observe",
+		"availableInputs": []any{map[string]any{"kind": "requirement_context_catalog", "ref": "proofkit/context-catalog.json"}},
+	})
+	if err != nil || code != 1 || blocked["state"] != "blocked_missing_input" || len(blocked["nextCommands"].([]any)) != 0 {
+		t.Fatalf("incomplete context bundle was not blocked: report=%#v code=%d err=%v", blocked, code, err)
+	}
+}
+
 func TestRouteSpecsUseAdmittedCommandInputKindMatrix(t *testing.T) {
 	t.Parallel()
 
@@ -1459,14 +1503,20 @@ func admittedRouteCommandInputKindMatrix() map[string]struct{} {
 		{"requirement-browser-server", "compact_proof_binding"},
 		{"requirement-browser-server", "proof_binding"},
 		{"requirement-browser-server", "requirement_source"},
+		{"requirement-browser-server", "requirement_workspace_input"},
 		{"requirement-browser-server", "spec_tree_bundle"},
 		{"requirement-coverage-view", "coverage_view_input"},
+		{"requirement-context-compose", "requirement_context_catalog"},
+		{"requirement-context-compose", "requirement_context_repo_root"},
+		{"requirement-context-slice", "requirement_context_slice_input"},
 		{"requirement-proof-view", "proof_binding"},
 		{"requirement-proof-view", "compact_proof_binding"},
 		{"requirement-source-admission", "requirement_source"},
 		{"requirement-source-transition", "requirement_source_transition"},
 		{"requirement-source-view", "requirement_source"},
+		{"requirement-semantic-diff", "requirement_semantic_diff_input"},
 		{"requirement-spec-tree-view", "spec_tree_bundle"},
+		{"requirement-traceability-graph", "requirement_traceability_graph_input"},
 		{"scaffold-profile-plan", "scaffold_profile_plan"},
 		{"scaffold-project-structure", "scaffold_project_structure"},
 		{"selective-gate-evidence", "selective_evidence"},

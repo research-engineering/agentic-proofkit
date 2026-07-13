@@ -157,7 +157,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	contract, err := readJSON[cliContract]("proofkit/cli-contract.v1.json")
+	contract, err := readJSON[cliContract]("proofkit/cli-contract.v2.json")
 	if err != nil {
 		return err
 	}

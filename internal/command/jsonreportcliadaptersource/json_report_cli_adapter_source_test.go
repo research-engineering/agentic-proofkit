@@ -15,7 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:a3b55d9b408d13bc0094dd08c21d9f29a8c9662bab7f7bb2a864b16e9d40ddbb"
+const expectedTypeScriptSourceSha256 = "sha256:dc1478adc582d4bdfeab52ca1e3facaac23cfe9a78e9351620e11edae9cd9ba0"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -206,7 +206,8 @@ func exportedDeclarations(source string) []string {
 const fakeProofkitBinarySource = `#!/usr/bin/env node
 import { writeFileSync } from "node:fs";
 
-const command = process.argv[2];
+const commandIndex = process.argv[2] === "--json-layout" ? 4 : 2;
+const command = process.argv[commandIndex];
 let input = "";
 process.stdin.on("data", (chunk) => {
   input += chunk;
@@ -318,6 +319,7 @@ assert.throws(
 assert.equal(helpText, "help text");
 
 assert.equal(proofkitStableJsonString({z: 1, a: true}), "{\n  \"a\": true,\n  \"z\": 1\n}\n");
+assert.equal(proofkitStableJsonString({z: 1, a: true}, "compact"), "{\"a\":true,\"z\":1}\n");
 const prototypeKey = JSON.parse('{"__proto__":{"polluted":true}}');
 assert.equal(proofkitStableJsonString(prototypeKey), '{\n  "__proto__": {\n    "polluted": true\n  }\n}\n');
 assert.equal(({}).polluted, undefined);
@@ -431,6 +433,9 @@ const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPat
 assert.equal(pass.status, 0);
 assert.equal(pass.value.state, "passed");
 assert.deepEqual(pass.value.received, {a: true, z: 1});
+const compactPass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, jsonLayout: "compact"});
+assert.equal(compactPass.status, 0);
+assert.deepEqual(compactPass.value.received, {a: true, z: 1});
 
 const fail = runProofkitJsonCommand("json-fail", {ok: false}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(fail.status, 1);
@@ -512,6 +517,7 @@ assert.throws(
 const text = runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(text.status, 0);
 assert.equal(text.text, "text result");
+assert.throws(() => runProofkitTextCommand("text-pass", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, jsonLayout: "compact"}), /only for JSON/);
 const textOutput = runProofkitTextCommand("text-pass", {}, ["--output", "proofkit-output.txt"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(textOutput.status, 0);
 assert.equal(textOutput.stdout, "");

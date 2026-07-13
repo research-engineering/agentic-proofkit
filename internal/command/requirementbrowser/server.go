@@ -2,6 +2,7 @@ package requirementbrowser
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,8 @@ import (
 	"os/exec"
 	"runtime"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -19,17 +22,44 @@ import (
 const (
 	serverIdleTimeout       = 30 * time.Second
 	serverReadHeaderTimeout = 5 * time.Second
+	serverReadTimeout       = 15 * time.Second
 	serverShutdownTimeout   = 5 * time.Second
 	serverWriteTimeout      = 15 * time.Second
 )
 
-type ServerHandle struct {
-	Host string
-	Port int
-	URL  string
+var ErrOneShotTerminal = errors.New("requirement browser one-shot terminal state")
 
-	close func(context.Context) error
-	done  <-chan error
+type ServerHandle struct {
+	Host       string
+	Port       int
+	SnapshotID string
+	URL        string
+	Handoff    <-chan map[string]any
+
+	close    func(context.Context) error
+	done     <-chan error
+	terminal *terminalArbiter
+}
+
+type terminalArbiter struct {
+	mu        sync.Mutex
+	committed bool
+	packets   chan map[string]any
+}
+
+func newTerminalArbiter() *terminalArbiter {
+	return &terminalArbiter{packets: make(chan map[string]any, 1)}
+}
+
+func (arbiter *terminalArbiter) TryCommit(packet map[string]any) bool {
+	arbiter.mu.Lock()
+	defer arbiter.mu.Unlock()
+	if arbiter.committed {
+		return false
+	}
+	arbiter.committed = true
+	arbiter.packets <- packet
+	return true
 }
 
 func (handle ServerHandle) Close(ctx context.Context) error {
@@ -70,10 +100,25 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 		return ServerHandle{}, err
 	}
 	expectedAuthority := net.JoinHostPort(options.Host, strconv.Itoa(actualPort))
+	capability, err := browserCapability()
+	if err != nil {
+		_ = listener.Close()
+		return ServerHandle{}, err
+	}
+	if rendered.workspace != nil {
+		marker := `content="` + workspaceCapabilityPlaceholder + `"`
+		if strings.Count(rendered.html, marker) != 1 {
+			_ = listener.Close()
+			return ServerHandle{}, fmt.Errorf("requirement browser capability marker must occur exactly once")
+		}
+		rendered.html = strings.Replace(rendered.html, marker, `content="`+capability+`"`, 1)
+	}
+	terminal := newTerminalArbiter()
 	server := &http.Server{
-		Handler:           browserHandler(options.View, rendered, expectedAuthority),
+		Handler:           browserHandler(options.View, rendered, expectedAuthority, capability, options.SessionMode == "one-shot-question", terminal),
 		IdleTimeout:       serverIdleTimeout,
 		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
 		WriteTimeout:      serverWriteTimeout,
 	}
 	done := make(chan error, 1)
@@ -86,9 +131,11 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 		done <- nil
 	}()
 	return ServerHandle{
-		Host: options.Host,
-		Port: actualPort,
-		URL:  browserURL(options.Host, actualPort),
+		Host:       options.Host,
+		Port:       actualPort,
+		SnapshotID: workspaceSnapshotID(rendered.workspace),
+		URL:        browserURL(options.Host, actualPort),
+		Handoff:    terminal.packets,
 		close: func(ctx context.Context) error {
 			shutdownErr := server.Shutdown(ctx)
 			if shutdownErr == nil {
@@ -96,7 +143,8 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 			}
 			return errors.Join(shutdownErr, server.Close())
 		},
-		done: done,
+		done:     done,
+		terminal: terminal,
 	}, nil
 }
 
@@ -108,6 +156,24 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 	defer func() { _ = closeHandle(handle) }()
 	if options.Open {
 		if err := openBrowser(ctx, handle.URL); err != nil {
+			return err
+		}
+	}
+	if options.SessionMode == "one-shot-question" {
+		timeout := options.SessionTimeout
+		if timeout == 0 {
+			timeout = 30 * time.Minute
+		}
+		timer := time.NewTimer(timeout)
+		defer timer.Stop()
+		select {
+		case packet := <-handle.Handoff:
+			return writeOneShotPacket(stdout, packet, packet["state"] != "submitted")
+		case <-timer.C:
+			return commitOrReadTerminal(handle, terminalPacket("expired", handle), stdout)
+		case <-ctx.Done():
+			return commitOrReadTerminal(handle, terminalPacket("cancelled", handle), stdout)
+		case err := <-handle.Done():
 			return err
 		}
 	}
@@ -125,56 +191,46 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 	}
 }
 
-func browserHandler(view string, rendered renderedView, expectedAuthority string) http.Handler {
-	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if request.Host != expectedAuthority {
-			response.Header().Set("content-type", "text/plain; charset=utf-8")
-			response.WriteHeader(http.StatusForbidden)
-			writeBody(response, request.Method, []byte("forbidden host\n"))
-			return
-		}
-		expectedOrigin := "http://" + expectedAuthority
-		if origin := request.Header.Get("origin"); origin != "" && origin != expectedOrigin {
-			response.Header().Set("content-type", "text/plain; charset=utf-8")
-			response.WriteHeader(http.StatusForbidden)
-			writeBody(response, request.Method, []byte("forbidden origin\n"))
-			return
-		}
-		method := request.Method
-		if method != http.MethodGet && method != http.MethodHead {
-			response.Header().Set("allow", "GET, HEAD")
-			response.Header().Set("content-type", "text/plain; charset=utf-8")
-			response.WriteHeader(http.StatusMethodNotAllowed)
-			writeBody(response, method, []byte("method not allowed\n"))
-			return
-		}
-		switch request.URL.Path {
-		case "/", "/index.html":
-			response.Header().Set("cache-control", "no-store")
-			response.Header().Set("content-type", "text/html; charset=utf-8")
-			response.WriteHeader(http.StatusOK)
-			writeBody(response, method, []byte(rendered.html))
-		case "/healthz":
-			response.Header().Set("cache-control", "no-store")
-			response.Header().Set("content-type", "application/json; charset=utf-8")
-			response.WriteHeader(http.StatusOK)
-			body, err := stablejson.Marshal(map[string]any{
-				"authority": "presentation_adapter_status",
-				"nonClaims": admit.StringSliceToAny(serverNonClaims),
-				"state":     "ok",
-				"view":      view,
-				"viewKind":  rendered.viewKind,
-			})
-			if err != nil {
-				return
-			}
-			writeBody(response, method, append(body, '\n'))
-		default:
-			response.Header().Set("content-type", "text/plain; charset=utf-8")
-			response.WriteHeader(http.StatusNotFound)
-			writeBody(response, method, []byte("not found\n"))
-		}
-	})
+func commitOrReadTerminal(handle ServerHandle, candidate map[string]any, stdout io.Writer) error {
+	if handle.terminal.TryCommit(candidate) {
+		return writeOneShotPacket(stdout, candidate, true)
+	}
+	winner := <-handle.Handoff
+	return writeOneShotPacket(stdout, winner, winner["state"] != "submitted")
+}
+
+func terminalPacket(state string, handle ServerHandle) map[string]any {
+	packet := map[string]any{
+		"handoffKind":   "proofkit.requirement-browser-question",
+		"nonClaims":     admit.StringSliceToAny(serverNonClaims),
+		"schemaVersion": json.Number("1"),
+		"state":         state,
+	}
+	if handle.SnapshotID != "" {
+		packet["snapshotRefs"] = []any{map[string]any{"role": "current", "snapshotId": handle.SnapshotID}}
+	}
+	return packet
+}
+
+func workspaceSnapshotID(session *workspaceSession) string {
+	if session == nil {
+		return ""
+	}
+	return session.SnapshotID
+}
+
+func writeOneShotPacket(stdout io.Writer, packet map[string]any, unsuccessful bool) error {
+	output, err := stablejson.MarshalLayout(packet, stablejson.LayoutCompact)
+	if err != nil {
+		return err
+	}
+	if _, err := stdout.Write(output); err != nil {
+		return err
+	}
+	if unsuccessful {
+		return ErrOneShotTerminal
+	}
+	return nil
 }
 
 func writeBody(response http.ResponseWriter, method string, body []byte) {

@@ -1,7 +1,7 @@
 {
   "name": "@research-engineering/agentic-proofkit",
   "description": "Reusable proof profile, report, graph, and witness-planning primitives.",
-  "version": "0.1.158",
+  "version": "0.1.159",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
@@ -36,7 +36,10 @@
   ],
   "scripts": {
     "build": "go run ./internal/tools/packagebuild",
-    "check": "npm run npm:version && npm run source-hygiene && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
+    "check": "npm run npm:version && npm run source-hygiene && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run browser:check && npm run go:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
+    "browser:check": "npm run browser:static-check && npm run browser:test",
+    "browser:static-check": "tsc -p tsconfig.browser.json && node --test scripts/browser-proof-execution.test.mjs scripts/browser-proof-inputs.test.mjs scripts/browser-selection-authority.test.mjs",
+    "browser:test": "go run ./internal/tools/browserproofverify --run",
     "command-family:check": "go run ./internal/tools/commandfamilygen --check",
     "go:actionlint": "go tool actionlint",
     "go:bench": "go test ./internal/kernel/admission ./internal/kernel/stablejson -run '^$' -bench . -benchmem -count=10",
@@ -69,5 +72,10 @@
   "cpu": [
     "arm64",
     "x64"
-  ]
+  ],
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.61.1",
+    "typescript": "7.0.2"
+  }
 }

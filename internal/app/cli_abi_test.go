@@ -544,6 +544,20 @@ func TestRequirementSpecTreeViewOutputPathAdmission(t *testing.T) {
 
 	stdout.Reset()
 	stderr.Reset()
+	status = Run(t.Context(), []string{"--json-layout", "compact", "requirement-spec-tree-view", "--input", "-", "--format", "json", "--output", "out/spec-tree-compact.json"}, strings.NewReader(cliRequirementSpecTreeInput()), &stdout, &stderr)
+	if status != 0 || stdout.Len() != 0 || stderr.Len() != 0 {
+		t.Fatalf("unexpected compact JSON output write result status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+	}
+	compactContent, err := os.ReadFile(filepath.Join("out", "spec-tree-compact.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(compactContent), "\n  ") || !json.Valid(compactContent) {
+		t.Fatalf("compact file output is not valid compact JSON: %q", compactContent)
+	}
+
+	stdout.Reset()
+	stderr.Reset()
 	status = Run(t.Context(), []string{"requirement-spec-tree-view", "--input", "-", "--format", "markdown", "--output", "../spec-tree.md"}, strings.NewReader(cliRequirementSpecTreeInput()), &stdout, &stderr)
 	if status != 1 || stdout.Len() != 0 || stderr.Len() == 0 {
 		t.Fatalf("unsafe output args produced status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())

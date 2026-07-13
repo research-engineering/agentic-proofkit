@@ -9,7 +9,7 @@ Owner: `proofkit`.
 This map helps consuming repositories choose the smallest Proofkit CLI command
 or JSON contract without loading the full README or source tree. It is not an
 exhaustive schema reference. The canonical command inventory is
-`proofkit/cli-contract.v1.json`.
+`proofkit/cli-contract.v2.json`.
 
 Formal rule:
 
@@ -92,7 +92,7 @@ returns deterministic JSON from explicit caller-owned facts; the envelope is an
 opt-in derived projection over the same report. This map explains the route
 families without becoming an execution, freshness, or merge decision.
 The exact route input vocabulary is machine-readable in
-`proofkit/cli-contract.v1.json` under `agent-route.inputContract`; the Go
+`proofkit/cli-contract.v2.json` under `agent-route.inputContract`; the Go
 admission implementation and shipped CLI contract are parity-tested.
 
 Formal rule:
@@ -107,6 +107,10 @@ goal plus caller-owned state
 
 Decision tree:
 
+Semantic context routes are `requirement-context-compose`,
+`requirement-context-slice`, `requirement-semantic-diff`, and
+`requirement-traceability-graph`.
+
 | State or goal | Next Proofkit route | Stop or escalation condition |
 |---|---|---|
 | The agent does not know where to start. | `init` or `init --preset fresh|code-baseline|code-audit|legacy|change-set` | Treat output as dry-run route guidance only. Stop before scanning, writing files, or making requirements authoritative. |
@@ -116,14 +120,15 @@ Decision tree:
 | Temporary external design, implementation-plan, PR, code, or test observations may contain durable requirements. | `requirement-authoring-plan` | Treat output as candidate-only; stop before writing `requirements.v1.json`, retaining temporary documents, or claiming requirement meaning. |
 | Requirement records exist. | `requirement-source-admission`; use `requirement-source-transition` for lifecycle changes. | Escalate when blocking requirements lack proof routes or lifecycle replacement ids are incomplete. |
 | Humans or agents need meta/module/submodule navigation. | `requirement-spec-tree`, then `requirement-spec-tree-view` or `requirement-browser-server --view spec-tree` from the same caller-owned tree input. | Stop before inferring hierarchy from paths. The consumer owns source hierarchy; CLI/browser outputs remain presentation only and are not committed by default. |
+| An agent needs a bounded semantic subset instead of whole specification files. | `requirement-context-compose --repo-root <caller-selected-root>` over an explicit catalog, then `requirement-context-slice` over the materialized snapshot. | The snapshot and slice are content-bound derived projections. Stop before inferring hierarchy, scanning ambient paths, treating omissions as absence, or promoting the slice to requirement, proof, freshness, or merge authority. |
 | Overview prose may contain durable claims. | `spec-overview-claims` | Escalate when normative claims are not tied to `REQ-*` records. |
 | Requirements have no verified proof route. | `requirement-bindings`, `witness-plan` from either an explicit `witness_command_catalog` or a complete `binding_witness_plan_input`, `proof-slice`, or `requirement-proof-resolver` | Stop before claiming proof adequacy; native witness semantics stay with the consumer. A binding-derived witness plan still needs caller-owned vocabulary and conservative command policy. |
 | Tests or proof evidence need inventory. | `test-evidence-inventory`; use `--projection discovery-draft` only for explicit discovered-test facts, then `requirement-coverage-input-compose` when an aggregate `coverage_compose_input` exists, then `requirement-coverage-view` when a `coverage_view_input` exists | Compose only from explicit caller-owned facts. Discovery drafts are candidate-only and cannot close coverage. Use `failureClassifications[]`, `warningClassifications[]`, and `agentActionPlan[]` for machine routing. Escalate when tests are route-only, weak-oracle, unbound, or outside the caller-owned coverage universe. |
 | A change set is known. | `changed-path-set`, optionally `requirement-impact-input-compose`, `impact`, then `selective-gate-plan --agent-envelope` | Raw `knownChangedPaths` in `agent-route` are diagnostic only. Materialize a caller-owned `changed_path_set`, compose a caller-owned `impact_input` before `impact`, and compose a caller-owned `selective_gate_plan_input` before `selective-gate-plan`. Use `scanObligation` to name whether a `text-policy`, `secret-scan`, or caller-owned external scanner is required. Fail closed on unknown scope, dynamic edges, missing owner routes, unbound proof-like paths, or full-gate escalation. |
 | Caller-owned file contents need secret-like text detection. | `secret-scan` | Provide explicit sorted file inventory with content. Stop before claiming repository-wide discovery, credential validity, provider ingestion, merge readiness, or replacement of GitHub secret scanning. |
-| Does a TypeScript package public API match a caller-owned manifest? | `agent-route` with `goal: "verify_typescript_public_api"` and explicit `typescript_public_api_manifest` plus `typescript_public_api_repo_root`, then `typescript-public-api-surfaces --repo-root <caller-selected-root>` | The manifest must name each referenced `package.json`, sorted-unique export conditions, and a non-JSX `.ts`, `.mts`, or `.cts` `sourcePath` whose canonical target has the same admitted extension class. The bounded scanner accepts only the fail-closed export grammar in `proofkit/cli-contract.v1.json`; it does not parse unrestricted TypeScript or TSX, infer conventional layouts, or prove compiler output provenance, checkout freshness, package-manager truth, or merge readiness. |
+| Does a TypeScript package public API match a caller-owned manifest? | `agent-route` with `goal: "verify_typescript_public_api"` and explicit `typescript_public_api_manifest` plus `typescript_public_api_repo_root`, then `typescript-public-api-surfaces --repo-root <caller-selected-root>` | The manifest must name each referenced `package.json`, sorted-unique export conditions, and a non-JSX `.ts`, `.mts`, or `.cts` `sourcePath` whose canonical target has the same admitted extension class. The bounded scanner accepts only the fail-closed export grammar in `proofkit/cli-contract.v2.json`; it does not parse unrestricted TypeScript or TSX, infer conventional layouts, or prove compiler output provenance, checkout freshness, package-manager truth, or merge readiness. |
 | Receipts are available for planned checks. | `selective-gate-evidence --agent-envelope`; then materialize a caller-owned `obligation_decision_input` from the evidence output plus command routes, currentness, and trust facts; then run `selective-gate-obligation-decision-input`; then materialize the resulting `obligation_decision` input and run `obligation-decision --agent-envelope` | Escalate on missing, stale, invalid, untrusted, blocked, unavailable, or unknown-scope evidence. |
-| Human inspection is needed. | `requirement-source-view`, `requirement-proof-view`, `requirement-coverage-view`, `requirement-spec-tree-view`, or `requirement-browser-server` | `agent-route` emits browser commands as plan-only by default. Use `browserMode: "serve_local_view"` for `--serve` and `openBrowser: true` for `--open`. Rendered HTML and Markdown are presentation only unless the consumer admits a tracked artifact freshness gate. |
+| Human inspection, semantic comparison, or traceability navigation is needed. | `requirement-source-view`, `requirement-proof-view`, `requirement-coverage-view`, `requirement-spec-tree-view`, `requirement-semantic-diff`, `requirement-traceability-graph`, or `requirement-browser-server` | Semantic diff compares admitted owner fields rather than lines. Traceability keeps specification, proof, code, and native execution evidence planes separate. Browser and rendered outputs remain presentation only unless the consumer admits a tracked artifact freshness gate. |
 | Temporary external document lifecycle facts, generated views, or rendered views need authority classification. | `document-lifecycle-boundary` | Treat lifecycle records as caller-owned metadata. Temporary design docs and implementation plans are not retained repository authority unless rewritten into deterministic specs, proof bindings, tests, package-public docs, or backlog rows. |
 | A JavaScript/TypeScript consumer needs less wrapper code. | `json-report-cli-adapter-source --language typescript --format json` | Generated adapter source is caller-owned after materialization. The consumer still owns package pin, binary path, repo paths, local policy, and freshness proof. It is a CLI runner adapter, not a separate SDK authority. |
 | A Python consumer needs Proofkit from Python tooling. | Install the Python package when available and invoke the same CLI/JSON contract. | The Python package is a runner wrapper over the Go CLI, not a Python SDK or alternate schema owner. |
@@ -133,7 +138,7 @@ Decision tree:
 
 ## Routing Rules
 
-1. Start from `proofkit/cli-contract.v1.json` when a machine needs the exact
+1. Start from `proofkit/cli-contract.v2.json` when a machine needs the exact
    command, flags, input mode, output mode, scope class, or `agent-route` input
    contract.
 2. Start from this map when a human or agent only needs the correct command

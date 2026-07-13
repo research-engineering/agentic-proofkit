@@ -3,6 +3,7 @@ package requirementbrowser
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofview"
@@ -13,7 +14,7 @@ import (
 
 const (
 	defaultHost = "127.0.0.1"
-	defaultPort = 4177
+	defaultPort = 0
 )
 
 var serverNonClaims = []string{
@@ -22,6 +23,7 @@ var serverNonClaims = []string{
 	"Requirement browser servers do not execute native witnesses.",
 	"Requirement browser servers do not prove receipt freshness, merge approval, or rollout readiness.",
 	"Requirement browser servers do not persist browser annotations into source files.",
+	"Requirement browser servers do not authenticate the surrounding browser profile or operating-system user.",
 }
 
 type Options struct {
@@ -32,6 +34,8 @@ type Options struct {
 	Port                        int
 	PortSet                     bool
 	ProofViewScope              string
+	SessionMode                 string
+	SessionTimeout              time.Duration
 	View                        string
 }
 
@@ -52,6 +56,12 @@ func BuildPlan(raw any, options Options) (map[string]any, int, error) {
 	if err != nil {
 		return nil, 1, err
 	}
+	portSelection := "fixed"
+	var plannedURL any = browserURL(options.Host, options.Port)
+	if options.Port == 0 {
+		portSelection = "ephemeral"
+		plannedURL = nil
+	}
 	return map[string]any{
 		"authority":         "presentation_adapter_plan",
 		"host":              options.Host,
@@ -59,10 +69,11 @@ func BuildPlan(raw any, options Options) (map[string]any, int, error) {
 		"nonClaims":         admit.StringSliceToAny(serverNonClaims),
 		"planKind":          "proofkit.requirement-browser-server-plan",
 		"port":              options.Port,
+		"portSelection":     portSelection,
 		"renderedAuthority": rendered.authority,
 		"renderedViewKind":  rendered.viewKind,
 		"schemaVersion":     1,
-		"url":               browserURL(options.Host, options.Port),
+		"url":               plannedURL,
 		"view":              options.View,
 	}, 0, nil
 }
@@ -71,9 +82,17 @@ type renderedView struct {
 	authority string
 	html      string
 	viewKind  string
+	workspace *workspaceSession
 }
 
 func render(raw any, options Options) (renderedView, error) {
+	if options.View == "workspace" {
+		session, document, err := buildWorkspace(raw)
+		if err != nil {
+			return renderedView{}, err
+		}
+		return renderedView{authority: "presentation_adapter", html: document, viewKind: "proofkit.requirement-workspace", workspace: &session}, nil
+	}
 	if options.View == "source" {
 		view, html, err := requirementsourceview.BuildBrowserDocument(raw)
 		if err != nil {
