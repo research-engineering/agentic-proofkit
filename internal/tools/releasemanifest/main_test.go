@@ -230,19 +230,6 @@ func TestTrustedPublisherSetFromEnvRequiresIdentityOnlyForWorkflowPublication(t 
 	}
 }
 
-func TestReleaseNotesIncludeRollbackInstruction(t *testing.T) {
-	content := releaseNotes(packageJSON{Name: "agentic-proofkit", Version: "1.2.3"}, false)
-	for _, want := range []string{
-		"Rollback:",
-		"npm install -D agentic-proofkit@<previous-version>",
-		"Treat local package artifacts as candidates until registry identity is proven.",
-	} {
-		if !strings.Contains(content, want) {
-			t.Fatalf("releaseNotes() missing %q:\n%s", want, content)
-		}
-	}
-}
-
 func TestRequirePublicationModeFailsClosedWhenRegistryEvidenceExists(t *testing.T) {
 	cases := []struct {
 		name      string

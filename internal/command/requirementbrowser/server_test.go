@@ -1,8 +1,10 @@
 package requirementbrowser
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -346,6 +348,136 @@ func TestServerCloseForcesTerminationAfterGracefulDeadline(t *testing.T) {
 	case <-handle.Done():
 	case <-time.After(time.Second):
 		t.Fatal("server did not reach terminal state after forced close")
+	}
+}
+
+func TestServeOneShotWaitsForDoneBeforeWritingTerminalPacket(t *testing.T) {
+	handoff := make(chan map[string]any, 1)
+	handoff <- map[string]any{"state": "submitted"}
+	done := make(chan error, 1)
+	closeStarted := make(chan struct{})
+	closeCalls := 0
+	handle := ServerHandle{
+		Handoff: handoff,
+		close: func(context.Context) error {
+			closeCalls++
+			if closeCalls == 1 {
+				close(closeStarted)
+			}
+			return nil
+		},
+		done: done,
+	}
+	var stdout bytes.Buffer
+	result := make(chan error, 1)
+	go func() {
+		result <- serveHandle(t.Context(), handle, Options{SessionMode: "one-shot-question"}, &stdout)
+	}()
+	select {
+	case <-closeStarted:
+	case err := <-result:
+		t.Fatalf("Serve returned before cleanup started: %v", err)
+	case <-time.After(time.Second):
+		t.Fatal("Serve did not start cleanup")
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout emitted before Done completed: %q", stdout.String())
+	}
+	select {
+	case err := <-result:
+		t.Fatalf("Serve returned before Done completed: %v", err)
+	default:
+	}
+	done <- nil
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatalf("Serve() error = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Serve did not return after Done completed")
+	}
+	if closeCalls != 1 {
+		t.Fatalf("Close calls = %d, want 1", closeCalls)
+	}
+	if got := stdout.String(); got != "{\"state\":\"submitted\"}\n" {
+		t.Fatalf("stdout = %q, want submitted packet", got)
+	}
+}
+
+func TestServeOneShotReturnsCleanupFailuresWithoutWritingTerminalPacket(t *testing.T) {
+	closeFailure := errors.New("close failure")
+	doneFailure := errors.New("done failure")
+	unreadDone := errors.New("unexpected second Done read")
+	handoff := make(chan map[string]any, 1)
+	handoff <- map[string]any{"state": "submitted"}
+	done := make(chan error, 2)
+	closeCalls := 0
+	handle := ServerHandle{
+		Handoff: handoff,
+		close: func(context.Context) error {
+			closeCalls++
+			done <- doneFailure
+			done <- unreadDone
+			return closeFailure
+		},
+		done: done,
+	}
+	var stdout bytes.Buffer
+	err := serveHandle(t.Context(), handle, Options{SessionMode: "one-shot-question"}, &stdout)
+	if !errors.Is(err, closeFailure) || !errors.Is(err, doneFailure) {
+		t.Fatalf("Serve() error = %v, want close and Done failures", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout emitted despite cleanup failure: %q", stdout.String())
+	}
+	if closeCalls != 1 {
+		t.Fatalf("Close calls = %d, want 1", closeCalls)
+	}
+	select {
+	case got := <-done:
+		if !errors.Is(got, unreadDone) {
+			t.Fatalf("Done first unread value = %v, want second-read sentinel", got)
+		}
+	default:
+		t.Fatal("Done was read more than once")
+	}
+}
+
+func TestServeOneShotDoesNotReadCompletedDoneTwice(t *testing.T) {
+	serveFailure := errors.New("serve failure")
+	closeFailure := errors.New("close failure")
+	unreadDone := errors.New("unexpected second Done read")
+	done := make(chan error, 2)
+	done <- serveFailure
+	done <- unreadDone
+	closeCalls := 0
+	handle := ServerHandle{
+		Handoff: make(chan map[string]any),
+		close: func(context.Context) error {
+			closeCalls++
+			return closeFailure
+		},
+		done: done,
+	}
+	var stdout bytes.Buffer
+	err := serveHandle(t.Context(), handle, Options{SessionMode: "one-shot-question"}, &stdout)
+	if !errors.Is(err, serveFailure) || !errors.Is(err, closeFailure) {
+		t.Fatalf("Serve() error = %v, want Serve and close failures", err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout emitted after premature server completion: %q", stdout.String())
+	}
+	if closeCalls != 1 {
+		t.Fatalf("Close calls = %d, want 1", closeCalls)
+	}
+	select {
+	case got := <-done:
+		if !errors.Is(got, unreadDone) {
+			t.Fatalf("Done first unread value = %v, want second-read sentinel", got)
+		}
+	default:
+		t.Fatal("Done was read more than once")
 	}
 }
 

@@ -222,7 +222,7 @@ func workspaceHTML(workspaceID string) string {
 		"<body><header><p>Proofkit semantic workspace</p><h1>" + html.EscapeString(workspaceID) + "</h1><section id=\"workspace-authority\" aria-label=\"Authority boundary\"><h2>Authority boundary</h2><p data-authority></p><ul data-non-claims></ul></section></header>",
 		"<main><nav aria-label=\"Workspace views\"><button data-view=\"specifications\">Specifications</button><button data-view=\"diff\">Diff</button><button data-view=\"graph\">Traceability</button></nav>",
 		"<section id=\"workspace-content\"></section></main>",
-		"<aside aria-label=\"Agent question\"><h2>Ask about selection</h2><label for=\"annotation-question\">Question</label><textarea id=\"annotation-question\" maxlength=\"4096\"></textarea><button id=\"submit-question\">Create handoff packet</button><p id=\"handoff-status\" role=\"status\" aria-live=\"polite\"></p><pre id=\"handoff-packet\" aria-label=\"Handoff packet\" tabindex=\"0\"></pre></aside>",
+		"<aside aria-label=\"Agent question\"><h2>Ask about selection</h2><h3>Selected source text</h3><ul id=\"selected-context\" aria-label=\"Selected source text\"></ul><button id=\"clear-selection\" type=\"button\" disabled>Clear selection</button><label for=\"annotation-question\">Question</label><textarea id=\"annotation-question\" maxlength=\"4096\"></textarea><button id=\"submit-question\">Create handoff packet</button><p id=\"handoff-status\" role=\"status\" aria-live=\"polite\"></p><pre id=\"handoff-packet\" aria-label=\"Handoff packet\" tabindex=\"0\"></pre></aside>",
 		"<script type=\"module\" src=\"/assets/workspace.js\"></script></body></html>\n",
 	}, "")
 }

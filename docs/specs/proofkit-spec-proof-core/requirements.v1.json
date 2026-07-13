@@ -533,7 +533,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-022",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement semantic diff compares two admitted context snapshots by stable requirement identity and owner-declared scalar, set, and map field classes, producing deterministic added, removed, and modified facts without textual diff, inferred move semantics, or authority over requirement meaning.",
+      "invariant": "Requirement semantic diff compares two admitted context snapshots by stable requirement identity and owner-declared scalar, set, map, and lifecycle field classes, producing canonically ordered added, removed, and modified facts that remain closed under output re-admission without textual diff, inferred move semantics, or authority over requirement meaning.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -546,7 +546,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-023",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement traceability graph deterministically projects admitted specification and proof topology plus explicit caller-owned code topology while preserving specification, proof, code traceability, and native execution as distinct evidence planes and rejecting dangling topology references.",
+      "invariant": "Requirement traceability graph input schema v2 deterministically projects admitted specification and proof topology plus explicit caller-owned code topology while preserving specification, proof, code traceability, and native execution as distinct evidence planes; one typed topology validator rejects dangling endpoints, enforces the bijection between non-root parentNodeId facts and contains edges with broader parent abstraction, verifies every supplied code-source digest, and applies node, edge, and source-byte budgets before per-item semantic materialization.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

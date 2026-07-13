@@ -79,8 +79,8 @@ var providerEvidencePaths = []string{
 	"artifacts/attestations",
 	"artifacts/pypi-registry",
 	"artifacts/registry",
+	"artifacts/retained-evidence-checksums.sha256",
 	"artifacts/release/github-release.json",
-	"artifacts/release/retained-evidence-checksums.sha256",
 }
 
 func CanonicalCommandArgv() []string {

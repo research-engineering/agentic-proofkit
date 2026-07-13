@@ -110,6 +110,40 @@ test("collapsed text selection cannot retain hidden handoff authority", async ({
   await expect(page.getByLabel("Handoff packet")).toBeEmpty();
 });
 
+test("text selection projects Unicode code-point coordinates", async ({page}) => {
+  await page.goto("/");
+  const invariant = page.locator("[data-anchor-id]").filter({hasText: "retry \u{1F680}"}).first();
+  await expect(invariant).toBeVisible();
+  const offsets = await invariant.evaluate((element) => {
+    const text = element.firstChild?.textContent ?? "";
+    const domStart = text.indexOf("\u{1F680}");
+    if (domStart < 0) throw new Error("Unicode fixture is unavailable");
+    return {
+      codePointStart: Array.from(text.slice(0, domStart)).length,
+      domEnd: domStart + "\u{1F680}".length,
+      domStart,
+    };
+  });
+  await setSelection(page, invariant, offsets.domStart, offsets.domEnd);
+  await expect(page.getByRole("status")).toContainText("1 source-bound target");
+  await expect(page.getByLabel("Selected source text").getByRole("listitem")).toHaveText("\u{1F680}");
+  await page.getByRole("textbox", {name: "Question"}).fill("Does the Unicode coordinate remain source-bound?");
+  await expect(page.getByLabel("Selected source text").getByRole("listitem")).toHaveText("\u{1F680}");
+  await page.getByRole("button", {name: "Create handoff packet"}).click();
+  await expect(page.getByRole("status")).toContainText("Handoff packet created");
+
+  const packet = JSON.parse(await page.getByLabel("Handoff packet").textContent());
+  const annotation = packet.annotations[0];
+  expect(annotation.exactQuote).toBe("\u{1F680}");
+  expect(annotation.startCodePoint).toBe(offsets.codePointStart);
+  expect(annotation.endCodePoint).toBe(offsets.codePointStart + 1);
+  await page.getByRole("button", {name: "Clear selection"}).click();
+  await expect(page.getByLabel("Selected source text").getByRole("listitem")).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("No source-bound text selected");
+  await page.getByRole("button", {name: "Create handoff packet"}).click();
+  await expect(page.getByRole("status")).toContainText("Select invariant text");
+});
+
 /** @param {import("@playwright/test").Page} page @param {import("@playwright/test").Locator} locator @param {number} start @param {number} end */
 async function setSelection(page, locator, start, end) {
   const anchorID = await locator.getAttribute("data-anchor-id");

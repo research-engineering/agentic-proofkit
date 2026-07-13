@@ -10,6 +10,24 @@ import (
 	"testing"
 )
 
+func TestRetainedEvidenceCommandWritesArtifactRootManifest(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "release", "github-release.json"), "release\n")
+	writeFile(t, filepath.Join(root, "attestations", "github-artifact-attestations.json"), "attestation\n")
+	if err := run([]string{"retained-evidence", "--artifact-root", root}); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(filepath.Join(root, "retained-evidence-checksums.sha256"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"attestations/github-artifact-attestations.json", "release/github-release.json"} {
+		if !strings.Contains(string(content), "  "+path+"\n") {
+			t.Fatalf("retained evidence manifest missing %s:\n%s", path, content)
+		}
+	}
+}
+
 func TestCompareNPMExisting(t *testing.T) {
 	expected := npmCandidate{Name: "agentic-proofkit", Version: "1.2.3", Shasum: "sha", Integrity: "integrity"}
 	actual := npmView{Name: "agentic-proofkit", Version: "1.2.3"}
@@ -378,4 +396,14 @@ func TestParseFlagsRejectsUnsupportedAndDuplicateFlags(t *testing.T) {
 
 func boolPtr(value bool) *bool {
 	return &value
+}
+
+func writeFile(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }

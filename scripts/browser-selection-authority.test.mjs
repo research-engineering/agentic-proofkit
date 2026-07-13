@@ -20,6 +20,14 @@ test("collapsed native selection does not revoke explicit button authority", () 
   assert.deepEqual(transitionSelection(selected, {kind: "collapse"}), selected);
 });
 
+test("committed text remains visible authority until explicitly cleared", () => {
+  const selected = transitionSelection(emptySelectionState(), {kind: "text", targets: [target]});
+  const committed = transitionSelection(selected, {kind: "commit"});
+  assert.equal(committed.mode, "committed_text");
+  assert.deepEqual(transitionSelection(committed, {kind: "collapse"}), committed);
+  assertEmptySelection(transitionSelection(committed, {kind: "clear"}));
+});
+
 test("empty text selection and explicit clear produce the empty state", () => {
   const selected = transitionSelection(emptySelectionState(), {kind: "text", targets: [target]});
   assertEmptySelection(transitionSelection(selected, {kind: "text", targets: []}));

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha256"
+	"debug/macho"
 	"encoding/base64"
 	"encoding/csv"
 	"fmt"
@@ -17,7 +18,14 @@ import (
 	"strings"
 )
 
-const zipDataDescriptorFlag = 0x8
+const (
+	zipDataDescriptorFlag          = 0x8
+	machoBuildVersionCommand       = 0x32
+	machoBuildVersionCommandSize   = 24
+	machoMinimumVersionCommand     = 0x24
+	machoMinimumVersionCommandSize = 16
+	machoPlatformMacOS             = 1
+)
 
 func verifyPythonPackages() error {
 	return verifyPythonPackagesForTargets(releaseTargets())
@@ -98,10 +106,14 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 	if record.BinarySha256 != fmt.Sprintf("%x", binarySHA[:]) {
 		return fmt.Errorf("python wheel binary sha256 mismatch for %s", record.Filename)
 	}
-	return verifyWheelContents(wheelPath, manifest.Version, target, record.BinarySha256)
+	license, err := readLicenseFile()
+	if err != nil {
+		return err
+	}
+	return verifyWheelContents(wheelPath, manifest, target, record.BinarySha256, license)
 }
 
-func verifyWheelContents(path string, version string, target target, expectedBinarySHA256 string) error {
+func verifyWheelContents(path string, manifest packageJSON, target target, expectedBinarySHA256 string, expectedLicense []byte) error {
 	reader, err := zip.OpenReader(path)
 	if err != nil {
 		return err
@@ -117,7 +129,8 @@ func verifyWheelContents(path string, version string, target target, expectedBin
 		}
 		entries[file.Name] = file
 	}
-	distInfo := distInfoDir(version)
+	distInfo := distInfoDir(manifest.Version)
+	licensePath := distInfo + "/licenses/" + licenseFilename
 	required := []string{
 		"agentic_proofkit/__init__.py",
 		"agentic_proofkit/__main__.py",
@@ -126,6 +139,7 @@ func verifyWheelContents(path string, version string, target target, expectedBin
 		distInfo + "/METADATA",
 		distInfo + "/WHEEL",
 		distInfo + "/entry_points.txt",
+		licensePath,
 		distInfo + "/RECORD",
 	}
 	for _, entry := range required {
@@ -137,6 +151,20 @@ func verifyWheelContents(path string, version string, target target, expectedBin
 		if !contains(required, entry) {
 			return fmt.Errorf("%s contains unexpected entry %s", path, entry)
 		}
+	}
+	metadataContent, err := readZipFile(entries[distInfo+"/METADATA"])
+	if err != nil {
+		return err
+	}
+	if string(metadataContent) != metadata(manifest) {
+		return fmt.Errorf("%s METADATA mismatch", path)
+	}
+	licenseContent, err := readZipFile(entries[licensePath])
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(licenseContent, expectedLicense) {
+		return fmt.Errorf("%s embedded %s mismatch", path, licenseFilename)
 	}
 	wheel, err := readZipFile(entries[distInfo+"/WHEEL"])
 	if err != nil {
@@ -160,7 +188,107 @@ func verifyWheelContents(path string, version string, target target, expectedBin
 	if fmt.Sprintf("%x", embeddedBinarySHA256[:]) != expectedBinarySHA256 {
 		return fmt.Errorf("%s embedded binary sha256 mismatch", path)
 	}
+	if err := verifyDarwinWheelMinimum(target, embeddedBinary); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	return verifyRecord(entries, distInfo+"/RECORD")
+}
+
+func verifyDarwinWheelMinimum(target target, content []byte) error {
+	if target.GOOS != "darwin" {
+		return nil
+	}
+	wheelMinimum, err := macOSPlatformTagMinimum(target.PlatformTag)
+	if err != nil {
+		return err
+	}
+	binaryMinimum, err := machoMinimumMacOS(content)
+	if err != nil {
+		return fmt.Errorf("decode embedded Mach-O minimum macOS: %w", err)
+	}
+	if wheelMinimum < binaryMinimum {
+		return fmt.Errorf(
+			"wheel tag %s advertises macOS %s but embedded Mach-O requires macOS %s",
+			target.PlatformTag,
+			formatMachOVersion(wheelMinimum),
+			formatMachOVersion(binaryMinimum),
+		)
+	}
+	return nil
+}
+
+func macOSPlatformTagMinimum(platformTag string) (uint32, error) {
+	const prefix = "macosx_"
+	if !strings.HasPrefix(platformTag, prefix) {
+		return 0, fmt.Errorf("darwin platform tag must start with %s: %s", prefix, platformTag)
+	}
+	parts := strings.SplitN(strings.TrimPrefix(platformTag, prefix), "_", 3)
+	if len(parts) != 3 || parts[2] == "" {
+		return 0, fmt.Errorf("invalid Darwin platform tag %s", platformTag)
+	}
+	major, err := strconv.ParseUint(parts[0], 10, 16)
+	if err != nil || major < 10 {
+		return 0, fmt.Errorf("invalid Darwin platform tag major version in %s", platformTag)
+	}
+	minor, err := strconv.ParseUint(parts[1], 10, 8)
+	if err != nil {
+		return 0, fmt.Errorf("invalid Darwin platform tag minor version in %s", platformTag)
+	}
+	return uint32(major)<<16 | uint32(minor)<<8, nil
+}
+
+func machoMinimumMacOS(content []byte) (uint32, error) {
+	file, err := macho.NewFile(bytes.NewReader(content))
+	if err != nil {
+		return 0, fmt.Errorf("parse Mach-O: %w", err)
+	}
+	var minimum uint32
+	found := false
+	for _, load := range file.Loads {
+		raw := load.Raw()
+		if len(raw) < 8 {
+			return 0, fmt.Errorf("truncated Mach-O load command")
+		}
+		command := file.ByteOrder.Uint32(raw[:4])
+		switch command {
+		case machoBuildVersionCommand:
+			if found {
+				return 0, fmt.Errorf("multiple Mach-O minimum macOS commands")
+			}
+			if len(raw) < machoBuildVersionCommandSize {
+				return 0, fmt.Errorf("truncated Mach-O LC_BUILD_VERSION command")
+			}
+			platform := file.ByteOrder.Uint32(raw[8:12])
+			if platform != machoPlatformMacOS {
+				return 0, fmt.Errorf("Mach-O LC_BUILD_VERSION platform is %d, want macOS", platform)
+			}
+			minimum = file.ByteOrder.Uint32(raw[12:16])
+			found = true
+		case machoMinimumVersionCommand:
+			if found {
+				return 0, fmt.Errorf("multiple Mach-O minimum macOS commands")
+			}
+			if len(raw) < machoMinimumVersionCommandSize {
+				return 0, fmt.Errorf("truncated Mach-O LC_VERSION_MIN_MACOSX command")
+			}
+			minimum = file.ByteOrder.Uint32(raw[8:12])
+			found = true
+		}
+	}
+	if !found {
+		return 0, fmt.Errorf("missing Mach-O minimum macOS command")
+	}
+	return minimum, nil
+}
+
+func formatMachOVersion(version uint32) string {
+	major := version >> 16
+	minor := version >> 8 & 0xff
+	patch := version & 0xff
+	if patch == 0 {
+		return fmt.Sprintf("%d.%d", major, minor)
+	}
+	return fmt.Sprintf("%d.%d.%d", major, minor, patch)
 }
 
 func verifyRecord(entries map[string]*zip.File, recordPath string) error {

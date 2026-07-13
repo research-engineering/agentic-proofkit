@@ -1011,18 +1011,7 @@ jobs:
               --notes-file artifacts/release/release-notes.md \
               --asset-names-file /tmp/proofkit-expected-release-assets.txt
             cp /tmp/proofkit-release-view.json artifacts/release/github-release.json
-            retained_evidence=(artifacts/release/github-release.json)
-            if compgen -G "artifacts/attestations/*.json" >/dev/null; then
-              while IFS= read -r evidence; do
-                retained_evidence+=("$evidence")
-              done < <(find artifacts/attestations -type f -name '*.json' | sort)
-            fi
-            mapfile -t retained_evidence < <(printf '%s\n' "${retained_evidence[@]}" | sort)
-            : > artifacts/release/retained-evidence-checksums.sha256
-            for evidence in "${retained_evidence[@]}"; do
-              sum="$(sha256sum "$evidence" | awk '{print $1}')"
-              printf '%s  %s\n' "$sum" "$(basename "$evidence")" >> artifacts/release/retained-evidence-checksums.sha256
-            done
+            go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts
             final_dir="$(mktemp -d)"
             for asset in "${expected_assets[@]}"; do
               asset_name="$(basename "$asset")"
@@ -1048,18 +1037,7 @@ jobs:
             --tag "$GITHUB_REF_NAME" \
             --notes-file artifacts/release/release-notes.md \
             --asset-names-file /tmp/proofkit-expected-release-assets.txt
-          retained_evidence=(artifacts/release/github-release.json)
-          if compgen -G "artifacts/attestations/*.json" >/dev/null; then
-            while IFS= read -r evidence; do
-              retained_evidence+=("$evidence")
-            done < <(find artifacts/attestations -type f -name '*.json' | sort)
-          fi
-          mapfile -t retained_evidence < <(printf '%s\n' "${retained_evidence[@]}" | sort)
-          : > artifacts/release/retained-evidence-checksums.sha256
-          for evidence in "${retained_evidence[@]}"; do
-            sum="$(sha256sum "$evidence" | awk '{print $1}')"
-            printf '%s  %s\n' "$sum" "$(basename "$evidence")" >> artifacts/release/retained-evidence-checksums.sha256
-          done
+          go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts
           final_dir="$(mktemp -d)"
           for asset in "${expected_assets[@]}"; do
             asset_name="$(basename "$asset")"
@@ -1095,7 +1073,7 @@ jobs:
             artifacts/release/checksums.sha256
             artifacts/release/github-release.json
             artifacts/release/metadata-checksums.sha256
-            artifacts/release/retained-evidence-checksums.sha256
+            artifacts/retained-evidence-checksums.sha256
             artifacts/release/release-manifest.json
             artifacts/release/release-notes.md
             artifacts/release/sbom.cdx.json

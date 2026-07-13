@@ -16,6 +16,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 const (
@@ -191,6 +192,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	changeRecord, err := releasechange.Read(releasechange.RecordPath)
+	if err != nil {
+		return err
+	}
+	if err := releasechange.RequireVersion(changeRecord, manifest.Version); err != nil {
+		return err
+	}
 	localRecords, err := readPackRecords(filepath.Join("artifacts", "package", "npm-pack.json"))
 	if err != nil {
 		return err
@@ -307,7 +315,7 @@ func run() error {
 	if err := writeJSON(filepath.Join(releaseDir, "release-manifest.json"), release); err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(releaseDir, "release-notes.md"), []byte(releaseNotes(manifest, pypiRegistry != nil)), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(releaseDir, "release-notes.md"), []byte(releasechange.RenderMarkdown(changeRecord, manifest.Name, pythonPackageName, pypiRegistry != nil)), 0o644); err != nil {
 		return err
 	}
 	metadataChecksums, err := checksumLines([]string{
@@ -995,40 +1003,4 @@ func optionalCommandOutput(name string, args ...string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(output))
-}
-
-func releaseNotes(manifest packageJSON, pypiPublished bool) string {
-	lines := []string{
-		fmt.Sprintf("# %s %s", manifest.Name, manifest.Version),
-		"",
-		"Primary install channel:",
-		"",
-		"```bash",
-		fmt.Sprintf("npm install -D %s@%s", manifest.Name, manifest.Version),
-		"```",
-		"",
-		"This release publishes one root CLI package with embedded platform binaries.",
-		"GitHub Release assets and checksums are archive/provenance evidence.",
-		"",
-		"Rollback:",
-		"",
-		fmt.Sprintf("- Pin consumers to the previous admitted version with `npm install -D %s@<previous-version>`.", manifest.Name),
-		"- Treat local package artifacts as candidates until registry identity is proven.",
-	}
-	if pypiPublished {
-		lines = append(lines,
-			"",
-			"Python/uv install channel:",
-			"",
-			"```bash",
-			fmt.Sprintf("uv tool install %s==%s", pythonPackageName, manifest.Version),
-			"```",
-			"",
-			"PyPI registry identity is recorded in the release manifest.",
-		)
-	} else {
-		lines = append(lines, "Python wheels are candidate artifacts until a PyPI release workflow publishes them.")
-	}
-	lines = append(lines, "")
-	return strings.Join(lines, "\n")
 }

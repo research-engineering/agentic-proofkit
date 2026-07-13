@@ -42,7 +42,11 @@ Go source
   -> GitHub Release assets with checksums and SBOM for provenance lookup
 ```
 
-The repository-owned `release:manifest` tool creates `release-manifest.json`,
+The committed `release/change-record.v1.json` owns the reviewed, version-bound
+declaration of the public-contract delta, migration decision, platform
+requirements, known limitations, and rollback strategy. It does not infer
+change completeness from the source diff. The repository-owned
+`release:manifest` tool admits that record and creates `release-manifest.json`,
 `checksums.sha256`, `metadata-checksums.sha256`, `sbom-subjects.sha256`,
 release notes, and deterministic SBOM candidate evidence from explicit package,
 registry, and release evidence. `checksums.sha256` covers distributable archive
@@ -77,18 +81,21 @@ Before publishing a version:
 
 1. The source tree is clean.
 2. `package.json` contains the exact new version.
-3. `package.json` repository, license, bin, exports, files, and publishConfig
+3. `release/change-record.v1.json` contains the same version and explicitly
+   classifies breaking changes, additions, migration, platform requirements,
+   known limitations, and rollback.
+4. `package.json` repository, license, bin, exports, files, and publishConfig
    match the intended public package contract.
-4. The npm account has verified email and write-protective 2FA, or the package
+5. The npm account has verified email and write-protective 2FA, or the package
    uses an admitted Trusted Publisher configuration.
-5. When `PROOFKIT_ENABLE_PYPI_PUBLISH=true`, the PyPI account has a normal or
+6. When `PROOFKIT_ENABLE_PYPI_PUBLISH=true`, the PyPI account has a normal or
    pending Trusted Publisher configured for project `agentic-proofkit`,
    repository `research-engineering/agentic-proofkit`, workflow `release.yml`, and
    environment `pypi`.
-6. The release workflow is configured for the package, public npm registry, and
+7. The release workflow is configured for the package, public npm registry, and
    release environments. PyPI release configuration is required only when the
    PyPI channel is explicitly enabled.
-7. `npm run check` passes locally or the release candidate workflow provides
+8. `npm run check` passes locally or the release candidate workflow provides
    equivalent current-head evidence.
 
 ## Candidate Proof
@@ -156,7 +163,10 @@ The `release` workflow must:
 14. retain normalized GitHub Release metadata as workflow release evidence at
     `artifacts/release/github-release.json` after byte-for-byte asset
     verification, and bind it plus any attestation record with
-    `artifacts/release/retained-evidence-checksums.sha256`. The release
+    `artifacts/retained-evidence-checksums.sha256`. The checksum manifest lives
+    at the retained artifact root and uses exact `release/...` and
+    `attestations/...` paths, so standard checksum verification executes against
+    the downloaded artifact layout without path rewriting. The release
     manifest records GitHub Release channel data as candidate/archive inventory;
     `github-release.json` owns post-create GitHub Release facts only inside
     retained workflow evidence, not as a public release asset.

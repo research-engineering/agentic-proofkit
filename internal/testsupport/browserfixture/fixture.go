@@ -39,9 +39,8 @@ func Workspace() (map[string]any, error) {
 				map[string]any{"abstractionLevel": "repository", "currentnessState": "stale", "label": "Fixture repository with a deliberately long traceability label preserved in the accessible title", "nodeId": "code.repository", "sourceDigest": digest.SHA256TextRef(code), "sourcePath": "src/retry.go"},
 				map[string]any{"abstractionLevel": "source_range", "byteEnd": json.Number(fmt.Sprint(start + len("func Retry() {}"))), "byteStart": json.Number(fmt.Sprint(start)), "currentnessState": "current", "label": "Retry", "nodeId": "code.retry", "parentNodeId": "code.repository", "sourceDigest": digest.SHA256TextRef(code), "sourcePath": "src/retry.go"},
 			},
-			"topologyId": "browser.fixture.topology",
 		},
-		"context": current, "graphId": "browser.fixture.graph", "schemaVersion": json.Number("1"),
+		"context": current, "graphId": "browser.fixture.graph", "schemaVersion": json.Number("2"),
 	}
 	return map[string]any{"context": current, "diffInput": diffInput, "graphInput": graphInput, "schemaVersion": json.Number("1"), "workspaceId": "browser.fixture.workspace"}, nil
 }
