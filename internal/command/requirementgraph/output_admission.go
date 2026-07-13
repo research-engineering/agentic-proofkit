@@ -41,8 +41,18 @@ func AdmitOutput(raw any, snapshotID string) (map[string]any, error) {
 	if !graphCountEquals(record["nodeCount"], len(rawNodes)) || !graphCountEquals(record["edgeCount"], len(rawEdges)) {
 		return nil, fmt.Errorf("requirement traceability graph counts must match records")
 	}
+	budget := graphBudget{}
+	if err := budget.reserveOutput(len(rawNodes), len(rawEdges)); err != nil {
+		return nil, err
+	}
+	encoded, err := stablejson.Marshal(record)
+	if err != nil {
+		return nil, err
+	}
+	if len(encoded) > maxGraphOutputBytes {
+		return nil, fmt.Errorf("requirement traceability graph exceeds output byte limit")
+	}
 	nodes := make([]map[string]any, 0, len(rawNodes))
-	nodesByID := map[string]map[string]any{}
 	for index, rawNode := range rawNodes {
 		node, ok := rawNode.(map[string]any)
 		if !ok {
@@ -52,7 +62,6 @@ func AdmitOutput(raw any, snapshotID string) (map[string]any, error) {
 			return nil, err
 		}
 		nodes = append(nodes, node)
-		nodesByID[node["nodeId"].(string)] = node
 	}
 	edges := make([]map[string]any, 0, len(rawEdges))
 	for index, rawEdge := range rawEdges {
@@ -63,12 +72,13 @@ func AdmitOutput(raw any, snapshotID string) (map[string]any, error) {
 		if err := admitGraphEdge(edge); err != nil {
 			return nil, err
 		}
-		if err := admitGraphRelation(edge, nodesByID); err != nil {
-			return nil, err
-		}
 		edges = append(edges, edge)
 	}
-	if err := uniqueGraphIdentities(nodes, edges); err != nil {
+	topology, err := outputTopologyFromRecords(nodes, edges)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateOutputTopology(topology); err != nil {
 		return nil, err
 	}
 	findings, err := secretjson.Scan(record, "traceability_graph")
@@ -83,10 +93,6 @@ func AdmitOutput(raw any, snapshotID string) (map[string]any, error) {
 	}
 	if !sort.SliceIsSorted(nodes, func(left, right int) bool { return nodes[left]["nodeId"].(string) < nodes[right]["nodeId"].(string) }) || !sort.SliceIsSorted(edges, func(left, right int) bool { return edges[left]["edgeId"].(string) < edges[right]["edgeId"].(string) }) {
 		return nil, fmt.Errorf("requirement traceability graph records must be canonically sorted")
-	}
-	encoded, err := stablejson.Marshal(record)
-	if err != nil {
-		return nil, err
 	}
 	decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
 	if err != nil {
@@ -160,6 +166,11 @@ func admitGraphNode(node map[string]any) error {
 		if _, err := digestRef(node["sourceDigest"], "requirement traceability graph code node sourceDigest"); err != nil {
 			return err
 		}
+		if rawParentID, exists := node["parentNodeId"]; exists {
+			if _, err := admitGraphID(rawParentID, "requirement traceability graph code node parentNodeId"); err != nil {
+				return err
+			}
+		}
 		if node["kind"] == "source_range" {
 			if node["coordinateUnit"] != "utf8_byte" {
 				return fmt.Errorf("requirement traceability graph range coordinateUnit must be utf8_byte")
@@ -175,9 +186,18 @@ func admitGraphNode(node map[string]any) error {
 			if err != nil || end <= start {
 				return fmt.Errorf("requirement traceability graph range must be non-empty and half-open")
 			}
+		} else {
+			for _, key := range []string{"byteEnd", "byteStart", "coordinateUnit", "rangeVerification"} {
+				if _, exists := node[key]; exists {
+					return fmt.Errorf("requirement traceability graph range fields are allowed only on source_range nodes")
+				}
+			}
 		}
 	}
 	if plane == "native_execution_coverage" {
+		if node["kind"] != "execution_evidence" {
+			return fmt.Errorf("requirement traceability graph execution node kind must be execution_evidence")
+		}
 		if _, err := admit.Enum(node["authorityClass"], map[string]struct{}{"caller_reported": {}, "receipt_admitted": {}}, "requirement traceability graph execution authorityClass"); err != nil {
 			return err
 		}
@@ -265,6 +285,13 @@ func admitGraphNodeIdentity(node map[string]any) error {
 		if nodeID != "execution:"+sourceID || node["label"] != sourceID {
 			return fmt.Errorf("requirement traceability graph execution node identity is invalid")
 		}
+	case "code_traceability":
+		if !strings.HasPrefix(nodeID, "code:") {
+			return fmt.Errorf("requirement traceability graph code node identity is invalid")
+		}
+		if _, err := admit.RuleID(strings.TrimPrefix(nodeID, "code:"), "requirement traceability graph code node identity"); err != nil {
+			return fmt.Errorf("requirement traceability graph code node identity is invalid")
+		}
 	}
 	return nil
 }
@@ -273,7 +300,10 @@ func admitGraphEdgeIdentity(edge map[string]any) error {
 	edgeID := edge["edgeId"].(string)
 	fromID := edge["fromNodeId"].(string)
 	toID := edge["toNodeId"].(string)
-	prefix := strings.SplitN(edgeID, ":", 2)[0]
+	prefix, err := graphEdgeIdentityPrefix(edge)
+	if err != nil {
+		return err
+	}
 	var identity map[string]any
 	switch prefix {
 	case "spec-edge", "declaration-edge", "code-parent-edge":
@@ -284,8 +314,6 @@ func admitGraphEdgeIdentity(edge map[string]any) error {
 		identity = map[string]any{"authorityClass": edge["authorityClass"], "codeNodeId": strings.TrimPrefix(toID, "code:"), "currentnessState": edge["currentnessState"], "evidenceRefs": edge["evidenceRefs"], "requirementId": strings.TrimPrefix(fromID, "requirement:")}
 	case "execution-edge":
 		identity = map[string]any{"codeNodeId": strings.TrimPrefix(edge["codeNodeId"].(string), "code:"), "evidenceRef": strings.TrimPrefix(toID, "execution:"), "requirementId": strings.TrimPrefix(fromID, "requirement:")}
-	default:
-		return nil
 	}
 	expected, err := semanticGraphID(prefix, identity)
 	if err != nil || edgeID != expected {
@@ -294,42 +322,32 @@ func admitGraphEdgeIdentity(edge map[string]any) error {
 	return nil
 }
 
+func graphEdgeIdentityPrefix(edge map[string]any) (string, error) {
+	key := edge["evidencePlane"].(string) + ":" + edge["edgeKind"].(string)
+	switch key {
+	case "specification_coverage:contains":
+		return "spec-edge", nil
+	case "specification_coverage:declares":
+		return "declaration-edge", nil
+	case "proof_coverage:proved_by_candidate":
+		return "proof-edge", nil
+	case "code_traceability:contains":
+		return "code-parent-edge", nil
+	case "code_traceability:traced_to":
+		return "code-edge", nil
+	case "native_execution_coverage:observed_by":
+		return "execution-edge", nil
+	default:
+		return "", fmt.Errorf("requirement traceability graph edge identity class is invalid")
+	}
+}
+
 func admitGraphID(raw any, context string) (string, error) {
 	value, ok := raw.(string)
 	if ok && derivedGraphIDPattern.MatchString(value) {
 		return value, nil
 	}
 	return admit.RuleID(raw, context)
-}
-
-func admitGraphRelation(edge map[string]any, nodes map[string]map[string]any) error {
-	from := nodes[edge["fromNodeId"].(string)]
-	to := nodes[edge["toNodeId"].(string)]
-	if from == nil || to == nil {
-		return fmt.Errorf("requirement traceability graph edge endpoint must resolve")
-	}
-	plane := edge["evidencePlane"].(string)
-	kind := edge["edgeKind"].(string)
-	valid := false
-	switch plane + ":" + kind {
-	case "specification_coverage:contains":
-		valid = from["evidencePlane"] == plane && to["evidencePlane"] == plane && from["kind"] != "requirement" && to["kind"] != "requirement"
-	case "specification_coverage:declares":
-		valid = from["evidencePlane"] == plane && from["kind"] != "requirement" && to["evidencePlane"] == plane && to["kind"] == "requirement"
-	case "proof_coverage:proved_by_candidate":
-		valid = from["evidencePlane"] == "specification_coverage" && from["kind"] == "requirement" && to["evidencePlane"] == plane && to["kind"] == "scenario"
-	case "code_traceability:contains":
-		valid = from["evidencePlane"] == plane && to["evidencePlane"] == plane
-	case "code_traceability:traced_to":
-		valid = from["evidencePlane"] == "specification_coverage" && from["kind"] == "requirement" && to["evidencePlane"] == plane
-	case "native_execution_coverage:observed_by":
-		codeNode := nodes[edge["codeNodeId"].(string)]
-		valid = from["evidencePlane"] == "specification_coverage" && from["kind"] == "requirement" && to["evidencePlane"] == plane && codeNode != nil && codeNode["evidencePlane"] == "code_traceability"
-	}
-	if !valid {
-		return fmt.Errorf("requirement traceability graph relation is incompatible with its evidence plane and endpoint kinds")
-	}
-	return nil
 }
 
 func exactGraphNonClaims(raw any) error {

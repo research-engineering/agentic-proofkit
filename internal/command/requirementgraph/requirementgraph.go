@@ -29,6 +29,33 @@ type codeSource struct {
 	digest  string
 }
 
+type graphBudget struct {
+	codeSourceBytes int
+	edges           int
+	nodes           int
+}
+
+func (budget *graphBudget) reserveOutput(nodes, edges int) error {
+	if nodes < 0 || edges < 0 || nodes > maxGraphNodes-budget.nodes || edges > maxGraphEdges-budget.edges {
+		return fmt.Errorf("requirement traceability graph exceeds node or edge limit")
+	}
+	budget.nodes += nodes
+	budget.edges += edges
+	return nil
+}
+
+func (budget *graphBudget) reserveCodeSourceBytes(size int) error {
+	if size < 0 || size > maxCodeSourceBytes-budget.codeSourceBytes {
+		return fmt.Errorf("requirement traceability graph code sources exceed byte limit")
+	}
+	budget.codeSourceBytes += size
+	return nil
+}
+
+func (budget graphBudget) matches(nodes, edges int) bool {
+	return budget.nodes == nodes && budget.edges == edges
+}
+
 var nonClaims = []string{
 	"Traceability graph is a derived projection and does not infer code topology, native execution coverage, proof freshness, merge, release, or rollout readiness.",
 	"Specification, proof, code traceability, and native execution remain distinct evidence planes.",
@@ -42,8 +69,8 @@ func Build(raw any) (map[string]any, error) {
 	if err := admit.KnownKeys(record, []string{"codeSources", "codeTopology", "context", "graphId", "schemaVersion"}, "requirement traceability graph input"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return nil, fmt.Errorf("requirement traceability graph schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return nil, fmt.Errorf("requirement traceability graph input schemaVersion must be 2")
 	}
 	graphID, err := admit.RuleID(record["graphId"], "requirement traceability graph graphId")
 	if err != nil {
@@ -51,6 +78,10 @@ func Build(raw any) (map[string]any, error) {
 	}
 	snapshot, err := requirementcontext.AdmitSnapshot(record["context"])
 	if err != nil {
+		return nil, err
+	}
+	budget := graphBudget{}
+	if err := budget.reserveOutput(len(snapshot.Tree.Nodes), len(snapshot.Tree.Edges)); err != nil {
 		return nil, err
 	}
 	nodes := []map[string]any{}
@@ -67,29 +98,33 @@ func Build(raw any) (map[string]any, error) {
 		}
 		edges = append(edges, map[string]any{"edgeId": edgeID, "edgeKind": "contains", "evidencePlane": "specification_coverage", "fromNodeId": fromNodeID, "toNodeId": toNodeID})
 	}
-	requirementNodeIDs, err := appendRequirementNodes(snapshot, &nodes)
+	requirementNodeIDs, err := appendRequirementNodes(snapshot, &budget, &nodes)
 	if err != nil {
 		return nil, err
 	}
-	if err := appendSpecificationRequirementEdges(snapshot, snapshot.Tree, &edges); err != nil {
+	if err := appendSpecificationRequirementEdges(snapshot, snapshot.Tree, &budget, &edges); err != nil {
 		return nil, err
 	}
-	if err := appendProofEdges(snapshot, requirementNodeIDs, &nodes, &edges); err != nil {
+	if err := appendProofEdges(snapshot, requirementNodeIDs, &budget, &nodes, &edges); err != nil {
 		return nil, err
 	}
-	codeSources, err := admitCodeSources(record["codeSources"])
+	codeSources, err := admitCodeSources(record["codeSources"], &budget)
 	if err != nil {
 		return nil, err
 	}
 	if record["codeTopology"] != nil {
-		if err := appendCodeTopology(record["codeTopology"], codeSources, requirementNodeIDs, &nodes, &edges); err != nil {
+		if err := appendCodeTopology(record["codeTopology"], codeSources, &budget, &nodes, &edges); err != nil {
 			return nil, err
 		}
 	}
-	if len(nodes) > maxGraphNodes || len(edges) > maxGraphEdges {
-		return nil, fmt.Errorf("requirement traceability graph exceeds node or edge limit")
+	if !budget.matches(len(nodes), len(edges)) {
+		return nil, fmt.Errorf("requirement traceability graph budget does not match projected topology")
 	}
-	if err := uniqueGraphIdentities(nodes, edges); err != nil {
+	topology, err := outputTopologyFromRecords(nodes, edges)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateOutputTopology(topology); err != nil {
 		return nil, err
 	}
 	sort.Slice(nodes, func(left, right int) bool { return nodes[left]["nodeId"].(string) < nodes[right]["nodeId"].(string) })
@@ -102,12 +137,23 @@ func Build(raw any) (map[string]any, error) {
 	return output, nil
 }
 
-func appendSpecificationRequirementEdges(snapshot requirementcontext.Snapshot, tree requirementspectree.Tree, edges *[]map[string]any) error {
+func appendSpecificationRequirementEdges(snapshot requirementcontext.Snapshot, tree requirementspectree.Tree, budget *graphBudget, edges *[]map[string]any) error {
 	requirementsBySource := map[string][]string{}
 	for _, source := range snapshot.RequirementSources {
 		for _, requirement := range source.Requirements {
 			requirementsBySource[source.SourceID] = append(requirementsBySource[source.SourceID], requirement.RequirementID)
 		}
+	}
+	relationCount := 0
+	for _, node := range tree.Nodes {
+		for _, ref := range node.SourceRefs {
+			if ref.SourceRole == "requirements" {
+				relationCount += len(requirementsBySource[ref.SourceID])
+			}
+		}
+	}
+	if err := budget.reserveOutput(0, relationCount); err != nil {
+		return err
 	}
 	for _, node := range tree.Nodes {
 		for _, ref := range node.SourceRefs {
@@ -115,9 +161,6 @@ func appendSpecificationRequirementEdges(snapshot requirementcontext.Snapshot, t
 				continue
 			}
 			for _, requirementID := range requirementsBySource[ref.SourceID] {
-				if len(*edges) >= maxGraphEdges {
-					return fmt.Errorf("requirement traceability graph exceeds edge limit")
-				}
 				fromNodeID := "spec:" + node.NodeID
 				toNodeID := "requirement:" + requirementID
 				edgeID, err := semanticGraphID("declaration-edge", map[string]any{"edgeKind": "declares", "fromNodeId": fromNodeID, "toNodeId": toNodeID})
@@ -131,33 +174,14 @@ func appendSpecificationRequirementEdges(snapshot requirementcontext.Snapshot, t
 	return nil
 }
 
-func uniqueGraphIdentities(nodes, edges []map[string]any) error {
-	seenNodes := map[string]struct{}{}
-	for _, node := range nodes {
-		id := node["nodeId"].(string)
-		if _, exists := seenNodes[id]; exists {
-			return fmt.Errorf("requirement traceability graph node ids must be unique")
-		}
-		seenNodes[id] = struct{}{}
+func appendRequirementNodes(snapshot requirementcontext.Snapshot, budget *graphBudget, nodes *[]map[string]any) (map[string]struct{}, error) {
+	requirementCount := 0
+	for _, source := range snapshot.RequirementSources {
+		requirementCount += len(source.Requirements)
 	}
-	seenEdges := map[string]struct{}{}
-	for _, edge := range edges {
-		id := edge["edgeId"].(string)
-		if _, exists := seenEdges[id]; exists {
-			return fmt.Errorf("requirement traceability graph edge ids must be unique")
-		}
-		seenEdges[id] = struct{}{}
-		if _, ok := seenNodes[edge["fromNodeId"].(string)]; !ok {
-			return fmt.Errorf("requirement traceability graph edge source must resolve")
-		}
-		if _, ok := seenNodes[edge["toNodeId"].(string)]; !ok {
-			return fmt.Errorf("requirement traceability graph edge target must resolve")
-		}
+	if err := budget.reserveOutput(requirementCount, 0); err != nil {
+		return nil, err
 	}
-	return nil
-}
-
-func appendRequirementNodes(snapshot requirementcontext.Snapshot, nodes *[]map[string]any) (map[string]struct{}, error) {
 	ids := map[string]struct{}{}
 	for _, source := range snapshot.RequirementSources {
 		for _, requirement := range source.Requirements {
@@ -172,9 +196,18 @@ func appendRequirementNodes(snapshot requirementcontext.Snapshot, nodes *[]map[s
 	return ids, nil
 }
 
-func appendProofEdges(snapshot requirementcontext.Snapshot, requirementIDs map[string]struct{}, nodes *[]map[string]any, edges *[]map[string]any) error {
+func appendProofEdges(snapshot requirementcontext.Snapshot, requirementIDs map[string]struct{}, budget *graphBudget, nodes *[]map[string]any, edges *[]map[string]any) error {
 	if snapshot.ProofBinding == nil {
 		return nil
+	}
+	bindingCount := 0
+	for _, binding := range snapshot.ProofBinding.Bindings {
+		if _, ok := requirementIDs[binding.RequirementID]; ok {
+			bindingCount++
+		}
+	}
+	if err := budget.reserveOutput(bindingCount, bindingCount); err != nil {
+		return err
 	}
 	seenBindings := map[string]struct{}{}
 	for _, binding := range snapshot.ProofBinding.Bindings {
@@ -191,9 +224,6 @@ func appendProofEdges(snapshot requirementcontext.Snapshot, requirementIDs map[s
 			return fmt.Errorf("requirement traceability graph proof bindings must be unique")
 		}
 		seenBindings[nodeID] = struct{}{}
-		if len(*nodes) >= maxGraphNodes || len(*edges) >= maxGraphEdges {
-			return fmt.Errorf("requirement traceability graph exceeds node or edge limit")
-		}
 		*nodes = append(*nodes, map[string]any{"evidencePlane": "proof_coverage", "kind": "scenario", "label": binding.ScenarioID, "nodeId": nodeID, "requirementId": requirementID, "scenarioId": binding.ScenarioID, "sourceId": binding.WitnessID, "witnessId": binding.WitnessID, "witnessKind": binding.WitnessKind, "witnessPath": binding.WitnessPath})
 		edgeID, err := semanticGraphID("proof-edge", map[string]any{"fromNodeId": "requirement:" + requirementID, "toNodeId": nodeID})
 		if err != nil {
@@ -204,27 +234,34 @@ func appendProofEdges(snapshot requirementcontext.Snapshot, requirementIDs map[s
 	return nil
 }
 
-func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementIDs map[string]struct{}, nodes *[]map[string]any, edges *[]map[string]any) error {
+func appendCodeTopology(raw any, codeSources map[string]codeSource, budget *graphBudget, nodes *[]map[string]any, edges *[]map[string]any) error {
 	record, ok := raw.(map[string]any)
 	if !ok {
 		return fmt.Errorf("codeTopology must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"edges", "nativeCoverage", "nodes", "topologyId"}, "codeTopology"); err != nil {
-		return err
-	}
-	if _, err := admit.RuleID(record["topologyId"], "codeTopology topologyId"); err != nil {
+	if err := admit.KnownKeys(record, []string{"edges", "nativeCoverage", "nodes"}, "codeTopology"); err != nil {
 		return err
 	}
 	rawNodes, ok := record["nodes"].([]any)
 	if !ok {
 		return fmt.Errorf("codeTopology nodes must be an array")
 	}
-	type admittedCodeNode struct {
-		level  string
-		parent string
+	rawEdges, ok := record["edges"].([]any)
+	if !ok {
+		return fmt.Errorf("codeTopology edges must be an array")
 	}
-	levels := map[string]int{"repository": 0, "package": 1, "module": 2, "file": 3, "symbol": 4, "source_range": 5}
-	known := map[string]admittedCodeNode{}
+	coverage := []any{}
+	if rawCoverage := record["nativeCoverage"]; rawCoverage != nil {
+		coverage, ok = rawCoverage.([]any)
+		if !ok {
+			return fmt.Errorf("codeTopology nativeCoverage must be an array")
+		}
+	}
+	reservedNodes, reservedEdges := codeTopologyReservation(rawNodes, rawEdges, coverage)
+	if err := budget.reserveOutput(reservedNodes, reservedEdges); err != nil {
+		return err
+	}
+	known := map[string]string{}
 	for _, rawNode := range rawNodes {
 		node, ok := rawNode.(map[string]any)
 		if !ok {
@@ -255,9 +292,6 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 				return err
 			}
 		}
-		if (level == "repository") != (parentID == "") {
-			return fmt.Errorf("codeTopology repository nodes must be roots and every other node must declare parentNodeId")
-		}
 		pathText, err := admit.NonEmptyText(node["sourcePath"], "codeTopology node sourcePath")
 		if err != nil {
 			return err
@@ -273,6 +307,10 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 		currentness, err := admit.Enum(node["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "codeTopology node currentnessState")
 		if err != nil {
 			return err
+		}
+		source, hasSource := codeSources[path]
+		if hasSource && source.digest != digestRef {
+			return fmt.Errorf("codeTopology node sourceDigest does not match codeSources content")
 		}
 		projected := map[string]any{"currentnessState": currentness, "evidencePlane": "code_traceability", "kind": level, "label": label, "nodeId": "code:" + id, "sourceDigest": digestRef, "sourceId": path}
 		if parentID != "" {
@@ -303,41 +341,27 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 			projected["coordinateUnit"] = "utf8_byte"
 			projected["sourceDigest"] = digestRef
 			projected["rangeVerification"] = "unverified"
-			if source, exists := codeSources[path]; exists {
-				if source.digest != digestRef {
-					return fmt.Errorf("codeTopology node sourceDigest does not match codeSources content")
-				}
+			if hasSource {
 				if end > len(source.content) || !utf8Boundary(source.content, start) || !utf8Boundary(source.content, end) {
 					return fmt.Errorf("codeTopology node byte range must resolve to UTF-8 boundaries in codeSources content")
 				}
 				projected["rangeVerification"] = "verified"
 			}
 		}
-		known[id] = admittedCodeNode{level: level, parent: parentID}
+		known[id] = parentID
 		*nodes = append(*nodes, projected)
 	}
-	for id, node := range known {
-		if node.parent == "" {
+	for id, parentID := range known {
+		if parentID == "" {
 			continue
 		}
-		parent, exists := known[node.parent]
-		if !exists {
-			return fmt.Errorf("codeTopology node references unknown parent")
-		}
-		if levels[parent.level] >= levels[node.level] {
-			return fmt.Errorf("codeTopology parent abstraction level must be broader than child level")
-		}
-		fromNodeID := "code:" + node.parent
+		fromNodeID := "code:" + parentID
 		toNodeID := "code:" + id
 		edgeID, err := semanticGraphID("code-parent-edge", map[string]any{"edgeKind": "contains", "fromNodeId": fromNodeID, "toNodeId": toNodeID})
 		if err != nil {
 			return err
 		}
 		*edges = append(*edges, map[string]any{"edgeId": edgeID, "edgeKind": "contains", "evidencePlane": "code_traceability", "fromNodeId": fromNodeID, "toNodeId": toNodeID})
-	}
-	rawEdges, ok := record["edges"].([]any)
-	if !ok {
-		return fmt.Errorf("codeTopology edges must be an array")
 	}
 	seenRelations := map[string]struct{}{}
 	for _, rawEdge := range rawEdges {
@@ -355,12 +379,6 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 		requirementID, err := admit.RuleID(edge["requirementId"], "codeTopology edge requirementId")
 		if err != nil {
 			return err
-		}
-		if _, ok := known[codeID]; !ok {
-			return fmt.Errorf("codeTopology edge references unknown code node")
-		}
-		if _, ok := requirementIDs[requirementID]; !ok {
-			return fmt.Errorf("codeTopology edge references unknown requirement")
 		}
 		evidenceRefs, err := admittedRuleIDArray(edge["evidenceRefs"], "codeTopology edge evidenceRefs")
 		if err != nil || len(evidenceRefs) == 0 {
@@ -383,16 +401,9 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 			return fmt.Errorf("codeTopology traceability relations must be unique")
 		}
 		seenRelations[edgeID] = struct{}{}
-		if len(*edges) >= maxGraphEdges {
-			return fmt.Errorf("requirement traceability graph exceeds edge limit")
-		}
 		*edges = append(*edges, map[string]any{"authorityClass": authority, "currentnessState": currentness, "edgeId": edgeID, "edgeKind": "traced_to", "evidencePlane": "code_traceability", "evidenceRefs": admit.StringSliceToAny(evidenceRefs), "fromNodeId": "requirement:" + requirementID, "toNodeId": "code:" + codeID})
 	}
-	if rawCoverage := record["nativeCoverage"]; rawCoverage != nil {
-		coverage, ok := rawCoverage.([]any)
-		if !ok {
-			return fmt.Errorf("codeTopology nativeCoverage must be an array")
-		}
+	if len(coverage) > 0 {
 		seenEvidence := map[string]map[string]any{}
 		seenObservations := map[string]struct{}{}
 		for _, raw := range coverage {
@@ -407,15 +418,9 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 			if err != nil {
 				return err
 			}
-			if _, ok := known[codeID]; !ok {
-				return fmt.Errorf("codeTopology native coverage references unknown code node")
-			}
 			requirementID, err := admit.RuleID(item["requirementId"], "codeTopology native coverage requirementId")
 			if err != nil {
 				return err
-			}
-			if _, ok := requirementIDs[requirementID]; !ok {
-				return fmt.Errorf("codeTopology native coverage references unknown requirement")
 			}
 			evidenceRef, err := admit.RuleID(item["evidenceRef"], "codeTopology native coverage evidenceRef")
 			if err != nil {
@@ -455,13 +460,36 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, requirementI
 				return fmt.Errorf("codeTopology native coverage observations must be unique")
 			}
 			seenObservations[edgeID] = struct{}{}
-			if len(*nodes) > maxGraphNodes || len(*edges) >= maxGraphEdges {
-				return fmt.Errorf("requirement traceability graph exceeds node or edge limit")
-			}
 			*edges = append(*edges, map[string]any{"codeNodeId": "code:" + codeID, "edgeId": edgeID, "edgeKind": "observed_by", "evidencePlane": "native_execution_coverage", "fromNodeId": "requirement:" + requirementID, "toNodeId": nodeID})
 		}
 	}
 	return nil
+}
+
+func codeTopologyReservation(rawNodes, rawEdges, coverage []any) (int, int) {
+	parentEdges := 0
+	for _, rawNode := range rawNodes {
+		node, ok := rawNode.(map[string]any)
+		if !ok || node["parentNodeId"] != nil {
+			parentEdges++
+		}
+	}
+	evidenceRefs := map[string]struct{}{}
+	malformedEvidenceRefs := 0
+	for _, raw := range coverage {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			malformedEvidenceRefs++
+			continue
+		}
+		evidenceRef, ok := item["evidenceRef"].(string)
+		if !ok {
+			malformedEvidenceRefs++
+			continue
+		}
+		evidenceRefs[evidenceRef] = struct{}{}
+	}
+	return len(rawNodes) + len(evidenceRefs) + malformedEvidenceRefs, parentEdges + len(rawEdges) + len(coverage)
 }
 
 func semanticGraphID(prefix string, identity map[string]any) (string, error) {
@@ -472,7 +500,7 @@ func semanticGraphID(prefix string, identity map[string]any) (string, error) {
 	return prefix + ":" + strings.TrimPrefix(digest.SHA256TextRef(string(encoded)), "sha256:"), nil
 }
 
-func admitCodeSources(raw any) (map[string]codeSource, error) {
+func admitCodeSources(raw any, budget *graphBudget) (map[string]codeSource, error) {
 	if raw == nil {
 		return map[string]codeSource{}, nil
 	}
@@ -481,13 +509,19 @@ func admitCodeSources(raw any) (map[string]codeSource, error) {
 		return nil, fmt.Errorf("requirement traceability graph codeSources must be an array")
 	}
 	result := make(map[string]codeSource, len(values))
-	totalBytes := 0
 	for index, rawValue := range values {
 		record, ok := rawValue.(map[string]any)
 		if !ok {
 			return nil, fmt.Errorf("requirement traceability graph codeSources[%d] must be an object", index)
 		}
 		if err := admit.KnownKeys(record, []string{"content", "path"}, "requirement traceability graph code source"); err != nil {
+			return nil, err
+		}
+		content, ok := record["content"].(string)
+		if !ok {
+			return nil, fmt.Errorf("requirement traceability graph code source content must be UTF-8 text")
+		}
+		if err := budget.reserveCodeSourceBytes(len(content)); err != nil {
 			return nil, err
 		}
 		pathText, err := admit.NonEmptyText(record["path"], "requirement traceability graph code source path")
@@ -501,16 +535,11 @@ func admitCodeSources(raw any) (map[string]codeSource, error) {
 		if _, exists := result[path]; exists {
 			return nil, fmt.Errorf("requirement traceability graph code source paths must be unique")
 		}
-		content, ok := record["content"].(string)
-		if !ok || !utf8.ValidString(content) {
+		if !utf8.ValidString(content) {
 			return nil, fmt.Errorf("requirement traceability graph code source content must be UTF-8 text")
 		}
 		if admit.ContainsSecretLikeValue(content) {
 			return nil, fmt.Errorf("requirement traceability graph code source content must not contain secret-like values")
-		}
-		totalBytes += len(content)
-		if totalBytes > maxCodeSourceBytes {
-			return nil, fmt.Errorf("requirement traceability graph code sources exceed byte limit")
 		}
 		result[path] = codeSource{content: []byte(content), digest: digest.SHA256TextRef(content)}
 	}

@@ -122,7 +122,7 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 		"python/agentic_proofkit/__main__.py",
 		"python/agentic_proofkit/cli.py",
 	}
-	entries := make([]wheelEntry, 0, len(sourceFiles)+5)
+	entries := make([]wheelEntry, 0, len(sourceFiles)+6)
 	for _, source := range sourceFiles {
 		content, err := os.ReadFile(source)
 		if err != nil {
@@ -133,6 +133,10 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 			Mode:    0o644,
 			Path:    strings.TrimPrefix(source, "python/"),
 		})
+	}
+	license, err := readLicenseFile()
+	if err != nil {
+		return nil, err
 	}
 	entries = append(entries,
 		wheelEntry{
@@ -155,6 +159,11 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 			Mode:    0o644,
 			Path:    distInfo + "/entry_points.txt",
 		},
+		wheelEntry{
+			Content: license,
+			Mode:    0o644,
+			Path:    distInfo + "/licenses/" + licenseFilename,
+		},
 	)
 	sort.Slice(entries, func(left int, right int) bool {
 		return entries[left].Path < entries[right].Path
@@ -169,11 +178,12 @@ func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEn
 
 func metadata(manifest packageJSON) string {
 	return strings.Join([]string{
-		"Metadata-Version: 2.1",
+		"Metadata-Version: 2.4",
 		"Name: " + packageName,
 		"Version: " + manifest.Version,
 		"Summary: " + manifest.Description,
-		"License: " + manifest.License,
+		"License-Expression: " + licenseExpression,
+		"License-File: " + licenseFilename,
 		"Requires-Python: >=3.9",
 		"Project-URL: Source, " + strings.TrimPrefix(manifest.Repository.URL, "git+"),
 		"",

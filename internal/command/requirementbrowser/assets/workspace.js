@@ -395,10 +395,25 @@ document.querySelectorAll("[data-view]").forEach((button) => button.addEventList
   if (button.dataset.view === "graph") void renderGraph();
 }));
 
+const questionInputElement = document.querySelector("#annotation-question");
+const statusElement = document.querySelector("#handoff-status");
+const packetElement = document.querySelector("#handoff-packet");
+const submitElement = document.querySelector("#submit-question");
+const selectedContextElement = document.querySelector("#selected-context");
+const clearSelectionElement = document.querySelector("#clear-selection");
+if (!(questionInputElement instanceof HTMLTextAreaElement) || !(statusElement instanceof HTMLElement) || !(packetElement instanceof HTMLElement) || !(submitElement instanceof HTMLButtonElement) || !(selectedContextElement instanceof HTMLUListElement) || !(clearSelectionElement instanceof HTMLButtonElement)) throw new Error("Missing handoff controls");
+const questionInput = /** @type {HTMLTextAreaElement} */ (questionInputElement);
+const status = /** @type {HTMLElement} */ (statusElement);
+const packetView = /** @type {HTMLElement} */ (packetElement);
+const submit = /** @type {HTMLButtonElement} */ (submitElement);
+const selectedContext = /** @type {HTMLUListElement} */ (selectedContextElement);
+const clearSelectionButton = /** @type {HTMLButtonElement} */ (clearSelectionElement);
+
 document.addEventListener("selectionchange", () => {
   const selection = window.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount !== 1) {
-    const nextState = transitionSelection(selectionState, {kind: "collapse"});
+    const focusedHandoffControl = document.activeElement === questionInput || document.activeElement === submit || document.activeElement === clearSelectionButton;
+    const nextState = transitionSelection(selectionState, {kind: focusedHandoffControl ? "commit" : "collapse"});
     if (nextState !== selectionState) {
       selectionState = nextState;
       resetPressedSelectionControls();
@@ -430,17 +445,10 @@ document.addEventListener("selectionchange", () => {
   announceSelection();
 });
 
-const questionInputElement = document.querySelector("#annotation-question");
-const statusElement = document.querySelector("#handoff-status");
-const packetElement = document.querySelector("#handoff-packet");
-const submitElement = document.querySelector("#submit-question");
-if (!(questionInputElement instanceof HTMLTextAreaElement) || !(statusElement instanceof HTMLElement) || !(packetElement instanceof HTMLElement) || !(submitElement instanceof HTMLButtonElement)) throw new Error("Missing handoff controls");
-const questionInput = /** @type {HTMLTextAreaElement} */ (questionInputElement);
-const status = /** @type {HTMLElement} */ (statusElement);
-const packetView = /** @type {HTMLElement} */ (packetElement);
-const submit = /** @type {HTMLButtonElement} */ (submitElement);
-
 function announceSelection() {
+  selectedContext.replaceChildren();
+  appendTextItems(selectedContext, selectionState.targets.map((target) => target.exactQuote));
+  clearSelectionButton.disabled = selectionState.targets.length === 0;
   status.textContent = selectionState.targets.length === 0 ? "No source-bound text selected." : `${selectionState.targets.length} source-bound target(s) selected.`;
 }
 
@@ -452,9 +460,23 @@ function clearSelection() {
   selectionState = transitionSelection(selectionState, {kind: "clear"});
   resetPressedSelectionControls();
   const selection = window.getSelection();
-  if (selection && !selection.isCollapsed) selection.removeAllRanges();
-  status.textContent = "No source-bound text selected.";
+  selection?.removeAllRanges();
+  announceSelection();
 }
+
+function commitSelection() {
+  const nextState = transitionSelection(selectionState, {kind: "commit"});
+  if (nextState !== selectionState) {
+    selectionState = nextState;
+    announceSelection();
+  }
+}
+
+for (const control of [questionInput, submit]) {
+  control.addEventListener("pointerdown", commitSelection);
+  control.addEventListener("focus", commitSelection);
+}
+clearSelectionButton.addEventListener("click", clearSelection);
 submit.addEventListener("click", async () => {
   if (submit.disabled) return;
   const question = questionInput.value.trim();
@@ -475,4 +497,5 @@ submit.addEventListener("click", async () => {
   }
 });
 
+announceSelection();
 void renderSpecifications();

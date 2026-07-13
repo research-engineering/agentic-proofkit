@@ -294,6 +294,32 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Each Python wheel binds its embedded executable to the release binary digest, independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
+      "claimLevel": "blocking",
+      "riskClass": "critical",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-023"],
+      "nonClaims": ["This requirement does not claim execution on every accepted operating-system version, legal approval, registry publication, release approval, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Release metadata generation admits one version-bound machine-readable declaration of the reviewed public-contract change set and renders release notes as its exact projection, while one repository-owned retained-evidence builder and verifier checksum the exact final downloadable artifact topology with artifact-relative paths, reject unbound evidence files and symlink substitution, and fail release closeout on record, note, path, or digest drift.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-024"],
+      "nonClaims": ["This requirement does not infer change-record completeness from source changes, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ]
 }

@@ -124,6 +124,79 @@ func TestOwnerFilterPreservesStableIdentityAcrossOwnershipChange(t *testing.T) {
 	}
 }
 
+func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.091504423064274626695623049569025044424830049352504253663226902245461570004740")
+	baseline := contextFixture(t, "The shared requirement remains stable.")
+	current := contextFixture(t, "The shared requirement changes its invariant.")
+	baseRequirements := baseline["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)
+	currentRequirements := current["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)
+
+	removed := cloneRequirementRecord(t, baseRequirements[0].(map[string]any))
+	removed["requirementId"] = "REQ-CONSUMER-REMOVED"
+	baseline["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"] = append(baseRequirements, removed)
+
+	added := cloneRequirementRecord(t, currentRequirements[0].(map[string]any))
+	added["requirementId"] = "REQ-CONSUMER-ADDED"
+	added["invariant"] = "The added requirement remains independently identifiable."
+	current["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"] = append(currentRequirements, added)
+
+	shared := currentRequirements[0].(map[string]any)
+	shared["claimLevel"] = "advisory"
+	shared["nonClaimRefs"] = []any{"NC-CONSUMER-001", "NC-CONSUMER-002"}
+	shared["updatePolicy"].(map[string]any)["requiresImpactDeclaration"] = false
+	shared["lifecycle"] = map[string]any{
+		"state":                     "superseded",
+		"replacementRequirementIds": []any{"REQ-CONSUMER-ADDED"},
+		"evidenceRefs":              []any{"consumer.lifecycle.transition"},
+	}
+	resignContextFixture(t, baseline)
+	resignContextFixture(t, current)
+
+	output, err := Build(map[string]any{
+		"baseContext": baseline, "currentContext": current,
+		"diffId": "consumer.complete-algebra.diff", "schemaVersion": json.Number("1"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	classes := map[string]bool{}
+	pointers := map[string]string{}
+	for _, raw := range output["changes"].([]any) {
+		change := raw.(map[string]any)
+		class := change["changeClass"].(string)
+		classes[class] = true
+		pointers[change["jsonPointer"].(string)] = class
+	}
+	for _, class := range []string{"entity_added", "entity_removed", "lifecycle_transition", "opaque_value_changed", "scalar_changed", "set_membership_changed"} {
+		if !classes[class] {
+			t.Fatalf("semantic diff omitted %s: %#v", class, output["changes"])
+		}
+	}
+	for pointer, class := range map[string]string{
+		"/requirements/REQ-CONSUMER-ADDED":            "entity_added",
+		"/requirements/REQ-CONSUMER-REMOVED":          "entity_removed",
+		"/requirements/REQ-CONSUMER-001/invariant":    "scalar_changed",
+		"/requirements/REQ-CONSUMER-001/nonClaimRefs": "set_membership_changed",
+		"/requirements/REQ-CONSUMER-001/updatePolicy": "opaque_value_changed",
+		"/requirements/REQ-CONSUMER-001/lifecycle":    "lifecycle_transition",
+	} {
+		if pointers[pointer] != class {
+			t.Fatalf("change %s class=%q, want %q", pointer, pointers[pointer], class)
+		}
+	}
+	encoded, err := stablejson.Marshal(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AdmitOutput(decoded, current["snapshotId"].(string)); err != nil {
+		t.Fatalf("complete semantic diff algebra is not closed under output admission: %v", err)
+	}
+}
+
 func TestBuildIncludesDeferralAndAdmissionBindsChangeIdentity(t *testing.T) {
 	base := deferredContextFixture(t, "Review after the migration window.")
 	current := deferredContextFixture(t, "Review after the compatibility window.")
@@ -204,6 +277,23 @@ func resignContextFixture(t *testing.T, value map[string]any) {
 		t.Fatal(err)
 	}
 	value["snapshotId"] = digest.SHA256TextRef(string(encoded))
+}
+
+func cloneRequirementRecord(t *testing.T, value map[string]any) map[string]any {
+	t.Helper()
+	encoded, err := stablejson.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, ok := decoded.(map[string]any)
+	if !ok {
+		t.Fatal("cloned requirement is not an object")
+	}
+	return record
 }
 
 func treeFixture() map[string]any {

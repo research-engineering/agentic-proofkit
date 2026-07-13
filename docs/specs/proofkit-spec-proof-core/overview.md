@@ -108,10 +108,13 @@ execution receipts, and merge policy.
   boundaries, and non-claims, then emits a bounded source-bound question packet
   only after explicit user submission.
 - `REQ-PROOFKIT-SPEC-022`: semantic diff compares admitted requirement fields
-  by owner-declared scalar, set, and map semantics rather than textual order.
-- `REQ-PROOFKIT-SPEC-023`: traceability graphs preserve specification, proof,
-  code traceability, and native execution as distinct evidence planes and
-  accept code topology only as explicit caller-owned input.
+  by owner-declared scalar, set, map, and lifecycle semantics, covers entity
+  additions and removals, and remains closed under output re-admission.
+- `REQ-PROOFKIT-SPEC-023`: traceability graph input schema v2 preserves
+  specification, proof, code traceability, and native execution as distinct
+  evidence planes and accepts code topology only as explicit caller-owned input
+  with source-digest, parent-edge, abstraction-order, and pre-materialization
+  budget closure.
 
 ## Non-Claims
 

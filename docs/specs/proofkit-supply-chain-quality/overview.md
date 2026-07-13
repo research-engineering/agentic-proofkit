@@ -98,6 +98,14 @@ vulnerability absence, or consumer rollout safety by itself.
   routes, bounded server cleanup, repository-confined non-symlink proof
   artifacts, and machine-admitted per-project rendered engine evidence without
   runtime dependencies or a production bundler.
+- `REQ-PROOFKIT-QUALITY-023`: Python wheels independently bind advertised
+  platform compatibility to decoded executable bytes and carry Core Metadata
+  2.4 plus an exact, RECORD-closed repository license payload.
+- `REQ-PROOFKIT-QUALITY-024`: a version-bound machine record declares the
+  reviewed public-contract change set and owns release-note content, while one
+  retained-evidence owner builds and verifies checksums against exact
+  downloadable artifact-relative paths without inferring change completeness
+  from the source diff.
 
 ## Non-Claims
 

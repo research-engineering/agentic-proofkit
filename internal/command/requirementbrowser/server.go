@@ -153,27 +153,16 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 	if err != nil {
 		return err
 	}
+	return serveHandle(ctx, handle, options, stdout)
+}
+
+func serveHandle(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer) error {
+	if options.SessionMode == "one-shot-question" {
+		return serveOneShot(ctx, handle, options, stdout)
+	}
 	defer func() { _ = closeHandle(handle) }()
 	if options.Open {
 		if err := openBrowser(ctx, handle.URL); err != nil {
-			return err
-		}
-	}
-	if options.SessionMode == "one-shot-question" {
-		timeout := options.SessionTimeout
-		if timeout == 0 {
-			timeout = 30 * time.Minute
-		}
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
-		select {
-		case packet := <-handle.Handoff:
-			return writeOneShotPacket(stdout, packet, packet["state"] != "submitted")
-		case <-timer.C:
-			return commitOrReadTerminal(handle, terminalPacket("expired", handle), stdout)
-		case <-ctx.Done():
-			return commitOrReadTerminal(handle, terminalPacket("cancelled", handle), stdout)
-		case err := <-handle.Done():
 			return err
 		}
 	}
@@ -191,12 +180,43 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 	}
 }
 
-func commitOrReadTerminal(handle ServerHandle, candidate map[string]any, stdout io.Writer) error {
-	if handle.terminal.TryCommit(candidate) {
-		return writeOneShotPacket(stdout, candidate, true)
+func serveOneShot(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer) error {
+	if options.Open {
+		if err := openBrowser(ctx, handle.URL); err != nil {
+			return errors.Join(err, closeAndWaitServer(handle))
+		}
 	}
-	winner := <-handle.Handoff
-	return writeOneShotPacket(stdout, winner, winner["state"] != "submitted")
+	timeout := options.SessionTimeout
+	if timeout == 0 {
+		timeout = 30 * time.Minute
+	}
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	var packet map[string]any
+	select {
+	case packet = <-handle.Handoff:
+	case <-timer.C:
+		packet = commitOrReadTerminal(handle, terminalPacket("expired", handle))
+	case <-ctx.Done():
+		packet = commitOrReadTerminal(handle, terminalPacket("cancelled", handle))
+	case err := <-handle.Done():
+		return errors.Join(err, closeHandle(handle))
+	}
+	unsuccessful := packet["state"] != "submitted"
+	if cleanupErr := closeAndWaitServer(handle); cleanupErr != nil {
+		if unsuccessful {
+			return errors.Join(ErrOneShotTerminal, cleanupErr)
+		}
+		return cleanupErr
+	}
+	return writeOneShotPacket(stdout, packet, unsuccessful)
+}
+
+func commitOrReadTerminal(handle ServerHandle, candidate map[string]any) map[string]any {
+	if handle.terminal.TryCommit(candidate) {
+		return candidate
+	}
+	return <-handle.Handoff
 }
 
 func terminalPacket(state string, handle ServerHandle) map[string]any {
@@ -252,6 +272,13 @@ func closeHandle(handle ServerHandle) error {
 	ctx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
 	defer cancel()
 	return handle.Close(ctx)
+}
+
+func closeAndWaitServer(handle ServerHandle) error {
+	closeErr := closeHandle(handle)
+	waitCtx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
+	defer cancel()
+	return errors.Join(closeErr, waitServerDone(waitCtx, handle))
 }
 
 func waitServerDone(ctx context.Context, handle ServerHandle) error {

@@ -214,7 +214,7 @@ func TestWorkspaceRejectsGraphInputForAnotherContext(t *testing.T) {
 	otherContext := decoded.(map[string]any)
 	otherContext["catalogId"] = "consumer.other-context"
 	resignWorkspaceSnapshot(t, otherContext)
-	fixture["graphInput"] = map[string]any{"context": otherContext, "graphId": "consumer.workspace.graph", "schemaVersion": json.Number("1")}
+	fixture["graphInput"] = map[string]any{"context": otherContext, "graphId": "consumer.workspace.graph", "schemaVersion": json.Number("2")}
 	if _, _, err := buildWorkspace(fixture); err == nil {
 		t.Fatal("buildWorkspace accepted graph input for a different context")
 	}

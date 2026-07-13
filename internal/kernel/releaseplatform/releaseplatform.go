@@ -21,8 +21,8 @@ type Target struct {
 }
 
 var targets = []Target{
-	target("darwin", "arm64", "arm64", "darwin-arm64", "macosx_11_0_arm64"),
-	target("darwin", "amd64", "x64", "darwin-x64", "macosx_10_12_x86_64"),
+	target("darwin", "arm64", "arm64", "darwin-arm64", "macosx_12_0_arm64"),
+	target("darwin", "amd64", "x64", "darwin-x64", "macosx_12_0_x86_64"),
 	target("linux", "arm64", "arm64", "linux-arm64", "manylinux_2_17_aarch64"),
 	target("linux", "amd64", "x64", "linux-x64", "manylinux_2_17_x86_64"),
 }

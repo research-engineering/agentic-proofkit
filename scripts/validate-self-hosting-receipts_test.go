@@ -472,13 +472,14 @@ func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testi
 	for _, item := range []string{
 		"artifacts/release/release-notes.md",
 		"artifacts/release/github-release.json",
-		"artifacts/release/retained-evidence-checksums.sha256",
-		"artifacts/attestations/github-artifact-attestations.json",
-		"printf '%s  %s\\n' \"$sum\" \"$(basename \"$evidence\")\"",
+		"go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts",
 	} {
 		if !strings.Contains(createRun, item) {
 			t.Fatalf("Create GitHub Release step missing retained evidence token %q", item)
 		}
+	}
+	if strings.Contains(createRun, "$(basename \"$evidence\")") || strings.Contains(createRun, "sha256sum \"$evidence\"") {
+		t.Fatal("Create GitHub Release step must delegate retained evidence topology to its repository owner")
 	}
 	uploadIndex, err := uniqueStepIndex(assetJob.Steps, "Upload release evidence")
 	if err != nil {
@@ -491,7 +492,7 @@ func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testi
 	for _, item := range []string{
 		"artifacts/attestations/*.json",
 		"artifacts/release/github-release.json",
-		"artifacts/release/retained-evidence-checksums.sha256",
+		"artifacts/retained-evidence-checksums.sha256",
 		"artifacts/release/release-notes.md",
 	} {
 		if !strings.Contains(uploadPath, item) {

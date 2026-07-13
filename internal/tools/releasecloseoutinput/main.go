@@ -25,6 +25,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
 )
 
 const (
@@ -446,6 +448,7 @@ func pythonArtifactCriterion(root string, manifest packageJSON) criterion {
 func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 	evidence := []string{
 		ciProvenancePath,
+		releasechange.RecordPath,
 		"artifacts/release/checksums.sha256",
 		"artifacts/release/metadata-checksums.sha256",
 		"artifacts/release/release-manifest.json",
@@ -456,17 +459,17 @@ func releaseManifestCriterion(root string, manifest packageJSON) criterion {
 	evidence = append(evidence, retainedReleaseEvidenceRefs(root)...)
 	ok := releaseManifestMatches(root, manifest) &&
 		validSBOM(root, "artifacts/release/sbom.cdx.json") &&
-		releaseNotesIncludeRollback(root, "artifacts/release/release-notes.md", manifest.Name) &&
+		releaseNotesMatchChangeRecord(root, "artifacts/release/release-notes.md", manifest) &&
 		releaseChecksumInventoriesMatch(root, manifest) &&
 		retainedReleaseEvidenceMatches(root) &&
 		allFilesExist(root, evidence)
 	return blockingCriterion(
 		"proofkit.release_closeout.manifest_and_sbom",
-		"Release manifest, rollback-capable release notes, package checksums, metadata checksums, SBOM, and SBOM subject digests must exist for the current package version.",
+		"Release manifest, version-bound change-record notes, package checksums, metadata checksums, SBOM, and SBOM subject digests must exist for the current package version.",
 		ok,
 		evidence,
 		[]string{"npm:release:manifest", "npm:release:sbom"},
-		[]string{"Release manifest, rollback-capable notes, checksum inventory, metadata checksum inventory, SBOM, or SBOM subject digest is missing or invalid."},
+		[]string{"Release manifest, change record, release notes projection, checksum inventory, metadata checksum inventory, SBOM, or SBOM subject digest is missing or invalid."},
 		[]string{"This criterion does not claim vulnerability absence, license approval, GitHub Release publication, or registry publication."},
 	)
 }
@@ -1430,36 +1433,40 @@ func retainedReleaseEvidenceRefs(root string) []string {
 	if len(targets) == 0 {
 		return []string{}
 	}
-	return append([]string{"artifacts/release/retained-evidence-checksums.sha256"}, targets...)
+	return append([]string{"artifacts/" + retainedevidence.ManifestPath}, targets...)
 }
 
 func retainedReleaseEvidenceMatches(root string) bool {
-	targets := retainedReleaseEvidenceTargets(root)
-	if len(targets) == 0 {
-		return true
+	paths := []string{
+		"artifacts/" + retainedevidence.ManifestPath,
+		"artifacts/attestations",
 	}
-	return checksumFileMatches(root, "artifacts/release/retained-evidence-checksums.sha256", targets)
+	paths = append(paths, retainedReleaseEvidenceRepositoryPaths()...)
+	for _, path := range paths {
+		if pathEntryExists(root, path) {
+			return retainedevidence.Verify(filepath.Join(root, "artifacts")) == nil
+		}
+	}
+	return true
 }
 
 func retainedReleaseEvidenceTargets(root string) []string {
 	targets := []string{}
-	if fileExists(root, "artifacts/release/github-release.json") {
-		targets = append(targets, "artifacts/release/github-release.json")
+	for _, repositoryPath := range retainedReleaseEvidenceRepositoryPaths() {
+		if fileExists(root, repositoryPath) {
+			targets = append(targets, repositoryPath)
+		}
 	}
-	attestationRoot := filepath.Join(root, "artifacts", "attestations")
-	_ = filepath.WalkDir(attestationRoot, func(path string, entry os.DirEntry, err error) error {
-		if err != nil || entry == nil || entry.IsDir() || filepath.Ext(path) != ".json" {
-			return nil
-		}
-		relative, relErr := filepath.Rel(root, path)
-		if relErr != nil {
-			return nil
-		}
-		targets = append(targets, filepath.ToSlash(relative))
-		return nil
-	})
 	sort.Strings(targets)
 	return targets
+}
+
+func retainedReleaseEvidenceRepositoryPaths() []string {
+	paths := make([]string, 0, len(retainedevidence.EvidencePaths()))
+	for _, path := range retainedevidence.EvidencePaths() {
+		paths = append(paths, filepath.ToSlash(filepath.Join("artifacts", filepath.FromSlash(path))))
+	}
+	return paths
 }
 
 func checksumFileMatches(root string, checksumPath string, targetPaths []string) bool {
@@ -1513,16 +1520,18 @@ func validSBOM(root string, path string) bool {
 	return err == nil && sbom.BOMFormat == "CycloneDX" && sbom.SpecVersion != ""
 }
 
-func releaseNotesIncludeRollback(root string, path string, packageName string) bool {
+func releaseNotesMatchChangeRecord(root string, path string, manifest packageJSON) bool {
 	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
-	if err != nil || len(content) == 0 {
+	if err != nil {
 		return false
 	}
-	normalized := strings.ToLower(string(content))
-	packageRef := strings.ToLower(packageName) + "@"
-	return strings.Contains(normalized, "rollback") &&
-		strings.Contains(normalized, "npm install") &&
-		strings.Contains(normalized, packageRef)
+	record, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)))
+	if err != nil || releasechange.RequireVersion(record, manifest.Version) != nil {
+		return false
+	}
+	pypiPublished := fileExists(root, "artifacts/pypi-registry/pypi-release.json")
+	expected := releasechange.RenderMarkdown(record, manifest.Name, pythonPackageName, pypiPublished)
+	return string(content) == expected
 }
 
 func hasChannelStatus(manifest releaseManifest, authority string, allowed ...string) bool {
@@ -1647,6 +1656,11 @@ func allFilesExist(root string, paths []string) bool {
 func fileExists(root string, path string) bool {
 	info, err := os.Stat(filepath.Join(root, filepath.FromSlash(path)))
 	return err == nil && !info.IsDir() && info.Size() > 0
+}
+
+func pathEntryExists(root string, path string) bool {
+	_, err := os.Lstat(filepath.Join(root, filepath.FromSlash(path)))
+	return err == nil
 }
 
 func readTypedJSON[T any](root string, path string) (T, error) {

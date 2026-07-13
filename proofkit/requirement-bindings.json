@@ -589,6 +589,22 @@
       "nonClaims": ["This requirement does not claim full WCAG conformance, every branded browser, provider CI ingestion, registry publication, release approval, rollout approval, or production readiness."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not claim execution on every accepted operating-system version, legal approval, registry publication, release approval, rollout approval, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not infer change-record completeness from source changes, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
@@ -2258,6 +2274,51 @@
       "environmentClasses": ["local-node-browser"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
+      "witnessId": "proofkit.python-package.macho-platform-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/metadata_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.python-wheel-license-closure",
+      "witnessId": "proofkit.python-package.license-payload-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/metadata_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.release-change-record-projection",
+      "witnessId": "proofkit.release-change.versioned-projection-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasechange/record_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.retained-evidence-artifact-topology",
+      "witnessId": "proofkit.retained-evidence.download-layout-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/retainedevidence/manifest_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-change-record",
+      "witnessId": "proofkit.release-closeout.change-record-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-019",
       "scenarioId": "proofkit.spec-proof-core.requirement-context-composition",
       "witnessId": "proofkit.requirement-context.compose-round-trip-falsifier",
@@ -2267,11 +2328,29 @@
       "environmentClasses": ["local-go"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-019",
+      "scenarioId": "proofkit.spec-proof-core.requirement-context-composition-whole-cli",
+      "witnessId": "proofkit.app.requirement-context-compose-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/requirement_context_cli_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-020",
       "scenarioId": "proofkit.spec-proof-core.requirement-context-slicing",
       "witnessId": "proofkit.requirement-context.slice-closure-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementcontext/slice_closure_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-020",
+      "scenarioId": "proofkit.spec-proof-core.requirement-context-slicing-whole-cli",
+      "witnessId": "proofkit.app.requirement-context-slice-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/requirement_context_cli_test.go",
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },
@@ -2303,11 +2382,38 @@
       "environmentClasses": ["local-go"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
+      "witnessId": "proofkit.requirement-browser.one-shot-cleanup-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/server_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-022",
       "scenarioId": "proofkit.spec-proof-core.requirement-semantic-diff",
       "witnessId": "proofkit.requirement-semantic-diff.owner-field-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementdiff/requirementdiff_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "scenarioId": "proofkit.spec-proof-core.requirement-semantic-diff-complete-algebra",
+      "witnessId": "proofkit.requirement-semantic-diff.complete-algebra-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementdiff/requirementdiff_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "scenarioId": "proofkit.spec-proof-core.requirement-semantic-diff-whole-cli",
+      "witnessId": "proofkit.app.requirement-semantic-diff-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/requirement_context_cli_test.go",
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },
@@ -2321,9 +2427,36 @@
       "environmentClasses": ["local-go"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-023",
+      "scenarioId": "proofkit.spec-proof-core.requirement-traceability-topology-closure",
+      "witnessId": "proofkit.requirement-traceability.topology-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementgraph/requirementgraph_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-023",
+      "scenarioId": "proofkit.spec-proof-core.requirement-traceability-whole-cli",
+      "witnessId": "proofkit.app.requirement-traceability-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/requirement_context_cli_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-021",
       "scenarioId": "proofkit.spec-proof-core.requirement-browser-rendered-runtime",
       "witnessId": "proofkit.requirement-browser.rendered-runtime-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-unicode-code-point-selection",
+      "witnessId": "proofkit.requirement-browser.unicode-selection-falsifier",
       "witnessKind": "technical",
       "witnessPath": "tests/browser/workspace.spec.mjs",
       "commandIds": ["proofkit.browser-check"],

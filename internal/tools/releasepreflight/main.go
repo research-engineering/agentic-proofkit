@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
 )
 
 const maxReleaseJSONBytes = 8 << 20
@@ -105,7 +106,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release>")
+		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence>")
 	}
 	switch args[0] {
 	case "npm-existing":
@@ -198,6 +199,12 @@ func run(args []string) error {
 			return err
 		}
 		return validateGitHubSignedTag(ref, tag, options["tag"], options["commit"])
+	case "retained-evidence":
+		options, err := parseFlags(args[1:], "artifact-root")
+		if err != nil {
+			return err
+		}
+		return retainedevidence.Write(options["artifact-root"])
 	default:
 		return fmt.Errorf("unknown releasepreflight command %s", args[0])
 	}

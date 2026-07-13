@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "version": "0.1.160",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.python-wheel.macos-minimum",
+      "summary": "Darwin distributions now declare macOS 12.0 as their minimum supported operating-system version, matching the embedded executable."
+    },
+    {
+      "changeId": "proofkit.requirement-graph.topology-id-removal",
+      "summary": "Requirement traceability graph inputs advance to schemaVersion 2 and reject the semantically inert codeTopology.topologyId field."
+    }
+  ],
+  "additions": [
+    {
+      "changeId": "proofkit.python-wheel.license-closure",
+      "summary": "Python wheels carry Core Metadata 2.4 license fields and an exact copy of the repository MIT license."
+    },
+    {
+      "changeId": "proofkit.release.change-record",
+      "summary": "Release notes are generated from this version-bound machine-readable public-contract change record."
+    },
+    {
+      "changeId": "proofkit.release.retained-evidence-topology",
+      "summary": "Retained evidence checksums use executable artifact-relative paths owned by one builder and verifier."
+    },
+    {
+      "changeId": "proofkit.requirement-graph.topology-closure",
+      "summary": "Traceability graph build and output admission enforce source-digest coherence, bounded materialization, and parent-to-edge topology closure."
+    }
+  ],
+  "migration": {
+    "required": true,
+    "steps": [
+      "Set requirement-traceability-graph input schemaVersion to 2 and remove codeTopology.topologyId.",
+      "Run Darwin package binaries only on macOS 12.0 or later."
+    ]
+  },
+  "platformRequirements": [
+    "Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64."
+  ],
+  "knownLimitations": [
+    "TSX source parsing remains unsupported.",
+    "The immutable 0.1.159 release retains its inaccurate macOS wheel tags and incomplete wheel license payload."
+  ],
+  "rollback": {
+    "strategy": "previous_admitted_version"
+  }
+}

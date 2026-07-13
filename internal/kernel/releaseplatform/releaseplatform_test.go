@@ -17,8 +17,8 @@ func TestTargetsOwnExactReleaseMatrix(t *testing.T) {
 			NPMOS:           "darwin",
 			PackageTarEntry: "package/dist/platform/darwin-arm64/agentic-proofkit",
 			PlatformSuffix:  "darwin-arm64",
-			PlatformTag:     "macosx_11_0_arm64",
-			WheelTag:        "py3-none-macosx_11_0_arm64",
+			PlatformTag:     "macosx_12_0_arm64",
+			WheelTag:        "py3-none-macosx_12_0_arm64",
 		},
 		{
 			BinaryPath:      "dist/platform/darwin-x64/agentic-proofkit",
@@ -28,8 +28,8 @@ func TestTargetsOwnExactReleaseMatrix(t *testing.T) {
 			NPMOS:           "darwin",
 			PackageTarEntry: "package/dist/platform/darwin-x64/agentic-proofkit",
 			PlatformSuffix:  "darwin-x64",
-			PlatformTag:     "macosx_10_12_x86_64",
-			WheelTag:        "py3-none-macosx_10_12_x86_64",
+			PlatformTag:     "macosx_12_0_x86_64",
+			WheelTag:        "py3-none-macosx_12_0_x86_64",
 		},
 		{
 			BinaryPath:      "dist/platform/linux-arm64/agentic-proofkit",

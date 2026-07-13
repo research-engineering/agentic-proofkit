@@ -25,6 +25,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 const (
@@ -271,6 +272,27 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "change record summary drift from release notes",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				path := filepath.Join(root, "release", "change-record.v1.json")
+				record := readJSONMap(t, path)
+				additions := record["additions"].([]any)
+				additions[0].(map[string]any)["summary"] = "Changed without regenerating release notes."
+				writeJSON(t, path, record)
+			},
+		},
+		{
+			name:        "change record version drift from package and release notes",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				path := filepath.Join(root, "release", "change-record.v1.json")
+				record := readJSONMap(t, path)
+				record["version"] = "1.2.4"
+				writeJSON(t, path, record)
+			},
+		},
+		{
 			name:        "missing metadata checksums",
 			criterionID: "proofkit.release_closeout.manifest_and_sbom",
 			mutate: func(root string) {
@@ -295,6 +317,40 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "retained evidence manifest without targets",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeFile(t, filepath.Join(root, "artifacts", "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  release/github-release.json\n")
+			},
+		},
+		{
+			name:        "unbound retained attestation without manifest",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				writeJSON(t, filepath.Join(root, "artifacts", "attestations", "unbound.json"), map[string]any{"state": "unbound"})
+			},
+		},
+		{
+			name:        "empty retained attestation namespace",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				if err := os.MkdirAll(filepath.Join(root, "artifacts", "attestations"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name:        "symlinked retained attestation namespace",
+			criterionID: "proofkit.release_closeout.manifest_and_sbom",
+			mutate: func(root string) {
+				target := t.TempDir()
+				writeJSON(t, filepath.Join(target, "github-artifact-attestations.json"), map[string]any{"state": "redirected"})
+				if err := os.Symlink(target, filepath.Join(root, "artifacts", "attestations")); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
 			name:        "stale retained evidence checksums",
 			criterionID: "proofkit.release_closeout.manifest_and_sbom",
 			mutate: func(root string) {
@@ -302,7 +358,8 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 					"tagName": "v1.2.3",
 					"assets":  []any{},
 				})
-				writeFile(t, filepath.Join(root, "artifacts", "release", "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  github-release.json\n")
+				writeJSON(t, filepath.Join(root, "artifacts", "attestations", "github-artifact-attestations.json"), map[string]any{"state": "not_published"})
+				writeFile(t, filepath.Join(root, "artifacts", "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  release/github-release.json\n")
 			},
 		},
 		{
@@ -877,7 +934,8 @@ func populateCompleteFixture(t *testing.T, root string) {
 		"version":    "1.2.3",
 		"repository": map[string]any{"url": "git+https://github.com/research-engineering/agentic-proofkit.git"},
 	})
-	runFixtureGit(t, root, "add", ".gitignore", "go.mod", "go.sum", "package.json", "proofkit", "source.txt")
+	writeJSON(t, filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)), releaseChangeRecordFixture())
+	runFixtureGit(t, root, "add", ".gitignore", "go.mod", "go.sum", "package.json", "proofkit", "release", "source.txt")
 	runFixtureGit(t, root, "commit", "-m", "fixture")
 	writeNPMArtifact(t, root, testNPMTarballName, []byte("package"))
 	writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
@@ -888,7 +946,11 @@ func populateCompleteFixture(t *testing.T, root string) {
 		},
 	})
 	writeFile(t, filepath.Join(root, "artifacts", "pypi", testPythonWheelName), "wheel")
-	writeFile(t, filepath.Join(root, "artifacts", "release", "release-notes.md"), "# notes\n\nRollback: pin consumers with `npm install -D @research-engineering/agentic-proofkit@<previous-version>`.\n")
+	changeRecord, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(root, "artifacts", "release", "release-notes.md"), releasechange.RenderMarkdown(changeRecord, testNPMPackageName, testPythonPackageName, false))
 	writeJSON(t, filepath.Join(root, "artifacts", "release", "sbom.cdx.json"), map[string]any{"bomFormat": "CycloneDX", "specVersion": "1.6"})
 	writeReleaseManifest(t, root, releaseManifestFixture(true))
 	writeChecksumFile(t, root, "artifacts/release/checksums.sha256", []string{
@@ -902,6 +964,19 @@ func populateCompleteFixture(t *testing.T, root string) {
 	})
 	execution := writePackageArtifactExecutionFixture(t, root)
 	writeLocalSelfEvidence(t, root, execution)
+}
+
+func releaseChangeRecordFixture() map[string]any {
+	return map[string]any{
+		"additions":            []any{map[string]any{"changeId": "proofkit.release.fixture", "summary": "Exercise release change projection."}},
+		"breakingChanges":      []any{},
+		"knownLimitations":     []any{"The fixture does not prove registry publication."},
+		"migration":            map[string]any{"required": false, "steps": []any{}},
+		"platformRequirements": []any{"Use a supported fixture platform."},
+		"rollback":             map[string]any{"strategy": "previous_admitted_version"},
+		"schemaVersion":        1,
+		"version":              "1.2.3",
+	}
 }
 
 func writeLocalSelfEvidence(t *testing.T, root string, execution packageartifactrecord.Record) {

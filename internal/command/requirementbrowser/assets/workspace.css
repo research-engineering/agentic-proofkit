@@ -9,6 +9,8 @@ button { min-height: 2.5rem; }
 article { border-top: 1px solid color-mix(in srgb, CanvasText 25%, transparent); padding: .75rem 0; }
 aside { border-left: 1px solid CanvasText; }
 textarea { box-sizing: border-box; min-height: 8rem; width: 100%; }
+#selected-context { padding-left: 1.25rem; }
+#selected-context li { overflow-wrap: anywhere; }
 pre { max-width: 100%; overflow: auto; white-space: pre-wrap; }
 svg { display: block; min-width: 50rem; width: 100%; }
 .graph-viewport { border: 1px solid color-mix(in srgb, CanvasText 35%, transparent); max-height: 42rem; overflow: auto; }

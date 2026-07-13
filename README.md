@@ -42,6 +42,8 @@ Python consumers use the Python package as a runner wrapper over the same Go
 CLI, not as a Python SDK. Python projects should still treat CLI/JSON records,
 exit codes, and package metadata as the public contract.
 
+Published Darwin binary distributions require macOS 12.0 or later.
+
 ## Project Boundary
 
 `agentic-proofkit` is intended to provide reusable proof-workflow mechanics for

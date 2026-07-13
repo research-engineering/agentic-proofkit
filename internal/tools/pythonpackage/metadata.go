@@ -13,12 +13,14 @@ import (
 var pep440VersionPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+)+(?:a[0-9]+|b[0-9]+|rc[0-9]+|\.post[0-9]+|\.dev[0-9]+)?$`)
 
 const (
-	artifactKind   = "proofkit.python-package-set.v1"
-	npmPackageName = "@research-engineering/agentic-proofkit"
-	packageName    = "agentic-proofkit"
-	pythonTag      = "py3"
-	abiTag         = "none"
-	schemaVersion  = 1
+	artifactKind      = "proofkit.python-package-set.v1"
+	npmPackageName    = "@research-engineering/agentic-proofkit"
+	packageName       = "agentic-proofkit"
+	licenseExpression = "MIT"
+	pythonTag         = "py3"
+	abiTag            = "none"
+	licenseFilename   = "LICENSE"
+	schemaVersion     = 1
 )
 
 type target = releaseplatform.Target
@@ -81,6 +83,9 @@ func readPackageJSON() (packageJSON, error) {
 	if err := requireMetadataField("license", manifest.License); err != nil {
 		return packageJSON{}, err
 	}
+	if manifest.License != licenseExpression {
+		return packageJSON{}, fmt.Errorf("package.json license must be %s", licenseExpression)
+	}
 	if err := requireMetadataField("repository.url", manifest.Repository.URL); err != nil {
 		return packageJSON{}, err
 	}
@@ -95,6 +100,17 @@ func requireMetadataField(label string, value string) error {
 		return fmt.Errorf("package.json %s must be a single-line metadata field without surrounding whitespace", label)
 	}
 	return nil
+}
+
+func readLicenseFile() ([]byte, error) {
+	content, err := os.ReadFile(licenseFilename)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", licenseFilename, err)
+	}
+	if len(content) == 0 {
+		return nil, fmt.Errorf("%s must not be empty", licenseFilename)
+	}
+	return content, nil
 }
 
 func readAdmittedJSON[T any](path string) (T, error) {
