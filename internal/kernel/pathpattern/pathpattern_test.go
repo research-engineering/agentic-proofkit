@@ -33,7 +33,7 @@ func TestMatchAnyAndValidateShareOwnerSemantics(t *testing.T) {
 	if err := Validate("../docs/**/*.md", "test path pattern"); err == nil {
 		t.Fatalf("Validate() accepted escaping pattern")
 	}
-	if !MatchAny([]string{"docs/*.md", "proofkit/**/*.json"}, "proofkit/cli-contract.v1.json") {
+	if !MatchAny([]string{"docs/*.md", "proofkit/**/*.json"}, "proofkit/cli-contract.v2.json") {
 		t.Fatalf("MatchAny() did not match proofkit contract")
 	}
 	if MatchAny([]string{"docs/*.md"}, "src/main.go") {

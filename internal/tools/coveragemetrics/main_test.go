@@ -481,7 +481,7 @@ func writeMinimalCoverageMetricsRepo(t *testing.T, root string) {
 }
 `)
 	writeFile(t, filepath.Join(root, "proofkit/witness-plan.json"), `{"commands": [{"id": "proofkit.test.command"}]}`)
-	writeFile(t, filepath.Join(root, "proofkit/cli-contract.v1.json"), `{"commands": [{"command": "target"}]}`)
+	writeFile(t, filepath.Join(root, "proofkit/cli-contract.v2.json"), `{"commands": [{"command": "target"}]}`)
 }
 
 func writeFile(t *testing.T, path string, content string) {

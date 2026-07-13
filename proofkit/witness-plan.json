@@ -14,6 +14,7 @@
     "environmentClasses": [
       "local-go",
       "local-go-python",
+      "local-node-browser",
       "local-python"
     ],
     "environmentClassPolicies": [
@@ -48,6 +49,18 @@
         ]
       },
       {
+        "environmentClass": "local-node-browser",
+        "networkPolicies": [
+          "none"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "cachePolicies": [
+          "disabled"
+        ]
+      },
+      {
         "environmentClass": "local-python",
         "networkPolicies": [
           "none"
@@ -62,6 +75,7 @@
       }
     ],
     "parallelGroups": [
+      "browser-runtime",
       "coverage-metrics",
       "local-go-static",
       "package-artifact",
@@ -628,6 +642,41 @@
           0
         ]
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.browser-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "browser:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-node-browser"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [
+        {
+          "kind": "report",
+          "path": "artifacts/proofkit/browser-runtime-proof.json",
+          "required": true
+        }
+      ],
+      "parallelGroup": "browser-runtime",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
     }
   ],
   "policies": [
@@ -667,6 +716,80 @@
       "nonClaims": [
         "Actionlint validates GitHub Actions syntax and expression structure only; it does not prove workflow runtime success or external action safety.",
         "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.browser-check",
+      "inputSelectors": [
+        "go.mod",
+        "go.sum",
+        "internal/command/requirementbinding",
+        "internal/command/requirementbrowser",
+        "internal/command/requirementcontext",
+        "internal/command/requirementcoverageview",
+        "internal/command/requirementdiff",
+        "internal/command/requirementgraph",
+        "internal/command/requirementproofview",
+        "internal/command/requirementsourceadmission",
+        "internal/command/requirementsourceview",
+        "internal/command/requirementspectree",
+        "internal/command/testevidenceinventory",
+        "internal/kernel/admission",
+        "internal/kernel/admit",
+        "internal/kernel/agentenvelope",
+        "internal/kernel/browserdoc",
+        "internal/kernel/compactproofcontract",
+        "internal/kernel/digest",
+        "internal/kernel/markdownfmt",
+        "internal/kernel/report",
+        "internal/kernel/secretjson",
+        "internal/kernel/stablejson",
+        "internal/kernel/witnesscommand",
+        "internal/testsupport/browserfixture",
+        "internal/tools/browserproofverify",
+        "internal/tools/browsertestserver",
+        "package-lock.json",
+        "package.json",
+        "playwright.config.mjs",
+        "proofkit/witness-plan.json",
+        "scripts/browser-proof-execution.mjs",
+        "scripts/browser-proof-execution.test.mjs",
+        "scripts/browser-proof-inputs.mjs",
+        "scripts/browser-proof-inputs.test.mjs",
+        "scripts/browser-runtime-proof-inputs.v1.json",
+        "scripts/browser-selection-authority.test.mjs",
+        "scripts/write-browser-proof.mjs",
+        "tests/browser",
+        "tsconfig.browser.json"
+      ],
+      "outputSelectors": [
+        "artifacts/proofkit/browser-runtime-proof.json"
+      ],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.local-artifacts"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Browser runtime proof does not prove registry publication, rollout, or production readiness.",
+        "Pinned Playwright engines are not branded browser compatibility proof."
       ]
     },
     {
@@ -731,7 +854,7 @@
         "internal/command",
         "internal/testsupport/commandcoverage",
         "internal/tools/coveragemetrics",
-        "proofkit/cli-contract.v1.json",
+        "proofkit/cli-contract.v2.json",
         "proofkit/requirement-bindings.json",
         "proofkit/witness-plan.json"
       ],
@@ -873,9 +996,11 @@
         "go.mod",
         "go.sum",
         "internal",
-        "proofkit/cli-contract.v1.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
         "proofkit/requirement-bindings.json",
         "proofkit/witness-plan.json",
+        "scripts/browser-runtime-proof-inputs.v1.json",
         "scripts/validate-self-hosting-receipts.go"
       ],
       "outputSelectors": [],

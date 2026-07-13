@@ -31,7 +31,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/repoprofileadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementimpactinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofsourceset"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
@@ -84,6 +87,9 @@ var genericCommandBuilders = mustGenericCommandBuilders(map[string]genericComman
 	"requirement-authoring-plan":         outputWithExit(requirementauthoringplan.Build),
 	"requirement-bindings":               reportOutput(requirementbinding.BuildReport),
 	"requirement-coverage-input-compose": outputWithExit(requirementcoverageinput.Build),
+	"requirement-context-slice":          zeroExitOutput(requirementcontext.Slice),
+	"requirement-semantic-diff":          zeroExitOutput(requirementdiff.Build),
+	"requirement-traceability-graph":     zeroExitOutput(requirementgraph.Build),
 	"requirement-impact-input-compose":   outputWithExit(requirementimpactinput.Build),
 	"requirement-proof-source-set":       requirementproofsourceset.Build,
 	"requirement-source-admission":       reportOutput(requirementsourceadmission.Build),

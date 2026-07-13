@@ -555,6 +555,8 @@ func malformedInputExtraArgs(command string) []string {
 		return []string{"--pilot", "first"}
 	case "requirement-browser-server":
 		return []string{"--view", "source"}
+	case "requirement-context-compose":
+		return []string{"--repo-root", "."}
 	case "requirement-proof-resolver":
 		return []string{"--empty-local-environment-policy"}
 	case "requirement-proof-view":

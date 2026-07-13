@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -54,6 +55,156 @@ func TestSelfCheckReadsExplicitJSONAndEmitsReport(t *testing.T) {
 	}
 	if output["state"] != "passed" {
 		t.Fatalf("unexpected state: %v", output["state"])
+	}
+}
+
+func TestCompactJSONLayoutPreservesValue(t *testing.T) {
+	var pretty bytes.Buffer
+	var compact bytes.Buffer
+	var stderr bytes.Buffer
+	input := `{"ok":true}`
+	if status := Run(t.Context(), []string{"self-check", "--input", "-"}, strings.NewReader(input), &pretty, &stderr); status != 0 {
+		t.Fatalf("pretty status=%d stderr=%q", status, stderr.String())
+	}
+	stderr.Reset()
+	if status := Run(t.Context(), []string{"--json-layout", "compact", "self-check", "--input", "-"}, strings.NewReader(input), &compact, &stderr); status != 0 {
+		t.Fatalf("compact status=%d stderr=%q", status, stderr.String())
+	}
+	if strings.Contains(compact.String(), "\n  ") {
+		t.Fatalf("compact output contains indentation: %q", compact.String())
+	}
+	var prettyValue any
+	var compactValue any
+	if err := json.Unmarshal(pretty.Bytes(), &prettyValue); err != nil {
+		t.Fatalf("decode pretty output: %v", err)
+	}
+	if err := json.Unmarshal(compact.Bytes(), &compactValue); err != nil {
+		t.Fatalf("decode compact output: %v", err)
+	}
+	if !reflect.DeepEqual(prettyValue, compactValue) {
+		t.Fatalf("layout changed JSON value: pretty=%v compact=%v", prettyValue, compactValue)
+	}
+}
+
+func TestJSONLayoutRejectsNonJSONAndNonLeadingUseBeforeInput(t *testing.T) {
+	tests := [][]string{
+		{"--json-layout", "compact", "help"},
+		{"--json-layout", "compact", "requirement-source-view", "--input", "-", "--format", "markdown"},
+		{"--json-layout", "compact", "requirement-browser-server", "--input", "-", "--view", "spec-tree", "--serve"},
+		{"self-check", "--json-layout", "compact", "--input", "-"},
+	}
+	for _, args := range tests {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), args, panicReader{}, &stdout, &stderr)
+			if status == 0 || stdout.Len() != 0 || stderr.Len() == 0 {
+				t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+			}
+		})
+	}
+}
+
+func TestJSONLayoutRejectsEveryTextCommandHelpForm(t *testing.T) {
+	for _, descriptor := range commandDescriptors {
+		for _, helpFlag := range []string{"--help", "-h"} {
+			args := []string{"--json-layout", "compact", descriptor.name, helpFlag}
+			t.Run(descriptor.name+"/"+helpFlag, func(t *testing.T) {
+				var stdout bytes.Buffer
+				var stderr bytes.Buffer
+				status := Run(t.Context(), args, panicReader{}, &stdout, &stderr)
+				if status == 0 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "--json-layout is valid only for JSON command output") {
+					t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+				}
+			})
+		}
+	}
+}
+
+func TestJSONLayoutUsesDescriptorParsedFlags(t *testing.T) {
+	browser, ok := commandDescriptorFor("requirement-browser-server")
+	if !ok {
+		t.Fatal("requirement-browser-server descriptor is unavailable")
+	}
+	inputNamedLikeFlag := classifyDescriptorArguments(browser, []string{"--input", "--serve", "--view", "spec-tree"})
+	if inputNamedLikeFlag.present["--serve"] || inputNamedLikeFlag.values["--input"][0] != "--serve" {
+		t.Fatalf("descriptor parser reclassified an input value as a flag: %#v", inputNamedLikeFlag)
+	}
+	if err := validateJSONLayoutUse(browser, inputNamedLikeFlag, true); err != nil {
+		t.Fatalf("JSON layout rejected a flag-shaped input value: %v", err)
+	}
+
+	served := classifyDescriptorArguments(browser, []string{"--input", "workspace.json", "--view", "workspace", "--serve"})
+	if err := validateJSONLayoutUse(browser, served, true); err == nil {
+		t.Fatal("JSON layout accepted an actual browser serve flag")
+	}
+
+	view, ok := commandDescriptorFor("requirement-source-view")
+	if !ok {
+		t.Fatal("requirement-source-view descriptor is unavailable")
+	}
+	formatNamedInput := classifyDescriptorArguments(view, []string{"--input", "--format", "--format", "json"})
+	if formatNamedInput.values["--input"][0] != "--format" || !slices.Equal(formatNamedInput.values["--format"], []string{"json"}) {
+		t.Fatalf("descriptor parser did not preserve flag-shaped values: %#v", formatNamedInput)
+	}
+	if err := validateJSONLayoutUse(view, formatNamedInput, true); err != nil {
+		t.Fatalf("JSON layout rejected an actual JSON format after a flag-shaped input value: %v", err)
+	}
+}
+
+func TestJSONLayoutPreservesFlagShapedInputPathAtProcessBoundary(t *testing.T) {
+	t.Chdir(t.TempDir())
+	treeInput := `{"schemaVersion":2,"treeId":"consumer.tree","rootNodeId":"spec.root","callerAnnotations":[],"edges":[],"overlays":[],"nodes":[{"nodeId":"spec.root","nodeKind":"meta_spec","label":"Root","displayOrder":1,"callerAnnotations":[],"sourceRefs":[{"sourceRefId":"spec.root.requirements","sourceRefKind":"source_id","sourceRole":"requirements","sourceId":"consumer.requirements"}]}]}`
+	if err := os.WriteFile("--serve", []byte(treeInput), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(t.Context(), []string{"--json-layout", "compact", "requirement-browser-server", "--input", "--serve", "--view", "spec-tree"}, panicReader{}, &stdout, &stderr)
+	if status != 0 || stderr.Len() != 0 {
+		t.Fatalf("flag-shaped input path changed command semantics: status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+	}
+	var plan map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatalf("compact browser plan is not JSON: %v", err)
+	}
+	if plan["view"] != "spec-tree" || plan["url"] != nil {
+		t.Fatalf("unexpected browser plan for flag-shaped input path: %#v", plan)
+	}
+
+	requirementSource := `{"schemaVersion":1,"sourceId":"consumer.requirements","specPackagePath":"docs/specs/consumer","overviewPath":"docs/specs/consumer/overview.md","requirementsPath":"docs/specs/consumer/requirements.v1.json","requirements":[{"requirementId":"REQ-CONSUMER-001","ownerId":"consumer.owner","invariant":"The system preserves semantic identity.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":["NC-CONSUMER-001"],"nonClaims":["This requirement does not approve merge."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"consumer.owner","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["Consumer repositories own requirement meaning."]}`
+	if err := os.WriteFile("--format", []byte(requirementSource), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	status = Run(t.Context(), []string{"--json-layout", "compact", "requirement-source-view", "--input", "--format", "--format", "json"}, panicReader{}, &stdout, &stderr)
+	if status != 0 || stderr.Len() != 0 {
+		t.Fatalf("format-shaped input path changed command semantics: status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+	}
+	var view map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &view); err != nil {
+		t.Fatalf("compact requirement view is not JSON: %v", err)
+	}
+	if view["viewKind"] != "proofkit.requirement-source-view" {
+		t.Fatalf("unexpected requirement view for flag-shaped input path: %#v", view)
+	}
+}
+
+func TestCompactJSONLayoutAppliesToRequirementBrowserPlan(t *testing.T) {
+	input := `{"schemaVersion":2,"treeId":"consumer.tree","rootNodeId":"spec.root","callerAnnotations":[],"edges":[],"overlays":[],"nodes":[{"nodeId":"spec.root","nodeKind":"meta_spec","label":"Root","displayOrder":1,"callerAnnotations":[],"sourceRefs":[{"sourceRefId":"spec.root.requirements","sourceRefKind":"source_id","sourceRole":"requirements","sourceId":"consumer.requirements"}]}]}`
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(t.Context(), []string{"--json-layout", "compact", "requirement-browser-server", "--input", "-", "--view", "spec-tree"}, strings.NewReader(input), &stdout, &stderr)
+	if status != 0 || stderr.Len() != 0 || strings.Contains(stdout.String(), "\n  ") {
+		t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+	}
+	var plan map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &plan); err != nil {
+		t.Fatal(err)
+	}
+	if plan["portSelection"] != "ephemeral" || plan["url"] != nil {
+		t.Fatalf("default browser plan must defer its ephemeral origin: %#v", plan)
 	}
 }
 
@@ -521,7 +672,7 @@ func assertDescriptorAdmitsAgentArgv(t *testing.T, argv []string) {
 			index++
 		}
 	}
-	if err := validateFlagConstraints(descriptor, argv[2:]); err != nil {
+	if err := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, argv[2:])); err != nil {
 		t.Fatalf("agent route argv is rejected by %s descriptor: %v; argv=%v", descriptor.name, err, argv)
 	}
 }

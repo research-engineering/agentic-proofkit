@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "9923feb596ae4334e24d728b6156df3dbc6ac3464ed0b593e924a86c4d934b84"
+	cliContractPublicABISHA256               = "10d5eb817410b82f4bae384806f1e87449860b4fcf5c8e5f875ab5a1a204627d"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -122,6 +122,33 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	for command := range contractCommands {
 		if !strings.Contains(help, "agentic-proofkit "+command) && command != "help" {
 			t.Fatalf("help output does not route command %s", command)
+		}
+	}
+}
+
+func TestRequirementBrowserHelpMatchesWorkspaceInputContract(t *testing.T) {
+	contract := readCLIContract(t)
+	var browser cliContractCommand
+	for _, command := range contract.Commands {
+		if command.Command == "requirement-browser-server" {
+			browser = command
+			break
+		}
+	}
+	if browser.Command == "" {
+		t.Fatal("requirement-browser-server contract missing")
+	}
+	inputContract := canonicalJSONValue(t, browser.InputContract).(map[string]any)
+	optionalFields := inputContract["workspaceOptionalFields"].([]any)
+	descriptor, ok := commandDescriptorFor("requirement-browser-server")
+	if !ok {
+		t.Fatal("requirement-browser-server descriptor missing")
+	}
+	summary := strings.Join(descriptor.inputSchemaSummary, "\n")
+	for _, rawField := range optionalFields {
+		field := rawField.(string)
+		if !strings.Contains(summary, "workspace mode: "+field+"=") {
+			t.Fatalf("requirement-browser-server help omits workspace optional field %q", field)
 		}
 	}
 }
@@ -314,7 +341,7 @@ func TestCLIContractModeSpecificPromises(t *testing.T) {
 	assertCommand(t, commands["requirement-source-view"], "required", []string{"--format", "--input", "--input-pointer"}, []string{"html", "json", "markdown"})
 	assertCommand(t, commands["requirement-spec-tree"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
 	assertCommand(t, commands["requirement-spec-tree-view"], "required", []string{"--format", "--input", "--input-pointer", "--output"}, []string{"html", "json", "markdown"})
-	assertCommand(t, commands["requirement-browser-server"], "required", []string{"--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--view"}, []string{"json", "server"})
+	assertCommand(t, commands["requirement-browser-server"], "required", []string{"--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"}, []string{"json", "server"})
 	assertCommand(t, commands["test-evidence-inventory"], "required", []string{"--input", "--input-pointer", "--normalized-inventory", "--projection"}, []string{"json", "normalized-inventory"})
 	assertCommand(t, commands["workspace-manifest-facts"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
 	assertCommand(t, commands["requirement-impact-input-compose"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
@@ -692,7 +719,8 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
-		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host 127.0.0.1|::1] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <scope>] [--serve] --view <value>",
+		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host 127.0.0.1|::1] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <scope>] [--serve] [--session-mode browse|one-shot-question] [--session-timeout-seconds <1..7200>] --view <value>",
+		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <value>",
 		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
@@ -740,7 +768,7 @@ func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
 	}
 	for _, item := range cases {
 		descriptor := commandDescriptorByName[item.command]
-		if err := validateFlagConstraints(descriptor, item.args); err == nil {
+		if err := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, item.args)); err == nil {
 			t.Fatalf("%s invalid argv was admitted by descriptor owner", item.command)
 		}
 	}
@@ -773,7 +801,7 @@ type cliContractCommand struct {
 
 func readCLIContract(t *testing.T) cliContract {
 	t.Helper()
-	file, err := os.Open(filepath.Join(repoRoot(t), "proofkit", "cli-contract.v1.json"))
+	file, err := os.Open(filepath.Join(repoRoot(t), "proofkit", "cli-contract.v2.json"))
 	if err != nil {
 		t.Fatalf("open CLI contract: %v", err)
 	}
@@ -787,7 +815,7 @@ func readCLIContract(t *testing.T) cliContract {
 
 func assertCLIContractSchema(t *testing.T) {
 	t.Helper()
-	file, err := os.Open(filepath.Join(repoRoot(t), "proofkit", "cli-contract.v1.json"))
+	file, err := os.Open(filepath.Join(repoRoot(t), "proofkit", "cli-contract.v2.json"))
 	if err != nil {
 		t.Fatalf("open CLI contract: %v", err)
 	}
@@ -801,7 +829,21 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(record["processContract"], &processContract); err != nil {
 		t.Fatalf("decode process contract: %v", err)
 	}
-	assertKeys(t, "CLI process contract", keys(processContract), []string{"failureExitCode", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	assertKeys(t, "CLI process contract", keys(processContract), []string{"failureExitCode", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	var globalOptions map[string]any
+	if err := json.Unmarshal(processContract["globalOptions"], &globalOptions); err != nil {
+		t.Fatalf("decode global options: %v", err)
+	}
+	assertKeys(t, "CLI global options", keysAny(globalOptions), []string{"jsonLayout"})
+	jsonLayout, ok := globalOptions["jsonLayout"].(map[string]any)
+	if !ok {
+		t.Fatalf("CLI jsonLayout option must be an object: %#v", globalOptions["jsonLayout"])
+	}
+	assertKeys(t, "CLI jsonLayout option", keysAny(jsonLayout), []string{"default", "flag", "position", "scope", "values"})
+	assertStringSet(t, stringsFromAny(jsonLayout["values"].([]any)), []string{"compact", "pretty"}, "JSON layout values")
+	if jsonLayout["flag"] != "--json-layout" || jsonLayout["position"] != "before_command" || jsonLayout["default"] != "pretty" || jsonLayout["scope"] != "json_output_only" {
+		t.Fatalf("CLI jsonLayout option does not describe runtime admission: %#v", jsonLayout)
+	}
 	var helpGrammar map[string]any
 	if err := json.Unmarshal(processContract["helpGrammar"], &helpGrammar); err != nil {
 		t.Fatalf("decode help grammar: %v", err)

@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "lib": ["DOM", "ES2024"],
+    "module": "ESNext",
+    "noEmit": true,
+    "strict": true,
+    "target": "ES2024"
+  },
+  "include": ["internal/command/requirementbrowser/assets/selection-authority.js", "internal/command/requirementbrowser/assets/workspace.js"]
+}

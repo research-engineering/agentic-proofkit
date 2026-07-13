@@ -172,6 +172,7 @@ export interface ProofkitReportInputReadOptions {
 
 export interface ProofkitJsonReportOutputOptions {
   readonly cwd?: string;
+  readonly jsonLayout?: "pretty" | "compact";
   readonly writeStdout?: (text: string) => void;
 }
 
@@ -180,6 +181,7 @@ export interface ProofkitCommandRunOptions {
   readonly cwd: string;
   readonly env?: Readonly<Record<string, string | undefined>>;
   readonly inputMode?: "none" | "required";
+  readonly jsonLayout?: "pretty" | "compact";
   readonly maxBuffer?: number;
 }
 
@@ -283,8 +285,8 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
   throw new Error("stable JSON value must be JSON-serializable");
 }
 
-export function proofkitStableJsonString(value: unknown): string {
-  return JSON.stringify(proofkitStableJsonValue(value), null, 2) + "\n";
+export function proofkitStableJsonString(value: unknown, layout: "pretty" | "compact" = "pretty"): string {
+  return JSON.stringify(proofkitStableJsonValue(value), null, layout === "pretty" ? 2 : undefined) + "\n";
 }
 
 export function formatProofkitCliError(error: unknown): string {
@@ -434,7 +436,7 @@ export function writeProofkitJsonReportOutput(
   outputPath?: string | null,
   options: ProofkitJsonReportOutputOptions = {},
 ): void {
-  const output = proofkitStableJsonString(value);
+  const output = proofkitStableJsonString(value, options.jsonLayout);
   if (outputPath === null || outputPath === undefined) {
     (options.writeStdout ?? ((text: string) => process.stdout.write(text)))(output);
     return;
@@ -518,6 +520,9 @@ export function runProofkitTextCommand(
   args: readonly string[],
   options: ProofkitCommandRunOptions,
 ): ProofkitTextCommandResult {
+  if (options.jsonLayout !== undefined) {
+    throw new Error("Proofkit jsonLayout is valid only for JSON command output");
+  }
   const {child, outputFile} = runProofkitCommand(command, input, args, options);
   if (child.status !== 0 && child.stdout.length === 0) {
     throw new Error(formatProofkitCliError(child.stderr.trim() || command + " failed with exit code " + String(child.status)));
@@ -542,7 +547,8 @@ function runProofkitCommand(command: string, input: unknown, args: readonly stri
   } catch (error) {
     throw new Error(formatProofkitCliError(error));
   }
-  const childArgs = options.inputMode === "none" ? [command, ...prepared.args] : [command, "--input", "-", ...prepared.args];
+  const processArgs = options.jsonLayout === undefined ? [] : ["--json-layout", options.jsonLayout];
+  const childArgs = options.inputMode === "none" ? [...processArgs, command, ...prepared.args] : [...processArgs, command, "--input", "-", ...prepared.args];
   const child = spawnSync(options.binaryPath, childArgs, {
     cwd: options.cwd,
     encoding: "utf8",
@@ -974,6 +980,9 @@ function admitRunOptions(options: ProofkitCommandRunOptions): void {
   }
   if (options.cwd.length === 0) {
     throw new Error("Proofkit cwd is required");
+  }
+  if (options.jsonLayout !== undefined && options.jsonLayout !== "pretty" && options.jsonLayout !== "compact") {
+    throw new Error("Proofkit jsonLayout must be pretty or compact");
   }
 }
 

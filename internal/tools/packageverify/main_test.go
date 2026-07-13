@@ -82,7 +82,7 @@ func TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift(t *testing.T)
 		"package/LICENSE",
 		"package/package.json",
 		"package/docs/specs/example/requirements.v1.json",
-		"package/proofkit/cli-contract.v1.json",
+		"package/proofkit/cli-contract.v2.json",
 	}
 	for _, entry := range entries {
 		sourcePath := strings.TrimPrefix(entry, "package/")
@@ -333,8 +333,8 @@ func TestVerifyNoStalePackageDocsReadsTarballDocs(t *testing.T) {
 		},
 		{
 			name:      "shipped spec json contract",
-			path:      "package/proofkit/cli-contract.v1.json",
-			wantPath:  "package/proofkit/cli-contract.v1.json",
+			path:      "package/proofkit/cli-contract.v2.json",
+			wantPath:  "package/proofkit/cli-contract.v2.json",
 			staleText: "public/root API",
 		},
 	}
@@ -794,7 +794,7 @@ func packageDocEntries(content string) map[string]string {
 		"package/docs/proofkit-contract-map.md":                    content,
 		"package/docs/release-process.md":                          content,
 		"package/docs/specs/proofkit-package-boundary/overview.md": content,
-		"package/proofkit/cli-contract.v1.json":                    content,
+		"package/proofkit/cli-contract.v2.json":                    content,
 	}
 }
 
@@ -887,6 +887,11 @@ func packageManifestFixture(repositoryURL string) string {
   "packageManager": "npm@11.18.0",
   "type": "module",
   "sideEffects": false,
+  "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
+    "@playwright/test": "1.61.1",
+    "typescript": "7.0.2"
+  },
   "repository": {
     "type": "git",
     "url": "` + repositoryURL + `"

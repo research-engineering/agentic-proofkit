@@ -96,6 +96,61 @@ type CompactFalsificationRoute struct {
 	VerifyCommands        []string
 }
 
+// SelectRequirements returns a reference-closed owner projection containing
+// only the selected requirements, bindings, and commands they reference.
+func SelectRequirements(input Input, selected map[string]struct{}) Input {
+	result := Input{
+		BindingID: input.BindingID,
+		NonClaims: append([]string{}, input.NonClaims...),
+	}
+	selectedOwned := map[string]struct{}{}
+	commandIDs := map[string]struct{}{}
+	for _, requirement := range input.Requirements {
+		if _, ok := selected[requirement.RequirementID]; ok {
+			result.Requirements = append(result.Requirements, requirement)
+			selectedOwned[requirement.RequirementID] = struct{}{}
+		}
+	}
+	result.Selection = Selection{RequirementIDs: sortedSetKeys(selectedOwned)}
+	for _, binding := range input.Bindings {
+		if _, ok := selected[binding.RequirementID]; !ok {
+			continue
+		}
+		result.Bindings = append(result.Bindings, binding)
+		for _, commandID := range binding.CommandIDs {
+			commandIDs[commandID] = struct{}{}
+		}
+	}
+	for _, command := range input.WitnessCommands {
+		if _, ok := commandIDs[command.CommandID]; ok {
+			result.WitnessCommands = append(result.WitnessCommands, command)
+		}
+	}
+	return result
+}
+
+// SelectionFragmentValue returns a lookup-only subset. It deliberately does
+// not retain the complete binding identity, so consumers cannot re-admit a
+// bounded fragment as the caller-owned proof-binding source.
+func SelectionFragmentValue(input Input, selected map[string]struct{}) map[string]any {
+	projected := SelectRequirements(input, selected)
+	value := InputValue(projected)
+	delete(value, "bindingId")
+	value["authority"] = "lookup_fragment_only"
+	value["projectionKind"] = "proofkit.requirement-binding-fragment"
+	value["sourceBindingId"] = input.BindingID
+	return value
+}
+
+func sortedSetKeys(values map[string]struct{}) []string {
+	result := make([]string, 0, len(values))
+	for value := range values {
+		result = append(result, value)
+	}
+	sort.Strings(result)
+	return result
+}
+
 func BuildResolver(raw any, options ResolverOptions) (any, int, error) {
 	contract, err := compactproofcontract.Admit(raw)
 	if err != nil {

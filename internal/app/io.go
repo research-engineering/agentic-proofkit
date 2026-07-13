@@ -15,7 +15,7 @@ func writeJSON(value any, exitCode int, err error, stdout io.Writer, stderr io.W
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	output, err := stablejson.Marshal(value)
+	output, err := stablejson.MarshalLayout(value, jsonLayoutFromWriter(stdout))
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1

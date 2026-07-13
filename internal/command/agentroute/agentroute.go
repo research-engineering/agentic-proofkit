@@ -11,56 +11,65 @@ import (
 
 var (
 	goalValues = map[string]struct{}{
-		"admit_receipts":               {},
-		"adopt_repository":             {},
-		"author_requirements":          {},
-		"bind_requirement_proofs":      {},
-		"check_overview_claims":        {},
-		"decide_obligations":           {},
-		"inspect_coverage":             {},
-		"inventory_tests":              {},
-		"plan_selective_checks":        {},
-		"release_or_deploy_evidence":   {},
-		"render_human_view":            {},
-		"retire_local_infrastructure":  {},
-		"scaffold_first_module":        {},
-		"unknown":                      {},
-		"validate_requirement_source":  {},
-		"verify_typescript_public_api": {},
+		"admit_receipts":                   {},
+		"adopt_repository":                 {},
+		"author_requirements":              {},
+		"bind_requirement_proofs":          {},
+		"check_overview_claims":            {},
+		"decide_obligations":               {},
+		"inspect_coverage":                 {},
+		"inspect_requirement_context":      {},
+		"inspect_requirement_traceability": {},
+		"inventory_tests":                  {},
+		"plan_selective_checks":            {},
+		"release_or_deploy_evidence":       {},
+		"render_human_view":                {},
+		"review_requirement_change":        {},
+		"retire_local_infrastructure":      {},
+		"scaffold_first_module":            {},
+		"unknown":                          {},
+		"validate_requirement_source":      {},
+		"verify_typescript_public_api":     {},
 	}
 	modeValues      = adoptionmode.ValuesMap()
 	inputKindValues = map[string]struct{}{
-		"adoption_workflow":               {},
-		"authoring_plan":                  {},
-		"binding_witness_plan_input":      {},
-		"capability_map":                  {},
-		"changed_path_set":                {},
-		"coverage_compose_input":          {},
-		"coverage_view_input":             {},
-		"compact_proof_binding":           {},
-		"deployment_evidence_input":       {},
-		"impact_input":                    {},
-		"migration_plan":                  {},
-		"migration_parity":                {},
-		"obligation_decision":             {},
-		"obligation_decision_input":       {},
-		"overview_claims":                 {},
-		"proof_binding":                   {},
-		"readiness_closeout_input":        {},
-		"registry_consumer_input":         {},
-		"release_authority_input":         {},
-		"requirement_source":              {},
-		"requirement_source_transition":   {},
-		"scaffold_profile_plan":           {},
-		"scaffold_project_structure":      {},
-		"selective_evidence":              {},
-		"selective_gate_plan_input":       {},
-		"spec_tree_bundle":                {},
-		"test_discovery":                  {},
-		"test_inventory":                  {},
-		"typescript_public_api_manifest":  {},
-		"typescript_public_api_repo_root": {},
-		"witness_command_catalog":         {},
+		"adoption_workflow":                    {},
+		"authoring_plan":                       {},
+		"binding_witness_plan_input":           {},
+		"capability_map":                       {},
+		"changed_path_set":                     {},
+		"coverage_compose_input":               {},
+		"coverage_view_input":                  {},
+		"compact_proof_binding":                {},
+		"deployment_evidence_input":            {},
+		"impact_input":                         {},
+		"migration_plan":                       {},
+		"migration_parity":                     {},
+		"obligation_decision":                  {},
+		"obligation_decision_input":            {},
+		"overview_claims":                      {},
+		"proof_binding":                        {},
+		"readiness_closeout_input":             {},
+		"registry_consumer_input":              {},
+		"release_authority_input":              {},
+		"requirement_source":                   {},
+		"requirement_source_transition":        {},
+		"requirement_context_catalog":          {},
+		"requirement_context_repo_root":        {},
+		"requirement_context_slice_input":      {},
+		"requirement_semantic_diff_input":      {},
+		"requirement_traceability_graph_input": {},
+		"requirement_workspace_input":          {},
+		"scaffold_profile_plan":                {},
+		"scaffold_project_structure":           {},
+		"selective_evidence":                   {},
+		"selective_gate_plan_input":            {},
+		"spec_tree_bundle":                     {},
+		"test_discovery":                       {},
+		"test_inventory":                       {},
+		"typescript_public_api_manifest":       {},
+		"typescript_public_api_repo_root":      {},
+		"witness_command_catalog":              {},
 	}
 	reportKindValues = map[string]struct{}{
 		"adoption":           {},
@@ -110,13 +119,14 @@ type observedReport struct {
 }
 
 type routeSpec struct {
-	RouteFamily    routeFamily
-	RequiredAny    [][]string
-	NextCommands   []commandSpec
-	StopConditions []string
-	Escalations    []string
-	SliceSummary   string
-	SliceNonClaims []string
+	RouteFamily     routeFamily
+	RequiredAny     [][]string
+	RequiredBundles [][]string
+	NextCommands    []commandSpec
+	StopConditions  []string
+	Escalations     []string
+	SliceSummary    string
+	SliceNonClaims  []string
 }
 
 type routeFamily string
@@ -235,6 +245,41 @@ var routeSpecs = map[string]routeSpec{
 		Escalations:    []string{"Escalate coverage completeness and native test execution to the consuming repository."},
 		SliceSummary:   "Route coverage inspection through admitted requirement, proof-binding, and test inventory inputs.",
 		SliceNonClaims: []string{"The coverage slice does not claim inventory completeness outside the caller-owned universe."},
+	},
+	"inspect_requirement_context": {
+		RouteFamily:     routeFamilyRenderedViews,
+		RequiredBundles: [][]string{{"requirement_context_catalog", "requirement_context_repo_root"}, {"requirement_context_slice_input"}, {"requirement_workspace_input"}},
+		NextCommands: []commandSpec{
+			{Command: "requirement-context-compose", InputKind: "requirement_context_catalog", ArgInputs: []commandArgInput{{Flag: "--repo-root", InputKind: "requirement_context_repo_root"}}, Why: "An explicit catalog and caller-selected root compose a content-bound semantic context without ambient scanning."},
+			{Command: "requirement-context-slice", InputKind: "requirement_context_slice_input", Why: "A materialized slice input selects the smallest bounded reference-closed semantic context."},
+			{Command: "requirement-browser-server", InputKind: "requirement_workspace_input", ExtraArgs: []string{"--view", "workspace"}, Why: "A materialized workspace input can be inspected through the presentation-only loopback browser."},
+		},
+		StopConditions: []string{"Stop before inventing a catalog, repo root, selector, or intermediate operation input; caller materialization owns those transitions."},
+		Escalations:    []string{"Escalate specification meaning, source freshness, and omitted semantic classes to the consuming repository owner."},
+		SliceSummary:   "Route bounded semantic context inspection through explicit composition, materialized slicing, or a materialized browser workspace.",
+		SliceNonClaims: []string{"The semantic context route does not read unlisted files, materialize intermediate JSON, or promote a derived slice to requirement authority."},
+	},
+	"review_requirement_change": {
+		RouteFamily: routeFamilyRenderedViews,
+		RequiredAny: [][]string{{"requirement_semantic_diff_input"}},
+		NextCommands: []commandSpec{
+			{Command: "requirement-semantic-diff", InputKind: "requirement_semantic_diff_input", Why: "A materialized baseline/current diff input preserves owner-declared comparison semantics and snapshot identities."},
+		},
+		StopConditions: []string{"Stop before fabricating baseline/current snapshots or treating semantic diff as Git, freshness, or merge evidence."},
+		Escalations:    []string{"Escalate requirement meaning and acceptance of changes to the consuming repository owner."},
+		SliceSummary:   "Route requirement change review through a caller-materialized semantic diff input.",
+		SliceNonClaims: []string{"The semantic diff route does not create baselines, read Git, or approve a change."},
+	},
+	"inspect_requirement_traceability": {
+		RouteFamily: routeFamilyRenderedViews,
+		RequiredAny: [][]string{{"requirement_traceability_graph_input"}},
+		NextCommands: []commandSpec{
+			{Command: "requirement-traceability-graph", InputKind: "requirement_traceability_graph_input", Why: "A materialized graph input keeps specification, proof, code traceability, and native execution evidence planes distinct."},
+		},
+		StopConditions: []string{"Stop before scanning code, inferring topology, authenticating caller-reported evidence, or synthesizing cross-plane coverage."},
+		Escalations:    []string{"Escalate code topology, native execution truth, and evidence currentness to their consuming-repository owners."},
+		SliceSummary:   "Route traceability inspection through an explicit caller-materialized graph input.",
+		SliceNonClaims: []string{"The traceability route does not discover code, execute tests, or turn caller-reported evidence into verified coverage."},
 	},
 	"inventory_tests": {
 		RouteFamily: routeFamilyTestInventoryAndCoverage,
@@ -605,7 +650,7 @@ func admitAvailableInputs(raw any) (map[string]string, error) {
 }
 
 func admitAvailableInputRef(kind string, value string, context string) (string, error) {
-	if kind == "typescript_public_api_repo_root" && value == "." {
+	if (kind == "typescript_public_api_repo_root" || kind == "requirement_context_repo_root") && value == "." {
 		return value, nil
 	}
 	return admit.SafeRepoRelativePath(value, context)
@@ -689,6 +734,17 @@ func admitOptionalCallerNonClaims(raw any) ([]string, error) {
 
 func missingRequiredInputs(spec routeSpec, input routeInput) []map[string]any {
 	missing := []map[string]any{}
+	if len(spec.RequiredBundles) > 0 && !anyInputBundleSatisfied(spec.RequiredBundles, input.AvailableInputs) {
+		bundles := make([]any, 0, len(spec.RequiredBundles))
+		for _, bundle := range spec.RequiredBundles {
+			values := make([]any, len(bundle))
+			for index, value := range bundle {
+				values[index] = value
+			}
+			bundles = append(bundles, values)
+		}
+		missing = append(missing, map[string]any{"oneOfBundles": bundles, "reason": "The selected route requires one complete caller-owned input bundle before a safe next command can run."})
+	}
 	for _, group := range spec.RequiredAny {
 		if inputGroupSatisfied(group, input.AvailableInputs) {
 			continue
@@ -721,6 +777,22 @@ func missingRequiredInputs(spec routeSpec, input routeInput) []map[string]any {
 		})
 	}
 	return missing
+}
+
+func anyInputBundleSatisfied(bundles [][]string, available map[string]string) bool {
+	for _, bundle := range bundles {
+		complete := true
+		for _, kind := range bundle {
+			if _, ok := available[kind]; !ok {
+				complete = false
+				break
+			}
+		}
+		if complete {
+			return true
+		}
+	}
+	return false
 }
 
 func inputKindGroupContains(values []string, target string) bool {
@@ -818,6 +890,9 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 func commandReports(commands []commandSpec, input routeInput) []any {
 	result := []any{}
 	for _, command := range commands {
+		if !commandInputsAvailable(command, input.AvailableInputs) {
+			continue
+		}
 		argv := []any{"agentic-proofkit", command.Command}
 		for _, arg := range command.ExtraArgs {
 			argv = append(argv, arg)
@@ -855,6 +930,20 @@ func commandReports(commands []commandSpec, input routeInput) []any {
 	return result
 }
 
+func commandInputsAvailable(command commandSpec, available map[string]string) bool {
+	if command.InputKind != "" {
+		if _, ok := available[command.InputKind]; !ok {
+			return false
+		}
+	}
+	for _, arg := range command.ArgInputs {
+		if _, ok := available[arg.InputKind]; !ok {
+			return false
+		}
+	}
+	return true
+}
+
 func browserModeForCommand(command commandSpec, input routeInput) any {
 	if command.Command != "requirement-browser-server" {
 		return nil
@@ -865,20 +954,31 @@ func browserModeForCommand(command commandSpec, input routeInput) any {
 func omittedReports(commands []commandSpec, available map[string]string) []any {
 	result := []any{}
 	for _, command := range commands {
-		if command.InputKind == "" {
+		if commandInputsAvailable(command, available) {
 			continue
 		}
-		if _, ok := available[command.InputKind]; ok {
-			continue
+		missing := command.InputKind
+		if missing == "" || hasInputKind(available, missing) {
+			for _, arg := range command.ArgInputs {
+				if !hasInputKind(available, arg.InputKind) {
+					missing = arg.InputKind
+					break
+				}
+			}
 		}
 		result = append(result, map[string]any{
 			"command":            command.Command,
-			"missingInputKind":   command.InputKind,
+			"missingInputKind":   missing,
 			"reason":             omittedReason(command),
 			"safePlaceholderUse": false,
 		})
 	}
 	return result
+}
+
+func hasInputKind(available map[string]string, kind string) bool {
+	_, ok := available[kind]
+	return ok
 }
 
 func omittedReason(command commandSpec) string {
@@ -980,7 +1080,7 @@ func guidanceSliceReport(goal string, spec routeSpec) map[string]any {
 				"selector": "Agent Decision Procedure",
 			},
 			map[string]any{
-				"path":     "proofkit/cli-contract.v1.json",
+				"path":     "proofkit/cli-contract.v2.json",
 				"reason":   "Machine-readable CLI command and flag contract.",
 				"refId":    "proofkit.agent-route.cli-contract",
 				"role":     "command_registry",

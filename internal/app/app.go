@@ -19,7 +19,16 @@ import (
 const maxInputBytes = 32 << 20
 
 func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	args, layout, layoutExplicit, err := parseProcessOptions(args)
+	if err != nil {
+		writeDiagnostic(stderr, err)
+		return 1
+	}
 	if len(args) == 0 || args[0] == "--help" || args[0] == "-h" {
+		if layoutExplicit {
+			writeDiagnosticf(stderr, "--json-layout is valid only for JSON command output")
+			return 1
+		}
 		return writeText(usage(), 0, nil, stdout, stderr)
 	}
 	descriptor, ok := commandDescriptorFor(args[0])
@@ -28,9 +37,19 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 		return 1
 	}
 	if isCommandHelpRequest(args) {
+		if layoutExplicit {
+			writeDiagnosticf(stderr, "--json-layout is valid only for JSON command output")
+			return 1
+		}
 		return writeText(commandUsage(descriptor), 0, nil, stdout, stderr)
 	}
-	if err := validateFlagConstraints(descriptor, args[1:]); err != nil {
+	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
+	if err := validateJSONLayoutUse(descriptor, parsedArguments, layoutExplicit); err != nil {
+		writeDiagnostic(stderr, err)
+		return 1
+	}
+	stdout = layoutWriter{Writer: stdout, layout: layout}
+	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
@@ -136,6 +155,8 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 		return runRequirementProofResolver(args[1:], stdin, stdout, stderr)
 	case commandRunnerRequirementBrowserServer:
 		return runRequirementBrowserServer(ctx, args[1:], stdin, stdout, stderr)
+	case commandRunnerRequirementContextCompose:
+		return runRequirementContextCompose(args[1:], stdin, stdout, stderr)
 	case commandRunnerRequirementView:
 		return runRequirementView(args[0], args[1:], stdin, stdout, stderr)
 	case commandRunnerTestEvidenceInventory:
@@ -213,6 +234,8 @@ type requirementBrowserArgs struct {
 	port                        int
 	portSet                     bool
 	scope                       string
+	sessionMode                 string
+	sessionTimeoutSeconds       int
 	serve                       bool
 	view                        string
 }

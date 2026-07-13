@@ -629,7 +629,7 @@ func TestCIWorkflowDeclaresFailClosedRequiredAggregate(t *testing.T) {
 	if !usesAlwaysStatusCheck(gate.If) {
 		t.Fatalf("ci-required-gate if=%q, want always() so failed or skipped needs are inspected", gate.If)
 	}
-	wantNeeds := []string{"platform-smoke", "source-quality"}
+	wantNeeds := []string{"browser-runtime", "platform-smoke", "source-quality"}
 	if got := needsList(gate.Needs); !reflect.DeepEqual(got, wantNeeds) {
 		t.Fatalf("ci-required-gate needs=%#v, want %#v", got, wantNeeds)
 	}
@@ -642,6 +642,55 @@ func TestCIWorkflowDeclaresFailClosedRequiredAggregate(t *testing.T) {
 		if !strings.Contains(run, want) {
 			t.Fatalf("ci-required-gate run must require %s success, run=%q", need, run)
 		}
+	}
+}
+
+func TestCIBrowserRuntimeInstallsEnginesBeforeProofAndRetainsOnlySuccessfulEvidence(t *testing.T) {
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
+	job, ok := workflow.Jobs["browser-runtime"]
+	if !ok {
+		t.Fatal("ci workflow missing browser-runtime job")
+	}
+	installIndex, err := uniqueStepIndex(job.Steps, "Install pinned browser engines")
+	if err != nil {
+		t.Fatal(err)
+	}
+	proofIndex, err := uniqueStepIndex(job.Steps, "Run browser proof")
+	if err != nil {
+		t.Fatal(err)
+	}
+	uploadIndex, err := uniqueStepIndex(job.Steps, "Upload browser proof")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !(installIndex < proofIndex && proofIndex < uploadIndex) {
+		t.Fatalf("browser runtime order install=%d proof=%d upload=%d", installIndex, proofIndex, uploadIndex)
+	}
+	if job.Steps[installIndex].Run != "npx playwright install --with-deps chromium firefox webkit" || job.Steps[proofIndex].Run != "npm run browser:check" {
+		t.Fatalf("browser runtime commands are not exact: install=%q proof=%q", job.Steps[installIndex].Run, job.Steps[proofIndex].Run)
+	}
+	upload := job.Steps[uploadIndex]
+	if usesAlwaysStatusCheck(upload.If) || upload.With["if-no-files-found"] != "error" || upload.With["path"] != "artifacts/proofkit/browser-runtime-proof.json" {
+		t.Fatalf("browser proof upload is not fail-closed success evidence: %#v", upload)
+	}
+}
+
+func TestReleaseCandidateInstallsBrowserEnginesBeforePackageGate(t *testing.T) {
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "release.yml"))
+	job, ok := workflow.Jobs["candidate"]
+	if !ok {
+		t.Fatal("release workflow missing candidate job")
+	}
+	installIndex, err := uniqueStepIndex(job.Steps, "Install pinned browser engines")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gateIndex, err := uniqueStepIndex(job.Steps, "Run package gate")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if installIndex >= gateIndex || job.Steps[installIndex].Run != "npx playwright install --with-deps chromium firefox webkit" || job.Steps[gateIndex].Run != "npm run check" {
+		t.Fatalf("release browser prerequisite is not fail-closed before package gate: install=%#v gate=%#v", job.Steps[installIndex], job.Steps[gateIndex])
 	}
 }
 

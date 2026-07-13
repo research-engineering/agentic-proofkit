@@ -25,9 +25,15 @@ admission, and rollout approval belong in consuming repositories.
 Run before proposing a non-trivial change:
 
 ```bash
+npm ci --ignore-scripts
+npx playwright install chromium firefox webkit
 npm run check
 git diff --check
 ```
+
+The browser engine installation is a one-time prerequisite for the pinned
+rendered-runtime gate. CI installs the same engines with their Linux system
+dependencies before running that gate.
 
 If your local project uses Bun, `bun run check` is acceptable as a convenience
 runner only when it invokes the same scripts and leaves `npm run check`

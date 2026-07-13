@@ -51,7 +51,7 @@ var boundaryNonClaims = []string{
 	"Requirement spec tree reports do not validate requirement meaning, proof adequacy, coverage truth, or receipt freshness.",
 }
 
-type sourceRef struct {
+type SourceRef struct {
 	CurrentSourceDigest  string
 	DigestAlgorithm      string
 	RecordedSourceDigest string
@@ -62,7 +62,9 @@ type sourceRef struct {
 	SourceRole           string
 }
 
-type node struct {
+type sourceRef = SourceRef
+
+type Node struct {
 	CallerAnnotations []string
 	DisplayOrder      int
 	Label             string
@@ -71,12 +73,16 @@ type node struct {
 	SourceRefs        []sourceRef
 }
 
-type edge struct {
+type node = Node
+
+type Edge struct {
 	ChildNodeID  string
 	ParentNodeID string
 }
 
-type overlay struct {
+type edge = Edge
+
+type Overlay struct {
 	CallerAnnotations []string
 	DigestAlgorithm   string
 	Label             string
@@ -89,7 +95,9 @@ type overlay struct {
 	TargetNodeID      string
 }
 
-type admittedInput struct {
+type overlay = Overlay
+
+type Tree struct {
 	CallerAnnotations []string
 	Edges             []edge
 	Nodes             []node
@@ -97,3 +105,5 @@ type admittedInput struct {
 	RootNodeID        string
 	TreeID            string
 }
+
+type admittedInput = Tree

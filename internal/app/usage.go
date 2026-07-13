@@ -3,7 +3,7 @@ package app
 import "strings"
 
 func usage() string {
-	lines := []string{"Usage:"}
+	lines := []string{"Usage:", "  agentic-proofkit [--json-layout pretty|compact] <command> [arguments]", "", "Commands:"}
 	for _, descriptor := range commandDescriptors {
 		lines = append(lines, "  "+commandUsageLine(descriptor))
 	}

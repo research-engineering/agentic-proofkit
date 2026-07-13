@@ -22,7 +22,7 @@ import (
 
 const (
 	catalogPath     = "proofkit/command-families.v1.json"
-	cliContractPath = "proofkit/cli-contract.v1.json"
+	cliContractPath = "proofkit/cli-contract.v2.json"
 	generatedPath   = "internal/app/command_family_catalog_generated.go"
 	maxCatalogBytes = 1 << 20
 )

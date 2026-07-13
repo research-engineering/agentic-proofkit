@@ -490,6 +490,71 @@
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-019",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement context composition reads only caller-selected repository-relative catalog paths through a confined filesystem root, admits each source through its semantic owner, records current and optional expected digests, and emits one bounded content-bound derived snapshot without ambient scanning or new requirement, proof, coverage, freshness, or merge authority.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-019"],
+      "nonClaims": ["This requirement does not claim ambient repository discovery, later-checkout freshness, requirement meaning, proof adequacy, native witness execution, merge approval, release approval, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-020",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement context slicing strictly re-admits snapshot identity, applies closed profiles and intersecting stable-id selectors under deterministic bounds, rejects unknown explicit targets, retains selected ancestors before descendants, preserves source-role and lifecycle reference closure, and distinctly reports depth, node-count, and requirement-count omissions without treating bounded absence as source absence.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-020"],
+      "nonClaims": ["This requirement does not claim source completeness outside the admitted snapshot, product meaning, proof freshness, native execution, merge approval, release approval, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "The loopback requirement workspace visibly preserves presentation-only authority boundaries, non-claims, snapshot and baseline identity, and trust-significant graph states while rendering immutable admitted context, optional semantic diff, and optional traceability graph through exact allowlisted routes, a per-process capability, same-origin handoff admission, source-digest and JSON-pointer anchors, Unicode code-point quote coordinates, bounded browser-session question packets after explicit UI submission across the admitted tree domain subject to explicit packet byte bounds, and terminal one-shot concurrent session semantics without persistence, command execution, provider access, or authority promotion.",
+      "claimLevel": "blocking",
+      "riskClass": "critical",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-021"],
+      "nonClaims": ["This requirement does not authenticate the surrounding browser profile or operating-system user and does not claim remote access, annotation persistence, agent execution, provider delivery, proof freshness, merge approval, release approval, rollout approval, branded Safari behavior, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement semantic diff compares two admitted context snapshots by stable requirement identity and owner-declared scalar, set, and map field classes, producing deterministic added, removed, and modified facts without textual diff, inferred move semantics, or authority over requirement meaning.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-022"],
+      "nonClaims": ["This requirement does not claim textual equivalence, inferred moves, product meaning, proof freshness, merge approval, release approval, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-023",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Requirement traceability graph deterministically projects admitted specification and proof topology plus explicit caller-owned code topology while preserving specification, proof, code traceability, and native execution as distinct evidence planes and rejecting dangling topology references.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-023"],
+      "nonClaims": ["This requirement does not infer code topology, line or branch coverage, native execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

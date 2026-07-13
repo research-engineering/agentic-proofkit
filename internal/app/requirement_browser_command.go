@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
@@ -40,12 +42,17 @@ func runRequirementBrowserServer(ctx context.Context, args []string, stdin io.Re
 		Port:                        options.port,
 		PortSet:                     options.portSet,
 		ProofViewScope:              options.scope,
+		SessionMode:                 options.sessionMode,
+		SessionTimeout:              time.Duration(options.sessionTimeoutSeconds) * time.Second,
 		View:                        options.view,
 	}
 	if options.serve {
 		signalContext, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 		defer stop()
 		if err := requirementbrowser.Serve(signalContext, input, browserOptions, stdout); err != nil {
+			if errors.Is(err, requirementbrowser.ErrOneShotTerminal) {
+				return 1
+			}
 			writeDiagnostic(stderr, err)
 			return 1
 		}
@@ -56,8 +63,10 @@ func runRequirementBrowserServer(ctx context.Context, args []string, stdin io.Re
 }
 
 func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) {
-	options := requirementBrowserArgs{host: "127.0.0.1", port: 4177}
+	options := requirementBrowserArgs{host: "127.0.0.1", port: 0, sessionMode: "browse"}
 	inputPointerSeen := false
+	sessionModeSeen := false
+	sessionTimeoutSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -74,8 +83,8 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			options.inputPointer = args[index+1]
 			index++
 		case "--view":
-			if index+1 >= len(args) || (args[index+1] != "source" && args[index+1] != "proof" && args[index+1] != "coverage" && args[index+1] != "spec-tree") {
-				return requirementBrowserArgs{}, fmt.Errorf("--view requires source, proof, coverage, or spec-tree")
+			if index+1 >= len(args) || (args[index+1] != "source" && args[index+1] != "proof" && args[index+1] != "coverage" && args[index+1] != "spec-tree" && args[index+1] != "workspace") {
+				return requirementBrowserArgs{}, fmt.Errorf("--view requires source, proof, coverage, spec-tree, or workspace")
 			}
 			options.view = args[index+1]
 			index++
@@ -100,6 +109,24 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			options.open = true
 		case "--serve":
 			options.serve = true
+		case "--session-mode":
+			if sessionModeSeen || index+1 >= len(args) || (args[index+1] != "browse" && args[index+1] != "one-shot-question") {
+				return requirementBrowserArgs{}, fmt.Errorf("--session-mode requires browse or one-shot-question")
+			}
+			sessionModeSeen = true
+			options.sessionMode = args[index+1]
+			index++
+		case "--session-timeout-seconds":
+			if sessionTimeoutSeen || index+1 >= len(args) {
+				return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds requires an integer from 1 to 7200")
+			}
+			sessionTimeoutSeen = true
+			seconds, err := strconv.Atoi(args[index+1])
+			if err != nil || seconds < 1 || seconds > 7200 {
+				return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds requires an integer from 1 to 7200")
+			}
+			options.sessionTimeoutSeconds = seconds
+			index++
 		case "--scope":
 			if index+1 >= len(args) || (args[index+1] != "graph" && args[index+1] != "slice") {
 				return requirementBrowserArgs{}, fmt.Errorf("--scope requires graph or slice")
@@ -123,13 +150,22 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 		}
 	}
 	if options.view == "" {
-		return requirementBrowserArgs{}, fmt.Errorf("requirement-browser-server requires --view source, proof, coverage, or spec-tree")
+		return requirementBrowserArgs{}, fmt.Errorf("requirement-browser-server requires --view source, proof, coverage, spec-tree, or workspace")
 	}
 	if options.inputPath == "" {
 		return requirementBrowserArgs{}, fmt.Errorf("--input is required")
 	}
 	if options.open && !options.serve {
 		return requirementBrowserArgs{}, fmt.Errorf("--open requires --serve for requirement-browser-server")
+	}
+	if options.sessionMode == "one-shot-question" && (!options.serve || !options.open || options.view != "workspace") {
+		return requirementBrowserArgs{}, fmt.Errorf("one-shot-question requires --view workspace --serve --open")
+	}
+	if sessionModeSeen && (options.view != "workspace" || !options.serve) {
+		return requirementBrowserArgs{}, fmt.Errorf("--session-mode is valid only with --view workspace --serve")
+	}
+	if options.sessionTimeoutSeconds != 0 && options.sessionMode != "one-shot-question" {
+		return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds is valid only for one-shot-question")
 	}
 	if options.view != "proof" && options.scope != "" {
 		return requirementBrowserArgs{}, fmt.Errorf("--scope is valid only for requirement-proof-view or proof requirement-browser-server")

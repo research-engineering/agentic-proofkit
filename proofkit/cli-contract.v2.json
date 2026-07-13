@@ -1,15 +1,33 @@
 {
-  "schemaVersion": 1,
-  "contractId": "proofkit.cli-contract.v1",
+  "schemaVersion": 2,
+  "contractId": "proofkit.cli-contract.v2",
   "packageName": "@research-engineering/agentic-proofkit",
   "processContract": {
     "successExitCode": 0,
     "failureExitCode": 1,
     "stdout": "Successful JSON commands write exactly one JSON value to stdout unless an admitted explicit output-file flag writes that JSON value to the selected path and leaves stdout empty. Successful text or help commands write text to stdout unless an admitted explicit output-file flag writes the selected representation to the selected path and leaves stdout empty. Commands do not write stderr on success.",
     "stderr": "Argument parsing, unsupported command, input admission, and output serialization failures write human diagnostics to stderr. Failed report commands may still write a machine-readable failed report to stdout when admission succeeds. Opt-in agent-envelope repair packets may write deterministic invalid-input JSON to stdout with exit code 1 and empty stderr.",
+    "globalOptions": {
+      "jsonLayout": {
+        "flag": "--json-layout",
+        "position": "before_command",
+        "values": [
+          "compact",
+          "pretty"
+        ],
+        "default": "pretty",
+        "scope": "json_output_only"
+      }
+    },
     "helpGrammar": {
-      "rootHelpFlags": ["--help", "-h"],
-      "commandHelpFlags": ["--help", "-h"],
+      "rootHelpFlags": [
+        "--help",
+        "-h"
+      ],
+      "commandHelpFlags": [
+        "--help",
+        "-h"
+      ],
       "helpCommandPositionalTarget": "optional_supported_command",
       "helpCatalogFormsSource": "proofkit/command-families.v1.json",
       "helpReadsCommandInput": false
@@ -132,8 +150,14 @@
                   "readiness_closeout_input",
                   "registry_consumer_input",
                   "release_authority_input",
+                  "requirement_context_catalog",
+                  "requirement_context_repo_root",
+                  "requirement_context_slice_input",
+                  "requirement_semantic_diff_input",
                   "requirement_source",
                   "requirement_source_transition",
+                  "requirement_traceability_graph_input",
+                  "requirement_workspace_input",
                   "scaffold_profile_plan",
                   "scaffold_project_structure",
                   "selective_evidence",
@@ -170,11 +194,14 @@
               "check_overview_claims",
               "decide_obligations",
               "inspect_coverage",
+              "inspect_requirement_context",
+              "inspect_requirement_traceability",
               "inventory_tests",
               "plan_selective_checks",
               "release_or_deploy_evidence",
               "render_human_view",
               "retire_local_infrastructure",
+              "review_requirement_change",
               "scaffold_first_module",
               "unknown",
               "validate_requirement_source",
@@ -1017,10 +1044,82 @@
         "--port",
         "--scope",
         "--serve",
+        "--session-mode",
+        "--session-timeout-seconds",
         "--view"
       ],
       "requiredFlags": [
         "--view"
+      ],
+      "flagValueRequirements": [
+        {
+          "flag": "--session-mode",
+          "requiredFlags": [
+            "--open",
+            "--serve",
+            "--view"
+          ],
+          "value": "one-shot-question"
+        }
+      ],
+      "inputContract": {
+        "schemaVersion": 1,
+        "workspaceRequiredFields": [
+          "context",
+          "schemaVersion",
+          "workspaceId"
+        ],
+        "workspaceOptionalFields": [
+          "diffInput",
+          "graphInput"
+        ],
+        "sessionModeValues": [
+          "browse",
+          "one-shot-question"
+        ],
+        "sessionTimeoutSeconds": {
+          "minimum": 1,
+          "maximum": 7200,
+          "requiresSessionMode": "one-shot-question"
+        },
+        "oneShotRequirements": {
+          "open": true,
+          "serve": true,
+          "view": "workspace"
+        },
+        "jsonLayoutRule": "allowed for non-serving JSON plans; serving and one-shot modes reject the global layout option because one-shot terminal packets are fixed compact JSON"
+      }
+    },
+    {
+      "command": "requirement-context-compose",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer",
+        "--repo-root"
+      ],
+      "requiredFlags": [
+        "--repo-root"
+      ]
+    },
+    {
+      "command": "requirement-context-slice",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
       ]
     },
     {
@@ -1322,6 +1421,20 @@
       ]
     },
     {
+      "command": "requirement-semantic-diff",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
+    },
+    {
       "command": "requirement-source-admission",
       "input": "required",
       "stdin": true,
@@ -1374,7 +1487,15 @@
       "scopeClass": "explicit_caller_input",
       "inputContract": {
         "schemaVersion": 2,
-        "requiredFields": ["schemaVersion", "treeId", "rootNodeId", "callerAnnotations", "nodes", "edges", "overlays"],
+        "requiredFields": [
+          "schemaVersion",
+          "treeId",
+          "rootNodeId",
+          "callerAnnotations",
+          "nodes",
+          "edges",
+          "overlays"
+        ],
         "callerTextAuthority": "callerAnnotations fields are untrusted presentation annotations and never command-owned nonClaims"
       },
       "outputModes": [
@@ -1393,7 +1514,15 @@
       "scopeClass": "explicit_caller_input",
       "inputContract": {
         "schemaVersion": 2,
-        "requiredFields": ["schemaVersion", "treeId", "rootNodeId", "callerAnnotations", "nodes", "edges", "overlays"],
+        "requiredFields": [
+          "schemaVersion",
+          "treeId",
+          "rootNodeId",
+          "callerAnnotations",
+          "nodes",
+          "edges",
+          "overlays"
+        ],
         "callerTextAuthority": "callerAnnotations fields are untrusted presentation annotations and never command-owned nonClaims"
       },
       "outputModes": [
@@ -1411,7 +1540,10 @@
         "contractId": "proofkit.requirement-spec-tree-view.output.v2",
         "schemaVersion": 2,
         "authority": "requirement spec tree view output contract",
-        "nonJsonFormats": ["html", "markdown"],
+        "nonJsonFormats": [
+          "html",
+          "markdown"
+        ],
         "requiredFields": [
           "authority",
           "nodeCount",
@@ -1424,6 +1556,20 @@
           "Requirement spec tree views do not scan repositories, compute source freshness, execute witnesses, approve merge, or replace the requirement spec tree admission report."
         ]
       }
+    },
+    {
+      "command": "requirement-traceability-graph",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "outputModes": [
+        "json"
+      ],
+      "allowedFlags": [
+        "--input",
+        "--input-pointer"
+      ]
     },
     {
       "command": "scaffold-profile-plan",

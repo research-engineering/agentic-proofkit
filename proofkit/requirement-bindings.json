@@ -573,6 +573,22 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-021",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not change canonical source storage, semantic selection, stable identity, text output, help output, browser sessions, merge approval, release approval, or rollout readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not claim full WCAG conformance, every branded browser, provider CI ingestion, registry publication, release approval, rollout approval, or production readiness."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
@@ -591,6 +607,46 @@
       "nonClaims": [
         "This requirement does not claim byte-for-byte help text compatibility across owner-approved CLI contract corrections, command recommendation, command execution through family membership, consumer policy, native witness execution, merge approval, release approval, rollout approval, or production readiness."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-019",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not claim ambient repository discovery, later-checkout freshness, requirement meaning, proof adequacy, native witness execution, merge approval, release approval, rollout approval, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-020",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not claim source completeness outside the admitted snapshot, product meaning, proof freshness, native execution, merge approval, release approval, rollout approval, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not authenticate the surrounding browser profile or operating-system user and does not claim remote access, annotation persistence, agent execution, provider delivery, proof freshness, merge approval, release approval, rollout approval, branded Safari behavior, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not claim textual equivalence, inferred moves, product meaning, proof freshness, merge approval, release approval, rollout approval, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-023",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This requirement does not infer code topology, line or branch coverage, native execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."]
     }
   ],
   "bindings": [
@@ -2128,9 +2184,167 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-021",
+      "scenarioId": "proofkit.supply-chain-quality.cli-json-layout-parity",
+      "witnessId": "proofkit.stablejson.layout-parity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/stablejson/stablejson_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-021",
+      "scenarioId": "proofkit.supply-chain-quality.cli-json-layout-process-boundary",
+      "witnessId": "proofkit.app.json-layout-process-boundary-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/app_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-021",
+      "scenarioId": "proofkit.supply-chain-quality.cli-json-layout-file-boundary",
+      "witnessId": "proofkit.app.json-layout-file-boundary-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_abi_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "scenarioId": "proofkit.supply-chain-quality.browser-asset-and-security-boundary",
+      "witnessId": "proofkit.requirement-browser.workspace-security-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "scenarioId": "proofkit.supply-chain-quality.browser-project-execution-evidence",
+      "witnessId": "proofkit.requirement-browser.project-execution-evidence-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/playwright_report_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "scenarioId": "proofkit.supply-chain-quality.browser-proof-artifact-confinement",
+      "witnessId": "proofkit.requirement-browser.proof-artifact-confinement-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/artifact_paths_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "scenarioId": "proofkit.supply-chain-quality.browser-terminal-concurrency",
+      "witnessId": "proofkit.requirement-browser.terminal-concurrency-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_handoff_boundary_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "scenarioId": "proofkit.supply-chain-quality.browser-process-lifecycle",
+      "witnessId": "proofkit.requirement-browser.process-lifecycle-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "scripts/browser-proof-execution.test.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-019",
+      "scenarioId": "proofkit.spec-proof-core.requirement-context-composition",
+      "witnessId": "proofkit.requirement-context.compose-round-trip-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/requirementcontext_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-020",
+      "scenarioId": "proofkit.spec-proof-core.requirement-context-slicing",
+      "witnessId": "proofkit.requirement-context.slice-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/slice_closure_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-workspace-handoff",
+      "witnessId": "proofkit.requirement-browser.workspace-handoff-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-tree-domain-closure",
+      "witnessId": "proofkit.requirement-browser.tree-domain-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_handoff_boundary_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-packet-bounds",
+      "witnessId": "proofkit.requirement-browser.packet-bounds-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/handoff_bounds_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "scenarioId": "proofkit.spec-proof-core.requirement-semantic-diff",
+      "witnessId": "proofkit.requirement-semantic-diff.owner-field-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementdiff/requirementdiff_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-023",
+      "scenarioId": "proofkit.spec-proof-core.requirement-traceability-evidence-planes",
+      "witnessId": "proofkit.requirement-traceability.evidence-plane-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementgraph/requirementgraph_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-021",
+      "scenarioId": "proofkit.spec-proof-core.requirement-browser-rendered-runtime",
+      "witnessId": "proofkit.requirement-browser.rendered-runtime-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "scenarioId": "proofkit.supply-chain-quality.browser-static-and-runtime-proof",
+      "witnessId": "proofkit.requirement-browser.static-runtime-proof-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
     }
   ],
   "witnessCommands": [
+    {
+      "commandId": "proofkit.browser-check",
+      "command": "npm run browser:check",
+      "environmentClass": "local-node-browser"
+    },
     {
       "commandId": "proofkit.ci-receipt-anchor",
       "command": "npm run self:receipt",

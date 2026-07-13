@@ -11,16 +11,30 @@ import (
 
 var jsonNumberPattern = regexp.MustCompile(`^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$`)
 
+type Layout string
+
+const (
+	LayoutPretty  Layout = "pretty"
+	LayoutCompact Layout = "compact"
+)
+
 func Marshal(value any) ([]byte, error) {
+	return MarshalLayout(value, LayoutPretty)
+}
+
+func MarshalLayout(value any, layout Layout) ([]byte, error) {
+	if layout != LayoutPretty && layout != LayoutCompact {
+		return nil, fmt.Errorf("unsupported JSON layout: %s", layout)
+	}
 	var builder strings.Builder
-	if err := writeValue(&builder, value, 0); err != nil {
+	if err := writeValue(&builder, value, 0, layout); err != nil {
 		return nil, err
 	}
 	builder.WriteByte('\n')
 	return []byte(builder.String()), nil
 }
 
-func writeValue(builder *strings.Builder, value any, depth int) error {
+func writeValue(builder *strings.Builder, value any, depth int, layout Layout) error {
 	switch typed := value.(type) {
 	case nil:
 		builder.WriteString("null")
@@ -40,9 +54,9 @@ func writeValue(builder *strings.Builder, value any, depth int) error {
 	case int:
 		builder.WriteString(fmt.Sprintf("%d", typed))
 	case []any:
-		return writeArray(builder, typed, depth)
+		return writeArray(builder, typed, depth, layout)
 	case map[string]any:
-		return writeObject(builder, typed, depth)
+		return writeObject(builder, typed, depth, layout)
 	default:
 		return fmt.Errorf("unsupported JSON value %T", value)
 	}
@@ -53,28 +67,38 @@ func isJSONNumberToken(value string) bool {
 	return jsonNumberPattern.MatchString(value)
 }
 
-func writeArray(builder *strings.Builder, values []any, depth int) error {
+func writeArray(builder *strings.Builder, values []any, depth int, layout Layout) error {
 	if len(values) == 0 {
 		builder.WriteString("[]")
 		return nil
 	}
-	builder.WriteString("[\n")
+	builder.WriteByte('[')
+	if layout == LayoutPretty {
+		builder.WriteByte('\n')
+	}
 	for index, value := range values {
 		if index > 0 {
-			builder.WriteString(",\n")
+			builder.WriteByte(',')
+			if layout == LayoutPretty {
+				builder.WriteByte('\n')
+			}
 		}
-		writeIndent(builder, depth+1)
-		if err := writeValue(builder, value, depth+1); err != nil {
+		if layout == LayoutPretty {
+			writeIndent(builder, depth+1)
+		}
+		if err := writeValue(builder, value, depth+1, layout); err != nil {
 			return err
 		}
 	}
-	builder.WriteByte('\n')
-	writeIndent(builder, depth)
+	if layout == LayoutPretty {
+		builder.WriteByte('\n')
+		writeIndent(builder, depth)
+	}
 	builder.WriteByte(']')
 	return nil
 }
 
-func writeObject(builder *strings.Builder, values map[string]any, depth int) error {
+func writeObject(builder *strings.Builder, values map[string]any, depth int, layout Layout) error {
 	if len(values) == 0 {
 		builder.WriteString("{}")
 		return nil
@@ -84,20 +108,33 @@ func writeObject(builder *strings.Builder, values map[string]any, depth int) err
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-	builder.WriteString("{\n")
+	builder.WriteByte('{')
+	if layout == LayoutPretty {
+		builder.WriteByte('\n')
+	}
 	for index, key := range keys {
 		if index > 0 {
-			builder.WriteString(",\n")
+			builder.WriteByte(',')
+			if layout == LayoutPretty {
+				builder.WriteByte('\n')
+			}
 		}
-		writeIndent(builder, depth+1)
+		if layout == LayoutPretty {
+			writeIndent(builder, depth+1)
+		}
 		builder.WriteString(quote(key))
-		builder.WriteString(": ")
-		if err := writeValue(builder, values[key], depth+1); err != nil {
+		builder.WriteByte(':')
+		if layout == LayoutPretty {
+			builder.WriteByte(' ')
+		}
+		if err := writeValue(builder, values[key], depth+1, layout); err != nil {
 			return err
 		}
 	}
-	builder.WriteByte('\n')
-	writeIndent(builder, depth)
+	if layout == LayoutPretty {
+		builder.WriteByte('\n')
+		writeIndent(builder, depth)
+	}
 	builder.WriteByte('}')
 	return nil
 }

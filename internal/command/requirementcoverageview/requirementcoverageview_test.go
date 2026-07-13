@@ -34,6 +34,28 @@ func TestBuildJSONBuildsSemanticRequirementAndCommandCoverage(t *testing.T) {
 	}
 }
 
+func TestAdmitOutputRejectsUnknownNestedFieldsAndBreaksCallerAliases(t *testing.T) {
+	view, _, err := BuildJSON(validCoverageInput(t), Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	record := view.(map[string]any)
+	test := record["requirementCoverage"].([]any)[0].(map[string]any)["tests"].([]any)[0].(map[string]any)
+	test["unownedField"] = true
+	if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "unsupported field") {
+		t.Fatalf("AdmitOutput() error=%v, want unknown nested field rejection", err)
+	}
+	delete(test, "unownedField")
+	admitted, err := AdmitOutput(record)
+	if err != nil {
+		t.Fatalf("AdmitOutput() error = %v", err)
+	}
+	record["requirementCoverage"].([]any)[0].(map[string]any)["coverageState"] = "mutated"
+	if got := admitted["requirementCoverage"].([]any)[0].(map[string]any)["coverageState"]; got == "mutated" {
+		t.Fatalf("AdmitOutput() retained caller alias")
+	}
+}
+
 func TestBuildJSONDoesNotPromoteProofRouteCandidateToSemanticCoverage(t *testing.T) {
 	input := validCoverageInput(t)
 	entry := inventoryEntry(input)

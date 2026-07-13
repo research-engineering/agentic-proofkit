@@ -40,7 +40,7 @@ var requiredPackedFiles = []string{
 	"SECURITY.md",
 	"dist/agentic-proofkit",
 	"package.json",
-	"proofkit/cli-contract.v1.json",
+	"proofkit/cli-contract.v2.json",
 	"proofkit/receipt-producer-policy.json",
 	"proofkit/requirement-bindings.json",
 	"proofkit/witness-plan.json",

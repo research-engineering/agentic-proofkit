@@ -111,6 +111,17 @@
       ]
     },
     {
+      "familyId": "requirement-context-and-traceability",
+      "label": "Requirement context and traceability",
+      "purpose": "Compose bounded semantic context and derive diff and traceability projections.",
+      "commands": [
+        "requirement-context-compose",
+        "requirement-context-slice",
+        "requirement-semantic-diff",
+        "requirement-traceability-graph"
+      ]
+    },
+    {
       "familyId": "requirement-navigation-and-rendering",
       "label": "Requirement navigation and rendering",
       "purpose": "Build and present requirement, proof, and coverage views.",

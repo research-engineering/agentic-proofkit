@@ -62,7 +62,7 @@ func commandUsage(descriptor commandDescriptor) string {
 		}
 	}
 	lines = append(lines, "", "Public contract:")
-	lines = append(lines, "  CLI/JSON input, output modes, exit codes, and flags are owned by proofkit/cli-contract.v1.json.")
+	lines = append(lines, "  CLI/JSON input, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")
 	return strings.Join(lines, "\n") + "\n"
 }
 
@@ -92,6 +92,10 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			segments = append(segments, "[--host 127.0.0.1|::1]")
 		case "--port":
 			segments = append(segments, "[--port <port>]")
+		case "--session-mode":
+			segments = append(segments, "[--session-mode browse|one-shot-question]")
+		case "--session-timeout-seconds":
+			segments = append(segments, "[--session-timeout-seconds <1..7200>]")
 		case "--scope":
 			segments = append(segments, "[--scope <scope>]")
 		case "--local-environment-class":

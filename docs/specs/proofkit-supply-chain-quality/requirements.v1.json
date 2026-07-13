@@ -268,6 +268,32 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-021",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "The public CLI v2 process contract admits one leading pretty or compact JSON layout option, preserves pretty as the default, classifies descriptor-admitted flag and value token roles before output policy so option-shaped values cannot alter output classification, emits sorted valid JSON with one trailing LF in both layouts, applies the selected layout only at JSON stdout or admitted JSON file sinks, and leaves canonical digest and identity serialization unchanged.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-021"],
+      "nonClaims": ["This requirement does not change canonical source storage, semantic selection, stable identity, text output, help output, browser sessions, merge approval, release approval, or rollout readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-022",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Authored requirement workspace JavaScript and CSS are embedded through an explicit compile-time asset set, served only by exact routes with restrictive response headers, strictly type-checked without a production bundler, and covered by Go lifecycle, concurrent terminal-state, HTTP security, and repository-confined non-symlink artifact falsifiers plus a machine-admitted per-project execution report proving the same non-empty passed test identities in pinned Chromium, Firefox, and Playwright WebKit, with bounded browser-server cleanup and no added runtime package dependencies.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-022"],
+      "nonClaims": ["This requirement does not claim full WCAG conformance, every branded browser, provider CI ingestion, registry publication, release approval, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ]
 }

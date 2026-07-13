@@ -97,6 +97,21 @@ execution receipts, and merge policy.
   runtime navigation projection, and adds opt-in family help while preserving
   existing help invocation forms, process channels, no-input behavior, and leaf
   dispatch; descriptor and help truth remains owned by `REQ-PROOFKIT-QUALITY-004`.
+- `REQ-PROOFKIT-SPEC-019`: explicit catalogs compose content-bound semantic
+  context snapshots through existing source, tree, proof, and coverage owners
+  without ambient repository discovery.
+- `REQ-PROOFKIT-SPEC-020`: bounded context queries select parent-before-child,
+  role-aware, reference-closed semantic subsets by stable identity and report
+  each active bound without treating bounded absence as source absence.
+- `REQ-PROOFKIT-SPEC-021`: the loopback workspace progressively presents
+  immutable context, semantic diff, traceability trust states, authority
+  boundaries, and non-claims, then emits a bounded source-bound question packet
+  only after explicit user submission.
+- `REQ-PROOFKIT-SPEC-022`: semantic diff compares admitted requirement fields
+  by owner-declared scalar, set, and map semantics rather than textual order.
+- `REQ-PROOFKIT-SPEC-023`: traceability graphs preserve specification, proof,
+  code traceability, and native execution as distinct evidence planes and
+  accept code topology only as explicit caller-owned input.
 
 ## Non-Claims
 

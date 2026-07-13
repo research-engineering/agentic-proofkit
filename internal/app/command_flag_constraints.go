@@ -5,34 +5,42 @@ import (
 	"slices"
 )
 
-func validateFlagConstraints(descriptor commandDescriptor, args []string) error {
-	present := map[string]bool{}
-	values := map[string][]string{}
+type descriptorArguments struct {
+	present map[string]bool
+	values  map[string][]string
+}
+
+func classifyDescriptorArguments(descriptor commandDescriptor, args []string) descriptorArguments {
+	parsed := descriptorArguments{present: map[string]bool{}, values: map[string][]string{}}
 	for index := 0; index < len(args); index++ {
 		argument := args[index]
 		if !slices.Contains(descriptor.allowedFlags, argument) {
 			continue
 		}
-		present[argument] = true
+		parsed.present[argument] = true
 		if flagRequiresValue(argument) {
-			if index+1 < len(args) && !slices.Contains(descriptor.allowedFlags, args[index+1]) {
-				values[argument] = append(values[argument], args[index+1])
+			if index+1 < len(args) {
+				parsed.values[argument] = append(parsed.values[argument], args[index+1])
 				index++
 			}
 		}
 	}
-	if descriptor.input == commandInputRequired && !present["--input"] {
+	return parsed
+}
+
+func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArguments) error {
+	if descriptor.input == commandInputRequired && !parsed.present["--input"] {
 		return fmt.Errorf("%s requires --input <path|->", descriptor.name)
 	}
 	for _, flag := range descriptor.requiredFlags {
-		if !present[flag] {
+		if !parsed.present[flag] {
 			return fmt.Errorf("%s requires %s", descriptor.name, flag)
 		}
 	}
 	for _, group := range descriptor.exactlyOneOfFlagGroups {
 		count := 0
 		for _, flag := range group {
-			if present[flag] {
+			if parsed.present[flag] {
 				count++
 			}
 		}
@@ -41,11 +49,11 @@ func validateFlagConstraints(descriptor commandDescriptor, args []string) error 
 		}
 	}
 	for _, requirement := range descriptor.flagValueRequirements {
-		if !slices.Contains(values[requirement.Flag], requirement.Value) {
+		if !slices.Contains(parsed.values[requirement.Flag], requirement.Value) {
 			continue
 		}
 		for _, flag := range requirement.RequiredFlags {
-			if !present[flag] {
+			if !parsed.present[flag] {
 				return fmt.Errorf("%s %s %s requires %s", descriptor.name, requirement.Flag, requirement.Value, flag)
 			}
 		}
