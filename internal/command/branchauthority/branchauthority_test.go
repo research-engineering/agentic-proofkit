@@ -9,12 +9,18 @@ import (
 
 func TestBuildAdmitsAlignedRequiredBranchAndRejectsRequiredDrift(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059237477459693884008799222027390418858342772482064960101818015827014505791733")
-	record, exitCode := Build(validBranchAuthorityInput("main"))
+	record, exitCode, err := Build(validBranchAuthorityInput("main"))
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
 	if exitCode != 0 || record.State != "passed" {
 		t.Fatalf("Build() exitCode=%d state=%s, want passed", exitCode, record.State)
 	}
 
-	record, exitCode = Build(validBranchAuthorityInput("feature/test"))
+	record, exitCode, err = Build(validBranchAuthorityInput("feature/test"))
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
 	encoded, _ := json.Marshal(record)
 	if exitCode == 0 || record.State != "failed" || !strings.Contains(string(encoded), "proofkit.test.default") || !strings.Contains(string(encoded), "drifted") {
 		t.Fatalf("Build() accepted required branch drift: exitCode=%d record=%s", exitCode, string(encoded))

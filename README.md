@@ -24,25 +24,55 @@ packets without copying verifier logic between projects.
 The canonical registry identity is npm:
 
 ```bash
-npm install -D @research-engineering/agentic-proofkit
+npm install --save-dev --save-exact @research-engineering/agentic-proofkit
 ```
 
-Bun consumers may install the same npm registry package with Bun:
+Pre-1.0 releases may contain owner-declared breaking changes, so npm consumers
+must retain the exact saved version instead of replacing it with a version
+range.
+
+The canonical local invocation resolves only the already-installed dependency:
 
 ```bash
-bun add -d @research-engineering/agentic-proofkit
+npm exec --offline -- agentic-proofkit help
 ```
 
 npm remains the release-authority toolchain because release proof records npm
 registry identity, `dist.integrity`, `dist.shasum`, `npm pack`, and root-only
-registry install evidence. Bun is a supported consumer/developer package
-manager path, not a replacement for npm release evidence.
+registry install evidence. A bare `agentic-proofkit` command is valid when the
+package manager, script runner, or activated environment has already placed the
+installed binary on `PATH`; it is not the canonical copy-and-paste route.
+Equivalent exact-tarball Bun execution has not been admitted, so this README
+does not claim a Bun execution route.
 
 Python consumers use the Python package as a runner wrapper over the same Go
 CLI, not as a Python SDK. Python projects should still treat CLI/JSON records,
 exit codes, and package metadata as the public contract.
 
-Published Darwin binary distributions require macOS 12.0 or later.
+<!-- proofkit:platform-python:start -->
+Supported binary targets are macOS 12 or later on arm64 or x64.
+Linux manylinux 2.17 or later is supported on arm64 or x64. Windows is unsupported. The Python
+runner requires Python 3.9 or later and wraps the same Go CLI; it is not a
+Python SDK.
+
+After an exact Python package version is available from an admitted channel,
+use one complete package-manager chain:
+
+```bash
+python -m pip install agentic-proofkit==<version>
+python -m agentic_proofkit help
+```
+
+or:
+
+```bash
+uv add --dev agentic-proofkit==<version>
+uv run agentic-proofkit help
+```
+
+These conditional commands do not claim that any current version is available
+on PyPI.
+<!-- proofkit:platform-python:end -->
 
 ## Project Boundary
 
@@ -148,10 +178,10 @@ make generated invariants authoritative by itself.
 Use the CLI help route before reading source:
 
 ```bash
-agentic-proofkit help
-agentic-proofkit init
-agentic-proofkit help repo-profile-admission
-agentic-proofkit repo-profile-admission --help
+npm exec --offline -- agentic-proofkit help
+npm exec --offline -- agentic-proofkit init
+npm exec --offline -- agentic-proofkit help repo-profile-admission
+npm exec --offline -- agentic-proofkit repo-profile-admission --help
 ```
 
 Command-specific help is derived from the private command descriptor table and
@@ -175,8 +205,60 @@ value with lower transport overhead by placing the process option before the
 command:
 
 ```bash
-agentic-proofkit --json-layout compact requirement-context-slice --input slice-input.json
+npm exec --offline -- agentic-proofkit --json-layout compact requirement-context-slice --input slice-input.json
 ```
+
+### First Valid Input
+
+The following marker-bounded record is a complete minimal requirement-source
+input. Its example IDs, paths, owner, invariant, and non-claims are
+caller-replaceable examples, not Proofkit-owned product meaning.
+
+<!-- proofkit:first-valid-input:start -->
+```bash
+npm exec --offline -- agentic-proofkit requirement-source-admission --input -
+```
+
+```json
+{
+  "schemaVersion": 1,
+  "sourceId": "example.requirements",
+  "specPackagePath": "docs/specs/example",
+  "overviewPath": "docs/specs/example/overview.md",
+  "requirementsPath": "docs/specs/example/requirements.v1.json",
+  "nonClaims": [
+    "This example does not approve merge or release."
+  ],
+  "requirements": [
+    {
+      "requirementId": "REQ-EXAMPLE-001",
+      "ownerId": "example.owner",
+      "invariant": "The example owner must replace this sentence with an admitted product invariant.",
+      "claimLevel": "blocking",
+      "riskClass": "medium",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [],
+      "nonClaims": [
+        "This example does not execute or authenticate a native witness."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "example.owner",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
+    }
+  ]
+}
+```
+<!-- proofkit:first-valid-input:end -->
 
 Use `secret-scan` only when the caller provides an explicit file inventory with
 content. It is a dedicated secret-like text detector for admitted inventory
@@ -187,7 +269,7 @@ For TypeScript consumers that want a small wrapper instead of hand-written
 child-process code:
 
 ```bash
-agentic-proofkit json-report-cli-adapter-source --language typescript --format json
+npm exec --offline -- agentic-proofkit json-report-cli-adapter-source --language typescript --format json
 ```
 
 The generated adapter remains caller-owned after materialization. It must be
@@ -197,10 +279,7 @@ contract; it does not become a separate public SDK or proof authority.
 | Need | Owner |
 |---|---|
 | Human orientation | This README |
-| Coding-agent startup | `AGENTS.md` |
 | Adoption and release-channel model | `ADOPTION.md` |
-| Active work ledger | `BACKLOG.md` |
-| Contribution rules | `CONTRIBUTING.md` |
 | Vulnerability reporting boundary | `SECURITY.md` |
 | Explicit boundary denials | `NON_CLAIMS.md` |
 | `LICENSE` | MIT license |

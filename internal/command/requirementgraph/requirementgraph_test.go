@@ -285,6 +285,31 @@ func TestBuildRequiresInputSchemaVersion2(t *testing.T) {
 	}
 }
 
+func TestBuildConsumesNormalizedV1AndV2ContextSnapshots(t *testing.T) {
+	v2Context := graphContextFixture(t)
+	v2Output, err := Build(map[string]any{"context": v2Context, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("2")})
+	if err != nil {
+		t.Fatal(err)
+	}
+	v1Context := decodedGraphOutput(t, v2Context)
+	delete(v1Context, "expectedDigestCoverage")
+	v1Context["baselineVerification"] = "unverified"
+	v1Context["nonClaims"] = []any{
+		"Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+		"Requirement context does not execute native witnesses or prove source freshness after composition.",
+	}
+	v1Context["schemaVersion"] = json.Number("1")
+	v1Output, err := Build(map[string]any{"context": v1Context, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("2")})
+	if err != nil {
+		t.Fatalf("Build(v1 context) error = %v", err)
+	}
+	got, _ := stablejson.Marshal(v1Output)
+	want, _ := stablejson.Marshal(v2Output)
+	if !bytes.Equal(got, want) {
+		t.Fatalf("v1 and v2 contexts produced different graph records\n got: %s\nwant: %s", got, want)
+	}
+}
+
 func TestGraphIdentityIsPermutationStableAndRelationsAreTyped(t *testing.T) {
 	input := graphPermutationInput(t)
 	first, err := Build(input)
@@ -452,5 +477,5 @@ func graphContextFixture(t *testing.T) map[string]any {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{BaselineVerification: "unverified", CatalogID: "consumer.context", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
+	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "consumer.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
 }

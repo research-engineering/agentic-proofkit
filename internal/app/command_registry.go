@@ -57,7 +57,7 @@ type genericCommandBuilder func(any) (any, int, error)
 var genericCommandBuilders = mustGenericCommandBuilders(map[string]genericCommandBuilder{
 	"adoption-checklist":                   reportOutput(adoptionchecklist.Build),
 	"binding-partition":                    reportOutput(bindingpartition.Build),
-	"branch-authority":                     reportOutputWithoutError(branchauthority.Build),
+	"branch-authority":                     reportOutput(branchauthority.Build),
 	"capability-map-admission":             reportOutput(capabilitymapadmission.Build),
 	"completion-criteria":                  reportOutput(completioncriteria.Build),
 	"custom-rule-boundary":                 reportOutput(customruleboundary.Build),
@@ -68,7 +68,7 @@ var genericCommandBuilders = mustGenericCommandBuilders(map[string]genericComman
 	"impact":                               outputWithExit(impact.Build),
 	"migration-parity-admission":           reportOutput(migrationparityadmission.Build),
 	"migration-plan":                       outputWithExit(migrationplan.Build),
-	"package-runtime-dependency-admission": reportOutputWithoutError(packageruntimedependency.Build),
+	"package-runtime-dependency-admission": reportOutput(packageruntimedependency.Build),
 	"producer-policy-self-proof":           reportOutput(producerpolicyselfproof.Build),
 	"proof-obligation-algebra":             reportOutput(proofobligationalgebra.Build),
 	"proof-receipt-admission":              reportOutput(proofreceiptadmission.Build),
@@ -134,13 +134,6 @@ func reportOutput(builder func(any) (report.Record, int, error)) genericCommandB
 		if err != nil {
 			return nil, exitCode, err
 		}
-		return record.JSONValue(), exitCode, nil
-	}
-}
-
-func reportOutputWithoutError(builder func(any) (report.Record, int)) genericCommandBuilder {
-	return func(input any) (any, int, error) {
-		record, exitCode := builder(input)
 		return record.JSONValue(), exitCode, nil
 	}
 }

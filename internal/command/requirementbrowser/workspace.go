@@ -41,8 +41,8 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 	if err := admit.KnownKeys(record, []string{"context", "diffInput", "graphInput", "schemaVersion", "workspaceId"}, "requirement browser workspace input"); err != nil {
 		return workspaceSession{}, "", err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return workspaceSession{}, "", fmt.Errorf("requirement browser workspace schemaVersion must be 1")
+	if err := admitWorkspaceInputVersion(record); err != nil {
+		return workspaceSession{}, "", err
 	}
 	workspaceID, err := admit.RuleID(record["workspaceId"], "requirement browser workspaceId")
 	if err != nil {
@@ -88,18 +88,53 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 		}
 	}
 	manifest := map[string]any{
-		"authority":            "presentation_adapter",
-		"availableViews":       []any{"specifications", "diff", "graph"},
-		"baselineVerification": snapshot.BaselineVerification,
-		"diffAvailable":        diff != nil,
-		"graphAvailable":       graph != nil,
-		"nonClaims":            admit.StringSliceToAny(serverNonClaims),
-		"requirementCount":     len(requirements),
-		"schemaVersion":        json.Number("1"),
-		"snapshotId":           snapshot.SnapshotID,
-		"workspaceId":          workspaceID,
+		"authority":              "presentation_adapter",
+		"availableViews":         []any{"specifications", "diff", "graph"},
+		"diffAvailable":          diff != nil,
+		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
+		"graphAvailable":         graph != nil,
+		"nonClaims":              admit.StringSliceToAny(serverNonClaims),
+		"requirementCount":       len(requirements),
+		"schemaVersion":          json.Number("2"),
+		"snapshotId":             snapshot.SnapshotID,
+		"workspaceId":            workspaceID,
 	}
 	return workspaceSession{Anchors: anchors, ContextValue: requirementcontext.SnapshotValue(snapshot), Diff: diff, Graph: graph, Manifest: manifest, Requirements: requirements, SnapshotID: snapshot.SnapshotID}, workspaceHTML(workspaceID), nil
+}
+
+func admitWorkspaceInputVersion(record map[string]any) error {
+	switch {
+	case admit.JSONNumberEquals(record["schemaVersion"], 1):
+		return admitV1WorkspaceInput(record)
+	case admit.JSONNumberEquals(record["schemaVersion"], 2):
+		return requireWorkspaceNestedVersions(record, 2)
+	default:
+		return fmt.Errorf("requirement browser workspace schemaVersion must be 1 or 2")
+	}
+}
+
+func requireWorkspaceNestedVersions(record map[string]any, expected int) error {
+	contextRecord, ok := record["context"].(map[string]any)
+	if !ok || !admit.JSONNumberEquals(contextRecord["schemaVersion"], int64(expected)) {
+		return fmt.Errorf("requirement browser workspace schemaVersion %d requires context schemaVersion %d", expected, expected)
+	}
+	if rawDiff := record["diffInput"]; rawDiff != nil {
+		diff, ok := rawDiff.(map[string]any)
+		if !ok || !admit.JSONNumberEquals(diff["schemaVersion"], int64(expected)) {
+			return fmt.Errorf("requirement browser workspace schemaVersion %d requires diffInput schemaVersion %d", expected, expected)
+		}
+	}
+	if rawGraph := record["graphInput"]; rawGraph != nil {
+		graph, ok := rawGraph.(map[string]any)
+		if !ok || !admit.JSONNumberEquals(graph["schemaVersion"], 2) {
+			return fmt.Errorf("requirement browser workspace graphInput schemaVersion must be 2")
+		}
+		graphContext, ok := graph["context"].(map[string]any)
+		if !ok || !admit.JSONNumberEquals(graphContext["schemaVersion"], int64(expected)) {
+			return fmt.Errorf("requirement browser workspace schemaVersion %d requires graphInput context schemaVersion %d", expected, expected)
+		}
+	}
+	return nil
 }
 
 func validateGraphSnapshotClosure(snapshot requirementcontext.Snapshot, graph map[string]any) error {
@@ -219,10 +254,10 @@ func workspaceHTML(workspaceID string) string {
 		"<meta name=\"proofkit-browser-capability\" content=\"" + workspaceCapabilityPlaceholder + "\">",
 		"<title>" + html.EscapeString(workspaceID) + " - Proofkit workspace</title>",
 		"<link rel=\"stylesheet\" href=\"/assets/workspace.css\"></head>",
-		"<body><header><p>Proofkit semantic workspace</p><h1>" + html.EscapeString(workspaceID) + "</h1><section id=\"workspace-authority\" aria-label=\"Authority boundary\"><h2>Authority boundary</h2><p data-authority></p><ul data-non-claims></ul></section></header>",
-		"<main><nav aria-label=\"Workspace views\"><button data-view=\"specifications\">Specifications</button><button data-view=\"diff\">Diff</button><button data-view=\"graph\">Traceability</button></nav>",
-		"<section id=\"workspace-content\"></section></main>",
-		"<aside aria-label=\"Agent question\"><h2>Ask about selection</h2><h3>Selected source text</h3><ul id=\"selected-context\" aria-label=\"Selected source text\"></ul><button id=\"clear-selection\" type=\"button\" disabled>Clear selection</button><label for=\"annotation-question\">Question</label><textarea id=\"annotation-question\" maxlength=\"4096\"></textarea><button id=\"submit-question\">Create handoff packet</button><p id=\"handoff-status\" role=\"status\" aria-live=\"polite\"></p><pre id=\"handoff-packet\" aria-label=\"Handoff packet\" tabindex=\"0\"></pre></aside>",
+		"<body data-state=\"bootstrap-loading\"><header><p>Proofkit semantic workspace</p><h1>" + html.EscapeString(workspaceID) + "</h1><section id=\"workspace-authority\" aria-label=\"Authority boundary\"><h2>Authority boundary</h2><p data-authority>Loading admitted authority...</p><ul data-non-claims></ul></section></header>",
+		"<main><nav aria-label=\"Workspace views\"><button type=\"button\" data-view=\"specifications\" disabled>Specifications</button><button type=\"button\" data-view=\"diff\" disabled>Diff</button><button type=\"button\" data-view=\"graph\" disabled>Traceability</button></nav>",
+		"<section id=\"workspace-content\" aria-busy=\"true\"><h2>Loading workspace</h2><p role=\"status\" aria-live=\"polite\">Loading admitted manifest...</p></section></main>",
+		"<aside aria-label=\"Agent question\"><h2>Ask about selection</h2><h3>Selected source text</h3><ul id=\"selected-context\" aria-label=\"Selected source text\"></ul><button id=\"clear-selection\" type=\"button\" disabled>Clear selection</button><label for=\"annotation-question\">Question</label><textarea id=\"annotation-question\" maxlength=\"4096\"></textarea><button id=\"submit-question\" type=\"button\">Create handoff packet</button><p id=\"handoff-status\" role=\"status\" aria-live=\"polite\"></p><section id=\"handoff-output\" aria-labelledby=\"handoff-packet-heading\"><h3 id=\"handoff-packet-heading\">Handoff packet</h3><pre id=\"handoff-packet\"></pre></section></aside>",
 		"<script type=\"module\" src=\"/assets/workspace.js\"></script></body></html>\n",
 	}, "")
 }

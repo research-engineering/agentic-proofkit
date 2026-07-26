@@ -51,10 +51,10 @@ type admittedInput struct {
 	ReportID            string
 }
 
-func Build(raw any) (report.Record, int) {
+func Build(raw any) (report.Record, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return invalidInputReport(err.Error()), 1
+		return report.Record{}, 1, err
 	}
 	branchRefs := make([]any, 0, len(input.BranchRefs))
 	requiredDrift := []string{}
@@ -112,28 +112,9 @@ func Build(raw any) (report.Record, int) {
 		NonClaims: input.NonClaims,
 	}
 	if state == "passed" {
-		return record, 0
+		return record, 0, nil
 	}
-	return record, 1
-}
-
-func invalidInputReport(failure string) report.Record {
-	return report.Record{
-		SchemaVersion: 1,
-		ReportKind:    reportKind,
-		ReportID:      "invalid-input",
-		State:         "failed",
-		Summary: map[string]any{
-			"advisoryDriftCount": 0,
-			"branchRefCount":     0,
-			"requiredDriftCount": 0,
-		},
-		Diagnostics: []report.Diagnostic{},
-		RuleResults: []report.RuleResult{
-			rule("branch_authority.input", "failed", failure),
-		},
-		NonClaims: branchAuthorityNonClaims,
-	}
+	return record, 1, nil
 }
 
 func admitInput(raw any) (admittedInput, error) {

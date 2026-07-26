@@ -40,8 +40,8 @@ func Build(raw any) (map[string]any, error) {
 	if err := admit.KnownKeys(record, []string{"baseContext", "currentContext", "diffId", "query", "schemaVersion"}, "requirement semantic diff input"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return nil, fmt.Errorf("requirement semantic diff schemaVersion must be 1")
+	if err := admitDiffInputVersion(record); err != nil {
+		return nil, err
 	}
 	diffID, err := admit.RuleID(record["diffId"], "requirement semantic diff diffId")
 	if err != nil {
@@ -66,17 +66,38 @@ func Build(raw any) (map[string]any, error) {
 		return nil, err
 	}
 	return map[string]any{
-		"baseBaselineVerification":    base.BaselineVerification,
-		"baseSnapshotId":              base.SnapshotID,
-		"changeCount":                 len(changes),
-		"changes":                     changes,
-		"currentBaselineVerification": current.BaselineVerification,
-		"currentSnapshotId":           current.SnapshotID,
-		"diffId":                      diffID,
-		"diffKind":                    "proofkit.requirement-semantic-diff",
-		"nonClaims":                   admit.StringSliceToAny(nonClaims),
-		"schemaVersion":               json.Number("1"),
+		"baseExpectedDigestCoverage":    base.ExpectedDigestCoverage,
+		"baseSnapshotId":                base.SnapshotID,
+		"changeCount":                   len(changes),
+		"changes":                       changes,
+		"currentExpectedDigestCoverage": current.ExpectedDigestCoverage,
+		"currentSnapshotId":             current.SnapshotID,
+		"diffId":                        diffID,
+		"diffKind":                      "proofkit.requirement-semantic-diff",
+		"nonClaims":                     admit.StringSliceToAny(nonClaims),
+		"schemaVersion":                 json.Number("2"),
 	}, nil
+}
+
+func admitDiffInputVersion(record map[string]any) error {
+	switch {
+	case admit.JSONNumberEquals(record["schemaVersion"], 1):
+		return admitV1DiffInput(record)
+	case admit.JSONNumberEquals(record["schemaVersion"], 2):
+		return requireContextVersions(record, 2)
+	default:
+		return fmt.Errorf("requirement semantic diff schemaVersion must be 1 or 2")
+	}
+}
+
+func requireContextVersions(record map[string]any, expected int) error {
+	for _, key := range []string{"baseContext", "currentContext"} {
+		contextRecord, ok := record[key].(map[string]any)
+		if !ok || !admit.JSONNumberEquals(contextRecord["schemaVersion"], int64(expected)) {
+			return fmt.Errorf("requirement semantic diff schemaVersion %d requires %s schemaVersion %d", expected, key, expected)
+		}
+	}
+	return nil
 }
 
 func admitQuery(raw any) (query, error) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
@@ -11,7 +12,7 @@ import (
 )
 
 const (
-	RecordPath       = "release/change-record.v1.json"
+	RecordPath       = "release/change-record.v2.json"
 	maxRecordBytes   = 1 << 20
 	maxListItems     = 128
 	maxEntryTextByte = 4096
@@ -20,9 +21,11 @@ const (
 type Record struct {
 	Additions            []Change
 	BreakingChanges      []Change
+	ChangeClass          string
 	KnownLimitations     []string
 	Migration            Migration
 	PlatformRequirements []string
+	PreviousVersion      string
 	RollbackStrategy     string
 	SchemaVersion        int
 	Version              string
@@ -55,13 +58,32 @@ func Admit(raw any) (Record, error) {
 	if !ok {
 		return Record{}, fmt.Errorf("release change record must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"additions", "breakingChanges", "knownLimitations", "migration", "platformRequirements", "rollback", "schemaVersion", "version"}, "release change record"); err != nil {
+	if err := admit.KnownKeys(record, []string{"additions", "breakingChanges", "changeClass", "knownLimitations", "migration", "platformRequirements", "previousVersion", "rollback", "schemaVersion", "version"}, "release change record"); err != nil {
 		return Record{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return Record{}, fmt.Errorf("release change record schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return Record{}, fmt.Errorf("release change record schemaVersion must be 2")
 	}
 	version, err := boundedText(record["version"], "release change record version")
+	if err != nil {
+		return Record{}, err
+	}
+	previousVersion, err := boundedText(record["previousVersion"], "release change record previousVersion")
+	if err != nil {
+		return Record{}, err
+	}
+	currentSemVer, err := parseCanonicalSemVer(version)
+	if err != nil {
+		return Record{}, fmt.Errorf("release change record version: %w", err)
+	}
+	previousSemVer, err := parseCanonicalSemVer(previousVersion)
+	if err != nil {
+		return Record{}, fmt.Errorf("release change record previousVersion: %w", err)
+	}
+	if compareSemVer(currentSemVer, previousSemVer) <= 0 {
+		return Record{}, fmt.Errorf("release change record version must be greater than previousVersion")
+	}
+	changeClass, err := admit.Enum(record["changeClass"], map[string]struct{}{"breaking": {}, "compatible": {}}, "release change record changeClass")
 	if err != nil {
 		return Record{}, err
 	}
@@ -79,6 +101,19 @@ func Admit(raw any) (Record, error) {
 	migration, err := admitMigration(record["migration"])
 	if err != nil {
 		return Record{}, err
+	}
+	requiredClass := "compatible"
+	if len(breaking) > 0 || migration.Required {
+		requiredClass = "breaking"
+	}
+	if changeClass != requiredClass {
+		return Record{}, fmt.Errorf("release change record changeClass does not match breakingChanges and migration")
+	}
+	if changeClass == "breaking" && !isBreakingBump(previousSemVer, currentSemVer) {
+		return Record{}, fmt.Errorf("release change record breaking change requires a SemVer major bump or a pre-1.0 minor bump")
+	}
+	if changeClass == "compatible" && currentSemVer.Major != previousSemVer.Major {
+		return Record{}, fmt.Errorf("release change record compatible change must not change the SemVer major version")
 	}
 	platforms, err := orderedUniqueText(record["platformRequirements"], "release change record platformRequirements", true)
 	if err != nil {
@@ -103,9 +138,9 @@ func Admit(raw any) (Record, error) {
 		return Record{}, fmt.Errorf("release change record rollback strategy must be previous_admitted_version")
 	}
 	return Record{
-		Additions: additions, BreakingChanges: breaking, KnownLimitations: limitations,
+		Additions: additions, BreakingChanges: breaking, ChangeClass: changeClass, KnownLimitations: limitations,
 		Migration: migration, PlatformRequirements: platforms, RollbackStrategy: strategy,
-		SchemaVersion: 1, Version: version,
+		PreviousVersion: previousVersion, SchemaVersion: 2, Version: version,
 	}, nil
 }
 
@@ -139,8 +174,11 @@ func RenderMarkdown(record Record, npmPackage, pythonPackage string, pypiPublish
 	lines = appendTextList(lines, record.KnownLimitations)
 	lines = append(lines,
 		"", "## Install", "", "Primary npm channel:", "", "```bash",
-		fmt.Sprintf("npm install -D %s@%s", npmPackage, record.Version), "```",
+		fmt.Sprintf("npm install --save-dev --save-exact %s@%s", npmPackage, record.Version), "```",
 	)
+	if current, err := parseCanonicalSemVer(record.Version); err == nil && current.Major == 0 {
+		lines = append(lines, "", "Pre-1.0 npm consumers must keep this dependency exact-pinned.")
+	}
 	if pypiPublished {
 		lines = append(lines,
 			"", "Python/uv channel:", "", "```bash",
@@ -152,13 +190,65 @@ func RenderMarkdown(record Record, npmPackage, pythonPackage string, pypiPublish
 	lines = append(lines,
 		"", "GitHub Release assets and checksums are archive and provenance evidence, not package-manager dependency authority.",
 		"", "## Rollback", "",
-		fmt.Sprintf("- Pin npm consumers to the previous admitted version with `npm install -D %s@<previous-version>`.", npmPackage),
+		fmt.Sprintf("- Pin npm consumers to the previous admitted version %s with `npm install --save-dev --save-exact %s@%s`.", record.PreviousVersion, npmPackage, record.PreviousVersion),
 	)
 	if pypiPublished {
-		lines = append(lines, fmt.Sprintf("- Pin Python/uv consumers with `uv tool install %s==<previous-version>`.", pythonPackage))
+		lines = append(lines, fmt.Sprintf("- Pin Python/uv consumers with `uv tool install %s==%s`.", pythonPackage, record.PreviousVersion))
 	}
 	lines = append(lines, "- Treat local package artifacts as candidates until registry identity is proven.")
 	return strings.Join(lines, "\n") + "\n"
+}
+
+type semVer struct {
+	Major uint64
+	Minor uint64
+	Patch uint64
+}
+
+func parseCanonicalSemVer(value string) (semVer, error) {
+	parts := strings.Split(value, ".")
+	if len(parts) != 3 {
+		return semVer{}, fmt.Errorf("must be canonical SemVer")
+	}
+	numbers := [3]uint64{}
+	for index, part := range parts {
+		if part == "" || (len(part) > 1 && part[0] == '0') {
+			return semVer{}, fmt.Errorf("must be canonical SemVer")
+		}
+		for _, char := range part {
+			if char < '0' || char > '9' {
+				return semVer{}, fmt.Errorf("must be canonical SemVer")
+			}
+		}
+		number, err := strconv.ParseUint(part, 10, 64)
+		if err != nil {
+			return semVer{}, fmt.Errorf("must be canonical SemVer")
+		}
+		numbers[index] = number
+	}
+	return semVer{Major: numbers[0], Minor: numbers[1], Patch: numbers[2]}, nil
+}
+
+func compareSemVer(left, right semVer) int {
+	for _, pair := range [][2]uint64{{left.Major, right.Major}, {left.Minor, right.Minor}, {left.Patch, right.Patch}} {
+		if pair[0] < pair[1] {
+			return -1
+		}
+		if pair[0] > pair[1] {
+			return 1
+		}
+	}
+	return 0
+}
+
+func isBreakingBump(previous, current semVer) bool {
+	if current.Major > previous.Major {
+		return true
+	}
+	if previous.Major == 0 && current.Major == 0 && current.Minor > previous.Minor {
+		return true
+	}
+	return false
 }
 
 func admitChanges(raw any, context string) ([]Change, error) {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/adoptionmode"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 var (
@@ -399,6 +400,10 @@ var nonClaims = []any{
 }
 
 func Build(raw any) (map[string]any, int, error) {
+	return BuildWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
 		return nil, 1, err
@@ -422,7 +427,7 @@ func Build(raw any) (map[string]any, int, error) {
 		state = "blocked_ambiguous_state"
 		exitCode = 1
 	}
-	return buildReport(input, spec, state, missing), exitCode, nil
+	return buildReport(input, spec, state, missing, renderer), exitCode, nil
 }
 
 func InputContract() map[string]any {
@@ -853,8 +858,8 @@ func buildUnknownGoal(input routeInput) map[string]any {
 	}
 }
 
-func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any) map[string]any {
-	nextCommands := commandReports(spec.NextCommands, input)
+func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any, renderer cliexec.Renderer) map[string]any {
+	nextCommands := commandReports(spec.NextCommands, input, renderer)
 	if state != "routed" {
 		nextCommands = []any{}
 	}
@@ -887,16 +892,14 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 	}
 }
 
-func commandReports(commands []commandSpec, input routeInput) []any {
+func commandReports(commands []commandSpec, input routeInput, renderer cliexec.Renderer) []any {
 	result := []any{}
 	for _, command := range commands {
 		if !commandInputsAvailable(command, input.AvailableInputs) {
 			continue
 		}
-		argv := []any{"agentic-proofkit", command.Command}
-		for _, arg := range command.ExtraArgs {
-			argv = append(argv, arg)
-		}
+		argv := renderer.Argv(command.Command)
+		argv = append(argv, command.ExtraArgs...)
 		for _, arg := range command.ArgInputs {
 			ref, ok := input.AvailableInputs[arg.InputKind]
 			if !ok {
@@ -918,7 +921,7 @@ func commandReports(commands []commandSpec, input routeInput) []any {
 			argv = append(argv, "--input", ref)
 		}
 		report := map[string]any{
-			"argv":    argv,
+			"argv":    admit.StringSliceToAny(argv),
 			"command": command.Command,
 			"why":     command.Why,
 		}

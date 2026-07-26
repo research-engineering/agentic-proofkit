@@ -3,11 +3,104 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
+
+func TestArtifactSpecificRuntimeEdgesAndExcludedInventory(t *testing.T) {
+	source := []goModuleRecord{
+		{Path: "example.invalid/runtime", Version: "v1.0.0"},
+		{Path: "example.invalid/tool", Version: "v2.0.0"},
+	}
+	artifacts := []artifactRuntimeInventory{
+		{
+			BinaryRef: "file:dist/platform/linux-x64/agentic-proofkit",
+			Modules:   []goModuleRecord{{Path: "example.invalid/runtime", Version: "v1.0.0"}},
+		},
+		{
+			BinaryRef: "file:dist/platform/darwin-arm64/agentic-proofkit",
+			Modules:   nil,
+		},
+	}
+
+	components, dependencies := projectModuleEvidence(source, artifacts)
+	byRef := map[string]cyclonedxComponent{}
+	for _, component := range components {
+		byRef[component.BOMRef] = component
+	}
+	runtimeRef := "go-module:example.invalid/runtime@v1.0.0"
+	toolRef := "go-module:example.invalid/tool@v2.0.0"
+	if byRef[runtimeRef].Scope != "required" {
+		t.Fatalf("runtime scope = %q, want required", byRef[runtimeRef].Scope)
+	}
+	if byRef[toolRef].Scope != "excluded" {
+		t.Fatalf("tool scope = %q, want excluded", byRef[toolRef].Scope)
+	}
+	if !hasProperty(byRef[toolRef], "proofkit:evidence-class", "source_build_inventory") {
+		t.Fatalf("tool properties = %#v, want excluded source inventory evidence", byRef[toolRef].Properties)
+	}
+	dependencyByRef := map[string][]string{}
+	for _, dependency := range dependencies {
+		dependencyByRef[dependency.Ref] = dependency.DependsOn
+	}
+	if got := dependencyByRef[artifacts[0].BinaryRef]; !slices.Equal(got, []string{runtimeRef}) {
+		t.Fatalf("linux runtime edges = %v, want [%s]", got, runtimeRef)
+	}
+	if got := dependencyByRef[artifacts[1].BinaryRef]; len(got) != 0 {
+		t.Fatalf("stripped binary runtime edges = %v, want none", got)
+	}
+	for _, forbiddenRef := range []string{
+		"pkg:npm/@research-engineering/agentic-proofkit@1.2.3",
+		"pkg:pypi/agentic-proofkit@1.2.3",
+		toolRef,
+	} {
+		for ref, edges := range dependencyByRef {
+			if slices.Contains(edges, forbiddenRef) {
+				t.Fatalf("%s invented runtime edge from %s", forbiddenRef, ref)
+			}
+		}
+	}
+}
+
+func TestReleaseFileEvidenceRejectsDeterministicIdentitySwap(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "agentic-proofkit")
+	replacement := filepath.Join(root, "replacement")
+	displaced := filepath.Join(root, "displaced")
+	writeFile(t, path, "first-binary")
+	writeFile(t, replacement, "other-binary")
+	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", License: "MIT"}
+
+	_, _, err := releaseFileEvidence(manifest, []string{path}, func(selected string) error {
+		if selected != path {
+			t.Fatalf("afterHash selected %s, want %s", selected, path)
+		}
+		if err := os.Rename(path, displaced); err != nil {
+			return err
+		}
+		return os.Rename(replacement, path)
+	})
+	if err == nil || !strings.Contains(err.Error(), "changed during admission") {
+		t.Fatalf("releaseFileEvidence() error=%v, want identity-swap rejection", err)
+	}
+}
+
+func TestReleaseFileEvidenceRejectsDeterministicInPlaceMutation(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "agentic-proofkit")
+	writeFile(t, path, "first-binary")
+	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", License: "MIT"}
+
+	_, _, err := releaseFileEvidence(manifest, []string{path}, func(selected string) error {
+		return os.WriteFile(selected, []byte("other-binary"), 0o600)
+	})
+	if err == nil || !strings.Contains(err.Error(), "changed during admission") {
+		t.Fatalf("releaseFileEvidence() error=%v, want in-place mutation rejection", err)
+	}
+}
 
 func TestReadPackageJSONRejectsAmbiguousJSON(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "package.json")
@@ -94,6 +187,15 @@ func TestSBOMSerialNumberIsDeterministicCycloneDXURN(t *testing.T) {
 	if got == changed {
 		t.Fatalf("sbomSerialNumber()=%q did not change when package version changed", got)
 	}
+}
+
+func hasProperty(component cyclonedxComponent, name, value string) bool {
+	for _, property := range component.Properties {
+		if property.Name == name && property.Value == value {
+			return true
+		}
+	}
+	return false
 }
 
 func writeReleasePlatformBinaries(t *testing.T, paths []string) {

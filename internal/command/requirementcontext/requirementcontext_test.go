@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
@@ -25,8 +26,8 @@ func TestComposeAndSliceRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AdmitSnapshot() error = %v", err)
 	}
-	if snapshot.BaselineVerification != "unverified" {
-		t.Fatalf("baseline verification = %q, want unverified", snapshot.BaselineVerification)
+	if snapshot.ExpectedDigestCoverage != "none" {
+		t.Fatalf("expected digest coverage = %q, want none", snapshot.ExpectedDigestCoverage)
 	}
 	output, err := Slice(map[string]any{
 		"schemaVersion": json.Number("1"),
@@ -54,7 +55,95 @@ func TestComposeAndSliceRoundTrip(t *testing.T) {
 	}
 }
 
-func TestSnapshotAdmissionRejectsForgedBaselineAndProjectionLedger(t *testing.T) {
+func TestV1DigestCoverageAdapters(t *testing.T) {
+	root := fixtureRepository(t)
+	for _, test := range []struct {
+		name     string
+		covered  []string
+		expected string
+		legacy   string
+	}{
+		{name: "none", expected: "none", legacy: "unverified"},
+		{name: "partial", covered: []string{"specTree"}, expected: "partial", legacy: "partially_verified"},
+		{name: "all", covered: []string{"specTree", "requirementSources"}, expected: "all", legacy: "verified"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			catalog := fixtureCatalog()
+			for _, owner := range test.covered {
+				switch owner {
+				case "specTree":
+					setExpectedFixtureDigest(t, root, catalog["specTree"].(map[string]any))
+				case "requirementSources":
+					setExpectedFixtureDigest(t, root, catalog["requirementSources"].([]any)[0].(map[string]any))
+				}
+			}
+			v2, err := Compose(root, catalog)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if v2["schemaVersion"] != json.Number("2") || v2["expectedDigestCoverage"] != test.expected {
+				t.Fatalf("v2 projection = %#v, want coverage %q", v2, test.expected)
+			}
+			v1 := v1SnapshotFixture(t, v2, test.legacy)
+			admitted, err := AdmitSnapshot(v1)
+			if err != nil {
+				t.Fatalf("AdmitSnapshot(v1) error = %v", err)
+			}
+			if got, want := mustStableJSON(t, SnapshotValue(admitted)), mustStableJSON(t, v2); !bytes.Equal(got, want) {
+				t.Fatalf("v1 normalized output differs from v2\n got: %s\nwant: %s", got, want)
+			}
+		})
+	}
+
+	v2, err := Compose(root, fixtureCatalog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	mixedV2 := deepClone(t, v2)
+	mixedV2["baselineVerification"] = "unverified"
+	if _, err := AdmitSnapshot(mixedV2); err == nil {
+		t.Fatal("AdmitSnapshot accepted mixed v1/v2 fields under schema v2")
+	}
+	mixedV1 := v1SnapshotFixture(t, v2, "unverified")
+	mixedV1["expectedDigestCoverage"] = "none"
+	if _, err := AdmitSnapshot(mixedV1); err == nil {
+		t.Fatal("AdmitSnapshot accepted mixed v1/v2 fields under schema v1")
+	}
+	malformedV1 := v1SnapshotFixture(t, v2, "verified")
+	if _, err := AdmitSnapshot(malformedV1); err == nil {
+		t.Fatal("AdmitSnapshot accepted a malformed legacy coverage claim")
+	}
+}
+
+func setExpectedFixtureDigest(t *testing.T, root string, entry map[string]any) {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(entry["path"].(string))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry["expectedSourceDigest"] = digest.SHA256TextRef(string(content))
+}
+
+func v1SnapshotFixture(t *testing.T, v2 map[string]any, legacy string) map[string]any {
+	t.Helper()
+	v1 := deepClone(t, v2)
+	delete(v1, "expectedDigestCoverage")
+	v1["baselineVerification"] = legacy
+	v1["nonClaims"] = admit.StringSliceToAny(v1BoundaryNonClaims)
+	v1["schemaVersion"] = json.Number("1")
+	return v1
+}
+
+func mustStableJSON(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := stablejson.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
+}
+
+func TestSnapshotAdmissionRejectsForgedCoverageAndProjectionLedger(t *testing.T) {
 	contextValue, err := Compose(fixtureRepository(t), fixtureCatalog())
 	if err != nil {
 		t.Fatal(err)
@@ -65,10 +154,10 @@ func TestSnapshotAdmissionRejectsForgedBaselineAndProjectionLedger(t *testing.T)
 		source := raw.(map[string]any)
 		source["expectedDigest"] = "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
 	}
-	forged["baselineVerification"] = "verified"
+	forged["expectedDigestCoverage"] = "all"
 	resignSnapshot(t, forged)
 	if _, err := AdmitSnapshot(forged); err == nil {
-		t.Fatal("AdmitSnapshot accepted mismatched expected digests as verified")
+		t.Fatal("AdmitSnapshot accepted mismatched expected digests as fully covered")
 	}
 
 	phantom := deepClone(t, contextValue)

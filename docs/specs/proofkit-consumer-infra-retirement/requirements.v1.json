@@ -197,7 +197,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-008",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "invariant": "Adoption doctor reports classify caller-provided imperfect-repository migration gaps, non-passing child reports, and stale current authority vocabulary facts into advisory, failed, or blocked states, and emit bounded owner-specific agent guidance without scanning repositories or owning semantic boundary decisions.",
+      "invariant": "Adoption doctor reports classify caller-provided imperfect-repository migration gaps, non-passing child reports, and stale current authority vocabulary facts into advisory, failed, or blocked states, and emit bounded owner-specific agent guidance without scanning repositories or owning semantic boundary decisions; every unresolved external prerequisite remains blocked in every adoption mode, while mode policy can relax only admitted advisory gaps.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [

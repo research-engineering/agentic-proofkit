@@ -9,6 +9,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
@@ -74,7 +75,11 @@ type Result struct {
 }
 
 func Build(raw any) (map[string]any, int, error) {
-	result, err := BuildResult(raw)
+	return BuildWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := BuildResultWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -82,7 +87,11 @@ func Build(raw any) (map[string]any, int, error) {
 }
 
 func BuildResult(raw any) (Result, error) {
-	result, err := build(raw)
+	return BuildResultWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error) {
+	result, err := build(raw, renderer)
 	if err != nil {
 		return Result{}, err
 	}
@@ -90,7 +99,11 @@ func BuildResult(raw any) (Result, error) {
 }
 
 func BuildEnvelope(raw any) (map[string]any, int, error) {
-	result, err := build(raw)
+	return BuildEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := build(raw, renderer)
 	if err != nil {
 		return agentenvelope.InvalidInput(err.Error()), 1, nil
 	}
@@ -98,19 +111,27 @@ func BuildEnvelope(raw any) (map[string]any, int, error) {
 }
 
 func BuildFromContractEnvelope(raw any) (map[string]any, int, error) {
+	return BuildFromContractEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildFromContractEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
 	workflowInput, err := inputFromContractEnvelope(raw)
 	if err != nil {
 		return nil, 1, err
 	}
-	return Build(workflowInput)
+	return BuildWithRenderer(workflowInput, renderer)
 }
 
 func BuildEnvelopeFromContractEnvelope(raw any) (map[string]any, int, error) {
+	return BuildEnvelopeFromContractEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildEnvelopeFromContractEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
 	workflowInput, err := inputFromContractEnvelope(raw)
 	if err != nil {
 		return agentenvelope.InvalidInput(err.Error()), 1, nil
 	}
-	return BuildEnvelope(workflowInput)
+	return BuildEnvelopeWithRenderer(workflowInput, renderer)
 }
 
 func inputFromContractEnvelope(raw any) (map[string]any, error) {
@@ -121,7 +142,7 @@ func inputFromContractEnvelope(raw any) (map[string]any, error) {
 	return contractenv.ObjectField(envelope, "workflow", "adoption workflow contract envelope")
 }
 
-func build(raw any) (result, error) {
+func build(raw any, renderer cliexec.Renderer) (result, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
 		return result{}, fmt.Errorf("adoption workflow plan input must be an object")
@@ -157,7 +178,7 @@ func build(raw any) (result, error) {
 		return result{}, err
 	}
 	blockers := workflowBlockers(scenario, presetID, inputRefs)
-	phases := workflowPhases(scenario, presetID, inputRefs)
+	phases := workflowPhases(scenario, presetID, inputRefs, renderer)
 	planState := "blocked"
 	exitCode := 1
 	if len(blockers) == 0 {
@@ -255,28 +276,28 @@ func presetID(raw any) (*string, error) {
 	return &value, nil
 }
 
-func workflowPhases(scenario string, presetID *string, refs []inputRef) []any {
+func workflowPhases(scenario string, presetID *string, refs []inputRef, renderer cliexec.Renderer) []any {
 	byKind := refsByKind(refs)
 	phases := make([]any, 0, len(phaseOrder))
 	for _, phase := range phaseOrder {
 		phases = append(phases, map[string]any{
-			"commands": workflowCommandsForPhase(scenario, presetID, byKind, phase),
+			"commands": workflowCommandsForPhase(scenario, presetID, byKind, phase, renderer),
 			"phase":    phase,
 		})
 	}
 	return phases
 }
 
-func workflowCommandsForPhase(scenario string, presetID *string, refs map[string]inputRef, phase string) []any {
+func workflowCommandsForPhase(scenario string, presetID *string, refs map[string]inputRef, phase string, renderer cliexec.Renderer) []any {
 	if phase == "profile" {
 		commands := []map[string]any{}
 		if presetID != nil {
-			commands = append(commands, command("stack-preset", []string{"stack-preset", "--preset", *presetID}, []string{}))
+			commands = append(commands, command("stack-preset", []string{"stack-preset", "--preset", *presetID}, []string{}, renderer))
 		}
 		if scenario == "new_repository" || scenario == "existing_gradual_adoption" {
-			commands = appendInputCommand(commands, refs, "repo_profile_scaffold", "scaffold-profile-plan")
+			commands = appendInputCommand(commands, refs, "repo_profile_scaffold", "scaffold-profile-plan", renderer)
 		}
-		commands = appendInputCommand(commands, refs, "branch_authority", "branch-authority")
+		commands = appendInputCommand(commands, refs, "branch_authority", "branch-authority", renderer)
 		return mapsToAny(commands)
 	}
 	if phase == "bootstrap" {
@@ -284,8 +305,8 @@ func workflowCommandsForPhase(scenario string, presetID *string, refs map[string
 			return []any{}
 		}
 		commands := []map[string]any{}
-		commands = appendInputCommand(commands, refs, "gradual_adoption_bootstrap", "gradual-adoption-bootstrap")
-		commands = appendInputCommand(commands, refs, "gradual_adoption_guidance", "gradual-adoption-guidance")
+		commands = appendInputCommand(commands, refs, "gradual_adoption_bootstrap", "gradual-adoption-bootstrap", renderer)
+		commands = appendInputCommand(commands, refs, "gradual_adoption_guidance", "gradual-adoption-guidance", renderer)
 		return mapsToAny(commands)
 	}
 	if phase == "bind" {
@@ -293,39 +314,39 @@ func workflowCommandsForPhase(scenario string, presetID *string, refs map[string
 			return []any{}
 		}
 		commands := []map[string]any{}
-		commands = appendInputCommand(commands, refs, "requirement_bindings", "requirement-bindings")
-		commands = appendInputCommand(commands, refs, "requirement_bindings", "proof-slice")
-		commands = appendInputCommand(commands, refs, "witness_plan", "witness-scheduler-plan")
+		commands = appendInputCommand(commands, refs, "requirement_bindings", "requirement-bindings", renderer)
+		commands = appendInputCommand(commands, refs, "requirement_bindings", "proof-slice", renderer)
+		commands = appendInputCommand(commands, refs, "witness_plan", "witness-scheduler-plan", renderer)
 		return mapsToAny(commands)
 	}
 	if phase == "migrate" {
 		if scenario != "legacy_proof_migration" {
 			return []any{}
 		}
-		return mapsToAny(appendInputCommand([]map[string]any{}, refs, "migration_plan", "migration-plan"))
+		return mapsToAny(appendInputCommand([]map[string]any{}, refs, "migration_plan", "migration-plan", renderer))
 	}
 	if phase == "plan-gates" {
 		if scenario == "new_repository" {
 			return []any{}
 		}
-		return mapsToAny(appendInputCommand([]map[string]any{}, refs, "selective_gate_plan", "selective-gate-plan"))
+		return mapsToAny(appendInputCommand([]map[string]any{}, refs, "selective_gate_plan", "selective-gate-plan", renderer))
 	}
 	if phase == "collect-evidence" {
 		commands := []map[string]any{}
 		if scenario != "new_repository" {
-			commands = appendInputCommand(commands, refs, "receipt_producer_admission", "receipt-producer-admission")
-			commands = appendInputCommand(commands, refs, "selective_gate_evidence", "selective-gate-evidence")
+			commands = appendInputCommand(commands, refs, "receipt_producer_admission", "receipt-producer-admission", renderer)
+			commands = appendInputCommand(commands, refs, "selective_gate_evidence", "selective-gate-evidence", renderer)
 		}
-		commands = appendInputCommand(commands, refs, "adoption_checklist", "adoption-checklist")
+		commands = appendInputCommand(commands, refs, "adoption_checklist", "adoption-checklist", renderer)
 		return mapsToAny(commands)
 	}
 	if scenario != "release_channel" {
 		return []any{}
 	}
 	commands := []map[string]any{}
-	commands = appendInputCommand(commands, refs, "release_authority", "release-authority")
-	commands = appendInputCommand(commands, refs, "external_consumer", "external-consumer")
-	commands = appendInputCommand(commands, refs, "registry_consumer", "registry-consumer")
+	commands = appendInputCommand(commands, refs, "release_authority", "release-authority", renderer)
+	commands = appendInputCommand(commands, refs, "external_consumer", "external-consumer", renderer)
+	commands = appendInputCommand(commands, refs, "registry_consumer", "registry-consumer", renderer)
 	return mapsToAny(commands)
 }
 
@@ -366,9 +387,9 @@ func requiredKinds(scenario string) []string {
 	}
 }
 
-func command(commandID string, argv []string, inputRefIDs []string) map[string]any {
+func command(commandID string, argv []string, inputRefIDs []string, renderer cliexec.Renderer) map[string]any {
 	return map[string]any{
-		"argv":        admit.StringSliceToAny(append([]string{"agentic-proofkit"}, argv...)),
+		"argv":        admit.StringSliceToAny(renderer.Argv(argv...)),
 		"commandId":   "proofkit.adoption-workflow.command." + commandID,
 		"inputRefIds": admit.StringSliceToAny(inputRefIDs),
 		"nonClaim":    "Workflow command refs are caller-owned routes only and do not execute commands or prove pass evidence.",
@@ -376,12 +397,12 @@ func command(commandID string, argv []string, inputRefIDs []string) map[string]a
 	}
 }
 
-func appendInputCommand(commands []map[string]any, refs map[string]inputRef, inputKind string, cliCommand string) []map[string]any {
+func appendInputCommand(commands []map[string]any, refs map[string]inputRef, inputKind string, cliCommand string, renderer cliexec.Renderer) []map[string]any {
 	ref, ok := refs[inputKind]
 	if !ok {
 		return commands
 	}
-	return append(commands, command(cliCommand, []string{cliCommand, "--input", ref.Path}, []string{ref.RefID}))
+	return append(commands, command(cliCommand, []string{cliCommand, "--input", ref.Path}, []string{ref.RefID}, renderer))
 }
 
 func newBlocker(scenario string, reason string, requiredKinds []string) blocker {
@@ -446,7 +467,7 @@ func envelope(result result) map[string]any {
 			argv := anyToStrings(commandRef["argv"].([]any))
 			commands = append(commands, map[string]any{
 				"argv":      admit.StringSliceToAny(argv),
-				"command":   strings.Join(argv, " "),
+				"command":   cliexec.DisplayArgv(argv),
 				"commandId": commandID,
 				"nonClaim":  "Agent command refs preserve argv boundaries but do not execute commands or prove pass evidence.",
 				"owner":     "consumer_repository",

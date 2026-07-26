@@ -16,14 +16,15 @@ const contentElement = document.querySelector("#workspace-content");
 if (!(contentElement instanceof HTMLElement)) throw new Error("Missing workspace content region");
 const content = /** @type {HTMLElement} */ (contentElement);
 
-const manifest = await fetchJSON("/api/v1/manifest", {headers: {"X-Proofkit-Browser-Capability": capability}});
 const authorityElement = document.querySelector("#workspace-authority");
 if (!(authorityElement instanceof HTMLElement)) throw new Error("Missing workspace authority boundary");
 const authorityText = authorityElement.querySelector("[data-authority]");
 const authorityNonClaims = authorityElement.querySelector("[data-non-claims]");
 if (!(authorityText instanceof HTMLElement) || !(authorityNonClaims instanceof HTMLUListElement)) throw new Error("Missing workspace authority fields");
-authorityText.textContent = `Authority: ${manifest.authority}. Snapshot: ${manifest.snapshotId}. Baseline: ${manifest.baselineVerification}.`;
-appendTextItems(authorityNonClaims, manifest.nonClaims ?? []);
+const authorityTextView = /** @type {HTMLElement} */ (authorityText);
+const authorityNonClaimsView = /** @type {HTMLUListElement} */ (authorityNonClaims);
+/** @type {any} */
+let manifest = null;
 let activeRequestId = "";
 let requestSequence = 0;
 /** @type {AbortController | null} */
@@ -44,18 +45,65 @@ async function fetchJSON(path, init) {
   return response.json();
 }
 
+/** @param {string} state */
+function setWorkspaceState(state) {
+  document.body.dataset.state = state;
+}
+
+/** @param {"specifications" | "diff" | "graph"} activeView */
+function setActiveView(activeView) {
+  for (const control of document.querySelectorAll("[data-view]")) {
+    if (!(control instanceof HTMLButtonElement)) continue;
+    if (control.dataset.view === activeView) {
+      control.setAttribute("aria-current", "page");
+    } else {
+      control.removeAttribute("aria-current");
+    }
+  }
+}
+
+function enableViewControls() {
+  for (const control of document.querySelectorAll("[data-view]")) {
+    if (control instanceof HTMLButtonElement) control.disabled = false;
+  }
+}
+
+async function initializeWorkspace() {
+  try {
+    manifest = await fetchJSON("/api/v1/manifest", {headers: {"X-Proofkit-Browser-Capability": capability}});
+    authorityTextView.textContent = `Authority: ${manifest.authority}. Snapshot: ${manifest.snapshotId}. Expected-digest coverage: ${manifest.expectedDigestCoverage}.`;
+    appendTextItems(authorityNonClaimsView, manifest.nonClaims ?? []);
+    enableViewControls();
+    await renderSpecifications();
+  } catch {
+    activeViewController?.abort();
+    content.replaceChildren();
+    content.setAttribute("aria-busy", "false");
+    const heading = document.createElement("h2");
+    heading.textContent = "Workspace unavailable";
+    const alert = document.createElement("p");
+    alert.setAttribute("role", "alert");
+    alert.textContent = "The admitted workspace could not be loaded.";
+    content.append(heading, alert);
+    setWorkspaceState("bootstrap-failed");
+  }
+}
+
 /** @param {string} path @param {any} body @param {AbortSignal} [signal] @returns {Promise<any>} */
 async function post(path, body, signal) {
   return fetchJSON(path, {method: "POST", headers, body: JSON.stringify(body), signal});
 }
 
-/** @param {string} title @param {string} requestPrefix */
-function beginView(title, requestPrefix) {
+/** @param {string} title @param {string} requestPrefix @param {"specifications" | "diff" | "graph"} view */
+function beginView(title, requestPrefix, view) {
   activeViewController?.abort();
   activeViewController = new AbortController();
   const requestId = nextRequestId(requestPrefix);
   clearSelection();
+  setActiveView(view);
+  setWorkspaceState(`${view}-loading`);
   content.replaceChildren();
+  content.setAttribute("aria-busy", "true");
   const heading = document.createElement("h2");
   heading.textContent = title;
   const status = document.createElement("p");
@@ -67,32 +115,43 @@ function beginView(title, requestPrefix) {
   return {requestId, signal: activeViewController.signal, status};
 }
 
-/** @param {HTMLElement} status @param {unknown} error */
-function failView(status, error) {
+/** @param {HTMLElement} status */
+function failView(status) {
+  content.setAttribute("aria-busy", "false");
+  setWorkspaceState("view-failed");
+  status.setAttribute("role", "alert");
+  status.setAttribute("aria-live", "assertive");
   status.dataset.state = "failed";
-  status.textContent = error instanceof Error ? error.message : "Workspace request failed.";
+  status.textContent = "The admitted workspace view could not be loaded.";
+}
+
+/** @param {any} response @param {string} requestId @param {AbortSignal} signal */
+function admitCurrentViewResponse(response, requestId, signal) {
+  if (signal.aborted || requestId !== activeRequestId) return false;
+  if (response?.requestId !== requestId || response?.snapshotId !== manifest.snapshotId) {
+    throw new Error("Workspace view response identity mismatch");
+  }
+  return true;
 }
 
 /** @param {number} [offset] */
 async function renderSpecifications(offset = 0) {
-  const {requestId, signal, status} = beginView("Specifications", "browser.specifications");
+  const {requestId, signal, status} = beginView("Specifications", "browser.specifications", "specifications");
   try {
     const response = await post("/api/v1/requirements", {
       requestId,
       snapshotId: manifest.snapshotId,
       query: {maxRecords: 256, offset},
     }, signal);
-    if (signal.aborted || requestId !== activeRequestId || response.requestId !== requestId || response.snapshotId !== manifest.snapshotId) return;
+    if (!admitCurrentViewResponse(response, requestId, signal)) return;
     status.remove();
-    const tree = document.createElement("div");
-    tree.setAttribute("role", "tree");
-    tree.setAttribute("aria-label", "Specification requirements");
+    const list = document.createElement("ul");
+    list.setAttribute("aria-label", "Specification requirements");
     const requirements = response.projection?.requirements ?? [];
     let itemIndex = 0;
     for (const requirement of requirements) {
+        const item = document.createElement("li");
         const article = document.createElement("article");
-        article.setAttribute("role", "treeitem");
-        article.tabIndex = itemIndex === 0 ? 0 : -1;
         article.dataset.requirementId = requirement.requirementId;
         const title = document.createElement("h3");
         title.textContent = requirement.requirementId;
@@ -120,56 +179,45 @@ async function renderSpecifications(offset = 0) {
           announceSelection();
         });
         article.append(title, boundary, invariant, choose);
-        tree.append(article);
+        item.append(article);
+        list.append(item);
         itemIndex += 1;
     }
     if (itemIndex === 0) {
       status.dataset.state = "no-match";
       status.textContent = "No requirements matched the admitted query.";
       content.append(status);
+      content.setAttribute("aria-busy", "false");
+      setWorkspaceState("specifications");
       return;
     }
-    tree.addEventListener("keydown", moveTreeFocus);
-    content.append(tree);
+    content.append(list);
     appendPagingControls("specifications", offset, response.projection.selectedRequirementCount ?? 0, response.projection.availableRequirementCount ?? 0);
+    content.setAttribute("aria-busy", "false");
+    setWorkspaceState("specifications");
   } catch (error) {
     if (signal.aborted) return;
-    failView(status, error);
+    failView(status);
   }
-}
-
-/** @param {KeyboardEvent} event */
-function moveTreeFocus(event) {
-  if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
-  const items = /** @type {HTMLElement[]} */ ([...content.querySelectorAll('[role="treeitem"]')]);
-  const active = document.activeElement;
-  if (!(active instanceof HTMLElement)) return;
-  const current = items.indexOf(active);
-  if (current < 0) return;
-  event.preventDefault();
-  const direction = event.key === "ArrowDown" ? 1 : -1;
-  const next = Math.max(0, Math.min(items.length - 1, current + direction));
-  const nextItem = items[next];
-  if (!nextItem) return;
-  for (const item of items) item.tabIndex = item === nextItem ? 0 : -1;
-  nextItem.focus();
 }
 
 /** @param {number} [offset] */
 async function renderDiff(offset = 0) {
-  const {requestId, signal, status} = beginView("Semantic diff", "browser.diff");
+  const {requestId, signal, status} = beginView("Semantic diff", "browser.diff", "diff");
   if (!manifest.diffAvailable) {
+    content.setAttribute("aria-busy", "false");
+    setWorkspaceState("diff-unavailable");
     status.dataset.state = "unavailable";
     status.textContent = "No admitted semantic diff was supplied.";
     return;
   }
   try {
     const response = await post("/api/v1/diff", {requestId, snapshotId: manifest.snapshotId, query: {maxRecords: 512, offset}}, signal);
-    if (signal.aborted || requestId !== activeRequestId || response.requestId !== requestId || response.snapshotId !== manifest.snapshotId) return;
+    if (!admitCurrentViewResponse(response, requestId, signal)) return;
     status.remove();
     appendProjectionBoundary(response.projection.authority, response.projection.nonClaims ?? [], [
-      `Base snapshot: ${response.projection.baseSnapshotId} (${response.projection.baseBaselineVerification}).`,
-      `Current snapshot: ${response.projection.currentSnapshotId} (${response.projection.currentBaselineVerification}).`,
+      `Base snapshot: ${response.projection.baseSnapshotId} (expected-digest coverage: ${response.projection.baseExpectedDigestCoverage}).`,
+      `Current snapshot: ${response.projection.currentSnapshotId} (expected-digest coverage: ${response.projection.currentExpectedDigestCoverage}).`,
     ]);
     for (const change of response.projection.changes ?? []) {
       const article = document.createElement("article");
@@ -186,23 +234,27 @@ async function renderDiff(offset = 0) {
       content.append(article);
     }
     appendPagingControls("diff", offset, response.projection.selectedChangeCount ?? 0, response.projection.availableChangeCount ?? 0);
+    content.setAttribute("aria-busy", "false");
+    setWorkspaceState("diff");
   } catch (error) {
     if (signal.aborted) return;
-    failView(status, error);
+    failView(status);
   }
 }
 
 /** @param {number} [offset] */
 async function renderGraph(offset = 0, edgeOffset = 0) {
-  const {requestId, signal, status} = beginView("Traceability graph", "browser.graph");
+  const {requestId, signal, status} = beginView("Traceability graph", "browser.graph", "graph");
   if (!manifest.graphAvailable) {
+    content.setAttribute("aria-busy", "false");
+    setWorkspaceState("graph-unavailable");
     status.dataset.state = "unavailable";
     status.textContent = "No admitted traceability graph was supplied.";
     return;
   }
   try {
     const response = await post("/api/v1/graph", {requestId, snapshotId: manifest.snapshotId, query: {edgeOffset, maxEdges: 2048, maxRecords: 256, offset}}, signal);
-    if (signal.aborted || requestId !== activeRequestId || response.requestId !== requestId || response.snapshotId !== manifest.snapshotId) return;
+    if (!admitCurrentViewResponse(response, requestId, signal)) return;
     status.remove();
     const graph = response.projection;
     appendProjectionBoundary(graph.authority, graph.nonClaims ?? [], [`Source snapshot: ${graph.sourceSnapshotId}.`]);
@@ -250,6 +302,9 @@ async function renderGraph(offset = 0, edgeOffset = 0) {
     }
     const viewport = document.createElement("div");
     viewport.className = "graph-viewport";
+    viewport.setAttribute("role", "region");
+    viewport.setAttribute("aria-label", "Traceability graph viewport");
+    viewport.tabIndex = 0;
     viewport.append(svg);
     content.append(viewport, graphTable(
       "Admitted traceability nodes",
@@ -265,9 +320,11 @@ async function renderGraph(offset = 0, edgeOffset = 0) {
     ));
     appendPagingControls("graph", offset, graph.primaryNodeCount ?? 0, graph.availableNodeCount ?? 0);
     appendGraphEdgeControls(offset, edgeOffset, graph.selectedEdgeCount ?? 0, graph.availableIncidentEdgeCount ?? 0);
+    content.setAttribute("aria-busy", "false");
+    setWorkspaceState("graph");
   } catch (error) {
     if (signal.aborted) return;
-    failView(status, error);
+    failView(status);
   }
 }
 
@@ -326,6 +383,11 @@ function appendGraphEdgeControls(nodeOffset, edgeOffset, selectedCount, availabl
 
 /** @param {string} captionText @param {string[]} headings @param {string[][]} rows @param {string} identityKind */
 function graphTable(captionText, headings, rows, identityKind) {
+  const viewport = document.createElement("div");
+  viewport.className = "table-viewport";
+  viewport.setAttribute("role", "region");
+  viewport.setAttribute("aria-label", `${captionText} table viewport`);
+  viewport.tabIndex = 0;
   const table = document.createElement("table");
   table.dataset.identityKind = identityKind;
   const caption = document.createElement("caption");
@@ -350,7 +412,8 @@ function graphTable(captionText, headings, rows, identityKind) {
     body.append(row);
   }
   table.append(caption, head, body);
-  return table;
+  viewport.append(table);
+  return viewport;
 }
 
 /** @param {unknown} value */
@@ -481,21 +544,31 @@ submit.addEventListener("click", async () => {
   if (submit.disabled) return;
   const question = questionInput.value.trim();
   if (selectionState.targets.length === 0 || !question) {
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
     status.textContent = "Select invariant text and enter a question.";
     return;
   }
+  const submissionViewRequestId = activeRequestId;
   submit.disabled = true;
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
   status.textContent = "Creating handoff packet...";
   try {
     const packet = await post("/api/v1/handoff", {annotations: selectionState.targets.map((target) => ({...target, question}))});
     packetView.textContent = JSON.stringify(packet, null, 2);
     status.textContent = "Handoff packet created.";
-  } catch (error) {
-    status.textContent = error instanceof Error ? error.message : "Handoff was rejected.";
+    if (submissionViewRequestId === activeRequestId) setWorkspaceState("handoff-result");
+  } catch {
+    packetView.replaceChildren();
+    status.setAttribute("role", "alert");
+    status.setAttribute("aria-live", "assertive");
+    status.textContent = "The handoff packet could not be created.";
+    if (submissionViewRequestId === activeRequestId) setWorkspaceState("handoff-failed");
   } finally {
     submit.disabled = false;
   }
 });
 
 announceSelection();
-void renderSpecifications();
+void initializeWorkspace();

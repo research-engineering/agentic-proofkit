@@ -15,25 +15,44 @@ vulnerability absence, or consumer rollout safety by itself.
   inventory and optional GitHub artifact attestations without claiming
   public-source provenance before a public-source tag release exists.
 - `REQ-PROOFKIT-QUALITY-002`: release evidence includes a deterministic SBOM
-  for package, wheel, binary, and Go module inventory without claiming
-  vulnerability absence or license approval.
+  whose runtime edges and digest come from one immutable byte snapshot of the
+  exact owning binary through an identity-checked pinned handle with a final
+  same-handle content check; source/tool module inventory is excluded and
+  package or wheel representations invent no runtime edges.
 - `REQ-PROOFKIT-QUALITY-003`: pure parser and canonicalization boundaries have
   fuzz/property tests that prove no-panic and round-trip stability without
   fuzzing side-effecting CLI or filesystem flows.
 - `REQ-PROOFKIT-QUALITY-004`: public CLI ABI has a small golden corpus and
   canonical ABI hash covering command topology, exit code, stdout/stderr
-  channel discipline, JSON parseability, stable public diagnostics, explicit
-  output schema evolution for breaking JSON field changes, and
-  descriptor/contract/help parity without making private descriptors public API.
+  channel discipline, JSON parseability, stable public diagnostics, complete
+  versioned root-shape input/output variants, exact source-checkout selectors,
+  exact native source sets and requirement scenarios for root-distinct output
+  witnesses, generated help and preset projections, explicit root schema
+  evolution, and descriptor/contract/help parity without making private
+  descriptors public API. The admitted adoption-envelope machine condition
+  model uses complete
+  canonical flag conjunctions, proves finite valid-option closure against
+  native admission, binds exercised argv to one exact condition and variant,
+  and rejects repeated mode or pilot selectors plus an empty pilot value that
+  would normalize to absence. Any later condition-model owner requires its own
+  admitted native-closure witness. The separate pilot-admission route declares
+  its contract-envelope stack-diverse alias and rejects repeated or mixed
+  `--pilot` and `--stack-diverse` selectors instead of applying last-write-wins
+  routing. Nested fields, leaf types, cardinality,
+  nullability, and cross-field semantics remain native-command concerns rather
+  than machine-contract claims.
 - `REQ-PROOFKIT-QUALITY-005`: CodeQL workflow source is admitted as an
-  independent semantic security analysis signal for Go source without replacing
-  native Go static gates.
+  independent semantic security analysis signal for Go source; advisory
+  analysis remains read-only, provider publication is isolated and disabled on
+  pull requests, and native Go static gates remain required.
 - `REQ-PROOFKIT-QUALITY-006`: OSV workflow source is admitted as an advisory
-  multi-ecosystem dependency signal without replacing `govulncheck`
-  reachable-code evidence.
+  multi-ecosystem dependency signal; advisory analysis remains read-only,
+  provider publication is isolated and disabled on pull requests, and
+  `govulncheck` reachable-code evidence remains required.
 - `REQ-PROOFKIT-QUALITY-007`: Scorecard workflow source is admitted as an
-  advisory repository hygiene signal without claiming branch protection or
-  provider settings that the repository cannot prove from source.
+  advisory repository hygiene signal; advisory analysis remains read-only,
+  public publication authority is isolated with exact output inputs, and
+  source does not claim branch protection or unobserved provider settings.
 - `REQ-PROOFKIT-QUALITY-008`: GitHub Actions workflow syntax and expression
   semantics are checked by actionlint in the local package gate.
 - `REQ-PROOFKIT-QUALITY-009`: performance-sensitive parser and serializer
@@ -41,23 +60,42 @@ vulnerability absence, or consumer rollout safety by itself.
   required PR gate before stable baselines exist.
 - `REQ-PROOFKIT-QUALITY-010`: coverage metrics report requirement, binding,
   witness, CLI inventory linkage, and descriptor-owned command proof-route
-  candidates from admitted test-evidence-inventory rows. The gate fails closed
-  on linkage dead zones, failed inventory admission, missing candidates,
-  unknown command refs, contract-only commands, or route-only commands. Static
-  route metadata and source syntax never become semantic falsifier evidence.
+  candidates from admitted test-evidence-inventory rows, while critical
+  anti-vacuity scenarios retain exact closed selector inventories. Each linkage and route
+  conjunct has an independent fail-closed falsifier, and each source-checkout
+  selector resolves to a valid function in an active Go test file with its
+  exact executable command; static route metadata, prose, source markers, test
+  existence, and failure-capable syntax never become semantic falsifier
+  evidence.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
   source/package gate from macOS platform smoke, executes the complete Go
   package set through its owner command, uses explicit hosted runner labels
   instead of floating latest labels, and exposes one fail-closed aggregate gate
-  that requires every required leaf check to finish with success.
+  whose exact expression and script reject neutralization and require every
+  required leaf check to finish with success, while the aggregate job omits
+  job defaults and `continue-on-error` entirely. Exact workflow-level bash
+  defaults plus a closed inventory require exact provider-check names and
+  scalar runners, bind the macOS job's presence-aware exact ordered step
+  inventory and exact local setup-action bytes to the fail-closed
+  package-script owner command, require every required leaf job and step to
+  omit conditions except for exact named owner conditions, and reject
+  dynamically false or explicit-null conditions, dual `run`/`uses` keys,
+  non-string runner labels, nested or top-level semantic shadow steps,
+  reusable-job substitution, inherited or local environment entries, shell,
+  working-directory, and `continue-on-error` overrides.
 - `REQ-PROOFKIT-QUALITY-012`: release and adoption channel identifiers use one
   canonical authority vocabulary that separates durable authority channels from
   display labels, publisher environments, statuses, and candidate evidence.
 - `REQ-PROOFKIT-QUALITY-013`: self-hosting workflow package-gate evidence is
   checked by a typed workflow oracle instead of text search, proving the
-  package gate is reachable, exact, advisory, success-gated for always-running
-  downstream jobs and required evidence-publication steps, and ordered before
-  evidence publication.
+  package gate is reachable, exact, advisory, and guarded only by absent or
+  exact owner-reviewed conditions for every trust-significant job and step
+  across the closed required CI and release inventories; dynamically false and
+  neutralized expressions are rejected alongside unsafe workflow run defaults,
+  unexpected workflow or step environment entries, gate-job defaults or
+  environment entries, and shell, working-directory, or
+  `continue-on-error` override on any step in the gate job; the gate remains
+  ordered before evidence publication.
 - `REQ-PROOFKIT-QUALITY-014`: release authority consumers compare downstream
   policy against the admitted typed release-authority projection and admitted
   report digest instead of rereading caller-owned raw `releaseAuthorityInput`
@@ -68,8 +106,8 @@ vulnerability absence, or consumer rollout safety by itself.
 - `REQ-PROOFKIT-QUALITY-016`: release platform targets use one private owner
   that projects platform suffixes, Go build targets, npm OS/CPU metadata,
   package tar entries, Python wheel tags, PyPI candidate completeness,
-  self-hosting native binary selection, and SBOM binary subjects without
-  becoming public API.
+  self-hosting native binary selection, SBOM binary subjects, and the exact
+  marker-bounded README platform matrix without becoming public API.
 - `REQ-PROOFKIT-QUALITY-017`: report-visible secret-shaped JSON traversal
   uses one private kernel owner for deterministic paths and finding kinds while
   command packages only map findings to their local report policy.
@@ -78,7 +116,13 @@ vulnerability absence, or consumer rollout safety by itself.
   npm and PyPI channels and release closeout rejects publication claims without
   that tuple.
 - `REQ-PROOFKIT-QUALITY-019`: installed package smoke proof verifies one
-  successful JSON report command, one failed-report command, and the current
+  continuous offline route through every displayed family and leaf-help
+  transition, binds each installed invocation to its ordered exact bare Usage
+  command token, requires every exact generated preset command to retain the
+  offline npm prefix, re-executes one emitted continuation, reaches the first
+  valid README input, executes one successful JSON report command and one
+  failed-report command, applies bounded expansion-free literal parsing to
+  emitted and README argv, and verifies the current
   `json-report-cli-adapter-source` generated source artifact from the
   package-managed binary, including report identity, state, exit code, stdout,
   stderr discipline, generated-source hash, owner-source parity, and exact
@@ -96,16 +140,36 @@ vulnerability absence, or consumer rollout safety by itself.
 - `REQ-PROOFKIT-QUALITY-022`: the requirement workspace uses an explicit
   embedded asset set, strict authored-JavaScript type checking, exact secured
   routes, bounded server cleanup, repository-confined non-symlink proof
-  artifacts, and machine-admitted per-project rendered engine evidence without
-  runtime dependencies or a production bundler.
+  artifacts, and machine-admitted per-project rendered engine evidence for its
+  stable-state accessibility matrix, including independently held bootstrap,
+  specifications, diff, and graph loading states, target size, 320-pixel
+  reflow, labelled internal overflow, and light/dark rendered contrast without
+  runtime dependencies or a production bundler; one direct audit initializes
+  pinned axe code through the browser-context script channel, admits only the
+  main frame and exact engine identity, preserves same-origin and Playwright
+  branding, and runs default rules plus explicitly enabled target size, while
+  failed attempts retain attempt-scoped action, DOM, network, and source traces
+  without continuous screenshot capture plus a bounded best-effort failure
+  screenshot, without creating passed proof.
 - `REQ-PROOFKIT-QUALITY-023`: Python wheels independently bind advertised
-  platform compatibility to decoded executable bytes and carry Core Metadata
-  2.4 plus an exact, RECORD-closed repository license payload.
-- `REQ-PROOFKIT-QUALITY-024`: a version-bound machine record declares the
-  reviewed public-contract change set and owns release-note content, while one
-  retained-evidence owner builds and verifies checksums against exact
+  platform compatibility to decoded executable bytes, and the wheel set rejects
+  version, identity, presence, and digest drift; wheels carry Core Metadata 2.4
+  plus an exact, RECORD-closed repository license payload.
+- `REQ-PROOFKIT-QUALITY-024`: a closed version-bound machine record binds the
+  exact previous/current SemVer pair and compatible/breaking class, declares the
+  exact complete current breaking, addition, and migration inventories
+  including channel-specific generated continuation bytes, rejects missing,
+  substituted, reordered, or surplus entries, and owns one independently
+  authored byte-exact complete current release-note projection, while one
+  retained-
+  evidence owner builds and verifies checksums against exact
   downloadable artifact-relative paths without inferring change completeness
   from the source diff.
+- `REQ-PROOFKIT-QUALITY-025`: exact workflow inventory, closed raw-YAML keys
+  before typed decoding, exact release deployment environments, pinned action
+  commit identities, admitted status expressions, the required aggregate shell
+  program, and read-only treatment of an existing release are source-oracle
+  invariants.
 
 ## Non-Claims
 

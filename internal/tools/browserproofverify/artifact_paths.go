@@ -70,6 +70,16 @@ func cleanupBrowserProofRun(root, runDirectory string) error {
 	return rootFS.RemoveAll(filepath.FromSlash(runDirectory))
 }
 
+func finalizeBrowserProofRun(root, runDirectory string, resultErr error) error {
+	if resultErr != nil {
+		return resultErr
+	}
+	if err := cleanupBrowserProofRun(root, runDirectory); err != nil {
+		return fmt.Errorf("clean browser proof run directory: %w", err)
+	}
+	return nil
+}
+
 func readRootedJSON(root, path string, maxBytes int64) (any, error) {
 	rootFS, err := os.OpenRoot(root)
 	if err != nil {

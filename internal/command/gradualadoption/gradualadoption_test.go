@@ -2,6 +2,7 @@ package gradualadoption
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -85,31 +86,86 @@ func TestBootstrapRejectsShellControlGuidanceCommand(t *testing.T) {
 }
 
 func TestBootstrapPreservesCallerDisplayCommandInGuidancePayload(t *testing.T) {
-	result, err := BuildBootstrapResult(validBootstrapInput())
-	if err != nil {
-		t.Fatalf("BuildBootstrapResult() error=%v", err)
+	input := validBootstrapInput()
+	callerCommands := anyStrings(input["commands"])
+	profiles := []struct {
+		name             string
+		profile          string
+		pythonExecutable string
+	}{
+		{name: "path", profile: cliexec.ProfilePath},
+		{name: "npm offline", profile: cliexec.ProfileNPMOffline},
+		{name: "python module", profile: cliexec.ProfilePythonModule, pythonExecutable: "/tmp/proofkit venv/bin/python"},
 	}
-	if result.ExitCode != 0 {
-		t.Fatalf("BuildBootstrapResult() exit=%d report=%#v, want passed", result.ExitCode, result.Record.JSONValue())
+	for _, profile := range profiles {
+		t.Run(profile.name, func(t *testing.T) {
+			renderer, err := cliexec.AdmitLauncherProfile(profile.profile, profile.pythonExecutable)
+			if err != nil {
+				t.Fatalf("AdmitLauncherProfile() error=%v", err)
+			}
+			result, err := BuildBootstrapResultWithRenderer(input, renderer)
+			if err != nil {
+				t.Fatalf("BuildBootstrapResultWithRenderer() error=%v", err)
+			}
+			if result.ExitCode != 0 {
+				t.Fatalf("BuildBootstrapResultWithRenderer() exit=%d report=%#v, want passed", result.ExitCode, result.Record.JSONValue())
+			}
+			guidance := result.Payloads["adoptionGuidance"].(map[string]any)
+			agentGuidance := guidance["agentGuidance"].(map[string]any)
+			commands := anyStrings(agentGuidance["commands"])
+			if len(commands) != len(callerCommands)+len(result.NextCommands) {
+				t.Fatalf("guidance commands=%#v, want exact caller prefix and generated suffix", commands)
+			}
+			if !reflect.DeepEqual(commands[:len(callerCommands)], callerCommands) {
+				t.Fatalf("caller-provided bootstrap prefix=%#v, want unchanged %#v", commands[:len(callerCommands)], callerCommands)
+			}
+			if !reflect.DeepEqual(commands[len(callerCommands):], result.NextCommands) {
+				t.Fatalf("generated guidance suffix=%#v, want %#v", commands[len(callerCommands):], result.NextCommands)
+			}
+			if !containsString(commands, renderer.DisplayCommand("gradual-adoption", "--input", "proofkit/profile.json")) {
+				t.Fatalf("generated bootstrap command missing: %#v", commands)
+			}
+			if !containsString(commands, renderer.DisplayCommand("witness-scheduler-plan", "--input", "proofkit/witness-plan.json")) {
+				t.Fatalf("generated witness scheduler command missing: %#v", commands)
+			}
+			if containsString(commands, renderer.DisplayCommand("witness-plan", "--input", "proofkit/witness-plan.json")) {
+				t.Fatalf("generated bootstrap command uses catalog command for scheduler-plan fixture: %#v", commands)
+			}
+			for _, command := range result.NextCommands {
+				if !strings.HasPrefix(command, renderer.DisplayCommand()+" ") {
+					t.Fatalf("generated command=%q, want exact renderer prefix %q", command, renderer.DisplayCommand())
+				}
+			}
+
+			manifest, err := BootstrapMaterializationManifest(result)
+			if err != nil {
+				t.Fatalf("BootstrapMaterializationManifest() error=%v", err)
+			}
+			assertMaterializedCallerCommandPrefix(t, manifest, callerCommands, result.NextCommands)
+		})
 	}
-	guidance := result.Payloads["adoptionGuidance"].(map[string]any)
-	agentGuidance := guidance["agentGuidance"].(map[string]any)
-	commands := anyStrings(agentGuidance["commands"])
-	if !containsString(commands, "go test ./internal/command/gradualadoption") {
-		t.Fatalf("caller-provided bootstrap command was not preserved: %#v", commands)
+}
+
+func assertMaterializedCallerCommandPrefix(t *testing.T, manifest map[string]any, callerCommands []string, generatedCommands []string) {
+	t.Helper()
+	for _, rawFile := range manifest["files"].([]any) {
+		file := rawFile.(map[string]any)
+		if file["payloadKey"] != "adoptionGuidance" {
+			continue
+		}
+		var guidance map[string]any
+		if err := json.Unmarshal([]byte(file["content"].(string)), &guidance); err != nil {
+			t.Fatalf("decode materialized adoption guidance: %v", err)
+		}
+		commands := anyStrings(guidance["agentGuidance"].(map[string]any)["commands"])
+		if len(commands) != len(callerCommands)+len(generatedCommands) ||
+			!reflect.DeepEqual(commands[:len(callerCommands)], callerCommands) ||
+			!reflect.DeepEqual(commands[len(callerCommands):], generatedCommands) {
+			t.Fatalf("materialized guidance commands=%#v, want caller prefix %#v and generated suffix %#v", commands, callerCommands, generatedCommands)
+		}
+		return
 	}
-	if !containsString(commands, "agentic-proofkit gradual-adoption --input proofkit/profile.json") {
-		t.Fatalf("generated bootstrap command missing: %#v", commands)
-	}
-	if !containsString(commands, "agentic-proofkit witness-scheduler-plan --input proofkit/witness-plan.json") {
-		t.Fatalf("generated witness scheduler command missing: %#v", commands)
-	}
-	if containsString(commands, "agentic-proofkit witness-plan --input proofkit/witness-plan.json") {
-		t.Fatalf("generated bootstrap command uses catalog command for scheduler-plan fixture: %#v", commands)
-	}
-	for _, command := range result.NextCommands {
-		assertPackageExecutableCommand(t, command)
-	}
+	t.Fatal("materialization manifest missing adoptionGuidance payload")
 }
 
 func TestBootstrapRejectsUnknownRootAndNestedFields(t *testing.T) {
@@ -372,15 +428,4 @@ func containsString(values []string, needle string) bool {
 		}
 	}
 	return false
-}
-
-func assertPackageExecutableCommand(t *testing.T, command string) {
-	t.Helper()
-	fields := strings.Fields(command)
-	if len(fields) < 2 {
-		t.Fatalf("generated command %q has no command name", command)
-	}
-	if fields[0] != cliexec.BinaryName {
-		t.Fatalf("generated command %q uses binary %q, want %q", command, fields[0], cliexec.BinaryName)
-	}
 }

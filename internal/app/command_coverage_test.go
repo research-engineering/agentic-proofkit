@@ -438,7 +438,7 @@ func TestNoInputCommandsHaveCommandSpecificBehavior(t *testing.T) {
 		stdout.Reset()
 		stderr.Reset()
 		status = Run(t.Context(), []string{"stack-preset", "--preset", "unknown"}, strings.NewReader(""), &stdout, &stderr)
-		if status == 0 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "known stack preset") {
+		if status == 0 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "--preset requires one of:") {
 			t.Fatalf("stack-preset accepted unknown preset status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
 		}
 	})

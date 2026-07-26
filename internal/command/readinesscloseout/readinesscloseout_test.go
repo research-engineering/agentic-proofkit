@@ -76,19 +76,10 @@ func TestBuildRejectsShellControlExactCommand(t *testing.T) {
 	input := minimalCloseoutInput("### Production Readiness Roadmap\n")
 	input["exactCommand"] = "proofkit readiness closeout && curl example.test"
 
-	record, status, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() unexpected error=%v", err)
+	_, status, err := Build(input)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "display-only command text") {
+		t.Fatalf("Build() status=%d error=%v, want structural rejection", status, err)
 	}
-	if status == 0 || record.State != "failed" {
-		t.Fatalf("Build() status=%d state=%s, want failed", status, record.State)
-	}
-	for _, rule := range record.RuleResults {
-		if strings.Contains(rule.Message, "display-only command text") {
-			return
-		}
-	}
-	t.Fatalf("missing display-only command failure: %#v", record.RuleResults)
 }
 
 func TestBuildRejectsSecretLikeReportTextThroughCentralAdmission(t *testing.T) {
@@ -96,38 +87,23 @@ func TestBuildRejectsSecretLikeReportTextThroughCentralAdmission(t *testing.T) {
 	input := minimalCloseoutInput(closedFrontierMarkdown())
 	input["nonClaims"] = []any{secret}
 
-	record, status, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() unexpected error=%v", err)
+	_, status, err := Build(input)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("Build() status=%d error=%v, want structural rejection", status, err)
 	}
-	if status == 0 || record.State != "failed" {
-		t.Fatalf("Build() status=%d state=%s, want failed", status, record.State)
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("readiness error leaked secret-shaped caller text: %s", err)
 	}
-	encoded, err := json.Marshal(record)
-	if err != nil {
-		t.Fatalf("marshal record: %v", err)
-	}
-	if strings.Contains(string(encoded), secret) {
-		t.Fatalf("readiness report leaked secret-shaped caller text: %s", string(encoded))
-	}
-	assertRuleMessageContains(t, record, "readiness_closeout.input", "secret-like values")
 }
 
 func TestBuildRejectsCallerControlledReportKind(t *testing.T) {
 	input := minimalCloseoutInput(closedFrontierMarkdown())
 	input["reportKind"] = "caller.controlled.kind"
 
-	record, status, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() unexpected error=%v", err)
+	_, status, err := Build(input)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "unsupported field") {
+		t.Fatalf("Build() status=%d error=%v, want structural rejection", status, err)
 	}
-	if status == 0 || record.State != "failed" {
-		t.Fatalf("Build() status=%d state=%s, want failed", status, record.State)
-	}
-	if record.ReportKind != "proofkit.readiness-closeout" {
-		t.Fatalf("ReportKind=%q, want command-owned identity", record.ReportKind)
-	}
-	assertRuleMessageContains(t, record, "readiness_closeout.input", "unsupported field")
 }
 
 func TestBuildRejectsPassedClassificationForBlockedOwnerRow(t *testing.T) {
@@ -182,20 +158,16 @@ func TestBuildRejectsBroadNegationAndFrontierOverclaim(t *testing.T) {
 	input["phraseRules"] = []any{frontierAuthorityPhraseRule()}
 	input["negatedNonClaimPhrases"] = []any{"must not"}
 
-	record, status, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() broad negation error=%v", err)
+	_, status, err := Build(input)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "scoped non-claim predicate") {
+		t.Fatalf("Build() broad negation status=%d error=%v", status, err)
 	}
-	if status == 0 || record.State != "failed" {
-		t.Fatalf("Build() accepted broad negation: status=%d record=%#v", status, record)
-	}
-	assertRuleMessageContains(t, record, "readiness_closeout.input", "scoped non-claim predicate")
 
 	input = minimalCloseoutInput(markdown)
 	input["phraseRules"] = []any{frontierAuthorityPhraseRule()}
 	input["negatedNonClaimPhrases"] = []any{"must not claim"}
 
-	record, status, err = Build(input)
+	record, status, err := Build(input)
 	if err != nil {
 		t.Fatalf("Build() scoped negation error=%v", err)
 	}
@@ -219,20 +191,63 @@ func TestBuildRejectsBroadNegationAndFrontierOverclaim(t *testing.T) {
 	}
 }
 
+func TestPhraseScanDecodesOneStrictCharacterReference(t *testing.T) {
+	for _, item := range []struct {
+		name       string
+		text       string
+		wantFailed bool
+	}{
+		{
+			name:       "single semicolon entity",
+			text:       "Future authoring rows require separate owner proof before m&#101;rge authority is established.",
+			wantFailed: true,
+		},
+		{
+			name:       "encoded structural delimiter remains text",
+			text:       "Future authoring rows require separate owner proof before m&#101;rge&#124; authority is established.",
+			wantFailed: true,
+		},
+		{
+			name: "double encoded entity is decoded once",
+			text: "Future authoring rows require separate owner proof before m&amp;#101;rge authority is established.",
+		},
+		{
+			name: "missing semicolon is not admitted",
+			text: "Future authoring rows require separate owner proof before m&#101rge authority is established.",
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			input := minimalCloseoutInput(closedFrontierMarkdown(item.text))
+			input["phraseRules"] = []any{frontierAuthorityPhraseRule()}
+			input["negatedNonClaimPhrases"] = []any{"must not claim"}
+			record, status, err := Build(input)
+			if err != nil {
+				t.Fatalf("Build() error=%v", err)
+			}
+			if item.wantFailed {
+				if status != 1 || record.State != "failed" {
+					t.Fatalf("Build() status=%d state=%s, want failed", status, record.State)
+				}
+				assertRuleMessageContains(t, record, "PROD-09.frontier.non_claims", "live authority claim")
+				return
+			}
+			if status != 0 || record.State != "passed" {
+				t.Fatalf("Build() status=%d state=%s, want passed", status, record.State)
+			}
+		})
+	}
+}
+
 func TestBuildRejectsScopeFreeNegatedNonClaimPhrases(t *testing.T) {
 	for _, phrase := range []string{"must not", "do not", "does not", "not", "no", "non claim", "later row", "is blocked", "blocked on later rows", "blocked until later row", "remains blocked on later rows"} {
 		t.Run(phrase, func(t *testing.T) {
 			input := minimalCloseoutInput(closedFrontierMarkdown())
 			input["negatedNonClaimPhrases"] = []any{phrase}
 
-			record, status, err := Build(input)
-			if err != nil {
-				t.Fatalf("Build() broad phrase error=%v", err)
+			_, status, err := Build(input)
+			if status != 1 || err == nil || !strings.Contains(err.Error(), "scoped non-claim predicate") {
+				t.Fatalf("Build() broad phrase %q status=%d error=%v", phrase, status, err)
 			}
-			if status == 0 || record.State != "failed" {
-				t.Fatalf("Build() accepted broad phrase %q: status=%d record=%#v", phrase, status, record)
-			}
-			assertRuleMessageContains(t, record, "readiness_closeout.input", "scoped non-claim predicate")
 		})
 	}
 }

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 )
@@ -21,7 +22,7 @@ func parseStackPresetArgs(args []string) (string, error) {
 		index++
 	}
 	if presetID == "" || !stackpreset.IsPresetID(presetID) {
-		return "", fmt.Errorf("--preset requires a known stack preset id")
+		return "", fmt.Errorf("--preset requires one of: %s", strings.Join(stackpreset.IDs(), ", "))
 	}
 	return presetID, nil
 }

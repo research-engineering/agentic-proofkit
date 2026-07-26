@@ -81,6 +81,9 @@ jobs:
       - name: Verify Go formatting
         run: npm run go:fmt
 
+      - name: Verify generated command contracts
+        run: npm run command-contract:check
+
       - name: Verify generated command family catalog
         run: npm run command-family:check
 
@@ -187,6 +190,17 @@ jobs:
 
       - name: Run browser proof
         run: npm run browser:check
+
+      - name: Upload browser failure diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: browser-runtime-diagnostics-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            artifacts/browser-run-*/playwright-report.json
+            artifacts/browser-run-*/test-results
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload browser proof
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

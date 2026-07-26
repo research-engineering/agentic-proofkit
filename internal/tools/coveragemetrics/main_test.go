@@ -2,7 +2,9 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -289,32 +291,359 @@ func TestRunWritesCurrentMetricsWhenCommandRouteInventoryBuilderFails(t *testing
 	}
 }
 
-func TestRequireCommandRouteInventoryClosureFailsClosed(t *testing.T) {
-	err := requireCommandRouteInventoryClosure(commandRouteMetrics{
-		CommandsWithoutProofRouteCandidate: []string{"route-only"},
-	})
-	if err == nil || !strings.Contains(err.Error(), "missingCandidates=[route-only]") {
-		t.Fatalf("requireCommandRouteInventoryClosure() error = %v, want candidate-route failure", err)
+func TestEachCommandRouteClosureConjunctHasIndependentFalsifier(t *testing.T) {
+	cases := []struct {
+		name    string
+		metrics commandRouteMetrics
+		want    string
+	}{
+		{name: "missing candidate", metrics: commandRouteMetrics{CommandsWithoutProofRouteCandidate: []string{"target"}}, want: "missingCandidates=[target]"},
+		{name: "unknown candidate ref", metrics: commandRouteMetrics{UnknownProofRouteCandidateRefs: []string{"proofkit.unknown"}}, want: "unknownCandidateRefs=[proofkit.unknown]"},
+		{name: "unknown semantic ref", metrics: commandRouteMetrics{UnknownSemanticCommandRefs: []string{"proofkit.unknown"}}, want: "unknownSemanticRefs=[proofkit.unknown]"},
+		{name: "contract only", metrics: commandRouteMetrics{ContractOnlyCommands: []string{"contract-only"}}, want: "contractOnly=[contract-only]"},
+		{name: "route only", metrics: commandRouteMetrics{RouteOnlyCommands: []string{"route-only"}}, want: "routeOnly=[route-only]"},
 	}
-
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			err := requireCommandRouteInventoryClosure(test.metrics)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("requireCommandRouteInventoryClosure() error = %v, want %q", err, test.want)
+			}
+		})
+	}
 	if err := requireCommandRouteInventoryClosure(commandRouteMetrics{}); err != nil {
 		t.Fatalf("requireCommandRouteInventoryClosure() error = %v, want nil", err)
 	}
 }
 
-func TestRequireNoLinkageDeadZonesFailsClosed(t *testing.T) {
-	err := requireNoLinkageDeadZones(deadZoneMetrics{
-		BindingWithoutRequirementIDs:  []string{"REQ-STALE"},
-		RequirementWithoutBindingIDs:  []string{"REQ-MISSING"},
-		ScenarioWithoutCommandIDs:     []string{"scenario.missing-command"},
-		ScenarioWithoutRequirementIDs: []string{"scenario.missing-requirement"},
-	})
-	if err == nil || !strings.Contains(err.Error(), "requirement/proof linkage dead zones") {
-		t.Fatalf("requireNoLinkageDeadZones() error = %v, want dead-zone failure", err)
+func TestEachLinkageDeadZoneConjunctHasIndependentFalsifier(t *testing.T) {
+	cases := []struct {
+		name    string
+		metrics deadZoneMetrics
+		want    string
+	}{
+		{name: "binding without requirement", metrics: deadZoneMetrics{BindingWithoutRequirementIDs: []string{"REQ-STALE"}}, want: "bindingWithoutRequirement=[REQ-STALE]"},
+		{name: "requirement without binding", metrics: deadZoneMetrics{RequirementWithoutBindingIDs: []string{"REQ-MISSING"}}, want: "requirementWithoutBinding=[REQ-MISSING]"},
+		{name: "scenario without command", metrics: deadZoneMetrics{ScenarioWithoutCommandIDs: []string{"scenario.missing-command"}}, want: "scenarioWithoutCommand=[scenario.missing-command]"},
+		{name: "scenario without requirement", metrics: deadZoneMetrics{ScenarioWithoutRequirementIDs: []string{"scenario.missing-requirement"}}, want: "scenarioWithoutRequirement=[scenario.missing-requirement]"},
 	}
-
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			err := requireNoLinkageDeadZones(test.metrics)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("requireNoLinkageDeadZones() error = %v, want %q", err, test.want)
+			}
+		})
+	}
 	if err := requireNoLinkageDeadZones(deadZoneMetrics{}); err != nil {
 		t.Fatalf("requireNoLinkageDeadZones() error = %v, want nil", err)
+	}
+}
+
+func TestBindingWitnessSelectorsRejectMissingSemanticOwner(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	bindings, err := readJSON[bindingFile](filepath.Join(root, "proofkit", "requirement-bindings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateBindingWitnessSelectorsAtRoot(root, bindings); err != nil {
+		t.Fatalf("current binding selectors are invalid: %v", err)
+	}
+	for index := range bindings.Bindings {
+		if bindings.Bindings[index].ScenarioID != "proofkit.spec-proof-core.installed-readme-first-input" {
+			continue
+		}
+		bindings.Bindings[index].WitnessSelectors[0].Selector = "TestDeletedSemanticOwner"
+		bindings.Bindings[index].WitnessSelectors[0].Command = "go test ./internal/tools/packageverify -run '^TestDeletedSemanticOwner$'"
+		err := validateBindingWitnessSelectorsAtRoot(root, bindings)
+		if err == nil || !strings.Contains(err.Error(), "selector TestDeletedSemanticOwner is missing") {
+			t.Fatalf("missing selector error=%v", err)
+		}
+		return
+	}
+	t.Fatal("installed README binding missing")
+}
+
+func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	bindings, err := readJSON[bindingFile](filepath.Join(root, "proofkit", "requirement-bindings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := validateBindingWitnessSelectorsAtRoot(root, bindings); err != nil {
+		t.Fatalf("current binding selectors are invalid: %v", err)
+	}
+
+	for _, scenarioID := range []string{
+		"proofkit.package-boundary.cli-output-root-witnesses",
+		"proofkit.package-boundary.generated-command-caller-preservation",
+		"proofkit.package-boundary.generated-command-field-inventory",
+		"proofkit.package-boundary.launcher-profile-admission",
+		"proofkit.package-boundary.merge-critical-runtime-preconditions",
+		"proofkit.package-boundary.outside-consumer-artifact",
+		"proofkit.package-boundary.package-public-docs-no-mutable-release-facts",
+		"proofkit.package-boundary.python-wheel-generated-continuation",
+		"proofkit.supply-chain-quality.binding-selector-executability",
+		"proofkit.supply-chain-quality.browser-failure-diagnostics-retention",
+		"proofkit.supply-chain-quality.ci-required-aggregate-exactness",
+		"proofkit.supply-chain-quality.cli-abi-golden",
+		"proofkit.supply-chain-quality.cli-contract-topology",
+		"proofkit.supply-chain-quality.cli-output-witness-contract",
+		"proofkit.supply-chain-quality.codeql-permission-separation",
+		"proofkit.supply-chain-quality.installed-package-json-abi-smoke",
+		"proofkit.supply-chain-quality.osv-permission-separation",
+		"proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
+		"proofkit.supply-chain-quality.release-platform-python-wheels",
+		"proofkit.supply-chain-quality.release-change-record-projection",
+		"proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs",
+		"proofkit.supply-chain-quality.workflow-package-gate-oracle",
+		"proofkit.supply-chain-quality.workflow-source-oracles",
+		"proofkit.spec-proof-core.adoption-contract-envelope-cli-abi",
+		"proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
+	} {
+		index := -1
+		for candidate := range bindings.Bindings {
+			if bindings.Bindings[candidate].ScenarioID == scenarioID {
+				index = candidate
+				break
+			}
+		}
+		if index < 0 {
+			t.Fatalf("critical binding %s is missing", scenarioID)
+		}
+		original := append([]witnessSelector(nil), bindings.Bindings[index].WitnessSelectors...)
+		if len(original) < 1 {
+			t.Fatalf("critical binding %s has no removable selector", scenarioID)
+		}
+
+		t.Run(scenarioID+"/empty", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].WitnessSelectors = nil
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "witness selectors=[]") {
+				t.Fatalf("empty selector error=%v", err)
+			}
+		})
+		t.Run(scenarioID+"/missing", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].WitnessSelectors = append([]witnessSelector(nil), original[:len(original)-1]...)
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "witness selectors=") {
+				t.Fatalf("missing selector error=%v", err)
+			}
+		})
+		t.Run(scenarioID+"/surplus", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].WitnessSelectors = append(append([]witnessSelector(nil), original...), original[0])
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "witness selectors=") {
+				t.Fatalf("surplus selector error=%v", err)
+			}
+		})
+		t.Run(scenarioID+"/owner-transfer", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].RequirementID = "REQ-PROOFKIT-QUALITY-009"
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "required independent-falsifier binding is missing") {
+				t.Fatalf("owner-transfer error=%v", err)
+			}
+		})
+		t.Run(scenarioID+"/scenario-transfer", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].ScenarioID += ".transferred"
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "required independent-falsifier binding is missing") {
+				t.Fatalf("scenario-transfer error=%v", err)
+			}
+		})
+		t.Run(scenarioID+"/selector-substitution", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].WitnessSelectors[0].Selector = "TestSubstitutedSemanticOwner"
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "witness selectors=") {
+				t.Fatalf("selector-substitution error=%v", err)
+			}
+		})
+		t.Run(scenarioID+"/command-drift", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].WitnessSelectors[0].Command = "go test ./internal/app -run '^TestSubstitutedSemanticOwner$'"
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "selector command=") {
+				t.Fatalf("command-drift error=%v", err)
+			}
+		})
+	}
+
+	for _, scenarioID := range []string{
+		"proofkit.package-boundary.cli-output-root-witnesses",
+		"proofkit.package-boundary.generated-command-caller-preservation",
+		"proofkit.package-boundary.generated-command-field-inventory",
+		"proofkit.package-boundary.launcher-profile-admission",
+		"proofkit.package-boundary.merge-critical-runtime-preconditions",
+		"proofkit.package-boundary.outside-consumer-artifact",
+		"proofkit.package-boundary.package-public-docs-no-mutable-release-facts",
+		"proofkit.package-boundary.python-wheel-generated-continuation",
+		"proofkit.supply-chain-quality.browser-failure-diagnostics-retention",
+		"proofkit.supply-chain-quality.cli-abi-golden",
+		"proofkit.supply-chain-quality.cli-contract-topology",
+		"proofkit.supply-chain-quality.cli-output-witness-contract",
+		"proofkit.supply-chain-quality.codeql-permission-separation",
+		"proofkit.supply-chain-quality.installed-package-json-abi-smoke",
+		"proofkit.supply-chain-quality.osv-permission-separation",
+		"proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
+		"proofkit.supply-chain-quality.release-platform-python-wheels",
+		"proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs",
+		"proofkit.supply-chain-quality.workflow-source-oracles",
+		"proofkit.spec-proof-core.adoption-contract-envelope-cli-abi",
+		"proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
+	} {
+		index := -1
+		for candidate := range bindings.Bindings {
+			if bindings.Bindings[candidate].ScenarioID == scenarioID {
+				index = candidate
+				break
+			}
+		}
+		if index < 0 {
+			t.Fatalf("split binding %s is missing", scenarioID)
+		}
+		t.Run(scenarioID+"/relocated-witness-path", func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			mutated.Bindings[index].WitnessPath = "scripts/workflow_package_gate_oracle_test.go"
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "witness path=") ||
+				!strings.Contains(err.Error(), ", want exact ") {
+				t.Fatalf("relocated witness path error=%v", err)
+			}
+		})
+	}
+}
+
+func cloneBindingFile(source bindingFile) bindingFile {
+	clone := bindingFile{
+		Requirements: append([]bindingRequirement(nil), source.Requirements...),
+		Bindings:     append([]bindingScenario(nil), source.Bindings...),
+	}
+	for index := range clone.Bindings {
+		clone.Bindings[index].CommandIDs = append([]string(nil), source.Bindings[index].CommandIDs...)
+		clone.Bindings[index].WitnessSelectors = append([]witnessSelector(nil), source.Bindings[index].WitnessSelectors...)
+	}
+	return clone
+}
+
+func TestBindingWitnessSelectorsAcceptUnnamedGoTestParameter(t *testing.T) {
+	root := t.TempDir()
+	witnessPath := filepath.Join("internal", "sample", "sample_test.go")
+	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(witnessPath)), 0o755); err != nil {
+		t.Fatalf("mkdir witness directory: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/sample\n\ngo 1.25.0\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod fixture: %v", err)
+	}
+	source := "package sample\n\nimport \"testing\"\n\nfunc TestRunnable(*testing.T) {}\n"
+	if err := os.WriteFile(filepath.Join(root, witnessPath), []byte(source), 0o644); err != nil {
+		t.Fatalf("write witness fixture: %v", err)
+	}
+	bindings := bindingFile{
+		Bindings: []bindingScenario{bindingSelectorFixture(
+			"scenario.unnamed-parameter", witnessPath, "TestRunnable",
+		)},
+	}
+
+	command := exec.Command("go", "test", "./internal/sample", "-run", "^TestRunnable$", "-count=1")
+	command.Dir = root
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("Go toolchain rejected unnamed test parameter: %v\n%s", err, output)
+	}
+	if err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings); err != nil {
+		t.Fatalf("valid unnamed Go test parameter rejected: %v", err)
+	}
+}
+
+func TestBindingWitnessSelectorsRejectInvalidGoTestSignature(t *testing.T) {
+	root := t.TempDir()
+	witnessPath := filepath.Join("internal", "sample", "sample_test.go")
+	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(witnessPath)), 0o755); err != nil {
+		t.Fatalf("mkdir witness directory: %v", err)
+	}
+	source := "package sample\n\nimport \"testing\"\n\nfunc TestNotRunnable() {}\n"
+	if err := os.WriteFile(filepath.Join(root, witnessPath), []byte(source), 0o644); err != nil {
+		t.Fatalf("write witness fixture: %v", err)
+	}
+	bindings := bindingFile{
+		Bindings: []bindingScenario{{
+			ScenarioID:  "scenario.invalid-signature",
+			WitnessPath: witnessPath,
+			WitnessSelectors: []witnessSelector{{
+				Selector: "TestNotRunnable",
+				Command:  "go test ./internal/sample -run '^TestNotRunnable$'",
+			}},
+		}},
+	}
+
+	err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
+	if err == nil || !strings.Contains(err.Error(), "is not a valid Go test function") {
+		t.Fatalf("invalid signature error=%v", err)
+	}
+}
+
+func TestBindingWitnessSelectorsRejectNonTestAndBuildExcludedFiles(t *testing.T) {
+	t.Run("non-test source", func(t *testing.T) {
+		root := t.TempDir()
+		witnessPath := filepath.Join("internal", "sample", "sample.go")
+		if err := os.MkdirAll(filepath.Join(root, filepath.Dir(witnessPath)), 0o755); err != nil {
+			t.Fatalf("mkdir witness directory: %v", err)
+		}
+		source := "package sample\n\nimport \"testing\"\n\nfunc TestLooksRunnable(t *testing.T) {}\n"
+		if err := os.WriteFile(filepath.Join(root, witnessPath), []byte(source), 0o644); err != nil {
+			t.Fatalf("write witness fixture: %v", err)
+		}
+		bindings := bindingFile{Bindings: []bindingScenario{bindingSelectorFixture(
+			"scenario.non-test", witnessPath, "TestLooksRunnable",
+		)}}
+
+		err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
+		if err == nil || !strings.Contains(err.Error(), "must be an active _test.go file") {
+			t.Fatalf("non-test witness error=%v", err)
+		}
+	})
+
+	t.Run("build-excluded test", func(t *testing.T) {
+		root := t.TempDir()
+		packageDir := filepath.Join(root, "internal", "sample")
+		if err := os.MkdirAll(packageDir, 0o755); err != nil {
+			t.Fatalf("mkdir witness directory: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.invalid/fixture\n\ngo 1.25.0\n"), 0o644); err != nil {
+			t.Fatalf("write go.mod: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(packageDir, "sample.go"), []byte("package sample\n"), 0o644); err != nil {
+			t.Fatalf("write package fixture: %v", err)
+		}
+		witnessPath := filepath.Join("internal", "sample", "excluded_test.go")
+		source := "//go:build proofkit_never\n\npackage sample\n\nimport \"testing\"\n\nfunc TestExcluded(t *testing.T) {}\n"
+		if err := os.WriteFile(filepath.Join(root, witnessPath), []byte(source), 0o644); err != nil {
+			t.Fatalf("write excluded witness: %v", err)
+		}
+		bindings := bindingFile{Bindings: []bindingScenario{bindingSelectorFixture(
+			"scenario.excluded", witnessPath, "TestExcluded",
+		)}}
+
+		err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
+		if err == nil || !strings.Contains(err.Error(), "is not active for the current Go build") {
+			t.Fatalf("build-excluded witness error=%v", err)
+		}
+	})
+}
+
+func bindingSelectorFixture(scenarioID, witnessPath, selector string) bindingScenario {
+	return bindingScenario{
+		ScenarioID:  scenarioID,
+		WitnessPath: witnessPath,
+		WitnessSelectors: []witnessSelector{{
+			Selector: selector,
+			Command:  fmt.Sprintf("go test ./%s -run '^%s$'", filepath.ToSlash(filepath.Dir(witnessPath)), selector),
+		}},
 	}
 }
 

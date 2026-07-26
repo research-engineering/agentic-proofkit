@@ -2,10 +2,13 @@ package projectstructure
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
@@ -45,6 +48,54 @@ func TestBuildAdmitsProjectStructureScaffoldAndEmitsBoundedEnvelope(t *testing.T
 	}
 	if maxContextRefs, ok := bounds["maxContextRefs"].(int); !ok || maxContextRefs > envelopeContextLimit {
 		t.Fatalf("bounds=%#v, want maxContextRefs <= %d", bounds, envelopeContextLimit)
+	}
+}
+
+func TestBuildRendererOwnsWorkflowPlanAndSourceReportIdentity(t *testing.T) {
+	profiles := []struct {
+		name             string
+		profile          string
+		pythonExecutable string
+	}{
+		{name: "npm offline", profile: cliexec.ProfileNPMOffline},
+		{name: "python module", profile: cliexec.ProfilePythonModule, pythonExecutable: "/tmp/proofkit-python"},
+	}
+	for _, profile := range profiles {
+		t.Run(profile.name, func(t *testing.T) {
+			renderer, err := cliexec.AdmitLauncherProfile(profile.profile, profile.pythonExecutable)
+			if err != nil {
+				t.Fatalf("AdmitLauncherProfile() error=%v", err)
+			}
+			result, err := BuildResultWithRenderer(validProjectStructureInput(), renderer)
+			if err != nil {
+				t.Fatalf("BuildResultWithRenderer() error=%v", err)
+			}
+			workflow, err := adoptionworkflow.BuildResultWithRenderer(result.AdoptionWorkflowInput, renderer)
+			if err != nil {
+				t.Fatalf("BuildResultWithRenderer(workflow) error=%v", err)
+			}
+			if !reflect.DeepEqual(result.AdoptionWorkflowPlan, workflow.Plan) {
+				t.Fatal("project structure workflow plan does not preserve the admitted renderer")
+			}
+			expectedHash, err := digest.StableJSONSHA256Ref(workflow.Record.JSONValue())
+			if err != nil {
+				t.Fatalf("StableJSONSHA256Ref() error=%v", err)
+			}
+			matches := 0
+			for _, raw := range anyArray(result.Manifest["sourceReports"]) {
+				source := mapValue(raw)
+				if source["reportKind"] != workflow.Record.ReportKind {
+					continue
+				}
+				matches++
+				if source["stableHash"] != expectedHash {
+					t.Fatalf("workflow source report stableHash=%v, want %s", source["stableHash"], expectedHash)
+				}
+			}
+			if matches != 1 {
+				t.Fatalf("workflow source report count=%d, want 1", matches)
+			}
+		})
 	}
 }
 

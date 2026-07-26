@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
 const textExtensions = new Set([
+  ".css",
   ".go",
   ".js",
   ".json",
@@ -20,6 +21,22 @@ const bannedTokens = [
   ["agentic", "platform"].join("-"),
   ["auto", "fleet"].join(""),
 ];
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function tokenPattern(token) {
+  const leftBoundary = /^[a-z0-9]/.test(token) ? "(^|[^a-z0-9])" : "";
+  const rightBoundary = /[a-z0-9]$/.test(token) ? "([^a-z0-9]|$)" : "";
+  return new RegExp(`${leftBoundary}${escapeRegExp(token)}${rightBoundary}`, "i");
+}
+
+const bannedTokenPatterns = bannedTokens.map(tokenPattern);
+
+function containsOrganizationSpecificToken(text) {
+  return bannedTokenPatterns.some((pattern) => pattern.test(text));
+}
 
 function trackedFiles() {
   return execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
@@ -55,7 +72,7 @@ for (const entry of trackedIndexEntries()) {
   const lowerText = execFileSync("git", ["cat-file", "-p", entry.object], {
     encoding: "utf8",
   }).toLowerCase();
-  if (bannedTokens.some((token) => lowerText.includes(token))) {
+  if (containsOrganizationSpecificToken(lowerText)) {
     organizationSpecific.add(entry.file);
   }
 }
@@ -66,7 +83,7 @@ for (const file of trackedFiles()) {
   }
 
   const lowerText = readFileSync(file, "utf8").toLowerCase();
-  if (bannedTokens.some((token) => lowerText.includes(token))) {
+  if (containsOrganizationSpecificToken(lowerText)) {
     organizationSpecific.add(file);
   }
 }

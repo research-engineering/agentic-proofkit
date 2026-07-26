@@ -108,7 +108,7 @@ type precondition struct {
 func Build(raw any) (map[string]any, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return invalidInputOutput(err), 1, nil
+		return nil, 1, err
 	}
 	output, exitCode := buildOutput(input)
 	return output, exitCode, nil
@@ -657,28 +657,6 @@ func ruleResults(blockers []string, failures []string) []any {
 		})
 	}
 	return results
-}
-
-func invalidInputOutput(err error) map[string]any {
-	return map[string]any{
-		"compositionId":         "proofkit.registry-consumer-proof-input-compose.invalid-input",
-		"compositionKind":       compositionKind,
-		"nonClaims":             admit.StringSliceToAny(standardNonClaims),
-		"registryConsumerInput": nil,
-		"ruleResults": []any{
-			map[string]any{
-				"diagnostics": []any{},
-				"message":     admit.RedactDiagnosticValue(err.Error()),
-				"ruleId":      "proofkit.registry-consumer-proof-input-compose.failure.001",
-				"status":      "failed",
-			},
-		},
-		"schemaVersion": 1,
-		"state":         "failed",
-		"summary": map[string]any{
-			"admission": "failed",
-		},
-	}
 }
 
 func matchingFailures(failures []string, marker string) []string {

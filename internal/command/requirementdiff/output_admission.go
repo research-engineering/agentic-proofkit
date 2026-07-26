@@ -24,22 +24,37 @@ func AdmitOutput(raw any, currentSnapshotID string) (map[string]any, error) {
 	if !ok {
 		return nil, fmt.Errorf("requirement semantic diff output must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"baseBaselineVerification", "baseSnapshotId", "changeCount", "changes", "currentBaselineVerification", "currentSnapshotId", "diffId", "diffKind", "nonClaims", "schemaVersion"}, "requirement semantic diff output"); err != nil {
+	switch {
+	case admit.JSONNumberEquals(record["schemaVersion"], 1):
+		return admitV1Output(record, currentSnapshotID)
+	case admit.JSONNumberEquals(record["schemaVersion"], 2):
+		return admitV2Output(record, currentSnapshotID)
+	default:
+		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 1 or 2")
+	}
+}
+
+func admitV2Output(record map[string]any, currentSnapshotID string) (map[string]any, error) {
+	if err := admit.KnownKeys(record, []string{"baseExpectedDigestCoverage", "baseSnapshotId", "changeCount", "changes", "currentExpectedDigestCoverage", "currentSnapshotId", "diffId", "diffKind", "nonClaims", "schemaVersion"}, "requirement semantic diff output v2"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) && record["schemaVersion"] != 1 {
-		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) && record["schemaVersion"] != 2 {
+		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 2")
 	}
 	if record["diffKind"] != "proofkit.requirement-semantic-diff" || record["currentSnapshotId"] != currentSnapshotID {
 		return nil, fmt.Errorf("requirement semantic diff output identity is invalid")
 	}
-	for _, key := range []string{"baseSnapshotId", "currentSnapshotId"} {
-		if _, err := digestRef(record[key], "requirement semantic diff output "+key); err != nil {
+	for _, key := range []string{"baseExpectedDigestCoverage", "currentExpectedDigestCoverage"} {
+		if _, err := admit.Enum(record[key], map[string]struct{}{"all": {}, "none": {}, "partial": {}}, "requirement semantic diff output "+key); err != nil {
 			return nil, err
 		}
 	}
-	for _, key := range []string{"baseBaselineVerification", "currentBaselineVerification"} {
-		if _, err := admit.Enum(record[key], map[string]struct{}{"partially_verified": {}, "unverified": {}, "verified": {}}, "requirement semantic diff output "+key); err != nil {
+	return admitOutputRecord(record)
+}
+
+func admitOutputRecord(record map[string]any) (map[string]any, error) {
+	for _, key := range []string{"baseSnapshotId", "currentSnapshotId"} {
+		if _, err := digestRef(record[key], "requirement semantic diff output "+key); err != nil {
 			return nil, err
 		}
 	}

@@ -56,6 +56,7 @@ type commandDescriptor struct {
 	requiredFlags          []string
 	exactlyOneOfFlagGroups [][]string
 	flagValueRequirements  []flagValueRequirement
+	flagValueChoices       map[string][]string
 	inputSchemaSummary     []string
 	outputModes            []string
 	agentEnvelope          bool
@@ -94,10 +95,10 @@ var commandDescriptors = []commandDescriptor{
 	command("impact", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("impact")),
 	command("init", commandInputNone, flags("--preset"), modes("json"), ownerDirs("initplan"), withRunner(commandRunnerInit), withSemanticAppTests("TestCLIABIGoldenCorpus")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource), withRequiredFlags("--language")),
-	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission"), withInputSchemaSummary("schemaVersion=1", "paritySetId", "sourceProofOwners[]", "targetProofkitRefs[]", "parityRecords[]", "nonClaims[]")),
-	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan"), withInputSchemaSummary("schemaVersion=1", "migrationId", "sourceProofOwners[]", "targetProofkitRefs[]", "parityEvidenceRefs[]", "retainedOwners[]", "retirementCandidates[]", "followUpCommands[]", "nonClaims[]")),
+	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
+	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
 	command("obligation-decision", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("obligationdecision"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
-	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency"), withInputSchemaSummary("schemaVersion=1", "reportId", "expectedDependencySpec", "expectedLockfileIntegrity", "expectedPackageName", "expectedPackageVersion", "admissibleLocations{}", "packageResolution{}", "nonClaims[]")),
+	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency")),
 	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope()),
 	command("producer-policy-self-proof", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("producerpolicyselfproof")),
 	command("proof-obligation-algebra", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("proofobligationalgebra")),
@@ -114,22 +115,22 @@ var commandDescriptors = []commandDescriptor{
 	command("repo-profile-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("repoprofileadmission")),
 	command("requirement-authoring-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementauthoringplan")),
 	command("requirement-bindings", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementbinding")),
-	command("requirement-browser-server", commandInputRequired, flags("--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerRequirementBrowserServer), withSemanticAppTests("TestRequirementBrowserServerSpecTreeCLIABI"), withRequiredFlags("--view"), withFlagValueRequirement("--session-mode", "one-shot-question", "--open", "--serve", "--view"), withInputSchemaSummary("workspace mode: schemaVersion=1", "workspace mode: workspaceId", "workspace mode: context=proofkit.requirement-context", "workspace mode: diffInput=proofkit.requirement-semantic-diff-input (optional)", "workspace mode: graphInput=proofkit.requirement-traceability-graph-input schemaVersion=2 (optional)", "--session-mode values: browse|one-shot-question", "one-shot-question requires --view workspace --serve --open", "--session-timeout-seconds is 1..7200 and requires one-shot-question", "source|proof|coverage|spec-tree modes retain their owner input contracts")),
-	command("requirement-context-compose", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("requirementcontext"), withRunner(commandRunnerRequirementContextCompose), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withInputSchemaSummary("schemaVersion=1", "catalogId", "specTree.path", "requirementSources[] (non-empty)", "requirementSources[].nodeId", "requirementSources[].path", "expectedSourceDigest (optional sha256 ref)", "proofBinding.path (optional)", "coverage.path (optional)", "exact catalog paths only; no discovery")),
-	command("requirement-context-slice", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementcontext"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI"), withInputSchemaSummary("schemaVersion=1", "sliceId", "context=proofkit.requirement-context", "query.profile=routing|specification|proof|coverage|review", "query.nodeIds[]|requirementIds[]|ownerIds[]|lifecycleStates[]", "query.maxDepth=0..512", "query.maxNodes=1..4096", "query.maxRequirements=1..16384")),
+	command("requirement-browser-server", commandInputRequired, flags("--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerRequirementBrowserServer), withSemanticAppTests("TestRequirementBrowserServerSpecTreeCLIABI"), withRequiredFlags("--view"), withFlagValueRequirement("--session-mode", "one-shot-question", "--open", "--serve", "--view")),
+	command("requirement-context-compose", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("requirementcontext"), withRunner(commandRunnerRequirementContextCompose), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root")),
+	command("requirement-context-slice", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementcontext"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI")),
 	command("requirement-coverage-input-compose", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementcoverageinput")),
 	command("requirement-coverage-view", commandInputRequired, flags("--agent-envelope", "--format", "--input", "--input-pointer"), modes("html", "json", "markdown"), ownerDirs("requirementcoverageview"), withRunner(commandRunnerRequirementView), withAgentEnvelope()),
 	command("requirement-impact-input-compose", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementimpactinput")),
 	command("requirement-proof-resolver", commandInputRequired, flags("--empty-local-environment-policy", "--input", "--input-pointer", "--local-environment-class"), modes("json"), ownerDirs("requirementbinding"), withRunner(commandRunnerRequirementProofResolver), withExactlyOneOfFlags("--empty-local-environment-policy", "--local-environment-class")),
 	command("requirement-proof-source-set", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementproofsourceset")),
 	command("requirement-proof-view", commandInputRequired, flags("--empty-local-environment-policy", "--format", "--input", "--input-pointer", "--local-environment-class", "--scope"), modes("html", "json", "markdown"), ownerDirs("requirementproofview"), withRunner(commandRunnerRequirementView)),
-	command("requirement-semantic-diff", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementdiff"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI"), withInputSchemaSummary("schemaVersion=1", "diffId", "baseContext=proofkit.requirement-context", "currentContext=proofkit.requirement-context", "query.requirementIds[] (optional)", "query.ownerIds[] (optional)", "query.maxChanges=1..8192 (optional)")),
+	command("requirement-semantic-diff", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementdiff"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI")),
 	command("requirement-source-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementsourceadmission")),
 	command("requirement-source-transition", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementsourcetransition")),
 	command("requirement-source-view", commandInputRequired, flags("--format", "--input", "--input-pointer"), modes("html", "json", "markdown"), ownerDirs("requirementsourceview"), withRunner(commandRunnerRequirementView)),
 	command("requirement-spec-tree", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementspectree")),
 	command("requirement-spec-tree-view", commandInputRequired, flags("--format", "--input", "--input-pointer", "--output"), modes("html", "json", "markdown"), ownerDirs("requirementspectree"), withRunner(commandRunnerRequirementView)),
-	command("requirement-traceability-graph", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementgraph"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI"), withInputSchemaSummary("schemaVersion=2", "graphId", "context=proofkit.requirement-context", "codeSources[].path+content (optional, bounded UTF-8)", "codeTopology.nodes[].abstractionLevel=repository|package|module|file|symbol|source_range", "codeTopology.nodes[].sourceDigest+currentnessState", "codeTopology.edges[].evidenceRefs+authorityClass+currentnessState", "codeTopology.nativeCoverage[].producerId+evidenceRef+authorityClass+currentnessState+state")),
+	command("requirement-traceability-graph", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementgraph"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI")),
 	command("scaffold-profile-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("scaffoldprofileplan")),
 	command("scaffold-project-structure", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("projectstructure"), withRunner(commandRunnerProjectStructure), withAgentEnvelope()),
 	command("selective-gate-evidence", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("selectivegateevidence"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
@@ -142,7 +143,7 @@ var commandDescriptors = []commandDescriptor{
 	command("stack-preset", commandInputNone, flags("--preset"), modes("json"), ownerDirs("stackpreset"), withRunner(commandRunnerStackPreset), withSemanticAppTests("TestNoInputCommandsHaveCommandSpecificBehavior"), withRequiredFlags("--preset")),
 	command("test-evidence-inventory", commandInputRequired, flags("--input", "--input-pointer", "--normalized-inventory", "--projection"), modes("json", "normalized-inventory"), ownerDirs("proofbindingtestinventory", "testevidenceinventory"), withRunner(commandRunnerTestEvidenceInventory)),
 	command("text-policy", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("textpolicy")),
-	command("typescript-public-api-surfaces", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("publicapi"), withRunner(commandRunnerTypeScriptPublicAPISurfaces), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withInputSchemaSummary("schemaVersion=1", "machineContract=public_api_surfaces", "entries[].packageManifestPath", "entries[].packageName", "entries[].exportKey", "entries[].exportConditions[] (non-empty, sorted unique by condition)", "entries[].exportConditions[].condition", "entries[].exportConditions[].path", "entries[].exportConditions[].sourcePath (declared and canonical target .ts/.mts/.cts)", "entries[].runtimeExports[]", "entries[].typeExports[]", "entries[].deniedExportKeys[] (optional)", "sourceGrammar=fail_closed_restricted_typescript_exports_v1", "maxSourceFileBytes=8388608", "maxPackageManifestBytes=262144", "maxAggregateFileReadBytes=67108864")),
+	command("typescript-public-api-surfaces", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("publicapi"), withRunner(commandRunnerTypeScriptPublicAPISurfaces), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root")),
 	command("witness-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("witnessplan")),
 	command("witness-scheduler-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("witnessschedulerplan")),
 	command("workspace-changed-package-plan", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("workspaceplanning"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
@@ -200,6 +201,10 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 	for _, option := range options {
 		option(&descriptor)
 	}
+	if metadata, ok := generatedCommandContractMetadataByName[name]; ok {
+		descriptor.inputSchemaSummary = cloneStrings(metadata.InputSchemaSummary)
+		descriptor.flagValueChoices = cloneStringMap(metadata.FlagChoices)
+	}
 	return descriptor
 }
 
@@ -237,12 +242,6 @@ func withContractEnvelope() commandDescriptorOption {
 func withSemanticAppTests(testNames ...string) commandDescriptorOption {
 	return func(descriptor *commandDescriptor) {
 		descriptor.semanticAppTests = cloneStrings(testNames)
-	}
-}
-
-func withInputSchemaSummary(fields ...string) commandDescriptorOption {
-	return func(descriptor *commandDescriptor) {
-		descriptor.inputSchemaSummary = cloneStrings(fields)
 	}
 }
 
@@ -324,6 +323,11 @@ func buildCommandDescriptorIndex(descriptors []commandDescriptor) map[string]com
 				}
 			}
 		}
+		for flag, choices := range descriptor.flagValueChoices {
+			if !slices.Contains(descriptor.allowedFlags, flag) || !isSortedUnique(choices) {
+				panic("invalid generated flag choices: " + descriptor.name + " " + flag)
+			}
+		}
 		index[descriptor.name] = descriptor.clone()
 	}
 	return index
@@ -399,6 +403,7 @@ func (descriptor commandDescriptor) clone() commandDescriptor {
 	descriptor.requiredFlags = cloneStrings(descriptor.requiredFlags)
 	descriptor.exactlyOneOfFlagGroups = cloneStringMatrix(descriptor.exactlyOneOfFlagGroups)
 	descriptor.flagValueRequirements = cloneFlagValueRequirements(descriptor.flagValueRequirements)
+	descriptor.flagValueChoices = cloneStringMap(descriptor.flagValueChoices)
 	descriptor.inputSchemaSummary = cloneStrings(descriptor.inputSchemaSummary)
 	descriptor.outputModes = cloneStrings(descriptor.outputModes)
 	descriptor.semanticAppTests = cloneStrings(descriptor.semanticAppTests)
@@ -425,4 +430,15 @@ func cloneFlagValueRequirements(values []flagValueRequirement) []flagValueRequir
 
 func cloneStrings(values []string) []string {
 	return append([]string(nil), values...)
+}
+
+func cloneStringMap(values map[string][]string) map[string][]string {
+	if values == nil {
+		return nil
+	}
+	out := make(map[string][]string, len(values))
+	for key, value := range values {
+		out[key] = cloneStrings(value)
+	}
+	return out
 }

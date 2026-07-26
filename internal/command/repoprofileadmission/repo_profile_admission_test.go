@@ -44,14 +44,10 @@ func TestBuildAdmitsOptionalInputSchemaVersionOne(t *testing.T) {
 
 	input = validRepoProfileInput()
 	input["schemaVersion"] = json.Number("2")
-	record, exitCode, err = Build(input)
-	if err != nil {
-		t.Fatalf("Build() unexpected error = %v", err)
+	_, exitCode, err = Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "schemaVersion must be 1") {
+		t.Fatalf("Build() admitted invalid schemaVersion: exit=%d error=%v", exitCode, err)
 	}
-	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() admitted invalid schemaVersion: exit=%d state=%s", exitCode, record.State)
-	}
-	assertRecordContains(t, record.JSONValue(), "schemaVersion must be 1")
 }
 
 func TestBuildRejectsUnknownRepoProfileAdmissionFields(t *testing.T) {
@@ -89,15 +85,9 @@ func TestBuildRejectsUnknownRepoProfileAdmissionFields(t *testing.T) {
 		t.Run(item.name, func(t *testing.T) {
 			input := validRepoProfileInput()
 			item.mutate(input)
-			record, exitCode, err := Build(input)
-			if err != nil {
-				t.Fatalf("Build() unexpected error = %v", err)
-			}
-			if exitCode == 0 || record.State != "failed" {
-				t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
-			}
-			if !strings.Contains(record.RuleResults[0].Message, "unsupported field") {
-				t.Fatalf("failure message=%q, want unsupported field", record.RuleResults[0].Message)
+			_, exitCode, err := Build(input)
+			if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "unsupported field") {
+				t.Fatalf("Build() exit=%d error=%v, want unsupported field", exitCode, err)
 			}
 		})
 	}
@@ -125,19 +115,12 @@ func TestBuildRejectsSchemeAndDriveLikeRepoProfilePaths(t *testing.T) {
 		t.Run(item.name, func(t *testing.T) {
 			input := validRepoProfileInput()
 			item.mutate(input)
-			record, exitCode, err := Build(input)
-			if err != nil {
-				t.Fatalf("Build() unexpected error = %v", err)
+			_, exitCode, err := Build(input)
+			if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "repository-relative POSIX path") {
+				t.Fatalf("Build() exit=%d error=%v, want path rejection", exitCode, err)
 			}
-			if exitCode == 0 || record.State != "failed" {
-				t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
-			}
-			if !strings.Contains(record.RuleResults[0].Message, "repository-relative POSIX path") {
-				t.Fatalf("failure message=%q, want path rejection", record.RuleResults[0].Message)
-			}
-			encoded, _ := json.Marshal(record.JSONValue())
-			if strings.Contains(string(encoded), "file:docs/INDEX.md") || strings.Contains(string(encoded), "C:/outside/INDEX.md") {
-				t.Fatalf("Build() leaked rejected caller path: %s", encoded)
+			if strings.Contains(err.Error(), "file:docs/INDEX.md") || strings.Contains(err.Error(), "C:/outside/INDEX.md") {
+				t.Fatalf("Build() leaked rejected caller path: %s", err)
 			}
 		})
 	}
@@ -149,16 +132,12 @@ func TestBuildRedactsCallerPathDiagnostics(t *testing.T) {
 	documents := profile["documents"].(map[string]any)
 	documents["policyPath"] = "docs/sk-proj-abcdefghijklmnop.md"
 
-	record, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() unexpected error = %v", err)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("Build() exit=%d error=%v, want secret-like rejection", exitCode, err)
 	}
-	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
-	}
-	encoded, _ := json.Marshal(record.JSONValue())
-	if strings.Contains(string(encoded), "abcdefghijklmnop") {
-		t.Fatalf("Build() leaked caller path diagnostic: %s", encoded)
+	if strings.Contains(err.Error(), "abcdefghijklmnop") {
+		t.Fatalf("Build() leaked caller path diagnostic: %s", err)
 	}
 }
 
@@ -335,15 +314,9 @@ func TestBuildRejectsShellControlCommandEnvironmentPair(t *testing.T) {
 		map[string]any{"command": "go test ./... && curl example.test", "environmentClasses": []any{"local-go"}},
 	}
 
-	record, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() unexpected error = %v", err)
-	}
-	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
-	}
-	if !strings.Contains(record.RuleResults[0].Message, "display-only command text") {
-		t.Fatalf("failure message=%q, want display-only command rejection", record.RuleResults[0].Message)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "display-only command text") {
+		t.Fatalf("Build() exit=%d error=%v, want display-only command rejection", exitCode, err)
 	}
 }
 

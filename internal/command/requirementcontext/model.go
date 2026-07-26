@@ -23,6 +23,7 @@ const (
 var boundaryNonClaims = []string{
 	"Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
 	"Requirement context does not execute native witnesses or prove source freshness after composition.",
+	"Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness.",
 }
 
 type Source struct {
@@ -36,15 +37,15 @@ type Source struct {
 }
 
 type Snapshot struct {
-	BaselineVerification string
-	CatalogID            string
-	Coverage             map[string]any
-	ProofBinding         *requirementbinding.Input
-	Projections          map[string]any
-	RequirementSources   []requirementsourceadmission.Source
-	SnapshotID           string
-	Sources              []Source
-	Tree                 requirementspectree.Tree
+	CatalogID              string
+	Coverage               map[string]any
+	ExpectedDigestCoverage string
+	ProofBinding           *requirementbinding.Input
+	Projections            map[string]any
+	RequirementSources     []requirementsourceadmission.Source
+	SnapshotID             string
+	Sources                []Source
+	Tree                   requirementspectree.Tree
 }
 
 func SnapshotValue(snapshot Snapshot) map[string]any {
@@ -68,14 +69,14 @@ func SnapshotValue(snapshot Snapshot) map[string]any {
 		sources = append(sources, record)
 	}
 	return map[string]any{
-		"baselineVerification": snapshot.BaselineVerification,
-		"catalogId":            snapshot.CatalogID,
-		"contextKind":          ContextKind,
-		"nonClaims":            admit.StringSliceToAny(boundaryNonClaims),
-		"projections":          snapshot.Projections,
-		"schemaVersion":        json.Number("1"),
-		"snapshotId":           snapshot.SnapshotID,
-		"sources":              sources,
+		"catalogId":              snapshot.CatalogID,
+		"contextKind":            ContextKind,
+		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
+		"nonClaims":              admit.StringSliceToAny(boundaryNonClaims),
+		"projections":            snapshot.Projections,
+		"schemaVersion":          json.Number("2"),
+		"snapshotId":             snapshot.SnapshotID,
+		"sources":                sources,
 	}
 }
 
@@ -84,21 +85,44 @@ func AdmitSnapshot(raw any) (Snapshot, error) {
 	if !ok {
 		return Snapshot{}, fmt.Errorf("requirement context must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"baselineVerification", "catalogId", "contextKind", "nonClaims", "projections", "schemaVersion", "snapshotId", "sources"}, "requirement context"); err != nil {
+	switch {
+	case admit.JSONNumberEquals(record["schemaVersion"], 1):
+		return admitV1Snapshot(record)
+	case admit.JSONNumberEquals(record["schemaVersion"], 2):
+		return admitV2Snapshot(record)
+	default:
+		return Snapshot{}, fmt.Errorf("requirement context schemaVersion must be 1 or 2")
+	}
+}
+
+func admitV2Snapshot(record map[string]any) (Snapshot, error) {
+	if err := admit.KnownKeys(record, []string{"catalogId", "contextKind", "expectedDigestCoverage", "nonClaims", "projections", "schemaVersion", "snapshotId", "sources"}, "requirement context v2"); err != nil {
 		return Snapshot{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) || record["contextKind"] != ContextKind {
-		return Snapshot{}, fmt.Errorf("requirement context identity is invalid")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) || record["contextKind"] != ContextKind {
+		return Snapshot{}, fmt.Errorf("requirement context v2 identity is invalid")
 	}
+	coverage, err := admit.Enum(record["expectedDigestCoverage"], map[string]struct{}{"all": {}, "none": {}, "partial": {}}, "requirement context expectedDigestCoverage")
+	if err != nil {
+		return Snapshot{}, err
+	}
+	snapshot, err := admitSnapshotRecord(record, boundaryNonClaims)
+	if err != nil {
+		return Snapshot{}, err
+	}
+	if coverage != expectedDigestCoverage(snapshot.Sources) {
+		return Snapshot{}, fmt.Errorf("requirement context expectedDigestCoverage does not match admitted sources")
+	}
+	snapshot.ExpectedDigestCoverage = coverage
+	return validateSnapshotSize(snapshot)
+}
+
+func admitSnapshotRecord(record map[string]any, expectedNonClaims []string) (Snapshot, error) {
 	catalogID, err := admit.RuleID(record["catalogId"], "requirement context catalogId")
 	if err != nil {
 		return Snapshot{}, err
 	}
 	snapshotID, err := admitDigestRef(record["snapshotId"], "requirement context snapshotId")
-	if err != nil {
-		return Snapshot{}, err
-	}
-	verification, err := admit.Enum(record["baselineVerification"], map[string]struct{}{"verified": {}, "partially_verified": {}, "unverified": {}}, "requirement context baselineVerification")
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -120,11 +144,7 @@ func AdmitSnapshot(raw any) (Snapshot, error) {
 	if err := validateProjectionSources(tree, requirementSources, proofBinding, coverage, sources); err != nil {
 		return Snapshot{}, err
 	}
-	derivedVerification := baselineVerification(sources)
-	if verification != derivedVerification {
-		return Snapshot{}, fmt.Errorf("requirement context baselineVerification does not match admitted sources")
-	}
-	if err := admitExactNonClaims(record["nonClaims"]); err != nil {
+	if err := admitExactNonClaims(record["nonClaims"], expectedNonClaims); err != nil {
 		return Snapshot{}, err
 	}
 	identityValue := map[string]any{"catalogId": catalogID, "projections": canonicalProjections, "sources": sourceIdentityValues(sources)}
@@ -136,16 +156,19 @@ func AdmitSnapshot(raw any) (Snapshot, error) {
 		return Snapshot{}, fmt.Errorf("requirement context snapshotId does not match admitted content")
 	}
 	snapshot := Snapshot{
-		BaselineVerification: verification,
-		CatalogID:            catalogID,
-		Coverage:             coverage,
-		ProofBinding:         proofBinding,
-		Projections:          canonicalProjections,
-		RequirementSources:   requirementSources,
-		SnapshotID:           snapshotID,
-		Sources:              sources,
-		Tree:                 tree,
+		CatalogID:          catalogID,
+		Coverage:           coverage,
+		ProofBinding:       proofBinding,
+		Projections:        canonicalProjections,
+		RequirementSources: requirementSources,
+		SnapshotID:         snapshotID,
+		Sources:            sources,
+		Tree:               tree,
 	}
+	return snapshot, nil
+}
+
+func validateSnapshotSize(snapshot Snapshot) (Snapshot, error) {
 	fullValue, err := stablejson.Marshal(SnapshotValue(snapshot))
 	if err != nil {
 		return Snapshot{}, err
@@ -309,12 +332,12 @@ func requirementSourceValues(sources []requirementsourceadmission.Source) []any 
 	return values
 }
 
-func admitExactNonClaims(raw any) error {
+func admitExactNonClaims(raw any, expectedNonClaims []string) error {
 	values, ok := raw.([]any)
-	if !ok || len(values) != len(boundaryNonClaims) {
+	if !ok || len(values) != len(expectedNonClaims) {
 		return fmt.Errorf("requirement context nonClaims must equal the command-owned boundary")
 	}
-	for index, expected := range boundaryNonClaims {
+	for index, expected := range expectedNonClaims {
 		if values[index] != expected {
 			return fmt.Errorf("requirement context nonClaims must equal the command-owned boundary")
 		}

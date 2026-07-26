@@ -3,6 +3,8 @@ package app
 import (
 	"fmt"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 type commandFamily struct {
@@ -21,17 +23,17 @@ type commandFamilyCatalog struct {
 	SchemaVersion        int
 }
 
-func commandFamiliesUsage() string {
+func commandFamiliesUsageWithRenderer(renderer cliexec.Renderer) string {
 	lines := []string{"Command families:"}
 	for _, family := range generatedCommandFamilyCatalog().Families {
 		lines = append(lines, fmt.Sprintf("  %s\t%s", family.ID, family.Label))
 		lines = append(lines, "    "+family.Purpose)
+		lines = append(lines, "    "+renderer.DisplayCommand("help", "family", family.ID))
 	}
-	lines = append(lines, "", "Use `agentic-proofkit help family <family-id>` for leaf commands.")
 	return strings.Join(lines, "\n") + "\n"
 }
 
-func commandFamilyUsage(familyID string) (string, error) {
+func commandFamilyUsageWithRenderer(familyID string, renderer cliexec.Renderer) (string, error) {
 	for _, family := range generatedCommandFamilyCatalog().Families {
 		if family.ID != familyID {
 			continue
@@ -46,6 +48,7 @@ func commandFamilyUsage(familyID string) (string, error) {
 		}
 		for _, command := range family.Commands {
 			lines = append(lines, "  "+command)
+			lines = append(lines, "    "+renderer.DisplayCommand("help", command))
 		}
 		return strings.Join(lines, "\n") + "\n", nil
 	}

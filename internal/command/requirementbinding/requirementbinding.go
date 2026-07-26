@@ -61,8 +61,14 @@ type Binding struct {
 	WitnessID          string
 	WitnessKind        string
 	WitnessPath        string
+	WitnessSelectors   []WitnessSelector
 	CommandIDs         []string
 	EnvironmentClasses []string
+}
+
+type WitnessSelector struct {
+	Command  string
+	Selector string
 }
 
 type WitnessCommand struct {
@@ -245,7 +251,7 @@ func InputValue(input Input) map[string]any {
 	}
 	bindings := make([]any, 0, len(input.Bindings))
 	for _, binding := range input.Bindings {
-		bindings = append(bindings, map[string]any{
+		value := map[string]any{
 			"commandIds":         admit.StringSliceToAny(binding.CommandIDs),
 			"environmentClasses": admit.StringSliceToAny(binding.EnvironmentClasses),
 			"requirementId":      binding.RequirementID,
@@ -253,7 +259,11 @@ func InputValue(input Input) map[string]any {
 			"witnessId":          binding.WitnessID,
 			"witnessKind":        binding.WitnessKind,
 			"witnessPath":        binding.WitnessPath,
-		})
+		}
+		if len(binding.WitnessSelectors) > 0 {
+			value["witnessSelectors"] = witnessSelectorValues(binding.WitnessSelectors)
+		}
+		bindings = append(bindings, value)
 	}
 	witnessCommands := make([]any, 0, len(input.WitnessCommands))
 	for _, command := range input.WitnessCommands {
@@ -550,7 +560,7 @@ func admitBinding(raw any) (Binding, error) {
 	if !ok {
 		return Binding{}, fmt.Errorf("proof binding record must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"commandIds", "environmentClasses", "requirementId", "scenarioId", "witnessId", "witnessKind", "witnessPath"}, "proof binding record"); err != nil {
+	if err := admit.KnownKeys(record, []string{"commandIds", "environmentClasses", "requirementId", "scenarioId", "witnessId", "witnessKind", "witnessPath", "witnessSelectors"}, "proof binding record"); err != nil {
 		return Binding{}, err
 	}
 	requirementID, err := admit.RuleID(record["requirementId"], "binding requirementId")
@@ -585,15 +595,72 @@ func admitBinding(raw any) (Binding, error) {
 	if err != nil {
 		return Binding{}, err
 	}
+	witnessSelectors, err := admitWitnessSelectors(record["witnessSelectors"])
+	if err != nil {
+		return Binding{}, err
+	}
 	return Binding{
 		RequirementID:      requirementID,
 		ScenarioID:         scenarioID,
 		WitnessID:          witnessID,
 		WitnessKind:        witnessKind,
 		WitnessPath:        witnessPath,
+		WitnessSelectors:   witnessSelectors,
 		CommandIDs:         commandIDs,
 		EnvironmentClasses: environmentClasses,
 	}, nil
+}
+
+func admitWitnessSelectors(raw any) ([]WitnessSelector, error) {
+	if raw == nil {
+		return []WitnessSelector{}, nil
+	}
+	values, ok := raw.([]any)
+	if !ok || len(values) == 0 {
+		return nil, fmt.Errorf("witnessSelectors must be a non-empty array when present")
+	}
+	selectors := make([]WitnessSelector, 0, len(values))
+	seen := map[string]struct{}{}
+	for index, rawSelector := range values {
+		record, ok := rawSelector.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("witnessSelectors[%d] must be an object", index)
+		}
+		if err := admit.KnownKeys(record, []string{"command", "selector"}, "witness selector"); err != nil {
+			return nil, err
+		}
+		selector, err := admit.NonEmptyText(record["selector"], "witness selector selector")
+		if err != nil {
+			return nil, err
+		}
+		if strings.ContainsAny(selector, " \t\r\n") {
+			return nil, fmt.Errorf("witness selector selector must not contain whitespace")
+		}
+		if _, duplicate := seen[selector]; duplicate {
+			return nil, fmt.Errorf("witness selector selectors must be unique")
+		}
+		seen[selector] = struct{}{}
+		command, err := admit.DisplayOnlyCommandText(record["command"], "witness selector command")
+		if err != nil {
+			return nil, err
+		}
+		if !strings.Contains(command, selector) {
+			return nil, fmt.Errorf("witness selector command must contain its selector")
+		}
+		selectors = append(selectors, WitnessSelector{Command: command, Selector: selector})
+	}
+	sort.Slice(selectors, func(left, right int) bool {
+		return selectors[left].Selector < selectors[right].Selector
+	})
+	return selectors, nil
+}
+
+func witnessSelectorValues(selectors []WitnessSelector) []any {
+	values := make([]any, 0, len(selectors))
+	for _, selector := range selectors {
+		values = append(values, map[string]any{"command": selector.Command, "selector": selector.Selector})
+	}
+	return values
 }
 
 func admitWitnessCommands(raw any) ([]WitnessCommand, error) {
@@ -750,14 +817,18 @@ func buildGraph(input Input) map[string]any {
 	for _, requirement := range input.Requirements {
 		scenarios := make([]any, 0, len(bindingsByRequirement[requirement.RequirementID]))
 		for _, binding := range bindingsByRequirement[requirement.RequirementID] {
-			scenarios = append(scenarios, map[string]any{
+			scenario := map[string]any{
 				"commandIds":         admit.StringSliceToAny(binding.CommandIDs),
 				"environmentClasses": admit.StringSliceToAny(binding.EnvironmentClasses),
 				"scenarioId":         binding.ScenarioID,
 				"witnessId":          binding.WitnessID,
 				"witnessKind":        binding.WitnessKind,
 				"witnessPath":        binding.WitnessPath,
-			})
+			}
+			if len(binding.WitnessSelectors) > 0 {
+				scenario["witnessSelectors"] = witnessSelectorValues(binding.WitnessSelectors)
+			}
+			scenarios = append(scenarios, scenario)
 		}
 		requirements = append(requirements, map[string]any{
 			"claimLevel":    requirement.ClaimLevel,

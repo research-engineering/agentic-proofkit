@@ -302,17 +302,10 @@ func TestBuildRejectsMalformedSmokeDigestAsInvalidInput(t *testing.T) {
 	input := validComposeInput(t)
 	input["smoke"].(map[string]any)["binarySmokeOutputSha256"] = strings.Repeat("A", 64)
 
-	output, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() error=%v", err)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "must be lowercase sha256 hex") {
+		t.Fatalf("Build() exit=%d error=%v, want admission failure", exitCode, err)
 	}
-	if exitCode == 0 || output["state"] != "failed" {
-		t.Fatalf("Build() exit=%d state=%v, want failed", exitCode, output["state"])
-	}
-	if output["registryConsumerInput"] != nil {
-		t.Fatalf("invalid input output must not emit registryConsumerInput")
-	}
-	assertRuleMessage(t, output, "must be lowercase sha256 hex")
 }
 
 func TestBuildRejectsSecretLikeReleaseAuthorityFreeTextWithoutComposedInput(t *testing.T) {

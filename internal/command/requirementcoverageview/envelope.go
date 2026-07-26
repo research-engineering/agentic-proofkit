@@ -3,16 +3,18 @@ package requirementcoverageview
 import (
 	"fmt"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
-func agentEnvelope(view map[string]any) map[string]any {
+func agentEnvelope(view map[string]any, renderer cliexec.Renderer) map[string]any {
 	state := stringValue(view["state"])
 	failures := stringArray(view["failures"])
 	commands := []map[string]any{}
 	if state == "failed" {
 		commands = append(commands, map[string]any{
-			"argv":      []any{"agentic-proofkit", "requirement-coverage-view", "--input", "<coverage-input.json>"},
+			"argv":      admit.StringSliceToAny(renderer.Argv("requirement-coverage-view", "--input", "<coverage-input.json>")),
 			"commandId": "proofkit.requirement-coverage-view.rerun",
 			"nonClaim":  "Command refs are suggestions only; the consumer repository owns paths and execution.",
 			"reason":    "Rebuild the coverage view after repairing caller-owned coverage input.",

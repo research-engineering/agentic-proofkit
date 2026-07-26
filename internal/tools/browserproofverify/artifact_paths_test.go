@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,6 +26,36 @@ func TestPrepareBrowserProofRunCreatesAConfinedDisposableDirectory(t *testing.T)
 	}
 	if _, err := os.Lstat(filepath.Join(root, filepath.FromSlash(paths.RunDirectory))); !os.IsNotExist(err) {
 		t.Fatalf("run directory survived cleanup: %v", err)
+	}
+}
+
+func TestFinalizeBrowserProofRunCleansSuccessAndRetainsFailureDiagnostics(t *testing.T) {
+	root := t.TempDir()
+	successPaths, err := prepareBrowserProofRun(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := finalizeBrowserProofRun(root, successPaths.RunDirectory, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Lstat(filepath.Join(root, filepath.FromSlash(successPaths.RunDirectory))); !os.IsNotExist(err) {
+		t.Fatalf("successful run directory survived cleanup: %v", err)
+	}
+
+	failurePaths, err := prepareBrowserProofRun(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	diagnosticPath := filepath.Join(root, filepath.FromSlash(failurePaths.RunDirectory), "playwright-report.json")
+	if err := os.WriteFile(diagnosticPath, []byte("{}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runErr := errors.New("browser proof failed")
+	if err := finalizeBrowserProofRun(root, failurePaths.RunDirectory, runErr); !errors.Is(err, runErr) {
+		t.Fatalf("finalizeBrowserProofRun() error=%v, want original failure", err)
+	}
+	if content, err := os.ReadFile(diagnosticPath); err != nil || string(content) != "{}\n" {
+		t.Fatalf("failed run diagnostic was not retained: content=%q err=%v", content, err)
 	}
 }
 

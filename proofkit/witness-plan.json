@@ -173,6 +173,35 @@
     },
     {
       "schemaVersion": 1,
+      "id": "proofkit.command-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "command-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "local-go-static",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "schemaVersion": 1,
       "id": "proofkit.go-fmt",
       "cwd": ".",
       "argv": [
@@ -738,6 +767,7 @@
         "internal/kernel/admit",
         "internal/kernel/agentenvelope",
         "internal/kernel/browserdoc",
+        "internal/kernel/cliexec",
         "internal/kernel/compactproofcontract",
         "internal/kernel/digest",
         "internal/kernel/markdownfmt",
@@ -788,8 +818,8 @@
         "timeoutMs": 600000
       },
       "nonClaims": [
-        "Browser runtime proof does not prove registry publication, rollout, or production readiness.",
-        "Pinned Playwright engines are not branded browser compatibility proof."
+        "Browser runtime proof does not establish full WCAG 2.2 conformance, complete screen-reader interoperability, every operating-system theme, 400-percent zoom behavior, registry publication, rollout, or production readiness.",
+        "Pinned Chromium, Firefox, and Playwright WebKit engines do not prove branded Safari compatibility."
       ]
     },
     {
@@ -840,6 +870,40 @@
       },
       "nonClaims": [
         "Self-hosting receipt output includes current timestamp and admitted CI environment metadata.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.command-contract-check",
+      "inputSelectors": [
+        "internal/app/command_contract_generated.go",
+        "internal/command/stackpreset/preset_ids_generated.go",
+        "internal/tools/commandcontractgen",
+        "proofkit/cli-contract.v2.json"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [],
+      "exclusiveLocks": [],
+      "sideEffectClass": "none",
+      "deterministicOutput": true,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Generated projection freshness does not execute native command semantics or validate package publication.",
         "Self-hosting witness policy does not prove producer authentication or merge approval."
       ]
     },

@@ -7,8 +7,12 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
 const testLicenseContent = "MIT License\n"
@@ -113,6 +117,112 @@ func TestMetadataUsesCoreMetadata24LicenseFields(t *testing.T) {
 	if strings.Contains(content, "\nLicense: ") {
 		t.Fatalf("metadata() retained deprecated License field:\n%s", content)
 	}
+}
+
+func TestREADMEPlatformAndPythonProjection(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "..", "README.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	block := markerBlock(t, string(content), "<!-- proofkit:platform-python:start -->", "<!-- proofkit:platform-python:end -->")
+	normalizedBlock := strings.Join(strings.Fields(block), " ")
+	ownerMinimums := map[string]string{}
+	ownerArchitectures := map[string][]string{}
+	for _, target := range releaseplatform.Targets() {
+		var minimum string
+		switch target.GOOS {
+		case "darwin":
+			match := regexp.MustCompile(`^macosx_([0-9]+)_0_(?:arm64|x86_64)$`).FindStringSubmatch(target.PlatformTag)
+			if len(match) != 2 {
+				t.Fatalf("README macOS projection owner has unexpected tag %s", target.PlatformTag)
+			}
+			minimum = match[1]
+		case "linux":
+			match := regexp.MustCompile(`^manylinux_([0-9]+)_([0-9]+)_(?:aarch64|x86_64)$`).FindStringSubmatch(target.PlatformTag)
+			if len(match) != 3 {
+				t.Fatalf("README Linux projection owner has unexpected tag %s", target.PlatformTag)
+			}
+			minimum = match[1] + "." + match[2]
+		default:
+			t.Fatalf("README projection owner contains undocumented OS %s", target.GOOS)
+		}
+		if prior := ownerMinimums[target.GOOS]; prior != "" && prior != minimum {
+			t.Fatalf("release targets for %s disagree on minimum %s versus %s", target.GOOS, prior, minimum)
+		}
+		ownerMinimums[target.GOOS] = minimum
+		ownerArchitectures[target.GOOS] = append(ownerArchitectures[target.GOOS], target.NPMCPU)
+	}
+	if len(ownerMinimums) != 2 {
+		t.Fatalf("README supported/unsupported OS projection is not closed: owners=%v", ownerMinimums)
+	}
+	expectedBlock := strings.Join([]string{
+		fmt.Sprintf("Supported binary targets are macOS %s or later on %s.", ownerMinimums["darwin"], strings.Join(ownerArchitectures["darwin"], " or ")),
+		fmt.Sprintf("Linux manylinux %s or later is supported on %s. Windows is unsupported. The Python", ownerMinimums["linux"], strings.Join(ownerArchitectures["linux"], " or ")),
+		"runner requires Python 3.9 or later and wraps the same Go CLI; it is not a",
+		"Python SDK.",
+		"",
+		"After an exact Python package version is available from an admitted channel,",
+		"use one complete package-manager chain:",
+		"",
+		"```bash",
+		"python -m pip install agentic-proofkit==<version>",
+		"python -m agentic_proofkit help",
+		"```",
+		"",
+		"or:",
+		"",
+		"```bash",
+		"uv add --dev agentic-proofkit==<version>",
+		"uv run agentic-proofkit help",
+		"```",
+		"",
+		"These conditional commands do not claim that any current version is available",
+		"on PyPI.",
+	}, "\n")
+	expectedNormalized := strings.Join(strings.Fields(expectedBlock), " ")
+	if normalizedBlock != expectedNormalized {
+		t.Fatalf("README platform/Python block is not the exact owner projection:\ngot:  %s\nwant: %s", normalizedBlock, expectedNormalized)
+	}
+	if !strings.Contains(metadata(testPackageManifest("1.2.3")), "Requires-Python: >=3.9\n") {
+		t.Fatal("wheel metadata no longer matches the README Python minimum")
+	}
+}
+
+func TestReleaseTargetsProjectExactPythonWheelMetadata(t *testing.T) {
+	ownerTargets := releaseplatform.Targets()
+	targets := releaseTargets()
+	if !slices.Equal(targets, ownerTargets) {
+		t.Fatalf("releaseTargets() = %#v, want owner targets %#v", targets, ownerTargets)
+	}
+	for _, target := range ownerTargets {
+		wantMetadata := strings.Join([]string{
+			"Wheel-Version: 1.0",
+			"Generator: agentic-proofkit",
+			"Root-Is-Purelib: false",
+			"Tag: " + target.WheelTag,
+			"",
+		}, "\n")
+		if got := wheelMetadata(target); got != wantMetadata {
+			t.Fatalf("wheelMetadata(%s) = %q, want %q", target.PlatformSuffix, got, wantMetadata)
+		}
+		wantFilename := "agentic_proofkit-1.2.3-" + target.WheelTag + ".whl"
+		if got := wheelFilename("1.2.3", target); got != wantFilename {
+			t.Fatalf("wheelFilename(%s) = %q, want %q", target.PlatformSuffix, got, wantFilename)
+		}
+	}
+}
+
+func markerBlock(t *testing.T, content, start, end string) string {
+	t.Helper()
+	if strings.Count(content, start) != 1 || strings.Count(content, end) != 1 {
+		t.Fatalf("marker counts start=%d end=%d, want one each", strings.Count(content, start), strings.Count(content, end))
+	}
+	startIndex := strings.Index(content, start) + len(start)
+	endIndex := strings.Index(content, end)
+	if startIndex >= endIndex {
+		t.Fatal("marker block is empty or reversed")
+	}
+	return content[startIndex:endIndex]
 }
 
 func TestWheelEntriesIncludeCanonicalLicense(t *testing.T) {

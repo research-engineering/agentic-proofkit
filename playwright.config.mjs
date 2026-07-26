@@ -18,7 +18,13 @@ export default defineConfig({
   workers: 1,
   use: {
     baseURL,
-    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    trace: {
+      mode: "retain-on-failure",
+      screenshots: false,
+      snapshots: true,
+      sources: true,
+    },
   },
   projects: [
     {name: "chromium", use: {...devices["Desktop Chrome"]}},

@@ -93,7 +93,8 @@ opt-in derived projection over the same report. This map explains the route
 families without becoming an execution, freshness, or merge decision.
 The exact route input vocabulary is machine-readable in
 `proofkit/cli-contract.v2.json` under `agent-route.inputContract`; the Go
-admission implementation and shipped CLI contract are parity-tested.
+admission implementation owns nested and semantic behavior, while the shipped
+CLI contract owns the bounded root-shape variants and their ABI digest.
 
 Formal rule:
 
@@ -113,7 +114,7 @@ Semantic context routes are `requirement-context-compose`,
 
 | State or goal | Next Proofkit route | Stop or escalation condition |
 |---|---|---|
-| The agent does not know where to start. | `init` or `init --preset fresh|code-baseline|code-audit|legacy|change-set` | Treat output as dry-run route guidance only. Stop before scanning, writing files, or making requirements authoritative. |
+| The agent does not know where to start. | `init`, or `init --preset` with `fresh`, `code-baseline`, `code-audit`, `legacy`, or `change-set` | Treat output as dry-run route guidance only. Stop before scanning, writing files, or making requirements authoritative. |
 | No admitted spec/profile exists and the caller has explicit capability observations. | `capability-map-admission`; use `trustMode: "code_baseline"` only when maintainers intentionally freeze current code, otherwise use `trustMode: "audit_from_code"`. | Stop before treating seeds as stable requirements. The consumer owns observation extraction, materialization, requirement meaning, and proof adequacy. |
 | No admitted spec/profile exists and no capability observations exist. | `scaffold-project-structure`, `adoption-workflow-plan`, or `stack-preset` | Stop before writing files; the consumer owns materialization, overwrite policy, and final requirement text. |
 | Candidate boundary is uncertain. | `adoption-doctor` or `gradual-adoption-guidance --agent-envelope` | Escalate to owner review when the boundary is advisory, ambiguous, or missing native witnesses. |

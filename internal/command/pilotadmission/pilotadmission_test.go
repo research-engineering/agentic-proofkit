@@ -38,6 +38,47 @@ func TestBuildRejectsPilotDisplayCommandShellControlTokens(t *testing.T) {
 	}
 }
 
+func TestBuildAllFromContractEnvelopeAdmitsBothOwnedInputs(t *testing.T) {
+	firstInput := validPilotInput()
+	stackDiverseInput := validPilotInput()
+	stackDiverseInput["pilotId"] = "proofkit.test.pilot.stack-diverse"
+	stackDiverseInput["stackDiversity"] = validStackDiversity()
+	stackDiverseInput["cacheNegativeChecks"] = validCacheNegativeChecks()
+	impactInput := stackDiverseInput["impactDemos"].([]any)[0].(map[string]any)["impactInput"].(map[string]any)
+	impactInput["changedBindingRecordIds"] = []any{"REQ-PROOFKIT-001"}
+	impactInput["changedPaths"] = []any{
+		"docs/specs/proofkit/requirements.v1.json",
+		"internal/proofkit/witness_test.go",
+	}
+	impactInput["changedWitnessPathCoverage"] = []any{
+		map[string]any{
+			"path":      "internal/proofkit/witness_test.go",
+			"recordIds": []any{"REQ-PROOFKIT-001"},
+		},
+	}
+
+	envelope := map[string]any{
+		"schema":            "proofkit.pilot-admission.v1",
+		"input":             firstInput,
+		"stackDiverseInput": stackDiverseInput,
+	}
+	first, firstExitCode, stackDiverse, stackDiverseExitCode, err := BuildAllFromContractEnvelope(envelope)
+	if err != nil {
+		t.Fatalf("BuildAllFromContractEnvelope() error = %v", err)
+	}
+	if firstExitCode != 0 || first.State != "passed" {
+		t.Fatalf("first exit=%d state=%s, want passed", firstExitCode, first.State)
+	}
+	if stackDiverseExitCode != 0 || stackDiverse.State != "passed" {
+		t.Fatalf("stack-diverse exit=%d state=%s rules=%#v, want passed", stackDiverseExitCode, stackDiverse.State, stackDiverse.RuleResults)
+	}
+
+	delete(envelope, "stackDiverseInput")
+	if _, _, _, _, err := BuildAllFromContractEnvelope(envelope); err == nil || !strings.Contains(err.Error(), "must declare object stackDiverseInput") {
+		t.Fatalf("BuildAllFromContractEnvelope() error = %v, want missing field rejection", err)
+	}
+}
+
 func validPilotInput() map[string]any {
 	return map[string]any{
 		"schemaVersion": json.Number("1"),
@@ -146,4 +187,34 @@ func validPilotInput() map[string]any {
 		"pilotMode":           "non_blocking",
 		"rolloutClaim":        false,
 	}
+}
+
+func validStackDiversity() map[string]any {
+	dimensions := make([]any, 0, len(stackDiversityDimensions))
+	for _, dimension := range stackDiversityDimensions {
+		dimensions = append(dimensions, map[string]any{
+			"baseline":  "baseline-" + dimension,
+			"candidate": "candidate-" + dimension,
+			"dimension": dimension,
+			"evidence":  "docs/evidence/" + dimension + ".md",
+		})
+	}
+	return map[string]any{
+		"baselinePilotId": "proofkit.test.pilot",
+		"dimensions":      dimensions,
+	}
+}
+
+func validCacheNegativeChecks() []any {
+	checks := make([]any, 0, len(cacheInvalidationClasses))
+	for _, inputClass := range cacheInvalidationClasses {
+		checks = append(checks, map[string]any{
+			"checkId":                     "proofkit.test.cache." + inputClass,
+			"evidence":                    "Cache invalidates on " + inputClass + " changes.",
+			"expectedOutcome":             "invalidate_output",
+			"invalidatedInputClass":       inputClass,
+			"liveOrCredentialedCacheable": false,
+		})
+	}
+	return checks
 }

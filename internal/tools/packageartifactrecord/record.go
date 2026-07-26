@@ -560,7 +560,30 @@ func ToolchainDigest() (string, error) {
 }
 
 func gitPaths(root string) ([]string, error) {
-	command := exec.Command("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+	paths, err := gitNullPaths(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
+	if err != nil {
+		return nil, err
+	}
+	deleted, err := gitNullPaths(root, "ls-files", "-z", "--deleted")
+	if err != nil {
+		return nil, err
+	}
+	deletedSet := make(map[string]struct{}, len(deleted))
+	for _, path := range deleted {
+		deletedSet[path] = struct{}{}
+	}
+	current := make([]string, 0, len(paths))
+	for _, path := range paths {
+		if _, removed := deletedSet[path]; !removed {
+			current = append(current, path)
+		}
+	}
+	sort.Strings(current)
+	return current, nil
+}
+
+func gitNullPaths(root string, args ...string) ([]string, error) {
+	command := exec.Command("git", args...)
 	command.Dir = root
 	output, err := command.Output()
 	if err != nil {
@@ -573,7 +596,6 @@ func gitPaths(root string) ([]string, error) {
 			paths = append(paths, filepath.ToSlash(path))
 		}
 	}
-	sort.Strings(paths)
 	return paths, nil
 }
 

@@ -3,6 +3,7 @@ package requirementcoverageview
 import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 var defaultNonClaims = []string{
@@ -14,6 +15,7 @@ var defaultNonClaims = []string{
 
 type Options struct {
 	AgentEnvelope bool
+	Renderer      cliexec.Renderer
 }
 type compositeInput struct {
 	CoverageUniverse       coverageUniverse

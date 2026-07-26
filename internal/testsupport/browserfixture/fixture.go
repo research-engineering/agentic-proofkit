@@ -23,7 +23,7 @@ func Workspace() (map[string]any, error) {
 	}
 	diffInput := map[string]any{
 		"baseContext": base, "currentContext": current, "diffId": "browser.fixture.diff",
-		"query": map[string]any{"requirementIds": []any{RequirementID}}, "schemaVersion": json.Number("1"),
+		"query": map[string]any{"requirementIds": []any{RequirementID}}, "schemaVersion": json.Number("2"),
 	}
 	code := "package retry\n\nfunc Retry() {}\n"
 	start := strings.Index(code, "func Retry")
@@ -42,7 +42,7 @@ func Workspace() (map[string]any, error) {
 		},
 		"context": current, "graphId": "browser.fixture.graph", "schemaVersion": json.Number("2"),
 	}
-	return map[string]any{"context": current, "diffInput": diffInput, "graphInput": graphInput, "schemaVersion": json.Number("1"), "workspaceId": "browser.fixture.workspace"}, nil
+	return map[string]any{"context": current, "diffInput": diffInput, "graphInput": graphInput, "schemaVersion": json.Number("2"), "workspaceId": "browser.fixture.workspace"}, nil
 }
 
 func snapshot(invariant string) (map[string]any, error) {
@@ -66,5 +66,5 @@ func snapshot(invariant string) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{BaselineVerification: "unverified", CatalogID: "browser.fixture.context", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources}), nil
+	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "browser.fixture.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources}), nil
 }

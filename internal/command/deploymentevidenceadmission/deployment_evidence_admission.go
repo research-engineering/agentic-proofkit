@@ -61,7 +61,7 @@ type input struct {
 func Build(raw any) (report.Record, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return invalidInputReport(err.Error()), 1, nil
+		return report.Record{}, 1, err
 	}
 
 	blockedReasons := []string{}
@@ -74,7 +74,7 @@ func Build(raw any) (report.Record, int, error) {
 		blockedReasons = append(blockedReasons, "deployment evidence is required")
 	} else {
 		if findings, err := scanSecretShapedJSON(input.Evidence, "evidence"); err != nil {
-			return invalidInputReport(err.Error()), 1, nil
+			return report.Record{}, 1, err
 		} else {
 			failures = append(failures, findings...)
 		}
@@ -90,7 +90,7 @@ func Build(raw any) (report.Record, int, error) {
 	}
 
 	if findings, err := scanRawOperatorEvidence(input.RawOperatorEvidence); err != nil {
-		return invalidInputReport(err.Error()), 1, nil
+		return report.Record{}, 1, err
 	} else {
 		failures = append(failures, findings...)
 	}
@@ -490,34 +490,6 @@ func deploymentEvidenceRuleResults(state string, blockedReasons []string, failur
 			Message:     shapeMessage,
 			Diagnostics: []report.Diagnostic{{Key: "blockedReasons", Value: stringSliceToAny(blockedReasons)}},
 		},
-	}
-}
-
-func invalidInputReport(message string) report.Record {
-	return report.Record{
-		SchemaVersion: 1,
-		ReportKind:    reportKind,
-		ReportID:      "invalid_input",
-		State:         "failed",
-		Summary: map[string]any{
-			"blockedReasonCount":    0,
-			"endpointCount":         0,
-			"evidenceId":            nil,
-			"factCount":             0,
-			"failureCount":          1,
-			"requiredFactIdCount":   0,
-			"requiredFactKindCount": 0,
-		},
-		Diagnostics: []report.Diagnostic{{Key: "failures", Value: []any{message}}},
-		RuleResults: []report.RuleResult{
-			{
-				Diagnostics: []report.Diagnostic{{Key: "failure", Value: message}},
-				Message:     message,
-				RuleID:      "proofkit.deployment-evidence-admission.input",
-				Status:      "failed",
-			},
-		},
-		NonClaims: []any{"invalid deployment evidence admission input does not prove deployment evidence state"},
 	}
 }
 

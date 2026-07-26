@@ -71,33 +71,7 @@ var changedPathSetNonClaims = []string{
 func Build(raw any) (Result, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		failure := errorText(err)
-		emptyHash := changedPathsHash([]string{})
-		record := report.Record{
-			SchemaVersion: 1,
-			ReportKind:    "proofkit.changed-path-set",
-			ReportID:      "invalid-input",
-			State:         "failed",
-			Summary: map[string]any{
-				"changedPathCount":   0,
-				"duplicatePathCount": 0,
-				"invalidPathCount":   1,
-				"sourceCount":        0,
-			},
-			Diagnostics: []report.Diagnostic{{Key: "changedPathSetHash", Value: emptyHash}},
-			RuleResults: []report.RuleResult{rule("changed_path_set.input", "failed", failure)},
-			NonClaims:   []any{"invalid input does not prove changed path completeness"},
-		}
-		return Result{
-			ChangedPaths:       []string{},
-			ChangedPathSetHash: emptyHash,
-			DuplicatePaths:     []Diagnostic{},
-			ExitCode:           1,
-			Failures:           []string{failure},
-			InvalidPaths:       []Diagnostic{{SourceID: "input", Path: "", Reason: failure}},
-			Report:             record,
-			SourceSummaries:    []SourceSummary{},
-		}, nil
+		return Result{}, fmt.Errorf("%s", errorText(err))
 	}
 	return build(input), nil
 }

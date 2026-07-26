@@ -25,7 +25,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-002",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Release evidence includes a deterministic SBOM for package, wheel, binary, and Go module inventory without claiming vulnerability absence or license approval.",
+      "invariant": "Release evidence includes a deterministic SBOM in which source and tool Go module inventory is explicitly excluded, package and wheel representations invent no runtime edges, and each required runtime dependency edge and subject digest are derived from one immutable byte snapshot read through an identity-checked pinned handle to the exact release binary that owns the edge, with a final same-handle content check, without claiming reachability, vulnerability absence, or license approval.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -51,12 +51,12 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-004",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Public CLI ABI has a small golden corpus and canonical ABI hash covering command topology, exit code, stdout and stderr channel discipline, JSON parseability, stable public diagnostics, explicit output schema evolution for breaking JSON field changes, and descriptor/contract/help parity without making private descriptors a public API.",
+      "invariant": "Public CLI ABI has a small golden corpus and canonical ABI hash covering command topology, exit code, stdout and stderr channel discipline, JSON parseability, stable public diagnostics, complete versioned root-shape input and JSON-output variant declarations, exact source-checkout witness selectors, exact native source-path sets and requirement scenarios for every root-distinct output witness, deterministic generated help and stack-preset projections, explicit output schema evolution for breaking JSON root changes, and descriptor/contract/help parity without making private descriptors a public API; the admitted adoption-contract-envelope machine condition model uses canonical complete flag conjunctions, rejects ambiguous or incomplete assignments, closes the finite valid option space against native option admission, binds each exercised argv to its exact condition and variant, and rejects repeated mode or pilot flags or an empty pilot value rather than silently changing or misreporting the selected variant, while any later condition-model owner requires its own admitted native-closure witness; the separate pilot-admission route declares its contract-envelope stack-diverse alias and rejects repeated or mixed --pilot and --stack-diverse selectors instead of applying last-write-wins routing.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-QUALITY-004"],
-      "nonClaims": ["This requirement does not claim exhaustive command semantic completeness beyond the declared route inventory or byte-for-byte stability for diagnostics outside the public CLI ABI."],
+      "nonClaims": ["This requirement does not claim nested field shape, scalar type, collection cardinality, nullability, exhaustive command semantic completeness beyond the declared route inventory, installation of source-checkout witness files, runtime JSON Schema validation, or byte-for-byte stability for diagnostics outside the public CLI ABI."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
@@ -64,7 +64,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-005",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "CodeQL workflow source is admitted as an independent semantic security analysis signal for Go source without replacing native Go static gates.",
+      "invariant": "CodeQL workflow source is admitted as an independent semantic security analysis signal for Go source; advisory analysis remains read-only, provider publication authority is isolated and disabled on pull requests, and native Go static gates remain required.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -77,7 +77,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-006",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "OSV workflow source is admitted as an advisory multi-ecosystem dependency signal without replacing govulncheck reachable-code evidence.",
+      "invariant": "OSV workflow source is admitted as an advisory multi-ecosystem dependency signal; advisory analysis remains read-only, provider publication authority is isolated and disabled on pull requests, and govulncheck reachable-code evidence remains required.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -90,7 +90,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-007",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Scorecard workflow source is admitted as an advisory repository hygiene signal without claiming branch protection or provider settings that the repository cannot prove from source.",
+      "invariant": "Scorecard workflow source is admitted as an advisory repository hygiene signal; advisory analysis remains read-only, public publication authority is isolated with exact output inputs, and source does not claim branch protection or unobserved provider settings.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -129,7 +129,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-010",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Coverage metrics report requirement, binding, witness, CLI inventory linkage, and descriptor-owned command proof-route candidates from admitted test-evidence-inventory rows, failing closed on explicit requirement/proof linkage dead zones, failed command-route inventory admission, missing candidate routes, unknown command refs, contract-only commands, or route-only commands; static route metadata, prose, source markers, test existence, and failure-capable syntax remain candidate evidence and cannot satisfy semantic_falsifier coverage.",
+      "invariant": "Coverage metrics report requirement, binding, witness, CLI inventory linkage, and descriptor-owned command proof-route candidates from admitted test-evidence-inventory rows, failing closed independently for each requirement/proof linkage dead-zone class and each missing-candidate, unknown-candidate-ref, unknown-semantic-ref, contract-only, or route-only command-route class; source-checkout witness selectors must resolve to valid functions in active Go test files with exact executable commands, critical anti-vacuity scenarios must retain their exact closed selector inventories, and failed command-route inventory admission also fails closed, while static route metadata, prose, source markers, test existence, and failure-capable syntax remain candidate evidence and cannot satisfy semantic_falsifier coverage.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -142,7 +142,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-011",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "CI separates the OS-independent full source/package gate from the platform-specific macOS execution smoke, executes the complete Go package set through the owner command rather than a partial package list, uses explicit hosted runner labels instead of floating latest labels, and exposes one fail-closed aggregate quality gate that requires every required leaf check to finish with success so skipped, failed, or cancelled leaf jobs cannot satisfy branch-protection evidence.",
+      "invariant": "CI separates the OS-independent full source/package gate from the platform-specific macOS execution smoke, executes the complete Go package set through the owner command rather than a partial package list, uses exact scalar hosted runners and provider-check names, requires the macOS job's presence-aware exact ordered step inventory and exact repository-local setup-action bytes to execute the exact fail-closed platform-smoke package-script owner command, and exposes one exact fail-closed aggregate quality gate under exact bash workflow run defaults with no inherited working-directory or environment entries; a closed inventory requires every required leaf job and step to omit conditions except for exact owner-reviewed named conditions, every required leaf job and the aggregate job omit job defaults, reusable-workflow substitution, and continue-on-error and have no job environment entries, all of their steps omit shell, working-directory, and continue-on-error and have no step environment entries, and the aggregate's reviewed expression and script require every exact required leaf check to finish with success; neutralizing wrappers, dynamically false or explicit-null conditions, execution overrides, dual run/uses keys, extra disjunctions, non-string runner labels, nested or top-level semantic shadow steps, no-op or reusable-job substitution, skipped, failed, or cancelled leaf jobs cannot satisfy branch-protection evidence.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -168,7 +168,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-013",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Self-hosting workflow package-gate evidence is checked by a typed workflow oracle that proves the package gate is reachable, exact, advisory, success-gated for always-running downstream jobs and required evidence-publication steps, and ordered before evidence publication instead of relying on workflow text search.",
+      "invariant": "Self-hosting workflow package-gate evidence is checked by a typed workflow oracle that proves the package gate is reachable, exact, advisory, and guarded only by an absent condition or the exact owner-reviewed condition for every trust-significant job and step; the oracle checks the complete required CI and release job inventories, rejects neutralizing or dynamically false expression variants, requires any workflow run defaults to retain exact bash without a working-directory override, admits only the exact owner-reviewed workflow and step environment entries, requires the gate job to omit job defaults and continue-on-error and have no job environment entries, requires every step in that job to omit shell, working-directory, and continue-on-error, and orders the gate before evidence publication instead of relying on workflow text search.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -207,7 +207,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-016",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Release platform targets have one private owner that projects exact platform suffixes, Go build targets, npm OS/CPU metadata, package tar binary entries, Python wheel tags, PyPI candidate completeness, self-hosting native binary selection, and SBOM binary subjects without turning the platform matrix into public API.",
+      "invariant": "Release platform targets have one private owner that projects exact platform suffixes, Go build targets, npm OS/CPU metadata, package tar binary entries, Python wheel tags, PyPI candidate completeness, self-hosting native binary selection, SBOM binary subjects, and the marker-bounded README platform and architecture matrix in both directions without turning the platform matrix into public API.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -246,7 +246,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-019",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Installed package smoke proof verifies the package-managed binary can process explicit JSON input for one successful report command and one failed-report command, and can emit the current json-report-cli-adapter-source artifact from the installed package binary with source bytes equal to the generator owner source, preserving report kind, report id, state, explicit input counts, exit code, stdout JSON, generated-source hash, and stderr channel discipline without admitting unlisted consumer working-directory files in addition to help discoverability.",
+      "invariant": "Installed package smoke proof builds the current product, installs the exact local tarball, and verifies a continuous npm exec --offline route from root help through every displayed family and leaf-help transition, with each installed invocation exactly bound to its ordered bare Usage command token; it then verifies exact stack-preset vocabulary, requires every exact generated preset command string to retain the offline npm prefix, re-executes one emitted self-continuation, and continues to exactly one marker-bounded README command and JSON first input, with every emitted or README argv admitted through bounded expansion-free literal shell-word semantics before direct execution. It also verifies that the package-managed binary can process explicit JSON input for one successful report command and one failed-report command and emit the current json-report-cli-adapter-source artifact with source bytes equal to the generator owner source, preserving report kind, report id, state, explicit input counts, exit code, stdout JSON, generated-source hash, and stderr channel discipline without admitting unlisted consumer working-directory files.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -285,12 +285,12 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-022",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Authored requirement workspace JavaScript and CSS are embedded through an explicit compile-time asset set, served only by exact routes with restrictive response headers, strictly type-checked without a production bundler, and covered by Go lifecycle, concurrent terminal-state, HTTP security, and repository-confined non-symlink artifact falsifiers plus a machine-admitted per-project execution report proving the same non-empty passed test identities in pinned Chromium, Firefox, and Playwright WebKit, with bounded browser-server cleanup and no added runtime package dependencies.",
+      "invariant": "Authored requirement workspace JavaScript and CSS are embedded through an explicit compile-time asset set, served only by exact routes with restrictive response headers, and strictly type-checked without a production bundler; Go lifecycle, concurrent terminal-state, HTTP security, and repository-confined non-symlink artifact falsifiers plus one machine-admitted state-matrix execution report prove the same non-empty passed test identities in pinned Chromium, Firefox, and Playwright WebKit across independently held bootstrap, specifications, diff, and graph loading states, bootstrap failure, terminal specifications, diff, graph, unavailable views, view failure, handoff result, and handoff failure, with one direct audit initializing the pinned axe distribution through the browser-context script channel, admitting only the main frame and exact engine identity, preserving same-origin and Playwright branding, and running default rules plus explicitly enabled target-size after state identity, followed by 320 CSS-pixel document reflow, labelled internal graph and table overflow, and rendered light/dark text, boundary, and focus contrast oracles, a combined negative fixture for undersized named and normal-sized unnamed controls, bounded browser-server cleanup, attempt-scoped failed-run action, DOM, network, and source traces without continuous screenshot capture plus one bounded best-effort failure screenshot retained separately from authoritative passed proof, and no added runtime package dependencies.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-QUALITY-022"],
-      "nonClaims": ["This requirement does not claim full WCAG conformance, every branded browser, provider CI ingestion, registry publication, release approval, rollout approval, or production readiness."],
+      "nonClaims": ["This requirement does not claim full WCAG 2.2 conformance, branded Safari behavior, complete screen-reader interoperability, every operating-system theme, 400-percent zoom behavior, continuous screenshot evidence, guaranteed capture of the best-effort failure screenshot, provider CI ingestion, registry publication, release approval, rollout approval, or production readiness."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
@@ -298,7 +298,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Each Python wheel binds its embedded executable to the release binary digest, independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
+      "invariant": "Each Python wheel binds its embedded executable to the release binary digest, and the wheel-set verifier independently rejects version drift, duplicate identities, missing files, and SHA drift; each wheel independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
       "claimLevel": "blocking",
       "riskClass": "critical",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -311,12 +311,25 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-024",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Release metadata generation admits one version-bound machine-readable declaration of the reviewed public-contract change set and renders release notes as its exact projection, while one repository-owned retained-evidence builder and verifier checksum the exact final downloadable artifact topology with artifact-relative paths, reject unbound evidence files and symlink substitution, and fail release closeout on record, note, path, or digest drift.",
+      "invariant": "Release metadata generation admits one closed schema-versioned machine-readable declaration of the reviewed public-contract change set, requires exact ordered equality for the complete current breaking-change, addition, and migration inventories, including channel-specific changes to public generated continuation bytes, binds its exact previous and current canonical SemVer values to a compatible or breaking change class, rejects missing, substituted, reordered, or surplus current entries plus non-monotonic or patch-range breaking releases, and renders one byte-exact independently authored complete current release-note projection with no relocated, duplicate, appended, surplus, or second owned section, while one repository-owned retained-evidence builder and verifier checksum the exact final downloadable artifact topology with artifact-relative paths, reject unbound evidence files and symlink substitution, and fail release closeout on record, note, path, or digest drift.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-QUALITY-024"],
       "nonClaims": ["This requirement does not infer change-record completeness from source changes, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-025",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Every tracked GitHub Actions workflow is admitted by one exact sorted inventory and a closed raw-YAML key grammar at workflow, job, and step boundaries before typed decoding, with only exact owner-reviewed release deployment environments; every external action reference is pinned to a full lowercase 40-hex commit identity; local action references remain repository-confined; status expressions and the required CI aggregate match exact owner-reviewed forms; and an already-existing GitHub Release is a read-only object whose metadata, exact asset set, and asset bytes must match the candidate before the workflow exits successfully.",
+      "claimLevel": "blocking",
+      "riskClass": "critical",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-025"],
+      "nonClaims": ["This requirement does not claim external action safety, tag equivalence, provider execution, branch-protection configuration, release publication, or provider-side asset immutability."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}

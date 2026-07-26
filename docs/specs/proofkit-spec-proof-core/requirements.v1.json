@@ -8,7 +8,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-001",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement source admission validates structured REQ-* records and source-package shape without owning requirement meaning or scanning overview prose as authority.",
+      "invariant": "Requirement source admission validates structured REQ-* records and source-package shape without owning requirement meaning or scanning overview prose as authority; the shipped README routes one marker-bounded exact offline command and exactly one JSON example through the installed current product as a first valid input, using bounded expansion-free literal shell-word semantics so safe Bash quoting and directly executed argv remain equivalent.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -224,7 +224,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-009",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement spec tree views render admitted caller-owned spec-tree hierarchy through shared safe browser document fragments, deterministic CLI JSON, Markdown, HTML, explicit output paths, and loopback browser serving without accepting caller-owned raw HTML or making rendered output authoritative.",
+      "invariant": "Requirement spec tree views render admitted caller-owned spec-tree hierarchy through shared safe browser document fragments, deterministic CLI JSON, Markdown, HTML, explicit output paths through repository-confined same-parent atomic replacement after final destination-parent plus temporary-object identity, mode, and content admission, and loopback browser serving without accepting caller-owned raw HTML or making rendered output authoritative; the browser command and runtime share one exact supported-view vocabulary, and invalid-view diagnostics list all and only those views.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -234,7 +234,7 @@
         "NC-PROOFKIT-SPEC-009"
       ],
       "nonClaims": [
-        "This requirement does not claim repository scanning, source freshness computation from files, requirement meaning, native witness execution, committed generated HTML, merge approval, release approval, rollout approval, or production readiness."
+        "This requirement does not claim repository scanning, source freshness computation from files, requirement meaning, native witness execution, protection from adversarial concurrent content or namespace mutation by the same operating-system user during the operation, filesystem crash or fsync durability, committed generated HTML, merge approval, release approval, rollout approval, or production readiness."
       ],
       "lifecycle": {
         "state": "active",
@@ -278,7 +278,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-011",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Adoption contract envelope admission validates a complete caller-owned aggregate adoption envelope, selects one child adoption, bootstrap, guidance, workflow, or pilot route through orthogonal CLI flags, and delegates to existing child command contracts without scanning repositories, writing files, executing witnesses, or creating a second adoption readiness policy.",
+      "invariant": "Adoption contract envelope admission validates a complete caller-owned aggregate adoption envelope, selects one child adoption, bootstrap, guidance, workflow, or pilot route through orthogonal CLI flags, rejects repeated single-value mode or pilot selectors and an explicitly empty pilot value rather than changing or misreporting the selected root variant, binds its union output contract to the exact successful public-CLI root-shape witness and native source owner, and delegates to existing child command contracts without scanning repositories, writing files, executing witnesses, or creating a second adoption readiness policy.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -467,7 +467,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-018",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Command family navigation projects the complete public CLI command inventory from one authored family catalog into a deterministic private runtime projection, preserves root and per-command help invocation forms, stdout and stderr channel discipline, no-input behavior, and leaf dispatch, admits only opt-in family help forms, rejects missing, duplicated, oversized, unsorted, or reserved-operand-colliding families, and does not infer command selection, execute commands through family membership, or create a second command inventory owner.",
+      "invariant": "Command family navigation projects the complete public CLI command inventory from one authored family catalog into a deterministic private runtime projection, preserves root and per-command help invocation forms, stdout and stderr channel discipline, no-input behavior, and leaf dispatch, exposes one token-bounded root discovery route, and projects the exact stack-preset vocabulary from the authored CLI contract into generated runtime IDs, direct help, and invalid-ID diagnostics; it admits only opt-in family help forms, rejects missing, duplicated, oversized, unsorted, or reserved-operand-colliding families, and does not infer command selection, execute commands through family membership, or create a second command inventory owner.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": [
@@ -494,12 +494,12 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-019",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement context composition reads only caller-selected repository-relative catalog paths through a confined filesystem root, admits each source through its semantic owner, records current and optional expected digests, and emits one bounded content-bound derived snapshot without ambient scanning or new requirement, proof, coverage, freshness, or merge authority.",
+      "invariant": "Requirement context composition reads only caller-selected repository-relative catalog paths through a confined filesystem root, admits each source through its semantic owner, records current and optional expected digests, and emits one bounded content-bound schema-v2 derived snapshot whose expectedDigestCoverage is exactly none, partial, or all; the strict schema-v1 adapter fully admits the legacy record before mapping it to the same semantic snapshot, mixed v1/v2 vocabulary is rejected, and no producer emits v1.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-SPEC-019"],
-      "nonClaims": ["This requirement does not claim ambient repository discovery, later-checkout freshness, requirement meaning, proof adequacy, native witness execution, merge approval, release approval, rollout approval, or production readiness."],
+      "nonClaims": ["Expected-digest coverage records only equality between caller-supplied expected digests and admitted current bytes; it does not authenticate a producer, baseline, checkout, or freshness and does not claim ambient repository discovery, requirement meaning, proof adequacy, native witness execution, merge approval, release approval, rollout approval, or production readiness."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
@@ -520,12 +520,12 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-021",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "The loopback requirement workspace visibly preserves presentation-only authority boundaries, non-claims, snapshot and baseline identity, and trust-significant graph states while rendering immutable admitted context, optional semantic diff, and optional traceability graph through exact allowlisted routes, a per-process capability, same-origin handoff admission, source-digest and JSON-pointer anchors, Unicode code-point quote coordinates, bounded browser-session question packets after explicit UI submission across the admitted tree domain subject to explicit packet byte bounds, and terminal one-shot concurrent session semantics without persistence, command execution, provider access, or authority promotion.",
+      "invariant": "The loopback requirement workspace visibly preserves presentation-only authority boundaries, non-claims, snapshot identity, schema-v2 expected-digest coverage, and trust-significant graph states while rendering immutable admitted context, optional schema-v2 semantic diff, and optional traceability graph through exact allowlisted routes and schema-v2 manifest and affected API projections, a per-process capability removed from the document before API use, one exact loopback root URL passed to one fixed platform launcher argv, visible bootstrap loading and sanitized terminal failure states with stable identities, native list and article semantics, active-view aria-current, a visibly headed handoff region, same-origin handoff admission, source-digest and JSON-pointer anchors, Unicode code-point quote coordinates, bounded browser-session question packets after explicit UI submission across the admitted list domain subject to explicit packet byte bounds, and terminal one-shot concurrent session semantics without persistence, caller-supplied command execution, native-witness execution, provider access, or authority promotion; the only local-process side effect is the fixed launcher above.",
       "claimLevel": "blocking",
       "riskClass": "critical",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-SPEC-021"],
-      "nonClaims": ["This requirement does not authenticate the surrounding browser profile or operating-system user and does not claim remote access, annotation persistence, agent execution, provider delivery, proof freshness, merge approval, release approval, rollout approval, branded Safari behavior, or production readiness."],
+      "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; successful launcher invocation does not prove browser rendering; this requirement also does not authenticate the surrounding browser profile or operating-system user and does not claim remote access, annotation persistence, agent execution, provider delivery, complete screen-reader interoperability, full WCAG 2.2 conformance, every operating-system theme, 400-percent zoom behavior, merge approval, release approval, rollout approval, branded Safari behavior, or production readiness."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
@@ -533,12 +533,12 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-022",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement semantic diff compares two admitted context snapshots by stable requirement identity and owner-declared scalar, set, map, and lifecycle field classes, producing canonically ordered added, removed, and modified facts that remain closed under output re-admission without textual diff, inferred move semantics, or authority over requirement meaning.",
+      "invariant": "Requirement semantic diff schema-v2 input compares two fully admitted normalized context snapshots by stable requirement identity and owner-declared scalar, set, map, and lifecycle field classes, producing a schema-v2 canonically ordered output with base and current expected-digest coverage that remains closed under output re-admission; strict schema-v1 input and output adapters fully admit legacy records before normalization and reject mixed-version vocabulary.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-SPEC-022"],
-      "nonClaims": ["This requirement does not claim textual equivalence, inferred moves, product meaning, proof freshness, merge approval, release approval, rollout approval, or production readiness."],
+      "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; this requirement also does not claim textual equivalence, inferred moves, product meaning, merge approval, release approval, rollout approval, or production readiness."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
@@ -546,12 +546,12 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-023",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement traceability graph input schema v2 deterministically projects admitted specification and proof topology plus explicit caller-owned code topology while preserving specification, proof, code traceability, and native execution as distinct evidence planes; one typed topology validator rejects dangling endpoints, enforces the bijection between non-root parentNodeId facts and contains edges with broader parent abstraction, verifies every supplied code-source digest, and applies node, edge, and source-byte budgets before per-item semantic materialization.",
+      "invariant": "Requirement traceability graph input schema v2 deterministically consumes a fully admitted normalized context snapshot, including strict schema-v1 adaptation or native schema-v2 expected-digest coverage, and projects admitted specification and proof topology plus explicit caller-owned code topology while preserving specification, proof, code traceability, and native execution as distinct evidence planes; one typed topology validator rejects dangling endpoints, enforces the bijection between non-root parentNodeId facts and contains edges with broader parent abstraction, verifies every supplied code-source digest, and applies node, edge, and source-byte budgets before per-item semantic materialization.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-SPEC-023"],
-      "nonClaims": ["This requirement does not infer code topology, line or branch coverage, native execution, proof freshness, merge approval, release approval, rollout approval, or production readiness."],
+      "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; this requirement also does not infer code topology, line or branch coverage, native execution, merge approval, release approval, rollout approval, or production readiness."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}

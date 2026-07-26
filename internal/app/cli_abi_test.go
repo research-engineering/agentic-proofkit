@@ -2,13 +2,22 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
+	"runtime"
+	"slices"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/browserfixture"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestCLIABIGoldenCorpus(t *testing.T) {
@@ -19,16 +28,18 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 		t.Fatalf("read spec fixture: %v", err)
 	}
 	cases := []struct {
-		name             string
-		args             []string
-		stdin            string
-		wantStatus       int
-		wantStdoutJSON   bool
-		wantStdout       string
-		wantStdoutHas    []string
-		wantStdoutNotHas []string
-		wantStderr       string
-		wantStderrHas    []string
+		name              string
+		args              []string
+		stdin             string
+		wantStatus        int
+		wantStdoutJSON    bool
+		wantStdout        string
+		wantStdoutHas     []string
+		wantStdoutNotHas  []string
+		wantStderr        string
+		wantStderrHas     []string
+		wantInputVariant  string
+		wantOutputVariant string
 	}{
 		{
 			name:          "unsupported command",
@@ -265,22 +276,26 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			wantStderrHas: []string{"requires --language"},
 		},
 		{
-			name:           "test evidence inventory emits passed report JSON",
-			args:           []string{"test-evidence-inventory", "--input", "-"},
-			stdin:          cliTestEvidenceInventory(),
-			wantStatus:     0,
-			wantStdoutJSON: true,
+			name:              "test evidence inventory emits passed report JSON",
+			args:              []string{"test-evidence-inventory", "--input", "-"},
+			stdin:             cliTestEvidenceInventory(),
+			wantStatus:        0,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "01-direct-inventory",
+			wantOutputVariant: "03-report",
 			wantStdoutHas: []string{
 				`"reportKind": "proofkit.test-evidence-inventory"`,
 				`"state": "passed"`,
 			},
 		},
 		{
-			name:           "test evidence inventory emits normalized inventory JSON",
-			args:           []string{"test-evidence-inventory", "--input", "-", "--normalized-inventory"},
-			stdin:          cliTestEvidenceInventory(),
-			wantStatus:     0,
-			wantStdoutJSON: true,
+			name:              "test evidence inventory emits normalized inventory JSON",
+			args:              []string{"test-evidence-inventory", "--input", "-", "--normalized-inventory"},
+			stdin:             cliTestEvidenceInventory(),
+			wantStatus:        0,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "01-direct-inventory",
+			wantOutputVariant: "01-normalized-direct",
 			wantStdoutHas: []string{
 				`"normalizedKind": "proofkit.test-evidence-inventory.normalized"`,
 				`"sourceAuthority": "caller_owned_inventory"`,
@@ -290,11 +305,13 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			},
 		},
 		{
-			name:           "test evidence inventory emits proof-binding-derived normalized inventory JSON",
-			args:           []string{"test-evidence-inventory", "--input", "-", "--projection", "proof-binding-derived", "--normalized-inventory"},
-			stdin:          cliProofBindingDerivedInventoryInput(),
-			wantStatus:     0,
-			wantStdoutJSON: true,
+			name:              "test evidence inventory emits proof-binding-derived normalized inventory JSON",
+			args:              []string{"test-evidence-inventory", "--input", "-", "--projection", "proof-binding-derived", "--normalized-inventory"},
+			stdin:             cliProofBindingDerivedInventoryInput(),
+			wantStatus:        0,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "03-proof-binding-derived",
+			wantOutputVariant: "02-normalized-proof-binding",
 			wantStdoutHas: []string{
 				`"normalizedKind": "proofkit.test-evidence-inventory.normalized"`,
 				`"projectionKind": "proofkit.proof-binding-test-inventory"`,
@@ -303,11 +320,13 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			},
 		},
 		{
-			name:           "test evidence inventory emits discovery draft candidate JSON",
-			args:           []string{"test-evidence-inventory", "--input", "-", "--projection", "discovery-draft"},
-			stdin:          cliTestDiscoveryDraftInput(),
-			wantStatus:     0,
-			wantStdoutJSON: true,
+			name:              "test evidence inventory emits discovery draft candidate JSON",
+			args:              []string{"test-evidence-inventory", "--input", "-", "--projection", "discovery-draft"},
+			stdin:             cliTestDiscoveryDraftInput(),
+			wantStatus:        0,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "02-discovery-draft",
+			wantOutputVariant: "03-report",
 			wantStdoutHas: []string{
 				`"reportKind": "proofkit.test-inventory-discovery-draft"`,
 				`"authority": "caller_owned_test_discovery_candidate_inventory"`,
@@ -321,33 +340,39 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			},
 		},
 		{
-			name:           "test evidence inventory failed report keeps stdout JSON",
-			args:           []string{"test-evidence-inventory", "--input", "-"},
-			stdin:          cliTestEvidenceInventoryMissingAnchor(),
-			wantStatus:     1,
-			wantStdoutJSON: true,
+			name:              "test evidence inventory failed report keeps stdout JSON",
+			args:              []string{"test-evidence-inventory", "--input", "-"},
+			stdin:             cliTestEvidenceInventoryMissingAnchor(),
+			wantStatus:        1,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "01-direct-inventory",
+			wantOutputVariant: "03-report",
 			wantStdoutHas: []string{
 				`"missing_semantic_anchor:test.cli.semantic"`,
 				`"state": "failed"`,
 			},
 		},
 		{
-			name:           "test evidence inventory normalized mode fails closed",
-			args:           []string{"test-evidence-inventory", "--input", "-", "--normalized-inventory"},
-			stdin:          cliTestEvidenceInventoryMissingAnchor(),
-			wantStatus:     1,
-			wantStdoutJSON: true,
+			name:              "test evidence inventory normalized mode fails closed",
+			args:              []string{"test-evidence-inventory", "--input", "-", "--normalized-inventory"},
+			stdin:             cliTestEvidenceInventoryMissingAnchor(),
+			wantStatus:        1,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "01-direct-inventory",
+			wantOutputVariant: "03-report",
 			wantStdoutHas: []string{
 				`"reportKind": "proofkit.test-evidence-inventory"`,
 				`"state": "failed"`,
 			},
 		},
 		{
-			name:           "requirement coverage view emits passed report JSON",
-			args:           []string{"requirement-coverage-view", "--input", "-"},
-			stdin:          cliCoverageInput(cliCoverageInventory()),
-			wantStatus:     0,
-			wantStdoutJSON: true,
+			name:              "requirement coverage view emits passed report JSON",
+			args:              []string{"requirement-coverage-view", "--input", "-"},
+			stdin:             cliCoverageInput(cliCoverageInventory()),
+			wantStatus:        0,
+			wantStdoutJSON:    true,
+			wantInputVariant:  "02-coverage-structured",
+			wantOutputVariant: "02-report",
 			wantStdoutHas: []string{
 				`"viewKind": "proofkit.requirement-coverage-view"`,
 				`"covered_by_semantic_falsifier"`,
@@ -439,6 +464,13 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 		t.Run(item.name, func(t *testing.T) {
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
+			if item.wantInputVariant != "" {
+				var input any
+				if err := json.Unmarshal([]byte(item.stdin), &input); err != nil {
+					t.Fatalf("root-oracle input must be JSON: %v", err)
+				}
+				assertPublicCLIRootVariant(t, item.args[0], "input", item.wantInputVariant, input)
+			}
 			status := Run(t.Context(), item.args, strings.NewReader(item.stdin), &stdout, &stderr)
 			if status != item.wantStatus {
 				t.Fatalf("status=%d want %d stdout=%s stderr=%s", status, item.wantStatus, stdout.String(), stderr.String())
@@ -465,9 +497,12 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 				}
 			}
 			if item.wantStdoutJSON {
-				var parsed map[string]any
+				var parsed any
 				if err := json.Unmarshal(stdout.Bytes(), &parsed); err != nil {
 					t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
+				}
+				if item.wantOutputVariant != "" {
+					assertPublicCLIRootVariant(t, item.args[0], "output", item.wantOutputVariant, parsed)
 				}
 				if stderr.Len() != 0 {
 					t.Fatalf("admitted JSON ABI must keep stderr empty: %s", stderr.String())
@@ -478,6 +513,101 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSelfCheckOutputUsesExactRootShape(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(t.Context(), []string{"self-check", "--input", "-"}, strings.NewReader(`{"ok":true}`), &stdout, &stderr)
+	if status != 0 || stderr.Len() != 0 {
+		t.Fatalf("status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+	}
+	var output any
+	if err := json.Unmarshal(stdout.Bytes(), &output); err != nil {
+		t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
+	}
+	assertPublicCLIRootVariant(t, "self-check", "output", "01-root", output)
+}
+
+func TestRequiredInputCommandsRouteStructuralErrorsByMode(t *testing.T) {
+	commands := []string{
+		"branch-authority",
+		"changed-path-set",
+		"deployment-evidence-admission",
+		"external-consumer",
+		"package-runtime-dependency-admission",
+		"readiness-closeout",
+		"registry-consumer",
+		"registry-consumer-proof-input-compose",
+		"repo-profile-admission",
+	}
+	for _, command := range commands {
+		t.Run(command+"/ordinary", func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), []string{command, "--input", "-"}, strings.NewReader(`{}`), &stdout, &stderr)
+			if status != 1 || stdout.Len() != 0 || stderr.Len() == 0 {
+				t.Fatalf("status=%d stdout=%q stderr=%q, want 1/empty/diagnostic", status, stdout.String(), stderr.String())
+			}
+		})
+	}
+
+	t.Run("deployment-evidence-admission/nested-structural-error", func(t *testing.T) {
+		input := `{
+			"schemaVersion":1,
+			"admissionId":"proofkit.test.deployment",
+			"evidence":{
+				"schema":"deployment.evidence.v1",
+				"proofScope":"local",
+				"deploymentClaim":"candidate",
+				"evidenceId":"proofkit.test.evidence",
+				"facts":[{
+					"factId":"proofkit.test.fact",
+					"kind":"release_artifact",
+					"sourceCommits":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
+					"imageRefs":["registry.example.test/proofkit@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]
+				}],
+				"nonClaims":["Deployment evidence test fixture does not prove live deployment."]
+			},
+			"policy":{
+				"expectedDeploymentClaim":"candidate",
+				"expectedEvidenceSchema":"deployment.evidence.v1",
+				"expectedProofScope":"local",
+				"forbiddenValueIndicators":[],
+				"localRefIndicators":["127.0.0.1","localhost"],
+				"requiredFactIds":["proofkit.test.fact"],
+				"requiredFactKinds":["release_artifact"],
+				"requiredNonClaims":["Deployment evidence test fixture does not prove live deployment."],
+				"requireDigestPinnedImageRefs":true,
+				"requireLowercaseSourceCommits":true,
+				"temporaryEndpointHostSuffixes":["trycloudflare.com"]
+			},
+			"rawOperatorEvidence":[{"evidenceRef":"operator.note","payload":{"":"value"}}],
+			"nonClaims":["Deployment evidence admission test fixture is not release proof."]
+		}`
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		status := Run(t.Context(), []string{"deployment-evidence-admission", "--input", "-"}, strings.NewReader(input), &stdout, &stderr)
+		if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "object key must be non-empty text") {
+			t.Fatalf("status=%d stdout=%q stderr=%q, want 1/empty/structural diagnostic", status, stdout.String(), stderr.String())
+		}
+	})
+
+	t.Run("changed-path-set/agent-envelope", func(t *testing.T) {
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		status := Run(t.Context(), []string{"changed-path-set", "--input", "-", "--agent-envelope"}, strings.NewReader(`{}`), &stdout, &stderr)
+		if status != 1 || stderr.Len() != 0 {
+			t.Fatalf("status=%d stdout=%q stderr=%q, want 1/envelope/empty", status, stdout.String(), stderr.String())
+		}
+		var envelope map[string]any
+		if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
+			t.Fatalf("decode envelope: %v", err)
+		}
+		if envelope["envelopeId"] != "proofkit.agent-envelope.invalid-input" {
+			t.Fatalf("envelopeId=%v, want invalid-input", envelope["envelopeId"])
+		}
+	})
 }
 
 func TestSpecializedParsersRejectDuplicateInputPointer(t *testing.T) {
@@ -602,8 +732,299 @@ func TestRequirementSpecTreeViewOutputPathAdmission(t *testing.T) {
 	}
 }
 
+func TestOutputWriterRejectsDeterministicParentSwap(t *testing.T) {
+	for _, targetKind := range []string{"outside-root", "in-root-sibling"} {
+		t.Run("before-temp/"+targetKind, func(t *testing.T) {
+			root := t.TempDir()
+			t.Chdir(root)
+			if err := os.Mkdir("out", 0o755); err != nil {
+				t.Fatal(err)
+			}
+			target := t.TempDir()
+			if targetKind == "in-root-sibling" {
+				target = filepath.Join(root, "victim")
+				if err := os.Mkdir(target, 0o755); err != nil {
+					t.Fatal(err)
+				}
+			}
+			sentinel := filepath.Join(target, "sentinel.txt")
+			if err := os.WriteFile(sentinel, []byte("unchanged"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			swapped := false
+			outputWriterBarrier = func(stage, outputPath string) {
+				if swapped || stage != "parent_admitted" || outputPath != "out/result.txt" {
+					return
+				}
+				swapped = true
+				if err := os.Rename("out", "out-original"); err != nil {
+					t.Fatal(err)
+				}
+				linkTarget := target
+				if targetKind == "in-root-sibling" {
+					linkTarget = "victim"
+				}
+				if err := os.Symlink(linkTarget, "out"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Cleanup(func() { outputWriterBarrier = nil })
+
+			err := writeRepoRelativeOutputFile(filepath.FromSlash("out/result.txt"), []byte("must-not-escape"))
+			if !swapped {
+				t.Fatal("output writer barrier was not reached")
+			}
+			if err == nil {
+				t.Fatal("writeRepoRelativeOutputFile() accepted swapped parent")
+			}
+			content, readErr := os.ReadFile(sentinel)
+			if readErr != nil || string(content) != "unchanged" {
+				t.Fatalf("target sentinel changed: content=%q error=%v", content, readErr)
+			}
+			if _, statErr := os.Stat(filepath.Join(target, "result.txt")); !os.IsNotExist(statErr) {
+				t.Fatalf("output reached swapped target: stat error=%v", statErr)
+			}
+		})
+	}
+
+	for _, barrierStage := range []string{"before_publish", "before_rename"} {
+		for _, targetKind := range []string{"outside-root", "in-root-sibling"} {
+			t.Run(strings.ReplaceAll(barrierStage, "_", "-")+"/"+targetKind, func(t *testing.T) {
+				root := t.TempDir()
+				t.Chdir(root)
+				if err := os.Mkdir("out", 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.WriteFile(filepath.Join("out", "result.txt"), []byte("unchanged"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+
+				displaced := filepath.Join(root, "out-original")
+				replacement := filepath.Join(root, "out")
+				if targetKind == "outside-root" {
+					displaced = filepath.Join(t.TempDir(), "moved-out")
+				} else {
+					if err := os.Mkdir("victim", 0o755); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.WriteFile(filepath.Join("victim", "sentinel.txt"), []byte("unchanged"), 0o600); err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				swapped := false
+				outputWriterBarrier = func(stage, outputPath string) {
+					if swapped || stage != barrierStage || outputPath != "out/result.txt" {
+						return
+					}
+					swapped = true
+					if err := os.Rename("out", displaced); err != nil {
+						t.Fatal(err)
+					}
+					if targetKind == "outside-root" {
+						if err := os.Mkdir("out", 0o755); err != nil {
+							t.Fatal(err)
+						}
+						return
+					}
+					if err := os.Rename("victim", "out"); err != nil {
+						t.Fatal(err)
+					}
+				}
+				t.Cleanup(func() { outputWriterBarrier = nil })
+
+				err := writeRepoRelativeOutputFile(filepath.FromSlash("out/result.txt"), []byte("must-not-escape"))
+				if !swapped {
+					t.Fatalf("output writer %s barrier was not reached", barrierStage)
+				}
+				if err == nil {
+					t.Fatal("writeRepoRelativeOutputFile() accepted a final parent swap")
+				}
+				content, readErr := os.ReadFile(filepath.Join(displaced, "result.txt"))
+				if readErr != nil || string(content) != "unchanged" {
+					t.Fatalf("displaced target changed: content=%q error=%v", content, readErr)
+				}
+				entries, readDirErr := os.ReadDir(displaced)
+				if readDirErr != nil {
+					t.Fatal(readDirErr)
+				}
+				for _, entry := range entries {
+					if strings.HasPrefix(entry.Name(), ".proofkit-output-") {
+						t.Fatalf("temporary output escaped cleanup: %s", filepath.Join(displaced, entry.Name()))
+					}
+				}
+				if _, statErr := os.Stat(filepath.Join(replacement, "result.txt")); !os.IsNotExist(statErr) {
+					t.Fatalf("output reached replacement parent: stat error=%v", statErr)
+				}
+				if targetKind == "in-root-sibling" {
+					sentinel, sentinelErr := os.ReadFile(filepath.Join(replacement, "sentinel.txt"))
+					if sentinelErr != nil || string(sentinel) != "unchanged" {
+						t.Fatalf("replacement sentinel changed: content=%q error=%v", sentinel, sentinelErr)
+					}
+				}
+			})
+		}
+	}
+
+	for _, mutation := range []string{
+		"identity",
+		"content",
+		"mode-permissions",
+		"mode-setuid",
+		"mode-setgid",
+		"mode-sticky",
+		"symlink",
+	} {
+		t.Run("before-publish/temp-"+mutation, func(t *testing.T) {
+			root := t.TempDir()
+			if mutation == "mode-setgid" {
+				effectiveGroupID := os.Getegid()
+				if effectiveGroupID < 0 {
+					t.Fatal("effective group ID is required for the setgid mutant")
+				}
+				if err := os.Chown(root, -1, effectiveGroupID); err != nil {
+					t.Fatalf("normalize setgid mutant root group: %v", err)
+				}
+			}
+			t.Chdir(root)
+			if err := os.Mkdir("out", 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join("out", "result.txt"), []byte("unchanged"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			identityReplacement := filepath.Join("out", "temp-identity-replacement")
+			if mutation == "identity" {
+				if err := os.WriteFile(identityReplacement, []byte("must-not-substitute"), 0o644); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(identityReplacement, 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			mutated := false
+			outputWriterBarrier = func(stage, outputPath string) {
+				if mutated || stage != "before_publish" || outputPath != "out/result.txt" {
+					return
+				}
+				entries, err := os.ReadDir("out")
+				if err != nil {
+					t.Fatal(err)
+				}
+				tempName := ""
+				for _, entry := range entries {
+					if strings.HasPrefix(entry.Name(), ".proofkit-output-") {
+						if tempName != "" {
+							t.Fatal("multiple temporary outputs found before publication")
+						}
+						tempName = entry.Name()
+					}
+				}
+				if tempName == "" {
+					t.Fatal("temporary output was not found before publication")
+				}
+				mutated = true
+				tempPath := filepath.Join("out", tempName)
+				if mutation == "identity" {
+					tempInfo, err := os.Lstat(tempPath)
+					if err != nil {
+						t.Fatal(err)
+					}
+					replacementInfo, err := os.Lstat(identityReplacement)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if os.SameFile(tempInfo, replacementInfo) {
+						t.Fatal("identity replacement did not coexist with a distinct temporary object")
+					}
+					if err := os.Remove(tempPath); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Rename(identityReplacement, tempPath); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				if mutation == "symlink" {
+					backupPath := filepath.Join("out", "temp-original")
+					if err := os.Rename(tempPath, backupPath); err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(func() { _ = os.Remove(backupPath) })
+					if err := os.Symlink(filepath.Base(backupPath), tempPath); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				mutatedMode := os.FileMode(0)
+				switch mutation {
+				case "mode-permissions":
+					mutatedMode = 0o600
+				case "mode-setuid":
+					mutatedMode = 0o644 | os.ModeSetuid
+				case "mode-setgid":
+					mutatedMode = 0o644 | os.ModeSetgid
+				case "mode-sticky":
+					mutatedMode = 0o644 | os.ModeSticky
+				}
+				if mutatedMode != 0 {
+					if err := os.Chmod(tempPath, mutatedMode); err != nil {
+						t.Fatal(err)
+					}
+					mutatedInfo, err := os.Lstat(tempPath)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if mutatedInfo.Mode() != mutatedMode {
+						t.Fatalf("temporary output mode mutant did not materialize: got %v want %v", mutatedInfo.Mode(), mutatedMode)
+					}
+					return
+				}
+				if err := os.WriteFile(tempPath, []byte("substituted"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			t.Cleanup(func() { outputWriterBarrier = nil })
+
+			err := writeRepoRelativeOutputFile(filepath.FromSlash("out/result.txt"), []byte("must-not-substitute"))
+			if !mutated {
+				t.Fatal("output writer temporary-object barrier was not reached")
+			}
+			expectedError := "temporary output " + mutation + " changed"
+			if mutation == "symlink" {
+				expectedError = "temporary output identity changed"
+			}
+			if strings.HasPrefix(mutation, "mode-") {
+				expectedError = "temporary output mode changed"
+			}
+			if err == nil || !strings.Contains(err.Error(), expectedError) {
+				t.Fatalf("writeRepoRelativeOutputFile() temp mutation error=%v", err)
+			}
+			content, readErr := os.ReadFile(filepath.Join("out", "result.txt"))
+			if readErr != nil || string(content) != "unchanged" {
+				t.Fatalf("destination changed: content=%q error=%v", content, readErr)
+			}
+			entries, readDirErr := os.ReadDir("out")
+			if readDirErr != nil {
+				t.Fatal(readDirErr)
+			}
+			for _, entry := range entries {
+				if strings.HasPrefix(entry.Name(), ".proofkit-output-") {
+					t.Fatalf("substituted temporary output escaped cleanup: %s", entry.Name())
+				}
+			}
+		})
+	}
+}
+
 func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.006501090000492450297502395866607916441745680520470690190439229497945905166304")
+	var input any
+	if err := json.Unmarshal([]byte(cliRequirementSpecTreeInput()), &input); err != nil {
+		t.Fatalf("root-oracle input must be JSON: %v", err)
+	}
+	assertPublicCLIRootVariant(t, "requirement-browser-server", "input", "06-spec-tree", input)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	status := Run(t.Context(), []string{"requirement-browser-server", "--input", "-", "--view", "spec-tree"}, strings.NewReader(cliRequirementSpecTreeInput()), &stdout, &stderr)
@@ -614,12 +1035,130 @@ func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &parsed); err != nil {
 		t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
 	}
+	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "01-plan", parsed)
 	if parsed["planKind"] != "proofkit.requirement-browser-server-plan" || parsed["renderedViewKind"] != "proofkit.requirement-spec-tree-view" || parsed["view"] != "spec-tree" {
 		t.Fatalf("unexpected spec-tree browser plan: %#v", parsed)
 	}
 	if _, ok := parsed["htmlByteLength"].(float64); !ok {
 		t.Fatalf("browser plan must expose rendered HTML byte length: %#v", parsed)
 	}
+}
+
+func TestRequirementBrowserOneShotCLIOutputVariants(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("test launcher fixture is POSIX-only")
+	}
+	fixture, err := browserfixture.Workspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	input, err := json.Marshal(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	launcherDir := t.TempDir()
+	launcherName := "xdg-open"
+	if runtime.GOOS == "darwin" {
+		launcherName = "open"
+	}
+	launcherPath := filepath.Join(launcherDir, launcherName)
+	launcherScript := "#!/bin/sh\nprintf '%s\\n' \"$1\" > \"$PROOFKIT_TEST_BROWSER_URL_FILE\"\n"
+	if err := os.WriteFile(launcherPath, []byte(launcherScript), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	urlFile := filepath.Join(t.TempDir(), "browser-url")
+	t.Setenv("PROOFKIT_TEST_BROWSER_URL_FILE", urlFile)
+	t.Setenv("PATH", launcherDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	args := []string{
+		"requirement-browser-server",
+		"--input", "-",
+		"--view", "workspace",
+		"--serve",
+		"--open",
+		"--session-mode", "one-shot-question",
+		"--session-timeout-seconds", "5",
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	var submittedStdout bytes.Buffer
+	var submittedStderr bytes.Buffer
+	result := make(chan int, 1)
+	go func() {
+		result <- Run(ctx, args, bytes.NewReader(input), &submittedStdout, &submittedStderr)
+	}()
+	var browserURL string
+	deadline := time.Now().Add(3 * time.Second)
+	for browserURL == "" && time.Now().Before(deadline) {
+		content, readErr := os.ReadFile(urlFile)
+		if readErr == nil {
+			browserURL = strings.TrimSpace(string(content))
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if browserURL == "" {
+		t.Fatal("browser launcher did not receive one-shot URL")
+	}
+	response, err := http.Get(browserURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	capabilityMatch := regexp.MustCompile(`name="proofkit-browser-capability" content="([A-Za-z0-9_-]{43})"`).FindSubmatch(body)
+	if len(capabilityMatch) != 2 {
+		t.Fatalf("workspace capability missing from browser shell: %s", body)
+	}
+	handoff := `{"annotations":[{"anchorId":"requirement:REQ-CONSUMER-001:invariant","exactQuote":"preserves","startCodePoint":11,"endCodePoint":20,"question":"Does this remain true?"}]}`
+	request, err := http.NewRequest(http.MethodPost, browserURL+"api/v1/handoff", strings.NewReader(handoff))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Origin", strings.TrimSuffix(browserURL, "/"))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Proofkit-Browser-Capability", string(capabilityMatch[1]))
+	handoffResponse, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handoffBody, _ := io.ReadAll(handoffResponse.Body)
+	_ = handoffResponse.Body.Close()
+	if handoffResponse.StatusCode != http.StatusOK {
+		t.Fatalf("handoff status=%d body=%s", handoffResponse.StatusCode, handoffBody)
+	}
+	select {
+	case status := <-result:
+		if status != 0 || submittedStderr.Len() != 0 {
+			t.Fatalf("submitted status=%d stdout=%s stderr=%s", status, submittedStdout.String(), submittedStderr.String())
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("submitted one-shot CLI did not return")
+	}
+	var submitted any
+	if err := json.Unmarshal(submittedStdout.Bytes(), &submitted); err != nil {
+		t.Fatalf("submitted stdout must be JSON: %v\n%s", err, submittedStdout.String())
+	}
+	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "03-one-shot-submitted", submitted)
+
+	var terminalStdout bytes.Buffer
+	var terminalStderr bytes.Buffer
+	terminalStatus := Run(t.Context(), []string{
+		"requirement-browser-server",
+		"--input", "-",
+		"--view", "workspace",
+		"--serve",
+		"--open",
+		"--session-mode", "one-shot-question",
+		"--session-timeout-seconds", "1",
+	}, bytes.NewReader(input), &terminalStdout, &terminalStderr)
+	if terminalStatus != 1 || terminalStderr.Len() != 0 {
+		t.Fatalf("terminal status=%d stdout=%s stderr=%s", terminalStatus, terminalStdout.String(), terminalStderr.String())
+	}
+	var terminal any
+	if err := json.Unmarshal(terminalStdout.Bytes(), &terminal); err != nil {
+		t.Fatalf("terminal stdout must be JSON: %v\n%s", err, terminalStdout.String())
+	}
+	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "02-one-shot-terminal", terminal)
 }
 
 func TestAdoptionDoctorCLIABI(t *testing.T) {
@@ -693,18 +1232,24 @@ func TestAdoptionDoctorCLIABI(t *testing.T) {
 }
 
 func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
+	exercisedRootConditions := map[string]struct{}{}
+	exercisedJSONCases := []string{}
 	cases := []struct {
-		name       string
-		args       []string
-		stdin      string
-		wantStatus int
-		wantStderr string
-		assertJSON func(t *testing.T, value any)
+		name          string
+		args          []string
+		stdin         string
+		wantStatus    int
+		wantStderr    string
+		rootCondition string
+		rootVariant   string
+		assertJSON    func(t *testing.T, value any)
 	}{
 		{
-			name:       "workflow mode emits child workflow plan",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "workflow"},
-			wantStatus: 0,
+			name:          "workflow mode emits child workflow plan",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "workflow"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=workflow --pilot=absent",
+			rootVariant:   "11-workflow-plan",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "planKind", "proofkit.adoption-workflow-plan")
@@ -712,9 +1257,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "workflow agent envelope emits child envelope",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "workflow", "--agent-envelope"},
-			wantStatus: 0,
+			name:          "workflow agent envelope emits child envelope",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "workflow", "--agent-envelope"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=present --materialization-manifest=absent --mode=workflow --pilot=absent",
+			rootVariant:   "10-workflow-agent",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "envelopeId", "proofkit-adoption-workflow.agent-envelope")
@@ -722,9 +1269,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "adoption mode emits gradual adoption report",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "adoption"},
-			wantStatus: 0,
+			name:          "adoption mode emits gradual adoption report",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "adoption"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=adoption --pilot=absent",
+			rootVariant:   "01-adoption-report",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "reportKind", "proofkit.gradual-adoption")
@@ -732,9 +1281,37 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "bootstrap materialization emits manifest",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "bootstrap", "--materialization-manifest"},
-			wantStatus: 0,
+			name:          "bootstrap mode emits bootstrap projection",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "bootstrap"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=bootstrap --pilot=absent",
+			rootVariant:   "02-bootstrap",
+			assertJSON: func(t *testing.T, value any) {
+				object := jsonObject(t, value)
+				if _, ok := object["plannedFiles"].([]any); !ok {
+					t.Fatalf("bootstrap projection must expose plannedFiles: %#v", object)
+				}
+				assertStringField(t, jsonObjectField(t, object, "report"), "reportKind", "proofkit.gradual-adoption-bootstrap")
+			},
+		},
+		{
+			name:          "bootstrap agent mode emits envelope",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "bootstrap", "--agent-envelope"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=present --materialization-manifest=absent --mode=bootstrap --pilot=absent",
+			rootVariant:   "03-bootstrap-agent",
+			assertJSON: func(t *testing.T, value any) {
+				object := jsonObject(t, value)
+				assertStringField(t, object, "envelopeId", "proofkit.cli.bootstrap.agent-envelope")
+				assertStringField(t, jsonObjectField(t, object, "sourceReport"), "reportKind", "proofkit.gradual-adoption-bootstrap")
+			},
+		},
+		{
+			name:          "bootstrap materialization emits manifest",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "bootstrap", "--materialization-manifest"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=present --mode=bootstrap --pilot=absent",
+			rootVariant:   "04-bootstrap-materialization",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "manifestKind", "proofkit.gradual-adoption-bootstrap-materialization-manifest")
@@ -745,9 +1322,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "guidance override emits guidance report",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "guidance", "--guidance-mode", "warn", "--checked-scope", "all"},
-			wantStatus: 0,
+			name:          "guidance override emits guidance report",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "guidance", "--guidance-mode", "warn", "--checked-scope", "all"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=guidance --pilot=absent",
+			rootVariant:   "06-guidance-report",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "reportKind", "proofkit.gradual-adoption-guidance")
@@ -757,9 +1336,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "guidance agent envelope emits child envelope",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "guidance", "--agent-envelope", "--guidance-mode", "warn", "--checked-scope", "none"},
-			wantStatus: 0,
+			name:          "guidance agent envelope emits child envelope",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "guidance", "--agent-envelope", "--guidance-mode", "warn", "--checked-scope", "none"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=present --materialization-manifest=absent --mode=guidance --pilot=absent",
+			rootVariant:   "05-guidance-agent",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "envelopeId", "proofkit.cli.guidance.agent-envelope")
@@ -767,9 +1348,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "pilot first emits pilot report",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "first"},
-			wantStatus: 0,
+			name:          "pilot first emits pilot report",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "first"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=first",
+			rootVariant:   "08-pilot-first",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "reportId", "proofkit.cli.pilot.first")
@@ -777,9 +1360,23 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "pilot stack diverse emits stack-diverse report",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "stack-diverse"},
-			wantStatus: 0,
+			name:          "pilot omitted defaults to first report",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=absent",
+			rootVariant:   "08-pilot-first",
+			assertJSON: func(t *testing.T, value any) {
+				object := jsonObject(t, value)
+				assertStringField(t, object, "reportId", "proofkit.cli.pilot.first")
+				assertStringField(t, object, "reportKind", "proofkit.pilot-admission")
+			},
+		},
+		{
+			name:          "pilot stack diverse emits stack-diverse report",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "stack-diverse"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=stack-diverse",
+			rootVariant:   "09-pilot-stack-diverse",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "reportId", "proofkit.cli.pilot.stack-diverse")
@@ -787,9 +1384,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "pilot all emits both pilot reports",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "all"},
-			wantStatus: 0,
+			name:          "pilot all emits both pilot reports",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "all"},
+			wantStatus:    0,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=all",
+			rootVariant:   "07-pilot-all",
 			assertJSON: func(t *testing.T, value any) {
 				items := jsonArray(t, value)
 				if len(items) != 2 {
@@ -800,10 +1399,12 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			},
 		},
 		{
-			name:       "agent envelope invalid aggregate emits repair packet",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "workflow", "--agent-envelope"},
-			stdin:      cliInvalidAdoptionContractEnvelopeInput(),
-			wantStatus: 1,
+			name:          "agent envelope invalid aggregate emits repair packet",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "workflow", "--agent-envelope"},
+			stdin:         cliInvalidAdoptionContractEnvelopeInput(),
+			wantStatus:    1,
+			rootCondition: "--agent-envelope=present --materialization-manifest=absent --mode=workflow --pilot=absent",
+			rootVariant:   "10-workflow-agent",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "envelopeId", "proofkit.agent-envelope.invalid-input")
@@ -811,6 +1412,24 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 					t.Fatalf("invalid aggregate envelope must expose blocked preconditions: %#v", object)
 				}
 			},
+		},
+		{
+			name:       "duplicate mode is rejected instead of changing the selected root variant",
+			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "adoption", "--mode", "bootstrap"},
+			wantStatus: 1,
+			wantStderr: "--mode may be specified only once\n",
+		},
+		{
+			name:       "duplicate pilot is rejected instead of changing the selected root variant",
+			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "all", "--pilot", "first"},
+			wantStatus: 1,
+			wantStderr: "--pilot may be specified only once\n",
+		},
+		{
+			name:       "empty pilot is rejected instead of projecting a present flag as absent",
+			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", ""},
+			wantStatus: 1,
+			wantStderr: "--pilot requires first, stack-diverse, or all\n",
 		},
 		{
 			name:       "input pointer is rejected",
@@ -849,9 +1468,11 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			wantStderr: "--checked-scope requires none, touched, or all\n",
 		},
 		{
-			name:       "invalid guidance mode scope pair rejected",
-			args:       []string{"adoption-contract-envelope", "--input", "-", "--mode", "guidance", "--guidance-mode", "enforce-all", "--checked-scope", "touched"},
-			wantStatus: 1,
+			name:          "invalid guidance mode scope pair rejected",
+			args:          []string{"adoption-contract-envelope", "--input", "-", "--mode", "guidance", "--guidance-mode", "enforce-all", "--checked-scope", "touched"},
+			wantStatus:    1,
+			rootCondition: "--agent-envelope=absent --materialization-manifest=absent --mode=guidance --pilot=absent",
+			rootVariant:   "06-guidance-report",
 			assertJSON: func(t *testing.T, value any) {
 				object := jsonObject(t, value)
 				assertStringField(t, object, "state", "failed")
@@ -874,6 +1495,27 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			if stdin == "" {
 				stdin = cliAdoptionContractEnvelopeInput()
 			}
+			var input any
+			if err := json.Unmarshal([]byte(stdin), &input); err != nil {
+				t.Fatalf("root-oracle input must be JSON: %v", err)
+			}
+			assertPublicCLIRootVariant(t, "adoption-contract-envelope", "input", "01-root", input)
+			expectsJSON := item.assertJSON != nil
+			if expectsJSON {
+				if item.rootCondition == "" || item.rootVariant == "" {
+					t.Fatal("every JSON-emitting argv must declare an exact output condition and root variant")
+				}
+				parsedOptions, err := parseAdoptionContractArgs(item.args[1:])
+				if err != nil {
+					t.Fatalf("parse root-condition argv: %v", err)
+				}
+				if actual := adoptionOutputConditionFromParsed(parsedOptions); actual != item.rootCondition {
+					t.Fatalf("argv root condition=%q want %q", actual, item.rootCondition)
+				}
+				exercisedRootConditions[item.rootCondition] = struct{}{}
+			} else if item.rootCondition != "" || item.rootVariant != "" {
+				t.Fatal("non-JSON argv must not declare an output condition or root variant")
+			}
 			status := Run(t.Context(), item.args, strings.NewReader(stdin), &stdout, &stderr)
 			if status != item.wantStatus {
 				t.Fatalf("status=%d want %d stdout=%s stderr=%s", status, item.wantStatus, stdout.String(), stderr.String())
@@ -887,13 +1529,192 @@ func TestAdoptionContractEnvelopeCLIABI(t *testing.T) {
 			if item.wantStderr != "" && stdout.Len() != 0 {
 				t.Fatalf("stdout must be empty for argument failure: %s", stdout.String())
 			}
-			if item.assertJSON != nil {
+			emittedJSON := stdout.Len() != 0
+			if emittedJSON != expectsJSON {
+				t.Fatalf("actual JSON emission=%t want fixture assertion=%t stdout=%q", emittedJSON, expectsJSON, stdout.String())
+			}
+			if emittedJSON {
+				exercisedJSONCases = append(exercisedJSONCases, item.name)
 				var parsed any
 				if err := json.Unmarshal(stdout.Bytes(), &parsed); err != nil {
 					t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
 				}
+				assertPublicCLIRootVariant(t, "adoption-contract-envelope", "output", item.rootVariant, parsed)
+				assertPublicCLIRootVariantCondition(t, "adoption-contract-envelope", "output", item.rootVariant, item.rootCondition)
 				item.assertJSON(t, parsed)
 			}
+		})
+	}
+	slices.Sort(exercisedJSONCases)
+	expectedJSONCases := []string{
+		"adoption mode emits gradual adoption report",
+		"agent envelope invalid aggregate emits repair packet",
+		"bootstrap agent mode emits envelope",
+		"bootstrap materialization emits manifest",
+		"bootstrap mode emits bootstrap projection",
+		"guidance agent envelope emits child envelope",
+		"guidance override emits guidance report",
+		"invalid guidance mode scope pair rejected",
+		"pilot all emits both pilot reports",
+		"pilot first emits pilot report",
+		"pilot omitted defaults to first report",
+		"pilot stack diverse emits stack-diverse report",
+		"workflow agent envelope emits child envelope",
+		"workflow mode emits child workflow plan",
+	}
+	if !slices.Equal(exercisedJSONCases, expectedJSONCases) {
+		t.Fatalf("exercised adoption JSON cases=%v want exact %v", exercisedJSONCases, expectedJSONCases)
+	}
+	if len(exercisedRootConditions) != 12 {
+		t.Fatalf("exercised adoption root conditions=%d want 12: %v", len(exercisedRootConditions), exercisedRootConditions)
+	}
+}
+
+func TestStandaloneMultiVariantCommandsUseExactRootShapes(t *testing.T) {
+	pilotCases := []struct {
+		name          string
+		args          []string
+		stdin         string
+		inputVariant  string
+		outputVariant string
+	}{
+		{
+			name:          "direct input",
+			args:          []string{"pilot-admission", "--input", "-"},
+			stdin:         cliJSON(cliPilotInput("proofkit.cli.pilot.first", false)),
+			inputVariant:  "04-direct-first",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "direct explicit first",
+			args:          []string{"pilot-admission", "--input", "-", "--pilot", "first"},
+			stdin:         cliJSON(cliPilotInput("proofkit.cli.pilot.first", false)),
+			inputVariant:  "04-direct-first",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "direct stack diverse",
+			args:          []string{"pilot-admission", "--input", "-", "--pilot", "stack-diverse"},
+			stdin:         cliJSON(cliPilotInput("proofkit.cli.pilot.stack-diverse", true)),
+			inputVariant:  "05-direct-stack-diverse",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "contract default first",
+			args:          []string{"pilot-admission", "--input", "-", "--contract-envelope"},
+			stdin:         cliPilotContractEnvelopeInput("first"),
+			inputVariant:  "02-contract-first",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "contract explicit first",
+			args:          []string{"pilot-admission", "--input", "-", "--contract-envelope", "--pilot", "first"},
+			stdin:         cliPilotContractEnvelopeInput("first"),
+			inputVariant:  "02-contract-first",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "contract stack diverse",
+			args:          []string{"pilot-admission", "--input", "-", "--contract-envelope", "--pilot", "stack-diverse"},
+			stdin:         cliPilotContractEnvelopeInput("stack-diverse"),
+			inputVariant:  "03-contract-stack-diverse",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "contract stack diverse alias",
+			args:          []string{"pilot-admission", "--input", "-", "--contract-envelope", "--stack-diverse"},
+			stdin:         cliPilotContractEnvelopeInput("stack-diverse"),
+			inputVariant:  "03-contract-stack-diverse",
+			outputVariant: "02-report",
+		},
+		{
+			name:          "contract all",
+			args:          []string{"pilot-admission", "--input", "-", "--contract-envelope", "--pilot", "all"},
+			stdin:         cliPilotContractEnvelopeInput("all"),
+			inputVariant:  "01-contract-all",
+			outputVariant: "01-all",
+		},
+	}
+	for _, item := range pilotCases {
+		t.Run("pilot/"+item.name, func(t *testing.T) {
+			var input any
+			if err := json.Unmarshal([]byte(item.stdin), &input); err != nil {
+				t.Fatal(err)
+			}
+			assertPublicCLIRootVariant(t, "pilot-admission", "input", item.inputVariant, input)
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), item.args, strings.NewReader(item.stdin), &stdout, &stderr)
+			if status != 0 || stderr.Len() != 0 {
+				t.Fatalf("status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+			}
+			var output any
+			if err := json.Unmarshal(stdout.Bytes(), &output); err != nil {
+				t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
+			}
+			assertPublicCLIRootVariant(t, "pilot-admission", "output", item.outputVariant, output)
+		})
+	}
+
+	for _, item := range []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "repeated pilot",
+			args: []string{"--pilot", "all", "--pilot", "first"},
+		},
+		{
+			name: "stack alias then pilot",
+			args: []string{"--stack-diverse", "--pilot", "first"},
+		},
+		{
+			name: "pilot then stack alias",
+			args: []string{"--pilot", "first", "--stack-diverse"},
+		},
+		{
+			name: "repeated stack alias",
+			args: []string{"--stack-diverse", "--stack-diverse"},
+		},
+	} {
+		t.Run("pilot rejects "+item.name, func(t *testing.T) {
+			args := append([]string{"pilot-admission", "--input", "-"}, item.args...)
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), args, strings.NewReader("{}"), &stdout, &stderr)
+			if status != 1 || stdout.Len() != 0 || stderr.String() != "pilot selector may be specified only once\n" {
+				t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+			}
+		})
+	}
+
+	conformanceInput := cliConformanceProfileInput()
+	for _, item := range []struct {
+		name          string
+		args          []string
+		outputVariant string
+	}{
+		{name: "list", args: []string{"conformance-profile", "--input", "-", "--list"}, outputVariant: "01-list"},
+		{name: "profile default json", args: []string{"conformance-profile", "--input", "-", "--profile", "local"}, outputVariant: "02-profile"},
+		{name: "verify", args: []string{"conformance-profile", "--input", "-", "--verify"}, outputVariant: "03-verify"},
+	} {
+		t.Run("conformance/"+item.name, func(t *testing.T) {
+			var input any
+			if err := json.Unmarshal([]byte(conformanceInput), &input); err != nil {
+				t.Fatal(err)
+			}
+			assertPublicCLIRootVariant(t, "conformance-profile", "input", "01-root", input)
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), item.args, strings.NewReader(conformanceInput), &stdout, &stderr)
+			if status != 0 || stderr.Len() != 0 {
+				t.Fatalf("status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+			}
+			var output any
+			if err := json.Unmarshal(stdout.Bytes(), &output); err != nil {
+				t.Fatalf("stdout must be JSON: %v\n%s", err, stdout.String())
+			}
+			assertPublicCLIRootVariant(t, "conformance-profile", "output", item.outputVariant, output)
 		})
 	}
 }
@@ -1004,6 +1825,86 @@ func cliAdoptionContractEnvelopeInput() string {
 		"nonClaims": []any{"CLI aggregate fixture does not execute native witnesses."},
 	}
 	content, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	return string(content)
+}
+
+func cliPilotContractEnvelopeInput(mode string) string {
+	envelope := map[string]any{"schema": "proofkit.pilot-admission.v1"}
+	if mode == "first" || mode == "all" {
+		envelope["input"] = cliPilotInput("proofkit.cli.pilot.first", false)
+	}
+	if mode == "stack-diverse" || mode == "all" {
+		envelope["stackDiverseInput"] = cliPilotInput("proofkit.cli.pilot.stack-diverse", true)
+	}
+	return cliJSON(envelope)
+}
+
+func cliConformanceProfileInput() string {
+	manifestNonClaim := "Conformance profile CLI fixture is not live proof."
+	return cliJSON(map[string]any{
+		"schemaVersion": json.Number("1"),
+		"profileId":     "local",
+		"policy": map[string]any{
+			"knownEnvironmentClasses":             []any{"local-go"},
+			"localEnvironmentClasses":             []any{"local-go"},
+			"allowedProofContractStates":          []any{"witness_backed"},
+			"blockingStatuses":                    []any{"blocking"},
+			"failOnUnusedAllowedEnvironmentClass": true,
+			"expectedManifest": map[string]any{
+				"contractId":           "proofkit.cli.conformance",
+				"contractKind":         "proofkit.conformance-manifest",
+				"authorityState":       "canonical",
+				"normalizationProfile": "proofkit.cli.v1",
+				"sourceContract":       "docs/contracts/requirement-proof-bindings.v1.json",
+				"nonClaims":            []any{manifestNonClaim},
+			},
+		},
+		"manifest": map[string]any{
+			"schemaVersion":        json.Number("1"),
+			"contractId":           "proofkit.cli.conformance",
+			"contractKind":         "proofkit.conformance-manifest",
+			"authorityState":       "canonical",
+			"normalizationProfile": "proofkit.cli.v1",
+			"sourceContract":       "docs/contracts/requirement-proof-bindings.v1.json",
+			"nonClaims":            []any{manifestNonClaim},
+			"profiles": []any{map[string]any{
+				"profileId":                 "local",
+				"purpose":                   "Local proof profile.",
+				"preconditionPolicy":        "local_only",
+				"requiredSurfaceIds":        []any{"surface.local"},
+				"optionalSurfaceIds":        []any{},
+				"allowedEnvironmentClasses": []any{"local-go"},
+				"nonClaims":                 []any{"Local profile CLI fixture does not execute commands."},
+			}},
+		},
+		"proofContract": map[string]any{
+			"contractId": "proofkit.cli.proof-contract",
+			"surfaces": []any{map[string]any{
+				"surfaceId":                        "surface.local",
+				"requiredEnvironmentClasses":       []any{"local-go"},
+				"preconditionedEnvironmentClasses": []any{},
+			}},
+			"bindings": []any{map[string]any{
+				"requirementId":              "REQ-PROOFKIT-001",
+				"surfaceId":                  "surface.local",
+				"scenarioId":                 "proofkit.scenario",
+				"blockingStatus":             "blocking",
+				"proofContractState":         "witness_backed",
+				"requiredEnvironmentClasses": []any{"local-go"},
+				"verifyCommands":             []any{"go test ./..."},
+				"witnessRefs": []any{
+					map[string]any{"role": "unit", "selector": "internal/test.go::TestOK"},
+				},
+			}},
+		},
+	})
+}
+
+func cliJSON(value any) string {
+	content, err := json.Marshal(value)
 	if err != nil {
 		panic(err)
 	}

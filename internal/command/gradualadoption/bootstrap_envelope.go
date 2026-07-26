@@ -6,10 +6,15 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 func BuildBootstrapEnvelope(raw any) (map[string]any, int, error) {
-	result, err := buildBootstrap(raw)
+	return BuildBootstrapEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := buildBootstrap(raw, renderer)
 	if err != nil {
 		return agentenvelope.InvalidInput(err.Error()), 1, nil
 	}
@@ -17,11 +22,15 @@ func BuildBootstrapEnvelope(raw any) (map[string]any, int, error) {
 }
 
 func BuildBootstrapEnvelopeFromContractEnvelope(raw any) (map[string]any, int, error) {
+	return BuildBootstrapEnvelopeFromContractEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapEnvelopeFromContractEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
 	input, err := BootstrapInputFromContractEnvelope(raw)
 	if err != nil {
 		return agentenvelope.InvalidInput(err.Error()), 1, nil
 	}
-	return BuildBootstrapEnvelope(input)
+	return BuildBootstrapEnvelopeWithRenderer(input, renderer)
 }
 
 func BootstrapEnvelope(result BootstrapResult) map[string]any {

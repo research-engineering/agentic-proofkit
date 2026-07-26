@@ -202,10 +202,12 @@ func admitInput(raw any) (Input, error) {
 
 func build(input Input) Result {
 	gaps := adoptionGaps(input)
+	blocked := blockedGaps(gaps)
 	enforced := enforcedGaps(input, gaps)
+	blocking := append(append([]gap{}, blocked...), enforced...)
 	state := "passed"
 	exitCode := 0
-	if hasBlockedGap(enforced) {
+	if len(blocked) > 0 {
 		state = "blocked"
 		exitCode = 1
 	} else if len(enforced) > 0 {
@@ -219,6 +221,7 @@ func build(input Input) Result {
 		State:         state,
 		Summary: map[string]any{
 			"blockedPreconditionCount":   len(input.BlockedPreconditions),
+			"blockedGapCount":            len(blocked),
 			"candidateBoundaryCount":     len(input.CandidateBoundaries),
 			"checkedScope":               input.CheckedScope,
 			"childReportCount":           len(input.ChildReports),
@@ -236,7 +239,7 @@ func build(input Input) Result {
 			{Key: "routeCommands", Value: routeCommandDiagnostics(input.OwnerRoutes)},
 			{Key: "candidateBoundaries", Value: candidatesJSON(input.CandidateBoundaries)},
 			{Key: "staleAuthority", Value: staleAuthorityJSON(input.StaleAuthority)},
-			{Key: "promotionReadiness", Value: promotionReadiness(input, enforced)},
+			{Key: "promotionReadiness", Value: promotionReadiness(input, blocking)},
 		},
 		RuleResults: ruleResults(input, gaps, enforced),
 		NonClaims:   admit.StringSliceToAny(mergedNonClaims(input.NonClaims)),
@@ -368,25 +371,29 @@ func missingOwnerRouteGaps(input Input, touched map[string]struct{}) []gap {
 }
 
 func enforcedGaps(input Input, gaps []gap) []gap {
-	if !adoptionmode.IsEnforcing(input.Mode) {
-		return []gap{}
-	}
 	enforced := []gap{}
 	for _, item := range gaps {
-		if input.Mode == adoptionmode.EnforceAll || item.Touched {
+		if !isUnconditionalBlockedGap(item) &&
+			adoptionmode.IsEnforcing(input.Mode) &&
+			(input.Mode == adoptionmode.EnforceAll || item.Touched) {
 			enforced = append(enforced, item)
 		}
 	}
 	return enforced
 }
 
-func hasBlockedGap(gaps []gap) bool {
+func blockedGaps(gaps []gap) []gap {
+	blocked := []gap{}
 	for _, item := range gaps {
-		if item.Kind == "blocked_precondition" || item.Kind == "child_report_blocked" {
-			return true
+		if isUnconditionalBlockedGap(item) {
+			blocked = append(blocked, item)
 		}
 	}
-	return false
+	return blocked
+}
+
+func isUnconditionalBlockedGap(item gap) bool {
+	return item.Kind == "blocked_precondition" || item.Kind == "child_report_blocked"
 }
 
 func ruleResults(input Input, gaps []gap, enforced []gap) []report.RuleResult {
@@ -403,15 +410,25 @@ func ruleResults(input Input, gaps []gap, enforced []gap) []report.RuleResult {
 	}
 	results := make([]report.RuleResult, 0, len(gaps))
 	for _, item := range gaps {
-		status := "passed"
+		if isUnconditionalBlockedGap(item) {
+			results = append(results, report.RuleResult{
+				RuleID:  "proofkit.adoption-doctor." + item.Kind,
+				Status:  "blocked",
+				Message: item.Message,
+				Diagnostics: []report.Diagnostic{
+					{Key: "gapId", Value: item.GapID},
+					{Key: "phase", Value: item.Phase},
+					{Key: "touched", Value: item.Touched},
+				},
+			})
+			continue
+		}
+		status := "skipped"
 		if input.Mode == adoptionmode.Warn {
 			status = "warning"
 		}
 		if _, ok := enforcedSet[item.GapID]; ok {
 			status = "failed"
-			if item.Kind == "blocked_precondition" || item.Kind == "child_report_blocked" {
-				status = "blocked"
-			}
 		}
 		results = append(results, report.RuleResult{
 			RuleID:  "proofkit.adoption-doctor." + item.Kind,

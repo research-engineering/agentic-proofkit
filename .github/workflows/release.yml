@@ -976,23 +976,13 @@ jobs:
               --notes-file artifacts/release/release-notes.md
             existing_dir="$(mktemp -d)"
             gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | sort > /tmp/proofkit-existing-release-assets.txt
-            mapfile -t existing_asset_names < /tmp/proofkit-existing-release-assets.txt
-            comm -13 \
-              <(printf '%s\n' "${expected_asset_names[@]}") \
-              <(printf '%s\n' "${existing_asset_names[@]}") \
-              >/tmp/proofkit-extra-release-assets.txt
-            if [ -s /tmp/proofkit-extra-release-assets.txt ]; then
-              cat /tmp/proofkit-extra-release-assets.txt >&2
-              echo "release $GITHUB_REF_NAME contains unexpected assets" >&2
+            if ! cmp -s /tmp/proofkit-expected-release-assets.txt /tmp/proofkit-existing-release-assets.txt; then
+              diff -u /tmp/proofkit-expected-release-assets.txt /tmp/proofkit-existing-release-assets.txt >&2 || true
+              echo "release $GITHUB_REF_NAME asset set differs from the candidate asset set" >&2
               exit 1
             fi
-            missing_assets=()
             for asset in "${expected_assets[@]}"; do
               asset_name="$(basename "$asset")"
-              if ! grep -Fxq "$asset_name" /tmp/proofkit-existing-release-assets.txt; then
-                missing_assets+=("$asset")
-                continue
-              fi
               gh release download "$GITHUB_REF_NAME" --pattern "$asset_name" --dir "$existing_dir"
               existing_asset="$existing_dir/$asset_name"
               if ! cmp -s "$asset" "$existing_asset"; then
@@ -1001,9 +991,6 @@ jobs:
                 exit 1
               fi
             done
-            if [ "${#missing_assets[@]}" -gt 0 ]; then
-              gh release upload "$GITHUB_REF_NAME" "${missing_assets[@]}"
-            fi
             gh release view "$GITHUB_REF_NAME" --json tagName,name,body,isDraft,isPrerelease,assets >/tmp/proofkit-release-view.json
             go run ./internal/tools/releasepreflight github-release \
               --release-file /tmp/proofkit-release-view.json \
@@ -1012,17 +999,6 @@ jobs:
               --asset-names-file /tmp/proofkit-expected-release-assets.txt
             cp /tmp/proofkit-release-view.json artifacts/release/github-release.json
             go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts
-            final_dir="$(mktemp -d)"
-            for asset in "${expected_assets[@]}"; do
-              asset_name="$(basename "$asset")"
-              gh release download "$GITHUB_REF_NAME" --pattern "$asset_name" --dir "$final_dir"
-              final_asset="$final_dir/$asset_name"
-              if ! cmp -s "$asset" "$final_asset"; then
-                echo "release $GITHUB_REF_NAME final asset $asset_name differs from the candidate artifact" >&2
-                sha256sum "$asset" "$final_asset" >&2 || true
-                exit 1
-              fi
-            done
             echo "release $GITHUB_REF_NAME already exists and matches the candidate artifacts" >&2
             exit 0
           fi

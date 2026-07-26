@@ -5,10 +5,11 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 )
 
-func runAgentRoute(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+func runAgentRoute(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parsePlanningArgs("agent-route", args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -33,13 +34,13 @@ func runAgentRoute(args []string, stdin io.Reader, stdout io.Writer, stderr io.W
 		}
 	}
 	if options.agentEnvelope {
-		output, exitCode, err := agentroute.BuildEnvelope(input)
+		output, exitCode, err := agentroute.BuildEnvelopeWithRenderer(input, renderer)
 		if err != nil {
 			return writeJSON(agentenvelope.InvalidInput(diagnosticMessage(err)), 1, nil, stdout, stderr)
 		}
 		return writeJSON(output, exitCode, nil, stdout, stderr)
 	}
-	output, exitCode, err := agentroute.Build(input)
+	output, exitCode, err := agentroute.BuildWithRenderer(input, renderer)
 	if err != nil {
 		writeDiagnostic(stderr, err)
 		return 1

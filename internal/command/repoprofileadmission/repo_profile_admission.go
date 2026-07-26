@@ -147,13 +147,7 @@ type admissionResult struct {
 func Build(raw any) (report.Record, int, error) {
 	result, err := verify(raw)
 	if err != nil {
-		result = admissionResult{
-			CommandMatcherCount:         0,
-			DistinctWitnessCommandCount: 0,
-			EnvironmentClassCount:       0,
-			GeneratedArtifactCount:      0,
-			Failures:                    []string{err.Error()},
-		}
+		return report.Record{}, 1, err
 	}
 	record := buildReport(result)
 	if record.State == "passed" {

@@ -47,16 +47,12 @@ func TestRegistryConsumerRejectsSecretLikeCallerOwnedText(t *testing.T) {
 	input := validRegistryConsumerInput(t)
 	input["input"].(map[string]any)["consumerId"] = secretLike
 
-	record, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("Build() accepted secret-like caller text: exit=%d error=%v", exitCode, err)
 	}
-	encoded, _ := json.Marshal(record)
-	if exitCode == 0 || record.State != "failed" || !strings.Contains(string(encoded), "secret-like values") {
-		t.Fatalf("Build() accepted secret-like caller text: exit=%d record=%s", exitCode, string(encoded))
-	}
-	if strings.Contains(string(encoded), secretLike) {
-		t.Fatalf("Build() leaked secret-like caller text: %s", string(encoded))
+	if strings.Contains(err.Error(), secretLike) {
+		t.Fatalf("Build() leaked secret-like caller text: %s", err)
 	}
 }
 
@@ -187,17 +183,10 @@ func TestRegistryConsumerRejectsLegacyRootImportProof(t *testing.T) {
 	proof := input["proof"].(map[string]any)
 	proof["rootImportOutputSha256"] = sha256Hex()
 
-	record, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "rootImportOutputSha256") {
+		t.Fatalf("Build() exit=%d error=%v, want admission failure", exitCode, err)
 	}
-	if exitCode != 1 {
-		t.Fatalf("Build() exit=%d, want admission failure", exitCode)
-	}
-	if record.ReportID != "proofkit.registry-consumer.invalid-input" {
-		t.Fatalf("Build() reportID=%s, want invalid input report", record.ReportID)
-	}
-	assertFailureMessage(t, record.RuleResults, "rootImportOutputSha256")
 }
 
 func anyStrings(values []any) []string {

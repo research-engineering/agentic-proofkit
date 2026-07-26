@@ -2,27 +2,20 @@ package adoptioncontract
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/pilotadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 )
 
-var modes = map[string]struct{}{
-	"adoption":  {},
-	"bootstrap": {},
-	"guidance":  {},
-	"pilot":     {},
-	"workflow":  {},
-}
-
-var pilotVariants = map[string]struct{}{
-	"all":           {},
-	"first":         {},
-	"stack-diverse": {},
-}
+var supportedModes = []string{"adoption", "bootstrap", "guidance", "pilot", "workflow"}
+var supportedPilotVariants = []string{"all", "first", "stack-diverse"}
+var modes = stringSet(supportedModes)
+var pilotVariants = stringSet(supportedPilotVariants)
 
 type Options struct {
 	AgentEnvelope           bool
@@ -30,6 +23,14 @@ type Options struct {
 	Mode                    string
 	Pilot                   string
 	Guidance                gradualadoption.GuidanceOptions
+}
+
+func SupportedModes() []string {
+	return slices.Clone(supportedModes)
+}
+
+func SupportedPilotVariants() []string {
+	return slices.Clone(supportedPilotVariants)
 }
 
 type aggregateEnvelope struct {
@@ -41,6 +42,10 @@ type aggregateEnvelope struct {
 }
 
 func Build(raw any, options Options) (any, int, error) {
+	return BuildWithRenderer(raw, options, cliexec.PathRenderer())
+}
+
+func BuildWithRenderer(raw any, options Options, renderer cliexec.Renderer) (any, int, error) {
 	if err := ValidateOptions(options); err != nil {
 		return nil, 1, err
 	}
@@ -54,19 +59,19 @@ func Build(raw any, options Options) (any, int, error) {
 	switch options.Mode {
 	case "workflow":
 		if options.AgentEnvelope {
-			return adoptionworkflow.BuildEnvelopeFromContractEnvelope(workflowEnvelope(envelope))
+			return adoptionworkflow.BuildEnvelopeFromContractEnvelopeWithRenderer(workflowEnvelope(envelope), renderer)
 		}
-		return adoptionworkflow.BuildFromContractEnvelope(workflowEnvelope(envelope))
+		return adoptionworkflow.BuildFromContractEnvelopeWithRenderer(workflowEnvelope(envelope), renderer)
 	case "adoption":
 		return gradualadoption.BuildFromContractEnvelope(adoptionEnvelope(envelope))
 	case "bootstrap":
 		if options.AgentEnvelope {
-			return gradualadoption.BuildBootstrapEnvelopeFromContractEnvelope(bootstrapEnvelope(envelope))
+			return gradualadoption.BuildBootstrapEnvelopeFromContractEnvelopeWithRenderer(bootstrapEnvelope(envelope), renderer)
 		}
 		if options.MaterializationManifest {
-			return gradualadoption.BuildBootstrapMaterializationManifestFromContractEnvelope(bootstrapEnvelope(envelope))
+			return gradualadoption.BuildBootstrapMaterializationManifestFromContractEnvelopeWithRenderer(bootstrapEnvelope(envelope), renderer)
 		}
-		return gradualadoption.BuildBootstrapFromContractEnvelope(bootstrapEnvelope(envelope))
+		return gradualadoption.BuildBootstrapFromContractEnvelopeWithRenderer(bootstrapEnvelope(envelope), renderer)
 	case "guidance":
 		if options.AgentEnvelope {
 			return gradualadoption.BuildGuidanceEnvelopeFromContractEnvelope(guidanceEnvelope(envelope), options.Guidance)
@@ -167,6 +172,14 @@ func ValidateOptions(options Options) error {
 		return fmt.Errorf("--guidance-mode, --checked-scope, and --touched-rule-id are valid only for guidance mode")
 	}
 	return nil
+}
+
+func stringSet(values []string) map[string]struct{} {
+	result := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		result[value] = struct{}{}
+	}
+	return result
 }
 
 func workflowEnvelope(envelope aggregateEnvelope) map[string]any {
