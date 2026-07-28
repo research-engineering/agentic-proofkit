@@ -10,11 +10,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/projectstructure"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/adoptionmode"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-func runAdoptionContractEnvelope(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+func runAdoptionContractEnvelope(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parseAdoptionContractArgs(args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -28,7 +29,7 @@ func runAdoptionContractEnvelope(args []string, stdin io.Reader, stdout io.Write
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	output, exitCode, err := adoptioncontract.Build(input, adoptioncontract.Options{
+	output, exitCode, err := adoptioncontract.BuildWithRenderer(input, adoptioncontract.Options{
 		AgentEnvelope:           options.agentEnvelope,
 		MaterializationManifest: options.materializationManifest,
 		Mode:                    options.mode,
@@ -38,7 +39,7 @@ func runAdoptionContractEnvelope(args []string, stdin io.Reader, stdout io.Write
 			GuidanceMode:   options.guidanceMode,
 			TouchedRuleIDs: options.touchedRuleIDs,
 		},
-	})
+	}, renderer)
 	if err != nil && options.agentEnvelope {
 		return writeJSON(agentenvelope.InvalidInput(diagnosticMessage(err)), 1, nil, stdout, stderr)
 	}
@@ -63,6 +64,9 @@ func parseAdoptionContractArgs(args []string) (adoptionContractArgs, error) {
 			options.inputPath = args[index+1]
 			index++
 		case "--mode":
+			if options.mode != "" {
+				return adoptionContractArgs{}, fmt.Errorf("--mode may be specified only once")
+			}
 			if index+1 >= len(args) || args[index+1] == "" {
 				return adoptionContractArgs{}, fmt.Errorf("--mode requires adoption, bootstrap, guidance, pilot, or workflow")
 			}
@@ -73,7 +77,10 @@ func parseAdoptionContractArgs(args []string) (adoptionContractArgs, error) {
 		case "--materialization-manifest":
 			options.materializationManifest = true
 		case "--pilot":
-			if index+1 >= len(args) {
+			if options.pilotSet {
+				return adoptionContractArgs{}, fmt.Errorf("--pilot may be specified only once")
+			}
+			if index+1 >= len(args) || args[index+1] == "" {
 				return adoptionContractArgs{}, fmt.Errorf("--pilot requires first, stack-diverse, or all")
 			}
 			options.pilot = args[index+1]
@@ -150,14 +157,7 @@ func runPilotAdmission(args []string, stdin io.Reader, stdout io.Writer, stderr 
 		}
 	}
 	if options.pilot == "all" {
-		first, firstExitCode, err := pilotadmission.BuildFromContractEnvelope(input, "input", pilotadmission.Options{})
-		if err != nil {
-			writeDiagnostic(stderr, err)
-			return 1
-		}
-		stackDiverse, stackDiverseExitCode, err := pilotadmission.BuildFromContractEnvelope(input, "stackDiverseInput", pilotadmission.Options{
-			RequireStackDiverseReleaseCandidate: true,
-		})
+		first, firstExitCode, stackDiverse, stackDiverseExitCode, err := pilotadmission.BuildAllFromContractEnvelope(input)
 		if err != nil {
 			writeDiagnostic(stderr, err)
 			return 1
@@ -191,6 +191,7 @@ func runPilotAdmission(args []string, stdin io.Reader, stdout io.Writer, stderr 
 func parsePilotAdmissionArgs(args []string) (pilotAdmissionArgs, error) {
 	options := pilotAdmissionArgs{pilot: "first"}
 	inputPointerSeen := false
+	pilotSelectorSeen := false
 	for index := 0; index < len(args); index++ {
 		switch args[index] {
 		case "--input":
@@ -209,8 +210,15 @@ func parsePilotAdmissionArgs(args []string) (pilotAdmissionArgs, error) {
 		case "--contract-envelope":
 			options.contractEnvelope = true
 		case "--stack-diverse":
+			if pilotSelectorSeen {
+				return pilotAdmissionArgs{}, fmt.Errorf("pilot selector may be specified only once")
+			}
+			pilotSelectorSeen = true
 			options.pilot = "stack-diverse"
 		case "--pilot":
+			if pilotSelectorSeen {
+				return pilotAdmissionArgs{}, fmt.Errorf("pilot selector may be specified only once")
+			}
 			if index+1 >= len(args) {
 				return pilotAdmissionArgs{}, fmt.Errorf("--pilot requires first, stack-diverse, or all")
 			}
@@ -218,6 +226,7 @@ func parsePilotAdmissionArgs(args []string) (pilotAdmissionArgs, error) {
 			if pilot != "first" && pilot != "stack-diverse" && pilot != "all" {
 				return pilotAdmissionArgs{}, fmt.Errorf("--pilot requires first, stack-diverse, or all")
 			}
+			pilotSelectorSeen = true
 			options.pilot = pilot
 			index++
 		default:
@@ -236,7 +245,7 @@ func parsePilotAdmissionArgs(args []string) (pilotAdmissionArgs, error) {
 	return options, nil
 }
 
-func runProjectStructure(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+func runProjectStructure(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parsePlanningArgs("scaffold-project-structure", args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -255,12 +264,12 @@ func runProjectStructure(args []string, stdin io.Reader, stdout io.Writer, stder
 		}
 	}
 	if options.agentEnvelope {
-		output, exitCode, err := projectstructure.BuildEnvelope(input)
+		output, exitCode, err := projectstructure.BuildEnvelopeWithRenderer(input, renderer)
 		if err != nil {
 			return writeJSON(agentenvelope.InvalidInput(diagnosticMessage(err)), 1, nil, stdout, stderr)
 		}
 		return writeJSON(output, exitCode, nil, stdout, stderr)
 	}
-	output, exitCode, err := projectstructure.Build(input)
+	output, exitCode, err := projectstructure.BuildWithRenderer(input, renderer)
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }

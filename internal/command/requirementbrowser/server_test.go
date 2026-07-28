@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -125,6 +126,52 @@ func TestStartServerServesExplicitSourceViews(t *testing.T) {
 			defer response.Body.Close()
 			if response.StatusCode != http.StatusForbidden {
 				t.Fatalf("status=%d, want forbidden", response.StatusCode)
+			}
+		})
+	}
+}
+
+func TestOpenBrowserUsesFixedLauncherAndLoopbackURL(t *testing.T) {
+	const loopbackURL = "http://127.0.0.1:43127/"
+	cases := []struct {
+		goos        string
+		wantCommand string
+		wantArgs    []string
+	}{
+		{goos: "darwin", wantCommand: "open", wantArgs: []string{loopbackURL}},
+		{goos: "linux", wantCommand: "xdg-open", wantArgs: []string{loopbackURL}},
+		{goos: "windows", wantCommand: "cmd", wantArgs: []string{"/c", "start", "", loopbackURL}},
+	}
+	for _, test := range cases {
+		t.Run(test.goos, func(t *testing.T) {
+			calls := 0
+			err := openBrowserWithLauncher(t.Context(), test.goos, loopbackURL, func(_ context.Context, command string, args ...string) error {
+				calls++
+				if command != test.wantCommand || !slices.Equal(args, test.wantArgs) {
+					t.Fatalf("launcher command=%q args=%v, want %q %v", command, args, test.wantCommand, test.wantArgs)
+				}
+				return nil
+			})
+			if err != nil || calls != 1 {
+				t.Fatalf("openBrowserWithLauncher() error=%v calls=%d", err, calls)
+			}
+		})
+	}
+	for _, unsafe := range []string{
+		"https://127.0.0.1:43127/",
+		"http://attacker.invalid:43127/",
+		"http://127.0.0.1:43127/?target=attacker",
+		"http://127.0.0.1:43127/#fragment",
+		"http://127.0.0.1:43127/other",
+	} {
+		t.Run(unsafe, func(t *testing.T) {
+			called := false
+			err := openBrowserWithLauncher(t.Context(), "linux", unsafe, func(context.Context, string, ...string) error {
+				called = true
+				return nil
+			})
+			if err == nil || called {
+				t.Fatalf("unsafe URL error=%v launcherCalled=%v", err, called)
 			}
 		})
 	}

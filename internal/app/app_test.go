@@ -18,8 +18,36 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
+
+func TestRequirementBrowserInvalidViewDiagnosticMatchesRuntime(t *testing.T) {
+	_, _, runtimeErr := requirementbrowser.BuildPlan(map[string]any{}, requirementbrowser.Options{
+		Host:    "127.0.0.1",
+		PortSet: true,
+		View:    "invalid",
+	})
+	if runtimeErr == nil {
+		t.Fatal("runtime accepted invalid browser view")
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(
+		t.Context(),
+		[]string{"requirement-browser-server", "--input", "-", "--view", "invalid"},
+		strings.NewReader("{}"),
+		&stdout,
+		&stderr,
+	)
+	const vocabulary = "source, proof, coverage, spec-tree, or workspace"
+	if status != 1 ||
+		stdout.Len() != 0 ||
+		strings.Count(stderr.String(), vocabulary) != 1 ||
+		strings.Count(runtimeErr.Error(), vocabulary) != 1 {
+		t.Fatalf("app/runtime diagnostic drift status=%d stdout=%q stderr=%q runtime=%q", status, stdout.String(), stderr.String(), runtimeErr)
+	}
+}
 
 var processTestBinary = struct {
 	once    sync.Once

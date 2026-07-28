@@ -20,10 +20,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 127
     ensure_executable(binary)
     command = [str(binary), *argv]
+    python_executable = str(Path(sys.executable).absolute())
+    environment = os.environ.copy()
+    environment["AGENTIC_PROOFKIT_LAUNCHER_PROFILE"] = "python_module"
+    environment["AGENTIC_PROOFKIT_PYTHON_EXECUTABLE"] = python_executable
     if os.name != "nt":
-        os.execv(str(binary), command)
-        raise AssertionError("os.execv returned unexpectedly")
-    return subprocess.run(command, check=False).returncode
+        os.execve(str(binary), command, environment)
+        raise AssertionError("os.execve returned unexpectedly")
+    return subprocess.run(command, check=False, env=environment).returncode
 
 
 def ensure_executable(path: Path) -> None:

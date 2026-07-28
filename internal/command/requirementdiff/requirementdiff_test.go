@@ -16,7 +16,7 @@ func TestBuildClassifiesOwnerAwareRequirementChanges(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070793924321910266811017548213459952142613821158702213873670242368963866904489")
 	baseline := contextFixture(t, "The system preserves the baseline.")
 	current := contextFixture(t, "The system preserves the revised invariant.")
-	output, err := Build(map[string]any{"schemaVersion": json.Number("1"), "diffId": "consumer.requirement.diff", "baseContext": baseline, "currentContext": current, "query": map[string]any{"requirementIds": []any{"REQ-CONSUMER-001"}}})
+	output, err := Build(map[string]any{"schemaVersion": json.Number("2"), "diffId": "consumer.requirement.diff", "baseContext": baseline, "currentContext": current, "query": map[string]any{"requirementIds": []any{"REQ-CONSUMER-001"}}})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -47,6 +47,69 @@ func TestBuildClassifiesOwnerAwareRequirementChanges(t *testing.T) {
 	}
 }
 
+func TestDigestCoverageAdaptersPreserveSemanticDiffV2(t *testing.T) {
+	baseV2 := contextFixture(t, "The system preserves the baseline.")
+	currentV2 := contextFixture(t, "The system preserves the revised invariant.")
+	v2Input := map[string]any{"baseContext": baseV2, "currentContext": currentV2, "diffId": "consumer.digest-coverage.diff", "schemaVersion": json.Number("2")}
+	v2Output, err := Build(v2Input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v2Output["schemaVersion"] != json.Number("2") || v2Output["baseExpectedDigestCoverage"] != "none" || v2Output["currentExpectedDigestCoverage"] != "none" {
+		t.Fatalf("semantic diff did not emit v2 digest coverage: %#v", v2Output)
+	}
+
+	baseV1 := v1DiffContextFixture(t, baseV2)
+	currentV1 := v1DiffContextFixture(t, currentV2)
+	v1Output, err := Build(map[string]any{"baseContext": baseV1, "currentContext": currentV1, "diffId": "consumer.digest-coverage.diff", "schemaVersion": json.Number("1")})
+	if err != nil {
+		t.Fatalf("Build(v1) error = %v", err)
+	}
+	if got, want := stableBytes(t, v1Output), stableBytes(t, v2Output); !bytes.Equal(got, want) {
+		t.Fatalf("v1 input normalized to a different semantic diff\n got: %s\nwant: %s", got, want)
+	}
+
+	var v1WireOutput map[string]any
+	for _, mapping := range []struct {
+		legacy string
+		v2     string
+	}{
+		{legacy: "unverified", v2: "none"},
+		{legacy: "partially_verified", v2: "partial"},
+		{legacy: "verified", v2: "all"},
+	} {
+		expectedV2 := cloneRequirementRecord(t, v2Output)
+		expectedV2["baseExpectedDigestCoverage"] = mapping.v2
+		expectedV2["currentExpectedDigestCoverage"] = mapping.v2
+		v1WireOutput = cloneRequirementRecord(t, expectedV2)
+		delete(v1WireOutput, "baseExpectedDigestCoverage")
+		delete(v1WireOutput, "currentExpectedDigestCoverage")
+		v1WireOutput["baseBaselineVerification"] = mapping.legacy
+		v1WireOutput["currentBaselineVerification"] = mapping.legacy
+		v1WireOutput["schemaVersion"] = json.Number("1")
+		normalized, err := AdmitOutput(v1WireOutput, currentV2["snapshotId"].(string))
+		if err != nil {
+			t.Fatalf("AdmitOutput(v1 %s) error = %v", mapping.legacy, err)
+		}
+		if got, want := stableBytes(t, normalized), stableBytes(t, expectedV2); !bytes.Equal(got, want) {
+			t.Fatalf("v1 %s output normalized to a different semantic record\n got: %s\nwant: %s", mapping.legacy, got, want)
+		}
+	}
+
+	if _, err := Build(map[string]any{"baseContext": baseV2, "currentContext": currentV2, "diffId": "consumer.mixed.diff", "schemaVersion": json.Number("1")}); err == nil {
+		t.Fatal("Build accepted a v1 envelope with v2 contexts")
+	}
+	mixedOutput := cloneRequirementRecord(t, v2Output)
+	mixedOutput["baseBaselineVerification"] = "unverified"
+	if _, err := AdmitOutput(mixedOutput, currentV2["snapshotId"].(string)); err == nil {
+		t.Fatal("AdmitOutput accepted mixed v1/v2 digest coverage fields")
+	}
+	v1WireOutput["baseExpectedDigestCoverage"] = "all"
+	if _, err := AdmitOutput(v1WireOutput, currentV2["snapshotId"].(string)); err == nil {
+		t.Fatal("AdmitOutput accepted mixed v1/v2 digest coverage fields under schema v1")
+	}
+}
+
 func TestBuildOutputIsClosedUnderAdmissionForMultipleChanges(t *testing.T) {
 	baseline := contextFixture(t, "The system preserves the baseline.")
 	current := contextFixture(t, "The system preserves the revised invariant.")
@@ -58,7 +121,7 @@ func TestBuildOutputIsClosedUnderAdmissionForMultipleChanges(t *testing.T) {
 	requirement["updatePolicy"].(map[string]any)["reviewOwnerId"] = "consumer.next-owner"
 	resignContextFixture(t, current)
 
-	output, err := Build(map[string]any{"baseContext": baseline, "currentContext": current, "diffId": "consumer.multi-field.diff", "schemaVersion": json.Number("1")})
+	output, err := Build(map[string]any{"baseContext": baseline, "currentContext": current, "diffId": "consumer.multi-field.diff", "schemaVersion": json.Number("2")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +163,7 @@ func TestOwnerFilterPreservesStableIdentityAcrossOwnershipChange(t *testing.T) {
 	} {
 		t.Run(item.ownerID, func(t *testing.T) {
 			output, err := Build(map[string]any{
-				"baseContext": baseline, "currentContext": current, "diffId": "consumer.owner-transition.diff", "schemaVersion": json.Number("1"),
+				"baseContext": baseline, "currentContext": current, "diffId": "consumer.owner-transition.diff", "schemaVersion": json.Number("2"),
 				"query": map[string]any{"ownerIds": []any{item.ownerID}},
 			})
 			if err != nil {
@@ -154,7 +217,7 @@ func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
 
 	output, err := Build(map[string]any{
 		"baseContext": baseline, "currentContext": current,
-		"diffId": "consumer.complete-algebra.diff", "schemaVersion": json.Number("1"),
+		"diffId": "consumer.complete-algebra.diff", "schemaVersion": json.Number("2"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -200,7 +263,7 @@ func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
 func TestBuildIncludesDeferralAndAdmissionBindsChangeIdentity(t *testing.T) {
 	base := deferredContextFixture(t, "Review after the migration window.")
 	current := deferredContextFixture(t, "Review after the compatibility window.")
-	output, err := Build(map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.deferral.diff", "schemaVersion": json.Number("1")})
+	output, err := Build(map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.deferral.diff", "schemaVersion": json.Number("2")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -250,7 +313,29 @@ func contextFixture(t *testing.T, invariant string) map[string]any {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{BaselineVerification: "unverified", CatalogID: "consumer.context", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
+	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "consumer.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
+}
+
+func v1DiffContextFixture(t *testing.T, value map[string]any) map[string]any {
+	t.Helper()
+	v1 := cloneRequirementRecord(t, value)
+	delete(v1, "expectedDigestCoverage")
+	v1["baselineVerification"] = "unverified"
+	v1["nonClaims"] = []any{
+		"Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+		"Requirement context does not execute native witnesses or prove source freshness after composition.",
+	}
+	v1["schemaVersion"] = json.Number("1")
+	return v1
+}
+
+func stableBytes(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := stablejson.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
 }
 
 func resignContextFixture(t *testing.T, value map[string]any) {

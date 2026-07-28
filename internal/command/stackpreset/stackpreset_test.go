@@ -51,6 +51,11 @@ func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T
 			t.Fatalf("preset %s missing from presetIDs", presetID)
 		}
 	}
+	publicIDs := IDs()
+	publicIDs[0] = "mutated"
+	if IDs()[0] == "mutated" {
+		t.Fatal("IDs leaked mutable generated preset inventory")
+	}
 
 	original, ok := ProfileFor("typescript_workspace")
 	if !ok {

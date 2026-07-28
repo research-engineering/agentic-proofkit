@@ -146,6 +146,11 @@ if [ ! -x "$binary" ]; then
   exit 1
 fi
 
+AGENTIC_PROOFKIT_LAUNCHER_PROFILE=npm_offline
+AGENTIC_PROOFKIT_PYTHON_EXECUTABLE=
+export AGENTIC_PROOFKIT_LAUNCHER_PROFILE
+export AGENTIC_PROOFKIT_PYTHON_EXECUTABLE
+
 exec "$binary" "$@"
 `, platformCases), nil
 }

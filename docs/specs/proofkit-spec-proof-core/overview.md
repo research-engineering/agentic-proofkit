@@ -13,7 +13,9 @@ execution receipts, and merge policy.
 
 - `REQ-PROOFKIT-SPEC-001`: requirement source admission validates structured
   `REQ-*` records and source-package shape without owning requirement meaning
-  or scanning overview prose as authority.
+  or scanning overview prose as authority; one shipped, marker-bounded example
+  is parsed as bounded expansion-free literal shell words and executed through
+  the installed current product as a first valid input.
 - `REQ-PROOFKIT-SPEC-002`: requirement proof binding reports validate
   caller-owned requirement-to-witness mappings, require compact scenarios to be
   admitted `surface_id::stable_anchor` identities, require compact witness
@@ -58,9 +60,11 @@ execution receipts, and merge policy.
   reading sources, rendering views, or owning requirement/proof semantics.
 - `REQ-PROOFKIT-SPEC-009`: requirement spec tree views render admitted
   caller-owned hierarchy through shared safe browser document fragments,
-  deterministic CLI JSON, Markdown, HTML, explicit output paths, and loopback
-  browser serving without accepting caller-owned raw HTML or making rendered
-  output authoritative.
+  deterministic CLI JSON, Markdown, HTML, repository-confined same-parent
+  atomic output replacement after final destination-parent plus
+  temporary-object identity, mode, and content admission, and loopback browser
+  serving with one exact supported-view vocabulary without accepting
+  caller-owned raw HTML or making rendered output authoritative.
 - `REQ-PROOFKIT-SPEC-010`: requirement impact input composition converts
   caller-owned base/current requirement sources, single-current-binding compact
   proof contracts, changed-path facts, generated-artifact policy, local
@@ -69,8 +73,11 @@ execution receipts, and merge policy.
   impact evaluator.
 - `REQ-PROOFKIT-SPEC-011`: adoption contract envelope admission validates a
   complete caller-owned aggregate adoption envelope, selects one child route
-  through orthogonal CLI flags, and delegates to existing child command
-  contracts without becoming a second adoption readiness policy.
+  through orthogonal CLI flags, rejects repeated single-value mode or pilot
+  selectors and an explicitly empty pilot value, binds its union output to the
+  exact successful public-CLI root witness and native owner, and delegates to
+  existing child command contracts without becoming a second adoption readiness
+  policy.
 - `REQ-PROOFKIT-SPEC-012`: requirement authoring plans package caller-provided
   design, implementation, PR, code, test, and clarification facts into
   candidate-only requirement updates, delegate structural checks to requirement
@@ -94,27 +101,32 @@ execution receipts, and merge policy.
   and emits only bounded candidate requirements, bindings, or owner guidance.
 - `REQ-PROOFKIT-SPEC-018`: an authored command-family catalog covers every
   public CLI command exactly once, deterministically generates the private
-  runtime navigation projection, and adds opt-in family help while preserving
-  existing help invocation forms, process channels, no-input behavior, and leaf
-  dispatch; descriptor and help truth remains owned by `REQ-PROOFKIT-QUALITY-004`.
+  runtime navigation projection, adds token-bounded root discovery, and projects
+  exact stack-preset IDs into help and diagnostics while preserving existing
+  help invocation forms, process channels, no-input behavior, and leaf dispatch;
+  descriptor and help truth remains owned by `REQ-PROOFKIT-QUALITY-004`.
 - `REQ-PROOFKIT-SPEC-019`: explicit catalogs compose content-bound semantic
-  context snapshots through existing source, tree, proof, and coverage owners
-  without ambient repository discovery.
+  schema-v2 context snapshots with exact expected-digest coverage through
+  existing source, tree, proof, and coverage owners, with strict v1 adaptation
+  and without ambient repository discovery.
 - `REQ-PROOFKIT-SPEC-020`: bounded context queries select parent-before-child,
   role-aware, reference-closed semantic subsets by stable identity and report
   each active bound without treating bounded absence as source absence.
 - `REQ-PROOFKIT-SPEC-021`: the loopback workspace progressively presents
   immutable context, semantic diff, traceability trust states, authority
-  boundaries, and non-claims, then emits a bounded source-bound question packet
-  only after explicit user submission.
+  boundaries, one exact loopback root URL through one fixed platform launcher
+  argv, visible loading and sanitized terminal failure states through native
+  document semantics, and non-claims, then emits a bounded source-bound question
+  packet from a visibly labelled region only after explicit user submission.
 - `REQ-PROOFKIT-SPEC-022`: semantic diff compares admitted requirement fields
-  by owner-declared scalar, set, map, and lifecycle semantics, covers entity
-  additions and removals, and remains closed under output re-admission.
+  by owner-declared scalar, set, map, and lifecycle semantics through schema-v2
+  records and strict v1 adapters, covers entity additions and removals, and
+  remains closed under output re-admission.
 - `REQ-PROOFKIT-SPEC-023`: traceability graph input schema v2 preserves
   specification, proof, code traceability, and native execution as distinct
-  evidence planes and accepts code topology only as explicit caller-owned input
-  with source-digest, parent-edge, abstraction-order, and pre-materialization
-  budget closure.
+  evidence planes, consumes the normalized v1/v2 context boundary, and accepts
+  code topology only as explicit caller-owned input with source-digest,
+  parent-edge, abstraction-order, and pre-materialization budget closure.
 
 ## Non-Claims
 

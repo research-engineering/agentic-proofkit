@@ -10,6 +10,10 @@ import (
 func TestBuildReportsObserveAndWarnWithoutBlockingAdvisoryGaps(t *testing.T) {
 	for _, mode := range []string{"observe", "warn"} {
 		t.Run(mode, func(t *testing.T) {
+			wantRuleStatus := "skipped"
+			if mode == "warn" {
+				wantRuleStatus = "warning"
+			}
 			input := baseInput()
 			input["mode"] = mode
 			input["checkedScope"] = "touched"
@@ -24,7 +28,51 @@ func TestBuildReportsObserveAndWarnWithoutBlockingAdvisoryGaps(t *testing.T) {
 			if summary["gapCount"].(int) == 0 {
 				t.Fatalf("summary=%#v, want advisory gap count", summary)
 			}
+			rules := report["ruleResults"].([]any)
+			if len(rules) == 0 {
+				t.Fatal("ruleResults is empty, want advisory rule results")
+			}
+			for _, rawRule := range rules {
+				rule := rawRule.(map[string]any)
+				if rule["status"] != wantRuleStatus {
+					t.Fatalf("rule=%#v, want status %q", rule, wantRuleStatus)
+				}
+			}
 		})
+	}
+}
+
+func TestBuildEnforceTouchedSkipsGapsOutsideTouchedSelection(t *testing.T) {
+	input := completeInput()
+	input["mode"] = "enforce-touched"
+	input["checkedScope"] = "touched"
+	input["ownerRoutes"] = append(input["ownerRoutes"].([]any), map[string]any{
+		"commands":          []any{},
+		"nativeWitnessRefs": []any{},
+		"nonClaims":         []any{"Owner route evidence is caller-provided."},
+		"owner":             "consumer.repository",
+		"proofBindingPaths": []any{},
+		"routeId":           "consumer.untouched-route",
+		"specPaths":         []any{"docs/specs/untouched/requirements.v1.json"},
+		"touchedRuleIds":    []any{"REQ-CONSUMER-OTHER"},
+	})
+
+	report, exitCode, err := Build(decodeInput(t, input))
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
+	if exitCode != 0 || report["state"] != "passed" {
+		t.Fatalf("state=%v exit=%d, want passed/0", report["state"], exitCode)
+	}
+	rules := report["ruleResults"].([]any)
+	if len(rules) == 0 {
+		t.Fatal("ruleResults is empty, want non-enforced advisory rule results")
+	}
+	for _, rawRule := range rules {
+		rule := rawRule.(map[string]any)
+		if rule["status"] != "skipped" {
+			t.Fatalf("rule=%#v, want skipped outside touched selection", rule)
+		}
 	}
 }
 
@@ -165,6 +213,49 @@ func TestBuildBlocksEnforcementForExternalPreconditions(t *testing.T) {
 	}
 	if exitCode != 1 || report["state"] != "blocked" {
 		t.Fatalf("state=%v exit=%d, want blocked/1", report["state"], exitCode)
+	}
+}
+
+func TestBuildBlocksEveryModeForExternalPreconditions(t *testing.T) {
+	for _, mode := range []string{"observe", "warn", "enforce-touched", "enforce-all"} {
+		t.Run(mode, func(t *testing.T) {
+			input := completeInput()
+			input["mode"] = mode
+			if mode == "observe" || mode == "warn" {
+				input["checkedScope"] = "none"
+			} else if mode == "enforce-touched" {
+				input["checkedScope"] = "touched"
+			} else {
+				input["checkedScope"] = "all"
+			}
+			input["blockedPreconditions"] = []any{
+				map[string]any{
+					"evidenceRefs":   []any{"docs/external-evidence.md"},
+					"nonClaim":       "Unavailable external evidence is not passed.",
+					"owner":          "consumer.repository",
+					"preconditionId": "consumer.external-evidence-unavailable",
+					"reason":         "Required external evidence is unavailable.",
+					"touchedRuleIds": []any{},
+				},
+			}
+			report, exitCode, err := Build(decodeInput(t, input))
+			if err != nil {
+				t.Fatalf("Build() error=%v", err)
+			}
+			if exitCode != 1 || report["state"] != "blocked" {
+				t.Fatalf("state=%v exit=%d, want blocked/1", report["state"], exitCode)
+			}
+			if !hasRule(report, "proofkit.adoption-doctor.blocked_precondition", "blocked") {
+				t.Fatalf("blocked precondition rule = %#v", report["ruleResults"])
+			}
+			summary, ok := report["summary"].(map[string]any)
+			if !ok {
+				t.Fatalf("summary=%#v, want object", report["summary"])
+			}
+			if summary["blockedGapCount"] != 1 || summary["enforcedGapCount"] != 0 {
+				t.Fatalf("summary counts=%#v, want blockedGapCount=1 enforcedGapCount=0", summary)
+			}
+		})
 	}
 }
 

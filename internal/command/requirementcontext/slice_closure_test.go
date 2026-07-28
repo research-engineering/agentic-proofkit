@@ -216,7 +216,7 @@ func sliceTopologyFixture(t *testing.T) map[string]any {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return SnapshotValue(Snapshot{BaselineVerification: "unverified", CatalogID: "consumer.slice-context", Projections: projections, SnapshotID: digest.SHA256TextRef(string(identity)), Sources: sources})
+	return SnapshotValue(Snapshot{CatalogID: "consumer.slice-context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(identity)), Sources: sources})
 }
 
 func sliceRequirement(id, owner, claimLevel, lifecycleState string, replacementIDs []any) map[string]any {

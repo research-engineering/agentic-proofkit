@@ -31,7 +31,11 @@ type BootstrapResult struct {
 }
 
 func BuildBootstrap(raw any) (map[string]any, int, error) {
-	result, err := BuildBootstrapResult(raw)
+	return BuildBootstrapWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := BuildBootstrapResultWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -39,15 +43,23 @@ func BuildBootstrap(raw any) (map[string]any, int, error) {
 }
 
 func BuildBootstrapResult(raw any) (BootstrapResult, error) {
-	return buildBootstrap(raw)
+	return BuildBootstrapResultWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapResultWithRenderer(raw any, renderer cliexec.Renderer) (BootstrapResult, error) {
+	return buildBootstrap(raw, renderer)
 }
 
 func BuildBootstrapFromContractEnvelope(raw any) (map[string]any, int, error) {
+	return BuildBootstrapFromContractEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapFromContractEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
 	input, err := BootstrapInputFromContractEnvelope(raw)
 	if err != nil {
 		return nil, 1, err
 	}
-	return BuildBootstrap(input)
+	return BuildBootstrapWithRenderer(input, renderer)
 }
 
 func BootstrapInputFromContractEnvelope(raw any) (map[string]any, error) {
@@ -147,7 +159,7 @@ func (result BootstrapResult) JSONValue() map[string]any {
 	}
 }
 
-func buildBootstrap(raw any) (BootstrapResult, error) {
+func buildBootstrap(raw any, renderer cliexec.Renderer) (BootstrapResult, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
 		return BootstrapResult{}, fmt.Errorf("proofkit gradual adoption bootstrap input must be an object")
@@ -196,9 +208,9 @@ func buildBootstrap(raw any) (BootstrapResult, error) {
 	nonClaims, err := admit.SortedText(append(append([]string{}, bootstrapNonClaims...), callerNonClaims...), "bootstrap merged nonClaims", false)
 	addErr(&failures, err)
 	nextCommands := []string{
-		cliexec.DisplayCommand("gradual-adoption", "--input", stringFromMap(paths, "adoptionProfilePath")),
-		cliexec.DisplayCommand("gradual-adoption-guidance", "--input", stringFromMap(paths, "adoptionGuidancePath")),
-		cliexec.DisplayCommand("witness-scheduler-plan", "--input", stringFromMap(paths, "witnessPlanInputPath")),
+		renderer.DisplayCommand("gradual-adoption", "--input", stringFromMap(paths, "adoptionProfilePath")),
+		renderer.DisplayCommand("gradual-adoption-guidance", "--input", stringFromMap(paths, "adoptionGuidancePath")),
+		renderer.DisplayCommand("witness-scheduler-plan", "--input", stringFromMap(paths, "witnessPlanInputPath")),
 	}
 	adoptionProfile := map[string]any{
 		"adoptionId":      bootstrapID,

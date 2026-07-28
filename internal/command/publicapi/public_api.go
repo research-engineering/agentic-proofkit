@@ -1,9 +1,11 @@
 package publicapi
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"os"
+	pathpkg "path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -45,20 +47,34 @@ type packageSnapshot struct {
 	dir      string
 	manifest map[string]any
 	name     string
+	root     *os.Root
 }
 
 type sourceExportSnapshot struct {
 	runtimeExports []string
 	typeExports    []string
+	digest         [sha256.Size]byte
+	identity       os.FileInfo
+}
+
+type admittedFileSnapshot struct {
+	canonical string
+	content   string
+	digest    [sha256.Size]byte
+	identity  os.FileInfo
 }
 
 type scanCache struct {
+	root          *os.Root
 	repoRoot      string
+	initErr       error
 	maxBytes      int64
 	bytesRead     int64
-	files         map[string][]byte
+	files         map[string]admittedFileSnapshot
 	sourceExports map[string]sourceExportSnapshot
 }
+
+var scanAdmissionBarrier func(stage string, lexicalPath string)
 
 func Verify(raw any, options Options) (map[string]any, int, error) {
 	return verifyWithScanBudget(raw, options, maxAggregateScanBytes)
@@ -68,11 +84,11 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 	if options.MachineContract == "" {
 		options.MachineContract = defaultMachineContract
 	}
-	repoRoot, err := filepath.EvalSymlinks(options.RepoRoot)
-	if err != nil {
-		return nil, 1, err
+	scan := newScanCache(options.RepoRoot, scanBudget)
+	if scan.initErr != nil {
+		return nil, 1, scan.initErr
 	}
-	scan := newScanCache(repoRoot, scanBudget)
+	defer scan.root.Close()
 	manifest, err := admitManifest(raw, options.MachineContract)
 	if err != nil {
 		return nil, 1, err
@@ -81,6 +97,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 	if err != nil {
 		return nil, 1, err
 	}
+	defer closePackageRoots(packages)
 	failures := []string{}
 	verifyCoveredPackageExportKeys(packages, manifest, &failures)
 	seenKeys := map[string]struct{}{}
@@ -103,16 +120,12 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 		actualRuntimeSet := map[string]struct{}{}
 		actualTypeSet := map[string]struct{}{}
 		for _, sourcePath := range entrySourcePaths(item) {
-			resolvedSource, err := resolvePackageSource(scan.repoRoot, pkg.dir, sourcePath, manifestKey+" source")
+			actualRuntime, actualTypes, err := scan.collectSourceExports(sourcePath, pkg, manifestKey+" source")
 			if err != nil {
 				if os.IsNotExist(err) {
 					failures = append(failures, fmt.Sprintf("%s source does not exist: %s", manifestKey, sourcePath))
 					continue
 				}
-				return nil, 1, err
-			}
-			actualRuntime, actualTypes, err := scan.collectSourceExports(resolvedSource, manifestKey+" source")
-			if err != nil {
 				return nil, 1, err
 			}
 			for _, value := range actualRuntime {
@@ -259,76 +272,173 @@ func exportConditions(raw any, context string) ([]exportCondition, error) {
 	return conditions, nil
 }
 
-func referencedPackages(scan *scanCache, entries []entry) (map[string]packageSnapshot, error) {
+func referencedPackages(scan *scanCache, entries []entry) (_ map[string]packageSnapshot, returnErr error) {
 	byManifest := map[string]packageSnapshot{}
+	defer func() {
+		if returnErr != nil {
+			closePackageRoots(byManifest)
+		}
+	}()
 	manifestByName := map[string]string{}
 	for _, item := range entries {
 		if _, exists := byManifest[item.PackageManifestPath]; exists {
 			continue
 		}
-		manifestPath := filepath.Join(scan.repoRoot, filepath.FromSlash(item.PackageManifestPath))
-		resolvedManifest, err := resolvedPathUnderRoot(scan.repoRoot, manifestPath, "TypeScript public API package manifest")
-		if err != nil {
-			return nil, err
-		}
-		manifest, err := readPackageManifest(scan, resolvedManifest)
+		manifest, _, packageDir, packageRoot, err := readPackageManifest(scan, item.PackageManifestPath)
 		if err != nil {
 			return nil, err
 		}
 		name, err := nonEmptyString(manifest["name"], item.PackageManifestPath+" name")
 		if err != nil {
+			_ = packageRoot.Close()
 			return nil, err
 		}
 		if previous, exists := manifestByName[name]; exists && previous != item.PackageManifestPath {
+			packageRoot.Close()
 			return nil, fmt.Errorf("duplicate referenced package name %s in %s and %s", name, previous, item.PackageManifestPath)
 		}
 		manifestByName[name] = item.PackageManifestPath
-		byManifest[item.PackageManifestPath] = packageSnapshot{dir: filepath.Dir(resolvedManifest), manifest: manifest, name: name}
+		byManifest[item.PackageManifestPath] = packageSnapshot{dir: packageDir, manifest: manifest, name: name, root: packageRoot}
 	}
 	return byManifest, nil
 }
 
-func readPackageManifest(scan *scanCache, path string) (map[string]any, error) {
-	source, _, err := scan.readFile(path, "TypeScript public API package manifest", maxPackageManifestBytes)
+func readPackageManifest(scan *scanCache, path string) (_ map[string]any, _ admittedFileSnapshot, _ string, _ *os.Root, returnErr error) {
+	const context = "TypeScript public API package manifest"
+	lexical, err := scan.relativePath(path, context)
 	if err != nil {
-		return nil, err
+		return nil, admittedFileSnapshot{}, "", nil, err
 	}
-	parsed, err := admission.DecodeJSON(strings.NewReader(string(source)), int64(len(source)))
+	packageDir := pathpkg.Dir(lexical)
+	root, err := scan.root.OpenRoot(filepath.FromSlash(packageDir))
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, admittedFileSnapshot{}, "", nil, fmt.Errorf("open referenced package root %s: %w", packageDir, err)
+	}
+	defer func() {
+		if returnErr != nil {
+			_ = root.Close()
+		}
+	}()
+	snapshot, err := scan.readRelativeFileSnapshot(
+		root,
+		lexical,
+		pathpkg.Base(lexical),
+		packageDir,
+		context,
+		maxPackageManifestBytes,
+	)
+	if err != nil {
+		return nil, admittedFileSnapshot{}, "", nil, err
+	}
+	parsed, err := admission.DecodeJSON(strings.NewReader(snapshot.content), int64(len(snapshot.content)))
+	if err != nil {
+		return nil, admittedFileSnapshot{}, "", nil, fmt.Errorf("%s: %w", path, err)
 	}
 	record, ok := parsed.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("%s must contain a JSON object", path)
+		return nil, admittedFileSnapshot{}, "", nil, fmt.Errorf("%s must contain a JSON object", path)
 	}
-	return record, nil
+	return record, snapshot, packageDir, root, nil
+}
+
+func closePackageRoots(packages map[string]packageSnapshot) {
+	for _, pkg := range packages {
+		if pkg.root != nil {
+			_ = pkg.root.Close()
+		}
+	}
 }
 
 func newScanCache(repoRoot string, maxBytes int64) *scanCache {
+	root, err := os.OpenRoot(repoRoot)
 	return &scanCache{
+		root:          root,
 		repoRoot:      repoRoot,
+		initErr:       err,
 		maxBytes:      maxBytes,
-		files:         map[string][]byte{},
+		files:         map[string]admittedFileSnapshot{},
 		sourceExports: map[string]sourceExportSnapshot{},
 	}
 }
 
-func (scan *scanCache) readFile(filePath string, context string, maxFileBytes int64) ([]byte, string, error) {
-	resolved, err := resolvedPathUnderRoot(scan.repoRoot, filePath, context)
+func (scan *scanCache) readFile(filePath string, context string, maxFileBytes int64) (string, string, error) {
+	snapshot, err := scan.readFileSnapshot(filePath, context, maxFileBytes)
 	if err != nil {
-		return nil, "", err
+		return "", "", err
 	}
-	if content, ok := scan.files[resolved]; ok {
-		if int64(len(content)) > maxFileBytes {
-			return nil, "", fmt.Errorf("%s exceeds the %s file limit", context, byteLimitLabel(maxFileBytes))
+	return snapshot.content, snapshot.canonical, nil
+}
+
+func (scan *scanCache) readFileSnapshot(filePath string, context string, maxFileBytes int64) (admittedFileSnapshot, error) {
+	if scan.initErr != nil {
+		return admittedFileSnapshot{}, scan.initErr
+	}
+	lexical, err := scan.relativePath(filePath, context)
+	if err != nil {
+		return admittedFileSnapshot{}, err
+	}
+	return scan.readRelativeFileSnapshot(scan.root, lexical, lexical, "", context, maxFileBytes)
+}
+
+func (scan *scanCache) readFileSnapshotUnder(filePath string, pkg packageSnapshot, context string, maxFileBytes int64) (admittedFileSnapshot, error) {
+	if scan.initErr != nil {
+		return admittedFileSnapshot{}, scan.initErr
+	}
+	lexical, err := scan.relativePath(filePath, context)
+	if err != nil {
+		return admittedFileSnapshot{}, err
+	}
+	if pkg.root == nil || !pathWithin(pkg.dir, lexical) {
+		return admittedFileSnapshot{}, fmt.Errorf("%s must identify a file under its referenced package manifest directory", context)
+	}
+	packageRelative := strings.TrimPrefix(lexical, strings.TrimSuffix(pkg.dir, "/")+"/")
+	return scan.readRelativeFileSnapshot(pkg.root, lexical, packageRelative, pkg.dir, context, maxFileBytes)
+}
+
+func (scan *scanCache) readRelativeFileSnapshot(root *os.Root, lexical string, rootRelative string, canonicalPrefix string, context string, maxFileBytes int64) (admittedFileSnapshot, error) {
+	if snapshot, ok := scan.files[lexical]; ok {
+		if int64(len(snapshot.content)) > maxFileBytes {
+			return admittedFileSnapshot{}, fmt.Errorf("%s exceeds the %s file limit", context, byteLimitLabel(maxFileBytes))
 		}
-		return content, resolved, nil
+		return snapshot, nil
 	}
-	file, err := os.Open(resolved)
+	canonicalRelative, err := canonicalRelativePath(root, rootRelative, context)
 	if err != nil {
-		return nil, "", err
+		return admittedFileSnapshot{}, err
+	}
+	canonical := canonicalRelative
+	if canonicalPrefix != "" {
+		canonical = pathpkg.Join(canonicalPrefix, canonicalRelative)
+	}
+	if scanAdmissionBarrier != nil {
+		scanAdmissionBarrier("canonical_resolved", lexical)
+	}
+	file, err := root.Open(filepath.FromSlash(rootRelative))
+	if err != nil {
+		return admittedFileSnapshot{}, err
 	}
 	defer file.Close()
+	canonicalFile, err := root.Open(filepath.FromSlash(canonicalRelative))
+	if err != nil {
+		return admittedFileSnapshot{}, err
+	}
+	canonicalInfo, err := canonicalFile.Stat()
+	if closeErr := canonicalFile.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return admittedFileSnapshot{}, err
+	}
+	before, err := file.Stat()
+	if err != nil {
+		return admittedFileSnapshot{}, err
+	}
+	if !before.Mode().IsRegular() {
+		return admittedFileSnapshot{}, fmt.Errorf("%s must identify a regular file", context)
+	}
+	if !os.SameFile(before, canonicalInfo) {
+		return admittedFileSnapshot{}, fmt.Errorf("%s changed identity during confined admission", context)
+	}
 	remaining := scan.maxBytes - scan.bytesRead
 	readLimit := maxFileBytes
 	if remaining < readLimit {
@@ -339,33 +449,60 @@ func (scan *scanCache) readFile(filePath string, context string, maxFileBytes in
 	}
 	content, err := io.ReadAll(io.LimitReader(file, readLimit+1))
 	if err != nil {
-		return nil, "", err
+		return admittedFileSnapshot{}, err
 	}
 	if int64(len(content)) > readLimit {
 		if maxFileBytes <= remaining {
-			return nil, "", fmt.Errorf("%s exceeds the %s file limit", context, byteLimitLabel(maxFileBytes))
+			return admittedFileSnapshot{}, fmt.Errorf("%s exceeds the %s file limit", context, byteLimitLabel(maxFileBytes))
 		}
-		return nil, "", fmt.Errorf("TypeScript public API scan exceeds the %s aggregate file-read limit", byteLimitLabel(scan.maxBytes))
+		return admittedFileSnapshot{}, fmt.Errorf("TypeScript public API scan exceeds the %s aggregate file-read limit", byteLimitLabel(scan.maxBytes))
+	}
+	after, err := file.Stat()
+	if err != nil {
+		return admittedFileSnapshot{}, err
+	}
+	if !os.SameFile(before, after) || before.Size() != after.Size() || after.Size() != int64(len(content)) {
+		return admittedFileSnapshot{}, fmt.Errorf("%s changed identity or size during confined read", context)
 	}
 	scan.bytesRead += int64(len(content))
-	scan.files[resolved] = content
-	return content, resolved, nil
+	snapshot := admittedFileSnapshot{
+		canonical: canonical,
+		content:   string(content),
+		digest:    sha256.Sum256(content),
+		identity:  before,
+	}
+	scan.files[lexical] = snapshot
+	return snapshot, nil
 }
 
-func (scan *scanCache) collectSourceExports(filePath string, context string) ([]string, []string, error) {
-	source, resolved, err := scan.readFile(filePath, context, maxSourceFileBytes)
+func (scan *scanCache) collectSourceExports(filePath string, pkg packageSnapshot, context string) ([]string, []string, error) {
+	admitted, err := scan.readFileSnapshotUnder(filePath, pkg, context, maxSourceFileBytes)
 	if err != nil {
 		return nil, nil, err
 	}
-	if snapshot, ok := scan.sourceExports[resolved]; ok {
-		return snapshot.runtimeExports, snapshot.typeExports, nil
+	if !pathWithin(pkg.dir, admitted.canonical) {
+		return nil, nil, fmt.Errorf("%s must resolve under its referenced package manifest directory", context)
 	}
-	runtimeExports, typeExports, err := CollectExports(string(source))
+	if err := requireTypeScriptSourceExtension(admitted.canonical, context+" canonical target"); err != nil {
+		return nil, nil, err
+	}
+	if snapshot, ok := scan.sourceExports[admitted.canonical]; ok {
+		if !os.SameFile(snapshot.identity, admitted.identity) || snapshot.digest != admitted.digest {
+			return nil, nil, fmt.Errorf("%s canonical source changed identity or content during scan", context)
+		}
+		return append([]string(nil), snapshot.runtimeExports...), append([]string(nil), snapshot.typeExports...), nil
+	}
+	runtimeExports, typeExports, err := CollectExports(admitted.content)
 	if err != nil {
 		return nil, nil, err
 	}
-	scan.sourceExports[resolved] = sourceExportSnapshot{runtimeExports: runtimeExports, typeExports: typeExports}
-	return runtimeExports, typeExports, nil
+	scan.sourceExports[admitted.canonical] = sourceExportSnapshot{
+		runtimeExports: append([]string(nil), runtimeExports...),
+		typeExports:    append([]string(nil), typeExports...),
+		digest:         admitted.digest,
+		identity:       admitted.identity,
+	}
+	return append([]string(nil), runtimeExports...), append([]string(nil), typeExports...), nil
 }
 
 func byteLimitLabel(limit int64) string {
@@ -378,16 +515,75 @@ func byteLimitLabel(limit int64) string {
 	return fmt.Sprintf("%d-byte", limit)
 }
 
-func resolvedPathUnderRoot(repoRoot string, filePath string, context string) (string, error) {
-	resolved, err := filepath.EvalSymlinks(filePath)
-	if err != nil {
-		return "", err
+func (scan *scanCache) relativePath(filePath string, context string) (string, error) {
+	value := filePath
+	if filepath.IsAbs(value) {
+		relative, err := filepath.Rel(scan.repoRoot, value)
+		if err != nil {
+			return "", fmt.Errorf("%s must resolve inside repo root", context)
+		}
+		value = relative
 	}
-	relative, err := filepath.Rel(repoRoot, resolved)
-	if err != nil || relative == "." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || relative == ".." || filepath.IsAbs(relative) {
+	value = filepath.ToSlash(filepath.Clean(value))
+	if value == "." {
+		return "", fmt.Errorf("%s must identify a file under repo root", context)
+	}
+	relative, err := admit.SafeRepoRelativePath(value, context)
+	if err != nil {
 		return "", fmt.Errorf("%s must resolve inside repo root", context)
 	}
-	return resolved, nil
+	return relative, nil
+}
+
+func (scan *scanCache) canonicalRelativePath(lexical string, context string) (string, error) {
+	return canonicalRelativePath(scan.root, lexical, context)
+}
+
+func canonicalRelativePath(root *os.Root, lexical string, context string) (string, error) {
+	pending := strings.Split(lexical, "/")
+	resolved := []string{}
+	for links := 0; len(pending) > 0; {
+		component := pending[0]
+		pending = pending[1:]
+		candidate := pathpkg.Join(append(resolved, component)...)
+		info, err := root.Lstat(filepath.FromSlash(candidate))
+		if err != nil {
+			return "", err
+		}
+		if info.Mode()&os.ModeSymlink == 0 {
+			resolved = append(resolved, component)
+			continue
+		}
+		links++
+		if links > 255 {
+			return "", fmt.Errorf("%s contains too many symlink traversals", context)
+		}
+		target, err := root.Readlink(filepath.FromSlash(candidate))
+		if err != nil {
+			return "", err
+		}
+		if filepath.IsAbs(target) {
+			return "", fmt.Errorf("%s uses an absolute symlink target; use a relative in-root symlink", context)
+		}
+		combined := pathpkg.Join(append([]string{pathpkg.Dir(candidate), filepath.ToSlash(target)}, pending...)...)
+		safe, err := admit.SafeRepoRelativePath(combined, context)
+		if err != nil {
+			return "", fmt.Errorf("%s must resolve inside repo root", context)
+		}
+		pending = strings.Split(safe, "/")
+		resolved = nil
+	}
+	if len(resolved) == 0 {
+		return "", fmt.Errorf("%s must identify a file under repo root", context)
+	}
+	return pathpkg.Join(resolved...), nil
+}
+
+func pathWithin(parent, child string) bool {
+	if parent == "." || parent == "" {
+		return child != "." && child != ""
+	}
+	return child != parent && strings.HasPrefix(child, strings.TrimSuffix(parent, "/")+"/")
 }
 
 func safeRepoPath(raw any, context string) (string, error) {
@@ -416,21 +612,6 @@ func requireTypeScriptSourceExtension(path string, context string) error {
 	default:
 		return fmt.Errorf("%s must identify a non-JSX TypeScript source (.ts, .mts, or .cts)", context)
 	}
-}
-
-func resolvePackageSource(repoRoot string, packageDir string, sourcePath string, context string) (string, error) {
-	resolved, err := resolvedPathUnderRoot(repoRoot, filepath.Join(repoRoot, filepath.FromSlash(sourcePath)), context)
-	if err != nil {
-		return "", err
-	}
-	relative, err := filepath.Rel(packageDir, resolved)
-	if err != nil || relative == "." || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) || filepath.IsAbs(relative) {
-		return "", fmt.Errorf("%s must resolve under its referenced package manifest directory", context)
-	}
-	if err := requireTypeScriptSourceExtension(resolved, context+" canonical target"); err != nil {
-		return "", err
-	}
-	return resolved, nil
 }
 
 func verifyPackageExportMap(pkg packageSnapshot, item entry, failures *[]string) {

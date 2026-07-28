@@ -127,7 +127,7 @@ func render(raw any, options Options) (renderedView, error) {
 		}, nil
 	}
 	if options.View != "proof" {
-		return renderedView{}, fmt.Errorf("requirement-browser-server requires --view source, proof, coverage, or spec-tree")
+		return renderedView{}, fmt.Errorf("requirement-browser-server requires --view source, proof, coverage, spec-tree, or workspace")
 	}
 	compact := requirementproofview.IsCompact(raw)
 	if compact && len(options.LocalEnvironmentClasses) == 0 && !options.EmptyLocalEnvironmentPolicy {

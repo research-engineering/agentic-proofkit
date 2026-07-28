@@ -1,6 +1,11 @@
 package app
 
 import (
+	"bytes"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,12 +17,15 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-func runRequirementView(command string, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+var outputWriterBarrier func(stage string, outputPath string)
+
+func runRequirementView(command string, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parseRequirementViewArgs(command, args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -39,7 +47,7 @@ func runRequirementView(command string, args []string, stdin io.Reader, stdout i
 		return writeSourceView(input, options, stdout, stderr)
 	}
 	if command == "requirement-coverage-view" {
-		return writeCoverageView(input, options, stdout, stderr)
+		return writeCoverageView(input, options, stdout, stderr, renderer)
 	}
 	if command == "requirement-spec-tree-view" {
 		return writeSpecTreeView(input, options, stdout, stderr)
@@ -177,7 +185,7 @@ func writeProofView(input any, options requirementViewArgs, stdout io.Writer, st
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
-func writeCoverageView(input any, options requirementViewArgs, stdout io.Writer, stderr io.Writer) int {
+func writeCoverageView(input any, options requirementViewArgs, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	if format := options.format; format == "markdown" {
 		output, exitCode, err := requirementcoverageview.BuildMarkdown(input)
 		return writeText(output, exitCode, err, stdout, stderr)
@@ -185,7 +193,7 @@ func writeCoverageView(input any, options requirementViewArgs, stdout io.Writer,
 		output, exitCode, err := requirementcoverageview.BuildHTML(input)
 		return writeText(output, exitCode, err, stdout, stderr)
 	}
-	output, exitCode, err := requirementcoverageview.BuildJSON(input, requirementcoverageview.Options{AgentEnvelope: options.agentEnvelope})
+	output, exitCode, err := requirementcoverageview.BuildJSON(input, requirementcoverageview.Options{AgentEnvelope: options.agentEnvelope, Renderer: renderer})
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
@@ -239,29 +247,49 @@ func writeViewText(output string, exitCode int, err error, outputPath string, st
 }
 
 func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
-	parent := filepath.Dir(nativePath)
-	if err := ensureOutputParent(parent); err != nil {
+	relative, err := admit.SafeRepoRelativePath(filepath.ToSlash(nativePath), "output path")
+	if err != nil {
 		return err
 	}
-	if info, err := os.Lstat(nativePath); err == nil {
+	root, err := os.OpenRoot(".")
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	parent := pathDir(relative)
+	if err := ensureOutputParent(root, parent); err != nil {
+		return err
+	}
+	parentRoot, parentInfo, err := openStableOutputParent(root, parent)
+	if err != nil {
+		return err
+	}
+	defer parentRoot.Close()
+	leaf := pathBase(relative)
+	if info, err := parentRoot.Lstat(filepath.FromSlash(leaf)); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
-			return fmt.Errorf("output path must not be a symlink: %s", filepath.ToSlash(nativePath))
+			return fmt.Errorf("output path must not be a symlink: %s", relative)
 		}
 		if info.IsDir() {
-			return fmt.Errorf("output path must not be a directory: %s", filepath.ToSlash(nativePath))
+			return fmt.Errorf("output path must not be a directory: %s", relative)
 		}
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	temp, err := os.CreateTemp(parent, ".proofkit-output-*")
+	if outputWriterBarrier != nil {
+		outputWriterBarrier("parent_admitted", relative)
+	}
+	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
+		return err
+	}
+	tempRelative, temp, err := createRootTemp(parentRoot, ".")
 	if err != nil {
 		return err
 	}
-	tempPath := temp.Name()
 	cleanup := true
 	defer func() {
 		if cleanup {
-			_ = os.Remove(tempPath)
+			_ = parentRoot.Remove(filepath.FromSlash(tempRelative))
 		}
 	}()
 	if _, err := temp.Write(content); err != nil {
@@ -272,32 +300,92 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 		_ = temp.Close()
 		return err
 	}
+	tempInfo, err := temp.Stat()
+	if err != nil {
+		_ = temp.Close()
+		return err
+	}
 	if err := temp.Close(); err != nil {
 		return err
 	}
-	if err := os.Rename(tempPath, nativePath); err != nil {
+	if outputWriterBarrier != nil {
+		outputWriterBarrier("before_publish", relative)
+	}
+	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
+		return err
+	}
+	currentTempRouteInfo, err := parentRoot.Lstat(filepath.FromSlash(tempRelative))
+	if err != nil {
+		return err
+	}
+	if currentTempRouteInfo.Mode()&os.ModeSymlink != 0 || !os.SameFile(tempInfo, currentTempRouteInfo) {
+		return errors.New("temporary output identity changed before publication")
+	}
+	if currentTempRouteInfo.Mode() != 0o644 {
+		return errors.New("temporary output mode changed before publication")
+	}
+	currentTemp, err := parentRoot.Open(filepath.FromSlash(tempRelative))
+	if err != nil {
+		return err
+	}
+	currentTempInfo, err := currentTemp.Stat()
+	if err != nil {
+		_ = currentTemp.Close()
+		return err
+	}
+	if !os.SameFile(tempInfo, currentTempInfo) {
+		_ = currentTemp.Close()
+		return errors.New("temporary output identity changed before publication")
+	}
+	if currentTempInfo.Mode() != 0o644 {
+		_ = currentTemp.Close()
+		return errors.New("temporary output mode changed before publication")
+	}
+	currentDigest := sha256.New()
+	if _, err := io.Copy(currentDigest, currentTemp); err != nil {
+		_ = currentTemp.Close()
+		return err
+	}
+	if err := currentTemp.Close(); err != nil {
+		return err
+	}
+	expectedDigest := sha256.Sum256(content)
+	if !bytes.Equal(currentDigest.Sum(nil), expectedDigest[:]) {
+		return errors.New("temporary output content changed before publication")
+	}
+	if outputWriterBarrier != nil {
+		outputWriterBarrier("before_rename", relative)
+	}
+	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
+		return err
+	}
+	if err := parentRoot.Rename(filepath.FromSlash(tempRelative), filepath.FromSlash(leaf)); err != nil {
 		return err
 	}
 	cleanup = false
 	return nil
 }
 
-func ensureOutputParent(parent string) error {
+func ensureOutputParent(root *os.Root, parent string) error {
 	if parent == "." || parent == "" {
 		return nil
 	}
-	current := "."
-	for _, part := range strings.Split(filepath.Clean(parent), string(filepath.Separator)) {
+	current := ""
+	for _, part := range strings.Split(parent, "/") {
 		if part == "." || part == "" {
 			continue
 		}
-		current = filepath.Join(current, part)
-		info, err := os.Lstat(current)
+		if current == "" {
+			current = part
+		} else {
+			current += "/" + part
+		}
+		info, err := root.Lstat(filepath.FromSlash(current))
 		if os.IsNotExist(err) {
-			if err := os.Mkdir(current, 0o755); err != nil && !os.IsExist(err) {
+			if err := root.Mkdir(filepath.FromSlash(current), 0o755); err != nil && !os.IsExist(err) {
 				return err
 			}
-			info, err = os.Lstat(current)
+			info, err = root.Lstat(filepath.FromSlash(current))
 		}
 		if err != nil {
 			return err
@@ -310,4 +398,81 @@ func ensureOutputParent(parent string) error {
 		}
 	}
 	return nil
+}
+
+func openStableOutputParent(root *os.Root, parent string) (*os.Root, os.FileInfo, error) {
+	nativeParent := filepath.FromSlash(parent)
+	routeInfo, err := root.Lstat(nativeParent)
+	if err != nil {
+		return nil, nil, err
+	}
+	if routeInfo.Mode()&os.ModeSymlink != 0 {
+		return nil, nil, fmt.Errorf("output parent must not be a symlink: %s", parent)
+	}
+	if !routeInfo.IsDir() {
+		return nil, nil, fmt.Errorf("output parent must be a directory: %s", parent)
+	}
+	parentRoot, err := root.OpenRoot(nativeParent)
+	if err != nil {
+		return nil, nil, err
+	}
+	handleInfo, err := parentRoot.Stat(".")
+	if err != nil {
+		_ = parentRoot.Close()
+		return nil, nil, err
+	}
+	if !os.SameFile(routeInfo, handleInfo) {
+		_ = parentRoot.Close()
+		return nil, nil, fmt.Errorf("output parent changed while it was admitted: %s", parent)
+	}
+	return parentRoot, handleInfo, nil
+}
+
+func requireStableOutputParent(root *os.Root, parent string, admitted os.FileInfo) error {
+	info, err := root.Lstat(filepath.FromSlash(parent))
+	if err != nil {
+		return fmt.Errorf("output parent changed after admission: %s: %w", parent, err)
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || !os.SameFile(info, admitted) {
+		return fmt.Errorf("output parent changed after admission: %s", parent)
+	}
+	return nil
+}
+
+func createRootTemp(root *os.Root, parent string) (string, *os.File, error) {
+	for attempt := 0; attempt < 32; attempt++ {
+		random := make([]byte, 16)
+		if _, err := rand.Read(random); err != nil {
+			return "", nil, err
+		}
+		name := ".proofkit-output-" + hex.EncodeToString(random)
+		relative := name
+		if parent != "." && parent != "" {
+			relative = parent + "/" + name
+		}
+		file, err := root.OpenFile(filepath.FromSlash(relative), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		if err == nil {
+			return relative, file, nil
+		}
+		if !os.IsExist(err) {
+			return "", nil, err
+		}
+	}
+	return "", nil, fmt.Errorf("unable to allocate a unique output temporary file")
+}
+
+func pathDir(value string) string {
+	index := strings.LastIndexByte(value, '/')
+	if index < 0 {
+		return "."
+	}
+	return value[:index]
+}
+
+func pathBase(value string) string {
+	index := strings.LastIndexByte(value, '/')
+	if index < 0 {
+		return value
+	}
+	return value[index+1:]
 }

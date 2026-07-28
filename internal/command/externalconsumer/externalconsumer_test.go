@@ -58,16 +58,12 @@ func TestBuildRejectsSecretLikeCallerOwnedText(t *testing.T) {
 	input := validExternalConsumerInput(t)
 	input["input"].(map[string]any)["sourceRepository"] = secretLike
 
-	record, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() error=%v", err)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("Build() accepted secret-like caller text: exit=%d error=%v", exitCode, err)
 	}
-	encoded, _ := json.Marshal(record)
-	if exitCode == 0 || record.State != "failed" || !strings.Contains(string(encoded), "secret-like values") {
-		t.Fatalf("Build() accepted secret-like caller text: exit=%d record=%s", exitCode, string(encoded))
-	}
-	if strings.Contains(string(encoded), secretLike) {
-		t.Fatalf("Build() leaked secret-like caller text: %s", string(encoded))
+	if strings.Contains(err.Error(), secretLike) {
+		t.Fatalf("Build() leaked secret-like caller text: %s", err)
 	}
 }
 

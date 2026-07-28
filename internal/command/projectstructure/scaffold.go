@@ -8,6 +8,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/scaffoldprofileplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
@@ -30,7 +31,11 @@ type Result struct {
 }
 
 func Build(raw any) (map[string]any, int, error) {
-	result, err := BuildResult(raw)
+	return BuildWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := BuildResultWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -38,7 +43,11 @@ func Build(raw any) (map[string]any, int, error) {
 }
 
 func BuildEnvelope(raw any) (map[string]any, int, error) {
-	result, err := BuildResult(raw)
+	return BuildEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := BuildResultWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -46,6 +55,10 @@ func BuildEnvelope(raw any) (map[string]any, int, error) {
 }
 
 func BuildResult(raw any) (Result, error) {
+	return BuildResultWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildResultWithRenderer(raw any, renderer cliexec.Renderer) (Result, error) {
 	input, ok := raw.(map[string]any)
 	if !ok {
 		return Result{}, fmt.Errorf("project structure scaffold input must be an object")
@@ -83,7 +96,7 @@ func BuildResult(raw any) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	bootstrap, err := gradualadoption.BuildBootstrapResult(bootstrapInput)
+	bootstrap, err := gradualadoption.BuildBootstrapResultWithRenderer(bootstrapInput, renderer)
 	if err != nil {
 		return Result{}, err
 	}
@@ -95,7 +108,7 @@ func BuildResult(raw any) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	adoptionWorkflow, err := adoptionworkflow.BuildResult(workflowInput)
+	adoptionWorkflow, err := adoptionworkflow.BuildResultWithRenderer(workflowInput, renderer)
 	if err != nil {
 		return Result{}, err
 	}
@@ -123,7 +136,7 @@ func BuildResult(raw any) (Result, error) {
 			bootstrap.Record,
 			adoptionWorkflow.Record,
 		},
-	})
+	}, renderer)
 	if err != nil {
 		return Result{}, err
 	}

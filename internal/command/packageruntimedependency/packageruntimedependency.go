@@ -66,10 +66,10 @@ type locationFacts struct {
 	ResolvedEntryPointInsideNodeModules         bool
 }
 
-func Build(raw any) (report.Record, int) {
+func Build(raw any) (report.Record, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		return invalidInputReport(sanitizedError(err)), 1
+		return report.Record{}, 1, fmt.Errorf("%s", sanitizedError(err))
 	}
 	facts := makeLocationFacts(input)
 	mode := classifyMode(facts)
@@ -142,9 +142,9 @@ func Build(raw any) (report.Record, int) {
 		NonClaims: admit.StringSliceToAny(nonClaims),
 	}
 	if state == "passed" {
-		return record, 0
+		return record, 0, nil
 	}
-	return record, 1
+	return record, 1, nil
 }
 
 func admitInput(raw any) (input, error) {
@@ -355,34 +355,6 @@ func status(passed bool) string {
 		return "passed"
 	}
 	return "failed"
-}
-
-func invalidInputReport(message string) report.Record {
-	return report.Record{
-		SchemaVersion: 1,
-		ReportKind:    reportKind,
-		ReportID:      "invalid-input",
-		State:         "failed",
-		Summary: map[string]any{
-			"accepted":     false,
-			"failureCount": 1,
-			"mode":         "unadmitted_package",
-		},
-		Diagnostics: []report.Diagnostic{
-			{Key: "error", Value: message},
-		},
-		RuleResults: []report.RuleResult{
-			{
-				Diagnostics: []report.Diagnostic{
-					{Key: "phase", Value: "input_admission"},
-				},
-				Message: message,
-				RuleID:  "proofkit.package-runtime-dependency-admission.input",
-				Status:  "failed",
-			},
-		},
-		NonClaims: standardNonClaims,
-	}
 }
 
 func packageName(raw any, context string) (string, error) {

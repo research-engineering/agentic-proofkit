@@ -42,7 +42,7 @@ Go source
   -> GitHub Release assets with checksums and SBOM for provenance lookup
 ```
 
-The committed `release/change-record.v1.json` owns the reviewed, version-bound
+The committed `release/change-record.v2.json` owns the reviewed, version-bound
 declaration of the public-contract delta, migration decision, platform
 requirements, known limitations, and rollback strategy. It does not infer
 change completeness from the source diff. The repository-owned
@@ -81,7 +81,8 @@ Before publishing a version:
 
 1. The source tree is clean.
 2. `package.json` contains the exact new version.
-3. `release/change-record.v1.json` contains the same version and explicitly
+3. `release/change-record.v2.json` contains the same version, names the exact
+   previous version and compatible or breaking change class, and explicitly
    classifies breaking changes, additions, migration, platform requirements,
    known limitations, and rollback.
 4. `package.json` repository, license, bin, exports, files, and publishConfig
@@ -211,9 +212,9 @@ The evidence must distinguish:
 These evidence classes are not interchangeable.
 
 Historical GitHub Releases are immutable provider state. If an older release
-metadata record names an asset that is absent from the provider release and the
-provider rejects exact backfill, the repository records that as a historical
-archive-evidence exception instead of mutating the release model around it.
+metadata record names an asset that is absent from the provider release, the
+repository records that as a historical archive-evidence exception. It does
+not attempt backfill regardless of whether the provider would permit mutation.
 Future releases must prevent recurrence by verifying the expected public asset
 set, byte-for-byte Release asset content, `release-notes.md` presence, release
 manifest and metadata checksum closure, and retained workflow evidence checksum

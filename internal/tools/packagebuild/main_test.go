@@ -51,6 +51,17 @@ func TestWrapperScriptRoutesEveryReleasePlatformTarget(t *testing.T) {
 			}
 		}
 	}
+	for _, required := range []string{
+		"AGENTIC_PROOFKIT_LAUNCHER_PROFILE=npm_offline\n",
+		"AGENTIC_PROOFKIT_PYTHON_EXECUTABLE=\n",
+		"export AGENTIC_PROOFKIT_LAUNCHER_PROFILE\n",
+		"export AGENTIC_PROOFKIT_PYTHON_EXECUTABLE\n",
+		"exec \"$binary\" \"$@\"\n",
+	} {
+		if !strings.Contains(wrapper, required) {
+			t.Fatalf("wrapperScript() missing launcher-profile boundary %q:\n%s", required, wrapper)
+		}
+	}
 }
 
 func TestWrapperPlatformCasesRejectDuplicatePatterns(t *testing.T) {

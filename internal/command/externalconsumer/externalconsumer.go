@@ -142,7 +142,7 @@ type reportInput struct {
 func Build(raw any) (report.Record, int, error) {
 	admitted, err := admitReportInput(raw)
 	if err != nil {
-		return failedAdmissionReport(err), 1, nil
+		return report.Record{}, 1, err
 	}
 	failures := []string{}
 	failures = append(failures, inputFailures(admitted.Input)...)
@@ -863,26 +863,6 @@ func stableSHA256(value any) string {
 	}
 	sum := sha256.Sum256(stable)
 	return hex.EncodeToString(sum[:])
-}
-
-func failedAdmissionReport(err error) report.Record {
-	return report.Record{
-		SchemaVersion: 1,
-		ReportKind:    reportKind,
-		ReportID:      "proofkit.external-consumer.invalid-input",
-		State:         "failed",
-		Summary:       map[string]any{"admission": "failed"},
-		Diagnostics:   []report.Diagnostic{},
-		RuleResults: []report.RuleResult{
-			{
-				RuleID:      "proofkit.external-consumer.failure.001",
-				Status:      "failed",
-				Message:     err.Error(),
-				Diagnostics: []report.Diagnostic{},
-			},
-		},
-		NonClaims: []any{"Invalid external-consumer input is not proofkit consumption evidence."},
-	}
 }
 
 func ruleResults(failures []string) []report.RuleResult {

@@ -2,20 +2,12 @@ package stackpreset
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
-
-var presetIDs = []string{
-	"agentic_runtime_repo",
-	"generated_docs_contract_repo",
-	"python_service",
-	"python_typescript_service",
-	"typescript_monorepo",
-	"typescript_workspace",
-}
 
 var presetNonClaims = []string{
 	"Stack presets do not read repository state.",
@@ -31,7 +23,7 @@ type preset struct {
 	StarterEnvironmentClasses []string
 	StarterProofLikePaths     []string
 	StarterWitnessKinds       []string
-	SuggestedCommands         []string
+	SuggestedCommandArgs      [][]string
 }
 
 type Profile struct {
@@ -52,7 +44,7 @@ var presets = map[string]preset{
 		StarterEnvironmentClasses: []string{"local-typecheck", "local-unit", "credentialed-live"},
 		StarterProofLikePaths:     []string{"docs/specs/**/*.md", "packages/**/test/**/*.test.ts"},
 		StarterWitnessKinds:       []string{"contract", "falsification", "local-unit", "live-preflight"},
-		SuggestedCommands:         []string{cliexec.DisplayCommand("stack-preset", "--preset", "agentic_runtime_repo"), cliexec.DisplayCommand("requirement-bindings", "--input", "docs/contracts/requirement-proof-bindings.v1.json"), cliexec.DisplayCommand("proof-slice", "--input", "docs/contracts/requirement-proof-bindings.v1.json")},
+		SuggestedCommandArgs:      [][]string{{"stack-preset", "--preset", "agentic_runtime_repo"}, {"requirement-bindings", "--input", "docs/contracts/requirement-proof-bindings.v1.json"}, {"proof-slice", "--input", "docs/contracts/requirement-proof-bindings.v1.json"}},
 	},
 	"generated_docs_contract_repo": {
 		Purpose:                   "Starter profile for repositories with generated lookup docs and machine-readable proof contracts.",
@@ -61,7 +53,7 @@ var presets = map[string]preset{
 		StarterEnvironmentClasses: []string{"local-docs", "local-generated-artifacts"},
 		StarterProofLikePaths:     []string{"docs/**/*.md", "docs/contracts/**/*"},
 		StarterWitnessKinds:       []string{"docs-surface", "generated-artifact", "schema"},
-		SuggestedCommands:         []string{cliexec.DisplayCommand("stack-preset", "--preset", "generated_docs_contract_repo"), cliexec.DisplayCommand("evidence-graph", "--input", "docs/contracts/requirement-proof-bindings.v1.json")},
+		SuggestedCommandArgs:      [][]string{{"stack-preset", "--preset", "generated_docs_contract_repo"}, {"evidence-graph", "--input", "docs/contracts/requirement-proof-bindings.v1.json"}},
 	},
 	"python_service": {
 		Purpose:                   "Starter profile for Python services adopting proofkit through CLI reports.",
@@ -70,7 +62,7 @@ var presets = map[string]preset{
 		StarterEnvironmentClasses: []string{"local-pytest", "local-ruff"},
 		StarterProofLikePaths:     []string{"docs/specs/**/*.md", "tests/**/*.py"},
 		StarterWitnessKinds:       []string{"contract", "falsification", "pytest"},
-		SuggestedCommands:         []string{cliexec.DisplayCommand("stack-preset", "--preset", "python_service"), cliexec.DisplayCommand("witness-scheduler-plan", "--input", "proofkit/witness-plan.json")},
+		SuggestedCommandArgs:      [][]string{{"stack-preset", "--preset", "python_service"}, {"witness-scheduler-plan", "--input", "proofkit/witness-plan.json"}},
 	},
 	"python_typescript_service": {
 		Purpose:                   "Starter profile for services with Python runtime code and TypeScript tooling or UI packages.",
@@ -79,7 +71,7 @@ var presets = map[string]preset{
 		StarterEnvironmentClasses: []string{"local-bun", "local-pytest", "local-typecheck"},
 		StarterProofLikePaths:     []string{"docs/specs/**/*.md", "tests/**/*.py", "packages/**/test/**/*.test.ts"},
 		StarterWitnessKinds:       []string{"contract", "falsification", "pytest", "typescript-unit"},
-		SuggestedCommands:         []string{cliexec.DisplayCommand("stack-preset", "--preset", "python_typescript_service"), cliexec.DisplayCommand("selective-gate-plan", "--input", "proofkit/selective-gate-plan.json")},
+		SuggestedCommandArgs:      [][]string{{"stack-preset", "--preset", "python_typescript_service"}, {"selective-gate-plan", "--input", "proofkit/selective-gate-plan.json"}},
 	},
 	"typescript_monorepo": {
 		Purpose:                   "Starter profile for TypeScript monorepos with package graph and public API boundaries.",
@@ -88,7 +80,7 @@ var presets = map[string]preset{
 		StarterEnvironmentClasses: []string{"local-bun", "local-typecheck"},
 		StarterProofLikePaths:     []string{"docs/specs/**/*.md", "packages/**/test/**/*.test.ts"},
 		StarterWitnessKinds:       []string{"contract", "package-test", "public-api", "typecheck"},
-		SuggestedCommands:         []string{cliexec.DisplayCommand("stack-preset", "--preset", "typescript_monorepo"), cliexec.DisplayCommand("selective-gate-plan", "--input", "proofkit/selective-gate-plan.json")},
+		SuggestedCommandArgs:      [][]string{{"stack-preset", "--preset", "typescript_monorepo"}, {"selective-gate-plan", "--input", "proofkit/selective-gate-plan.json"}},
 	},
 	"typescript_workspace": {
 		Purpose:                   "Starter profile for a TypeScript workspace adopting proofkit one module at a time.",
@@ -97,14 +89,18 @@ var presets = map[string]preset{
 		StarterEnvironmentClasses: []string{"local-bun", "local-typecheck"},
 		StarterProofLikePaths:     []string{"docs/specs/**/*.md", "src/**/*.test.ts", "test/**/*.test.ts"},
 		StarterWitnessKinds:       []string{"contract", "falsification", "unit", "typecheck"},
-		SuggestedCommands:         []string{cliexec.DisplayCommand("stack-preset", "--preset", "typescript_workspace"), cliexec.DisplayCommand("gradual-adoption-bootstrap", "--input", "proofkit/bootstrap.json")},
+		SuggestedCommandArgs:      [][]string{{"stack-preset", "--preset", "typescript_workspace"}, {"gradual-adoption-bootstrap", "--input", "proofkit/bootstrap.json"}},
 	},
 }
 
 func Build(presetID string) (report.Record, error) {
-	preset, ok := ProfileFor(presetID)
+	return BuildWithRenderer(presetID, cliexec.PathRenderer())
+}
+
+func BuildWithRenderer(presetID string, renderer cliexec.Renderer) (report.Record, error) {
+	preset, ok := ProfileForWithRenderer(presetID, renderer)
 	if !ok {
-		return report.Record{}, fmt.Errorf("--preset requires a known stack preset id")
+		return report.Record{}, fmt.Errorf("--preset requires one of: %s", strings.Join(IDs(), ", "))
 	}
 	return report.Record{
 		SchemaVersion: 1,
@@ -162,7 +158,15 @@ func IsPresetID(value string) bool {
 	return false
 }
 
+func IDs() []string {
+	return append([]string(nil), presetIDs...)
+}
+
 func ProfileFor(presetID string) (Profile, bool) {
+	return ProfileForWithRenderer(presetID, cliexec.PathRenderer())
+}
+
+func ProfileForWithRenderer(presetID string, renderer cliexec.Renderer) (Profile, bool) {
 	preset, ok := presets[presetID]
 	if !ok {
 		return Profile{}, false
@@ -174,8 +178,16 @@ func ProfileFor(presetID string) (Profile, bool) {
 		StarterEnvironmentClasses: append([]string{}, preset.StarterEnvironmentClasses...),
 		StarterProofLikePaths:     append([]string{}, preset.StarterProofLikePaths...),
 		StarterWitnessKinds:       append([]string{}, preset.StarterWitnessKinds...),
-		SuggestedCommands:         append([]string{}, preset.SuggestedCommands...),
+		SuggestedCommands:         renderCommands(renderer, preset.SuggestedCommandArgs),
 	}, true
+}
+
+func renderCommands(renderer cliexec.Renderer, commands [][]string) []string {
+	rendered := make([]string, 0, len(commands))
+	for _, command := range commands {
+		rendered = append(rendered, renderer.DisplayCommand(command...))
+	}
+	return rendered
 }
 
 func stringsToAny(values []string) []any {

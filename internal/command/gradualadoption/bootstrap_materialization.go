@@ -3,12 +3,17 @@ package gradualadoption
 import (
 	"fmt"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 func BuildBootstrapMaterializationManifest(raw any) (map[string]any, int, error) {
-	result, err := buildBootstrap(raw)
+	return BuildBootstrapMaterializationManifestWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapMaterializationManifestWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	result, err := buildBootstrap(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -20,11 +25,15 @@ func BuildBootstrapMaterializationManifest(raw any) (map[string]any, int, error)
 }
 
 func BuildBootstrapMaterializationManifestFromContractEnvelope(raw any) (map[string]any, int, error) {
+	return BuildBootstrapMaterializationManifestFromContractEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildBootstrapMaterializationManifestFromContractEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
 	input, err := BootstrapInputFromContractEnvelope(raw)
 	if err != nil {
 		return nil, 1, err
 	}
-	return BuildBootstrapMaterializationManifest(input)
+	return BuildBootstrapMaterializationManifestWithRenderer(input, renderer)
 }
 
 func BootstrapMaterializationManifest(result BootstrapResult) (map[string]any, error) {

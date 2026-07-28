@@ -64,7 +64,7 @@ func TestHandoffDerivedContextByteBoundary(t *testing.T) {
 }
 
 func TestHandoffFinalPacketByteBoundaryIsReachable(t *testing.T) {
-	const invariantBytes = maxHandoffContextBytes - 2532
+	const invariantBytes = maxHandoffContextBytes - 2800
 	const quoteBytes = 16204
 	session := workspaceSessionForInvariant(t, strings.Repeat("z", invariantBytes))
 	anchor := session.Anchors["requirement:REQ-CONSUMER-001:invariant"]

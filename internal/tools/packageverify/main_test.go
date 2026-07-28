@@ -9,7 +9,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -226,6 +228,62 @@ func TestVerifyRootManifestBoundaryRejectsPackageManifestRuntimeDrift(t *testing
 	}
 }
 
+func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
+	cases := []struct {
+		name  string
+		patch func(string) string
+	}{
+		{
+			name: "missing dependency",
+			patch: func(manifest string) string {
+				return strings.Replace(manifest, "    \"axe-core\": \"4.12.1\",\n", "", 1)
+			},
+		},
+		{
+			name: "wrong dependency version",
+			patch: func(manifest string) string {
+				return strings.Replace(manifest, "\"axe-core\": \"4.12.1\"", "\"axe-core\": \"4.12.0\"", 1)
+			},
+		},
+		{
+			name: "surplus wrapper dependency",
+			patch: func(manifest string) string {
+				return strings.Replace(
+					manifest,
+					"  \"devDependencies\": {\n",
+					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.12.1\",\n",
+					1,
+				)
+			},
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			filename := "agentic-proofkit-1.2.3.tgz"
+			manifest := item.patch(packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"))
+			tarball := writePackageTarball(t, map[string]string{
+				"package/package.json": manifest,
+			})
+			content, err := os.ReadFile(tarball)
+			if err != nil {
+				t.Fatalf("read package tarball: %v", err)
+			}
+			record := packRecord{
+				Filename:  filename,
+				Integrity: testNPMIntegrity(content),
+				Name:      rootPackageName,
+				Shasum:    testSHA1(content),
+				Version:   "1.2.3",
+			}
+
+			err = verifyRootManifestBoundary(rootPackageArtifact{Content: content, Record: record})
+			if err == nil || !strings.Contains(err.Error(), "devDependencies must equal") {
+				t.Fatalf("verifyRootManifestBoundary() error=%v, want devDependencies failure", err)
+			}
+		})
+	}
+}
+
 func TestReadManifestFromTarRejectsUnknownPackageManifestFields(t *testing.T) {
 	secretShapedKey := "api_key=ghp_1234567890abcdefghijklmnopqrstuvwx"
 	tarball := writePackageTarball(t, map[string]string{
@@ -269,7 +327,7 @@ func TestVerifyRootManifestBoundaryRejectsLifecycleScripts(t *testing.T) {
 func TestSnapshotReadersDoNotRereadMutableTarballPath(t *testing.T) {
 	tarball := writePackageTarball(t, map[string]string{
 		"package/ADOPTION.md":                             "package docs describe embedded Go binaries.",
-		"package/AGENTS.md":                               "package docs describe embedded Go binaries.",
+		"package/NON_CLAIMS.md":                           "package docs describe embedded Go binaries.",
 		"package/docs/proofkit-contract-map.md":           "package docs describe embedded Go binaries.",
 		"package/package.json":                            packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"),
 		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}]}`,
@@ -592,6 +650,768 @@ func TestVerifyRequiredRootEntriesRequiresPackagePublicDocs(t *testing.T) {
 	}
 }
 
+func TestPackagePublicReferenceClosure(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(map[string]string)
+		want   string
+	}{
+		{name: "valid closure"},
+		{
+			name: "source-only backlog owner row",
+			mutate: func(entries map[string]string) {
+				entries["package/README.md"] = strings.Replace(
+					entries["package/README.md"],
+					"\n\n[Adoption]",
+					"\n| Active work ledger | `BACKLOG.md` |\n\n[Adoption]",
+					1,
+				)
+			},
+			want: "dangling package-public route BACKLOG.md",
+		},
+		{
+			name: "dangling Markdown destination",
+			mutate: func(entries map[string]string) {
+				entries["package/README.md"] += "[Missing](MISSING.md)\n"
+			},
+			want: "dangling package-public Markdown destination MISSING.md",
+		},
+		{
+			name: "dangling reference-style Markdown destination",
+			mutate: func(entries map[string]string) {
+				entries["package/README.md"] += "[Missing][missing]\n[missing]: MISSING.md\n"
+			},
+			want: "dangling package-public Markdown destination MISSING.md",
+		},
+		{
+			name: "dangling route-bearing README code span",
+			mutate: func(entries map[string]string) {
+				entries["package/README.md"] = strings.Replace(
+					entries["package/README.md"],
+					"docs/proofkit-contract-map.md",
+					"docs/MISSING.md",
+					1,
+				)
+			},
+			want: "dangling package-public route docs/MISSING.md",
+		},
+		{
+			name: "dangling machine route",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/receipt-producer-policy.json"] = `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/missing.json"]}]}`
+			},
+			want: "dangling package-public route docs/missing.json",
+		},
+		{
+			name: "source-only witness misclassified as package public",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/cli-contract.v2.json"] = `{"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/fixture.go","evidenceClass":"package_public"}}}]}`
+			},
+			want: "must declare evidenceClass=source_checkout",
+		},
+		{
+			name: "dangling help catalog source",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/cli-contract.v2.json"] = `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"MISSING.json"}},"commands":[]}`
+			},
+			want: "dangling package-public route MISSING.json",
+		},
+		{
+			name: "dangling binding witness path",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/requirement-bindings.json"] = `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"MISSING.go"}]}`
+			},
+			want: "dangling source-checkout route MISSING.go",
+		},
+		{
+			name: "dangling requirement source overview path",
+			mutate: func(entries map[string]string) {
+				entries["package/docs/specs/example/requirements.v1.json"] = `{"specPackagePath":"docs/specs/example","overviewPath":"MISSING.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[]}`
+			},
+			want: "dangling package-public route MISSING.md",
+		},
+		{
+			name: "dangling witness plan source selector",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/witness-plan.json"] = `{"commands":[],"policies":[{"inputSelectors":["MISSING.md"],"outputSelectors":[],"cacheAdmissionRefs":[]}]}`
+			},
+			want: "dangling source-checkout route MISSING.md",
+		},
+		{
+			name: "unclassified future machine reference",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/command-families.v1.json"] = `{"families":[],"documentationPath":"MISSING.md"}`
+			},
+			want: "unclassified reference-bearing field /documentationPath",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			entries := packageReferenceClosureFixture()
+			if test.mutate != nil {
+				test.mutate(entries)
+			}
+			tarball := writePackageTarball(t, entries)
+			artifact := tarballArtifact(t, tarball)
+			entrySet := map[string]struct{}{}
+			for entry := range entries {
+				entrySet[entry] = struct{}{}
+			}
+			err := verifyPackagePublicReferenceClosure(artifact, entrySet)
+			if test.want == "" {
+				if err != nil {
+					t.Fatalf("verifyPackagePublicReferenceClosure() error=%v, want nil", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("verifyPackagePublicReferenceClosure() error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestExactTarballOnboardingTrace(t *testing.T) {
+	readme := mustReadBytes(t, filepath.Join("..", "..", "..", "README.md"))
+	contract := mustReadBytes(t, filepath.Join("..", "..", "..", "proofkit", "cli-contract.v2.json"))
+	target, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		t.Skipf("current platform has no admitted npm package target: %v", err)
+	}
+	binaryPath := filepath.Join(t.TempDir(), "agentic-proofkit")
+	build := exec.Command("go", "build", "-o", binaryPath, "./cmd/agentic-proofkit")
+	build.Dir = filepath.Join("..", "..", "..")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build current product binary: %v\n%s", err, output)
+	}
+	binary := mustReadBytes(t, binaryPath)
+	tarball := writePackageTarball(t, map[string]string{
+		"package/package.json":                  `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","bin":{"agentic-proofkit":"dist/agentic-proofkit"}}`,
+		"package/dist/agentic-proofkit":         installedNPMWrapperFixture(target.PlatformSuffix),
+		target.PackageTarEntry:                  string(binary),
+		"package/README.md":                     string(readme),
+		"package/proofkit/cli-contract.v2.json": string(contract),
+	})
+	content := mustReadBytes(t, tarball)
+	artifact := rootPackageArtifact{
+		Content: content,
+		Record:  packRecord{Filename: "agentic-proofkit-1.2.3.tgz"},
+	}
+	quotedTempRoot := filepath.Join(t.TempDir(), `proof"kit`)
+	if err := os.Mkdir(quotedTempRoot, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TMPDIR", quotedTempRoot)
+	if err := withExactTarballConsumer(artifact, func(consumer string) error {
+		return verifyInstalledOnboardingTrace(consumer, runInstalledWithInput)
+	}); err != nil {
+		t.Fatalf("exact tarball onboarding trace failed: %v", err)
+	}
+}
+
+func installedNPMWrapperFixture(platformSuffix string) string {
+	return `#!/usr/bin/env sh
+set -eu
+
+script="$0"
+while [ -L "$script" ]; do
+  link=$(readlink "$script")
+  case "$link" in
+    /*) script="$link" ;;
+    *) script=$(CDPATH= cd -- "$(dirname -- "$script")" && pwd)/"$link" ;;
+  esac
+done
+
+dir=$(CDPATH= cd -- "$(dirname -- "$script")" && pwd)
+package_dir=$(CDPATH= cd -- "$dir/.." && pwd)
+binary="$package_dir/dist/platform/` + platformSuffix + `/agentic-proofkit"
+
+AGENTIC_PROOFKIT_LAUNCHER_PROFILE=npm_offline
+AGENTIC_PROOFKIT_PYTHON_EXECUTABLE=
+export AGENTIC_PROOFKIT_LAUNCHER_PROFILE
+export AGENTIC_PROOFKIT_PYTHON_EXECUTABLE
+
+exec "$binary" "$@"
+`
+}
+
+func TestREADMEInstallPolicyRequiresPreOneExactPinExplanation(t *testing.T) {
+	if err := verifyREADMEInstallPolicy(readmePreOneExactPinPolicy); err != nil {
+		t.Fatalf("owner policy rejected: %v", err)
+	}
+	for _, content := range []string{
+		"",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit",
+		readmePreOneExactPinPolicy + "\n" + readmePreOneExactPinPolicy,
+	} {
+		if err := verifyREADMEInstallPolicy(content); err == nil {
+			t.Fatalf("invalid README install policy was admitted: %q", content)
+		}
+	}
+}
+
+func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) {
+	consumer := t.TempDir()
+	rootHelpRoute := "npm exec --offline -- agentic-proofkit help families"
+	familyRoutePrefix := "npm exec --offline -- agentic-proofkit help family "
+	stackHelpRoute := "npm exec --offline -- agentic-proofkit help stack-preset"
+	requirementSourceHelpRoute := "npm exec --offline -- agentic-proofkit help requirement-source-admission"
+	selfCheckHelpRoute := "npm exec --offline -- agentic-proofkit help self-check"
+	stackInstalledInvocation := ""
+	requirementSourceInstalledInvocation := "npm exec --offline -- agentic-proofkit requirement-source-admission --input <path|-> [--input-pointer <pointer>]"
+	selfCheckInstalledInvocation := "npm exec --offline -- agentic-proofkit self-check --input <path|->"
+	presetRoutePrefix := "npm exec --offline -- agentic-proofkit stack-preset --preset "
+	readmeContinuation := "Path: node_modules/@research-engineering/agentic-proofkit/README.md"
+	installedRoot := filepath.Join(consumer, "node_modules", "@research-engineering", "agentic-proofkit")
+	for _, source := range []string{"README.md", "proofkit/cli-contract.v2.json"} {
+		content, err := os.ReadFile(filepath.Join("..", "..", "..", filepath.FromSlash(source)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		writeFileBytes(t, filepath.Join(installedRoot, filepath.FromSlash(source)), content)
+	}
+	choices, err := installedContractPresetIDs(mustReadBytes(t, filepath.Join(installedRoot, "proofkit", "cli-contract.v2.json")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	stackInstalledInvocation = "npm exec --offline -- agentic-proofkit stack-preset --preset <" + strings.Join(choices, "|") + ">"
+	seenPresets := map[string]struct{}{}
+	presetExecutionCounts := map[string]int{}
+	presetSuggestedCommands := func(presetID string) []string {
+		return []string{
+			installedNPMExecCommandPrefix + "stack-preset --preset " + presetID,
+			installedNPMExecCommandPrefix + "self-check --input -",
+		}
+	}
+	execute := func(_ string, input []byte, args ...string) (installedCommandResult, error) {
+		stdout := ""
+		switch {
+		case slices.Equal(args, []string{"help"}):
+			stdout = rootHelpRoute + "\nCLI/JSON is the public cross-language contract.\n"
+		case slices.Equal(args, []string{"help", "families"}):
+			stdout = "Command families:\n" +
+				"  scaffolding\tScaffolding\n" +
+				"    Scaffold projects.\n" +
+				"    " + familyRoutePrefix + "scaffolding\n" +
+				"  quality\tQuality\n" +
+				"    Verify quality.\n" +
+				"    " + familyRoutePrefix + "quality\n" +
+				"  requirement-source-lifecycle\tRequirement source lifecycle\n" +
+				"    Admit requirement sources.\n" +
+				"    " + familyRoutePrefix + "requirement-source-lifecycle\n"
+		case slices.Equal(args, []string{"help", "family", "scaffolding"}):
+			stdout = "Commands:\n  stack-preset\n    " + stackHelpRoute + "\n"
+		case slices.Equal(args, []string{"help", "family", "quality"}):
+			stdout = "Commands:\n  self-check\n    " + selfCheckHelpRoute + "\n"
+		case slices.Equal(args, []string{"help", "family", "requirement-source-lifecycle"}):
+			stdout = "Commands:\n  requirement-source-admission\n    " + requirementSourceHelpRoute + "\n"
+		case slices.Equal(args, []string{"help", "stack-preset"}):
+			stdout = "Usage:\n  agentic-proofkit stack-preset --preset <" + strings.Join(choices, "|") + ">\n" +
+				"\nInstalled invocation:\n  " + stackInstalledInvocation + "\n" +
+				"Copyable preset commands:\n"
+			for _, choice := range choices {
+				stdout += "  " + presetRoutePrefix + choice + "\n"
+			}
+		case slices.Equal(args, []string{"help", "requirement-source-admission"}):
+			stdout = "Usage:\n  agentic-proofkit requirement-source-admission --input <path|-> [--input-pointer <pointer>]\n" +
+				"\nInstalled invocation:\n  " + requirementSourceInstalledInvocation + "\n" +
+				"Continue with the installed README first-valid-input example:\n  " + readmeContinuation + "\n"
+		case slices.Equal(args, []string{"help", "self-check"}):
+			stdout = "Usage:\n  agentic-proofkit self-check --input <path|->\n" +
+				"\nInstalled invocation:\n  " + selfCheckInstalledInvocation + "\n"
+		case len(args) == 3 && args[0] == "stack-preset" && args[1] == "--preset":
+			seenPresets[args[2]] = struct{}{}
+			presetExecutionCounts[args[2]]++
+			content, err := json.Marshal(map[string]any{
+				"diagnostics": []any{map[string]any{
+					"key": "preset",
+					"value": map[string]any{
+						"suggestedCommands": presetSuggestedCommands(args[2]),
+					},
+				}},
+				"state": "passed",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			stdout = string(content) + "\n"
+		case slices.Equal(args, []string{"requirement-source-admission", "--input", "-"}):
+			if len(input) == 0 {
+				t.Fatal("README first-input command received empty stdin")
+			}
+			stdout = `{"state":"passed"}` + "\n"
+		default:
+			t.Fatalf("unexpected installed argv: %v", args)
+		}
+		return installedCommandResult{Stdout: []byte(stdout)}, nil
+	}
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err != nil {
+		t.Fatalf("verifyInstalledOnboardingTrace() error=%v", err)
+	}
+	if len(seenPresets) != len(choices) {
+		t.Fatalf("executed preset count=%d, want %d", len(seenPresets), len(choices))
+	}
+	for _, choice := range choices {
+		if _, ok := seenPresets[choice]; !ok {
+			t.Fatalf("installed onboarding did not execute preset %s", choice)
+		}
+	}
+	for index, choice := range choices {
+		want := 1
+		if index == 0 {
+			want = 2
+		}
+		if presetExecutionCounts[choice] != want {
+			t.Fatalf("installed preset %s execution count=%d, want %d", choice, presetExecutionCounts[choice], want)
+		}
+	}
+
+	validPresetSuggestedCommands := presetSuggestedCommands
+	for _, mutant := range []struct {
+		name     string
+		commands func(string) []string
+		want     string
+	}{
+		{
+			name: "missing generated commands",
+			commands: func(string) []string {
+				return nil
+			},
+			want: "must expose non-empty suggestedCommands",
+		},
+		{
+			name: "bare non-first generated command",
+			commands: func(presetID string) []string {
+				return []string{
+					installedNPMExecCommandPrefix + "stack-preset --preset " + presetID,
+					"agentic-proofkit self-check --input -",
+				}
+			},
+			want: "suggestedCommands[1] must use the exact npm exec --offline prefix",
+		},
+		{
+			name: "wrong self-continuation",
+			commands: func(string) []string {
+				return []string{installedNPMExecCommandPrefix + "stack-preset --preset other"}
+			},
+			want: "first suggested command must be its exact self-continuation",
+		},
+		{
+			name: "equivalent but non-canonical self-continuation",
+			commands: func(presetID string) []string {
+				return []string{installedNPMExecCommandPrefix + "stack-preset --preset '" + presetID + "'"}
+			},
+			want: "first suggested command must be its exact self-continuation",
+		},
+	} {
+		presetSuggestedCommands = mutant.commands
+		if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+			!strings.Contains(err.Error(), mutant.want) {
+			t.Fatalf("%s error=%v, want %q", mutant.name, err, mutant.want)
+		}
+	}
+	presetSuggestedCommands = validPresetSuggestedCommands
+
+	for _, mutant := range []struct {
+		name  string
+		route string
+		want  string
+	}{
+		{name: "bare executable", route: "agentic-proofkit help families", want: "must use npm exec --offline"},
+		{name: "leading NBSP", route: "\u00a0npm exec --offline -- agentic-proofkit help families", want: "must use npm exec --offline"},
+		{name: "trailing NBSP", route: "npm exec --offline -- agentic-proofkit help families\u00a0", want: "must resolve to help families"},
+	} {
+		rootHelpRoute = mutant.route
+		if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+			!strings.Contains(err.Error(), mutant.want) {
+			t.Fatalf("%s root-help route error=%v, want %q", mutant.name, err, mutant.want)
+		}
+	}
+	rootHelpRoute = "npm exec --offline -- agentic-proofkit help families"
+
+	familyRoutePrefix = "agentic-proofkit help family "
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "family discovery route must use npm exec --offline") {
+		t.Fatalf("bare family route error=%v, want npm exec --offline rejection", err)
+	}
+	familyRoutePrefix = "npm exec --offline -- agentic-proofkit help family "
+
+	stackHelpRoute = "agentic-proofkit help stack-preset"
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "leaf help route must use npm exec --offline") {
+		t.Fatalf("bare leaf route error=%v, want npm exec --offline rejection", err)
+	}
+	stackHelpRoute = "npm exec --offline -- agentic-proofkit help stack-preset"
+
+	requirementSourceHelpRoute = "agentic-proofkit help requirement-source-admission"
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "leaf help route must use npm exec --offline") {
+		t.Fatalf("bare requirement-source leaf route error=%v, want npm exec --offline rejection", err)
+	}
+	requirementSourceHelpRoute = "npm exec --offline -- agentic-proofkit help requirement-source-admission"
+
+	selfCheckHelpRoute = "agentic-proofkit help self-check"
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "leaf help route must use npm exec --offline") {
+		t.Fatalf("bare ordinary leaf route error=%v, want npm exec --offline rejection", err)
+	}
+	selfCheckHelpRoute = "npm exec --offline -- agentic-proofkit help self-check"
+
+	stackInstalledInvocation = "agentic-proofkit stack-preset --preset <" + strings.Join(choices, "|") + ">"
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "installed invocation must prefix its exact usage with npm exec --offline") {
+		t.Fatalf("bare stack invocation error=%v, want installed invocation rejection", err)
+	}
+	stackInstalledInvocation = "npm exec --offline -- agentic-proofkit stack-preset --preset <" + strings.Join(choices, "|") + ">"
+
+	requirementSourceInstalledInvocation = "agentic-proofkit requirement-source-admission --input <path|-> [--input-pointer <pointer>]"
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "installed invocation must prefix its exact usage with npm exec --offline") {
+		t.Fatalf("bare requirement-source invocation error=%v, want installed invocation rejection", err)
+	}
+	requirementSourceInstalledInvocation = "npm exec --offline -- agentic-proofkit requirement-source-admission --input <path|-> [--input-pointer <pointer>]"
+
+	selfCheckInstalledInvocation = "agentic-proofkit self-check --input <path|->"
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "installed invocation must prefix its exact usage with npm exec --offline") {
+		t.Fatalf("bare ordinary invocation error=%v, want installed invocation rejection", err)
+	}
+	selfCheckInstalledInvocation = "npm exec --offline -- agentic-proofkit self-check --input <path|->"
+
+	presetRoutePrefix = "agentic-proofkit stack-preset --preset "
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "stack preset route must use npm exec --offline") {
+		t.Fatalf("bare preset route error=%v, want npm exec --offline rejection", err)
+	}
+	presetRoutePrefix = "npm exec --offline -- agentic-proofkit stack-preset --preset "
+
+	readmeContinuation = ""
+	if err := verifyInstalledOnboardingTrace(consumer, execute); err == nil ||
+		!strings.Contains(err.Error(), "must expose the exact installed README path") {
+		t.Fatalf("missing README continuation error=%v, want exact path rejection", err)
+	}
+}
+
+func TestInstalledHelpRouteParsersRejectDuplicateOwnerIDs(t *testing.T) {
+	familyHelp := "Command families:\n" +
+		"  quality\tQuality\n" +
+		"    npm exec --offline -- agentic-proofkit help family quality\n" +
+		"  quality\tDuplicate\n" +
+		"    npm exec --offline -- agentic-proofkit help family other\n"
+	if _, err := parseInstalledFamilyRoutes(familyHelp); err == nil ||
+		!strings.Contains(err.Error(), "duplicated family id") {
+		t.Fatalf("duplicate family id error=%v", err)
+	}
+
+	leafHelp := "Commands:\n" +
+		"  self-check\n" +
+		"    npm exec --offline -- agentic-proofkit help self-check\n" +
+		"  self-check\n" +
+		"    npm exec --offline -- agentic-proofkit help other\n"
+	if _, err := parseInstalledLeafHelpRoutes(leafHelp); err == nil ||
+		!strings.Contains(err.Error(), "duplicate command id") {
+		t.Fatalf("duplicate command id error=%v", err)
+	}
+}
+
+func TestInstalledInvocationRequiresAuthoredOrderAndExactCommandToken(t *testing.T) {
+	valid := "Usage:\n" +
+		"  agentic-proofkit self-check --input <path|->\n\n" +
+		"Installed invocation:\n" +
+		"  npm exec --offline -- agentic-proofkit self-check --input <path|->\n"
+	if err := requireInstalledInvocationSyntax([]byte(valid), "self-check"); err != nil {
+		t.Fatalf("owner installed invocation: %v", err)
+	}
+	cases := []struct {
+		name    string
+		content string
+	}{
+		{
+			name: "installed block before usage",
+			content: "Installed invocation:\n" +
+				"  npm exec --offline -- \n" +
+				"Usage:\n" +
+				"  agentic-proofkit self-check --input <path|->\n",
+		},
+		{
+			name: "command token prefix collision",
+			content: "Usage:\n" +
+				"  agentic-proofkit self-checkevil --input <path|->\n\n" +
+				"Installed invocation:\n" +
+				"  npm exec --offline -- agentic-proofkit self-checkevil --input <path|->\n",
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			if err := requireInstalledInvocationSyntax([]byte(item.content), "self-check"); err == nil {
+				t.Fatal("invalid installed invocation was admitted")
+			}
+		})
+	}
+}
+
+func TestInstalledREADMEFirstInputRejectsAmbiguousFences(t *testing.T) {
+	valid := `<!-- proofkit:first-valid-input:start -->
+` + "```bash\nnpm exec --offline -- agentic-proofkit requirement-source-admission --input -\n```\n\n" + "```json\n{}\n```\n" + `<!-- proofkit:first-valid-input:end -->`
+	cases := []struct {
+		name    string
+		content string
+	}{
+		{
+			name:    "duplicate bash",
+			content: strings.Replace(valid, "```json", "```bash\nnpm exec --offline -- agentic-proofkit help\n```\n\n```json", 1),
+		},
+		{
+			name:    "duplicate JSON",
+			content: strings.Replace(valid, "<!-- proofkit:first-valid-input:end -->", "```json\n{}\n```\n<!-- proofkit:first-valid-input:end -->", 1),
+		},
+		{
+			name:    "tilde bash",
+			content: strings.Replace(valid, "<!-- proofkit:first-valid-input:end -->", "~~~bash\nnpm exec --offline -- agentic-proofkit help\n~~~\n<!-- proofkit:first-valid-input:end -->", 1),
+		},
+		{
+			name:    "tilde JSON",
+			content: strings.Replace(valid, "<!-- proofkit:first-valid-input:end -->", "~~~json\n{}\n~~~\n<!-- proofkit:first-valid-input:end -->", 1),
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			_, _, err := installedREADMEFirstInput([]byte(test.content))
+			if err == nil || !strings.Contains(err.Error(), "must contain one bash command and one JSON value") {
+				t.Fatalf("installedREADMEFirstInput() error=%v", err)
+			}
+		})
+	}
+}
+
+func TestInstalledREADMEFirstInputUsesBoundedLiteralShellWords(t *testing.T) {
+	readme := func(command string) []byte {
+		return []byte(`<!-- proofkit:first-valid-input:start -->
+` + "```bash\n" + command + "\n```\n\n```json\n{}\n```\n" + `<!-- proofkit:first-valid-input:end -->`)
+	}
+	accepted := []struct {
+		name    string
+		command string
+		want    []string
+	}{
+		{
+			name:    "single and double quotes",
+			command: `npm exec --offline -- agentic-proofkit "requirement-source-admission" --input '-'`,
+			want:    []string{"requirement-source-admission", "--input", "-"},
+		},
+		{
+			name:    "escaped literal",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input \-`,
+			want:    []string{"requirement-source-admission", "--input", "-"},
+		},
+		{
+			name:    "escaped trailing space",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input value\ `,
+			want:    []string{"requirement-source-admission", "--input", "value "},
+		},
+		{
+			name:    "escaped trailing tab",
+			command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input value\\\t",
+			want:    []string{"requirement-source-admission", "--input", "value\t"},
+		},
+		{
+			name:    "concatenated literal segments",
+			command: `npm exec --offline -- agentic-proofkit 'requirement-'source-admission --input "-"`,
+			want:    []string{"requirement-source-admission", "--input", "-"},
+		},
+		{
+			name:    "vertical tab is literal",
+			command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input -\v",
+			want:    []string{"requirement-source-admission", "--input", "-\v"},
+		},
+		{
+			name:    "non-breaking space is literal",
+			command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input -\u00a0",
+			want:    []string{"requirement-source-admission", "--input", "-\u00a0"},
+		},
+		{
+			name:    "double quoted one-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input "\!"`,
+			want:    []string{"requirement-source-admission", "--input", `\!`},
+		},
+		{
+			name:    "double quoted two-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input "\\!"`,
+			want:    []string{"requirement-source-admission", "--input", `\!`},
+		},
+		{
+			name:    "double quoted three-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input "\\\!"`,
+			want:    []string{"requirement-source-admission", "--input", `\\!`},
+		},
+		{
+			name:    "double quoted four-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input "\\\\!"`,
+			want:    []string{"requirement-source-admission", "--input", `\\!`},
+		},
+		{
+			name:    "unquoted one-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input \!`,
+			want:    []string{"requirement-source-admission", "--input", `!`},
+		},
+		{
+			name:    "unquoted two-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input \\!`,
+			want:    []string{"requirement-source-admission", "--input", `\!`},
+		},
+		{
+			name:    "unquoted three-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input \\\!`,
+			want:    []string{"requirement-source-admission", "--input", `\!`},
+		},
+		{
+			name:    "unquoted four-backslash history marker",
+			command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input \\\\!`,
+			want:    []string{"requirement-source-admission", "--input", `\\!`},
+		},
+	}
+	for _, test := range accepted {
+		t.Run("accept/"+test.name, func(t *testing.T) {
+			got, _, err := installedREADMEFirstInput(readme(test.command))
+			if err != nil {
+				t.Fatalf("installedREADMEFirstInput() error=%v", err)
+			}
+			if !slices.Equal(got, test.want) {
+				t.Fatalf("installedREADMEFirstInput() argv=%v, want %v", got, test.want)
+			}
+		})
+	}
+
+	rejected := []struct {
+		name    string
+		command string
+	}{
+		{name: "unquoted expansion", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input $INPUT`},
+		{name: "double quoted expansion", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input "$INPUT"`},
+		{name: "double quoted history expansion", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input "!!"`},
+		{name: "control operator", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input -; true`},
+		{name: "glob", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input *`},
+		{name: "unterminated quote", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input '-'` + "'"},
+		{name: "trailing escape", command: `npm exec --offline -- agentic-proofkit requirement-source-admission --input \`},
+		{name: "unquoted NUL", command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input \x00"},
+		{name: "single quoted NUL", command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input '\x00'"},
+		{name: "double quoted NUL", command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input \"\x00\""},
+		{name: "escaped NUL", command: "npm exec --offline -- agentic-proofkit requirement-source-admission --input \\" + "\x00"},
+	}
+	for _, test := range rejected {
+		t.Run("reject/"+test.name, func(t *testing.T) {
+			_, _, err := installedREADMEFirstInput(readme(test.command))
+			if err == nil || !strings.Contains(err.Error(), "bounded literal shell words") {
+				t.Fatalf("installedREADMEFirstInput() error=%v", err)
+			}
+		})
+	}
+}
+
+func TestInstalledREADMEFirstInputPreservesJSONExampleBytes(t *testing.T) {
+	readme := func(input string) []byte {
+		return []byte(`<!-- proofkit:first-valid-input:start -->
+` + "```bash\nnpm exec --offline -- agentic-proofkit requirement-source-admission --input -\n```\n\n```json\n" + input + "\n```\n" + `<!-- proofkit:first-valid-input:end -->`)
+	}
+
+	const validInput = "{\"requirements\":[]} \t"
+	_, got, err := installedREADMEFirstInput(readme(validInput))
+	if err != nil {
+		t.Fatalf("installedREADMEFirstInput() error=%v", err)
+	}
+	if want := validInput + "\n"; string(got) != want {
+		t.Fatalf("installedREADMEFirstInput() input=%q, want %q", got, want)
+	}
+
+	_, _, err = installedREADMEFirstInput(readme("{}\u00a0"))
+	if err == nil || !strings.Contains(err.Error(), "JSON is invalid") {
+		t.Fatalf("installedREADMEFirstInput() NBSP error=%v", err)
+	}
+}
+
+func TestLiteralShellWordsConsumesLongBackslashRun(t *testing.T) {
+	const backslashCount = 128 << 10
+	command := strings.Repeat("\\", backslashCount) + "value"
+	got, err := parseLiteralShellWords(command)
+	if err != nil {
+		t.Fatalf("parseLiteralShellWords() error=%v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("parseLiteralShellWords() word count=%d, want 1", len(got))
+	}
+	want := strings.Repeat("\\", backslashCount/2) + "value"
+	if got[0] != want {
+		t.Fatalf("parseLiteralShellWords() word length=%d, want %d", len(got[0]), len(want))
+	}
+}
+
+func mustReadBytes(t *testing.T, path string) []byte {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return content
+}
+
+func packageReferenceClosureFixture() map[string]string {
+	return map[string]string{
+		"package/README.md":                               readmePreOneExactPinPolicy + "\n\nThe full machine-readable command inventory remains\n`proofkit/cli-contract.v2.json`; the human route map is\n`docs/proofkit-contract-map.md`.\n\n| Need | Owner |\n|---|---|\n| Adoption | `ADOPTION.md` |\n\n[Adoption](ADOPTION.md \"Guide\")\n[Adoption reference][adoption]\n[adoption]: ADOPTION.md \"Guide\"\n",
+		"package/ADOPTION.md":                             "Adoption.\n",
+		"package/docs/proofkit-contract-map.md":           "Contract map.\n",
+		"package/docs/specs/example/overview.md":          "Example.\n",
+		"package/docs/specs/example/requirements.v1.json": `{"specPackagePath":"docs/specs/example","overviewPath":"docs/specs/example/overview.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[]}`,
+		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"internal/tools/packageverify/main_test.go","witnessSelectors":[{"selector":"TestPackagePublicReferenceClosure","command":"go test ./internal/tools/packageverify -run '^TestPackagePublicReferenceClosure$'"}]}]}`,
+		"package/proofkit/witness-plan.json":              `{"commands":[],"policies":[]}`,
+		"package/proofkit/command-families.v1.json":       `{"families":[]}`,
+		"package/proofkit/receipt-producer-policy.json":   `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/specs/example/requirements.v1.json"]}]}`,
+		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
+	}
+}
+
+func TestVerifyRootPackageRejectsEachForbiddenRootEntry(t *testing.T) {
+	forbiddenEntries := []string{
+		"package/bun.lock",
+		"package/dist/cli.js",
+		"package/dist/index.js",
+		"package/proofkit/sdk-cli-parity.v1.json",
+		"package/tsconfig.json",
+		"package/dist/fixture.d.ts",
+		"package/dist/fixture.ts",
+		"package/dist/fixture.map",
+	}
+	for _, forbidden := range forbiddenEntries {
+		t.Run(forbidden, func(t *testing.T) {
+			root := t.TempDir()
+			withWorkingDirectory(t, root)
+			entries := map[string]string{}
+			for _, required := range requiredRootEntries() {
+				entries[required] = "fixture"
+			}
+			entries[forbidden] = "forbidden"
+			tarball := writePackageTarball(t, entries)
+			content, err := os.ReadFile(tarball)
+			if err != nil {
+				t.Fatalf("read package tarball: %v", err)
+			}
+			filename := "agentic-proofkit-1.2.3.tgz"
+			writeFileBytes(t, filepath.Join(root, "artifacts", "package", filename), content)
+			record := packRecord{
+				Filename:  filename,
+				Integrity: testNPMIntegrity(content),
+				Name:      rootPackageName,
+				Shasum:    testSHA1(content),
+				Version:   "1.2.3",
+			}
+
+			_, err = verifyRootPackage(record)
+			if err == nil || !strings.Contains(err.Error(), "forbidden entry "+forbidden) {
+				t.Fatalf("verifyRootPackage() error=%v, want rejection of %s", err, forbidden)
+			}
+		})
+	}
+}
+
 func TestVerifyTextPolicySmokeReportRequiresJSONABI(t *testing.T) {
 	wantSummary := textPolicySmokeSummary{
 		CheckedTextFileCount: 1,
@@ -786,8 +1606,6 @@ func quotedJSON(value string) string {
 func packageDocEntries(content string) map[string]string {
 	return map[string]string{
 		"package/ADOPTION.md":                                      content,
-		"package/AGENTS.md":                                        content,
-		"package/CONTRIBUTING.md":                                  content,
 		"package/NON_CLAIMS.md":                                    content,
 		"package/README.md":                                        content,
 		"package/SECURITY.md":                                      content,
@@ -809,9 +1627,13 @@ func writePackageTarball(t *testing.T, entries map[string]string) string {
 	tarWriter := tar.NewWriter(gzipWriter)
 	for name, content := range entries {
 		body := []byte(content)
+		mode := int64(0o644)
+		if rootBinaryEntry(name) {
+			mode = 0o755
+		}
 		if err := tarWriter.WriteHeader(&tar.Header{
 			Name:     name,
-			Mode:     0o644,
+			Mode:     mode,
 			Size:     int64(len(body)),
 			Typeflag: tar.TypeReg,
 		}); err != nil {
@@ -888,8 +1710,8 @@ func packageManifestFixture(repositoryURL string) string {
   "type": "module",
   "sideEffects": false,
   "devDependencies": {
-    "@axe-core/playwright": "4.12.1",
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.62.0",
+    "axe-core": "4.12.1",
     "typescript": "7.0.2"
   },
   "repository": {
@@ -914,11 +1736,9 @@ func packageManifestFixture(repositoryURL string) string {
     "arm64",
     "x64"
   ],
-  "files": [
-    "ADOPTION.md",
-    "AGENTS.md",
-    "CONTRIBUTING.md",
-    "LICENSE",
+	  "files": [
+	    "ADOPTION.md",
+	    "LICENSE",
     "NON_CLAIMS.md",
     "README.md",
     "SECURITY.md",

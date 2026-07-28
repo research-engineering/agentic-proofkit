@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -11,7 +12,7 @@ import (
 func TestSourceHygieneReadsStagedBlob(t *testing.T) {
 	t.Parallel()
 
-	for _, file := range []string{"README.md", "proof.py"} {
+	for _, file := range sourceHygieneFixtureFiles(t) {
 		file := file
 		t.Run(file, func(t *testing.T) {
 			t.Parallel()
@@ -37,7 +38,7 @@ func TestSourceHygieneReadsStagedBlob(t *testing.T) {
 func TestSourceHygieneReadsTrackedWorktree(t *testing.T) {
 	t.Parallel()
 
-	for _, file := range []string{"README.md", "proof.py"} {
+	for _, file := range sourceHygieneFixtureFiles(t) {
 		file := file
 		t.Run(file, func(t *testing.T) {
 			t.Parallel()
@@ -60,6 +61,27 @@ func TestSourceHygieneReadsTrackedWorktree(t *testing.T) {
 	}
 }
 
+func TestSourceHygieneIgnoresTokenSubstringsInsideContentDigests(t *testing.T) {
+	t.Parallel()
+
+	scriptPath := sourceHygieneScriptPath(t)
+	tempDir := t.TempDir()
+	runCommand(t, tempDir, "git", "init")
+
+	path := filepath.Join(tempDir, "contract.json")
+	content := `{"canonicalDigest":"sha256:0123456789abcdef0123456789abcdef0123456789afcdef0123456789abcdef"}`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write digest fixture: %v", err)
+	}
+	runCommand(t, tempDir, "git", "add", "contract.json")
+
+	command := exec.Command("node", scriptPath)
+	command.Dir = tempDir
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("source hygiene rejected an identifier substring inside a digest: %v\n%s", err, output)
+	}
+}
+
 func assertSourceHygieneRejects(t *testing.T, scriptPath string, repoRoot string, file string, evidenceClass string) {
 	t.Helper()
 	command := exec.Command("node", scriptPath)
@@ -77,11 +99,57 @@ func assertSourceHygieneRejects(t *testing.T, scriptPath string, repoRoot string
 func sourceHygieneScriptPath(t *testing.T) string {
 	t.Helper()
 
+	return filepath.Join(sourceHygieneRepoRoot(t), "scripts", "source-hygiene.mjs")
+}
+
+func sourceHygieneFixtureFiles(t *testing.T) []string {
+	t.Helper()
+
+	repoRoot := sourceHygieneRepoRoot(t)
+	command := exec.Command(
+		"git",
+		"ls-files",
+		"-z",
+		"--",
+		"internal/command/requirementbrowser/assets",
+	)
+	command.Dir = repoRoot
+	output, err := command.Output()
+	if err != nil {
+		t.Fatalf("list tracked browser assets: %v", err)
+	}
+
+	extensions := make(map[string]struct{})
+	for _, asset := range strings.Split(string(output), "\x00") {
+		if asset == "" {
+			continue
+		}
+		extension := filepath.Ext(asset)
+		if extension == "" {
+			t.Fatalf("tracked browser asset %q has no text extension", asset)
+		}
+		extensions[extension] = struct{}{}
+	}
+	if len(extensions) == 0 {
+		t.Fatal("tracked browser asset inventory is empty")
+	}
+
+	files := []string{"README.md", "proof.py"}
+	for extension := range extensions {
+		files = append(files, "browser-asset"+extension)
+	}
+	sort.Strings(files)
+	return files
+}
+
+func sourceHygieneRepoRoot(t *testing.T) string {
+	t.Helper()
+
 	repoRoot, err := filepath.Abs("..")
 	if err != nil {
 		t.Fatalf("resolve repo root: %v", err)
 	}
-	return filepath.Join(repoRoot, "scripts", "source-hygiene.mjs")
+	return repoRoot
 }
 
 func runCommand(t *testing.T, dir string, name string, args ...string) {

@@ -10,6 +10,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 )
 
@@ -19,6 +20,10 @@ import (
 const maxInputBytes = 32 << 20
 
 func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+	return RunWithRenderer(ctx, args, stdin, stdout, stderr, cliexec.PathRenderer())
+}
+
+func RunWithRenderer(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	args, layout, layoutExplicit, err := parseProcessOptions(args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -29,7 +34,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 			writeDiagnosticf(stderr, "--json-layout is valid only for JSON command output")
 			return 1
 		}
-		return writeText(usage(), 0, nil, stdout, stderr)
+		return writeText(usageWithRenderer(renderer), 0, nil, stdout, stderr)
 	}
 	descriptor, ok := commandDescriptorFor(args[0])
 	if !ok {
@@ -41,7 +46,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 			writeDiagnosticf(stderr, "--json-layout is valid only for JSON command output")
 			return 1
 		}
-		return writeText(commandUsage(descriptor), 0, nil, stdout, stderr)
+		return writeText(commandUsageWithRenderer(descriptor, renderer), 0, nil, stdout, stderr)
 	}
 	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
 	if err := validateJSONLayoutUse(descriptor, parsedArguments, layoutExplicit); err != nil {
@@ -60,7 +65,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 				writeDiagnosticf(stderr, "help families accepts no additional operands")
 				return 1
 			}
-			return writeText(commandFamiliesUsage(), 0, nil, stdout, stderr)
+			return writeText(commandFamiliesUsageWithRenderer(renderer), 0, nil, stdout, stderr)
 		}
 		if len(args) >= 2 && args[1] == "family" {
 			if len(args) < 3 {
@@ -71,7 +76,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 				writeDiagnosticf(stderr, "help family accepts exactly one family id")
 				return 1
 			}
-			output, err := commandFamilyUsage(args[2])
+			output, err := commandFamilyUsageWithRenderer(args[2], renderer)
 			if err != nil {
 				writeDiagnostic(stderr, err)
 				return 1
@@ -84,13 +89,13 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 				writeDiagnosticf(stderr, "unsupported help target: %s", args[1])
 				return 1
 			}
-			return writeText(commandUsage(target), 0, nil, stdout, stderr)
+			return writeText(commandUsageWithRenderer(target, renderer), 0, nil, stdout, stderr)
 		}
 		if len(args) != 1 && !(len(args) == 2 && (args[1] == "--help" || args[1] == "-h")) {
 			_, _ = fmt.Fprintln(stderr, "help supports only --help or -h")
 			return 1
 		}
-		return writeText(usage(), 0, nil, stdout, stderr)
+		return writeText(usageWithRenderer(renderer), 0, nil, stdout, stderr)
 	case commandRunnerInit:
 		preset, err := parseInitArgs(args[1:])
 		if err != nil {
@@ -105,22 +110,30 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 			buildEnvelope: adoptiondoctor.BuildEnvelope,
 		})
 	case commandRunnerAdoptionContractEnvelope:
-		return runAdoptionContractEnvelope(args[1:], stdin, stdout, stderr)
+		return runAdoptionContractEnvelope(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerAdoptionWorkflow:
 		return runAgentEnvelopeCommand(args[0], args[1:], stdin, stdout, stderr, agentEnvelopeBuilders{
-			build:                       adoptionworkflow.Build,
-			buildEnvelope:               adoptionworkflow.BuildEnvelope,
-			buildFromContract:           adoptionworkflow.BuildFromContractEnvelope,
-			buildEnvelopeFromContract:   adoptionworkflow.BuildEnvelopeFromContractEnvelope,
+			build: func(raw any) (map[string]any, int, error) {
+				return adoptionworkflow.BuildWithRenderer(raw, renderer)
+			},
+			buildEnvelope: func(raw any) (map[string]any, int, error) {
+				return adoptionworkflow.BuildEnvelopeWithRenderer(raw, renderer)
+			},
+			buildFromContract: func(raw any) (map[string]any, int, error) {
+				return adoptionworkflow.BuildFromContractEnvelopeWithRenderer(raw, renderer)
+			},
+			buildEnvelopeFromContract: func(raw any) (map[string]any, int, error) {
+				return adoptionworkflow.BuildEnvelopeFromContractEnvelopeWithRenderer(raw, renderer)
+			},
 			supportsContractEnvelope:    true,
 			supportsMaterializationFile: false,
 		})
 	case commandRunnerAgentRoute:
-		return runAgentRoute(args[1:], stdin, stdout, stderr)
+		return runAgentRoute(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerContractEnvelope:
 		return runContractEnvelopeCommand(args[0], args[1:], stdin, stdout, stderr, gradualadoption.Build, gradualadoption.BuildFromContractEnvelope)
 	case commandRunnerGradualAdoptionBootstrap:
-		return runGradualAdoptionBootstrap(args[1:], stdin, stdout, stderr)
+		return runGradualAdoptionBootstrap(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerGradualAdoptionGuidance:
 		return runGradualAdoptionGuidance(args[1:], stdin, stdout, stderr)
 	case commandRunnerJSONReportCLIAdapterSource:
@@ -134,7 +147,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 	case commandRunnerPilotAdmission:
 		return runPilotAdmission(args[1:], stdin, stdout, stderr)
 	case commandRunnerProjectStructure:
-		return runProjectStructure(args[1:], stdin, stdout, stderr)
+		return runProjectStructure(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerTypeScriptPublicAPISurfaces:
 		return runTypeScriptPublicAPI(args[1:], stdin, stdout, stderr)
 	case commandRunnerStackPreset:
@@ -143,7 +156,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 			writeDiagnostic(stderr, err)
 			return 1
 		}
-		record, err := stackpreset.Build(presetID)
+		record, err := stackpreset.BuildWithRenderer(presetID, renderer)
 		if err != nil {
 			writeDiagnostic(stderr, err)
 			return 1
@@ -158,7 +171,7 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 	case commandRunnerRequirementContextCompose:
 		return runRequirementContextCompose(args[1:], stdin, stdout, stderr)
 	case commandRunnerRequirementView:
-		return runRequirementView(args[0], args[1:], stdin, stdout, stderr)
+		return runRequirementView(args[0], args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerTestEvidenceInventory:
 		return runTestEvidenceInventory(args[1:], stdin, stdout, stderr)
 	case commandRunnerPlanning:

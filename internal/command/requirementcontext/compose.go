@@ -162,8 +162,8 @@ func Compose(repoRoot string, raw any) (map[string]any, error) {
 	})
 	sort.Slice(sources, func(left, right int) bool { return sources[left].SourceRef < sources[right].SourceRef })
 	projections["requirementSources"] = requirementSources
-	verification := baselineVerification(sources)
-	snapshot := Snapshot{BaselineVerification: verification, CatalogID: catalogID, Projections: projections, Sources: sources}
+	coverage := expectedDigestCoverage(sources)
+	snapshot := Snapshot{CatalogID: catalogID, ExpectedDigestCoverage: coverage, Projections: projections, Sources: sources}
 	identityValue := map[string]any{"catalogId": catalogID, "projections": projections, "sources": sourceIdentityValues(sources)}
 	encoded, err := stablejson.Marshal(identityValue)
 	if err != nil {
@@ -314,20 +314,20 @@ func readCatalogSource(root *os.Root, path string) (any, []byte, string, error) 
 	return value, content, digest.SHA256TextRef(string(content)), nil
 }
 
-func baselineVerification(sources []Source) string {
-	verified := 0
+func expectedDigestCoverage(sources []Source) string {
+	covered := 0
 	for _, source := range sources {
 		if source.ExpectedDigest != "" {
-			verified++
+			covered++
 		}
 	}
-	if verified == 0 {
-		return "unverified"
+	if covered == 0 {
+		return "none"
 	}
-	if verified == len(sources) {
-		return "verified"
+	if covered == len(sources) {
+		return "all"
 	}
-	return "partially_verified"
+	return "partial"
 }
 
 func sourceIdentityValues(sources []Source) []any {

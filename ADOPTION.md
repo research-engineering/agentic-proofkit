@@ -30,18 +30,19 @@ Publisher and post-publish registry identity are admitted. GitHub Release
 assets are archive and provenance lookup, not package-manager dependency
 authority.
 
-Consumers may choose npm or Bun for installation. Both consume the same npm
-registry package identity:
+Consumers install the exact npm registry package identity:
 
 ```bash
-npm install -D @research-engineering/agentic-proofkit
-bun add -d @research-engineering/agentic-proofkit
+npm install --save-dev --save-exact @research-engineering/agentic-proofkit
+npm exec --offline -- agentic-proofkit help
 ```
 
 Release evidence still uses npm as the registry-authority CLI because Proofkit
 records npm-specific package identity, `dist.integrity`, `dist.shasum`, `npm
-pack`, and root-only registry install proof. Bun is not used as a substitute
-for those release-authority facts.
+pack`, and root-only registry install proof. A bare `agentic-proofkit` command
+is valid only when an installed package binary is already on `PATH`.
+Equivalent exact-tarball Bun execution has not been admitted, so Bun execution
+remains a non-claim.
 
 Stable authority channel ids:
 

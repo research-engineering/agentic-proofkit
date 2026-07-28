@@ -43,12 +43,17 @@ def raise_exit():
 signal.signal(signal.SIGTERM, lambda _signum, _frame: raise_exit())
 
 pid_path = os.environ["PROOFKIT_TEST_PID_FILE"]
+profile_path = os.environ["PROOFKIT_TEST_PROFILE_FILE"]
 temporary_pid_path = pid_path + ".tmp"
 with open(temporary_pid_path, "w", encoding="utf-8") as handle:
     handle.write(str(os.getpid()))
     handle.flush()
     os.fsync(handle.fileno())
 os.replace(temporary_pid_path, pid_path)
+
+with open(profile_path, "w", encoding="utf-8") as handle:
+    handle.write(os.environ["AGENTIC_PROOFKIT_LAUNCHER_PROFILE"] + "\n")
+    handle.write(os.environ["AGENTIC_PROOFKIT_PYTHON_EXECUTABLE"] + "\n")
 
 while True:
     time.sleep(0.1)
@@ -57,8 +62,16 @@ while True:
 		t.Fatal(err)
 	}
 	pidFile := filepath.Join(root, "child.pid")
+	profileFile := filepath.Join(root, "launcher-profile.txt")
 	command := exec.Command(python, "-m", "agentic_proofkit")
-	command.Env = append(os.Environ(), "PYTHONPATH="+root, "PROOFKIT_TEST_PID_FILE="+pidFile)
+	command.Env = append(
+		os.Environ(),
+		"PYTHONPATH="+root,
+		"PROOFKIT_TEST_PID_FILE="+pidFile,
+		"PROOFKIT_TEST_PROFILE_FILE="+profileFile,
+		"AGENTIC_PROOFKIT_LAUNCHER_PROFILE=hostile",
+		"AGENTIC_PROOFKIT_PYTHON_EXECUTABLE=relative/python",
+	)
 	if err := command.Start(); err != nil {
 		t.Fatal(err)
 	}
@@ -71,6 +84,22 @@ while True:
 	pid := waitForPID(t, pidFile, command.Process.Pid)
 	if pid != command.Process.Pid {
 		t.Fatalf("wrapper pid=%d embedded CLI pid=%d, want exec-preserved identity", command.Process.Pid, pid)
+	}
+	profile := waitForFile(t, profileFile)
+	profileLines := strings.Split(strings.TrimSuffix(profile, "\n"), "\n")
+	if len(profileLines) != 2 || profileLines[0] != "python_module" || !filepath.IsAbs(profileLines[1]) {
+		t.Fatalf("wrapper launcher profile=%q, want overwritten python_module and absolute interpreter", profile)
+	}
+	wrapperPython, err := os.Stat(profileLines[1])
+	if err != nil {
+		t.Fatalf("stat wrapper interpreter: %v", err)
+	}
+	invokedPython, err := os.Stat(python)
+	if err != nil {
+		t.Fatalf("stat invoked interpreter: %v", err)
+	}
+	if !os.SameFile(wrapperPython, invokedPython) {
+		t.Fatalf("wrapper interpreter=%q does not identify invoked interpreter %q", profileLines[1], python)
 	}
 	if err := command.Process.Signal(syscall.SIGTERM); err != nil {
 		t.Fatal(err)
@@ -108,6 +137,20 @@ func waitForPID(t *testing.T, path string, expected int) int {
 	}
 	t.Fatal(fmt.Errorf("timed out waiting for embedded CLI pid"))
 	return 0
+}
+
+func waitForFile(t *testing.T, path string) string {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		content, err := os.ReadFile(path)
+		if err == nil && len(content) > 0 {
+			return string(content)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("timed out waiting for %s", path)
+	return ""
 }
 
 func TestWaitForPIDIgnoresPartialMalformedAndStaleValues(t *testing.T) {

@@ -41,7 +41,8 @@ approval, rollout approval, and production decisions.
 - `REQ-PROOFKIT-RETIRE-008`: adoption doctor reports classify caller-provided
   imperfect-repository migration gaps and non-passing child reports into
   advisory, failed, or blocked states and emit bounded owner-specific guidance
-  without scanning repositories or owning semantic boundary decisions.
+  without scanning repositories or owning semantic boundary decisions;
+  unresolved external prerequisites remain blocked in every adoption mode.
 - `REQ-PROOFKIT-RETIRE-009`: workspace manifest fact projection turns explicit
   caller-owned manifest records into registry-compatible workspace facts and
   planning inputs without reading manifests from disk or owning package-manager

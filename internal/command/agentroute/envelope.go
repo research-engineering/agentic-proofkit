@@ -6,11 +6,16 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
 func BuildEnvelope(raw any) (map[string]any, int, error) {
-	report, exitCode, err := Build(raw)
+	return BuildEnvelopeWithRenderer(raw, cliexec.PathRenderer())
+}
+
+func BuildEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int, error) {
+	report, exitCode, err := BuildWithRenderer(raw, renderer)
 	if err != nil {
 		return nil, 1, err
 	}
@@ -122,10 +127,11 @@ func commandContextRefs(commands []map[string]any, reportID string) []map[string
 		if commandName == "" {
 			continue
 		}
+		argv := stringsFromAny(command["argv"])
 		refs = append(refs, map[string]any{
 			"argv":          command["argv"],
 			"commandId":     commandID(reportID, command),
-			"display":       commandName,
+			"display":       cliexec.DisplayArgv(argv),
 			"nonClaim":      "Agent-route command refs do not execute commands or admit command results.",
 			"owner":         "consumer_repository",
 			"proofkitRoute": commandName,

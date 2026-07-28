@@ -10,7 +10,10 @@ import (
 func TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.027617011738725950397530096345580960352335933116627715389463795934691621119686")
 	input := validPackageRuntimeDependencyInput()
-	record, exitCode := Build(input)
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
 	if exitCode != 0 || record.State != "passed" {
 		t.Fatalf("Build() exit=%d state=%s, want passed", exitCode, record.State)
 	}
@@ -19,7 +22,10 @@ func TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution(t *te
 	input["packageResolution"].(map[string]any)["packageRoot"] = "/repo/packages/proofkit"
 	input["packageResolution"].(map[string]any)["realPackageRoot"] = "/repo/packages/proofkit"
 	input["packageResolution"].(map[string]any)["resolvedEntryPoint"] = "/repo/packages/proofkit/dist/index.js"
-	record, exitCode = Build(input)
+	record, exitCode, err = Build(input)
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
 	if exitCode == 0 || record.State != "failed" {
 		t.Fatalf("Build(workspace) exit=%d state=%s, want failed", exitCode, record.State)
 	}
@@ -29,7 +35,10 @@ func TestBuildRejectsLockfileIntegrityDrift(t *testing.T) {
 	input := validPackageRuntimeDependencyInput()
 	input["packageResolution"].(map[string]any)["lockfileIntegrity"] = "sha512-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
-	record, exitCode := Build(input)
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
 	if exitCode == 0 || record.State != "failed" {
 		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
 	}
@@ -43,19 +52,12 @@ func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
 	input := validPackageRuntimeDependencyInput()
 	input["nonClaims"] = []any{secret}
 
-	record, exitCode := Build(input)
-	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() exit=%d state=%s, want failed", exitCode, record.State)
+	_, exitCode, err := Build(input)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "secret-like values") {
+		t.Fatalf("Build() exit=%d error=%v, want structural rejection", exitCode, err)
 	}
-	encoded, err := json.Marshal(record)
-	if err != nil {
-		t.Fatalf("marshal report: %v", err)
-	}
-	if strings.Contains(string(encoded), secret) {
-		t.Fatalf("report leaked secret-shaped caller text: %s", string(encoded))
-	}
-	if !strings.Contains(string(encoded), "secret-like values") {
-		t.Fatalf("report=%s, want secret-like rejection", string(encoded))
+	if strings.Contains(err.Error(), secret) {
+		t.Fatalf("error leaked secret-shaped caller text: %s", err)
 	}
 }
 

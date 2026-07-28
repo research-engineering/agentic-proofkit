@@ -129,7 +129,7 @@ func TestBuildRejectsUnknownReceiptSelector(t *testing.T) {
 func TestBuildRejectsReceiptKindThatDoesNotCoverWitnessSelector(t *testing.T) {
 	input := validBundleInput(t)
 	receipt := validProofReceipt()
-	receipt["receiptKind"] = "proofkit.go-test"
+	receipt["receiptKind"] = commandOutsideRequirement(t, input, "REQ-PROOFKIT-PACKAGE-004")
 	receipt["witnessSelectors"] = []any{"REQ-PROOFKIT-PACKAGE-004"}
 	input["receiptAdmission"] = proofReceiptChild(t, []any{receipt})
 
@@ -141,6 +141,34 @@ func TestBuildRejectsReceiptKindThatDoesNotCoverWitnessSelector(t *testing.T) {
 		t.Fatalf("Build() exitCode=%d state=%s, want failed report", exitCode, record.State)
 	}
 	assertFailedRuleMessage(t, record.RuleResults, "proofkit.spec-proof-bundle-admission.failure.", "does not cover witness selector")
+}
+
+func commandOutsideRequirement(t *testing.T, input map[string]any, requirementID string) string {
+	t.Helper()
+	bindingFile := input["requirementBindings"].(map[string]any)
+	covered := map[string]struct{}{}
+	all := []string{}
+	seen := map[string]struct{}{}
+	for _, raw := range bindingFile["bindings"].([]any) {
+		binding := raw.(map[string]any)
+		for _, commandRaw := range binding["commandIds"].([]any) {
+			commandID := commandRaw.(string)
+			if _, ok := seen[commandID]; !ok {
+				seen[commandID] = struct{}{}
+				all = append(all, commandID)
+			}
+			if binding["requirementId"] == requirementID {
+				covered[commandID] = struct{}{}
+			}
+		}
+	}
+	for _, commandID := range all {
+		if _, ok := covered[commandID]; !ok {
+			return commandID
+		}
+	}
+	t.Fatalf("fixture has no command outside requirement %s", requirementID)
+	return ""
 }
 
 func TestBuildRejectsBindingThatOmitsWitnessCommandEnvironment(t *testing.T) {

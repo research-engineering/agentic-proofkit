@@ -3,11 +3,12 @@ package publicapi
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
@@ -23,6 +24,41 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 	}
 	if output["entryCount"] != 1 {
 		t.Fatalf("entryCount=%v want 1", output["entryCount"])
+	}
+}
+
+func TestVerifyTypeScriptRootPackagePublicAPISurfaces(t *testing.T) {
+	repoRoot := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(repoRoot, "src"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(repoRoot, "src", "index.ts"),
+		[]byte("export const VALUE = 1;\nexport function makeThing() {}\nexport type Mode = string;\nexport interface Thing {}\n"),
+		0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	writeJSON(t, filepath.Join(repoRoot, "package.json"), map[string]any{
+		"name": "@example/alpha",
+		"exports": map[string]any{
+			".": map[string]any{
+				"import": "./src/index.ts",
+				"types":  "./src/index.ts",
+			},
+			"./internal": nil,
+		},
+	})
+	input := publicAPIManifest()
+	item := input["entries"].([]any)[0].(map[string]any)
+	item["packageManifestPath"] = "package.json"
+	for _, raw := range item["exportConditions"].([]any) {
+		raw.(map[string]any)["sourcePath"] = "src/index.ts"
+	}
+
+	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Verify() exit=%d error=%v output=%#v, want root-package success", exitCode, err, output)
 	}
 }
 
@@ -153,7 +189,7 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsSymlinkEscapedSource(t *testing.
 	}
 
 	_, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "must resolve inside repo root") {
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "absolute symlink target") {
 		t.Fatalf("Verify() exitCode=%d error=%v, want symlink escape rejection", exitCode, err)
 	}
 }
@@ -172,13 +208,304 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsSymlinkToTSX(t *testing.T) {
 	if err := os.Remove(sourcePath); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(tsxPath, sourcePath); err != nil {
+	if err := os.Symlink("index.tsx", sourcePath); err != nil {
 		t.Skipf("symlink unavailable: %v", err)
 	}
 
 	_, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
 	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source") {
 		t.Fatalf("Verify() exitCode=%d error=%v, want canonical TSX target rejection", exitCode, err)
+	}
+}
+
+func TestVerifyAcceptsStableRelativeInRootSymlink(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	targetPath := filepath.Join(repoRoot, "packages", "alpha", "src", "real.ts")
+	content, err := os.ReadFile(sourcePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(targetPath, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Remove(sourcePath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("real.ts", sourcePath); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	output, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Verify() exit=%d error=%v output=%#v, want confined relative symlink success", exitCode, err, output)
+	}
+}
+
+func TestVerifyRejectsDeterministicSymlinkSwap(t *testing.T) {
+	for _, item := range []struct {
+		name string
+		swap func(t *testing.T, repoRoot, outsideRoot string)
+	}{
+		{
+			name: "leaf source swap",
+			swap: func(t *testing.T, repoRoot, outsideRoot string) {
+				sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+				if err := os.Remove(sourcePath); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(filepath.Join(outsideRoot, "index.ts"), sourcePath); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "ancestor directory swap",
+			swap: func(t *testing.T, repoRoot, outsideRoot string) {
+				sourceDir := filepath.Join(repoRoot, "packages", "alpha", "src")
+				if err := os.Rename(sourceDir, sourceDir+"-original"); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outsideRoot, sourceDir); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			repoRoot := writeTypeScriptPackageFixture(t)
+			outsideRoot := t.TempDir()
+			if err := os.WriteFile(filepath.Join(outsideRoot, "index.ts"), []byte(`export const SENTINEL = "outside";`), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			swapped := false
+			scanAdmissionBarrier = func(stage, lexical string) {
+				if swapped || stage != "canonical_resolved" || lexical != "packages/alpha/src/index.ts" {
+					return
+				}
+				swapped = true
+				item.swap(t, repoRoot, outsideRoot)
+			}
+			t.Cleanup(func() { scanAdmissionBarrier = nil })
+
+			output, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
+			if !swapped {
+				t.Fatal("deterministic scan barrier was not reached")
+			}
+			if exitCode != 1 || err == nil {
+				t.Fatalf("Verify() exit=%d error=%v output=%#v, want fail-closed swap rejection", exitCode, err, output)
+			}
+			if strings.Contains(fmt.Sprint(output), "SENTINEL") || strings.Contains(err.Error(), "SENTINEL") {
+				t.Fatalf("outside sentinel leaked through confined scanner: output=%#v error=%v", output, err)
+			}
+		})
+	}
+}
+
+func TestVerifyPinsPackageRootAcrossInRootSiblingSwap(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	alphaSource := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	if err := os.WriteFile(alphaSource, []byte("export const ORIGINAL = 1;\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	swapped := false
+	scanAdmissionBarrier = func(stage, lexical string) {
+		if swapped || stage != "canonical_resolved" || lexical != "packages/alpha/src/index.ts" {
+			return
+		}
+		swapped = true
+		packagesDir := filepath.Join(repoRoot, "packages")
+		betaSourceDir := filepath.Join(packagesDir, "beta", "src")
+		if err := os.MkdirAll(betaSourceDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		betaSource := "export const VALUE = 1;\nexport function makeThing() {}\nexport type Mode = string;\nexport interface Thing {}\n"
+		if err := os.WriteFile(filepath.Join(betaSourceDir, "index.ts"), []byte(betaSource), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		alphaDir := filepath.Join(packagesDir, "alpha")
+		if err := os.Rename(alphaDir, alphaDir+"-original"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Symlink("beta", alphaDir); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Cleanup(func() { scanAdmissionBarrier = nil })
+
+	output, exitCode, err := Verify(publicAPIManifest(), Options{RepoRoot: repoRoot})
+	if !swapped {
+		t.Fatal("deterministic scan barrier was not reached")
+	}
+	if err != nil || exitCode != 1 {
+		t.Fatalf("Verify() exit=%d error=%v output=%#v, want pinned original package source mismatch", exitCode, err, output)
+	}
+	failures := fmt.Sprint(output["failures"])
+	if !strings.Contains(failures, "ORIGINAL") || strings.Contains(failures, "SENTINEL") {
+		t.Fatalf("Verify() failures=%s, want proof that the pinned alpha source, not the sibling, was read", failures)
+	}
+}
+
+func TestScanCacheBindsBytesToFirstCanonicalIdentityAcrossSymlinkRetarget(t *testing.T) {
+	repoRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repoRoot, "a.ts"), []byte("A"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repoRoot, "b.ts"), []byte("B"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	linkPath := filepath.Join(repoRoot, "entry.ts")
+	if err := os.Symlink("a.ts", linkPath); err != nil {
+		t.Skipf("symlink unavailable: %v", err)
+	}
+	scan := newScanCache(repoRoot, maxAggregateScanBytes)
+	if scan.initErr != nil {
+		t.Fatal(scan.initErr)
+	}
+	t.Cleanup(func() {
+		if err := scan.root.Close(); err != nil {
+			t.Errorf("close scan root: %v", err)
+		}
+	})
+
+	firstContent, firstCanonical, err := scan.readFile("entry.ts", "fixture source", maxSourceFileBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if firstContent != "A" || firstCanonical != "a.ts" {
+		t.Fatalf("first read=(%q, %q), want bytes and canonical identity from a.ts", firstContent, firstCanonical)
+	}
+	if err := os.Remove(linkPath); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("b.ts", linkPath); err != nil {
+		t.Fatal(err)
+	}
+	currentCanonical, err := scan.canonicalRelativePath("entry.ts", "fixture source")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if currentCanonical != "b.ts" {
+		t.Fatalf("retargeted lexical path resolves to %q, want b.ts", currentCanonical)
+	}
+
+	secondContent, secondCanonical, err := scan.readFile("entry.ts", "fixture source", maxSourceFileBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secondContent != "A" || secondCanonical != "a.ts" {
+		t.Fatalf("cached read=(%q, %q), want indivisible first-admission snapshot (A, a.ts)", secondContent, secondCanonical)
+	}
+}
+
+func TestCanonicalSourceSnapshotRejectsChangedCrossAliasAdmission(t *testing.T) {
+	originalContent := []byte("export const ALPHA = 1;")
+	for _, test := range []struct {
+		name   string
+		mutate func(t *testing.T, targetPath string, before os.FileInfo)
+	}{
+		{
+			name: "identity drift with stable digest",
+			mutate: func(t *testing.T, targetPath string, before os.FileInfo) {
+				replacementPath := targetPath + ".replacement"
+				if err := os.WriteFile(replacementPath, originalContent, 0o600); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Remove(targetPath); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Rename(replacementPath, targetPath); err != nil {
+					t.Fatal(err)
+				}
+				after, err := os.Stat(targetPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if os.SameFile(before, after) {
+					t.Fatal("replacement retained file identity; test cannot isolate identity drift")
+				}
+			},
+		},
+		{
+			name: "digest drift with stable identity",
+			mutate: func(t *testing.T, targetPath string, before os.FileInfo) {
+				file, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_TRUNC, 0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if _, err := file.Write([]byte("export const BETA_ = 1;")); err != nil {
+					file.Close()
+					t.Fatal(err)
+				}
+				if err := file.Close(); err != nil {
+					t.Fatal(err)
+				}
+				after, err := os.Stat(targetPath)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !os.SameFile(before, after) {
+					t.Fatal("in-place rewrite changed file identity; test cannot isolate digest drift")
+				}
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			repoRoot := t.TempDir()
+			packageDir := "packages/alpha"
+			packageRoot := filepath.Join(repoRoot, filepath.FromSlash(packageDir))
+			if err := os.MkdirAll(packageRoot, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			targetPath := filepath.Join(packageRoot, "real.ts")
+			if err := os.WriteFile(targetPath, originalContent, 0o600); err != nil {
+				t.Fatal(err)
+			}
+			for _, alias := range []string{"one.ts", "two.ts", "three.ts"} {
+				if err := os.Symlink("real.ts", filepath.Join(packageRoot, alias)); err != nil {
+					t.Skipf("symlink unavailable: %v", err)
+				}
+			}
+			scan := newScanCache(repoRoot, maxAggregateScanBytes)
+			if scan.initErr != nil {
+				t.Fatal(scan.initErr)
+			}
+			t.Cleanup(func() {
+				if err := scan.root.Close(); err != nil {
+					t.Errorf("close scan root: %v", err)
+				}
+			})
+			pinnedRoot, err := os.OpenRoot(packageRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				if err := pinnedRoot.Close(); err != nil {
+					t.Errorf("close pinned package root: %v", err)
+				}
+			})
+			pkg := packageSnapshot{dir: packageDir, root: pinnedRoot}
+
+			runtimeExports, _, err := scan.collectSourceExports(packageDir+"/one.ts", pkg, "first alias")
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertStringSlice(t, runtimeExports, []string{"ALPHA"})
+			runtimeExports, _, err = scan.collectSourceExports(packageDir+"/two.ts", pkg, "stable second alias")
+			if err != nil {
+				t.Fatalf("stable alias reuse: %v", err)
+			}
+			assertStringSlice(t, runtimeExports, []string{"ALPHA"})
+
+			before, err := os.Stat(targetPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			test.mutate(t, targetPath, before)
+			_, _, err = scan.collectSourceExports(packageDir+"/three.ts", pkg, "changed third alias")
+			if err == nil || !strings.Contains(err.Error(), "canonical source changed identity or content during scan") {
+				t.Fatalf("collectSourceExports() error=%v, want cross-alias canonical drift rejection", err)
+			}
+		})
 	}
 }
 
@@ -411,7 +738,7 @@ func TestScanCacheRejectsOversizedSource(t *testing.T) {
 		t.Fatalf("close oversized source: %v", err)
 	}
 	scan := newScanCache(resolvedRoot, maxAggregateScanBytes)
-	if _, _, err := scan.readFile(path, "fixture source", maxSourceFileBytes); err == nil || !strings.Contains(err.Error(), "8 MiB") {
+	if _, _, err := scan.readFile("oversized.ts", "fixture source", maxSourceFileBytes); err == nil || !strings.Contains(err.Error(), "8 MiB") {
 		t.Fatalf("scan.readFile() error=%v, want bounded file rejection", err)
 	}
 }
@@ -478,10 +805,10 @@ func TestScanCacheRejectsAggregateBytesAcrossUniqueFiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	scan := newScanCache(resolvedRoot, 10)
-	if _, _, err := scan.readFile(firstPath, "first source", maxSourceFileBytes); err != nil {
+	if _, _, err := scan.readFile("first.ts", "first source", maxSourceFileBytes); err != nil {
 		t.Fatalf("read first source: %v", err)
 	}
-	if _, _, err := scan.readFile(secondPath, "second source", maxSourceFileBytes); err == nil || !strings.Contains(err.Error(), "aggregate file-read limit") {
+	if _, _, err := scan.readFile("second.ts", "second source", maxSourceFileBytes); err == nil || !strings.Contains(err.Error(), "aggregate file-read limit") {
 		t.Fatalf("scan.readFile() error=%v, want aggregate budget rejection", err)
 	}
 }
@@ -504,7 +831,7 @@ func TestReadPackageManifestRejectsOversizedMetadata(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := readPackageManifest(newScanCache(resolvedRoot, maxAggregateScanBytes), manifestPath); err == nil || !strings.Contains(err.Error(), "256 KiB") {
+	if _, _, _, _, err := readPackageManifest(newScanCache(resolvedRoot, maxAggregateScanBytes), "package.json"); err == nil || !strings.Contains(err.Error(), "256 KiB") {
 		t.Fatalf("readPackageManifest() error=%v, want package metadata bound rejection", err)
 	}
 }

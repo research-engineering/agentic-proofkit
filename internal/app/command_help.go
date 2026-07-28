@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 func isCommandHelpRequest(args []string) bool {
@@ -11,11 +13,21 @@ func isCommandHelpRequest(args []string) bool {
 }
 
 func commandUsage(descriptor commandDescriptor) string {
-	lines := []string{"Usage:"}
-	lines = append(lines, "  "+commandUsageLine(descriptor))
+	return commandUsageWithRenderer(descriptor, cliexec.PathRenderer())
+}
+
+func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Renderer) string {
+	lines := []string{
+		"Usage:",
+		"  " + commandUsageLine(descriptor),
+		"",
+		"Installed invocation:",
+		"  " + installedCommandUsageLineWithRenderer(descriptor, renderer),
+	}
 	if descriptor.name == "help" {
+		lines = append(lines, "", "Installed help routes:")
 		for _, form := range generatedCommandFamilyCatalog().HelpForms {
-			lines = append(lines, "  agentic-proofkit "+form)
+			lines = append(lines, "  "+renderer.DisplayCommand()+" "+form)
 		}
 	}
 	lines = append(lines,
@@ -36,6 +48,19 @@ func commandUsage(descriptor commandDescriptor) string {
 	)
 	for _, flag := range descriptor.allowedFlags {
 		lines = append(lines, "  "+flag)
+	}
+	if descriptor.name == "stack-preset" {
+		lines = append(lines, "", "Copyable preset commands:")
+		for _, presetID := range descriptor.flagValueChoices["--preset"] {
+			lines = append(lines, "  "+renderer.DisplayCommand("stack-preset", "--preset", presetID))
+		}
+	}
+	if descriptor.name == "stack-preset" || descriptor.name == "requirement-source-admission" {
+		lines = append(lines,
+			"",
+			"Continue with the installed README first-valid-input example:",
+			"  Path: node_modules/@research-engineering/agentic-proofkit/README.md",
+		)
 	}
 	if len(descriptor.exactlyOneOfFlagGroups) > 0 || len(descriptor.flagValueRequirements) > 0 {
 		lines = append(lines, "", "Flag constraints:")
@@ -62,8 +87,17 @@ func commandUsage(descriptor commandDescriptor) string {
 		}
 	}
 	lines = append(lines, "", "Public contract:")
-	lines = append(lines, "  CLI/JSON input, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")
+	lines = append(lines, "  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")
+	lines = append(lines, "  Nested field semantics remain owned by native command admission.")
 	return strings.Join(lines, "\n") + "\n"
+}
+
+func installedCommandUsageLine(descriptor commandDescriptor) string {
+	return installedCommandUsageLineWithRenderer(descriptor, cliexec.PathRenderer())
+}
+
+func installedCommandUsageLineWithRenderer(descriptor commandDescriptor, renderer cliexec.Renderer) string {
+	return renderer.DisplayCommand() + strings.TrimPrefix(commandUsageLine(descriptor), cliexec.BinaryName)
 }
 
 func commandUsageLine(descriptor commandDescriptor) string {
@@ -79,6 +113,10 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			continue
 		}
 		required := slices.Contains(descriptor.requiredFlags, flag)
+		if choices := descriptor.flagValueChoices[flag]; len(choices) > 0 {
+			segments = append(segments, optionalUsageSegment(flag+" <"+strings.Join(choices, "|")+">", required))
+			continue
+		}
 		switch flag {
 		case "--input":
 			continue

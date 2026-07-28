@@ -116,7 +116,7 @@ func serveWorkspaceRequirements(response http.ResponseWriter, request *http.Requ
 		return
 	}
 	projection, state := requirementWindow(session.Requirements, query)
-	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number("1"), "snapshotId": session.SnapshotID, "state": state})
+	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number("2"), "snapshotId": session.SnapshotID, "state": state})
 }
 
 func requirementWindow(requirements []any, query projectionQuery) (map[string]any, string) {
@@ -165,7 +165,7 @@ func serveWorkspaceQuery(response http.ResponseWriter, request *http.Request, ex
 	serveWorkspaceJSON(response, request.Method, map[string]any{
 		"queryId":       queryID,
 		"requestId":     requestID,
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"slice":         slice,
 		"snapshotId":    session.SnapshotID,
 		"state":         slice["state"],
@@ -204,7 +204,7 @@ func serveWorkspaceProjection(response http.ResponseWriter, request *http.Reques
 	} else {
 		projection, state = graphWindow(projection, query)
 	}
-	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number("1"), "snapshotId": session.SnapshotID, "state": state})
+	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number("2"), "snapshotId": session.SnapshotID, "state": state})
 }
 
 type projectionQuery struct {
@@ -264,18 +264,18 @@ func diffWindow(full map[string]any, query projectionQuery) (map[string]any, str
 		state = "partial_with_omissions"
 	}
 	return map[string]any{
-		"authority":                   "lookup_fragment_only",
-		"availableChangeCount":        len(changes),
-		"baseBaselineVerification":    full["baseBaselineVerification"],
-		"baseSnapshotId":              full["baseSnapshotId"],
-		"changes":                     selected,
-		"currentBaselineVerification": full["currentBaselineVerification"],
-		"currentSnapshotId":           full["currentSnapshotId"],
-		"nonClaims":                   full["nonClaims"],
-		"omittedChangeCount":          len(changes) - len(selected),
-		"projectionKind":              "proofkit.requirement-semantic-diff-fragment",
-		"selectedChangeCount":         len(selected),
-		"sourceDiffId":                full["diffId"],
+		"authority":                     "lookup_fragment_only",
+		"availableChangeCount":          len(changes),
+		"baseExpectedDigestCoverage":    full["baseExpectedDigestCoverage"],
+		"baseSnapshotId":                full["baseSnapshotId"],
+		"changes":                       selected,
+		"currentExpectedDigestCoverage": full["currentExpectedDigestCoverage"],
+		"currentSnapshotId":             full["currentSnapshotId"],
+		"nonClaims":                     full["nonClaims"],
+		"omittedChangeCount":            len(changes) - len(selected),
+		"projectionKind":                "proofkit.requirement-semantic-diff-fragment",
+		"selectedChangeCount":           len(selected),
+		"sourceDiffId":                  full["diffId"],
 	}, state
 }
 

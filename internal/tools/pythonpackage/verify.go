@@ -7,6 +7,7 @@ import (
 	"debug/macho"
 	"encoding/base64"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -16,6 +17,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 const (
@@ -380,6 +384,10 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 	if err != nil {
 		return err
 	}
+	return verifyInstalledPythonWheel(consumer, venvPython, wheelPath)
+}
+
+func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath string) error {
 	if output, err := runCommand("", venvPython, "-m", "pip", "install", "--no-index", wheelPath); err != nil {
 		return fmt.Errorf("install local Python wheel: %w\n%s", err, output)
 	}
@@ -401,7 +409,336 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 	if !bytes.Contains(output, []byte("CLI/JSON is the public cross-language contract")) {
 		return fmt.Errorf("python console script smoke did not expose CLI contract")
 	}
+	return verifyInstalledPythonPresetContinuation(consumer, venvPython)
+}
+
+func verifyInstalledPythonPresetContinuation(consumer string, venvPython string) error {
+	emptyPath := filepath.Join(consumer, "empty-path")
+	if err := os.Mkdir(emptyPath, 0o700); err != nil && !os.IsExist(err) {
+		return fmt.Errorf("create npm-free PATH: %w", err)
+	}
+	environment := environmentWithOverrides(os.Environ(), map[string]string{
+		"PATH":                              emptyPath,
+		cliexec.LauncherProfileEnvironment:  cliexec.ProfilePath,
+		cliexec.PythonExecutableEnvironment: filepath.Join(consumer, "wrong-python"),
+	})
+	executableOutput, err := runCommandWithEnvironment("", environment, venvPython, "-c", "import sys; print(sys.executable)")
+	if err != nil {
+		return fmt.Errorf("resolve installed Python wheel interpreter identity: %w\n%s", err, executableOutput)
+	}
+	pythonExecutable := strings.TrimSpace(string(executableOutput))
+	if pythonExecutable == "" || !filepath.IsAbs(pythonExecutable) ||
+		string(executableOutput) != pythonExecutable+"\n" {
+		return fmt.Errorf("installed Python wheel interpreter identity must be one absolute newline-terminated path, got %q", executableOutput)
+	}
+	output, err := runCommandWithEnvironment("", environment, pythonExecutable, "-m", "agentic_proofkit", "stack-preset", "--preset", "agentic_runtime_repo")
+	if err != nil {
+		return fmt.Errorf("installed Python wheel stack preset failed with npm absent from PATH: %w\n%s", err, output)
+	}
+	commands, err := installedPythonPresetSuggestedCommands(output, "agentic_runtime_repo")
+	if err != nil {
+		return err
+	}
+	renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, pythonExecutable)
+	if err != nil {
+		return fmt.Errorf("construct expected Python module renderer: %w", err)
+	}
+	prefix := renderer.DisplayCommand() + " "
+	for index, command := range commands {
+		if !strings.HasPrefix(command, prefix) {
+			return fmt.Errorf("installed Python wheel suggestedCommands[%d]=%q must use exact interpreter module prefix %q", index, command, prefix)
+		}
+	}
+	expectedSelfContinuation := renderer.DisplayCommand("stack-preset", "--preset", "agentic_runtime_repo")
+	if commands[0] != expectedSelfContinuation {
+		return fmt.Errorf("installed Python wheel first suggested command must be exact self-continuation %q", expectedSelfContinuation)
+	}
+	output, err = runArgvWithEnvironment(consumer, environment, renderer.Argv("stack-preset", "--preset", "agentic_runtime_repo"))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel self-continuation failed with npm absent from PATH: %w\n%s", err, output)
+	}
+	if err := requirePythonPassedJSON(output, "installed Python wheel self-continuation"); err != nil {
+		return err
+	}
+	return verifyInstalledPythonHelpAndAgentRouteContinuity(consumer, environment, renderer)
+}
+
+func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environment []string, renderer cliexec.Renderer) error {
+	rootHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help"))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel root help route failed: %w\n%s", err, rootHelp)
+	}
+	familiesCommand := renderer.DisplayCommand("help", "families")
+	if !strings.Contains(string(rootHelp), "Discover command families:\n  "+familiesCommand+"\n") {
+		return fmt.Errorf("installed Python wheel root help does not expose exact family route %q", familiesCommand)
+	}
+	familiesHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help", "families"))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel family discovery route failed: %w\n%s", err, familiesHelp)
+	}
+	familyPrefix := renderer.DisplayCommand() + " help family "
+	familyIDs, err := exactDisplayedRouteOperands(familiesHelp, familyPrefix, "installed Python wheel family routes")
+	if err != nil {
+		return err
+	}
+	leafPrefix := renderer.DisplayCommand() + " help "
+	leafRouteCount := 0
+	for _, familyID := range familyIDs {
+		familyRoute := renderer.DisplayCommand("help", "family", familyID)
+		familyHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help", "family", familyID))
+		if err != nil {
+			return fmt.Errorf("installed Python wheel family route %q failed: %w\n%s", familyRoute, err, familyHelp)
+		}
+		leafCommands, err := exactDisplayedRouteOperands(familyHelp, leafPrefix, "installed Python wheel leaf routes")
+		if err != nil {
+			return err
+		}
+		leafRouteCount += len(leafCommands)
+		for _, leafCommand := range leafCommands {
+			leafRoute := renderer.DisplayCommand("help", leafCommand)
+			if _, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help", leafCommand)); err != nil {
+				return fmt.Errorf("installed Python wheel leaf help route %q failed: %w", leafRoute, err)
+			}
+		}
+	}
+	if leafRouteCount == 0 {
+		return fmt.Errorf("installed Python wheel help chain exposed no leaf routes")
+	}
+
+	requirementSourceRef := "requirements.v1.json"
+	requirementSourcePath := filepath.Join(consumer, requirementSourceRef)
+	requirementSource := map[string]any{
+		"schemaVersion":    1,
+		"sourceId":         "proofkit.python.consumer.requirements",
+		"specPackagePath":  "docs/specs/python-consumer",
+		"overviewPath":     "docs/specs/python-consumer/overview.md",
+		"requirementsPath": "docs/specs/python-consumer/requirements.v1.json",
+		"nonClaims":        []string{"Installed Python consumer fixture does not execute native witnesses."},
+		"requirements": []any{map[string]any{
+			"claimLevel":       "blocking",
+			"deferral":         nil,
+			"invariant":        "Installed Python consumer routes preserve the active launcher.",
+			"lifecycle":        map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
+			"nonClaimRefs":     []any{},
+			"nonClaims":        []string{"Installed Python consumer route does not prove publication."},
+			"ownerId":          "proofkit.python.consumer",
+			"proofBindingRefs": []string{"proofkit/requirement-bindings.json"},
+			"requirementId":    "REQ-PROOFKIT-PYTHON-CONSUMER-001",
+			"riskClass":        "medium",
+			"updatePolicy": map[string]any{
+				"requiresImpactDeclaration":  true,
+				"requiresProofBindingReview": true,
+				"reviewOwnerId":              "proofkit.python.consumer",
+			},
+		}},
+	}
+	if err := writeJSONFixture(requirementSourcePath, requirementSource); err != nil {
+		return err
+	}
+	agentRoutePath := filepath.Join(consumer, "agent-route.json")
+	agentRoute := map[string]any{
+		"schemaVersion": 1,
+		"routeId":       "proofkit.python.consumer.route",
+		"goal":          "validate_requirement_source",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{"kind": "requirement_source", "ref": requirementSourceRef},
+		},
+	}
+	if err := writeJSONFixture(agentRoutePath, agentRoute); err != nil {
+		return err
+	}
+	routeOutput, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("agent-route", "--input", agentRoutePath))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel agent route failed: %w\n%s", err, routeOutput)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(routeOutput), 8<<20)
+	if err != nil {
+		return fmt.Errorf("installed Python wheel agent route output must be one JSON value: %w", err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("installed Python wheel agent route output must be an object")
+	}
+	rawCommands, ok := record["nextCommands"].([]any)
+	if !ok || len(rawCommands) != 1 {
+		return fmt.Errorf("installed Python wheel agent route must expose exactly one next command")
+	}
+	command, ok := rawCommands[0].(map[string]any)
+	if !ok {
+		return fmt.Errorf("installed Python wheel next command must be an object")
+	}
+	argv, err := exactStringArray(command["argv"], "installed Python wheel next command argv")
+	if err != nil {
+		return err
+	}
+	prefix := renderer.Argv()
+	if len(argv) < len(prefix) || !equalStrings(argv[:len(prefix)], prefix) {
+		return fmt.Errorf("installed Python wheel next command argv does not use the active launcher prefix")
+	}
+	commandOutput, err := runArgvWithEnvironment(consumer, environment, argv)
+	if err != nil {
+		return fmt.Errorf("installed Python wheel emitted agent-route argv failed: %w\n%s", err, commandOutput)
+	}
+	return requirePythonPassedJSON(commandOutput, "installed Python wheel emitted agent-route argv")
+}
+
+func exactDisplayedRouteOperands(output []byte, prefix string, context string) ([]string, error) {
+	operands := []string{}
+	seen := map[string]struct{}{}
+	for _, line := range strings.Split(strings.TrimSuffix(string(output), "\n"), "\n") {
+		route, admitted := strings.CutPrefix(line, "    ")
+		if !admitted {
+			continue
+		}
+		if !strings.HasPrefix(route, prefix) {
+			continue
+		}
+		operand := strings.TrimPrefix(route, prefix)
+		if !isCommandRouteOperand(operand) || route != prefix+operand {
+			return nil, fmt.Errorf("%s contain non-canonical route %q", context, route)
+		}
+		if _, duplicate := seen[operand]; duplicate {
+			return nil, fmt.Errorf("%s contain duplicate route operand %q", context, operand)
+		}
+		seen[operand] = struct{}{}
+		operands = append(operands, operand)
+	}
+	if len(operands) == 0 {
+		return nil, fmt.Errorf("%s are empty", context)
+	}
+	sort.Strings(operands)
+	return operands, nil
+}
+
+func isCommandRouteOperand(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, character := range value {
+		if (character < 'a' || character > 'z') && (character < '0' || character > '9') && character != '-' {
+			return false
+		}
+	}
+	return true
+}
+
+func writeJSONFixture(path string, value any) error {
+	content, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("marshal installed Python consumer fixture: %w", err)
+	}
+	if err := os.WriteFile(path, append(content, '\n'), 0o600); err != nil {
+		return fmt.Errorf("write installed Python consumer fixture: %w", err)
+	}
 	return nil
+}
+
+func exactStringArray(raw any, context string) ([]string, error) {
+	values, ok := raw.([]any)
+	if !ok || len(values) == 0 {
+		return nil, fmt.Errorf("%s must be a non-empty array", context)
+	}
+	result := make([]string, 0, len(values))
+	for _, rawValue := range values {
+		value, ok := rawValue.(string)
+		if !ok || value == "" {
+			return nil, fmt.Errorf("%s must contain non-empty strings", context)
+		}
+		result = append(result, value)
+	}
+	return result, nil
+}
+
+func equalStrings(left []string, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
+func installedPythonPresetSuggestedCommands(output []byte, presetID string) ([]string, error) {
+	value, err := admission.DecodeJSON(bytes.NewReader(output), 8<<20)
+	if err != nil {
+		return nil, fmt.Errorf("installed Python wheel stack preset %s stdout must be one JSON value: %w", presetID, err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok || record["state"] != "passed" {
+		return nil, fmt.Errorf("installed Python wheel stack preset %s state is not passed", presetID)
+	}
+	diagnostics, ok := record["diagnostics"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("installed Python wheel stack preset %s output must expose diagnostics", presetID)
+	}
+	var presetValue map[string]any
+	presetDiagnosticCount := 0
+	for _, rawDiagnostic := range diagnostics {
+		diagnostic, ok := rawDiagnostic.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("installed Python wheel stack preset %s diagnostics must contain objects", presetID)
+		}
+		if diagnostic["key"] != "preset" {
+			continue
+		}
+		presetDiagnosticCount++
+		presetValue, ok = diagnostic["value"].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("installed Python wheel stack preset %s preset diagnostic must contain an object value", presetID)
+		}
+	}
+	if presetDiagnosticCount != 1 {
+		return nil, fmt.Errorf("installed Python wheel stack preset %s must expose exactly one preset diagnostic", presetID)
+	}
+	rawCommands, ok := presetValue["suggestedCommands"].([]any)
+	if !ok || len(rawCommands) == 0 {
+		return nil, fmt.Errorf("installed Python wheel stack preset %s must expose non-empty suggestedCommands", presetID)
+	}
+	commands := make([]string, 0, len(rawCommands))
+	for index, rawCommand := range rawCommands {
+		command, ok := rawCommand.(string)
+		if !ok || command == "" {
+			return nil, fmt.Errorf("installed Python wheel stack preset %s suggestedCommands[%d] must be a non-empty string", presetID, index)
+		}
+		commands = append(commands, command)
+	}
+	return commands, nil
+}
+
+func requirePythonPassedJSON(output []byte, label string) error {
+	value, err := admission.DecodeJSON(bytes.NewReader(output), 8<<20)
+	if err != nil {
+		return fmt.Errorf("%s stdout must be one JSON value: %w", label, err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok || record["state"] != "passed" {
+		return fmt.Errorf("%s state is not passed", label)
+	}
+	return nil
+}
+
+func environmentWithOverrides(environment []string, overrides map[string]string) []string {
+	result := make([]string, 0, len(environment)+len(overrides))
+	for _, item := range environment {
+		name, _, ok := strings.Cut(item, "=")
+		if _, replaced := overrides[name]; ok && replaced {
+			continue
+		}
+		result = append(result, item)
+	}
+	names := make([]string, 0, len(overrides))
+	for name := range overrides {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		result = append(result, name+"="+overrides[name])
+	}
+	return result
 }
 
 func readZipFile(file *zip.File) ([]byte, error) {
@@ -419,6 +756,22 @@ func runCommand(dir string, name string, args ...string) ([]byte, error) {
 		command.Dir = dir
 	}
 	return command.CombinedOutput()
+}
+
+func runCommandWithEnvironment(dir string, environment []string, name string, args ...string) ([]byte, error) {
+	command := exec.Command(name, args...)
+	command.Env = environment
+	if dir != "" {
+		command.Dir = dir
+	}
+	return command.CombinedOutput()
+}
+
+func runArgvWithEnvironment(dir string, environment []string, argv []string) ([]byte, error) {
+	if len(argv) == 0 {
+		return nil, fmt.Errorf("run argv requires at least one token")
+	}
+	return runCommandWithEnvironment(dir, environment, argv[0], argv[1:]...)
 }
 
 func contains(values []string, candidate string) bool {

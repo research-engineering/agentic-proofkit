@@ -71,7 +71,7 @@ type reportInput struct {
 func Build(raw any) (report.Record, int, error) {
 	admitted, err := admitReportInput(raw)
 	if err != nil {
-		return failedAdmissionReport(err), 1, nil
+		return report.Record{}, 1, err
 	}
 	failures := []string{}
 	failures = append(failures, inputFailures(admitted.Input)...)
@@ -433,28 +433,6 @@ func consumerProofDiagnostic(proofValue *proof) any {
 		"rollbackLockContainsPackage":  proofValue.RollbackLockContainsPackage,
 		"binarySmokeOutputSha256":      proofValue.BinarySmokeOutputSHA256,
 		"tempConsumerLocation":         proofValue.TempConsumerLocation,
-	}
-}
-
-func failedAdmissionReport(err error) report.Record {
-	return report.Record{
-		SchemaVersion: 1,
-		ReportKind:    reportKind,
-		ReportID:      "proofkit.registry-consumer.invalid-input",
-		State:         "failed",
-		Summary: map[string]any{
-			"admission": "failed",
-		},
-		Diagnostics: []report.Diagnostic{},
-		RuleResults: []report.RuleResult{
-			{
-				RuleID:      "proofkit.registry-consumer.failure.001",
-				Status:      "failed",
-				Message:     err.Error(),
-				Diagnostics: []report.Diagnostic{},
-			},
-		},
-		NonClaims: []any{"Invalid registry-consumer input is not proofkit consumption evidence."},
 	}
 }
 

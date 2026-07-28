@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -115,9 +114,7 @@ func runBrowserProof(root string) (resultErr error) {
 		return err
 	}
 	defer func() {
-		if cleanupErr := cleanupBrowserProofRun(root, runPaths.RunDirectory); cleanupErr != nil {
-			resultErr = errors.Join(resultErr, fmt.Errorf("clean browser proof run directory: %w", cleanupErr))
-		}
+		resultErr = finalizeBrowserProofRun(root, runPaths.RunDirectory, resultErr)
 	}()
 	command := exec.Command("node", manifest.WriterPath)
 	command.Dir = root

@@ -53,7 +53,7 @@ func projectPaths(raw any) (projectPathSet, error) {
 	}, nil
 }
 
-func buildMaterializationManifest(input materializationInput) (map[string]any, error) {
+func buildMaterializationManifest(input materializationInput, renderer cliexec.Renderer) (map[string]any, error) {
 	files := []map[string]any{}
 	repoProfileFile, err := payloadFile(input.paths.repoProfileScaffoldInputPath, "caller-owned repo-profile scaffold input", "project_scaffold", input.repoProfileInput, nil)
 	if err != nil {
@@ -116,9 +116,9 @@ func buildMaterializationManifest(input materializationInput) (map[string]any, e
 		}
 	}
 	nextCommands := []any{
-		cliexec.DisplayCommand("scaffold-profile-plan", "--input", input.paths.repoProfileScaffoldInputPath),
-		cliexec.DisplayCommand("gradual-adoption-bootstrap", "--input", input.paths.bootstrapInputPath),
-		cliexec.DisplayCommand("adoption-workflow-plan", "--input", input.paths.workflowInputPath),
+		renderer.DisplayCommand("scaffold-profile-plan", "--input", input.paths.repoProfileScaffoldInputPath),
+		renderer.DisplayCommand("gradual-adoption-bootstrap", "--input", input.paths.bootstrapInputPath),
+		renderer.DisplayCommand("adoption-workflow-plan", "--input", input.paths.workflowInputPath),
 	}
 	nextCommands = append(nextCommands, anyArray(input.bootstrapManifest["nextCommands"])...)
 	return map[string]any{

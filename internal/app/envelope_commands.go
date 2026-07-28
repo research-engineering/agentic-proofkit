@@ -6,6 +6,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/adoptionmode"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 )
 
@@ -84,7 +85,7 @@ func runGradualAdoptionGuidance(args []string, stdin io.Reader, stdout io.Writer
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 
-func runGradualAdoptionBootstrap(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
+func runGradualAdoptionBootstrap(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
 	options, err := parseEnvelopeCommandArgs("gradual-adoption-bootstrap", args, agentEnvelopeBuilders{
 		supportsContractEnvelope:    true,
 		supportsMaterializationFile: true,
@@ -106,26 +107,26 @@ func runGradualAdoptionBootstrap(args []string, stdin io.Reader, stdout io.Write
 		}
 	}
 	if options.agentEnvelope && options.contractEnvelope {
-		output, exitCode, err := gradualadoption.BuildBootstrapEnvelopeFromContractEnvelope(input)
+		output, exitCode, err := gradualadoption.BuildBootstrapEnvelopeFromContractEnvelopeWithRenderer(input, renderer)
 		return writeJSON(output, exitCode, err, stdout, stderr)
 	}
 	if options.agentEnvelope {
-		output, exitCode, err := gradualadoption.BuildBootstrapEnvelope(input)
+		output, exitCode, err := gradualadoption.BuildBootstrapEnvelopeWithRenderer(input, renderer)
 		return writeJSON(output, exitCode, err, stdout, stderr)
 	}
 	if options.materialization && options.contractEnvelope {
-		output, exitCode, err := gradualadoption.BuildBootstrapMaterializationManifestFromContractEnvelope(input)
+		output, exitCode, err := gradualadoption.BuildBootstrapMaterializationManifestFromContractEnvelopeWithRenderer(input, renderer)
 		return writeJSON(output, exitCode, err, stdout, stderr)
 	}
 	if options.materialization {
-		output, exitCode, err := gradualadoption.BuildBootstrapMaterializationManifest(input)
+		output, exitCode, err := gradualadoption.BuildBootstrapMaterializationManifestWithRenderer(input, renderer)
 		return writeJSON(output, exitCode, err, stdout, stderr)
 	}
 	if options.contractEnvelope {
-		output, exitCode, err := gradualadoption.BuildBootstrapFromContractEnvelope(input)
+		output, exitCode, err := gradualadoption.BuildBootstrapFromContractEnvelopeWithRenderer(input, renderer)
 		return writeJSON(output, exitCode, err, stdout, stderr)
 	}
-	output, exitCode, err := gradualadoption.BuildBootstrap(input)
+	output, exitCode, err := gradualadoption.BuildBootstrapWithRenderer(input, renderer)
 	return writeJSON(output, exitCode, err, stdout, stderr)
 }
 

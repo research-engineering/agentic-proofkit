@@ -6,7 +6,7 @@ func BuildJSON(raw any, options Options) (any, int, error) {
 		return nil, 1, err
 	}
 	if options.AgentEnvelope {
-		return agentEnvelope(view), exitCode(view), nil
+		return agentEnvelope(view, options.Renderer), exitCode(view), nil
 	}
 	return view, exitCode(view), nil
 }

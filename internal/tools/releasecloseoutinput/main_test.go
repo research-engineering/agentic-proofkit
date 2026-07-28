@@ -275,7 +275,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "change record summary drift from release notes",
 			criterionID: "proofkit.release_closeout.manifest_and_sbom",
 			mutate: func(root string) {
-				path := filepath.Join(root, "release", "change-record.v1.json")
+				path := filepath.Join(root, "release", "change-record.v2.json")
 				record := readJSONMap(t, path)
 				additions := record["additions"].([]any)
 				additions[0].(map[string]any)["summary"] = "Changed without regenerating release notes."
@@ -286,7 +286,7 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			name:        "change record version drift from package and release notes",
 			criterionID: "proofkit.release_closeout.manifest_and_sbom",
 			mutate: func(root string) {
-				path := filepath.Join(root, "release", "change-record.v1.json")
+				path := filepath.Join(root, "release", "change-record.v2.json")
 				record := readJSONMap(t, path)
 				record["version"] = "1.2.4"
 				writeJSON(t, path, record)
@@ -970,11 +970,13 @@ func releaseChangeRecordFixture() map[string]any {
 	return map[string]any{
 		"additions":            []any{map[string]any{"changeId": "proofkit.release.fixture", "summary": "Exercise release change projection."}},
 		"breakingChanges":      []any{},
+		"changeClass":          "compatible",
 		"knownLimitations":     []any{"The fixture does not prove registry publication."},
 		"migration":            map[string]any{"required": false, "steps": []any{}},
 		"platformRequirements": []any{"Use a supported fixture platform."},
+		"previousVersion":      "1.2.2",
 		"rollback":             map[string]any{"strategy": "previous_admitted_version"},
-		"schemaVersion":        1,
+		"schemaVersion":        2,
 		"version":              "1.2.3",
 	}
 }

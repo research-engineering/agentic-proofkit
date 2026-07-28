@@ -68,8 +68,8 @@ func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing
 		t.Fatal(err)
 	}
 	manifest := manifestValue.(map[string]any)
-	if manifest["baselineVerification"] != "unverified" || manifest["snapshotId"] != handle.SnapshotID {
-		t.Fatalf("workspace manifest lost baseline identity: %#v", manifest)
+	if manifest["expectedDigestCoverage"] != "none" || manifest["snapshotId"] != handle.SnapshotID {
+		t.Fatalf("workspace manifest lost digest-coverage identity: %#v", manifest)
 	}
 	handoff := `{"annotations":[{"anchorId":"requirement:REQ-CONSUMER-001:invariant","exactQuote":"preserves","startCodePoint":11,"endCodePoint":20,"question":"Does this remain true?"}]}`
 	handoffRequest, _ := http.NewRequest(http.MethodPost, handle.URL+"api/v1/handoff", strings.NewReader(handoff))
@@ -108,6 +108,130 @@ func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing
 	if spaceResponse.StatusCode != http.StatusOK {
 		t.Fatalf("source-exact whitespace quote status=%d", spaceResponse.StatusCode)
 	}
+}
+
+func TestV2DigestCoverageProjections(t *testing.T) {
+	fixture := workspaceFixture(t)
+	current := fixture["context"].(map[string]any)
+	base := cloneWorkspaceRecord(t, current)
+	base["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)["invariant"] = "The system preserved the previous semantic identity."
+	resignWorkspaceSnapshot(t, base)
+	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.digest-coverage", "schemaVersion": json.Number("2")}
+	fixture["graphInput"] = map[string]any{"context": current, "graphId": "consumer.workspace.digest-coverage", "schemaVersion": json.Number("2")}
+
+	handle, capability := startWorkspaceTestServer(t, fixture, false)
+	manifest := getWorkspaceJSON(t, handle.URL+"api/v1/manifest", capability)
+	if manifest["schemaVersion"] != json.Number("2") || manifest["expectedDigestCoverage"] != "none" || manifest["baselineVerification"] != nil {
+		t.Fatalf("workspace manifest is not a clean v2 projection: %#v", manifest)
+	}
+	for _, path := range []string{"requirements", "diff", "graph"} {
+		response := postWorkspaceJSON(t, handle.URL+"api/v1/"+path, capability, map[string]any{
+			"query": map[string]any{}, "requestId": "consumer.workspace." + path, "snapshotId": handle.SnapshotID,
+		})
+		if response["schemaVersion"] != json.Number("2") {
+			t.Fatalf("%s response schemaVersion = %v, want 2", path, response["schemaVersion"])
+		}
+		if path == "diff" {
+			projection := response["projection"].(map[string]any)
+			if projection["baseExpectedDigestCoverage"] != "none" || projection["currentExpectedDigestCoverage"] != "none" || projection["baseBaselineVerification"] != nil || projection["currentBaselineVerification"] != nil {
+				t.Fatalf("diff API projection is not clean v2: %#v", projection)
+			}
+		}
+	}
+
+	v2Minimal := workspaceFixture(t)
+	v1Minimal := cloneWorkspaceRecord(t, v2Minimal)
+	v1Minimal["schemaVersion"] = json.Number("1")
+	v1Context := v1Minimal["context"].(map[string]any)
+	delete(v1Context, "expectedDigestCoverage")
+	v1Context["baselineVerification"] = "unverified"
+	v1Context["nonClaims"] = []any{
+		"Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+		"Requirement context does not execute native witnesses or prove source freshness after composition.",
+	}
+	v1Context["schemaVersion"] = json.Number("1")
+	v1Session, _, err := buildWorkspace(v1Minimal)
+	if err != nil {
+		t.Fatalf("buildWorkspace(v1) error = %v", err)
+	}
+	v2Session, _, err := buildWorkspace(v2Minimal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := stableWorkspaceBytes(t, v1Session.Manifest), stableWorkspaceBytes(t, v2Session.Manifest); !bytes.Equal(got, want) {
+		t.Fatalf("v1 workspace normalized to a different v2 manifest\n got: %s\nwant: %s", got, want)
+	}
+	v1Minimal["context"] = current
+	if _, _, err := buildWorkspace(v1Minimal); err == nil {
+		t.Fatal("buildWorkspace accepted a v1 envelope with a v2 context")
+	}
+}
+
+func getWorkspaceJSON(t *testing.T, url, capability string) map[string]any {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("X-Proofkit-Browser-Capability", capability)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	return decodeWorkspaceResponse(t, response)
+}
+
+func postWorkspaceJSON(t *testing.T, url, capability string, value any) map[string]any {
+	t.Helper()
+	body := stableWorkspaceBytes(t, value)
+	request, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Origin", strings.Split(url, "/api/")[0])
+	request.Header.Set("X-Proofkit-Browser-Capability", capability)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	return decodeWorkspaceResponse(t, response)
+}
+
+func decodeWorkspaceResponse(t *testing.T, response *http.Response) map[string]any {
+	t.Helper()
+	body, err := io.ReadAll(response.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("workspace response status=%d body=%s", response.StatusCode, body)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded.(map[string]any)
+}
+
+func cloneWorkspaceRecord(t *testing.T, value map[string]any) map[string]any {
+	t.Helper()
+	decoded, err := admission.DecodeJSON(bytes.NewReader(stableWorkspaceBytes(t, value)), 24<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded.(map[string]any)
+}
+
+func stableWorkspaceBytes(t *testing.T, value any) []byte {
+	t.Helper()
+	encoded, err := stablejson.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return encoded
 }
 
 func TestWorkspaceAssetsHaveExactSecureHTTPContract(t *testing.T) {
@@ -236,7 +360,7 @@ func TestWorkspaceAdmitsMultiFieldSemanticDiffFromProducer(t *testing.T) {
 	requirement["invariant"] = "The system preserved the previous semantic identity."
 	requirement["riskClass"] = "medium"
 	resignWorkspaceSnapshot(t, base)
-	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.diff", "schemaVersion": json.Number("1")}
+	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.diff", "schemaVersion": json.Number("2")}
 
 	workspace, _, err := buildWorkspace(fixture)
 	if err != nil {
@@ -307,14 +431,65 @@ func TestWorkspaceCapabilityReplacementIsConfinedToBootstrapMeta(t *testing.T) {
 	}
 }
 
-func TestOneShotTimeoutEmitsOneCompactTerminalPacket(t *testing.T) {
-	var stdout bytes.Buffer
-	err := Serve(t.Context(), workspaceFixture(t), Options{Host: "127.0.0.1", Port: 0, PortSet: true, SessionMode: "one-shot-question", SessionTimeout: 10 * time.Millisecond, View: "workspace"}, &stdout)
+func TestOneShotOutputVariantsUseExactRootShapes(t *testing.T) {
+	var terminalStdout bytes.Buffer
+	err := Serve(t.Context(), workspaceFixture(t), Options{Host: "127.0.0.1", Port: 0, PortSet: true, SessionMode: "one-shot-question", SessionTimeout: 10 * time.Millisecond, View: "workspace"}, &terminalStdout)
 	if !errors.Is(err, ErrOneShotTerminal) {
 		t.Fatalf("Serve() error = %v, want terminal state", err)
 	}
-	if strings.Count(stdout.String(), "\n") != 1 || strings.Contains(stdout.String(), "\n  ") || !strings.Contains(stdout.String(), `"state":"expired"`) {
-		t.Fatalf("unexpected one-shot packet: %q", stdout.String())
+	if strings.Count(terminalStdout.String(), "\n") != 1 || strings.Contains(terminalStdout.String(), "\n  ") {
+		t.Fatalf("unexpected one-shot terminal packet layout: %q", terminalStdout.String())
+	}
+	terminalValue, err := admission.DecodeJSON(bytes.NewReader(terminalStdout.Bytes()), int64(terminalStdout.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	terminal := terminalValue.(map[string]any)
+	assertExactRootKeys(t, terminal, "handoffKind", "nonClaims", "schemaVersion", "snapshotRefs", "state")
+	if terminal["state"] != "expired" {
+		t.Fatalf("terminal state=%v, want expired", terminal["state"])
+	}
+
+	handle, capability := startWorkspaceTestServer(t, workspaceFixture(t), true)
+	var submittedStdout bytes.Buffer
+	result := make(chan error, 1)
+	go func() {
+		result <- serveHandle(t.Context(), handle, Options{SessionMode: "one-shot-question"}, &submittedStdout)
+	}()
+	response := postWorkspaceHandoff(t, handle.URL, capability)
+	body, _ := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("handoff status=%d body=%s", response.StatusCode, body)
+	}
+	select {
+	case err := <-result:
+		if err != nil {
+			t.Fatalf("serveHandle() submitted error = %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("serveHandle did not emit submitted packet")
+	}
+	submittedValue, err := admission.DecodeJSON(bytes.NewReader(submittedStdout.Bytes()), int64(submittedStdout.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	submitted := submittedValue.(map[string]any)
+	assertExactRootKeys(t, submitted, "annotations", "context", "handoffKind", "instructionAuthority", "nonClaims", "schemaVersion", "snapshotRefs", "sourceTextAuthority", "state")
+	if submitted["state"] != "submitted" {
+		t.Fatalf("submitted state=%v, want submitted", submitted["state"])
+	}
+}
+
+func assertExactRootKeys(t *testing.T, record map[string]any, keys ...string) {
+	t.Helper()
+	if len(record) != len(keys) {
+		t.Fatalf("root keys=%v, want exactly %v", record, keys)
+	}
+	for _, key := range keys {
+		if _, ok := record[key]; !ok {
+			t.Fatalf("root is missing %s: %#v", key, record)
+		}
 	}
 }
 
@@ -388,8 +563,8 @@ func workspaceFixtureWithInvariant(t *testing.T, invariant string) map[string]an
 	if err != nil {
 		t.Fatal(err)
 	}
-	contextValue := requirementcontext.SnapshotValue(requirementcontext.Snapshot{BaselineVerification: "unverified", CatalogID: "consumer.context", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
-	return map[string]any{"schemaVersion": json.Number("1"), "workspaceId": "consumer.workspace", "context": contextValue}
+	contextValue := requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "consumer.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
+	return map[string]any{"schemaVersion": json.Number("2"), "workspaceId": "consumer.workspace", "context": contextValue}
 }
 
 func resignWorkspaceSnapshot(t *testing.T, contextValue map[string]any) {

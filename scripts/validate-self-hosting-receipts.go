@@ -316,14 +316,21 @@ func runProofkit(command string, inputPath string, outputPath string) error {
 	result := exec.Command(binaryPath, command, "--input", inputPath)
 	output, err := result.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s failed: %w\n%s", command, err, string(output))
+		return proofkitVerdict(command, err, output)
 	}
 	if err := os.WriteFile(outputPath, output, 0o644); err != nil {
 		return err
 	}
+	return proofkitVerdict(command, nil, output)
+}
+
+func proofkitVerdict(command string, processErr error, output []byte) error {
+	if processErr != nil {
+		return fmt.Errorf("%s failed: %w\n%s", command, processErr, string(output))
+	}
 	reportOutput, err := admission.DecodeJSON(bytes.NewReader(output), maxJSONBytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s emitted invalid JSON: %w", command, err)
 	}
 	record, ok := reportOutput.(map[string]any)
 	if !ok || record["state"] != "passed" {
@@ -439,10 +446,12 @@ func pythonArtifactRefs(version string) ([]map[string]any, error) {
 		if _, err := os.Stat(wheelPath); err != nil {
 			return nil, err
 		}
-		if expected := stringField(record, "sha256"); expected != "" {
-			if actual := strings.TrimPrefix(digestFile(wheelPath), "sha256:"); actual != expected {
-				return nil, fmt.Errorf("python wheel sha256 mismatch for %s", filename)
-			}
+		expected := stringField(record, "sha256")
+		if expected == "" {
+			return nil, fmt.Errorf("%s package record for %s must include sha256", path, filename)
+		}
+		if actual := strings.TrimPrefix(digestFile(wheelPath), "sha256:"); actual != expected {
+			return nil, fmt.Errorf("python wheel sha256 mismatch for %s", filename)
 		}
 		refs = append(refs, map[string]any{"kind": "artifact", "path": wheelPath, "sha256": digestFile(wheelPath)})
 	}

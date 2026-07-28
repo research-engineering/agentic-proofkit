@@ -4,10 +4,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
@@ -48,10 +56,17 @@ type bindingRequirement struct {
 }
 
 type bindingScenario struct {
-	CommandIDs    []string `json:"commandIds"`
-	RequirementID string   `json:"requirementId"`
-	ScenarioID    string   `json:"scenarioId"`
-	WitnessID     string   `json:"witnessId"`
+	CommandIDs       []string          `json:"commandIds"`
+	RequirementID    string            `json:"requirementId"`
+	ScenarioID       string            `json:"scenarioId"`
+	WitnessID        string            `json:"witnessId"`
+	WitnessPath      string            `json:"witnessPath"`
+	WitnessSelectors []witnessSelector `json:"witnessSelectors"`
+}
+
+type witnessSelector struct {
+	Command  string `json:"command"`
+	Selector string `json:"selector"`
 }
 
 type witnessPlan struct {
@@ -173,8 +188,362 @@ func run() error {
 	closeoutErr := errors.Join(
 		requireCommandRouteInventoryClosure(out.CommandRoutes),
 		requireNoLinkageDeadZones(out.DeadZones),
+		validateBindingWitnessSelectorsAtRoot(".", bindings),
 	)
 	return writeMetrics(out, closeoutErr)
+}
+
+func validateBindingWitnessSelectorsAtRoot(root string, bindings bindingFile) error {
+	if err := validateRequiredBindingWitnessSelectors(bindings); err != nil {
+		return err
+	}
+	return validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
+}
+
+func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
+	type inventoryKey struct {
+		requirementID string
+		scenarioID    string
+	}
+	required := map[inventoryKey][]string{
+		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}: {"TestVerifyRootPackageRejectsEachForbiddenRootEntry"},
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.launcher-profile-admission"}:         {"TestLauncherProfileAdmissionMatrix"},
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-field-inventory"}: {
+			"TestGeneratedCommandInvocationProfileFieldInventory",
+			"TestGeneratedCommandInvocationProfileRouteClosure",
+		},
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-caller-preservation"}: {"TestBootstrapPreservesCallerDisplayCommandInGuidancePayload"},
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.cli-output-root-witnesses"}: {
+			"TestAdoptionContractEnvelopeCLIABI",
+			"TestSelfCheckOutputUsesExactRootShape",
+			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
+		},
+		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}:            {"TestExactTarballOnboardingTrace"},
+		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.ci-receipt-anchor"}:                    {"TestReceiptIDKeepsLocalAndCIIdentitiesDistinct"},
+		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.self-hosting-report-verdict"}:          {"TestRunProofkitVerdictCases"},
+		{"REQ-PROOFKIT-PACKAGE-005", "proofkit.package-boundary.merge-critical-runtime-preconditions"}: {"TestCISourceQualityInstallsPythonBeforeLifecycleTests"},
+		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-candidate"}:               {"TestPythonArtifactRefsRejectEachWheelIdentityDefect"},
+		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-generated-continuation"}: {
+			"TestExactDisplayedRouteOperandsRejectsWhitespaceAndExpansionMutants",
+			"TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM",
+		},
+		{"REQ-PROOFKIT-PACKAGE-007", "proofkit.package-boundary.package-public-docs-no-mutable-release-facts"}: {
+			"TestVerifyNoStalePackageDocsRejectsMutableReleaseFactsInMarkdown",
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-abi-golden"}: {
+			"TestAdoptionContractEnvelopeCLIABI",
+			"TestRequiredInputCommandsRouteStructuralErrorsByMode",
+			"TestRequirementBrowserOneShotCLIOutputVariants",
+			"TestSelfCheckOutputUsesExactRootShape",
+			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-contract-topology"}: {
+			"TestCLIConditionModelClosesAdoptionOutputRoutes",
+			"TestCommandDescriptorContractParityRejectsMutations",
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-witness-contract"}: {
+			"TestRootDistinctOutputWitnessBindingsAreExact",
+		},
+		{"REQ-PROOFKIT-QUALITY-005", "proofkit.supply-chain-quality.codeql-permission-separation"}: {
+			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
+		},
+		{"REQ-PROOFKIT-QUALITY-006", "proofkit.supply-chain-quality.osv-permission-separation"}: {
+			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
+		},
+		{"REQ-PROOFKIT-QUALITY-007", "proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs"}: {
+			"TestScorecardPublicPublishDeclaresRequiredOutputInputs",
+			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
+		},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}: {"TestEachCommandRouteClosureConjunctHasIndependentFalsifier", "TestEachLinkageDeadZoneConjunctHasIndependentFalsifier"},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-executability"}: {
+			"TestBindingWitnessSelectorsAcceptUnnamedGoTestParameter",
+			"TestBindingWitnessSelectorsRejectInvalidGoTestSignature",
+			"TestBindingWitnessSelectorsRejectMissingSemanticOwner",
+			"TestBindingWitnessSelectorsRejectNonTestAndBuildExcludedFiles",
+			"TestBindingWitnessSelectorsRequireExactCriticalInventories",
+		},
+		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.ci-required-aggregate-exactness"}: {
+			"TestCIRequiredAggregateRejectsExecutionOverrides",
+			"TestCIRequiredAggregateRejectsNeutralizedScript",
+			"TestCIRequiredAggregateRejectsPlatformSmokeSubstitution",
+			"TestCIWorkflowDeclaresFailClosedRequiredAggregate",
+		},
+		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}: {
+			"TestCIWorkflowDeclaresFailClosedRequiredAggregate",
+			"TestNeedsListNormalizesStringAndList",
+			"TestPackageGateWorkflowOracleAcceptsOwnerCIAndReleaseWorkflows",
+			"TestPackageGateWorkflowOracleAdmitsAlwaysWithNeedSuccess",
+			"TestPackageGateWorkflowOracleAdmitsLaterAlwaysWithSuccess",
+			"TestPackageGateWorkflowOracleAdmitsPrivateAttestationBypass",
+			"TestPackageGateWorkflowOracleRejectsAlwaysWithoutNeedSuccess",
+			"TestPackageGateWorkflowOracleRejectsDisabledAndShadowedEvidence",
+			"TestPackageGateWorkflowOracleRejectsDuplicatePriorStepName",
+			"TestPackageGateWorkflowOracleRejectsExecutionOverrides",
+			"TestPackageGateWorkflowOracleRejectsLateRequiredPriorStep",
+			"TestPackageGateWorkflowOracleRejectsMissingWorkflowPermissionFloor",
+			"TestPackageGateWorkflowOracleRejectsNeedSuccessBypass",
+			"TestPackageGateWorkflowOracleRejectsRequiredPriorExecutionOverride",
+			"TestPackageGateWorkflowOracleRejectsUnusedAllowedStepEnvironment",
+			"TestPackageGateWorkflowOracleRejectsWrongPriorStepCommand",
+			"TestWorkflowGuardExpressionsRejectNeutralization",
+		},
+		{"REQ-PROOFKIT-QUALITY-016", "proofkit.supply-chain-quality.release-platform-python-wheels"}: {
+			"TestREADMEPlatformAndPythonProjection",
+			"TestReleaseTargetsProjectExactPythonWheelMetadata",
+			"TestVerifyWheelContentsRequiresExactWheelMetadata",
+		},
+		{"REQ-PROOFKIT-QUALITY-019", "proofkit.supply-chain-quality.installed-package-json-abi-smoke"}: {
+			"TestExactTarballOnboardingTrace",
+			"TestInstalledInvocationRequiresAuthoredOrderAndExactCommandToken",
+			"TestInstalledREADMEFirstInputPreservesJSONExampleBytes",
+			"TestInstalledREADMEFirstInputUsesBoundedLiteralShellWords",
+			"TestLiteralShellWordsConsumesLongBackslashRun",
+			"TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput",
+		},
+		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}: {
+			"TestCIBrowserRuntimeRetainsFailureDiagnosticsWithoutPublishingProof",
+		},
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility"}: {
+			"TestMachOMinimumMacOSAcceptsLegacyVersionCommand",
+			"TestMachOMinimumMacOSRejectsTruncatedBuildVersion",
+			"TestVerifyWheelContentsAcceptsDarwinTagAtOrAboveMachOMinimum",
+			"TestVerifyWheelContentsRejectsDarwinTagBelowMachOMinimum",
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}: {
+			"TestAdmitEnforcesVersionedChangeClass",
+			"TestCurrentChangeRecordNamesReviewedSemanticChanges",
+			"TestRenderStatesPreOneExactPinPolicy",
+		},
+		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-source-oracles"}: {
+			"TestExistingReleasePathIsReadOnlyAndFailsOnDrift",
+			"TestWorkflowClosedKeyAdmission",
+			"TestWorkflowExternalActionsUseFullCommitSHAs",
+		},
+		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}: {
+			"TestAdoptionContractEnvelopeCLIABI",
+		},
+		{"REQ-PROOFKIT-SPEC-021", "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup"}: {
+			"TestServeOneShotDoesNotReadCompletedDoneTwice",
+			"TestServeOneShotReturnsCleanupFailuresWithoutWritingTerminalPacket",
+			"TestServeOneShotWaitsForDoneBeforeWritingTerminalPacket",
+		},
+	}
+	requiredPaths := map[inventoryKey]string{
+		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}:              "internal/tools/packageverify/main_test.go",
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.launcher-profile-admission"}:                      "internal/kernel/cliexec/cliexec_test.go",
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-field-inventory"}:               "internal/app/invocation_profile_test.go",
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-caller-preservation"}:           "internal/command/gradualadoption/gradualadoption_test.go",
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.cli-output-root-witnesses"}:                       "internal/app/cli_abi_test.go",
+		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}:                       "internal/tools/packageverify/main_test.go",
+		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.ci-receipt-anchor"}:                               "scripts/validate-self-hosting-receipts_test.go",
+		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.self-hosting-report-verdict"}:                     "scripts/validate-self-hosting-receipts_test.go",
+		{"REQ-PROOFKIT-PACKAGE-005", "proofkit.package-boundary.merge-critical-runtime-preconditions"}:            "scripts/workflow_runtime_preconditions_test.go",
+		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-candidate"}:                          "scripts/validate-self-hosting-receipts_test.go",
+		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-generated-continuation"}:             "internal/tools/pythonpackage/continuation_test.go",
+		{"REQ-PROOFKIT-PACKAGE-007", "proofkit.package-boundary.package-public-docs-no-mutable-release-facts"}:    "internal/tools/packageverify/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-abi-golden"}:                              "internal/app/cli_abi_test.go",
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-contract-topology"}:                       "internal/app/cli_contract_test.go",
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-witness-contract"}:                 "internal/app/cli_output_witness_contract_test.go",
+		{"REQ-PROOFKIT-QUALITY-005", "proofkit.supply-chain-quality.codeql-permission-separation"}:                "scripts/workflow_security_scanner_oracles_test.go",
+		{"REQ-PROOFKIT-QUALITY-006", "proofkit.supply-chain-quality.osv-permission-separation"}:                   "scripts/workflow_security_scanner_oracles_test.go",
+		{"REQ-PROOFKIT-QUALITY-007", "proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs"}: "scripts/workflow_security_scanner_oracles_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-executability"}:              "internal/tools/coveragemetrics/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}:                            "internal/tools/coveragemetrics/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.ci-required-aggregate-exactness"}:             "scripts/workflow_package_gate_oracle_test.go",
+		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}:                "scripts/workflow_package_gate_oracle_test.go",
+		{"REQ-PROOFKIT-QUALITY-016", "proofkit.supply-chain-quality.release-platform-python-wheels"}:              "internal/tools/pythonpackage/metadata_test.go",
+		{"REQ-PROOFKIT-QUALITY-019", "proofkit.supply-chain-quality.installed-package-json-abi-smoke"}:            "internal/tools/packageverify/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}:       "scripts/workflow_browser_runtime_oracle_test.go",
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility"}:    "internal/tools/pythonpackage/metadata_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}:            "internal/tools/releasechange/record_test.go",
+		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-source-oracles"}:                     "scripts/workflow_source_oracles_test.go",
+		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}:                  "internal/app/cli_abi_test.go",
+		{"REQ-PROOFKIT-SPEC-021", "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup"}:                "internal/command/requirementbrowser/server_test.go",
+	}
+	if len(requiredPaths) != len(required) {
+		return fmt.Errorf("required selector path inventory=%d, selector inventory=%d", len(requiredPaths), len(required))
+	}
+	seenRequired := map[inventoryKey]struct{}{}
+	for _, binding := range bindings.Bindings {
+		key := inventoryKey{requirementID: binding.RequirementID, scenarioID: binding.ScenarioID}
+		want, isRequired := required[key]
+		if !isRequired {
+			continue
+		}
+		wantPath, hasRequiredPath := requiredPaths[key]
+		if !hasRequiredPath {
+			return fmt.Errorf("binding %s has selectors but no exact witness path inventory", binding.ScenarioID)
+		}
+		if binding.WitnessPath != wantPath {
+			return fmt.Errorf("binding %s witness path=%q, want exact %q", binding.ScenarioID, binding.WitnessPath, wantPath)
+		}
+		seenRequired[key] = struct{}{}
+		got := make([]string, 0, len(binding.WitnessSelectors))
+		for _, selector := range binding.WitnessSelectors {
+			got = append(got, selector.Selector)
+		}
+		sort.Strings(got)
+		if !equalStrings(got, want) {
+			return fmt.Errorf("binding %s witness selectors=%v, want %v", binding.ScenarioID, got, want)
+		}
+	}
+	for key := range required {
+		if _, ok := requiredPaths[key]; !ok {
+			return fmt.Errorf("required exact witness path is missing: %s/%s", key.requirementID, key.scenarioID)
+		}
+		if _, ok := seenRequired[key]; !ok {
+			return fmt.Errorf("required independent-falsifier binding is missing: %s/%s", key.requirementID, key.scenarioID)
+		}
+	}
+	return nil
+}
+
+func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bindingFile) error {
+	activeWitnessFiles := map[string]bool{}
+	for _, binding := range bindings.Bindings {
+		if len(binding.WitnessSelectors) == 0 {
+			continue
+		}
+		path := filepath.Join(root, filepath.FromSlash(binding.WitnessPath))
+		source, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			return fmt.Errorf("parse binding witness %s: %w", binding.WitnessPath, err)
+		}
+		functions := map[string]*ast.FuncDecl{}
+		for _, declaration := range source.Decls {
+			function, ok := declaration.(*ast.FuncDecl)
+			if ok && function.Recv == nil {
+				functions[function.Name.Name] = function
+			}
+		}
+		testingAliases, dotImportedTesting := importedTestingNames(source)
+		packagePath := "./" + filepath.ToSlash(filepath.Dir(binding.WitnessPath))
+		for _, selector := range binding.WitnessSelectors {
+			function, ok := functions[selector.Selector]
+			if !ok {
+				return fmt.Errorf("binding %s selector %s is missing from %s", binding.ScenarioID, selector.Selector, binding.WitnessPath)
+			}
+			if !validGoTestFunction(function, testingAliases, dotImportedTesting) {
+				return fmt.Errorf("binding %s selector %s is not a valid Go test function", binding.ScenarioID, selector.Selector)
+			}
+			expectedCommand := fmt.Sprintf("go test %s -run '^%s$'", packagePath, selector.Selector)
+			if selector.Command != expectedCommand {
+				return fmt.Errorf("binding %s selector command=%q, want %q", binding.ScenarioID, selector.Command, expectedCommand)
+			}
+		}
+		if !strings.HasSuffix(binding.WitnessPath, "_test.go") {
+			return fmt.Errorf("binding %s witness %s must be an active _test.go file", binding.ScenarioID, binding.WitnessPath)
+		}
+		active, checked := activeWitnessFiles[binding.WitnessPath]
+		if !checked {
+			active, err = activeGoTestFile(root, packagePath, binding.WitnessPath)
+			if err != nil {
+				return fmt.Errorf("discover binding witness %s: %w", binding.WitnessPath, err)
+			}
+			activeWitnessFiles[binding.WitnessPath] = active
+		}
+		if !active {
+			return fmt.Errorf("binding %s witness %s is not active for the current Go build", binding.ScenarioID, binding.WitnessPath)
+		}
+	}
+	return nil
+}
+
+func activeGoTestFile(root, packagePath, witnessPath string) (bool, error) {
+	command := exec.Command("go", "list", "-json", packagePath)
+	command.Dir = root
+	output, err := command.CombinedOutput()
+	if err != nil {
+		return false, fmt.Errorf("go list %s: %w: %s", packagePath, err, strings.TrimSpace(string(output)))
+	}
+	var listed struct {
+		Dir          string
+		TestGoFiles  []string
+		XTestGoFiles []string
+	}
+	if err := json.Unmarshal(output, &listed); err != nil {
+		return false, fmt.Errorf("decode go list %s: %w", packagePath, err)
+	}
+	witnessAbsolute, err := filepath.Abs(filepath.Join(root, filepath.FromSlash(witnessPath)))
+	if err != nil {
+		return false, err
+	}
+	for _, file := range append(listed.TestGoFiles, listed.XTestGoFiles...) {
+		activeAbsolute, err := filepath.Abs(filepath.Join(listed.Dir, file))
+		if err != nil {
+			return false, err
+		}
+		if filepath.Clean(activeAbsolute) == filepath.Clean(witnessAbsolute) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func importedTestingNames(source *ast.File) (map[string]struct{}, bool) {
+	aliases := map[string]struct{}{}
+	dotImported := false
+	for _, specification := range source.Imports {
+		path, err := strconv.Unquote(specification.Path.Value)
+		if err != nil || path != "testing" {
+			continue
+		}
+		switch {
+		case specification.Name == nil:
+			aliases["testing"] = struct{}{}
+		case specification.Name.Name == ".":
+			dotImported = true
+		case specification.Name.Name != "_":
+			aliases[specification.Name.Name] = struct{}{}
+		}
+	}
+	return aliases, dotImported
+}
+
+func validGoTestFunction(function *ast.FuncDecl, testingAliases map[string]struct{}, dotImportedTesting bool) bool {
+	if !validGoTestName(function.Name.Name) ||
+		function.Type.TypeParams != nil ||
+		function.Type.Results != nil && len(function.Type.Results.List) != 0 ||
+		function.Type.Params == nil || len(function.Type.Params.List) != 1 {
+		return false
+	}
+	parameter := function.Type.Params.List[0]
+	if len(parameter.Names) > 1 {
+		return false
+	}
+	pointer, ok := parameter.Type.(*ast.StarExpr)
+	if !ok {
+		return false
+	}
+	if identifier, ok := pointer.X.(*ast.Ident); ok {
+		return dotImportedTesting && identifier.Name == "T"
+	}
+	selector, ok := pointer.X.(*ast.SelectorExpr)
+	if !ok || selector.Sel.Name != "T" {
+		return false
+	}
+	identifier, ok := selector.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	_, ok = testingAliases[identifier.Name]
+	return ok
+}
+
+func validGoTestName(name string) bool {
+	if !strings.HasPrefix(name, "Test") {
+		return false
+	}
+	suffix := strings.TrimPrefix(name, "Test")
+	if suffix == "" {
+		return true
+	}
+	first, _ := utf8.DecodeRuneInString(suffix)
+	return !unicode.IsLower(first)
+}
+
+func equalStrings(left, right []string) bool {
+	return len(left) == len(right) && strings.Join(left, "\x00") == strings.Join(right, "\x00")
 }
 
 func bindCurrentSourceProvenance(out *metrics) error {

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,13 +14,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptioncontract"
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
+	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 const (
-	cliContractPublicABISHA256               = "10d5eb817410b82f4bae384806f1e87449860b4fcf5c8e5f875ab5a1a204627d"
+	cliContractPublicABISHA256               = "1b615f82dd66b83cf3d1a72154d7f4b7d1946eb3a6727cf4d0c54f065462c63f"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -126,6 +129,559 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 	}
 }
 
+func TestCLIContractsAreCompleteGeneratedAndWitnessBound(t *testing.T) {
+	contract := readCLIContract(t)
+	if len(contract.ContractDefinitions) == 0 {
+		t.Fatal("CLI contract must expose reusable closed definitions")
+	}
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	for _, command := range contract.Commands {
+		metadata, ok := generatedCommandContractMetadataByName[command.Command]
+		if !ok {
+			t.Fatalf("%s missing generated command-contract metadata", command.Command)
+		}
+		if command.Input == "required" {
+			assertBoundCommandContract(t, command.Command, "input", command.InputContract, definitions, metadata.InputContractSHA256, "nativeAdmissionWitnessSelector")
+			if len(metadata.InputSchemaSummary) == 0 {
+				t.Fatalf("%s input help summary is empty", command.Command)
+			}
+		}
+		if slices.Contains(command.OutputModes, "json") {
+			assertBoundCommandContract(t, command.Command, "output", command.OutputContract, definitions, metadata.OutputContractSHA256, "nativeOutputWitnessSelector")
+		}
+	}
+	presetChoices := generatedCommandContractMetadataByName["stack-preset"].FlagChoices["--preset"]
+	if !slices.Equal(presetChoices, stackpreset.IDs()) {
+		t.Fatalf("generated app preset choices=%v package projection=%v", presetChoices, stackpreset.IDs())
+	}
+}
+
+func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.T) {
+	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	usedDefinitions := map[string]string{}
+	for _, command := range contract.Commands {
+		for _, direction := range []struct {
+			name string
+			raw  any
+		}{
+			{name: "input", raw: command.InputContract},
+			{name: "output", raw: command.OutputContract},
+		} {
+			if direction.raw == nil {
+				continue
+			}
+			binding := canonicalJSONValue(t, direction.raw).(map[string]any)
+			definitionID := binding["rootDefinitionRef"].(string)
+			if prior, exists := usedDefinitions[definitionID]; exists {
+				t.Fatalf("root-shape definition %s is shared by %s and %s %s", definitionID, prior, command.Command, direction.name)
+			}
+			usedDefinitions[definitionID] = command.Command + " " + direction.name
+			definition := definitions[definitionID]
+			if definition == nil {
+				t.Fatalf("%s %s root-shape definition %s is missing", command.Command, direction.name, definitionID)
+			}
+			assertRootShapeDefinition(t, definitionID, definition)
+		}
+	}
+	if len(usedDefinitions) != len(definitions) {
+		t.Fatalf("used root-shape definitions=%d want all %d definitions", len(usedDefinitions), len(definitions))
+	}
+
+	expectedConditions := map[string][]string{
+		"adoption-contract-envelope output":   {"--agent-envelope=absent", "--agent-envelope=present", "--materialization-manifest=absent", "--materialization-manifest=present", "--mode=adoption", "--mode=bootstrap", "--mode=guidance", "--mode=pilot", "--mode=workflow", "--pilot=absent"},
+		"conformance-profile output":          {"--list", "--profile", "--verify", "without --format"},
+		"pilot-admission output":              {"--pilot all", "--pilot first", "--pilot stack-diverse", "without --pilot"},
+		"requirement-browser-server input":    {"--view coverage", "--view proof", "--view source", "--view spec-tree", "--view workspace"},
+		"requirement-browser-server output":   {"--serve", "--session-mode one-shot-question", "state=cancelled|expired", "state=submitted", "without --serve"},
+		"requirement-proof-source-set output": {"canonical_contract", "resolver_input"},
+		"requirement-proof-view input":        {"compact", "structured"},
+		"requirement-proof-view output":       {"compact", "structured"},
+		"test-evidence-inventory input":       {"direct inventory", "discovery-draft", "proof-binding-derived", "source-set", "wrapped inventory"},
+		"test-evidence-inventory output":      {"normalized-inventory", "proof-binding-derived", "failure report", "without --normalized-inventory"},
+		"witness-plan input":                  {"without projection", "projection=requirement-bindings"},
+	}
+	exactHighRiskConditions := map[string][]string{
+		"adoption-contract-envelope output": {
+			"--agent-envelope=absent --materialization-manifest=absent --mode=adoption --pilot=absent",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=bootstrap --pilot=absent",
+			"--agent-envelope=present --materialization-manifest=absent --mode=bootstrap --pilot=absent",
+			"--agent-envelope=absent --materialization-manifest=present --mode=bootstrap --pilot=absent",
+			"--agent-envelope=present --materialization-manifest=absent --mode=guidance --pilot=absent",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=guidance --pilot=absent",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=all",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=absent",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=first",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=pilot --pilot=stack-diverse",
+			"--agent-envelope=present --materialization-manifest=absent --mode=workflow --pilot=absent",
+			"--agent-envelope=absent --materialization-manifest=absent --mode=workflow --pilot=absent",
+		},
+		"conformance-profile output": {
+			"--list",
+			"--profile <id> --format json",
+			"--profile <id> without --format (defaults json)",
+			"--verify",
+		},
+		"pilot-admission input": {
+			"--contract-envelope --pilot all",
+			"--contract-envelope --pilot first",
+			"--contract-envelope without --pilot (defaults first)",
+			"--contract-envelope --pilot stack-diverse",
+			"--contract-envelope --stack-diverse",
+			"without --contract-envelope; --pilot first",
+			"without --contract-envelope; without --pilot (defaults first)",
+			"without --contract-envelope; --pilot stack-diverse",
+			"without --contract-envelope; --stack-diverse",
+		},
+		"pilot-admission output": {
+			"--contract-envelope --pilot all",
+			"--contract-envelope --pilot first",
+			"--contract-envelope --pilot stack-diverse",
+			"--contract-envelope --stack-diverse",
+			"--contract-envelope without --pilot (defaults first)",
+			"direct input",
+		},
+		"requirement-browser-server output": {
+			"without --serve; --view coverage",
+			"without --serve; --view proof",
+			"without --serve; --view source",
+			"without --serve; --view spec-tree",
+			"without --serve; --view workspace",
+			"--open; --serve; --session-mode one-shot-question; --view workspace; state=cancelled|expired",
+			"--open; --serve; --session-mode one-shot-question; --view workspace; state=submitted",
+		},
+		"requirement-proof-source-set output": {
+			"projection.kind=canonical_contract",
+			"projection.kind=resolver_input",
+		},
+		"requirement-proof-view input": {
+			"compact proof contract root",
+			"structured requirement proof binding root",
+		},
+		"requirement-proof-view output": {
+			"compact proof contract root",
+			"structured requirement proof binding root",
+		},
+		"witness-plan input": {
+			"without projection",
+			"projection=requirement-bindings",
+		},
+	}
+	for _, command := range contract.Commands {
+		for _, direction := range []struct {
+			name string
+			raw  any
+		}{
+			{name: "input", raw: command.InputContract},
+			{name: "output", raw: command.OutputContract},
+		} {
+			if direction.raw == nil {
+				continue
+			}
+			binding := canonicalJSONValue(t, direction.raw).(map[string]any)
+			definition := definitions[binding["rootDefinitionRef"].(string)]
+			conditionText := rootShapeConditionText(t, definition)
+			key := command.Command + " " + direction.name
+			if expected, ok := exactHighRiskConditions[key]; ok {
+				actual := rootShapeConditions(t, definition)
+				if !slices.Equal(actual, expected) {
+					t.Fatalf("%s exact root-shape conditions=%v want %v", key, actual, expected)
+				}
+			}
+			for _, expected := range expectedConditions[key] {
+				if !strings.Contains(conditionText, expected) {
+					t.Fatalf("%s root-shape variants omit condition %q: %s", key, expected, conditionText)
+				}
+			}
+			if direction.name == "input" && command.ContractEnvelope != nil && *command.ContractEnvelope {
+				for _, expected := range []string{"--contract-envelope", "without --contract-envelope"} {
+					if !strings.Contains(conditionText, expected) {
+						t.Fatalf("%s input root-shape variants omit %q: %s", command.Command, expected, conditionText)
+					}
+				}
+			}
+			if direction.name == "output" && command.AgentEnvelope != nil && *command.AgentEnvelope {
+				if !strings.Contains(conditionText, "--agent-envelope") {
+					t.Fatalf("%s output root-shape variants omit --agent-envelope: %s", command.Command, conditionText)
+				}
+				if len(definition["fieldTree"].(map[string]any)["variants"].([]any)) < 2 {
+					t.Fatalf("%s output must distinguish agent and non-agent root shapes", command.Command)
+				}
+			}
+		}
+	}
+}
+
+func TestCLIConditionModelClosesAdoptionOutputRoutes(t *testing.T) {
+	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	definition := definitions["proofkit.adoption-contract-envelope.output.v1.root-shape"]
+	if definition == nil {
+		t.Fatal("adoption output root-shape definition is missing")
+	}
+	fieldTree := definition["fieldTree"].(map[string]any)
+	if fieldTree["conditionModel"] != "cli_flag_conjunction_v1" {
+		t.Fatalf("conditionModel=%v want cli_flag_conjunction_v1", fieldTree["conditionModel"])
+	}
+	conditionOwners := map[string]string{}
+	for _, raw := range fieldTree["variants"].([]any) {
+		variant := raw.(map[string]any)
+		for _, condition := range stringsFromAny(variant["when"].([]any)) {
+			if previous, duplicate := conditionOwners[condition]; duplicate {
+				t.Fatalf("condition %q is owned by %s and %v", condition, previous, variant["variantId"])
+			}
+			conditionOwners[condition] = variant["variantId"].(string)
+		}
+	}
+	if len(conditionOwners) != 12 {
+		t.Fatalf("adoption output condition cases=%d want 12", len(conditionOwners))
+	}
+
+	validConditionOwners := map[string]string{}
+	validOptionCount := 0
+	modeDomain := adoptioncontract.SupportedModes()
+	pilotDomain := append([]string{""}, adoptioncontract.SupportedPilotVariants()...)
+	mutatedModes := adoptioncontract.SupportedModes()
+	if len(mutatedModes) == 0 {
+		t.Fatal("native mode domain is empty")
+	}
+	mutatedModes[0] = "caller-mutant"
+	if slices.Contains(adoptioncontract.SupportedModes(), "caller-mutant") {
+		t.Fatal("native mode domain aliases caller-owned memory")
+	}
+	mutatedPilots := adoptioncontract.SupportedPilotVariants()
+	if len(mutatedPilots) == 0 {
+		t.Fatal("native pilot domain is empty")
+	}
+	mutatedPilots[0] = "caller-mutant"
+	if slices.Contains(adoptioncontract.SupportedPilotVariants(), "caller-mutant") {
+		t.Fatal("native pilot domain aliases caller-owned memory")
+	}
+	for _, mode := range modeDomain {
+		for _, agentEnvelope := range []bool{false, true} {
+			for _, materializationManifest := range []bool{false, true} {
+				for _, pilot := range pilotDomain {
+					options := adoptioncontract.Options{
+						AgentEnvelope:           agentEnvelope,
+						MaterializationManifest: materializationManifest,
+						Mode:                    mode,
+						Pilot:                   pilot,
+					}
+					condition := adoptionOutputCondition(options)
+					_, matched := conditionOwners[condition]
+					err := adoptioncontract.ValidateOptions(options)
+					if err == nil && !matched {
+						t.Fatalf("valid options %#v have no condition %q", options, condition)
+					}
+					if err != nil && matched {
+						t.Fatalf("invalid options %#v match condition %q owned by %s: %v", options, condition, conditionOwners[condition], err)
+					}
+					if err == nil {
+						validOptionCount++
+						validConditionOwners[condition] = conditionOwners[condition]
+					}
+				}
+			}
+		}
+	}
+	if total := len(modeDomain) * 2 * 2 * len(pilotDomain); total != 80 {
+		t.Fatalf("native normalized adoption option domain=%d want 80", total)
+	}
+	if validOptionCount != 12 {
+		t.Fatalf("valid normalized adoption output options=%d want 12", validOptionCount)
+	}
+	if !maps.Equal(validConditionOwners, conditionOwners) {
+		t.Fatalf("reachable condition owners=%v want exact declared set %v", validConditionOwners, conditionOwners)
+	}
+}
+
+func adoptionOutputCondition(options adoptioncontract.Options) string {
+	flagState := func(present bool) string {
+		if present {
+			return "present"
+		}
+		return "absent"
+	}
+	pilot := options.Pilot
+	if pilot == "" {
+		pilot = "absent"
+	}
+	return fmt.Sprintf(
+		"--agent-envelope=%s --materialization-manifest=%s --mode=%s --pilot=%s",
+		flagState(options.AgentEnvelope),
+		flagState(options.MaterializationManifest),
+		options.Mode,
+		pilot,
+	)
+}
+
+func adoptionOutputConditionFromParsed(options adoptionContractArgs) string {
+	return adoptionOutputCondition(adoptioncontract.Options{
+		AgentEnvelope:           options.agentEnvelope,
+		MaterializationManifest: options.materializationManifest,
+		Mode:                    options.mode,
+		Pilot:                   options.explicitPilot(),
+	})
+}
+
+func assertRootShapeDefinition(t *testing.T, id string, definition map[string]any) {
+	t.Helper()
+	if definition["closed"] != true {
+		t.Fatalf("%s root-shape definition is not closed", id)
+	}
+	if refs := definition["definitionRefs"].([]any); len(refs) != 0 {
+		t.Fatalf("%s root-shape definition has nested refs: %v", id, refs)
+	}
+	fieldTree := definition["fieldTree"].(map[string]any)
+	expectedFieldTreeKeys := []string{"kind", "nonClaims", "variants"}
+	if _, present := fieldTree["conditionModel"]; present {
+		expectedFieldTreeKeys = []string{"conditionModel", "kind", "nonClaims", "variants"}
+	}
+	assertStringSet(t, sortedMapKeys(fieldTree), expectedFieldTreeKeys, id+" fieldTree keys")
+	if fieldTree["kind"] != "root_shape_only" {
+		t.Fatalf("%s fieldTree kind=%v want root_shape_only", id, fieldTree["kind"])
+	}
+	assertStringSet(t, stringsFromAny(fieldTree["nonClaims"].([]any)), []string{
+		"Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+		"Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection.",
+	}, id+" non-claims")
+	variants := fieldTree["variants"].([]any)
+	if len(variants) == 0 {
+		t.Fatalf("%s has no root-shape variants", id)
+	}
+	rootKinds := map[string]struct{}{}
+	for _, raw := range variants {
+		variant := raw.(map[string]any)
+		assertStringSet(t, sortedMapKeys(variant), []string{"allowedFields", "requiredFields", "rootKind", "variantId", "when"}, id+" variant keys")
+		allowed := stringsFromAny(variant["allowedFields"].([]any))
+		required := stringsFromAny(variant["requiredFields"].([]any))
+		assertSortedUnique(t, allowed, id+" allowed root fields")
+		assertSortedUnique(t, required, id+" required root fields")
+		for _, field := range required {
+			if !slices.Contains(allowed, field) {
+				t.Fatalf("%s variant %v requires root field %s outside allowed fields", id, variant["variantId"], field)
+			}
+		}
+		rootKind := variant["rootKind"].(string)
+		rootKinds[rootKind] = struct{}{}
+		if rootKind != "object" && (len(allowed) != 0 || len(required) != 0) {
+			t.Fatalf("%s variant %v non-object root declares fields", id, variant["variantId"])
+		}
+		if when := stringsFromAny(variant["when"].([]any)); len(when) == 0 {
+			t.Fatalf("%s variant %v has no CLI condition", id, variant["variantId"])
+		}
+	}
+	switch definition["rootType"] {
+	case "object":
+		if len(rootKinds) != 1 {
+			t.Fatalf("%s object root has kinds %v", id, rootKinds)
+		}
+		if _, ok := rootKinds["object"]; !ok {
+			t.Fatalf("%s object root omits object variant", id)
+		}
+	case "union":
+		if len(rootKinds) < 2 {
+			t.Fatalf("%s union does not enumerate distinct root kinds: %v", id, rootKinds)
+		}
+		if _, unbounded := rootKinds["json_value"]; unbounded {
+			t.Fatalf("%s union includes unbounded json_value", id)
+		}
+	case "json_value":
+		if len(variants) != 1 {
+			t.Fatalf("%s json_value root has %d variants, want one", id, len(variants))
+		}
+		if _, ok := rootKinds["json_value"]; !ok {
+			t.Fatalf("%s json_value root is not explicitly unconstrained", id)
+		}
+	default:
+		t.Fatalf("%s has unsupported rootType %v", id, definition["rootType"])
+	}
+}
+
+func rootShapeConditionText(t *testing.T, definition map[string]any) string {
+	t.Helper()
+	return strings.Join(rootShapeConditions(t, definition), "\n")
+}
+
+func rootShapeConditions(t *testing.T, definition map[string]any) []string {
+	t.Helper()
+	fieldTree := definition["fieldTree"].(map[string]any)
+	conditions := []string{}
+	for _, raw := range fieldTree["variants"].([]any) {
+		variant := raw.(map[string]any)
+		conditions = append(conditions, stringsFromAny(variant["when"].([]any))...)
+	}
+	return conditions
+}
+
+func assertPublicCLIRootVariant(t *testing.T, commandName string, direction string, variantID string, value any) {
+	t.Helper()
+	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	var command *cliContractCommand
+	for index := range contract.Commands {
+		if contract.Commands[index].Command == commandName {
+			command = &contract.Commands[index]
+			break
+		}
+	}
+	if command == nil {
+		t.Fatalf("root oracle command %s is missing", commandName)
+	}
+	rawContract := command.OutputContract
+	if direction == "input" {
+		rawContract = command.InputContract
+	}
+	binding := canonicalJSONValue(t, rawContract).(map[string]any)
+	definition := definitions[binding["rootDefinitionRef"].(string)]
+	fieldTree := definition["fieldTree"].(map[string]any)
+	var selected map[string]any
+	for _, raw := range fieldTree["variants"].([]any) {
+		variant := raw.(map[string]any)
+		if variant["variantId"] == variantID {
+			selected = variant
+			break
+		}
+	}
+	if selected == nil {
+		t.Fatalf("%s %s root variant %s is missing", commandName, direction, variantID)
+	}
+	switch selected["rootKind"] {
+	case "array":
+		if _, ok := value.([]any); !ok {
+			t.Fatalf("%s %s variant %s requires array root, got %T", commandName, direction, variantID, value)
+		}
+	case "json_value":
+		return
+	case "object":
+		record, ok := value.(map[string]any)
+		if !ok {
+			t.Fatalf("%s %s variant %s requires object root, got %T", commandName, direction, variantID, value)
+		}
+		allowed := stringsFromAny(selected["allowedFields"].([]any))
+		for key := range record {
+			if !slices.Contains(allowed, key) {
+				t.Fatalf("%s %s variant %s emitted uncontracted root field %s; allowed=%v", commandName, direction, variantID, key, allowed)
+			}
+		}
+		for _, field := range stringsFromAny(selected["requiredFields"].([]any)) {
+			if _, exists := record[field]; !exists {
+				t.Fatalf("%s %s variant %s omitted required root field %s; value=%v", commandName, direction, variantID, field, record)
+			}
+		}
+	default:
+		t.Fatalf("%s %s variant %s has unsupported root kind %v", commandName, direction, variantID, selected["rootKind"])
+	}
+}
+
+func assertPublicCLIRootVariantCondition(t *testing.T, commandName string, direction string, variantID string, condition string) {
+	t.Helper()
+	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	var command *cliContractCommand
+	for index := range contract.Commands {
+		if contract.Commands[index].Command == commandName {
+			command = &contract.Commands[index]
+			break
+		}
+	}
+	if command == nil {
+		t.Fatalf("condition oracle command %s is missing", commandName)
+	}
+	rawContract := command.OutputContract
+	if direction == "input" {
+		rawContract = command.InputContract
+	}
+	binding := canonicalJSONValue(t, rawContract).(map[string]any)
+	definition := definitions[binding["rootDefinitionRef"].(string)]
+	for _, raw := range definition["fieldTree"].(map[string]any)["variants"].([]any) {
+		variant := raw.(map[string]any)
+		if variant["variantId"] != variantID {
+			continue
+		}
+		if !slices.Contains(stringsFromAny(variant["when"].([]any)), condition) {
+			t.Fatalf("%s %s variant %s omits exact condition %q", commandName, direction, variantID, condition)
+		}
+		return
+	}
+	t.Fatalf("%s %s root variant %s is missing", commandName, direction, variantID)
+}
+
+func TestContractMapDecisionTreeHasThreeCells(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "docs", "proofkit-contract-map.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	inDecisionTree := false
+	rowCount := 0
+	for _, line := range strings.Split(string(content), "\n") {
+		if line == "Decision tree:" {
+			inDecisionTree = true
+			continue
+		}
+		if !inDecisionTree {
+			continue
+		}
+		if line == "## Routing Rules" {
+			break
+		}
+		if !strings.HasPrefix(line, "|") {
+			continue
+		}
+		rowCount++
+		if separators := strings.Count(line, "|"); separators != 4 {
+			t.Fatalf("decision-tree row has %d separators, want 4 for three cells: %s", separators, line)
+		}
+	}
+	if rowCount < 3 {
+		t.Fatalf("decision-tree row count=%d, want a non-empty three-column table", rowCount)
+	}
+}
+
+func assertBoundCommandContract(t *testing.T, command string, direction string, raw any, definitions map[string]map[string]any, wantDigest string, selectorKey string) {
+	t.Helper()
+	if raw == nil {
+		t.Fatalf("%s missing %s contract", command, direction)
+	}
+	value := canonicalJSONValue(t, raw).(map[string]any)
+	for _, field := range []string{"contractId", "schemaVersion", "rootType", "closed", "rootDefinitionRef", "rootDefinitionDigest", "ownerRequirementRefs", selectorKey, "compatibilitySummary"} {
+		if _, ok := value[field]; !ok {
+			t.Fatalf("%s %s contract missing %s", command, direction, field)
+		}
+	}
+	if (value["rootType"] != "object" && value["rootType"] != "json_value" && value["rootType"] != "union") || value["closed"] != true {
+		t.Fatalf("%s %s contract root is not closed: %#v", command, direction, value)
+	}
+	source, hasSource := value["nativeSource"].(map[string]any)
+	rawSources, hasSources := value["nativeSources"].([]any)
+	if hasSource == hasSources {
+		t.Fatalf("%s %s contract must declare exactly one native source form", command, direction)
+	}
+	if hasSource && source["evidenceClass"] != "source_checkout" {
+		t.Fatalf("%s %s native source is not source-checkout evidence", command, direction)
+	}
+	for index, rawSource := range rawSources {
+		source, ok := rawSource.(map[string]any)
+		if !ok || source["evidenceClass"] != "source_checkout" {
+			t.Fatalf("%s %s nativeSources[%d] is not source-checkout evidence", command, direction, index)
+		}
+	}
+	selector := value[selectorKey].(map[string]any)
+	if selector["evidenceClass"] != "source_checkout" {
+		t.Fatalf("%s %s selector is not source-checkout evidence", command, direction)
+	}
+	resolved := resolvedCommandContract(t, value, definitions)
+	encoded, err := json.Marshal(resolved)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(encoded)
+	gotDigest := "sha256:" + fmt.Sprintf("%x", sum[:])
+	if gotDigest != wantDigest {
+		t.Fatalf("%s %s generated digest=%s want %s", command, direction, wantDigest, gotDigest)
+	}
+}
+
 func TestRequirementBrowserHelpMatchesWorkspaceInputContract(t *testing.T) {
 	contract := readCLIContract(t)
 	var browser cliContractCommand
@@ -172,6 +728,7 @@ func TestProofkitContractMapRoutesRequiredInputCommands(t *testing.T) {
 
 func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
 	commands := []any{}
 	for _, command := range contract.Commands {
 		record := map[string]any{
@@ -192,14 +749,24 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 		if command.ContractEnvelope != nil {
 			record["contractEnvelope"] = *command.ContractEnvelope
 		}
+		metadata := generatedCommandContractMetadataByName[command.Command]
+		if command.InputContract != nil {
+			record["inputContract"] = resolvedCommandContract(t, canonicalJSONValue(t, command.InputContract).(map[string]any), definitions)
+			record["inputContractSHA256"] = metadata.InputContractSHA256
+		}
+		if command.OutputContract != nil {
+			record["outputContract"] = resolvedCommandContract(t, canonicalJSONValue(t, command.OutputContract).(map[string]any), definitions)
+			record["outputContractSHA256"] = metadata.OutputContractSHA256
+		}
 		commands = append(commands, record)
 	}
 	abi := map[string]any{
-		"commands":        commands,
-		"contractId":      contract.ContractID,
-		"packageName":     contract.PackageName,
-		"processContract": contract.ProcessContract,
-		"schemaVersion":   contract.SchemaVersion,
+		"commands":            commands,
+		"contractDefinitions": contract.ContractDefinitions,
+		"contractId":          contract.ContractID,
+		"packageName":         contract.PackageName,
+		"processContract":     contract.ProcessContract,
+		"schemaVersion":       contract.SchemaVersion,
 	}
 	encoded, err := json.Marshal(abi)
 	if err != nil {
@@ -210,6 +777,50 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 	if got != cliContractPublicABISHA256 {
 		t.Fatalf("public CLI ABI hash drifted: got %s want %s", got, cliContractPublicABISHA256)
 	}
+}
+
+func cliContractDefinitionMap(t *testing.T, raw []any) map[string]map[string]any {
+	t.Helper()
+	definitions := make(map[string]map[string]any, len(raw))
+	for _, value := range raw {
+		record := canonicalJSONValue(t, value).(map[string]any)
+		id, _ := record["definitionId"].(string)
+		if id == "" {
+			t.Fatal("CLI contract definition has no definitionId")
+		}
+		definitions[id] = record
+	}
+	return definitions
+}
+
+func resolvedCommandContract(t *testing.T, contract map[string]any, definitions map[string]map[string]any) map[string]any {
+	t.Helper()
+	rootID, _ := contract["rootDefinitionRef"].(string)
+	return map[string]any{
+		"contract":               contract,
+		"resolvedRootDefinition": resolveCLIContractDefinition(t, rootID, definitions, map[string]bool{}),
+	}
+}
+
+func resolveCLIContractDefinition(t *testing.T, id string, definitions map[string]map[string]any, visiting map[string]bool) map[string]any {
+	t.Helper()
+	if visiting[id] {
+		t.Fatalf("CLI contract definition cycle includes %s", id)
+	}
+	definition, ok := definitions[id]
+	if !ok {
+		t.Fatalf("CLI contract references missing definition %s", id)
+	}
+	visiting[id] = true
+	resolved := maps.Clone(definition)
+	references := stringsFromAny(resolved["definitionRefs"].([]any))
+	children := make([]any, 0, len(references))
+	for _, reference := range references {
+		children = append(children, resolveCLIContractDefinition(t, reference, definitions, visiting))
+	}
+	delete(visiting, id)
+	resolved["resolvedDefinitionRefs"] = children
+	return resolved
 }
 
 func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
@@ -722,7 +1333,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host 127.0.0.1|::1] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <scope>] [--serve] [--session-mode browse|one-shot-question] [--session-timeout-seconds <1..7200>] --view <value>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
-		"stack-preset":                   "agentic-proofkit stack-preset --preset <value>",
+		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
 		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 	}
 	constrainedCount := 0
@@ -775,11 +1386,12 @@ func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
 }
 
 type cliContract struct {
-	Commands        []cliContractCommand `json:"commands"`
-	ContractID      string               `json:"contractId"`
-	PackageName     string               `json:"packageName"`
-	ProcessContract any                  `json:"processContract"`
-	SchemaVersion   int                  `json:"schemaVersion"`
+	Commands            []cliContractCommand `json:"commands"`
+	ContractDefinitions []any                `json:"contractDefinitions"`
+	ContractID          string               `json:"contractId"`
+	PackageName         string               `json:"packageName"`
+	ProcessContract     any                  `json:"processContract"`
+	SchemaVersion       int                  `json:"schemaVersion"`
 }
 
 type cliContractCommand struct {
@@ -824,7 +1436,7 @@ func assertCLIContractSchema(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decode raw CLI contract: %v", err)
 	}
-	assertKeys(t, "CLI contract", keys(record), []string{"commands", "contractId", "packageName", "processContract", "schemaVersion"})
+	assertKeys(t, "CLI contract", keys(record), []string{"commands", "contractDefinitions", "contractId", "packageName", "processContract", "schemaVersion"})
 	var processContract map[string]json.RawMessage
 	if err := json.Unmarshal(record["processContract"], &processContract); err != nil {
 		t.Fatalf("decode process contract: %v", err)
@@ -1340,16 +1952,36 @@ func TestAgentRouteInputContractMatchesAdmission(t *testing.T) {
 	if route.OutputContract == nil {
 		t.Fatal("agent-route must expose its versioned output contract")
 	}
-	got := canonicalJSONValue(t, route.InputContract)
+	got := commandOwnedContractProjection(t, route.InputContract)
 	want := canonicalJSONValue(t, agentroute.InputContract())
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("agent-route input contract drift\ngot:  %#v\nwant: %#v", got, want)
 	}
-	gotOutput := canonicalJSONValue(t, route.OutputContract)
+	gotOutput := commandOwnedContractProjection(t, route.OutputContract)
 	wantOutput := canonicalJSONValue(t, agentroute.OutputContract())
 	if !reflect.DeepEqual(gotOutput, wantOutput) {
 		t.Fatalf("agent-route output contract drift\ngot:  %#v\nwant: %#v", gotOutput, wantOutput)
 	}
+}
+
+func commandOwnedContractProjection(t *testing.T, value any) any {
+	t.Helper()
+	record := canonicalJSONValue(t, value).(map[string]any)
+	for _, key := range []string{
+		"closed",
+		"compatibilitySummary",
+		"nativeAdmissionWitnessSelector",
+		"nativeOutputWitnessSelector",
+		"nativeSource",
+		"nativeSources",
+		"ownerRequirementRefs",
+		"rootDefinitionDigest",
+		"rootDefinitionRef",
+		"rootType",
+	} {
+		delete(record, key)
+	}
+	return record
 }
 
 func canonicalJSONValue(t *testing.T, value any) any {

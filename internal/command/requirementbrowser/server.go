@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -291,19 +292,40 @@ func waitServerDone(ctx context.Context, handle ServerHandle) error {
 }
 
 func openBrowser(ctx context.Context, url string) error {
+	return openBrowserWithLauncher(ctx, runtime.GOOS, url, startBrowserProcess)
+}
+
+type browserLaunchOperation func(context.Context, string, ...string) error
+
+func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch browserLaunchOperation) error {
+	parsed, err := url.Parse(rawURL)
+	if err != nil ||
+		parsed.Scheme != "http" ||
+		(parsed.Hostname() != "127.0.0.1" && parsed.Hostname() != "::1") ||
+		parsed.Port() == "" ||
+		parsed.User != nil ||
+		parsed.RawQuery != "" ||
+		parsed.Fragment != "" ||
+		parsed.Path != "/" {
+		return fmt.Errorf("open browser requires a server-generated loopback URL")
+	}
 	var command string
 	var args []string
-	switch runtime.GOOS {
+	switch goos {
 	case "darwin":
 		command = "open"
-		args = []string{url}
+		args = []string{rawURL}
 	case "windows":
 		command = "cmd"
-		args = []string{"/c", "start", "", url}
+		args = []string{"/c", "start", "", rawURL}
 	default:
 		command = "xdg-open"
-		args = []string{url}
+		args = []string{rawURL}
 	}
+	return launch(ctx, command, args...)
+}
+
+func startBrowserProcess(ctx context.Context, command string, args ...string) error {
 	process := exec.CommandContext(ctx, command, args...)
 	if err := process.Start(); err != nil {
 		return fmt.Errorf("open browser: %w", err)

@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
+	gobuildinfo "debug/buildinfo"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -75,6 +77,7 @@ type cyclonedxComponent struct {
 	Hashes     []cyclonedxHash     `json:"hashes,omitempty"`
 	Licenses   []cyclonedxLicense  `json:"licenses,omitempty"`
 	Properties []cyclonedxProperty `json:"properties,omitempty"`
+	Scope      string              `json:"scope,omitempty"`
 }
 
 type cyclonedxHash struct {
@@ -112,17 +115,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	components, err := components(manifest)
+	components, dependencies, err := components(manifest)
 	if err != nil {
 		return err
 	}
 	sort.Slice(components, func(left int, right int) bool {
 		return components[left].BOMRef < components[right].BOMRef
 	})
-	dependencies := []cyclonedxDependency{{
-		Ref:       rootRef(manifest),
-		DependsOn: componentRefs(components, rootRef(manifest)),
-	}}
 	out := cyclonedxBOM{
 		BOMFormat:    bomFormat,
 		SpecVersion:  specVersion,
@@ -165,28 +164,32 @@ func readPackageJSON(path string) (packageJSON, error) {
 	return manifest, nil
 }
 
-func components(manifest packageJSON) ([]cyclonedxComponent, error) {
-	out := []cyclonedxComponent{}
-	goModules, err := goModuleComponents()
+func components(manifest packageJSON) ([]cyclonedxComponent, []cyclonedxDependency, error) {
+	sourceModules, err := goModuleInventory()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	out = append(out, goModules...)
-	fileComponents, err := releaseFileComponents(manifest)
+	paths, err := releaseFilePaths()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+	fileComponents, runtimeInventories, err := releaseFileEvidence(manifest, paths, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	goModules, dependencies := projectModuleEvidence(sourceModules, runtimeInventories)
+	out := append([]cyclonedxComponent{}, goModules...)
 	out = append(out, fileComponents...)
-	return out, nil
+	return out, dependencies, nil
 }
 
-func goModuleComponents() ([]cyclonedxComponent, error) {
+func goModuleInventory() ([]goModuleRecord, error) {
 	output, err := exec.Command("go", "list", "-m", "-json", "all").Output()
 	if err != nil {
 		return nil, fmt.Errorf("go list modules: %w", err)
 	}
 	decoder := json.NewDecoder(strings.NewReader(string(output)))
-	out := []cyclonedxComponent{}
+	out := []goModuleRecord{}
 	for {
 		var module goModuleRecord
 		if err := decoder.Decode(&module); err != nil {
@@ -198,60 +201,237 @@ func goModuleComponents() ([]cyclonedxComponent, error) {
 		if module.Main {
 			continue
 		}
-		version := module.Version
-		pathValue := module.Path
-		if module.Replace != nil {
-			pathValue = module.Replace.Path
-			version = module.Replace.Version
-		}
-		if pathValue == "" {
+		module = canonicalModule(module)
+		if module.Path == "" {
 			continue
 		}
-		out = append(out, cyclonedxComponent{
-			Type:       "library",
-			BOMRef:     "go-module:" + pathValue + "@" + version,
-			Name:       pathValue,
-			Version:    version,
-			PackageURL: goPackageURL(pathValue, version),
-			Properties: []cyclonedxProperty{{
-				Name:  "proofkit:source",
-				Value: "go list -m -json all",
-			}},
-		})
+		out = append(out, module)
 	}
 	return out, nil
 }
 
-func releaseFileComponents(manifest packageJSON) ([]cyclonedxComponent, error) {
-	paths, err := releaseFilePaths()
+type artifactRuntimeInventory struct {
+	BinaryRef string
+	Modules   []goModuleRecord
+}
+
+func binaryRuntimeModules(reader io.ReaderAt) ([]goModuleRecord, error) {
+	info, err := gobuildinfo.Read(reader)
 	if err != nil {
-		return nil, err
+		// A stripped or otherwise non-introspectable binary has no admitted
+		// runtime-module evidence. The release file remains an SBOM subject.
+		return nil, nil
 	}
-	out := make([]cyclonedxComponent, 0, len(paths))
-	for _, path := range paths {
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, err
+	modules := make([]goModuleRecord, 0, len(info.Deps))
+	for _, module := range info.Deps {
+		record := goModuleRecord{Path: module.Path, Version: module.Version}
+		if module.Replace != nil {
+			record.Replace = &goModuleRecord{Path: module.Replace.Path, Version: module.Replace.Version}
 		}
-		out = append(out, cyclonedxComponent{
-			Type:    componentType(path),
-			BOMRef:  "file:" + filepath.ToSlash(path),
-			Name:    filepath.Base(path),
-			Version: manifest.Version,
-			Hashes: []cyclonedxHash{{
-				Alg:     "SHA-256",
-				Content: sum,
-			}},
-			Licenses: []cyclonedxLicense{{
-				License: cyclonedxLicenseID{ID: manifest.License},
-			}},
-			Properties: []cyclonedxProperty{{
-				Name:  "proofkit:path",
-				Value: filepath.ToSlash(path),
-			}},
+		record = canonicalModule(record)
+		if record.Path != "" {
+			modules = append(modules, record)
+		}
+	}
+	sort.Slice(modules, func(left, right int) bool {
+		return moduleKey(modules[left]) < moduleKey(modules[right])
+	})
+	return modules, nil
+}
+
+func projectModuleEvidence(source []goModuleRecord, artifacts []artifactRuntimeInventory) ([]cyclonedxComponent, []cyclonedxDependency) {
+	components := map[string]cyclonedxComponent{}
+	for _, raw := range source {
+		module := canonicalModule(raw)
+		if module.Path == "" {
+			continue
+		}
+		components[moduleKey(module)] = moduleComponent(module, "excluded", []cyclonedxProperty{
+			{Name: "proofkit:evidence-class", Value: "source_build_inventory"},
+			{Name: "proofkit:source", Value: "go list -m -json all"},
 		})
 	}
-	return out, nil
+	dependencies := make([]cyclonedxDependency, 0, len(artifacts))
+	for _, artifact := range artifacts {
+		edges := []string{}
+		seen := map[string]struct{}{}
+		for _, raw := range artifact.Modules {
+			module := canonicalModule(raw)
+			if module.Path == "" {
+				continue
+			}
+			key := moduleKey(module)
+			component, exists := components[key]
+			if !exists {
+				component = moduleComponent(module, "required", nil)
+			}
+			component.Scope = "required"
+			component.Properties = appendUniqueProperty(component.Properties, cyclonedxProperty{
+				Name: "proofkit:evidence-class", Value: "artifact_build_info",
+			})
+			components[key] = component
+			if _, exists := seen[component.BOMRef]; !exists {
+				seen[component.BOMRef] = struct{}{}
+				edges = append(edges, component.BOMRef)
+			}
+		}
+		sort.Strings(edges)
+		dependencies = append(dependencies, cyclonedxDependency{Ref: artifact.BinaryRef, DependsOn: edges})
+	}
+	out := make([]cyclonedxComponent, 0, len(components))
+	for _, component := range components {
+		sort.Slice(component.Properties, func(left, right int) bool {
+			if component.Properties[left].Name != component.Properties[right].Name {
+				return component.Properties[left].Name < component.Properties[right].Name
+			}
+			return component.Properties[left].Value < component.Properties[right].Value
+		})
+		out = append(out, component)
+	}
+	sort.Slice(out, func(left, right int) bool { return out[left].BOMRef < out[right].BOMRef })
+	sort.Slice(dependencies, func(left, right int) bool { return dependencies[left].Ref < dependencies[right].Ref })
+	return out, dependencies
+}
+
+func canonicalModule(module goModuleRecord) goModuleRecord {
+	if module.Replace != nil {
+		return goModuleRecord{Path: module.Replace.Path, Version: module.Replace.Version}
+	}
+	return goModuleRecord{Path: module.Path, Version: module.Version}
+}
+
+func moduleKey(module goModuleRecord) string {
+	return module.Path + "@" + module.Version
+}
+
+func moduleComponent(module goModuleRecord, scope string, properties []cyclonedxProperty) cyclonedxComponent {
+	return cyclonedxComponent{
+		Type:       "library",
+		BOMRef:     "go-module:" + moduleKey(module),
+		Name:       module.Path,
+		Version:    module.Version,
+		PackageURL: goPackageURL(module.Path, module.Version),
+		Properties: properties,
+		Scope:      scope,
+	}
+}
+
+func appendUniqueProperty(properties []cyclonedxProperty, property cyclonedxProperty) []cyclonedxProperty {
+	for _, existing := range properties {
+		if existing == property {
+			return properties
+		}
+	}
+	return append(properties, property)
+}
+
+func releaseFileEvidence(
+	manifest packageJSON,
+	paths []string,
+	afterHash func(string) error,
+) ([]cyclonedxComponent, []artifactRuntimeInventory, error) {
+	binaryPaths := map[string]struct{}{}
+	for _, path := range releaseplatform.BinaryPaths() {
+		binaryPaths[filepath.Clean(path)] = struct{}{}
+	}
+	out := make([]cyclonedxComponent, 0, len(paths))
+	runtimeInventories := make([]artifactRuntimeInventory, 0, len(binaryPaths))
+	for _, path := range paths {
+		component, modules, isBinary, err := admitReleaseFile(manifest, path, binaryPaths, afterHash)
+		if err != nil {
+			return nil, nil, err
+		}
+		out = append(out, component)
+		if isBinary {
+			runtimeInventories = append(runtimeInventories, artifactRuntimeInventory{
+				BinaryRef: component.BOMRef,
+				Modules:   modules,
+			})
+		}
+	}
+	return out, runtimeInventories, nil
+}
+
+func admitReleaseFile(
+	manifest packageJSON,
+	path string,
+	binaryPaths map[string]struct{},
+	afterHash func(string) error,
+) (cyclonedxComponent, []goModuleRecord, bool, error) {
+	var zero cyclonedxComponent
+	routeInfo, err := os.Lstat(path)
+	if err != nil {
+		return zero, nil, false, err
+	}
+	if routeInfo.Mode()&os.ModeSymlink != 0 || !routeInfo.Mode().IsRegular() {
+		return zero, nil, false, fmt.Errorf("release file %s must be a non-symlink regular file", path)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return zero, nil, false, err
+	}
+	defer file.Close()
+	before, err := file.Stat()
+	if err != nil {
+		return zero, nil, false, err
+	}
+	if !os.SameFile(routeInfo, before) {
+		return zero, nil, false, fmt.Errorf("release file %s changed before admission", path)
+	}
+	content, err := io.ReadAll(io.NewSectionReader(file, 0, before.Size()))
+	if err != nil {
+		return zero, nil, false, err
+	}
+	if int64(len(content)) != before.Size() {
+		return zero, nil, false, fmt.Errorf("release file %s changed during admission", path)
+	}
+	contentDigest := sha256.Sum256(content)
+	if afterHash != nil {
+		if err := afterHash(path); err != nil {
+			return zero, nil, false, err
+		}
+	}
+	_, isBinary := binaryPaths[filepath.Clean(path)]
+	var modules []goModuleRecord
+	if isBinary {
+		modules, err = binaryRuntimeModules(bytes.NewReader(content))
+		if err != nil {
+			return zero, nil, false, err
+		}
+	}
+	currentDigest := sha256.New()
+	if _, err := io.Copy(currentDigest, io.NewSectionReader(file, 0, before.Size())); err != nil {
+		return zero, nil, false, err
+	}
+	after, err := file.Stat()
+	if err != nil {
+		return zero, nil, false, err
+	}
+	currentRoute, err := os.Lstat(path)
+	if err != nil || currentRoute.Mode()&os.ModeSymlink != 0 ||
+		!os.SameFile(before, after) || !os.SameFile(before, currentRoute) ||
+		before.Size() != after.Size() ||
+		!bytes.Equal(contentDigest[:], currentDigest.Sum(nil)) {
+		return zero, nil, false, fmt.Errorf("release file %s changed during admission", path)
+	}
+	component := cyclonedxComponent{
+		Type:    componentType(path),
+		BOMRef:  "file:" + filepath.ToSlash(path),
+		Name:    filepath.Base(path),
+		Version: manifest.Version,
+		Hashes: []cyclonedxHash{{
+			Alg:     "SHA-256",
+			Content: hex.EncodeToString(contentDigest[:]),
+		}},
+		Licenses: []cyclonedxLicense{{
+			License: cyclonedxLicenseID{ID: manifest.License},
+		}},
+		Properties: []cyclonedxProperty{{
+			Name:  "proofkit:path",
+			Value: filepath.ToSlash(path),
+		}},
+	}
+	return component, modules, isBinary, nil
 }
 
 func releaseFilePaths() ([]string, error) {
@@ -344,33 +524,9 @@ func uuidV5(namespace [16]byte, name string) string {
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:16])
 }
 
-func componentRefs(components []cyclonedxComponent, root string) []string {
-	out := []string{}
-	for _, component := range components {
-		if component.BOMRef != root {
-			out = append(out, component.BOMRef)
-		}
-	}
-	sort.Strings(out)
-	return out
-}
-
 func goPackageURL(path string, version string) string {
 	if version == "" {
 		return "pkg:golang/" + path
 	}
 	return "pkg:golang/" + path + "@" + version
-}
-
-func fileSHA256(path string) (string, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(hash.Sum(nil)), nil
 }

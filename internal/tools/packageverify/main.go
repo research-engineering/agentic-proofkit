@@ -15,9 +15,9 @@ import (
 	"maps"
 	"os"
 	"os/exec"
+	pathpkg "path"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -29,6 +29,7 @@ import (
 
 const rootPackageName = "@research-engineering/agentic-proofkit"
 const rootBinaryName = "agentic-proofkit"
+const installedNPMExecCommandPrefix = "npm exec --offline -- agentic-proofkit "
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
 
@@ -220,6 +221,9 @@ func runVerifier() error {
 	if err := verifySpecReferenceClosure(rootPackage, toSet(rootPackage.Entries)); err != nil {
 		return err
 	}
+	if err := verifyPackagePublicReferenceClosure(rootPackage, toSet(rootPackage.Entries)); err != nil {
+		return err
+	}
 	return verifyOutsideConsumer(rootPackage)
 }
 
@@ -312,8 +316,6 @@ func verifyPackRecordContent(record packRecord, content []byte) error {
 func requiredRootEntries() []string {
 	required := []string{
 		"package/ADOPTION.md",
-		"package/AGENTS.md",
-		"package/CONTRIBUTING.md",
 		"package/LICENSE",
 		"package/NON_CLAIMS.md",
 		"package/README.md",
@@ -532,23 +534,21 @@ func forbiddenRootEntry(path string) bool {
 
 func allowedRootEntry(path string) bool {
 	allowedExact := map[string]struct{}{
-		"package/ADOPTION.md":                                               {},
-		"package/AGENTS.md":                                                 {},
-		"package/CONTRIBUTING.md":                                           {},
-		"package/LICENSE":                                                   {},
-		"package/NON_CLAIMS.md":                                             {},
-		"package/README.md":                                                 {},
-		"package/SECURITY.md":                                               {},
-		"package/dist/agentic-proofkit":                                     {},
-		"package/docs/proofkit-contract-map.md":                             {},
-		"package/docs/release-process.md":                                   {},
-		"package/package.json":                                              {},
-		"package/proofkit/cli-contract.v2.json":                             {},
-		"package/proofkit/command-families.v1.json":                         {},
-		"package/proofkit/receipt-producer-policy.json":                     {},
-		"package/proofkit/requirement-bindings.json":                        {},
-		"package/proofkit/witness-plan.json":                                {},
-		"package/docs/specs/proofkit-consumer-infra-retirement/overview.md": {},
+		"package/ADOPTION.md":                                                        {},
+		"package/LICENSE":                                                            {},
+		"package/NON_CLAIMS.md":                                                      {},
+		"package/README.md":                                                          {},
+		"package/SECURITY.md":                                                        {},
+		"package/dist/agentic-proofkit":                                              {},
+		"package/docs/proofkit-contract-map.md":                                      {},
+		"package/docs/release-process.md":                                            {},
+		"package/package.json":                                                       {},
+		"package/proofkit/cli-contract.v2.json":                                      {},
+		"package/proofkit/command-families.v1.json":                                  {},
+		"package/proofkit/receipt-producer-policy.json":                              {},
+		"package/proofkit/requirement-bindings.json":                                 {},
+		"package/proofkit/witness-plan.json":                                         {},
+		"package/docs/specs/proofkit-consumer-infra-retirement/overview.md":          {},
 		"package/docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json": {},
 		"package/docs/specs/proofkit-package-boundary/overview.md":                   {},
 		"package/docs/specs/proofkit-package-boundary/requirements.v1.json":          {},
@@ -607,7 +607,7 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.SideEffects {
 		return fmt.Errorf("root package sideEffects must be false")
 	}
-	expectedDevDependencies := map[string]string{"@axe-core/playwright": "4.12.1", "@playwright/test": "1.61.1", "typescript": "7.0.2"}
+	expectedDevDependencies := map[string]string{"@playwright/test": "1.62.0", "axe-core": "4.12.1", "typescript": "7.0.2"}
 	if !maps.Equal(manifest.DevDependencies, expectedDevDependencies) {
 		return fmt.Errorf("root package devDependencies must equal the source-only browser proof toolchain")
 	}
@@ -634,8 +634,6 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	}
 	expectedFiles := []string{
 		"ADOPTION.md",
-		"AGENTS.md",
-		"CONTRIBUTING.md",
 		"LICENSE",
 		"NON_CLAIMS.md",
 		"README.md",
@@ -814,8 +812,6 @@ func readTarTextEntriesFromGzip(gzipReader io.Reader) (map[string]string, error)
 func packageTextEntry(path string) bool {
 	switch path {
 	case "package/ADOPTION.md",
-		"package/AGENTS.md",
-		"package/CONTRIBUTING.md",
 		"package/NON_CLAIMS.md",
 		"package/README.md",
 		"package/SECURITY.md":
@@ -851,6 +847,715 @@ func verifySpecReferenceClosure(artifact rootPackageArtifact, entries map[string
 	return nil
 }
 
+var markdownInlineDestinationPattern = regexp.MustCompile(`\[[^\]\r\n]*\]\(\s*(?:<([^>\r\n]+)>|([^)\s\r\n]+))(?:\s+(?:"[^"\r\n]*"|'[^'\r\n]*'|\([^)\r\n]*\)))?\s*\)`)
+var markdownReferenceDestinationPattern = regexp.MustCompile(`(?m)^[ \t]{0,3}\[[^\]\r\n]+\]:[ \t]*(?:<([^>\r\n]+)>|([^ \t\r\n]+))`)
+var markdownCodeSpanPattern = regexp.MustCompile("`([^`]+)`")
+var readmePublicNavigationPattern = regexp.MustCompile(
+	`(?s)The full machine-readable command inventory remains\s+` +
+		"`([^`\r\n]+)`" +
+		`; the human route map is\s+` +
+		"`([^`\r\n]+)`" +
+		`\.`,
+)
+
+func verifyPackagePublicReferenceClosure(artifact rootPackageArtifact, entries map[string]struct{}) error {
+	textEntries, err := readTarTextEntriesFromBytes(artifact.Content)
+	if err != nil {
+		return err
+	}
+	for entry, content := range textEntries {
+		if strings.HasSuffix(entry, ".md") {
+			if err := verifyMarkdownDestinations(entry, content, entries); err != nil {
+				return err
+			}
+		}
+	}
+	knownMachineEntries := map[string]struct{}{
+		"package/proofkit/cli-contract.v2.json":         {},
+		"package/proofkit/command-families.v1.json":     {},
+		"package/proofkit/receipt-producer-policy.json": {},
+		"package/proofkit/requirement-bindings.json":    {},
+		"package/proofkit/witness-plan.json":            {},
+	}
+	for entry, content := range textEntries {
+		if !strings.HasSuffix(entry, ".json") {
+			continue
+		}
+		if strings.HasPrefix(entry, "package/docs/specs/") && strings.HasSuffix(entry, "/requirements.v1.json") {
+			if err := verifyRequirementSourceReferences(entry, content, entries); err != nil {
+				return err
+			}
+			continue
+		}
+		if _, known := knownMachineEntries[entry]; !known {
+			return fmt.Errorf("package contains unclassified machine projection %s", entry)
+		}
+	}
+	if readme, ok := textEntries["package/README.md"]; ok {
+		if err := verifyREADMEInstallPolicy(readme); err != nil {
+			return err
+		}
+		if err := verifyREADMEPublicNavigation(readme, entries); err != nil {
+			return err
+		}
+		if err := verifyREADMEOwnerTable(readme, entries); err != nil {
+			return err
+		}
+	}
+	if err := verifyRequirementBindingReferences(textEntries["package/proofkit/requirement-bindings.json"], entries); err != nil {
+		return err
+	}
+	if err := verifyWitnessPlanReferences(textEntries["package/proofkit/witness-plan.json"]); err != nil {
+		return err
+	}
+	if err := verifyCommandFamilyReferenceInventory(textEntries["package/proofkit/command-families.v1.json"]); err != nil {
+		return err
+	}
+	if err := verifyReceiptPolicyReferences(textEntries["package/proofkit/receipt-producer-policy.json"], entries); err != nil {
+		return err
+	}
+	return verifyCLIContractSourceClassifications(textEntries["package/proofkit/cli-contract.v2.json"], entries)
+}
+
+const readmePreOneExactPinPolicy = "Pre-1.0 releases may contain owner-declared breaking changes, so npm consumers\nmust retain the exact saved version instead of replacing it with a version\nrange."
+
+func verifyREADMEInstallPolicy(content string) error {
+	if strings.Count(content, readmePreOneExactPinPolicy) != 1 {
+		return fmt.Errorf("package README must state the exact pre-1.0 npm pin policy once")
+	}
+	return nil
+}
+
+func verifyMarkdownDestinations(entry, content string, entries map[string]struct{}) error {
+	matches := append(
+		markdownInlineDestinationPattern.FindAllStringSubmatch(content, -1),
+		markdownReferenceDestinationPattern.FindAllStringSubmatch(content, -1)...,
+	)
+	for _, match := range matches {
+		destination := firstNonEmptyCapture(match[1:])
+		if destination == "" || strings.HasPrefix(destination, "#") || strings.Contains(destination, "://") || strings.HasPrefix(destination, "mailto:") {
+			continue
+		}
+		destination = strings.SplitN(destination, "#", 2)[0]
+		destination = strings.SplitN(destination, "?", 2)[0]
+		resolved := pathpkg.Clean(pathpkg.Join(pathpkg.Dir(entry), destination))
+		if !safePackageEntryReference(resolved) {
+			return fmt.Errorf("%s contains unsafe Markdown destination %s", entry, destination)
+		}
+		if _, ok := entries[resolved]; !ok {
+			return fmt.Errorf("%s contains dangling package-public Markdown destination %s", entry, destination)
+		}
+	}
+	return nil
+}
+
+func verifyRequirementSourceReferences(entry, content string, entries map[string]struct{}) error {
+	value, err := decodePackageJSONObject(content, entry)
+	if err != nil {
+		return err
+	}
+	if err := verifyClosedReferenceInventory(entry, value, map[string]string{
+		"/specPackagePath":                       "package_public_directory",
+		"/overviewPath":                          "package_public",
+		"/requirementsPath":                      "package_public",
+		"/requirements/*/proofBindingRefs":       "package_public",
+		"/requirements/*/nonClaimRefs":           "non_claim_identifier",
+		"/requirements/*/lifecycle/evidenceRefs": "package_public_or_evidence_identifier",
+	}); err != nil {
+		return err
+	}
+	specPackagePath := stringField(value, "specPackagePath")
+	if err := requireShippedRootPrefix(entry+" specPackagePath", specPackagePath, entries); err != nil {
+		return err
+	}
+	for _, field := range []string{"overviewPath", "requirementsPath"} {
+		if err := requireShippedRootReference(entry+" "+field, stringField(value, field), entries); err != nil {
+			return err
+		}
+	}
+	requirements, ok := value["requirements"].([]any)
+	if !ok {
+		return fmt.Errorf("package %s requirements must be an array", entry)
+	}
+	for _, raw := range requirements {
+		requirement, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package %s requirement must be an object", entry)
+		}
+		for _, reference := range stringArrayField(requirement, "proofBindingRefs") {
+			if err := requireShippedRootReference(entry+" proofBindingRef", reference, entries); err != nil {
+				return err
+			}
+		}
+		for _, reference := range stringArrayField(requirement, "nonClaimRefs") {
+			if !strings.HasPrefix(reference, "NC-") {
+				return fmt.Errorf("package %s nonClaimRef must be an NC-* identifier", entry)
+			}
+		}
+		lifecycle, _ := requirement["lifecycle"].(map[string]any)
+		for _, reference := range stringArrayField(lifecycle, "evidenceRefs") {
+			if looksLikeRepositoryPath(reference) {
+				if err := requireShippedRootReference(entry+" lifecycle evidenceRef", reference, entries); err != nil {
+					return err
+				}
+			} else if reference == "" {
+				return fmt.Errorf("package %s lifecycle evidenceRef must be non-empty", entry)
+			}
+		}
+	}
+	return nil
+}
+
+func firstNonEmptyCapture(captures []string) string {
+	for _, capture := range captures {
+		if capture != "" {
+			return strings.TrimSpace(capture)
+		}
+	}
+	return ""
+}
+
+func verifyREADMEPublicNavigation(content string, entries map[string]struct{}) error {
+	match := readmePublicNavigationPattern.FindStringSubmatch(content)
+	if len(match) != 3 {
+		return fmt.Errorf("package README public command navigation is missing")
+	}
+	for _, reference := range match[1:] {
+		if err := requireShippedRootReference("package README public command navigation", reference, entries); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func verifyREADMEOwnerTable(content string, entries map[string]struct{}) error {
+	inTable := false
+	for _, line := range strings.Split(content, "\n") {
+		if line == "| Need | Owner |" {
+			inTable = true
+			continue
+		}
+		if !inTable {
+			continue
+		}
+		if line == "" {
+			break
+		}
+		if strings.HasPrefix(line, "|---") {
+			continue
+		}
+		cells := strings.Split(line, "|")
+		if len(cells) != 4 {
+			return fmt.Errorf("package README owner table must contain exactly two cells")
+		}
+		for _, match := range markdownCodeSpanPattern.FindAllStringSubmatch(cells[2], -1) {
+			reference := strings.TrimSpace(match[1])
+			if !looksLikeRepositoryPath(reference) {
+				continue
+			}
+			if err := requireShippedRootReference("package README owner table", reference, entries); err != nil {
+				return err
+			}
+		}
+	}
+	if !inTable {
+		return fmt.Errorf("package README owner table is missing")
+	}
+	return nil
+}
+
+func verifyRequirementBindingReferences(content string, entries map[string]struct{}) error {
+	value, err := decodePackageJSONObject(content, "requirement bindings")
+	if err != nil {
+		return err
+	}
+	if err := verifyClosedReferenceInventory("requirement bindings", value, map[string]string{
+		"/requirements/*/specPath":                "package_public",
+		"/bindings/*/witnessPath":                 "source_checkout",
+		"/bindings/*/witnessSelectors":            "source_checkout_selector_set",
+		"/bindings/*/witnessSelectors/*/selector": "source_checkout_test_selector",
+	}); err != nil {
+		return err
+	}
+	requirements, ok := value["requirements"].([]any)
+	if !ok {
+		return fmt.Errorf("package requirement bindings requirements must be an array")
+	}
+	for _, raw := range requirements {
+		record, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package requirement binding requirement must be an object")
+		}
+		specPath, ok := record["specPath"].(string)
+		if !ok || specPath == "" {
+			return fmt.Errorf("package requirement binding specPath must be a string")
+		}
+		if err := requireShippedRootReference("package requirement binding specPath", specPath, entries); err != nil {
+			return err
+		}
+	}
+	bindings, _ := value["bindings"].([]any)
+	for _, raw := range bindings {
+		record, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package requirement binding witness must be an object")
+		}
+		witnessPath, ok := record["witnessPath"].(string)
+		if !ok || witnessPath == "" {
+			return fmt.Errorf("package requirement binding witnessPath must be a string")
+		}
+		if err := requireSourceCheckoutReference("package requirement binding witnessPath", witnessPath); err != nil {
+			return err
+		}
+		selectors, _ := record["witnessSelectors"].([]any)
+		for _, rawSelector := range selectors {
+			selector, ok := rawSelector.(map[string]any)
+			if !ok {
+				return fmt.Errorf("package requirement binding witnessSelector must be an object")
+			}
+			if value, _ := selector["selector"].(string); value == "" {
+				return fmt.Errorf("package requirement binding witness selector must be non-empty")
+			}
+			if value, _ := selector["command"].(string); value == "" {
+				return fmt.Errorf("package requirement binding witness command must be non-empty")
+			}
+		}
+	}
+	return nil
+}
+
+func verifyWitnessPlanReferences(content string) error {
+	value, err := decodePackageJSONObject(content, "witness plan")
+	if err != nil {
+		return err
+	}
+	if err := verifyClosedReferenceInventory("witness plan", value, map[string]string{
+		"/commands/*/cwd":                      "source_checkout",
+		"/commands/*/expectedArtifacts/*/path": "generated_output",
+		"/policies/*/inputSelectors":           "source_checkout_or_generated_input",
+		"/policies/*/outputSelectors":          "generated_output",
+		"/policies/*/cacheAdmissionRefs":       "policy_identifier",
+	}); err != nil {
+		return err
+	}
+	commands, ok := value["commands"].([]any)
+	if !ok {
+		return fmt.Errorf("package witness plan commands must be an array")
+	}
+	for _, raw := range commands {
+		command, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package witness plan command must be an object")
+		}
+		cwd, _ := command["cwd"].(string)
+		if cwd != "." {
+			return fmt.Errorf("package witness plan command cwd must be source checkout root")
+		}
+		artifacts, _ := command["expectedArtifacts"].([]any)
+		for _, rawArtifact := range artifacts {
+			artifact, ok := rawArtifact.(map[string]any)
+			if !ok {
+				return fmt.Errorf("package witness plan expectedArtifact must be an object")
+			}
+			if err := requireGeneratedOutputReference("package witness plan expectedArtifact", stringField(artifact, "path")); err != nil {
+				return err
+			}
+		}
+	}
+	policies, ok := value["policies"].([]any)
+	if !ok {
+		return fmt.Errorf("package witness plan policies must be an array")
+	}
+	for _, raw := range policies {
+		policy, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package witness plan policy must be an object")
+		}
+		for _, reference := range stringArrayField(policy, "inputSelectors") {
+			if strings.HasPrefix(reference, "artifacts/") {
+				if err := requireGeneratedOutputReference("package witness plan generated inputSelector", reference); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := requireSourceCheckoutReference("package witness plan source inputSelector", reference); err != nil {
+				return err
+			}
+		}
+		for _, reference := range stringArrayField(policy, "outputSelectors") {
+			if err := requireGeneratedOutputReference("package witness plan outputSelector", reference); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func verifyCommandFamilyReferenceInventory(content string) error {
+	value, err := decodePackageJSONObject(content, "command family catalog")
+	if err != nil {
+		return err
+	}
+	if err := verifyClosedReferenceInventory("command family catalog", value, map[string]string{}); err != nil {
+		return err
+	}
+	families, ok := value["families"].([]any)
+	if !ok {
+		return fmt.Errorf("package command family catalog families must be an array")
+	}
+	for _, raw := range families {
+		family, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package command family must be an object")
+		}
+		for _, command := range stringArrayField(family, "commands") {
+			if looksLikeRepositoryPath(command) {
+				return fmt.Errorf("package command family command must be a command identifier, got route %s", command)
+			}
+		}
+	}
+	return nil
+}
+
+func verifyReceiptPolicyReferences(content string, entries map[string]struct{}) error {
+	value, err := decodePackageJSONObject(content, "receipt producer policy")
+	if err != nil {
+		return err
+	}
+	if err := verifyClosedReferenceInventory("receipt producer policy", value, map[string]string{
+		"/producers/*/evidenceRefs": "package_public_or_source_checkout",
+	}); err != nil {
+		return err
+	}
+	producers, ok := value["producers"].([]any)
+	if !ok {
+		return fmt.Errorf("package receipt producer policy producers must be an array")
+	}
+	for _, raw := range producers {
+		record, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package receipt producer must be an object")
+		}
+		refs, ok := record["evidenceRefs"].([]any)
+		if !ok {
+			return fmt.Errorf("package receipt producer evidenceRefs must be an array")
+		}
+		for _, rawRef := range refs {
+			reference, ok := rawRef.(string)
+			if !ok {
+				return fmt.Errorf("package receipt producer evidenceRef must be a string")
+			}
+			if record["producerId"] == "github.actions.package" && reference == ".github/workflows/ci.yml" {
+				if err := requireSourceCheckoutReference("package receipt producer source evidenceRef", reference); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := requireShippedRootReference("package receipt producer evidenceRef", reference, entries); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func verifyCLIContractSourceClassifications(content string, entries map[string]struct{}) error {
+	value, err := decodePackageJSONObject(content, "CLI contract")
+	if err != nil {
+		return err
+	}
+	if err := verifyClosedReferenceInventory("CLI contract", value, map[string]string{
+		"/processContract/helpGrammar/helpCatalogFormsSource":           "package_public",
+		"/commands/*/inputContract/fields/availableInputs/item/ref":     "runtime_field",
+		"/commands/*/inputContract/fields/knownChangedPaths":            "runtime_field",
+		"/commands/*/inputContract/fields/observedReports/item/ref":     "runtime_field",
+		"/commands/*/inputContract/nativeAdmissionWitnessSelector":      "source_checkout_selector",
+		"/commands/*/inputContract/nativeAdmissionWitnessSelector/path": "source_checkout",
+		"/commands/*/inputContract/nativeSource/path":                   "source_checkout",
+		"/commands/*/inputContract/nativeSources/*/path":                "source_checkout",
+		"/commands/*/inputContract/ownerRequirementRefs":                "requirement_identifier",
+		"/commands/*/inputContract/rootDefinitionRef":                   "schema_identifier",
+		"/commands/*/outputContract/nativeOutputWitnessSelector":        "source_checkout_selector",
+		"/commands/*/outputContract/nativeOutputWitnessSelector/path":   "source_checkout",
+		"/commands/*/outputContract/nativeSource/path":                  "source_checkout",
+		"/commands/*/outputContract/nativeSources/*/path":               "source_checkout",
+		"/commands/*/outputContract/ownerRequirementRefs":               "requirement_identifier",
+		"/commands/*/outputContract/qualityFindingFields/evidenceRefs":  "runtime_field",
+		"/commands/*/outputContract/records/dependencyRef":              "runtime_field",
+		"/commands/*/outputContract/rootDefinitionRef":                  "schema_identifier",
+		"/contractDefinitions/*/definitionRefs":                         "schema_identifier",
+	}); err != nil {
+		return err
+	}
+	if processContract, _ := value["processContract"].(map[string]any); processContract != nil {
+		helpGrammar, _ := processContract["helpGrammar"].(map[string]any)
+		if helpGrammar == nil {
+			return fmt.Errorf("package CLI contract processContract.helpGrammar must be an object")
+		}
+		if err := requireShippedRootReference(
+			"package CLI contract helpCatalogFormsSource",
+			stringField(helpGrammar, "helpCatalogFormsSource"),
+			entries,
+		); err != nil {
+			return err
+		}
+	}
+	commands, ok := value["commands"].([]any)
+	if !ok {
+		return fmt.Errorf("package CLI contract commands must be an array")
+	}
+	for _, rawCommand := range commands {
+		command, ok := rawCommand.(map[string]any)
+		if !ok {
+			return fmt.Errorf("package CLI contract command must be an object")
+		}
+		for _, contractKey := range []string{"inputContract", "outputContract"} {
+			contract, _ := command[contractKey].(map[string]any)
+			if contract == nil {
+				continue
+			}
+			_, hasSource := contract["nativeSource"]
+			_, hasSources := contract["nativeSources"]
+			if hasSource == hasSources {
+				return fmt.Errorf("package CLI contract %s must declare exactly one of nativeSource or nativeSources", contractKey)
+			}
+			for _, sourceKey := range []string{"nativeSource", "nativeAdmissionWitnessSelector", "nativeOutputWitnessSelector"} {
+				source, _ := contract[sourceKey].(map[string]any)
+				if source == nil {
+					continue
+				}
+				reference, _ := source["path"].(string)
+				if reference == "" {
+					return fmt.Errorf("package CLI contract %s.%s path must be non-empty", contractKey, sourceKey)
+				}
+				if source["evidenceClass"] != "source_checkout" {
+					return fmt.Errorf("package CLI contract source-only %s.%s must declare evidenceClass=source_checkout", contractKey, sourceKey)
+				}
+				if err := requireSourceCheckoutReference("package CLI contract source path", reference); err != nil {
+					return err
+				}
+			}
+			if rawSources, ok := contract["nativeSources"].([]any); ok {
+				for index, rawSource := range rawSources {
+					source, ok := rawSource.(map[string]any)
+					if !ok {
+						return fmt.Errorf("package CLI contract %s.nativeSources[%d] must be an object", contractKey, index)
+					}
+					reference, _ := source["path"].(string)
+					if reference == "" {
+						return fmt.Errorf("package CLI contract %s.nativeSources[%d] path must be non-empty", contractKey, index)
+					}
+					if source["evidenceClass"] != "source_checkout" {
+						return fmt.Errorf("package CLI contract source-only %s.nativeSources[%d] must declare evidenceClass=source_checkout", contractKey, index)
+					}
+					if err := requireSourceCheckoutReference("package CLI contract source path", reference); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func verifyClosedReferenceInventory(label string, value any, classifications map[string]string) error {
+	var walk func(any, []string) error
+	walk = func(current any, route []string) error {
+		switch typed := current.(type) {
+		case map[string]any:
+			keys := make([]string, 0, len(typed))
+			for key := range typed {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			for _, key := range keys {
+				fieldRoute := append(append([]string{}, route...), key)
+				if referenceBearingField(key) {
+					pointer := "/" + strings.Join(fieldRoute, "/")
+					if _, admitted := classifications[pointer]; !admitted {
+						return fmt.Errorf("package %s contains unclassified reference-bearing field %s", label, pointer)
+					}
+				}
+				if err := walk(typed[key], fieldRoute); err != nil {
+					return err
+				}
+			}
+		case []any:
+			for _, item := range typed {
+				if err := walk(item, append(append([]string{}, route...), "*")); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	return walk(value, nil)
+}
+
+func referenceBearingField(key string) bool {
+	if key == "helpCatalogFormsSource" {
+		return true
+	}
+	lower := strings.ToLower(key)
+	if lower == "cwd" {
+		return true
+	}
+	for _, suffix := range []string{"path", "paths", "ref", "refs", "selector", "selectors"} {
+		if strings.HasSuffix(lower, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func requireSourceCheckoutReference(context, reference string) error {
+	static, err := safeRepositoryReference(reference)
+	if err != nil {
+		return fmt.Errorf("%s contains unsafe source-checkout route %s: %w", context, reference, err)
+	}
+	root, err := findRepositoryRoot()
+	if err != nil {
+		return fmt.Errorf("%s: %w", context, err)
+	}
+	current := root
+	if static == "." {
+		return nil
+	}
+	for _, component := range strings.Split(static, "/") {
+		current = filepath.Join(current, component)
+		info, err := os.Lstat(current)
+		if err != nil {
+			return fmt.Errorf("%s contains dangling source-checkout route %s", context, reference)
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return fmt.Errorf("%s source-checkout route traverses symlink %s", context, reference)
+		}
+	}
+	return nil
+}
+
+func requireGeneratedOutputReference(context, reference string) error {
+	static, err := safeRepositoryReference(reference)
+	if err != nil {
+		return fmt.Errorf("%s contains unsafe generated-output route %s: %w", context, reference, err)
+	}
+	if static != "artifacts" && !strings.HasPrefix(static, "artifacts/") &&
+		static != "dist" && !strings.HasPrefix(static, "dist/") {
+		return fmt.Errorf("%s must classify an artifacts/ or dist/ generated-output route, got %s", context, reference)
+	}
+	return nil
+}
+
+func safeRepositoryReference(reference string) (string, error) {
+	if reference == "" || strings.HasPrefix(reference, "/") || strings.Contains(reference, `\`) {
+		return "", fmt.Errorf("route must be non-empty repository-relative POSIX syntax")
+	}
+	clean := pathpkg.Clean(reference)
+	if clean == ".." || strings.HasPrefix(clean, "../") {
+		return "", fmt.Errorf("route escapes repository root")
+	}
+	static := clean
+	if index := strings.IndexAny(static, "*?["); index >= 0 {
+		static = strings.TrimSuffix(static[:index], "/")
+		if static == "" {
+			return "", fmt.Errorf("glob must have an existing static prefix")
+		}
+	}
+	return static, nil
+}
+
+func findRepositoryRoot() (string, error) {
+	current, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("resolve working directory: %w", err)
+	}
+	for {
+		if info, err := os.Stat(filepath.Join(current, "go.mod")); err == nil && info.Mode().IsRegular() {
+			return current, nil
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", fmt.Errorf("repository root containing go.mod not found")
+		}
+		current = parent
+	}
+}
+
+func stringField(record map[string]any, key string) string {
+	value, _ := record[key].(string)
+	return value
+}
+
+func stringArrayField(record map[string]any, key string) []string {
+	values, _ := record[key].([]any)
+	result := make([]string, 0, len(values))
+	for _, raw := range values {
+		value, ok := raw.(string)
+		if !ok {
+			return []string{""}
+		}
+		result = append(result, value)
+	}
+	return result
+}
+
+func decodePackageJSONObject(content, label string) (map[string]any, error) {
+	if content == "" {
+		return nil, fmt.Errorf("package %s is missing", label)
+	}
+	value, err := admission.DecodeJSON(strings.NewReader(content), int64(len(content)))
+	if err != nil {
+		return nil, fmt.Errorf("decode package %s: %w", label, err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("package %s must be an object", label)
+	}
+	return record, nil
+}
+
+func requireShippedRootReference(context, reference string, entries map[string]struct{}) error {
+	if !looksLikeRepositoryPath(reference) || strings.HasPrefix(reference, "/") {
+		return fmt.Errorf("%s contains unsafe route %s", context, reference)
+	}
+	target := pathpkg.Clean("package/" + reference)
+	if !safePackageEntryReference(target) {
+		return fmt.Errorf("%s contains unsafe route %s", context, reference)
+	}
+	if _, ok := entries[target]; !ok {
+		return fmt.Errorf("%s contains dangling package-public route %s", context, reference)
+	}
+	return nil
+}
+
+func requireShippedRootPrefix(context, reference string, entries map[string]struct{}) error {
+	if !looksLikeRepositoryPath(reference) || strings.HasPrefix(reference, "/") {
+		return fmt.Errorf("%s contains unsafe route %s", context, reference)
+	}
+	target := pathpkg.Clean("package/" + reference)
+	if !safePackageEntryReference(target) {
+		return fmt.Errorf("%s contains unsafe route %s", context, reference)
+	}
+	prefix := strings.TrimSuffix(target, "/") + "/"
+	for entry := range entries {
+		if strings.HasPrefix(entry, prefix) {
+			return nil
+		}
+	}
+	return fmt.Errorf("%s contains dangling package-public route %s", context, reference)
+}
+
+func safePackageEntryReference(reference string) bool {
+	return reference != "package" &&
+		strings.HasPrefix(reference, "package/") &&
+		!strings.Contains(reference, `\`) &&
+		!strings.Contains(reference, "../")
+}
+
+func looksLikeRepositoryPath(reference string) bool {
+	return strings.Contains(reference, "/") || strings.Contains(pathpkg.Base(reference), ".")
+}
+
 func decodeRequirementBindings(content []byte) (requirementBindings, error) {
 	return admission.DecodeTypedJSON[requirementBindings](bytes.NewReader(content), int64(len(content)))
 }
@@ -874,6 +1579,18 @@ func verifyOutsideConsumer(artifact rootPackageArtifact) error {
 }
 
 func verifyExactTarballConsumer(artifact rootPackageArtifact) error {
+	return withExactTarballConsumer(artifact, func(consumer string) error {
+		if err := verifyInstalledOnboardingTrace(consumer, runInstalledWithInput); err != nil {
+			return err
+		}
+		if err := verifyInstalledJSONABI(consumer); err != nil {
+			return err
+		}
+		return verifyOutsideConsumerImports(consumer)
+	})
+}
+
+func withExactTarballConsumer(artifact rootPackageArtifact, verify func(string) error) error {
 	consumer, err := os.MkdirTemp("", "proofkit-consumer-*")
 	if err != nil {
 		return err
@@ -883,35 +1600,23 @@ func verifyExactTarballConsumer(artifact rootPackageArtifact) error {
 	if err := os.WriteFile(tarballPath, artifact.Content, 0o644); err != nil {
 		return fmt.Errorf("write snapshot package tarball: %w", err)
 	}
-	packageJSON := fmt.Sprintf(
-		`{"private":true,"type":"module","dependencies":{"%s":"file:%s"}}`+"\n",
-		rootPackageName,
-		tarballPath,
-	)
-	if err := os.WriteFile(filepath.Join(consumer, "package.json"), []byte(packageJSON), 0o644); err != nil {
+	packageJSON, err := json.Marshal(map[string]any{
+		"private": true,
+		"type":    "module",
+		"dependencies": map[string]string{
+			rootPackageName: "file:" + tarballPath,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("encode outside consumer package manifest: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(consumer, "package.json"), append(packageJSON, '\n'), 0o644); err != nil {
 		return err
 	}
 	if output, err := run(consumer, "npm", "install", "--ignore-scripts", "--no-audit", "--no-fund"); err != nil {
 		return fmt.Errorf("outside consumer install failed: %w\n%s", err, output)
 	}
-	binPath := filepath.Join(consumer, "node_modules", ".bin", "agentic-proofkit")
-	if runtime.GOOS == "windows" {
-		binPath += ".cmd"
-	}
-	output, err := run(consumer, binPath, "--help")
-	if err != nil {
-		return fmt.Errorf("outside consumer binary smoke failed: %w\n%s", err, output)
-	}
-	if !bytes.Contains(output, []byte("CLI/JSON is the public cross-language contract")) {
-		return fmt.Errorf("outside consumer binary smoke did not expose CLI contract")
-	}
-	if err := verifyInstalledJSONABI(consumer, binPath); err != nil {
-		return err
-	}
-	if err := verifyOutsideConsumerImports(consumer); err != nil {
-		return err
-	}
-	return nil
+	return verify(consumer)
 }
 
 func run(dir string, name string, args ...string) ([]byte, error) {
@@ -920,11 +1625,729 @@ func run(dir string, name string, args ...string) ([]byte, error) {
 	return command.CombinedOutput()
 }
 
-func verifyInstalledJSONABI(consumer string, binPath string) error {
+type installedCommandOperation func(string, []byte, ...string) (installedCommandResult, error)
+
+type installedHelpRoute struct {
+	ID   string
+	Argv []string
+}
+
+func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOperation) error {
+	rootHelp, err := execute(consumer, nil, "help")
+	if err != nil {
+		return fmt.Errorf("outside consumer root help failed to run: %w", err)
+	}
+	if err := requireInstalledTextSuccess(rootHelp, "root help"); err != nil {
+		return err
+	}
+	familyArgv, err := installedRootHelpFamilyArgv(rootHelp.Stdout)
+	if err != nil {
+		return err
+	}
+	if !bytes.Contains(rootHelp.Stdout, []byte("CLI/JSON is the public cross-language contract")) {
+		return fmt.Errorf("outside consumer root help did not expose the family discovery and CLI contract routes")
+	}
+	families, err := execute(consumer, nil, familyArgv...)
+	if err != nil {
+		return fmt.Errorf("outside consumer family help failed to run: %w", err)
+	}
+	if err := requireInstalledTextSuccess(families, "family help"); err != nil {
+		return err
+	}
+	familyRoutes, err := parseInstalledFamilyRoutes(string(families.Stdout))
+	if err != nil {
+		return err
+	}
+	var stackHelp installedCommandResult
+	var requirementSourceHelp installedCommandResult
+	stackHelpFound := false
+	requirementSourceHelpFound := false
+	for _, familyRoute := range familyRoutes {
+		family, err := execute(consumer, nil, familyRoute.Argv...)
+		if err != nil {
+			return fmt.Errorf("outside consumer family %s failed to run: %w", familyRoute.ID, err)
+		}
+		if err := requireInstalledTextSuccess(family, "family "+familyRoute.ID); err != nil {
+			return err
+		}
+		leafRoutes, err := parseInstalledLeafHelpRoutes(string(family.Stdout))
+		if err != nil {
+			return fmt.Errorf("outside consumer family %s: %w", familyRoute.ID, err)
+		}
+		for _, leafRoute := range leafRoutes {
+			leafHelp, err := execute(consumer, nil, leafRoute.Argv...)
+			if err != nil {
+				return fmt.Errorf("outside consumer %s help failed to run: %w", leafRoute.ID, err)
+			}
+			if err := requireInstalledTextSuccess(leafHelp, leafRoute.ID+" help"); err != nil {
+				return err
+			}
+			if err := requireInstalledInvocationSyntax(leafHelp.Stdout, leafRoute.ID); err != nil {
+				return err
+			}
+			switch leafRoute.ID {
+			case "stack-preset":
+				if stackHelpFound {
+					return fmt.Errorf("outside consumer family navigation exposed stack-preset more than once")
+				}
+				stackHelp = leafHelp
+				stackHelpFound = true
+			case "requirement-source-admission":
+				if requirementSourceHelpFound {
+					return fmt.Errorf("outside consumer family navigation exposed requirement-source-admission more than once")
+				}
+				requirementSourceHelp = leafHelp
+				requirementSourceHelpFound = true
+			}
+		}
+	}
+	if !stackHelpFound {
+		return fmt.Errorf("outside consumer family navigation did not expose stack-preset")
+	}
+	if !requirementSourceHelpFound {
+		return fmt.Errorf("outside consumer family navigation did not expose requirement-source-admission")
+	}
+	presetRoutes, err := parseInstalledPresetRoutes(string(stackHelp.Stdout))
+	if err != nil {
+		return err
+	}
+	contractPath := filepath.Join(consumer, "node_modules", "@research-engineering", "agentic-proofkit", "proofkit", "cli-contract.v2.json")
+	contractContent, err := os.ReadFile(contractPath)
+	if err != nil {
+		return fmt.Errorf("read installed CLI contract: %w", err)
+	}
+	contractPresetIDs, err := installedContractPresetIDs(contractContent)
+	if err != nil {
+		return err
+	}
+	helpPresetIDs := make([]string, 0, len(presetRoutes))
+	for _, route := range presetRoutes {
+		helpPresetIDs = append(helpPresetIDs, route.ID)
+	}
+	if !sameStrings(helpPresetIDs, contractPresetIDs) {
+		return fmt.Errorf("installed stack-preset help ids=%v contract ids=%v", helpPresetIDs, contractPresetIDs)
+	}
+	var firstSelfContinuation []string
+	for _, presetRoute := range presetRoutes {
+		result, err := execute(consumer, nil, presetRoute.Argv...)
+		if err != nil {
+			return fmt.Errorf("outside consumer stack preset %s failed to run: %w", presetRoute.ID, err)
+		}
+		if err := requirePassedJSON(result, "stack preset "+presetRoute.ID); err != nil {
+			return err
+		}
+		continuations, err := installedPresetContinuationArgv(result, presetRoute.ID)
+		if err != nil {
+			return err
+		}
+		if firstSelfContinuation == nil {
+			firstSelfContinuation = append([]string{}, continuations[0]...)
+		}
+	}
+	if len(firstSelfContinuation) == 0 {
+		return fmt.Errorf("outside consumer stack presets exposed no executable self-continuation")
+	}
+	continuation, err := execute(consumer, nil, firstSelfContinuation...)
+	if err != nil {
+		return fmt.Errorf("outside consumer stack preset self-continuation failed to run: %w", err)
+	}
+	if err := requirePassedJSON(continuation, "stack preset self-continuation"); err != nil {
+		return err
+	}
+	readmeRelativePath, err := installedREADMEPath(requirementSourceHelp.Stdout)
+	if err != nil {
+		return err
+	}
+	readmePath := filepath.Join(consumer, filepath.FromSlash(readmeRelativePath))
+	readme, err := os.ReadFile(readmePath)
+	if err != nil {
+		return fmt.Errorf("read installed README: %w", err)
+	}
+	argv, input, err := installedREADMEFirstInput(readme)
+	if err != nil {
+		return err
+	}
+	result, err := execute(consumer, input, argv...)
+	if err != nil {
+		return fmt.Errorf("outside consumer README first-input command failed to run: %w", err)
+	}
+	return requirePassedJSON(result, "README first-input command")
+}
+
+func installedRootHelpFamilyArgv(content []byte) ([]string, error) {
+	const routeFragment = "agentic-proofkit help families"
+	var command string
+	matchCount := 0
+	for _, line := range strings.Split(string(content), "\n") {
+		if !strings.Contains(line, routeFragment) {
+			continue
+		}
+		command = strings.TrimLeft(line, " \t")
+		matchCount++
+	}
+	if matchCount != 1 {
+		return nil, fmt.Errorf("outside consumer root help must expose exactly one family discovery route")
+	}
+	if !strings.HasPrefix(command, installedNPMExecCommandPrefix) {
+		return nil, fmt.Errorf("outside consumer root help family route must use npm exec --offline")
+	}
+	argv, err := parseLiteralShellWords(strings.TrimPrefix(command, installedNPMExecCommandPrefix))
+	if err != nil {
+		return nil, fmt.Errorf("outside consumer root help family route must use bounded literal shell words: %w", err)
+	}
+	if len(argv) != 2 || argv[0] != "help" || argv[1] != "families" {
+		return nil, fmt.Errorf("outside consumer root help family route must resolve to help families")
+	}
+	return argv, nil
+}
+
+func parseInstalledFamilyRoutes(help string) ([]installedHelpRoute, error) {
+	ids, err := parseInstalledFamilyIDs(help)
+	if err != nil {
+		return nil, err
+	}
+	routeByID := map[string][]string{}
+	for _, line := range strings.Split(help, "\n") {
+		if !strings.Contains(line, "agentic-proofkit help family ") {
+			continue
+		}
+		argv, err := installedNPMExecArgv(line, "family discovery")
+		if err != nil {
+			return nil, err
+		}
+		if len(argv) != 3 || argv[0] != "help" || argv[1] != "family" || argv[2] == "" {
+			return nil, fmt.Errorf("outside consumer family discovery route must resolve to help family <family-id>")
+		}
+		if _, exists := routeByID[argv[2]]; exists {
+			return nil, fmt.Errorf("outside consumer family discovery route %q is duplicated", argv[2])
+		}
+		routeByID[argv[2]] = argv
+	}
+	if len(routeByID) != len(ids) {
+		return nil, fmt.Errorf("outside consumer family discovery routes=%d family ids=%d", len(routeByID), len(ids))
+	}
+	routes := make([]installedHelpRoute, 0, len(ids))
+	for _, id := range ids {
+		argv, ok := routeByID[id]
+		if !ok {
+			return nil, fmt.Errorf("outside consumer family %q has no copyable discovery route", id)
+		}
+		routes = append(routes, installedHelpRoute{ID: id, Argv: argv})
+	}
+	return routes, nil
+}
+
+func parseInstalledLeafHelpRoutes(help string) ([]installedHelpRoute, error) {
+	commandIDs := []string{}
+	seenCommandIDs := map[string]struct{}{}
+	inCommands := false
+	for _, line := range strings.Split(help, "\n") {
+		if line == "Commands:" {
+			inCommands = true
+			continue
+		}
+		if !inCommands || !strings.HasPrefix(line, "  ") || strings.HasPrefix(line, "    ") {
+			continue
+		}
+		commandID := strings.TrimSpace(line)
+		if commandID == "" || strings.ContainsAny(commandID, " \t") {
+			return nil, fmt.Errorf("command family has an invalid command id %q", commandID)
+		}
+		if _, exists := seenCommandIDs[commandID]; exists {
+			return nil, fmt.Errorf("command family has duplicate command id %q", commandID)
+		}
+		seenCommandIDs[commandID] = struct{}{}
+		commandIDs = append(commandIDs, commandID)
+	}
+	if len(commandIDs) == 0 {
+		return nil, fmt.Errorf("command family exposed no command ids")
+	}
+
+	routeByID := map[string][]string{}
+	for _, line := range strings.Split(help, "\n") {
+		if !strings.Contains(line, "agentic-proofkit help ") {
+			continue
+		}
+		argv, err := installedNPMExecArgv(line, "leaf help")
+		if err != nil {
+			return nil, err
+		}
+		if len(argv) != 2 || argv[0] != "help" || argv[1] == "" {
+			return nil, fmt.Errorf("outside consumer leaf help route must resolve to help <command>")
+		}
+		if _, exists := routeByID[argv[1]]; exists {
+			return nil, fmt.Errorf("outside consumer command %q has duplicate copyable help routes", argv[1])
+		}
+		routeByID[argv[1]] = argv
+	}
+	if len(routeByID) != len(commandIDs) {
+		return nil, fmt.Errorf("outside consumer leaf help routes=%d command ids=%d", len(routeByID), len(commandIDs))
+	}
+	routes := make([]installedHelpRoute, 0, len(commandIDs))
+	for _, commandID := range commandIDs {
+		argv, ok := routeByID[commandID]
+		if !ok {
+			return nil, fmt.Errorf("outside consumer command %q has no copyable help route", commandID)
+		}
+		routes = append(routes, installedHelpRoute{ID: commandID, Argv: argv})
+	}
+	return routes, nil
+}
+
+func requireInstalledInvocationSyntax(content []byte, command string) error {
+	lines := strings.Split(string(content), "\n")
+	var usage string
+	var installed string
+	usageCount := 0
+	installedCount := 0
+	usageIndex := -1
+	installedIndex := -1
+	for index, line := range lines {
+		if line == "Usage:" {
+			usageCount++
+			if index+1 >= len(lines) {
+				return fmt.Errorf("outside consumer command %q has no usage line", command)
+			}
+			usage = strings.TrimLeft(lines[index+1], " \t")
+			usageIndex = index
+		}
+		if line == "Installed invocation:" {
+			installedCount++
+			if index+1 >= len(lines) {
+				return fmt.Errorf("outside consumer command %q has no installed invocation line", command)
+			}
+			installed = strings.TrimLeft(lines[index+1], " \t")
+			installedIndex = index
+		}
+	}
+	commandPrefix := "agentic-proofkit " + command
+	if usageCount != 1 || installedCount != 1 ||
+		installedIndex != usageIndex+3 ||
+		(usage != commandPrefix && !strings.HasPrefix(usage, commandPrefix+" ")) {
+		return fmt.Errorf("outside consumer command %q must expose one exact bare usage and installed invocation", command)
+	}
+	if installed != "npm exec --offline -- "+usage {
+		return fmt.Errorf("outside consumer command %q installed invocation must prefix its exact usage with npm exec --offline", command)
+	}
+	return nil
+}
+
+func parseInstalledPresetRoutes(help string) ([]installedHelpRoute, error) {
+	ids, err := parseInstalledPresetIDs(help)
+	if err != nil {
+		return nil, err
+	}
+	routeByID := map[string][]string{}
+	for _, line := range strings.Split(help, "\n") {
+		if !strings.Contains(line, "agentic-proofkit stack-preset --preset ") {
+			continue
+		}
+		if strings.Contains(line, "<") {
+			continue
+		}
+		argv, err := installedNPMExecArgv(line, "stack preset")
+		if err != nil {
+			return nil, err
+		}
+		if len(argv) != 3 || argv[0] != "stack-preset" || argv[1] != "--preset" || argv[2] == "" {
+			return nil, fmt.Errorf("outside consumer stack-preset route must resolve to stack-preset --preset <id>")
+		}
+		if _, exists := routeByID[argv[2]]; exists {
+			return nil, fmt.Errorf("outside consumer stack-preset route %q is duplicated", argv[2])
+		}
+		routeByID[argv[2]] = argv
+	}
+	if len(routeByID) != len(ids) {
+		return nil, fmt.Errorf("outside consumer stack-preset routes=%d preset ids=%d", len(routeByID), len(ids))
+	}
+	routes := make([]installedHelpRoute, 0, len(ids))
+	for _, id := range ids {
+		argv, ok := routeByID[id]
+		if !ok {
+			return nil, fmt.Errorf("outside consumer preset %q has no copyable execution route", id)
+		}
+		routes = append(routes, installedHelpRoute{ID: id, Argv: argv})
+	}
+	return routes, nil
+}
+
+func installedREADMEPath(content []byte) (string, error) {
+	const prefix = "Path: "
+	const expected = "node_modules/@research-engineering/agentic-proofkit/README.md"
+	var discovered string
+	matchCount := 0
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimLeft(line, " \t")
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		discovered = strings.TrimPrefix(line, prefix)
+		matchCount++
+	}
+	if matchCount != 1 || discovered != expected {
+		return "", fmt.Errorf("outside consumer requirement-source-admission help must expose the exact installed README path")
+	}
+	return discovered, nil
+}
+
+func installedNPMExecArgv(line string, label string) ([]string, error) {
+	command := strings.TrimLeft(line, " \t")
+	if !strings.HasPrefix(command, installedNPMExecCommandPrefix) {
+		return nil, fmt.Errorf("outside consumer %s route must use npm exec --offline", label)
+	}
+	argv, err := parseLiteralShellWords(strings.TrimPrefix(command, installedNPMExecCommandPrefix))
+	if err != nil {
+		return nil, fmt.Errorf("outside consumer %s route must use bounded literal shell words: %w", label, err)
+	}
+	return argv, nil
+}
+
+func installedPresetContinuationArgv(result installedCommandResult, presetID string) ([][]string, error) {
+	value, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), 8<<20)
+	if err != nil {
+		return nil, fmt.Errorf("outside consumer stack preset %s stdout must be one JSON value: %w", presetID, err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("outside consumer stack preset %s output must be an object", presetID)
+	}
+	diagnostics, ok := record["diagnostics"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("outside consumer stack preset %s output must expose diagnostics", presetID)
+	}
+	var presetValue map[string]any
+	presetDiagnosticCount := 0
+	for _, rawDiagnostic := range diagnostics {
+		diagnostic, ok := rawDiagnostic.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("outside consumer stack preset %s diagnostics must contain objects", presetID)
+		}
+		if diagnostic["key"] != "preset" {
+			continue
+		}
+		presetDiagnosticCount++
+		presetValue, ok = diagnostic["value"].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("outside consumer stack preset %s preset diagnostic must contain an object value", presetID)
+		}
+	}
+	if presetDiagnosticCount != 1 {
+		return nil, fmt.Errorf("outside consumer stack preset %s must expose exactly one preset diagnostic", presetID)
+	}
+	rawCommands, ok := presetValue["suggestedCommands"].([]any)
+	if !ok || len(rawCommands) == 0 {
+		return nil, fmt.Errorf("outside consumer stack preset %s must expose non-empty suggestedCommands", presetID)
+	}
+	continuations := make([][]string, 0, len(rawCommands))
+	firstCommand := ""
+	for index, rawCommand := range rawCommands {
+		command, ok := rawCommand.(string)
+		if !ok || command == "" {
+			return nil, fmt.Errorf("outside consumer stack preset %s suggestedCommands[%d] must be a non-empty string", presetID, index)
+		}
+		if command != strings.TrimSpace(command) || !strings.HasPrefix(command, installedNPMExecCommandPrefix) {
+			return nil, fmt.Errorf("outside consumer stack preset %s suggestedCommands[%d] must use the exact npm exec --offline prefix", presetID, index)
+		}
+		argv, err := parseLiteralShellWords(strings.TrimPrefix(command, installedNPMExecCommandPrefix))
+		if err != nil {
+			return nil, fmt.Errorf("outside consumer stack preset %s suggestedCommands[%d] must use bounded literal shell words: %w", presetID, index, err)
+		}
+		if len(argv) == 0 {
+			return nil, fmt.Errorf("outside consumer stack preset %s suggestedCommands[%d] has no Proofkit argv", presetID, index)
+		}
+		if index == 0 {
+			firstCommand = command
+		}
+		continuations = append(continuations, argv)
+	}
+	expectedSelfContinuation := installedNPMExecCommandPrefix + "stack-preset --preset " + presetID
+	if firstCommand != expectedSelfContinuation {
+		return nil, fmt.Errorf("outside consumer stack preset %s first suggested command must be its exact self-continuation", presetID)
+	}
+	return continuations, nil
+}
+
+func requireInstalledTextSuccess(result installedCommandResult, label string) error {
+	if result.ExitCode != 0 || len(result.Stderr) != 0 || len(result.Stdout) == 0 {
+		return fmt.Errorf("outside consumer %s exit=%d stdout=%q stderr=%q", label, result.ExitCode, result.Stdout, result.Stderr)
+	}
+	return nil
+}
+
+func requirePassedJSON(result installedCommandResult, label string) error {
+	if result.ExitCode != 0 || len(result.Stderr) != 0 {
+		return fmt.Errorf("outside consumer %s exit=%d stdout=%q stderr=%q", label, result.ExitCode, result.Stdout, result.Stderr)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), 8<<20)
+	if err != nil {
+		return fmt.Errorf("outside consumer %s stdout must be one JSON value: %w", label, err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok || record["state"] != "passed" {
+		return fmt.Errorf("outside consumer %s state is not passed", label)
+	}
+	return nil
+}
+
+func parseInstalledFamilyIDs(help string) ([]string, error) {
+	ids := []string{}
+	seen := map[string]struct{}{}
+	for _, line := range strings.Split(help, "\n") {
+		if !strings.HasPrefix(line, "  ") || !strings.Contains(line, "\t") {
+			continue
+		}
+		id := strings.TrimSpace(strings.SplitN(strings.TrimSpace(line), "\t", 2)[0])
+		if id != "" {
+			if _, exists := seen[id]; exists {
+				return nil, fmt.Errorf("outside consumer family help duplicated family id %q", id)
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("outside consumer family help exposed no family ids")
+	}
+	return ids, nil
+}
+
+func parseInstalledPresetIDs(help string) ([]string, error) {
+	const prefix = "agentic-proofkit stack-preset --preset <"
+	start := strings.Index(help, prefix)
+	if start < 0 {
+		return nil, fmt.Errorf("outside consumer stack-preset help omitted preset vocabulary")
+	}
+	start += len(prefix)
+	end := strings.Index(help[start:], ">")
+	if end < 0 {
+		return nil, fmt.Errorf("outside consumer stack-preset help has an unclosed preset vocabulary")
+	}
+	ids := strings.Split(help[start:start+end], "|")
+	if len(ids) == 0 || !sort.StringsAreSorted(ids) {
+		return nil, fmt.Errorf("outside consumer stack-preset help ids must be non-empty and sorted")
+	}
+	return ids, nil
+}
+
+func installedContractPresetIDs(content []byte) ([]string, error) {
+	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		return nil, fmt.Errorf("decode installed CLI contract: %w", err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("installed CLI contract must be an object")
+	}
+	commands, ok := record["commands"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("installed CLI contract commands must be an array")
+	}
+	for _, raw := range commands {
+		command, _ := raw.(map[string]any)
+		if command["command"] != "stack-preset" {
+			continue
+		}
+		output, _ := command["outputContract"].(map[string]any)
+		choices, _ := output["flagChoices"].(map[string]any)
+		rawIDs, _ := choices["--preset"].([]any)
+		ids := make([]string, 0, len(rawIDs))
+		for _, rawID := range rawIDs {
+			id, ok := rawID.(string)
+			if !ok || id == "" {
+				return nil, fmt.Errorf("installed CLI contract stack-preset choices must be non-empty strings")
+			}
+			ids = append(ids, id)
+		}
+		if len(ids) == 0 || !sort.StringsAreSorted(ids) {
+			return nil, fmt.Errorf("installed CLI contract stack-preset choices must be non-empty and sorted")
+		}
+		return ids, nil
+	}
+	return nil, fmt.Errorf("installed CLI contract omitted stack-preset")
+}
+
+func installedREADMEFirstInput(content []byte) ([]string, []byte, error) {
+	text := string(content)
+	const startMarker = "<!-- proofkit:first-valid-input:start -->"
+	const endMarker = "<!-- proofkit:first-valid-input:end -->"
+	if strings.Count(text, startMarker) != 1 || strings.Count(text, endMarker) != 1 {
+		return nil, nil, fmt.Errorf("installed README first-input markers must occur exactly once")
+	}
+	start := strings.Index(text, startMarker) + len(startMarker)
+	end := strings.Index(text, endMarker)
+	if start >= end {
+		return nil, nil, fmt.Errorf("installed README first-input marker order is invalid")
+	}
+	block := text[start:end]
+	fenceLines := regexp.MustCompile("(?m)^[ \\t]*(?:`{3,}|~{3,})[^\\r\\n]*$").FindAllString(block, -1)
+	if len(fenceLines) != 4 {
+		return nil, nil, fmt.Errorf("installed README first-input block must contain one bash command and one JSON value")
+	}
+	for _, line := range fenceLines {
+		if strings.Contains(line, "~") {
+			return nil, nil, fmt.Errorf("installed README first-input block must contain one bash command and one JSON value")
+		}
+	}
+	match := regexp.MustCompile("(?s)^\\s*```bash[ \\t]*\\r?\\n([^\\r\\n]+)\\r?\\n```[ \\t]*\\r?\\n\\s*```json[ \\t]*\\r?\\n(.*?)\\r?\\n```[ \\t]*\\s*$").FindStringSubmatch(block)
+	if len(match) != 3 {
+		return nil, nil, fmt.Errorf("installed README first-input block must contain one bash command and one JSON value")
+	}
+	command := strings.TrimLeft(match[1], " \t")
+	if !strings.HasPrefix(command, installedNPMExecCommandPrefix) {
+		return nil, nil, fmt.Errorf("installed README first-input command must use npm exec --offline")
+	}
+	argv, err := parseLiteralShellWords(strings.TrimPrefix(command, installedNPMExecCommandPrefix))
+	if err != nil {
+		return nil, nil, fmt.Errorf("installed README first-input command must use bounded literal shell words: %w", err)
+	}
+	if len(argv) == 0 {
+		return nil, nil, fmt.Errorf("installed README first-input command has no Proofkit argv")
+	}
+	input := []byte(match[2] + "\n")
+	if _, err := admission.DecodeJSON(bytes.NewReader(input), int64(len(input))); err != nil {
+		return nil, nil, fmt.Errorf("installed README first-input JSON is invalid: %w", err)
+	}
+	return argv, input, nil
+}
+
+func parseLiteralShellWords(command string) ([]string, error) {
+	var words []string
+	var word strings.Builder
+	var quote byte
+	wordStarted := false
+
+	backslashRunEnd := func(index int) int {
+		end := index
+		for end < len(command) && command[end] == '\\' {
+			end++
+		}
+		return end
+	}
+	writeBackslashes := func(count int) {
+		for range count {
+			word.WriteByte('\\')
+		}
+	}
+	flush := func() {
+		if !wordStarted {
+			return
+		}
+		words = append(words, word.String())
+		word.Reset()
+		wordStarted = false
+	}
+	for index := 0; index < len(command); index++ {
+		character := command[index]
+		if character == 0 {
+			return nil, fmt.Errorf("NUL is not allowed")
+		}
+		if character == '\r' || character == '\n' {
+			return nil, fmt.Errorf("line breaks are not allowed")
+		}
+		switch quote {
+		case '\'':
+			if character == '\'' {
+				quote = 0
+			} else {
+				word.WriteByte(character)
+			}
+			continue
+		case '"':
+			switch character {
+			case '"':
+				quote = 0
+			case '$', '`':
+				return nil, fmt.Errorf("shell expansion is not allowed")
+			case '!':
+				return nil, fmt.Errorf("history expansion is not allowed")
+			case '\\':
+				end := backslashRunEnd(index)
+				count := end - index
+				if end == len(command) {
+					return nil, fmt.Errorf("trailing escape in double-quoted word")
+				}
+				next := command[end]
+				if next == 0 {
+					return nil, fmt.Errorf("NUL is not allowed")
+				}
+				if next == '\r' || next == '\n' {
+					return nil, fmt.Errorf("line continuation is not allowed")
+				}
+				if next == '!' {
+					writeBackslashes((count + 1) / 2)
+					word.WriteByte(next)
+					index = end
+					continue
+				}
+				writeBackslashes(count / 2)
+				if count%2 != 0 && strings.ContainsRune("\"\\$`", rune(next)) {
+					word.WriteByte(next)
+					index = end
+				} else {
+					if count%2 != 0 {
+						word.WriteByte('\\')
+					}
+					index = end - 1
+				}
+			default:
+				word.WriteByte(character)
+			}
+			continue
+		}
+
+		switch character {
+		case ' ', '\t':
+			flush()
+		case '\'', '"':
+			quote = character
+			wordStarted = true
+		case '\\':
+			end := backslashRunEnd(index)
+			count := end - index
+			if end == len(command) {
+				if count%2 != 0 {
+					return nil, fmt.Errorf("trailing escape")
+				}
+				writeBackslashes(count / 2)
+				wordStarted = true
+				index = end - 1
+				continue
+			}
+			next := command[end]
+			if next == 0 {
+				return nil, fmt.Errorf("NUL is not allowed")
+			}
+			if next == '\r' || next == '\n' {
+				return nil, fmt.Errorf("line continuation is not allowed")
+			}
+			writeBackslashes(count / 2)
+			if next == '!' || count%2 != 0 {
+				word.WriteByte(next)
+				index = end
+			} else {
+				index = end - 1
+			}
+			wordStarted = true
+		default:
+			if strings.ContainsRune(";&|<>()$`*?[]{}~#!", rune(character)) {
+				return nil, fmt.Errorf("shell operators and expansion syntax are not allowed")
+			}
+			word.WriteByte(character)
+			wordStarted = true
+		}
+	}
+	if quote != 0 {
+		return nil, fmt.Errorf("unterminated quoted word")
+	}
+	flush()
+	return words, nil
+}
+
+func verifyInstalledJSONABI(consumer string) error {
 	if err := os.WriteFile(filepath.Join(consumer, "unlisted-poison.md"), []byte("bad trailing \n"), 0o644); err != nil {
 		return fmt.Errorf("write unlisted poison file: %w", err)
 	}
-	success, err := runWithInput(consumer, binPath, packageSmokeSuccessInput(), "text-policy", "--input", "-")
+	success, err := runInstalledWithInput(consumer, packageSmokeSuccessInput(), "text-policy", "--input", "-")
 	if err != nil {
 		return fmt.Errorf("outside consumer JSON success smoke failed to run: %w", err)
 	}
@@ -935,14 +2358,14 @@ func verifyInstalledJSONABI(consumer string, binPath string) error {
 	}); err != nil {
 		return fmt.Errorf("outside consumer JSON success smoke failed: %w", err)
 	}
-	compactSuccess, err := runWithInput(consumer, binPath, packageSmokeSuccessInput(), "--json-layout", "compact", "text-policy", "--input", "-")
+	compactSuccess, err := runInstalledWithInput(consumer, packageSmokeSuccessInput(), "--json-layout", "compact", "text-policy", "--input", "-")
 	if err != nil {
 		return fmt.Errorf("outside consumer compact JSON success smoke failed to run: %w", err)
 	}
 	if err := verifyTextPolicySmokeReport(compactSuccess, "proofkit.package-smoke.success", "passed", 0, textPolicySmokeSummary{CheckedTextFileCount: 1, FailureCount: 0, InputFileCount: 1}); err != nil {
 		return fmt.Errorf("outside consumer compact JSON success smoke failed: %w", err)
 	}
-	failed, err := runWithInput(consumer, binPath, packageSmokeFailureInput(), "text-policy", "--input", "-")
+	failed, err := runInstalledWithInput(consumer, packageSmokeFailureInput(), "text-policy", "--input", "-")
 	if err != nil {
 		return fmt.Errorf("outside consumer JSON failure smoke failed to run: %w", err)
 	}
@@ -953,34 +2376,25 @@ func verifyInstalledJSONABI(consumer string, binPath string) error {
 	}); err != nil {
 		return fmt.Errorf("outside consumer JSON failure smoke failed: %w", err)
 	}
-	compactFailed, err := runWithInput(consumer, binPath, packageSmokeFailureInput(), "--json-layout", "compact", "text-policy", "--input", "-")
+	compactFailed, err := runInstalledWithInput(consumer, packageSmokeFailureInput(), "--json-layout", "compact", "text-policy", "--input", "-")
 	if err != nil {
 		return fmt.Errorf("outside consumer compact JSON failure smoke failed to run: %w", err)
 	}
 	if err := verifyTextPolicySmokeReport(compactFailed, "proofkit.package-smoke.failure", "failed", 1, textPolicySmokeSummary{CheckedTextFileCount: 1, FailureCount: 1, InputFileCount: 1}); err != nil {
 		return fmt.Errorf("outside consumer compact JSON failure smoke failed: %w", err)
 	}
-	if err := verifyJSONAdapterSourceSmoke(consumer, binPath); err != nil {
+	if err := verifyJSONAdapterSourceSmoke(consumer); err != nil {
 		return err
 	}
 	return nil
 }
 
-func verifyJSONAdapterSourceSmoke(consumer string, binPath string) error {
-	command := exec.Command(binPath, "json-report-cli-adapter-source", "--language", "typescript")
-	command.Dir = consumer
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	command.Stdout = &stdout
-	command.Stderr = &stderr
-	if err := command.Run(); err != nil {
-		return fmt.Errorf("outside consumer JSON adapter source smoke failed to run: %w; stderr=%s", err, stderr.String())
+func verifyJSONAdapterSourceSmoke(consumer string) error {
+	result, err := runInstalledWithInput(consumer, nil, "json-report-cli-adapter-source", "--language", "typescript")
+	if err != nil {
+		return fmt.Errorf("outside consumer JSON adapter source smoke failed to run: %w", err)
 	}
-	return verifyJSONAdapterSourceSmokeReport(installedCommandResult{
-		ExitCode: 0,
-		Stdout:   stdout.Bytes(),
-		Stderr:   stderr.Bytes(),
-	}, jsonreportcliadaptersource.TypeScriptSource())
+	return verifyJSONAdapterSourceSmokeReport(result, jsonreportcliadaptersource.TypeScriptSource())
 }
 
 func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedSource string) error {
@@ -1064,6 +2478,11 @@ func runWithInput(dir string, name string, input []byte, args ...string) (instal
 		exitCode = exitErr.ExitCode()
 	}
 	return installedCommandResult{ExitCode: exitCode, Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, nil
+}
+
+func runInstalledWithInput(dir string, input []byte, args ...string) (installedCommandResult, error) {
+	npmArgs := append([]string{"exec", "--offline", "--", "agentic-proofkit"}, args...)
+	return runWithInput(dir, "npm", input, npmArgs...)
 }
 
 func verifyTextPolicySmokeReport(result installedCommandResult, reportID string, state string, exitCode int, summary textPolicySmokeSummary) error {

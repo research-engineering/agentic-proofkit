@@ -326,6 +326,32 @@ func BuildFromContractEnvelope(raw any, field string, options Options) (report.R
 	return Build(input, options)
 }
 
+func BuildAllFromContractEnvelope(raw any) (report.Record, int, report.Record, int, error) {
+	envelope, err := contractenv.Object(raw, "proofkit.pilot-admission.v1", "pilot admission", "input", "stackDiverseInput")
+	if err != nil {
+		return report.Record{}, 1, report.Record{}, 1, err
+	}
+	firstInput, err := contractenv.ObjectField(envelope, "input", "pilot admission contract envelope")
+	if err != nil {
+		return report.Record{}, 1, report.Record{}, 1, err
+	}
+	stackDiverseInput, err := contractenv.ObjectField(envelope, "stackDiverseInput", "pilot admission contract envelope")
+	if err != nil {
+		return report.Record{}, 1, report.Record{}, 1, err
+	}
+	first, firstExitCode, err := Build(firstInput, Options{})
+	if err != nil {
+		return report.Record{}, 1, report.Record{}, 1, err
+	}
+	stackDiverse, stackDiverseExitCode, err := Build(stackDiverseInput, Options{
+		RequireStackDiverseReleaseCandidate: true,
+	})
+	if err != nil {
+		return report.Record{}, 1, report.Record{}, 1, err
+	}
+	return first, firstExitCode, stackDiverse, stackDiverseExitCode, nil
+}
+
 func admitBlockingDisposition(record map[string]any, failures *[]string) admittedBlockingDisposition {
 	addErr(failures, admit.KnownKeys(record, []string{"dispositionPolicy", "explicitlyDeferredRequirements", "requirements", "totalBlockingRequirements", "unmappedRequirements", "witnessBackedRequirements"}, "blocking disposition"))
 	if record["dispositionPolicy"] != "all_blocking_requirements_must_be_witnessed_or_explicitly_deferred" {

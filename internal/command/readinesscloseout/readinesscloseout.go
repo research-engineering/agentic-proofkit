@@ -2,6 +2,7 @@ package readinesscloseout
 
 import (
 	"fmt"
+	"html"
 	"regexp"
 	"sort"
 	"strings"
@@ -23,7 +24,9 @@ var readinessCloseoutNonClaims = []string{
 
 var statusPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)?$`)
 var rowIDPattern = regexp.MustCompile(`^[A-Z]+(?:-[A-Z]+)*-\d+[A-Z]?$`)
-var splitSegmentPattern = regexp.MustCompile(`[\n.;|]+`)
+var markdownStructuralSegmentPattern = regexp.MustCompile(`[\n|]+`)
+var phraseSegmentPattern = regexp.MustCompile(`[.;]+`)
+var strictCharacterReferencePattern = regexp.MustCompile(`&(?:#[xX][0-9a-fA-F]+|#[0-9]+|[A-Za-z][A-Za-z0-9]+);`)
 var nonAlphaNumericPattern = regexp.MustCompile(`[^a-z0-9]+`)
 var whitespacePattern = regexp.MustCompile(`\s+`)
 
@@ -165,8 +168,7 @@ type classification struct {
 func Build(raw any) (report.Record, int, error) {
 	input, err := admitInput(raw)
 	if err != nil {
-		result := invalidInputReport(err.Error())
-		return result, 1, nil
+		return report.Record{}, 1, err
 	}
 	return buildReport(input)
 }
@@ -434,12 +436,14 @@ func matchesPhraseRule(segment string, rule phraseRule) bool {
 }
 
 func normalizedSegments(text string) []string {
-	parts := splitSegmentPattern.Split(text, -1)
 	result := []string{}
-	for _, part := range parts {
-		normalized := normalizeForPhraseScan(part)
-		if len(normalized) > 0 {
-			result = append(result, normalized)
+	for _, structuralSegment := range markdownStructuralSegmentPattern.Split(text, -1) {
+		decoded := decodeOneStrictCharacterReferencePass(structuralSegment)
+		for _, phraseSegment := range phraseSegmentPattern.Split(decoded, -1) {
+			normalized := normalizeForPhraseScan(phraseSegment)
+			if len(normalized) > 0 {
+				result = append(result, normalized)
+			}
 		}
 	}
 	return result
@@ -454,6 +458,10 @@ func normalizeForPhraseScan(value string) string {
 		return ""
 	}
 	return " " + normalized + " "
+}
+
+func decodeOneStrictCharacterReferencePass(value string) string {
+	return strictCharacterReferencePattern.ReplaceAllStringFunc(value, html.UnescapeString)
 }
 
 func includesAny(segment string, phrases []string) bool {
@@ -793,34 +801,6 @@ func hasNonClaimActionToken(normalized string) bool {
 		}
 	}
 	return false
-}
-
-func invalidInputReport(failure string) report.Record {
-	return report.Record{
-		SchemaVersion: 1,
-		ReportKind:    reportKind,
-		ReportID:      "invalid-input",
-		State:         "failed",
-		Summary: map[string]any{
-			"blocked":        0,
-			"failed":         1,
-			"outOfScope":     0,
-			"passed":         0,
-			"readinessClaim": "classification_honesty_only",
-			"rowCount":       0,
-			"runIdentity":    "invalid-input",
-		},
-		Diagnostics: []report.Diagnostic{},
-		RuleResults: []report.RuleResult{
-			{
-				Diagnostics: []report.Diagnostic{},
-				Message:     failure,
-				RuleID:      "readiness_closeout.input",
-				Status:      "failed",
-			},
-		},
-		NonClaims: []any{"invalid input does not prove readiness closeout state"},
-	}
 }
 
 func classificationDiagnostics(input closeoutInput, definition inputDefinition) []report.Diagnostic {

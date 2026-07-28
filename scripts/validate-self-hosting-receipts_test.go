@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -13,6 +14,36 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"go.yaml.in/yaml/v3"
 )
+
+const testRootPackageName = "@research-engineering/agentic-proofkit"
+
+func TestRunProofkitVerdictCases(t *testing.T) {
+	cases := []struct {
+		name       string
+		processErr error
+		output     string
+		wantError  string
+	}{
+		{name: "process exit", processErr: errors.New("exit status 7"), output: `{"state":"passed"}`, wantError: "exit status 7"},
+		{name: "invalid JSON", output: `{"state":`, wantError: "emitted invalid JSON"},
+		{name: "wrong state", output: `{"state":"failed"}`, wantError: "did not pass"},
+		{name: "passed", output: `{"state":"passed"}`},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			err := proofkitVerdict("fixture", test.processErr, []byte(test.output))
+			if test.wantError == "" {
+				if err != nil {
+					t.Fatalf("proofkitVerdict() error=%v, want nil", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), test.wantError) {
+				t.Fatalf("proofkitVerdict() error=%v, want %q", err, test.wantError)
+			}
+		})
+	}
+}
 
 func TestCurrentPlatformBinaryUsesReleasePlatformOwner(t *testing.T) {
 	target, err := releaseplatform.CurrentTarget()
@@ -309,6 +340,182 @@ func TestSelfHostingPackageGateReceiptKeepsAggregateEvidenceModel(t *testing.T) 
 	}
 }
 
+func TestPackageArtifactRefsRejectEachPackageIdentityDefect(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(t *testing.T, records []any)
+		want   string
+	}{
+		{
+			name: "name",
+			mutate: func(_ *testing.T, records []any) {
+				records[0].(map[string]any)["name"] = "@research-engineering/other"
+			},
+			want: "unexpected package artifact",
+		},
+		{
+			name: "version",
+			mutate: func(_ *testing.T, records []any) {
+				records[0].(map[string]any)["version"] = "9.9.9"
+			},
+			want: "version must match package.json",
+		},
+		{
+			name: "duplicate",
+			mutate: func(_ *testing.T, records []any) {
+				records = append(records, cloneObject(records[0].(map[string]any)))
+				mustWriteJSON(t, filepath.Join(packageArtifactRoot, "npm-pack.json"), records)
+			},
+			want: "duplicate package artifact",
+		},
+		{
+			name: "missing artifact",
+			mutate: func(t *testing.T, records []any) {
+				filename := records[0].(map[string]any)["filename"].(string)
+				if err := os.Remove(filepath.Join(packageArtifactRoot, filename)); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: "no such file or directory",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			packageJSON, records := writeArtifactRefFixture(t)
+			test.mutate(t, records)
+			if test.name != "duplicate" {
+				mustWriteJSON(t, filepath.Join(packageArtifactRoot, "npm-pack.json"), records)
+			}
+			_, err := packageArtifactRefs(packageJSON)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("packageArtifactRefs() error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestPythonArtifactRefsRejectEachWheelIdentityDefect(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(t *testing.T, packageSet map[string]any)
+		want   string
+	}{
+		{
+			name: "version",
+			mutate: func(_ *testing.T, packageSet map[string]any) {
+				packageSet["packageVersion"] = "9.9.9"
+			},
+			want: "packageVersion must match",
+		},
+		{
+			name: "duplicate",
+			mutate: func(_ *testing.T, packageSet map[string]any) {
+				packages := packageSet["packages"].([]any)
+				packageSet["packages"] = append(packages, cloneObject(packages[0].(map[string]any)))
+			},
+			want: "duplicate Python wheel artifact",
+		},
+		{
+			name: "missing file",
+			mutate: func(t *testing.T, packageSet map[string]any) {
+				filename := packageSet["packages"].([]any)[0].(map[string]any)["filename"].(string)
+				if err := os.Remove(filepath.Join(pythonArtifactRoot, filename)); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: "no such file or directory",
+		},
+		{
+			name: "SHA mismatch",
+			mutate: func(_ *testing.T, packageSet map[string]any) {
+				packageSet["packages"].([]any)[0].(map[string]any)["sha256"] = strings.Repeat("0", 64)
+			},
+			want: "sha256 mismatch",
+		},
+		{
+			name: "missing SHA",
+			mutate: func(_ *testing.T, packageSet map[string]any) {
+				delete(packageSet["packages"].([]any)[0].(map[string]any), "sha256")
+			},
+			want: "must include sha256",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			packageJSON, _ := writeArtifactRefFixture(t)
+			packageSet := readRepoArtifactObject(t, filepath.Join(pythonArtifactRoot, "python-packages.json"))
+			test.mutate(t, packageSet)
+			mustWriteJSON(t, filepath.Join(pythonArtifactRoot, "python-packages.json"), packageSet)
+			_, err := pythonArtifactRefs(packageJSON["version"].(string))
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("pythonArtifactRefs() error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestReceiptIDKeepsLocalAndCIIdentitiesDistinct(t *testing.T) {
+	local := receiptID(false)
+	ci := receiptID(true)
+	if local != "receipt.local.package-artifact" ||
+		ci != "receipt.github.actions.package-artifact" ||
+		local == ci {
+		t.Fatalf("receipt identities local=%q ci=%q", local, ci)
+	}
+}
+
+func writeArtifactRefFixture(t *testing.T) (map[string]any, []any) {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	if err := os.MkdirAll(packageArtifactRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(pythonArtifactRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	const (
+		version = "1.2.3"
+		tarball = "agentic-proofkit-1.2.3.tgz"
+		wheel   = "agentic_proofkit-1.2.3-py3-none-any.whl"
+	)
+	if err := os.WriteFile(filepath.Join(packageArtifactRoot, tarball), []byte("tarball"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pythonArtifactRoot, wheel), []byte("wheel"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	records := []any{map[string]any{
+		"name":     testRootPackageName,
+		"version":  version,
+		"filename": tarball,
+	}}
+	mustWriteJSON(t, filepath.Join(packageArtifactRoot, "npm-pack.json"), records)
+	mustWriteJSON(t, filepath.Join(pythonArtifactRoot, "python-packages.json"), map[string]any{
+		"packageVersion": version,
+		"packages": []any{map[string]any{
+			"filename": wheel,
+			"sha256":   strings.TrimPrefix(digestFile(filepath.Join(pythonArtifactRoot, wheel)), "sha256:"),
+		}},
+	})
+	return map[string]any{"name": testRootPackageName, "version": version}, records
+}
+
+func mustWriteJSON(t *testing.T, path string, value any) {
+	t.Helper()
+	if err := writeJSON(path, value); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func readRepoArtifactObject(t *testing.T, path string) map[string]any {
+	t.Helper()
+	value, err := readJSONObject(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return value
+}
+
 func receiptProducerPolicy(t *testing.T) map[string]any {
 	t.Helper()
 	decoded := readRepoJSON(t, "proofkit/receipt-producer-policy.json")
@@ -356,19 +563,33 @@ func readRepoJSON(t *testing.T, path string) any {
 }
 
 func TestCIWorkflowPackageGateRemainsAdvisory(t *testing.T) {
-	assertPackageGateWorkflowFile(t, filepath.Join("..", ".github", "workflows", "ci.yml"), packageGateWorkflowExpectation{
-		label:                              "ci workflow",
+	assertPackageGateWorkflowFile(
+		t,
+		filepath.Join("..", ".github", "workflows", "ci.yml"),
+		ciPackageGateWorkflowExpectation(),
+	)
+}
+
+func ciPackageGateWorkflowExpectation() packageGateWorkflowExpectation {
+	return packageGateWorkflowExpectation{
+		label:        "ci workflow",
+		workflowName: "ci",
+		workflowConcurrency: &workflowConcurrencyExpectation{
+			group:            "ci-${{ github.event.pull_request.number || github.ref }}",
+			cancelInProgress: true,
+		},
 		jobID:                              "source-quality",
 		stepName:                           "Verify release closeout",
 		runCommand:                         "npm run release:closeout",
 		mustFollowSteps:                    ciSourceQualityProofSteps(),
 		mustPrecedeStepNames:               []string{"Upload package tarball artifact"},
 		requireReadOnlyWorkflowPermissions: true,
+		stepInventorySHA256:                ciSourceQualityStepInventorySHA256,
 		requiredTriggers: []workflowTriggerExpectation{
 			{event: "pull_request"},
 			{event: "push", path: []string{"branches"}, value: "main"},
 		},
-	})
+	}
 }
 
 func ciSourceQualityProofSteps() []workflowStepExpectation {
@@ -378,6 +599,7 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 		{name: "Verify text policy", runCommand: "npm run text-policy"},
 		{name: "Verify Mermaid diagrams", runCommand: "npm run mermaid:check"},
 		{name: "Verify Go formatting", runCommand: "npm run go:fmt"},
+		{name: "Verify generated command contracts", runCommand: "npm run command-contract:check"},
 		{name: "Verify generated command family catalog", runCommand: "npm run command-family:check"},
 		{name: "Run all Go tests", runCommand: "npm run go:test"},
 		{name: "Run Go vet", runCommand: "npm run go:vet"},
@@ -391,13 +613,35 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 }
 
 func TestReleaseWorkflowPackageGateRemainsAdvisory(t *testing.T) {
-	assertPackageGateWorkflowFile(t, filepath.Join("..", ".github", "workflows", "release.yml"), packageGateWorkflowExpectation{
-		label:                              "release workflow",
-		jobID:                              "candidate",
-		stepName:                           "Run package gate",
-		runCommand:                         "npm run check",
+	assertPackageGateWorkflowFile(
+		t,
+		filepath.Join("..", ".github", "workflows", "release.yml"),
+		releasePackageGateWorkflowExpectation(),
+	)
+}
+
+func releasePackageGateWorkflowExpectation() packageGateWorkflowExpectation {
+	return packageGateWorkflowExpectation{
+		label:        "release workflow",
+		workflowName: "release",
+		workflowConcurrency: &workflowConcurrencyExpectation{
+			group:            "release-${{ github.ref }}",
+			cancelInProgress: false,
+		},
+		jobID:       "candidate",
+		stepName:    "Run package gate",
+		runCommand:  "npm run check",
+		workflowEnv: map[string]any{"REGISTRY_URL": "https://registry.npmjs.org"},
+		allowedStepEnv: map[string]map[string]any{
+			"Verify source package identity": {
+				"EXPECTED_VERSION": "${{ inputs.expected_version }}",
+				"MODE":             "${{ inputs.mode }}",
+			},
+		},
 		mustPrecedeStepNames:               []string{"Build publish dry-run evidence", "Upload release candidate evidence"},
 		requireReadOnlyWorkflowPermissions: true,
+		requireReleaseExpressionInventory:  true,
+		stepInventorySHA256:                releaseCandidateStepInventorySHA256,
 		requiredNeeds: map[string][]string{
 			"publish-readiness":    []string{"candidate"},
 			"publish":              []string{"publish-readiness"},
@@ -410,7 +654,7 @@ func TestReleaseWorkflowPackageGateRemainsAdvisory(t *testing.T) {
 			{event: "push", path: []string{"tags"}, value: "v*"},
 			{event: "workflow_dispatch"},
 		},
-	})
+	}
 }
 
 func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T) {

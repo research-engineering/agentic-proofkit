@@ -100,6 +100,33 @@ func TestSourceSnapshotRejectsSymlink(t *testing.T) {
 	}
 }
 
+func TestSourceSnapshotModelsTrackedDeletionBeforeStaging(t *testing.T) {
+	root := t.TempDir()
+	runGit(t, root, "init")
+	runGit(t, root, "config", "user.email", "proofkit@example.invalid")
+	runGit(t, root, "config", "user.name", "Proofkit Test")
+	writeFixture(t, root, "release/change-record.v1.json", "legacy")
+	runGit(t, root, "add", "release/change-record.v1.json")
+	runGit(t, root, "commit", "-m", "fixture")
+
+	if err := os.Remove(filepath.Join(root, "release", "change-record.v1.json")); err != nil {
+		t.Fatal(err)
+	}
+	writeFixture(t, root, "release/change-record.v2.json", "current")
+	revisionBefore, digestBefore, err := SourceSnapshot(root)
+	if err != nil {
+		t.Fatalf("SourceSnapshot() before staging error=%v", err)
+	}
+	runGit(t, root, "add", "-A")
+	revisionAfter, digestAfter, err := SourceSnapshot(root)
+	if err != nil {
+		t.Fatalf("SourceSnapshot() after staging error=%v", err)
+	}
+	if revisionBefore != revisionAfter || digestBefore != digestAfter {
+		t.Fatalf("unstaged/staged deletion snapshots differ: before=(%s,%s) after=(%s,%s)", revisionBefore, digestBefore, revisionAfter, digestAfter)
+	}
+}
+
 func TestArtifactSnapshotRejectsSymlink(t *testing.T) {
 	root := t.TempDir()
 	writeFixture(t, root, "artifact-target.txt", "target")
