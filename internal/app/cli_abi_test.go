@@ -1046,7 +1046,7 @@ func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
 
 func TestRequirementBrowserOneShotCLIOutputVariants(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("test launcher fixture is POSIX-only")
+		t.Fatal("test launcher fixture is POSIX-only")
 	}
 	fixture, err := browserfixture.Workspace()
 	if err != nil {

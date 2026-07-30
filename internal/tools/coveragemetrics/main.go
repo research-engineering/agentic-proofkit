@@ -21,6 +21,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/gotestsource"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
@@ -399,7 +400,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 }
 
 func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bindingFile) error {
-	activeWitnessFiles := map[string]bool{}
+	activeWitnessPackages := map[string]map[string]struct{}{}
 	for _, binding := range bindings.Bindings {
 		if len(binding.WitnessSelectors) == 0 {
 			continue
@@ -426,6 +427,9 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 			if !validGoTestFunction(function, testingAliases, dotImportedTesting) {
 				return fmt.Errorf("binding %s selector %s is not a valid Go test function", binding.ScenarioID, selector.Selector)
 			}
+			if gotestsource.HasSkip(function) {
+				return fmt.Errorf("binding %s selector %s contains t.Skip and cannot serve as an always-executable witness", binding.ScenarioID, selector.Selector)
+			}
 			expectedCommand := fmt.Sprintf("go test %s -run '^%s$'", packagePath, selector.Selector)
 			if selector.Command != expectedCommand {
 				return fmt.Errorf("binding %s selector command=%q, want %q", binding.ScenarioID, selector.Command, expectedCommand)
@@ -434,27 +438,31 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 		if !strings.HasSuffix(binding.WitnessPath, "_test.go") {
 			return fmt.Errorf("binding %s witness %s must be an active _test.go file", binding.ScenarioID, binding.WitnessPath)
 		}
-		active, checked := activeWitnessFiles[binding.WitnessPath]
+		activeFiles, checked := activeWitnessPackages[packagePath]
 		if !checked {
-			active, err = activeGoTestFile(root, packagePath, binding.WitnessPath)
+			activeFiles, err = activeGoTestFiles(root, packagePath)
 			if err != nil {
 				return fmt.Errorf("discover binding witness %s: %w", binding.WitnessPath, err)
 			}
-			activeWitnessFiles[binding.WitnessPath] = active
+			activeWitnessPackages[packagePath] = activeFiles
 		}
-		if !active {
+		witnessAbsolute, err := filepath.Abs(filepath.Join(root, filepath.FromSlash(binding.WitnessPath)))
+		if err != nil {
+			return err
+		}
+		if _, active := activeFiles[filepath.Clean(witnessAbsolute)]; !active {
 			return fmt.Errorf("binding %s witness %s is not active for the current Go build", binding.ScenarioID, binding.WitnessPath)
 		}
 	}
 	return nil
 }
 
-func activeGoTestFile(root, packagePath, witnessPath string) (bool, error) {
+func activeGoTestFiles(root, packagePath string) (map[string]struct{}, error) {
 	command := exec.Command("go", "list", "-json", packagePath)
 	command.Dir = root
 	output, err := command.CombinedOutput()
 	if err != nil {
-		return false, fmt.Errorf("go list %s: %w: %s", packagePath, err, strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf("go list %s: %w: %s", packagePath, err, strings.TrimSpace(string(output)))
 	}
 	var listed struct {
 		Dir          string
@@ -462,22 +470,17 @@ func activeGoTestFile(root, packagePath, witnessPath string) (bool, error) {
 		XTestGoFiles []string
 	}
 	if err := json.Unmarshal(output, &listed); err != nil {
-		return false, fmt.Errorf("decode go list %s: %w", packagePath, err)
+		return nil, fmt.Errorf("decode go list %s: %w", packagePath, err)
 	}
-	witnessAbsolute, err := filepath.Abs(filepath.Join(root, filepath.FromSlash(witnessPath)))
-	if err != nil {
-		return false, err
-	}
+	activeFiles := map[string]struct{}{}
 	for _, file := range append(listed.TestGoFiles, listed.XTestGoFiles...) {
 		activeAbsolute, err := filepath.Abs(filepath.Join(listed.Dir, file))
 		if err != nil {
-			return false, err
+			return nil, err
 		}
-		if filepath.Clean(activeAbsolute) == filepath.Clean(witnessAbsolute) {
-			return true, nil
-		}
+		activeFiles[filepath.Clean(activeAbsolute)] = struct{}{}
 	}
-	return false, nil
+	return activeFiles, nil
 }
 
 func importedTestingNames(source *ast.File) (map[string]struct{}, bool) {

@@ -25,11 +25,11 @@ type workspaceAnchor struct {
 
 type workspaceSession struct {
 	Anchors      map[string]workspaceAnchor
-	ContextValue map[string]any
 	Diff         map[string]any
 	Graph        map[string]any
 	Manifest     map[string]any
 	Requirements []any
+	Snapshot     requirementcontext.Snapshot
 	SnapshotID   string
 }
 
@@ -99,7 +99,7 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 		"snapshotId":             snapshot.SnapshotID,
 		"workspaceId":            workspaceID,
 	}
-	return workspaceSession{Anchors: anchors, ContextValue: requirementcontext.SnapshotValue(snapshot), Diff: diff, Graph: graph, Manifest: manifest, Requirements: requirements, SnapshotID: snapshot.SnapshotID}, workspaceHTML(workspaceID), nil
+	return workspaceSession{Anchors: anchors, Diff: diff, Graph: graph, Manifest: manifest, Requirements: requirements, Snapshot: snapshot, SnapshotID: snapshot.SnapshotID}, workspaceHTML(workspaceID), nil
 }
 
 func admitWorkspaceInputVersion(record map[string]any) error {

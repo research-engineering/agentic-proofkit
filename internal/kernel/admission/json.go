@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"unicode"
+	"unicode/utf8"
 )
 
 const maxJSONNestingDepth = 512
@@ -15,6 +16,9 @@ func DecodeJSON(reader io.Reader, maxBytes int64) (any, error) {
 	source, err := readBounded(reader, maxBytes)
 	if err != nil {
 		return nil, err
+	}
+	if !utf8.Valid(source) {
+		return nil, errors.New("invalid JSON input: source must be valid UTF-8")
 	}
 	if err := assertUniqueObjectKeys(source); err != nil {
 		return nil, err
@@ -102,7 +106,7 @@ func (scanner *jsonKeyScanner) parseValue() error {
 	case '[':
 		return scanner.parseArray()
 	case '"':
-		_, err := scanner.parseString()
+		_, err := scanner.parseStringToken()
 		return err
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		scanner.parseNumberLike()
@@ -185,6 +189,18 @@ func (scanner *jsonKeyScanner) parseArray() error {
 }
 
 func (scanner *jsonKeyScanner) parseString() (string, error) {
+	token, err := scanner.parseStringToken()
+	if err != nil {
+		return "", err
+	}
+	var value string
+	if err := json.Unmarshal(token, &value); err != nil {
+		return "", fmt.Errorf("invalid JSON input: %w", err)
+	}
+	return value, nil
+}
+
+func (scanner *jsonKeyScanner) parseStringToken() ([]byte, error) {
 	start := scanner.index
 	scanner.index++
 	for scanner.index < len(scanner.source) {
@@ -193,16 +209,71 @@ func (scanner *jsonKeyScanner) parseString() (string, error) {
 			scanner.index += 2
 		case '"':
 			scanner.index++
-			var value string
-			if err := json.Unmarshal(scanner.source[start:scanner.index], &value); err != nil {
-				return "", fmt.Errorf("invalid JSON input: %w", err)
+			token := scanner.source[start:scanner.index]
+			if err := validateJSONStringUnicodeEscapes(token); err != nil {
+				return nil, err
 			}
-			return value, nil
+			if !json.Valid(token) {
+				return nil, errors.New("invalid JSON input: invalid string token")
+			}
+			return token, nil
 		default:
 			scanner.index++
 		}
 	}
-	return "", errors.New("invalid JSON input: unterminated string")
+	return nil, errors.New("invalid JSON input: unterminated string")
+}
+
+func validateJSONStringUnicodeEscapes(token []byte) error {
+	for index := 1; index < len(token)-1; index++ {
+		if token[index] != '\\' {
+			continue
+		}
+		index++
+		if index >= len(token)-1 || token[index] != 'u' {
+			continue
+		}
+		codePoint, ok := decodeHexQuad(token, index+1)
+		if !ok {
+			continue
+		}
+		index += 4
+		switch {
+		case codePoint >= 0xd800 && codePoint <= 0xdbff:
+			if index+6 >= len(token) || token[index+1] != '\\' || token[index+2] != 'u' {
+				return errors.New("invalid JSON input: unpaired Unicode surrogate")
+			}
+			low, ok := decodeHexQuad(token, index+3)
+			if !ok || low < 0xdc00 || low > 0xdfff {
+				return errors.New("invalid JSON input: unpaired Unicode surrogate")
+			}
+			index += 6
+		case codePoint >= 0xdc00 && codePoint <= 0xdfff:
+			return errors.New("invalid JSON input: unpaired Unicode surrogate")
+		}
+	}
+	return nil
+}
+
+func decodeHexQuad(source []byte, start int) (uint16, bool) {
+	if start+4 > len(source) {
+		return 0, false
+	}
+	var value uint16
+	for _, character := range source[start : start+4] {
+		value <<= 4
+		switch {
+		case character >= '0' && character <= '9':
+			value += uint16(character - '0')
+		case character >= 'a' && character <= 'f':
+			value += uint16(character-'a') + 10
+		case character >= 'A' && character <= 'F':
+			value += uint16(character-'A') + 10
+		default:
+			return 0, false
+		}
+	}
+	return value, true
 }
 
 func (scanner *jsonKeyScanner) parseNumberLike() {

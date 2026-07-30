@@ -42,10 +42,11 @@ Go source
   -> GitHub Release assets with checksums and SBOM for provenance lookup
 ```
 
-The committed `release/change-record.v2.json` owns the reviewed, version-bound
-declaration of the public-contract delta, migration decision, platform
-requirements, known limitations, and rollback strategy. It does not infer
-change completeness from the source diff. The repository-owned
+In a source checkout, the committed `release/change-record.v2.json` owns the
+reviewed, version-bound declaration of the public-contract delta, migration
+decision, platform requirements, known limitations, and rollback strategy. It
+is not part of the installed npm or PyPI projection and does not infer change
+completeness from the source diff. The repository-owned
 `release:manifest` tool admits that record and creates `release-manifest.json`,
 `checksums.sha256`, `metadata-checksums.sha256`, `sbom-subjects.sha256`,
 release notes, and deterministic SBOM candidate evidence from explicit package,
@@ -81,10 +82,10 @@ Before publishing a version:
 
 1. The source tree is clean.
 2. `package.json` contains the exact new version.
-3. `release/change-record.v2.json` contains the same version, names the exact
-   previous version and compatible or breaking change class, and explicitly
-   classifies breaking changes, additions, migration, platform requirements,
-   known limitations, and rollback.
+3. In the source checkout, `release/change-record.v2.json` contains the same
+   version, names the exact previous version and compatible or breaking change
+   class, and explicitly classifies breaking changes, additions, migration,
+   platform requirements, known limitations, and rollback.
 4. `package.json` repository, license, bin, exports, files, and publishConfig
    match the intended public package contract.
 5. The npm account has verified email and write-protective 2FA, or the package

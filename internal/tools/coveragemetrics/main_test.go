@@ -587,6 +587,29 @@ func TestBindingWitnessSelectorsRejectInvalidGoTestSignature(t *testing.T) {
 	}
 }
 
+func TestBindingWitnessSelectorsRejectSkippingTest(t *testing.T) {
+	root := t.TempDir()
+	witnessPath := filepath.Join("internal", "sample", "sample_test.go")
+	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(witnessPath)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/sample\n\ngo 1.25.0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	source := "package sample\n\nimport \"testing\"\n\nfunc TestSkipping(t *testing.T) { t.Skip(\"blocked\") }\n"
+	if err := os.WriteFile(filepath.Join(root, witnessPath), []byte(source), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bindings := bindingFile{Bindings: []bindingScenario{bindingSelectorFixture(
+		"scenario.skipping", witnessPath, "TestSkipping",
+	)}}
+
+	err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
+	if err == nil || !strings.Contains(err.Error(), "contains t.Skip") {
+		t.Fatalf("skipping witness error=%v", err)
+	}
+}
+
 func TestBindingWitnessSelectorsRejectNonTestAndBuildExcludedFiles(t *testing.T) {
 	t.Run("non-test source", func(t *testing.T) {
 		root := t.TempDir()

@@ -776,7 +776,7 @@ func TestExactTarballOnboardingTrace(t *testing.T) {
 	contract := mustReadBytes(t, filepath.Join("..", "..", "..", "proofkit", "cli-contract.v2.json"))
 	target, err := releaseplatform.CurrentTarget()
 	if err != nil {
-		t.Skipf("current platform has no admitted npm package target: %v", err)
+		t.Fatalf("current platform has no admitted npm package target: %v", err)
 	}
 	binaryPath := filepath.Join(t.TempDir(), "agentic-proofkit")
 	build := exec.Command("go", "build", "-o", binaryPath, "./cmd/agentic-proofkit")

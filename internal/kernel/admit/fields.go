@@ -11,6 +11,7 @@ import (
 
 var (
 	ruleIDPattern               = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*$`)
+	ruleIDSeparatorPattern      = regexp.MustCompile(`[._:-]`)
 	timestampLikePattern        = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
 	isoDateComponentPattern     = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
 	compactDateComponentRegexp  = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
@@ -96,7 +97,7 @@ func RuleID(raw any, context string) (string, error) {
 	if timestampLikePattern.MatchString(value) {
 		return "", fmt.Errorf("%s must not contain timestamp-like identity components", context)
 	}
-	for _, component := range regexp.MustCompile(`[._:-]`).Split(value, -1) {
+	for _, component := range ruleIDSeparatorPattern.Split(value, -1) {
 		if isoDateComponentPattern.MatchString(component) || compactDateComponentRegexp.MatchString(component) {
 			return "", fmt.Errorf("%s must not contain timestamp-like identity components", context)
 		}
@@ -263,25 +264,34 @@ func TextArray(raw any, context string, allowEmpty bool) ([]string, error) {
 	return result, nil
 }
 
-func SortedText(values []string, context string, allowEmpty bool) ([]string, error) {
+func NormalizeSortedText(values []string, context string, allowEmpty bool) ([]string, error) {
 	if !allowEmpty && len(values) == 0 {
 		return nil, fmt.Errorf("%s must be non-empty", context)
 	}
-	sort.Strings(values)
-	for index := 1; index < len(values); index++ {
-		if values[index-1] == values[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
+	normalized := append([]string{}, values...)
+	sort.Strings(normalized)
+	for index := 1; index < len(normalized); index++ {
+		if normalized[index-1] == normalized[index] {
+			return nil, fmt.Errorf("%s must be unique", context)
 		}
 	}
-	return values, nil
+	return normalized, nil
 }
 
-func SortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
+func NormalizeSortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
 	values, err := TextArray(raw, context, allowEmpty)
 	if err != nil {
 		return nil, err
 	}
-	return SortedText(values, context, allowEmpty)
+	return NormalizeSortedText(values, context, allowEmpty)
+}
+
+func SortedText(values []string, context string, allowEmpty bool) ([]string, error) {
+	return NormalizeSortedText(values, context, allowEmpty)
+}
+
+func SortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
+	return NormalizeSortedTextArray(raw, context, allowEmpty)
 }
 
 func MergeNonClaims(required []string, caller []string, context string) ([]string, error) {

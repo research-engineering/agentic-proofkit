@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -52,7 +53,7 @@ func writeValue(builder *strings.Builder, value any, depth int, layout Layout) e
 		}
 		builder.WriteString(typed.String())
 	case int:
-		builder.WriteString(fmt.Sprintf("%d", typed))
+		builder.WriteString(strconv.Itoa(typed))
 	case []any:
 		return writeArray(builder, typed, depth, layout)
 	case map[string]any:
@@ -146,6 +147,9 @@ func writeIndent(builder *strings.Builder, depth int) {
 }
 
 func quote(value string) string {
+	if isUnescapedASCII(value) {
+		return `"` + value + `"`
+	}
 	var buffer bytes.Buffer
 	encoder := json.NewEncoder(&buffer)
 	encoder.SetEscapeHTML(false)
@@ -153,4 +157,14 @@ func quote(value string) string {
 		panic(err)
 	}
 	return strings.TrimSuffix(buffer.String(), "\n")
+}
+
+func isUnescapedASCII(value string) bool {
+	for index := 0; index < len(value); index++ {
+		character := value[index]
+		if character < 0x20 || character >= 0x80 || character == '"' || character == '\\' {
+			return false
+		}
+	}
+	return true
 }

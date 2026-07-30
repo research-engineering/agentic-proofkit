@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha256"
+	"debug/elf"
 	"debug/macho"
 	"encoding/base64"
 	"encoding/csv"
@@ -192,10 +193,45 @@ func verifyWheelContents(path string, manifest packageJSON, target target, expec
 	if fmt.Sprintf("%x", embeddedBinarySHA256[:]) != expectedBinarySHA256 {
 		return fmt.Errorf("%s embedded binary sha256 mismatch", path)
 	}
+	if err := verifyEmbeddedBinaryTarget(target, embeddedBinary); err != nil {
+		return fmt.Errorf("%s: %w", path, err)
+	}
 	if err := verifyDarwinWheelMinimum(target, embeddedBinary); err != nil {
 		return fmt.Errorf("%s: %w", path, err)
 	}
 	return verifyRecord(entries, distInfo+"/RECORD")
+}
+
+func verifyEmbeddedBinaryTarget(target target, content []byte) error {
+	switch target.GOOS {
+	case "darwin":
+		file, err := macho.NewFile(bytes.NewReader(content))
+		if err != nil {
+			return fmt.Errorf("decode embedded Mach-O: %w", err)
+		}
+		expected := map[string]macho.Cpu{
+			"amd64": macho.CpuAmd64,
+			"arm64": macho.CpuArm64,
+		}[target.GOARCH]
+		if expected == 0 || file.Cpu != expected {
+			return fmt.Errorf("embedded Mach-O architecture %s does not match target %s", file.Cpu, target.GOARCH)
+		}
+	case "linux":
+		file, err := elf.NewFile(bytes.NewReader(content))
+		if err != nil {
+			return fmt.Errorf("decode embedded ELF: %w", err)
+		}
+		expected := map[string]elf.Machine{
+			"amd64": elf.EM_X86_64,
+			"arm64": elf.EM_AARCH64,
+		}[target.GOARCH]
+		if expected == elf.EM_NONE || file.Machine != expected {
+			return fmt.Errorf("embedded ELF architecture %s does not match target %s", file.Machine, target.GOARCH)
+		}
+	default:
+		return fmt.Errorf("unsupported embedded binary target OS %s", target.GOOS)
+	}
+	return nil
 }
 
 func verifyDarwinWheelMinimum(target target, content []byte) error {

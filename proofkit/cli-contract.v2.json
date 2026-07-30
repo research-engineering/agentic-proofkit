@@ -1340,7 +1340,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.external-consumer.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:8434bcea866d7e26d93fc896d88e16659252c6b5b7057a60525d9c1b64c1bf40",
+        "rootDefinitionDigest": "sha256:89b31d89ae46fcef5f5d90a64e1a38427dd048ff910fbd1c51937469468ca83f",
         "nativeSource": {
           "path": "internal/command/externalconsumer",
           "canonicalDigest": "sha256:2319bb14baed7ece382f022d3b397cdf241844a2d437716cc5098661486e9a25",
@@ -2216,7 +2216,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:9a9280f7e5803767e0edc5aa5431d9163becc9265d767b2cc1acb22f454b70ea",
+            "canonicalDigest": "sha256:b05dbafc64cccb87ef05a31f048096629ecdfe3cb3f9ad0e8d4131a3966e68ab",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2541,7 +2541,7 @@
         "rootDefinitionDigest": "sha256:7db0df3e9be3eba731937a4d887aa031cd70d3d5db36de3c630a1bced1d04bcf",
         "nativeSource": {
           "path": "internal/command/readinesscloseout",
-          "canonicalDigest": "sha256:8e706df865d00d2258328a6be9700a0200f856335b018209a63af5f06b0052d6",
+          "canonicalDigest": "sha256:87e9d83fbcd645f90dbd894af63d083629c1330fac60e3ec39698bffe01dc122",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2569,7 +2569,7 @@
         "rootDefinitionDigest": "sha256:0ef2b994e1ee6fed9ce10740c0464dda72c3df220a9453e7a6a221fba31cec29",
         "nativeSource": {
           "path": "internal/command/readinesscloseout",
-          "canonicalDigest": "sha256:8e706df865d00d2258328a6be9700a0200f856335b018209a63af5f06b0052d6",
+          "canonicalDigest": "sha256:87e9d83fbcd645f90dbd894af63d083629c1330fac60e3ec39698bffe01dc122",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2816,7 +2816,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.registry-consumer.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:cc490b41d9f9e68c5121f81e702222ed3e717d462fa2059a0e0b76c0c82fb5e5",
+        "rootDefinitionDigest": "sha256:b9933ddbbca994fc3ea4d48da422ec5b09972ec47994a000ffbd31f46bc7cb9d",
         "nativeSource": {
           "path": "internal/command/registryconsumer",
           "canonicalDigest": "sha256:8b208777ccc022c5ea6b2a1d74366acd885ea0089a802999bc0a896c3b3a9c63",
@@ -3113,7 +3113,7 @@
         "rootDefinitionDigest": "sha256:7cb2357b227c2669b5322712ce6e032315e18b726dde8ead31b1feb29e14b418",
         "nativeSource": {
           "path": "internal/command/repoprofileadmission",
-          "canonicalDigest": "sha256:47c0521b8a99c2aa96016735995d700b555601d0dc3705b7248db6926e789b9f",
+          "canonicalDigest": "sha256:9a60318c4f1b673c79cf0fa55f589170256a16e18ec3c9b069ba567184caff6d",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3140,7 +3140,7 @@
         "rootDefinitionDigest": "sha256:acf8e7db39bfb1325d83c2cdfe68a7c243847d207e56691a3b2937b28f95d3e7",
         "nativeSource": {
           "path": "internal/command/repoprofileadmission",
-          "canonicalDigest": "sha256:47c0521b8a99c2aa96016735995d700b555601d0dc3705b7248db6926e789b9f",
+          "canonicalDigest": "sha256:9a60318c4f1b673c79cf0fa55f589170256a16e18ec3c9b069ba567184caff6d",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3370,7 +3370,7 @@
         "rootDefinitionDigest": "sha256:50a7bb1b477b6067d410cf22db7e7564a9742aa7f6a270642149d372f0156007",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
-          "canonicalDigest": "sha256:db68fadae3f68184d118cfdd39befedde9783cbcdd798cf56337b43fc0f7d018",
+          "canonicalDigest": "sha256:7d85d0f51193cd3d42fbf19eb4dad4baadf5e5a050be9ce1363bf3e92dbdfcf2",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3407,7 +3407,7 @@
         "rootDefinitionDigest": "sha256:c2e7d851c7928560d4267fe85ebc0ae61e33c4c0ef15f7f7b01deb73bb80eda7",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
-          "canonicalDigest": "sha256:db68fadae3f68184d118cfdd39befedde9783cbcdd798cf56337b43fc0f7d018",
+          "canonicalDigest": "sha256:7d85d0f51193cd3d42fbf19eb4dad4baadf5e5a050be9ce1363bf3e92dbdfcf2",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3454,7 +3454,7 @@
         "rootDefinitionDigest": "sha256:41bc233c96bd468bc96eeb0447e037cacdbcf92bb04161052303e8747e4282f2",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:120f236dc1e9e11e5cecb6237bf727fe513b75e83783f52d31872c6c2b20ae7e",
+          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3494,7 +3494,7 @@
         "rootDefinitionDigest": "sha256:cdadd7b589d682a122cfe2b801f001a3b22a2269aa4977ebe073932d11e1f816",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:120f236dc1e9e11e5cecb6237bf727fe513b75e83783f52d31872c6c2b20ae7e",
+          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3541,7 +3541,7 @@
         "rootDefinitionDigest": "sha256:43852cf1a52b3c1f000ec95e460fbad157a6b6a39958d20f81c9e1e4d31e3c6f",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:120f236dc1e9e11e5cecb6237bf727fe513b75e83783f52d31872c6c2b20ae7e",
+          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3579,7 +3579,7 @@
         "rootDefinitionDigest": "sha256:61f7fd43e2e9da5bde9b61bb86e02cbf337a43c6891ca888c1d42936e5b16456",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:120f236dc1e9e11e5cecb6237bf727fe513b75e83783f52d31872c6c2b20ae7e",
+          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4091,7 +4091,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.requirement-proof-source-set.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:8003f7feca3b82413cbc2bfdbc3b754508ec3d7e1706df54431b6332d19ec5fd",
+        "rootDefinitionDigest": "sha256:cd406c4aba90faa0fa2b132d4c50af85578ec79a6ad1d89bc997ea027d6def05",
         "nativeSource": {
           "path": "internal/command/requirementproofsourceset",
           "canonicalDigest": "sha256:bd5377b5ec6b2a5a506e2702ed8dacb9a25908aa9f63002a4cf88f63f4641ba7",
@@ -5014,7 +5014,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.secret-scan.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:6477a651d88632cbdd4cdde0877b95faa1efaeaa16ec8d16a913313517d591ce",
+        "rootDefinitionDigest": "sha256:6df7c84b104a318b2f6b04b662c3dfb54b16f4fb339cfb5f0ba6ee56485fae8f",
         "nativeSource": {
           "path": "internal/command/secretscan",
           "canonicalDigest": "sha256:7fe8eb1fe43973b321fce0edce337b565d4a51e86e244bce9c3a57039209b0e3",
@@ -5169,7 +5169,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.selective-gate-obligation-decision-input.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:f488e84a8a588593d41cdbea8991fbe549239580292db573d215c8a4725ad2ee",
+        "rootDefinitionDigest": "sha256:394c4523f385351794db259b7a7d365d0852ee22ec38695b1336f6559f823a15",
         "nativeSource": {
           "path": "internal/command/selectivegateevidence",
           "canonicalDigest": "sha256:ddee1b6e09f88546d237fe32b4f4c98b62406efe0556273f382d1e6be577c4ef",
@@ -5341,7 +5341,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:9a9280f7e5803767e0edc5aa5431d9163becc9265d767b2cc1acb22f454b70ea",
+          "canonicalDigest": "sha256:b05dbafc64cccb87ef05a31f048096629ecdfe3cb3f9ad0e8d4131a3966e68ab",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5370,7 +5370,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:9a9280f7e5803767e0edc5aa5431d9163becc9265d767b2cc1acb22f454b70ea",
+          "canonicalDigest": "sha256:b05dbafc64cccb87ef05a31f048096629ecdfe3cb3f9ad0e8d4131a3966e68ab",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -8476,48 +8476,14 @@
         "variants": [
           {
             "allowedFields": [
-              "binarySmokeProbeRuleId",
-              "nonClaims",
-              "npmIntegrity",
-              "npmShasum",
-              "packMetadataPath",
-              "packMetadataSha256",
-              "packageName",
-              "packageVersion",
-              "pilotId",
-              "pilotMode",
-              "releaseAuthorityInput",
-              "rollback",
-              "schemaVersion",
-              "sourceArtifactName",
-              "sourceCommit",
-              "sourceRepository",
-              "sourceWorkflowRun",
-              "tarballPath",
-              "tarballSha256",
-              "witnessPlan"
+              "evidence",
+              "input",
+              "schemaVersion"
             ],
             "requiredFields": [
-              "binarySmokeProbeRuleId",
-              "nonClaims",
-              "npmIntegrity",
-              "npmShasum",
-              "packMetadataPath",
-              "packMetadataSha256",
-              "packageName",
-              "packageVersion",
-              "pilotId",
-              "pilotMode",
-              "releaseAuthorityInput",
-              "rollback",
-              "schemaVersion",
-              "sourceArtifactName",
-              "sourceCommit",
-              "sourceRepository",
-              "sourceWorkflowRun",
-              "tarballPath",
-              "tarballSha256",
-              "witnessPlan"
+              "evidence",
+              "input",
+              "schemaVersion"
             ],
             "rootKind": "object",
             "variantId": "01-root",
@@ -8527,7 +8493,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:8434bcea866d7e26d93fc896d88e16659252c6b5b7057a60525d9c1b64c1bf40"
+      "canonicalDigest": "sha256:89b31d89ae46fcef5f5d90a64e1a38427dd048ff910fbd1c51937469468ca83f"
     },
     {
       "definitionId": "proofkit.external-consumer.output.v1.root-shape",
@@ -10653,34 +10619,13 @@
         "variants": [
           {
             "allowedFields": [
-              "consumerId",
-              "dependencyName",
-              "dependencySpec",
-              "nonClaims",
-              "packageName",
-              "packageVersion",
-              "registryUrl",
-              "releaseAuthorityInput",
-              "rollbackVersionPin",
-              "schemaVersion",
-              "tarballFileName",
-              "tarballIntegrity",
-              "tarballShasum"
+              "input",
+              "proof",
+              "schemaVersion"
             ],
             "requiredFields": [
-              "consumerId",
-              "dependencyName",
-              "dependencySpec",
-              "nonClaims",
-              "packageName",
-              "packageVersion",
-              "registryUrl",
-              "releaseAuthorityInput",
-              "rollbackVersionPin",
-              "schemaVersion",
-              "tarballFileName",
-              "tarballIntegrity",
-              "tarballShasum"
+              "input",
+              "schemaVersion"
             ],
             "rootKind": "object",
             "variantId": "01-root",
@@ -10690,7 +10635,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:cc490b41d9f9e68c5121f81e702222ed3e717d462fa2059a0e0b76c0c82fb5e5"
+      "canonicalDigest": "sha256:b9933ddbbca994fc3ea4d48da422ec5b09972ec47994a000ffbd31f46bc7cb9d"
     },
     {
       "definitionId": "proofkit.registry-consumer.output.v1.root-shape",
@@ -12176,7 +12121,6 @@
             ],
             "requiredFields": [
               "canonicalEnvelope",
-              "projection",
               "sourceSet",
               "sources"
             ],
@@ -12188,7 +12132,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:8003f7feca3b82413cbc2bfdbc3b754508ec3d7e1706df54431b6332d19ec5fd"
+      "canonicalDigest": "sha256:cd406c4aba90faa0fa2b132d4c50af85578ec79a6ad1d89bc997ea027d6def05"
     },
     {
       "definitionId": "proofkit.requirement-proof-source-set.output.v1.root-shape",
@@ -13270,8 +13214,7 @@
               "files",
               "nonClaims",
               "reportId",
-              "schemaVersion",
-              "suppressions"
+              "schemaVersion"
             ],
             "rootKind": "object",
             "variantId": "01-root",
@@ -13281,7 +13224,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:6477a651d88632cbdd4cdde0877b95faa1efaeaa16ec8d16a913313517d591ce"
+      "canonicalDigest": "sha256:6df7c84b104a318b2f6b04b662c3dfb54b16f4fb339cfb5f0ba6ee56485fae8f"
     },
     {
       "definitionId": "proofkit.secret-scan.output.v1.root-shape",
@@ -13469,23 +13412,19 @@
         "variants": [
           {
             "allowedFields": [
-              "evidenceClass",
-              "evidenceId",
+              "commandRoutes",
+              "decisionId",
+              "evidence",
               "nonClaims",
-              "plan",
-              "preexistingFailures",
-              "producerAdmission",
-              "receipts",
+              "receiptCurrentnessScopeAdmission",
+              "receiptTrustClassAdmission",
               "schemaVersion"
             ],
             "requiredFields": [
-              "evidenceClass",
-              "evidenceId",
+              "commandRoutes",
+              "decisionId",
+              "evidence",
               "nonClaims",
-              "plan",
-              "preexistingFailures",
-              "producerAdmission",
-              "receipts",
               "schemaVersion"
             ],
             "rootKind": "object",
@@ -13496,7 +13435,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:f488e84a8a588593d41cdbea8991fbe549239580292db573d215c8a4725ad2ee"
+      "canonicalDigest": "sha256:394c4523f385351794db259b7a7d365d0852ee22ec38695b1336f6559f823a15"
     },
     {
       "definitionId": "proofkit.selective-gate-obligation-decision-input.output.v1.root-shape",

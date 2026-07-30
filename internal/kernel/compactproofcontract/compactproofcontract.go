@@ -443,15 +443,15 @@ func mutationFindingCount(state string) int {
 }
 
 func resolverSurfaces(surfaces []Surface, requirements []any) []any {
+	requirementIDsBySurface := make(map[string][]string, len(surfaces))
+	for _, requirementValue := range requirements {
+		requirement := requirementValue.(map[string]any)
+		surfaceID := requirement["surfaceId"].(string)
+		requirementIDsBySurface[surfaceID] = append(requirementIDsBySurface[surfaceID], requirement["requirementId"].(string))
+	}
 	result := make([]any, 0, len(surfaces))
 	for _, surface := range surfaces {
-		requirementIDs := []string{}
-		for _, requirementValue := range requirements {
-			requirement := requirementValue.(map[string]any)
-			if requirement["surfaceId"] == surface.SurfaceID {
-				requirementIDs = append(requirementIDs, requirement["requirementId"].(string))
-			}
-		}
+		requirementIDs := requirementIDsBySurface[surface.SurfaceID]
 		sort.Strings(requirementIDs)
 		result = append(result, map[string]any{
 			"requirementIds": stringSliceToAny(requirementIDs),

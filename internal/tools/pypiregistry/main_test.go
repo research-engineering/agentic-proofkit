@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,20 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
+
+func TestDecodePyPIResponseEnforcesByteLimit(t *testing.T) {
+	exact := strings.Repeat(" ", maxPyPIResponseBytes-2) + "{}"
+	if _, err := decodePyPIResponse(strings.NewReader(exact)); err != nil {
+		t.Fatalf("exact-limit response rejected: %v", err)
+	}
+	oversized := strings.Repeat(" ", maxPyPIResponseBytes+1)
+	if _, err := decodePyPIResponse(strings.NewReader(oversized)); !errors.Is(err, errPyPIResponseTooLarge) {
+		t.Fatalf("oversized response error=%v, want byte-limit classification", err)
+	}
+	if retryablePyPIFetchError(errPyPIResponseTooLarge) {
+		t.Fatal("deterministically oversized response must not be retried")
+	}
+}
 
 func TestCompareRegistryFilesAcceptsMatchingWheels(t *testing.T) {
 	target, ok := releaseplatform.TargetByPlatformSuffix("linux-x64")

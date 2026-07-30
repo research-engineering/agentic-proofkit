@@ -1,6 +1,7 @@
 package admission
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -80,6 +81,38 @@ func TestDecodeJSONRejectsResourceLimit(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "resource limit") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDecodeJSONRejectsLossyUnicodeInputs(t *testing.T) {
+	tests := []struct {
+		name  string
+		input []byte
+	}{
+		{name: "invalid UTF-8 ff", input: []byte{'{', '"', 'v', '"', ':', '"', 0xff, '"', '}'}},
+		{name: "invalid UTF-8 fe", input: []byte{'{', '"', 'v', '"', ':', '"', 0xfe, '"', '}'}},
+		{name: "unpaired high surrogate", input: []byte(`{"v":"\ud800"}`)},
+		{name: "unpaired low surrogate", input: []byte(`{"v":"\udc00"}`)},
+		{name: "high surrogate followed by non-low surrogate", input: []byte(`{"v":"\ud800\u0041"}`)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := DecodeJSON(bytes.NewReader(test.input), 1024); err == nil {
+				t.Fatal("DecodeJSON accepted a lossy Unicode input")
+			}
+		})
+	}
+}
+
+func TestDecodeJSONAcceptsUnicodeScalarValues(t *testing.T) {
+	for _, input := range []string{
+		`{"literal":"` + string('\ufffd') + `"}`,
+		`{"escaped":"\ufffd"}`,
+		`{"pair":"\ud83d\ude80"}`,
+	} {
+		if _, err := DecodeJSON(strings.NewReader(input), 1024); err != nil {
+			t.Fatalf("DecodeJSON(%q) error=%v", input, err)
+		}
 	}
 }
 

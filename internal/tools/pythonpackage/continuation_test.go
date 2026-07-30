@@ -35,7 +35,7 @@ func TestExactDisplayedRouteOperandsRejectsWhitespaceAndExpansionMutants(t *test
 
 func TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM(t *testing.T) {
 	if runtime.GOOS == "windows" {
-		t.Skip("Windows wheels are not supported")
+		t.Fatal("Windows wheels are not supported")
 	}
 	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
 	if err != nil {
@@ -50,7 +50,7 @@ func runInstalledWheelContinuationWitness(t *testing.T, repositoryRoot string) {
 	t.Helper()
 	target, err := currentTarget()
 	if err != nil {
-		t.Skipf("current platform has no admitted wheel target: %v", err)
+		t.Fatalf("current platform has no admitted wheel target: %v", err)
 	}
 	manifest, err := readPackageJSON()
 	if err != nil {

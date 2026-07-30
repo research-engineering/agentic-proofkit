@@ -144,20 +144,24 @@ func TestRedactStructuralTextPreservesLongStructureAndRedactsSensitiveTokens(t *
 	}
 }
 
-func TestSortedTextEnforcesUniquenessAndNonEmptyPolicy(t *testing.T) {
+func TestNormalizeSortedTextEnforcesUniquenessWithoutAliasing(t *testing.T) {
 	t.Parallel()
 
-	values, err := SortedText([]string{"b", "a"}, "refs", false)
+	input := []string{"b", "a"}
+	values, err := NormalizeSortedText(input, "refs", false)
 	if err != nil {
 		t.Fatalf("expected sortable unique refs: %v", err)
 	}
 	if strings.Join(values, ",") != "a,b" {
 		t.Fatalf("expected sorted refs, got %q", strings.Join(values, ","))
 	}
-	if _, err := SortedText([]string{"a", "a"}, "refs", false); err == nil {
+	if strings.Join(input, ",") != "b,a" {
+		t.Fatalf("input mutated to %q", strings.Join(input, ","))
+	}
+	if _, err := NormalizeSortedText([]string{"a", "a"}, "refs", false); err == nil {
 		t.Fatal("expected duplicate refs rejection")
 	}
-	if _, err := SortedText([]string{}, "refs", false); err == nil {
+	if _, err := NormalizeSortedText([]string{}, "refs", false); err == nil {
 		t.Fatal("expected empty refs rejection")
 	}
 }

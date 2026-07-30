@@ -351,6 +351,18 @@ func TestVerifyWheelContentsAcceptsDarwinTagAtOrAboveMachOMinimum(t *testing.T) 
 	}
 }
 
+func TestVerifyEmbeddedBinaryTargetRejectsFormatAndArchitectureMismatch(t *testing.T) {
+	arm64MachO := macho64WithMinimumMacOS(12, 0, 0)
+	darwinAMD64 := releaseTargets()[1]
+	if err := verifyEmbeddedBinaryTarget(darwinAMD64, arm64MachO); err == nil || !strings.Contains(err.Error(), "does not match target amd64") {
+		t.Fatalf("architecture mismatch error=%v", err)
+	}
+	linuxARM64 := releaseTargets()[2]
+	if err := verifyEmbeddedBinaryTarget(linuxARM64, arm64MachO); err == nil || !strings.Contains(err.Error(), "decode embedded ELF") {
+		t.Fatalf("format mismatch error=%v", err)
+	}
+}
+
 func TestMachOMinimumMacOSRejectsTruncatedBuildVersion(t *testing.T) {
 	content := macho64WithMinimumMacOS(12, 0, 0)
 	binary.LittleEndian.PutUint32(content[36:40], 8)

@@ -106,6 +106,16 @@ func TestBuildRejectsCallerControlledReportKind(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsWhitespaceOnlyReason(t *testing.T) {
+	input := minimalCloseoutInput(closedFrontierMarkdown())
+	input["inputDefinitions"].([]any)[0].(map[string]any)["reason"] = " \t "
+
+	_, status, err := Build(input)
+	if status != 1 || err == nil || !strings.Contains(err.Error(), "must be non-empty text") {
+		t.Fatalf("Build() status=%d error=%v, want whitespace-only reason rejection", status, err)
+	}
+}
+
 func TestBuildRejectsPassedClassificationForBlockedOwnerRow(t *testing.T) {
 	markdown := strings.Join([]string{
 		"### Production Readiness Roadmap",

@@ -873,7 +873,11 @@ func uniqueTextArray(raw any, context string) ([]string, error) {
 
 func textValue(raw any, context string, allowEmpty bool, allowSecretLike bool) (string, error) {
 	value, ok := raw.(string)
-	if !ok || (!allowEmpty && value == "") {
+	if !ok {
+		return "", fmt.Errorf("%s must be non-empty text", context)
+	}
+	value = strings.TrimSpace(value)
+	if !allowEmpty && value == "" {
 		return "", fmt.Errorf("%s must be non-empty text", context)
 	}
 	if strings.ContainsRune(value, '\x00') {

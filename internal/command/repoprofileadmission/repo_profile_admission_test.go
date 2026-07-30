@@ -17,6 +17,17 @@ func TestBuildAdmitsValidRepoProfileAndRejectsRootPackageMismatch(t *testing.T) 
 		encoded, _ := json.Marshal(record)
 		t.Fatalf("Build() exit=%d record=%s, want passed", exitCode, string(encoded))
 	}
+	if !strings.Contains(strings.Join(admitNonClaims(record.NonClaims), "\n"), "Repo profile test input does not read repository state.") {
+		t.Fatalf("Build() dropped caller nonClaims: %#v", record.NonClaims)
+	}
+	record.NonClaims[0] = "mutated by caller"
+	second, secondExit, secondErr := Build(validRepoProfileInput())
+	if secondErr != nil || secondExit != 0 {
+		t.Fatalf("second Build() exit=%d error=%v", secondExit, secondErr)
+	}
+	if strings.Contains(strings.Join(admitNonClaims(second.NonClaims), "\n"), "mutated by caller") {
+		t.Fatalf("Build() leaked prior report mutation: %#v", second.NonClaims)
+	}
 
 	input := validRepoProfileInput()
 	input["facts"].(map[string]any)["rootPackageName"] = "other-root"
@@ -28,6 +39,17 @@ func TestBuildAdmitsValidRepoProfileAndRejectsRootPackageMismatch(t *testing.T) 
 		t.Fatalf("Build() accepted rootPackageName mismatch: exit=%d state=%s", exitCode, record.State)
 	}
 	assertRecordContains(t, record.JSONValue(), "rootPackageName must match")
+}
+
+func admitNonClaims(values []any) []string {
+	out := make([]string, 0, len(values))
+	for _, value := range values {
+		text, ok := value.(string)
+		if ok {
+			out = append(out, text)
+		}
+	}
+	return out
 }
 
 func TestBuildAdmitsOptionalInputSchemaVersionOne(t *testing.T) {
