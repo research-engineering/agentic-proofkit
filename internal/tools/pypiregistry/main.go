@@ -27,7 +27,10 @@ const (
 
 	pypiRegistryAttemptLimit = 24
 	pypiRegistryRetryDelay   = 10 * time.Second
+	maxPyPIResponseBytes     = 8 << 20
 )
+
+var errPyPIResponseTooLarge = errors.New("pypi response exceeds byte limit")
 
 type packageJSON struct {
 	Name    string `json:"name"`
@@ -82,6 +85,14 @@ type pypiHTTPStatusError struct {
 
 func (err pypiHTTPStatusError) Error() string {
 	return fmt.Sprintf("pypi returned %s: %s", err.Status, err.Body)
+}
+
+type pypiMissingWheelError struct {
+	Filename string
+}
+
+func (err pypiMissingWheelError) Error() string {
+	return fmt.Sprintf("pypi release is missing wheel %s", err.Filename)
 }
 
 type registryArtifactSet struct {
@@ -225,28 +236,37 @@ func fetchPyPIRelease(name string, version string) (pypiResponse, error) {
 	if err != nil {
 		return pypiResponse{}, err
 	}
+	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
-		_ = response.Body.Close()
 		return pypiResponse{}, pypiHTTPStatusError{
 			StatusCode: response.StatusCode,
 			Status:     response.Status,
 			Body:       strings.TrimSpace(string(body)),
 		}
 	}
-	body, err := io.ReadAll(response.Body)
-	_ = response.Body.Close()
-	if err != nil {
-		return pypiResponse{}, err
-	}
-	out, err := admission.DecodeTypedJSON[pypiResponse](bytes.NewReader(body), int64(len(body)))
+	out, err := decodePyPIResponse(response.Body)
 	if err != nil {
 		return pypiResponse{}, err
 	}
 	return out, nil
 }
 
+func decodePyPIResponse(reader io.Reader) (pypiResponse, error) {
+	body, err := io.ReadAll(io.LimitReader(reader, maxPyPIResponseBytes+1))
+	if err != nil {
+		return pypiResponse{}, err
+	}
+	if len(body) > maxPyPIResponseBytes {
+		return pypiResponse{}, errPyPIResponseTooLarge
+	}
+	return admission.DecodeTypedJSON[pypiResponse](bytes.NewReader(body), maxPyPIResponseBytes)
+}
+
 func retryablePyPIFetchError(err error) bool {
+	if errors.Is(err, errPyPIResponseTooLarge) {
+		return false
+	}
 	var statusErr pypiHTTPStatusError
 	if errors.As(err, &statusErr) {
 		return statusErr.StatusCode == http.StatusNotFound || statusErr.StatusCode >= http.StatusInternalServerError
@@ -255,7 +275,8 @@ func retryablePyPIFetchError(err error) bool {
 }
 
 func retryableRegistryEvidenceError(err error) bool {
-	return strings.Contains(err.Error(), "pypi release is missing wheel")
+	var missing pypiMissingWheelError
+	return errors.As(err, &missing)
 }
 
 func requireCandidatePlatformCompleteness(records []wheelRecord) error {
@@ -337,7 +358,7 @@ func compareRegistryFiles(candidates pythonPackageSet, registry pypiResponse) ([
 	for _, candidate := range candidates.Packages {
 		file, ok := filesByName[candidate.Filename]
 		if !ok {
-			return nil, fmt.Errorf("pypi release is missing wheel %s", candidate.Filename)
+			return nil, pypiMissingWheelError{Filename: candidate.Filename}
 		}
 		if file.PackageType != "bdist_wheel" {
 			return nil, fmt.Errorf("pypi file %s has package type %s", file.Filename, file.PackageType)

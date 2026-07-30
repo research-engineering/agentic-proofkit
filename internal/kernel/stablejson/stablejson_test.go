@@ -1,8 +1,10 @@
 package stablejson
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -79,5 +81,33 @@ func TestMarshalAcceptsJSONNumberGrammar(t *testing.T) {
 				t.Fatalf("Marshal rejected valid JSON number token %q: %v", value.String(), err)
 			}
 		})
+	}
+}
+
+func TestQuoteFastPathMatchesCanonicalEncoder(t *testing.T) {
+	for _, value := range []string{
+		"",
+		"plain ASCII",
+		"<html>&text",
+		"quote\"slash\\",
+		"line\nbreak",
+		"cafe\u0301",
+		"\u2028\u2029",
+		string([]byte{0xff}),
+	} {
+		var buffer strings.Builder
+		if err := writeValue(&buffer, value, 0, LayoutCompact); err != nil {
+			t.Fatalf("writeValue(%q): %v", value, err)
+		}
+		var reference bytes.Buffer
+		encoder := json.NewEncoder(&reference)
+		encoder.SetEscapeHTML(false)
+		if err := encoder.Encode(value); err != nil {
+			t.Fatalf("encode reference %q: %v", value, err)
+		}
+		want := strings.TrimSuffix(reference.String(), "\n")
+		if buffer.String() != want {
+			t.Fatalf("quote(%q)=%q want %q", value, buffer.String(), want)
+		}
 	}
 }

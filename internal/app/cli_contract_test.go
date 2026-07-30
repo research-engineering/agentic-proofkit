@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "1b615f82dd66b83cf3d1a72154d7f4b7d1946eb3a6727cf4d0c54f065462c63f"
+	cliContractPublicABISHA256               = "4f305627f56ea031fc501b872ce9e20afa3e6b7b3af4fe20c48f787693198fa4"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -153,6 +153,61 @@ func TestCLIContractsAreCompleteGeneratedAndWitnessBound(t *testing.T) {
 	presetChoices := generatedCommandContractMetadataByName["stack-preset"].FlagChoices["--preset"]
 	if !slices.Equal(presetChoices, stackpreset.IDs()) {
 		t.Fatalf("generated app preset choices=%v package projection=%v", presetChoices, stackpreset.IDs())
+	}
+}
+
+func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
+	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	tests := []struct {
+		definitionID string
+		allowed      []string
+		required     []string
+	}{
+		{
+			definitionID: "proofkit.external-consumer.input.v1.root-shape",
+			allowed:      []string{"evidence", "input", "schemaVersion"},
+			required:     []string{"evidence", "input", "schemaVersion"},
+		},
+		{
+			definitionID: "proofkit.registry-consumer.input.v1.root-shape",
+			allowed:      []string{"input", "proof", "schemaVersion"},
+			required:     []string{"input", "schemaVersion"},
+		},
+		{
+			definitionID: "proofkit.requirement-proof-source-set.input.v1.root-shape",
+			allowed:      []string{"canonicalEnvelope", "projection", "sourceSet", "sources"},
+			required:     []string{"canonicalEnvelope", "sourceSet", "sources"},
+		},
+		{
+			definitionID: "proofkit.secret-scan.input.v1.root-shape",
+			allowed:      []string{"files", "nonClaims", "reportId", "schemaVersion", "suppressions"},
+			required:     []string{"files", "nonClaims", "reportId", "schemaVersion"},
+		},
+		{
+			definitionID: "proofkit.selective-gate-obligation-decision-input.input.v1.root-shape",
+			allowed:      []string{"commandRoutes", "decisionId", "evidence", "nonClaims", "receiptCurrentnessScopeAdmission", "receiptTrustClassAdmission", "schemaVersion"},
+			required:     []string{"commandRoutes", "decisionId", "evidence", "nonClaims", "schemaVersion"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.definitionID, func(t *testing.T) {
+			definition := definitions[test.definitionID]
+			if definition == nil {
+				t.Fatalf("missing definition %s", test.definitionID)
+			}
+			variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+			if len(variants) != 1 {
+				t.Fatalf("variants=%d want 1", len(variants))
+			}
+			variant := variants[0].(map[string]any)
+			if actual := stringsFromAny(variant["allowedFields"].([]any)); !slices.Equal(actual, test.allowed) {
+				t.Fatalf("allowedFields=%v want %v", actual, test.allowed)
+			}
+			if actual := stringsFromAny(variant["requiredFields"].([]any)); !slices.Equal(actual, test.required) {
+				t.Fatalf("requiredFields=%v want %v", actual, test.required)
+			}
+		})
 	}
 }
 

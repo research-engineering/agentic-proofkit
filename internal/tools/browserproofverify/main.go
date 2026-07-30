@@ -238,17 +238,17 @@ func verifyRecord(root string, raw any, expectedResolution proofInputResolution,
 		}
 		identityAssets = append(identityAssets, map[string]any{"path": path, "sha256": sha})
 	}
-	encodedIdentity, err := json.Marshal(map[string]any{
+	encodedIdentity, err := stablejson.MarshalLayout(map[string]any{
 		"assets": identityAssets,
 		"inputResolution": map[string]any{
 			"serverTarget": expectedResolution.ServerTarget,
 			"writerPath":   expectedResolution.WriterPath,
 		},
-	})
+	}, stablejson.LayoutCompact)
 	if err != nil {
 		return err
 	}
-	expectedInputDigest := digest.SHA256TextRef(string(encodedIdentity))
+	expectedInputDigest := digest.SHA256TextRef(strings.TrimSuffix(string(encodedIdentity), "\n"))
 	if record["inputDigest"] != expectedInputDigest {
 		return fmt.Errorf("browser runtime proof inputDigest mismatch: got %s want %s", admit.RedactStructuralText(fmt.Sprint(record["inputDigest"])), expectedInputDigest)
 	}

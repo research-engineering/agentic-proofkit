@@ -41,6 +41,16 @@ func TestComposeAndSliceRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Slice() error = %v", err)
 	}
+	direct, err := SliceSnapshot(snapshot, map[string]any{
+		"profile": "specification",
+		"nodeIds": []any{"spec.root"},
+	}, "consumer.context.slice")
+	if err != nil {
+		t.Fatalf("SliceSnapshot() error = %v", err)
+	}
+	if !sameStableJSON(t, output, direct) {
+		t.Fatal("SliceSnapshot() drifted from public Slice() projection")
+	}
 	if output["state"] != "selected" || output["snapshotId"] != snapshot.SnapshotID {
 		t.Fatalf("unexpected slice output: %#v", output)
 	}
@@ -53,6 +63,19 @@ func TestComposeAndSliceRoundTrip(t *testing.T) {
 	if len(requirements) == 0 {
 		t.Fatal("slice omitted all requirements from explicitly selected source")
 	}
+}
+
+func sameStableJSON(t *testing.T, left, right any) bool {
+	t.Helper()
+	leftJSON, err := stablejson.Marshal(left)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rightJSON, err := stablejson.Marshal(right)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bytes.Equal(leftJSON, rightJSON)
 }
 
 func TestV1DigestCoverageAdapters(t *testing.T) {

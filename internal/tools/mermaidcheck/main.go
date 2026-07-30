@@ -2,12 +2,14 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -69,16 +71,41 @@ func run(args []string, stdout io.Writer) error {
 }
 
 func markdownFilesFromGit() ([]string, error) {
-	cmd := exec.Command("git", "ls-files", "*.md")
+	return markdownFilesFromGitAt(".")
+}
+
+func markdownFilesFromGitAt(dir string) ([]string, error) {
+	cmd := exec.Command("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", "*.md")
+	cmd.Dir = dir
 	out, err := cmd.Output()
 	if err != nil {
-		return nil, fmt.Errorf("list tracked Markdown files: %w", err)
+		return nil, fmt.Errorf("list candidate Markdown files: %w", err)
 	}
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-	if len(lines) == 1 && lines[0] == "" {
-		return nil, nil
+
+	var files []string
+	seen := make(map[string]struct{})
+	for _, path := range strings.Split(string(out), "\x00") {
+		if path == "" {
+			continue
+		}
+		info, err := os.Stat(filepath.Join(dir, path))
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return nil, fmt.Errorf("inspect candidate Markdown file %s: %w", path, err)
+		}
+		if !info.Mode().IsRegular() {
+			continue
+		}
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+		files = append(files, path)
 	}
-	return lines, nil
+	sort.Strings(files)
+	return files, nil
 }
 
 func extractMermaidBlocks(path string) ([]diagramBlock, error) {

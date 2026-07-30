@@ -142,7 +142,10 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 			if shutdownErr == nil {
 				return nil
 			}
-			return errors.Join(shutdownErr, server.Close())
+			if closeErr := server.Close(); closeErr != nil {
+				return errors.Join(shutdownErr, closeErr)
+			}
+			return nil
 		},
 		done:     done,
 		terminal: terminal,

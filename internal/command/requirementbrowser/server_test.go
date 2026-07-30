@@ -390,7 +390,9 @@ func TestServerCloseForcesTerminationAfterGracefulDeadline(t *testing.T) {
 	}
 	shutdownCtx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 	defer cancel()
-	_ = handle.Close(shutdownCtx)
+	if err := handle.Close(shutdownCtx); err != nil {
+		t.Fatalf("forced close after graceful deadline returned error: %v", err)
+	}
 	select {
 	case <-handle.Done():
 	case <-time.After(time.Second):

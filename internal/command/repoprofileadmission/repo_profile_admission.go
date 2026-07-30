@@ -11,7 +11,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-var boundaryNonClaims = []any{
+var boundaryNonClaims = []string{
 	"Repo-profile structural admission does not read repository state.",
 	"Repo-profile structural admission does not execute native witnesses.",
 	"Repo-profile structural admission does not prove command pass evidence.",
@@ -142,6 +142,7 @@ type admissionResult struct {
 	EnvironmentClassCount       int
 	GeneratedArtifactCount      int
 	Failures                    []string
+	NonClaims                   []string
 }
 
 func Build(raw any) (report.Record, int, error) {
@@ -195,13 +196,14 @@ func verify(raw any) (admissionResult, error) {
 
 	for _, entry := range globEntries(input.Profile) {
 		for _, glob := range entry.Globs {
-			if err := pathpattern.Validate(glob, entry.Label+" glob"); err != nil {
+			pattern, err := pathpattern.Compile(glob, entry.Label+" glob")
+			if err != nil {
 				failures = append(failures, err.Error())
 				continue
 			}
 			matched := false
 			for _, tracked := range input.Facts.TrackedFiles {
-				if pathpattern.Match(glob, tracked) {
+				if pattern.MatchAdmitted(tracked) {
 					matched = true
 					break
 				}
@@ -235,6 +237,10 @@ func verify(raw any) (admissionResult, error) {
 		return admissionResult{}, err
 	}
 	failures = append(failures, commandFailures...)
+	nonClaims, err := admit.MergeNonClaims(boundaryNonClaims, input.Profile.NonClaims, "repo profile report")
+	if err != nil {
+		return admissionResult{}, err
+	}
 
 	return admissionResult{
 		CommandMatcherCount:         len(input.Profile.CommandMatchers),
@@ -242,6 +248,7 @@ func verify(raw any) (admissionResult, error) {
 		EnvironmentClassCount:       len(input.Profile.Proofs.EnvironmentClasses),
 		GeneratedArtifactCount:      len(input.Profile.Documents.GeneratedArtifacts),
 		Failures:                    sortedUniqueFailures(failures),
+		NonClaims:                   nonClaims,
 	}, nil
 }
 
@@ -281,7 +288,7 @@ func buildReport(result admissionResult) report.Record {
 		},
 		Diagnostics: []report.Diagnostic{},
 		RuleResults: rules,
-		NonClaims:   boundaryNonClaims,
+		NonClaims:   admit.StringSliceToAny(result.NonClaims),
 	}
 }
 

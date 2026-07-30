@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,9 +28,16 @@ const (
 	maxHandoffQuestionBytes = 4 << 10
 	maxHandoffContextBytes  = 1 << 20
 	maxHandoffPacketBytes   = 2 << 20
+	maxWorkspaceRequests    = 4
+)
+
+var (
+	errUnauthorizedAPIRequest = errors.New("unauthorized browser API request")
+	errStaleAPIRequest        = errors.New("browser API request snapshot is stale")
 )
 
 func browserHandler(view string, rendered renderedView, expectedAuthority, capability string, oneShot bool, terminal *terminalArbiter) http.Handler {
+	workspaceRequests := make(chan struct{}, maxWorkspaceRequests)
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		if request.Host != expectedAuthority {
 			forbidden(response, request.Method)
@@ -67,18 +75,30 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 				methodNotAllowed(response, method, "POST")
 				return
 			}
+			if !admitWorkspaceRequest(response, workspaceRequests) {
+				return
+			}
+			defer releaseWorkspaceRequest(workspaceRequests)
 			serveWorkspaceQuery(response, request, expectedOrigin, capability, rendered.workspace)
 		case "/api/v1/requirements":
 			if method != http.MethodPost {
 				methodNotAllowed(response, method, "POST")
 				return
 			}
+			if !admitWorkspaceRequest(response, workspaceRequests) {
+				return
+			}
+			defer releaseWorkspaceRequest(workspaceRequests)
 			serveWorkspaceRequirements(response, request, expectedOrigin, capability, rendered.workspace)
 		case "/api/v1/diff", "/api/v1/graph":
 			if method != http.MethodPost {
 				methodNotAllowed(response, method, "POST")
 				return
 			}
+			if !admitWorkspaceRequest(response, workspaceRequests) {
+				return
+			}
+			defer releaseWorkspaceRequest(workspaceRequests)
 			serveWorkspaceProjection(response, request, expectedOrigin, capability, rendered.workspace)
 		case "/api/v1/cancel":
 			if method != http.MethodPost {
@@ -91,12 +111,30 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 				methodNotAllowed(response, method, "POST")
 				return
 			}
+			if !admitWorkspaceRequest(response, workspaceRequests) {
+				return
+			}
+			defer releaseWorkspaceRequest(workspaceRequests)
 			serveHandoff(response, request, expectedOrigin, capability, rendered.workspace, oneShot, terminal)
 		default:
 			response.WriteHeader(http.StatusNotFound)
 			writeBody(response, method, []byte("not found\n"))
 		}
 	})
+}
+
+func admitWorkspaceRequest(response http.ResponseWriter, requests chan struct{}) bool {
+	select {
+	case requests <- struct{}{}:
+		return true
+	default:
+		response.WriteHeader(http.StatusTooManyRequests)
+		return false
+	}
+}
+
+func releaseWorkspaceRequest(requests chan struct{}) {
+	<-requests
 }
 
 func serveWorkspaceRequirements(response http.ResponseWriter, request *http.Request, expectedOrigin, capability string, session *workspaceSession) {
@@ -152,12 +190,7 @@ func serveWorkspaceQuery(response http.ResponseWriter, request *http.Request, ex
 		return
 	}
 	queryID := digest.SHA256TextRef(string(queryBytes))
-	slice, err := requirementcontext.Slice(map[string]any{
-		"context":       session.ContextValue,
-		"query":         query,
-		"schemaVersion": json.Number("1"),
-		"sliceId":       "browser.query:" + requestID,
-	})
+	slice, err := requirementcontext.SliceSnapshot(session.Snapshot, query, "browser.query:"+requestID)
 	if err != nil {
 		writeAPIError(response, request.Method, err)
 		return
@@ -368,7 +401,7 @@ func serveCancel(response http.ResponseWriter, request *http.Request, expectedOr
 
 func admitAPIRequest(request *http.Request, expectedOrigin, capability string, session *workspaceSession, keys []string) (map[string]any, error) {
 	if session == nil || request.Header.Get("origin") != expectedOrigin || request.Header.Get("content-type") != "application/json" || !validCapability(request, capability) {
-		return nil, fmt.Errorf("unauthorized browser API request")
+		return nil, errUnauthorizedAPIRequest
 	}
 	if request.ContentLength > maxHandoffRequestBytes {
 		return nil, fmt.Errorf("browser API request exceeds byte limit")
@@ -385,16 +418,16 @@ func admitAPIRequest(request *http.Request, expectedOrigin, capability string, s
 		return nil, err
 	}
 	if record["snapshotId"] != session.SnapshotID {
-		return nil, fmt.Errorf("browser API request snapshot is stale")
+		return nil, errStaleAPIRequest
 	}
 	return record, nil
 }
 
 func writeAPIError(response http.ResponseWriter, method string, err error) {
 	status := http.StatusBadRequest
-	if strings.Contains(err.Error(), "unauthorized") {
+	if errors.Is(err, errUnauthorizedAPIRequest) {
 		status = http.StatusForbidden
-	} else if strings.Contains(err.Error(), "stale") {
+	} else if errors.Is(err, errStaleAPIRequest) {
 		status = http.StatusConflict
 	}
 	response.WriteHeader(status)
@@ -564,12 +597,11 @@ func buildHandoffPacket(request *http.Request, session workspaceSession) (map[st
 	for index, requirementID := range orderedRequirementIDs {
 		selectedRequirementIDs[index] = requirementID
 	}
-	slice, err := requirementcontext.Slice(map[string]any{
-		"context":       session.ContextValue,
-		"query":         map[string]any{"maxNodes": json.Number("4096"), "maxRequirements": json.Number("16384"), "profile": "review", "requirementIds": selectedRequirementIDs},
-		"schemaVersion": json.Number("1"),
-		"sliceId":       "browser.handoff.context",
-	})
+	slice, err := requirementcontext.SliceSnapshot(
+		session.Snapshot,
+		map[string]any{"maxNodes": json.Number("4096"), "maxRequirements": json.Number("16384"), "profile": "review", "requirementIds": selectedRequirementIDs},
+		"browser.handoff.context",
+	)
 	if err != nil {
 		return nil, err
 	}

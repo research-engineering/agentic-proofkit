@@ -44,15 +44,19 @@ func Slice(raw any) (map[string]any, error) {
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
 		return nil, fmt.Errorf("requirement context slice schemaVersion must be 1")
 	}
-	sliceID, err := admit.RuleID(record["sliceId"], "requirement context sliceId")
-	if err != nil {
-		return nil, err
-	}
 	snapshot, err := AdmitSnapshot(record["context"])
 	if err != nil {
 		return nil, err
 	}
-	query, err := admitSliceQuery(record["query"])
+	return SliceSnapshot(snapshot, record["query"], record["sliceId"])
+}
+
+func SliceSnapshot(snapshot Snapshot, rawQuery any, rawSliceID any) (map[string]any, error) {
+	sliceID, err := admit.RuleID(rawSliceID, "requirement context sliceId")
+	if err != nil {
+		return nil, err
+	}
+	query, err := admitSliceQuery(rawQuery)
 	if err != nil {
 		return nil, err
 	}

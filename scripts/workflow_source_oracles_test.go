@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -262,6 +263,55 @@ func TestWorkflowExternalActionsUseFullCommitSHAs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateRootCheckScript(manifest.Scripts["check"]); err != nil {
+		t.Fatal(err)
+	}
+	for _, removed := range []string{"npm run go:check", "npm run browser:check", "npm run package:artifact"} {
+		mutant := strings.Replace(manifest.Scripts["check"], " && "+removed, "", 1)
+		if err := validateRootCheckScript(mutant); err == nil {
+			t.Fatalf("check oracle admitted removal of %q", removed)
+		}
+	}
+}
+
+func validateRootCheckScript(script string) error {
+	steps := strings.Split(script, " && ")
+	indexes := map[string]int{}
+	for index, step := range steps {
+		if _, duplicate := indexes[step]; duplicate {
+			return fmt.Errorf("root check contains duplicate step %q", step)
+		}
+		indexes[step] = index
+	}
+	for _, required := range []string{
+		"npm run go:check",
+		"npm run browser:check",
+		"npm run package:artifact",
+		"npm run self:receipt",
+		"npm run self:coverage",
+		"npm run release:closeout",
+	} {
+		if _, ok := indexes[required]; !ok {
+			return fmt.Errorf("root check omits required proof gate %q", required)
+		}
+	}
+	if indexes["npm run go:check"] > indexes["npm run browser:check"] {
+		return errors.New("root check must run deterministic Go gates before browser gates")
+	}
+	return nil
 }
 
 func TestExistingReleasePathIsReadOnlyAndFailsOnDrift(t *testing.T) {

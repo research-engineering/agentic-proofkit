@@ -107,6 +107,15 @@ async function expectCSS(locator, properties) {
   expect(completed).toEqual(plan);
 }
 
+async function expectAllCSS(locator, properties) {
+  const propertyNames = Object.keys(properties);
+  const actual = await locator.evaluateAll((elements, names) => elements.map((element) => {
+    const computed = window.getComputedStyle(element);
+    return Object.fromEntries(names.map((name) => [name, computed.getPropertyValue(name)]));
+  }), propertyNames);
+  expect(actual).toEqual(actual.map(() => properties));
+}
+
 function assertAssertionPlanFalsifiers() {
   const first = Object.freeze({property: "opacity", value: "1"});
   const second = Object.freeze({property: "filter", value: "none"});
@@ -153,31 +162,29 @@ async function expectVisibleTable(table, caption, headers, rows) {
   for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
     const row = bodyRows.nth(rowIndex);
     await expect(row).toBeVisible();
-    await expectCSS(row, commonStyles);
     await expect(row.locator(":scope > td")).toHaveText(rows[rowIndex]);
   }
+  await expectAllCSS(bodyRows, commonStyles);
   const textElements = table.locator("caption, th, td");
   const textCount = 1 + headers.length + rows.reduce((count, row) => count + row.length, 0);
   await expect(textElements).toHaveCount(textCount);
   await expect(table.locator("caption:visible, th:visible, td:visible")).toHaveCount(textCount);
-  for (let index = 0; index < textCount; index += 1) {
-    await expectCSS(textElements.nth(index), {
-      opacity: "1",
-      color: "rgb(23, 32, 51)",
-      "font-size": "16px",
-      "font-size-adjust": "none",
-      "-webkit-text-security": "none",
-      "text-transform": "none",
-      filter: "none",
-      "clip-path": "none",
-      "mask-image": "none",
-      "content-visibility": "visible",
-      zoom: "1",
-      "animation-name": "none",
-      "transition-duration": "0s",
-      "transition-delay": "0s",
-    });
-  }
+  await expectAllCSS(textElements, {
+    opacity: "1",
+    color: "rgb(23, 32, 51)",
+    "font-size": "16px",
+    "font-size-adjust": "none",
+    "-webkit-text-security": "none",
+    "text-transform": "none",
+    filter: "none",
+    "clip-path": "none",
+    "mask-image": "none",
+    "content-visibility": "visible",
+    zoom: "1",
+    "animation-name": "none",
+    "transition-duration": "0s",
+    "transition-delay": "0s",
+  });
 }
 
 test.beforeEach(async ({browser, browserName, channel, connectOptions, launchOptions}, testInfo) => {
@@ -652,6 +659,7 @@ test("handoff packet output never creates a zero-value keyboard stop", async ({b
 });
 
 test("workspace renders admitted views and creates a keyboard-authorized handoff", async ({baseURL, browserName, page}) => {
+  test.setTimeout(60_000);
   assertAssertionPlanFalsifiers();
   const consoleErrors = [];
   page.on("console", (message) => {

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -50,6 +52,31 @@ func TestMermaidCheckRejectsQuotedDottedEdgeLabel(t *testing.T) {
 	}
 	if got := errorText(err); !strings.Contains(got, "quoted dotted-edge labels") {
 		t.Fatalf("expected dotted-edge message, got %q", got)
+	}
+}
+
+func TestMarkdownFilesFromGitUsesCandidateWorktree(t *testing.T) {
+	dir := t.TempDir()
+	runGitForTest(t, dir, "init", "--quiet")
+
+	writeTestFile(t, dir, ".gitignore", "ignored.md\n")
+	writeTestFile(t, dir, "deleted.md", "# Deleted\n")
+	writeTestFile(t, dir, "kept.md", "# Kept\n")
+	runGitForTest(t, dir, "add", ".gitignore", "deleted.md", "kept.md")
+
+	if err := os.Remove(filepath.Join(dir, "deleted.md")); err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, dir, "new.md", "# New\n")
+	writeTestFile(t, dir, "ignored.md", "# Ignored\n")
+
+	got, err := markdownFilesFromGitAt(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"kept.md", "new.md"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("candidate Markdown files = %v, want %v", got, want)
 	}
 }
 
@@ -110,4 +137,20 @@ func runForTest(files map[string]string, stdout *bytes.Buffer) error {
 		stdout = &bytes.Buffer{}
 	}
 	return run(names, stdout)
+}
+
+func runGitForTest(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+}
+
+func writeTestFile(t *testing.T, dir, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, path), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 }

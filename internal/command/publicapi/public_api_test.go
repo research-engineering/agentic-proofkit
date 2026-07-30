@@ -355,7 +355,7 @@ func TestScanCacheBindsBytesToFirstCanonicalIdentityAcrossSymlinkRetarget(t *tes
 	}
 	linkPath := filepath.Join(repoRoot, "entry.ts")
 	if err := os.Symlink("a.ts", linkPath); err != nil {
-		t.Skipf("symlink unavailable: %v", err)
+		t.Fatalf("symlink unavailable: %v", err)
 	}
 	scan := newScanCache(repoRoot, maxAggregateScanBytes)
 	if scan.initErr != nil {
@@ -462,7 +462,7 @@ func TestCanonicalSourceSnapshotRejectsChangedCrossAliasAdmission(t *testing.T) 
 			}
 			for _, alias := range []string{"one.ts", "two.ts", "three.ts"} {
 				if err := os.Symlink("real.ts", filepath.Join(packageRoot, alias)); err != nil {
-					t.Skipf("symlink unavailable: %v", err)
+					t.Fatalf("symlink unavailable: %v", err)
 				}
 			}
 			scan := newScanCache(repoRoot, maxAggregateScanBytes)

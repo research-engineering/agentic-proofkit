@@ -8,10 +8,12 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 func TestInputManifestClosesGoDependenciesAndWitnessPolicy(t *testing.T) {
@@ -211,7 +213,7 @@ func fixtureRecord(t *testing.T, root string, resolution proofInputResolution) m
 		assets = append(assets, map[string]any{"path": path, "sha256": hex.EncodeToString(sum[:])})
 	}
 	inputResolution := map[string]any{"serverTarget": resolution.ServerTarget, "writerPath": resolution.WriterPath}
-	encoded, err := json.Marshal(map[string]any{"assets": assets, "inputResolution": inputResolution})
+	encoded, err := stablejson.MarshalLayout(map[string]any{"assets": assets, "inputResolution": inputResolution}, stablejson.LayoutCompact)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +224,7 @@ func fixtureRecord(t *testing.T, root string, resolution proofInputResolution) m
 	return map[string]any{
 		"assets": assets, "command": map[string]any{"argv": []any{"node_modules/@playwright/test/cli.js", "test"}, "exitCode": json.Number("0"), "inputMode": "materialized_snapshot", "runner": "node"},
 		"engines":     []any{map[string]any{"name": "chromium", "version": "1"}, map[string]any{"name": "firefox", "version": "1"}, map[string]any{"name": "webkit", "version": "1"}},
-		"inputDigest": digest.SHA256TextRef(string(encoded)), "inputResolution": inputResolution, "nonClaims": nonClaims,
+		"inputDigest": digest.SHA256TextRef(strings.TrimSuffix(string(encoded), "\n")), "inputResolution": inputResolution, "nonClaims": nonClaims,
 		"projects": []any{
 			map[string]any{"browserName": "chromium", "browserVersion": "1", "executedTestCount": json.Number("1"), "name": "chromium", "passedTestCount": json.Number("1"), "testIds": []any{"tests/browser/workspace.spec.mjs::runs"}},
 			map[string]any{"browserName": "firefox", "browserVersion": "1", "executedTestCount": json.Number("1"), "name": "firefox", "passedTestCount": json.Number("1"), "testIds": []any{"tests/browser/workspace.spec.mjs::runs"}},
