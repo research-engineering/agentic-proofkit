@@ -268,8 +268,8 @@ func admitProjectionQuery(raw any) (projectionQuery, error) {
 	}
 	if record["offset"] != nil {
 		query.Offset, err = nonNegativeJSONInteger(record["offset"], "browser projection query offset")
-		if err != nil || query.Offset > 20_000 {
-			return projectionQuery{}, fmt.Errorf("browser projection query offset must be between 0 and 20000")
+		if err != nil {
+			return projectionQuery{}, err
 		}
 	}
 	if record["maxRecords"] != nil {

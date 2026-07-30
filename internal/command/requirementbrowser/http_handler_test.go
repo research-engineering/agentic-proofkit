@@ -1,7 +1,9 @@
 package requirementbrowser
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -47,4 +49,27 @@ func TestWorkspaceRequestAdmissionIsBounded(t *testing.T) {
 		t.Fatal("released capacity must admit the next request")
 	}
 	releaseWorkspaceRequest(requests)
+}
+
+func TestProjectionQueryKeepsEveryAdmittedRequirementPageReachable(t *testing.T) {
+	const finalOffset = 20_224
+	requirements := make([]any, finalOffset+1)
+	for index := range requirements {
+		requirements[index] = map[string]any{"requirementId": fmt.Sprintf("REQ-%05d", index)}
+	}
+	query, err := admitProjectionQuery(map[string]any{
+		"maxRecords": json.Number("256"),
+		"offset":     json.Number("20224"),
+	})
+	if err != nil {
+		t.Fatalf("admit final reachable page: %v", err)
+	}
+	projection, state := requirementWindow(requirements, query)
+	if state != "partial_with_omissions" || projection["selectedRequirementCount"] != 1 {
+		t.Fatalf("final page state=%s projection=%#v", state, projection)
+	}
+	selected := projection["requirements"].([]any)
+	if got := selected[0].(map[string]any)["requirementId"]; got != "REQ-20224" {
+		t.Fatalf("final requirement=%v, want REQ-20224", got)
+	}
 }
