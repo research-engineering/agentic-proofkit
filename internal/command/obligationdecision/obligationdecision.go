@@ -404,8 +404,7 @@ func sortedText(values []string, context string, allowEmpty bool) ([]string, err
 		}
 		values[index] = trimmed
 	}
-	sort.Strings(values)
-	return preserveSortedUnique(values, context, allowEmpty)
+	return admit.NormalizeSortedText(values, context, allowEmpty)
 }
 
 func preserveSortedUnique(values []string, context string, allowEmpty bool) ([]string, error) {

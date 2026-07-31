@@ -395,6 +395,8 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
 		"proofkit.supply-chain-quality.release-platform-python-wheels",
 		"proofkit.supply-chain-quality.release-change-record-projection",
+		"proofkit.supply-chain-quality.release-predecessor-lineage",
+		"proofkit.supply-chain-quality.release-predecessor-lineage-workflow",
 		"proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs",
 		"proofkit.supply-chain-quality.workflow-package-gate-oracle",
 		"proofkit.supply-chain-quality.workflow-source-oracles",
@@ -540,7 +542,7 @@ func TestBindingWitnessSelectorsAcceptUnnamedGoTestParameter(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/sample\n\ngo 1.25.0\n"), 0o644); err != nil {
 		t.Fatalf("write go.mod fixture: %v", err)
 	}
-	source := "package sample\n\nimport \"testing\"\n\nfunc TestRunnable(*testing.T) {}\n"
+	source := "package sample\n\nimport \"testing\"\n\nfunc TestRunnable(*testing.T) { if testing.Short() { panic(\"short-mode falsifier\") } }\n"
 	if err := os.WriteFile(filepath.Join(root, witnessPath), []byte(source), 0o644); err != nil {
 		t.Fatalf("write witness fixture: %v", err)
 	}
@@ -607,6 +609,28 @@ func TestBindingWitnessSelectorsRejectSkippingTest(t *testing.T) {
 	err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
 	if err == nil || !strings.Contains(err.Error(), "contains t.Skip") {
 		t.Fatalf("skipping witness error=%v", err)
+	}
+}
+
+func TestBindingWitnessSelectorsRejectVacuousTestBody(t *testing.T) {
+	root := t.TempDir()
+	witnessPath := filepath.Join("internal", "sample", "sample_test.go")
+	if err := os.MkdirAll(filepath.Join(root, filepath.Dir(witnessPath)), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/sample\n\ngo 1.25.0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, witnessPath), []byte("package sample\n\nimport \"testing\"\n\nfunc TestVacuous(t *testing.T) { _ = t }\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	bindings := bindingFile{Bindings: []bindingScenario{bindingSelectorFixture(
+		"scenario.vacuous", witnessPath, "TestVacuous",
+	)}}
+
+	err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindings)
+	if err == nil || !strings.Contains(err.Error(), "no failure-capable assertion candidate") {
+		t.Fatalf("vacuous witness error=%v", err)
 	}
 }
 

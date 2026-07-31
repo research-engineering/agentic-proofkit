@@ -3,6 +3,9 @@ package app
 import (
 	"slices"
 	"sort"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofview"
 )
 
 type commandInputMode string
@@ -48,27 +51,42 @@ const (
 )
 
 type commandDescriptor struct {
-	name                   string
-	input                  commandInputMode
-	runner                 commandRunner
-	scopeClass             commandScopeClass
-	allowedFlags           []string
-	requiredFlags          []string
-	exactlyOneOfFlagGroups [][]string
-	flagValueRequirements  []flagValueRequirement
-	flagValueChoices       map[string][]string
-	inputSchemaSummary     []string
-	outputModes            []string
-	agentEnvelope          bool
-	contractEnvelope       bool
-	semanticAppTests       []string
-	semanticOwnerDirs      []string
+	name                     string
+	input                    commandInputMode
+	runner                   commandRunner
+	scopeClass               commandScopeClass
+	allowedFlags             []string
+	requiredFlags            []string
+	exactlyOneOfFlagGroups   [][]string
+	atMostOneOfFlagGroups    [][]string
+	flagPresenceRequirements []flagPresenceRequirement
+	flagValueRequirements    []flagValueRequirement
+	singleOccurrenceFlags    []string
+	flagValueChoices         map[string][]string
+	inputSchemaSummary       []string
+	outputModes              []string
+	agentEnvelope            bool
+	contractEnvelope         bool
+	semanticAppTests         []string
+	semanticOwnerDirs        []string
 }
 
 type flagValueRequirement struct {
-	Flag          string   `json:"flag"`
-	RequiredFlags []string `json:"requiredFlags"`
-	Value         string   `json:"value"`
+	Flag               string              `json:"flag"`
+	RequiredFlagValues []requiredFlagValue `json:"requiredFlagValues,omitempty"`
+	RequiredFlags      []string            `json:"requiredFlags"`
+	Value              string              `json:"value"`
+}
+
+type flagPresenceRequirement struct {
+	Flag               string              `json:"flag"`
+	RequiredFlagValues []requiredFlagValue `json:"requiredFlagValues,omitempty"`
+	RequiredFlags      []string            `json:"requiredFlags"`
+}
+
+type requiredFlagValue struct {
+	Flag  string `json:"flag"`
+	Value string `json:"value"`
 }
 
 var commandDescriptors = []commandDescriptor{
@@ -99,7 +117,7 @@ var commandDescriptors = []commandDescriptor{
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
 	command("obligation-decision", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("obligationdecision"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency")),
-	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope()),
+	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope(), withFlagValueRequirement("--pilot", "all", "--contract-envelope")),
 	command("producer-policy-self-proof", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("producerpolicyselfproof")),
 	command("proof-obligation-algebra", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("proofobligationalgebra")),
 	command("proof-receipt-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("proofreceiptadmission")),
@@ -115,7 +133,7 @@ var commandDescriptors = []commandDescriptor{
 	command("repo-profile-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("repoprofileadmission")),
 	command("requirement-authoring-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementauthoringplan")),
 	command("requirement-bindings", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementbinding")),
-	command("requirement-browser-server", commandInputRequired, flags("--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerRequirementBrowserServer), withSemanticAppTests("TestRequirementBrowserServerSpecTreeCLIABI"), withRequiredFlags("--view"), withFlagValueRequirement("--session-mode", "one-shot-question", "--open", "--serve", "--view")),
+	command("requirement-browser-server", commandInputRequired, flags("--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerRequirementBrowserServer), withSemanticAppTests("TestRequirementBrowserServerSpecTreeCLIABI"), withRequiredFlags("--view"), withAtMostOneOfFlags("--empty-local-environment-policy", "--local-environment-class"), withFlagChoices("--host", requirementbrowser.HostChoices()...), withFlagChoices("--scope", requirementproofview.ScopeChoices()...), withFlagChoices("--session-mode", requirementbrowser.SessionModeChoices()...), withFlagChoices("--view", requirementbrowser.ViewChoices()...), withFlagPresenceAndRequiredValue("--empty-local-environment-policy", "--view", "proof"), withFlagPresenceAndRequiredValue("--local-environment-class", "--view", "proof"), withFlagPresenceRequirement("--open", "--serve"), withFlagPresenceAndRequiredValue("--scope", "--view", "proof"), withFlagPresenceAndRequiredValue("--session-timeout-seconds", "--session-mode", "one-shot-question"), withFlagValueAndRequiredValue("--session-mode", "browse", "--view", "workspace", "--serve"), withFlagValueAndRequiredValue("--session-mode", "one-shot-question", "--view", "workspace", "--open", "--serve"), withSingleOccurrenceFlags(requirementBrowserSingleOccurrenceFlags...)),
 	command("requirement-context-compose", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("requirementcontext"), withRunner(commandRunnerRequirementContextCompose), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root")),
 	command("requirement-context-slice", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementcontext"), withSemanticAppTests("TestRequirementContextCommandsComposeThroughWholeCLI")),
 	command("requirement-coverage-input-compose", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementcoverageinput")),
@@ -201,9 +219,19 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 	for _, option := range options {
 		option(&descriptor)
 	}
+	if slices.Contains(descriptor.allowedFlags, "--format") {
+		descriptor.singleOccurrenceFlags = []string{"--format"}
+	}
+	explicitFlagChoices := cloneStringMap(descriptor.flagValueChoices)
 	if metadata, ok := generatedCommandContractMetadataByName[name]; ok {
 		descriptor.inputSchemaSummary = cloneStrings(metadata.InputSchemaSummary)
 		descriptor.flagValueChoices = cloneStringMap(metadata.FlagChoices)
+		for flag, choices := range explicitFlagChoices {
+			if generated, exists := descriptor.flagValueChoices[flag]; exists && !slices.Equal(generated, choices) {
+				panic("explicit and generated flag choices disagree: " + name + " " + flag)
+			}
+			descriptor.flagValueChoices[flag] = cloneStrings(choices)
+		}
 	}
 	return descriptor
 }
@@ -257,11 +285,67 @@ func withExactlyOneOfFlags(flags ...string) commandDescriptorOption {
 	}
 }
 
+func withAtMostOneOfFlags(flags ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.atMostOneOfFlagGroups = append(descriptor.atMostOneOfFlagGroups, cloneStrings(flags))
+	}
+}
+
+func withFlagChoices(flag string, values ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		if descriptor.flagValueChoices == nil {
+			descriptor.flagValueChoices = map[string][]string{}
+		}
+		descriptor.flagValueChoices[flag] = cloneStrings(values)
+	}
+}
+
+func withFlagPresenceRequirement(flag string, requiredFlags ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.flagPresenceRequirements = append(descriptor.flagPresenceRequirements, flagPresenceRequirement{
+			Flag: flag, RequiredFlags: append([]string{}, requiredFlags...),
+		})
+	}
+}
+
+func withFlagPresenceAndRequiredValue(flag string, requiredFlag string, requiredValue string, requiredFlags ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.flagPresenceRequirements = append(descriptor.flagPresenceRequirements, flagPresenceRequirement{
+			Flag: flag,
+			RequiredFlagValues: []requiredFlagValue{{
+				Flag:  requiredFlag,
+				Value: requiredValue,
+			}},
+			RequiredFlags: append([]string{}, requiredFlags...),
+		})
+	}
+}
+
 func withFlagValueRequirement(flag string, value string, requiredFlags ...string) commandDescriptorOption {
 	return func(descriptor *commandDescriptor) {
 		descriptor.flagValueRequirements = append(descriptor.flagValueRequirements, flagValueRequirement{
 			Flag: flag, RequiredFlags: cloneStrings(requiredFlags), Value: value,
 		})
+	}
+}
+
+func withFlagValueAndRequiredValue(flag string, value string, requiredFlag string, requiredValue string, requiredFlags ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.flagValueRequirements = append(descriptor.flagValueRequirements, flagValueRequirement{
+			Flag: flag,
+			RequiredFlagValues: []requiredFlagValue{{
+				Flag:  requiredFlag,
+				Value: requiredValue,
+			}},
+			RequiredFlags: cloneStrings(requiredFlags),
+			Value:         value,
+		})
+	}
+}
+
+func withSingleOccurrenceFlags(flags ...string) commandDescriptorOption {
+	return func(descriptor *commandDescriptor) {
+		descriptor.singleOccurrenceFlags = append(descriptor.singleOccurrenceFlags, flags...)
 	}
 }
 
@@ -295,7 +379,7 @@ func buildCommandDescriptorIndex(descriptors []commandDescriptor) map[string]com
 		if len(descriptor.allowedFlags) == 0 || len(descriptor.outputModes) == 0 || len(descriptor.semanticOwnerDirs) == 0 {
 			panic("incomplete command descriptor: " + descriptor.name)
 		}
-		if !isSortedUnique(descriptor.allowedFlags) || !isSortedUnique(descriptor.requiredFlags) || !isSortedUnique(descriptor.outputModes) || !isSortedUnique(descriptor.semanticOwnerDirs) || !isSortedUnique(descriptor.semanticAppTests) {
+		if !isSortedUnique(descriptor.allowedFlags) || !isSortedUnique(descriptor.requiredFlags) || !isSortedUnique(descriptor.singleOccurrenceFlags) || !isSortedUnique(descriptor.outputModes) || !isSortedUnique(descriptor.semanticOwnerDirs) || !isSortedUnique(descriptor.semanticAppTests) || !isSortedUniqueFlagPresenceRequirements(descriptor.flagPresenceRequirements) || !isSortedUniqueFlagValueRequirements(descriptor.flagValueRequirements) {
 			panic("command descriptor lists must be sorted and unique: " + descriptor.name)
 		}
 		for _, requiredFlag := range descriptor.requiredFlags {
@@ -313,8 +397,33 @@ func buildCommandDescriptorIndex(descriptors []commandDescriptor) map[string]com
 				}
 			}
 		}
+		for _, group := range descriptor.atMostOneOfFlagGroups {
+			if len(group) < 2 || !isSortedUnique(group) {
+				panic("at-most-one flag group must be sorted, unique, and contain at least two flags: " + descriptor.name)
+			}
+			for _, flag := range group {
+				if !slices.Contains(descriptor.allowedFlags, flag) {
+					panic("at-most-one flag is not allowed: " + descriptor.name + " " + flag)
+				}
+			}
+		}
+		for _, requirement := range descriptor.flagPresenceRequirements {
+			if requirement.Flag == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) || !isSortedUniqueRequiredFlagValues(requirement.RequiredFlagValues) {
+				panic("invalid flag presence requirement: " + descriptor.name)
+			}
+			for _, flag := range requirement.RequiredFlags {
+				if !slices.Contains(descriptor.allowedFlags, flag) {
+					panic("presence-required flag is not allowed: " + descriptor.name + " " + flag)
+				}
+			}
+			for _, required := range requirement.RequiredFlagValues {
+				if !slices.Contains(descriptor.allowedFlags, required.Flag) {
+					panic("presence-required flag is not allowed: " + descriptor.name + " " + required.Flag)
+				}
+			}
+		}
 		for _, requirement := range descriptor.flagValueRequirements {
-			if requirement.Flag == "" || requirement.Value == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) {
+			if requirement.Flag == "" || requirement.Value == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) || !isSortedUniqueRequiredFlagValues(requirement.RequiredFlagValues) {
 				panic("invalid flag value requirement: " + descriptor.name)
 			}
 			for _, flag := range requirement.RequiredFlags {
@@ -322,10 +431,20 @@ func buildCommandDescriptorIndex(descriptors []commandDescriptor) map[string]com
 					panic("value-required flag is not allowed: " + descriptor.name + " " + flag)
 				}
 			}
+			for _, required := range requirement.RequiredFlagValues {
+				if !slices.Contains(descriptor.allowedFlags, required.Flag) {
+					panic("value-required flag is not allowed: " + descriptor.name + " " + required.Flag)
+				}
+			}
 		}
 		for flag, choices := range descriptor.flagValueChoices {
 			if !slices.Contains(descriptor.allowedFlags, flag) || !isSortedUnique(choices) {
 				panic("invalid generated flag choices: " + descriptor.name + " " + flag)
+			}
+		}
+		for _, flag := range descriptor.singleOccurrenceFlags {
+			if !slices.Contains(descriptor.allowedFlags, flag) {
+				panic("single-occurrence flag is not allowed: " + descriptor.name + " " + flag)
 			}
 		}
 		index[descriptor.name] = descriptor.clone()
@@ -398,11 +517,51 @@ func isSortedUnique(values []string) bool {
 	return true
 }
 
+func isSortedUniqueRequiredFlagValues(values []requiredFlagValue) bool {
+	previous := requiredFlagValue{}
+	for index, value := range values {
+		if value.Flag == "" || value.Value == "" {
+			return false
+		}
+		if index > 0 && (previous.Flag > value.Flag || previous.Flag == value.Flag && previous.Value >= value.Value) {
+			return false
+		}
+		previous = value
+	}
+	return true
+}
+
+func isSortedUniqueFlagPresenceRequirements(values []flagPresenceRequirement) bool {
+	previous := ""
+	for index, value := range values {
+		if value.Flag == "" || index > 0 && previous >= value.Flag {
+			return false
+		}
+		previous = value.Flag
+	}
+	return true
+}
+
+func isSortedUniqueFlagValueRequirements(values []flagValueRequirement) bool {
+	previous := ""
+	for index, value := range values {
+		key := value.Flag + "\x00" + value.Value
+		if value.Flag == "" || value.Value == "" || index > 0 && previous >= key {
+			return false
+		}
+		previous = key
+	}
+	return true
+}
+
 func (descriptor commandDescriptor) clone() commandDescriptor {
 	descriptor.allowedFlags = cloneStrings(descriptor.allowedFlags)
 	descriptor.requiredFlags = cloneStrings(descriptor.requiredFlags)
 	descriptor.exactlyOneOfFlagGroups = cloneStringMatrix(descriptor.exactlyOneOfFlagGroups)
+	descriptor.atMostOneOfFlagGroups = cloneStringMatrix(descriptor.atMostOneOfFlagGroups)
+	descriptor.flagPresenceRequirements = cloneFlagPresenceRequirements(descriptor.flagPresenceRequirements)
 	descriptor.flagValueRequirements = cloneFlagValueRequirements(descriptor.flagValueRequirements)
+	descriptor.singleOccurrenceFlags = cloneStrings(descriptor.singleOccurrenceFlags)
 	descriptor.flagValueChoices = cloneStringMap(descriptor.flagValueChoices)
 	descriptor.inputSchemaSummary = cloneStrings(descriptor.inputSchemaSummary)
 	descriptor.outputModes = cloneStrings(descriptor.outputModes)
@@ -422,7 +581,18 @@ func cloneStringMatrix(values [][]string) [][]string {
 func cloneFlagValueRequirements(values []flagValueRequirement) []flagValueRequirement {
 	out := make([]flagValueRequirement, 0, len(values))
 	for _, value := range values {
-		value.RequiredFlags = cloneStrings(value.RequiredFlags)
+		value.RequiredFlags = append([]string{}, value.RequiredFlags...)
+		value.RequiredFlagValues = append([]requiredFlagValue(nil), value.RequiredFlagValues...)
+		out = append(out, value)
+	}
+	return out
+}
+
+func cloneFlagPresenceRequirements(values []flagPresenceRequirement) []flagPresenceRequirement {
+	out := make([]flagPresenceRequirement, 0, len(values))
+	for _, value := range values {
+		value.RequiredFlags = append([]string{}, value.RequiredFlags...)
+		value.RequiredFlagValues = append([]requiredFlagValue(nil), value.RequiredFlagValues...)
 		out = append(out, value)
 	}
 	return out

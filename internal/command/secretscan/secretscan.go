@@ -196,7 +196,7 @@ func admitFiles(raw any) ([]fileRecord, error) {
 		files = append(files, fileRecord{ContentBase64: contentBase64, Path: pathValue, State: state})
 		paths = append(paths, pathValue)
 	}
-	if _, err := admit.PreserveSortedText(paths, "secret scan file paths", true); err != nil {
+	if _, err := admit.PreserveSortedPaths(paths, "secret scan file paths", true); err != nil {
 		return nil, err
 	}
 	return files, nil

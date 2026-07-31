@@ -206,7 +206,7 @@
         "rootDefinitionDigest": "sha256:104d1e8bef615582ead1c7c8c64b7e1643a76c2bc2a1f224189c372cf8cc4aa1",
         "nativeSource": {
           "path": "internal/command/adoptiondoctor",
-          "canonicalDigest": "sha256:95f909f36650142a58ca241c0210582c405f749187a16c03127242ba3d1b1507",
+          "canonicalDigest": "sha256:cec92b209d2fa36cf5da43a7049d3c24212f6762a085b065e75b46f1c5fda625",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -237,7 +237,7 @@
         "rootDefinitionDigest": "sha256:90583a47b9bdd605b2d3f24dcb1a5dbb2b4d9da20d7be097da381c9c77229e62",
         "nativeSource": {
           "path": "internal/command/adoptiondoctor",
-          "canonicalDigest": "sha256:95f909f36650142a58ca241c0210582c405f749187a16c03127242ba3d1b1507",
+          "canonicalDigest": "sha256:cec92b209d2fa36cf5da43a7049d3c24212f6762a085b065e75b46f1c5fda625",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -987,6 +987,9 @@
           ],
           "value": "markdown"
         }
+      ],
+      "singleOccurrenceFlags": [
+        "--format"
       ],
       "inputContract": {
         "contractId": "proofkit.conformance-profile.input.v1",
@@ -1773,6 +1776,9 @@
       "requiredFlags": [
         "--language"
       ],
+      "singleOccurrenceFlags": [
+        "--format"
+      ],
       "outputContract": {
         "contractId": "proofkit.json-report-cli-adapter-source.output.v1",
         "schemaVersion": 1,
@@ -1850,7 +1856,7 @@
         "rootDefinitionDigest": "sha256:a1f8ab777249d7ff613bfb3256cd96514235ac90d02ad39ce8720330cbd71d38",
         "nativeSource": {
           "path": "internal/command/migrationparityadmission",
-          "canonicalDigest": "sha256:2e19dca45e5cc77a74e65a30e0d2cbcd27279a5b17d43bd677686ade04b15585",
+          "canonicalDigest": "sha256:e6d7db500dea081cbf5c50a0b56051c3f5f193d5dbcc314871cd2bae0c0b3e6a",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -1882,7 +1888,7 @@
         "rootDefinitionDigest": "sha256:aaea5c7d9d12e1fbc406d080dcda5aca84351c5a2048d40535a1b3895cc37440",
         "nativeSource": {
           "path": "internal/command/migrationparityadmission",
-          "canonicalDigest": "sha256:2e19dca45e5cc77a74e65a30e0d2cbcd27279a5b17d43bd677686ade04b15585",
+          "canonicalDigest": "sha256:e6d7db500dea081cbf5c50a0b56051c3f5f193d5dbcc314871cd2bae0c0b3e6a",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2014,7 +2020,7 @@
         "rootDefinitionDigest": "sha256:5c9e25b7a7e379f21cd586693f1303a823699c348129a35c20c79fe0a225597f",
         "nativeSource": {
           "path": "internal/command/obligationdecision",
-          "canonicalDigest": "sha256:444d161fe3c88a3106b8a7f7db0125753870f85bc2afd32f00dbb11429f71a28",
+          "canonicalDigest": "sha256:507d019a96d80343890f30f94cf5d908fb0140d2513370021195f28de0420573",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2042,7 +2048,7 @@
         "rootDefinitionDigest": "sha256:0a9bf16564faaf4362e84b490ec24e722ed5b98617d8f4d7f62d8ce30e21c2e5",
         "nativeSource": {
           "path": "internal/command/obligationdecision",
-          "canonicalDigest": "sha256:444d161fe3c88a3106b8a7f7db0125753870f85bc2afd32f00dbb11429f71a28",
+          "canonicalDigest": "sha256:507d019a96d80343890f30f94cf5d908fb0140d2513370021195f28de0420573",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2179,6 +2185,15 @@
         "--pilot",
         "--stack-diverse"
       ],
+      "flagValueRequirements": [
+        {
+          "flag": "--pilot",
+          "requiredFlags": [
+            "--contract-envelope"
+          ],
+          "value": "all"
+        }
+      ],
       "inputContract": {
         "contractId": "proofkit.pilot-admission.input.v1",
         "schemaVersion": 1,
@@ -2216,7 +2231,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:b05dbafc64cccb87ef05a31f048096629ecdfe3cb3f9ad0e8d4131a3966e68ab",
+            "canonicalDigest": "sha256:0bea47d33304e528ffbe087688ea2dee07cf42e55632eda3b479732e221841d9",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2333,7 +2348,7 @@
         "rootDefinitionDigest": "sha256:cf9e13e7e1186d4dcdcfcecfe33c4dc61f88791242b42a4a3a92b349c605b476",
         "nativeSource": {
           "path": "internal/command/proofobligationalgebra",
-          "canonicalDigest": "sha256:f8a7f7e89de6549acb0dc6853d8507916c6589617a4b2fbc22149eb3d7fce547",
+          "canonicalDigest": "sha256:825fe712a106ce1c6b60d9a723d06c48838684fd1cfeaa3415849e20abcd4368",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2360,7 +2375,7 @@
         "rootDefinitionDigest": "sha256:4133b3c92c688c56a04871ededc6a595b17690d02e70ee35b87f728c21109a37",
         "nativeSource": {
           "path": "internal/command/proofobligationalgebra",
-          "canonicalDigest": "sha256:f8a7f7e89de6549acb0dc6853d8507916c6589617a4b2fbc22149eb3d7fce547",
+          "canonicalDigest": "sha256:825fe712a106ce1c6b60d9a723d06c48838684fd1cfeaa3415849e20abcd4368",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2611,7 +2626,7 @@
         "rootDefinitionDigest": "sha256:912f60b637aa0ca917b1c90d4caa4e3e65ec60ad0c5529d0da9d815fc766c5f5",
         "nativeSource": {
           "path": "internal/command/receiptcurrentnessscope",
-          "canonicalDigest": "sha256:82b133cede2489ecf3b813b83f0453f525c623b53ac383607f3ff31e84a7c450",
+          "canonicalDigest": "sha256:64fe8dfe45c5af89533bcc3bd7448977cf51b446df18eff11bf4dd3a8815c1d0",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2638,7 +2653,7 @@
         "rootDefinitionDigest": "sha256:30a1b7ef616c1e44bbdbebc6e511231166a2d1ea600d8d5954484fe8c0e7cdf4",
         "nativeSource": {
           "path": "internal/command/receiptcurrentnessscope",
-          "canonicalDigest": "sha256:82b133cede2489ecf3b813b83f0453f525c623b53ac383607f3ff31e84a7c450",
+          "canonicalDigest": "sha256:64fe8dfe45c5af89533bcc3bd7448977cf51b446df18eff11bf4dd3a8815c1d0",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2749,7 +2764,7 @@
         "rootDefinitionDigest": "sha256:19b0af54f38516daf4c0fb386a16284821f07ee14028738b5287a09f8b3b2122",
         "nativeSource": {
           "path": "internal/command/receipttrustclass",
-          "canonicalDigest": "sha256:7bc30b98ef1e7f0fdef09f8a00d0f10158e0a8dca6a676736151eeb939a364da",
+          "canonicalDigest": "sha256:22a0a2e7e6f2a657a2da1a4b8ec58be090a7bf26d924b98b78ca91b45208126f",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2777,7 +2792,7 @@
         "rootDefinitionDigest": "sha256:3914567b0719287a883352e711121f71610ab041df74a009edd2363fb6907872",
         "nativeSource": {
           "path": "internal/command/receipttrustclass",
-          "canonicalDigest": "sha256:7bc30b98ef1e7f0fdef09f8a00d0f10158e0a8dca6a676736151eeb939a364da",
+          "canonicalDigest": "sha256:22a0a2e7e6f2a657a2da1a4b8ec58be090a7bf26d924b98b78ca91b45208126f",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3027,7 +3042,7 @@
         "rootDefinitionDigest": "sha256:525ed9c2b820df9f52dce95442bf48bccfba1368f82e9bf68b92c275cf79b51c",
         "nativeSource": {
           "path": "internal/command/renderedartifactfreshness",
-          "canonicalDigest": "sha256:56ec807644da3f730e2ca55cb7b4dcded4bfab5e707657600ecbcd211ef17a4e",
+          "canonicalDigest": "sha256:7782f4cecf9f35b5a5deda9b9fdf76fa485cdddd018d6f08aecd4f13a8cd4342",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3054,7 +3069,7 @@
         "rootDefinitionDigest": "sha256:99c5af92d1f98744436493c4330c78ed409da2f72be0bb7bb82670cf7fb8fe2f",
         "nativeSource": {
           "path": "internal/command/renderedartifactfreshness",
-          "canonicalDigest": "sha256:56ec807644da3f730e2ca55cb7b4dcded4bfab5e707657600ecbcd211ef17a4e",
+          "canonicalDigest": "sha256:7782f4cecf9f35b5a5deda9b9fdf76fa485cdddd018d6f08aecd4f13a8cd4342",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3326,13 +3341,110 @@
       "requiredFlags": [
         "--view"
       ],
+      "singleOccurrenceFlags": [
+        "--session-mode",
+        "--session-timeout-seconds"
+      ],
+      "flagChoices": {
+        "--host": [
+          "127.0.0.1",
+          "::1"
+        ],
+        "--scope": [
+          "graph",
+          "slice"
+        ],
+        "--session-mode": [
+          "browse",
+          "one-shot-question"
+        ],
+        "--view": [
+          "coverage",
+          "proof",
+          "source",
+          "spec-tree",
+          "workspace"
+        ]
+      },
+      "atMostOneOfFlagGroups": [
+        [
+          "--empty-local-environment-policy",
+          "--local-environment-class"
+        ]
+      ],
+      "flagPresenceRequirements": [
+        {
+          "flag": "--empty-local-environment-policy",
+          "requiredFlagValues": [
+            {
+              "flag": "--view",
+              "value": "proof"
+            }
+          ],
+          "requiredFlags": []
+        },
+        {
+          "flag": "--local-environment-class",
+          "requiredFlagValues": [
+            {
+              "flag": "--view",
+              "value": "proof"
+            }
+          ],
+          "requiredFlags": []
+        },
+        {
+          "flag": "--open",
+          "requiredFlags": [
+            "--serve"
+          ]
+        },
+        {
+          "flag": "--scope",
+          "requiredFlagValues": [
+            {
+              "flag": "--view",
+              "value": "proof"
+            }
+          ],
+          "requiredFlags": []
+        },
+        {
+          "flag": "--session-timeout-seconds",
+          "requiredFlagValues": [
+            {
+              "flag": "--session-mode",
+              "value": "one-shot-question"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
       "flagValueRequirements": [
         {
           "flag": "--session-mode",
+          "requiredFlagValues": [
+            {
+              "flag": "--view",
+              "value": "workspace"
+            }
+          ],
+          "requiredFlags": [
+            "--serve"
+          ],
+          "value": "browse"
+        },
+        {
+          "flag": "--session-mode",
+          "requiredFlagValues": [
+            {
+              "flag": "--view",
+              "value": "workspace"
+            }
+          ],
           "requiredFlags": [
             "--open",
-            "--serve",
-            "--view"
+            "--serve"
           ],
           "value": "one-shot-question"
         }
@@ -3370,7 +3482,7 @@
         "rootDefinitionDigest": "sha256:50a7bb1b477b6067d410cf22db7e7564a9742aa7f6a270642149d372f0156007",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
-          "canonicalDigest": "sha256:7d85d0f51193cd3d42fbf19eb4dad4baadf5e5a050be9ce1363bf3e92dbdfcf2",
+          "canonicalDigest": "sha256:df4d6ca7f6f08342e48e44dad7cfbbcb25869c039814efd875e6435b4aeefa33",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3407,7 +3519,7 @@
         "rootDefinitionDigest": "sha256:c2e7d851c7928560d4267fe85ebc0ae61e33c4c0ef15f7f7b01deb73bb80eda7",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
-          "canonicalDigest": "sha256:7d85d0f51193cd3d42fbf19eb4dad4baadf5e5a050be9ce1363bf3e92dbdfcf2",
+          "canonicalDigest": "sha256:df4d6ca7f6f08342e48e44dad7cfbbcb25869c039814efd875e6435b4aeefa33",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3454,7 +3566,7 @@
         "rootDefinitionDigest": "sha256:41bc233c96bd468bc96eeb0447e037cacdbcf92bb04161052303e8747e4282f2",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
+          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3494,7 +3606,7 @@
         "rootDefinitionDigest": "sha256:cdadd7b589d682a122cfe2b801f001a3b22a2269aa4977ebe073932d11e1f816",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
+          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3541,7 +3653,7 @@
         "rootDefinitionDigest": "sha256:43852cf1a52b3c1f000ec95e460fbad157a6b6a39958d20f81c9e1e4d31e3c6f",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
+          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3579,7 +3691,7 @@
         "rootDefinitionDigest": "sha256:61f7fd43e2e9da5bde9b61bb86e02cbf337a43c6891ca888c1d42936e5b16456",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:f81c94b2ff570bac1e3fcf1d32ee25dc36e6b3baacf2c63744f6824ee77cade2",
+          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3762,6 +3874,9 @@
         "--input",
         "--input-pointer"
       ],
+      "singleOccurrenceFlags": [
+        "--format"
+      ],
       "outputContract": {
         "contractId": "proofkit.requirement-coverage-view.output.v1",
         "schemaVersion": 1,
@@ -3805,7 +3920,7 @@
         "rootDefinitionDigest": "sha256:697d24d12d4772b67283f24da2f265372de241bd4741ac23f7b984ca96023818",
         "nativeSource": {
           "path": "internal/command/requirementcoverageview",
-          "canonicalDigest": "sha256:446947f5ccedc573a0839c4dfbf0ea35bbf529035838035e923f71f10a1f5695",
+          "canonicalDigest": "sha256:c2a999a43db2e7b9ed65a599865bd291c7a0a4daf64973aefb40e684dee34c5a",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3838,7 +3953,7 @@
         "rootDefinitionDigest": "sha256:b5ddab0a55a381f002b39ece0f5727171f7984856e553200bbb62a49821ff6ac",
         "nativeSource": {
           "path": "internal/command/requirementcoverageview",
-          "canonicalDigest": "sha256:446947f5ccedc573a0839c4dfbf0ea35bbf529035838035e923f71f10a1f5695",
+          "canonicalDigest": "sha256:c2a999a43db2e7b9ed65a599865bd291c7a0a4daf64973aefb40e684dee34c5a",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3904,7 +4019,7 @@
         "rootDefinitionDigest": "sha256:9fd57d299d4e76bb3b0bf10f313a8dd9bfd593b8d15fa4844d5e342c4d929ee9",
         "nativeSource": {
           "path": "internal/command/requirementimpactinput",
-          "canonicalDigest": "sha256:014ecba30947ebee4f45c22ed0a06bfb2d47392e0d3420d1e4480a1c0111dd81",
+          "canonicalDigest": "sha256:f45499ce46858ba03325cc52875b10181d9a190244ca21471b651a122a890636",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3946,7 +4061,7 @@
         "rootDefinitionDigest": "sha256:e6af8f427f781395710407a87bfd5fa91a0b3c8aaaee437c2487472a243b22a6",
         "nativeSource": {
           "path": "internal/command/requirementimpactinput",
-          "canonicalDigest": "sha256:014ecba30947ebee4f45c22ed0a06bfb2d47392e0d3420d1e4480a1c0111dd81",
+          "canonicalDigest": "sha256:f45499ce46858ba03325cc52875b10181d9a190244ca21471b651a122a890636",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4183,6 +4298,9 @@
         "--local-environment-class",
         "--scope"
       ],
+      "singleOccurrenceFlags": [
+        "--format"
+      ],
       "inputContract": {
         "contractId": "proofkit.requirement-proof-view.input.v1",
         "schemaVersion": 1,
@@ -4192,7 +4310,7 @@
         "rootDefinitionDigest": "sha256:5aed3bcb99337d4937243d61d1f8ed1b1b358108a7710152221bfd5961a3aeb7",
         "nativeSource": {
           "path": "internal/command/requirementproofview",
-          "canonicalDigest": "sha256:76e16289eb4e8e4d6ae3d9ac9ee52b22335338bdf0467c5968894f92bfa09895",
+          "canonicalDigest": "sha256:ab2902ef8c5bc19d8d084b8fa355dbab09cae61eecf6bbe6946d882b73f9b687",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4219,7 +4337,7 @@
         "rootDefinitionDigest": "sha256:d1da2a4593aa2f4a1531e1a5be8e3bc877a5ff45f978b7f39a0bf708b01cb564",
         "nativeSource": {
           "path": "internal/command/requirementproofview",
-          "canonicalDigest": "sha256:76e16289eb4e8e4d6ae3d9ac9ee52b22335338bdf0467c5968894f92bfa09895",
+          "canonicalDigest": "sha256:ab2902ef8c5bc19d8d084b8fa355dbab09cae61eecf6bbe6946d882b73f9b687",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4260,7 +4378,7 @@
         "rootDefinitionDigest": "sha256:1f30133908a40c16f8ed236725e36b1999fc125f1450efa1c28264c42e6c8a63",
         "nativeSource": {
           "path": "internal/command/requirementdiff",
-          "canonicalDigest": "sha256:046132ae2b29d60ca2a21b55a1d57a56930ae15db701595a1ccbc4b503aa7b94",
+          "canonicalDigest": "sha256:49fb852dd5b80784635165f0c02a8c8d2f275b00a261f1220c60eb3a648b03fa",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4298,7 +4416,7 @@
         "rootDefinitionDigest": "sha256:abe2eda1ca5496bd33cd659a419a46d7b69a2b8cc50203c7ba6acd31625b760f",
         "nativeSource": {
           "path": "internal/command/requirementdiff",
-          "canonicalDigest": "sha256:046132ae2b29d60ca2a21b55a1d57a56930ae15db701595a1ccbc4b503aa7b94",
+          "canonicalDigest": "sha256:49fb852dd5b80784635165f0c02a8c8d2f275b00a261f1220c60eb3a648b03fa",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4477,6 +4595,9 @@
         "--format",
         "--input",
         "--input-pointer"
+      ],
+      "singleOccurrenceFlags": [
+        "--format"
       ],
       "inputContract": {
         "contractId": "proofkit.requirement-source-view.input.v1",
@@ -4683,6 +4804,9 @@
         "--input-pointer",
         "--output"
       ],
+      "singleOccurrenceFlags": [
+        "--format"
+      ],
       "outputContract": {
         "contractId": "proofkit.requirement-spec-tree-view.output.v2",
         "schemaVersion": 2,
@@ -4755,7 +4879,7 @@
         "rootDefinitionDigest": "sha256:6487ff537380d1cbffe5a72b9688e9ce6baffa218e76f8dbbfe8f50d14509219",
         "nativeSource": {
           "path": "internal/command/requirementgraph",
-          "canonicalDigest": "sha256:7aba61b6b6a66f53d9ffde32867bf4f52dd32156debc75a9d6d5da8beba39cb4",
+          "canonicalDigest": "sha256:330cc4ceef881c5ad8cfac76c0c9876ed65e897d5ffe631e01c8625d35b09fa3",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4793,7 +4917,7 @@
         "rootDefinitionDigest": "sha256:37d07abc4d9122176ffab9842b5d85fbfdbe068ee9e4097da8fc21206aae1d47",
         "nativeSource": {
           "path": "internal/command/requirementgraph",
-          "canonicalDigest": "sha256:7aba61b6b6a66f53d9ffde32867bf4f52dd32156debc75a9d6d5da8beba39cb4",
+          "canonicalDigest": "sha256:330cc4ceef881c5ad8cfac76c0c9876ed65e897d5ffe631e01c8625d35b09fa3",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5017,7 +5141,7 @@
         "rootDefinitionDigest": "sha256:6df7c84b104a318b2f6b04b662c3dfb54b16f4fb339cfb5f0ba6ee56485fae8f",
         "nativeSource": {
           "path": "internal/command/secretscan",
-          "canonicalDigest": "sha256:7fe8eb1fe43973b321fce0edce337b565d4a51e86e244bce9c3a57039209b0e3",
+          "canonicalDigest": "sha256:e5eb7dfbbb78c1d964cdc374e2ea43e201cd54b5cae18016ad7a00182cbb01cb",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5059,7 +5183,7 @@
         "rootDefinitionDigest": "sha256:e4113bfd0c2affe54c8f231ca280a405ba24adfb5e219ad548bd5c175c3d5f54",
         "nativeSource": {
           "path": "internal/command/secretscan",
-          "canonicalDigest": "sha256:7fe8eb1fe43973b321fce0edce337b565d4a51e86e244bce9c3a57039209b0e3",
+          "canonicalDigest": "sha256:e5eb7dfbbb78c1d964cdc374e2ea43e201cd54b5cae18016ad7a00182cbb01cb",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5102,7 +5226,7 @@
         "rootDefinitionDigest": "sha256:0615e61b546c079fa662e7a83e5472bdc137eceafd42700dcfa9e78c8c5397b0",
         "nativeSource": {
           "path": "internal/command/selectivegateevidence",
-          "canonicalDigest": "sha256:ddee1b6e09f88546d237fe32b4f4c98b62406efe0556273f382d1e6be577c4ef",
+          "canonicalDigest": "sha256:eb23cea0bb22b585f9441504278db2291ea49a12cc3118ed0a1d5f0f5eb59978",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5130,7 +5254,7 @@
         "rootDefinitionDigest": "sha256:8b8537b08340434bcb6c91fc446d8bf7aaa782e8e88763a31aa19720bf49a113",
         "nativeSource": {
           "path": "internal/command/selectivegateevidence",
-          "canonicalDigest": "sha256:ddee1b6e09f88546d237fe32b4f4c98b62406efe0556273f382d1e6be577c4ef",
+          "canonicalDigest": "sha256:eb23cea0bb22b585f9441504278db2291ea49a12cc3118ed0a1d5f0f5eb59978",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5172,7 +5296,7 @@
         "rootDefinitionDigest": "sha256:394c4523f385351794db259b7a7d365d0852ee22ec38695b1336f6559f823a15",
         "nativeSource": {
           "path": "internal/command/selectivegateevidence",
-          "canonicalDigest": "sha256:ddee1b6e09f88546d237fe32b4f4c98b62406efe0556273f382d1e6be577c4ef",
+          "canonicalDigest": "sha256:eb23cea0bb22b585f9441504278db2291ea49a12cc3118ed0a1d5f0f5eb59978",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5200,7 +5324,7 @@
         "rootDefinitionDigest": "sha256:f4c5b8430047a0a9c19d6c180bdf8b20b1980519dbdbf18e05870ebe5ea51942",
         "nativeSource": {
           "path": "internal/command/selectivegateevidence",
-          "canonicalDigest": "sha256:ddee1b6e09f88546d237fe32b4f4c98b62406efe0556273f382d1e6be577c4ef",
+          "canonicalDigest": "sha256:eb23cea0bb22b585f9441504278db2291ea49a12cc3118ed0a1d5f0f5eb59978",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5341,7 +5465,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:b05dbafc64cccb87ef05a31f048096629ecdfe3cb3f9ad0e8d4131a3966e68ab",
+          "canonicalDigest": "sha256:0bea47d33304e528ffbe087688ea2dee07cf42e55632eda3b479732e221841d9",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5370,7 +5494,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:b05dbafc64cccb87ef05a31f048096629ecdfe3cb3f9ad0e8d4131a3966e68ab",
+          "canonicalDigest": "sha256:0bea47d33304e528ffbe087688ea2dee07cf42e55632eda3b479732e221841d9",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5544,6 +5668,16 @@
       "requiredFlags": [
         "--preset"
       ],
+      "flagChoices": {
+        "--preset": [
+          "agentic_runtime_repo",
+          "generated_docs_contract_repo",
+          "python_service",
+          "python_typescript_service",
+          "typescript_monorepo",
+          "typescript_workspace"
+        ]
+      },
       "outputContract": {
         "contractId": "proofkit.stack-preset.output.v1",
         "schemaVersion": 1,
@@ -5851,7 +5985,7 @@
         "rootDefinitionDigest": "sha256:af1e6196ddee9ee4262ca14c9cca1451c89241ebeef177af4a12be866b088f9a",
         "nativeSource": {
           "path": "internal/command/textpolicy",
-          "canonicalDigest": "sha256:d15d33f5481f994fecc70b5ab159ea16d5bed8d0ccbe3cf840a55ed18f168e79",
+          "canonicalDigest": "sha256:7b46a4a0372f3ecd5a9ae7c42a0ba0200d436834cfcdfa8a2d4860be0d8f78d6",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5878,7 +6012,7 @@
         "rootDefinitionDigest": "sha256:a47795a1a72dcece9e3e513c8d33829fed187a959450d1ce007697a434b26df1",
         "nativeSource": {
           "path": "internal/command/textpolicy",
-          "canonicalDigest": "sha256:d15d33f5481f994fecc70b5ab159ea16d5bed8d0ccbe3cf840a55ed18f168e79",
+          "canonicalDigest": "sha256:7b46a4a0372f3ecd5a9ae7c42a0ba0200d436834cfcdfa8a2d4860be0d8f78d6",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

@@ -253,7 +253,7 @@ func admitFiles(raw any) ([]FileRecord, error) {
 		files = append(files, FileRecord{ContentBase64: contentBase64, Path: pathValue, State: state})
 		paths = append(paths, pathValue)
 	}
-	if _, err := admit.PreserveSortedText(paths, "text policy file paths", true); err != nil {
+	if _, err := admit.PreserveSortedPaths(paths, "text policy file paths", true); err != nil {
 		return nil, err
 	}
 	return files, nil

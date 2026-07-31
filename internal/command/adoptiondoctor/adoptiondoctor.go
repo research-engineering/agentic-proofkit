@@ -738,7 +738,7 @@ func sortedPaths(raw any, context string) ([]string, error) {
 		}
 		paths = append(paths, path)
 	}
-	return admit.PreserveSortedText(paths, context, true)
+	return admit.PreserveSortedPaths(paths, context, true)
 }
 
 func sortedRuleIDs(raw any, context string) ([]string, error) {

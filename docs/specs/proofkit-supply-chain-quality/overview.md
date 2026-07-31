@@ -160,8 +160,9 @@ vulnerability absence, or consumer rollout safety by itself.
   exact complete current breaking, addition, and migration inventories
   including channel-specific generated continuation bytes, rejects missing,
   substituted, reordered, or surplus entries, and owns one independently
-  authored byte-exact complete current release-note projection, while one
-  retained-
+  authored byte-exact complete current release-note projection. Candidate
+  preflight binds npm latest to `previousVersion` for an unpublished candidate
+  or to `version` only after exact existing-byte-match proof. One retained-
   evidence owner builds and verifies checksums against exact
   downloadable artifact-relative paths without inferring change completeness
   from the source diff.

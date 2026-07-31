@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
 )
 
@@ -36,6 +37,16 @@ type npmView struct {
 		Integrity string `json:"integrity"`
 	} `json:"dist"`
 }
+
+type npmReleaseIdentity struct {
+	Name    string `json:"name"`
+	Version string `json:"version"`
+}
+
+const (
+	npmCandidateUnpublished       = "unpublished"
+	npmCandidateExistingByteMatch = "existing_byte_match"
+)
 
 type pythonPackageSet struct {
 	Packages []wheelRecord `json:"packages"`
@@ -106,7 +117,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence>")
+		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-lineage|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence|retained-evidence-verify>")
 	}
 	switch args[0] {
 	case "npm-existing":
@@ -123,6 +134,26 @@ func run(args []string) error {
 			return err
 		}
 		return compareNPMExisting(expected, actual)
+	case "npm-lineage":
+		options, err := parseFlags(args[1:], "change-record-file", "latest-file", "expected-name", "candidate-version", "candidate-state")
+		if err != nil {
+			return err
+		}
+		changeRecord, err := releasechange.Read(options["change-record-file"])
+		if err != nil {
+			return err
+		}
+		var latest npmReleaseIdentity
+		if err := readJSON(options["latest-file"], &latest); err != nil {
+			return err
+		}
+		return validateNPMReleaseLineage(
+			changeRecord,
+			latest,
+			options["expected-name"],
+			options["candidate-version"],
+			options["candidate-state"],
+		)
 	case "npm-candidate-artifacts":
 		options, err := parseFlags(args[1:], "metadata-file", "directory")
 		if err != nil {
@@ -205,6 +236,12 @@ func run(args []string) error {
 			return err
 		}
 		return retainedevidence.Write(options["artifact-root"])
+	case "retained-evidence-verify":
+		options, err := parseFlags(args[1:], "artifact-root")
+		if err != nil {
+			return err
+		}
+		return retainedevidence.Verify(options["artifact-root"])
 	default:
 		return fmt.Errorf("unknown releasepreflight command %s", args[0])
 	}
@@ -229,6 +266,43 @@ func compareNPMExisting(expected npmCandidate, actual npmView) error {
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("published %s@%s does not match candidate: %s", expected.Name, expected.Version, strings.Join(failures, "; "))
+	}
+	return nil
+}
+
+func validateNPMReleaseLineage(
+	record releasechange.Record,
+	latest npmReleaseIdentity,
+	expectedName string,
+	candidateVersion string,
+	candidateState string,
+) error {
+	if expectedName == "" {
+		return fmt.Errorf("expected npm package name must not be empty")
+	}
+	if candidateVersion == "" {
+		return fmt.Errorf("candidate npm package version must not be empty")
+	}
+	if candidateVersion != record.Version {
+		return fmt.Errorf("candidate npm package version %s !== release version %s", candidateVersion, record.Version)
+	}
+	if latest.Name == "" || latest.Version == "" {
+		return fmt.Errorf("npm latest identity must include name and version")
+	}
+	if latest.Name != expectedName {
+		return fmt.Errorf("npm latest package name %s !== %s", latest.Name, expectedName)
+	}
+	var expectedVersion string
+	switch candidateState {
+	case npmCandidateUnpublished:
+		expectedVersion = record.PreviousVersion
+	case npmCandidateExistingByteMatch:
+		expectedVersion = record.Version
+	default:
+		return fmt.Errorf("unsupported npm candidate state %q", candidateState)
+	}
+	if latest.Version != expectedVersion {
+		return fmt.Errorf("npm latest version %s !== expected %s for candidate state %s", latest.Version, expectedVersion, candidateState)
 	}
 	return nil
 }

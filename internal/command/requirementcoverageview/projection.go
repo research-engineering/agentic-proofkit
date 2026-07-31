@@ -98,14 +98,6 @@ func entryIDs(entries []testevidenceinventory.Entry) []string {
 	}
 	return sortedUnique(values)
 }
-func surfaceIDs(values []surface) []string {
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		result = append(result, value.SurfaceID)
-	}
-	sort.Strings(result)
-	return result
-}
 func ownerInvariantIDs(values []ownerInvariant) []string {
 	result := make([]string, 0, len(values))
 	for _, value := range values {

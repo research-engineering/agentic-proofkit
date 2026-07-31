@@ -61,6 +61,17 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 			},
 			want: "duplicate object key",
 		},
+		{
+			name: "npm registry set duplicate key",
+			write: func(path string) {
+				writeFile(t, path, `{"artifactKind":"proofkit.published-registry-artifact-set.v1","schemaVersion":1,"authorityChannel":"registry_release","authorityValidator":"releaseauthority","registry":"https://registry.npmjs.org","publicationMode":"existing_byte_match","source":"registry npm pack byte-match for preexisting version","nonClaims":["Registry evidence does not prove adoption."],"packages":[],"packages":[]}`)
+			},
+			read: func(path string) error {
+				_, err := optionalNPMRegistrySet(path)
+				return err
+			},
+			want: "duplicate object key",
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
@@ -71,6 +82,66 @@ func TestReleaseManifestReadersRejectAmbiguousJSON(t *testing.T) {
 				t.Fatalf("reader error = %v, want %q", err, item.want)
 			}
 		})
+	}
+}
+
+func TestNPMRegistryPublicationRequiresTypedAuthorityEvidence(t *testing.T) {
+	record := packRecord{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", Filename: "research-engineering-agentic-proofkit-1.2.3.tgz", Integrity: "sha512-x", Shasum: "abc"}
+	if err := requireNPMRegistryMatchesLocal(nil, []packRecord{record}, []packRecord{record}, "existing_byte_match"); err == nil || !strings.Contains(err.Error(), "typed registry authority evidence") {
+		t.Fatalf("requireNPMRegistryMatchesLocal() error=%v, want typed authority rejection", err)
+	}
+
+	registry := &npmRegistrySet{
+		ArtifactKind:       "proofkit.published-registry-artifact-set.v1",
+		AuthorityChannel:   string(releasechannel.RegistryRelease),
+		AuthorityValidator: releasechannel.Must(releasechannel.RegistryRelease).AuthorityValidator,
+		NonClaims:          []string{"Registry evidence does not prove adoption."},
+		Packages:           []packRecord{record},
+		PublicationMode:    "existing_byte_match",
+		Registry:           releasechannel.NPMRegistryURL,
+		SchemaVersion:      1,
+		Source:             mustNPMRegistryEvidenceSource(t, "existing_byte_match"),
+	}
+	if err := requireNPMRegistryMatchesLocal(registry, []packRecord{record}, []packRecord{record}, "existing_byte_match"); err != nil {
+		t.Fatalf("requireNPMRegistryMatchesLocal() error=%v", err)
+	}
+}
+
+func TestNPMRegistryEvidenceRejectsDuplicateSubstitution(t *testing.T) {
+	recordA := packRecord{Name: "agentic-proofkit-a", Version: "1.2.3", Filename: "a.tgz", Integrity: "sha512-a", Shasum: "a"}
+	recordB := packRecord{Name: "agentic-proofkit-b", Version: "1.2.3", Filename: "b.tgz", Integrity: "sha512-b", Shasum: "b"}
+	for _, test := range []struct {
+		name     string
+		registry []packRecord
+		local    []packRecord
+	}{
+		{name: "duplicate registry substitutes missing package", registry: []packRecord{recordA, recordA}, local: []packRecord{recordA, recordB}},
+		{name: "duplicate local package", registry: []packRecord{recordA, recordB}, local: []packRecord{recordA, recordA}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if err := requireRegistryRecordsMatchLocal(test.registry, test.local); err == nil || !strings.Contains(err.Error(), "duplicate package filename") {
+				t.Fatalf("requireRegistryRecordsMatchLocal() error=%v, want duplicate filename rejection", err)
+			}
+		})
+	}
+}
+
+func TestNPMRegistryAuthorityFlowsFromAdmittedFileToPublishedChannel(t *testing.T) {
+	record := packRecord{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", Filename: "research-engineering-agentic-proofkit-1.2.3.tgz", Integrity: "sha512-x", Shasum: "abc"}
+	path := filepath.Join(t.TempDir(), "published-registry-artifact-set.json")
+	writeFile(t, path, `{"artifactKind":"proofkit.published-registry-artifact-set.v1","schemaVersion":1,"authorityChannel":"registry_release","authorityValidator":"releaseauthority","registry":"https://registry.npmjs.org","publicationMode":"existing_byte_match","source":"registry npm pack byte-match for preexisting version","nonClaims":["Registry evidence does not prove adoption."],"packages":[{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","filename":"research-engineering-agentic-proofkit-1.2.3.tgz","integrity":"sha512-x","shasum":"abc"}]}`)
+	registry, err := optionalNPMRegistrySet(path)
+	if err != nil {
+		t.Fatalf("optionalNPMRegistrySet() error=%v", err)
+	}
+	if err := requireNPMRegistryMatchesLocal(registry, registry.Packages, []packRecord{record}, "existing_byte_match"); err != nil {
+		t.Fatalf("requireNPMRegistryMatchesLocal() error=%v", err)
+	}
+	channels := releaseChannels([]packRecord{record}, registry.Packages, registry.PublicationMode, nil, nil, "", nil, trustedPublisherSet{})
+	byAuthority := channelsByAuthority(t, channels)
+	npm := byAuthority[string(releasechannel.RegistryRelease)]
+	if npm.Status != "published" || npm.PublicationMode != "existing_byte_match" || len(npm.Packages) != 1 || npm.Packages[0].Filename != record.Filename {
+		t.Fatalf("npm channel=%#v, want admitted published package projection", npm)
 	}
 }
 
@@ -533,4 +604,13 @@ func writeFile(t *testing.T, path string, content string) {
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+}
+
+func mustNPMRegistryEvidenceSource(t *testing.T, mode string) string {
+	t.Helper()
+	value, ok := releasechannel.NPMRegistryEvidenceSource(mode)
+	if !ok {
+		t.Fatalf("unknown npm registry publication mode %q", mode)
+	}
+	return value
 }

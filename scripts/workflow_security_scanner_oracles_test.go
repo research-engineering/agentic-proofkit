@@ -95,6 +95,36 @@ func TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions(t *testi
 	}
 }
 
+func TestOSVSourceScanFailsForEveryNonzeroScannerStatus(t *testing.T) {
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "osv-scanner.yml"))
+	job := workflow.Jobs["scan"]
+	run := ""
+	for _, step := range job.Steps {
+		if step.Name == "Run OSV source scan" {
+			run = step.Run
+			break
+		}
+	}
+	if run == "" {
+		t.Fatal("OSV workflow is missing the source scan step")
+	}
+	if !strings.Contains(run, `if [ "$scanner_status" -ne 0 ]`) || !strings.Contains(run, `exit "$scanner_status"`) {
+		t.Fatal("OSV source scan must fail for vulnerability status 1 and scanner errors")
+	}
+	for _, weak := range []string{`[ "$scanner_status" -gt 1 ]`, `[ "$scanner_status" -eq 1 ]`} {
+		if strings.Contains(run, weak) {
+			t.Fatalf("OSV source scan contains partial status gate %q", weak)
+		}
+	}
+	upload := workflow.Jobs["upload-sarif"]
+	if canonicalWorkflowExpression(upload.If) != "!cancelled()&&needs.scan.result!='skipped'&&github.event_name!='pull_request'&&(github.event.repository.private==false||vars.enable_code_scanning_upload=='true')" {
+		t.Fatalf("OSV provider upload must run after a finding failure but not after cancellation or a skipped scan: if=%q", upload.If)
+	}
+	if needs, ok := upload.Needs.(string); !ok || needs != "scan" {
+		t.Fatalf("OSV provider upload needs=%#v, want scan", upload.Needs)
+	}
+}
+
 func validateSecurityScannerPermissionSeparation(
 	workflow githubWorkflow,
 	expectation securityScannerPermissionExpectation,
@@ -143,7 +173,7 @@ func validateSecurityScannerPermissionSeparation(
 			return fmt.Errorf("%s missing provider job %q", expectation.path, jobID)
 		}
 		if expectation.name == "codeql" || expectation.name == "osv" {
-			if !providerUploadDisabledOnPullRequest(job.If) {
+			if !providerUploadDisabledOnPullRequest(expectation.name, job.If) {
 				return fmt.Errorf(
 					"%s provider job %q must not upload provider evidence on pull_request: if=%q",
 					expectation.path,
@@ -179,9 +209,12 @@ func permissionSetEquals(raw any, want map[string]string) bool {
 	return true
 }
 
-func providerUploadDisabledOnPullRequest(expression string) bool {
-	return canonicalWorkflowExpression(expression) ==
-		"github.event_name!='pull_request'&&(github.event.repository.private==false||vars.enable_code_scanning_upload=='true')"
+func providerUploadDisabledOnPullRequest(scanner string, expression string) bool {
+	expected := "github.event_name!='pull_request'&&(github.event.repository.private==false||vars.enable_code_scanning_upload=='true')"
+	if scanner == "osv" {
+		expected = "!cancelled()&&needs.scan.result!='skipped'&&" + expected
+	}
+	return canonicalWorkflowExpression(expression) == expected
 }
 
 func TestScorecardPublicPublishDeclaresRequiredOutputInputs(t *testing.T) {

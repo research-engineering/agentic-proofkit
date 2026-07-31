@@ -53,3 +53,14 @@ func TestIDSetContainsOnlyCanonicalAuthorityIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestNPMRegistryEvidenceSourceIsTotalForAdmittedPublicationModes(t *testing.T) {
+	for _, mode := range []string{"existing_byte_match", "mixed", "published_by_workflow"} {
+		if source, ok := NPMRegistryEvidenceSource(mode); !ok || source == "" {
+			t.Fatalf("NPMRegistryEvidenceSource(%q)=%q,%v", mode, source, ok)
+		}
+	}
+	if source, ok := NPMRegistryEvidenceSource("candidate"); ok || source != "" {
+		t.Fatalf("NPMRegistryEvidenceSource(candidate)=%q,%v, want rejection", source, ok)
+	}
+}

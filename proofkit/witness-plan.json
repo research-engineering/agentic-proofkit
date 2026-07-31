@@ -935,7 +935,7 @@
       ],
       "exclusiveLocks": [],
       "sideEffectClass": "local_write",
-      "deterministicOutput": true,
+      "deterministicOutput": false,
       "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",

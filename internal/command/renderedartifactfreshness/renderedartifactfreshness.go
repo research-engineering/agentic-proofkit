@@ -145,8 +145,8 @@ func admitInput(raw any) (admittedInput, error) {
 		return admittedInput{}, err
 	}
 	allNonClaims := append(append([]string{}, boundaryNonClaims...), nonClaims...)
-	sort.Strings(allNonClaims)
-	if _, err := preserveSortedUnique(allNonClaims, "rendered artifact freshness report nonClaims", true); err != nil {
+	allNonClaims, err = admit.NormalizeSortedText(allNonClaims, "rendered artifact freshness report nonClaims", true)
+	if err != nil {
 		return admittedInput{}, err
 	}
 	return admittedInput{
@@ -423,8 +423,7 @@ func sortedText(raw any, context string, allowEmpty bool) ([]string, error) {
 }
 
 func sortedUnique(values []string, context string, allowEmpty bool) ([]string, error) {
-	sort.Strings(values)
-	return preserveSortedUnique(values, context, allowEmpty)
+	return admit.NormalizeSortedText(values, context, allowEmpty)
 }
 
 func preserveSortedUnique(values []string, context string, allowEmpty bool) ([]string, error) {

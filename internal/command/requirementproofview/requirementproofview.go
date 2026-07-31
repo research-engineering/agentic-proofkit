@@ -2,6 +2,7 @@ package requirementproofview
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -10,6 +11,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/browserdoc"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/markdownfmt"
 )
+
+var scopeChoices = []string{"graph", "slice"}
+
+func ScopeChoices() []string {
+	return slices.Clone(scopeChoices)
+}
 
 type Options struct {
 	Scope                   string
@@ -84,7 +91,7 @@ func structuredView(raw any, options Options) (map[string]any, error) {
 	if scope == "" {
 		scope = "slice"
 	}
-	if scope != "graph" && scope != "slice" {
+	if !slices.Contains(scopeChoices, scope) {
 		return nil, fmt.Errorf("--scope must be graph or slice")
 	}
 	result, err := requirementbinding.Build(raw)

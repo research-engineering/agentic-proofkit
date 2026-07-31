@@ -245,7 +245,7 @@ func admitObligationReceipt(record map[string]any) (obligationReceipt, error) {
 	if err != nil {
 		return obligationReceipt{}, err
 	}
-	evidenceRefs, err := sortedPathsFromRaw(record["evidenceRefs"], "receipt currentness-scope evidenceRefs", false)
+	evidenceRefs, err := admit.NormalizeSortedPathArray(record["evidenceRefs"], "receipt currentness-scope evidenceRefs", false)
 	if err != nil {
 		return obligationReceipt{}, err
 	}
@@ -321,7 +321,7 @@ func admitCurrentnessCheck(record map[string]any) (currentnessCheck, error) {
 	if err != nil {
 		return currentnessCheck{}, err
 	}
-	evidenceRefs, err := sortedPathsFromRaw(record["evidenceRefs"], "receipt currentness-scope currentness evidenceRefs", false)
+	evidenceRefs, err := admit.NormalizeSortedPathArray(record["evidenceRefs"], "receipt currentness-scope currentness evidenceRefs", false)
 	if err != nil {
 		return currentnessCheck{}, err
 	}
@@ -389,7 +389,7 @@ func admitScopeCheck(record map[string]any) (scopeCheck, error) {
 	if err != nil {
 		return scopeCheck{}, err
 	}
-	evidenceRefs, err := sortedPathsFromRaw(record["evidenceRefs"], "receipt currentness-scope scope evidenceRefs", false)
+	evidenceRefs, err := admit.NormalizeSortedPathArray(record["evidenceRefs"], "receipt currentness-scope scope evidenceRefs", false)
 	if err != nil {
 		return scopeCheck{}, err
 	}
@@ -625,35 +625,11 @@ func sortedTextFromRaw(raw any, context string, allowEmpty bool) ([]string, erro
 	return sortedText(result, context, allowEmpty)
 }
 
-func sortedPathsFromRaw(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("%s must be a string array", context)
-	}
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		text, err := admit.NonEmptyText(value, context)
-		if err != nil {
-			return nil, err
-		}
-		path, err := admit.SafeRepoRelativePath(text, context)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, path)
-	}
-	return sortedText(result, context, allowEmpty)
-}
-
 func sortedText(values []string, context string, allowEmpty bool) ([]string, error) {
 	if !allowEmpty && len(values) == 0 {
 		return nil, fmt.Errorf("%s must not be empty", context)
 	}
-	sort.Strings(values)
-	if err := preserveSortedUnique(values, context, allowEmpty); err != nil {
-		return nil, err
-	}
-	return values, nil
+	return admit.NormalizeSortedText(values, context, allowEmpty)
 }
 
 func preserveSortedUnique(values []string, context string, allowEmpty bool) error {

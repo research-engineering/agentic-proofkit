@@ -552,11 +552,7 @@ func sortedTextFromAny(raw any, context string, allowEmpty bool) ([]string, erro
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(values)
-	if err := preserveSortedUnique(values, context, allowEmpty); err != nil {
-		return nil, err
-	}
-	return values, nil
+	return admit.NormalizeSortedText(values, context, allowEmpty)
 }
 
 func sortedUniqueText(values []string) []string {
@@ -583,11 +579,7 @@ func sortedPathsFromAny(raw any, context string, allowEmpty bool) ([]string, err
 		}
 		result = append(result, path)
 	}
-	sort.Strings(result)
-	if err := preserveSortedUnique(result, context, allowEmpty); err != nil {
-		return nil, err
-	}
-	return result, nil
+	return admit.NormalizeSortedPaths(result, context, allowEmpty)
 }
 
 func uniqueSortedPaths(values []string, context string) ([]string, error) {
@@ -623,18 +615,6 @@ func equalStringSlices(left []string, right []string) bool {
 		}
 	}
 	return true
-}
-
-func preserveSortedUnique(values []string, context string, allowEmpty bool) error {
-	if !allowEmpty && len(values) == 0 {
-		return fmt.Errorf("%s must be sorted and unique", context)
-	}
-	for index := range values {
-		if index > 0 && values[index-1] == values[index] {
-			return fmt.Errorf("%s must be sorted and unique", context)
-		}
-	}
-	return nil
 }
 
 func exitCode(raw any, status string) (any, error) {

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
@@ -420,15 +419,5 @@ func admitSources(raw any) ([]Source, error) {
 }
 
 func admitDigestRef(raw any, context string) (string, error) {
-	value, err := admit.NonEmptyText(raw, context)
-	if err != nil {
-		return "", err
-	}
-	if !strings.HasPrefix(value, "sha256:") {
-		return "", fmt.Errorf("%s must be a sha256 digest reference", context)
-	}
-	if _, err := admit.LowercaseSHA256(strings.TrimPrefix(value, "sha256:"), context); err != nil {
-		return "", err
-	}
-	return value, nil
+	return admit.SHA256Ref(raw, context)
 }

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
@@ -68,6 +69,18 @@ type pypiRegistrySet struct {
 	Registry           string              `json:"registry"`
 	SchemaVersion      int                 `json:"schemaVersion"`
 	Source             string              `json:"source"`
+}
+
+type npmRegistrySet struct {
+	ArtifactKind       string       `json:"artifactKind"`
+	AuthorityChannel   string       `json:"authorityChannel"`
+	AuthorityValidator string       `json:"authorityValidator"`
+	NonClaims          []string     `json:"nonClaims"`
+	Packages           []packRecord `json:"packages"`
+	PublicationMode    string       `json:"publicationMode"`
+	Registry           string       `json:"registry"`
+	SchemaVersion      int          `json:"schemaVersion"`
+	Source             string       `json:"source"`
 }
 
 type pythonWheelRecord struct {
@@ -219,6 +232,10 @@ func run() error {
 	if len(registryRecords) > 0 {
 		sortPackRecords(registryRecords)
 	}
+	npmRegistry, err := optionalNPMRegistrySet(filepath.Join("artifacts", "registry", "published-registry-artifact-set.json"))
+	if err != nil {
+		return err
+	}
 	pypiRegistry, err := optionalPyPIRegistrySet(filepath.Join("artifacts", "pypi-registry", "pypi-release.json"))
 	if err != nil {
 		return err
@@ -232,6 +249,9 @@ func run() error {
 		return err
 	}
 	if err := requirePublicationMode(npmPublicationMode, "npm", len(registryRecords) > 0); err != nil {
+		return err
+	}
+	if err := requireNPMRegistryMatchesLocal(npmRegistry, registryRecords, localRecords, npmPublicationMode); err != nil {
 		return err
 	}
 	if err := requirePublicationMode(pypiPublicationMode, "pypi", pypiRegistry != nil); err != nil {
@@ -430,6 +450,9 @@ func publicationModeRequiresIdentity(mode string, label string) (bool, error) {
 }
 
 func requirePackRecordsMatchPackage(manifest packageJSON, records []packRecord, label string) error {
+	if _, err := packRecordsByFilename(records, label); err != nil {
+		return err
+	}
 	for _, record := range records {
 		if record.Name != manifest.Name || record.Version != manifest.Version {
 			return fmt.Errorf("%s record %s must match package.json identity %s@%s", label, record.Filename, manifest.Name, manifest.Version)
@@ -442,26 +465,113 @@ func requireRegistryRecordsMatchLocal(registryRecords []packRecord, localRecords
 	if len(registryRecords) == 0 {
 		return nil
 	}
-	if len(registryRecords) != len(localRecords) {
-		return fmt.Errorf("npm registry evidence package count must match local package evidence")
+	registryByFilename, err := packRecordsByFilename(registryRecords, "npm registry evidence")
+	if err != nil {
+		return err
 	}
-	localByFilename := map[string]packRecord{}
-	for _, record := range localRecords {
-		localByFilename[record.Filename] = record
+	localByFilename, err := packRecordsByFilename(localRecords, "local npm package evidence")
+	if err != nil {
+		return err
 	}
-	for _, registryRecord := range registryRecords {
-		localRecord, ok := localByFilename[registryRecord.Filename]
+	if len(registryByFilename) != len(localByFilename) {
+		return fmt.Errorf("npm registry evidence package set must match local package evidence")
+	}
+	for filename, registryRecord := range registryByFilename {
+		localRecord, ok := localByFilename[filename]
 		if !ok {
-			return fmt.Errorf("npm registry evidence contains package %s absent from local package evidence", registryRecord.Filename)
+			return fmt.Errorf("npm registry evidence contains package %s absent from local package evidence", filename)
 		}
 		if registryRecord.Name != localRecord.Name ||
 			registryRecord.Version != localRecord.Version ||
 			registryRecord.Integrity != localRecord.Integrity ||
 			registryRecord.Shasum != localRecord.Shasum {
-			return fmt.Errorf("npm registry evidence for %s does not match local package identity and bytes", registryRecord.Filename)
+			return fmt.Errorf("npm registry evidence for %s does not match local package identity and bytes", filename)
+		}
+	}
+	for filename := range localByFilename {
+		if _, ok := registryByFilename[filename]; !ok {
+			return fmt.Errorf("local npm package evidence contains package %s absent from registry evidence", filename)
 		}
 	}
 	return nil
+}
+
+func packRecordsByFilename(records []packRecord, label string) (map[string]packRecord, error) {
+	result := make(map[string]packRecord, len(records))
+	for _, record := range records {
+		if record.Filename == "" {
+			return nil, fmt.Errorf("%s contains an empty package filename", label)
+		}
+		if _, duplicate := result[record.Filename]; duplicate {
+			return nil, fmt.Errorf("%s contains duplicate package filename %s", label, record.Filename)
+		}
+		result[record.Filename] = record
+	}
+	return result, nil
+}
+
+func optionalNPMRegistrySet(path string) (*npmRegistrySet, error) {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	out, err := readAdmittedJSON[npmRegistrySet](path)
+	if err != nil {
+		return nil, err
+	}
+	definition := releasechannel.Must(releasechannel.RegistryRelease)
+	if out.ArtifactKind != "proofkit.published-registry-artifact-set.v1" || out.SchemaVersion != 1 {
+		return nil, fmt.Errorf("%s has unexpected artifact kind or schema version", path)
+	}
+	if out.AuthorityChannel != string(definition.ID) || out.AuthorityValidator != definition.AuthorityValidator {
+		return nil, fmt.Errorf("%s must carry canonical %s authority metadata", path, definition.ID)
+	}
+	if out.Registry != definition.RegistryURL || len(out.Packages) == 0 {
+		return nil, fmt.Errorf("%s must carry canonical registry and package evidence", path)
+	}
+	mode, err := trustedpublisher.AdmitPublicationMode(out.PublicationMode, "npm registry evidence publicationMode")
+	if err != nil {
+		return nil, err
+	}
+	expectedSource, ok := releasechannel.NPMRegistryEvidenceSource(mode)
+	if !ok || out.Source != expectedSource {
+		return nil, fmt.Errorf("%s source does not match npm publication mode", path)
+	}
+	for _, record := range out.Packages {
+		if record.Name == "" || record.Version == "" || record.Filename == "" || record.Integrity == "" || record.Shasum == "" {
+			return nil, fmt.Errorf("%s contains incomplete npm registry package evidence", path)
+		}
+	}
+	if _, err := packRecordsByFilename(out.Packages, "npm registry authority evidence"); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	if _, err := admit.PreserveSortedText(out.NonClaims, "npm registry evidence nonClaims", false); err != nil {
+		return nil, err
+	}
+	out.PublicationMode = mode
+	sortPackRecords(out.Packages)
+	return &out, nil
+}
+
+func requireNPMRegistryMatchesLocal(registry *npmRegistrySet, records []packRecord, local []packRecord, mode string) error {
+	if registry == nil {
+		if len(records) > 0 {
+			return fmt.Errorf("npm registry package records require typed registry authority evidence")
+		}
+		return nil
+	}
+	if len(records) == 0 {
+		return fmt.Errorf("typed npm registry authority evidence requires registry package records")
+	}
+	if registry.PublicationMode != mode {
+		return fmt.Errorf("npm registry authority evidence publication mode must match retained publication mode")
+	}
+	if err := requireRegistryRecordsMatchLocal(registry.Packages, records); err != nil {
+		return err
+	}
+	return requireRegistryRecordsMatchLocal(registry.Packages, local)
 }
 
 func optionalPythonPackageSet(path string) (*pythonPackageSet, error) {

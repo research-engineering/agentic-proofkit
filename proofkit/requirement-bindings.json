@@ -602,7 +602,7 @@
       "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["This requirement does not infer change-record completeness from source changes, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."]
+      "nonClaims": ["This requirement does not infer change-record completeness from source changes, reconstruct release-history migration data before the declared support baseline, claim a cumulative release-history planner, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."]
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-025",
@@ -1035,6 +1035,10 @@
         {
           "selector": "TestReceiptIDKeepsLocalAndCIIdentitiesDistinct",
           "command": "go test ./scripts -run '^TestReceiptIDKeepsLocalAndCIIdentitiesDistinct$'"
+        },
+        {
+          "selector": "TestRunInvokesEveryRequiredSelfHostingAdmissionBoundary",
+          "command": "go test ./scripts -run '^TestRunInvokesEveryRequiredSelfHostingAdmissionBoundary$'"
         }
       ],
       "commandIds": [
@@ -1471,10 +1475,35 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-007",
+      "scenarioId": "proofkit.spec-proof-core.canonical-command-input-admission",
+      "witnessId": "proofkit.app.required-input-command-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/command_coverage_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRequiredInputCommandsRejectMalformedCallerRecords",
+          "command": "go test ./internal/app -run '^TestRequiredInputCommandsRejectMalformedCallerRecords$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-007",
       "scenarioId": "proofkit.spec-proof-core.canonical-input-admission",
       "witnessId": "proofkit.admission.decode-typed-json-canonical-record",
       "witnessKind": "contract",
       "witnessPath": "internal/kernel/admission/json_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDecodeTypedJSONUsesStrictAdmission",
+          "command": "go test ./internal/kernel/admission -run '^TestDecodeTypedJSONUsesStrictAdmission$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -1701,6 +1730,12 @@
       "witnessId": "proofkit.receipt-trust-status-vocabulary.command-admission",
       "witnessKind": "contract",
       "witnessPath": "internal/command/receipttrustclass/receipt_trust_class_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildRejectsHigherRankThatWeakensMinimumTrustSemantics",
+          "command": "go test ./internal/command/receipttrustclass -run '^TestBuildRejectsHigherRankThatWeakensMinimumTrustSemantics$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -2242,6 +2277,10 @@
         {
           "selector": "TestBindingWitnessSelectorsRejectNonTestAndBuildExcludedFiles",
           "command": "go test ./internal/tools/coveragemetrics -run '^TestBindingWitnessSelectorsRejectNonTestAndBuildExcludedFiles$'"
+        },
+        {
+          "selector": "TestBindingWitnessSelectorsRejectVacuousTestBody",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestBindingWitnessSelectorsRejectVacuousTestBody$'"
         },
         {
           "selector": "TestBindingWitnessSelectorsRequireExactCriticalInventories",
@@ -2790,11 +2829,21 @@
       ]
     },
     {
-      "requirementId": "REQ-PROOFKIT-QUALITY-019",
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
       "scenarioId": "proofkit.supply-chain-quality.release-manifest-json-abi-registry-evidence",
       "witnessId": "proofkit.release-manifest.json-abi-registry-evidence",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/releasemanifest/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNPMRegistryPublicationRequiresTypedAuthorityEvidence",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestNPMRegistryPublicationRequiresTypedAuthorityEvidence$'"
+        },
+        {
+          "selector": "TestNPMRegistryAuthorityFlowsFromAdmittedFileToPublishedChannel",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestNPMRegistryAuthorityFlowsFromAdmittedFileToPublishedChannel$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test",
         "proofkit.package-artifact"
@@ -2802,6 +2851,51 @@
       "environmentClasses": [
         "local-go",
         "local-go-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.npm-registry-authority-producer",
+      "witnessId": "proofkit.npm-registry.authority-producer",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/npmregistry/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunBuildsCanonicalTypedRegistryEvidence",
+          "command": "go test ./internal/tools/npmregistry -run '^TestRunBuildsCanonicalTypedRegistryEvidence$'"
+        },
+        {
+          "selector": "TestRunRejectsRegistryPackageSetSubstitution",
+          "command": "go test ./internal/tools/npmregistry -run '^TestRunRejectsRegistryPackageSetSubstitution$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-go-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.npm-registry-workflow-delegation",
+      "witnessId": "proofkit.release-workflow.npm-registry-owner-delegation",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/validate-self-hosting-receipts_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseWorkflowDelegatesNPMRegistryEvidenceToRepositoryOwner",
+          "command": "go test ./scripts -run '^TestReleaseWorkflowDelegatesNPMRegistryEvidenceToRepositoryOwner$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.actionlint",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
       ]
     },
     {
@@ -2838,6 +2932,10 @@
       "witnessPath": "scripts/workflow_security_scanner_oracles_test.go",
       "witnessSelectors": [
         {
+          "selector": "TestOSVSourceScanFailsForEveryNonzeroScannerStatus",
+          "command": "go test ./scripts -run '^TestOSVSourceScanFailsForEveryNonzeroScannerStatus$'"
+        },
+        {
           "selector": "TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
           "command": "go test ./scripts -run '^TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions$'"
         }
@@ -2853,14 +2951,46 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-001",
       "scenarioId": "proofkit.supply-chain-quality.release-attestation-wiring",
-      "witnessId": "proofkit.release-workflow.attestation-wiring",
-      "witnessKind": "technical",
-      "witnessPath": ".github/workflows/release.yml",
+      "witnessId": "proofkit.release-workflow.attestation-and-retention-wiring",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/validate-self-hosting-receipts_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure",
+          "command": "go test ./scripts -run '^TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure$'"
+        }
+      ],
       "commandIds": [
-        "proofkit.actionlint"
+        "proofkit.actionlint",
+        "proofkit.go-test"
       ],
       "environmentClasses": [
         "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-001",
+      "scenarioId": "proofkit.supply-chain-quality.retained-evidence-manifest",
+      "witnessId": "proofkit.retained-evidence.downloadable-topology",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/retainedevidence/manifest_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestManifestRejectsUnboundAttestationAndSymlink",
+          "command": "go test ./internal/tools/retainedevidence -run '^TestManifestRejectsUnboundAttestationAndSymlink$'"
+        },
+        {
+          "selector": "TestManifestUsesDownloadableArtifactPaths",
+          "command": "go test ./internal/tools/retainedevidence -run '^TestManifestUsesDownloadableArtifactPaths$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-go-python"
       ]
     },
     {
@@ -3144,6 +3274,12 @@
       "witnessId": "proofkit.retained-evidence.download-layout-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/retainedevidence/manifest_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyRejectsManifestAddressDrift",
+          "command": "go test ./internal/tools/retainedevidence -run '^TestVerifyRejectsManifestAddressDrift$'"
+        }
+      ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },
@@ -3153,6 +3289,46 @@
       "witnessId": "proofkit.release-closeout.change-record-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.release-predecessor-lineage",
+      "witnessId": "proofkit.release-preflight.predecessor-lineage-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasepreflight/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestValidateNPMReleaseLineage",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestValidateNPMReleaseLineage$'"
+        },
+        {
+          "selector": "TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.release-predecessor-lineage-workflow",
+      "witnessId": "proofkit.release-workflow.predecessor-lineage-oracle",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/validate-self-hosting-receipts_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch",
+          "command": "go test ./scripts -run '^TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch$'"
+        }
+      ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },

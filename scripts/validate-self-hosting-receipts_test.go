@@ -2,9 +2,14 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -42,6 +47,47 @@ func TestRunProofkitVerdictCases(t *testing.T) {
 				t.Fatalf("proofkitVerdict() error=%v, want %q", err, test.wantError)
 			}
 		})
+	}
+}
+
+func TestRunInvokesEveryRequiredSelfHostingAdmissionBoundary(t *testing.T) {
+	parsed, err := parser.ParseFile(token.NewFileSet(), "validate-self-hosting-receipts.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]int{
+		"proof-receipt-admission":     1,
+		"receipt-producer-admission":  1,
+		"spec-proof-bundle-admission": 1,
+	}
+	got := map[string]int{}
+	for _, declaration := range parsed.Decls {
+		function, ok := declaration.(*ast.FuncDecl)
+		if !ok || function.Name.Name != "run" {
+			continue
+		}
+		ast.Inspect(function.Body, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok || len(call.Args) != 3 {
+				return true
+			}
+			callee, ok := call.Fun.(*ast.Ident)
+			if !ok || callee.Name != "runProofkit" {
+				return true
+			}
+			literal, ok := call.Args[0].(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+			command, err := strconv.Unquote(literal.Value)
+			if err == nil {
+				got[command]++
+			}
+			return true
+		})
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("run() admission command inventory=%v, want exact %v", got, want)
 	}
 }
 
@@ -674,25 +720,70 @@ func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T
 		t.Fatal("Build publish dry-run evidence step not found")
 	}
 	run := workflow.Jobs["candidate"].Steps[stepIndex].Run
+	if err := validateReleaseCandidateLineageRun(run); err != nil {
+		t.Fatal(err)
+	}
+
+	lateOverride := strings.Replace(
+		run,
+		"npm view \"${package_name}@latest\" name version --json",
+		"lineage_state=\"unpublished\"\n            npm view \"${package_name}@latest\" name version --json",
+		1,
+	)
+	if err := validateReleaseCandidateLineageRun(lateOverride); err == nil || !strings.Contains(err.Error(), "exactly two") {
+		t.Fatalf("late candidate-state override error=%v, want exact assignment-count rejection", err)
+	}
+
+	const existingState = "lineage_state=\"existing_byte_match\""
+	const unpublishedState = "lineage_state=\"unpublished\""
+	swapped := strings.Replace(run, existingState, "__EXISTING_LINEAGE_STATE__", 1)
+	swapped = strings.Replace(swapped, unpublishedState, existingState, 1)
+	swapped = strings.Replace(swapped, "__EXISTING_LINEAGE_STATE__", unpublishedState, 1)
+	if err := validateReleaseCandidateLineageRun(swapped); err == nil || !strings.Contains(err.Error(), "only after") {
+		t.Fatalf("swapped candidate-state assignments error=%v, want branch-origin rejection", err)
+	}
+}
+
+func validateReleaseCandidateLineageRun(run string) error {
 	required := []string{
 		"npm view \"${package_name}@${package_version}\"",
 		"go run ./internal/tools/releasepreflight npm-existing",
+		"lineage_state=\"existing_byte_match\"",
 		"node - \"$metadata\" \"$filename\" \"$report\" <<'NODE'",
 		"writeFileSync(report",
-		"continue",
 		"npm publish \"artifacts/package/${filename}\"",
 		"--dry-run",
+		"lineage_state=\"unpublished\"",
+		"npm view \"${package_name}@latest\" name version --json",
+		"go run ./internal/tools/releasepreflight npm-lineage",
+		"--change-record-file release/change-record.v2.json",
+		"--candidate-version \"$package_version\"",
+		"--candidate-state \"$lineage_state\"",
 	}
 	for _, item := range required {
 		if !strings.Contains(run, item) {
-			t.Fatalf("candidate evidence step missing %q", item)
+			return fmt.Errorf("candidate evidence step missing %q", item)
 		}
 	}
-	existingIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-existing")
-	dryRunIndex := strings.Index(run, "npm publish \"artifacts/package/${filename}\"")
-	if existingIndex < 0 || dryRunIndex < 0 || existingIndex > dryRunIndex {
-		t.Fatalf("candidate evidence must validate existing-byte-match before npm publish dry-run")
+	if count := strings.Count(run, "lineage_state="); count != 2 {
+		return fmt.Errorf("candidate evidence must contain exactly two lineage_state assignments, got %d", count)
 	}
+	existingIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-existing")
+	existingStateIndex := strings.Index(run, "lineage_state=\"existing_byte_match\"")
+	dryRunIndex := strings.Index(run, "npm publish \"artifacts/package/${filename}\"")
+	unpublishedStateIndex := strings.Index(run, "lineage_state=\"unpublished\"")
+	latestIndex := strings.Index(run, "npm view \"${package_name}@latest\" name version --json")
+	lineageIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-lineage")
+	if existingIndex < 0 || dryRunIndex < 0 || existingIndex > dryRunIndex {
+		return fmt.Errorf("candidate evidence must validate existing-byte-match before npm publish dry-run")
+	}
+	if existingStateIndex < existingIndex || unpublishedStateIndex < dryRunIndex {
+		return fmt.Errorf("candidate state must be assigned only after its branch evidence succeeds")
+	}
+	if latestIndex < existingStateIndex || latestIndex < unpublishedStateIndex || lineageIndex < latestIndex {
+		return fmt.Errorf("candidate evidence must validate registry lineage after the exact-byte or dry-run branch")
+	}
+	return nil
 }
 
 func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testing.T) {
@@ -717,6 +808,7 @@ func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testi
 		"artifacts/release/release-notes.md",
 		"artifacts/release/github-release.json",
 		"go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts",
+		"go run ./internal/tools/releasepreflight retained-evidence-verify --artifact-root artifacts",
 	} {
 		if !strings.Contains(createRun, item) {
 			t.Fatalf("Create GitHub Release step missing retained evidence token %q", item)
@@ -724,6 +816,9 @@ func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testi
 	}
 	if strings.Contains(createRun, "$(basename \"$evidence\")") || strings.Contains(createRun, "sha256sum \"$evidence\"") {
 		t.Fatal("Create GitHub Release step must delegate retained evidence topology to its repository owner")
+	}
+	if err := validateRetainedEvidenceBranchClosure(createRun); err != nil {
+		t.Fatal(err)
 	}
 	uploadIndex, err := uniqueStepIndex(assetJob.Steps, "Upload release evidence")
 	if err != nil {
@@ -741,6 +836,92 @@ func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testi
 	} {
 		if !strings.Contains(uploadPath, item) {
 			t.Fatalf("Upload release evidence path missing %q: %#v", item, uploadPath)
+		}
+	}
+}
+
+func TestRetainedEvidenceBranchClosureRejectsUnreachableExistingReleaseVerification(t *testing.T) {
+	writeCommand := "go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts"
+	verifyCommand := "go run ./internal/tools/releasepreflight retained-evidence-verify --artifact-root artifacts"
+	mutated := strings.Join([]string{
+		`if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then`,
+		"  exit 0",
+		"fi",
+		writeCommand,
+		verifyCommand,
+		`gh release create "$GITHUB_REF_NAME"`,
+		writeCommand,
+		verifyCommand,
+	}, "\n")
+	if err := validateRetainedEvidenceBranchClosure(mutated); err == nil {
+		t.Fatal("retained evidence verification after the existing-release branch was accepted")
+	}
+}
+
+func validateRetainedEvidenceBranchClosure(run string) error {
+	writeCommand := "go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts"
+	verifyCommand := "go run ./internal/tools/releasepreflight retained-evidence-verify --artifact-root artifacts"
+	writeOffsets := trimmedLineOffsets(run, writeCommand)
+	verifyOffsets := trimmedLineOffsets(run, verifyCommand)
+	exitOffsets := trimmedLineOffsets(run, "exit 0")
+	branchEndOffsets := trimmedLineOffsets(run, "fi")
+	existingBranchIndex := strings.Index(run, `if gh release view "$GITHUB_REF_NAME"`)
+	createReleaseIndex := strings.Index(run, `gh release create "$GITHUB_REF_NAME"`)
+	if len(writeOffsets) != 2 || len(verifyOffsets) != 2 || len(exitOffsets) != 1 || existingBranchIndex < 0 || createReleaseIndex < 0 {
+		return fmt.Errorf("retained evidence branch inventory write=%v verify=%v exit=%v existing=%d create=%d", writeOffsets, verifyOffsets, exitOffsets, existingBranchIndex, createReleaseIndex)
+	}
+	branchEndIndex := -1
+	for _, offset := range branchEndOffsets {
+		if offset > exitOffsets[0] {
+			branchEndIndex = offset
+			break
+		}
+	}
+	if !(existingBranchIndex < writeOffsets[0] &&
+		writeOffsets[0] < verifyOffsets[0] &&
+		verifyOffsets[0] < exitOffsets[0] &&
+		exitOffsets[0] < branchEndIndex &&
+		branchEndIndex < createReleaseIndex &&
+		createReleaseIndex < writeOffsets[1] &&
+		writeOffsets[1] < verifyOffsets[1]) {
+		return fmt.Errorf("retained evidence write=%v verify=%v exit=%v branch end=%d existing=%d create=%d; want reachable write-then-verify before existing-release exit and after release creation", writeOffsets, verifyOffsets, exitOffsets, branchEndIndex, existingBranchIndex, createReleaseIndex)
+	}
+	return nil
+}
+
+func trimmedLineOffsets(content, target string) []int {
+	offsets := []int{}
+	offset := 0
+	for _, line := range strings.SplitAfter(content, "\n") {
+		if strings.TrimSpace(line) == target {
+			offsets = append(offsets, offset)
+		}
+		offset += len(line)
+	}
+	return offsets
+}
+
+func TestReleaseWorkflowDelegatesNPMRegistryEvidenceToRepositoryOwner(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatalf("read release workflow: %v", err)
+	}
+	var workflow githubWorkflow
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatalf("parse release workflow: %v", err)
+	}
+	publish := workflow.Jobs["publish"]
+	stepIndex, err := uniqueStepIndex(publish.Steps, "Capture published registry artifact identity")
+	if err != nil || stepIndex < 0 {
+		t.Fatalf("find npm registry evidence step: index=%d error=%v", stepIndex, err)
+	}
+	run := publish.Steps[stepIndex].Run
+	if strings.Count(run, "npm run npm:registry-evidence") != 1 {
+		t.Fatalf("npm registry evidence step must invoke its repository owner exactly once: %s", run)
+	}
+	for _, forbidden := range []string{"proofkit.published-registry-artifact-set.v1", "authorityValidator", "registry_release"} {
+		if strings.Contains(run, forbidden) {
+			t.Fatalf("workflow duplicates typed npm registry authority field %q", forbidden)
 		}
 	}
 }

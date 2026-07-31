@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "8c1ed8d811ee9421a773647cc6255dcd233af6d5ab24c2c7d76bca06760da723"
+	cliContractPublicABISHA256               = "472517950d99dc3c6ce772ac6f63ca5be2a4ff3692aac3025dd7f4adb09289b3"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -787,16 +787,20 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 	commands := []any{}
 	for _, command := range contract.Commands {
 		record := map[string]any{
-			"allowedFlags":           stringsAsAny(command.AllowedFlags),
-			"command":                command.Command,
-			"exactlyOneOfFlagGroups": stringMatrixAsAny(command.ExactlyOneOfFlagGroups),
-			"flagValueRequirements":  command.FlagValueRequirements,
-			"input":                  command.Input,
-			"inputPointer":           command.InputPointer,
-			"outputModes":            stringsAsAny(command.OutputModes),
-			"requiredFlags":          stringsAsAny(command.RequiredFlags),
-			"scopeClass":             command.ScopeClass,
-			"stdin":                  command.Stdin,
+			"atMostOneOfFlagGroups":    stringMatrixAsAny(command.AtMostOneOfFlagGroups),
+			"allowedFlags":             stringsAsAny(command.AllowedFlags),
+			"command":                  command.Command,
+			"exactlyOneOfFlagGroups":   stringMatrixAsAny(command.ExactlyOneOfFlagGroups),
+			"flagChoices":              command.FlagChoices,
+			"flagPresenceRequirements": command.FlagPresenceRequirements,
+			"flagValueRequirements":    command.FlagValueRequirements,
+			"input":                    command.Input,
+			"inputPointer":             command.InputPointer,
+			"outputModes":              stringsAsAny(command.OutputModes),
+			"requiredFlags":            stringsAsAny(command.RequiredFlags),
+			"scopeClass":               command.ScopeClass,
+			"singleOccurrenceFlags":    stringsAsAny(command.SingleOccurrenceFlags),
+			"stdin":                    command.Stdin,
 		}
 		if command.AgentEnvelope != nil {
 			record["agentEnvelope"] = *command.AgentEnvelope
@@ -932,6 +936,34 @@ func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
 			name: "flag value requirement drift",
 			descriptors: mutateDescriptor("conformance-profile", func(descriptor *commandDescriptor) {
 				descriptor.flagValueRequirements = nil
+			}),
+			commands: contract.Commands,
+		},
+		{
+			name: "flag presence requirement drift",
+			descriptors: mutateDescriptor("requirement-browser-server", func(descriptor *commandDescriptor) {
+				descriptor.flagPresenceRequirements = nil
+			}),
+			commands: contract.Commands,
+		},
+		{
+			name: "at-most-one constraint drift",
+			descriptors: mutateDescriptor("requirement-browser-server", func(descriptor *commandDescriptor) {
+				descriptor.atMostOneOfFlagGroups = nil
+			}),
+			commands: contract.Commands,
+		},
+		{
+			name: "single-occurrence constraint drift",
+			descriptors: mutateDescriptor("requirement-source-view", func(descriptor *commandDescriptor) {
+				descriptor.singleOccurrenceFlags = nil
+			}),
+			commands: contract.Commands,
+		},
+		{
+			name: "flag choice drift",
+			descriptors: mutateDescriptor("requirement-browser-server", func(descriptor *commandDescriptor) {
+				descriptor.flagValueChoices["--scope"] = []string{"graph"}
 			}),
 			commands: contract.Commands,
 		},
@@ -1102,8 +1134,20 @@ func commandDescriptorContractParityProblems(descriptors []commandDescriptor, co
 		if !reflect.DeepEqual(descriptor.exactlyOneOfFlagGroups, command.ExactlyOneOfFlagGroups) {
 			problems = append(problems, "exactly-one flag group drift "+name)
 		}
+		if !reflect.DeepEqual(descriptor.atMostOneOfFlagGroups, command.AtMostOneOfFlagGroups) {
+			problems = append(problems, "at-most-one flag group drift "+name)
+		}
+		if !reflect.DeepEqual(descriptor.flagPresenceRequirements, command.FlagPresenceRequirements) {
+			problems = append(problems, "flag presence requirement drift "+name)
+		}
 		if !reflect.DeepEqual(descriptor.flagValueRequirements, command.FlagValueRequirements) {
 			problems = append(problems, "flag value requirement drift "+name)
+		}
+		if !equalFlagChoiceMaps(descriptor.flagValueChoices, command.FlagChoices) {
+			problems = append(problems, "flag choice drift "+name)
+		}
+		if !equalStringSets(descriptor.singleOccurrenceFlags, command.SingleOccurrenceFlags) {
+			problems = append(problems, "single-occurrence flag drift "+name)
 		}
 		if !equalStringSets(descriptor.outputModes, command.OutputModes) {
 			problems = append(problems, "output mode drift "+name)
@@ -1142,7 +1186,7 @@ func commandDescriptorTopologyProblems(descriptors []commandDescriptor) []string
 		if len(descriptor.semanticOwnerDirs) == 0 {
 			problems = append(problems, "missing semantic owner dirs "+descriptor.name)
 		}
-		if !isSortedUnique(descriptor.allowedFlags) || !isSortedUnique(descriptor.requiredFlags) || !isSortedUnique(descriptor.outputModes) || !isSortedUnique(descriptor.semanticOwnerDirs) || !isSortedUnique(descriptor.semanticAppTests) {
+		if !isSortedUnique(descriptor.allowedFlags) || !isSortedUnique(descriptor.requiredFlags) || !isSortedUnique(descriptor.singleOccurrenceFlags) || !isSortedUnique(descriptor.outputModes) || !isSortedUnique(descriptor.semanticOwnerDirs) || !isSortedUnique(descriptor.semanticAppTests) || !isSortedUniqueFlagPresenceRequirements(descriptor.flagPresenceRequirements) || !isSortedUniqueFlagValueRequirements(descriptor.flagValueRequirements) {
 			problems = append(problems, "unsorted descriptor list "+descriptor.name)
 		}
 		for _, requiredFlag := range descriptor.requiredFlags {
@@ -1160,14 +1204,49 @@ func commandDescriptorTopologyProblems(descriptors []commandDescriptor) []string
 				}
 			}
 		}
+		for _, group := range descriptor.atMostOneOfFlagGroups {
+			if len(group) < 2 || !isSortedUnique(group) {
+				problems = append(problems, "invalid at-most-one flag group "+descriptor.name)
+			}
+			for _, flag := range group {
+				if !slices.Contains(descriptor.allowedFlags, flag) {
+					problems = append(problems, "at-most-one flag is not allowed "+descriptor.name+" "+flag)
+				}
+			}
+		}
+		for _, requirement := range descriptor.flagPresenceRequirements {
+			if requirement.Flag == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) || !isSortedUniqueRequiredFlagValues(requirement.RequiredFlagValues) {
+				problems = append(problems, "invalid flag presence requirement "+descriptor.name)
+			}
+			for _, flag := range requirement.RequiredFlags {
+				if !slices.Contains(descriptor.allowedFlags, flag) {
+					problems = append(problems, "presence-required flag is not allowed "+descriptor.name+" "+flag)
+				}
+			}
+			for _, required := range requirement.RequiredFlagValues {
+				if !slices.Contains(descriptor.allowedFlags, required.Flag) {
+					problems = append(problems, "presence-required flag is not allowed "+descriptor.name+" "+required.Flag)
+				}
+			}
+		}
 		for _, requirement := range descriptor.flagValueRequirements {
-			if requirement.Flag == "" || requirement.Value == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) {
+			if requirement.Flag == "" || requirement.Value == "" || !slices.Contains(descriptor.allowedFlags, requirement.Flag) || !isSortedUnique(requirement.RequiredFlags) || !isSortedUniqueRequiredFlagValues(requirement.RequiredFlagValues) {
 				problems = append(problems, "invalid flag value requirement "+descriptor.name)
 			}
 			for _, flag := range requirement.RequiredFlags {
 				if !slices.Contains(descriptor.allowedFlags, flag) {
 					problems = append(problems, "value-required flag is not allowed "+descriptor.name+" "+flag)
 				}
+			}
+			for _, required := range requirement.RequiredFlagValues {
+				if !slices.Contains(descriptor.allowedFlags, required.Flag) {
+					problems = append(problems, "value-required flag is not allowed "+descriptor.name+" "+required.Flag)
+				}
+			}
+		}
+		for _, flag := range descriptor.singleOccurrenceFlags {
+			if !slices.Contains(descriptor.allowedFlags, flag) {
+				problems = append(problems, "single-occurrence flag is not allowed "+descriptor.name+" "+flag)
 			}
 		}
 		if descriptor.input == commandInputNone && descriptor.runner == commandRunnerGenericInput {
@@ -1193,7 +1272,11 @@ func cloneCLIContractCommands(commands []cliContractCommand) []cliContractComman
 		copied.AllowedFlags = cloneStrings(command.AllowedFlags)
 		copied.RequiredFlags = cloneStrings(command.RequiredFlags)
 		copied.ExactlyOneOfFlagGroups = cloneStringMatrix(command.ExactlyOneOfFlagGroups)
+		copied.AtMostOneOfFlagGroups = cloneStringMatrix(command.AtMostOneOfFlagGroups)
+		copied.FlagPresenceRequirements = cloneFlagPresenceRequirements(command.FlagPresenceRequirements)
 		copied.FlagValueRequirements = cloneFlagValueRequirements(command.FlagValueRequirements)
+		copied.FlagChoices = cloneStringMap(command.FlagChoices)
+		copied.SingleOccurrenceFlags = cloneStrings(command.SingleOccurrenceFlags)
 		copied.OutputModes = cloneStrings(command.OutputModes)
 		clone = append(clone, copied)
 	}
@@ -1385,7 +1468,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
-		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host 127.0.0.1|::1] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <scope>] [--serve] [--session-mode browse|one-shot-question] [--session-timeout-seconds <1..7200>] --view <value>",
+		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
@@ -1410,10 +1493,36 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 			}
 		}
 		commandHelp := commandUsage(descriptor)
+		for _, group := range descriptor.atMostOneOfFlagGroups {
+			expected := "  At most one of: " + strings.Join(group, ", ")
+			if !strings.Contains(commandHelp, expected) {
+				t.Fatalf("%s at-most-one constraint %q is missing from command help", descriptor.name, expected)
+			}
+		}
+		for _, requirement := range descriptor.flagPresenceRequirements {
+			required := cloneStrings(requirement.RequiredFlags)
+			for _, value := range requirement.RequiredFlagValues {
+				required = append(required, value.Flag+" "+value.Value)
+			}
+			expected := fmt.Sprintf("  %s requires: %s", requirement.Flag, strings.Join(required, ", "))
+			if !strings.Contains(commandHelp, expected) {
+				t.Fatalf("%s presence constraint %q is missing from command help", descriptor.name, expected)
+			}
+		}
 		for _, requirement := range descriptor.flagValueRequirements {
-			expected := fmt.Sprintf("  %s %s requires: %s", requirement.Flag, requirement.Value, strings.Join(requirement.RequiredFlags, ", "))
+			required := cloneStrings(requirement.RequiredFlags)
+			for _, value := range requirement.RequiredFlagValues {
+				required = append(required, value.Flag+" "+value.Value)
+			}
+			expected := fmt.Sprintf("  %s %s requires: %s", requirement.Flag, requirement.Value, strings.Join(required, ", "))
 			if !strings.Contains(commandHelp, expected) {
 				t.Fatalf("%s value constraint %q is missing from command help", descriptor.name, expected)
+			}
+		}
+		for _, flag := range descriptor.singleOccurrenceFlags {
+			expected := "  May be specified once: " + flag
+			if !strings.Contains(commandHelp, expected) {
+				t.Fatalf("%s occurrence constraint %q is missing from command help", descriptor.name, expected)
 			}
 		}
 	}
@@ -1429,6 +1538,14 @@ func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
 	}{
 		{command: "adoption-contract-envelope", args: []string{"--input", "-"}},
 		{command: "conformance-profile", args: []string{"--input", "-", "--list", "--verify"}},
+		{command: "pilot-admission", args: []string{"--input", "-", "--pilot", "all"}},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--open", "--view", "source"}},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--scope", "graph", "--view", "source"}},
+		{command: "requirement-browser-server", args: []string{"--empty-local-environment-policy", "--input", "-", "--local-environment-class", "local-go", "--view", "proof"}},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--open", "--serve", "--session-mode", "one-shot-question", "--view", "spec-tree"}},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--serve", "--session-timeout-seconds", "30", "--view", "workspace"}},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--scope", "unknown", "--view", "proof"}},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--serve", "--session-mode", "browse", "--session-mode", "browse", "--view", "workspace"}},
 		{command: "requirement-proof-resolver", args: []string{"--input", "-"}},
 		{command: "stack-preset", args: nil},
 	}
@@ -1437,6 +1554,53 @@ func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
 		if err := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, item.args)); err == nil {
 			t.Fatalf("%s invalid argv was admitted by descriptor owner", item.command)
 		}
+	}
+}
+
+func TestRequirementBrowserDescriptorMatchesRuntimeConditionalFlags(t *testing.T) {
+	descriptor := commandDescriptorByName["requirement-browser-server"]
+	wantChoices := map[string][]string{
+		"--host":         {"127.0.0.1", "::1"},
+		"--scope":        {"graph", "slice"},
+		"--session-mode": {"browse", "one-shot-question"},
+		"--view":         {"coverage", "proof", "source", "spec-tree", "workspace"},
+	}
+	if !reflect.DeepEqual(descriptor.flagValueChoices, wantChoices) {
+		t.Fatalf("browser flag choices=%v, want %v", descriptor.flagValueChoices, wantChoices)
+	}
+	if !slices.Equal(descriptor.singleOccurrenceFlags, requirementBrowserSingleOccurrenceFlags) {
+		t.Fatalf("browser singleton flags=%v, want %v", descriptor.singleOccurrenceFlags, requirementBrowserSingleOccurrenceFlags)
+	}
+	help := commandUsage(descriptor)
+	for _, fragment := range []string{"--host <127.0.0.1|::1>", "--scope <graph|slice>", "--session-mode <browse|one-shot-question>", "--view <coverage|proof|source|spec-tree|workspace>"} {
+		if !strings.Contains(help, fragment) {
+			t.Fatalf("browser help missing descriptor choice projection %q:\n%s", fragment, help)
+		}
+	}
+	for _, test := range []struct {
+		name string
+		args []string
+	}{
+		{name: "source view", args: []string{"--input", "-", "--view", "source"}},
+		{name: "browse session", args: []string{"--input", "-", "--serve", "--session-mode", "browse", "--view", "workspace"}},
+		{name: "one shot session", args: []string{"--input", "-", "--open", "--serve", "--session-mode", "one-shot-question", "--session-timeout-seconds", "30", "--view", "workspace"}},
+		{name: "proof scope", args: []string{"--input", "-", "--local-environment-class", "local-go", "--scope", "graph", "--view", "proof"}},
+		{name: "open without serve", args: []string{"--input", "-", "--open", "--view", "source"}},
+		{name: "browse wrong view", args: []string{"--input", "-", "--serve", "--session-mode", "browse", "--view", "source"}},
+		{name: "timeout without one shot", args: []string{"--input", "-", "--serve", "--session-timeout-seconds", "30", "--view", "workspace"}},
+		{name: "scope outside proof", args: []string{"--input", "-", "--scope", "graph", "--view", "source"}},
+		{name: "conflicting environment policy", args: []string{"--empty-local-environment-policy", "--input", "-", "--local-environment-class", "local-go", "--view", "proof"}},
+		{name: "invalid scope", args: []string{"--input", "-", "--scope", "unknown", "--view", "proof"}},
+		{name: "repeated session mode", args: []string{"--input", "-", "--serve", "--session-mode", "browse", "--session-mode", "browse", "--view", "workspace"}},
+		{name: "repeated session timeout", args: []string{"--input", "-", "--open", "--serve", "--session-mode", "one-shot-question", "--session-timeout-seconds", "30", "--session-timeout-seconds", "30", "--view", "workspace"}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			descriptorErr := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, test.args))
+			_, runtimeErr := parseRequirementBrowserArgs(test.args)
+			if (descriptorErr == nil) != (runtimeErr == nil) {
+				t.Fatalf("descriptor error=%v runtime error=%v for argv %v", descriptorErr, runtimeErr, test.args)
+			}
+		})
 	}
 }
 
@@ -1450,20 +1614,24 @@ type cliContract struct {
 }
 
 type cliContractCommand struct {
-	AgentEnvelope          *bool                  `json:"agentEnvelope,omitempty"`
-	AllowedFlags           []string               `json:"allowedFlags"`
-	Command                string                 `json:"command"`
-	ContractEnvelope       *bool                  `json:"contractEnvelope,omitempty"`
-	ExactlyOneOfFlagGroups [][]string             `json:"exactlyOneOfFlagGroups,omitempty"`
-	FlagValueRequirements  []flagValueRequirement `json:"flagValueRequirements,omitempty"`
-	Input                  string                 `json:"input"`
-	InputContract          any                    `json:"inputContract,omitempty"`
-	InputPointer           bool                   `json:"inputPointer"`
-	OutputContract         any                    `json:"outputContract,omitempty"`
-	OutputModes            []string               `json:"outputModes"`
-	RequiredFlags          []string               `json:"requiredFlags,omitempty"`
-	ScopeClass             string                 `json:"scopeClass"`
-	Stdin                  bool                   `json:"stdin"`
+	AgentEnvelope            *bool                     `json:"agentEnvelope,omitempty"`
+	AllowedFlags             []string                  `json:"allowedFlags"`
+	AtMostOneOfFlagGroups    [][]string                `json:"atMostOneOfFlagGroups,omitempty"`
+	Command                  string                    `json:"command"`
+	ContractEnvelope         *bool                     `json:"contractEnvelope,omitempty"`
+	ExactlyOneOfFlagGroups   [][]string                `json:"exactlyOneOfFlagGroups,omitempty"`
+	FlagChoices              map[string][]string       `json:"flagChoices,omitempty"`
+	FlagPresenceRequirements []flagPresenceRequirement `json:"flagPresenceRequirements,omitempty"`
+	FlagValueRequirements    []flagValueRequirement    `json:"flagValueRequirements,omitempty"`
+	Input                    string                    `json:"input"`
+	InputContract            any                       `json:"inputContract,omitempty"`
+	InputPointer             bool                      `json:"inputPointer"`
+	OutputContract           any                       `json:"outputContract,omitempty"`
+	OutputModes              []string                  `json:"outputModes"`
+	RequiredFlags            []string                  `json:"requiredFlags,omitempty"`
+	ScopeClass               string                    `json:"scopeClass"`
+	SingleOccurrenceFlags    []string                  `json:"singleOccurrenceFlags,omitempty"`
+	Stdin                    bool                      `json:"stdin"`
 }
 
 func readCLIContract(t *testing.T) cliContract {
@@ -1536,20 +1704,24 @@ func assertCLIContractSchema(t *testing.T) {
 		t.Fatalf("decode raw CLI commands: %v", err)
 	}
 	allowedCommandKeys := map[string]struct{}{
-		"agentEnvelope":          {},
-		"allowedFlags":           {},
-		"command":                {},
-		"contractEnvelope":       {},
-		"exactlyOneOfFlagGroups": {},
-		"flagValueRequirements":  {},
-		"input":                  {},
-		"inputContract":          {},
-		"inputPointer":           {},
-		"outputContract":         {},
-		"outputModes":            {},
-		"requiredFlags":          {},
-		"scopeClass":             {},
-		"stdin":                  {},
+		"agentEnvelope":            {},
+		"allowedFlags":             {},
+		"atMostOneOfFlagGroups":    {},
+		"command":                  {},
+		"contractEnvelope":         {},
+		"exactlyOneOfFlagGroups":   {},
+		"flagChoices":              {},
+		"flagPresenceRequirements": {},
+		"flagValueRequirements":    {},
+		"input":                    {},
+		"inputContract":            {},
+		"inputPointer":             {},
+		"outputContract":           {},
+		"outputModes":              {},
+		"requiredFlags":            {},
+		"scopeClass":               {},
+		"singleOccurrenceFlags":    {},
+		"stdin":                    {},
 	}
 	for index, command := range commands {
 		for key := range command {
@@ -1560,6 +1732,91 @@ func assertCLIContractSchema(t *testing.T) {
 		for _, required := range []string{"allowedFlags", "command", "input", "inputPointer", "outputModes", "scopeClass", "stdin"} {
 			if _, ok := command[required]; !ok {
 				t.Fatalf("CLI command %d missing required key %s", index, required)
+			}
+		}
+		var flagChoices map[string][]string
+		if raw, ok := command["flagChoices"]; ok {
+			if err := json.Unmarshal(raw, &flagChoices); err != nil {
+				t.Fatalf("decode CLI command %d flag choices: %v", index, err)
+			}
+			var allowedFlags []string
+			if err := json.Unmarshal(command["allowedFlags"], &allowedFlags); err != nil {
+				t.Fatalf("decode CLI command %d allowed flags: %v", index, err)
+			}
+			for flag, choices := range flagChoices {
+				if !slices.Contains(allowedFlags, flag) || !isSortedUnique(choices) {
+					t.Fatalf("CLI command %d has invalid choices for %s: %v", index, flag, choices)
+				}
+			}
+		}
+		var presenceRequirements []map[string]json.RawMessage
+		if raw, ok := command["flagPresenceRequirements"]; ok {
+			if err := json.Unmarshal(raw, &presenceRequirements); err != nil {
+				t.Fatalf("decode CLI command %d flag presence requirements: %v", index, err)
+			}
+		}
+		for requirementIndex, requirement := range presenceRequirements {
+			allowedRequirementKeys := map[string]struct{}{
+				"flag":               {},
+				"requiredFlagValues": {},
+				"requiredFlags":      {},
+			}
+			for key := range requirement {
+				if _, ok := allowedRequirementKeys[key]; !ok {
+					t.Fatalf("CLI command %d flag presence requirement %d has unsupported key %s", index, requirementIndex, key)
+				}
+			}
+			for _, required := range []string{"flag", "requiredFlags"} {
+				if _, ok := requirement[required]; !ok {
+					t.Fatalf("CLI command %d flag presence requirement %d missing required key %s", index, requirementIndex, required)
+				}
+			}
+			var requiredValues []map[string]json.RawMessage
+			if raw, ok := requirement["requiredFlagValues"]; ok {
+				if err := json.Unmarshal(raw, &requiredValues); err != nil {
+					t.Fatalf("decode CLI command %d flag presence requirement %d required values: %v", index, requirementIndex, err)
+				}
+			}
+			for valueIndex, requiredValue := range requiredValues {
+				assertKeys(t, fmt.Sprintf("CLI command %d flag presence requirement %d required value %d", index, requirementIndex, valueIndex), keys(requiredValue), []string{"flag", "value"})
+			}
+		}
+		var requirements []map[string]json.RawMessage
+		if raw, ok := command["flagValueRequirements"]; ok {
+			if err := json.Unmarshal(raw, &requirements); err != nil {
+				t.Fatalf("decode CLI command %d flag value requirements: %v", index, err)
+			}
+		}
+		for requirementIndex, requirement := range requirements {
+			allowedRequirementKeys := map[string]struct{}{
+				"flag":               {},
+				"requiredFlagValues": {},
+				"requiredFlags":      {},
+				"value":              {},
+			}
+			for key := range requirement {
+				if _, ok := allowedRequirementKeys[key]; !ok {
+					t.Fatalf("CLI command %d flag value requirement %d has unsupported key %s", index, requirementIndex, key)
+				}
+			}
+			for _, required := range []string{"flag", "requiredFlags", "value"} {
+				if _, ok := requirement[required]; !ok {
+					t.Fatalf("CLI command %d flag value requirement %d missing required key %s", index, requirementIndex, required)
+				}
+			}
+			var requiredValues []map[string]json.RawMessage
+			if raw, ok := requirement["requiredFlagValues"]; ok {
+				if err := json.Unmarshal(raw, &requiredValues); err != nil {
+					t.Fatalf("decode CLI command %d flag value requirement %d required values: %v", index, requirementIndex, err)
+				}
+			}
+			for valueIndex, requiredValue := range requiredValues {
+				assertKeys(t, fmt.Sprintf("CLI command %d flag value requirement %d required value %d", index, requirementIndex, valueIndex), keys(requiredValue), []string{"flag", "value"})
+				for _, required := range []string{"flag", "value"} {
+					if _, ok := requiredValue[required]; !ok {
+						t.Fatalf("CLI command %d flag value requirement %d required value %d missing required key %s", index, requirementIndex, valueIndex, required)
+					}
+				}
 			}
 		}
 	}
@@ -2139,6 +2396,18 @@ func equalStringSets(left []string, right []string) bool {
 	sort.Strings(left)
 	sort.Strings(right)
 	return equalStrings(left, right)
+}
+
+func equalFlagChoiceMaps(left map[string][]string, right map[string][]string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for flag, choices := range left {
+		if !slices.Equal(choices, right[flag]) {
+			return false
+		}
+	}
+	return true
 }
 
 func contains(values []string, needle string) bool {

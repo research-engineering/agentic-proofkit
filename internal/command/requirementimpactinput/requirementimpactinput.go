@@ -424,7 +424,7 @@ func admitGeneratedArtifactRules(raw any) ([]generatedArtifactRule, error) {
 		result = append(result, generatedArtifactRule{GeneratedPath: path, SourcePathPatterns: sources})
 		paths = append(paths, path)
 	}
-	if _, err := admit.PreserveSortedText(paths, "requirement impact input compose generatedArtifactRules generated paths", true); err != nil {
+	if _, err := admit.PreserveSortedPaths(paths, "requirement impact input compose generatedArtifactRules generated paths", true); err != nil {
 		return nil, err
 	}
 	return result, nil

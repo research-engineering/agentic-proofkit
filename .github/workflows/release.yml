@@ -117,6 +117,7 @@ jobs:
               go run ./internal/tools/releasepreflight npm-existing \
                 --expected-json "$metadata" \
                 --actual-file /tmp/proofkit-candidate-view.json
+              lineage_state="existing_byte_match"
               node - "$metadata" "$filename" "$report" <<'NODE'
           const { execFileSync } = require("node:child_process");
           const { writeFileSync } = require("node:fs");
@@ -132,17 +133,25 @@ jobs:
             .sort((left, right) => left.path.localeCompare(right.path));
           writeFileSync(report, `${JSON.stringify({ [metadata.name]: { ...metadata, files } }, null, 2)}\n`);
           NODE
-              continue
+            else
+              if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-candidate-view.err; then
+                cat /tmp/proofkit-candidate-view.err >&2
+                exit 1
+              fi
+              npm publish "artifacts/package/${filename}" \
+                --dry-run \
+                --json \
+                --access public \
+                --registry="${REGISTRY_URL}" > "$report"
+              lineage_state="unpublished"
             fi
-            if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-candidate-view.err; then
-              cat /tmp/proofkit-candidate-view.err >&2
-              exit 1
-            fi
-            npm publish "artifacts/package/${filename}" \
-              --dry-run \
-              --json \
-              --access public \
-              --registry="${REGISTRY_URL}" > "$report"
+            npm view "${package_name}@latest" name version --json --registry="${REGISTRY_URL}" > /tmp/proofkit-latest-view.json
+            go run ./internal/tools/releasepreflight npm-lineage \
+              --change-record-file release/change-record.v2.json \
+              --latest-file /tmp/proofkit-latest-view.json \
+              --expected-name "$package_name" \
+              --candidate-version "$package_version" \
+              --candidate-state "$lineage_state"
           done < artifacts/publish/publish-order.txt
           node <<'NODE'
           const { readFileSync, readdirSync, writeFileSync } = require("node:fs");
@@ -382,9 +391,6 @@ jobs:
           node <<'NODE'
           const { readFileSync, readdirSync, writeFileSync } = require("node:fs");
 
-          const expectedRecords = require("./artifacts/package/npm-pack.json");
-          const publicationMode = readFileSync("artifacts/registry/npm-publication-mode.txt", "utf8").trim();
-          const expectedByName = new Map(expectedRecords.map((record) => [record.name, record]));
           const files = readdirSync("artifacts/registry")
             .filter((file) => file.startsWith("pack-") && file.endsWith(".json"))
             .sort();
@@ -396,43 +402,9 @@ jobs:
             return parsed[0];
           });
           records.sort((left, right) => left.name.localeCompare(right.name));
-          if (records.length !== expectedByName.size) {
-            throw new Error(`published registry package count mismatch: expected ${expectedByName.size}, got ${records.length}`);
-          }
-          const seen = new Set();
-          for (const record of records) {
-            const expected = expectedByName.get(record.name);
-            if (!expected) {
-              throw new Error(`unexpected published registry package ${record.name}`);
-            }
-            if (seen.has(record.name)) {
-              throw new Error(`duplicate published registry package ${record.name}`);
-            }
-            seen.add(record.name);
-            for (const field of ["version", "filename", "shasum", "integrity"]) {
-              if (record[field] !== expected[field]) {
-                throw new Error(`published registry ${record.name} ${field} mismatch: expected ${expected[field]}, got ${record[field]}`);
-              }
-            }
-          }
           writeFileSync("artifacts/registry/npm-pack.json", `${JSON.stringify(records, null, 2)}\n`);
-          const summary = {
-            artifactKind: "proofkit.published-registry-artifact-set.v1",
-            publicationMode,
-            registry: "https://registry.npmjs.org",
-            source: publicationMode === "published_by_workflow"
-              ? "post-publish npm pack from registry"
-              : "registry npm pack byte-match for preexisting version",
-            packages: records.map((record) => ({
-              name: record.name,
-              version: record.version,
-              filename: record.filename,
-              shasum: record.shasum,
-              integrity: record.integrity
-            }))
-          };
-          writeFileSync("artifacts/registry/published-registry-artifact-set.json", `${JSON.stringify(summary, null, 2)}\n`);
           NODE
+          npm run npm:registry-evidence
 
       - name: Verify root-only registry install and signatures
         run: |
@@ -999,6 +971,7 @@ jobs:
               --asset-names-file /tmp/proofkit-expected-release-assets.txt
             cp /tmp/proofkit-release-view.json artifacts/release/github-release.json
             go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts
+            go run ./internal/tools/releasepreflight retained-evidence-verify --artifact-root artifacts
             echo "release $GITHUB_REF_NAME already exists and matches the candidate artifacts" >&2
             exit 0
           fi
@@ -1014,6 +987,7 @@ jobs:
             --notes-file artifacts/release/release-notes.md \
             --asset-names-file /tmp/proofkit-expected-release-assets.txt
           go run ./internal/tools/releasepreflight retained-evidence --artifact-root artifacts
+          go run ./internal/tools/releasepreflight retained-evidence-verify --artifact-root artifacts
           final_dir="$(mktemp -d)"
           for asset in "${expected_assets[@]}"; do
             asset_name="$(basename "$asset")"

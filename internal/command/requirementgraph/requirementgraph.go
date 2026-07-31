@@ -590,14 +590,7 @@ func nonNegativeInteger(raw any, context string) (int, error) {
 	return value, nil
 }
 func digestRef(raw any, context string) (string, error) {
-	value, err := admit.NonEmptyText(raw, context)
-	if err != nil || !strings.HasPrefix(value, "sha256:") {
-		return "", fmt.Errorf("%s must be a sha256 digest reference", context)
-	}
-	if _, err := admit.LowercaseSHA256(strings.TrimPrefix(value, "sha256:"), context); err != nil {
-		return "", err
-	}
-	return value, nil
+	return admit.SHA256Ref(raw, context)
 }
 
 func mapsToAny(values []map[string]any) []any {

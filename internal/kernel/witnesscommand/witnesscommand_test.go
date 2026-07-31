@@ -37,6 +37,20 @@ func TestAdmitWithVocabularyRejectsRiskCorpus(t *testing.T) {
 			want: "shell",
 		},
 		{
+			name: "windows trailing dot shell alias",
+			mutate: func(command map[string]any) {
+				command["argv"] = []any{"bash.", "-c", "go test ./..."}
+			},
+			want: "shell",
+		},
+		{
+			name: "windows repeated executable extension shell alias",
+			mutate: func(command map[string]any) {
+				command["argv"] = []any{"bash.exe.exe", "-c", "go test ./..."}
+			},
+			want: "shell",
+		},
+		{
 			name: "alternative posix shell executable",
 			mutate: func(command map[string]any) {
 				command["argv"] = []any{"/bin/dash", "-c", "go test ./..."}

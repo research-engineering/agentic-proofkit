@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"slices"
 	"strconv"
 	"syscall"
 	"time"
@@ -14,6 +15,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
+)
+
+var requirementBrowserSingleOccurrenceFlags = flags(
+	"--session-mode",
+	"--session-timeout-seconds",
 )
 
 func runRequirementBrowserServer(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
@@ -66,8 +72,14 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 	options := requirementBrowserArgs{host: "127.0.0.1", port: 0, sessionMode: "browse"}
 	inputPointerSeen := false
 	sessionModeSeen := false
-	sessionTimeoutSeen := false
+	seenSingletonFlags := map[string]bool{}
 	for index := 0; index < len(args); index++ {
+		if slices.Contains(requirementBrowserSingleOccurrenceFlags, args[index]) {
+			if seenSingletonFlags[args[index]] {
+				return requirementBrowserArgs{}, fmt.Errorf("%s may be specified only once", args[index])
+			}
+			seenSingletonFlags[args[index]] = true
+		}
 		switch args[index] {
 		case "--input":
 			if options.inputPath != "" || index+1 >= len(args) || args[index+1] == "" {
@@ -83,14 +95,14 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			options.inputPointer = args[index+1]
 			index++
 		case "--view":
-			if index+1 >= len(args) || (args[index+1] != "source" && args[index+1] != "proof" && args[index+1] != "coverage" && args[index+1] != "spec-tree" && args[index+1] != "workspace") {
-				return requirementBrowserArgs{}, fmt.Errorf("--view requires source, proof, coverage, spec-tree, or workspace")
+			if index+1 >= len(args) || !requirementBrowserFlagValueAllowed("--view", args[index+1]) {
+				return requirementBrowserArgs{}, flagChoiceError("--view", requirementBrowserFlagChoices("--view"))
 			}
 			options.view = args[index+1]
 			index++
 		case "--host":
-			if index+1 >= len(args) || (args[index+1] != "127.0.0.1" && args[index+1] != "::1") {
-				return requirementBrowserArgs{}, fmt.Errorf("--host requires loopback literal: 127.0.0.1 or ::1")
+			if index+1 >= len(args) || !requirementBrowserFlagValueAllowed("--host", args[index+1]) {
+				return requirementBrowserArgs{}, flagChoiceError("--host", requirementBrowserFlagChoices("--host"))
 			}
 			options.host = args[index+1]
 			index++
@@ -110,17 +122,16 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 		case "--serve":
 			options.serve = true
 		case "--session-mode":
-			if sessionModeSeen || index+1 >= len(args) || (args[index+1] != "browse" && args[index+1] != "one-shot-question") {
-				return requirementBrowserArgs{}, fmt.Errorf("--session-mode requires browse or one-shot-question")
+			if index+1 >= len(args) || !requirementBrowserFlagValueAllowed("--session-mode", args[index+1]) {
+				return requirementBrowserArgs{}, flagChoiceError("--session-mode", requirementBrowserFlagChoices("--session-mode"))
 			}
 			sessionModeSeen = true
 			options.sessionMode = args[index+1]
 			index++
 		case "--session-timeout-seconds":
-			if sessionTimeoutSeen || index+1 >= len(args) {
+			if index+1 >= len(args) {
 				return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds requires an integer from 1 to 7200")
 			}
-			sessionTimeoutSeen = true
 			seconds, err := strconv.Atoi(args[index+1])
 			if err != nil || seconds < 1 || seconds > 7200 {
 				return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds requires an integer from 1 to 7200")
@@ -128,8 +139,8 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			options.sessionTimeoutSeconds = seconds
 			index++
 		case "--scope":
-			if index+1 >= len(args) || (args[index+1] != "graph" && args[index+1] != "slice") {
-				return requirementBrowserArgs{}, fmt.Errorf("--scope requires graph or slice")
+			if index+1 >= len(args) || !requirementBrowserFlagValueAllowed("--scope", args[index+1]) {
+				return requirementBrowserArgs{}, flagChoiceError("--scope", requirementBrowserFlagChoices("--scope"))
 			}
 			options.scope = args[index+1]
 			index++
@@ -177,4 +188,12 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 		return requirementBrowserArgs{}, fmt.Errorf("--local-environment-class and --empty-local-environment-policy are mutually exclusive")
 	}
 	return options, nil
+}
+
+func requirementBrowserFlagChoices(flag string) []string {
+	return commandDescriptorByName["requirement-browser-server"].flagValueChoices[flag]
+}
+
+func requirementBrowserFlagValueAllowed(flag string, value string) bool {
+	return slices.Contains(requirementBrowserFlagChoices(flag), value)
 }

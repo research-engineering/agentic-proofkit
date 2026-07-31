@@ -62,13 +62,30 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			"  Path: node_modules/@research-engineering/agentic-proofkit/README.md",
 		)
 	}
-	if len(descriptor.exactlyOneOfFlagGroups) > 0 || len(descriptor.flagValueRequirements) > 0 {
+	if len(descriptor.exactlyOneOfFlagGroups) > 0 || len(descriptor.atMostOneOfFlagGroups) > 0 || len(descriptor.flagPresenceRequirements) > 0 || len(descriptor.flagValueRequirements) > 0 || len(descriptor.singleOccurrenceFlags) > 0 {
 		lines = append(lines, "", "Flag constraints:")
 		for _, group := range descriptor.exactlyOneOfFlagGroups {
 			lines = append(lines, "  Exactly one of: "+strings.Join(group, ", "))
 		}
+		for _, group := range descriptor.atMostOneOfFlagGroups {
+			lines = append(lines, "  At most one of: "+strings.Join(group, ", "))
+		}
+		for _, requirement := range descriptor.flagPresenceRequirements {
+			required := cloneStrings(requirement.RequiredFlags)
+			for _, value := range requirement.RequiredFlagValues {
+				required = append(required, value.Flag+" "+value.Value)
+			}
+			lines = append(lines, fmt.Sprintf("  %s requires: %s", requirement.Flag, strings.Join(required, ", ")))
+		}
 		for _, requirement := range descriptor.flagValueRequirements {
-			lines = append(lines, fmt.Sprintf("  %s %s requires: %s", requirement.Flag, requirement.Value, strings.Join(requirement.RequiredFlags, ", ")))
+			required := cloneStrings(requirement.RequiredFlags)
+			for _, value := range requirement.RequiredFlagValues {
+				required = append(required, value.Flag+" "+value.Value)
+			}
+			lines = append(lines, fmt.Sprintf("  %s %s requires: %s", requirement.Flag, requirement.Value, strings.Join(required, ", ")))
+		}
+		for _, flag := range descriptor.singleOccurrenceFlags {
+			lines = append(lines, "  May be specified once: "+flag)
 		}
 	}
 	if len(descriptor.inputSchemaSummary) > 0 {

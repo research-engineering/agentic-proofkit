@@ -20,6 +20,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
@@ -733,10 +734,20 @@ func proofReceiptMatchesExecution(receipt proofReceiptEvidence, execution packag
 	if err != nil || receipt.SourceRevision != execution.SourceRevision ||
 		receipt.StartedAt != execution.StartedAt ||
 		receipt.FinishedAt != execution.FinishedAt ||
-		receipt.CommandDigest != commandDigest ||
-		(execution.EnvironmentDigest != "" && receipt.EnvironmentDigest != executionDigestRef(execution.EnvironmentDigest)) ||
-		(execution.ToolchainDigest != "" && receipt.ToolchainDigest != executionDigestRef(execution.ToolchainDigest)) {
+		receipt.CommandDigest != commandDigest {
 		return false
+	}
+	if execution.EnvironmentDigest != "" {
+		expected, err := admit.SHA256HexRef(execution.EnvironmentDigest, "package execution environmentDigest")
+		if err != nil || receipt.EnvironmentDigest != expected {
+			return false
+		}
+	}
+	if execution.ToolchainDigest != "" {
+		expected, err := admit.SHA256HexRef(execution.ToolchainDigest, "package execution toolchainDigest")
+		if err != nil || receipt.ToolchainDigest != expected {
+			return false
+		}
 	}
 	return true
 }
@@ -841,13 +852,6 @@ func packageArtifactCommandDigest(execution packageartifactrecord.Record) (strin
 		"argv": argv,
 		"id":   execution.CommandID,
 	})
-}
-
-func executionDigestRef(value string) string {
-	if strings.HasPrefix(value, "sha256:") {
-		return value
-	}
-	return "sha256:" + value
 }
 
 func coverageMetricsRecordMatches(record coverageMetricsEvidence) bool {
