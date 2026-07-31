@@ -15,6 +15,19 @@ const (
 	TarballPilot         ID = "tarball_pilot"
 )
 
+func NPMRegistryEvidenceSource(publicationMode string) (string, bool) {
+	switch publicationMode {
+	case "published_by_workflow":
+		return "post-publish npm pack from registry", true
+	case "existing_byte_match":
+		return "registry npm pack byte-match for preexisting version", true
+	case "mixed":
+		return "post-publish and preexisting npm pack byte-match from registry", true
+	default:
+		return "", false
+	}
+}
+
 const (
 	GitHubPackagesRegistryURL  = "https://npm.pkg.github.com"
 	NPMRegistryURL             = "https://registry.npmjs.org"

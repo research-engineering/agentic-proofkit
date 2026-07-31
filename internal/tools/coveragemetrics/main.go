@@ -219,8 +219,11 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestSelfCheckOutputUsesExactRootShape",
 			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
 		},
-		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}:            {"TestExactTarballOnboardingTrace"},
-		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.ci-receipt-anchor"}:                    {"TestReceiptIDKeepsLocalAndCIIdentitiesDistinct"},
+		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}: {"TestExactTarballOnboardingTrace"},
+		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.ci-receipt-anchor"}: {
+			"TestReceiptIDKeepsLocalAndCIIdentitiesDistinct",
+			"TestRunInvokesEveryRequiredSelfHostingAdmissionBoundary",
+		},
 		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.self-hosting-report-verdict"}:          {"TestRunProofkitVerdictCases"},
 		{"REQ-PROOFKIT-PACKAGE-005", "proofkit.package-boundary.merge-critical-runtime-preconditions"}: {"TestCISourceQualityInstallsPythonBeforeLifecycleTests"},
 		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-candidate"}:               {"TestPythonArtifactRefsRejectEachWheelIdentityDefect"},
@@ -238,6 +241,13 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestSelfCheckOutputUsesExactRootShape",
 			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
 		},
+		{"REQ-PROOFKIT-QUALITY-001", "proofkit.supply-chain-quality.release-attestation-wiring"}: {
+			"TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure",
+		},
+		{"REQ-PROOFKIT-QUALITY-001", "proofkit.supply-chain-quality.retained-evidence-manifest"}: {
+			"TestManifestRejectsUnboundAttestationAndSymlink",
+			"TestManifestUsesDownloadableArtifactPaths",
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-contract-topology"}: {
 			"TestCLIConditionModelClosesAdoptionOutputRoutes",
 			"TestCommandDescriptorContractParityRejectsMutations",
@@ -249,6 +259,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
 		},
 		{"REQ-PROOFKIT-QUALITY-006", "proofkit.supply-chain-quality.osv-permission-separation"}: {
+			"TestOSVSourceScanFailsForEveryNonzeroScannerStatus",
 			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
 		},
 		{"REQ-PROOFKIT-QUALITY-007", "proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs"}: {
@@ -261,6 +272,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestBindingWitnessSelectorsRejectInvalidGoTestSignature",
 			"TestBindingWitnessSelectorsRejectMissingSemanticOwner",
 			"TestBindingWitnessSelectorsRejectNonTestAndBuildExcludedFiles",
+			"TestBindingWitnessSelectorsRejectVacuousTestBody",
 			"TestBindingWitnessSelectorsRequireExactCriticalInventories",
 		},
 		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.ci-required-aggregate-exactness"}: {
@@ -301,6 +313,17 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestLiteralShellWordsConsumesLongBackslashRun",
 			"TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput",
 		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-manifest-json-abi-registry-evidence"}: {
+			"TestNPMRegistryAuthorityFlowsFromAdmittedFileToPublishedChannel",
+			"TestNPMRegistryPublicationRequiresTypedAuthorityEvidence",
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-authority-producer"}: {
+			"TestRunBuildsCanonicalTypedRegistryEvidence",
+			"TestRunRejectsRegistryPackageSetSubstitution",
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-workflow-delegation"}: {
+			"TestReleaseWorkflowDelegatesNPMRegistryEvidenceToRepositoryOwner",
+		},
 		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}: {
 			"TestCIBrowserRuntimeRetainsFailureDiagnosticsWithoutPublishingProof",
 		},
@@ -314,6 +337,12 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestAdmitEnforcesVersionedChangeClass",
 			"TestCurrentChangeRecordNamesReviewedSemanticChanges",
 			"TestRenderStatesPreOneExactPinPolicy",
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.retained-evidence-artifact-topology"}: {
+			"TestVerifyRejectsManifestAddressDrift",
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-closeout-change-record"}: {
+			"TestBuildInputFailsClosedForEachBlockingEvidenceClass",
 		},
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage"}: {
 			"TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity",
@@ -329,6 +358,15 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		},
 		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}: {
 			"TestAdoptionContractEnvelopeCLIABI",
+		},
+		{"REQ-PROOFKIT-SPEC-007", "proofkit.spec-proof-core.canonical-command-input-admission"}: {
+			"TestRequiredInputCommandsRejectMalformedCallerRecords",
+		},
+		{"REQ-PROOFKIT-SPEC-007", "proofkit.spec-proof-core.canonical-input-admission"}: {
+			"TestDecodeTypedJSONUsesStrictAdmission",
+		},
+		{"REQ-PROOFKIT-SPEC-013", "proofkit.spec-proof-core.receipt-trust-status-vocabulary-admission"}: {
+			"TestBuildRejectsHigherRankThatWeakensMinimumTrustSemantics",
 		},
 		{"REQ-PROOFKIT-SPEC-021", "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup"}: {
 			"TestServeOneShotDoesNotReadCompletedDoneTwice",
@@ -349,6 +387,8 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-candidate"}:                          "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-generated-continuation"}:             "internal/tools/pythonpackage/continuation_test.go",
 		{"REQ-PROOFKIT-PACKAGE-007", "proofkit.package-boundary.package-public-docs-no-mutable-release-facts"}:    "internal/tools/packageverify/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-001", "proofkit.supply-chain-quality.release-attestation-wiring"}:                  "scripts/validate-self-hosting-receipts_test.go",
+		{"REQ-PROOFKIT-QUALITY-001", "proofkit.supply-chain-quality.retained-evidence-manifest"}:                  "internal/tools/retainedevidence/manifest_test.go",
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-abi-golden"}:                              "internal/app/cli_abi_test.go",
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-contract-topology"}:                       "internal/app/cli_contract_test.go",
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-witness-contract"}:                 "internal/app/cli_output_witness_contract_test.go",
@@ -361,13 +401,21 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}:                "scripts/workflow_package_gate_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-016", "proofkit.supply-chain-quality.release-platform-python-wheels"}:              "internal/tools/pythonpackage/metadata_test.go",
 		{"REQ-PROOFKIT-QUALITY-019", "proofkit.supply-chain-quality.installed-package-json-abi-smoke"}:            "internal/tools/packageverify/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-manifest-json-abi-registry-evidence"}: "internal/tools/releasemanifest/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-authority-producer"}:             "internal/tools/npmregistry/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-workflow-delegation"}:            "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}:       "scripts/workflow_browser_runtime_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility"}:    "internal/tools/pythonpackage/metadata_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}:            "internal/tools/releasechange/record_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.retained-evidence-artifact-topology"}:         "internal/tools/retainedevidence/manifest_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-closeout-change-record"}:              "internal/tools/releasecloseoutinput/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage"}:                 "internal/tools/releasepreflight/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage-workflow"}:        "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-source-oracles"}:                     "scripts/workflow_source_oracles_test.go",
 		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}:                  "internal/app/cli_abi_test.go",
+		{"REQ-PROOFKIT-SPEC-007", "proofkit.spec-proof-core.canonical-command-input-admission"}:                   "internal/app/command_coverage_test.go",
+		{"REQ-PROOFKIT-SPEC-007", "proofkit.spec-proof-core.canonical-input-admission"}:                           "internal/kernel/admission/json_test.go",
+		{"REQ-PROOFKIT-SPEC-013", "proofkit.spec-proof-core.receipt-trust-status-vocabulary-admission"}:           "internal/command/receipttrustclass/receipt_trust_class_test.go",
 		{"REQ-PROOFKIT-SPEC-021", "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup"}:                "internal/command/requirementbrowser/server_test.go",
 	}
 	if len(requiredPaths) != len(required) {
@@ -410,6 +458,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 
 func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bindingFile) error {
 	activeWitnessPackages := map[string]map[string]struct{}{}
+	packageFunctionScopes := map[string]map[string]*ast.FuncDecl{}
 	for _, binding := range bindings.Bindings {
 		if len(binding.WitnessSelectors) == 0 {
 			continue
@@ -419,25 +468,22 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 		if err != nil {
 			return fmt.Errorf("parse binding witness %s: %w", binding.WitnessPath, err)
 		}
-		functions := map[string]*ast.FuncDecl{}
+		witnessFunctions := map[string]*ast.FuncDecl{}
 		for _, declaration := range source.Decls {
 			function, ok := declaration.(*ast.FuncDecl)
 			if ok && function.Recv == nil {
-				functions[function.Name.Name] = function
+				witnessFunctions[function.Name.Name] = function
 			}
 		}
 		testingAliases, dotImportedTesting := importedTestingNames(source)
 		packagePath := "./" + filepath.ToSlash(filepath.Dir(binding.WitnessPath))
 		for _, selector := range binding.WitnessSelectors {
-			function, ok := functions[selector.Selector]
+			function, ok := witnessFunctions[selector.Selector]
 			if !ok {
 				return fmt.Errorf("binding %s selector %s is missing from %s", binding.ScenarioID, selector.Selector, binding.WitnessPath)
 			}
 			if !validGoTestFunction(function, testingAliases, dotImportedTesting) {
 				return fmt.Errorf("binding %s selector %s is not a valid Go test function", binding.ScenarioID, selector.Selector)
-			}
-			if gotestsource.HasSkip(function) {
-				return fmt.Errorf("binding %s selector %s contains t.Skip and cannot serve as an always-executable witness", binding.ScenarioID, selector.Selector)
 			}
 			expectedCommand := fmt.Sprintf("go test %s -run '^%s$'", packagePath, selector.Selector)
 			if selector.Command != expectedCommand {
@@ -462,8 +508,51 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 		if _, active := activeFiles[filepath.Clean(witnessAbsolute)]; !active {
 			return fmt.Errorf("binding %s witness %s is not active for the current Go build", binding.ScenarioID, binding.WitnessPath)
 		}
+		scopeKey := packagePath + ":" + source.Name.Name
+		functionScope, scoped := packageFunctionScopes[scopeKey]
+		if !scoped {
+			functionScope, err = activePackageFunctions(activeFiles, source.Name.Name)
+			if err != nil {
+				return fmt.Errorf("parse active package functions for %s: %w", binding.WitnessPath, err)
+			}
+			packageFunctionScopes[scopeKey] = functionScope
+		}
+		for _, selector := range binding.WitnessSelectors {
+			function := witnessFunctions[selector.Selector]
+			if gotestsource.HasSkip(function) {
+				return fmt.Errorf("binding %s selector %s contains t.Skip and cannot serve as an always-executable witness", binding.ScenarioID, selector.Selector)
+			}
+			if !gotestsource.HasFailureCapableAssertionCandidate(function, functionScope) {
+				return fmt.Errorf("binding %s selector %s has no failure-capable assertion candidate", binding.ScenarioID, selector.Selector)
+			}
+		}
 	}
 	return nil
+}
+
+func activePackageFunctions(activeFiles map[string]struct{}, packageName string) (map[string]*ast.FuncDecl, error) {
+	paths := make([]string, 0, len(activeFiles))
+	for path := range activeFiles {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	functions := map[string]*ast.FuncDecl{}
+	for _, path := range paths {
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+		if err != nil {
+			return nil, err
+		}
+		if file.Name.Name != packageName {
+			continue
+		}
+		for _, declaration := range file.Decls {
+			function, ok := declaration.(*ast.FuncDecl)
+			if ok && function.Recv == nil {
+				functions[function.Name.Name] = function
+			}
+		}
+	}
+	return functions, nil
 }
 
 func activeGoTestFiles(root, packagePath string) (map[string]struct{}, error) {

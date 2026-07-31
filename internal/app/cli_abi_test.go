@@ -1662,7 +1662,7 @@ func TestStandaloneMultiVariantCommandsUseExactRootShapes(t *testing.T) {
 	}{
 		{
 			name: "repeated pilot",
-			args: []string{"--pilot", "all", "--pilot", "first"},
+			args: []string{"--contract-envelope", "--pilot", "all", "--pilot", "first"},
 		},
 		{
 			name: "stack alias then pilot",

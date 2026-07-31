@@ -100,7 +100,7 @@ func StartServer(raw any, options Options) (ServerHandle, error) {
 		_ = listener.Close()
 		return ServerHandle{}, err
 	}
-	expectedAuthority := net.JoinHostPort(options.Host, strconv.Itoa(actualPort))
+	expectedAuthority := browserAuthority(options.Host, actualPort)
 	capability, err := browserCapability()
 	if err != nil {
 		_ = listener.Close()
@@ -305,7 +305,6 @@ func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch br
 	if err != nil ||
 		parsed.Scheme != "http" ||
 		(parsed.Hostname() != "127.0.0.1" && parsed.Hostname() != "::1") ||
-		parsed.Port() == "" ||
 		parsed.User != nil ||
 		parsed.RawQuery != "" ||
 		parsed.Fragment != "" ||

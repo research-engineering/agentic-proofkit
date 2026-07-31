@@ -204,6 +204,44 @@ func TestBuildAdmitsAtomicObligationAndRejectsMissingRoute(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsShapeOnlyDelegationForCrossRequirementEdge(t *testing.T) {
+	input := validProofObligationAlgebraInput()
+	root := input["obligations"].([]any)[0].(map[string]any)
+	root["obligationKind"] = "all_of"
+	root["proofRouteRefs"] = []any{}
+	root["childObligationIds"] = []any{"proofkit.test.child_one", "proofkit.test.child_two"}
+	root["delegationRefs"] = []any{"proofkit.test.unresolved_delegation"}
+	for index, requirementID := range []string{"REQ-PROOFKIT-TEST-001", "REQ-PROOFKIT-TEST-002"} {
+		child := map[string]any{}
+		for key, value := range validProofObligationAlgebraInput()["obligations"].([]any)[0].(map[string]any) {
+			child[key] = value
+		}
+		child["obligationId"] = fmt.Sprintf("proofkit.test.child_%s", []string{"one", "two"}[index])
+		child["requirementId"] = requirementID
+		input["obligations"] = append(input["obligations"].([]any), child)
+	}
+
+	record, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
+	if exitCode == 0 || record.State != "failed" {
+		t.Fatalf("Build() exit=%d state=%s, want unresolved delegation failure", exitCode, record.State)
+	}
+	encoded, _ := json.Marshal(record.JSONValue())
+	if !strings.Contains(string(encoded), "without owner-admitted delegation authority") {
+		t.Fatalf("Build() output=%s, want unresolved delegation finding", encoded)
+	}
+}
+
+func TestBuildUsesPathPolicyForEvidenceReferenceArrays(t *testing.T) {
+	input := validProofObligationAlgebraInput()
+	input["obligations"].([]any)[0].(map[string]any)["evidenceRefs"] = []any{"artifacts/run-sk-abcdefghij.log"}
+	if _, _, err := Build(input); err != nil {
+		t.Fatalf("Build() applied prose admission to canonical evidence paths: %v", err)
+	}
+}
+
 func validProofObligationAlgebraInput() map[string]any {
 	return map[string]any{
 		"schemaVersion": json.Number("1"),

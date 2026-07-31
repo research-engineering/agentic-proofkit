@@ -28,6 +28,13 @@ func TestRetainedEvidenceCommandWritesArtifactRootManifest(t *testing.T) {
 			t.Fatalf("retained evidence manifest missing %s:\n%s", path, content)
 		}
 	}
+	if err := run([]string{"retained-evidence-verify", "--artifact-root", root}); err != nil {
+		t.Fatalf("verify retained evidence: %v", err)
+	}
+	writeFile(t, filepath.Join(root, "retained-evidence-checksums.sha256"), strings.Repeat("a", 64)+"  release/github-release.json\n")
+	if err := run([]string{"retained-evidence-verify", "--artifact-root", root}); err == nil {
+		t.Fatal("retained-evidence-verify accepted a stale manifest")
+	}
 }
 
 func TestCompareNPMExisting(t *testing.T) {

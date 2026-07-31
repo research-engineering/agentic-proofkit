@@ -9,7 +9,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const reportKind = "proofkit.receipt-trust-class-admission"
+const (
+	reportKind      = "proofkit.receipt-trust-class-admission"
+	maxTrustClasses = 4096
+)
 
 var producerAdmissionLevels = proofvocab.MergeSatisfactionClasses()
 var producerAdmissionLevelSet = proofvocab.MergeSatisfactionClassSet()
@@ -210,6 +213,9 @@ func trustClassArray(raw any) ([]trustClass, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(records) > maxTrustClasses {
+		return nil, fmt.Errorf("receipt trust-class trustClasses exceeds the %d-item limit", maxTrustClasses)
+	}
 	result := make([]trustClass, 0, len(records))
 	for _, record := range records {
 		item, err := admitTrustClass(record)
@@ -227,13 +233,53 @@ func trustClassArray(raw any) ([]trustClass, error) {
 		ids = append(ids, item.TrustClassID)
 		ranks[item.Rank] = struct{}{}
 	}
-	if err := preserveSortedUnique(ids, "receipt trust-class trustClass ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(ids, "receipt trust-class trustClass ids", false); err != nil {
 		return nil, err
 	}
 	if len(ranks) != len(result) {
 		return nil, fmt.Errorf("receipt trust-class ranks must be unique")
 	}
+	if err := requireMonotonicTrustClasses(result); err != nil {
+		return nil, err
+	}
 	return result, nil
+}
+
+func requireMonotonicTrustClasses(classes []trustClass) error {
+	ranked := append([]trustClass(nil), classes...)
+	sort.Slice(ranked, func(left int, right int) bool {
+		return ranked[left].Rank < ranked[right].Rank
+	})
+	for index := 1; index < len(ranked); index++ {
+		lower := ranked[index-1]
+		higher := ranked[index]
+		if lower.RequiresArtifactRefs && !higher.RequiresArtifactRefs {
+			return fmt.Errorf("receipt trust-class higher rank must preserve lower-rank artifact requirements")
+		}
+		if lower.RequiresProvenanceRef && !higher.RequiresProvenanceRef {
+			return fmt.Errorf("receipt trust-class higher rank must preserve lower-rank provenance requirements")
+		}
+		if !isSubset(higher.AllowedProducerAdmissionLevels, lower.AllowedProducerAdmissionLevels) {
+			return fmt.Errorf("receipt trust-class higher rank producer admission levels must refine lower ranks")
+		}
+		if !isSubset(higher.AllowedReceiptStatuses, lower.AllowedReceiptStatuses) {
+			return fmt.Errorf("receipt trust-class higher rank receipt statuses must refine lower ranks")
+		}
+	}
+	return nil
+}
+
+func isSubset(values []string, allowed []string) bool {
+	allowedSet := map[string]struct{}{}
+	for _, value := range allowed {
+		allowedSet[value] = struct{}{}
+	}
+	for _, value := range values {
+		if _, ok := allowedSet[value]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func admitTrustClass(record map[string]any) (trustClass, error) {
@@ -299,7 +345,7 @@ func proofClassArray(raw any, trustClassIDs map[string]struct{}) ([]proofClass, 
 	for _, item := range result {
 		ids = append(ids, item.ProofClassID)
 	}
-	if err := preserveSortedUnique(ids, "receipt trust-class proofClass ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(ids, "receipt trust-class proofClass ids", false); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -376,7 +422,7 @@ func obligationArray(raw any) ([]obligationReceipt, error) {
 	for _, item := range result {
 		ids = append(ids, item.ObligationID)
 	}
-	if err := preserveSortedUnique(ids, "receipt trust-class obligation ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(ids, "receipt trust-class obligation ids", false); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -430,11 +476,11 @@ func admitObligation(record map[string]any) (obligationReceipt, error) {
 	if err != nil {
 		return obligationReceipt{}, err
 	}
-	artifactRefs, err := sortedPathsFromRaw(record["artifactRefs"], "receipt trust-class artifactRefs", true)
+	artifactRefs, err := admit.NormalizeSortedPathArray(record["artifactRefs"], "receipt trust-class artifactRefs", true)
 	if err != nil {
 		return obligationReceipt{}, err
 	}
-	evidenceRefs, err := sortedPathsFromRaw(record["evidenceRefs"], "receipt trust-class evidenceRefs", false)
+	evidenceRefs, err := admit.NormalizeSortedPathArray(record["evidenceRefs"], "receipt trust-class evidenceRefs", false)
 	if err != nil {
 		return obligationReceipt{}, err
 	}
@@ -629,26 +675,6 @@ func sortedRuleIDs(raw any, context string) ([]string, error) {
 	return result, nil
 }
 
-func sortedPathsFromRaw(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("%s must be a string array", context)
-	}
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		text, err := admit.NonEmptyText(value, context)
-		if err != nil {
-			return nil, err
-		}
-		path, err := admit.SafeRepoRelativePath(text, context)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, path)
-	}
-	return sortedText(result, context, allowEmpty)
-}
-
 func sortedTextFromRaw(raw any, context string, allowEmpty bool) ([]string, error) {
 	values, ok := raw.([]any)
 	if !ok {
@@ -678,34 +704,11 @@ func enumArray(raw any, allowed map[string]struct{}, ordered []string, context s
 		}
 		result = append(result, enumValue)
 	}
-	sort.Strings(result)
-	if err := preserveSortedUnique(result, context, false); err != nil {
-		return nil, err
-	}
-	return result, nil
+	return admit.NormalizeSortedText(result, context, false)
 }
 
 func sortedText(values []string, context string, allowEmpty bool) ([]string, error) {
-	if !allowEmpty && len(values) == 0 {
-		return nil, fmt.Errorf("%s must not be empty", context)
-	}
-	sort.Strings(values)
-	if err := preserveSortedUnique(values, context, allowEmpty); err != nil {
-		return nil, err
-	}
-	return values, nil
-}
-
-func preserveSortedUnique(values []string, context string, allowEmpty bool) error {
-	if !allowEmpty && len(values) == 0 {
-		return fmt.Errorf("%s must not be empty", context)
-	}
-	for index := range values {
-		if index > 0 && (values[index-1] == values[index] || values[index-1] > values[index]) {
-			return fmt.Errorf("%s must be sorted and unique", context)
-		}
-	}
-	return nil
+	return admit.NormalizeSortedText(values, context, allowEmpty)
 }
 
 func nonEmptyRecords(raw any, context string) ([]map[string]any, error) {

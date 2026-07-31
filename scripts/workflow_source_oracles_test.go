@@ -453,7 +453,7 @@ func validateActionReference(reference string) error {
 	return nil
 }
 
-const existingReleaseReadOnlyBlockSHA256 = "8ca22124fd06580cc8d111bee06eee87cda0d4d57bdc67838e738114e3247885"
+const existingReleaseReadOnlyBlockSHA256 = "b80fff2c67ae5b02d78f39e3551b18dc75b94800ebf0812063e07952342f5af5"
 
 func validateExistingReleasePath(run string) error {
 	startMarker := `if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then`

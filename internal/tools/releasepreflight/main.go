@@ -117,7 +117,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-lineage|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence>")
+		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-lineage|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence|retained-evidence-verify>")
 	}
 	switch args[0] {
 	case "npm-existing":
@@ -236,6 +236,12 @@ func run(args []string) error {
 			return err
 		}
 		return retainedevidence.Write(options["artifact-root"])
+	case "retained-evidence-verify":
+		options, err := parseFlags(args[1:], "artifact-root")
+		if err != nil {
+			return err
+		}
+		return retainedevidence.Verify(options["artifact-root"])
 	default:
 		return fmt.Errorf("unknown releasepreflight command %s", args[0])
 	}

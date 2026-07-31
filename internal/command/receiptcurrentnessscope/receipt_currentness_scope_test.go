@@ -31,6 +31,18 @@ func TestBuildAdmitsCurrentScopedReceiptAndRejectsStaleDigest(t *testing.T) {
 	}
 }
 
+func TestBuildUsesPathPolicyForEvidenceReferenceArrays(t *testing.T) {
+	input := validReceiptCurrentnessScopeInput()
+	receipt := input["obligationReceipts"].([]any)[0].(map[string]any)
+	path := "artifacts/run-sk-abcdefghij.log"
+	receipt["evidenceRefs"] = []any{path}
+	receipt["currentnessChecks"].([]any)[0].(map[string]any)["evidenceRefs"] = []any{path}
+	receipt["scopeChecks"].([]any)[0].(map[string]any)["evidenceRefs"] = []any{path}
+	if _, _, err := Build(input); err != nil {
+		t.Fatalf("Build() applied prose admission to canonical evidence paths: %v", err)
+	}
+}
+
 func validReceiptCurrentnessScopeInput() map[string]any {
 	return map[string]any{
 		"schemaVersion": json.Number("1"),

@@ -1,7 +1,9 @@
 package requirementbrowser
 
 import (
+	"encoding/base64"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -24,6 +26,24 @@ var serverNonClaims = []string{
 	"Requirement browser servers do not prove receipt freshness, merge approval, or rollout readiness.",
 	"Requirement browser servers do not persist browser annotations into source files.",
 	"Requirement browser servers do not authenticate the surrounding browser profile or operating-system user.",
+}
+
+var (
+	hostChoices        = []string{"127.0.0.1", "::1"}
+	sessionModeChoices = []string{"browse", "one-shot-question"}
+	viewChoices        = []string{"coverage", "proof", "source", "spec-tree", "workspace"}
+)
+
+func HostChoices() []string {
+	return slices.Clone(hostChoices)
+}
+
+func SessionModeChoices() []string {
+	return slices.Clone(sessionModeChoices)
+}
+
+func ViewChoices() []string {
+	return slices.Clone(viewChoices)
 }
 
 type Options struct {
@@ -65,7 +85,7 @@ func BuildPlan(raw any, options Options) (map[string]any, int, error) {
 	return map[string]any{
 		"authority":         "presentation_adapter_plan",
 		"host":              options.Host,
-		"htmlByteLength":    len([]byte(rendered.html)),
+		"htmlByteLength":    servedHTMLByteLength(rendered),
 		"nonClaims":         admit.StringSliceToAny(serverNonClaims),
 		"planKind":          "proofkit.requirement-browser-server-plan",
 		"port":              options.Port,
@@ -127,7 +147,7 @@ func render(raw any, options Options) (renderedView, error) {
 		}, nil
 	}
 	if options.View != "proof" {
-		return renderedView{}, fmt.Errorf("requirement-browser-server requires --view source, proof, coverage, spec-tree, or workspace")
+		return renderedView{}, fmt.Errorf("--view requires one of: %s", strings.Join(viewChoices, ", "))
 	}
 	compact := requirementproofview.IsCompact(raw)
 	if compact && len(options.LocalEnvironmentClasses) == 0 && !options.EmptyLocalEnvironmentPolicy {
@@ -149,7 +169,7 @@ func render(raw any, options Options) (renderedView, error) {
 }
 
 func admitLoopbackHost(value string) error {
-	if value != "127.0.0.1" && value != "::1" {
+	if !slices.Contains(hostChoices, value) {
 		return fmt.Errorf("requirement browser server host must be loopback literal: 127.0.0.1 or ::1")
 	}
 	return nil
@@ -163,11 +183,26 @@ func admitPort(value int) error {
 }
 
 func browserURL(host string, port int) string {
+	return "http://" + browserAuthority(host, port) + "/"
+}
+
+func browserAuthority(host string, port int) string {
 	hostname := host
 	if strings.Contains(host, ":") {
 		hostname = "[" + host + "]"
 	}
-	return fmt.Sprintf("http://%s:%d/", hostname, port)
+	if port == 80 {
+		return hostname
+	}
+	return fmt.Sprintf("%s:%d", hostname, port)
+}
+
+func servedHTMLByteLength(rendered renderedView) int {
+	length := len([]byte(rendered.html))
+	if rendered.workspace == nil {
+		return length
+	}
+	return length - len(workspaceCapabilityPlaceholder) + base64.RawURLEncoding.EncodedLen(browserCapabilityBytes)
 }
 
 func stringValue(raw any) string {

@@ -51,7 +51,7 @@ jobs:
           scanner_status="$?"
           set -e
           test -s artifacts/osv/osv-results.sarif
-          if [ "$scanner_status" -gt 1 ]; then
+          if [ "$scanner_status" -ne 0 ]; then
             exit "$scanner_status"
           fi
 
@@ -66,7 +66,7 @@ jobs:
 
   upload-sarif:
     name: osv / provider upload
-    if: ${{ github.event_name != 'pull_request' && (github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true') }}
+    if: ${{ !cancelled() && needs.scan.result != 'skipped' && github.event_name != 'pull_request' && (github.event.repository.private == false || vars.ENABLE_CODE_SCANNING_UPLOAD == 'true') }}
     needs: scan
     runs-on: ubuntu-24.04
     timeout-minutes: 10

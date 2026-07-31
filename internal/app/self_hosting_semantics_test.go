@@ -32,6 +32,21 @@ func TestSelfHostingProofCoreCommandsAcceptCurrentRecords(t *testing.T) {
 	}
 }
 
+func TestSelfHostingCoverageMetricsDeclaresTimestampedOutput(t *testing.T) {
+	plan := readJSONFile(t, "proofkit/witness-plan.json").(map[string]any)
+	for _, raw := range plan["policies"].([]any) {
+		command := raw.(map[string]any)
+		if command["commandId"] != "proofkit.coverage-metrics" {
+			continue
+		}
+		if command["deterministicOutput"] != false {
+			t.Fatalf("coverage metrics deterministicOutput=%v, want false for generatedAt-bearing output", command["deterministicOutput"])
+		}
+		return
+	}
+	t.Fatal("proofkit.coverage-metrics is missing from witness plan")
+}
+
 func requirementSourcePaths(t *testing.T) []string {
 	t.Helper()
 	root := repoRoot(t)
@@ -78,9 +93,6 @@ func TestSelfHostingWitnessBackedBindingsReferenceExistingSurfaces(t *testing.T)
 		witnessPath, ok := binding["witnessPath"].(string)
 		if !ok || witnessPath == "" {
 			t.Fatalf("%s/%s witness_backed binding has no witnessPath", binding["requirementId"], binding["scenarioId"])
-		}
-		if strings.HasPrefix(witnessPath, "proofkit.virtual/") {
-			continue
 		}
 		if _, err := os.Stat(filepath.Join(root, witnessPath)); err != nil {
 			t.Fatalf("%s/%s witnessPath %q does not exist: %v", binding["requirementId"], binding["scenarioId"], witnessPath, err)

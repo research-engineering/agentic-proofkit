@@ -570,9 +570,16 @@ func witnessArgv(raw any) ([]string, error) {
 
 func normalizedExecutableName(value string) string {
 	normalized := strings.ReplaceAll(value, `\`, "/")
-	executable := strings.ToLower(path.Base(normalized))
-	for _, suffix := range []string{".exe", ".cmd", ".bat", ".com"} {
-		executable = strings.TrimSuffix(executable, suffix)
+	executable := strings.TrimRight(strings.ToLower(path.Base(normalized)), ". ")
+	for {
+		previous := executable
+		for _, suffix := range []string{".exe", ".cmd", ".bat", ".com"} {
+			executable = strings.TrimSuffix(executable, suffix)
+		}
+		executable = strings.TrimRight(executable, ". ")
+		if executable == previous {
+			break
+		}
 	}
 	return executable
 }

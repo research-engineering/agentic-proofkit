@@ -190,7 +190,9 @@ The `release` workflow must:
     `artifacts/retained-evidence-checksums.sha256`. The checksum manifest lives
     at the retained artifact root and uses exact `release/...` and
     `attestations/...` paths, so standard checksum verification executes against
-    the downloaded artifact layout without path rewriting. The release
+    the downloaded artifact layout without path rewriting. Each existing-release
+    and newly-created-release branch immediately runs the repository-owned
+    `retained-evidence-verify` preflight before reporting success. The release
     manifest records GitHub Release channel data as candidate/archive inventory;
     `github-release.json` owns post-create GitHub Release facts only inside
     retained workflow evidence, not as a public release asset.

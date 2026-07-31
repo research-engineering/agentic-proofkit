@@ -227,7 +227,7 @@ func TestAssertionless(t *testing.T) {
 }
 `)
 	problem := goTestFunctionProblem(filePath, "TestAssertionless")
-	if !strings.Contains(problem, "has no direct failure-capable assertion") {
+	if !strings.Contains(problem, "has no direct failure-capable assertion candidate") {
 		t.Fatalf("assertionless test body was not rejected: %q", problem)
 	}
 }

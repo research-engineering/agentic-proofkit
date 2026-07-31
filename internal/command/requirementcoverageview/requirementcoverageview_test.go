@@ -762,6 +762,22 @@ func TestBuildJSONRejectsCoverageUniverseSurfaceOutsideOwnerScope(t *testing.T) 
 	}
 }
 
+func TestBuildJSONRejectsDuplicateCoverageUniverseOwnerPath(t *testing.T) {
+	input := validCoverageInput(t)
+	universe := input.(map[string]any)["coverageUniverse"].(map[string]any)
+	codeSurfaces := universe["codeSurfaces"].([]any)
+	duplicate := map[string]any{}
+	for key, value := range codeSurfaces[0].(map[string]any) {
+		duplicate[key] = value
+	}
+	duplicate["surfaceId"] = "proofkit.coverage.duplicate_code"
+	universe["codeSurfaces"] = append(codeSurfaces, duplicate)
+
+	if _, _, err := BuildJSON(input, Options{}); err == nil || !strings.Contains(err.Error(), "duplicate owner/path surface") {
+		t.Fatalf("BuildJSON() error=%v, want duplicate owner/path rejection", err)
+	}
+}
+
 func TestBuildJSONRejectsInventoryEntryOutsideOwnerScope(t *testing.T) {
 	input := validCoverageInput(t)
 	inventoryEntry(input)["ownerId"] = "proofkit.other"

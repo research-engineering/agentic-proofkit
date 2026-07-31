@@ -22,6 +22,7 @@ import (
 )
 
 const (
+	browserCapabilityBytes  = 32
 	maxHandoffRequestBytes  = 1 << 20
 	maxHandoffAnnotations   = 64
 	maxHandoffQuoteBytes    = 64 << 10
@@ -443,6 +444,8 @@ func serveIndex(response http.ResponseWriter, method string, rendered renderedVi
 	response.Header().Set("content-type", "text/html; charset=utf-8")
 	if rendered.workspace != nil {
 		setWorkspaceSecurityHeaders(response)
+	} else {
+		setStaticDocumentSecurityHeaders(response)
 	}
 	response.WriteHeader(http.StatusOK)
 	writeBody(response, method, []byte(rendered.html))
@@ -485,12 +488,13 @@ func serveHandoff(response http.ResponseWriter, request *http.Request, expectedO
 }
 
 func browserCapability() (string, error) {
-	value := make([]byte, 32)
+	value := make([]byte, browserCapabilityBytes)
 	if _, err := rand.Read(value); err != nil {
 		return "", fmt.Errorf("generate browser capability: %w", err)
 	}
 	return base64.RawURLEncoding.EncodeToString(value), nil
 }
+
 func validCapability(request *http.Request, capability string) bool {
 	expected, err := base64.RawURLEncoding.DecodeString(capability)
 	if err != nil || len(expected) != 32 {
@@ -502,14 +506,25 @@ func validCapability(request *http.Request, capability string) bool {
 	}
 	return subtle.ConstantTimeCompare(provided, expected) == 1
 }
+
 func setWorkspaceSecurityHeaders(response http.ResponseWriter) {
 	response.Header().Set("content-security-policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+	setCommonDocumentSecurityHeaders(response)
+}
+
+func setStaticDocumentSecurityHeaders(response http.ResponseWriter) {
+	response.Header().Set("content-security-policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+	setCommonDocumentSecurityHeaders(response)
+}
+
+func setCommonDocumentSecurityHeaders(response http.ResponseWriter) {
 	response.Header().Set("cross-origin-opener-policy", "same-origin")
 	response.Header().Set("cross-origin-resource-policy", "same-origin")
 	response.Header().Set("permissions-policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()")
 	response.Header().Set("x-content-type-options", "nosniff")
 	response.Header().Set("referrer-policy", "no-referrer")
 }
+
 func serveWorkspaceAsset(response http.ResponseWriter, method string, body []byte, contentType string) {
 	if method != http.MethodGet && method != http.MethodHead {
 		methodNotAllowed(response, method, "GET, HEAD")
@@ -521,6 +536,7 @@ func serveWorkspaceAsset(response http.ResponseWriter, method string, body []byt
 	response.WriteHeader(http.StatusOK)
 	writeBody(response, method, body)
 }
+
 func serveWorkspaceJSON(response http.ResponseWriter, method string, value any) {
 	body, err := stablejson.Marshal(value)
 	if err != nil {

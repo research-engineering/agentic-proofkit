@@ -143,6 +143,21 @@ func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
 	if strings.Contains(err.Error(), "password") || strings.Contains(err.Error(), "example.invalid") {
 		t.Fatalf("Build() leaked URL credential text in error: %s", err)
 	}
+
+	result, err := Build(map[string]any{
+		"schemaVersion":       json.Number("1"),
+		"reportId":            "proofkit.test.changed-path-set",
+		"preexistingFailures": []any{},
+		"nonClaims":           []any{"Changed-path test input does not prove git diff freshness."},
+		"sources":             []any{map[string]any{"sourceId": "git", "paths": []any{"artifacts/run-" + secret + ".log"}}},
+	})
+	if err != nil {
+		t.Fatalf("Build() embedded secret path error=%v", err)
+	}
+	encoded, _ := json.Marshal(result.Report)
+	if result.ExitCode == 0 || strings.Contains(string(encoded), secret) || strings.Contains(string(encoded), "abcdefghijklmnop") {
+		t.Fatalf("Build() did not fail closed without leaking embedded secret path: exit=%d report=%s", result.ExitCode, encoded)
+	}
 }
 
 func containsAnyString(values []any, want string) bool {

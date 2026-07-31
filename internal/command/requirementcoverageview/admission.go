@@ -285,6 +285,8 @@ func admitSurfaces(raw any, context string) ([]surface, error) {
 		return nil, fmt.Errorf("%s must be an array", context)
 	}
 	result := make([]surface, 0, len(values))
+	ids := map[string]struct{}{}
+	pairs := map[string]string{}
 	for _, value := range values {
 		record, ok := value.(map[string]any)
 		if !ok {
@@ -309,10 +311,19 @@ func admitSurfaces(raw any, context string) ([]surface, error) {
 		if err != nil {
 			return nil, err
 		}
+		if _, exists := ids[surfaceID]; exists {
+			return nil, fmt.Errorf("%s duplicate surfaceId %s", context, surfaceID)
+		}
+		pairKey := ownerID + "\x00" + pathValue
+		if previous, exists := pairs[pairKey]; exists {
+			return nil, fmt.Errorf("%s duplicate owner/path surface %s and %s", context, previous, surfaceID)
+		}
+		ids[surfaceID] = struct{}{}
+		pairs[pairKey] = surfaceID
 		result = append(result, surface{OwnerID: ownerID, Path: pathValue, SurfaceID: surfaceID})
 	}
 	sort.Slice(result, func(left, right int) bool { return result[left].SurfaceID < result[right].SurfaceID })
-	return result, assertUnique(surfaceIDs(result), context+" surfaceIds")
+	return result, nil
 }
 func admitOwnerInvariantRegistry(raw any) (ownerInvariantRegistry, error) {
 	if raw == nil {

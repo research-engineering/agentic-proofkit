@@ -62,6 +62,46 @@ func TestBuildAdmitsEveryProofVocabularyMergeSatisfactionClass(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsHigherRankThatWeakensMinimumTrustSemantics(t *testing.T) {
+	input := validReceiptTrustClassInput()
+	input["trustClasses"] = append(input["trustClasses"].([]any), map[string]any{
+		"trustClassId":                   "proofkit.test.untrusted_high_rank",
+		"rank":                           json.Number("9"),
+		"allowedProducerAdmissionLevels": []any{"advisory"},
+		"allowedReceiptStatuses":         []any{"failed", "passed"},
+		"requiresArtifactRefs":           false,
+		"requiresProvenanceRef":          false,
+		"nonClaims":                      []any{"High-rank test fixture does not authenticate producers."},
+	})
+	receipt := input["obligationReceipts"].([]any)[0].(map[string]any)
+	receipt["artifactRefs"] = []any{}
+	receipt["producerAdmissionClass"] = "advisory"
+	receipt["provenanceRef"] = nil
+	receipt["receiptStatus"] = "failed"
+	receipt["trustClassId"] = "proofkit.test.untrusted_high_rank"
+
+	if _, _, err := Build(input); err == nil {
+		t.Fatal("Build() accepted a higher rank that weakens the declared minimum trust semantics")
+	}
+}
+
+func TestTrustClassArrayRejectsExcessiveCardinalityBeforeItemAdmission(t *testing.T) {
+	records := make([]any, maxTrustClasses+1)
+	if _, err := trustClassArray(records); err == nil {
+		t.Fatal("trustClassArray admitted an input above its explicit cardinality bound")
+	}
+}
+
+func TestBuildUsesPathPolicyForReceiptReferenceArrays(t *testing.T) {
+	input := validReceiptTrustClassInput()
+	receipt := input["obligationReceipts"].([]any)[0].(map[string]any)
+	receipt["artifactRefs"] = []any{"artifacts/run-sk-abcdefghij.log"}
+	receipt["evidenceRefs"] = []any{"artifacts/run-sk-abcdefghij.log"}
+	if _, _, err := Build(input); err != nil {
+		t.Fatalf("Build() applied prose admission to canonical path references: %v", err)
+	}
+}
+
 func validReceiptTrustClassInput() map[string]any {
 	return map[string]any{
 		"schemaVersion": json.Number("1"),

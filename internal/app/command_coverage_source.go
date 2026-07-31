@@ -82,8 +82,8 @@ func goTestFunctionProblemWithMarker(filePath string, testName string, marker st
 		if gotestsource.HasSkip(function) {
 			return "contains t.Skip and cannot serve as an always-executable semantic oracle"
 		}
-		if !hasFailureCapableAssertion(function) {
-			return "has no direct failure-capable assertion"
+		if !gotestsource.HasFailureCapableAssertionSyntax(function) {
+			return "has no direct failure-capable assertion candidate"
 		}
 		if marker != "" && !hasSemanticOracleBinding(function, marker) {
 			return "missing source-owned semantic oracle binding " + marker
@@ -120,39 +120,6 @@ func isTestingTFunction(function *ast.FuncDecl) bool {
 	}
 	packageName, ok := selector.X.(*ast.Ident)
 	return ok && packageName.Name == "testing"
-}
-
-func hasFailureCapableAssertion(function *ast.FuncDecl) bool {
-	paramName := testingTParamName(function)
-	if paramName == "" || function.Body == nil {
-		return false
-	}
-	found := false
-	ast.Inspect(function.Body, func(node ast.Node) bool {
-		if found {
-			return false
-		}
-		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		selector, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok {
-			return true
-		}
-		receiver, ok := selector.X.(*ast.Ident)
-		if !ok || receiver.Name != paramName {
-			return true
-		}
-		switch selector.Sel.Name {
-		case "Error", "Errorf", "Fail", "FailNow", "Fatal", "Fatalf":
-			found = true
-			return false
-		default:
-			return true
-		}
-	})
-	return found
 }
 
 func hasSemanticOracleBinding(function *ast.FuncDecl, marker string) bool {

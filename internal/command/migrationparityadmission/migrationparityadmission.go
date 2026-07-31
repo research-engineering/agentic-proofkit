@@ -510,11 +510,7 @@ func sortedMapped(raw any, context string, allowEmpty bool, mapper func(any, str
 		}
 		result = append(result, item)
 	}
-	sort.Strings(result)
-	if err := preserveSortedUnique(result, context, allowEmpty); err != nil {
-		return nil, err
-	}
-	return result, nil
+	return admit.NormalizeSortedText(result, context, allowEmpty)
 }
 
 func preserveSortedUnique(values []string, context string, allowEmpty bool) error {

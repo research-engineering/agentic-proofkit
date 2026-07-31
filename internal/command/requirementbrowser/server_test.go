@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -45,6 +46,17 @@ func TestStartServerServesExplicitSourceViews(t *testing.T) {
 	}
 	if !strings.Contains(root.Header.Get("content-type"), "text/html") {
 		t.Fatalf("unexpected root content-type: %s", root.Header.Get("content-type"))
+	}
+	for name, want := range map[string]string{
+		"content-security-policy":      "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+		"cross-origin-opener-policy":   "same-origin",
+		"cross-origin-resource-policy": "same-origin",
+		"referrer-policy":              "no-referrer",
+		"x-content-type-options":       "nosniff",
+	} {
+		if got := root.Header.Get(name); got != want {
+			t.Fatalf("source view header %s=%q, want %q", name, got, want)
+		}
 	}
 	rootBody, err := io.ReadAll(root.Body)
 	if err != nil {
@@ -131,21 +143,69 @@ func TestStartServerServesExplicitSourceViews(t *testing.T) {
 	}
 }
 
+func TestBrowserHandlerCanonicalizesDefaultPortAuthority(t *testing.T) {
+	rendered, err := render(sourceInput(t), Options{Host: "127.0.0.1", Port: 80, PortSet: true, View: "source"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := browserHandler("source", rendered, browserAuthority("127.0.0.1", 80), "", false, newTerminalArbiter())
+	request := httptest.NewRequest(http.MethodGet, "http://127.0.0.1/", nil)
+	request.Host = "127.0.0.1"
+	response := httptest.NewRecorder()
+	handler.ServeHTTP(response, request)
+	if response.Code != http.StatusOK {
+		t.Fatalf("default-port request status=%d, want 200", response.Code)
+	}
+	if got := browserURL("127.0.0.1", 80); got != "http://127.0.0.1/" {
+		t.Fatalf("browserURL()=%q, want canonical default-port URL", got)
+	}
+}
+
+func TestWorkspacePlanByteLengthMatchesServedCapabilityDocument(t *testing.T) {
+	fixture := workspaceFixture(t)
+	plan, exitCode, err := BuildPlan(fixture, Options{Host: "127.0.0.1", Port: 0, PortSet: true, View: "workspace"})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("BuildPlan() exit=%d error=%v", exitCode, err)
+	}
+	handle, err := StartServer(fixture, Options{Host: "127.0.0.1", Port: 0, PortSet: true, View: "workspace"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = handle.Close(t.Context()) })
+	response, err := (&http.Client{Timeout: 5 * time.Second}).Get(handle.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := io.ReadAll(response.Body)
+	_ = response.Body.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, want := plan["htmlByteLength"], len(body); got != want {
+		t.Fatalf("plan htmlByteLength=%v, served bytes=%d", got, want)
+	}
+}
+
 func TestOpenBrowserUsesFixedLauncherAndLoopbackURL(t *testing.T) {
-	const loopbackURL = "http://127.0.0.1:43127/"
 	cases := []struct {
 		goos        string
+		url         string
 		wantCommand string
 		wantArgs    []string
 	}{
-		{goos: "darwin", wantCommand: "open", wantArgs: []string{loopbackURL}},
-		{goos: "linux", wantCommand: "xdg-open", wantArgs: []string{loopbackURL}},
-		{goos: "windows", wantCommand: "cmd", wantArgs: []string{"/c", "start", "", loopbackURL}},
+		{goos: "darwin", url: "http://127.0.0.1:43127/", wantCommand: "open", wantArgs: []string{"http://127.0.0.1:43127/"}},
+		{goos: "linux", url: "http://127.0.0.1:43127/", wantCommand: "xdg-open", wantArgs: []string{"http://127.0.0.1:43127/"}},
+		{goos: "linux-default-port", url: browserURL("127.0.0.1", 80), wantCommand: "xdg-open", wantArgs: []string{"http://127.0.0.1/"}},
+		{goos: "windows", url: "http://127.0.0.1:43127/", wantCommand: "cmd", wantArgs: []string{"/c", "start", "", "http://127.0.0.1:43127/"}},
 	}
 	for _, test := range cases {
 		t.Run(test.goos, func(t *testing.T) {
 			calls := 0
-			err := openBrowserWithLauncher(t.Context(), test.goos, loopbackURL, func(_ context.Context, command string, args ...string) error {
+			goos := test.goos
+			if goos == "linux-default-port" {
+				goos = "linux"
+			}
+			err := openBrowserWithLauncher(t.Context(), goos, test.url, func(_ context.Context, command string, args ...string) error {
 				calls++
 				if command != test.wantCommand || !slices.Equal(args, test.wantArgs) {
 					t.Fatalf("launcher command=%q args=%v, want %q %v", command, args, test.wantCommand, test.wantArgs)

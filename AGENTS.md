@@ -115,11 +115,25 @@ own release, provider, or deployment evidence.
 Use the narrowest owner-valid proof first, then the current closeout gate for
 the imported surface.
 
-For public contract-only changes:
+For whitespace hygiene during iteration, check both unstaged and staged
+changes against `HEAD`:
 
 ```bash
 git diff --check
+git diff --cached --check
 ```
+
+For a committed public contract-only closeout, run the narrow owner-valid
+contract gate and inspect the committed range rather than an empty worktree
+diff:
+
+```bash
+git diff --check "$(git merge-base origin/main HEAD)"...HEAD
+npm run command-contract:check
+```
+
+Neither whitespace command proves contract semantics; the owner-valid contract
+or specification test remains mandatory.
 
 For runtime, package, CLI, workflow, or specification changes:
 

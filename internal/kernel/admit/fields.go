@@ -9,20 +9,27 @@ import (
 	"strings"
 )
 
+const (
+	secretContextPatternSource     = `authorization\s*:\s*[^\r\n]+|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
+	secretSharedTokenPatternSource = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
+	secretScalarTokenPatternSource = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
+	secretPathTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
+)
+
 var (
-	ruleIDPattern               = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*$`)
-	ruleIDSeparatorPattern      = regexp.MustCompile(`[._:-]`)
-	timestampLikePattern        = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
-	isoDateComponentPattern     = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
-	compactDateComponentRegexp  = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
-	driveLikePathPattern        = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
-	schemeLikePathPattern       = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
-	secretValuePattern          = regexp.MustCompile(`(?i)(authorization\s*:\s*[^\r\n]+|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
-	secretPathAssignmentPattern = regexp.MustCompile(`(?i)(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+`)
-	secretPathTokenPattern      = regexp.MustCompile(`(?i)^(?:github_pat_[A-Za-z0-9_]{10,}|gh[pousr]_[A-Za-z0-9_]{10,}|sk-(?:proj-)?[A-Za-z0-9_-]{16,}|xox[abprs]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{10,}|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)(?:\.[A-Za-z0-9_-]+)?$`)
-	urlUserInfoPattern          = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
-	controlRunePattern          = regexp.MustCompile(`[\x00-\x1f\x7f]`)
-	shellControlTokenPattern    = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
+	ruleIDPattern              = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*$`)
+	ruleIDSeparatorPattern     = regexp.MustCompile(`[._:-]`)
+	timestampLikePattern       = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
+	isoDateComponentPattern    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
+	compactDateComponentRegexp = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
+	driveLikePathPattern       = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
+	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+	secretValuePattern         = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
+	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
+	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
+	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
+	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
+	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
 
 const (
@@ -128,20 +135,32 @@ func LowercaseSHA256(raw any, context string) (string, error) {
 	return value, nil
 }
 
+func SHA256Ref(raw any, context string) (string, error) {
+	value, err := NonEmptyText(raw, context)
+	if err != nil || !strings.HasPrefix(value, "sha256:") {
+		return "", fmt.Errorf("%s must be a sha256 digest reference", context)
+	}
+	digest, err := LowercaseSHA256(strings.TrimPrefix(value, "sha256:"), context)
+	if err != nil {
+		return "", err
+	}
+	return "sha256:" + digest, nil
+}
+
+func SHA256HexRef(raw any, context string) (string, error) {
+	digest, err := LowercaseSHA256(raw, context)
+	if err != nil {
+		return "", err
+	}
+	return "sha256:" + digest, nil
+}
+
 func ContainsSecretLikeValue(value string) bool {
 	return ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value)
 }
 
 func ContainsSecretLikePathValue(value string) bool {
-	if ContainsURLCredentialValue(value) {
-		return true
-	}
-	for _, component := range strings.Split(value, "/") {
-		if secretPathAssignmentPattern.MatchString(component) || secretPathTokenPattern.MatchString(component) {
-			return true
-		}
-	}
-	return false
+	return ContainsURLCredentialValue(value) || secretPathContextPattern.MatchString(value) || secretPathTokenPattern.MatchString(value)
 }
 
 func ContainsSecretTokenLikeValue(value string) bool {
@@ -268,7 +287,14 @@ func NormalizeSortedText(values []string, context string, allowEmpty bool) ([]st
 	if !allowEmpty && len(values) == 0 {
 		return nil, fmt.Errorf("%s must be non-empty", context)
 	}
-	normalized := append([]string{}, values...)
+	normalized := make([]string, 0, len(values))
+	for index, value := range values {
+		admitted, err := NonEmptyText(value, fmt.Sprintf("%s[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		normalized = append(normalized, admitted)
+	}
 	sort.Strings(normalized)
 	for index := 1; index < len(normalized); index++ {
 		if normalized[index-1] == normalized[index] {
@@ -284,6 +310,35 @@ func NormalizeSortedTextArray(raw any, context string, allowEmpty bool) ([]strin
 		return nil, err
 	}
 	return NormalizeSortedText(values, context, allowEmpty)
+}
+
+func NormalizeSortedPaths(values []string, context string, allowEmpty bool) ([]string, error) {
+	if !allowEmpty && len(values) == 0 {
+		return nil, fmt.Errorf("%s must be non-empty", context)
+	}
+	paths := make([]string, 0, len(values))
+	for index, value := range values {
+		pathValue, err := SafeRepoRelativePath(value, fmt.Sprintf("%s[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, pathValue)
+	}
+	sort.Strings(paths)
+	for index := 1; index < len(paths); index++ {
+		if paths[index-1] == paths[index] {
+			return nil, fmt.Errorf("%s must be unique", context)
+		}
+	}
+	return paths, nil
+}
+
+func NormalizeSortedPathArray(raw any, context string, allowEmpty bool) ([]string, error) {
+	values, err := pathArrayValues(raw, context, allowEmpty)
+	if err != nil {
+		return nil, err
+	}
+	return NormalizeSortedPaths(values, context, allowEmpty)
 }
 
 func SortedText(values []string, context string, allowEmpty bool) ([]string, error) {
@@ -327,17 +382,32 @@ func PreserveSortedText(values []string, context string, allowEmpty bool) ([]str
 	if !allowEmpty && len(values) == 0 {
 		return nil, fmt.Errorf("%s must be non-empty", context)
 	}
-	sorted := append([]string{}, values...)
+	canonical := make([]string, 0, len(values))
+	for index, value := range values {
+		admitted, err := NonEmptyText(value, fmt.Sprintf("%s[%d]", context, index))
+		if err != nil {
+			return nil, err
+		}
+		if admitted != value {
+			return nil, fmt.Errorf("%s must contain canonical non-empty text", context)
+		}
+		canonical = append(canonical, admitted)
+	}
+	return preserveSortedCanonical(canonical, context)
+}
+
+func preserveSortedCanonical(canonical []string, context string) ([]string, error) {
+	sorted := append([]string{}, canonical...)
 	sort.Strings(sorted)
-	for index := 0; index < len(values); index++ {
-		if values[index] != sorted[index] {
+	for index := 0; index < len(canonical); index++ {
+		if canonical[index] != sorted[index] {
 			return nil, fmt.Errorf("%s must be sorted and unique", context)
 		}
-		if index > 0 && values[index-1] == values[index] {
+		if index > 0 && canonical[index-1] == canonical[index] {
 			return nil, fmt.Errorf("%s must be sorted and unique", context)
 		}
 	}
-	return values, nil
+	return canonical, nil
 }
 
 func PreserveSortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
@@ -380,19 +450,48 @@ func containsControlRune(value string) bool {
 }
 
 func PreserveSortedPathArray(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, err := TextArray(raw, context, allowEmpty)
+	values, err := pathArrayValues(raw, context, allowEmpty)
 	if err != nil {
 		return nil, err
 	}
+	return PreserveSortedPaths(values, context, allowEmpty)
+}
+
+func pathArrayValues(raw any, context string, allowEmpty bool) ([]string, error) {
+	values, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be an array", context)
+	}
+	result := make([]string, 0, len(values))
+	for index, item := range values {
+		value, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s[%d] must be a repository-relative POSIX path", context, index)
+		}
+		result = append(result, value)
+	}
+	if !allowEmpty && len(result) == 0 {
+		return nil, fmt.Errorf("%s must be non-empty", context)
+	}
+	return result, nil
+}
+
+func PreserveSortedPaths(values []string, context string, allowEmpty bool) ([]string, error) {
+	if !allowEmpty && len(values) == 0 {
+		return nil, fmt.Errorf("%s must be non-empty", context)
+	}
 	paths := make([]string, 0, len(values))
-	for _, value := range values {
-		pathValue, err := SafeRepoRelativePath(value, context)
+	for index, value := range values {
+		pathValue, err := SafeRepoRelativePath(value, fmt.Sprintf("%s[%d]", context, index))
 		if err != nil {
 			return nil, err
 		}
+		if pathValue != value {
+			return nil, fmt.Errorf("%s must contain canonical repository-relative POSIX paths", context)
+		}
 		paths = append(paths, pathValue)
 	}
-	return PreserveSortedText(paths, context, allowEmpty)
+	return preserveSortedCanonical(paths, context)
 }
 
 func Enum(raw any, values map[string]struct{}, context string) (string, error) {

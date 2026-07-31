@@ -45,6 +45,7 @@ var boundaryNonClaims = []string{
 	"Proof obligation algebra reports do not approve merge, release, rollout, or production readiness.",
 	"Proof obligation algebra reports do not authenticate producers or receipts.",
 	"Proof obligation algebra reports do not compute freshness or proof satisfaction.",
+	"Proof obligation algebra reports do not resolve delegation references or authorize cross-requirement edges.",
 	"Proof obligation algebra reports do not execute witnesses or commands.",
 	"Proof obligation algebra reports do not own requirement meaning, proof adequacy, or consumer policy.",
 }
@@ -132,7 +133,7 @@ func Build(raw any) (report.Record, int, error) {
 		ReportID:      input.AlgebraID,
 		State:         state,
 		Summary: map[string]any{
-			"crossRequirementDelegationCount": countCrossRequirementDelegations(obligations, byID),
+			"crossRequirementDelegationCount": 0,
 			"failedObligationCount":           len(failedObligationIDs),
 			"kindCounts":                      kindCounts(obligations),
 			"nonRouteBearingObligationCount":  len(nonRouteBearingObligationIDs),
@@ -212,7 +213,7 @@ func obligationArray(raw any) ([]obligationInput, error) {
 	for _, item := range obligations {
 		ids = append(ids, item.ObligationID)
 	}
-	if _, err := preserveSortedUnique(ids, "proof obligation ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(ids, "proof obligation ids", false); err != nil {
 		return nil, err
 	}
 	edgeCount := 0
@@ -343,6 +344,7 @@ func kindFindings(item obligationInput) []string {
 		requireMinimum(item.ChildObligationIDs, 2, fmt.Sprintf("%s obligations must declare at least two childObligationIds", item.ObligationKind), &findings)
 		requireEmpty(item.ProofRouteRefs, fmt.Sprintf("%s obligations must not declare proofRouteRefs", item.ObligationKind), &findings)
 		requireEmpty(item.ConditionRefs, fmt.Sprintf("%s obligations must not declare conditionRefs", item.ObligationKind), &findings)
+		requireEmpty(item.DelegationRefs, fmt.Sprintf("%s obligations must not declare unresolved delegationRefs", item.ObligationKind), &findings)
 		requireNull(item.ExpiryRef, fmt.Sprintf("%s obligations must not declare expiryRef", item.ObligationKind), &findings)
 		requireNull(item.ReviewConditionRef, fmt.Sprintf("%s obligations must not declare reviewConditionRef", item.ObligationKind), &findings)
 		return findings
@@ -351,6 +353,7 @@ func kindFindings(item obligationInput) []string {
 		requireNonEmpty(item.ChildObligationIDs, "conditional obligations must declare childObligationIds", &findings)
 		requireNonEmpty(item.ConditionRefs, "conditional obligations must declare conditionRefs", &findings)
 		requireEmpty(item.ProofRouteRefs, "conditional obligations must not declare proofRouteRefs", &findings)
+		requireEmpty(item.DelegationRefs, "conditional obligations must not declare unresolved delegationRefs", &findings)
 		requireNull(item.ExpiryRef, "conditional obligations must not declare expiryRef", &findings)
 		requireNull(item.ReviewConditionRef, "conditional obligations must not declare reviewConditionRef", &findings)
 		return findings
@@ -379,8 +382,8 @@ func crossRequirementFindings(item obligationInput, byID map[string]obligationIn
 	findings := []string{}
 	for _, childID := range item.ChildObligationIDs {
 		child, ok := byID[childID]
-		if ok && child.RequirementID != item.RequirementID && len(item.DelegationRefs) == 0 {
-			findings = append(findings, fmt.Sprintf("child obligation %s crosses requirement scope without delegationRefs", child.ObligationID))
+		if ok && child.RequirementID != item.RequirementID {
+			findings = append(findings, fmt.Sprintf("child obligation %s crosses requirement scope without owner-admitted delegation authority", child.ObligationID))
 		}
 	}
 	return findings
@@ -495,23 +498,6 @@ func kindCounts(obligations []obligation) map[string]any {
 	return counts
 }
 
-func countCrossRequirementDelegations(obligations []obligation, byID map[string]obligationInput) int {
-	count := 0
-	for _, item := range obligations {
-		hasCrossRequirementDelegation := false
-		for _, childID := range item.ChildObligationIDs {
-			child, ok := byID[childID]
-			if ok && child.RequirementID != item.RequirementID && len(item.DelegationRefs) > 0 {
-				hasCrossRequirementDelegation = true
-			}
-		}
-		if hasCrossRequirementDelegation {
-			count++
-		}
-	}
-	return count
-}
-
 func requireEmpty(values []string, message string, findings *[]string) {
 	if len(values) > 0 {
 		*findings = append(*findings, message)
@@ -555,23 +541,11 @@ func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {
 		}
 		ruleIDs = append(ruleIDs, ruleID)
 	}
-	return preserveSortedUnique(ruleIDs, context, allowEmpty)
+	return admit.PreserveSortedText(ruleIDs, context, allowEmpty)
 }
 
 func sortedPaths(raw any, context string) ([]string, error) {
-	values, err := textArray(raw, context, true)
-	if err != nil {
-		return nil, err
-	}
-	paths := make([]string, 0, len(values))
-	for _, value := range values {
-		pathValue, err := admit.SafeRepoRelativePath(value, context)
-		if err != nil {
-			return nil, err
-		}
-		paths = append(paths, pathValue)
-	}
-	return sortedText(paths, context, true)
+	return admit.NormalizeSortedPathArray(raw, context, true)
 }
 
 func textArray(raw any, context string, allowEmpty bool) ([]string, error) {
@@ -616,23 +590,5 @@ func sortedText(values []string, context string, allowEmpty bool) ([]string, err
 		}
 		normalized = append(normalized, text)
 	}
-	sort.Strings(normalized)
-	return preserveSortedUnique(normalized, context, allowEmpty)
-}
-
-func preserveSortedUnique(values []string, context string, allowEmpty bool) ([]string, error) {
-	if len(values) == 0 && !allowEmpty {
-		return nil, fmt.Errorf("%s must not be empty", context)
-	}
-	sorted := append([]string{}, values...)
-	sort.Strings(sorted)
-	for index := 0; index < len(values); index++ {
-		if values[index] != sorted[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
-		}
-		if index > 0 && values[index-1] == values[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
-		}
-	}
-	return values, nil
+	return admit.NormalizeSortedText(normalized, context, allowEmpty)
 }

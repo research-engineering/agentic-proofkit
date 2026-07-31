@@ -197,8 +197,13 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
+	{ChangeID: "proofkit.admission.canonical-boundary-hardening", Summary: "Shared admission now preserves exact typed JSON numbers and field spelling, separates canonical path-array policy from prose-array policy, rejects complete secret-shaped path and Windows executable alias classes, and requires higher receipt-trust ranks to refine lower-rank obligations."},
+	{ChangeID: "proofkit.cli.argument-constraint-closure", Summary: "The public CLI contract and generated help now expose descriptor-owned singleton, mutual-exclusion, presence, enum-domain, and value-dependent flag constraints, including requirement-browser session, scope, view, host, and cross-flag admission."},
+	{ChangeID: "proofkit.coverage.witness-anti-vacuity", Summary: "Self-hosting coverage now rejects Go witness selectors that expose no statically reachable failure-capable candidate or contain statically resolved testing.T skip calls, including direct aliases and helper propagation; this remains candidate evidence rather than semantic proof."},
+	{ChangeID: "proofkit.proof.delegation-authority", Summary: "Proof obligation algebra now fails closed on unresolved delegation references and cross-requirement child edges until an owner-admitted delegation authority exists."},
 	{ChangeID: "proofkit.release.migration-support-baseline", Summary: "Release-history migration support starts at 0.2.0, and any future cumulative plan must be derived from contiguous owner-reviewed per-release records without backfilling pre-baseline release history."},
 	{ChangeID: "proofkit.release.npm-predecessor-lineage", Summary: "Release candidate preflight binds a new candidate previousVersion to npm latest, while an exact already-published idempotent candidate requires npm latest to equal the candidate version."},
+	{ChangeID: "proofkit.release.registry-authority-closure", Summary: "Release metadata now promotes npm publication only from repository-produced typed registry evidence whose unique package set exactly matches retained provider records and local candidate identity and bytes."},
 }
 
 var currentMigrationSteps = []string{}

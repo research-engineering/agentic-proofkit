@@ -65,6 +65,65 @@ func TestContainsSecretLikeValueRecognizesHyphenatedAndPasswdLabels(t *testing.T
 	}
 }
 
+func TestSafeRepoRelativePathUsesCompleteSecretTaxonomy(t *testing.T) {
+	t.Parallel()
+
+	for _, fixture := range ReportVisibleRedactionFixtures() {
+		path := "artifacts/run-" + fixture.Input + ".log"
+		if _, err := SafeRepoRelativePath(path, "report-visible path"); err == nil {
+			t.Fatalf("SafeRepoRelativePath admitted embedded %s token", fixture.Name)
+		}
+	}
+	if path, err := SafeRepoRelativePath("artifacts/run-proofkit-check.log", "report-visible path"); err != nil || path != "artifacts/run-proofkit-check.log" {
+		t.Fatalf("SafeRepoRelativePath rejected benign path: %q %v", path, err)
+	}
+}
+
+func TestSortedTextOwnersAdmitCanonicalContentBeforeOrdering(t *testing.T) {
+	t.Parallel()
+
+	if _, err := PreserveSortedText([]string{" "}, "nonClaims", false); err == nil {
+		t.Fatal("PreserveSortedText admitted blank typed text")
+	}
+	if _, err := PreserveSortedText([]string{"sk-proj-abcdefghijklmnop"}, "nonClaims", false); err == nil {
+		t.Fatal("PreserveSortedText admitted secret-shaped typed text")
+	}
+	if got, err := NormalizeSortedText([]string{" b ", "a"}, "labels", false); err != nil || strings.Join(got, ",") != "a,b" {
+		t.Fatalf("NormalizeSortedText()=%v error=%v, want canonical a,b", got, err)
+	}
+}
+
+func TestPreserveSortedPathsUsesPathAdmissionWithoutProseFalsePositives(t *testing.T) {
+	t.Parallel()
+
+	paths := []string{"docs/features/ai-risk-escalation.md", "proofkit/contracts.json"}
+	if got, err := PreserveSortedPaths(paths, "paths", false); err != nil || strings.Join(got, ",") != strings.Join(paths, ",") {
+		t.Fatalf("PreserveSortedPaths()=%v error=%v, want canonical paths", got, err)
+	}
+	if _, err := PreserveSortedPaths([]string{"artifacts/run-ghp_12345678901234567890.log"}, "paths", false); err == nil {
+		t.Fatal("PreserveSortedPaths admitted a secret-shaped path")
+	}
+	unsorted := []string{"proofkit/contracts.json", "docs/features/ai-risk-escalation.md"}
+	if got, err := NormalizeSortedPaths(unsorted, "paths", false); err != nil || strings.Join(got, ",") != strings.Join(paths, ",") {
+		t.Fatalf("NormalizeSortedPaths()=%v error=%v, want sorted canonical paths", got, err)
+	}
+	if _, err := NormalizeSortedPaths([]string{"docs/same.md", "docs/same.md"}, "paths", false); err == nil {
+		t.Fatal("NormalizeSortedPaths admitted duplicate paths")
+	}
+	pathPolicyOnly := "artifacts/run-sk-abcdefghij.log"
+	if _, err := NonEmptyText(pathPolicyOnly, "prose"); err == nil {
+		t.Fatal("test premise invalid: prose admission unexpectedly accepted the path-policy fixture")
+	}
+	for name, admitArray := range map[string]func(any, string, bool) ([]string, error){
+		"normalize": NormalizeSortedPathArray,
+		"preserve":  PreserveSortedPathArray,
+	} {
+		if got, err := admitArray([]any{pathPolicyOnly}, "paths", false); err != nil || len(got) != 1 || got[0] != pathPolicyOnly {
+			t.Fatalf("%s path array=%v error=%v, want the canonical path-policy fixture", name, got, err)
+		}
+	}
+}
+
 func TestMergeNonClaimsPreservesRequiredClaimsAndRejectsSecretLikeCallerText(t *testing.T) {
 	t.Parallel()
 
@@ -184,7 +243,7 @@ func TestPreserveSortedTextRejectsCallerOrderingDrift(t *testing.T) {
 func TestSafeRepoRelativePathRejectsEscapesAndNormalization(t *testing.T) {
 	t.Parallel()
 
-	for _, value := range []string{"..", "../outside.md", "docs//INDEX.md", "/absolute.md", `docs\\INDEX.md`, ".", "C:/outside/report.json", "file:docs/report.json", "https://example.test/report.json", "packages/ghp_secretvalue/src/index.ts", "docs/api_key=abc123456789.md", "docs/sk-proj-abcdefghijklmnop.md", "docs/index\n.md", "docs/index\r.md", "docs/index\t.md", "docs/index\x7f.md"} {
+	for _, value := range []string{"..", "../outside.md", "docs//INDEX.md", "/absolute.md", `docs\\INDEX.md`, ".", "C:/outside/report.json", "file:docs/report.json", "https://example.test/report.json", "packages/ghp_secretvalue/src/index.ts", "artifacts/run-ghp_ABCDEFGHI.log", "docs/api_key=abc123456789.md", "docs/sk-proj-abcdefghijklmnop.md", "docs/index\n.md", "docs/index\r.md", "docs/index\t.md", "docs/index\x7f.md"} {
 		if _, err := SafeRepoRelativePath(value, "path"); err == nil {
 			t.Fatalf("expected unsafe path rejection for %q", value)
 		}
@@ -192,6 +251,22 @@ func TestSafeRepoRelativePathRejectsEscapesAndNormalization(t *testing.T) {
 	for _, path := range []string{"docs/INDEX.md", "docs/risk-escalation.md", "docs/ai-risk-escalation.md", "docs/secrets-incident-prevention.md", "docs/api-key-rotation.md", "docs/sk-project-key.md"} {
 		if value, err := SafeRepoRelativePath(path, "path"); err != nil || value != path {
 			t.Fatalf("expected stable repo-relative path for %q, got %q %v", path, value, err)
+		}
+	}
+}
+
+func TestSHA256RefAdmitsOneCanonicalRepresentation(t *testing.T) {
+	t.Parallel()
+	digest := strings.Repeat("a", 64)
+	if value, err := SHA256Ref("sha256:"+digest, "digest"); err != nil || value != "sha256:"+digest {
+		t.Fatalf("SHA256Ref() value=%q error=%v", value, err)
+	}
+	if value, err := SHA256HexRef(digest, "digest"); err != nil || value != "sha256:"+digest {
+		t.Fatalf("SHA256HexRef() value=%q error=%v", value, err)
+	}
+	for _, value := range []string{"sha256:" + strings.Repeat("a", 31) + " " + strings.Repeat("a", 32), "sha256:ABC", digest} {
+		if _, err := SHA256Ref(value, "digest"); err == nil {
+			t.Fatalf("SHA256Ref() accepted %q", value)
 		}
 	}
 }

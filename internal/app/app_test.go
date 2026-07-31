@@ -40,7 +40,7 @@ func TestRequirementBrowserInvalidViewDiagnosticMatchesRuntime(t *testing.T) {
 		&stdout,
 		&stderr,
 	)
-	const vocabulary = "source, proof, coverage, spec-tree, or workspace"
+	const vocabulary = "coverage, proof, source, spec-tree, workspace"
 	if status != 1 ||
 		stdout.Len() != 0 ||
 		strings.Count(stderr.String(), vocabulary) != 1 ||
@@ -233,6 +233,18 @@ func TestCompactJSONLayoutAppliesToRequirementBrowserPlan(t *testing.T) {
 	}
 	if plan["portSelection"] != "ephemeral" || plan["url"] != nil {
 		t.Fatalf("default browser plan must defer its ephemeral origin: %#v", plan)
+	}
+}
+
+func TestDuplicateFormatIsRejectedBeforeInputRead(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(t.Context(), []string{
+		"--json-layout", "compact",
+		"requirement-source-view", "--input", "-", "--format", "markdown", "--format", "json",
+	}, panicReader{}, &stdout, &stderr)
+	if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "--format may be specified only once") {
+		t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
 	}
 }
 

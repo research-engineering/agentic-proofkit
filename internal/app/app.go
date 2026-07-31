@@ -49,15 +49,15 @@ func RunWithRenderer(ctx context.Context, args []string, stdin io.Reader, stdout
 		return writeText(commandUsageWithRenderer(descriptor, renderer), 0, nil, stdout, stderr)
 	}
 	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
+	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {
+		writeDiagnostic(stderr, err)
+		return 1
+	}
 	if err := validateJSONLayoutUse(descriptor, parsedArguments, layoutExplicit); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
 	}
 	stdout = layoutWriter{Writer: stdout, layout: layout}
-	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {
-		writeDiagnostic(stderr, err)
-		return 1
-	}
 	switch descriptor.runner {
 	case commandRunnerHelp:
 		if len(args) >= 2 && args[1] == "families" {

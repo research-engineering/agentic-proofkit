@@ -128,7 +128,9 @@ func TestDecodeJSONAcceptsNestedObjects(t *testing.T) {
 
 func TestDecodeTypedJSONUsesStrictAdmission(t *testing.T) {
 	type record struct {
-		SchemaVersion int `json:"schemaVersion"`
+		Metadata      map[string]any `json:"metadata"`
+		SchemaVersion int            `json:"schemaVersion"`
+		Version       string         `json:"version"`
 	}
 	_, err := DecodeTypedJSON[record](strings.NewReader(`{"schemaVersion":1,"schemaVersion":2}`), 1024)
 	if err == nil || !strings.Contains(err.Error(), "duplicate object key") {
@@ -149,5 +151,17 @@ func TestDecodeTypedJSONUsesStrictAdmission(t *testing.T) {
 	}
 	if raw["n"] != json.Number("123") {
 		t.Fatalf("n=%v want 123", raw["n"])
+	}
+
+	if _, err := DecodeTypedJSON[record](strings.NewReader(`{"schemaVersion":1,"VERSION":"9.9.9"}`), 1024); err == nil || !strings.Contains(err.Error(), "exact declared field") {
+		t.Fatalf("DecodeTypedJSON() case-folded key error = %v, want exact-key rejection", err)
+	}
+
+	large, err := DecodeTypedJSON[record](strings.NewReader(`{"schemaVersion":1,"metadata":{"n":10000000000000000000}}`), 1024)
+	if err != nil {
+		t.Fatalf("DecodeTypedJSON() large number error = %v", err)
+	}
+	if number, ok := large.Metadata["n"].(json.Number); !ok || number.String() != "10000000000000000000" {
+		t.Fatalf("metadata.n=%#v, want exact json.Number", large.Metadata["n"])
 	}
 }
