@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 func TestRetainedEvidenceCommandWritesArtifactRootManifest(t *testing.T) {
@@ -45,6 +47,142 @@ func TestCompareNPMExisting(t *testing.T) {
 	expected.Shasum = ""
 	if err := compareNPMExisting(expected, actual); err == nil || !strings.Contains(err.Error(), "must include") {
 		t.Fatalf("compareNPMExisting() error = %v, want missing candidate metadata", err)
+	}
+}
+
+func TestValidateNPMReleaseLineage(t *testing.T) {
+	record := releasechange.Record{PreviousVersion: "0.2.0", Version: "0.2.1"}
+	accepted := []struct {
+		name           string
+		latestVersion  string
+		candidateState string
+	}{
+		{name: "unpublished candidate", latestVersion: "0.2.0", candidateState: npmCandidateUnpublished},
+		{name: "existing byte match", latestVersion: "0.2.1", candidateState: npmCandidateExistingByteMatch},
+	}
+	for _, item := range accepted {
+		t.Run(item.name, func(t *testing.T) {
+			latest := npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: item.latestVersion}
+			if err := validateNPMReleaseLineage(record, latest, "@research-engineering/agentic-proofkit", "0.2.1", item.candidateState); err != nil {
+				t.Fatalf("validateNPMReleaseLineage() error = %v", err)
+			}
+		})
+	}
+
+	tests := []struct {
+		name     string
+		latest   npmReleaseIdentity
+		expected string
+		version  string
+		state    string
+		want     string
+	}{
+		{
+			name:     "missing provider identity",
+			latest:   npmReleaseIdentity{},
+			expected: "@research-engineering/agentic-proofkit",
+			version:  "0.2.1",
+			state:    npmCandidateUnpublished,
+			want:     "must include name and version",
+		},
+		{
+			name:     "package mismatch",
+			latest:   npmReleaseIdentity{Name: "other", Version: "0.2.0"},
+			expected: "@research-engineering/agentic-proofkit",
+			version:  "0.2.1",
+			state:    npmCandidateUnpublished,
+			want:     "package name",
+		},
+		{
+			name:     "unpublished candidate skips predecessor",
+			latest:   npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: "0.2.1"},
+			expected: "@research-engineering/agentic-proofkit",
+			version:  "0.2.1",
+			state:    npmCandidateUnpublished,
+			want:     "expected 0.2.0",
+		},
+		{
+			name:     "existing candidate lacks byte-match lineage",
+			latest:   npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: "0.2.0"},
+			expected: "@research-engineering/agentic-proofkit",
+			version:  "0.2.1",
+			state:    npmCandidateExistingByteMatch,
+			want:     "expected 0.2.1",
+		},
+		{
+			name:     "empty expected package",
+			latest:   npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: "0.2.0"},
+			expected: "",
+			version:  "0.2.1",
+			state:    npmCandidateUnpublished,
+			want:     "must not be empty",
+		},
+		{
+			name:     "unsupported candidate state",
+			latest:   npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: "0.2.0"},
+			expected: "@research-engineering/agentic-proofkit",
+			version:  "0.2.1",
+			state:    "unknown",
+			want:     "unsupported npm candidate state",
+		},
+		{
+			name:     "empty candidate version",
+			latest:   npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: "0.2.0"},
+			expected: "@research-engineering/agentic-proofkit",
+			state:    npmCandidateUnpublished,
+			want:     "version must not be empty",
+		},
+		{
+			name:     "candidate version differs from release record",
+			latest:   npmReleaseIdentity{Name: "@research-engineering/agentic-proofkit", Version: "0.2.0"},
+			expected: "@research-engineering/agentic-proofkit",
+			version:  "0.2.2",
+			state:    npmCandidateUnpublished,
+			want:     "candidate npm package version",
+		},
+	}
+	for _, item := range tests {
+		t.Run(item.name, func(t *testing.T) {
+			err := validateNPMReleaseLineage(record, item.latest, item.expected, item.version, item.state)
+			if err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("validateNPMReleaseLineage() error = %v, want %q", err, item.want)
+			}
+		})
+	}
+}
+
+func TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity(t *testing.T) {
+	root := t.TempDir()
+	recordPath := filepath.Join(root, "change-record.json")
+	latestPath := filepath.Join(root, "latest.json")
+	writeFile(t, recordPath, `{
+	  "schemaVersion": 2,
+	  "previousVersion": "0.2.0",
+	  "version": "0.2.1",
+	  "changeClass": "compatible",
+	  "breakingChanges": [],
+	  "additions": [],
+	  "migration": {"required": false, "steps": []},
+	  "platformRequirements": [],
+	  "knownLimitations": [],
+	  "rollback": {"strategy": "previous_admitted_version"}
+	}`)
+	writeFile(t, latestPath, `{"name":"@research-engineering/agentic-proofkit","version":"0.2.0"}`)
+	args := []string{
+		"npm-lineage",
+		"--change-record-file", recordPath,
+		"--latest-file", latestPath,
+		"--expected-name", "@research-engineering/agentic-proofkit",
+		"--candidate-version", "0.2.1",
+		"--candidate-state", npmCandidateUnpublished,
+	}
+	if err := run(args); err != nil {
+		t.Fatalf("run(npm-lineage) error = %v", err)
+	}
+
+	writeFile(t, latestPath, `{"name":"@research-engineering/agentic-proofkit","version":"0.1.160"}`)
+	if err := run(args); err == nil || !strings.Contains(err.Error(), "expected 0.2.0") {
+		t.Fatalf("run(npm-lineage) error = %v, want lineage gap rejection", err)
 	}
 }
 

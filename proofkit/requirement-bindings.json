@@ -602,7 +602,7 @@
       "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["This requirement does not infer change-record completeness from source changes, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."]
+      "nonClaims": ["This requirement does not infer change-record completeness from source changes, reconstruct release-history migration data before the declared support baseline, claim a cumulative release-history planner, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."]
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-025",
@@ -3153,6 +3153,40 @@
       "witnessId": "proofkit.release-closeout.change-record-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.release-predecessor-lineage",
+      "witnessId": "proofkit.release-preflight.predecessor-lineage-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasepreflight/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestValidateNPMReleaseLineage",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestValidateNPMReleaseLineage$'"
+        },
+        {
+          "selector": "TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.release-predecessor-lineage-workflow",
+      "witnessId": "proofkit.release-workflow.predecessor-lineage-oracle",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/validate-self-hosting-receipts_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch",
+          "command": "go test ./scripts -run '^TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch$'"
+        }
+      ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },

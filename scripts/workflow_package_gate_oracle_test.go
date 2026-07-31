@@ -21,7 +21,7 @@ const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild 
 const setupVerifiedNPMActionSHA256 = "ead7e280f6430a9e83a544d5200217efaa36bf7aaedc879f417141fddfb20e8e"
 const ciSourceQualityStepInventorySHA256 = "90143666d13b499059937564e0829ecb1799946edb2975f187759cf5ef246da0"
 const ciBrowserRuntimeStepInventorySHA256 = "4880405e46ad4daad339117e76174a579e77cdfb70dde9c18d4afc7873f30aa4"
-const releaseCandidateStepInventorySHA256 = "a7a1f3216ab9dd0700957ad23ca557df446f5ceb917525aec1e3ead293de0585"
+const releaseCandidateStepInventorySHA256 = "12e2b229f711fb83e7a4230a455f764f03b5e36abf17ac0e53539037718b9e65"
 
 type packageGateWorkflowExpectation struct {
 	label                              string

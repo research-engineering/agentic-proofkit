@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -674,25 +675,70 @@ func TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch(t *testing.T
 		t.Fatal("Build publish dry-run evidence step not found")
 	}
 	run := workflow.Jobs["candidate"].Steps[stepIndex].Run
+	if err := validateReleaseCandidateLineageRun(run); err != nil {
+		t.Fatal(err)
+	}
+
+	lateOverride := strings.Replace(
+		run,
+		"npm view \"${package_name}@latest\" name version --json",
+		"lineage_state=\"unpublished\"\n            npm view \"${package_name}@latest\" name version --json",
+		1,
+	)
+	if err := validateReleaseCandidateLineageRun(lateOverride); err == nil || !strings.Contains(err.Error(), "exactly two") {
+		t.Fatalf("late candidate-state override error=%v, want exact assignment-count rejection", err)
+	}
+
+	const existingState = "lineage_state=\"existing_byte_match\""
+	const unpublishedState = "lineage_state=\"unpublished\""
+	swapped := strings.Replace(run, existingState, "__EXISTING_LINEAGE_STATE__", 1)
+	swapped = strings.Replace(swapped, unpublishedState, existingState, 1)
+	swapped = strings.Replace(swapped, "__EXISTING_LINEAGE_STATE__", unpublishedState, 1)
+	if err := validateReleaseCandidateLineageRun(swapped); err == nil || !strings.Contains(err.Error(), "only after") {
+		t.Fatalf("swapped candidate-state assignments error=%v, want branch-origin rejection", err)
+	}
+}
+
+func validateReleaseCandidateLineageRun(run string) error {
 	required := []string{
 		"npm view \"${package_name}@${package_version}\"",
 		"go run ./internal/tools/releasepreflight npm-existing",
+		"lineage_state=\"existing_byte_match\"",
 		"node - \"$metadata\" \"$filename\" \"$report\" <<'NODE'",
 		"writeFileSync(report",
-		"continue",
 		"npm publish \"artifacts/package/${filename}\"",
 		"--dry-run",
+		"lineage_state=\"unpublished\"",
+		"npm view \"${package_name}@latest\" name version --json",
+		"go run ./internal/tools/releasepreflight npm-lineage",
+		"--change-record-file release/change-record.v2.json",
+		"--candidate-version \"$package_version\"",
+		"--candidate-state \"$lineage_state\"",
 	}
 	for _, item := range required {
 		if !strings.Contains(run, item) {
-			t.Fatalf("candidate evidence step missing %q", item)
+			return fmt.Errorf("candidate evidence step missing %q", item)
 		}
 	}
-	existingIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-existing")
-	dryRunIndex := strings.Index(run, "npm publish \"artifacts/package/${filename}\"")
-	if existingIndex < 0 || dryRunIndex < 0 || existingIndex > dryRunIndex {
-		t.Fatalf("candidate evidence must validate existing-byte-match before npm publish dry-run")
+	if count := strings.Count(run, "lineage_state="); count != 2 {
+		return fmt.Errorf("candidate evidence must contain exactly two lineage_state assignments, got %d", count)
 	}
+	existingIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-existing")
+	existingStateIndex := strings.Index(run, "lineage_state=\"existing_byte_match\"")
+	dryRunIndex := strings.Index(run, "npm publish \"artifacts/package/${filename}\"")
+	unpublishedStateIndex := strings.Index(run, "lineage_state=\"unpublished\"")
+	latestIndex := strings.Index(run, "npm view \"${package_name}@latest\" name version --json")
+	lineageIndex := strings.Index(run, "go run ./internal/tools/releasepreflight npm-lineage")
+	if existingIndex < 0 || dryRunIndex < 0 || existingIndex > dryRunIndex {
+		return fmt.Errorf("candidate evidence must validate existing-byte-match before npm publish dry-run")
+	}
+	if existingStateIndex < existingIndex || unpublishedStateIndex < dryRunIndex {
+		return fmt.Errorf("candidate state must be assigned only after its branch evidence succeeds")
+	}
+	if latestIndex < existingStateIndex || latestIndex < unpublishedStateIndex || lineageIndex < latestIndex {
+		return fmt.Errorf("candidate evidence must validate registry lineage after the exact-byte or dry-run branch")
+	}
+	return nil
 }
 
 func TestReleaseWorkflowRetainsReleaseAssetAndPostCreateEvidenceClosure(t *testing.T) {

@@ -315,6 +315,13 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestCurrentChangeRecordNamesReviewedSemanticChanges",
 			"TestRenderStatesPreOneExactPinPolicy",
 		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage"}: {
+			"TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity",
+			"TestValidateNPMReleaseLineage",
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage-workflow"}: {
+			"TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch",
+		},
 		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-source-oracles"}: {
 			"TestExistingReleasePathIsReadOnlyAndFailsOnDrift",
 			"TestWorkflowClosedKeyAdmission",
@@ -357,6 +364,8 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}:       "scripts/workflow_browser_runtime_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility"}:    "internal/tools/pythonpackage/metadata_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}:            "internal/tools/releasechange/record_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage"}:                 "internal/tools/releasepreflight/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage-workflow"}:        "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-source-oracles"}:                     "scripts/workflow_source_oracles_test.go",
 		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}:                  "internal/app/cli_abi_test.go",
 		{"REQ-PROOFKIT-SPEC-021", "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup"}:                "internal/command/requirementbrowser/server_test.go",

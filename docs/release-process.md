@@ -46,7 +46,20 @@ In a source checkout, the committed `release/change-record.v2.json` owns the
 reviewed, version-bound declaration of the public-contract delta, migration
 decision, platform requirements, known limitations, and rollback strategy. It
 is not part of the installed npm or PyPI projection and does not infer change
-completeness from the source diff. The repository-owned
+completeness from the source diff.
+
+Release-history migration support starts at the baseline named by the first
+supporting release record. The exact baseline remains in that source-only,
+immutable release evidence rather than this package-public document. The
+repository does not backfill a machine release-history chain for earlier
+pre-baseline development releases. Each later change record in its released
+source commit owns exactly one edge from `previousVersion` to `version`. A
+future cumulative migration plan may be derived only from a contiguous,
+owner-admitted sequence of those immutable release records; it must not become
+a second authored source of truth or infer migration semantics from a source
+diff. No cumulative release-history planner is currently claimed.
+
+The repository-owned
 `release:manifest` tool admits that record and creates `release-manifest.json`,
 `checksums.sha256`, `metadata-checksums.sha256`, `sbom-subjects.sha256`,
 release notes, and deterministic SBOM candidate evidence from explicit package,
@@ -120,6 +133,13 @@ coverage metrics generation.
 The dry-run package identity proves candidate tarball shape only. It does not
 prove the bytes served by the registry after publish.
 
+Candidate preflight also admits the npm registry `latest` identity. For an
+unpublished candidate, `latest` must equal the change record
+`previousVersion`. For an already-published candidate, exact candidate-to-
+registry byte equality must be proven first and `latest` must equal the change
+record `version`. This separates a new release edge from an idempotent replay
+and rejects skipped or stale predecessor chains.
+
 ## Publish
 
 Create and push an exact version tag:
@@ -134,7 +154,9 @@ The `release` workflow must:
 1. verify source package identity;
 2. run the package gate;
 3. build publish candidate evidence through either npm publish dry-run or
-   exact existing-byte-match validation for an already published version;
+   exact existing-byte-match validation for an already published version, then
+   bind the branch-specific candidate state and admitted change record to the
+   exact npm `latest` package identity;
 4. build Python wheel candidates for the same embedded Go CLI;
 5. prove publish readiness before any registry side effect: the tag must equal
    `v<package.json version>`, target a commit reachable from `main`, and have

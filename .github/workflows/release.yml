@@ -117,6 +117,7 @@ jobs:
               go run ./internal/tools/releasepreflight npm-existing \
                 --expected-json "$metadata" \
                 --actual-file /tmp/proofkit-candidate-view.json
+              lineage_state="existing_byte_match"
               node - "$metadata" "$filename" "$report" <<'NODE'
           const { execFileSync } = require("node:child_process");
           const { writeFileSync } = require("node:fs");
@@ -132,17 +133,25 @@ jobs:
             .sort((left, right) => left.path.localeCompare(right.path));
           writeFileSync(report, `${JSON.stringify({ [metadata.name]: { ...metadata, files } }, null, 2)}\n`);
           NODE
-              continue
+            else
+              if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-candidate-view.err; then
+                cat /tmp/proofkit-candidate-view.err >&2
+                exit 1
+              fi
+              npm publish "artifacts/package/${filename}" \
+                --dry-run \
+                --json \
+                --access public \
+                --registry="${REGISTRY_URL}" > "$report"
+              lineage_state="unpublished"
             fi
-            if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-candidate-view.err; then
-              cat /tmp/proofkit-candidate-view.err >&2
-              exit 1
-            fi
-            npm publish "artifacts/package/${filename}" \
-              --dry-run \
-              --json \
-              --access public \
-              --registry="${REGISTRY_URL}" > "$report"
+            npm view "${package_name}@latest" name version --json --registry="${REGISTRY_URL}" > /tmp/proofkit-latest-view.json
+            go run ./internal/tools/releasepreflight npm-lineage \
+              --change-record-file release/change-record.v2.json \
+              --latest-file /tmp/proofkit-latest-view.json \
+              --expected-name "$package_name" \
+              --candidate-version "$package_version" \
+              --candidate-state "$lineage_state"
           done < artifacts/publish/publish-order.txt
           node <<'NODE'
           const { readFileSync, readdirSync, writeFileSync } = require("node:fs");

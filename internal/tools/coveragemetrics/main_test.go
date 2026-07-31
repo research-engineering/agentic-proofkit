@@ -395,6 +395,8 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
 		"proofkit.supply-chain-quality.release-platform-python-wheels",
 		"proofkit.supply-chain-quality.release-change-record-projection",
+		"proofkit.supply-chain-quality.release-predecessor-lineage",
+		"proofkit.supply-chain-quality.release-predecessor-lineage-workflow",
 		"proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs",
 		"proofkit.supply-chain-quality.workflow-package-gate-oracle",
 		"proofkit.supply-chain-quality.workflow-source-oracles",
