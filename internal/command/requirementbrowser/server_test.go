@@ -310,7 +310,7 @@ func TestStartServerServesExplicitCoverageViews(t *testing.T) {
 	for _, want := range []string{
 		"Requirement Coverage View",
 		"REQ-BROWSER-COVERAGE-001",
-		"covered_by_semantic_falsifier",
+		"mapped_to_declared_semantic_falsifier_route",
 		"Test evidence",
 		"Route-only evidence remains insufficient.",
 	} {
@@ -790,7 +790,7 @@ func coverageInput(t *testing.T) any {
         "selector": "go test ./internal/command/requirementbrowser -run TestStartServerServesExplicitCoverageViews",
         "sourcePath": "internal/command/requirementbrowser/server_test.go",
         "ownerId": "browser.coverage",
-        "evidenceClass": "semantic_falsifier",
+        "evidenceClass": "declared_semantic_falsifier_route",
         "requirementRefs": ["REQ-BROWSER-COVERAGE-001"],
         "ownerInvariantRefs": [],
         "commandRefs": ["proofkit.browser.coverage.command"],

@@ -120,30 +120,31 @@ type witnessPlanMetrics struct {
 }
 
 type cliContractMetrics struct {
-	CommandCount int `json:"commandCount"`
+	CommandCount int      `json:"commandCount"`
+	Commands     []string `json:"commands"`
 }
 
 type commandRouteMetrics struct {
-	AdmittedInventoryEntryCount               int      `json:"admittedInventoryEntryCount"`
-	CommandCount                              int      `json:"commandCount"`
-	CommandWithoutProofRouteCandidateCount    int      `json:"commandWithoutProofRouteCandidateCount"`
-	CommandsWithoutProofRouteCandidate        []string `json:"commandsWithoutProofRouteCandidate"`
-	ContractOnlyCommandCount                  int      `json:"contractOnlyCommandCount"`
-	ContractOnlyCommands                      []string `json:"contractOnlyCommands"`
-	CommandWithoutSemanticFalsifierRouteCount int      `json:"commandWithoutSemanticFalsifierRouteCount"`
-	CommandsWithoutSemanticFalsifierRoute     []string `json:"commandsWithoutSemanticFalsifierRoute"`
-	RouteCount                                int      `json:"routeCount"`
-	RouteOnlyCommandCount                     int      `json:"routeOnlyCommandCount"`
-	RouteOnlyCommands                         []string `json:"routeOnlyCommands"`
-	RouteSmokeCount                           int      `json:"routeSmokeCount"`
-	ProofRouteCandidateInventoryEntryCount    int      `json:"proofRouteCandidateInventoryEntryCount"`
-	ProofRouteCandidateRouteCount             int      `json:"proofRouteCandidateRouteCount"`
-	SemanticInventoryEntryCount               int      `json:"semanticInventoryEntryCount"`
-	SemanticRouteCount                        int      `json:"semanticRouteCount"`
-	UnknownProofRouteCandidateRefs            []string `json:"unknownProofRouteCandidateRefs"`
-	UnknownProofRouteCandidateRefCount        int      `json:"unknownProofRouteCandidateRefCount"`
-	UnknownSemanticCommandRefs                []string `json:"unknownSemanticCommandRefs"`
-	UnknownSemanticCommandRefCount            int      `json:"unknownSemanticCommandRefCount"`
+	AdmittedInventoryEntryCount                       int      `json:"admittedInventoryEntryCount"`
+	CommandCount                                      int      `json:"commandCount"`
+	Commands                                          []string `json:"commands"`
+	CommandWithoutProofRouteCandidateCount            int      `json:"commandWithoutProofRouteCandidateCount"`
+	CommandsWithoutProofRouteCandidate                []string `json:"commandsWithoutProofRouteCandidate"`
+	ContractOnlyCommandCount                          int      `json:"contractOnlyCommandCount"`
+	ContractOnlyCommands                              []string `json:"contractOnlyCommands"`
+	CommandWithoutDeclaredSemanticFalsifierRouteCount int      `json:"commandWithoutDeclaredSemanticFalsifierRouteCount"`
+	CommandsWithoutDeclaredSemanticFalsifierRoute     []string `json:"commandsWithoutDeclaredSemanticFalsifierRoute"`
+	RouteCount                                        int      `json:"routeCount"`
+	RouteOnlyCommandCount                             int      `json:"routeOnlyCommandCount"`
+	RouteOnlyCommands                                 []string `json:"routeOnlyCommands"`
+	RouteSmokeCount                                   int      `json:"routeSmokeCount"`
+	ProofRouteCandidateInventoryEntryCount            int      `json:"proofRouteCandidateInventoryEntryCount"`
+	ProofRouteCandidateRouteCount                     int      `json:"proofRouteCandidateRouteCount"`
+	DeclaredSemanticFalsifierRouteEntryCount          int      `json:"declaredSemanticFalsifierRouteEntryCount"`
+	UnknownProofRouteCandidateRefs                    []string `json:"unknownProofRouteCandidateRefs"`
+	UnknownProofRouteCandidateRefCount                int      `json:"unknownProofRouteCandidateRefCount"`
+	UnknownDeclaredSemanticRouteCommandRefs           []string `json:"unknownDeclaredSemanticRouteCommandRefs"`
+	UnknownDeclaredSemanticRouteCommandRefCount       int      `json:"unknownDeclaredSemanticRouteCommandRefCount"`
 }
 
 type deadZoneMetrics struct {
@@ -216,6 +217,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-caller-preservation"}: {"TestBootstrapPreservesCallerDisplayCommandInGuidancePayload"},
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.cli-output-root-witnesses"}: {
 			"TestAdoptionContractEnvelopeCLIABI",
+			"TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 			"TestSelfCheckOutputUsesExactRootShape",
 			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
 		},
@@ -237,6 +239,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-abi-golden"}: {
 			"TestAdoptionContractEnvelopeCLIABI",
 			"TestRequiredInputCommandsRouteStructuralErrorsByMode",
+			"TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 			"TestRequirementBrowserOneShotCLIOutputVariants",
 			"TestSelfCheckOutputUsesExactRootShape",
 			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
@@ -254,6 +257,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-witness-contract"}: {
 			"TestRootDistinctOutputWitnessBindingsAreExact",
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-schema-evolution"}: {
+			"TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract",
 		},
 		{"REQ-PROOFKIT-QUALITY-005", "proofkit.supply-chain-quality.codeql-permission-separation"}: {
 			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
@@ -333,6 +339,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestVerifyWheelContentsAcceptsDarwinTagAtOrAboveMachOMinimum",
 			"TestVerifyWheelContentsRejectsDarwinTagBelowMachOMinimum",
 		},
+		{"REQ-PROOFKIT-QUALITY-015", "proofkit.supply-chain-quality.release-closeout-completion-criteria"}: {
+			"TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+		},
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}: {
 			"TestAdmitEnforcesVersionedChangeClass",
 			"TestCurrentChangeRecordNamesReviewedSemanticChanges",
@@ -373,6 +382,28 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestServeOneShotReturnsCleanupFailuresWithoutWritingTerminalPacket",
 			"TestServeOneShotWaitsForDoneBeforeWritingTerminalPacket",
 		},
+		{"REQ-PROOFKIT-SPEC-006", "proofkit.spec-proof-core.test-inventory-and-coverage-view"}: {
+			"TestAdmitOutputRejectsCompactProjectionDrift",
+			"TestAdmitOutputRejectsMissingInverseParentProjection",
+			"TestAdmitOutputRejectsNonCanonicalWireProjectionText",
+			"TestAdmitOutputRejectsRemovedValidUnmappedInventoryEntry",
+			"TestAdmitOutputReplaysFailedInventoryQualitySemantics",
+			"TestAdmitOutputReplaysFullRepositorySourceOwnerScopeFailures",
+			"TestAdmitOutputReplaysOwnerScopeFailures",
+			"TestAdmitOutputRequiresEveryCoverageBasisField",
+			"TestAdmitOutputRequiresEveryDeclaredRootField",
+			"TestAdmitOutputRetainsFailedInventoryEntriesWithoutProjectedParents",
+			"TestAdmitOutputValidatesEveryCoverageRowMetadataField",
+		},
+		{"REQ-PROOFKIT-SPEC-006", "proofkit.spec-proof-core.declared-route-mapping-without-assurance"}: {
+			"TestBuildJSONMissingSelectorRemainsMappingOnly",
+		},
+		{"REQ-PROOFKIT-SPEC-012", "proofkit.spec-proof-core.requirement-authoring-ref-provenance"}: {
+			"TestBuildPreservesDigestBoundAuthoringRefIdentity",
+		},
+		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}: {
+			"TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField",
+		},
 	}
 	requiredPaths := map[inventoryKey]string{
 		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}:              "internal/tools/packageverify/main_test.go",
@@ -392,6 +423,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-abi-golden"}:                              "internal/app/cli_abi_test.go",
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-contract-topology"}:                       "internal/app/cli_contract_test.go",
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-witness-contract"}:                 "internal/app/cli_output_witness_contract_test.go",
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-output-schema-evolution"}:                 "internal/app/cli_contract_test.go",
 		{"REQ-PROOFKIT-QUALITY-005", "proofkit.supply-chain-quality.codeql-permission-separation"}:                "scripts/workflow_security_scanner_oracles_test.go",
 		{"REQ-PROOFKIT-QUALITY-006", "proofkit.supply-chain-quality.osv-permission-separation"}:                   "scripts/workflow_security_scanner_oracles_test.go",
 		{"REQ-PROOFKIT-QUALITY-007", "proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs"}: "scripts/workflow_security_scanner_oracles_test.go",
@@ -406,17 +438,22 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-workflow-delegation"}:            "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}:       "scripts/workflow_browser_runtime_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility"}:    "internal/tools/pythonpackage/metadata_test.go",
+		{"REQ-PROOFKIT-QUALITY-015", "proofkit.supply-chain-quality.release-closeout-completion-criteria"}:        "internal/tools/releasecloseoutinput/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}:            "internal/tools/releasechange/record_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.retained-evidence-artifact-topology"}:         "internal/tools/retainedevidence/manifest_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-closeout-change-record"}:              "internal/tools/releasecloseoutinput/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage"}:                 "internal/tools/releasepreflight/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage-workflow"}:        "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-QUALITY-025", "proofkit.supply-chain-quality.workflow-source-oracles"}:                     "scripts/workflow_source_oracles_test.go",
+		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}:              "internal/command/migrationparityadmission/migrationparityadmission_test.go",
 		{"REQ-PROOFKIT-SPEC-011", "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi"}:                  "internal/app/cli_abi_test.go",
 		{"REQ-PROOFKIT-SPEC-007", "proofkit.spec-proof-core.canonical-command-input-admission"}:                   "internal/app/command_coverage_test.go",
 		{"REQ-PROOFKIT-SPEC-007", "proofkit.spec-proof-core.canonical-input-admission"}:                           "internal/kernel/admission/json_test.go",
 		{"REQ-PROOFKIT-SPEC-013", "proofkit.spec-proof-core.receipt-trust-status-vocabulary-admission"}:           "internal/command/receipttrustclass/receipt_trust_class_test.go",
 		{"REQ-PROOFKIT-SPEC-021", "proofkit.spec-proof-core.requirement-browser-one-shot-cleanup"}:                "internal/command/requirementbrowser/server_test.go",
+		{"REQ-PROOFKIT-SPEC-006", "proofkit.spec-proof-core.test-inventory-and-coverage-view"}:                    "internal/command/requirementcoverageview/output_closure_test.go",
+		{"REQ-PROOFKIT-SPEC-006", "proofkit.spec-proof-core.declared-route-mapping-without-assurance"}:            "internal/command/requirementcoverageview/requirementcoverageview_test.go",
+		{"REQ-PROOFKIT-SPEC-012", "proofkit.spec-proof-core.requirement-authoring-ref-provenance"}:                "internal/command/requirementauthoringplan/requirement_authoring_plan_test.go",
 	}
 	if len(requiredPaths) != len(required) {
 		return fmt.Errorf("required selector path inventory=%d, selector inventory=%d", len(requiredPaths), len(required))
@@ -799,6 +836,7 @@ func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnes
 	sort.Strings(requirementWithoutBinding)
 	sort.Strings(scenarioWithoutCommand)
 	sort.Strings(scenarioWithoutRequirement)
+	contractCommands := cliContractCommandNames(contract)
 	commandRoutes := buildCommandRouteMetrics(contract, app.CommandCoverageSummaries(), commandInventory)
 	return metrics{
 		ArtifactKind:  "proofkit.coverage-metrics.v1",
@@ -815,7 +853,7 @@ func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnes
 			WitnessBackedRequirementCount: len(witnessBacked),
 		},
 		WitnessPlan:   witnessPlanMetrics{CommandCount: len(commandIDs)},
-		CLIContract:   cliContractMetrics{CommandCount: len(contract.Commands)},
+		CLIContract:   cliContractMetrics{CommandCount: len(contractCommands), Commands: contractCommands},
 		CommandRoutes: commandRoutes,
 		DeadZones: deadZoneMetrics{
 			BindingWithoutRequirementIDs:  bindingWithoutRequirement,
@@ -825,11 +863,20 @@ func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnes
 		},
 		NonClaims: []string{
 			"Coverage metrics report explicit requirement, binding, witness, and CLI inventory linkage only.",
-			"Coverage metrics classify static command route metadata as proof_route_candidate; route prose, source markers, test existence, and failure-capable AST nodes do not count as semantic_falsifier evidence.",
+			"Coverage metrics classify static command route metadata as proof_route_candidate; route prose, source markers, test existence, and failure-capable AST nodes do not become execution-backed semantic evidence.",
 			"Coverage metrics do not execute command route candidates or observe a concrete falsification event.",
 			"Coverage metrics do not claim line coverage, semantic correctness, command execution, receipt freshness, or merge satisfaction.",
 		},
 	}
+}
+
+func cliContractCommandNames(contract cliContract) []string {
+	commands := make([]string, 0, len(contract.Commands))
+	for _, command := range contract.Commands {
+		commands = append(commands, command.Command)
+	}
+	sort.Strings(commands)
+	return commands
 }
 
 func readCommandCoverageInventory() (testevidenceinventory.Inventory, error) {
@@ -853,14 +900,14 @@ func readCommandCoverageInventoryFrom(raw any) (testevidenceinventory.Inventory,
 
 func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCoverageSummary, inventory testevidenceinventory.Inventory) commandRouteMetrics {
 	missingCandidates := []string{}
-	missingSemantic := []string{}
+	missingDeclaredSemanticRoutes := []string{}
 	contractRefs := map[string]string{}
 	knownRefs := map[string]struct{}{}
 	candidateRefs := map[string]struct{}{}
-	semanticRefs := map[string]struct{}{}
+	declaredSemanticRouteRefs := map[string]struct{}{}
 	routeOnlyCount := 0
 	candidateEntryCount := 0
-	semanticEntryCount := 0
+	declaredSemanticRouteEntryCount := 0
 	for _, command := range contract.Commands {
 		contractRefs[app.CommandCoverageCommandRef(command.Command)] = command.Command
 	}
@@ -869,12 +916,12 @@ func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCover
 	}
 	for _, entry := range inventory.Entries {
 		switch entry.EvidenceClass {
-		case "semantic_falsifier":
-			semanticEntryCount++
+		case testevidenceinventory.EvidenceClassDeclaredSemanticFalsifierRoute:
+			declaredSemanticRouteEntryCount++
 			for _, commandRef := range entry.CommandRefs {
-				semanticRefs[commandRef] = struct{}{}
+				declaredSemanticRouteRefs[commandRef] = struct{}{}
 			}
-		case "proof_route_candidate":
+		case testevidenceinventory.EvidenceClassProofRouteCandidate:
 			candidateEntryCount++
 			for _, commandRef := range entry.CommandRefs {
 				candidateRefs[commandRef] = struct{}{}
@@ -883,10 +930,10 @@ func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCover
 			routeOnlyCount++
 		}
 	}
-	unknownRefs := []string{}
-	for ref := range semanticRefs {
+	unknownDeclaredSemanticRouteRefs := []string{}
+	for ref := range declaredSemanticRouteRefs {
 		if _, ok := knownRefs[ref]; !ok {
-			unknownRefs = append(unknownRefs, ref)
+			unknownDeclaredSemanticRouteRefs = append(unknownDeclaredSemanticRouteRefs, ref)
 		}
 	}
 	unknownCandidateRefs := []string{}
@@ -910,54 +957,55 @@ func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCover
 	sort.Strings(contractOnly)
 	sort.Strings(routeOnly)
 	sort.Strings(unknownCandidateRefs)
-	sort.Strings(unknownRefs)
+	sort.Strings(unknownDeclaredSemanticRouteRefs)
 	out := commandRouteMetrics{
-		AdmittedInventoryEntryCount:            len(inventory.Entries),
-		CommandCount:                           len(summaries),
-		ContractOnlyCommands:                   contractOnly,
-		ContractOnlyCommandCount:               len(contractOnly),
-		RouteOnlyCommands:                      routeOnly,
-		RouteOnlyCommandCount:                  len(routeOnly),
-		RouteSmokeCount:                        routeOnlyCount,
-		ProofRouteCandidateInventoryEntryCount: candidateEntryCount,
-		SemanticInventoryEntryCount:            semanticEntryCount,
-		UnknownProofRouteCandidateRefs:         unknownCandidateRefs,
-		UnknownProofRouteCandidateRefCount:     len(unknownCandidateRefs),
-		UnknownSemanticCommandRefs:             unknownRefs,
-		UnknownSemanticCommandRefCount:         len(unknownRefs),
+		AdmittedInventoryEntryCount:                 len(inventory.Entries),
+		CommandCount:                                len(summaries),
+		ContractOnlyCommands:                        contractOnly,
+		ContractOnlyCommandCount:                    len(contractOnly),
+		RouteOnlyCommands:                           routeOnly,
+		RouteOnlyCommandCount:                       len(routeOnly),
+		RouteSmokeCount:                             routeOnlyCount,
+		ProofRouteCandidateInventoryEntryCount:      candidateEntryCount,
+		DeclaredSemanticFalsifierRouteEntryCount:    declaredSemanticRouteEntryCount,
+		UnknownProofRouteCandidateRefs:              unknownCandidateRefs,
+		UnknownProofRouteCandidateRefCount:          len(unknownCandidateRefs),
+		UnknownDeclaredSemanticRouteCommandRefs:     unknownDeclaredSemanticRouteRefs,
+		UnknownDeclaredSemanticRouteCommandRefCount: len(unknownDeclaredSemanticRouteRefs),
 	}
 	for _, summary := range summaries {
+		out.Commands = append(out.Commands, summary.Command)
 		out.RouteCount += summary.RouteCount
 		out.ProofRouteCandidateRouteCount += summary.ProofRouteCandidateCount
-		out.SemanticRouteCount += summary.SemanticRouteCount
 		if _, ok := candidateRefs[summary.CommandRef]; !ok {
 			missingCandidates = append(missingCandidates, summary.Command)
 		}
-		if _, ok := semanticRefs[summary.CommandRef]; !ok {
-			missingSemantic = append(missingSemantic, summary.Command)
+		if _, ok := declaredSemanticRouteRefs[summary.CommandRef]; !ok {
+			missingDeclaredSemanticRoutes = append(missingDeclaredSemanticRoutes, summary.Command)
 		}
 	}
+	sort.Strings(out.Commands)
 	sort.Strings(missingCandidates)
-	sort.Strings(missingSemantic)
+	sort.Strings(missingDeclaredSemanticRoutes)
 	out.CommandsWithoutProofRouteCandidate = missingCandidates
 	out.CommandWithoutProofRouteCandidateCount = len(missingCandidates)
-	out.CommandsWithoutSemanticFalsifierRoute = missingSemantic
-	out.CommandWithoutSemanticFalsifierRouteCount = len(missingSemantic)
+	out.CommandsWithoutDeclaredSemanticFalsifierRoute = missingDeclaredSemanticRoutes
+	out.CommandWithoutDeclaredSemanticFalsifierRouteCount = len(missingDeclaredSemanticRoutes)
 	return out
 }
 
 func requireCommandRouteInventoryClosure(metrics commandRouteMetrics) error {
 	if len(metrics.CommandsWithoutProofRouteCandidate) == 0 &&
 		len(metrics.UnknownProofRouteCandidateRefs) == 0 &&
-		len(metrics.UnknownSemanticCommandRefs) == 0 &&
+		len(metrics.UnknownDeclaredSemanticRouteCommandRefs) == 0 &&
 		len(metrics.ContractOnlyCommands) == 0 &&
 		len(metrics.RouteOnlyCommands) == 0 {
 		return nil
 	}
-	return fmt.Errorf("command proof-route inventory defects: missingCandidates=%v unknownCandidateRefs=%v unknownSemanticRefs=%v contractOnly=%v routeOnly=%v",
+	return fmt.Errorf("command proof-route inventory defects: missingCandidates=%v unknownCandidateRefs=%v unknownDeclaredSemanticRouteRefs=%v contractOnly=%v routeOnly=%v",
 		metrics.CommandsWithoutProofRouteCandidate,
 		metrics.UnknownProofRouteCandidateRefs,
-		metrics.UnknownSemanticCommandRefs,
+		metrics.UnknownDeclaredSemanticRouteCommandRefs,
 		metrics.ContractOnlyCommands,
 		metrics.RouteOnlyCommands,
 	)

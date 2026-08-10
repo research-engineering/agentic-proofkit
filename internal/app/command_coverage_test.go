@@ -162,7 +162,7 @@ func TestCommandCoverageInventoryIsAdmittedAndBindsProofRouteCandidates(t *testi
 				t.Fatalf("proof-route candidate laundered semantic evidence: %#v", entry)
 			}
 			candidateCommandRefs[entry.CommandRefs[0]] = struct{}{}
-		case "semantic_falsifier":
+		case "declared_semantic_falsifier_route":
 			t.Fatalf("static command coverage route became semantic evidence: %#v", entry)
 		case "routing_smoke_nonclaim":
 			if len(entry.OwnerInvariantRefs) != 0 || entry.Falsifier != nil || entry.Oracle != nil {

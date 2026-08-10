@@ -124,7 +124,7 @@ func TestBuildPreservesNormalizedSourceSetProvenance(t *testing.T) {
 	}
 }
 
-func TestBuildPreservesChildOwnedInventorySupersessionProofRef(t *testing.T) {
+func TestBuildPreservesChildOwnedInventorySupersessionDeclarationRef(t *testing.T) {
 	input := validComposeInput(t, supersedingInventoryEntries()).(map[string]any)
 	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
 	delete(input, "compactProofContract")
@@ -141,8 +141,8 @@ func TestBuildPreservesChildOwnedInventorySupersessionProofRef(t *testing.T) {
 	}
 	inventory := output["testEvidenceInventory"].(map[string]any)
 	entries := inventory["entries"].([]any)
-	if !entryFalsifierHas(entries, "test.coverage.semantic_replacement", "supersessionProofRef", "proof.coverage.semantic_replacement") {
-		t.Fatalf("composed inventory lost supersessionProofRef: %#v", inventory)
+	if !entryFalsifierHas(entries, "test.coverage.semantic_replacement", "supersessionDeclarationRef", "proof.coverage.semantic_replacement") {
+		t.Fatalf("composed inventory lost supersessionDeclarationRef: %#v", inventory)
 	}
 }
 
@@ -542,7 +542,7 @@ func supersedingInventoryEntries() string {
   "selector": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go::semantic_replacement",
   "sourcePath": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go",
   "ownerId": "proofkit.coverage",
-  "evidenceClass": "semantic_falsifier",
+  "evidenceClass": "declared_semantic_falsifier_route",
   "requirementRefs": ["REQ-PROOFKIT-COVERAGE-001"],
   "ownerInvariantRefs": ["proof.coverage.semantic_replacement"],
   "commandRefs": ["proofkit.coverage.command"],
@@ -553,7 +553,7 @@ func supersedingInventoryEntries() string {
     "wrongImplementationClassId": "wrong.coverage.semantic",
     "dominanceGroup": "coverage.semantic",
     "supersedes": ["falsifier.coverage.semantic"],
-    "supersessionProofRef": "proof.coverage.semantic_replacement"
+    "supersessionDeclarationRef": "proof.coverage.semantic_replacement"
   },
   "oracle": {
     "oracleId": "oracle.coverage.semantic_replacement",
@@ -571,7 +571,7 @@ func inventoryEntry(testID string, commandRef string, sourcePath string, suffix 
   "selector": "` + sourcePath + `::` + suffix + `",
   "sourcePath": "` + sourcePath + `",
   "ownerId": "proofkit.coverage",
-  "evidenceClass": "semantic_falsifier",
+  "evidenceClass": "declared_semantic_falsifier_route",
   "requirementRefs": ["REQ-PROOFKIT-COVERAGE-001"],
   "ownerInvariantRefs": [],
   "commandRefs": ["` + commandRef + `"],

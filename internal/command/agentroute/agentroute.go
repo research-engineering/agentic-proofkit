@@ -242,7 +242,7 @@ var routeSpecs = map[string]routeSpec{
 			{Command: "requirement-coverage-view", InputKind: "coverage_view_input", Why: "Coverage inspection should join admitted requirement, proof-binding, and test-inventory inputs."},
 			{Command: "requirement-browser-server", InputKind: "coverage_view_input", ExtraArgs: []string{"--view", "coverage"}, Why: "Browser views are presentation-only inspection surfaces over caller-owned coverage input."},
 		},
-		StopConditions: []string{"Stop when tests are route-only, weak-oracle, unbound, or outside the caller-owned coverage universe."},
+		StopConditions: []string{"Stop when tests are route-only, lack a declared assertion signal, are unbound, or are outside the caller-owned coverage universe."},
 		Escalations:    []string{"Escalate coverage completeness and native test execution to the consuming repository."},
 		SliceSummary:   "Route coverage inspection through admitted requirement, proof-binding, and test inventory inputs.",
 		SliceNonClaims: []string{"The coverage slice does not claim inventory completeness outside the caller-owned universe."},

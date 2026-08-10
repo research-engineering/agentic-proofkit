@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "472517950d99dc3c6ce772ac6f63ca5be2a4ff3692aac3025dd7f4adb09289b3"
+	cliContractPublicABISHA256               = "6a3b6504546419e9198af89ea90af19d543dac26af975aeef1075b4ff7d88491"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1981,14 +1981,46 @@ func TestRequirementCoverageViewContractDescribesMachineClassifications(t *testi
 		"declared_dead_zone",
 		"failed_test_inventory",
 		"missing_requirement_binding",
-		"missing_semantic_test",
+		"missing_declared_test_route",
 		"nonsemantic_command_evidence",
 		"nonsemantic_governance_evidence",
 		"not_applicable_with_reason",
 		"owner_scope_violation",
+		"proof_route_candidate_only",
 		"routing_smoke_only",
+		"unclassified_gap",
 		"unknown_reference",
 	}, "requirement coverage classification ids")
+}
+
+func TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract(t *testing.T) {
+	contract := readCLIContract(t)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	for _, command := range contract.Commands {
+		if command.Command != "requirement-coverage-view" {
+			continue
+		}
+		output := canonicalJSONValue(t, command.OutputContract).(map[string]any)
+		if output["contractId"] != "proofkit.requirement-coverage-view.output.v2" || output["schemaVersion"] != float64(2) {
+			t.Fatalf("requirement coverage output identity=%#v, want versioned v2 contract", output)
+		}
+		definitionID := output["rootDefinitionRef"].(string)
+		definition := definitions[definitionID]
+		if definitionID != "proofkit.requirement-coverage-view.output.v2.root-shape" || definition["schemaVersion"] != float64(2) {
+			t.Fatalf("requirement coverage root definition=%#v, want versioned v2 root", definition)
+		}
+		for _, rawVariant := range definition["fieldTree"].(map[string]any)["variants"].([]any) {
+			variant := rawVariant.(map[string]any)
+			required := stringsFromAny(variant["requiredFields"].([]any))
+			if variant["variantId"] == "02-report" &&
+				slices.Contains(required, "coverageBasis") &&
+				slices.Contains(required, "unmappedTests") {
+				return
+			}
+		}
+		t.Fatal("requirement coverage v2 report root must require coverageBasis and unmappedTests")
+	}
+	t.Fatal("requirement-coverage-view missing from CLI contract")
 }
 
 func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing.T) {
@@ -2038,7 +2070,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"invalid_falsifier_supersession",
 		"missing_edge",
 		"missing_executable_command_ref",
-		"missing_semantic_anchor",
+		"missing_declared_route_anchor",
 		"mock_tests_mock",
 		"over_broad_integration",
 		"proof_route_candidate",
@@ -2047,7 +2079,7 @@ func TestTestEvidenceInventoryContractDescribesMachineClassifications(t *testing
 		"snapshot_without_oracle",
 		"tautology",
 		"unasserted_diagnostic",
-		"weak_or_empty_oracle",
+		"incomplete_declared_oracle_metadata",
 		"wrong_boundary",
 		"wrong_evidence_boundary",
 	}, "test evidence inventory classification ids")

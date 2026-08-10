@@ -19,9 +19,11 @@ func scenariosToAny(scenarios []scenario) []any {
 			"commandIds":         admit.StringSliceToAny(item.CommandIDs),
 			"environmentClasses": admit.StringSliceToAny(item.EnvironmentClasses),
 			"scenarioId":         item.ScenarioID,
+			"verifyCommands":     admit.StringSliceToAny(item.VerifyCommands),
 			"witnessId":          item.WitnessID,
 			"witnessKind":        item.WitnessKind,
 			"witnessPath":        item.WitnessPath,
+			"witnessSelectors":   admit.StringSliceToAny(item.WitnessSelectors),
 		})
 	}
 	return result
@@ -32,28 +34,46 @@ func testEntriesToAny(entries []testevidenceinventory.Entry) []any {
 		expectedPublicOutcome := ""
 		oracleSummary := ""
 		oracleKind := ""
+		oracleID := ""
 		if entry.Oracle != nil {
 			expectedPublicOutcome = entry.Oracle.ExpectedPublicOutcome
 			oracleSummary = entry.Oracle.AssertionSummary
 			oracleKind = entry.Oracle.OracleKind
+			oracleID = entry.Oracle.OracleID
 		}
+		dominanceGroup := ""
+		falsifierID := ""
 		wrongImplementation := ""
 		negativeCaseID := ""
+		supersedes := []string{}
+		supersessionDeclarationRef := ""
 		if entry.Falsifier != nil {
+			dominanceGroup = entry.Falsifier.DominanceGroup
+			falsifierID = entry.Falsifier.FalsifierID
 			wrongImplementation = entry.Falsifier.WrongImplementationClassID
 			negativeCaseID = entry.Falsifier.NegativeCaseID
+			supersedes = entry.Falsifier.Supersedes
+			supersessionDeclarationRef = entry.Falsifier.SupersessionDeclarationRef
 		}
 		result = append(result, map[string]any{
 			"commandRefs":                admit.StringSliceToAny(entry.CommandRefs),
+			"dominanceGroup":             dominanceGroup,
 			"evidenceClass":              entry.EvidenceClass,
 			"expectedPublicOutcome":      expectedPublicOutcome,
+			"falsifierId":                falsifierID,
 			"negativeCaseId":             negativeCaseID,
 			"nonClaims":                  admit.StringSliceToAny(entry.NonClaims),
+			"oracleId":                   oracleID,
 			"oracleKind":                 oracleKind,
 			"oracleSummary":              oracleSummary,
+			"ownerId":                    entry.OwnerID,
+			"ownerInvariantRefs":         admit.StringSliceToAny(entry.OwnerInvariantRefs),
 			"qualityFindings":            qualityFindingsToAny(entry.QualityFindings),
+			"requirementRefs":            admit.StringSliceToAny(entry.RequirementRefs),
 			"selector":                   entry.Selector,
 			"sourcePath":                 entry.SourcePath,
+			"supersedes":                 admit.StringSliceToAny(supersedes),
+			"supersessionDeclarationRef": supersessionDeclarationRef,
 			"testId":                     entry.TestID,
 			"witnessRefs":                admit.StringSliceToAny(entry.WitnessRefs),
 			"wrongImplementationClassId": wrongImplementation,
@@ -83,6 +103,24 @@ func entryCommandRefs(entries []testevidenceinventory.Entry) []string {
 		values = append(values, entry.CommandRefs...)
 	}
 	return sortedUnique(values)
+}
+
+func unprojectedTestEntries(entries []testevidenceinventory.Entry, rowGroups ...[]map[string]any) []testevidenceinventory.Entry {
+	projected := map[string]struct{}{}
+	for _, rows := range rowGroups {
+		for _, row := range rows {
+			for _, testID := range stringArray(row["testIds"]) {
+				projected[testID] = struct{}{}
+			}
+		}
+	}
+	result := make([]testevidenceinventory.Entry, 0)
+	for _, entry := range entries {
+		if _, ok := projected[entry.TestID]; !ok {
+			result = append(result, entry)
+		}
+	}
+	return result
 }
 
 func inventoryID(inventory *testevidenceinventory.Result) any {

@@ -129,7 +129,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim repository scanning, native test execution, proof freshness, receipt authenticity, merge approval, or global coverage completeness outside the caller-provided universe."
+        "This requirement does not claim repository scanning, source authenticity, producer identity, selector resolution, oracle quality, native test execution, proof freshness, receipt authenticity, trust, sensitivity, assurance closure, merge approval, or global coverage completeness outside the caller-provided universe."
       ]
     },
     {
@@ -989,6 +989,10 @@
           "command": "go test ./internal/app -run '^TestAdoptionContractEnvelopeCLIABI$'"
         },
         {
+          "selector": "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
+          "command": "go test ./internal/app -run '^TestRequirementAuthoringPlanOutputUsesVersionedRootShape$'"
+        },
+        {
           "selector": "TestSelfCheckOutputUsesExactRootShape",
           "command": "go test ./internal/app -run '^TestSelfCheckOutputUsesExactRootShape$'"
         },
@@ -1452,7 +1456,53 @@
       "scenarioId": "proofkit.spec-proof-core.test-inventory-and-coverage-view",
       "witnessId": "proofkit.test-inventory-and-coverage-view.boundary",
       "witnessKind": "contract",
-      "witnessPath": "internal/command/requirementcoverageview/requirementcoverageview_test.go",
+      "witnessPath": "internal/command/requirementcoverageview/output_closure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdmitOutputRejectsCompactProjectionDrift",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRejectsCompactProjectionDrift$'"
+        },
+        {
+          "selector": "TestAdmitOutputRejectsMissingInverseParentProjection",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRejectsMissingInverseParentProjection$'"
+        },
+        {
+          "selector": "TestAdmitOutputRejectsNonCanonicalWireProjectionText",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRejectsNonCanonicalWireProjectionText$'"
+        },
+        {
+          "selector": "TestAdmitOutputRejectsRemovedValidUnmappedInventoryEntry",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRejectsRemovedValidUnmappedInventoryEntry$'"
+        },
+        {
+          "selector": "TestAdmitOutputReplaysFailedInventoryQualitySemantics",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputReplaysFailedInventoryQualitySemantics$'"
+        },
+        {
+          "selector": "TestAdmitOutputReplaysFullRepositorySourceOwnerScopeFailures",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputReplaysFullRepositorySourceOwnerScopeFailures$'"
+        },
+        {
+          "selector": "TestAdmitOutputReplaysOwnerScopeFailures",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputReplaysOwnerScopeFailures$'"
+        },
+        {
+          "selector": "TestAdmitOutputRequiresEveryCoverageBasisField",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRequiresEveryCoverageBasisField$'"
+        },
+        {
+          "selector": "TestAdmitOutputRequiresEveryDeclaredRootField",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRequiresEveryDeclaredRootField$'"
+        },
+        {
+          "selector": "TestAdmitOutputRetainsFailedInventoryEntriesWithoutProjectedParents",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputRetainsFailedInventoryEntriesWithoutProjectedParents$'"
+        },
+        {
+          "selector": "TestAdmitOutputValidatesEveryCoverageRowMetadataField",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestAdmitOutputValidatesEveryCoverageRowMetadataField$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -1466,6 +1516,25 @@
       "witnessId": "proofkit.coverage-input-compose.boundary",
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementcoverageinput/requirementcoverageinput_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-006",
+      "scenarioId": "proofkit.spec-proof-core.declared-route-mapping-without-assurance",
+      "witnessId": "proofkit.requirement-coverage.declared-route-mapping-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcoverageview/requirementcoverageview_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildJSONMissingSelectorRemainsMappingOnly",
+          "command": "go test ./internal/command/requirementcoverageview -run '^TestBuildJSONMissingSelectorRemainsMappingOnly$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -1665,6 +1734,25 @@
       "witnessId": "proofkit.requirement-authoring-plan.public-cli-abi",
       "witnessKind": "contract",
       "witnessPath": "internal/app/cli_abi_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-012",
+      "scenarioId": "proofkit.spec-proof-core.requirement-authoring-ref-provenance",
+      "witnessId": "proofkit.requirement-authoring-plan.authoring-ref-provenance-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementauthoringplan/requirement_authoring_plan_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildPreservesDigestBoundAuthoringRefIdentity",
+          "command": "go test ./internal/command/requirementauthoringplan -run '^TestBuildPreservesDigestBoundAuthoringRefIdentity$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -1943,7 +2031,13 @@
       "scenarioId": "proofkit.consumer-infra-retirement.migration-parity-admission",
       "witnessId": "proofkit.migration-parity-admission.boundary",
       "witnessKind": "contract",
-      "witnessPath": "internal/app/self_hosting_semantics_test.go",
+      "witnessPath": "internal/command/migrationparityadmission/migrationparityadmission_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField",
+          "command": "go test ./internal/command/migrationparityadmission -run '^TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -2069,6 +2163,10 @@
           "command": "go test ./internal/app -run '^TestAdoptionContractEnvelopeCLIABI$'"
         },
         {
+          "selector": "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
+          "command": "go test ./internal/app -run '^TestRequirementAuthoringPlanOutputUsesVersionedRootShape$'"
+        },
+        {
           "selector": "TestRequirementBrowserOneShotCLIOutputVariants",
           "command": "go test ./internal/app -run '^TestRequirementBrowserOneShotCLIOutputVariants$'"
         },
@@ -2167,7 +2265,13 @@
       "scenarioId": "proofkit.supply-chain-quality.cli-output-schema-evolution",
       "witnessId": "proofkit.cli-contract.output-schema-evolution",
       "witnessKind": "contract",
-      "witnessPath": "internal/app/app_test.go",
+      "witnessPath": "internal/app/cli_contract_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract",
+          "command": "go test ./internal/app -run '^TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
@@ -2531,6 +2635,12 @@
       "witnessId": "proofkit.release-closeout.completion-criteria-gate",
       "witnessKind": "contract",
       "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test",
         "proofkit.package-gate"

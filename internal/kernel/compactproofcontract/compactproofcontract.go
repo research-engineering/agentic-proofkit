@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
 )
 
 const (
@@ -315,9 +316,12 @@ func admitBinding(row []any, bindingColumns map[string]int, witnessColumns map[s
 	if err != nil {
 		return Binding{}, err
 	}
-	proofContractState, err := admit.RuleID(column(row, bindingColumns, "proof_contract_state"), context+" proof_contract_state")
+	proofContractState, err := admit.Enum(column(row, bindingColumns, "proof_contract_state"), proofvocab.RequirementProofStateSet(), context+" proof_contract_state")
 	if err != nil {
 		return Binding{}, err
+	}
+	if proofContractState != "witness_backed" {
+		return Binding{}, fmt.Errorf("%s proof_contract_state must be witness_backed because a compact binding row contains positive and falsification witnesses", context)
 	}
 	blockingStatus, err := admit.RuleID(column(row, bindingColumns, "blocking_status"), context+" blocking_status")
 	if err != nil {
@@ -355,7 +359,7 @@ func admitWitness(raw any, context string, columns map[string]int) (Witness, err
 	if err != nil {
 		return Witness{}, err
 	}
-	selector, err = admitWitnessSelector(selector, context+" selector")
+	selector, err = AdmitWitnessSelector(selector, context+" selector")
 	if err != nil {
 		return Witness{}, err
 	}
@@ -652,25 +656,37 @@ func resolverNonClaims(nonClaims []string) []any {
 }
 
 func admitScopedScenarioID(value string, surfaceID string, context string) (string, error) {
-	parts := strings.Split(value, "::")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", fmt.Errorf("%s must use surface_id::stable_anchor scenario identity", context)
-	}
-	scenarioSurfaceID, err := admit.RuleID(parts[0], context+" surface_id")
+	scenarioID, scenarioSurfaceID, err := AdmitScenarioID(value, context)
 	if err != nil {
 		return "", err
 	}
 	if scenarioSurfaceID != surfaceID {
 		return "", fmt.Errorf("%s must be scoped under surface_id %s", context, surfaceID)
 	}
-	anchor, err := admit.RuleID(parts[1], context+" anchor")
-	if err != nil {
-		return "", err
-	}
-	return scenarioSurfaceID + "::" + anchor, nil
+	return scenarioID, nil
 }
 
-func admitWitnessSelector(value string, context string) (string, error) {
+// AdmitScenarioID preserves the compact-contract owner for the encoded
+// surface_id::stable_anchor scenario identity used by child projections.
+func AdmitScenarioID(value string, context string) (string, string, error) {
+	parts := strings.Split(value, "::")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return "", "", fmt.Errorf("%s must use surface_id::stable_anchor scenario identity", context)
+	}
+	scenarioSurfaceID, err := admit.RuleID(parts[0], context+" surface_id")
+	if err != nil {
+		return "", "", err
+	}
+	anchor, err := admit.RuleID(parts[1], context+" anchor")
+	if err != nil {
+		return "", "", err
+	}
+	return scenarioSurfaceID + "::" + anchor, scenarioSurfaceID, nil
+}
+
+// AdmitWitnessSelector preserves the compact-contract owner for selector
+// identity when child projections re-admit compact witness routes.
+func AdmitWitnessSelector(value string, context string) (string, error) {
 	parts := strings.Split(value, "::")
 	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
 		return "", fmt.Errorf("%s must use repo/path::stable_anchor selector identity", context)

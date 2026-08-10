@@ -62,6 +62,16 @@ func TestVocabularyAccessorsReturnCopies(t *testing.T) {
 	if _, ok := ObligationClassSet()["blocking"]; !ok {
 		t.Fatalf("ObligationClassSet returned mutable owner set")
 	}
+	proofStates := RequirementProofStates()
+	proofStates[0] = "mutated"
+	if RequirementProofStates()[0] == "mutated" {
+		t.Fatalf("RequirementProofStates returned mutable owner slice")
+	}
+	proofStateSet := RequirementProofStateSet()
+	delete(proofStateSet, "witness_backed")
+	if _, ok := RequirementProofStateSet()["witness_backed"]; !ok {
+		t.Fatalf("RequirementProofStateSet returned mutable owner set")
+	}
 	decisionStates := ObligationDecisionStates()
 	decisionStates[0] = "mutated"
 	if ObligationDecisionStates()[0] == "mutated" {

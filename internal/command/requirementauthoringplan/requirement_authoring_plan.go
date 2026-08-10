@@ -32,7 +32,7 @@ type input struct {
 	AuthoringPlanID         string
 	AuthoringRefs           []authoringRef
 	CandidateUpdates        []candidateUpdate
-	CurrentRequirementRaw   map[string]any
+	CurrentRequirementValue map[string]any
 	CurrentRequirementState requirementsourceadmission.Source
 	Mode                    string
 	NonClaims               []string
@@ -79,13 +79,16 @@ func Build(raw any) (map[string]any, int, error) {
 func buildOutput(input input) (map[string]any, int) {
 	nextSource, compositionFailures := composeNextRequirementSource(input)
 	sourceResult, sourceErr := requirementsourceadmission.Evaluate(nextSource)
+	if sourceErr == nil && sourceResult.ExitCode == 0 {
+		nextSource = requirementsourceadmission.SourceValue(sourceResult.Source)
+	}
 	transitionInput := map[string]any{
 		"schemaVersion": json.Number("1"),
 		"transitionId":  input.AuthoringPlanID + ".transition",
 		"nonClaims": []any{
 			"Requirement authoring plan transition proof does not promote candidates to stable repository truth.",
 		},
-		"previous": input.CurrentRequirementRaw,
+		"previous": input.CurrentRequirementValue,
 		"next":     nextSource,
 	}
 	transitionRecord, transitionExitCode, transitionErr := requirementsourcetransition.Build(transitionInput)
@@ -120,6 +123,7 @@ func buildOutput(input input) (map[string]any, int) {
 		}
 	}
 	output := map[string]any{
+		"authoringRefs":                    authoringRefValues(input.AuthoringRefs),
 		"authoringPlanId":                  input.AuthoringPlanID,
 		"candidateChangeSet":               candidateUpdateValues(input.CandidateUpdates, state == "passed"),
 		"mode":                             input.Mode,
@@ -129,7 +133,7 @@ func buildOutput(input input) (map[string]any, int) {
 		"planKind":                         planKind,
 		"promotionPreconditions":           promotionPreconditions(input),
 		"ruleResults":                      ruleResults(failures, sourceResult, sourceErr, transitionRecord.State, transitionErr),
-		"schemaVersion":                    1,
+		"schemaVersion":                    2,
 		"state":                            state,
 		"summary": map[string]any{
 			"authoringRefCount":            len(input.AuthoringRefs),
@@ -149,6 +153,25 @@ func buildOutput(input input) (map[string]any, int) {
 		return output, 0
 	}
 	return output, 1
+}
+
+func authoringRefValues(refs []authoringRef) []any {
+	values := make([]any, 0, len(refs))
+	for _, ref := range refs {
+		var digest any
+		if ref.Digest != nil {
+			digest = *ref.Digest
+		}
+		values = append(values, map[string]any{
+			"digest":    digest,
+			"kind":      ref.Kind,
+			"nonClaims": admit.StringSliceToAny(ref.NonClaims),
+			"path":      ref.Path,
+			"refId":     ref.RefID,
+			"summary":   ref.Summary,
+		})
+	}
+	return values
 }
 
 func admitInput(raw any) (input, error) {
@@ -197,7 +220,7 @@ func admitInput(raw any) (input, error) {
 		AuthoringPlanID:         authoringPlanID,
 		AuthoringRefs:           refs,
 		CandidateUpdates:        updates,
-		CurrentRequirementRaw:   cloneObject(current),
+		CurrentRequirementValue: requirementsourceadmission.SourceValue(currentResult.Source),
 		CurrentRequirementState: currentResult.Source,
 		Mode:                    mode,
 		NonClaims:               nonClaims,
@@ -327,11 +350,12 @@ func admitCandidateUpdate(raw any, admittedRefIDs map[string]struct{}) (candidat
 	if !ok {
 		return candidateUpdate{}, fmt.Errorf("requirement authoring plan candidateRequirement must be an object")
 	}
-	candidateRequirement = cloneObject(candidateRequirement)
-	candidateRequirementID, err := requirementID(candidateRequirement["requirementId"], "requirement authoring plan candidateRequirement.requirementId")
+	admittedCandidate, err := requirementsourceadmission.AdmitRequirement(candidateRequirement)
 	if err != nil {
 		return candidateUpdate{}, err
 	}
+	candidateRequirement = requirementsourceadmission.RequirementValue(admittedCandidate)
+	candidateRequirementID := admittedCandidate.RequirementID
 	if candidateRequirementID != targetRequirementID {
 		return candidateUpdate{}, fmt.Errorf("requirement authoring plan candidateRequirement.requirementId must equal candidateUpdate.requirementId")
 	}
@@ -396,7 +420,7 @@ func admitProofObligations(raw any) ([]proofObligation, error) {
 }
 
 func composeNextRequirementSource(input input) (map[string]any, []string) {
-	current := cloneObject(input.CurrentRequirementRaw)
+	current := cloneObject(input.CurrentRequirementValue)
 	requirements := cloneArray(current["requirements"].([]any))
 	indexByRequirementID := map[string]int{}
 	for index, raw := range requirements {

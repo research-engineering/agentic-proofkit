@@ -8,6 +8,27 @@ type ComparisonField struct {
 	Value any
 }
 
+// AdmitRequirement exposes the requirement owner's canonical leaf admission.
+func AdmitRequirement(raw any) (Requirement, error) {
+	return admitRequirement(raw)
+}
+
+func AdmitRequirementID(raw any, context string) (string, error) {
+	return requirementID(raw, context)
+}
+
+func AdmitClaimLevel(raw any, context string) (string, error) {
+	return enum(raw, claimLevelSet, claimLevels, context)
+}
+
+func AdmitLifecycleState(raw any, context string) (string, error) {
+	return enum(raw, lifecycleStateSet, lifecycleStates, context)
+}
+
+func AdmitInvariantText(raw any, context string) (string, error) {
+	return invariantText(raw, context)
+}
+
 func SourceValue(source Source) map[string]any {
 	requirements := make([]any, 0, len(source.Requirements))
 	for _, requirement := range source.Requirements {

@@ -510,7 +510,7 @@
         "rootDefinitionDigest": "sha256:fd1121285d1b357ed848febc248700a75417d06619e22ed36991631d7526375b",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:bcbf099540f203e32c0b6d9cb38dff0dc20e8018644569d647d2979d0d74ac15",
+          "canonicalDigest": "sha256:21ffaf8d53060e31f3dec92d7f39cf6e7654cc2268bde47599211d1d914acfeb",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -586,7 +586,7 @@
         "rootDefinitionDigest": "sha256:db7d5b29083a939eea0f23253632394212b0d73b5f1b6206d0811d236d6a84ca",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:bcbf099540f203e32c0b6d9cb38dff0dc20e8018644569d647d2979d0d74ac15",
+          "canonicalDigest": "sha256:21ffaf8d53060e31f3dec92d7f39cf6e7654cc2268bde47599211d1d914acfeb",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -1276,7 +1276,7 @@
         "rootDefinitionDigest": "sha256:7ffe236ab203cf411dbfda6008ec8c10cc15691261031d4ed9ed90d81525dc12",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -1304,7 +1304,7 @@
         "rootDefinitionDigest": "sha256:2be3545f9329bb4e4ba4971fc04bf5811959cf0087fd7ab3a7c2c8b45b8d714a",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -1840,7 +1840,7 @@
       "inputContract": {
         "contractId": "proofkit.migration-parity-admission.input.v1",
         "schemaVersion": 1,
-        "authority": "caller-owned migration parity evidence",
+        "authority": "caller-owned migration parity claims",
         "requiredFields": [
           "nonClaims",
           "parityRecords",
@@ -1856,13 +1856,13 @@
         "rootDefinitionDigest": "sha256:a1f8ab777249d7ff613bfb3256cd96514235ac90d02ad39ce8720330cbd71d38",
         "nativeSource": {
           "path": "internal/command/migrationparityadmission",
-          "canonicalDigest": "sha256:e6d7db500dea081cbf5c50a0b56051c3f5f193d5dbcc314871cd2bae0c0b3e6a",
+          "canonicalDigest": "sha256:37ea4422b751635bfd27f1afef8e7815b3efec2a8f71f96a7074e6185a18ee5b",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
           "path": "internal/command/migrationparityadmission/migrationparityadmission_test.go",
-          "test": "TestBuildAdmitsMatchedParityAndRejectsDigestDrift",
-          "command": "go test ./internal/command/migrationparityadmission -run '^TestBuildAdmitsMatchedParityAndRejectsDigestDrift$'",
+          "test": "TestBuildAdmitsCallerDeclaredMatchAndRejectsDigestDrift",
+          "command": "go test ./internal/command/migrationparityadmission -run '^TestBuildAdmitsCallerDeclaredMatchAndRejectsDigestDrift$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -1888,13 +1888,13 @@
         "rootDefinitionDigest": "sha256:aaea5c7d9d12e1fbc406d080dcda5aca84351c5a2048d40535a1b3895cc37440",
         "nativeSource": {
           "path": "internal/command/migrationparityadmission",
-          "canonicalDigest": "sha256:e6d7db500dea081cbf5c50a0b56051c3f5f193d5dbcc314871cd2bae0c0b3e6a",
+          "canonicalDigest": "sha256:37ea4422b751635bfd27f1afef8e7815b3efec2a8f71f96a7074e6185a18ee5b",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
           "path": "internal/command/migrationparityadmission/migrationparityadmission_test.go",
-          "test": "TestBuildAdmitsMatchedParityAndRejectsDigestDrift",
-          "command": "go test ./internal/command/migrationparityadmission -run '^TestBuildAdmitsMatchedParityAndRejectsDigestDrift$'",
+          "test": "TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField",
+          "command": "go test ./internal/command/migrationparityadmission -run '^TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -2231,7 +2231,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:0bea47d33304e528ffbe087688ea2dee07cf42e55632eda3b479732e221841d9",
+            "canonicalDigest": "sha256:b106e4c87900417f84f8bd999ddc67ac1d47bc54c2cb0bcb0e85993433761c82",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2486,7 +2486,7 @@
         "rootDefinitionDigest": "sha256:71914c95c70dbace0ebce1dc4609624e3b91c994cd8c5adc20ed84d4200f0ac9",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2514,7 +2514,7 @@
         "rootDefinitionDigest": "sha256:5fbdf25c90a2020525f97453c9d9fe5a774fe0e2eacf00d1b2aea3ff5f4fa0f0",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3196,7 +3196,7 @@
         "rootDefinitionDigest": "sha256:86f8f4913b5316caa63c40d79125199b282d108cbd8b9711db21c2023d1a4ca4",
         "nativeSource": {
           "path": "internal/command/requirementauthoringplan",
-          "canonicalDigest": "sha256:91d82aa48a4c10b33f89b7b2db7443182b7702de4b0c2763a8104f2b0a997bdf",
+          "canonicalDigest": "sha256:ec094da2d08e360992266402ec87fc361ef6b34023a91139015493d277bd3e76",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3216,26 +3216,26 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.requirement-authoring-plan.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-authoring-plan.output.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-authoring-plan.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:019c920b72a4d2fba8f6364bff554442b0194ac42364d645d5b0b71f28df24b1",
+        "rootDefinitionRef": "proofkit.requirement-authoring-plan.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:c2264058757e40789005b7cf7417906461f064b9b9bca0c5ddda86704e3b36cc",
         "nativeSource": {
           "path": "internal/command/requirementauthoringplan",
-          "canonicalDigest": "sha256:91d82aa48a4c10b33f89b7b2db7443182b7702de4b0c2763a8104f2b0a997bdf",
+          "canonicalDigest": "sha256:ec094da2d08e360992266402ec87fc361ef6b34023a91139015493d277bd3e76",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
-          "path": "internal/command/requirementauthoringplan/requirement_authoring_plan_test.go",
-          "test": "TestBuildRejectsCandidateSourceAdmissionFailure",
-          "command": "go test ./internal/command/requirementauthoringplan -run '^TestBuildRejectsCandidateSourceAdmissionFailure$'",
+          "path": "internal/app/cli_abi_test.go",
+          "test": "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
+          "command": "go test ./internal/app -run '^TestRequirementAuthoringPlanOutputUsesVersionedRootShape$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-authoring-plan.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-authoring-plan.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3266,7 +3266,7 @@
         "rootDefinitionDigest": "sha256:e7da70a2267f2ca13771e864bba6a1a0416132c2d56decb5db9f9694de021daf",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3294,7 +3294,7 @@
         "rootDefinitionDigest": "sha256:f31dd686f28fce4bf74265b557dc25428179cbc282753b4bea01439cd98f73c2",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3878,8 +3878,8 @@
         "--format"
       ],
       "outputContract": {
-        "contractId": "proofkit.requirement-coverage-view.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-coverage-view.output.v2",
+        "schemaVersion": 2,
         "authority": "requirement coverage view output contract",
         "classificationRecords": {
           "failureClassifications": {
@@ -3895,15 +3895,18 @@
           "declared_dead_zone",
           "failed_test_inventory",
           "missing_requirement_binding",
-          "missing_semantic_test",
+          "missing_declared_test_route",
           "nonsemantic_command_evidence",
           "nonsemantic_governance_evidence",
           "not_applicable_with_reason",
           "owner_scope_violation",
+          "proof_route_candidate_only",
           "routing_smoke_only",
+          "unclassified_gap",
           "unknown_reference"
         ],
         "requiredFields": [
+          "coverageBasis",
           "failureClassifications",
           "failures",
           "ownerInvariantCoverage",
@@ -3912,15 +3915,16 @@
           "warnings"
         ],
         "nonClaims": [
-          "Classification records describe Proofkit coverage diagnostics only; consumer repositories own severity policy, merge admission, escalation, and native witness execution."
+          "Classification records describe Proofkit coverage diagnostics only; consumer repositories own severity policy, merge admission, escalation, and native witness execution.",
+          "Coverage basis commitments prove internal projection consistency only; they do not authenticate source inputs or producer identity."
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-coverage-view.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:697d24d12d4772b67283f24da2f265372de241bd4741ac23f7b984ca96023818",
+        "rootDefinitionRef": "proofkit.requirement-coverage-view.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:71a3a1245159e03eb3f81e2b117e1d1690c99e7e84625670a1fd42530b53684c",
         "nativeSource": {
           "path": "internal/command/requirementcoverageview",
-          "canonicalDigest": "sha256:c2a999a43db2e7b9ed65a599865bd291c7a0a4daf64973aefb40e684dee34c5a",
+          "canonicalDigest": "sha256:a6f804ad55b0101c934c782468c217ab8f3ce0cc42828975fbc35621bd43bc97",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3930,13 +3934,14 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
+          "coverageBasis",
           "failureClassifications",
           "failures",
           "ownerInvariantCoverage",
           "state",
           "warningClassifications",
           "warnings",
-          "root-shape-only definition proofkit.requirement-coverage-view.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.requirement-coverage-view.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3953,7 +3958,7 @@
         "rootDefinitionDigest": "sha256:b5ddab0a55a381f002b39ece0f5727171f7984856e553200bbb62a49821ff6ac",
         "nativeSource": {
           "path": "internal/command/requirementcoverageview",
-          "canonicalDigest": "sha256:c2a999a43db2e7b9ed65a599865bd291c7a0a4daf64973aefb40e684dee34c5a",
+          "canonicalDigest": "sha256:a6f804ad55b0101c934c782468c217ab8f3ce0cc42828975fbc35621bd43bc97",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4111,7 +4116,7 @@
         "rootDefinitionDigest": "sha256:68ade17ac7e9fb3496ad0e7ea8ae9fbcf734afa4e6b8a44442e1af3c4f87bf15",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4138,7 +4143,7 @@
         "rootDefinitionDigest": "sha256:750c75c08376a986a18e8739b7476d58af4133c19c40f43d216ee009607be225",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:90bada8c868751cef16683475839174de48dd18936e3d79a74e24febcda1e09b",
+          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4464,7 +4469,7 @@
         "rootDefinitionDigest": "sha256:b2b3982ca053794da607673db6258933960a4f67653871205ff03caab2012a9f",
         "nativeSource": {
           "path": "internal/command/requirementsourceadmission",
-          "canonicalDigest": "sha256:5767016688b34b4843a4c2da3f817b354c2ade0e9dfcfae5009b8fbf7cf5f76d",
+          "canonicalDigest": "sha256:d68c56d1566166937da8ca3f2e0afe302d21a9349a0b520322a434ab88270b30",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4491,7 +4496,7 @@
         "rootDefinitionDigest": "sha256:2527a19394b22efb4b14e39bf3b1f14283f179592c369b9c2ae34b612c7c69af",
         "nativeSource": {
           "path": "internal/command/requirementsourceadmission",
-          "canonicalDigest": "sha256:5767016688b34b4843a4c2da3f817b354c2ade0e9dfcfae5009b8fbf7cf5f76d",
+          "canonicalDigest": "sha256:d68c56d1566166937da8ca3f2e0afe302d21a9349a0b520322a434ab88270b30",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5465,7 +5470,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:0bea47d33304e528ffbe087688ea2dee07cf42e55632eda3b479732e221841d9",
+          "canonicalDigest": "sha256:b106e4c87900417f84f8bd999ddc67ac1d47bc54c2cb0bcb0e85993433761c82",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5494,7 +5499,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:0bea47d33304e528ffbe087688ea2dee07cf42e55632eda3b479732e221841d9",
+          "canonicalDigest": "sha256:b106e4c87900417f84f8bd999ddc67ac1d47bc54c2cb0bcb0e85993433761c82",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5770,7 +5775,7 @@
               "candidateKind": "proofkit.test-inventory-discovery-draft.candidate-inventory",
               "strictInventoryAdmission": "rejected_until_owner_materialized"
             },
-            "nonClaim": "Discovery draft reports candidate-only guidance from explicit caller-owned facts; it does not scan repositories, execute tests, emit semantic_falsifier evidence, or close coverage."
+            "nonClaim": "Discovery draft reports candidate-only guidance from explicit caller-owned facts; it does not scan repositories, execute tests, emit execution-backed semantic evidence, or close coverage."
           },
           "proof-binding-derived": {
             "authority": "proof-binding-derived test inventory projection admission",
@@ -5845,14 +5850,14 @@
           },
           {
             "path": "internal/command/testevidenceinventory",
-            "canonicalDigest": "sha256:04febdd7e002567d50bb16fded119ef6ca0ce0d2eb063c92b1664312652ac395",
+            "canonicalDigest": "sha256:95618ec2824e5510d55d2c6bb86da69b057679a39404cca5f2ab5c8fd4826c6a",
             "evidenceClass": "source_checkout"
           }
         ],
         "nativeAdmissionWitnessSelector": {
           "path": "internal/command/testevidenceinventory/testevidenceinventory_test.go",
-          "test": "TestBuildRejectsWeakOracleAndDuplicateFalsifier",
-          "command": "go test ./internal/command/testevidenceinventory -run '^TestBuildRejectsWeakOracleAndDuplicateFalsifier$'",
+          "test": "TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier",
+          "command": "go test ./internal/command/testevidenceinventory -run '^TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -5899,7 +5904,7 @@
           "invalid_falsifier_supersession",
           "missing_edge",
           "missing_executable_command_ref",
-          "missing_semantic_anchor",
+          "missing_declared_route_anchor",
           "mock_tests_mock",
           "over_broad_integration",
           "proof_route_candidate",
@@ -5908,7 +5913,7 @@
           "snapshot_without_oracle",
           "tautology",
           "unasserted_diagnostic",
-          "weak_or_empty_oracle",
+          "incomplete_declared_oracle_metadata",
           "wrong_boundary",
           "wrong_evidence_boundary"
         ],
@@ -5921,8 +5926,8 @@
           "severity": "failure|warning"
         },
         "oracleFields": {
-          "assertionSummary": "non-empty assertion summary for semantic_falsifier, contract_admission, and property_or_fuzz entries",
-          "expectedPublicOutcome": "non-empty expected public outcome for semantic_falsifier, contract_admission, and property_or_fuzz entries",
+          "assertionSummary": "non-empty caller-authored assertion summary for declared semantic-falsifier, contract-admission, and property-or-fuzz routes",
+          "expectedPublicOutcome": "non-empty caller-authored expected public outcome for declared semantic-falsifier, contract-admission, and property-or-fuzz routes",
           "oracleId": "stable rule id",
           "oracleKind": "stable rule id"
         },
@@ -5942,14 +5947,14 @@
           },
           {
             "path": "internal/command/testevidenceinventory",
-            "canonicalDigest": "sha256:04febdd7e002567d50bb16fded119ef6ca0ce0d2eb063c92b1664312652ac395",
+            "canonicalDigest": "sha256:95618ec2824e5510d55d2c6bb86da69b057679a39404cca5f2ab5c8fd4826c6a",
             "evidenceClass": "source_checkout"
           }
         ],
         "nativeOutputWitnessSelector": {
           "path": "internal/command/testevidenceinventory/testevidenceinventory_test.go",
-          "test": "TestBuildRejectsWeakOracleAndDuplicateFalsifier",
-          "command": "go test ./internal/command/testevidenceinventory -run '^TestBuildRejectsWeakOracleAndDuplicateFalsifier$'",
+          "test": "TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier",
+          "command": "go test ./internal/command/testevidenceinventory -run '^TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -11109,8 +11114,8 @@
       "canonicalDigest": "sha256:86f8f4913b5316caa63c40d79125199b282d108cbd8b9711db21c2023d1a4ca4"
     },
     {
-      "definitionId": "proofkit.requirement-authoring-plan.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-authoring-plan.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -11124,6 +11129,7 @@
           {
             "allowedFields": [
               "authoringPlanId",
+              "authoringRefs",
               "candidateChangeSet",
               "mode",
               "nonAuthoritativeAdmissionPreview",
@@ -11138,6 +11144,7 @@
             ],
             "requiredFields": [
               "authoringPlanId",
+              "authoringRefs",
               "candidateChangeSet",
               "mode",
               "nonAuthoritativeAdmissionPreview",
@@ -11158,7 +11165,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:019c920b72a4d2fba8f6364bff554442b0194ac42364d645d5b0b71f28df24b1"
+      "canonicalDigest": "sha256:c2264058757e40789005b7cf7417906461f064b9b9bca0c5ddda86704e3b36cc"
     },
     {
       "definitionId": "proofkit.requirement-bindings.input.v1.root-shape",
@@ -11886,8 +11893,8 @@
       "canonicalDigest": "sha256:b5ddab0a55a381f002b39ece0f5727171f7984856e553200bbb62a49821ff6ac"
     },
     {
-      "definitionId": "proofkit.requirement-coverage-view.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-coverage-view.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -11945,6 +11952,7 @@
               "commandCoverageCount",
               "completenessDeclaration",
               "contractId",
+              "coverageBasis",
               "coverageUniverseId",
               "deadZones",
               "failureClassifications",
@@ -11962,6 +11970,7 @@
               "sourceId",
               "state",
               "testInventoryId",
+              "unmappedTests",
               "viewInputId",
               "viewKind",
               "warningClassifications",
@@ -11975,6 +11984,7 @@
               "commandCoverageCount",
               "completenessDeclaration",
               "contractId",
+              "coverageBasis",
               "coverageUniverseId",
               "deadZones",
               "failureClassifications",
@@ -11992,6 +12002,7 @@
               "sourceId",
               "state",
               "testInventoryId",
+              "unmappedTests",
               "viewInputId",
               "viewKind",
               "warningClassifications",
@@ -12006,7 +12017,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:697d24d12d4772b67283f24da2f265372de241bd4741ac23f7b984ca96023818"
+        "canonicalDigest": "sha256:71a3a1245159e03eb3f81e2b117e1d1690c99e7e84625670a1fd42530b53684c"
     },
     {
       "definitionId": "proofkit.requirement-impact-input-compose.input.v1.root-shape",

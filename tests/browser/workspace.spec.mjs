@@ -1335,7 +1335,6 @@ async function assertRenderedContrast(page, row) {
   for (const colorScheme of ["light", "dark"]) {
     await page.emulateMedia({colorScheme});
     await assertWorkspaceState(page, row);
-    await page.keyboard.press("Tab");
     const samples = await page.evaluate(() => {
       const parse = (value) => {
         if (value === "transparent") return [0, 0, 0, 0];
@@ -1384,7 +1383,8 @@ async function assertRenderedContrast(page, row) {
         text[3] *= opacity;
         const border = parse(style.borderTopColor);
         border[3] *= opacity;
-        control.focus();
+        control.blur();
+        control.focus({focusVisible: true});
         const focused = getComputedStyle(control);
         const outlineStyle = focused.outlineStyle;
         const outlineWidth = Number.parseFloat(focused.outlineWidth);

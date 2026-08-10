@@ -41,6 +41,11 @@ func build(raw any) (map[string]any, error) {
 	requirements := buildRequirementCoverage(input, entries, input.Inventory, &failures, &warnings)
 	ownerInvariantCoverage := buildOwnerInvariantCoverage(input, entries, input.Inventory, &warnings)
 	commandCoverage := buildCommandCoverage(input, entries, &failures, &warnings)
+	unmappedTests := unprojectedTestEntries(entries, requirements, ownerInvariantCoverage, commandCoverage)
+	coverageBasis, err := buildCoverageBasis(input, entries)
+	if err != nil {
+		return nil, err
+	}
 	deadZones := buildDeadZones(input, entries)
 	if input.CoverageUniverse.CompletenessDeclaration == "selected_paths_advisory" {
 		warnings = append(warnings, deadZoneDiagnostics("dead_zone_advisory", deadZones)...)
@@ -59,13 +64,14 @@ func build(raw any) (map[string]any, error) {
 	if input.Inventory != nil {
 		nonClaims = append(nonClaims, anyStrings(input.Inventory.Report.NonClaims)...)
 	}
-	return map[string]any{
+	output := map[string]any{
 		"authority":                   "lookup_only",
 		"bindingId":                   input.Proof.BindingID,
 		"commandCoverage":             mapsToAny(commandCoverage),
 		"commandCoverageCount":        len(commandCoverage),
 		"completenessDeclaration":     input.CoverageUniverse.CompletenessDeclaration,
 		"contractId":                  input.Proof.ContractID,
+		"coverageBasis":               coverageBasis,
 		"coverageUniverseId":          input.CoverageUniverse.UniverseID,
 		"deadZones":                   mapsToAny(deadZones),
 		"failureClassifications":      mapsToAny(diagnosticClassifications(failures, "failure")),
@@ -79,16 +85,21 @@ func build(raw any) (map[string]any, error) {
 		"proofMode":                   input.Proof.Mode,
 		"requirementCoverage":         mapsToAny(requirements),
 		"requirementCoverageCount":    len(requirements),
-		"schemaVersion":               1,
+		"schemaVersion":               2,
 		"sourceId":                    input.Source.SourceID,
 		"state":                       state,
 		"testInventoryId":             inventoryID(input.Inventory),
+		"unmappedTests":               testEntriesToAny(unmappedTests),
 		"viewInputId":                 input.ViewInputID,
 		"viewKind":                    "proofkit.requirement-coverage-view",
 		"warningClassifications":      mapsToAny(diagnosticClassifications(warnings, "warning")),
 		"warningCount":                len(warnings),
 		"warnings":                    admit.StringSliceToAny(warnings),
-	}, nil
+	}
+	if err := validateCoverageOutputSemantics(output); err != nil {
+		return nil, err
+	}
+	return output, nil
 }
 
 func buildOwnerInvariantCoverage(input compositeInput, entries []testevidenceinventory.Entry, inventory *testevidenceinventory.Result, warnings *[]string) []map[string]any {
@@ -108,10 +119,10 @@ func buildOwnerInvariantCoverage(input compositeInput, entries []testevidenceinv
 		state := "missing_test_inventory"
 		evidenceClass := ""
 		if inventory != nil && inventory.Report.State == "passed" {
-			state, evidenceClass = strongestEntryState(matches)
+			state, evidenceClass = strongestMappingState(matches)
 		}
 		invariantWarnings := []string{}
-		if state == "missing_test_inventory" || state == "proof_route_candidate_only" || state == "route_only_nonclaim" || state == "helper_or_testkit_nonclaim" || state == "benchmark_advisory_missing_policy" {
+		if ownerInvariantCoverageStateWarns(state) {
 			warning := "missing_owner_invariant_inventory:" + invariant.OwnerInvariantID
 			invariantWarnings = append(invariantWarnings, warning)
 			*warnings = append(*warnings, warning)
@@ -140,23 +151,25 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 	result := make([]map[string]any, 0, len(sourceRequirements))
 	for _, requirement := range sourceRequirements {
 		proof, hasProof := input.Proof.Requirements[requirement.RequirementID]
+		hasProofRoute := hasProof && proof.ProofState == "witness_backed"
 		entriesForRequirement := entriesReferencingRequirement(entries, requirement.RequirementID)
 		commandIDs := proof.CommandIDs
 		if hasProof && input.Proof.Mode == "compact" && len(commandIDs) == 0 {
 			commandIDs = entryCommandRefs(entriesForRequirement)
 		}
 		scenarios := proof.Scenarios
-		state, evidenceClass := requirementState(requirement, entriesForRequirement, inventory, hasProof)
+		state, evidenceClass := requirementState(requirement, entriesForRequirement, inventory, hasProofRoute)
 		requirementFailures := []string{}
-		if !hasProof && requirement.ClaimLevel == "blocking" && requirement.Lifecycle.State == "active" {
+		if !hasProofRoute && requirement.ClaimLevel == "blocking" && requirement.Lifecycle.State == "active" {
 			requirementFailures = append(requirementFailures, "missing_proof_binding_route:"+requirement.RequirementID)
 		}
-		if requirementBlocks(requirement, state, input.CoverageUniverse.CompletenessDeclaration) {
+		if requirementMappingBlocks(requirement.ClaimLevel, requirement.Lifecycle.State, state, input.CoverageUniverse.CompletenessDeclaration) {
 			requirementFailures = append(requirementFailures, state+":"+requirement.RequirementID)
 		}
-		if requirementWarns(requirement, state, input.CoverageUniverse.CompletenessDeclaration) {
+		if requirementMappingWarns(requirement.ClaimLevel, state, input.CoverageUniverse.CompletenessDeclaration) {
 			*warnings = append(*warnings, state+":"+requirement.RequirementID)
 		}
+		requirementFailures = sortedUnique(requirementFailures)
 		*failures = append(*failures, requirementFailures...)
 		result = append(result, map[string]any{
 			"claimLevel":         requirement.ClaimLevel,
@@ -200,38 +213,15 @@ func buildCommandCoverage(input compositeInput, entries []testevidenceinventory.
 	for _, commandID := range commands {
 		matches := entriesReferencingCommand(entries, commandID)
 		state := commandState(matches)
-		commandFailures := []string{}
-		if state == "missing_command_semantic_falsifier" && input.CoverageUniverse.CompletenessDeclaration != "selected_paths_advisory" {
-			commandFailures = append(commandFailures, state+":"+commandID)
-			*failures = append(*failures, commandFailures...)
-		}
-		if state == "command_owner_nonsemantic_evidence" && input.CoverageUniverse.CompletenessDeclaration != "selected_paths_advisory" {
-			commandFailures = append(commandFailures, "nonsemantic_command_evidence:"+commandID)
-			*failures = append(*failures, commandFailures...)
-		}
-		if state == "missing_command_semantic_falsifier" && input.CoverageUniverse.CompletenessDeclaration == "selected_paths_advisory" {
-			*warnings = append(*warnings, state+":"+commandID)
-		}
-		if state == "command_owner_nonsemantic_evidence" && input.CoverageUniverse.CompletenessDeclaration == "selected_paths_advisory" {
-			*warnings = append(*warnings, "nonsemantic_command_evidence:"+commandID)
-		}
-		if state == "command_route_only_nonclaim" {
-			*warnings = append(*warnings, state+":"+commandID)
-		}
-		if state == "command_proof_route_candidate_only" {
-			diagnostic := state + ":" + commandID
-			if input.CoverageUniverse.CompletenessDeclaration == "selected_paths_advisory" {
-				*warnings = append(*warnings, diagnostic)
-			} else {
-				commandFailures = append(commandFailures, diagnostic)
-				*failures = append(*failures, diagnostic)
-			}
-		}
+		commandFailures, commandWarnings := commandCoverageDiagnostics(commandID, state, input.CoverageUniverse.CompletenessDeclaration)
+		*failures = append(*failures, commandFailures...)
+		*warnings = append(*warnings, commandWarnings...)
 		result = append(result, map[string]any{
 			"commandId":     commandID,
 			"coverageState": state,
 			"failures":      admit.StringSliceToAny(commandFailures),
 			"testIds":       admit.StringSliceToAny(entryIDs(matches)),
+			"tests":         testEntriesToAny(matches),
 		})
 	}
 	return result
@@ -356,14 +346,14 @@ func inOwnerScope(ownerID string, ownerSet map[string]struct{}) bool {
 	return ok
 }
 
-func requirementState(requirement requirementsourceadmission.Requirement, entries []testevidenceinventory.Entry, inventory *testevidenceinventory.Result, hasProof bool) (string, string) {
+func requirementState(requirement requirementsourceadmission.Requirement, entries []testevidenceinventory.Entry, inventory *testevidenceinventory.Result, hasProofRoute bool) (string, string) {
 	if requirement.ClaimLevel == "deferred" {
 		return "deferred_with_owner", ""
 	}
 	if requirement.Lifecycle.State == "removed" {
 		return "not_applicable", ""
 	}
-	if !hasProof {
+	if !hasProofRoute {
 		return "missing_proof_binding_route", ""
 	}
 	if inventory == nil {
@@ -372,74 +362,19 @@ func requirementState(requirement requirementsourceadmission.Requirement, entrie
 	if inventory.Report.State != "passed" {
 		return "missing_test_inventory", ""
 	}
-	return strongestEntryState(entries)
+	return strongestMappingState(entries)
 }
-func strongestEntryState(entries []testevidenceinventory.Entry) (string, string) {
-	priority := []struct {
-		class string
-		state string
-	}{
-		{"semantic_falsifier", "covered_by_semantic_falsifier"},
-		{"property_or_fuzz", "covered_by_property_or_fuzz"},
-		{"contract_admission", "covered_by_contract_admission"},
-		{"governance_or_release", "covered_by_governance_invariant_nonproduct"},
-		{"benchmark", "benchmark_advisory_missing_policy"},
-		{"proof_route_candidate", "proof_route_candidate_only"},
-		{"routing_smoke_nonclaim", "route_only_nonclaim"},
-		{"helper_or_testkit", "helper_or_testkit_nonclaim"},
-	}
-	for _, candidate := range priority {
-		for _, entry := range entries {
-			if entry.EvidenceClass == candidate.class {
-				return candidate.state, candidate.class
-			}
-		}
-	}
-	return "missing_test_inventory", ""
-}
-func commandState(entries []testevidenceinventory.Entry) string {
-	for _, entry := range entries {
-		if entry.EvidenceClass == "semantic_falsifier" {
-			return "command_semantic_falsifier_present"
-		}
-	}
-	for _, entry := range entries {
-		if entry.EvidenceClass == "benchmark" ||
-			entry.EvidenceClass == "contract_admission" ||
-			entry.EvidenceClass == "governance_or_release" ||
-			entry.EvidenceClass == "helper_or_testkit" ||
-			entry.EvidenceClass == "property_or_fuzz" {
-			return "command_owner_nonsemantic_evidence"
-		}
-	}
-	for _, entry := range entries {
-		if entry.EvidenceClass == "proof_route_candidate" {
-			return "command_proof_route_candidate_only"
-		}
-	}
-	for _, entry := range entries {
-		if entry.EvidenceClass == "routing_smoke_nonclaim" {
-			return "command_route_only_nonclaim"
-		}
-	}
-	return "missing_command_semantic_falsifier"
-}
-func requirementBlocks(requirement requirementsourceadmission.Requirement, state string, scope string) bool {
-	if requirement.ClaimLevel != "blocking" || requirement.Lifecycle.State != "active" || scope == "selected_paths_advisory" {
+func requirementMappingBlocks(claimLevel string, lifecycleState string, state string, scope string) bool {
+	if claimLevel != "blocking" || lifecycleState != "active" || scope == "selected_paths_advisory" {
 		return false
 	}
-	switch state {
-	case "covered_by_semantic_falsifier", "covered_by_property_or_fuzz", "covered_by_contract_admission", "not_applicable", "deferred_with_owner":
-		return false
-	default:
-		return true
-	}
+	return !requirementCoverageStateComplete(state)
 }
-func requirementWarns(requirement requirementsourceadmission.Requirement, state string, scope string) bool {
+func requirementMappingWarns(claimLevel string, state string, scope string) bool {
 	if scope == "selected_paths_advisory" {
-		return state != "covered_by_semantic_falsifier" && state != "covered_by_property_or_fuzz" && state != "covered_by_contract_admission"
+		return !requirementCoverageStateComplete(state)
 	}
-	return requirement.ClaimLevel != "blocking" && state != "covered_by_semantic_falsifier" && state != "covered_by_property_or_fuzz" && state != "covered_by_contract_admission"
+	return claimLevel != "blocking" && !requirementCoverageStateComplete(state)
 }
 func unknownInventoryRefs(entries []testevidenceinventory.Entry, requirements map[string]struct{}, invariants map[string]struct{}, commands map[string]struct{}, witnesses map[string]struct{}) []string {
 	failures := []string{}
@@ -493,7 +428,7 @@ func entriesReferencingCommand(entries []testevidenceinventory.Entry, commandID 
 func guidanceSummary(state string, failures []string, warnings []string) map[string]any {
 	nextAction := "Inspect caller-owned coverage classifications before making repository policy decisions."
 	if state == "failed" {
-		nextAction = "Repair missing semantic falsifiers, unknown refs, or failed inventory before using this view as merge-adjacent guidance."
+		nextAction = "Repair missing declared test routes, unknown refs, or failed inventory before using this mapping view as guidance."
 	}
 	return map[string]any{
 		"failureCount": len(failures),

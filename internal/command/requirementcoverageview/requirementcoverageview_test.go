@@ -6,10 +6,11 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-func TestBuildJSONBuildsSemanticRequirementAndCommandCoverage(t *testing.T) {
+func TestBuildJSONBuildsDeclaredRequirementAndCommandRouteMapping(t *testing.T) {
 	view, exitCode, err := BuildJSON(validCoverageInput(t), Options{})
 	if err != nil {
 		t.Fatalf("BuildJSON() error = %v", err)
@@ -22,15 +23,50 @@ func TestBuildJSONBuildsSemanticRequirementAndCommandCoverage(t *testing.T) {
 		t.Fatalf("unexpected view: %#v", record)
 	}
 	requirement := record["requirementCoverage"].([]any)[0].(map[string]any)
-	if requirement["coverageState"] != "covered_by_semantic_falsifier" {
+	if requirement["coverageState"] != "mapped_to_declared_semantic_falsifier_route" {
 		t.Fatalf("coverageState=%v", requirement["coverageState"])
 	}
 	if requirement["tests"].([]any)[0].(map[string]any)["oracleSummary"] == "" {
 		t.Fatalf("semantic coverage should expose test oracle detail: %#v", requirement)
 	}
 	command := record["commandCoverage"].([]any)[0].(map[string]any)
-	if command["coverageState"] != "command_semantic_falsifier_present" {
+	if command["coverageState"] != "command_declared_semantic_falsifier_route_present" {
 		t.Fatalf("command coverageState=%v", command["coverageState"])
+	}
+}
+
+func TestBuildJSONMissingSelectorRemainsMappingOnly(t *testing.T) {
+	input := validCoverageInput(t)
+	entry := inventoryEntry(input)
+	entry["sourcePath"] = "internal/command/does-not-exist/missing_test.go"
+	entry["selector"] = "go test ./internal/command/does-not-exist -run TestMissing"
+	testSurface := input.(map[string]any)["coverageUniverse"].(map[string]any)["testSurfaces"].([]any)[0].(map[string]any)
+	testSurface["path"] = "internal/command/does-not-exist/missing_test.go"
+
+	view, exitCode, err := BuildJSON(input, Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("BuildJSON() exitCode=%d view=%#v, want successful mapping report", exitCode, view)
+	}
+	record := view.(map[string]any)
+	requirement := record["requirementCoverage"].([]any)[0].(map[string]any)
+	if got := requirement["coverageState"]; got != "mapped_to_declared_semantic_falsifier_route" {
+		t.Fatalf("coverageState=%v, want mapping-only state", got)
+	}
+	command := record["commandCoverage"].([]any)[0].(map[string]any)
+	if got := command["coverageState"]; got != "command_declared_semantic_falsifier_route_present" {
+		t.Fatalf("command coverageState=%v, want declared-route state", got)
+	}
+	for _, row := range []map[string]any{requirement, command} {
+		state := row["coverageState"].(string)
+		if strings.Contains(state, "covered_by") || strings.Contains(state, "verified") || strings.Contains(state, "closed") {
+			t.Fatalf("caller declaration acquired assurance state %q", state)
+		}
+	}
+	if !stringArrayContains(record["nonClaims"], "Mapped declaration routes do not prove selector resolution, oracle quality, execution, freshness, trust, sensitivity, or assurance closure.") {
+		t.Fatalf("mapping-only boundary non-claim missing: %#v", record["nonClaims"])
 	}
 }
 
@@ -56,6 +92,397 @@ func TestAdmitOutputRejectsUnknownNestedFieldsAndBreaksCallerAliases(t *testing.
 	}
 }
 
+func TestAdmitOutputRejectsAssuranceVocabularyAndInconsistentStateClasses(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{
+			name: "legacy covered state",
+			mutate: func(record map[string]any) {
+				record["requirementCoverage"].([]any)[0].(map[string]any)["coverageState"] = "covered_by_semantic_falsifier"
+			},
+			want: "coverageState is unsupported",
+		},
+		{
+			name: "legacy evidence class",
+			mutate: func(record map[string]any) {
+				test := record["requirementCoverage"].([]any)[0].(map[string]any)["tests"].([]any)[0].(map[string]any)
+				test["evidenceClass"] = "semantic_falsifier"
+			},
+			want: "evidenceClass must be one of",
+		},
+		{
+			name: "verified owner review state",
+			mutate: func(record map[string]any) {
+				test := record["requirementCoverage"].([]any)[0].(map[string]any)["tests"].([]any)[0].(map[string]any)
+				test["qualityFindings"] = []any{map[string]any{
+					"class": "missing_edge", "evidenceRefs": []any{"test.coverage.semantic"},
+					"findingId": "finding.coverage.forged", "nonClaims": []any{},
+					"ownerReviewState": "verified", "severity": "warning",
+				}}
+			},
+			want: "ownerReviewState must be one of",
+		},
+		{
+			name: "verified requirement proof state",
+			mutate: func(record map[string]any) {
+				record["requirementCoverage"].([]any)[0].(map[string]any)["proofState"] = "verified"
+			},
+			want: "proofState must be one of",
+		},
+		{
+			name: "inconsistent mapping pair",
+			mutate: func(record map[string]any) {
+				record["requirementCoverage"].([]any)[0].(map[string]any)["evidenceClass"] = "declared_property_or_fuzz_route"
+			},
+			want: "coverageState and evidenceClass are inconsistent",
+		},
+		{
+			name: "closed command state",
+			mutate: func(record map[string]any) {
+				record["commandCoverage"].([]any)[0].(map[string]any)["coverageState"] = "closed"
+			},
+			want: "coverageState must be one of",
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			view, _, err := BuildJSON(validCoverageInput(t), Options{})
+			if err != nil {
+				t.Fatalf("BuildJSON() error = %v", err)
+			}
+			record := view.(map[string]any)
+			item.mutate(record)
+			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("AdmitOutput() error=%v, want %q", err, item.want)
+			}
+		})
+	}
+}
+
+func TestAdmitOutputRejectsForgedDerivedCoverageAlgebra(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{
+			name: "passed state with failures",
+			mutate: func(record map[string]any) {
+				record["failures"] = []any{"proof_route_candidate_only:REQ-PROOFKIT-COVERAGE-001"}
+				record["failureCount"] = 1
+			},
+			want: "state is inconsistent with failures",
+		},
+		{
+			name: "forged classification",
+			mutate: func(record map[string]any) {
+				record["failureClassifications"] = []any{map[string]any{
+					"classificationId": "verified",
+					"diagnostic":       "forged",
+					"severity":         "failure",
+				}}
+			},
+			want: "failureClassifications is inconsistent",
+		},
+		{
+			name: "forged guidance",
+			mutate: func(record map[string]any) {
+				record["guidanceSummary"].(map[string]any)["state"] = "failed"
+			},
+			want: "guidanceSummary is inconsistent",
+		},
+		{
+			name: "parent state disagrees with projected child class",
+			mutate: func(record map[string]any) {
+				mutateProjectedTestCopies(t, record, "test.coverage.semantic", func(test map[string]any) {
+					test["evidenceClass"] = "proof_route_candidate"
+				})
+				refreshCoverageBasisInventoryDigest(t, record)
+			},
+			want: "not derived from projected tests and lifecycle",
+		},
+		{
+			name: "parent test ids disagree with projection",
+			mutate: func(record map[string]any) {
+				record["requirementCoverage"].([]any)[0].(map[string]any)["testIds"] = []any{}
+			},
+			want: "must equal projected test identities",
+		},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			view, _, err := BuildJSON(validCoverageInput(t), Options{})
+			if err != nil {
+				t.Fatalf("BuildJSON() error = %v", err)
+			}
+			record := view.(map[string]any)
+			item.mutate(record)
+			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("AdmitOutput() error=%v, want %q", err, item.want)
+			}
+		})
+	}
+}
+
+func TestAdmitOutputRejectsAggregateRowDiagnosticDrift(t *testing.T) {
+	for _, item := range []struct {
+		name       string
+		diagnostic string
+	}{
+		{name: "requirement failure", diagnostic: "proof_route_candidate_only:REQ-PROOFKIT-COVERAGE-001"},
+		{name: "command failure", diagnostic: "command_proof_route_candidate_only:proofkit.coverage.command"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			input := validCoverageInput(t)
+			entry := inventoryEntry(input)
+			entry["evidenceClass"] = "proof_route_candidate"
+			entry["falsifier"] = nil
+			entry["oracle"] = nil
+			view, _, err := BuildJSON(input, Options{})
+			if err != nil {
+				t.Fatalf("BuildJSON() error = %v", err)
+			}
+			record := view.(map[string]any)
+			setCoverageAggregateDiagnostics(record, withoutDiagnostic(stringArray(record["failures"]), item.diagnostic), stringArray(record["warnings"]))
+			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "inconsistent with retained rows") {
+				t.Fatalf("AdmitOutput() error=%v, want aggregate row diagnostic rejection", err)
+			}
+		})
+	}
+
+	t.Run("owner warning", func(t *testing.T) {
+		input := validCoverageInput(t).(map[string]any)
+		input["ownerInvariantRegistry"] = map[string]any{
+			"schemaVersion": json.Number("1"),
+			"registryId":    "proofkit.coverage.owner-invariants",
+			"invariants": []any{map[string]any{
+				"ownerInvariantId": "invariant.coverage.unmapped",
+				"ownerId":          "proofkit.coverage",
+				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v1.json",
+				"summary":          "Unmapped owner invariant fixture.",
+				"nonClaims":        []any{"Fixture does not claim native execution."},
+			}},
+			"nonClaims": []any{"Registry fixture is caller-owned."},
+		}
+		view, _, err := BuildJSON(input, Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error = %v", err)
+		}
+		record := view.(map[string]any)
+		diagnostic := "missing_owner_invariant_inventory:invariant.coverage.unmapped"
+		setCoverageAggregateDiagnostics(record, stringArray(record["failures"]), withoutDiagnostic(stringArray(record["warnings"]), diagnostic))
+		if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "inconsistent with retained rows") {
+			t.Fatalf("AdmitOutput() error=%v, want aggregate owner warning rejection", err)
+		}
+	})
+
+	t.Run("surplus requirement diagnostic", func(t *testing.T) {
+		view, _, err := BuildJSON(validCoverageInput(t), Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error = %v", err)
+		}
+		record := view.(map[string]any)
+		failures := append(stringArray(record["failures"]), "missing_test_inventory:REQ-PROOFKIT-COVERAGE-FORGED")
+		setCoverageAggregateDiagnostics(record, sortedUnique(failures), stringArray(record["warnings"]))
+		if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "inconsistent with retained rows") {
+			t.Fatalf("AdmitOutput() error=%v, want surplus row diagnostic rejection", err)
+		}
+	})
+}
+
+func TestAdmitOutputRejectsMalformedCommandCoverageRows(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{name: "missing failures", mutate: func(row map[string]any) { delete(row, "failures") }, want: "missing required field failures"},
+		{name: "missing test ids", mutate: func(row map[string]any) { delete(row, "testIds") }, want: "missing required field testIds"},
+		{name: "wrong test ids type", mutate: func(row map[string]any) { row["testIds"] = "test.coverage.semantic" }, want: "testIds must be an array"},
+		{name: "empty test ids with present route", mutate: func(row map[string]any) { row["testIds"] = []any{} }, want: "must equal projected test identities"},
+		{name: "duplicate test ids", mutate: func(row map[string]any) { row["testIds"] = []any{"test.coverage.semantic", "test.coverage.semantic"} }, want: "must be sorted and unique"},
+		{name: "unsorted test ids", mutate: func(row map[string]any) { row["testIds"] = []any{"test.coverage.z", "test.coverage.a"} }, want: "must be sorted and unique"},
+		{name: "invalid test id", mutate: func(row map[string]any) { row["testIds"] = []any{"not a rule id"} }, want: "must equal projected test identities"},
+		{name: "forged failures", mutate: func(row map[string]any) { row["failures"] = []any{"forged"} }, want: "failures is inconsistent"},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			view, _, err := BuildJSON(validCoverageInput(t), Options{})
+			if err != nil {
+				t.Fatalf("BuildJSON() error = %v", err)
+			}
+			record := view.(map[string]any)
+			item.mutate(record["commandCoverage"].([]any)[0].(map[string]any))
+			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("AdmitOutput() error=%v, want %q", err, item.want)
+			}
+		})
+	}
+}
+
+func TestAdmitOutputRejectsMissingCommandStateWithTestIdentity(t *testing.T) {
+	input := validCoverageInput(t)
+	universe := input.(map[string]any)["coverageUniverse"].(map[string]any)
+	universe["commandRefs"] = []any{"proofkit.coverage.command", "proofkit.coverage.uncovered"}
+	view, _, err := BuildJSON(input, Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	record := view.(map[string]any)
+	for _, rawRow := range record["commandCoverage"].([]any) {
+		row := rawRow.(map[string]any)
+		if row["commandId"] == "proofkit.coverage.uncovered" {
+			row["testIds"] = []any{"test.coverage.forged"}
+			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "must equal projected test identities") {
+				t.Fatalf("AdmitOutput() error=%v, want command test-projection cardinality rejection", err)
+			}
+			return
+		}
+	}
+	t.Fatal("missing command row not found")
+}
+
+func TestAdmitOutputRejectsCommandStateWeakerThanRetainedTestProjection(t *testing.T) {
+	view, _, err := BuildJSON(validCoverageInput(t), Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	record := view.(map[string]any)
+	command := record["commandCoverage"].([]any)[0].(map[string]any)
+	command["coverageState"] = "command_proof_route_candidate_only"
+	command["failures"] = []any{"command_proof_route_candidate_only:proofkit.coverage.command"}
+	setCoverageAggregateDiagnostics(record, []string{"command_proof_route_candidate_only:proofkit.coverage.command"}, stringArray(record["warnings"]))
+
+	if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "not derived from projected tests") {
+		t.Fatalf("AdmitOutput() error=%v, want correlated command-state rejection", err)
+	}
+}
+
+func TestAdmitOutputRejectsProjectedTestParentRefDrift(t *testing.T) {
+	t.Run("requirement parent", func(t *testing.T) {
+		view, _, err := BuildJSON(validCoverageInput(t), Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error = %v", err)
+		}
+		record := view.(map[string]any)
+		mutateProjectedTestCopies(t, record, "test.coverage.semantic", func(test map[string]any) {
+			test["requirementRefs"] = []any{"REQ-PROOFKIT-COVERAGE-OTHER"}
+		})
+		refreshCoverageBasisInventoryDigest(t, record)
+		if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "does not reference its projected parent") {
+			t.Fatalf("AdmitOutput() error=%v, want requirement parent-ref rejection", err)
+		}
+	})
+
+	t.Run("owner invariant parent", func(t *testing.T) {
+		input := validCoverageInput(t).(map[string]any)
+		input["ownerInvariantRegistry"] = map[string]any{
+			"schemaVersion": json.Number("1"), "registryId": "proofkit.coverage.owner-invariants",
+			"invariants": []any{map[string]any{
+				"ownerInvariantId": "invariant.coverage.semantic", "ownerId": "proofkit.coverage",
+				"sourcePath": "docs/specs/proofkit-coverage/requirements.v1.json",
+				"summary":    "Coverage owner invariant fixture.", "nonClaims": []any{"Fixture does not claim execution."},
+			}},
+			"nonClaims": []any{"Registry fixture is caller-owned."},
+		}
+		entry := inventoryEntry(input)
+		entry["ownerInvariantRefs"] = []any{"invariant.coverage.semantic"}
+		view, _, err := BuildJSON(input, Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error = %v", err)
+		}
+		record := view.(map[string]any)
+		mutateProjectedTestCopies(t, record, "test.coverage.semantic", func(test map[string]any) {
+			test["ownerInvariantRefs"] = []any{"invariant.coverage.other"}
+		})
+		refreshCoverageBasisInventoryDigest(t, record)
+		if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "does not reference its projected parent") {
+			t.Fatalf("AdmitOutput() error=%v, want owner-invariant parent-ref rejection", err)
+		}
+	})
+}
+
+func TestAdmitOutputRejectsInconsistentRepeatedTestProjection(t *testing.T) {
+	input := validCoverageInput(t).(map[string]any)
+	input["ownerInvariantRegistry"] = map[string]any{
+		"schemaVersion": json.Number("1"), "registryId": "proofkit.coverage.owner-invariants",
+		"invariants": []any{map[string]any{
+			"ownerInvariantId": "invariant.coverage.semantic", "ownerId": "proofkit.coverage",
+			"sourcePath": "docs/specs/proofkit-coverage/requirements.v1.json",
+			"summary":    "Coverage owner invariant fixture.", "nonClaims": []any{"Fixture does not claim execution."},
+		}},
+		"nonClaims": []any{"Registry fixture is caller-owned."},
+	}
+	entry := inventoryEntry(input)
+	entry["ownerInvariantRefs"] = []any{"invariant.coverage.semantic"}
+	view, _, err := BuildJSON(input, Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	record := view.(map[string]any)
+	requirementTest := record["requirementCoverage"].([]any)[0].(map[string]any)["tests"].([]any)[0].(map[string]any)
+	ownerTest := record["ownerInvariantCoverage"].([]any)[0].(map[string]any)["tests"].([]any)[0].(map[string]any)
+	requirementTest["ownerInvariantRefs"] = []any{}
+	ownerTest["requirementRefs"] = []any{}
+
+	if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "inconsistent projections") {
+		t.Fatalf("AdmitOutput() error=%v, want repeated test projection rejection", err)
+	}
+}
+
+func TestSelectRequirementsDoesNotAliasAdmittedCoverage(t *testing.T) {
+	view, _, err := BuildJSON(validCoverageInput(t), Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON() error = %v", err)
+	}
+	admitted, err := AdmitOutput(view)
+	if err != nil {
+		t.Fatalf("AdmitOutput() error = %v", err)
+	}
+	fragment := SelectRequirements(admitted, map[string]struct{}{"REQ-PROOFKIT-COVERAGE-001": {}})
+	fragmentRow := fragment["requirementCoverage"].([]any)[0].(map[string]any)
+	fragmentRow["coverageState"] = "mutated"
+	fragmentTest := fragmentRow["tests"].([]any)[0].(map[string]any)
+	fragmentTest["commandRefs"].([]any)[0] = "proofkit.mutated"
+
+	admittedRow := admitted["requirementCoverage"].([]any)[0].(map[string]any)
+	if admittedRow["coverageState"] == "mutated" {
+		t.Fatal("SelectRequirements retained a row-map alias")
+	}
+	admittedTest := admittedRow["tests"].([]any)[0].(map[string]any)
+	if admittedTest["commandRefs"].([]any)[0] == "proofkit.mutated" {
+		t.Fatal("SelectRequirements retained a nested-array alias")
+	}
+}
+
+func setCoverageAggregateDiagnostics(record map[string]any, failures []string, warnings []string) {
+	state := "passed"
+	if len(failures) > 0 {
+		state = "failed"
+	}
+	record["failures"] = admit.StringSliceToAny(failures)
+	record["failureCount"] = len(failures)
+	record["failureClassifications"] = mapsToAny(diagnosticClassifications(failures, "failure"))
+	record["warnings"] = admit.StringSliceToAny(warnings)
+	record["warningCount"] = len(warnings)
+	record["warningClassifications"] = mapsToAny(diagnosticClassifications(warnings, "warning"))
+	record["state"] = state
+	record["guidanceSummary"] = guidanceSummary(state, failures, warnings)
+}
+
+func withoutDiagnostic(values []string, removed string) []string {
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if value != removed {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
 func TestBuildJSONDoesNotPromoteProofRouteCandidateToSemanticCoverage(t *testing.T) {
 	input := validCoverageInput(t)
 	entry := inventoryEntry(input)
@@ -77,6 +504,13 @@ func TestBuildJSONDoesNotPromoteProofRouteCandidateToSemanticCoverage(t *testing
 	command := record["commandCoverage"].([]any)[0].(map[string]any)
 	if command["coverageState"] != "command_proof_route_candidate_only" {
 		t.Fatalf("proof-route command state=%v, want explicit candidate-only state", command["coverageState"])
+	}
+	requireExactClassifications(t, record, "failures", "failureClassifications", "failure", map[string]string{
+		"command_proof_route_candidate_only:proofkit.coverage.command": "proof_route_candidate_only",
+		"proof_route_candidate_only:REQ-PROOFKIT-COVERAGE-001":         "proof_route_candidate_only",
+	})
+	if _, err := AdmitOutput(record); err != nil {
+		t.Fatalf("AdmitOutput(candidate-only report) error = %v", err)
 	}
 }
 
@@ -227,7 +661,7 @@ func TestBuildJSONCompactProjectionAggregatesScenariosAndRequirementLocalCommand
 		"selector":           "go test ./internal/command/requirementcoverageview -run TestUnrelated",
 		"sourcePath":         "internal/command/requirementcoverageview/requirementcoverageview_test.go",
 		"ownerId":            "proofkit.coverage",
-		"evidenceClass":      "semantic_falsifier",
+		"evidenceClass":      "declared_semantic_falsifier_route",
 		"requirementRefs":    []any{"REQ-PROOFKIT-COVERAGE-002"},
 		"ownerInvariantRefs": []any{},
 		"commandRefs":        []any{"proofkit.coverage.unrelated"},
@@ -282,7 +716,7 @@ func TestBuildJSONCompactProjectionAggregatesScenariosAndRequirementLocalCommand
 	}
 }
 
-func TestBuildJSONCompactProjectionRejectsConflictingRequirementProofStates(t *testing.T) {
+func TestBuildJSONCompactProjectionRejectsNonWitnessBackedBindingState(t *testing.T) {
 	input := validCoverageInput(t)
 	record := input.(map[string]any)
 	second := compactCoverageBinding("proofkit.coverage::scenario.conflicting")
@@ -298,8 +732,8 @@ func TestBuildJSONCompactProjectionRejectsConflictingRequirementProofStates(t *t
 	}
 
 	_, _, err := BuildJSON(input, Options{})
-	if err == nil || !strings.Contains(err.Error(), "conflicting proofContractState") {
-		t.Fatalf("expected conflicting compact proof state error, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "must be witness_backed") {
+		t.Fatalf("expected witness-bearing compact state rejection, got %v", err)
 	}
 }
 
@@ -355,7 +789,7 @@ func TestBuildJSONRejectsRouteOnlyCoverageForBlockingRequirement(t *testing.T) {
 		t.Fatalf("route-only command state not preserved: %#v", command)
 	}
 	requireExactClassifications(t, record, "failures", "failureClassifications", "failure", map[string]string{
-		"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001": "missing_semantic_test",
+		"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001": "missing_declared_test_route",
 	})
 	requireExactClassifications(t, record, "warnings", "warningClassifications", "warning", map[string]string{
 		"command_route_only_nonclaim:proofkit.coverage.command": "routing_smoke_only",
@@ -395,7 +829,7 @@ func TestBuildJSONRejectsInventorySelectorSourcePathDrift(t *testing.T) {
 	}
 }
 
-func TestBuildJSONFailsMissingCommandSemanticFalsifierFromUniverse(t *testing.T) {
+func TestBuildJSONFailsMissingCommandDeclaredSemanticFalsifierRouteFromUniverse(t *testing.T) {
 	input := validCoverageInput(t)
 	universe := input.(map[string]any)["coverageUniverse"].(map[string]any)
 	universe["commandRefs"] = []any{"proofkit.coverage.command", "proofkit.coverage.uncovered"}
@@ -408,11 +842,11 @@ func TestBuildJSONFailsMissingCommandSemanticFalsifierFromUniverse(t *testing.T)
 		t.Fatalf("missing command semantic falsifier passed: %#v", view)
 	}
 	failures := strings.Join(stringArray(view.(map[string]any)["failures"]), "\n")
-	if !strings.Contains(failures, "missing_command_semantic_falsifier:proofkit.coverage.uncovered") {
+	if !strings.Contains(failures, "missing_command_declared_semantic_falsifier_route:proofkit.coverage.uncovered") {
 		t.Fatalf("missing command failure not reported: %s", failures)
 	}
 	requireExactClassifications(t, view.(map[string]any), "failures", "failureClassifications", "failure", map[string]string{
-		"missing_command_semantic_falsifier:proofkit.coverage.uncovered": "missing_semantic_test",
+		"missing_command_declared_semantic_falsifier_route:proofkit.coverage.uncovered": "missing_declared_test_route",
 	})
 }
 
@@ -450,8 +884,8 @@ func TestBuildJSONProjectsOwnerInvariantCoverage(t *testing.T) {
 	}
 	invariant := coverage[0].(map[string]any)
 	if invariant["ownerInvariantId"] != "invariant.coverage.semantic" ||
-		invariant["coverageState"] != "covered_by_semantic_falsifier" ||
-		invariant["evidenceClass"] != "semantic_falsifier" {
+		invariant["coverageState"] != "mapped_to_declared_semantic_falsifier_route" ||
+		invariant["evidenceClass"] != "declared_semantic_falsifier_route" {
 		t.Fatalf("unexpected owner invariant coverage: %#v", invariant)
 	}
 	tests := invariant["tests"].([]any)
@@ -519,6 +953,59 @@ func TestBuildJSONKeepsDeadZonesAdvisoryForSelectedPaths(t *testing.T) {
 	})
 }
 
+func TestAdmitOutputRejectsDeadZoneProjectionDrift(t *testing.T) {
+	for _, declaration := range []string{"selected_owner_surfaces", "selected_paths_advisory"} {
+		t.Run(declaration+" missing aggregate diagnostic", func(t *testing.T) {
+			input := validCoverageInput(t)
+			addUnboundCodeSurface(input, declaration)
+			view, _, err := BuildJSON(input, Options{})
+			if err != nil {
+				t.Fatalf("BuildJSON() error = %v", err)
+			}
+			record := view.(map[string]any)
+			failures := stringArray(record["failures"])
+			warnings := stringArray(record["warnings"])
+			if declaration == "selected_paths_advisory" {
+				warnings = withoutDiagnostic(warnings, "dead_zone_advisory:unbound_code_surface:proofkit.unbound.code")
+			} else {
+				failures = withoutDiagnostic(failures, "dead_zone:unbound_code_surface:proofkit.unbound.code")
+			}
+			setCoverageAggregateDiagnostics(record, failures, warnings)
+			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "retained projection") {
+				t.Fatalf("AdmitOutput() error=%v, want retained dead-zone diagnostic rejection", err)
+			}
+		})
+	}
+
+	t.Run("surplus aggregate diagnostic", func(t *testing.T) {
+		view, _, err := BuildJSON(validCoverageInput(t), Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error = %v", err)
+		}
+		record := view.(map[string]any)
+		failures := append(stringArray(record["failures"]), "dead_zone:unbound_code_surface:proofkit.forged")
+		setCoverageAggregateDiagnostics(record, sortedUnique(failures), stringArray(record["warnings"]))
+		if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "retained projection") {
+			t.Fatalf("AdmitOutput() error=%v, want surplus dead-zone rejection", err)
+		}
+	})
+
+	t.Run("malformed row", func(t *testing.T) {
+		view, _, err := BuildJSON(validCoverageInput(t), Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error = %v", err)
+		}
+		record := view.(map[string]any)
+		record["deadZones"] = []any{map[string]any{
+			"deadZoneKind": "unbound_code_surface", "ownerId": "proofkit.coverage",
+			"path": "../escape", "surfaceId": "proofkit.forged",
+		}}
+		if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), "must not escape the repository root") {
+			t.Fatalf("AdmitOutput() error=%v, want malformed dead-zone rejection", err)
+		}
+	})
+}
+
 func TestBuildJSONClassifiesFailedTestInventory(t *testing.T) {
 	input := validCoverageInput(t)
 	oracle := inventoryEntry(input)["oracle"].(map[string]any)
@@ -532,7 +1019,7 @@ func TestBuildJSONClassifiesFailedTestInventory(t *testing.T) {
 		t.Fatalf("failed inventory coverage view passed: %#v", view)
 	}
 	requireExactClassifications(t, view.(map[string]any), "failures", "failureClassifications", "failure", map[string]string{
-		"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001":  "missing_semantic_test",
+		"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001":  "missing_declared_test_route",
 		"test_inventory_failed:proofkit.coverage.inventory": "failed_test_inventory",
 	})
 }
@@ -551,7 +1038,7 @@ func TestBuildJSONRejectsUnknownInventoryRefs(t *testing.T) {
 			},
 			want: "unknown_requirement_ref:test.coverage.semantic:REQ-PROOFKIT-COVERAGE-999",
 			expected: map[string]string{
-				"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001":                         "missing_semantic_test",
+				"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001":                         "missing_declared_test_route",
 				"unknown_requirement_ref:test.coverage.semantic:REQ-PROOFKIT-COVERAGE-999": "unknown_reference",
 			},
 		},
@@ -572,7 +1059,7 @@ func TestBuildJSONRejectsUnknownInventoryRefs(t *testing.T) {
 			},
 			want: "unknown_command_or_witness_ref:test.coverage.semantic:proofkit.coverage.unknown",
 			expected: map[string]string{
-				"missing_command_semantic_falsifier:proofkit.coverage.command":                    "missing_semantic_test",
+				"missing_command_declared_semantic_falsifier_route:proofkit.coverage.command":     "missing_declared_test_route",
 				"unknown_command_or_witness_ref:test.coverage.semantic:proofkit.coverage.unknown": "unknown_reference",
 			},
 		},
@@ -622,7 +1109,7 @@ func TestBuildJSONClassifiesUnknownRefsByDiagnosticKindNotPayloadText(t *testing
 		t.Fatalf("unknown requirement ref passed: %#v", view)
 	}
 	requireExactClassifications(t, view.(map[string]any), "failures", "failureClassifications", "failure", map[string]string{
-		"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001":                              "missing_semantic_test",
+		"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001":                              "missing_declared_test_route",
 		"unknown_requirement_ref:test.routing_smoke_nonclaim:REQ-PROOFKIT-COVERAGE-999": "unknown_reference",
 	})
 }
@@ -799,14 +1286,17 @@ func TestBuildJSONRejectsInventoryEntryOutsideOwnerScope(t *testing.T) {
 }
 
 func TestBuildJSONRejectsGovernanceEvidenceForBlockingSemanticRequirement(t *testing.T) {
-	input := validCoverageInput(t)
-	entry := inventoryEntry(input)
-	entry["evidenceClass"] = "governance_or_release"
-	entry["falsifier"] = nil
-	entry["oracle"] = nil
-	entry["nonClaims"] = []any{"Governance evidence is not semantic product coverage."}
+	newInput := func() any {
+		input := validCoverageInput(t)
+		entry := inventoryEntry(input)
+		entry["evidenceClass"] = "governance_or_release"
+		entry["falsifier"] = nil
+		entry["oracle"] = nil
+		entry["nonClaims"] = []any{"Governance evidence is not semantic product coverage."}
+		return input
+	}
 
-	view, exitCode, err := BuildJSON(input, Options{})
+	view, exitCode, err := BuildJSON(newInput(), Options{})
 	if err != nil {
 		t.Fatalf("BuildJSON() error = %v", err)
 	}
@@ -814,7 +1304,7 @@ func TestBuildJSONRejectsGovernanceEvidenceForBlockingSemanticRequirement(t *tes
 		t.Fatalf("governance evidence satisfied blocking semantic coverage: %#v", view)
 	}
 	requirement := view.(map[string]any)["requirementCoverage"].([]any)[0].(map[string]any)
-	if requirement["coverageState"] != "covered_by_governance_invariant_nonproduct" {
+	if requirement["coverageState"] != "mapped_to_declared_governance_or_release_route_nonproduct" {
 		t.Fatalf("unexpected governance coverage state: %#v", requirement)
 	}
 	command := view.(map[string]any)["commandCoverage"].([]any)[0].(map[string]any)
@@ -822,17 +1312,42 @@ func TestBuildJSONRejectsGovernanceEvidenceForBlockingSemanticRequirement(t *tes
 		t.Fatalf("governance evidence should not satisfy semantic command closure: %#v", command)
 	}
 	failures := strings.Join(stringArray(view.(map[string]any)["failures"]), "\n")
-	if !strings.Contains(failures, "covered_by_governance_invariant_nonproduct:REQ-PROOFKIT-COVERAGE-001") {
+	if !strings.Contains(failures, "mapped_to_declared_governance_or_release_route_nonproduct:REQ-PROOFKIT-COVERAGE-001") {
 		t.Fatalf("governance non-semantic failure missing: %s", failures)
 	}
 	requireExactClassifications(t, view.(map[string]any), "failures", "failureClassifications", "failure", map[string]string{
-		"covered_by_governance_invariant_nonproduct:REQ-PROOFKIT-COVERAGE-001": "nonsemantic_governance_evidence",
-		"nonsemantic_command_evidence:proofkit.coverage.command":               "nonsemantic_command_evidence",
+		"mapped_to_declared_governance_or_release_route_nonproduct:REQ-PROOFKIT-COVERAGE-001": "nonsemantic_governance_evidence",
+		"nonsemantic_command_evidence:proofkit.coverage.command":                              "nonsemantic_command_evidence",
 	})
+
+	markdown, _, err := BuildMarkdown(newInput())
+	if err != nil {
+		t.Fatalf("BuildMarkdown() error = %v", err)
+	}
+	html, _, err := BuildHTML(newInput())
+	if err != nil {
+		t.Fatalf("BuildHTML() error = %v", err)
+	}
+	envelope, _, err := BuildJSON(newInput(), Options{AgentEnvelope: true})
+	if err != nil {
+		t.Fatalf("BuildJSON(agent envelope) error = %v", err)
+	}
+	encodedView, _ := json.Marshal(view)
+	encodedEnvelope, _ := json.Marshal(envelope)
+	for name, output := range map[string]string{
+		"agent envelope": string(encodedEnvelope),
+		"HTML":           html,
+		"JSON":           string(encodedView),
+		"Markdown":       markdown,
+	} {
+		if strings.Contains(output, "covered_by") {
+			t.Fatalf("%s laundered declaration mapping into coverage vocabulary: %s", name, output)
+		}
+	}
 }
 
 func TestBuildJSONClassifiesNonsemanticCommandEvidenceClasses(t *testing.T) {
-	for _, evidenceClass := range []string{"benchmark", "contract_admission", "helper_or_testkit", "property_or_fuzz"} {
+	for _, evidenceClass := range []string{"benchmark", "declared_contract_admission_route", "helper_or_testkit", "declared_property_or_fuzz_route"} {
 		t.Run(evidenceClass, func(t *testing.T) {
 			input := validCoverageInput(t)
 			entry := inventoryEntry(input)
@@ -863,7 +1378,7 @@ func TestBuildJSONWarnsForNonsemanticCommandEvidenceInAdvisoryScope(t *testing.T
 	input := validCoverageInput(t)
 	input.(map[string]any)["coverageUniverse"].(map[string]any)["completenessDeclaration"] = "selected_paths_advisory"
 	entry := inventoryEntry(input)
-	entry["evidenceClass"] = "contract_admission"
+	entry["evidenceClass"] = "declared_contract_admission_route"
 	entry["nonClaims"] = []any{"Contract admission evidence fixture does not prove command behavior."}
 
 	view, exitCode, err := BuildJSON(input, Options{})
@@ -916,7 +1431,7 @@ func TestBuildJSONWarnsWhenOwnerInvariantHasNoInventory(t *testing.T) {
 	if got := stringArray(invariant["warnings"]); len(got) != 1 || got[0] != "missing_owner_invariant_inventory:invariant.coverage.uncovered" {
 		t.Fatalf("row-local owner invariant warnings=%v", got)
 	}
-	requireClassificationIncludes(t, view.(map[string]any), "warnings", "warningClassifications", "warning", "missing_owner_invariant_inventory:invariant.coverage.uncovered", "missing_semantic_test")
+	requireClassificationIncludes(t, view.(map[string]any), "warnings", "warningClassifications", "warning", "missing_owner_invariant_inventory:invariant.coverage.uncovered", "missing_declared_test_route")
 }
 
 func TestBuildJSONRequiresExactlyOneProofInput(t *testing.T) {
@@ -972,11 +1487,10 @@ func TestDiagnosticClassIDVocabulary(t *testing.T) {
 		{"dead_zone_advisory:unbound_code_surface:proofkit.unbound.code", "declared_dead_zone"},
 		{"missing_proof_binding_route:REQ-PROOFKIT-COVERAGE-001", "missing_requirement_binding"},
 		{"proof_binding_unknown_requirement:REQ-PROOFKIT-COVERAGE-999", "missing_requirement_binding"},
-		{"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001", "missing_semantic_test"},
-		{"missing_command_semantic_falsifier:proofkit.coverage.command", "missing_semantic_test"},
+		{"missing_test_inventory:REQ-PROOFKIT-COVERAGE-001", "missing_declared_test_route"},
+		{"missing_command_declared_semantic_falsifier_route:proofkit.coverage.command", "missing_declared_test_route"},
 		{"route_only_nonclaim:REQ-PROOFKIT-COVERAGE-001", "routing_smoke_only"},
 		{"command_route_only_nonclaim:proofkit.coverage.command", "routing_smoke_only"},
-		{"covered_by_routing_smoke_nonclaim:REQ-PROOFKIT-COVERAGE-001", "routing_smoke_only"},
 		{"unknown_requirement_ref:test.routing_smoke_nonclaim:REQ-PROOFKIT-COVERAGE-999", "unknown_reference"},
 		{"unknown_requirement_ref:test.coverage:REQ-UNKNOWN", "unknown_reference"},
 		{"unknown_owner_invariant_ref:test.coverage:invariant.unknown", "unknown_reference"},
@@ -984,8 +1498,8 @@ func TestDiagnosticClassIDVocabulary(t *testing.T) {
 		{"full_repository_source_requirement_outside_owner_scope:REQ-PROOFKIT-COVERAGE-999", "owner_scope_violation"},
 		{"inventory_entry_owner_outside_scope:test.coverage:proofkit.other", "owner_scope_violation"},
 		{"test_inventory_failed:repo.tests", "failed_test_inventory"},
-		{"covered_by_governance_invariant_nonproduct:REQ-PROOFKIT-COVERAGE-001", "nonsemantic_governance_evidence"},
-		{"missing_owner_invariant_inventory:invariant.coverage.semantic", "missing_semantic_test"},
+		{"mapped_to_declared_governance_or_release_route_nonproduct:REQ-PROOFKIT-COVERAGE-001", "nonsemantic_governance_evidence"},
+		{"missing_owner_invariant_inventory:invariant.coverage.semantic", "missing_declared_test_route"},
 		{"nonsemantic_command_evidence:proofkit.coverage.command", "nonsemantic_command_evidence"},
 		{"not_applicable:REQ-PROOFKIT-COVERAGE-001", "not_applicable_with_reason"},
 		{"future_unmapped_diagnostic:example", "unclassified_gap"},
@@ -1159,7 +1673,7 @@ func validCoverageInput(t *testing.T) any {
         "selector": "go test ./internal/command/requirementcoverageview -run TestCoverage",
         "sourcePath": "internal/command/requirementcoverageview/requirementcoverageview_test.go",
         "ownerId": "proofkit.coverage",
-        "evidenceClass": "semantic_falsifier",
+        "evidenceClass": "declared_semantic_falsifier_route",
         "requirementRefs": ["REQ-PROOFKIT-COVERAGE-001"],
         "ownerInvariantRefs": [],
         "commandRefs": ["proofkit.coverage.command"],

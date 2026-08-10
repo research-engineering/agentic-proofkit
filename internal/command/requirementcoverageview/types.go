@@ -10,7 +10,9 @@ var defaultNonClaims = []string{
 	"Requirement coverage views are rendered lookup products only.",
 	"Requirement coverage views do not scan repositories, execute native tests, authenticate receipts, decide proof freshness, or approve merge.",
 	"Requirement coverage views classify only caller-owned structured inputs.",
-	"Route-only smoke evidence cannot satisfy semantic requirement coverage.",
+	"Mapped declaration routes do not prove selector resolution, oracle quality, execution, freshness, trust, sensitivity, or assurance closure.",
+	"Coverage basis commitments prove internal projection consistency only; they do not authenticate source inputs or producer identity.",
+	"Route-only smoke entries do not satisfy declared semantic-falsifier route mapping.",
 }
 
 type Options struct {
@@ -80,7 +82,9 @@ type scenario struct {
 	CommandIDs         []string
 	EnvironmentClasses []string
 	ScenarioID         string
+	VerifyCommands     []string
 	WitnessID          string
 	WitnessKind        string
 	WitnessPath        string
+	WitnessSelectors   []string
 }

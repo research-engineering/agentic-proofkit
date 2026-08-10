@@ -21,7 +21,7 @@ var equivalenceKinds = []string{
 }
 var equivalenceKindSet = toSet(equivalenceKinds)
 
-var parityStatuses = []string{"matched", "mismatched", "not_comparable", "not_run"}
+var parityStatuses = []string{"caller_declared_match", "caller_declared_mismatch", "caller_declared_not_comparable", "caller_declared_not_run"}
 var parityStatusSet = toSet(parityStatuses)
 
 var sourceOwnerKinds = []string{"local_doc", "local_manifest", "local_script", "local_test", "other"}
@@ -36,6 +36,7 @@ var boundaryNonClaims = []string{
 	"Migration parity admission does not approve old-owner deletion, migration exceptions, merge, release, rollout, or production readiness.",
 	"Migration parity admission does not authenticate parity evidence.",
 	"Migration parity admission does not compute digest values or proof freshness.",
+	"Migration parity statuses and status-derived parity claim counters are caller declarations, while structural and failure counts are Proofkit-computed admission facts; none are native verification results.",
 	"Migration parity admission does not execute native commands or prove command result correctness.",
 	"Migration parity admission does not prove semantic correctness of either legacy or Proofkit-owned infrastructure.",
 }
@@ -73,7 +74,7 @@ type parityDiagnostic struct {
 	Findings []string
 }
 
-type admittedEvidenceRef struct {
+type admittedParityClaimRef struct {
 	EquivalenceKind string
 	EvidenceID      string
 	EvidenceRefs    []string
@@ -111,11 +112,11 @@ func Build(raw any) (report.Record, int, error) {
 		return diagnostics[left].EvidenceID < diagnostics[right].EvidenceID
 	})
 	failures := []string{}
-	admittedRefs := []admittedEvidenceRef{}
+	admittedRefs := []admittedParityClaimRef{}
 	for _, diagnostic := range diagnostics {
 		failures = append(failures, diagnostic.Findings...)
 		if len(diagnostic.Findings) == 0 {
-			admittedRefs = append(admittedRefs, admittedEvidenceRef{
+			admittedRefs = append(admittedRefs, admittedParityClaimRef{
 				EquivalenceKind: diagnostic.EquivalenceKind,
 				EvidenceID:      diagnostic.EvidenceID,
 				EvidenceRefs:    diagnostic.EvidenceRefs,
@@ -137,18 +138,18 @@ func Build(raw any) (report.Record, int, error) {
 		ReportID:      input.ParitySetID,
 		State:         state,
 		Summary: map[string]any{
-			"admittedParityEvidenceCount": len(admittedRefs),
-			"failureCount":                len(failures),
-			"matchedCount":                countByStatus(diagnostics, "matched"),
-			"mismatchedCount":             countByStatus(diagnostics, "mismatched"),
-			"notComparableCount":          countByStatus(diagnostics, "not_comparable"),
-			"notRunCount":                 countByStatus(diagnostics, "not_run"),
-			"parityRecordCount":           len(diagnostics),
-			"sourceProofOwnerCount":       len(input.SourceProofOwners),
-			"targetProofkitRefCount":      len(input.TargetProofkitRefs),
+			"admittedParityClaimCount":         len(admittedRefs),
+			"failureCount":                     len(failures),
+			"callerDeclaredMatchCount":         countByStatus(diagnostics, "caller_declared_match"),
+			"callerDeclaredMismatchCount":      countByStatus(diagnostics, "caller_declared_mismatch"),
+			"callerDeclaredNotComparableCount": countByStatus(diagnostics, "caller_declared_not_comparable"),
+			"callerDeclaredNotRunCount":        countByStatus(diagnostics, "caller_declared_not_run"),
+			"parityRecordCount":                len(diagnostics),
+			"sourceProofOwnerCount":            len(input.SourceProofOwners),
+			"targetProofkitRefCount":           len(input.TargetProofkitRefs),
 		},
 		Diagnostics: []report.Diagnostic{
-			{Key: "admittedParityEvidenceRefs", Value: admittedEvidenceDiagnostics(admittedRefs)},
+			{Key: "admittedParityClaimRefs", Value: admittedParityClaimDiagnostics(admittedRefs)},
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
 			{Key: "migrationParity", Value: parityDiagnostics(diagnostics)},
 		},
@@ -398,13 +399,13 @@ func evaluateParityRecord(record parityRecord, sourceOwnerIDs map[string]struct{
 	if _, ok := targetIDs[record.TargetID]; !ok {
 		findings = append(findings, fmt.Sprintf("migration parity record %s references unknown target: %s", record.EvidenceID, record.TargetID))
 	}
-	if record.Status == "matched" && record.LegacyDigest != record.ProofkitDigest {
-		findings = append(findings, fmt.Sprintf("migration parity record %s is matched but digests differ", record.EvidenceID))
+	if record.Status == "caller_declared_match" && record.LegacyDigest != record.ProofkitDigest {
+		findings = append(findings, fmt.Sprintf("migration parity record %s declares a match but digests differ", record.EvidenceID))
 	}
-	if record.Status == "mismatched" && record.LegacyDigest == record.ProofkitDigest {
-		findings = append(findings, fmt.Sprintf("migration parity record %s is mismatched but digests are equal", record.EvidenceID))
+	if record.Status == "caller_declared_mismatch" && record.LegacyDigest == record.ProofkitDigest {
+		findings = append(findings, fmt.Sprintf("migration parity record %s declares a mismatch but digests are equal", record.EvidenceID))
 	}
-	if record.Status != "matched" {
+	if record.Status != "caller_declared_match" {
 		findings = append(findings, fmt.Sprintf("migration parity record %s is not admitted: %s", record.EvidenceID, record.Status))
 	}
 	sort.Strings(findings)
@@ -421,6 +422,7 @@ func parityDiagnostics(diagnostics []parityDiagnostic) []any {
 			"findings":           admit.StringSliceToAny(diagnostic.Findings),
 			"legacyDigest":       diagnostic.LegacyDigest,
 			"legacySubjectRef":   diagnostic.LegacySubjectRef,
+			"nonClaims":          admit.StringSliceToAny(diagnostic.NonClaims),
 			"proofkitDigest":     diagnostic.ProofkitDigest,
 			"proofkitSubjectRef": diagnostic.ProofkitSubjectRef,
 			"reason":             diagnostic.Reason,
@@ -433,7 +435,7 @@ func parityDiagnostics(diagnostics []parityDiagnostic) []any {
 	return result
 }
 
-func admittedEvidenceDiagnostics(refs []admittedEvidenceRef) []any {
+func admittedParityClaimDiagnostics(refs []admittedParityClaimRef) []any {
 	result := make([]any, 0, len(refs))
 	for _, ref := range refs {
 		result = append(result, map[string]any{
@@ -452,11 +454,11 @@ func ruleResults(diagnostics []parityDiagnostic) []report.RuleResult {
 	results := make([]report.RuleResult, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {
 		status := "passed"
-		message := "migration parity evidence record is admitted"
+		message := "caller-declared migration parity claim is admitted"
 		ruleDiagnostics := []report.Diagnostic{}
 		if len(diagnostic.Findings) > 0 {
 			status = "failed"
-			message = "migration parity evidence record is not admitted"
+			message = "caller-declared migration parity claim is not admitted"
 			ruleDiagnostics = []report.Diagnostic{{Key: "findings", Value: admit.StringSliceToAny(diagnostic.Findings)}}
 		}
 		results = append(results, report.RuleResult{

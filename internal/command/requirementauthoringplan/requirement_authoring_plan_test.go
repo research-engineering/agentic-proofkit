@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
@@ -17,6 +18,9 @@ func TestBuildComposesCandidateSourceAcceptedByAdmissionAndTransition(t *testing
 	if exitCode != 0 || output["state"] != "passed" {
 		t.Fatalf("Build() exit=%d state=%v output=%#v", exitCode, output["state"], output)
 	}
+	if output["schemaVersion"] != 2 {
+		t.Fatalf("Build() schemaVersion=%#v, want versioned output schema 2", output["schemaVersion"])
+	}
 	preview, ok := output["nonAuthoritativeAdmissionPreview"].(map[string]any)
 	if !ok {
 		t.Fatalf("passed authoring plan must expose wrapped candidate-only preview: %#v", output["nonAuthoritativeAdmissionPreview"])
@@ -24,10 +28,59 @@ func TestBuildComposesCandidateSourceAcceptedByAdmissionAndTransition(t *testing
 	if preview["authority"] != "candidate_only" || preview["ownerReviewRequired"] != true || preview["candidateOnly"] != true {
 		t.Fatalf("preview lost candidate-only metadata: %#v", preview)
 	}
-	assertStableJSONEqual(t, "candidate source preview", expectedNextSource(), preview["requirementSourcePreview"])
+	expectedResult, err := requirementsourceadmission.Evaluate(expectedNextSource())
+	if err != nil || expectedResult.ExitCode != 0 {
+		t.Fatalf("admit expected next source: exit=%d err=%v", expectedResult.ExitCode, err)
+	}
+	assertStableJSONEqual(t, "candidate source preview", requirementsourceadmission.SourceValue(expectedResult.Source), preview["requirementSourcePreview"])
 	assertOutputContains(t, output, "Requirement authoring plans do not infer requirement meaning")
 	assertOutputContains(t, output, "proofkit.requirement-authoring-plan.review-candidates")
 	assertOutputContains(t, output, "run_admitted_validation")
+	refs, ok := output["authoringRefs"].([]any)
+	if !ok || len(refs) != 2 {
+		t.Fatalf("authoring refs were not projected: %#v", output["authoringRefs"])
+	}
+	assertStableJSONEqual(t, "authoring ref projection", validInput()["authoringRefs"], refs)
+}
+
+func TestBuildPreservesDigestBoundAuthoringRefIdentity(t *testing.T) {
+	first := validInput()
+	second := validInput()
+	secondRef := second["authoringRefs"].([]any)[0].(map[string]any)
+	secondRef["digest"] = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	secondRef["summary"] = "The revised design proposes the same candidate from different source bytes."
+
+	firstOutput, firstExit, firstErr := Build(first)
+	secondOutput, secondExit, secondErr := Build(second)
+	if firstErr != nil || secondErr != nil || firstExit != 0 || secondExit != 0 {
+		t.Fatalf("Build() first=(%d,%v) second=(%d,%v)", firstExit, firstErr, secondExit, secondErr)
+	}
+	assertStableJSONEqual(t, "first complete authoring ref projection", first["authoringRefs"], firstOutput["authoringRefs"])
+	assertStableJSONEqual(t, "second complete authoring ref projection", second["authoringRefs"], secondOutput["authoringRefs"])
+	firstRefs, err := stablejson.Marshal(firstOutput["authoringRefs"])
+	if err != nil {
+		t.Fatalf("marshal first authoring refs: %v", err)
+	}
+	secondRefs, err := stablejson.Marshal(secondOutput["authoringRefs"])
+	if err != nil {
+		t.Fatalf("marshal second authoring refs: %v", err)
+	}
+	if string(firstRefs) == string(secondRefs) {
+		t.Fatal("digest- and summary-distinct authoring refs projected identically")
+	}
+}
+
+func TestAdmitInputUsesCanonicalRequirementSourceProjection(t *testing.T) {
+	raw := validInput()
+	admitted, err := admitInput(raw)
+	if err != nil {
+		t.Fatalf("admitInput() error = %v", err)
+	}
+	assertStableJSONEqual(t, "canonical current requirement source", requirementsourceadmission.SourceValue(admitted.CurrentRequirementState), admitted.CurrentRequirementValue)
+	raw["currentRequirementSource"].(map[string]any)["sourceId"] = "proofkit.test.mutated"
+	if admitted.CurrentRequirementValue["sourceId"] == "proofkit.test.mutated" {
+		t.Fatal("admitted current requirement source retained caller alias")
+	}
 }
 
 func TestBuildRejectsInvalidCurrentRequirementSourceBeforeComposition(t *testing.T) {
@@ -104,24 +157,19 @@ func TestBuildRejectsCandidateSourceAdmissionFailure(t *testing.T) {
 	assertOutputContains(t, output, "candidate next source must pass requirement-source-admission")
 }
 
-func TestBuildOmitsInvalidCandidateRequirementPayloadFromFailedOutput(t *testing.T) {
+func TestBuildRejectsSecretShapedCandidateBeforeCompositionWithoutEcho(t *testing.T) {
 	input := validInput()
 	sentinel := "sk-proj-aaaaaaaaaaa"
 	candidate := firstUpdate(input)["candidateRequirement"].(map[string]any)
 	candidate["invariant"] = "Sentinel " + sentinel + " must be rejected without echo."
 
 	output, exitCode, err := Build(input)
-	if err != nil {
-		t.Fatalf("Build() error = %v", err)
-	}
-	if exitCode == 0 || output["state"] != "failed" {
+	if err == nil || output != nil || exitCode != 1 {
 		t.Fatalf("Build() accepted secret-shaped candidate: exit=%d output=%#v", exitCode, output)
 	}
-	encoded, _ := json.Marshal(output)
-	if strings.Contains(string(encoded), sentinel) {
-		t.Fatalf("failed output leaked secret-shaped candidate payload: %s", encoded)
+	if strings.Contains(err.Error(), sentinel) {
+		t.Fatalf("admission error leaked secret-shaped candidate payload: %s", err)
 	}
-	assertOutputContains(t, output, "candidateRequirementOmitted")
 }
 
 func TestBuildRejectsLifecycleTransitionWithoutNewEvidence(t *testing.T) {
@@ -313,6 +361,14 @@ func validInput() map[string]any {
 				"digest":    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 				"summary":   "The design proposes a durable authoring invariant.",
 				"nonClaims": []any{"This ref does not prove implementation correctness."},
+			},
+			map[string]any{
+				"refId":     "proofkit.test.test-summary",
+				"kind":      "test_summary",
+				"path":      "artifacts/test-summary.json",
+				"digest":    nil,
+				"summary":   "The test summary identifies candidate validation context.",
+				"nonClaims": []any{"This ref does not prove witness execution."},
 			},
 		},
 		"candidateUpdates": []any{

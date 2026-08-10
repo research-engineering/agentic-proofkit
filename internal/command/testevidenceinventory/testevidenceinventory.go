@@ -16,15 +16,22 @@ const directAuthority = "caller_owned_inventory"
 const sourceSetAuthority = "caller_owned_inventory_source_set"
 const wrappedInventorySchema = "proofkit.requirement-test-inventory.v1"
 
+const (
+	EvidenceClassDeclaredContractAdmissionRoute = "declared_contract_admission_route"
+	EvidenceClassDeclaredPropertyOrFuzzRoute    = "declared_property_or_fuzz_route"
+	EvidenceClassDeclaredSemanticFalsifierRoute = "declared_semantic_falsifier_route"
+	EvidenceClassProofRouteCandidate            = "proof_route_candidate"
+)
+
 var evidenceClassSet = map[string]struct{}{
-	"benchmark":              {},
-	"contract_admission":     {},
-	"governance_or_release":  {},
-	"helper_or_testkit":      {},
-	"property_or_fuzz":       {},
-	"proof_route_candidate":  {},
-	"routing_smoke_nonclaim": {},
-	"semantic_falsifier":     {},
+	"benchmark": {},
+	EvidenceClassDeclaredContractAdmissionRoute: {},
+	"governance_or_release":                     {},
+	"helper_or_testkit":                         {},
+	EvidenceClassDeclaredPropertyOrFuzzRoute:    {},
+	EvidenceClassProofRouteCandidate:            {},
+	"routing_smoke_nonclaim":                    {},
+	EvidenceClassDeclaredSemanticFalsifierRoute: {},
 }
 
 var qualityFindingClassSet = map[string]struct{}{
@@ -53,8 +60,41 @@ var qualityFindingReviewStateSet = map[string]struct{}{
 	"confirmed": {},
 }
 
+// AdmitEvidenceClass keeps child projections on the inventory-owned vocabulary.
+func AdmitEvidenceClass(raw any, context string) (string, error) {
+	return admit.Enum(raw, evidenceClassSet, context)
+}
+
+// EvidenceClasses returns the closed inventory-owned vocabulary for consumers
+// that must prove exhaustive projection coverage.
+func EvidenceClasses() []string {
+	values := make([]string, 0, len(evidenceClassSet))
+	for value := range evidenceClassSet {
+		values = append(values, value)
+	}
+	sort.Strings(values)
+	return values
+}
+
+// AdmitQualityFindingClass keeps projected finding classes on the inventory owner.
+func AdmitQualityFindingClass(raw any, context string) (string, error) {
+	return admit.Enum(raw, qualityFindingClassSet, context)
+}
+
+// AdmitQualityFindingSeverity keeps projected finding severity on the inventory owner.
+func AdmitQualityFindingSeverity(raw any, context string) (string, error) {
+	return admit.Enum(raw, qualityFindingSeveritySet, context)
+}
+
+// AdmitQualityFindingReviewState keeps projected owner-review state on the inventory owner.
+func AdmitQualityFindingReviewState(raw any, context string) (string, error) {
+	return admit.Enum(raw, qualityFindingReviewStateSet, context)
+}
+
 var defaultNonClaims = []string{
 	"Test evidence inventory reports do not execute native tests.",
+	"Test evidence inventory reports do not resolve selectors or review caller-authored oracle quality.",
+	"Test evidence inventory reports do not verify that a caller-declared falsifier supersession dominates the superseded falsifier.",
 	"Test evidence inventory reports do not prove repository inventory completeness.",
 	"Test evidence inventory reports do not authenticate runner output or receipt producers.",
 	"Test evidence inventory reports do not approve merge, release, rollout, or repository policy.",
@@ -117,7 +157,7 @@ type Falsifier struct {
 	FalsifierID                string
 	NegativeCaseID             string
 	Supersedes                 []string
-	SupersessionProofRef       string
+	SupersessionDeclarationRef string
 	WrongImplementationClassID string
 }
 
@@ -199,19 +239,19 @@ func Evaluate(raw any) (Result, error) {
 		ReportID:      inventory.InventoryID,
 		State:         state,
 		Summary: map[string]any{
-			"agentActionCount":           len(actionPlan),
-			"entryCount":                 len(inventory.Entries),
-			"failureCount":               len(failures),
-			"inputPathCount":             len(inventory.InputPaths),
-			"qualityFindingFailureCount": countPrefix(failures, "quality_finding:"),
-			"qualityFindingWarningCount": countPrefix(warnings, "quality_finding:"),
-			"routeOnlyNonClaimCount":     countEvidenceClass(inventory.Entries, "routing_smoke_nonclaim"),
-			"proofRouteCandidateCount":   countEvidenceClass(inventory.Entries, "proof_route_candidate"),
-			"semanticFalsifierCount":     countEvidenceClass(inventory.Entries, "semantic_falsifier"),
-			"sourceCount":                inventory.SourceCount,
-			"weakOracleFailureCount":     countContains(failures, "weak_or_empty_oracle"),
-			"wrongBoundaryFailureCount":  countContains(failures, "wrong_evidence_boundary"),
-			"warningCount":               len(warnings),
+			"agentActionCount":                             len(actionPlan),
+			"entryCount":                                   len(inventory.Entries),
+			"failureCount":                                 len(failures),
+			"inputPathCount":                               len(inventory.InputPaths),
+			"qualityFindingFailureCount":                   countPrefix(failures, "quality_finding:"),
+			"qualityFindingWarningCount":                   countPrefix(warnings, "quality_finding:"),
+			"routeOnlyNonClaimCount":                       countEvidenceClass(inventory.Entries, "routing_smoke_nonclaim"),
+			"proofRouteCandidateCount":                     countEvidenceClass(inventory.Entries, "proof_route_candidate"),
+			"declaredSemanticFalsifierRouteCount":          countEvidenceClass(inventory.Entries, EvidenceClassDeclaredSemanticFalsifierRoute),
+			"sourceCount":                                  inventory.SourceCount,
+			"incompleteDeclaredOracleMetadataFailureCount": countContains(failures, "incomplete_declared_oracle_metadata"),
+			"wrongBoundaryFailureCount":                    countContains(failures, "wrong_evidence_boundary"),
+			"warningCount":                                 len(warnings),
 		},
 		Diagnostics: []report.Diagnostic{
 			{Key: "agentActionPlan", Value: mapsToAny(actionPlan)},
@@ -320,8 +360,8 @@ func falsifierToAny(falsifier *Falsifier) any {
 		"supersedes":                 admit.StringSliceToAny(falsifier.Supersedes),
 		"wrongImplementationClassId": falsifier.WrongImplementationClassID,
 	}
-	if falsifier.SupersessionProofRef != "" {
-		record["supersessionProofRef"] = falsifier.SupersessionProofRef
+	if falsifier.SupersessionDeclarationRef != "" {
+		record["supersessionDeclarationRef"] = falsifier.SupersessionDeclarationRef
 	}
 	return record
 }
@@ -462,7 +502,7 @@ func admitEntry(raw any) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
-	evidenceClass, err := admit.Enum(record["evidenceClass"], evidenceClassSet, fmt.Sprintf("test evidence inventory %s evidenceClass", testID))
+	evidenceClass, err := AdmitEvidenceClass(record["evidenceClass"], fmt.Sprintf("test evidence inventory %s evidenceClass", testID))
 	if err != nil {
 		return Entry{}, err
 	}
@@ -514,7 +554,7 @@ func admitFalsifier(raw any, testID string) (*Falsifier, error) {
 	if !ok {
 		return nil, fmt.Errorf("test evidence inventory %s falsifier must be an object or null", testID)
 	}
-	if err := admit.KnownKeys(record, []string{"dominanceGroup", "falsifierId", "negativeCaseId", "supersedes", "supersessionProofRef", "wrongImplementationClassId"}, "test evidence inventory falsifier"); err != nil {
+	if err := admit.KnownKeys(record, []string{"dominanceGroup", "falsifierId", "negativeCaseId", "supersedes", "supersessionDeclarationRef", "wrongImplementationClassId"}, "test evidence inventory falsifier"); err != nil {
 		return nil, err
 	}
 	falsifierID, err := admit.RuleID(record["falsifierId"], fmt.Sprintf("test evidence inventory %s falsifierId", testID))
@@ -537,16 +577,16 @@ func admitFalsifier(raw any, testID string) (*Falsifier, error) {
 	if err != nil {
 		return nil, err
 	}
-	supersessionProofRef := ""
-	if record["supersessionProofRef"] != nil {
-		supersessionProofRef, err = admit.RuleID(record["supersessionProofRef"], fmt.Sprintf("test evidence inventory %s supersessionProofRef", testID))
+	supersessionDeclarationRef := ""
+	if record["supersessionDeclarationRef"] != nil {
+		supersessionDeclarationRef, err = admit.RuleID(record["supersessionDeclarationRef"], fmt.Sprintf("test evidence inventory %s supersessionDeclarationRef", testID))
 		if err != nil {
 			return nil, err
 		}
 	}
 	return &Falsifier{
 		DominanceGroup: dominanceGroup, FalsifierID: falsifierID,
-		NegativeCaseID: negativeCaseID, Supersedes: supersedes, SupersessionProofRef: supersessionProofRef,
+		NegativeCaseID: negativeCaseID, Supersedes: supersedes, SupersessionDeclarationRef: supersessionDeclarationRef,
 		WrongImplementationClassID: wrongImplementationClassID,
 	}, nil
 }
@@ -622,15 +662,15 @@ func admitQualityFinding(raw any, testID string, index int) (QualityFinding, err
 	if err != nil {
 		return QualityFinding{}, err
 	}
-	class, err := admit.Enum(record["class"], qualityFindingClassSet, context+" class")
+	class, err := AdmitQualityFindingClass(record["class"], context+" class")
 	if err != nil {
 		return QualityFinding{}, err
 	}
-	severity, err := admit.Enum(record["severity"], qualityFindingSeveritySet, context+" severity")
+	severity, err := AdmitQualityFindingSeverity(record["severity"], context+" severity")
 	if err != nil {
 		return QualityFinding{}, err
 	}
-	reviewState, err := admit.Enum(record["ownerReviewState"], qualityFindingReviewStateSet, context+" ownerReviewState")
+	reviewState, err := AdmitQualityFindingReviewState(record["ownerReviewState"], context+" ownerReviewState")
 	if err != nil {
 		return QualityFinding{}, err
 	}
@@ -653,14 +693,14 @@ func classify(inventory Inventory) ([]string, []string) {
 	warnings := []string{}
 	falsifiers := inventoryFalsifiers(inventory.Entries)
 	for _, entry := range inventory.Entries {
-		if requiresSemanticAnchor(entry.EvidenceClass) && len(entry.RequirementRefs) == 0 && len(entry.OwnerInvariantRefs) == 0 {
-			failures = append(failures, fmt.Sprintf("missing_semantic_anchor:%s", entry.TestID))
+		if requiresDeclaredRouteAnchor(entry.EvidenceClass) && len(entry.RequirementRefs) == 0 && len(entry.OwnerInvariantRefs) == 0 {
+			failures = append(failures, fmt.Sprintf("missing_declared_route_anchor:%s", entry.TestID))
 		}
 		if requiresExecutableCommandRefs(entry.EvidenceClass) && len(entry.CommandRefs) == 0 {
 			failures = append(failures, fmt.Sprintf("missing_executable_command_ref:%s", entry.TestID))
 		}
-		if requiresStrongOracle(entry.EvidenceClass) && !hasStrongOracle(entry) {
-			failures = append(failures, fmt.Sprintf("weak_or_empty_oracle:%s", entry.TestID))
+		if requiresDeclaredOracleMetadata(entry.EvidenceClass) && !hasDeclaredOracleMetadata(entry) {
+			failures = append(failures, fmt.Sprintf("incomplete_declared_oracle_metadata:%s", entry.TestID))
 		}
 		if entry.EvidenceClass == "routing_smoke_nonclaim" {
 			if len(entry.RequirementRefs) > 0 || len(entry.OwnerInvariantRefs) > 0 {
@@ -686,12 +726,12 @@ func classify(inventory Inventory) ([]string, []string) {
 }
 
 type falsifierLedgerEntry struct {
-	FalsifierID string
-	Key         string
-	ProofRefs   []string
-	Supersedes  []string
-	ProofRef    string
-	TestID      string
+	DeclarationRef  string
+	DeclarationRefs []string
+	FalsifierID     string
+	Key             string
+	Supersedes      []string
+	TestID          string
 }
 
 func inventoryFalsifiers(entries []Entry) []falsifierLedgerEntry {
@@ -701,12 +741,12 @@ func inventoryFalsifiers(entries []Entry) []falsifierLedgerEntry {
 			continue
 		}
 		out = append(out, falsifierLedgerEntry{
-			FalsifierID: entry.Falsifier.FalsifierID,
-			Key:         falsifierEquivalenceKey(entry),
-			ProofRefs:   entry.OwnerInvariantRefs,
-			ProofRef:    entry.Falsifier.SupersessionProofRef,
-			Supersedes:  entry.Falsifier.Supersedes,
-			TestID:      entry.TestID,
+			DeclarationRef:  entry.Falsifier.SupersessionDeclarationRef,
+			DeclarationRefs: entry.OwnerInvariantRefs,
+			FalsifierID:     entry.Falsifier.FalsifierID,
+			Key:             falsifierEquivalenceKey(entry),
+			Supersedes:      entry.Falsifier.Supersedes,
+			TestID:          entry.TestID,
 		})
 	}
 	return out
@@ -728,13 +768,13 @@ func classifyFalsifierSupersession(entries []falsifierLedgerEntry) []string {
 	supersededByKey := map[string]map[string]struct{}{}
 	for _, entry := range entries {
 		for _, supersededID := range entry.Supersedes {
-			if entry.ProofRef == "" {
-				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:missing_dominance_proof:%s", entry.TestID, supersededID))
+			if entry.DeclarationRef == "" {
+				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:missing_supersession_declaration:%s", entry.TestID, supersededID))
 				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
 				continue
 			}
-			if !containsString(entry.ProofRefs, entry.ProofRef) {
-				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:unowned_dominance_proof:%s", entry.TestID, entry.ProofRef))
+			if !containsString(entry.DeclarationRefs, entry.DeclarationRef) {
+				failures = append(failures, fmt.Sprintf("invalid_falsifier_supersession:%s:unowned_supersession_declaration:%s", entry.TestID, entry.DeclarationRef))
 				invalidFalsifierIDs[entry.FalsifierID] = struct{}{}
 				continue
 			}
@@ -778,18 +818,18 @@ func classifyFalsifierSupersession(entries []falsifierLedgerEntry) []string {
 	return failures
 }
 
-func requiresSemanticAnchor(evidenceClass string) bool {
+func requiresDeclaredRouteAnchor(evidenceClass string) bool {
 	switch evidenceClass {
-	case "semantic_falsifier", "proof_route_candidate", "contract_admission", "property_or_fuzz", "governance_or_release", "benchmark":
+	case EvidenceClassDeclaredSemanticFalsifierRoute, EvidenceClassProofRouteCandidate, EvidenceClassDeclaredContractAdmissionRoute, EvidenceClassDeclaredPropertyOrFuzzRoute, "governance_or_release", "benchmark":
 		return true
 	default:
 		return false
 	}
 }
 
-func requiresStrongOracle(evidenceClass string) bool {
+func requiresDeclaredOracleMetadata(evidenceClass string) bool {
 	switch evidenceClass {
-	case "semantic_falsifier", "contract_admission", "property_or_fuzz":
+	case EvidenceClassDeclaredSemanticFalsifierRoute, EvidenceClassDeclaredContractAdmissionRoute, EvidenceClassDeclaredPropertyOrFuzzRoute:
 		return true
 	default:
 		return false
@@ -797,26 +837,43 @@ func requiresStrongOracle(evidenceClass string) bool {
 }
 
 func requiresExecutableCommandRefs(evidenceClass string) bool {
-	return evidenceClass == "semantic_falsifier" || evidenceClass == "proof_route_candidate"
+	return evidenceClass == EvidenceClassDeclaredSemanticFalsifierRoute || evidenceClass == EvidenceClassProofRouteCandidate
 }
 
-func hasStrongOracle(entry Entry) bool {
+func hasDeclaredOracleMetadata(entry Entry) bool {
 	return entry.Falsifier != nil &&
+		entry.Falsifier.NegativeCaseID != "" &&
+		entry.Falsifier.WrongImplementationClassID != "" &&
 		entry.Oracle != nil &&
+		entry.Oracle.OracleKind != "" &&
 		strings.TrimSpace(entry.Oracle.AssertionSummary) != "" &&
 		strings.TrimSpace(entry.Oracle.ExpectedPublicOutcome) != ""
+}
+
+// ClassifyProjectedEntries replays inventory-owned cross-entry and quality
+// semantics for a structurally complete child projection. It does not claim
+// source authenticity, selector execution, or repository completeness.
+func ClassifyProjectedEntries(entries []Entry) ([]string, []string, error) {
+	if err := assertUnique(entryIDs(entries), "projected test evidence inventory testIds"); err != nil {
+		return nil, nil, err
+	}
+	if err := assertUnique(falsifierIDs(entries), "projected test evidence inventory falsifierIds"); err != nil {
+		return nil, nil, err
+	}
+	failures, warnings := classify(Inventory{Entries: entries})
+	return failures, warnings, nil
 }
 
 func ruleResults(failures []string, warnings []string) []report.RuleResult {
 	return []report.RuleResult{
 		rule("test_inventory.input_admitted", "passed", "Test inventory input used strict known-key admission."),
-		ruleStatus("test_inventory.semantic_entries_have_anchors", !hasPrefix(failures, "missing_semantic_anchor"), "Semantic test inventory entries must cite requirement refs or stable owner invariant refs."),
-		ruleStatus("test_inventory.route_bearing_entries_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Semantic falsifier and proof-route candidate entries must cite executable command refs."),
-		ruleStatus("test_inventory.strong_oracles", !hasPrefix(failures, "weak_or_empty_oracle"), "Semantic falsifier entries must declare a falsifier, assertion oracle, and expected public outcome."),
-		ruleStatus("test_inventory.no_duplicate_falsifiers", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require explicit same-equivalence supersession with dominance proof."),
-		ruleStatus("test_inventory.route_only_boundaries", !hasPrefix(failures, "wrong_evidence_boundary"), "Route-only smoke evidence must remain a non-claim and cannot cite semantic requirement anchors."),
+		ruleStatus("test_inventory.declared_routes_have_anchors", !hasPrefix(failures, "missing_declared_route_anchor"), "Declared test routes must cite requirement refs or stable owner invariant refs."),
+		ruleStatus("test_inventory.route_bearing_entries_have_commands", !hasPrefix(failures, "missing_executable_command_ref"), "Declared semantic-falsifier routes and proof-route candidates must cite executable command refs."),
+		ruleStatus("test_inventory.declared_oracle_metadata", !hasPrefix(failures, "incomplete_declared_oracle_metadata"), "Declared semantic, contract-admission, and property/fuzz routes must include caller-authored falsifier and oracle metadata without claiming native oracle review."),
+		ruleStatus("test_inventory.declared_falsifier_supersession_consistency", !hasPrefix(failures, "declared_duplicate_falsifier") && !hasPrefix(failures, "invalid_falsifier_supersession"), "Duplicate falsifier equivalence keys require one caller-declared same-equivalence supersession ref included in ownerInvariantRefs; this does not prove dominance."),
+		ruleStatus("test_inventory.route_only_boundaries", !hasPrefix(failures, "wrong_evidence_boundary"), "Route-only smoke evidence must remain a non-claim and cannot cite requirement or owner-invariant anchors."),
 		rule("test_inventory.route_only_warnings_are_advisory", "passed", "Route-only entries remain admitted advisory non-claim warnings and do not fail the report."),
-		rule("test_inventory.proof_route_candidates_are_advisory", "passed", "Proof-route candidates remain advisory until a consumer owner supplies executable semantic evidence."),
+		rule("test_inventory.proof_route_candidates_are_advisory", "passed", "Proof-route candidates remain advisory until separately admitted execution and policy evidence satisfies a consumer-owned assurance rule."),
 	}
 }
 
@@ -856,8 +913,8 @@ func diagnosticClassID(diagnostic string) string {
 		return "declared_duplicate_falsifier"
 	case strings.HasPrefix(diagnostic, "invalid_falsifier_supersession:"):
 		return "invalid_falsifier_supersession"
-	case strings.HasPrefix(diagnostic, "missing_semantic_anchor:"):
-		return "missing_semantic_anchor"
+	case strings.HasPrefix(diagnostic, "missing_declared_route_anchor:"):
+		return "missing_declared_route_anchor"
 	case strings.HasPrefix(diagnostic, "missing_executable_command_ref:"):
 		return "missing_executable_command_ref"
 	case strings.HasPrefix(diagnostic, "quality_finding:"):
@@ -871,8 +928,8 @@ func diagnosticClassID(diagnostic string) string {
 		return "routing_smoke_only"
 	case strings.HasPrefix(diagnostic, "selector_fragility:"):
 		return "selector_fragility"
-	case strings.HasPrefix(diagnostic, "weak_or_empty_oracle:"):
-		return "weak_or_empty_oracle"
+	case strings.HasPrefix(diagnostic, "incomplete_declared_oracle_metadata:"):
+		return "incomplete_declared_oracle_metadata"
 	case strings.HasPrefix(diagnostic, "wrong_evidence_boundary:"):
 		return "wrong_evidence_boundary"
 	}

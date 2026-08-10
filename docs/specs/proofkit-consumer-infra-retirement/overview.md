@@ -30,9 +30,11 @@ approval, rollout approval, and production decisions.
   gradual adoption, and release-channel scenarios to existing Proofkit
   primitives through bounded structured command refs.
 - `REQ-PROOFKIT-RETIRE-006`: migration parity admission validates
-  caller-provided parity evidence shape, source/target closure, typed
-  equivalence dimensions, and matched digest equality without owning evidence
-  authenticity, freshness, semantic correctness, or retirement approval.
+  caller-provided parity-claim shape, source/target closure, typed equivalence
+  dimensions, consistency between caller-declared status and supplied digests,
+  and lossless record-level non-claim projection without owning digest
+  computation, evidence authenticity, freshness, semantic correctness, or
+  retirement approval.
 - `REQ-PROOFKIT-RETIRE-007`: gradual adoption guidance keeps caller-provided
   candidate boundaries advisory, exposes owner-review questions, routes mode
   and checked-scope semantics through one private owner, and fails closed for

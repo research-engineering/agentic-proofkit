@@ -8,6 +8,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/witnesscommand"
 )
@@ -18,11 +19,7 @@ var claimLevels = map[string]struct{}{
 	"deferred": {},
 }
 
-var proofStates = map[string]struct{}{
-	"explicitly_deferred": {},
-	"not_bound":           {},
-	"witness_backed":      {},
-}
+var proofStates = proofvocab.RequirementProofStateSet()
 
 var witnessKinds = map[string]struct{}{
 	"contract":      {},

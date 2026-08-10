@@ -379,6 +379,14 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 			ExecutableCommand: "go test ./internal/app -run '^TestStandaloneMultiVariantCommandsUseExactRootShapes$'",
 		},
 		{
+			Command:           "requirement-authoring-plan",
+			NativeSourceForm:  "nativeSource",
+			NativeSourcePaths: []string{"internal/command/requirementauthoringplan"},
+			SelectorPath:      "internal/app/cli_abi_test.go",
+			SelectorTest:      "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
+			ExecutableCommand: "go test ./internal/app -run '^TestRequirementAuthoringPlanOutputUsesVersionedRootShape$'",
+		},
+		{
 			Command:           "self-check",
 			NativeSourceForm:  "nativeSource",
 			NativeSourcePaths: []string{"internal/app"},
@@ -399,6 +407,11 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 		{
 			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
 			ScenarioID:    "proofkit.package-boundary.cli-output-root-witnesses",
+			SelectorTest:  "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.cli-output-root-witnesses",
 			SelectorTest:  "TestSelfCheckOutputUsesExactRootShape",
 		},
 		{
@@ -410,6 +423,11 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",
 			ScenarioID:    "proofkit.supply-chain-quality.cli-abi-golden",
 			SelectorTest:  "TestAdoptionContractEnvelopeCLIABI",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.cli-abi-golden",
+			SelectorTest:  "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 		},
 		{
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",
