@@ -33,6 +33,7 @@ import (
 const (
 	completionID                = "proofkit.release_closeout.current_package_gate"
 	ciProvenancePath            = "artifacts/proofkit/ci-provenance.json"
+	cliContractPath             = "proofkit/cli-contract.v2.json"
 	coverageMetricsPath         = "artifacts/proofkit/coverage-metrics.json"
 	proofReceiptReportPath      = "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"
 	proofReceiptsPath           = "artifacts/proofkit/self-hosting-proof-receipts.json"
@@ -120,7 +121,7 @@ type cyclonedxBOM struct {
 
 type coverageMetricsEvidence struct {
 	ArtifactKind  string                      `json:"artifactKind"`
-	CLIContract   map[string]any              `json:"cliContract"`
+	CLIContract   coverageCLIContractMetrics  `json:"cliContract"`
 	CommandRoutes coverageCommandRouteMetrics `json:"commandRoutes"`
 	DeadZones     coverageDeadZoneMetrics     `json:"deadZones"`
 	NonClaims     []string                    `json:"nonClaims"`
@@ -131,6 +132,19 @@ type coverageMetricsEvidence struct {
 	WitnessPlan   map[string]any              `json:"witnessPlan"`
 }
 
+type coverageCLIContractMetrics struct {
+	CommandCount *int      `json:"commandCount"`
+	Commands     *[]string `json:"commands"`
+}
+
+type cliContractEvidence struct {
+	Commands []cliContractCommandEvidence `json:"commands"`
+}
+
+type cliContractCommandEvidence struct {
+	Command string `json:"command"`
+}
+
 type coverageMetricsProvenance struct {
 	GeneratedAt          string `json:"generatedAt"`
 	ProducerCommandID    string `json:"producerCommandId"`
@@ -139,26 +153,26 @@ type coverageMetricsProvenance struct {
 }
 
 type coverageCommandRouteMetrics struct {
-	AdmittedInventoryEntryCount               *int      `json:"admittedInventoryEntryCount"`
-	CommandCount                              *int      `json:"commandCount"`
-	CommandWithoutProofRouteCandidateCount    *int      `json:"commandWithoutProofRouteCandidateCount"`
-	CommandsWithoutProofRouteCandidate        *[]string `json:"commandsWithoutProofRouteCandidate"`
-	ContractOnlyCommandCount                  *int      `json:"contractOnlyCommandCount"`
-	ContractOnlyCommands                      *[]string `json:"contractOnlyCommands"`
-	CommandWithoutSemanticFalsifierRouteCount *int      `json:"commandWithoutSemanticFalsifierRouteCount"`
-	CommandsWithoutSemanticFalsifierRoute     *[]string `json:"commandsWithoutSemanticFalsifierRoute"`
-	RouteCount                                *int      `json:"routeCount"`
-	RouteOnlyCommandCount                     *int      `json:"routeOnlyCommandCount"`
-	RouteOnlyCommands                         *[]string `json:"routeOnlyCommands"`
-	RouteSmokeCount                           *int      `json:"routeSmokeCount"`
-	ProofRouteCandidateInventoryEntryCount    *int      `json:"proofRouteCandidateInventoryEntryCount"`
-	ProofRouteCandidateRouteCount             *int      `json:"proofRouteCandidateRouteCount"`
-	SemanticInventoryEntryCount               *int      `json:"semanticInventoryEntryCount"`
-	SemanticRouteCount                        *int      `json:"semanticRouteCount"`
-	UnknownProofRouteCandidateRefCount        *int      `json:"unknownProofRouteCandidateRefCount"`
-	UnknownProofRouteCandidateRefs            *[]string `json:"unknownProofRouteCandidateRefs"`
-	UnknownSemanticCommandRefCount            *int      `json:"unknownSemanticCommandRefCount"`
-	UnknownSemanticCommandRefs                *[]string `json:"unknownSemanticCommandRefs"`
+	AdmittedInventoryEntryCount                       *int      `json:"admittedInventoryEntryCount"`
+	CommandCount                                      *int      `json:"commandCount"`
+	Commands                                          *[]string `json:"commands"`
+	CommandWithoutProofRouteCandidateCount            *int      `json:"commandWithoutProofRouteCandidateCount"`
+	CommandsWithoutProofRouteCandidate                *[]string `json:"commandsWithoutProofRouteCandidate"`
+	ContractOnlyCommandCount                          *int      `json:"contractOnlyCommandCount"`
+	ContractOnlyCommands                              *[]string `json:"contractOnlyCommands"`
+	CommandWithoutDeclaredSemanticFalsifierRouteCount *int      `json:"commandWithoutDeclaredSemanticFalsifierRouteCount"`
+	CommandsWithoutDeclaredSemanticFalsifierRoute     *[]string `json:"commandsWithoutDeclaredSemanticFalsifierRoute"`
+	RouteCount                                        *int      `json:"routeCount"`
+	RouteOnlyCommandCount                             *int      `json:"routeOnlyCommandCount"`
+	RouteOnlyCommands                                 *[]string `json:"routeOnlyCommands"`
+	RouteSmokeCount                                   *int      `json:"routeSmokeCount"`
+	ProofRouteCandidateInventoryEntryCount            *int      `json:"proofRouteCandidateInventoryEntryCount"`
+	ProofRouteCandidateRouteCount                     *int      `json:"proofRouteCandidateRouteCount"`
+	DeclaredSemanticFalsifierRouteEntryCount          *int      `json:"declaredSemanticFalsifierRouteEntryCount"`
+	UnknownProofRouteCandidateRefCount                *int      `json:"unknownProofRouteCandidateRefCount"`
+	UnknownProofRouteCandidateRefs                    *[]string `json:"unknownProofRouteCandidateRefs"`
+	UnknownDeclaredSemanticRouteCommandRefCount       *int      `json:"unknownDeclaredSemanticRouteCommandRefCount"`
+	UnknownDeclaredSemanticRouteCommandRefs           *[]string `json:"unknownDeclaredSemanticRouteCommandRefs"`
 }
 
 type coverageDeadZoneMetrics struct {
@@ -228,6 +242,7 @@ type selfEvidenceDocument[T any] struct {
 // SelfEvidenceSnapshot is constructed once and exposes no mutable document state.
 type SelfEvidenceSnapshot struct {
 	root                  string
+	cliContractCommands   []string
 	ciProvenance          selfEvidenceDocument[map[string]any]
 	coverageMetrics       selfEvidenceDocument[coverageMetricsEvidence]
 	execution             packageartifactrecord.Record
@@ -527,6 +542,14 @@ func selfEvidenceValid(root string) bool {
 }
 
 func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
+	cliContract, err := readTypedJSON[cliContractEvidence](root, cliContractPath)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	cliContractCommands, err := admittedCLIContractCommands(cliContract)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
 	ciProvenance, err := readSelfEvidenceDocument[map[string]any](root, ciProvenancePath)
 	if err != nil {
 		return SelfEvidenceSnapshot{}, err
@@ -568,6 +591,7 @@ func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
 	}
 	return SelfEvidenceSnapshot{
 		root:                  root,
+		cliContractCommands:   cliContractCommands,
 		ciProvenance:          ciProvenance,
 		coverageMetrics:       coverageMetrics,
 		execution:             execution,
@@ -593,7 +617,7 @@ func readSelfEvidenceDocument[T any](root string, path string) (selfEvidenceDocu
 }
 
 func (snapshot SelfEvidenceSnapshot) valid() bool {
-	return coverageMetricsRecordMatches(snapshot.coverageMetrics.value) &&
+	return coverageMetricsRecordMatches(snapshot.coverageMetrics.value, snapshot.cliContractCommands) &&
 		coverageMetricsMatchExecution(snapshot.coverageMetrics.value, snapshot.execution) &&
 		proofReceiptReportMatchesDocument(snapshot.proofReceiptReport, snapshot.proofReceipts) &&
 		proofReceiptDocumentMatches(snapshot.proofReceipts) &&
@@ -854,16 +878,23 @@ func packageArtifactCommandDigest(execution packageartifactrecord.Record) (strin
 	})
 }
 
-func coverageMetricsRecordMatches(record coverageMetricsEvidence) bool {
+func coverageMetricsRecordMatches(record coverageMetricsEvidence, cliContractCommands []string) bool {
 	return record.SchemaVersion == 1 &&
 		record.ArtifactKind == "proofkit.coverage-metrics.v1" &&
-		len(record.CLIContract) > 0 &&
+		coverageCLIContractMatches(record.CLIContract, cliContractCommands) &&
 		len(record.NonClaims) > 0 &&
 		len(record.ProofBindings) > 0 &&
 		len(record.Requirements) > 0 &&
 		len(record.WitnessPlan) > 0 &&
 		coverageDeadZonesEmpty(record.DeadZones) &&
-		commandRouteDefectsEmpty(record.CommandRoutes)
+		commandRouteDefectsEmpty(record.CommandRoutes, cliContractCommands)
+}
+
+func coverageCLIContractMatches(metrics coverageCLIContractMetrics, expected []string) bool {
+	return metrics.CommandCount != nil && metrics.Commands != nil &&
+		*metrics.CommandCount == len(expected) &&
+		reflect.DeepEqual(*metrics.Commands, expected) &&
+		sortedUniqueStringSlice(metrics.Commands)
 }
 
 func reportRecordMatches(record selfEvidenceReport, wantKind string, wantID string, wantState string, wantRuleIDs []string) bool {
@@ -955,27 +986,106 @@ func coverageDeadZonesEmpty(deadZones coverageDeadZoneMetrics) bool {
 		emptyStringSlice(deadZones.ScenarioWithoutRequirementIDs)
 }
 
-func commandRouteDefectsEmpty(routes coverageCommandRouteMetrics) bool {
+func commandRouteDefectsEmpty(routes coverageCommandRouteMetrics, cliContractCommands []string) bool {
 	return positiveInt(routes.AdmittedInventoryEntryCount) &&
 		positiveInt(routes.CommandCount) &&
 		positiveInt(routes.RouteCount) &&
 		nonNegativeInt(routes.RouteSmokeCount) &&
 		positiveInt(routes.ProofRouteCandidateInventoryEntryCount) &&
 		positiveInt(routes.ProofRouteCandidateRouteCount) &&
-		nonNegativeInt(routes.SemanticInventoryEntryCount) &&
-		nonNegativeInt(routes.SemanticRouteCount) &&
-		nonNegativeInt(routes.CommandWithoutSemanticFalsifierRouteCount) &&
+		nonNegativeInt(routes.DeclaredSemanticFalsifierRouteEntryCount) &&
+		commandRouteMetricsProducerReachable(routes, cliContractCommands) &&
+		countMatchesStringSlice(routes.CommandWithoutDeclaredSemanticFalsifierRouteCount, routes.CommandsWithoutDeclaredSemanticFalsifierRoute) &&
 		zeroInt(routes.CommandWithoutProofRouteCandidateCount) &&
 		zeroInt(routes.ContractOnlyCommandCount) &&
 		zeroInt(routes.RouteOnlyCommandCount) &&
 		zeroInt(routes.UnknownProofRouteCandidateRefCount) &&
-		zeroInt(routes.UnknownSemanticCommandRefCount) &&
+		zeroInt(routes.UnknownDeclaredSemanticRouteCommandRefCount) &&
 		emptyStringSlice(routes.CommandsWithoutProofRouteCandidate) &&
 		emptyStringSlice(routes.ContractOnlyCommands) &&
 		emptyStringSlice(routes.RouteOnlyCommands) &&
 		emptyStringSlice(routes.UnknownProofRouteCandidateRefs) &&
-		nonNilStringSlice(routes.CommandsWithoutSemanticFalsifierRoute) &&
-		emptyStringSlice(routes.UnknownSemanticCommandRefs)
+		emptyStringSlice(routes.UnknownDeclaredSemanticRouteCommandRefs)
+}
+
+func commandRouteMetricsProducerReachable(routes coverageCommandRouteMetrics, cliContractCommands []string) bool {
+	if routes.AdmittedInventoryEntryCount == nil ||
+		routes.CommandCount == nil ||
+		routes.Commands == nil ||
+		routes.CommandWithoutProofRouteCandidateCount == nil ||
+		routes.CommandsWithoutDeclaredSemanticFalsifierRoute == nil ||
+		routes.RouteCount == nil ||
+		routes.RouteSmokeCount == nil ||
+		routes.ProofRouteCandidateInventoryEntryCount == nil ||
+		routes.ProofRouteCandidateRouteCount == nil ||
+		routes.DeclaredSemanticFalsifierRouteEntryCount == nil ||
+		routes.CommandWithoutDeclaredSemanticFalsifierRouteCount == nil {
+		return false
+	}
+	admitted := *routes.AdmittedInventoryEntryCount
+	commands := *routes.CommandCount
+	routeCount := *routes.RouteCount
+	routeSmokeCount := *routes.RouteSmokeCount
+	candidateEntries := *routes.ProofRouteCandidateInventoryEntryCount
+	candidateRoutes := *routes.ProofRouteCandidateRouteCount
+	declaredEntries := *routes.DeclaredSemanticFalsifierRouteEntryCount
+	missingCandidates := *routes.CommandWithoutProofRouteCandidateCount
+	missingDeclared := *routes.CommandWithoutDeclaredSemanticFalsifierRouteCount
+	if admitted < 0 || commands < 0 || routeCount < 0 || routeSmokeCount < 0 ||
+		candidateEntries < 0 || candidateRoutes < 0 || declaredEntries < 0 ||
+		missingCandidates < 0 || missingDeclared < 0 ||
+		admitted != routeCount || candidateEntries != candidateRoutes ||
+		candidateEntries > admitted || routeSmokeCount != admitted-candidateEntries ||
+		declaredEntries != 0 || missingCandidates > commands || missingDeclared != commands ||
+		candidateRoutes < commands-missingCandidates || len(*routes.Commands) != commands ||
+		!reflect.DeepEqual(*routes.Commands, *routes.CommandsWithoutDeclaredSemanticFalsifierRoute) ||
+		!reflect.DeepEqual(*routes.Commands, cliContractCommands) {
+		return false
+	}
+	return sortedUniqueStringSlice(routes.Commands) &&
+		sortedUniqueStringSlice(routes.CommandsWithoutDeclaredSemanticFalsifierRoute) &&
+		sortedUniqueStringSlice(routes.CommandsWithoutProofRouteCandidate) &&
+		sortedUniqueStringSlice(routes.ContractOnlyCommands) &&
+		sortedUniqueStringSlice(routes.RouteOnlyCommands) &&
+		sortedUniqueStringSlice(routes.UnknownProofRouteCandidateRefs) &&
+		sortedUniqueStringSlice(routes.UnknownDeclaredSemanticRouteCommandRefs)
+}
+
+func admittedCLIContractCommands(contract cliContractEvidence) ([]string, error) {
+	if len(contract.Commands) == 0 {
+		return nil, fmt.Errorf("%s must declare at least one command", cliContractPath)
+	}
+	commands := make([]string, 0, len(contract.Commands))
+	for index, command := range contract.Commands {
+		value, err := admit.RuleID(command.Command, fmt.Sprintf("%s commands[%d] command", cliContractPath, index))
+		if err != nil {
+			return nil, err
+		}
+		commands = append(commands, value)
+	}
+	sort.Strings(commands)
+	for index := 1; index < len(commands); index++ {
+		if commands[index-1] == commands[index] {
+			return nil, fmt.Errorf("%s commands must be unique", cliContractPath)
+		}
+	}
+	return commands, nil
+}
+
+func sortedUniqueStringSlice(values *[]string) bool {
+	if values == nil {
+		return false
+	}
+	for index, value := range *values {
+		if value == "" || (index > 0 && (*values)[index-1] >= value) {
+			return false
+		}
+	}
+	return true
+}
+
+func countMatchesStringSlice(count *int, values *[]string) bool {
+	return count != nil && values != nil && *count >= 0 && *count == len(*values)
 }
 
 func positiveInt(value *int) bool {
@@ -992,10 +1102,6 @@ func nonNegativeInt(value *int) bool {
 
 func emptyStringSlice(value *[]string) bool {
 	return value != nil && len(*value) == 0
-}
-
-func nonNilStringSlice(value *[]string) bool {
-	return value != nil
 }
 
 func numericValueIsZero(value any) bool {

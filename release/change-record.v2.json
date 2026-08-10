@@ -1,50 +1,64 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.2.0",
-  "version": "0.2.1",
-  "changeClass": "compatible",
-  "breakingChanges": [],
+  "previousVersion": "0.2.1",
+  "version": "0.3.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.authoring.lossless-reference-projection",
+      "summary": "Requirement authoring plan output advances from schema v1 to v2, requires the complete admitted authoringRefs projection, and composes current and candidate requirement records only from canonical requirement-source owner projections."
+    },
+    {
+      "changeId": "proofkit.coverage.declaration-only-vocabulary",
+      "summary": "Caller-authored test routes, falsifier, oracle-signal, and supersession metadata now use declaration-only classes and mapped states; mapping no longer emits covered, verified, semantic-execution, oracle-review, or dominance-proof vocabulary, and related classifications and coverage metric fields are renamed."
+    },
+    {
+      "changeId": "proofkit.coverage.output-parent-reference-closure",
+      "summary": "Requirement coverage output advances from schema v1 to v2, retains complete test projections on requirement, owner-invariant, command, and unmapped-inventory surfaces, and re-admits the exact root and row shapes, row metadata, command-owned non-claims, canonical row order, coverage-basis owner scope and inventory commitments, inventory warnings and failures, compact scenario route unions, command state, parent references, retained unknown-reference diagnostics, and declared dead-zone diagnostics."
+    },
+    {
+      "changeId": "proofkit.migration.caller-declared-parity",
+      "summary": "Migration parity input statuses, diagnostics, and summaries now identify caller-declared claims, preserve each record's admitted non-claims, and no longer imply that Proofkit computed native parity."
+    },
+    {
+      "changeId": "proofkit.proof.requirement-state-vocabulary-closure",
+      "summary": "Requirement proof states now use one closed vocabulary across structured bindings, compact contracts, and re-admitted coverage output; arbitrary rule IDs and assurance-sounding states are rejected."
+    }
+  ],
   "additions": [
     {
-      "changeId": "proofkit.admission.canonical-boundary-hardening",
-      "summary": "Shared admission now preserves exact typed JSON numbers and field spelling, separates canonical path-array policy from prose-array policy, rejects complete secret-shaped path and Windows executable alias classes, and requires higher receipt-trust ranks to refine lower-rank obligations."
+      "changeId": "proofkit.coverage.classification-contract-closure",
+      "summary": "The requirement coverage output contract now declares every reachable diagnostic classification, including proof_route_candidate_only and the fail-closed unclassified_gap fallback."
     },
     {
-      "changeId": "proofkit.cli.argument-constraint-closure",
-      "summary": "The public CLI contract and generated help now expose descriptor-owned singleton, mutual-exclusion, presence, enum-domain, and value-dependent flag constraints, including requirement-browser session, scope, view, host, and cross-flag admission."
-    },
-    {
-      "changeId": "proofkit.coverage.witness-anti-vacuity",
-      "summary": "Self-hosting coverage now rejects Go witness selectors that expose no statically reachable failure-capable candidate or contain statically resolved testing.T skip calls, including direct aliases and helper propagation; this remains candidate evidence rather than semantic proof."
-    },
-    {
-      "changeId": "proofkit.proof.delegation-authority",
-      "summary": "Proof obligation algebra now fails closed on unresolved delegation references and cross-requirement child edges until an owner-admitted delegation authority exists."
-    },
-    {
-      "changeId": "proofkit.release.migration-support-baseline",
-      "summary": "Release-history migration support starts at 0.2.0, and any future cumulative plan must be derived from contiguous owner-reviewed per-release records without backfilling pre-baseline release history."
-    },
-    {
-      "changeId": "proofkit.release.npm-predecessor-lineage",
-      "summary": "Release candidate preflight binds a new candidate previousVersion to npm latest, while an exact already-published idempotent candidate requires npm latest to equal the candidate version."
-    },
-    {
-      "changeId": "proofkit.release.registry-authority-closure",
-      "summary": "Release metadata now promotes npm publication only from repository-produced typed registry evidence whose unique package set exactly matches retained provider records and local candidate identity and bytes."
+      "changeId": "proofkit.release.coverage-metric-reachability",
+      "summary": "Release closeout now uses overflow-safe exact coverage-producer relations for inventory entries, route classes, proof-route candidates, the complete command inventory, and commands missing declaration-only routes, and binds both command projections to the actual CLI contract inventory from the same source snapshot."
     }
   ],
   "migration": {
-    "required": false,
-    "steps": []
+    "required": true,
+    "steps": [
+      "Replace test inventory evidenceClass values semantic_falsifier, contract_admission, and property_or_fuzz with declared_semantic_falsifier_route, declared_contract_admission_route, and declared_property_or_fuzz_route.",
+      "Replace test inventory summary fields semanticFalsifierCount and weakOracleFailureCount with declaredSemanticFalsifierRouteCount and incompleteDeclaredOracleMetadataFailureCount; replace diagnostics missing_semantic_anchor and weak_or_empty_oracle with missing_declared_route_anchor and incomplete_declared_oracle_metadata; and replace rule IDs test_inventory.semantic_entries_have_anchors and test_inventory.strong_oracles with test_inventory.declared_routes_have_anchors and test_inventory.declared_oracle_metadata.",
+      "Within test-evidence-inventory-discovery-draft output, replace summary field weakOracleWarningCount with missingDeclaredAssertionSignalWarningCount, warning and action type weak_or_empty_oracle with missing_declared_assertion_signal, candidate quality finding suffix weak-oracle with missing-declared-assertion-signal, class empty_oracle with missing_edge, and suffix missing-semantic-anchor with missing-declared-route-anchor.",
+      "Within agent-route inspect_coverage stopConditions, replace weak-oracle language with missing declared assertion-signal language; treat the condition as routing guidance rather than an oracle-quality classification.",
+      "Replace falsifier field supersessionProofRef with supersessionDeclarationRef, diagnostic reasons missing_dominance_proof and unowned_dominance_proof with missing_supersession_declaration and unowned_supersession_declaration, and rule ID test_inventory.no_duplicate_falsifiers with test_inventory.declared_falsifier_supersession_consistency.",
+      "Replace requirement coverage states covered_by_semantic_falsifier, covered_by_property_or_fuzz, covered_by_contract_admission, covered_by_governance_invariant_nonproduct, command_semantic_falsifier_present, and missing_command_semantic_falsifier with mapped_to_declared_semantic_falsifier_route, mapped_to_declared_property_or_fuzz_route, mapped_to_declared_contract_admission_route, mapped_to_declared_governance_or_release_route_nonproduct, command_declared_semantic_falsifier_route_present, and missing_command_declared_semantic_falsifier_route; replace classification missing_semantic_test with missing_declared_test_route.",
+      "Consume proofkit.requirement-coverage-view.output.v2 with schemaVersion 2; preserve every admitted test-entry field, retain entries without selected parents in the required unmappedTests root array, consume the required coverageBasis owner scope, full-repository out-of-scope source identities, and retained-inventory digest, and consume compact scenarios with required verifyCommands and witnessSelectors arrays. Output re-admission now requires exact root and row shapes, exact row metadata, command-owned non-claims, canonical row order, owner-scoped compact scenario identities, exact missing-inventory warnings, and rejects owner-scope, inventory-failure, proof-route union, parent-reference, repeated-test, command-state, retained unknown-reference, mutable-fragment, dead-zone, and row-derived or scope-derived diagnostic drift; coverageBasis does not authenticate source inputs or producer identity.",
+      "Use only explicitly_deferred, not_bound, or witness_backed for requirement proofState values; compact binding rows contain positive and falsification witnesses and therefore require witness_backed proof_contract_state. Arbitrary rule IDs and assurance-sounding states are no longer admitted.",
+      "Replace coverage metric fields commandWithoutSemanticFalsifierRouteCount, commandsWithoutSemanticFalsifierRoute, semanticInventoryEntryCount, unknownSemanticCommandRefCount, and unknownSemanticCommandRefs with commandWithoutDeclaredSemanticFalsifierRouteCount, commandsWithoutDeclaredSemanticFalsifierRoute, declaredSemanticFalsifierRouteEntryCount, unknownDeclaredSemanticRouteCommandRefCount, and unknownDeclaredSemanticRouteCommandRefs; stop consuming removed semanticRouteCount, consume commandRoutes.commands and cliContract.commands, and require both inventories to equal the actual CLI contract command inventory from the same source snapshot.",
+      "Replace migration parity statuses matched, mismatched, not_comparable, and not_run with caller_declared_match, caller_declared_mismatch, caller_declared_not_comparable, and caller_declared_not_run.",
+      "Replace migration parity output fields admittedParityEvidenceCount, matchedCount, mismatchedCount, notComparableCount, notRunCount, and admittedParityEvidenceRefs with admittedParityClaimCount, callerDeclaredMatchCount, callerDeclaredMismatchCount, callerDeclaredNotComparableCount, callerDeclaredNotRunCount, and admittedParityClaimRefs; consume each migrationParity record's required nonClaims projection.",
+      "Consume proofkit.requirement-authoring-plan.output.v2 with schemaVersion 2, preserve its required authoringRefs array, treat nonAuthoritativeAdmissionPreview.requirementSourcePreview as a canonical requirement-source projection in which absent optional fields are omitted, and handle candidateRequirement owner-admission failures as input errors before composition."
+    ]
   },
   "platformRequirements": [
     "Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64."
   ],
   "knownLimitations": [
-    "TSX source parsing remains unsupported.",
-    "Static route coverage does not prove semantic execution coverage.",
-    "Release-history migration support starts at 0.2.0; no machine release-history chain is claimed for earlier releases."
+    "Execution-backed semantic command evidence remains open under COVERAGE-01; declared routes prove mapping only.",
+    "Requirement-source v2 representation and any textual DSL remain unselected until the typed-model and codec replacement gates pass.",
+    "TSX source parsing remains unsupported."
   ],
   "rollback": {
     "strategy": "previous_admitted_version"

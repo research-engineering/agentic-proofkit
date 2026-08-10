@@ -63,35 +63,35 @@ func TestReadRequirementsRequiresOwnerAdmission(t *testing.T) {
 	}
 }
 
-func TestBuildCommandRouteMetricsReportsMissingSemanticRoutes(t *testing.T) {
+func TestBuildCommandRouteMetricsReportsMissingDeclaredSemanticRoutes(t *testing.T) {
 	metrics := buildCommandRouteMetrics(cliContractWithCommands("covered", "z-route-only", "a-route-only"), []app.CommandCoverageSummary{
 		{Command: "covered", CommandRef: app.CommandCoverageCommandRef("covered"), RouteCount: 2, ProofRouteCandidateCount: 1},
 		{Command: "z-route-only", CommandRef: app.CommandCoverageCommandRef("z-route-only"), RouteCount: 1, ProofRouteCandidateCount: 1},
 		{Command: "a-route-only", CommandRef: app.CommandCoverageCommandRef("a-route-only"), RouteCount: 1, ProofRouteCandidateCount: 1},
 	}, testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
-		{CommandRefs: []string{app.CommandCoverageCommandRef("covered")}, EvidenceClass: "semantic_falsifier"},
+		{CommandRefs: []string{app.CommandCoverageCommandRef("covered")}, EvidenceClass: "declared_semantic_falsifier_route"},
 		{CommandRefs: []string{app.CommandCoverageCommandRef("z-route-only")}, EvidenceClass: "proof_route_candidate"},
 		{CommandRefs: []string{app.CommandCoverageCommandRef("covered")}, EvidenceClass: "routing_smoke_nonclaim"},
 	}})
 
-	if metrics.CommandCount != 3 || metrics.RouteCount != 4 || metrics.ProofRouteCandidateRouteCount != 3 || metrics.SemanticRouteCount != 0 || metrics.RouteSmokeCount != 1 {
+	if metrics.CommandCount != 3 || metrics.RouteCount != 4 || metrics.ProofRouteCandidateRouteCount != 3 || metrics.RouteSmokeCount != 1 {
 		t.Fatalf("unexpected metrics: %#v", metrics)
 	}
-	if metrics.AdmittedInventoryEntryCount != 3 || metrics.ProofRouteCandidateInventoryEntryCount != 1 || metrics.SemanticInventoryEntryCount != 1 {
+	if metrics.AdmittedInventoryEntryCount != 3 || metrics.ProofRouteCandidateInventoryEntryCount != 1 || metrics.DeclaredSemanticFalsifierRouteEntryCount != 1 {
 		t.Fatalf("unexpected inventory metrics: %#v", metrics)
 	}
-	if metrics.CommandWithoutSemanticFalsifierRouteCount != 2 {
-		t.Fatalf("missing semantic route count=%d, want 2", metrics.CommandWithoutSemanticFalsifierRouteCount)
+	if metrics.CommandWithoutDeclaredSemanticFalsifierRouteCount != 2 {
+		t.Fatalf("missing declared semantic route count=%d, want 2", metrics.CommandWithoutDeclaredSemanticFalsifierRouteCount)
 	}
 	want := []string{"a-route-only", "z-route-only"}
-	if strings.Join(metrics.CommandsWithoutSemanticFalsifierRoute, ",") != strings.Join(want, ",") {
-		t.Fatalf("missing commands=%#v, want %#v", metrics.CommandsWithoutSemanticFalsifierRoute, want)
+	if strings.Join(metrics.CommandsWithoutDeclaredSemanticFalsifierRoute, ",") != strings.Join(want, ",") {
+		t.Fatalf("missing commands=%#v, want %#v", metrics.CommandsWithoutDeclaredSemanticFalsifierRoute, want)
 	}
 }
 
-func TestBuildCommandRouteMetricsRequiresMatchingSemanticInventoryCommandRef(t *testing.T) {
+func TestBuildCommandRouteMetricsRequiresMatchingDeclaredSemanticInventoryCommandRef(t *testing.T) {
 	summaries := []app.CommandCoverageSummary{
-		{Command: "target", CommandRef: app.CommandCoverageCommandRef("target"), RouteCount: 1, SemanticRouteCount: 1},
+		{Command: "target", CommandRef: app.CommandCoverageCommandRef("target"), RouteCount: 1},
 	}
 	contract := cliContractWithCommands("target")
 	cases := []struct {
@@ -101,13 +101,13 @@ func TestBuildCommandRouteMetricsRequiresMatchingSemanticInventoryCommandRef(t *
 		{
 			name: "mismatched command ref",
 			inventory: testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
-				{CommandRefs: []string{app.CommandCoverageCommandRef("other")}, EvidenceClass: "semantic_falsifier"},
+				{CommandRefs: []string{app.CommandCoverageCommandRef("other")}, EvidenceClass: "declared_semantic_falsifier_route"},
 			}},
 		},
 		{
 			name: "unknown command ref",
 			inventory: testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
-				{CommandRefs: []string{"proofkit.cli.unknown"}, EvidenceClass: "semantic_falsifier"},
+				{CommandRefs: []string{"proofkit.cli.unknown"}, EvidenceClass: "declared_semantic_falsifier_route"},
 			}},
 		},
 		{
@@ -125,47 +125,48 @@ func TestBuildCommandRouteMetricsRequiresMatchingSemanticInventoryCommandRef(t *
 		{
 			name: "contract evidence is not semantic command falsifier",
 			inventory: testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
-				{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "contract_admission"},
+				{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "declared_contract_admission_route"},
 			}},
 		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {
 			metrics := buildCommandRouteMetrics(contract, summaries, item.inventory)
-			if metrics.CommandWithoutSemanticFalsifierRouteCount != 1 ||
-				strings.Join(metrics.CommandsWithoutSemanticFalsifierRoute, ",") != "target" {
-				t.Fatalf("metrics=%#v, want target missing semantic command coverage", metrics)
+			if metrics.CommandWithoutDeclaredSemanticFalsifierRouteCount != 1 ||
+				strings.Join(metrics.CommandsWithoutDeclaredSemanticFalsifierRoute, ",") != "target" {
+				t.Fatalf("metrics=%#v, want target missing declared semantic route", metrics)
 			}
 		})
 	}
 }
 
-func TestBuildCommandRouteMetricsReportsUnknownSemanticCommandRefs(t *testing.T) {
+func TestBuildCommandRouteMetricsReportsUnknownDeclaredSemanticRouteCommandRefs(t *testing.T) {
 	summaries := []app.CommandCoverageSummary{
-		{Command: "target", CommandRef: app.CommandCoverageCommandRef("target"), RouteCount: 1, SemanticRouteCount: 1},
+		{Command: "target", CommandRef: app.CommandCoverageCommandRef("target"), RouteCount: 1},
 	}
 	metrics := buildCommandRouteMetrics(cliContractWithCommands("target"), summaries, testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
-		{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "semantic_falsifier"},
-		{CommandRefs: []string{"proofkit.cli.unknown"}, EvidenceClass: "semantic_falsifier"},
+		{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "declared_semantic_falsifier_route"},
+		{CommandRefs: []string{app.CommandCoverageCommandRef("target")}, EvidenceClass: "proof_route_candidate"},
+		{CommandRefs: []string{"proofkit.cli.unknown"}, EvidenceClass: "declared_semantic_falsifier_route"},
 	}})
 
-	if metrics.CommandWithoutSemanticFalsifierRouteCount != 0 {
+	if metrics.CommandWithoutDeclaredSemanticFalsifierRouteCount != 0 {
 		t.Fatalf("covered target was reported missing: %#v", metrics)
 	}
-	if metrics.UnknownSemanticCommandRefCount != 1 || strings.Join(metrics.UnknownSemanticCommandRefs, ",") != "proofkit.cli.unknown" {
+	if metrics.UnknownDeclaredSemanticRouteCommandRefCount != 1 || strings.Join(metrics.UnknownDeclaredSemanticRouteCommandRefs, ",") != "proofkit.cli.unknown" {
 		t.Fatalf("unknown semantic command refs not reported: %#v", metrics)
 	}
-	if err := requireCommandRouteInventoryClosure(metrics); err == nil || !strings.Contains(err.Error(), "unknownSemanticRefs") {
+	if err := requireCommandRouteInventoryClosure(metrics); err == nil || !strings.Contains(err.Error(), "unknownDeclaredSemanticRouteRefs") {
 		t.Fatalf("requireCommandRouteInventoryClosure() error=%v, want unknown ref failure", err)
 	}
 }
 
 func TestBuildCommandRouteMetricsReportsContractRouteDrift(t *testing.T) {
 	metrics := buildCommandRouteMetrics(cliContractWithCommands("contract-only", "shared"), []app.CommandCoverageSummary{
-		{Command: "route-only", CommandRef: app.CommandCoverageCommandRef("route-only"), RouteCount: 1, SemanticRouteCount: 1},
-		{Command: "shared", CommandRef: app.CommandCoverageCommandRef("shared"), RouteCount: 1, SemanticRouteCount: 1},
+		{Command: "route-only", CommandRef: app.CommandCoverageCommandRef("route-only"), RouteCount: 1},
+		{Command: "shared", CommandRef: app.CommandCoverageCommandRef("shared"), RouteCount: 1},
 	}, testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{
-		{CommandRefs: []string{app.CommandCoverageCommandRef("shared")}, EvidenceClass: "semantic_falsifier"},
+		{CommandRefs: []string{app.CommandCoverageCommandRef("shared")}, EvidenceClass: "declared_semantic_falsifier_route"},
 	}})
 
 	if got := strings.Join(metrics.ContractOnlyCommands, ","); got != "contract-only" {
@@ -184,7 +185,7 @@ func TestReadCommandCoverageInventoryRejectsUnanchoredCandidate(t *testing.T) {
 	firstCandidateInventoryEntry(t, mutated)["ownerInvariantRefs"] = []any{}
 
 	_, err := readCommandCoverageInventoryFrom(mutated)
-	if err == nil || !strings.Contains(err.Error(), "missing_semantic_anchor") {
+	if err == nil || !strings.Contains(err.Error(), "missing_declared_route_anchor") {
 		t.Fatalf("readCommandCoverageInventoryFrom() error = %v, want missing candidate anchor failure", err)
 	}
 }
@@ -227,13 +228,13 @@ func TestRunWritesCurrentMetricsWhenCommandCoverageInventoryFails(t *testing.T) 
 		ArtifactKind:  "proofkit.coverage-metrics.v1",
 		SchemaVersion: 1,
 		CommandRoutes: commandRouteMetrics{
-			CommandWithoutSemanticFalsifierRouteCount: 0,
+			CommandWithoutDeclaredSemanticFalsifierRouteCount: 0,
 		},
 	}, nil); err != nil {
 		t.Fatalf("write stale success: %v", err)
 	}
 	err = run()
-	if err == nil || !strings.Contains(err.Error(), "missing_semantic_anchor") {
+	if err == nil || !strings.Contains(err.Error(), "missing_declared_route_anchor") {
 		t.Fatalf("run() error = %v, want failed inventory error", err)
 	}
 	content, err := os.ReadFile(outputPath)
@@ -241,8 +242,8 @@ func TestRunWritesCurrentMetricsWhenCommandCoverageInventoryFails(t *testing.T) 
 		t.Fatalf("read current metrics: %v", err)
 	}
 	if !strings.Contains(string(content), `"admittedInventoryEntryCount": 0`) ||
-		!strings.Contains(string(content), `"commandsWithoutSemanticFalsifierRoute"`) ||
-		strings.Contains(string(content), `"commandWithoutSemanticFalsifierRouteCount": 0`) {
+		!strings.Contains(string(content), `"commandsWithoutDeclaredSemanticFalsifierRoute"`) ||
+		strings.Contains(string(content), `"commandWithoutDeclaredSemanticFalsifierRouteCount": 0`) {
 		t.Fatalf("failed inventory did not replace stale success artifact:\n%s", string(content))
 	}
 }
@@ -272,7 +273,7 @@ func TestRunWritesCurrentMetricsWhenCommandRouteInventoryBuilderFails(t *testing
 		ArtifactKind:  "proofkit.coverage-metrics.v1",
 		SchemaVersion: 1,
 		CommandRoutes: commandRouteMetrics{
-			CommandWithoutSemanticFalsifierRouteCount: 0,
+			CommandWithoutDeclaredSemanticFalsifierRouteCount: 0,
 		},
 	}, nil); err != nil {
 		t.Fatalf("write stale success: %v", err)
@@ -286,7 +287,7 @@ func TestRunWritesCurrentMetricsWhenCommandRouteInventoryBuilderFails(t *testing
 		t.Fatalf("read current metrics: %v", err)
 	}
 	if !strings.Contains(string(content), `"admittedInventoryEntryCount": 0`) ||
-		strings.Contains(string(content), `"commandWithoutSemanticFalsifierRouteCount": 0`) {
+		strings.Contains(string(content), `"commandWithoutDeclaredSemanticFalsifierRouteCount": 0`) {
 		t.Fatalf("failed route inventory builder did not replace stale success artifact:\n%s", string(content))
 	}
 }
@@ -299,7 +300,7 @@ func TestEachCommandRouteClosureConjunctHasIndependentFalsifier(t *testing.T) {
 	}{
 		{name: "missing candidate", metrics: commandRouteMetrics{CommandsWithoutProofRouteCandidate: []string{"target"}}, want: "missingCandidates=[target]"},
 		{name: "unknown candidate ref", metrics: commandRouteMetrics{UnknownProofRouteCandidateRefs: []string{"proofkit.unknown"}}, want: "unknownCandidateRefs=[proofkit.unknown]"},
-		{name: "unknown semantic ref", metrics: commandRouteMetrics{UnknownSemanticCommandRefs: []string{"proofkit.unknown"}}, want: "unknownSemanticRefs=[proofkit.unknown]"},
+		{name: "unknown declared route ref", metrics: commandRouteMetrics{UnknownDeclaredSemanticRouteCommandRefs: []string{"proofkit.unknown"}}, want: "unknownDeclaredSemanticRouteRefs=[proofkit.unknown]"},
 		{name: "contract only", metrics: commandRouteMetrics{ContractOnlyCommands: []string{"contract-only"}}, want: "contractOnly=[contract-only]"},
 		{name: "route only", metrics: commandRouteMetrics{RouteOnlyCommands: []string{"route-only"}}, want: "routeOnly=[route-only]"},
 	}
@@ -401,7 +402,10 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.workflow-package-gate-oracle",
 		"proofkit.supply-chain-quality.workflow-source-oracles",
 		"proofkit.spec-proof-core.adoption-contract-envelope-cli-abi",
+		"proofkit.spec-proof-core.declared-route-mapping-without-assurance",
+		"proofkit.spec-proof-core.requirement-authoring-ref-provenance",
 		"proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
+		"proofkit.spec-proof-core.test-inventory-and-coverage-view",
 	} {
 		index := -1
 		for candidate := range bindings.Bindings {
@@ -497,7 +501,10 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs",
 		"proofkit.supply-chain-quality.workflow-source-oracles",
 		"proofkit.spec-proof-core.adoption-contract-envelope-cli-abi",
+		"proofkit.spec-proof-core.declared-route-mapping-without-assurance",
+		"proofkit.spec-proof-core.requirement-authoring-ref-provenance",
 		"proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
+		"proofkit.spec-proof-core.test-inventory-and-coverage-view",
 	} {
 		index := -1
 		for candidate := range bindings.Bindings {
@@ -517,6 +524,45 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 				!strings.Contains(err.Error(), ", want exact ") {
 				t.Fatalf("relocated witness path error=%v", err)
 			}
+		})
+	}
+}
+
+func TestExactSelectorInventoryRejectsExistingUnrelatedTests(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	bindings, err := readJSON[bindingFile](filepath.Join(root, "proofkit", "requirement-bindings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	unrelated := map[string]witnessSelector{
+		"proofkit.spec-proof-core.declared-route-mapping-without-assurance": {
+			Selector: "TestBuildJSONRequiresExactlyOneProofInput",
+			Command:  "go test ./internal/command/requirementcoverageview -run '^TestBuildJSONRequiresExactlyOneProofInput$'",
+		},
+		"proofkit.spec-proof-core.requirement-authoring-ref-provenance": {
+			Selector: "TestBuildDoesNotReadAuthoringRefPaths",
+			Command:  "go test ./internal/command/requirementauthoringplan -run '^TestBuildDoesNotReadAuthoringRefPaths$'",
+		},
+		"proofkit.spec-proof-core.test-inventory-and-coverage-view": {
+			Selector: "TestBuildJSONRequiresExactlyOneProofInput",
+			Command:  "go test ./internal/command/requirementcoverageview -run '^TestBuildJSONRequiresExactlyOneProofInput$'",
+		},
+	}
+	for scenarioID, replacement := range unrelated {
+		t.Run(scenarioID, func(t *testing.T) {
+			mutated := cloneBindingFile(bindings)
+			for index := range mutated.Bindings {
+				if mutated.Bindings[index].ScenarioID != scenarioID {
+					continue
+				}
+				mutated.Bindings[index].WitnessSelectors = []witnessSelector{replacement}
+				err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+				if err == nil || !strings.Contains(err.Error(), "witness selectors=") {
+					t.Fatalf("unrelated existing selector error=%v", err)
+				}
+				return
+			}
+			t.Fatalf("binding %s is missing", scenarioID)
 		})
 	}
 }
@@ -712,6 +758,19 @@ func TestBuildMetricsReportsScenarioWithoutRequirement(t *testing.T) {
 	}
 }
 
+func TestBuildMetricsProjectsExactCLIContractCommandInventory(t *testing.T) {
+	metrics := buildMetrics(
+		nil,
+		bindingFile{},
+		witnessPlan{},
+		cliContractWithCommands("z-command", "a-command"),
+		testevidenceinventory.Inventory{},
+	)
+	if metrics.CLIContract.CommandCount != 2 || strings.Join(metrics.CLIContract.Commands, ",") != "a-command,z-command" {
+		t.Fatalf("CLIContract=%#v, want exact sorted command inventory", metrics.CLIContract)
+	}
+}
+
 func TestWriteMetricsWritesCurrentReportBeforeRouteFailure(t *testing.T) {
 	root := t.TempDir()
 	oldwd, err := os.Getwd()
@@ -731,8 +790,8 @@ func TestWriteMetricsWritesCurrentReportBeforeRouteFailure(t *testing.T) {
 		ArtifactKind:  "proofkit.coverage-metrics.v1",
 		SchemaVersion: 1,
 		CommandRoutes: commandRouteMetrics{
-			CommandWithoutSemanticFalsifierRouteCount: 1,
-			CommandsWithoutSemanticFalsifierRoute:     []string{"route-only"},
+			CommandWithoutDeclaredSemanticFalsifierRouteCount: 1,
+			CommandsWithoutDeclaredSemanticFalsifierRoute:     []string{"route-only"},
 		},
 	}, errors.New("route failure"))
 	if err == nil || !strings.Contains(err.Error(), "route failure") {
@@ -743,7 +802,7 @@ func TestWriteMetricsWritesCurrentReportBeforeRouteFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read output: %v", err)
 	}
-	if !strings.Contains(string(content), `"commandsWithoutSemanticFalsifierRoute"`) || !strings.Contains(string(content), `"route-only"`) {
+	if !strings.Contains(string(content), `"commandsWithoutDeclaredSemanticFalsifierRoute"`) || !strings.Contains(string(content), `"route-only"`) {
 		t.Fatalf("output did not preserve current route failure report:\n%s", string(content))
 	}
 }
@@ -784,10 +843,10 @@ func TestBuildMetricsCarriesRealCommandRouteCandidatesAndNonClaim(t *testing.T) 
 	if metrics.CommandRoutes.CommandCount == 0 || metrics.CommandRoutes.ProofRouteCandidateRouteCount == 0 || metrics.CommandRoutes.ProofRouteCandidateInventoryEntryCount == 0 {
 		t.Fatalf("real command route inventory was not loaded: %#v", metrics.CommandRoutes)
 	}
-	if metrics.CommandRoutes.SemanticRouteCount != 0 || metrics.CommandRoutes.SemanticInventoryEntryCount != 0 {
+	if metrics.CommandRoutes.DeclaredSemanticFalsifierRouteEntryCount != 0 {
 		t.Fatalf("static command routes were counted as semantic evidence: %#v", metrics.CommandRoutes)
 	}
-	if metrics.CommandRoutes.CommandWithoutSemanticFalsifierRouteCount != metrics.CommandRoutes.CommandCount {
+	if metrics.CommandRoutes.CommandWithoutDeclaredSemanticFalsifierRouteCount != metrics.CommandRoutes.CommandCount {
 		t.Fatalf("candidate-only commands did not remain missing semantic evidence: %#v", metrics.CommandRoutes)
 	}
 	if !containsNonClaim(metrics.NonClaims, "do not execute command route candidates") {

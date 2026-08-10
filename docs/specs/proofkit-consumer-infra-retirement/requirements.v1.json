@@ -143,7 +143,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-006",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "invariant": "Migration parity admission validates caller-provided parity evidence shape, source/target closure, typed equivalence dimensions, and matched digest equality without owning evidence authenticity, freshness, semantic correctness, or retirement approval.",
+      "invariant": "Migration parity admission validates caller-provided parity-claim shape, source/target closure, typed equivalence dimensions, consistency between caller-declared status and caller-supplied digests, and lossless record-level non-claim projection; statuses, admitted parity claim refs, and status-derived parity counters remain explicitly caller-declared, structural and failure counts remain Proofkit-computed admission facts, and the report does not own digest computation, evidence authenticity, freshness, semantic correctness, or retirement approval.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [

@@ -124,7 +124,7 @@ func TestCompleteFixtureSelfEvidenceSnapshotMatches(t *testing.T) {
 		name string
 		ok   bool
 	}{
-		{name: "coverage metrics", ok: coverageMetricsRecordMatches(snapshot.coverageMetrics.value)},
+		{name: "coverage metrics", ok: coverageMetricsRecordMatches(snapshot.coverageMetrics.value, snapshot.cliContractCommands)},
 		{name: "proof receipt report", ok: reportRecordMatches(snapshot.proofReceiptReport.value, "proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "passed", []string{"proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"})},
 		{name: "proof receipts", ok: proofReceiptDocumentMatches(snapshot.proofReceipts)},
 		{name: "producer report", ok: reportRecordMatches(snapshot.producerReport.value, "proofkit.receipt-producer-admission", "proofkit.receipt-producer-policy", "passed", []string{"proofkit.receipt-producer-admission.boundary", "proofkit.receipt-producer-admission.coverage", "proofkit.receipt-producer-admission.receipts"})},
@@ -179,6 +179,9 @@ func TestBuildInputRejectsMixedSelfEvidenceIdentity(t *testing.T) {
 }
 
 func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
+	if !commandRouteMetricsProducerReachable(producerReachableCommandRouteMetricsFixture(), producerReachableCLIContractCommands()) {
+		t.Fatal("release closeout rejected a coverage-metrics producer-reachable count relation")
+	}
 	cases := []struct {
 		name        string
 		criterionID string
@@ -555,6 +558,165 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "self evidence coverage with contradictory declared route count",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commandWithoutDeclaredSemanticFalsifierRouteCount"] = 0
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{"ghost"}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with substituted declared-route command identity",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				record["commandRoutes"].(map[string]any)["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{"proofkit.command.substituted"}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with coordinated alien command inventories",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				alien := []any{"proofkit.command.substituted"}
+				record["cliContract"].(map[string]any)["commands"] = alien
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commands"] = alien
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = alien
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with inventory route count mismatch",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				record["commandRoutes"].(map[string]any)["admittedInventoryEntryCount"] = 2
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with candidate projection mismatch",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				record["commandRoutes"].(map[string]any)["proofRouteCandidateInventoryEntryCount"] = 0
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with impossible inventory class partition",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["routeSmokeCount"] = 1
+				routes["declaredSemanticFalsifierRouteEntryCount"] = 1
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with declared entries unavailable from producer",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				record["commandRoutes"].(map[string]any)["declaredSemanticFalsifierRouteEntryCount"] = 1
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with candidate routes unable to cover commands",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commandCount"] = 2
+				routes["commands"] = []any{"proofkit.command.a", "proofkit.command.b"}
+				routes["commandWithoutDeclaredSemanticFalsifierRouteCount"] = 2
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{"proofkit.command.a", "proofkit.command.b"}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with overflow-shaped route partition",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				maximum := int(^uint(0) >> 1)
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["admittedInventoryEntryCount"] = maximum
+				routes["routeCount"] = maximum
+				routes["routeSmokeCount"] = maximum
+				routes["proofRouteCandidateInventoryEntryCount"] = maximum
+				routes["proofRouteCandidateRouteCount"] = maximum
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with candidate routes above total routes",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["proofRouteCandidateRouteCount"] = 2
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with incomplete declared route missing set",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commandWithoutDeclaredSemanticFalsifierRouteCount"] = 0
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with missing declared routes above command count",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commandCount"] = 1
+				routes["commands"] = []any{"proofkit.command.a"}
+				routes["commandWithoutDeclaredSemanticFalsifierRouteCount"] = 2
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{"proofkit.command.a", "proofkit.command.b"}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with duplicate missing declared route ids",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commandCount"] = 2
+				routes["commands"] = []any{"proofkit.command.a", "proofkit.command.b"}
+				routes["commandWithoutDeclaredSemanticFalsifierRouteCount"] = 2
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{"proofkit.command.a", "proofkit.command.a"}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
+			name:        "self evidence coverage with unsorted missing declared route ids",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				routes := record["commandRoutes"].(map[string]any)
+				routes["commandCount"] = 2
+				routes["commands"] = []any{"proofkit.command.a", "proofkit.command.b"}
+				routes["commandWithoutDeclaredSemanticFalsifierRouteCount"] = 2
+				routes["commandsWithoutDeclaredSemanticFalsifierRoute"] = []any{"proofkit.command.b", "proofkit.command.a"}
+				writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), record)
+			},
+		},
+		{
 			name:        "self evidence arbitrary receipt object",
 			criterionID: "proofkit.release_closeout.self_evidence",
 			mutate: func(root string) {
@@ -644,6 +806,96 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			assertFailedRule(t, input, item.criterionID)
 		})
 	}
+}
+
+func TestCommandRouteMetricsProducerReachabilityMatchesExactProducerPartition(t *testing.T) {
+	routes := producerReachableCommandRouteMetricsFixture()
+	expectedCommands := producerReachableCLIContractCommands()
+	if !commandRouteMetricsProducerReachable(routes, expectedCommands) {
+		t.Fatal("producer-reachable route partition was rejected")
+	}
+	mutations := []struct {
+		name   string
+		mutate func(*coverageCommandRouteMetrics)
+	}{
+		{name: "inventory route mismatch", mutate: func(value *coverageCommandRouteMetrics) { value.AdmittedInventoryEntryCount = testIntPointer(4) }},
+		{name: "missing command inventory", mutate: func(value *coverageCommandRouteMetrics) { value.Commands = nil }},
+		{name: "source contract mismatch", mutate: func(value *coverageCommandRouteMetrics) {
+			commands := []string{"proofkit.cli.a", "proofkit.cli.c"}
+			value.Commands = &commands
+			value.CommandsWithoutDeclaredSemanticFalsifierRoute = &commands
+		}},
+		{name: "missing candidate count", mutate: func(value *coverageCommandRouteMetrics) { value.CommandWithoutProofRouteCandidateCount = nil }},
+		{name: "missing declared command identities", mutate: func(value *coverageCommandRouteMetrics) { value.CommandsWithoutDeclaredSemanticFalsifierRoute = nil }},
+		{name: "candidate projection mismatch", mutate: func(value *coverageCommandRouteMetrics) {
+			value.ProofRouteCandidateInventoryEntryCount = testIntPointer(1)
+		}},
+		{name: "route partition mismatch", mutate: func(value *coverageCommandRouteMetrics) { value.RouteSmokeCount = testIntPointer(2) }},
+		{name: "unreachable declared entry", mutate: func(value *coverageCommandRouteMetrics) {
+			value.DeclaredSemanticFalsifierRouteEntryCount = testIntPointer(1)
+		}},
+		{name: "declared missing partition mismatch", mutate: func(value *coverageCommandRouteMetrics) {
+			value.CommandWithoutDeclaredSemanticFalsifierRouteCount = testIntPointer(1)
+		}},
+		{name: "declared missing command identity mismatch", mutate: func(value *coverageCommandRouteMetrics) {
+			commands := []string{"arbitrary.a", "arbitrary.z"}
+			value.CommandsWithoutDeclaredSemanticFalsifierRoute = &commands
+		}},
+		{name: "candidate route cannot cover commands", mutate: func(value *coverageCommandRouteMetrics) { value.CommandCount = testIntPointer(3) }},
+		{name: "overflow-shaped counts", mutate: func(value *coverageCommandRouteMetrics) {
+			maximum := int(^uint(0) >> 1)
+			value.AdmittedInventoryEntryCount = testIntPointer(maximum)
+			value.RouteCount = testIntPointer(maximum)
+			value.RouteSmokeCount = testIntPointer(maximum)
+			value.ProofRouteCandidateInventoryEntryCount = testIntPointer(maximum)
+			value.ProofRouteCandidateRouteCount = testIntPointer(maximum)
+		}},
+	}
+	for _, item := range mutations {
+		t.Run(item.name, func(t *testing.T) {
+			mutated := producerReachableCommandRouteMetricsFixture()
+			item.mutate(&mutated)
+			if commandRouteMetricsProducerReachable(mutated, expectedCommands) {
+				t.Fatal("producer-impossible command-route metrics were admitted")
+			}
+		})
+	}
+}
+
+func producerReachableCLIContractCommands() []string {
+	return []string{"proofkit.cli.a", "proofkit.cli.b"}
+}
+
+func producerReachableCommandRouteMetricsFixture() coverageCommandRouteMetrics {
+	empty := []string{}
+	missingDeclared := []string{"proofkit.cli.a", "proofkit.cli.b"}
+	commands := []string{"proofkit.cli.a", "proofkit.cli.b"}
+	return coverageCommandRouteMetrics{
+		AdmittedInventoryEntryCount:                       testIntPointer(3),
+		CommandCount:                                      testIntPointer(2),
+		Commands:                                          &commands,
+		CommandWithoutProofRouteCandidateCount:            testIntPointer(0),
+		CommandsWithoutProofRouteCandidate:                &empty,
+		ContractOnlyCommandCount:                          testIntPointer(0),
+		ContractOnlyCommands:                              &empty,
+		CommandWithoutDeclaredSemanticFalsifierRouteCount: testIntPointer(2),
+		CommandsWithoutDeclaredSemanticFalsifierRoute:     &missingDeclared,
+		RouteCount:                                        testIntPointer(3),
+		RouteOnlyCommandCount:                             testIntPointer(0),
+		RouteOnlyCommands:                                 &empty,
+		RouteSmokeCount:                                   testIntPointer(1),
+		ProofRouteCandidateInventoryEntryCount:            testIntPointer(2),
+		ProofRouteCandidateRouteCount:                     testIntPointer(2),
+		DeclaredSemanticFalsifierRouteEntryCount:          testIntPointer(0),
+		UnknownProofRouteCandidateRefCount:                testIntPointer(0),
+		UnknownProofRouteCandidateRefs:                    &empty,
+		UnknownDeclaredSemanticRouteCommandRefCount:       testIntPointer(0),
+		UnknownDeclaredSemanticRouteCommandRefs:           &empty,
+	}
+}
+
+func testIntPointer(value int) *int {
+	return &value
 }
 
 func TestBuildInputAdmitsWorkflowPublicationTrustedPublisherIdentity(t *testing.T) {
@@ -928,6 +1180,9 @@ func populateCompleteFixture(t *testing.T, root string) {
 	writeFile(t, filepath.Join(root, "go.sum"), "")
 	writeJSON(t, filepath.Join(root, "proofkit", "requirement-bindings.json"), map[string]any{"schemaVersion": 1})
 	writeJSON(t, filepath.Join(root, "proofkit", "witness-plan.json"), map[string]any{"schemaVersion": 1})
+	writeJSON(t, filepath.Join(root, filepath.FromSlash(cliContractPath)), map[string]any{
+		"commands": []any{map[string]any{"command": "proofkit.coverage.command"}},
+	})
 	writeFile(t, filepath.Join(root, "source.txt"), "source-v1\n")
 	writeJSON(t, filepath.Join(root, "package.json"), map[string]any{
 		"name":       testNPMPackageName,
@@ -1202,28 +1457,28 @@ func coverageMetricsFixture() map[string]any {
 		"requirements":  map[string]any{"blocking": 1},
 		"proofBindings": map[string]any{"boundRequirementCount": 1},
 		"witnessPlan":   map[string]any{"commandCount": 1},
-		"cliContract":   map[string]any{"commandCount": 1},
+		"cliContract":   map[string]any{"commandCount": 1, "commands": []any{"proofkit.coverage.command"}},
 		"commandRoutes": map[string]any{
-			"admittedInventoryEntryCount":               1,
-			"commandCount":                              1,
-			"commandWithoutProofRouteCandidateCount":    0,
-			"commandsWithoutProofRouteCandidate":        []any{},
-			"commandWithoutSemanticFalsifierRouteCount": 0,
-			"commandsWithoutSemanticFalsifierRoute":     []any{},
-			"contractOnlyCommandCount":                  0,
-			"contractOnlyCommands":                      []any{},
-			"routeCount":                                1,
-			"routeOnlyCommandCount":                     0,
-			"routeOnlyCommands":                         []any{},
-			"routeSmokeCount":                           0,
-			"proofRouteCandidateInventoryEntryCount":    1,
-			"proofRouteCandidateRouteCount":             1,
-			"semanticInventoryEntryCount":               1,
-			"semanticRouteCount":                        1,
-			"unknownProofRouteCandidateRefCount":        0,
-			"unknownProofRouteCandidateRefs":            []any{},
-			"unknownSemanticCommandRefCount":            0,
-			"unknownSemanticCommandRefs":                []any{},
+			"admittedInventoryEntryCount":                       1,
+			"commandCount":                                      1,
+			"commands":                                          []any{"proofkit.coverage.command"},
+			"commandWithoutProofRouteCandidateCount":            0,
+			"commandsWithoutProofRouteCandidate":                []any{},
+			"commandWithoutDeclaredSemanticFalsifierRouteCount": 1,
+			"commandsWithoutDeclaredSemanticFalsifierRoute":     []any{"proofkit.coverage.command"},
+			"contractOnlyCommandCount":                          0,
+			"contractOnlyCommands":                              []any{},
+			"routeCount":                                        1,
+			"routeOnlyCommandCount":                             0,
+			"routeOnlyCommands":                                 []any{},
+			"routeSmokeCount":                                   0,
+			"proofRouteCandidateInventoryEntryCount":            1,
+			"proofRouteCandidateRouteCount":                     1,
+			"declaredSemanticFalsifierRouteEntryCount":          0,
+			"unknownProofRouteCandidateRefCount":                0,
+			"unknownProofRouteCandidateRefs":                    []any{},
+			"unknownDeclaredSemanticRouteCommandRefCount":       0,
+			"unknownDeclaredSemanticRouteCommandRefs":           []any{},
 		},
 		"deadZones": map[string]any{
 			"bindingWithoutRequirementIds":  []any{},

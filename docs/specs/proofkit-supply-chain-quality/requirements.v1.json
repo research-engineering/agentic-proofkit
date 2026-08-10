@@ -129,7 +129,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-010",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Coverage metrics report requirement, binding, witness, CLI inventory linkage, and descriptor-owned command proof-route candidates from admitted test-evidence-inventory rows, failing closed independently for each requirement/proof linkage dead-zone class and each missing-candidate, unknown-candidate-ref, unknown-semantic-ref, contract-only, or route-only command-route class; source-checkout witness selectors must resolve to valid functions in active Go test files with exact executable commands and a failure-capable assertion candidate outside literal-dead branches, uninvoked closures, and skip-bearing helper paths, critical anti-vacuity scenarios must retain their exact closed selector inventories, and failed command-route inventory admission also fails closed, while static route metadata, prose, source markers, test existence, and failure-capable syntax remain candidate evidence and cannot satisfy semantic_falsifier coverage.",
+      "invariant": "Coverage metrics report requirement, binding, witness, CLI inventory linkage, and descriptor-owned command proof-route candidates from admitted test-evidence-inventory rows, failing closed independently for each requirement/proof linkage dead-zone class and each missing-candidate, unknown-candidate-ref, unknown-declared-semantic-route-ref, contract-only, or route-only command-route class; source-checkout witness selectors must resolve to valid functions in active Go test files with exact executable commands and a failure-capable assertion candidate outside literal-dead branches, uninvoked closures, and skip-bearing helper paths, critical anti-vacuity scenarios must retain their exact closed selector inventories, and failed command-route inventory admission also fails closed, while static route metadata, prose, source markers, test existence, and failure-capable syntax remain candidate evidence and cannot become execution-backed semantic evidence.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -194,7 +194,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-015",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "The package gate includes an admitted release closeout completion-criteria report that classifies package artifacts, Python wrappers, release manifest, SBOM, channel scope, and self-hosting evidence instead of allowing unit tests alone to satisfy release closeout.",
+      "invariant": "The package gate includes an admitted release closeout completion-criteria report that classifies package artifacts, Python wrappers, release manifest, SBOM, channel scope, and self-hosting evidence instead of allowing unit tests alone to satisfy release closeout; coverage-metric re-admission uses overflow-safe relations to require the exact producer projection between admitted entries, routes, route classes, proof-route candidates, the complete command inventory, and commands missing declaration-only routes, and compares both coverage command projections with the actual cli-contract.v2.json command inventory from the same source snapshot.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

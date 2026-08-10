@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -13,17 +14,30 @@ import (
 
 var outputKeys = []string{
 	"authority", "bindingId", "commandCoverage", "commandCoverageCount",
-	"completenessDeclaration", "contractId", "coverageUniverseId", "deadZones",
+	"completenessDeclaration", "contractId", "coverageBasis", "coverageUniverseId", "deadZones",
 	"failureClassifications", "failureCount", "failures", "guidanceSummary",
 	"nonClaims", "ownerInvariantCoverage", "ownerInvariantCoverageCount",
 	"ownerInvariantRegistryId", "proofMode", "requirementCoverage",
 	"requirementCoverageCount", "schemaVersion", "sourceId", "state",
-	"testInventoryId", "viewInputId", "viewKind", "warningClassifications",
+	"testInventoryId", "unmappedTests", "viewInputId", "viewKind", "warningClassifications",
 	"warningCount", "warnings",
 }
 
+type coverageRowDescriptor struct {
+	rowsKey  string
+	countKey string
+	idKey    string
+}
+
+var coverageRowDescriptors = []coverageRowDescriptor{
+	{rowsKey: "requirementCoverage", countKey: "requirementCoverageCount", idKey: "requirementId"},
+	{rowsKey: "ownerInvariantCoverage", countKey: "ownerInvariantCoverageCount", idKey: "ownerInvariantId"},
+	{rowsKey: "commandCoverage", countKey: "commandCoverageCount", idKey: "commandId"},
+}
+
 // AdmitOutput preserves the requirement-coverage owner's wire projection for
-// parent commands without reinterpreting coverage semantics.
+// parent commands and replays retained report, requirement, and owner-invariant
+// derivations without claiming source authenticity.
 func AdmitOutput(raw any) (map[string]any, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -32,8 +46,13 @@ func AdmitOutput(raw any) (map[string]any, error) {
 	if err := admit.KnownKeys(record, outputKeys, "requirement coverage output"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) && record["schemaVersion"] != 1 {
-		return nil, fmt.Errorf("requirement coverage output schemaVersion must be 1")
+	for _, key := range outputKeys {
+		if _, ok := record[key]; !ok {
+			return nil, fmt.Errorf("requirement coverage output is missing required field %s", key)
+		}
+	}
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) && record["schemaVersion"] != 2 {
+		return nil, fmt.Errorf("requirement coverage output schemaVersion must be 2")
 	}
 	if record["viewKind"] != "proofkit.requirement-coverage-view" || record["authority"] != "lookup_only" {
 		return nil, fmt.Errorf("requirement coverage output identity is invalid")
@@ -43,29 +62,28 @@ func AdmitOutput(raw any) (map[string]any, error) {
 			return nil, err
 		}
 	}
+	nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "requirement coverage output nonClaims", false)
+	if err != nil {
+		return nil, err
+	}
+	for _, nonClaim := range defaultNonClaims {
+		if !slices.Contains(nonClaims, nonClaim) {
+			return nil, fmt.Errorf("requirement coverage output nonClaims must retain command-owned boundary %q", nonClaim)
+		}
+	}
 	if _, err := admit.Enum(record["state"], map[string]struct{}{"failed": {}, "passed": {}}, "requirement coverage output state"); err != nil {
 		return nil, err
 	}
-	for _, row := range []struct {
-		rowsKey  string
-		countKey string
-		idKey    string
-	}{
-		{rowsKey: "requirementCoverage", countKey: "requirementCoverageCount", idKey: "requirementId"},
-		{rowsKey: "ownerInvariantCoverage", countKey: "ownerInvariantCoverageCount", idKey: "ownerInvariantId"},
-		{rowsKey: "commandCoverage", countKey: "commandCoverageCount", idKey: "commandId"},
-	} {
+	for _, row := range coverageRowDescriptors {
 		if err := admitCoverageOutputRows(record, row.rowsKey, row.countKey, row.idKey); err != nil {
 			return nil, err
 		}
 	}
-	for _, pair := range [][2]string{{"failures", "failureCount"}, {"warnings", "warningCount"}} {
-		if err := admitCountedArray(record, pair[0], pair[1]); err != nil {
-			return nil, err
-		}
+	if err := admitNestedRecords(record["unmappedTests"], projectedTestKeys, "requirement coverage output unmappedTests"); err != nil {
+		return nil, err
 	}
-	if _, ok := record["deadZones"].([]any); !ok {
-		return nil, fmt.Errorf("requirement coverage output deadZones must be an array")
+	if err := validateCoverageOutputSemantics(record); err != nil {
+		return nil, err
 	}
 	findings, err := secretjson.Scan(record, "requirement_coverage_output")
 	if err != nil || len(findings) > 0 {
@@ -90,7 +108,7 @@ func SelectRequirements(output map[string]any, selected map[string]struct{}) map
 	for _, raw := range output["requirementCoverage"].([]any) {
 		row := raw.(map[string]any)
 		if _, ok := selected[row["requirementId"].(string)]; ok {
-			rows = append(rows, row)
+			rows = append(rows, cloneCoverageJSONValue(row))
 		}
 	}
 	return map[string]any{
@@ -112,14 +130,20 @@ func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey str
 	if !wireCountEquals(record[countKey], len(rows)) {
 		return fmt.Errorf("requirement coverage output %s does not match %s", countKey, rowsKey)
 	}
-	seen := map[string]struct{}{}
+	previousID := ""
 	for index, raw := range rows {
 		row, ok := raw.(map[string]any)
 		if !ok {
 			return fmt.Errorf("requirement coverage output %s[%d] must be an object", rowsKey, index)
 		}
-		if err := admit.KnownKeys(row, coverageRowKeys(rowsKey), "requirement coverage output "+rowsKey); err != nil {
+		rowKeys := coverageRowKeys(rowsKey)
+		if err := admit.KnownKeys(row, rowKeys, "requirement coverage output "+rowsKey); err != nil {
 			return err
+		}
+		for _, key := range rowKeys {
+			if _, ok := row[key]; !ok {
+				return fmt.Errorf("requirement coverage output %s[%d] is missing required field %s", rowsKey, index, key)
+			}
 		}
 		if err := admitCoverageNestedRows(row, rowsKey); err != nil {
 			return err
@@ -128,29 +152,45 @@ func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey str
 		if err != nil {
 			return err
 		}
-		if _, exists := seen[id]; exists {
-			return fmt.Errorf("requirement coverage output %s identities must be unique", rowsKey)
+		if previousID != "" && previousID >= id {
+			return fmt.Errorf("requirement coverage output %s must be sorted and unique by %s", rowsKey, idKey)
 		}
-		seen[id] = struct{}{}
+		previousID = id
 	}
 	return nil
 }
 
-func admitCoverageNestedRows(row map[string]any, rowsKey string) error {
-	if rowsKey == "commandCoverage" {
-		return nil
+func cloneCoverageJSONValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		cloned := make(map[string]any, len(typed))
+		for key, child := range typed {
+			cloned[key] = cloneCoverageJSONValue(child)
+		}
+		return cloned
+	case []any:
+		cloned := make([]any, len(typed))
+		for index, child := range typed {
+			cloned[index] = cloneCoverageJSONValue(child)
+		}
+		return cloned
+	default:
+		return typed
 	}
-	if err := admitNestedRecords(row["tests"], []string{"commandRefs", "evidenceClass", "expectedPublicOutcome", "negativeCaseId", "nonClaims", "oracleKind", "oracleSummary", "qualityFindings", "selector", "sourcePath", "testId", "witnessRefs", "wrongImplementationClassId"}, "requirement coverage output tests"); err != nil {
+}
+
+func admitCoverageNestedRows(row map[string]any, rowsKey string) error {
+	if err := admitNestedRecords(row["tests"], projectedTestKeys, "requirement coverage output tests"); err != nil {
 		return err
 	}
 	for _, raw := range row["tests"].([]any) {
 		test := raw.(map[string]any)
-		if err := admitNestedRecords(test["qualityFindings"], []string{"class", "evidenceRefs", "findingId", "nonClaims", "ownerReviewState", "severity"}, "requirement coverage output quality findings"); err != nil {
+		if err := admitNestedRecords(test["qualityFindings"], projectedQualityFindingKeys, "requirement coverage output quality findings"); err != nil {
 			return err
 		}
 	}
 	if rowsKey == "requirementCoverage" {
-		return admitNestedRecords(row["scenarios"], []string{"commandIds", "environmentClasses", "scenarioId", "witnessId", "witnessKind", "witnessPath"}, "requirement coverage output scenarios")
+		return admitNestedRecords(row["scenarios"], []string{"commandIds", "environmentClasses", "scenarioId", "verifyCommands", "witnessId", "witnessKind", "witnessPath", "witnessSelectors"}, "requirement coverage output scenarios")
 	}
 	return nil
 }
@@ -179,21 +219,10 @@ func coverageRowKeys(rowsKey string) []string {
 	case "ownerInvariantCoverage":
 		return []string{"coverageState", "evidenceClass", "nonClaims", "ownerId", "ownerInvariantId", "sourcePath", "summary", "testIds", "tests", "warnings"}
 	case "commandCoverage":
-		return []string{"commandId", "coverageState", "failures", "testIds"}
+		return []string{"commandId", "coverageState", "failures", "testIds", "tests"}
 	default:
 		return nil
 	}
-}
-
-func admitCountedArray(record map[string]any, rowsKey, countKey string) error {
-	rows, ok := record[rowsKey].([]any)
-	if !ok {
-		return fmt.Errorf("requirement coverage output %s must be an array", rowsKey)
-	}
-	if !wireCountEquals(record[countKey], len(rows)) {
-		return fmt.Errorf("requirement coverage output %s does not match %s", countKey, rowsKey)
-	}
-	return nil
 }
 
 func wireCountEquals(raw any, expected int) bool {

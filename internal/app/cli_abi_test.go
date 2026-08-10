@@ -142,13 +142,16 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			},
 		},
 		{
-			name:           "requirement authoring plan emits candidate-only preview JSON",
-			args:           []string{"requirement-authoring-plan", "--input", "-"},
-			stdin:          cliRequirementAuthoringPlanInput(),
-			wantStatus:     0,
-			wantStdoutJSON: true,
+			name:              "requirement authoring plan emits candidate-only preview JSON",
+			args:              []string{"requirement-authoring-plan", "--input", "-"},
+			stdin:             cliRequirementAuthoringPlanInput(),
+			wantStatus:        0,
+			wantStdoutJSON:    true,
+			wantOutputVariant: "01-root",
 			wantStdoutHas: []string{
 				`"planKind": "proofkit.requirement-authoring-plan"`,
+				`"schemaVersion": 2`,
+				`"authoringRefs": [`,
 				`"authority": "candidate_only"`,
 				`"ownerReviewRequired": true`,
 				`"state": "passed"`,
@@ -336,7 +339,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 				`"candidate_only:test.cli.discovery.test_missing_auth"`,
 			},
 			wantStdoutNotHas: []string{
-				`"evidenceClass": "semantic_falsifier"`,
+				`"evidenceClass": "declared_semantic_falsifier_route"`,
 			},
 		},
 		{
@@ -348,7 +351,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			wantInputVariant:  "01-direct-inventory",
 			wantOutputVariant: "03-report",
 			wantStdoutHas: []string{
-				`"missing_semantic_anchor:test.cli.semantic"`,
+				`"missing_declared_route_anchor:test.cli.semantic"`,
 				`"state": "failed"`,
 			},
 		},
@@ -375,7 +378,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			wantOutputVariant: "02-report",
 			wantStdoutHas: []string{
 				`"viewKind": "proofkit.requirement-coverage-view"`,
-				`"covered_by_semantic_falsifier"`,
+				`"mapped_to_declared_semantic_falsifier_route"`,
 				`"state": "passed"`,
 			},
 		},
@@ -425,7 +428,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			wantStatus:     1,
 			wantStdoutJSON: true,
 			wantStdoutHas: []string{
-				`"classificationId": "missing_semantic_test"`,
+				`"classificationId": "missing_declared_test_route"`,
 				`"missing_test_inventory:REQ-PROOFKIT-CLI-COVERAGE-001"`,
 				`"state": "failed"`,
 			},
@@ -512,6 +515,55 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 				t.Fatalf("failed ABI case must keep stdout empty: %s", stdout.String())
 			}
 		})
+	}
+}
+
+func TestRequirementAuthoringPlanOutputUsesVersionedRootShape(t *testing.T) {
+	var input map[string]any
+	if err := json.Unmarshal([]byte(cliRequirementAuthoringPlanInput()), &input); err != nil {
+		t.Fatalf("decode authoring plan fixture: %v", err)
+	}
+	input["authoringRefs"] = append(input["authoringRefs"].([]any), map[string]any{
+		"refId": "proofkit.cli.authoring.test-summary", "kind": "test_summary",
+		"path": "artifacts/cli-authoring-tests.json", "digest": nil,
+		"summary":   "The CLI test summary supplies undigested candidate context.",
+		"nonClaims": []any{"CLI authoring test-summary ref is label-only."},
+	})
+	encodedInput, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("encode authoring plan fixture: %v", err)
+	}
+	raw := runCLI(t, []string{"requirement-authoring-plan", "--input", "-"}, string(encodedInput))
+	var output any
+	if err := json.Unmarshal(raw, &output); err != nil {
+		t.Fatalf("requirement authoring plan output must be JSON: %v\n%s", err, raw)
+	}
+	assertPublicCLIRootVariant(t, "requirement-authoring-plan", "output", "01-root", output)
+	record := jsonObject(t, output)
+	assertNumberField(t, record, "schemaVersion", 2)
+	refs := jsonArrayField(t, record, "authoringRefs")
+	if len(refs) != 2 {
+		t.Fatalf("authoringRefs=%#v, want exactly two ordered admitted refs", refs)
+	}
+	ref := jsonObject(t, refs[0])
+	assertStringField(t, ref, "digest", "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	assertStringField(t, ref, "kind", "design_doc")
+	assertStringField(t, ref, "path", "docs/designs/cli-authoring.md")
+	assertStringField(t, ref, "refId", "proofkit.cli.authoring.design")
+	assertStringField(t, ref, "summary", "The CLI fixture design proposes one durable candidate invariant.")
+	if len(jsonArrayField(t, ref, "nonClaims")) != 1 {
+		t.Fatalf("authoring ref nonClaims=%#v, want exact projected boundary", ref["nonClaims"])
+	}
+	second := jsonObject(t, refs[1])
+	if second["digest"] != nil {
+		t.Fatalf("second authoring ref digest=%#v, want explicit null", second["digest"])
+	}
+	assertStringField(t, second, "kind", "test_summary")
+	assertStringField(t, second, "path", "artifacts/cli-authoring-tests.json")
+	assertStringField(t, second, "refId", "proofkit.cli.authoring.test-summary")
+	assertStringField(t, second, "summary", "The CLI test summary supplies undigested candidate context.")
+	if len(jsonArrayField(t, second, "nonClaims")) != 1 {
+		t.Fatalf("second authoring ref nonClaims=%#v, want exact projected boundary", second["nonClaims"])
 	}
 }
 
@@ -1086,19 +1138,7 @@ func TestRequirementBrowserOneShotCLIOutputVariants(t *testing.T) {
 	go func() {
 		result <- Run(ctx, args, bytes.NewReader(input), &submittedStdout, &submittedStderr)
 	}()
-	var browserURL string
-	deadline := time.Now().Add(3 * time.Second)
-	for browserURL == "" && time.Now().Before(deadline) {
-		content, readErr := os.ReadFile(urlFile)
-		if readErr == nil {
-			browserURL = strings.TrimSpace(string(content))
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	if browserURL == "" {
-		t.Fatal("browser launcher did not receive one-shot URL")
-	}
+	browserURL := waitForBrowserLauncherURL(t, urlFile, result, &submittedStdout, &submittedStderr)
 	response, err := http.Get(browserURL)
 	if err != nil {
 		t.Fatal(err)
@@ -1159,6 +1199,29 @@ func TestRequirementBrowserOneShotCLIOutputVariants(t *testing.T) {
 		t.Fatalf("terminal stdout must be JSON: %v\n%s", err, terminalStdout.String())
 	}
 	assertPublicCLIRootVariant(t, "requirement-browser-server", "output", "02-one-shot-terminal", terminal)
+}
+
+func waitForBrowserLauncherURL(t *testing.T, urlFile string, result <-chan int, stdout, stderr *bytes.Buffer) string {
+	t.Helper()
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	timer := time.NewTimer(10 * time.Second)
+	defer timer.Stop()
+	for {
+		select {
+		case status := <-result:
+			t.Fatalf("one-shot CLI exited before browser launch: status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
+		case <-ticker.C:
+			content, err := os.ReadFile(urlFile)
+			if err == nil {
+				if browserURL := strings.TrimSpace(string(content)); browserURL != "" {
+					return browserURL
+				}
+			}
+		case <-timer.C:
+			t.Fatal("browser launcher did not receive one-shot URL")
+		}
+	}
 }
 
 func TestAdoptionDoctorCLIABI(t *testing.T) {
@@ -2250,7 +2313,7 @@ func cliImpactDemo(demoID string, stackDiverse bool) map[string]any {
 }
 
 func cliTestEvidenceInventory() string {
-	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.semantic","selector":"go test ./internal/app -run TestCLI","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli","evidenceClass":"semantic_falsifier","requirementRefs":["REQ-PROOFKIT-CLI-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.command"],"witnessRefs":["proofkit.cli.witness"],"falsifier":{"falsifierId":"falsifier.cli.semantic","negativeCaseId":"case.cli.semantic","wrongImplementationClassId":"wrong.cli.semantic","dominanceGroup":"cli.semantic","supersedes":[]},"oracle":{"oracleId":"oracle.cli.semantic","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"The CLI emits a failed report on invalid semantic coverage."},"nonClaims":[]}],"nonClaims":["CLI ABI fixture does not execute native tests."]}`
+	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.semantic","selector":"go test ./internal/app -run TestCLI","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli","evidenceClass":"declared_semantic_falsifier_route","requirementRefs":["REQ-PROOFKIT-CLI-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.command"],"witnessRefs":["proofkit.cli.witness"],"falsifier":{"falsifierId":"falsifier.cli.semantic","negativeCaseId":"case.cli.semantic","wrongImplementationClassId":"wrong.cli.semantic","dominanceGroup":"cli.semantic","supersedes":[]},"oracle":{"oracleId":"oracle.cli.semantic","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"The CLI emits a failed report on invalid semantic coverage."},"nonClaims":[]}],"nonClaims":["CLI ABI fixture does not execute native tests."]}`
 }
 
 func cliSecretScanInput(content string) string {
@@ -2288,7 +2351,7 @@ func cliTestDiscoveryDraftInput() string {
 }
 
 func cliCoverageInventory() string {
-	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.coverage.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.coverage.semantic","selector":"go test ./internal/app -run TestCoverage","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli.coverage","evidenceClass":"semantic_falsifier","requirementRefs":["REQ-PROOFKIT-CLI-COVERAGE-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.coverage.command"],"witnessRefs":["proofkit.cli.coverage.witness"],"falsifier":{"falsifierId":"falsifier.cli.coverage","negativeCaseId":"case.cli.coverage","wrongImplementationClassId":"wrong.cli.coverage","dominanceGroup":"cli.coverage","supersedes":[]},"oracle":{"oracleId":"oracle.cli.coverage","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"Missing inventory leaves coverage failed."},"nonClaims":[]}],"nonClaims":["CLI coverage inventory fixture does not execute native tests."]}`
+	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.coverage.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.coverage.semantic","selector":"go test ./internal/app -run TestCoverage","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli.coverage","evidenceClass":"declared_semantic_falsifier_route","requirementRefs":["REQ-PROOFKIT-CLI-COVERAGE-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.coverage.command"],"witnessRefs":["proofkit.cli.coverage.witness"],"falsifier":{"falsifierId":"falsifier.cli.coverage","negativeCaseId":"case.cli.coverage","wrongImplementationClassId":"wrong.cli.coverage","dominanceGroup":"cli.coverage","supersedes":[]},"oracle":{"oracleId":"oracle.cli.coverage","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"Missing inventory leaves coverage failed."},"nonClaims":[]}],"nonClaims":["CLI coverage inventory fixture does not execute native tests."]}`
 }
 
 func cliCoverageInput(inventory string) string {

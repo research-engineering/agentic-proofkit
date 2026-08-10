@@ -170,6 +170,8 @@ func compactRequirementScenarios(requirement map[string]any) []scenario {
 	return []scenario{{
 		EnvironmentClasses: compactRequirementEnvironmentClasses(requirement),
 		ScenarioID:         scenarioID,
+		VerifyCommands:     stringArray(requirement["verifyCommands"]),
+		WitnessSelectors:   compactRequirementWitnessSelectors(requirement),
 	}}
 }
 

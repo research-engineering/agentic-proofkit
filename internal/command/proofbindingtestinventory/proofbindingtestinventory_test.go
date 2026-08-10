@@ -54,7 +54,7 @@ func TestBuildProjectsCompactProofBindingToAdmittedInventory(t *testing.T) {
 	if err != nil || reportExitCode != 0 {
 		t.Fatalf("BuildReport() exit=%d err=%v", reportExitCode, err)
 	}
-	if report.Summary["proofRouteCandidateCount"] != 1 || report.Summary["semanticFalsifierCount"] != 0 {
+	if report.Summary["proofRouteCandidateCount"] != 1 || report.Summary["declaredSemanticFalsifierRouteCount"] != 0 {
 		t.Fatalf("downstream evidence classification summary=%#v", report.Summary)
 	}
 	for _, rule := range report.RuleResults {
@@ -86,7 +86,7 @@ func TestBuildRejectsUnstructuredFalsificationSelector(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsSemanticFalsifierWithoutVerifyCommand(t *testing.T) {
+func TestBuildRejectsProofRouteCandidateWithoutVerifyCommand(t *testing.T) {
 	input := validInput()
 	binding := input["compactProofContract"].(map[string]any)["bindings"].([]any)[0].([]any)
 	falsification := binding[9].([]any)

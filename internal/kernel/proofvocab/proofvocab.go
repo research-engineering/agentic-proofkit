@@ -6,6 +6,12 @@ var mergeSatisfactionClasses = []string{"advisory", "merge_satisfying"}
 
 var obligationClasses = []string{"advisory", "blocking", "deferred"}
 
+var requirementProofStates = []string{
+	"explicitly_deferred",
+	"not_bound",
+	"witness_backed",
+}
+
 var obligationDecisionStates = []string{
 	"invalid_producer",
 	"invalid_receipt",
@@ -62,6 +68,14 @@ func ObligationClasses() []string {
 
 func ObligationClassSet() map[string]struct{} {
 	return set(obligationClasses)
+}
+
+func RequirementProofStates() []string {
+	return clone(requirementProofStates)
+}
+
+func RequirementProofStateSet() map[string]struct{} {
+	return set(requirementProofStates)
 }
 
 func ObligationDecisionStates() []string {

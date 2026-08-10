@@ -49,8 +49,21 @@ execution receipts, and merge policy.
   owners, scope widening, fabricated normalized inventory, non-strict
   discovery candidate inventory, nonsemantic command evidence, and declared
   dead zones in selected-owner or full-repository scopes, and do not treat
-  proof routes, discovery drafts, nonsemantic command evidence, normalized
-  projections, composed inputs, or rendered views as semantic test coverage.
+  caller-authored route, falsifier, oracle-signal, or falsifier-supersession
+  metadata as selector resolution, oracle review, execution, freshness, trust,
+  sensitivity, dominance proof, verified coverage, or assurance closure;
+  discovery classifies only declared assertion-signal presence and coverage
+  re-admission requires the versioned exact root and row shapes, canonical row
+  order, exact row metadata, command-owned non-claims, exact missing-inventory
+  diagnostics, owner-scoped compact scenario identities, and a coverage basis
+  that commits to selected owners, full-repository out-of-scope source
+  identities, and the complete retained inventory projection; it retains
+  complete inventory entries without selected parents, replays owner-scope and
+  inventory-owned failure semantics, and rejects missing projection fields,
+  contradictory repeated projections, one-sided retained parent references,
+  compact scenario-to-route drift, and unowned or inconsistent state/class
+  vocabulary. The coverage basis proves internal projection consistency, not
+  source authenticity or producer identity.
 - `REQ-PROOFKIT-SPEC-007`: caller-owned inputs are admitted into canonical
   immutable records before any proof, policy, route, rendering, or report
   decision consumes them.
@@ -80,9 +93,10 @@ execution receipts, and merge policy.
   policy.
 - `REQ-PROOFKIT-SPEC-012`: requirement authoring plans package caller-provided
   design, implementation, PR, code, test, and clarification facts into
-  candidate-only requirement updates, delegate structural checks to requirement
-  source admission and transition, and keep owner review/materialization outside
-  Proofkit.
+  candidate-only requirement updates, preserve complete canonically ordered
+  admitted authoring references, consume requirement records only through
+  canonical owner projections, delegate structural checks to requirement source
+  admission and transition, and keep owner review/materialization outside Proofkit.
 - `REQ-PROOFKIT-SPEC-013`: repeated cross-command proof vocabulary has one
   private owner for proof and selective-edge state while command-local and
   caller-owned vocabularies stay outside the shared owner.

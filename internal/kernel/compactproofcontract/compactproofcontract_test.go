@@ -56,6 +56,43 @@ func TestAdmitRejectsUnknownCompactColumn(t *testing.T) {
 	}
 }
 
+func TestAdmitRejectsUnknownRequirementProofState(t *testing.T) {
+	input := validCompactContract()
+	input["bindings"].([]any)[0].([]any)[5] = "verified"
+
+	_, err := Admit(input)
+	if err == nil || !strings.Contains(err.Error(), "proof_contract_state must be one of") {
+		t.Fatalf("Admit() error=%v, want closed proof-state vocabulary rejection", err)
+	}
+}
+
+func TestAdmitRejectsNonWitnessBackedBindingState(t *testing.T) {
+	for _, state := range []string{"explicitly_deferred", "not_bound"} {
+		t.Run(state, func(t *testing.T) {
+			input := validCompactContract()
+			input["bindings"].([]any)[0].([]any)[5] = state
+
+			_, err := Admit(input)
+			if err == nil || !strings.Contains(err.Error(), "must be witness_backed") {
+				t.Fatalf("Admit() error=%v, want witness-bearing binding state rejection", err)
+			}
+		})
+	}
+}
+
+func TestAdmitScenarioIDOwnsScopedIdentityGrammar(t *testing.T) {
+	scenarioID, surfaceID, err := AdmitScenarioID("proofkit.coverage::scenario", "scenarioId")
+	if err != nil {
+		t.Fatalf("AdmitScenarioID() error=%v", err)
+	}
+	if scenarioID != "proofkit.coverage::scenario" || surfaceID != "proofkit.coverage" {
+		t.Fatalf("AdmitScenarioID()=(%q,%q), want exact scoped identity", scenarioID, surfaceID)
+	}
+	if _, _, err := AdmitScenarioID("unscoped-scenario", "scenarioId"); err == nil {
+		t.Fatal("AdmitScenarioID() admitted an unscoped identity")
+	}
+}
+
 func TestAdmittedContractIsIndependentFromRawMutation(t *testing.T) {
 	input := validCompactContract()
 	contract, err := Admit(input)

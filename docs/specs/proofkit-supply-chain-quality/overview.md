@@ -102,7 +102,12 @@ vulnerability absence, or consumer rollout safety by itself.
   fields after validation.
 - `REQ-PROOFKIT-QUALITY-015`: the package gate includes an admitted release
   closeout completion-criteria report so unit tests alone cannot satisfy
-  release closeout.
+  release closeout, and coverage-metric re-admission uses overflow-safe exact
+  producer relations plus the complete command inventory, and compares both
+  coverage command projections with the actual `cli-contract.v2.json` command
+  inventory from the same source snapshot, so neither an impossible count
+  partition nor a coordinated same-size command substitution can satisfy
+  closeout.
 - `REQ-PROOFKIT-QUALITY-016`: release platform targets use one private owner
   that projects platform suffixes, Go build targets, npm OS/CPU metadata,
   package tar entries, Python wheel tags, PyPI candidate completeness,

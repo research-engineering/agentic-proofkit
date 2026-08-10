@@ -413,6 +413,10 @@ func TestBuildRoutesCoverageComposeInputBeforeCoverageView(t *testing.T) {
 	if commandExists(commands, "requirement-coverage-view") {
 		t.Fatalf("coverage compose route must not require prebuilt coverage_view_input: %#v", commands)
 	}
+	stopConditions := strings.Join(toStringSlice(t, report["stopConditions"].([]any)), "\n")
+	if !strings.Contains(stopConditions, "lack a declared assertion signal") || strings.Contains(stopConditions, "weak-oracle") {
+		t.Fatalf("coverage stop conditions retain obsolete oracle-quality vocabulary: %s", stopConditions)
+	}
 }
 
 func TestBuildRoutesRequirementSourceTransitionOnlyWithTransitionInput(t *testing.T) {

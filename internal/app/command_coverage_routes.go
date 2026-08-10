@@ -9,6 +9,9 @@ import (
 	"strings"
 )
 
+// These private marker names predate the declaration-only public contract.
+// Their projection remains proof_route_candidate until COVERAGE-01 supplies an
+// independently admitted execution-backed oracle ledger.
 type commandCoverageRoute struct {
 	file          string
 	kind          string
@@ -44,7 +47,6 @@ type CommandCoverageSummary struct {
 	CommandRef               string
 	ProofRouteCandidateCount int
 	RouteCount               int
-	SemanticRouteCount       int
 	RouteSmokeCount          int
 }
 
@@ -84,7 +86,7 @@ var commandCoverageRoutes = map[string][]commandCoverageRoute{
 	"impact":                                {requiredInputAdmissionRoute, packageFalsifierRoute("internal/command/impact/impact_test.go", "TestBuildRoutesChangedRecordToObligationAndRejectsUnboundProofChange", semanticRouteProof("impact.build_routes_changed_record_to_obligation_and_rejects_unbound_proof_change", commandCoverageExpectedPublicOutcome), "Impact analysis must route changed requirement records to obligations and reject unbound proof-like changes.")},
 	"init":                                  {directCLIRoute("internal/app/cli_abi_test.go", "TestCLIABIGoldenCorpus", semanticRouteProof("cli_abi.init_golden_corpus", commandCoverageExpectedPublicOutcome), "Init CLI ABI must emit dry-run route guidance without reading stdin, scanning, writing, or promoting repository facts.")},
 	"json-report-cli-adapter-source":        {packageFalsifierRoute("internal/command/jsonreportcliadaptersource/json_report_cli_adapter_source_test.go", "TestGeneratedTypeScriptAdapterExecutesCoreSemantics", semanticRouteProof("json_report_cli_adapter_source.generated_type_script_adapter_executes_core_semantics", commandCoverageExpectedPublicOutcome), "JSON report CLI adapter source generation must emit executable TypeScript that preserves parser, stable JSON, subprocess exit-code, stdout, stderr, and redacted direct-main semantics.")},
-	"migration-parity-admission":            {requiredInputAdmissionRoute, packageFalsifierRoute("internal/command/migrationparityadmission/migrationparityadmission_test.go", "TestBuildAdmitsMatchedParityAndRejectsDigestDrift", semanticRouteProof("migrationparityadmission.build_admits_matched_parity_and_rejects_digest_drift", commandCoverageExpectedPublicOutcome), "Migration parity admission must reject matched parity records with digest drift.")},
+	"migration-parity-admission":            {requiredInputAdmissionRoute, packageFalsifierRoute("internal/command/migrationparityadmission/migrationparityadmission_test.go", "TestBuildAdmitsCallerDeclaredMatchAndRejectsDigestDrift", semanticRouteProof("migrationparityadmission.build_admits_caller_declared_match_and_rejects_digest_drift", commandCoverageExpectedPublicOutcome), "Migration parity admission must reject caller-declared matches whose supplied digests differ without claiming native digest verification.")},
 	"migration-plan":                        {requiredInputAdmissionRoute, packageFalsifierRoute("internal/command/migrationplan/migrationplan_test.go", "TestSortedFollowUpCommandsRejectsShellControlTokens", semanticRouteProof("migrationplan.sorted_follow_up_commands_rejects_shell_control_tokens", commandCoverageExpectedPublicOutcome), "Migration plans must reject shell-control follow-up commands.")},
 	"obligation-decision":                   {requiredInputAdmissionRoute, packageFalsifierRoute("internal/command/obligationdecision/obligationdecision_test.go", "TestBuildAdmitsSatisfiedBlockingObligationsAndRejectsMissingReceipt", semanticRouteProof("obligationdecision.build_admits_satisfied_blocking_obligations_and_rejects_missing_receipt", commandCoverageExpectedPublicOutcome), "Obligation decision must fail blocking obligations that lack satisfying evidence states.")},
 	"package-runtime-dependency-admission":  {requiredInputAdmissionRoute, packageFalsifierRoute("internal/command/packageruntimedependency/package_runtime_dependency_test.go", "TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution", semanticRouteProof("package_runtime_dependency.build_admits_external_runtime_dependency_and_rejects_workspace_resolution", commandCoverageExpectedPublicOutcome), "Package runtime dependency admission must reject local workspace resolution.")},
@@ -137,7 +139,7 @@ var commandCoverageRoutes = map[string][]commandCoverageRoute{
 	"stack-preset":                             {directCLIRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("command_coverage.no_input_commands_have_command_specific_behavior", commandCoverageExpectedPublicOutcome), "Stack preset CLI route must emit JSON and reject unknown preset flags."), packageFalsifierRoute("internal/command/stackpreset/stackpreset_test.go", "TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied", semanticRouteProof("stackpreset.preset_inventory_is_complete_deterministic_and_defensively_copied", commandCoverageExpectedPublicOutcome), "Stack preset inventory must keep preset ids aligned with complete non-empty profile records and defensive copies."), packageFalsifierRoute("internal/command/stackpreset/stackpreset_test.go", "TestUnknownPresetIsRejected", semanticRouteProof("stackpreset.unknown_preset_is_rejected", commandCoverageExpectedPublicOutcome), "Stack preset package API must reject unknown preset ids.")},
 	"test-evidence-inventory": {
 		requiredInputAdmissionRoute,
-		packageFalsifierRoute("internal/command/testevidenceinventory/testevidenceinventory_test.go", "TestBuildRejectsWeakOracleAndDuplicateFalsifier", semanticRouteProof("testevidenceinventory.build_rejects_weak_oracle_and_duplicate_falsifier", commandCoverageExpectedPublicOutcome), "Test evidence inventory must reject weak semantic oracles and duplicate falsifier equivalence claims."),
+		packageFalsifierRoute("internal/command/testevidenceinventory/testevidenceinventory_test.go", "TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier", semanticRouteProof("testevidenceinventory.build_rejects_incomplete_declared_oracle_metadata_and_duplicate_falsifier", commandCoverageExpectedPublicOutcome), "Test evidence inventory must reject incomplete caller-declared oracle metadata and duplicate falsifier equivalence claims."),
 		packageFalsifierRoute("internal/command/testevidenceinventory/testevidenceinventory_test.go", "TestBuildDiscoveryDraftEmitsCandidateOnlyInventory", semanticRouteProof("testevidenceinventory.build_discovery_draft_emits_candidate_only_inventory", commandCoverageExpectedPublicOutcome), "Test discovery draft projection must emit candidate-only inventory guidance without closing semantic coverage."),
 		packageFalsifierRoute("internal/command/proofbindingtestinventory/proofbindingtestinventory_test.go", "TestBuildRejectsDerivedCommandRefCollision", semanticRouteProof("proofbindingtestinventory.build_rejects_derived_command_ref_collision", commandCoverageExpectedPublicOutcome), "Proof-binding-derived inventory projection must reject command-ref collisions before emitting normalized inventory."),
 	},
@@ -237,7 +239,7 @@ func commandCoverageInventoryFrom(routes map[string][]commandCoverageRoute) (map
 			"Command coverage inventory does not execute tests.",
 			"Command coverage inventory does not prove native command success, receipt freshness, or merge satisfaction.",
 			"Routing smoke entries prove CLI input routing only and cannot satisfy semantic command coverage.",
-			"Static route metadata, prose, source markers, test existence, and failure-capable AST nodes are proof-route candidates only; they cannot emit semantic_falsifier evidence.",
+			"Static route metadata, prose, source markers, test existence, and failure-capable AST nodes are proof-route candidates only; they cannot emit execution-backed semantic evidence.",
 		},
 	}, nil
 }

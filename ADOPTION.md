@@ -163,7 +163,7 @@ caller-owned capability or test observations
 
 Use `test-evidence-inventory --projection discovery-draft` only for explicit
 caller-owned test discovery facts. The command does not scan repositories,
-execute tests, emit `semantic_falsifier` evidence, or close coverage. It emits
+execute tests, emit execution-backed semantic evidence, or close coverage. It emits
 candidate inventory guidance with a non-strict candidate authority so an agent
 can ask the right owner questions and materialize strict inventory rows later.
 Candidate inventory diagnostics are rejected by strict inventory admission until

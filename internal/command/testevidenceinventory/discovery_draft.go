@@ -94,14 +94,14 @@ func BuildDiscoveryDraft(raw any) (report.Record, int, error) {
 		ReportID:      input.DraftID,
 		State:         "passed",
 		Summary: map[string]any{
-			"agentActionCount":             len(actions),
-			"candidateInventoryEntryCount": len(input.DiscoveredTests),
-			"discoveredTestCount":          len(input.DiscoveredTests),
-			"fragileSelectorWarningCount":  countPrefix(warnings, "selector_fragility:"),
-			"missingAnchorWarningCount":    countPrefix(warnings, "missing_semantic_anchor:"),
-			"runnerKind":                   input.Runner.RunnerKind,
-			"weakOracleWarningCount":       countPrefix(warnings, "weak_or_empty_oracle:"),
-			"warningCount":                 len(warnings),
+			"agentActionCount":                           len(actions),
+			"candidateInventoryEntryCount":               len(input.DiscoveredTests),
+			"discoveredTestCount":                        len(input.DiscoveredTests),
+			"fragileSelectorWarningCount":                countPrefix(warnings, "selector_fragility:"),
+			"missingAnchorWarningCount":                  countPrefix(warnings, "missing_declared_route_anchor:"),
+			"runnerKind":                                 input.Runner.RunnerKind,
+			"missingDeclaredAssertionSignalWarningCount": countPrefix(warnings, "missing_declared_assertion_signal:"),
+			"warningCount":                               len(warnings),
 		},
 		Diagnostics: []report.Diagnostic{
 			{Key: "agentActionPlan", Value: mapsToAny(actions)},
@@ -343,10 +343,10 @@ func discoveryWarnings(input discoveryDraftInput) []string {
 	warnings := []string{}
 	for _, test := range input.DiscoveredTests {
 		if len(test.CandidateRequirementRefs) == 0 && len(test.OwnerInvariantRefs) == 0 {
-			warnings = append(warnings, "missing_semantic_anchor:"+test.TestID)
+			warnings = append(warnings, "missing_declared_route_anchor:"+test.TestID)
 		}
-		if weakOracleSignals(test.OracleSignals) {
-			warnings = append(warnings, "weak_or_empty_oracle:"+test.TestID)
+		if !hasDeclaredAssertionSignal(test.OracleSignals) {
+			warnings = append(warnings, "missing_declared_assertion_signal:"+test.TestID)
 		}
 		if fragileSelectorSignals(test.SelectorSignals) {
 			warnings = append(warnings, "selector_fragility:"+test.TestID)
@@ -385,12 +385,12 @@ func discoveryActionMessage(actionType string) string {
 	switch actionType {
 	case "candidate_only":
 		return "Materialize owner-reviewed strict test-evidence-inventory before using this test as coverage evidence."
-	case "missing_semantic_anchor":
-		return "Attach the test to a stable requirement or owner invariant before claiming semantic coverage."
+	case "missing_declared_route_anchor":
+		return "Attach the test to a stable requirement or owner invariant before materializing declared route mapping."
 	case "selector_fragility":
 		return "Review selector stability before materializing this test as durable evidence."
-	case "weak_or_empty_oracle":
-		return "Add a falsifiable oracle or demote the test to route-only evidence."
+	case "missing_declared_assertion_signal":
+		return "Declare at least one assertion-capable signal or keep the candidate as route-only evidence."
 	default:
 		return "Review discovered test before materializing strict inventory."
 	}
@@ -401,7 +401,7 @@ func discoveryCandidateInventory(input discoveryDraftInput) map[string]any {
 	scopeNonClaims := discoveryScopeNonClaims(input)
 	for _, test := range input.DiscoveredTests {
 		entryNonClaims := []string{
-			"Discovery draft rows are candidate-only and cannot close semantic coverage.",
+			"Discovery draft rows are candidate-only and cannot close execution or assurance coverage.",
 		}
 		entryNonClaims = append(entryNonClaims, scopeNonClaims...)
 		entryNonClaims = append(entryNonClaims, test.NonClaims...)
@@ -444,10 +444,10 @@ func discoveryQualityFindings(test discoveredTest) []any {
 		discoveryQualityFinding(test.TestID, "candidate_only", "wrong_boundary", "warning"),
 	}
 	if len(test.CandidateRequirementRefs) == 0 && len(test.OwnerInvariantRefs) == 0 {
-		findings = append(findings, discoveryQualityFinding(test.TestID, "missing-semantic-anchor", "missing_edge", "warning"))
+		findings = append(findings, discoveryQualityFinding(test.TestID, "missing-declared-route-anchor", "missing_edge", "warning"))
 	}
-	if weakOracleSignals(test.OracleSignals) {
-		findings = append(findings, discoveryQualityFinding(test.TestID, "weak-oracle", "empty_oracle", "warning"))
+	if !hasDeclaredAssertionSignal(test.OracleSignals) {
+		findings = append(findings, discoveryQualityFinding(test.TestID, "missing-declared-assertion-signal", "missing_edge", "warning"))
 	}
 	if fragileSelectorSignals(test.SelectorSignals) {
 		findings = append(findings, discoveryQualityFinding(test.TestID, "selector-fragility", "wrong_boundary", "warning"))
@@ -466,21 +466,18 @@ func discoveryQualityFinding(testID string, suffix string, class string, severit
 	}
 }
 
-func weakOracleSignals(signals []string) bool {
-	if len(signals) == 0 {
-		return true
-	}
-	strong := map[string]struct{}{
+func hasDeclaredAssertionSignal(signals []string) bool {
+	assertionSignals := map[string]struct{}{
 		"assertion_present":        {},
 		"expected_exception":       {},
 		"status_or_exit_assertion": {},
 	}
 	for _, signal := range signals {
-		if _, ok := strong[signal]; ok {
-			return false
+		if _, ok := assertionSignals[signal]; ok {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func fragileSelectorSignals(signals []string) bool {

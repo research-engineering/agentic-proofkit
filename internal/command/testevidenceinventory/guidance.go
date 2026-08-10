@@ -47,19 +47,19 @@ func instructionForDiagnostic(diagnostic string, classificationID string) string
 	case "declared_duplicate_falsifier":
 		return "Keep one active falsifier per equivalence class, or use same-equivalence supersession to retire the older falsifier explicitly."
 	case "invalid_falsifier_supersession":
-		return "Point supersedes only at an existing same-equivalence falsifier and cite a dominance proof ref, or remove the supersession claim."
+		return "Point supersedes only at an existing same-equivalence falsifier and cite a caller-owned supersession declaration ref, or remove the supersession declaration."
 	case "missing_executable_command_ref":
-		return "Add the executable commandRef that runs this semantic falsifier, or reclassify the entry as nonsemantic evidence."
-	case "missing_semantic_anchor":
+		return "Add the caller-declared executable commandRef for this route, or reclassify the entry as nonsemantic evidence."
+	case "missing_declared_route_anchor":
 		return "Bind this test to at least one requirementRef or ownerInvariantRef, or reclassify it as helper or route-only evidence."
 	case "routing_smoke_only":
-		return "Treat this entry as wiring-only evidence; add a separate semantic_falsifier entry if a requirement or command must be satisfied."
+		return "Treat this entry as wiring-only evidence; add a declared semantic-falsifier route when mapping is required, then bind separately admitted execution and policy evidence before assurance closure."
 	case "proof_route_candidate":
-		return "Review the projected proof route, bind it to an owner-authored executable oracle, and only then materialize a semantic_falsifier entry."
-	case "weak_or_empty_oracle":
-		return "Declare a falsifier and a non-empty assertion oracle that distinguishes the intended failure from the implementation under test."
+		return "Review the projected proof route and bind it to an owner-authored executable oracle before materializing a declared semantic-falsifier route; the declaration still does not prove execution."
+	case "incomplete_declared_oracle_metadata":
+		return "Declare complete falsifier and oracle metadata that describes the intended distinction; this still does not prove execution or oracle quality."
 	case "wrong_evidence_boundary":
-		return "Remove semantic anchors from route-only smoke evidence, or replace it with a semantic_falsifier entry that carries a real oracle."
+		return "Remove requirement or invariant anchors from route-only smoke evidence, or replace it with a declared semantic-falsifier route whose oracle metadata remains explicitly caller-owned."
 	default:
 		return "Inspect this admitted inventory diagnostic and repair the caller-owned test inventory before using it as coverage guidance."
 	}

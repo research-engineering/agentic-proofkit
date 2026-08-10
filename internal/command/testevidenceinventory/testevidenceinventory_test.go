@@ -12,7 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-func TestBuildAdmitsSemanticFalsifierInventory(t *testing.T) {
+func TestBuildAdmitsDeclaredSemanticFalsifierRouteInventory(t *testing.T) {
 	record, exitCode, err := Build(validInventory(t))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -23,8 +23,8 @@ func TestBuildAdmitsSemanticFalsifierInventory(t *testing.T) {
 	if record.ReportKind != ReportKind || record.ReportID != "proofkit.test.inventory" {
 		t.Fatalf("unexpected report identity: %#v", record.JSONValue())
 	}
-	if record.Summary["semanticFalsifierCount"] != 1 {
-		t.Fatalf("semanticFalsifierCount=%v", record.Summary["semanticFalsifierCount"])
+	if record.Summary["declaredSemanticFalsifierRouteCount"] != 1 {
+		t.Fatalf("declaredSemanticFalsifierRouteCount=%v", record.Summary["declaredSemanticFalsifierRouteCount"])
 	}
 	if record.Summary["agentActionCount"] != 0 {
 		t.Fatalf("clean inventory emitted agent actions: %#v", record.JSONValue())
@@ -51,7 +51,7 @@ func TestBuildRejectsUnanchoredProofRouteCandidate(t *testing.T) {
 		t.Fatalf("Build() exit=%d state=%s, want failed candidate admission", exitCode, record.State)
 	}
 	encoded, _ := json.Marshal(record.JSONValue())
-	if !strings.Contains(string(encoded), "missing_semantic_anchor") || !strings.Contains(string(encoded), "missing_executable_command_ref") {
+	if !strings.Contains(string(encoded), "missing_declared_route_anchor") || !strings.Contains(string(encoded), "missing_executable_command_ref") {
 		t.Fatalf("candidate failures=%s", encoded)
 	}
 }
@@ -119,6 +119,28 @@ func TestBuildDiscoveryDraftEmitsCandidateOnlyInventory(t *testing.T) {
 	}
 }
 
+func TestBuildDiscoveryDraftNamesMissingDeclaredRouteAnchor(t *testing.T) {
+	input := validDiscoveryDraft()
+	test := firstDiscoveryTest(input)
+	test["candidateRequirementRefs"] = []any{}
+	test["ownerInvariantRefs"] = []any{}
+	record, _, err := BuildDiscoveryDraft(input)
+	if err != nil {
+		t.Fatalf("BuildDiscoveryDraft() error = %v", err)
+	}
+	candidate := diagnosticValue(record.JSONValue(), "candidateInventory").(map[string]any)
+	entry := candidate["entries"].([]any)[0].(map[string]any)
+	findings := entry["qualityFindings"].([]any)
+	findingIDs := []string{}
+	for _, rawFinding := range findings {
+		findingIDs = append(findingIDs, rawFinding.(map[string]any)["findingId"].(string))
+	}
+	joined := strings.Join(findingIDs, "\n")
+	if !strings.Contains(joined, ".missing-declared-route-anchor") || strings.Contains(joined, ".missing-semantic-anchor") {
+		t.Fatalf("candidate findings retain obsolete semantic-proof vocabulary: %s", joined)
+	}
+}
+
 func TestBuildDiscoveryDraftDefaultsOptionalNonClaims(t *testing.T) {
 	input := validDiscoveryDraft()
 	delete(input, "nonClaims")
@@ -139,7 +161,7 @@ func TestBuildDiscoveryDraftDefaultsOptionalNonClaims(t *testing.T) {
 	}
 }
 
-func TestBuildDiscoveryDraftClassifiesWeakOracleSignals(t *testing.T) {
+func TestBuildDiscoveryDraftClassifiesMissingDeclaredAssertionSignals(t *testing.T) {
 	input := validDiscoveryDraft()
 	strong := firstDiscoveryTest(input)
 	weak := cloneMap(strong)
@@ -158,26 +180,26 @@ func TestBuildDiscoveryDraftClassifiesWeakOracleSignals(t *testing.T) {
 		t.Fatalf("BuildDiscoveryDraft() state=%s exit=%d report=%#v", record.State, exitCode, record.JSONValue())
 	}
 	value := record.JSONValue()
-	if value["summary"].(map[string]any)["weakOracleWarningCount"] != 1 {
-		t.Fatalf("weakOracleWarningCount=%#v want 1", value["summary"].(map[string]any)["weakOracleWarningCount"])
+	if value["summary"].(map[string]any)["missingDeclaredAssertionSignalWarningCount"] != 1 {
+		t.Fatalf("missingDeclaredAssertionSignalWarningCount=%#v want 1", value["summary"].(map[string]any)["missingDeclaredAssertionSignalWarningCount"])
 	}
 	warnings := strings.Join(stringDiagnostics(value, "warnings"), "\n")
-	if !strings.Contains(warnings, "weak_or_empty_oracle:test.discovery.weak_oracle") {
-		t.Fatalf("warnings missing weak oracle diagnostic: %s", warnings)
+	if !strings.Contains(warnings, "missing_declared_assertion_signal:test.discovery.weak_oracle") {
+		t.Fatalf("warnings missing declared assertion-signal diagnostic: %s", warnings)
 	}
-	if strings.Contains(warnings, "weak_or_empty_oracle:test.discovery.semantic") {
-		t.Fatalf("strong oracle row emitted weak oracle diagnostic: %s", warnings)
+	if strings.Contains(warnings, "missing_declared_assertion_signal:test.discovery.semantic") {
+		t.Fatalf("assertion-bearing row emitted missing signal diagnostic: %s", warnings)
 	}
 	actions := diagnosticValue(value, "agentActionPlan").([]any)
 	foundAction := false
 	for _, raw := range actions {
 		action := raw.(map[string]any)
-		if action["testId"] == "test.discovery.weak_oracle" && action["type"] == "weak_or_empty_oracle" {
+		if action["testId"] == "test.discovery.weak_oracle" && action["type"] == "missing_declared_assertion_signal" {
 			foundAction = true
 		}
 	}
 	if !foundAction {
-		t.Fatalf("agentActionPlan missing weak_or_empty_oracle action: %#v", actions)
+		t.Fatalf("agentActionPlan missing missing_declared_assertion_signal action: %#v", actions)
 	}
 	candidate := diagnosticValue(value, "candidateInventory").(map[string]any)
 	for _, rawEntry := range candidate["entries"].([]any) {
@@ -188,11 +210,11 @@ func TestBuildDiscoveryDraftClassifiesWeakOracleSignals(t *testing.T) {
 		findings := entry["qualityFindings"].([]any)
 		for _, rawFinding := range findings {
 			finding := rawFinding.(map[string]any)
-			if finding["class"] == "empty_oracle" {
+			if finding["class"] == "missing_edge" && finding["findingId"] == "finding.test.discovery.weak_oracle.missing-declared-assertion-signal" {
 				return
 			}
 		}
-		t.Fatalf("weak oracle candidate entry missing empty_oracle quality finding: %#v", entry)
+		t.Fatalf("candidate entry missing declared assertion-signal finding: %#v", entry)
 	}
 	t.Fatalf("candidate inventory missing weak oracle row: %#v", candidate)
 }
@@ -260,8 +282,8 @@ func TestBuildDiscoveryDraftRejectsUnsafeAndContradictoryFacts(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsWeakOracleAndDuplicateFalsifier(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.081636031828961563284031836832627984765244046916564856218652240189648812663526")
+func TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.107074977993094420943019248218359465183764901197584019504412197592065422528956")
 	input := validInventory(t)
 	entries := input.(map[string]any)["entries"].([]any)
 	first := cloneMap(entries[0].(map[string]any))
@@ -295,17 +317,17 @@ func TestBuildRejectsWeakOracleAndDuplicateFalsifier(t *testing.T) {
 		t.Fatalf("Build() accepted weak inventory: %#v", record.JSONValue())
 	}
 	failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n")
-	for _, want := range []string{"declared_duplicate_falsifier:", "weak_or_empty_oracle:test.inventory.weak"} {
+	for _, want := range []string{"declared_duplicate_falsifier:", "incomplete_declared_oracle_metadata:test.inventory.weak"} {
 		if !strings.Contains(failures, want) {
 			t.Fatalf("failures missing %q: %s", want, failures)
 		}
 	}
 	requireDiagnosticClassifications(t, record.JSONValue(), "failureClassifications", "failure", map[string]string{
 		"declared_duplicate_falsifier:test.inventory.duplicate:test.inventory.semantic": "declared_duplicate_falsifier",
-		"weak_or_empty_oracle:test.inventory.weak":                                      "weak_or_empty_oracle",
+		"incomplete_declared_oracle_metadata:test.inventory.weak":                       "incomplete_declared_oracle_metadata",
 	})
 	requireAgentAction(t, record.JSONValue(), "declared_duplicate_falsifier", "failure")
-	requireAgentAction(t, record.JSONValue(), "weak_or_empty_oracle", "failure")
+	requireAgentAction(t, record.JSONValue(), "incomplete_declared_oracle_metadata", "failure")
 }
 
 func TestBuildRejectsDuplicateFalsifierIDAcrossDifferentEquivalenceKeys(t *testing.T) {
@@ -335,7 +357,7 @@ func TestBuildRejectsArbitraryFalsifierSupersedes(t *testing.T) {
 	replacement["testId"] = "test.inventory.invalid_supersedes"
 	replacement["falsifier"].(map[string]any)["falsifierId"] = "falsifier.inventory.invalid_supersedes"
 	replacement["falsifier"].(map[string]any)["supersedes"] = []any{"falsifier.inventory.unrelated"}
-	replacement["falsifier"].(map[string]any)["supersessionProofRef"] = "proof.inventory.invalid_supersedes"
+	replacement["falsifier"].(map[string]any)["supersessionDeclarationRef"] = "proof.inventory.invalid_supersedes"
 	replacement["ownerInvariantRefs"] = []any{"proof.inventory.invalid_supersedes"}
 	input.(map[string]any)["entries"] = append(entries, replacement)
 
@@ -355,7 +377,7 @@ func TestBuildRejectsArbitraryFalsifierSupersedes(t *testing.T) {
 	})
 }
 
-func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithoutDominanceProof(t *testing.T) {
+func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithoutDeclaration(t *testing.T) {
 	input := validInventory(t)
 	entries := input.(map[string]any)["entries"].([]any)
 	replacement := cloneMap(entries[0].(map[string]any))
@@ -370,15 +392,15 @@ func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithoutDominanceProof(t
 		t.Fatalf("Build() error = %v", err)
 	}
 	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() accepted supersession without dominance proof: %#v", record.JSONValue())
+		t.Fatalf("Build() accepted supersession without declaration ref: %#v", record.JSONValue())
 	}
 	failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n")
-	if !strings.Contains(failures, "invalid_falsifier_supersession:test.inventory.superseding:missing_dominance_proof:falsifier.inventory.semantic") {
-		t.Fatalf("failures missing dominance proof diagnostic: %s", failures)
+	if !strings.Contains(failures, "invalid_falsifier_supersession:test.inventory.superseding:missing_supersession_declaration:falsifier.inventory.semantic") {
+		t.Fatalf("failures missing supersession declaration diagnostic: %s", failures)
 	}
 }
 
-func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithUnownedDominanceProof(t *testing.T) {
+func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithUnownedDeclaration(t *testing.T) {
 	input := validInventory(t)
 	entries := input.(map[string]any)["entries"].([]any)
 	replacement := cloneMap(entries[0].(map[string]any))
@@ -386,7 +408,7 @@ func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithUnownedDominancePro
 	replacement["testId"] = "test.inventory.unowned_superseding"
 	replacement["falsifier"].(map[string]any)["falsifierId"] = "falsifier.inventory.unowned_superseding"
 	replacement["falsifier"].(map[string]any)["supersedes"] = []any{"falsifier.inventory.semantic"}
-	replacement["falsifier"].(map[string]any)["supersessionProofRef"] = "proof.inventory.unowned_superseding"
+	replacement["falsifier"].(map[string]any)["supersessionDeclarationRef"] = "proof.inventory.unowned_superseding"
 	input.(map[string]any)["entries"] = append(entries, replacement)
 
 	record, exitCode, err := Build(input)
@@ -394,15 +416,15 @@ func TestBuildRejectsSameEquivalenceFalsifierSupersessionWithUnownedDominancePro
 		t.Fatalf("Build() error = %v", err)
 	}
 	if exitCode == 0 || record.State != "failed" {
-		t.Fatalf("Build() accepted supersession with unowned dominance proof: %#v", record.JSONValue())
+		t.Fatalf("Build() accepted supersession with unowned declaration ref: %#v", record.JSONValue())
 	}
 	failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n")
-	if !strings.Contains(failures, "invalid_falsifier_supersession:test.inventory.unowned_superseding:unowned_dominance_proof:proof.inventory.unowned_superseding") {
-		t.Fatalf("failures missing unowned dominance proof diagnostic: %s", failures)
+	if !strings.Contains(failures, "invalid_falsifier_supersession:test.inventory.unowned_superseding:unowned_supersession_declaration:proof.inventory.unowned_superseding") {
+		t.Fatalf("failures missing unowned supersession declaration diagnostic: %s", failures)
 	}
 }
 
-func TestBuildAdmitsSameEquivalenceFalsifierSupersessionWithDominanceProof(t *testing.T) {
+func TestBuildAdmitsSameEquivalenceFalsifierSupersessionWithOwnedDeclaration(t *testing.T) {
 	input := validInventory(t)
 	entries := input.(map[string]any)["entries"].([]any)
 	replacement := cloneMap(entries[0].(map[string]any))
@@ -410,7 +432,7 @@ func TestBuildAdmitsSameEquivalenceFalsifierSupersessionWithDominanceProof(t *te
 	replacement["testId"] = "test.inventory.superseding"
 	replacement["falsifier"].(map[string]any)["falsifierId"] = "falsifier.inventory.superseding"
 	replacement["falsifier"].(map[string]any)["supersedes"] = []any{"falsifier.inventory.semantic"}
-	replacement["falsifier"].(map[string]any)["supersessionProofRef"] = "proof.inventory.superseding"
+	replacement["falsifier"].(map[string]any)["supersessionDeclarationRef"] = "proof.inventory.superseding"
 	replacement["ownerInvariantRefs"] = []any{"proof.inventory.superseding"}
 	input.(map[string]any)["entries"] = append(entries, replacement)
 
@@ -419,7 +441,7 @@ func TestBuildAdmitsSameEquivalenceFalsifierSupersessionWithDominanceProof(t *te
 		t.Fatalf("Build() error = %v", err)
 	}
 	if exitCode != 0 || record.State != "passed" {
-		t.Fatalf("Build() rejected proven same-equivalence supersession: %#v", record.JSONValue())
+		t.Fatalf("Build() rejected declared same-equivalence supersession: %#v", record.JSONValue())
 	}
 }
 
@@ -431,7 +453,7 @@ func TestBuildAdmitsSupersessionIndependentOfTestIDSortOrder(t *testing.T) {
 	replacement["testId"] = "test.inventory.aaa_superseding"
 	replacement["falsifier"].(map[string]any)["falsifierId"] = "falsifier.inventory.aaa_superseding"
 	replacement["falsifier"].(map[string]any)["supersedes"] = []any{"falsifier.inventory.semantic"}
-	replacement["falsifier"].(map[string]any)["supersessionProofRef"] = "proof.inventory.aaa_superseding"
+	replacement["falsifier"].(map[string]any)["supersessionDeclarationRef"] = "proof.inventory.aaa_superseding"
 	replacement["ownerInvariantRefs"] = []any{"proof.inventory.aaa_superseding"}
 	input.(map[string]any)["entries"] = append(entries, replacement)
 
@@ -444,7 +466,7 @@ func TestBuildAdmitsSupersessionIndependentOfTestIDSortOrder(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsSemanticFalsifierWithoutCommandRefs(t *testing.T) {
+func TestBuildRejectsDeclaredSemanticFalsifierRouteWithoutCommandRefs(t *testing.T) {
 	input := validInventory(t)
 	entry := input.(map[string]any)["entries"].([]any)[0].(map[string]any)
 	entry["commandRefs"] = []any{}
@@ -465,7 +487,7 @@ func TestBuildRejectsSemanticFalsifierWithoutCommandRefs(t *testing.T) {
 	})
 }
 
-func TestBuildRejectsSemanticFalsifierWithoutExpectedPublicOutcome(t *testing.T) {
+func TestBuildRejectsDeclaredSemanticFalsifierRouteWithoutExpectedPublicOutcome(t *testing.T) {
 	input := validInventory(t)
 	entry := input.(map[string]any)["entries"].([]any)[0].(map[string]any)
 	entry["oracle"].(map[string]any)["expectedPublicOutcome"] = ""
@@ -478,7 +500,7 @@ func TestBuildRejectsSemanticFalsifierWithoutExpectedPublicOutcome(t *testing.T)
 		t.Fatalf("Build() accepted semantic falsifier without expected public outcome: %#v", record.JSONValue())
 	}
 	failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n")
-	if !strings.Contains(failures, "weak_or_empty_oracle:test.inventory.semantic") {
+	if !strings.Contains(failures, "incomplete_declared_oracle_metadata:test.inventory.semantic") {
 		t.Fatalf("failures missing weak oracle diagnostic: %s", failures)
 	}
 }
@@ -623,7 +645,7 @@ func TestBuildRejectsUnknownQualityFindingClass(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsSemanticEntryWithoutStableAnchor(t *testing.T) {
+func TestBuildRejectsDeclaredRouteWithoutStableAnchor(t *testing.T) {
 	input := validInventory(t)
 	entry := input.(map[string]any)["entries"].([]any)[0].(map[string]any)
 	entry["requirementRefs"] = []any{}
@@ -636,7 +658,7 @@ func TestBuildRejectsSemanticEntryWithoutStableAnchor(t *testing.T) {
 	if exitCode == 0 || record.State != "failed" {
 		t.Fatalf("Build() accepted anchorless semantic entry: %#v", record.JSONValue())
 	}
-	if failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n"); !strings.Contains(failures, "missing_semantic_anchor:test.inventory.semantic") {
+	if failures := strings.Join(stringDiagnostics(record.JSONValue(), "failures"), "\n"); !strings.Contains(failures, "missing_declared_route_anchor:test.inventory.semantic") {
 		t.Fatalf("missing semantic anchor failure not reported: %s", failures)
 	}
 }
@@ -747,8 +769,8 @@ func TestBuildAdmitsWrappedSourceSetInventory(t *testing.T) {
 	if record.Summary["sourceCount"] != 1 || record.Summary["inputPathCount"] != 1 {
 		t.Fatalf("unexpected source summary: %#v", record.Summary)
 	}
-	if record.Summary["semanticFalsifierCount"] != 1 {
-		t.Fatalf("semanticFalsifierCount=%v", record.Summary["semanticFalsifierCount"])
+	if record.Summary["declaredSemanticFalsifierRouteCount"] != 1 {
+		t.Fatalf("declaredSemanticFalsifierRouteCount=%v", record.Summary["declaredSemanticFalsifierRouteCount"])
 	}
 }
 
@@ -997,7 +1019,7 @@ func validInventory(t *testing.T) any {
       "selector": "go test ./internal/command/testevidenceinventory -run TestSemantic",
       "sourcePath": "internal/command/testevidenceinventory/testevidenceinventory_test.go",
       "ownerId": "proofkit.test",
-      "evidenceClass": "semantic_falsifier",
+      "evidenceClass": "declared_semantic_falsifier_route",
       "requirementRefs": ["REQ-PROOFKIT-TEST-001"],
       "ownerInvariantRefs": [],
       "commandRefs": ["proofkit.test.command"],

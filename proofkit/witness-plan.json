@@ -771,6 +771,7 @@
         "internal/kernel/compactproofcontract",
         "internal/kernel/digest",
         "internal/kernel/markdownfmt",
+        "internal/kernel/proofvocab",
         "internal/kernel/report",
         "internal/kernel/secretjson",
         "internal/kernel/stablejson",

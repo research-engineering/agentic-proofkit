@@ -28,17 +28,16 @@ func diagnosticClassID(diagnostic string) string {
 		return "declared_dead_zone"
 	case strings.HasPrefix(diagnostic, "missing_proof_binding_route:") || strings.HasPrefix(diagnostic, "proof_binding_unknown_requirement:"):
 		return "missing_requirement_binding"
-	case strings.HasPrefix(diagnostic, "missing_test_inventory:") || strings.HasPrefix(diagnostic, "missing_command_semantic_falsifier:"):
-		return "missing_semantic_test"
+	case strings.HasPrefix(diagnostic, "missing_test_inventory:") || strings.HasPrefix(diagnostic, "missing_command_declared_semantic_falsifier_route:"):
+		return "missing_declared_test_route"
 	case strings.HasPrefix(diagnostic, "missing_owner_invariant_inventory:"):
-		return "missing_semantic_test"
+		return "missing_declared_test_route"
 	case strings.HasPrefix(diagnostic, "nonsemantic_command_evidence:"):
 		return "nonsemantic_command_evidence"
 	case strings.HasPrefix(diagnostic, "proof_route_candidate_only:") || strings.HasPrefix(diagnostic, "command_proof_route_candidate_only:"):
 		return "proof_route_candidate_only"
 	case strings.HasPrefix(diagnostic, "route_only_nonclaim:") ||
-		strings.HasPrefix(diagnostic, "command_route_only_nonclaim:") ||
-		strings.HasPrefix(diagnostic, "covered_by_routing_smoke_nonclaim:"):
+		strings.HasPrefix(diagnostic, "command_route_only_nonclaim:"):
 		return "routing_smoke_only"
 	case strings.HasPrefix(diagnostic, "unknown_requirement_ref:") ||
 		strings.HasPrefix(diagnostic, "unknown_owner_invariant_ref:") ||
@@ -49,7 +48,7 @@ func diagnosticClassID(diagnostic string) string {
 		return "owner_scope_violation"
 	case strings.HasPrefix(diagnostic, "test_inventory_failed:"):
 		return "failed_test_inventory"
-	case strings.HasPrefix(diagnostic, "covered_by_governance_invariant_nonproduct:"):
+	case strings.HasPrefix(diagnostic, "mapped_to_declared_governance_or_release_route_nonproduct:"):
 		return "nonsemantic_governance_evidence"
 	case strings.HasPrefix(diagnostic, "not_applicable:"):
 		return "not_applicable_with_reason"
