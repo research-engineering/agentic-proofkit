@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "440f53b6433deef5e254d0d48665e79eda10cf4c0bceafe8acfedb42a6f46df6"
+	cliContractPublicABISHA256               = "fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -175,9 +175,9 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			required:     []string{"input", "schemaVersion"},
 		},
 		{
-			definitionID: "proofkit.requirement-proof-source-set.input.v1.root-shape",
-			allowed:      []string{"canonicalEnvelope", "projection", "sourceSet", "sources"},
-			required:     []string{"canonicalEnvelope", "sourceSet", "sources"},
+			definitionID: "proofkit.requirement-proof-source-set.input.v2.root-shape",
+			allowed:      []string{"canonicalEnvelope", "projection", "schemaVersion", "sourceSet", "sources"},
+			required:     []string{"canonicalEnvelope", "schemaVersion", "sourceSet", "sources"},
 		},
 		{
 			definitionID: "proofkit.secret-scan.input.v1.root-shape",
@@ -2001,13 +2001,13 @@ func TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract(t *testi
 			continue
 		}
 		output := canonicalJSONValue(t, command.OutputContract).(map[string]any)
-		if output["contractId"] != "proofkit.requirement-coverage-view.output.v2" || output["schemaVersion"] != float64(2) {
-			t.Fatalf("requirement coverage output identity=%#v, want versioned v2 contract", output)
+		if output["contractId"] != "proofkit.requirement-coverage-view.output.v3" || output["schemaVersion"] != float64(3) {
+			t.Fatalf("requirement coverage output identity=%#v, want versioned v3 contract", output)
 		}
 		definitionID := output["rootDefinitionRef"].(string)
 		definition := definitions[definitionID]
-		if definitionID != "proofkit.requirement-coverage-view.output.v2.root-shape" || definition["schemaVersion"] != float64(2) {
-			t.Fatalf("requirement coverage root definition=%#v, want versioned v2 root", definition)
+		if definitionID != "proofkit.requirement-coverage-view.output.v3.root-shape" || definition["schemaVersion"] != float64(3) {
+			t.Fatalf("requirement coverage root definition=%#v, want versioned v3 root", definition)
 		}
 		for _, rawVariant := range definition["fieldTree"].(map[string]any)["variants"].([]any) {
 			variant := rawVariant.(map[string]any)
@@ -2018,7 +2018,7 @@ func TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract(t *testi
 				return
 			}
 		}
-		t.Fatal("requirement coverage v2 report root must require coverageBasis and unmappedTests")
+		t.Fatal("requirement coverage v3 report root must require coverageBasis and unmappedTests")
 	}
 	t.Fatal("requirement-coverage-view missing from CLI contract")
 }
@@ -2208,7 +2208,7 @@ func TestRequirementImpactInputComposeContractDescribesDirectImpactInput(t *test
 		"baseRef",
 		"changedBindingRecordIds",
 		"changedPaths",
-		"changedRecordIds",
+		"changedRequirementIds",
 		"changedWitnessPathCoverage",
 		"generatedArtifactRules",
 		"headCommit",

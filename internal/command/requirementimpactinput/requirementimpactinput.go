@@ -55,18 +55,26 @@ type proofLikePolicy struct {
 }
 
 type bindingRecord struct {
-	BlockingStatus             string
-	Commands                   []string
-	FalsificationSelector      string
-	Fingerprint                string
-	Identity                   string
-	PositiveSelector           string
-	Preconditioned             bool
-	ProofContractState         string
-	RequirementID              string
-	RequiredEnvironmentClasses []string
-	ScenarioID                 string
-	SurfaceID                  string
+	BindingRecordID                   string
+	BlockingStatus                    string
+	Commands                          []string
+	DeclaredMutationResistanceClaimID string
+	DeclaredWitnessRoutes             []compactproofcontract.WitnessRoute
+	FalsificationSelector             string
+	FalsificationWitnessRouteID       string
+	Fingerprint                       string
+	PositiveSelector                  string
+	PositiveWitnessRouteID            string
+	Preconditioned                    bool
+	RequirementID                     string
+	RequiredEnvironmentClasses        []string
+	ScenarioID                        string
+	SurfaceID                         string
+}
+
+type witnessCoverageRecord struct {
+	Path   string
+	Routes []compactproofcontract.WitnessRoute
 }
 
 func Build(raw any) (map[string]any, int, error) {
@@ -92,8 +100,8 @@ func admitInput(raw any) (input, error) {
 	if err := admit.KnownKeys(record, []string{"baseCommit", "baseCompactProofContract", "baseRef", "baseRequirementSources", "changedPathSources", "composerInputId", "currentCompactProofContract", "currentRequirementSources", "generatedArtifactPolicyState", "generatedArtifactRules", "headCommit", "headRef", "localEnvironmentPolicy", "nonClaims", "preexistingFailures", "proofBindingSourcePaths", "proofLikePathPolicy", "schemaVersion", "unboundProofChangeRationale"}, "requirement impact input compose input"); err != nil {
 		return input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return input{}, fmt.Errorf("requirement impact input compose schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return input{}, fmt.Errorf("requirement impact input compose schemaVersion must be 2")
 	}
 	if _, err := admit.RuleID(record["composerInputId"], "requirement impact input compose composerInputId"); err != nil {
 		return input{}, err
@@ -213,13 +221,13 @@ func compose(input input) (map[string]any, error) {
 	}
 	failures := append([]string{}, input.PreexistingFailures...)
 	failures = append(failures, generatedPolicyFailures(input.GeneratedArtifactPolicy)...)
-	currentByRequirement, currentByIdentity, err := impactBindings(input.CurrentCompactProofContract, input.LocalEnvironmentClasses, true)
+	currentByRequirement, currentByIdentity, err := impactBindings(input.CurrentCompactProofContract, input.LocalEnvironmentClasses)
 	if err != nil {
 		return nil, err
 	}
 	baseByIdentity := map[string]bindingRecord{}
 	if input.BaseCompactProofContract != nil {
-		_, baseByIdentity, err = impactBindings(*input.BaseCompactProofContract, input.LocalEnvironmentClasses, false)
+		_, baseByIdentity, err = impactBindings(*input.BaseCompactProofContract, input.LocalEnvironmentClasses)
 		if err != nil {
 			return nil, err
 		}
@@ -228,7 +236,7 @@ func compose(input input) (map[string]any, error) {
 	failures = append(failures, missingCurrentActiveBlockingBindingFailures(input.CurrentRequirements, currentByRequirement)...)
 	changedRequirements, requirementFailures := changedRequirementIDs(input.BaseRequirements, input.CurrentRequirements)
 	failures = append(failures, requirementFailures...)
-	changedRecordIDs := []string{}
+	changedRequirementIDs := []string{}
 	for _, requirementID := range changedRequirements {
 		requirement, ok := input.CurrentRequirements[requirementID]
 		if !ok || !isActiveBlocking(requirement) {
@@ -237,41 +245,46 @@ func compose(input input) (map[string]any, error) {
 		if _, ok := currentByRequirement[requirementID]; !ok {
 			continue
 		}
-		changedRecordIDs = append(changedRecordIDs, requirementID)
+		changedRequirementIDs = append(changedRequirementIDs, requirementID)
 	}
-	changedBindingIDs, bindingFailures := changedBindingRequirementIDs(input.BaseCompactProofContract != nil, baseByIdentity, currentByIdentity, input.CurrentRequirements, changed.ChangedPaths, input.ProofBindingSourcePaths)
+	changedBindingIDs, bindingFailures := changedBindingRecordIDs(input.BaseCompactProofContract != nil, baseByIdentity, currentByIdentity, input.CurrentRequirements, changed.ChangedPaths, input.ProofBindingSourcePaths)
 	failures = append(failures, bindingFailures...)
-	changedWitnessCoverage := changedWitnessPathCoverage(input.CurrentCompactProofContract, changed.ChangedPaths)
+	changedWitnessCoverage, err := changedWitnessPathCoverage(input.CurrentCompactProofContract, changed.ChangedPaths)
+	if err != nil {
+		return nil, err
+	}
 	proofLikePaths := proofLikeChangedPaths(changed.ChangedPaths, input.ProofLikePolicy.ProofLikePathPatterns, input.ProofLikePolicy.IgnoredProofLikePaths)
-	impactedRequirementIDs := sortedUnion(changedRecordIDs, changedBindingIDs, witnessCoverageRequirementIDs(changedWitnessCoverage))
+	impactedBindingIDs := sortedUnion(bindingIDsForRequirements(changedRequirementIDs, currentByRequirement), changedBindingIDs, witnessCoverageBindingIDs(changedWitnessCoverage))
 	obligations := []any{}
-	for _, requirementID := range impactedRequirementIDs {
-		binding, ok := currentByRequirement[requirementID]
+	for _, bindingRecordID := range impactedBindingIDs {
+		binding, ok := currentByIdentity[bindingRecordID]
 		if !ok {
-			failures = append(failures, fmt.Sprintf("impacted requirement has no current proof binding: %s", requirementID))
+			failures = append(failures, fmt.Sprintf("impacted binding has no current proof route declaration: %s", bindingRecordID))
 			continue
 		}
 		obligations = append(obligations, map[string]any{
-			"blockingStatus":             binding.BlockingStatus,
-			"commands":                   stringsToAny(binding.Commands),
-			"preconditioned":             binding.Preconditioned,
-			"proofContractState":         binding.ProofContractState,
-			"recordId":                   binding.RequirementID,
-			"requiredEnvironmentClasses": stringsToAny(binding.RequiredEnvironmentClasses),
-			"scenarioId":                 binding.ScenarioID,
-			"surfaceId":                  binding.SurfaceID,
+			"bindingRecordId":                   binding.BindingRecordID,
+			"blockingStatus":                    binding.BlockingStatus,
+			"commands":                          stringsToAny(binding.Commands),
+			"declaredMutationResistanceClaimId": binding.DeclaredMutationResistanceClaimID,
+			"declaredWitnessRoutes":             declaredWitnessRouteValues(binding.DeclaredWitnessRoutes),
+			"preconditioned":                    binding.Preconditioned,
+			"requirementId":                     binding.RequirementID,
+			"requiredEnvironmentClasses":        stringsToAny(binding.RequiredEnvironmentClasses),
+			"scenarioId":                        binding.ScenarioID,
+			"surfaceId":                         binding.SurfaceID,
 		})
 	}
 	sort.Strings(failures)
 	failures = uniqueStrings(failures)
 	output := map[string]any{
-		"schemaVersion":              json.Number("1"),
+		"schemaVersion":              json.Number("2"),
 		"baseRef":                    input.BaseRef,
 		"baseCommit":                 input.BaseCommit,
 		"headRef":                    input.HeadRef,
 		"headCommit":                 nullableTextValue(input.HeadCommit),
 		"changedPaths":               stringsToAny(changed.ChangedPaths),
-		"changedRecordIds":           stringsToAny(uniqueSorted(changedRecordIDs)),
+		"changedRequirementIds":      stringsToAny(uniqueSorted(changedRequirementIDs)),
 		"changedBindingRecordIds":    stringsToAny(uniqueSorted(changedBindingIDs)),
 		"changedWitnessPathCoverage": witnessCoverageValues(changedWitnessCoverage),
 		"generatedArtifactRules":     generatedArtifactRuleValues(input.GeneratedArtifactRules),
@@ -430,36 +443,46 @@ func admitGeneratedArtifactRules(raw any) ([]generatedArtifactRule, error) {
 	return result, nil
 }
 
-func impactBindings(contract compactproofcontract.Contract, localClasses []string, requireUniqueRequirement bool) (map[string]bindingRecord, map[string]bindingRecord, error) {
+func impactBindings(contract compactproofcontract.Contract, localClasses []string) (map[string][]bindingRecord, map[string]bindingRecord, error) {
 	surfaces := map[string]compactproofcontract.Surface{}
-	for _, surface := range contract.Surfaces {
-		surfaces[surface.SurfaceID] = surface
+	for _, surface := range contract.Surfaces() {
+		surfaces[surface.ID()] = surface
 	}
-	byRequirement := map[string]bindingRecord{}
+	byRequirement := map[string][]bindingRecord{}
 	byIdentity := map[string]bindingRecord{}
-	for _, binding := range contract.Bindings {
-		identity := bindingIdentity(binding)
+	for _, binding := range contract.Bindings() {
+		falsificationWitness := binding.FalsificationWitness()
+		positiveWitness := binding.PositiveWitness()
+		declaredWitnessRoutes, err := binding.WitnessRoutes()
+		if err != nil {
+			return nil, nil, err
+		}
+		requiredEnvironmentClasses := binding.DeclaredEnvironmentClasses()
+		surface := surfaces[binding.SurfaceID()]
 		record := bindingRecord{
-			BlockingStatus:             binding.BlockingStatus,
-			Commands:                   append([]string{}, binding.VerifyCommands...),
-			FalsificationSelector:      binding.FalsificationWitness.Selector,
-			Fingerprint:                fullBindingFingerprint(binding),
-			Identity:                   identity,
-			PositiveSelector:           binding.PositiveWitness.Selector,
-			Preconditioned:             preconditioned(surfaces[binding.SurfaceID], binding.RequiredEnvironmentClasses, localClasses),
-			ProofContractState:         binding.ProofContractState,
-			RequirementID:              binding.RequirementID,
-			RequiredEnvironmentClasses: append([]string{}, binding.RequiredEnvironmentClasses...),
-			ScenarioID:                 binding.ScenarioID,
-			SurfaceID:                  binding.SurfaceID,
+			BindingRecordID:                   binding.RecordID(),
+			BlockingStatus:                    binding.BlockingStatus(),
+			Commands:                          binding.DeclaredVerifyCommands(),
+			DeclaredMutationResistanceClaimID: binding.DeclaredMutationResistanceClaimID(),
+			DeclaredWitnessRoutes:             declaredWitnessRoutes,
+			FalsificationSelector:             falsificationWitness.Selector(),
+			FalsificationWitnessRouteID:       binding.FalsificationWitnessRouteID(),
+			Fingerprint:                       fullBindingFingerprint(binding, surface),
+			PositiveSelector:                  positiveWitness.Selector(),
+			PositiveWitnessRouteID:            binding.PositiveWitnessRouteID(),
+			Preconditioned:                    preconditioned(surface, requiredEnvironmentClasses, localClasses),
+			RequirementID:                     binding.RequirementID(),
+			RequiredEnvironmentClasses:        requiredEnvironmentClasses,
+			ScenarioID:                        binding.ScenarioID(),
+			SurfaceID:                         binding.SurfaceID(),
 		}
-		byIdentity[identity] = record
-		if _, exists := byRequirement[binding.RequirementID]; exists && requireUniqueRequirement {
-			return nil, nil, fmt.Errorf("requirement impact input compose current compact proof contract has multiple bindings for requirementId: %s", binding.RequirementID)
-		}
-		if _, exists := byRequirement[binding.RequirementID]; !exists {
-			byRequirement[binding.RequirementID] = record
-		}
+		byIdentity[binding.RecordID()] = record
+		byRequirement[binding.RequirementID()] = append(byRequirement[binding.RequirementID()], record)
+	}
+	for requirementID := range byRequirement {
+		sort.Slice(byRequirement[requirementID], func(left, right int) bool {
+			return byRequirement[requirementID][left].BindingRecordID < byRequirement[requirementID][right].BindingRecordID
+		})
 	}
 	return byRequirement, byIdentity, nil
 }
@@ -483,7 +506,7 @@ func changedRequirementIDs(base map[string]requirementsourceadmission.Requiremen
 	return changed, failures
 }
 
-func changedBindingRequirementIDs(hasBase bool, base map[string]bindingRecord, current map[string]bindingRecord, currentRequirements map[string]requirementsourceadmission.Requirement, changedPaths []string, sourcePaths []string) ([]string, []string) {
+func changedBindingRecordIDs(hasBase bool, base map[string]bindingRecord, current map[string]bindingRecord, currentRequirements map[string]requirementsourceadmission.Requirement, changedPaths []string, sourcePaths []string) ([]string, []string) {
 	if !hasBase {
 		return []string{}, []string{}
 	}
@@ -502,7 +525,7 @@ func changedBindingRequirementIDs(hasBase bool, base map[string]bindingRecord, c
 		currentRecord, currentOK := current[identity]
 		if currentOK {
 			if !baseOK || bindingFingerprint(baseRecord) != bindingFingerprint(currentRecord) {
-				changed = append(changed, currentRecord.RequirementID)
+				changed = append(changed, currentRecord.BindingRecordID)
 			}
 			continue
 		}
@@ -514,7 +537,7 @@ func changedBindingRequirementIDs(hasBase bool, base map[string]bindingRecord, c
 	return uniqueSorted(changed), failures
 }
 
-func unknownBindingRequirementFailures(bindings map[string]bindingRecord, requirements map[string]requirementsourceadmission.Requirement) []string {
+func unknownBindingRequirementFailures(bindings map[string][]bindingRecord, requirements map[string]requirementsourceadmission.Requirement) []string {
 	failures := []string{}
 	for _, requirementID := range sortedMapKeys(bindings) {
 		if _, ok := requirements[requirementID]; !ok {
@@ -524,7 +547,7 @@ func unknownBindingRequirementFailures(bindings map[string]bindingRecord, requir
 	return failures
 }
 
-func missingCurrentActiveBlockingBindingFailures(requirements map[string]requirementsourceadmission.Requirement, bindings map[string]bindingRecord) []string {
+func missingCurrentActiveBlockingBindingFailures(requirements map[string]requirementsourceadmission.Requirement, bindings map[string][]bindingRecord) []string {
 	failures := []string{}
 	for _, requirementID := range sortedMapKeys(requirements) {
 		requirement := requirements[requirementID]
@@ -538,27 +561,36 @@ func missingCurrentActiveBlockingBindingFailures(requirements map[string]require
 	return failures
 }
 
-func changedWitnessPathCoverage(contract compactproofcontract.Contract, changedPaths []string) []map[string][]string {
+func changedWitnessPathCoverage(contract compactproofcontract.Contract, changedPaths []string) ([]witnessCoverageRecord, error) {
 	changedSet := mapSet(changedPaths)
-	byPath := map[string]map[string]struct{}{}
-	for _, binding := range contract.Bindings {
-		for _, selector := range []string{binding.PositiveWitness.Selector, binding.FalsificationWitness.Selector} {
-			path := strings.Split(selector, "::")[0]
+	byPath := map[string]map[string]compactproofcontract.WitnessRoute{}
+	for _, binding := range contract.Bindings() {
+		routes, err := binding.WitnessRoutes()
+		if err != nil {
+			return nil, err
+		}
+		for _, route := range routes {
+			path := strings.Split(route.Selector, "::")[0]
 			if _, ok := changedSet[path]; !ok {
 				continue
 			}
 			if byPath[path] == nil {
-				byPath[path] = map[string]struct{}{}
+				byPath[path] = map[string]compactproofcontract.WitnessRoute{}
 			}
-			byPath[path][binding.RequirementID] = struct{}{}
+			byPath[path][route.RouteID] = route
 		}
 	}
 	paths := sortedMapKeys(byPath)
-	result := make([]map[string][]string, 0, len(paths))
+	result := []witnessCoverageRecord{}
 	for _, path := range paths {
-		result = append(result, map[string][]string{path: sortedSetValues(byPath[path])})
+		routeIDs := sortedMapKeys(byPath[path])
+		routes := make([]compactproofcontract.WitnessRoute, 0, len(routeIDs))
+		for _, routeID := range routeIDs {
+			routes = append(routes, byPath[path][routeID])
+		}
+		result = append(result, witnessCoverageRecord{Path: path, Routes: routes})
 	}
-	return result
+	return result, nil
 }
 
 func proofLikeChangedPaths(changedPaths []string, patterns []string, ignored []string) []string {
@@ -590,7 +622,7 @@ func generatedPolicyFailures(policy generatedArtifactPolicy) []string {
 }
 
 func preconditioned(surface compactproofcontract.Surface, required []string, localClasses []string) bool {
-	if len(surface.PreconditionedEnvironmentClasses) > 0 {
+	if len(surface.PreconditionedEnvironmentClasses()) > 0 {
 		return true
 	}
 	local := mapSet(localClasses)
@@ -630,29 +662,35 @@ func bindingFingerprint(binding bindingRecord) string {
 	return binding.Fingerprint
 }
 
-func fullBindingFingerprint(binding compactproofcontract.Binding) string {
+func fullBindingFingerprint(binding compactproofcontract.Binding, surface compactproofcontract.Surface) string {
+	falsificationWitness := binding.FalsificationWitness()
+	positiveWitness := binding.PositiveWitness()
 	return stableFingerprint(map[string]any{
-		"blockingStatus":             binding.BlockingStatus,
-		"falsificationWitness":       witnessFingerprintValue(binding.FalsificationWitness),
-		"invariantRole":              binding.InvariantRole,
-		"mutationResistanceState":    binding.MutationResistanceState,
-		"ownedInvariant":             binding.OwnedInvariant,
-		"positiveWitness":            witnessFingerprintValue(binding.PositiveWitness),
-		"proofContractState":         binding.ProofContractState,
-		"requirementId":              binding.RequirementID,
-		"requiredEnvironmentClasses": stringsToAny(binding.RequiredEnvironmentClasses),
-		"scenarioId":                 binding.ScenarioID,
-		"surfaceId":                  binding.SurfaceID,
-		"verifyCommands":             stringsToAny(binding.VerifyCommands),
+		"blockingStatus":                    binding.BlockingStatus(),
+		"falsificationWitness":              witnessFingerprintValue(falsificationWitness),
+		"invariantRole":                     binding.InvariantRole(),
+		"declaredMutationResistanceClaimId": binding.DeclaredMutationResistanceClaimID(),
+		"ownedInvariant":                    binding.OwnedInvariant(),
+		"positiveWitness":                   witnessFingerprintValue(positiveWitness),
+		"bindingRecordId":                   binding.RecordID(),
+		"requirementId":                     binding.RequirementID(),
+		"requiredEnvironmentClasses":        stringsToAny(binding.RequiredEnvironmentClasses()),
+		"scenarioId":                        binding.ScenarioID(),
+		"surface": map[string]any{
+			"preconditionedEnvironmentClasses": stringsToAny(surface.PreconditionedEnvironmentClasses()),
+			"requiredEnvironmentClasses":       stringsToAny(surface.RequiredEnvironmentClasses()),
+			"surfaceId":                        surface.ID(),
+		},
+		"verifyCommands": stringsToAny(binding.VerifyCommands()),
 	})
 }
 
 func witnessFingerprintValue(witness compactproofcontract.Witness) map[string]any {
 	return map[string]any{
-		"environmentClasses":   stringsToAny(witness.EnvironmentClasses),
-		"resolutionOrderIndex": witness.ResolutionOrderIndex,
-		"selector":             witness.Selector,
-		"verifyCommands":       stringsToAny(witness.VerifyCommands),
+		"environmentClasses":   stringsToAny(witness.EnvironmentClasses()),
+		"resolutionOrderIndex": witness.ResolutionOrderIndex(),
+		"selector":             witness.Selector(),
+		"verifyCommands":       stringsToAny(witness.VerifyCommands()),
 	}
 }
 
@@ -662,10 +700,6 @@ func bindingSetFingerprint(bindings map[string]bindingRecord) string {
 		rows = append(rows, map[string]any{"identity": key, "fingerprint": bindingFingerprint(bindings[key])})
 	}
 	return stableFingerprint(rows)
-}
-
-func bindingIdentity(binding compactproofcontract.Binding) string {
-	return binding.RequirementID + "\x00" + binding.SurfaceID + "\x00" + binding.ScenarioID
 }
 
 func stableFingerprint(value any) string {
@@ -739,21 +773,60 @@ func generatedArtifactRuleValues(rules []generatedArtifactRule) []any {
 	return result
 }
 
-func witnessCoverageValues(coverage []map[string][]string) []any {
-	result := []any{}
+func witnessCoverageValues(coverage []witnessCoverageRecord) []any {
+	result := make([]any, 0, len(coverage))
 	for _, item := range coverage {
-		for path, requirementIDs := range item {
-			result = append(result, map[string]any{"path": path, "recordIds": stringsToAny(requirementIDs)})
+		routes := make([]any, 0, len(item.Routes))
+		for _, route := range item.Routes {
+			routes = append(routes, map[string]any{
+				"bindingRecordId":      route.BindingRecordID,
+				"resolutionOrderIndex": route.ResolutionOrder,
+				"role":                 route.Role,
+				"selector":             route.Selector,
+				"witnessRouteId":       route.RouteID,
+			})
 		}
+		result = append(result, map[string]any{
+			"path":   item.Path,
+			"routes": routes,
+		})
 	}
 	return result
 }
 
-func witnessCoverageRequirementIDs(coverage []map[string][]string) []string {
+func declaredWitnessRouteValues(routes []compactproofcontract.WitnessRoute) []any {
+	routes = append([]compactproofcontract.WitnessRoute{}, routes...)
+	sort.Slice(routes, func(left, right int) bool { return routes[left].RouteID < routes[right].RouteID })
+	result := make([]any, 0, len(routes))
+	for _, route := range routes {
+		result = append(result, map[string]any{
+			"bindingRecordId":      route.BindingRecordID,
+			"environmentClasses":   stringsToAny(route.EnvironmentClasses),
+			"resolutionOrderIndex": route.ResolutionOrder,
+			"role":                 route.Role,
+			"selector":             route.Selector,
+			"verifyCommands":       stringsToAny(route.VerifyCommands),
+			"witnessRouteId":       route.RouteID,
+		})
+	}
+	return result
+}
+
+func witnessCoverageBindingIDs(coverage []witnessCoverageRecord) []string {
 	result := []string{}
 	for _, item := range coverage {
-		for _, requirementIDs := range item {
-			result = append(result, requirementIDs...)
+		for _, route := range item.Routes {
+			result = append(result, route.BindingRecordID)
+		}
+	}
+	return uniqueSorted(result)
+}
+
+func bindingIDsForRequirements(requirementIDs []string, bindings map[string][]bindingRecord) []string {
+	result := []string{}
+	for _, requirementID := range requirementIDs {
+		for _, binding := range bindings[requirementID] {
+			result = append(result, binding.BindingRecordID)
 		}
 	}
 	return result

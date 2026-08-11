@@ -13,7 +13,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const ProjectionKind = "proofkit.proof-binding-test-inventory"
+const ProjectionKind = testevidenceinventory.ProofBindingProjectionKind
 
 var projectionNonClaims = []string{
 	"Proof-binding-derived test inventories do not execute native tests or authenticate receipts.",
@@ -30,10 +30,11 @@ type Input struct {
 }
 
 type Projection struct {
-	CommandRefs []string
-	Entries     []map[string]any
-	Inventory   map[string]any
-	NonClaims   []string
+	CommandRefs        []string
+	Entries            []map[string]any
+	Inventory          map[string]any
+	NonClaims          []string
+	RouteEntryMappings []map[string]any
 }
 
 func Build(raw any) (any, int, error) {
@@ -63,10 +64,16 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 	}
 	normalized["projectionKind"] = ProjectionKind
 	normalized["projectionSummary"] = map[string]any{
-		"commandRefCount": len(projection.CommandRefs),
-		"entryCount":      len(projection.Entries),
+		"commandRefCount":    json.Number(fmt.Sprintf("%d", len(projection.CommandRefs))),
+		"entryCount":         json.Number(fmt.Sprintf("%d", len(projection.Entries))),
+		"routeEntryMappings": entriesToAny(projection.RouteEntryMappings),
+		"schemaVersion":      json.Number("2"),
 	}
-	return normalized, 0, nil
+	admitted, err := testevidenceinventory.AdmitNormalizedProjection(normalized, nil, "proof-binding normalized test inventory")
+	if err != nil {
+		return nil, 1, err
+	}
+	return admitted.Envelope, 0, nil
 }
 
 func Project(raw any) (Projection, error) {
@@ -88,13 +95,14 @@ func Project(raw any) (Projection, error) {
 
 func projectionValue(projection Projection) map[string]any {
 	return map[string]any{
-		"commandRefs":    admit.StringSliceToAny(projection.CommandRefs),
-		"entryCount":     len(projection.Entries),
-		"inventory":      projection.Inventory,
-		"inventoryId":    projection.Inventory["inventoryId"],
-		"nonClaims":      admit.StringSliceToAny(projection.NonClaims),
-		"projectionKind": ProjectionKind,
-		"schemaVersion":  json.Number("1"),
+		"commandRefs":        admit.StringSliceToAny(projection.CommandRefs),
+		"entryCount":         len(projection.Entries),
+		"inventory":          projection.Inventory,
+		"inventoryId":        projection.Inventory["inventoryId"],
+		"nonClaims":          admit.StringSliceToAny(projection.NonClaims),
+		"projectionKind":     ProjectionKind,
+		"routeEntryMappings": entriesToAny(projection.RouteEntryMappings),
+		"schemaVersion":      json.Number("2"),
 	}
 }
 
@@ -106,8 +114,8 @@ func admitInput(raw any) (Input, error) {
 	if err := admit.KnownKeys(record, []string{"commandRefPolicy", "compactProofContract", "inventoryId", "nonClaims", "requirementSource", "schemaVersion"}, "proof-binding test inventory input"); err != nil {
 		return Input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return Input{}, fmt.Errorf("proof-binding test inventory schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return Input{}, fmt.Errorf("proof-binding test inventory schemaVersion must be 2")
 	}
 	inventoryID, err := admit.RuleID(record["inventoryId"], "proof-binding test inventory inventoryId")
 	if err != nil {
@@ -196,6 +204,8 @@ func project(input Input) (Projection, error) {
 	commandByRef := map[string]string{}
 	commandRefs := map[string]struct{}{}
 	entries := make([]map[string]any, 0, len(routes))
+	mappings := make([]map[string]any, 0, len(routes))
+	testIDCoordinates := map[string]string{}
 	for _, route := range routes {
 		ownerID, ok := input.RequirementOwner[route.RequirementID]
 		if !ok {
@@ -215,24 +225,46 @@ func project(input Input) (Projection, error) {
 		for _, ref := range entryCommandRefs {
 			commandRefs[ref] = struct{}{}
 		}
-		requirementSlug := ruleFragment(route.RequirementID)
+		testID, err := testevidenceinventory.ProofBindingTestID(route.RouteID)
+		if err != nil {
+			return Projection{}, err
+		}
+		coordinate := route.BindingRecordID + "\x00" + route.RouteID + "\x00" + route.RequirementID + "\x00" + route.SurfaceID + "\x00" + route.ScenarioID
+		if previous, ok := testIDCoordinates[testID]; ok && previous != coordinate {
+			return Projection{}, fmt.Errorf("proof-binding test inventory testId collision for %s", testID)
+		}
+		testIDCoordinates[testID] = coordinate
 		entries = append(entries, map[string]any{
 			"commandRefs":        admit.StringSliceToAny(entryCommandRefs),
 			"evidenceClass":      "proof_route_candidate",
 			"falsifier":          nil,
-			"nonClaims":          admit.StringSliceToAny(entryNonClaims()),
+			"nonClaims":          admit.StringSliceToAny(testevidenceinventory.ProofBindingEntryNonClaims()),
 			"oracle":             nil,
 			"ownerId":            ownerID,
 			"ownerInvariantRefs": []any{},
 			"requirementRefs":    []any{route.RequirementID},
 			"selector":           route.FalsificationSelector,
 			"sourcePath":         sourcePath,
-			"testId":             "test." + route.SurfaceID + "." + requirementSlug,
-			"witnessRefs":        []any{},
+			"testId":             testID,
+			"witnessRefs":        []any{route.RouteID},
+		})
+		mappings = append(mappings, map[string]any{
+			"bindingRecordId":      route.BindingRecordID,
+			"requirementId":        route.RequirementID,
+			"resolutionOrderIndex": json.Number(fmt.Sprintf("%d", route.ResolutionOrderIndex)),
+			"role":                 route.Role,
+			"scenarioId":           route.ScenarioID,
+			"selector":             route.FalsificationSelector,
+			"surfaceId":            route.SurfaceID,
+			"testId":               testID,
+			"witnessRouteId":       route.RouteID,
 		})
 	}
 	sort.Slice(entries, func(left, right int) bool {
 		return entries[left]["testId"].(string) < entries[right]["testId"].(string)
+	})
+	sort.Slice(mappings, func(left, right int) bool {
+		return mappings[left]["witnessRouteId"].(string) < mappings[right]["witnessRouteId"].(string)
 	})
 	allCommandRefs := keys(commandRefs)
 	nonClaims := sortedUnique(append(append([]string{}, projectionNonClaims...), input.NonClaims...))
@@ -243,7 +275,7 @@ func project(input Input) (Projection, error) {
 		"nonClaims":     admit.StringSliceToAny(nonClaims),
 		"schemaVersion": json.Number("1"),
 	}
-	return Projection{CommandRefs: allCommandRefs, Entries: entries, Inventory: inventory, NonClaims: nonClaims}, nil
+	return Projection{CommandRefs: allCommandRefs, Entries: entries, Inventory: inventory, NonClaims: nonClaims, RouteEntryMappings: mappings}, nil
 }
 
 func structuredSelectorPath(selector string, context string) (string, error) {
@@ -305,13 +337,6 @@ func truncateRuleFragment(value string, limit int) string {
 		return value
 	}
 	return string(runes[:limit])
-}
-
-func entryNonClaims() []string {
-	return []string{
-		"This inventory entry does not execute native tests or authenticate receipts.",
-		"This inventory entry projects proof-route wiring only and cannot satisfy semantic coverage.",
-	}
 }
 
 func entriesToAny(entries []map[string]any) []any {

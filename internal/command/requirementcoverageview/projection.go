@@ -12,9 +12,23 @@ func exitCode(view map[string]any) int {
 	}
 	return 0
 }
-func scenariosToAny(scenarios []scenario) []any {
+func scenariosToAny(scenarios []scenario, proofMode string) []any {
 	result := make([]any, 0, len(scenarios))
 	for _, item := range scenarios {
+		if proofMode == "compact" {
+			result = append(result, map[string]any{
+				"bindingRecordId":            item.BindingRecordID,
+				"bindingVerifyCommands":      admit.StringSliceToAny(item.BindingVerifyCommands),
+				"declaredWitnessRoutes":      declaredWitnessRoutesToAny(item.DeclaredWitnessRoutes),
+				"environmentClasses":         admit.StringSliceToAny(item.EnvironmentClasses),
+				"requiredEnvironmentClasses": admit.StringSliceToAny(item.RequiredEnvironmentClasses),
+				"requirementId":              item.RequirementID,
+				"scenarioId":                 item.ScenarioID,
+				"surfaceId":                  item.SurfaceID,
+				"verifyCommands":             admit.StringSliceToAny(item.VerifyCommands),
+			})
+			continue
+		}
 		result = append(result, map[string]any{
 			"commandIds":         admit.StringSliceToAny(item.CommandIDs),
 			"environmentClasses": admit.StringSliceToAny(item.EnvironmentClasses),
@@ -23,7 +37,25 @@ func scenariosToAny(scenarios []scenario) []any {
 			"witnessId":          item.WitnessID,
 			"witnessKind":        item.WitnessKind,
 			"witnessPath":        item.WitnessPath,
-			"witnessSelectors":   admit.StringSliceToAny(item.WitnessSelectors),
+		})
+	}
+	return result
+}
+
+func declaredWitnessRoutesToAny(routes []declaredWitnessRoute) []any {
+	result := make([]any, 0, len(routes))
+	for _, route := range routes {
+		result = append(result, map[string]any{
+			"bindingRecordId":      route.BindingRecordID,
+			"environmentClasses":   admit.StringSliceToAny(route.EnvironmentClasses),
+			"requirementId":        route.RequirementID,
+			"resolutionOrderIndex": route.ResolutionOrder,
+			"role":                 route.Role,
+			"scenarioId":           route.ScenarioID,
+			"selector":             route.Selector,
+			"surfaceId":            route.SurfaceID,
+			"verifyCommands":       admit.StringSliceToAny(route.VerifyCommands),
+			"witnessRouteId":       route.WitnessRouteID,
 		})
 	}
 	return result

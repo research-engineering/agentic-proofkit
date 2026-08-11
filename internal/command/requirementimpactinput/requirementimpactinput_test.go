@@ -3,6 +3,7 @@ package requirementimpactinput
 import (
 	"bytes"
 	"encoding/json"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -26,7 +27,7 @@ func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("Build() exit = %d, want 0", exitCode)
 	}
-	assertStringArray(t, output["changedRecordIds"], []string{"REQ-PROOFKIT-IMPACT-001"})
+	assertStringArray(t, output["changedRequirementIds"], []string{"REQ-PROOFKIT-IMPACT-001"})
 	if _, exists := output["unboundProofChangeRationale"]; exists {
 		t.Fatalf("composer emitted empty unboundProofChangeRationale: %#v", output)
 	}
@@ -39,7 +40,7 @@ func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
 		t.Fatalf("impact.Build(composed) exit = %d report = %#v, want ok", impactExit, impactReport)
 	}
 	obligations := impactReport["obligations"].([]any)
-	if len(obligations) != 1 || obligations[0].(map[string]any)["recordId"] != "REQ-PROOFKIT-IMPACT-001" {
+	if len(obligations) != 1 || obligations[0].(map[string]any)["requirementId"] != "REQ-PROOFKIT-IMPACT-001" {
 		t.Fatalf("obligations = %#v, want REQ-PROOFKIT-IMPACT-001", obligations)
 	}
 	assertStringArray(t, impactReport["nonClaims"], []string{
@@ -49,6 +50,57 @@ func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
 		"Requirement impact input composition is caller-owned route input and does not execute native witnesses.",
 		"Requirement impact input composition treats proof-like paths as policy hints, not proof evidence.",
 	})
+}
+
+func TestBuildPreservesRouteOnlyCommandsAndEnvironments(t *testing.T) {
+	input := validComposeInput(t)
+	for _, key := range []string{"baseCompactProofContract", "currentCompactProofContract"} {
+		contract := input[key].(map[string]any)
+		binding := contract["bindings"].([]any)[0].([]any)
+		binding[9] = []any{}
+		positive := binding[7].([]any)
+		positive[1] = []any{"remote-ci"}
+		positive[2] = []any{"go test ./... -run TestPositive"}
+		falsification := binding[8].([]any)
+		falsification[1] = []any{"local-go"}
+		falsification[2] = []any{"go test ./... -run TestFalsification"}
+	}
+	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
+	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Changed invariant with route-only proof commands."
+
+	output, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Build() exit=%d error=%v", exitCode, err)
+	}
+	catalog := output["obligationCatalog"].([]any)
+	if len(catalog) != 1 {
+		t.Fatalf("obligationCatalog=%#v, want one impacted binding", catalog)
+	}
+	obligation := catalog[0].(map[string]any)
+	assertStringArray(t, obligation["commands"], []string{
+		"go test ./... -run TestFalsification",
+		"go test ./... -run TestPositive",
+	})
+	assertStringArray(t, obligation["requiredEnvironmentClasses"], []string{"local-go", "remote-ci"})
+	if obligation["preconditioned"] != true {
+		t.Fatalf("route-only remote environment preconditioned=%v, want true", obligation["preconditioned"])
+	}
+	if routes := obligation["declaredWitnessRoutes"].([]any); len(routes) != 2 {
+		t.Fatalf("declaredWitnessRoutes=%#v, want two", routes)
+	}
+
+	report, reportExit, err := impact.Build(output)
+	if err != nil || reportExit != 0 {
+		t.Fatalf("impact.Build() exit=%d error=%v report=%#v", reportExit, err, report)
+	}
+	reportObligation := report["obligations"].([]any)[0].(map[string]any)
+	assertStringArray(t, reportObligation["commands"], []string{
+		"go test ./... -run TestFalsification",
+		"go test ./... -run TestPositive",
+	})
+	if routes := reportObligation["declaredWitnessRoutes"].([]any); len(routes) != 2 {
+		t.Fatalf("impact declaredWitnessRoutes=%#v, want two", routes)
+	}
 }
 
 func TestBuildFailsDownstreamWhenChangedBlockingRequirementHasNoBinding(t *testing.T) {
@@ -127,7 +179,7 @@ func TestBuildAcceptsFullNullNewAdoptionBaseline(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("Build() exit = %d, want new-adoption composition success", exitCode)
 	}
-	assertStringArray(t, output["changedRecordIds"], []string{"REQ-PROOFKIT-IMPACT-001", "REQ-PROOFKIT-IMPACT-002"})
+	assertStringArray(t, output["changedRequirementIds"], []string{"REQ-PROOFKIT-IMPACT-001", "REQ-PROOFKIT-IMPACT-002"})
 	report, reportExit, err := impact.Build(output)
 	if err != nil {
 		t.Fatalf("impact.Build(new adoption) error = %v", err)
@@ -186,7 +238,7 @@ func TestBuildRoutesFullCompactBindingDrift(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
-	assertStringArray(t, output["changedBindingRecordIds"], []string{"REQ-PROOFKIT-IMPACT-001"})
+	assertStringArray(t, output["changedBindingRecordIds"], []string{bindingRecordID(t, "REQ-PROOFKIT-IMPACT-001", "proofkit.impact.surface::scenario_one")})
 	report, reportExit, err := impact.Build(output)
 	if err != nil {
 		t.Fatalf("impact.Build(binding drift) error = %v", err)
@@ -194,7 +246,77 @@ func TestBuildRoutesFullCompactBindingDrift(t *testing.T) {
 	if reportExit != 0 {
 		t.Fatalf("binding drift impact report = %#v exit = %d, want pass", report, reportExit)
 	}
-	assertObligationHasReason(t, report, "REQ-PROOFKIT-IMPACT-001", "proof_binding_changed")
+	assertObligationHasReason(t, report, bindingRecordID(t, "REQ-PROOFKIT-IMPACT-001", "proofkit.impact.surface::scenario_one"), "proof_binding_changed")
+}
+
+func TestBuildRoutesReferencedSurfaceSemanticDriftToEveryBinding(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		columnIndex int
+	}{
+		{name: "required environment classes", columnIndex: 1},
+		{name: "preconditioned environment classes", columnIndex: 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validComposeInput(t)
+			currentContract := input["currentCompactProofContract"].(map[string]any)
+			surface := currentContract["surfaces"].([]any)[0].([]any)
+			surface[test.columnIndex] = []any{"remote-linux"}
+			input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/contracts/proofkit-impact.json"}}}
+
+			output, _, err := Build(input)
+			if err != nil {
+				t.Fatalf("Build() error = %v", err)
+			}
+			expectedBindingIDs := []string{
+				bindingRecordID(t, "REQ-PROOFKIT-IMPACT-001", "proofkit.impact.surface::scenario_one"),
+				bindingRecordID(t, "REQ-PROOFKIT-IMPACT-002", "proofkit.impact.surface::scenario_two"),
+			}
+			sort.Strings(expectedBindingIDs)
+			assertStringArray(t, output["changedBindingRecordIds"], expectedBindingIDs)
+
+			report, reportExit, err := impact.Build(output)
+			if err != nil {
+				t.Fatalf("impact.Build(surface drift) error = %v", err)
+			}
+			if reportExit != 0 {
+				t.Fatalf("surface drift impact report = %#v exit = %d, want pass", report, reportExit)
+			}
+			for _, bindingID := range expectedBindingIDs {
+				assertObligationHasReason(t, report, bindingID, "proof_binding_changed")
+			}
+		})
+	}
+}
+
+func TestBuildFailsClosedWhenReferencedSurfaceSemanticDriftLacksSourcePath(t *testing.T) {
+	for _, test := range []struct {
+		name        string
+		columnIndex int
+	}{
+		{name: "required environment classes", columnIndex: 1},
+		{name: "preconditioned environment classes", columnIndex: 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validComposeInput(t)
+			currentContract := input["currentCompactProofContract"].(map[string]any)
+			surface := currentContract["surfaces"].([]any)[0].([]any)
+			surface[test.columnIndex] = []any{"remote-linux"}
+
+			output, _, err := Build(input)
+			if err != nil {
+				t.Fatalf("Build() error = %v", err)
+			}
+			report, reportExit, err := impact.Build(output)
+			if err != nil {
+				t.Fatalf("impact.Build(surface drift) error = %v", err)
+			}
+			if reportExit == 0 {
+				t.Fatalf("surface drift impact report unexpectedly passed: %#v", report)
+			}
+			assertContainsFailure(t, report, "proof binding payload changed without changed proof-binding source path evidence")
+		})
+	}
 }
 
 func TestBuildRoutesAddedCurrentBinding(t *testing.T) {
@@ -209,7 +331,7 @@ func TestBuildRoutesAddedCurrentBinding(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
-	assertStringArray(t, output["changedBindingRecordIds"], []string{"REQ-PROOFKIT-IMPACT-004"})
+	assertStringArray(t, output["changedBindingRecordIds"], []string{bindingRecordID(t, "REQ-PROOFKIT-IMPACT-004", "proofkit.impact.surface::scenario_added")})
 	report, reportExit, err := impact.Build(output)
 	if err != nil {
 		t.Fatalf("impact.Build(added binding) error = %v", err)
@@ -217,7 +339,7 @@ func TestBuildRoutesAddedCurrentBinding(t *testing.T) {
 	if reportExit != 0 {
 		t.Fatalf("added binding impact report = %#v exit = %d, want pass", report, reportExit)
 	}
-	assertObligationHasReason(t, report, "REQ-PROOFKIT-IMPACT-004", "proof_binding_changed")
+	assertObligationHasReason(t, report, bindingRecordID(t, "REQ-PROOFKIT-IMPACT-004", "proofkit.impact.surface::scenario_added"), "proof_binding_changed")
 }
 
 func TestBuildDoesNotCreateObligationsForAdvisoryRequirementChanges(t *testing.T) {
@@ -229,7 +351,7 @@ func TestBuildDoesNotCreateObligationsForAdvisoryRequirementChanges(t *testing.T
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
-	assertStringArray(t, output["changedRecordIds"], []string{})
+	assertStringArray(t, output["changedRequirementIds"], []string{})
 	report, reportExit, err := impact.Build(output)
 	if err != nil {
 		t.Fatalf("impact.Build(advisory) error = %v", err)
@@ -290,18 +412,34 @@ func TestBuildRejectsFailedChangedPathAdmission(t *testing.T) {
 	}
 }
 
-func TestBuildRejectsAmbiguousCurrentBindingRequirementOwnership(t *testing.T) {
+func TestBuildPreservesMultipleCurrentBindingsPerRequirement(t *testing.T) {
 	input := validComposeInput(t)
+	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
+	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition fans changed requirements out to every declared binding."
 	currentContract := input["currentCompactProofContract"].(map[string]any)
 	bindings := currentContract["bindings"].([]any)
 	duplicate := cloneAny(t, bindings[0]).([]any)
 	duplicate[2] = "proofkit.impact.surface::scenario_duplicate"
+	duplicate[7] = witness("internal/command/requirementimpactinput/alternate_test.go::positive_duplicate", 2)
+	duplicate[8] = witness("internal/command/requirementimpactinput/alternate_test.go::negative_duplicate", 3)
 	bindings = append(bindings, duplicate)
 	currentContract["bindings"] = bindings
 
-	_, _, err := Build(input)
-	if err == nil || !strings.Contains(err.Error(), "multiple bindings for requirementId: REQ-PROOFKIT-IMPACT-001") {
-		t.Fatalf("Build() error = %v, want duplicate current requirement binding rejection", err)
+	output, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Build() exit=%d error=%v, want multi-binding admission", exitCode, err)
+	}
+	if got := len(output["obligationCatalog"].([]any)); got != 2 {
+		t.Fatalf("obligationCatalog count=%d, want both bindings for changed requirement", got)
+	}
+	seen := map[string]bool{}
+	for _, raw := range output["obligationCatalog"].([]any) {
+		seen[raw.(map[string]any)["scenarioId"].(string)] = true
+	}
+	for _, scenarioID := range []string{"proofkit.impact.surface::scenario_one", "proofkit.impact.surface::scenario_duplicate"} {
+		if !seen[scenarioID] {
+			t.Fatalf("obligationCatalog omitted scenario %s: %#v", scenarioID, output["obligationCatalog"])
+		}
 	}
 }
 
@@ -309,7 +447,7 @@ func TestBuildFailsClosedWhenProofBindingPayloadChangesWithoutSourcePath(t *test
 	input := validComposeInput(t)
 	currentContract := input["currentCompactProofContract"].(map[string]any)
 	binding := currentContract["bindings"].([]any)[0].([]any)
-	binding[10] = []any{"go test ./internal/command/impact"}
+	binding[9] = []any{"go test ./internal/command/impact"}
 
 	output, _, err := Build(input)
 	if err != nil {
@@ -327,14 +465,14 @@ func TestBuildFailsClosedWhenProofBindingPayloadChangesWithoutSourcePath(t *test
 	input = validComposeInput(t)
 	currentContract = input["currentCompactProofContract"].(map[string]any)
 	binding = currentContract["bindings"].([]any)[0].([]any)
-	binding[10] = []any{"go test ./internal/command/impact"}
+	binding[9] = []any{"go test ./internal/command/impact"}
 	input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/contracts/proofkit-impact.json"}}}
 
 	output, _, err = Build(input)
 	if err != nil {
 		t.Fatalf("Build() with proof source path error = %v", err)
 	}
-	assertStringArray(t, output["changedBindingRecordIds"], []string{"REQ-PROOFKIT-IMPACT-001"})
+	assertStringArray(t, output["changedBindingRecordIds"], []string{bindingRecordID(t, "REQ-PROOFKIT-IMPACT-001", "proofkit.impact.surface::scenario_one")})
 }
 
 func TestBuildDerivesWitnessCoverageAndProofLikeFailures(t *testing.T) {
@@ -347,9 +485,29 @@ func TestBuildDerivesWitnessCoverageAndProofLikeFailures(t *testing.T) {
 	}
 	coverage := output["changedWitnessPathCoverage"].([]any)
 	if len(coverage) != 1 {
-		t.Fatalf("changedWitnessPathCoverage = %#v, want one shared path", coverage)
+		t.Fatalf("changedWitnessPathCoverage = %#v, want one exact route set per path", coverage)
 	}
-	assertStringArray(t, coverage[0].(map[string]any)["recordIds"], []string{"REQ-PROOFKIT-IMPACT-001", "REQ-PROOFKIT-IMPACT-002"})
+	coveredBindings := []string{}
+	routes := coverage[0].(map[string]any)["routes"].([]any)
+	if len(routes) != 3 {
+		t.Fatalf("changedWitnessPathCoverage routes=%#v, want three exact routes", routes)
+	}
+	for _, raw := range routes {
+		route := raw.(map[string]any)
+		for _, key := range []string{"bindingRecordId", "resolutionOrderIndex", "role", "selector", "witnessRouteId"} {
+			if _, ok := route[key]; !ok {
+				t.Fatalf("changedWitnessPathCoverage route lacks %s: %#v", key, route)
+			}
+		}
+		coveredBindings = append(coveredBindings, route["bindingRecordId"].(string))
+	}
+	coveredBindings = uniqueSorted(coveredBindings)
+	expectedCoveredBindings := []string{
+		bindingRecordID(t, "REQ-PROOFKIT-IMPACT-001", "proofkit.impact.surface::scenario_one"),
+		bindingRecordID(t, "REQ-PROOFKIT-IMPACT-002", "proofkit.impact.surface::scenario_two"),
+	}
+	sort.Strings(expectedCoveredBindings)
+	assertStringArray(t, stringsToAnyForTest(coveredBindings), expectedCoveredBindings)
 	report, reportExit, err := impact.Build(output)
 	if err != nil {
 		t.Fatalf("impact.Build(witness coverage) error = %v", err)
@@ -522,7 +680,7 @@ func validComposeInput(t *testing.T) map[string]any {
 	})
 	contract := compactContract()
 	return map[string]any{
-		"schemaVersion":                json.Number("1"),
+		"schemaVersion":                json.Number("2"),
 		"composerInputId":              "proofkit.impact_input.fixture",
 		"baseRef":                      "main",
 		"baseCommit":                   "base-sha",
@@ -584,15 +742,15 @@ func requirement(id string, invariant string, claimLevel string) map[string]any 
 
 func compactContract() map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
+		"schema_version":        json.Number("2"),
 		"authority_state":       compactproofcontract.AuthorityState,
 		"contract_kind":         compactproofcontract.ContractKind,
 		"contract_id":           "proofkit.impact.contract",
 		"normalization_profile": compactproofcontract.NormalizationProfile,
 		"non_claims":            []any{"Impact fixture compact proof contract does not execute witnesses."},
-		"surface_columns":       stringsToAny(compactproofcontract.SurfaceColumns),
-		"binding_columns":       stringsToAny(compactproofcontract.BindingColumns),
-		"witness_columns":       stringsToAny(compactproofcontract.WitnessColumns),
+		"surface_columns":       stringsToAny(compactproofcontract.SurfaceColumns()),
+		"binding_columns":       stringsToAny(compactproofcontract.BindingColumns()),
+		"witness_columns":       stringsToAny(compactproofcontract.WitnessColumns()),
 		"surfaces":              []any{[]any{"proofkit.impact.surface", []any{"local-go"}, []any{}}},
 		"bindings": []any{
 			binding("REQ-PROOFKIT-IMPACT-001", "proofkit.impact.surface::scenario_one", "proofkit.impact_one", "internal/command/requirementimpactinput/shared_test.go::positive_one", "internal/command/requirementimpactinput/negative_test.go::negative_one"),
@@ -608,13 +766,12 @@ func binding(requirementID string, scenarioID string, ownedInvariant string, pos
 		scenarioID,
 		"contract",
 		ownedInvariant,
-		"witness_backed",
 		"blocking",
 		[]any{"local-go"},
 		witness(positiveSelector, 0),
 		witness(negativeSelector, 1),
 		[]any{"go test ./internal/command/requirementimpactinput"},
-		"no_known_advisory_gap",
+		"claim.no_known_advisory_gap",
 	}
 }
 
@@ -625,6 +782,27 @@ func witness(selector string, order int) []any {
 		[]any{"go test ./internal/command/requirementimpactinput"},
 		json.Number(strconv.Itoa(order)),
 	}
+}
+
+func bindingRecordID(t *testing.T, requirementID string, scenarioID string) string {
+	t.Helper()
+	id, err := compactproofcontract.BindingRecordID(compactproofcontract.BindingIdentity{
+		RequirementID: requirementID,
+		ScenarioID:    scenarioID,
+		SurfaceID:     "proofkit.impact.surface",
+	})
+	if err != nil {
+		t.Fatalf("derive binding record ID: %v", err)
+	}
+	return id
+}
+
+func stringsToAnyForTest(values []string) []any {
+	result := make([]any, len(values))
+	for index, value := range values {
+		result[index] = value
+	}
+	return result
 }
 
 func cloneAny(t *testing.T, value any) any {
@@ -669,11 +847,11 @@ func assertContainsFailure(t *testing.T, report map[string]any, expected string)
 	t.Fatalf("failures = %#v, want substring %q", report["failures"], expected)
 }
 
-func assertObligationHasReason(t *testing.T, report map[string]any, recordID string, reason string) {
+func assertObligationHasReason(t *testing.T, report map[string]any, bindingRecordID string, reason string) {
 	t.Helper()
 	for _, raw := range report["obligations"].([]any) {
 		obligation := raw.(map[string]any)
-		if obligation["recordId"] != recordID {
+		if obligation["bindingRecordId"] != bindingRecordID {
 			continue
 		}
 		for _, rawReason := range obligation["changeReasons"].([]any) {
@@ -681,7 +859,7 @@ func assertObligationHasReason(t *testing.T, report map[string]any, recordID str
 				return
 			}
 		}
-		t.Fatalf("obligation for %s lacks reason %s: %#v", recordID, reason, obligation)
+		t.Fatalf("obligation for %s lacks reason %s: %#v", bindingRecordID, reason, obligation)
 	}
-	t.Fatalf("report lacks obligation for %s: %#v", recordID, report["obligations"])
+	t.Fatalf("report lacks obligation for %s: %#v", bindingRecordID, report["obligations"])
 }

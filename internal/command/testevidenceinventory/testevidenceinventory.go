@@ -518,7 +518,7 @@ func admitEntry(raw any) (Entry, error) {
 	if err != nil {
 		return Entry{}, err
 	}
-	witnessRefs, err := sortedRuleIDs(record["witnessRefs"], fmt.Sprintf("test evidence inventory %s witnessRefs", testID), true)
+	witnessRefs, err := sortedWitnessRefs(record["witnessRefs"], fmt.Sprintf("test evidence inventory %s witnessRefs", testID))
 	if err != nil {
 		return Entry{}, err
 	}
@@ -984,6 +984,32 @@ func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {
 		result = append(result, value)
 	}
 	return admit.PreserveSortedText(result, context, allowEmpty)
+}
+
+func sortedWitnessRefs(raw any, context string) ([]string, error) {
+	values, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be an array", context)
+	}
+	result := make([]string, 0, len(values))
+	for _, item := range values {
+		value, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s must contain text references", context)
+		}
+		var admitted string
+		var err error
+		if strings.HasPrefix(value, "sha256:") {
+			admitted, err = admit.SHA256Ref(value, context)
+		} else {
+			admitted, err = admit.RuleID(value, context)
+		}
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, admitted)
+	}
+	return admit.PreserveSortedText(result, context, true)
 }
 
 func sortedText(raw any, context string, allowEmpty bool) ([]string, error) {

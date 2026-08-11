@@ -577,17 +577,99 @@ func TestBuildJSONCompactProjectionExposesScenarioAndInventoryCommandRefs(t *tes
 	if scenario["scenarioId"] != "proofkit.coverage::scenario" {
 		t.Fatalf("compact scenarioId=%v", scenario["scenarioId"])
 	}
-	if got := stringArray(scenario["commandIds"]); len(got) != 0 {
-		t.Fatalf("compact scenario commandIds=%v, want no synthesized scenario command refs", got)
+	for _, forbidden := range []string{"commandIds", "witnessId", "witnessKind", "witnessPath", "witnessSelectors"} {
+		if _, ok := scenario[forbidden]; ok {
+			t.Fatalf("compact scenario retains structured-only field %s: %#v", forbidden, scenario)
+		}
 	}
-	if scenario["witnessId"] != "" {
-		t.Fatalf("compact scenario witnessId=%v, want no synthesized representative witness", scenario["witnessId"])
+	if scenario["bindingRecordId"] == "" {
+		t.Fatalf("compact scenario missing bindingRecordId: %#v", scenario)
 	}
-	if scenario["witnessPath"] != "" {
-		t.Fatalf("compact scenario witnessPath=%v, want no synthesized path", scenario["witnessPath"])
+	if got := stringArray(scenario["requiredEnvironmentClasses"]); len(got) != 1 || got[0] != "local-go" {
+		t.Fatalf("compact requiredEnvironmentClasses=%v, want binding-level class", got)
 	}
-	if got := stringArray(requirement["witnessSelectors"]); len(got) != 2 {
-		t.Fatalf("compact witnessSelectors=%v, want positive and falsification selectors", got)
+	routes := scenario["declaredWitnessRoutes"].([]any)
+	if len(routes) != 2 {
+		t.Fatalf("compact scenario routes=%#v, want two", routes)
+	}
+	roles := []string{routes[0].(map[string]any)["role"].(string), routes[1].(map[string]any)["role"].(string)}
+	if strings.Join(sortedUnique(roles), ",") != "falsification,positive" {
+		t.Fatalf("compact witness route roles=%v", roles)
+	}
+	if _, ok := requirement["proofState"]; ok {
+		t.Fatalf("compact requirement must not retain proofState: %#v", requirement)
+	}
+	if len(requirement["declaredWitnessRoutes"].([]any)) != 2 {
+		t.Fatalf("compact requirement route union=%#v", requirement["declaredWitnessRoutes"])
+	}
+}
+
+func TestBuildJSONCompactProjectionClosesAsymmetricEnvironmentClasses(t *testing.T) {
+	input := validCoverageInput(t)
+	record := input.(map[string]any)
+	record["requirementProofBinding"] = nil
+	contract := validCompactCoverageContract()
+	contract["surfaces"].([]any)[0].([]any)[1] = []any{"docker", "local-go"}
+	contract["bindings"].([]any)[0].([]any)[6] = []any{"docker"}
+	record["compactProofContract"] = contract
+	record["localEnvironmentPolicy"] = map[string]any{
+		"authority": "caller_provided", "localEnvironmentClasses": []any{"docker", "local-go"},
+	}
+	inventoryEntry(input)["witnessRefs"] = []any{}
+
+	view, exitCode, err := BuildJSON(input, Options{})
+	if err != nil {
+		t.Fatalf("BuildJSON(compact asymmetric environments) error=%v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("BuildJSON(compact asymmetric environments) exit=%d view=%#v", exitCode, view)
+	}
+	if _, err := AdmitOutput(view); err != nil {
+		t.Fatalf("AdmitOutput(BuildJSON()) error=%v", err)
+	}
+	scenario := view.(map[string]any)["requirementCoverage"].([]any)[0].(map[string]any)["scenarios"].([]any)[0].(map[string]any)
+	if got := stringArray(scenario["requiredEnvironmentClasses"]); strings.Join(got, ",") != "docker" {
+		t.Fatalf("requiredEnvironmentClasses=%v, want docker", got)
+	}
+	if got := stringArray(scenario["environmentClasses"]); strings.Join(got, ",") != "docker,local-go" {
+		t.Fatalf("environmentClasses=%v, want exact binding/route union", got)
+	}
+}
+
+func TestBuildJSONCompactProjectionClosesAsymmetricCommands(t *testing.T) {
+	input := validCoverageInput(t)
+	record := input.(map[string]any)
+	record["requirementProofBinding"] = nil
+	contract := validCompactCoverageContract()
+	binding := contract["bindings"].([]any)[0].([]any)
+	binding[9] = []any{"go test ./binding"}
+	binding[7].([]any)[2] = []any{"go test ./positive"}
+	binding[8].([]any)[2] = []any{"go test ./falsification"}
+	record["compactProofContract"] = contract
+	record["localEnvironmentPolicy"] = map[string]any{
+		"authority": "caller_provided", "localEnvironmentClasses": []any{"local-go"},
+	}
+	inventoryEntry(input)["witnessRefs"] = []any{}
+
+	view, exitCode, err := BuildJSON(input, Options{})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("BuildJSON(compact asymmetric commands) exit=%d error=%v view=%#v", exitCode, err, view)
+	}
+	if _, err := AdmitOutput(view); err != nil {
+		t.Fatalf("AdmitOutput(BuildJSON()) error=%v", err)
+	}
+	requirement := view.(map[string]any)["requirementCoverage"].([]any)[0].(map[string]any)
+	scenario := requirement["scenarios"].([]any)[0].(map[string]any)
+	wantBinding := "go test ./binding"
+	wantClosure := "go test ./binding,go test ./falsification,go test ./positive"
+	if got := strings.Join(stringArray(scenario["bindingVerifyCommands"]), ","); got != wantBinding {
+		t.Fatalf("bindingVerifyCommands=%q, want %q", got, wantBinding)
+	}
+	if got := strings.Join(stringArray(scenario["verifyCommands"]), ","); got != wantClosure {
+		t.Fatalf("scenario verifyCommands=%q, want %q", got, wantClosure)
+	}
+	if got := strings.Join(stringArray(requirement["verifyCommands"]), ","); got != wantClosure {
+		t.Fatalf("requirement verifyCommands=%q, want %q", got, wantClosure)
 	}
 }
 
@@ -701,14 +783,8 @@ func TestBuildJSONCompactProjectionAggregatesScenariosAndRequirementLocalCommand
 	for _, rawScenario := range scenarios {
 		item := rawScenario.(map[string]any)
 		scenarioIDs = append(scenarioIDs, item["scenarioId"].(string))
-		if got := stringArray(item["commandIds"]); len(got) != 0 {
-			t.Fatalf("compact scenario commandIds=%v, want no synthesized scenario command refs", got)
-		}
-		if item["witnessId"] != "" {
-			t.Fatalf("compact scenario witnessId=%v, want no synthesized representative witness", item["witnessId"])
-		}
-		if item["witnessPath"] != "" {
-			t.Fatalf("compact scenario witnessPath=%v, want no synthesized path", item["witnessPath"])
+		if len(item["declaredWitnessRoutes"].([]any)) != 2 || item["bindingRecordId"] == "" {
+			t.Fatalf("compact scenario lost route identity: %#v", item)
 		}
 	}
 	if strings.Join(sortedUnique(scenarioIDs), ",") != "proofkit.coverage::scenario.alpha,proofkit.coverage::scenario.beta" {
@@ -716,24 +792,21 @@ func TestBuildJSONCompactProjectionAggregatesScenariosAndRequirementLocalCommand
 	}
 }
 
-func TestBuildJSONCompactProjectionRejectsNonWitnessBackedBindingState(t *testing.T) {
+func TestBuildJSONCompactProjectionRejectsLegacyV1Contract(t *testing.T) {
 	input := validCoverageInput(t)
 	record := input.(map[string]any)
-	second := compactCoverageBinding("proofkit.coverage::scenario.conflicting")
-	second[5] = "not_bound"
 	record["requirementProofBinding"] = nil
-	record["compactProofContract"] = validCompactCoverageContract(
-		compactCoverageBinding("proofkit.coverage::scenario"),
-		second,
-	)
+	contract := validCompactCoverageContract()
+	contract["schema_version"] = json.Number("1")
+	record["compactProofContract"] = contract
 	record["localEnvironmentPolicy"] = map[string]any{
 		"authority":               "caller_provided",
 		"localEnvironmentClasses": []any{"local-go"},
 	}
 
 	_, _, err := BuildJSON(input, Options{})
-	if err == nil || !strings.Contains(err.Error(), "must be witness_backed") {
-		t.Fatalf("expected witness-bearing compact state rejection, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "schema_version must be 2") {
+		t.Fatalf("expected compact v1 rejection, got %v", err)
 	}
 }
 
@@ -1586,7 +1659,7 @@ func requireClassificationIncludes(t *testing.T, view map[string]any, diagnostic
 func validCoverageInput(t *testing.T) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "viewInputId": "proofkit.coverage.view",
   "requirementSource": {
     "schemaVersion": 1,
@@ -1714,11 +1787,11 @@ func validCompactCoverageContract(bindings ...[]any) map[string]any {
 		bindingRows = append(bindingRows, binding)
 	}
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"authority_state":       "canonical",
+		"schema_version":        json.Number("2"),
+		"authority_state":       "caller_owned_declaration",
 		"contract_id":           "proofkit.coverage.compact",
-		"contract_kind":         "requirement_proof_binding",
-		"normalization_profile": "proofkit.compact.v1",
+		"contract_kind":         "requirement_proof_route_declaration",
+		"normalization_profile": "proofkit.compact.declaration.v2",
 		"non_claims":            []any{"Compact coverage fixture does not execute witnesses."},
 		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
 		"surfaces":              []any{[]any{"proofkit.coverage", []any{"local-go"}, []any{}}},
@@ -1729,13 +1802,12 @@ func validCompactCoverageContract(bindings ...[]any) map[string]any {
 			"scenario_id",
 			"invariant_role",
 			"owned_invariant",
-			"proof_contract_state",
 			"blocking_status",
 			"required_environment_classes",
 			"positive_witness",
 			"falsification_witness",
 			"verify_commands",
-			"mutation_resistance_state",
+			"declared_mutation_resistance_claim_id",
 		},
 		"bindings": bindingRows,
 	}
@@ -1749,13 +1821,12 @@ func compactCoverageBinding(scenarioID string) []any {
 		scenarioID,
 		"contract",
 		"proofkit.coverage.invariant",
-		"witness_backed",
 		"blocking",
 		[]any{"local-go"},
 		compactCoverageWitness("internal/command/requirementcoverageview/requirementcoverageview_test.go::positive."+selectorSuffix, json.Number("0")),
 		compactCoverageWitness("internal/command/requirementcoverageview/requirementcoverageview_test.go::falsification."+selectorSuffix, json.Number("1")),
 		[]any{"go test ./internal/command/requirementcoverageview"},
-		"no_known_advisory_gap",
+		"proofkit.coverage.mutation_claim",
 	}
 }
 

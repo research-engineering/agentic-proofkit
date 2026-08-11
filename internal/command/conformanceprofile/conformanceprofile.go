@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/markdownfmt"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
@@ -52,23 +53,29 @@ type Surface struct {
 }
 
 type Binding struct {
-	BlockingStatus             string
-	ProofContractState         string
-	RequiredEnvironmentClasses []string
-	RequirementID              string
-	ScenarioID                 string
-	SurfaceID                  string
-	VerifyCommands             []string
-	WitnessRefs                []WitnessRef
+	BindingRecordID                   string
+	BlockingStatus                    string
+	DeclaredMutationResistanceClaimID string
+	InvariantRole                     string
+	OwnedInvariant                    string
+	RequiredEnvironmentClasses        []string
+	RequirementID                     string
+	ScenarioID                        string
+	SurfaceID                         string
+	VerifyCommands                    []string
+	WitnessRefs                       []WitnessRef
 }
 
 type WitnessRef struct {
-	Role     string
-	Selector string
+	EnvironmentClasses   []string
+	ResolutionOrderIndex int
+	Role                 string
+	Selector             string
+	VerifyCommands       []string
+	WitnessRouteID       string
 }
 
 type Policy struct {
-	AllowedProofContractStates     map[string]struct{}
 	BlockingStatuses               map[string]struct{}
 	ExpectedManifest               ExpectedManifest
 	FailOnUnusedAllowedEnvironment bool
@@ -86,23 +93,24 @@ type ExpectedManifest struct {
 }
 
 type ProfileReport struct {
-	CommandCount                   int
-	CommandExecutionState          string
-	EnvironmentClasses             []string
-	Failures                       []string
-	NonClaims                      []string
-	OptionalSurfaceCount           int
-	PreconditionedRequirementCount int
-	ProfileID                      string
-	ProfileResolutionState         string
-	Purpose                        string
-	RequirementCount               int
-	RequiredSurfaceCount           int
-	ScenarioCount                  int
-	SurfaceCount                   int
-	Surfaces                       []string
-	VerifyCommands                 []string
-	WitnessMappingCount            int
+	BindingCount               int
+	CommandCount               int
+	CommandExecutionState      string
+	EnvironmentClasses         []string
+	Failures                   []string
+	NonClaims                  []string
+	OptionalSurfaceCount       int
+	PreconditionedBindingCount int
+	ProfileID                  string
+	ProfileResolutionState     string
+	Purpose                    string
+	RequirementCount           int
+	RequiredSurfaceCount       int
+	ScenarioCount              int
+	SurfaceCount               int
+	Surfaces                   []string
+	VerifyCommands             []string
+	WitnessMappingCount        int
 }
 
 type Result struct {
@@ -205,11 +213,12 @@ func Markdown(profile ProfileReport) string {
 		"## Scope",
 		"",
 		fmt.Sprintf("- Surfaces: %d", profile.SurfaceCount),
+		fmt.Sprintf("- Bindings: %d", profile.BindingCount),
 		fmt.Sprintf("- Requirements: %d", profile.RequirementCount),
 		fmt.Sprintf("- Scenarios: %d", profile.ScenarioCount),
 		fmt.Sprintf("- Witness mappings: %d", profile.WitnessMappingCount),
 		fmt.Sprintf("- Commands: %d", profile.CommandCount),
-		fmt.Sprintf("- Preconditioned requirements: %d", profile.PreconditionedRequirementCount),
+		fmt.Sprintf("- Preconditioned bindings: %d", profile.PreconditionedBindingCount),
 		"- Environment classes: " + strings.Join(profile.EnvironmentClasses, ", "),
 		"",
 		"## Verify Commands",
@@ -234,8 +243,8 @@ func admitInput(raw any) (Input, error) {
 	if err := admit.KnownKeys(record, []string{"manifest", "policy", "profileId", "proofContract", "schemaVersion"}, "proofkit conformance profile input"); err != nil {
 		return Input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return Input{}, fmt.Errorf("proofkit conformance profile input schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return Input{}, fmt.Errorf("proofkit conformance profile input schemaVersion must be 2")
 	}
 	policy, err := admitPolicy(record["policy"])
 	if err != nil {
@@ -264,7 +273,7 @@ func admitPolicy(raw any) (Policy, error) {
 	if !ok {
 		return Policy{}, fmt.Errorf("conformance profile policy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"allowedProofContractStates", "blockingStatuses", "expectedManifest", "failOnUnusedAllowedEnvironmentClass", "knownEnvironmentClasses", "localEnvironmentClasses"}, "conformance profile policy"); err != nil {
+	if err := admit.KnownKeys(record, []string{"blockingStatuses", "expectedManifest", "failOnUnusedAllowedEnvironmentClass", "knownEnvironmentClasses", "localEnvironmentClasses"}, "conformance profile policy"); err != nil {
 		return Policy{}, err
 	}
 	known, err := stringArray(record["knownEnvironmentClasses"], "conformance profile policy knownEnvironmentClasses", false, true)
@@ -279,10 +288,6 @@ func admitPolicy(raw any) (Policy, error) {
 		if !contains(known, environmentClass) {
 			return Policy{}, fmt.Errorf("local environment class %s is not in knownEnvironmentClasses", environmentClass)
 		}
-	}
-	allowedStates, err := stringArray(record["allowedProofContractStates"], "conformance profile policy allowedProofContractStates", false, true)
-	if err != nil {
-		return Policy{}, err
 	}
 	blockingStatuses, err := stringArray(record["blockingStatuses"], "conformance profile policy blockingStatuses", false, true)
 	if err != nil {
@@ -301,7 +306,6 @@ func admitPolicy(raw any) (Policy, error) {
 		failOnUnused = boolean
 	}
 	return Policy{
-		AllowedProofContractStates:     set(allowedStates),
 		BlockingStatuses:               set(blockingStatuses),
 		ExpectedManifest:               expected,
 		FailOnUnusedAllowedEnvironment: failOnUnused,
@@ -422,8 +426,14 @@ func admitProofContract(raw any) (ProofContract, error) {
 	if !ok {
 		return ProofContract{}, fmt.Errorf("conformance proof contract must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"bindings", "contractId", "surfaces"}, "conformance proof contract"); err != nil {
+	if err := admit.KnownKeys(record, []string{"bindings", "contractId", "declarationKind", "schemaVersion", "surfaces"}, "conformance proof contract"); err != nil {
 		return ProofContract{}, err
+	}
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return ProofContract{}, fmt.Errorf("conformance proof contract schemaVersion must be 2")
+	}
+	if record["declarationKind"] != "proofkit.requirement-proof-route-declaration" {
+		return ProofContract{}, fmt.Errorf("conformance proof contract declarationKind must be proofkit.requirement-proof-route-declaration")
 	}
 	contractID, err := nonEmptyText(record["contractId"], "conformance proof contract contractId")
 	if err != nil {
@@ -456,8 +466,14 @@ func admitProofContract(raw any) (ProofContract, error) {
 		}
 		bindings = append(bindings, binding)
 	}
-	if err := assertSortedUnique(bindingIDs(bindings), "conformance proof contract requirementIds"); err != nil {
+	if err := assertSortedUnique(bindingIdentityKeys(bindings), "conformance proof contract binding identities"); err != nil {
 		return ProofContract{}, err
+	}
+	surfaceIDs := set(ids(surfaces))
+	for _, binding := range bindings {
+		if _, ok := surfaceIDs[binding.SurfaceID]; !ok {
+			return ProofContract{}, fmt.Errorf("conformance proof binding %s references unknown surfaceId %s", binding.RequirementID, binding.SurfaceID)
+		}
 	}
 	return ProofContract{Bindings: bindings, ContractID: contractID, Surfaces: surfaces}, nil
 }
@@ -490,19 +506,12 @@ func bindingFrom(raw any) (Binding, error) {
 	if !ok {
 		return Binding{}, fmt.Errorf("conformance proof binding must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"blockingStatus", "proofContractState", "requiredEnvironmentClasses", "requirementId", "scenarioId", "surfaceId", "verifyCommands", "witnessRefs"}, "conformance proof binding"); err != nil {
+	if err := admit.KnownKeys(record, []string{"bindingRecordId", "blockingStatus", "declaredMutationResistanceClaimId", "invariantRole", "ownedInvariant", "requiredEnvironmentClasses", "requirementId", "scenarioId", "surfaceId", "verifyCommands", "witnessRefs"}, "conformance proof binding"); err != nil {
 		return Binding{}, err
 	}
 	requirementID, err := admit.RuleID(record["requirementId"], "conformance proof binding requirementId")
 	if err != nil {
 		return Binding{}, err
-	}
-	witnessRefs, err := witnessRefs(record["witnessRefs"], requirementID)
-	if err != nil {
-		return Binding{}, err
-	}
-	if len(witnessRefs) == 0 {
-		return Binding{}, fmt.Errorf("conformance proof binding %s must declare witnessRefs", requirementID)
 	}
 	surfaceID, err := admit.RuleID(record["surfaceId"], "conformance proof binding "+requirementID+" surfaceId")
 	if err != nil {
@@ -512,7 +521,29 @@ func bindingFrom(raw any) (Binding, error) {
 	if err != nil {
 		return Binding{}, err
 	}
-	proofState, err := admit.RuleID(record["proofContractState"], "conformance proof binding "+requirementID+" proofContractState")
+	scenarioID, scenarioSurfaceID, err := compactproofcontract.AdmitScenarioID(scenarioID, "conformance proof binding "+requirementID+" scenarioId")
+	if err != nil {
+		return Binding{}, err
+	}
+	if scenarioSurfaceID != surfaceID {
+		return Binding{}, fmt.Errorf("conformance proof binding %s scenarioId must be scoped under surfaceId %s", requirementID, surfaceID)
+	}
+	bindingRecordID, err := admit.SHA256Ref(record["bindingRecordId"], "conformance proof binding "+requirementID+" bindingRecordId")
+	if err != nil {
+		return Binding{}, err
+	}
+	expectedBindingRecordID, err := compactproofcontract.BindingRecordID(compactproofcontract.BindingIdentity{
+		RequirementID: requirementID,
+		ScenarioID:    scenarioID,
+		SurfaceID:     surfaceID,
+	})
+	if err != nil {
+		return Binding{}, err
+	}
+	if bindingRecordID != expectedBindingRecordID {
+		return Binding{}, fmt.Errorf("conformance proof binding %s bindingRecordId does not match its requirement, surface, and scenario identity", requirementID)
+	}
+	witnessRefs, err := witnessRefs(record["witnessRefs"], requirementID, bindingRecordID)
 	if err != nil {
 		return Binding{}, err
 	}
@@ -528,13 +559,40 @@ func bindingFrom(raw any) (Binding, error) {
 	if err != nil {
 		return Binding{}, err
 	}
-	return Binding{BlockingStatus: blockingStatus, ProofContractState: proofState, RequiredEnvironmentClasses: required, RequirementID: requirementID, ScenarioID: scenarioID, SurfaceID: surfaceID, VerifyCommands: commands, WitnessRefs: witnessRefs}, nil
+	invariantRole, err := admit.RuleID(record["invariantRole"], "conformance proof binding "+requirementID+" invariantRole")
+	if err != nil {
+		return Binding{}, err
+	}
+	ownedInvariant, err := admit.RuleID(record["ownedInvariant"], "conformance proof binding "+requirementID+" ownedInvariant")
+	if err != nil {
+		return Binding{}, err
+	}
+	claimID, err := admit.RuleID(record["declaredMutationResistanceClaimId"], "conformance proof binding "+requirementID+" declaredMutationResistanceClaimId")
+	if err != nil {
+		return Binding{}, err
+	}
+	return Binding{
+		BindingRecordID:                   bindingRecordID,
+		BlockingStatus:                    blockingStatus,
+		DeclaredMutationResistanceClaimID: claimID,
+		InvariantRole:                     invariantRole,
+		OwnedInvariant:                    ownedInvariant,
+		RequiredEnvironmentClasses:        required,
+		RequirementID:                     requirementID,
+		ScenarioID:                        scenarioID,
+		SurfaceID:                         surfaceID,
+		VerifyCommands:                    commands,
+		WitnessRefs:                       witnessRefs,
+	}, nil
 }
 
-func witnessRefs(raw any, requirementID string) ([]WitnessRef, error) {
+func witnessRefs(raw any, requirementID, bindingRecordID string) ([]WitnessRef, error) {
 	values, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("conformance proof binding %s witnessRefs must be an array", requirementID)
+	}
+	if len(values) != 2 {
+		return nil, fmt.Errorf("conformance proof binding %s witnessRefs must contain exactly positive and falsification routes", requirementID)
 	}
 	refs := make([]WitnessRef, 0, len(values))
 	for _, value := range values {
@@ -542,18 +600,51 @@ func witnessRefs(raw any, requirementID string) ([]WitnessRef, error) {
 		if !ok {
 			return nil, fmt.Errorf("conformance proof binding %s witnessRef must be an object", requirementID)
 		}
-		if err := admit.KnownKeys(record, []string{"role", "selector"}, "conformance proof binding "+requirementID+" witnessRef"); err != nil {
+		if err := admit.KnownKeys(record, []string{"environmentClasses", "resolutionOrderIndex", "role", "selector", "verifyCommands", "witnessRouteId"}, "conformance proof binding "+requirementID+" witnessRef"); err != nil {
+			return nil, err
+		}
+		environmentClasses, err := stringArray(record["environmentClasses"], "conformance proof binding "+requirementID+" witnessRef environmentClasses", false, false)
+		if err != nil {
+			return nil, err
+		}
+		resolutionOrderIndex, err := compactproofcontract.AdmitProjectedResolutionOrderIndex(record["resolutionOrderIndex"], "conformance proof binding "+requirementID+" witnessRef resolutionOrderIndex")
+		if err != nil {
 			return nil, err
 		}
 		role, err := admit.RuleID(record["role"], "conformance proof binding "+requirementID+" witnessRef role")
 		if err != nil {
 			return nil, err
 		}
+		if role != compactproofcontract.FalsificationWitnessRole && role != compactproofcontract.PositiveWitnessRole {
+			return nil, fmt.Errorf("conformance proof binding %s witnessRef role must be positive or falsification", requirementID)
+		}
 		selector, err := nonEmptyText(record["selector"], "conformance proof binding "+requirementID+" witnessRef selector")
 		if err != nil {
 			return nil, err
 		}
-		refs = append(refs, WitnessRef{Role: role, Selector: selector})
+		selector, err = compactproofcontract.AdmitWitnessSelector(selector, "conformance proof binding "+requirementID+" witnessRef selector")
+		if err != nil {
+			return nil, err
+		}
+		routeID, err := admit.SHA256Ref(record["witnessRouteId"], "conformance proof binding "+requirementID+" witnessRef witnessRouteId")
+		if err != nil {
+			return nil, err
+		}
+		expectedRouteID, err := compactproofcontract.WitnessRouteID(bindingRecordID, role, selector)
+		if err != nil {
+			return nil, err
+		}
+		if routeID != expectedRouteID {
+			return nil, fmt.Errorf("conformance proof binding %s witnessRef %s route id does not match its binding, role, and selector identity", requirementID, role)
+		}
+		verifyCommands, err := displayCommandArray(record["verifyCommands"], "conformance proof binding "+requirementID+" witnessRef verifyCommands", false, false)
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, WitnessRef{
+			EnvironmentClasses: environmentClasses, ResolutionOrderIndex: resolutionOrderIndex,
+			Role: role, Selector: selector, VerifyCommands: verifyCommands, WitnessRouteID: routeID,
+		})
 	}
 	sort.Slice(refs, func(left int, right int) bool {
 		return refs[left].Role < refs[right].Role || refs[left].Role == refs[right].Role && refs[left].Selector < refs[right].Selector
@@ -564,6 +655,9 @@ func witnessRefs(raw any, requirementID string) ([]WitnessRef, error) {
 	}
 	if err := assertSortedUnique(keys, "conformance proof binding "+requirementID+" witnessRefs"); err != nil {
 		return nil, err
+	}
+	if refs[0].Role != compactproofcontract.FalsificationWitnessRole || refs[1].Role != compactproofcontract.PositiveWitnessRole {
+		return nil, fmt.Errorf("conformance proof binding %s witnessRefs must contain exactly positive and falsification roles", requirementID)
 	}
 	return refs, nil
 }
@@ -657,15 +751,12 @@ func validateProfile(profile Profile, proofContract ProofContract, policy Policy
 		if _, ok := required[binding.SurfaceID]; ok {
 			requiredSurfaceBindings[binding.SurfaceID]++
 		}
-		if _, ok := policy.AllowedProofContractStates[binding.ProofContractState]; !ok {
-			failures = append(failures, fmt.Sprintf("profile %s binding %s has unallowed proof state %s", profile.ProfileID, binding.RequirementID, binding.ProofContractState))
-		}
 		if _, ok := policy.BlockingStatuses[binding.BlockingStatus]; !ok {
-			failures = append(failures, fmt.Sprintf("profile %s binding %s has unallowed blocking status %s", profile.ProfileID, binding.RequirementID, binding.BlockingStatus))
+			failures = append(failures, fmt.Sprintf("profile %s binding %s has unallowed blocking status %s", profile.ProfileID, binding.BindingRecordID, binding.BlockingStatus))
 		}
-		for _, environmentClass := range binding.RequiredEnvironmentClasses {
+		for _, environmentClass := range bindingEnvironmentClasses(binding) {
 			if _, ok := allowedEnvironments[environmentClass]; !ok {
-				failures = append(failures, fmt.Sprintf("profile %s binding %s uses unallowed environment %s", profile.ProfileID, binding.RequirementID, environmentClass))
+				failures = append(failures, fmt.Sprintf("profile %s binding %s uses unallowed environment %s", profile.ProfileID, binding.BindingRecordID, environmentClass))
 			}
 		}
 		if profile.PreconditionPolicy == "local_only" {
@@ -674,7 +765,7 @@ func validateProfile(profile Profile, proofContract ProofContract, policy Policy
 				failures = append(failures, fmt.Sprintf("profile %s local-only profile selects preconditioned surface %s", profile.ProfileID, binding.SurfaceID))
 			}
 			if isPreconditionedBinding(binding, policy) {
-				failures = append(failures, fmt.Sprintf("profile %s local-only profile selects preconditioned binding %s", profile.ProfileID, binding.RequirementID))
+				failures = append(failures, fmt.Sprintf("profile %s local-only profile selects preconditioned binding %s", profile.ProfileID, binding.BindingRecordID))
 			}
 		}
 	}
@@ -704,23 +795,24 @@ func buildProfileReport(profile Profile, proofContract ProofContract, policy Pol
 		state = "invalid"
 	}
 	return ProfileReport{
-		CommandCount:                   len(verifyCommands),
-		CommandExecutionState:          "not_run",
-		EnvironmentClasses:             environmentClasses,
-		Failures:                       failures,
-		NonClaims:                      profile.NonClaims,
-		OptionalSurfaceCount:           len(profile.OptionalSurfaceIDs),
-		PreconditionedRequirementCount: preconditioned,
-		ProfileID:                      profile.ProfileID,
-		ProfileResolutionState:         state,
-		Purpose:                        profile.Purpose,
-		RequirementCount:               len(bindings),
-		RequiredSurfaceCount:           len(profile.RequiredSurfaceIDs),
-		ScenarioCount:                  len(uniqueSorted(scenarios(bindings))),
-		SurfaceCount:                   len(uniqueSorted(bindingSurfaces(bindings))),
-		Surfaces:                       uniqueSorted(bindingSurfaces(bindings)),
-		VerifyCommands:                 verifyCommands,
-		WitnessMappingCount:            witnessMappingCount(bindings),
+		BindingCount:               len(bindings),
+		CommandCount:               len(verifyCommands),
+		CommandExecutionState:      "not_run",
+		EnvironmentClasses:         environmentClasses,
+		Failures:                   failures,
+		NonClaims:                  profile.NonClaims,
+		OptionalSurfaceCount:       len(profile.OptionalSurfaceIDs),
+		PreconditionedBindingCount: preconditioned,
+		ProfileID:                  profile.ProfileID,
+		ProfileResolutionState:     state,
+		Purpose:                    profile.Purpose,
+		RequirementCount:           len(uniqueSorted(requirementIDs(bindings))),
+		RequiredSurfaceCount:       len(profile.RequiredSurfaceIDs),
+		ScenarioCount:              len(uniqueSorted(scenarios(bindings))),
+		SurfaceCount:               len(uniqueSorted(bindingSurfaces(bindings))),
+		Surfaces:                   uniqueSorted(bindingSurfaces(bindings)),
+		VerifyCommands:             verifyCommands,
+		WitnessMappingCount:        witnessMappingCount(bindings),
 	}
 }
 
@@ -735,6 +827,7 @@ func standardReportForProfile(profile ProfileReport) report.Record {
 		ReportID:      "proofkit.conformance-profile." + profile.ProfileID,
 		State:         state,
 		Summary: map[string]any{
+			"bindingCount":           profile.BindingCount,
 			"commandCount":           profile.CommandCount,
 			"profileId":              profile.ProfileID,
 			"profileResolutionState": profile.ProfileResolutionState,
@@ -753,23 +846,25 @@ func standardReportForProfile(profile ProfileReport) report.Record {
 
 func (profile ProfileReport) JSONValue() map[string]any {
 	return map[string]any{
-		"commandCount":                   profile.CommandCount,
-		"commandExecutionState":          profile.CommandExecutionState,
-		"environmentClasses":             admit.StringSliceToAny(profile.EnvironmentClasses),
-		"failures":                       admit.StringSliceToAny(profile.Failures),
-		"nonClaims":                      admit.StringSliceToAny(profile.NonClaims),
-		"optionalSurfaceCount":           profile.OptionalSurfaceCount,
-		"preconditionedRequirementCount": profile.PreconditionedRequirementCount,
-		"profileId":                      profile.ProfileID,
-		"profileResolutionState":         profile.ProfileResolutionState,
-		"purpose":                        profile.Purpose,
-		"requirementCount":               profile.RequirementCount,
-		"requiredSurfaceCount":           profile.RequiredSurfaceCount,
-		"scenarioCount":                  profile.ScenarioCount,
-		"surfaceCount":                   profile.SurfaceCount,
-		"surfaces":                       admit.StringSliceToAny(profile.Surfaces),
-		"verifyCommands":                 admit.StringSliceToAny(profile.VerifyCommands),
-		"witnessMappingCount":            profile.WitnessMappingCount,
+		"schemaVersion":              2,
+		"bindingCount":               profile.BindingCount,
+		"commandCount":               profile.CommandCount,
+		"commandExecutionState":      profile.CommandExecutionState,
+		"environmentClasses":         admit.StringSliceToAny(profile.EnvironmentClasses),
+		"failures":                   admit.StringSliceToAny(profile.Failures),
+		"nonClaims":                  admit.StringSliceToAny(profile.NonClaims),
+		"optionalSurfaceCount":       profile.OptionalSurfaceCount,
+		"preconditionedBindingCount": profile.PreconditionedBindingCount,
+		"profileId":                  profile.ProfileID,
+		"profileResolutionState":     profile.ProfileResolutionState,
+		"purpose":                    profile.Purpose,
+		"requirementCount":           profile.RequirementCount,
+		"requiredSurfaceCount":       profile.RequiredSurfaceCount,
+		"scenarioCount":              profile.ScenarioCount,
+		"surfaceCount":               profile.SurfaceCount,
+		"surfaces":                   admit.StringSliceToAny(profile.Surfaces),
+		"verifyCommands":             admit.StringSliceToAny(profile.VerifyCommands),
+		"witnessMappingCount":        profile.WitnessMappingCount,
 	}
 }
 
@@ -785,7 +880,7 @@ func profileBindings(profile Profile, proofContract ProofContract) []Binding {
 }
 
 func isPreconditionedBinding(binding Binding, policy Policy) bool {
-	for _, environmentClass := range binding.RequiredEnvironmentClasses {
+	for _, environmentClass := range bindingEnvironmentClasses(binding) {
 		if _, ok := policy.LocalEnvironmentClasses[environmentClass]; !ok {
 			return true
 		}
@@ -942,7 +1037,15 @@ func ids(surfaces []Surface) []string {
 	return result
 }
 
-func bindingIDs(bindings []Binding) []string {
+func bindingIdentityKeys(bindings []Binding) []string {
+	result := make([]string, 0, len(bindings))
+	for _, binding := range bindings {
+		result = append(result, binding.RequirementID+"\x00"+binding.SurfaceID+"\x00"+binding.ScenarioID)
+	}
+	return result
+}
+
+func requirementIDs(bindings []Binding) []string {
 	result := make([]string, 0, len(bindings))
 	for _, binding := range bindings {
 		result = append(result, binding.RequirementID)
@@ -953,7 +1056,7 @@ func bindingIDs(bindings []Binding) []string {
 func flatMapEnvironments(bindings []Binding) []string {
 	result := []string{}
 	for _, binding := range bindings {
-		result = append(result, binding.RequiredEnvironmentClasses...)
+		result = append(result, bindingEnvironmentClasses(binding)...)
 	}
 	return result
 }
@@ -961,7 +1064,23 @@ func flatMapEnvironments(bindings []Binding) []string {
 func flatMapCommands(bindings []Binding) []string {
 	result := []string{}
 	for _, binding := range bindings {
-		result = append(result, binding.VerifyCommands...)
+		result = append(result, bindingCommands(binding)...)
+	}
+	return result
+}
+
+func bindingEnvironmentClasses(binding Binding) []string {
+	result := append([]string{}, binding.RequiredEnvironmentClasses...)
+	for _, witness := range binding.WitnessRefs {
+		result = append(result, witness.EnvironmentClasses...)
+	}
+	return result
+}
+
+func bindingCommands(binding Binding) []string {
+	result := append([]string{}, binding.VerifyCommands...)
+	for _, witness := range binding.WitnessRefs {
+		result = append(result, witness.VerifyCommands...)
 	}
 	return result
 }

@@ -61,30 +61,48 @@ type localEnvironmentPolicy struct {
 	LocalEnvironmentClasses []string
 }
 type proofProjection struct {
-	BindingID        string
-	CommandIDs       []string
-	ContractID       string
-	Mode             string
-	Requirements     map[string]proofRequirement
-	WitnessRefs      []string
-	WitnessSelectors []string
+	BindingID       string
+	CommandIDs      []string
+	ContractID      string
+	Mode            string
+	Requirements    map[string]proofRequirement
+	WitnessRouteIDs []string
+	WitnessRefs     []string
 }
 type proofRequirement struct {
-	CommandIDs         []string
-	EnvironmentClasses []string
-	ProofState         string
-	Scenarios          []scenario
-	VerifyCommands     []string
-	WitnessRefs        []string
-	WitnessSelectors   []string
+	CommandIDs            []string
+	DeclaredWitnessRoutes []declaredWitnessRoute
+	EnvironmentClasses    []string
+	ProofState            string
+	Scenarios             []scenario
+	VerifyCommands        []string
+	WitnessRefs           []string
 }
 type scenario struct {
-	CommandIDs         []string
+	BindingRecordID            string
+	BindingVerifyCommands      []string
+	CommandIDs                 []string
+	DeclaredWitnessRoutes      []declaredWitnessRoute
+	EnvironmentClasses         []string
+	RequiredEnvironmentClasses []string
+	RequirementID              string
+	ScenarioID                 string
+	SurfaceID                  string
+	VerifyCommands             []string
+	WitnessID                  string
+	WitnessKind                string
+	WitnessPath                string
+}
+
+type declaredWitnessRoute struct {
+	BindingRecordID    string
 	EnvironmentClasses []string
+	RequirementID      string
+	ResolutionOrder    int
+	Role               string
 	ScenarioID         string
+	Selector           string
+	SurfaceID          string
 	VerifyCommands     []string
-	WitnessID          string
-	WitnessKind        string
-	WitnessPath        string
-	WitnessSelectors   []string
+	WitnessRouteID     string
 }

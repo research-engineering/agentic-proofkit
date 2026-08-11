@@ -283,6 +283,11 @@ func TestJSONNumberEqualsRequiresDecodedJSONNumber(t *testing.T) {
 	if JSONNumberEquals(json.Number("1.5"), 1) {
 		t.Fatal("expected non-integer json.Number to be rejected")
 	}
+	for _, value := range []json.Number{"+1", "01", "-0"} {
+		if JSONNumberEquals(value, 1) || JSONNumberEquals(value, 0) {
+			t.Fatalf("expected non-canonical JSON integer %q to be rejected", value)
+		}
+	}
 }
 
 func TestPositiveIntegerRequiresDecodedPositiveInteger(t *testing.T) {
@@ -291,7 +296,7 @@ func TestPositiveIntegerRequiresDecodedPositiveInteger(t *testing.T) {
 	if value, err := PositiveInteger(json.Number("2"), "limit"); err != nil || value != 2 {
 		t.Fatalf("expected positive integer, got %d %v", value, err)
 	}
-	for _, raw := range []any{json.Number("0"), json.Number("-1"), json.Number("1.5"), float64(1)} {
+	for _, raw := range []any{json.Number("0"), json.Number("-1"), json.Number("1.5"), json.Number("+1"), json.Number("01"), float64(1)} {
 		if _, err := PositiveInteger(raw, "limit"); err == nil {
 			t.Fatalf("expected positive integer rejection for %#v", raw)
 		}

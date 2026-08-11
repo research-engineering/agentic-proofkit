@@ -126,15 +126,15 @@
         "--mode"
       ],
       "inputContract": {
-        "contractId": "proofkit.adoption-contract-envelope.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.adoption-contract-envelope.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.adoption-contract-envelope.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:d12d8f01e350c871af39a1f518f08a86f59c0893c5d161ed1b4fe644e7b30f9c",
+        "rootDefinitionRef": "proofkit.adoption-contract-envelope.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:98fd5df72714bf773f3b90ad675ddcd9b214454fa083012c28f59a1cf3241b77",
         "nativeSource": {
           "path": "internal/command/adoptioncontract",
-          "canonicalDigest": "sha256:0f306d18075e903b0a9223b7ef4b5dbb8a56e20afdf49007edcbd1a3702c68a5",
+          "canonicalDigest": "sha256:167819db65616fcb8dec0e42ed91ee2f037db5d127ce1001db953ce683d2fd84",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -144,8 +144,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.adoption-contract-envelope.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.adoption-contract-envelope.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -162,7 +162,7 @@
         "rootDefinitionDigest": "sha256:6da2b641d38a05c97b6088bec7a38d8c9a76aa386eb101e48f9727bceae5cfa2",
         "nativeSource": {
           "path": "internal/command/adoptioncontract",
-          "canonicalDigest": "sha256:0f306d18075e903b0a9223b7ef4b5dbb8a56e20afdf49007edcbd1a3702c68a5",
+          "canonicalDigest": "sha256:167819db65616fcb8dec0e42ed91ee2f037db5d127ce1001db953ce683d2fd84",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -992,15 +992,15 @@
         "--format"
       ],
       "inputContract": {
-        "contractId": "proofkit.conformance-profile.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.conformance-profile.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.conformance-profile.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:6ebc6e3ceac697a483cd713833fd038086d49ec11718b7d1d3a210b3aae6dd22",
+        "rootDefinitionRef": "proofkit.conformance-profile.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:b343c1093476cd9f50970f58608e43c1a6ae681a2c06b17c217ab4f22ea454e5",
         "nativeSource": {
           "path": "internal/command/conformanceprofile",
-          "canonicalDigest": "sha256:5d71e7eea7501a11f5223c7626cddbf495b1c0fd16685d2432139b825bdef627",
+        "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -1010,8 +1010,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.conformance-profile.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.conformance-profile.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -1019,15 +1019,15 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.conformance-profile.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.conformance-profile.output.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.conformance-profile.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:11ee54032e139a25dda80337509ab6633ed31e297f9bc7461769badb2f5e0e0d",
+        "rootDefinitionRef": "proofkit.conformance-profile.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:b3b1ed639969bba5213bb70e0a4ab9f86b69f180ad677ced78e600f87d55fb4f",
         "nativeSource": {
           "path": "internal/command/conformanceprofile",
-          "canonicalDigest": "sha256:5d71e7eea7501a11f5223c7626cddbf495b1c0fd16685d2432139b825bdef627",
+        "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -1037,8 +1037,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.conformance-profile.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.conformance-profile.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -1276,7 +1276,7 @@
         "rootDefinitionDigest": "sha256:7ffe236ab203cf411dbfda6008ec8c10cc15691261031d4ed9ed90d81525dc12",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -1304,7 +1304,7 @@
         "rootDefinitionDigest": "sha256:2be3545f9329bb4e4ba4971fc04bf5811959cf0087fd7ab3a7c2c8b45b8d714a",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -1642,15 +1642,15 @@
         "--input-pointer"
       ],
       "inputContract": {
-        "contractId": "proofkit.impact.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.impact.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.impact.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:125e94c27e5de283c973643a90a95101f818545718d9cf12cf89a58d511c8cf1",
+        "rootDefinitionRef": "proofkit.impact.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:aa30fb2ab02bc74ef18f9cf599d319d06a44e374851c07f5d921e86654a42e57",
         "nativeSource": {
           "path": "internal/command/impact",
-          "canonicalDigest": "sha256:5acab1671cae3f05faf28519d08ecbc869be4043c2b10d196b6b6089b82dd4da",
+          "canonicalDigest": "sha256:a3735158aab6ad0c6c8d5173cc07906b900165addb2a3a8b58eefe95a8abc365",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -1660,8 +1660,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.impact.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.impact.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -1669,15 +1669,15 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.impact.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.impact.output.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.impact.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:a979e09258d551c600da01624aab78353c1434bb92baf51e24b33ae6baa85044",
+        "rootDefinitionRef": "proofkit.impact.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:e6dacd55cace039ca8e24bdec628b1498d0c12bbfcdb60c46854ab2047c3f2d7",
         "nativeSource": {
           "path": "internal/command/impact",
-          "canonicalDigest": "sha256:5acab1671cae3f05faf28519d08ecbc869be4043c2b10d196b6b6089b82dd4da",
+          "canonicalDigest": "sha256:a3735158aab6ad0c6c8d5173cc07906b900165addb2a3a8b58eefe95a8abc365",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -1687,8 +1687,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.impact.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.impact.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -2195,15 +2195,15 @@
         }
       ],
       "inputContract": {
-        "contractId": "proofkit.pilot-admission.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.pilot-admission.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.pilot-admission.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:984795f4b9c38763b001778fb2e072b0dc3e9eb6fac91b1ed966fd34382399c4",
+        "rootDefinitionRef": "proofkit.pilot-admission.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:e3f15bcf1927483bfda42ca49d7f6624c0d0fadac81ccab1266c1a6ae8f528f1",
         "nativeSource": {
           "path": "internal/command/pilotadmission",
-          "canonicalDigest": "sha256:bfb307fb7acea99f9ff9abf485416059f41c0330241bede17f20899b2d496a1b",
+          "canonicalDigest": "sha256:439a7efece3c003b1463758f206b236ce261a2f566ec59b4bddd83f815035850",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2213,8 +2213,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.pilot-admission.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.pilot-admission.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -2236,7 +2236,7 @@
           },
           {
             "path": "internal/command/pilotadmission",
-            "canonicalDigest": "sha256:bfb307fb7acea99f9ff9abf485416059f41c0330241bede17f20899b2d496a1b",
+            "canonicalDigest": "sha256:439a7efece3c003b1463758f206b236ce261a2f566ec59b4bddd83f815035850",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2486,7 +2486,7 @@
         "rootDefinitionDigest": "sha256:71914c95c70dbace0ebce1dc4609624e3b91c994cd8c5adc20ed84d4200f0ac9",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -2514,7 +2514,7 @@
         "rootDefinitionDigest": "sha256:5fbdf25c90a2020525f97453c9d9fe5a774fe0e2eacf00d1b2aea3ff5f4fa0f0",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3266,7 +3266,7 @@
         "rootDefinitionDigest": "sha256:e7da70a2267f2ca13771e864bba6a1a0416132c2d56decb5db9f9694de021daf",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3294,7 +3294,7 @@
         "rootDefinitionDigest": "sha256:f31dd686f28fce4bf74265b557dc25428179cbc282753b4bea01439cd98f73c2",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3450,7 +3450,7 @@
         }
       ],
       "inputContract": {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "workspaceRequiredFields": [
           "context",
           "schemaVersion",
@@ -3475,11 +3475,11 @@
           "view": "workspace"
         },
         "jsonLayoutRule": "allowed for non-serving JSON plans; serving and one-shot modes reject the global layout option because one-shot terminal packets are fixed compact JSON",
-        "contractId": "proofkit.requirement-browser-server.input.v2",
+        "contractId": "proofkit.requirement-browser-server.input.v3",
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-browser-server.input.v2.root-shape",
-        "rootDefinitionDigest": "sha256:50a7bb1b477b6067d410cf22db7e7564a9742aa7f6a270642149d372f0156007",
+        "rootDefinitionRef": "proofkit.requirement-browser-server.input.v3.root-shape",
+        "rootDefinitionDigest": "sha256:e6af5b9edb1284ab2ff2f1a276a6b924127b99810cd9446bffbc971f638a0997",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
           "canonicalDigest": "sha256:df4d6ca7f6f08342e48e44dad7cfbbcb25869c039814efd875e6435b4aeefa33",
@@ -3501,7 +3501,7 @@
           "one-shot-question requires --view workspace --serve --open",
           "--session-timeout-seconds is 1..7200 and requires one-shot-question",
           "source|proof|coverage|spec-tree modes retain their owner input contracts",
-          "root-shape-only definition proofkit.requirement-browser-server.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.requirement-browser-server.input.v3.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3728,8 +3728,8 @@
         "--input-pointer"
       ],
       "inputContract": {
-        "contractId": "proofkit.requirement-coverage-input-compose.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-coverage-input-compose.input.v2",
+        "schemaVersion": 2,
         "authority": "requirement coverage input compose input contract",
         "commonRequiredFields": [
           "coverageUniverse",
@@ -3775,11 +3775,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-coverage-input-compose.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:06fa8d0a592549cebdea1d7b9d428e090de7b57e265dbc263699b28dbe6eede8",
+        "rootDefinitionRef": "proofkit.requirement-coverage-input-compose.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:f6300d6d0f80f5066fe4079433978132ee2bb1df75e602e59cf3dc37a385d3ce",
         "nativeSource": {
           "path": "internal/command/requirementcoverageinput",
-          "canonicalDigest": "sha256:bed47612a7a300b548f78fae3011282cd09caae98e9ad13628c5602cf364747a",
+          "canonicalDigest": "sha256:4c10b1cd675af7d7753bb72a44fca1bb9a568bcd4d3733ee1907e6c4e22757f8",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3789,8 +3789,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-coverage-input-compose.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-coverage-input-compose.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3799,8 +3799,8 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.requirement-coverage-input-compose.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-coverage-input-compose.output.v2",
+        "schemaVersion": 2,
         "authority": "requirement coverage input compose output contract",
         "requiredFields": [
           "compactProofContract",
@@ -3823,11 +3823,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-coverage-input-compose.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:7e913a998ba47601fd054dbec429d96cb2a546c8925d311f45aca86f1e038bec",
+        "rootDefinitionRef": "proofkit.requirement-coverage-input-compose.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:0f264c996a058fb8aff102e42b95a4610d3a584b35687cc870b3d16c9589cfed",
         "nativeSource": {
           "path": "internal/command/requirementcoverageinput",
-          "canonicalDigest": "sha256:bed47612a7a300b548f78fae3011282cd09caae98e9ad13628c5602cf364747a",
+          "canonicalDigest": "sha256:4c10b1cd675af7d7753bb72a44fca1bb9a568bcd4d3733ee1907e6c4e22757f8",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3847,7 +3847,7 @@
           "schemaVersion",
           "testEvidenceInventory",
           "viewInputId",
-          "root-shape-only definition proofkit.requirement-coverage-input-compose.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.requirement-coverage-input-compose.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3878,8 +3878,8 @@
         "--format"
       ],
       "outputContract": {
-        "contractId": "proofkit.requirement-coverage-view.output.v2",
-        "schemaVersion": 2,
+        "contractId": "proofkit.requirement-coverage-view.output.v3",
+        "schemaVersion": 3,
         "authority": "requirement coverage view output contract",
         "classificationRecords": {
           "failureClassifications": {
@@ -3920,11 +3920,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-coverage-view.output.v2.root-shape",
-        "rootDefinitionDigest": "sha256:71a3a1245159e03eb3f81e2b117e1d1690c99e7e84625670a1fd42530b53684c",
+        "rootDefinitionRef": "proofkit.requirement-coverage-view.output.v3.root-shape",
+        "rootDefinitionDigest": "sha256:2365e4778d6c24c0af9507ce93bfba0a89c4ba9ece8da1c5b25b4581d6b80fa1",
         "nativeSource": {
           "path": "internal/command/requirementcoverageview",
-          "canonicalDigest": "sha256:a6f804ad55b0101c934c782468c217ab8f3ce0cc42828975fbc35621bd43bc97",
+          "canonicalDigest": "sha256:5a60148d843025a2ad7a2b72566792778120fc7979c5ec9c9db8dcac42e7dffd",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3941,7 +3941,7 @@
           "state",
           "warningClassifications",
           "warnings",
-          "root-shape-only definition proofkit.requirement-coverage-view.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.requirement-coverage-view.output.v3.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3950,15 +3950,15 @@
         ]
       },
       "inputContract": {
-        "contractId": "proofkit.requirement-coverage-view.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-coverage-view.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-coverage-view.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:b5ddab0a55a381f002b39ece0f5727171f7984856e553200bbb62a49821ff6ac",
+        "rootDefinitionRef": "proofkit.requirement-coverage-view.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:f42c9218c861b1e30ec3692fa0097da393e36eea2049d4aac1a05a8b0a40d81d",
         "nativeSource": {
           "path": "internal/command/requirementcoverageview",
-          "canonicalDigest": "sha256:a6f804ad55b0101c934c782468c217ab8f3ce0cc42828975fbc35621bd43bc97",
+          "canonicalDigest": "sha256:5a60148d843025a2ad7a2b72566792778120fc7979c5ec9c9db8dcac42e7dffd",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3968,8 +3968,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-coverage-view.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-coverage-view.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -3992,15 +3992,15 @@
         "--input-pointer"
       ],
       "outputContract": {
-        "contractId": "proofkit.requirement-impact-input-compose.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-impact-input-compose.output.v2",
+        "schemaVersion": 2,
         "authority": "requirement impact input compose output contract",
         "requiredFields": [
           "baseCommit",
           "baseRef",
           "changedBindingRecordIds",
           "changedPaths",
-          "changedRecordIds",
+          "changedRequirementIds",
           "changedWitnessPathCoverage",
           "generatedArtifactRules",
           "headCommit",
@@ -4020,11 +4020,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-impact-input-compose.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:9fd57d299d4e76bb3b0bf10f313a8dd9bfd593b8d15fa4844d5e342c4d929ee9",
+        "rootDefinitionRef": "proofkit.requirement-impact-input-compose.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:68a5ab234566459ce56772aac9a5c5b471647753390dbc1c2a62cabf0f489ef2",
         "nativeSource": {
           "path": "internal/command/requirementimpactinput",
-          "canonicalDigest": "sha256:f45499ce46858ba03325cc52875b10181d9a190244ca21471b651a122a890636",
+          "canonicalDigest": "sha256:28ab57ec44b4b4190db3c3ff50358c5cebdd36b625d1cfa07492fe9dac63f6e3",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4038,7 +4038,7 @@
           "baseRef",
           "changedBindingRecordIds",
           "changedPaths",
-          "changedRecordIds",
+          "changedRequirementIds",
           "changedWitnessPathCoverage",
           "generatedArtifactRules",
           "headCommit",
@@ -4049,7 +4049,7 @@
           "preexistingFailures",
           "proofLikePaths",
           "schemaVersion",
-          "root-shape-only definition proofkit.requirement-impact-input-compose.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.requirement-impact-input-compose.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4058,15 +4058,15 @@
         ]
       },
       "inputContract": {
-        "contractId": "proofkit.requirement-impact-input-compose.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-impact-input-compose.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-impact-input-compose.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:e6af8f427f781395710407a87bfd5fa91a0b3c8aaaee437c2487472a243b22a6",
+        "rootDefinitionRef": "proofkit.requirement-impact-input-compose.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:1ca9c341fecac869c675302fc547865674bb42605b7ed66b3733e3db15e85150",
         "nativeSource": {
           "path": "internal/command/requirementimpactinput",
-          "canonicalDigest": "sha256:f45499ce46858ba03325cc52875b10181d9a190244ca21471b651a122a890636",
+          "canonicalDigest": "sha256:28ab57ec44b4b4190db3c3ff50358c5cebdd36b625d1cfa07492fe9dac63f6e3",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4076,8 +4076,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-impact-input-compose.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-impact-input-compose.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4108,15 +4108,15 @@
         ]
       ],
       "inputContract": {
-        "contractId": "proofkit.requirement-proof-resolver.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-proof-resolver.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-proof-resolver.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:68ade17ac7e9fb3496ad0e7ea8ae9fbcf734afa4e6b8a44442e1af3c4f87bf15",
+        "rootDefinitionRef": "proofkit.requirement-proof-resolver.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:a9004b9ddd9f4109326bfc233e6d4629090373d8651488b6663328273826952d",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4126,8 +4126,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-proof-resolver.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-proof-resolver.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4135,15 +4135,15 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.requirement-proof-resolver.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-proof-resolver.output.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-proof-resolver.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:750c75c08376a986a18e8739b7476d58af4133c19c40f43d216ee009607be225",
+        "rootDefinitionRef": "proofkit.requirement-proof-resolver.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:42bbed6d902300afd15cf763e164896f9ac05567a67fa62a50801d9e90bc4e05",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
-          "canonicalDigest": "sha256:c1382a5e461974baf8e5a45d95e99552c241ea16590b1e1a781748c331cb5ffe",
+          "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4153,8 +4153,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-proof-resolver.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-proof-resolver.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4176,11 +4176,12 @@
         "--input-pointer"
       ],
       "inputContract": {
-        "contractId": "proofkit.requirement-proof-source-set.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-proof-source-set.input.v2",
+        "schemaVersion": 2,
         "authority": "requirement proof source-set input admission",
         "requiredFields": [
           "canonicalEnvelope",
+          "schemaVersion",
           "sourceSet",
           "sources"
         ],
@@ -4210,11 +4211,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-proof-source-set.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:cd406c4aba90faa0fa2b132d4c50af85578ec79a6ad1d89bc997ea027d6def05",
+        "rootDefinitionRef": "proofkit.requirement-proof-source-set.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:9b38b93e0b8a2ba2b72e32d606d3cb2372fa685c9a702ae31ae42437945f2eb0",
         "nativeSource": {
           "path": "internal/command/requirementproofsourceset",
-          "canonicalDigest": "sha256:bd5377b5ec6b2a5a506e2702ed8dacb9a25908aa9f63002a4cf88f63f4641ba7",
+          "canonicalDigest": "sha256:9acea8f3fdb09a6297d715d86a5d796209c8def51a24fa96b96dc780c38f97d1",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4225,9 +4226,10 @@
         },
         "compatibilitySummary": [
           "canonicalEnvelope",
+          "schemaVersion",
           "sourceSet",
           "sources",
-          "root-shape-only definition proofkit.requirement-proof-source-set.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.requirement-proof-source-set.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4236,11 +4238,12 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.requirement-proof-source-set.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-proof-source-set.output.v2",
+        "schemaVersion": 2,
         "commonFields": [
           "inputPaths",
           "projectionKind",
+          "schemaVersion",
           "selectedSourceIds",
           "sourceCount",
           "sourceSetCount"
@@ -4260,11 +4263,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-proof-source-set.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:57993914adfd60d6cc1a66bfef0b6a4c3c0162fd102f2629d497a28e839f1228",
+        "rootDefinitionRef": "proofkit.requirement-proof-source-set.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:ed81d03ea6ea56fd9ba12c48995111e8a90a8c1feb336fe95be195b25ccc0254",
         "nativeSource": {
           "path": "internal/command/requirementproofsourceset",
-          "canonicalDigest": "sha256:bd5377b5ec6b2a5a506e2702ed8dacb9a25908aa9f63002a4cf88f63f4641ba7",
+          "canonicalDigest": "sha256:9acea8f3fdb09a6297d715d86a5d796209c8def51a24fa96b96dc780c38f97d1",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4274,8 +4277,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-proof-source-set.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-proof-source-set.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4307,15 +4310,15 @@
         "--format"
       ],
       "inputContract": {
-        "contractId": "proofkit.requirement-proof-view.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-proof-view.input.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-proof-view.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:5aed3bcb99337d4937243d61d1f8ed1b1b358108a7710152221bfd5961a3aeb7",
+        "rootDefinitionRef": "proofkit.requirement-proof-view.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:998efcaf322251ec9ff402cbf8f4db84f981aca3c24bd2071c0c302ddcca5490",
         "nativeSource": {
           "path": "internal/command/requirementproofview",
-          "canonicalDigest": "sha256:ab2902ef8c5bc19d8d084b8fa355dbab09cae61eecf6bbe6946d882b73f9b687",
+          "canonicalDigest": "sha256:f71d93a5e3c434f8cefdc18a92cc1360400555351597bfaf7c0cc7a360b79444",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4325,8 +4328,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-proof-view.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-proof-view.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -4334,15 +4337,15 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.requirement-proof-view.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.requirement-proof-view.output.v2",
+        "schemaVersion": 2,
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.requirement-proof-view.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:d1da2a4593aa2f4a1531e1a5be8e3bc877a5ff45f978b7f39a0bf708b01cb564",
+        "rootDefinitionRef": "proofkit.requirement-proof-view.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:3dd563fd6eaedc12994b16234f72228b76fd1155e29033ca1b027fe1e0289d19",
         "nativeSource": {
           "path": "internal/command/requirementproofview",
-          "canonicalDigest": "sha256:ab2902ef8c5bc19d8d084b8fa355dbab09cae61eecf6bbe6946d882b73f9b687",
+          "canonicalDigest": "sha256:f71d93a5e3c434f8cefdc18a92cc1360400555351597bfaf7c0cc7a360b79444",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -4352,8 +4355,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.requirement-proof-view.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.requirement-proof-view.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -5739,8 +5742,8 @@
         "--projection"
       ],
       "inputContract": {
-        "contractId": "proofkit.test-evidence-inventory.input.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.test-evidence-inventory.input.v2",
+        "schemaVersion": 2,
         "authority": "test evidence inventory admission and projection admission",
         "projectionVariants": {
           "discovery-draft": {
@@ -5816,7 +5819,7 @@
               },
               "schemaVersion": {
                 "required": true,
-                "value": 1
+                "value": 2
               }
             },
             "candidateOutput": {
@@ -5840,17 +5843,17 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.test-evidence-inventory.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:4006bfcaab9bd8cb781595aa14f48768cbee996f5e866757fa73be1c9938fa98",
+        "rootDefinitionRef": "proofkit.test-evidence-inventory.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:4ec00274f91fd3e6e8bf67ac55125e1a9566e7d2233137ed3fa968539532125e",
         "nativeSources": [
           {
             "path": "internal/command/proofbindingtestinventory",
-            "canonicalDigest": "sha256:87d5871167fd326398dd3d9c9424401c9414cae1d212bdbbd187a7dfe5730fb0",
+            "canonicalDigest": "sha256:93c68e7bd85f435dd82b1a9ab663add5ecc37bd45948ec3ce49c8af18a90051a",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/testevidenceinventory",
-            "canonicalDigest": "sha256:95618ec2824e5510d55d2c6bb86da69b057679a39404cca5f2ab5c8fd4826c6a",
+            "canonicalDigest": "sha256:60983b8f25544c7b85e818f202de053fa15557b0de37a7df35aa0d58b58c3888",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -5861,8 +5864,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.test-evidence-inventory.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.test-evidence-inventory.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -5871,8 +5874,8 @@
         ]
       },
       "outputContract": {
-        "contractId": "proofkit.test-evidence-inventory.output.v1",
-        "schemaVersion": 1,
+        "contractId": "proofkit.test-evidence-inventory.output.v2",
+        "schemaVersion": 2,
         "authority": "test evidence inventory output contract",
         "classificationRecords": {
           "failureClassifications": {
@@ -5937,17 +5940,17 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.test-evidence-inventory.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:aa2813ab8406c0dba4a9ac4fc215cb607e2c2003e9b0921ac1f6a68faaacff0d",
+        "rootDefinitionRef": "proofkit.test-evidence-inventory.output.v2.root-shape",
+        "rootDefinitionDigest": "sha256:6688b487f1c9936dd1583ab0d90e689c75cae278b04bb431950b9979aba4efa7",
         "nativeSources": [
           {
             "path": "internal/command/proofbindingtestinventory",
-            "canonicalDigest": "sha256:87d5871167fd326398dd3d9c9424401c9414cae1d212bdbbd187a7dfe5730fb0",
+            "canonicalDigest": "sha256:93c68e7bd85f435dd82b1a9ab663add5ecc37bd45948ec3ce49c8af18a90051a",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/testevidenceinventory",
-            "canonicalDigest": "sha256:95618ec2824e5510d55d2c6bb86da69b057679a39404cca5f2ab5c8fd4826c6a",
+            "canonicalDigest": "sha256:60983b8f25544c7b85e818f202de053fa15557b0de37a7df35aa0d58b58c3888",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -5958,8 +5961,8 @@
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
-          "schemaVersion=1",
-          "root-shape-only definition proofkit.test-evidence-inventory.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "schemaVersion=2",
+          "root-shape-only definition proofkit.test-evidence-inventory.output.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -6823,8 +6826,8 @@
       "canonicalDigest": "sha256:6834488d7bfbb4fbcd50dda8d26c65f0c72e15ce7fd2f53ac4a1ee396f72f106"
     },
     {
-      "definitionId": "proofkit.adoption-contract-envelope.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.adoption-contract-envelope.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -6860,7 +6863,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:d12d8f01e350c871af39a1f518f08a86f59c0893c5d161ed1b4fe644e7b30f9c"
+      "canonicalDigest": "sha256:98fd5df72714bf773f3b90ad675ddcd9b214454fa083012c28f59a1cf3241b77"
     },
     {
       "definitionId": "proofkit.adoption-contract-envelope.output.v1.root-shape",
@@ -8130,8 +8133,8 @@
       "canonicalDigest": "sha256:81b3eb5f072ad45d3d71954bc9dfcb46bcdc1e8afc9ade800ae1ee73dfb503d0"
     },
     {
-      "definitionId": "proofkit.conformance-profile.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.conformance-profile.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -8164,11 +8167,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:6ebc6e3ceac697a483cd713833fd038086d49ec11718b7d1d3a210b3aae6dd22"
+      "canonicalDigest": "sha256:b343c1093476cd9f50970f58608e43c1a6ae681a2c06b17c217ab4f22ea454e5"
     },
     {
-      "definitionId": "proofkit.conformance-profile.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.conformance-profile.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -8194,38 +8197,42 @@
           },
           {
             "allowedFields": [
+              "bindingCount",
               "commandCount",
               "commandExecutionState",
               "environmentClasses",
               "failures",
               "nonClaims",
               "optionalSurfaceCount",
-              "preconditionedRequirementCount",
+              "preconditionedBindingCount",
               "profileId",
               "profileResolutionState",
               "purpose",
               "requiredSurfaceCount",
               "requirementCount",
               "scenarioCount",
+              "schemaVersion",
               "surfaceCount",
               "surfaces",
               "verifyCommands",
               "witnessMappingCount"
             ],
             "requiredFields": [
+              "bindingCount",
               "commandCount",
               "commandExecutionState",
               "environmentClasses",
               "failures",
               "nonClaims",
               "optionalSurfaceCount",
-              "preconditionedRequirementCount",
+              "preconditionedBindingCount",
               "profileId",
               "profileResolutionState",
               "purpose",
               "requiredSurfaceCount",
               "requirementCount",
               "scenarioCount",
+              "schemaVersion",
               "surfaceCount",
               "surfaces",
               "verifyCommands",
@@ -8267,7 +8274,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:11ee54032e139a25dda80337509ab6633ed31e297f9bc7461769badb2f5e0e0d"
+      "canonicalDigest": "sha256:b3b1ed639969bba5213bb70e0a4ab9f86b69f180ad677ced78e600f87d55fb4f"
     },
     {
       "definitionId": "proofkit.custom-rule-boundary.input.v1.root-shape",
@@ -9129,8 +9136,8 @@
       "canonicalDigest": "sha256:f780843a1d9afb5e7a82c5eefeca8f41d4ee8e852731ec3e690d1d8aedf46b16"
     },
     {
-      "definitionId": "proofkit.impact.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.impact.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -9147,7 +9154,7 @@
               "baseRef",
               "changedBindingRecordIds",
               "changedPaths",
-              "changedRecordIds",
+              "changedRequirementIds",
               "changedWitnessPathCoverage",
               "generatedArtifactRules",
               "headCommit",
@@ -9165,7 +9172,7 @@
               "baseRef",
               "changedBindingRecordIds",
               "changedPaths",
-              "changedRecordIds",
+              "changedRequirementIds",
               "changedWitnessPathCoverage",
               "generatedArtifactRules",
               "headCommit",
@@ -9184,11 +9191,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:125e94c27e5de283c973643a90a95101f818545718d9cf12cf89a58d511c8cf1"
+      "canonicalDigest": "sha256:aa30fb2ab02bc74ef18f9cf599d319d06a44e374851c07f5d921e86654a42e57"
     },
     {
-      "definitionId": "proofkit.impact.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.impact.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -9204,7 +9211,7 @@
               "baseCommit",
               "baseRef",
               "changedPaths",
-              "changedRecordIds",
+              "changedRequirementIds",
               "failures",
               "headCommit",
               "headRef",
@@ -9218,7 +9225,7 @@
               "baseCommit",
               "baseRef",
               "changedPaths",
-              "changedRecordIds",
+              "changedRequirementIds",
               "failures",
               "headCommit",
               "headRef",
@@ -9236,7 +9243,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:a979e09258d551c600da01624aab78353c1434bb92baf51e24b33ae6baa85044"
+      "canonicalDigest": "sha256:e6dacd55cace039ca8e24bdec628b1498d0c12bbfcdb60c46854ab2047c3f2d7"
     },
     {
       "definitionId": "proofkit.init.output.v1.root-shape",
@@ -9724,8 +9731,8 @@
       "canonicalDigest": "sha256:e6c9e94611b5de09befb45f56d1770bdf1e32a96752cf3e5fb8a58e8c6ecfc54"
     },
     {
-      "definitionId": "proofkit.pilot-admission.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.pilot-admission.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -9880,7 +9887,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:984795f4b9c38763b001778fb2e072b0dc3e9eb6fac91b1ed966fd34382399c4"
+      "canonicalDigest": "sha256:e3f15bcf1927483bfda42ca49d7f6624c0d0fadac81ccab1266c1a6ae8f528f1"
     },
     {
       "definitionId": "proofkit.pilot-admission.output.v1.root-shape",
@@ -11254,8 +11261,8 @@
       "canonicalDigest": "sha256:f31dd686f28fce4bf74265b557dc25428179cbc282753b4bea01439cd98f73c2"
     },
     {
-      "definitionId": "proofkit.requirement-browser-server.input.v2.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-browser-server.input.v3.root-shape",
+      "schemaVersion": 3,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -11450,7 +11457,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:50a7bb1b477b6067d410cf22db7e7564a9742aa7f6a270642149d372f0156007"
+      "canonicalDigest": "sha256:e6af5b9edb1284ab2ff2f1a276a6b924127b99810cd9446bffbc971f638a0997"
     },
     {
       "definitionId": "proofkit.requirement-browser-server.output.v1.root-shape",
@@ -11723,8 +11730,8 @@
       "canonicalDigest": "sha256:61f7fd43e2e9da5bde9b61bb86e02cbf337a43c6891ca888c1d42936e5b16456"
     },
     {
-      "definitionId": "proofkit.requirement-coverage-input-compose.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-coverage-input-compose.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -11770,11 +11777,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:06fa8d0a592549cebdea1d7b9d428e090de7b57e265dbc263699b28dbe6eede8"
+      "canonicalDigest": "sha256:f6300d6d0f80f5066fe4079433978132ee2bb1df75e602e59cf3dc37a385d3ce"
     },
     {
-      "definitionId": "proofkit.requirement-coverage-input-compose.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-coverage-input-compose.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -11818,11 +11825,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:7e913a998ba47601fd054dbec429d96cb2a546c8925d311f45aca86f1e038bec"
+      "canonicalDigest": "sha256:0f264c996a058fb8aff102e42b95a4610d3a584b35687cc870b3d16c9589cfed"
     },
     {
-      "definitionId": "proofkit.requirement-coverage-view.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-coverage-view.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -11890,11 +11897,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:b5ddab0a55a381f002b39ece0f5727171f7984856e553200bbb62a49821ff6ac"
+      "canonicalDigest": "sha256:f42c9218c861b1e30ec3692fa0097da393e36eea2049d4aac1a05a8b0a40d81d"
     },
     {
-      "definitionId": "proofkit.requirement-coverage-view.output.v2.root-shape",
-      "schemaVersion": 2,
+      "definitionId": "proofkit.requirement-coverage-view.output.v3.root-shape",
+      "schemaVersion": 3,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12017,11 +12024,11 @@
           }
         ]
       },
-        "canonicalDigest": "sha256:71a3a1245159e03eb3f81e2b117e1d1690c99e7e84625670a1fd42530b53684c"
+      "canonicalDigest": "sha256:2365e4778d6c24c0af9507ce93bfba0a89c4ba9ece8da1c5b25b4581d6b80fa1"
     },
     {
-      "definitionId": "proofkit.requirement-impact-input-compose.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-impact-input-compose.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12081,11 +12088,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:e6af8f427f781395710407a87bfd5fa91a0b3c8aaaee437c2487472a243b22a6"
+      "canonicalDigest": "sha256:1ca9c341fecac869c675302fc547865674bb42605b7ed66b3733e3db15e85150"
     },
     {
-      "definitionId": "proofkit.requirement-impact-input-compose.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-impact-input-compose.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12102,7 +12109,7 @@
               "baseRef",
               "changedBindingRecordIds",
               "changedPaths",
-              "changedRecordIds",
+              "changedRequirementIds",
               "changedWitnessPathCoverage",
               "generatedArtifactRules",
               "headCommit",
@@ -12120,7 +12127,7 @@
               "baseRef",
               "changedBindingRecordIds",
               "changedPaths",
-              "changedRecordIds",
+              "changedRequirementIds",
               "changedWitnessPathCoverage",
               "generatedArtifactRules",
               "headCommit",
@@ -12140,11 +12147,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:9fd57d299d4e76bb3b0bf10f313a8dd9bfd593b8d15fa4844d5e342c4d929ee9"
+      "canonicalDigest": "sha256:68a5ab234566459ce56772aac9a5c5b471647753390dbc1c2a62cabf0f489ef2"
     },
     {
-      "definitionId": "proofkit.requirement-proof-resolver.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-proof-resolver.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12190,11 +12197,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:68ade17ac7e9fb3496ad0e7ea8ae9fbcf734afa4e6b8a44442e1af3c4f87bf15"
+      "canonicalDigest": "sha256:a9004b9ddd9f4109326bfc233e6d4629090373d8651488b6663328273826952d"
     },
     {
-      "definitionId": "proofkit.requirement-proof-resolver.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-proof-resolver.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12207,6 +12214,7 @@
         "variants": [
           {
             "allowedFields": [
+              "bindings",
               "commands",
               "conformanceProofContract",
               "contractId",
@@ -12214,13 +12222,13 @@
               "localEnvironmentPolicy",
               "nonClaims",
               "projectionKind",
-              "requirements",
               "scenarios",
               "schemaVersion",
               "surfaces",
-              "witnessSelectors"
+              "witnessRoutes"
             ],
             "requiredFields": [
+              "bindings",
               "commands",
               "conformanceProofContract",
               "contractId",
@@ -12228,11 +12236,10 @@
               "localEnvironmentPolicy",
               "nonClaims",
               "projectionKind",
-              "requirements",
               "scenarios",
               "schemaVersion",
               "surfaces",
-              "witnessSelectors"
+              "witnessRoutes"
             ],
             "rootKind": "object",
             "variantId": "01-resolver",
@@ -12242,11 +12249,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:750c75c08376a986a18e8739b7476d58af4133c19c40f43d216ee009607be225"
+      "canonicalDigest": "sha256:42bbed6d902300afd15cf763e164896f9ac05567a67fa62a50801d9e90bc4e05"
     },
     {
-      "definitionId": "proofkit.requirement-proof-source-set.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-proof-source-set.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12261,11 +12268,13 @@
             "allowedFields": [
               "canonicalEnvelope",
               "projection",
+              "schemaVersion",
               "sourceSet",
               "sources"
             ],
             "requiredFields": [
               "canonicalEnvelope",
+              "schemaVersion",
               "sourceSet",
               "sources"
             ],
@@ -12277,11 +12286,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:cd406c4aba90faa0fa2b132d4c50af85578ec79a6ad1d89bc997ea027d6def05"
+      "canonicalDigest": "sha256:9b38b93e0b8a2ba2b72e32d606d3cb2372fa685c9a702ae31ae42437945f2eb0"
     },
     {
-      "definitionId": "proofkit.requirement-proof-source-set.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-proof-source-set.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12297,6 +12306,7 @@
               "contract",
               "inputPaths",
               "projectionKind",
+              "schemaVersion",
               "selectedSourceIds",
               "sourceCount",
               "sourceSetCount"
@@ -12305,6 +12315,7 @@
               "contract",
               "inputPaths",
               "projectionKind",
+              "schemaVersion",
               "selectedSourceIds",
               "sourceCount",
               "sourceSetCount"
@@ -12320,6 +12331,7 @@
               "inputPaths",
               "projectionKind",
               "resolverInput",
+              "schemaVersion",
               "selectedSourceIds",
               "sourceCount",
               "sourceSetCount"
@@ -12328,6 +12340,7 @@
               "inputPaths",
               "projectionKind",
               "resolverInput",
+              "schemaVersion",
               "selectedSourceIds",
               "sourceCount",
               "sourceSetCount"
@@ -12340,11 +12353,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:57993914adfd60d6cc1a66bfef0b6a4c3c0162fd102f2629d497a28e839f1228"
+      "canonicalDigest": "sha256:ed81d03ea6ea56fd9ba12c48995111e8a90a8c1feb336fe95be195b25ccc0254"
     },
     {
-      "definitionId": "proofkit.requirement-proof-view.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-proof-view.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12414,11 +12427,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:5aed3bcb99337d4937243d61d1f8ed1b1b358108a7710152221bfd5961a3aeb7"
+      "canonicalDigest": "sha256:998efcaf322251ec9ff402cbf8f4db84f981aca3c24bd2071c0c302ddcca5490"
     },
     {
-      "definitionId": "proofkit.requirement-proof-view.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.requirement-proof-view.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -12432,25 +12445,27 @@
           {
             "allowedFields": [
               "authority",
+              "bindingCount",
+              "bindings",
               "commandCount",
               "contractId",
               "localEnvironmentPolicy",
               "nonClaims",
-              "preconditionedRequirementCount",
+              "preconditionedBindingCount",
               "requirementCount",
-              "requirements",
               "schemaVersion",
               "viewKind"
             ],
             "requiredFields": [
               "authority",
+              "bindingCount",
+              "bindings",
               "commandCount",
               "contractId",
               "localEnvironmentPolicy",
               "nonClaims",
-              "preconditionedRequirementCount",
+              "preconditionedBindingCount",
               "requirementCount",
-              "requirements",
               "schemaVersion",
               "viewKind"
             ],
@@ -12493,7 +12508,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:d1da2a4593aa2f4a1531e1a5be8e3bc877a5ff45f978b7f39a0bf708b01cb564"
+      "canonicalDigest": "sha256:3dd563fd6eaedc12994b16234f72228b76fd1155e29033ca1b027fe1e0289d19"
     },
     {
       "definitionId": "proofkit.requirement-semantic-diff.input.v2.root-shape",
@@ -14078,8 +14093,8 @@
       "canonicalDigest": "sha256:338f720a24bd36f4ab34cad9b14d3bd26389119e5c713146f1c4eb019f4a0637"
     },
     {
-      "definitionId": "proofkit.test-evidence-inventory.input.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.test-evidence-inventory.input.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -14201,11 +14216,11 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:4006bfcaab9bd8cb781595aa14f48768cbee996f5e866757fa73be1c9938fa98"
+      "canonicalDigest": "sha256:4ec00274f91fd3e6e8bf67ac55125e1a9566e7d2233137ed3fa968539532125e"
     },
     {
-      "definitionId": "proofkit.test-evidence-inventory.output.v1.root-shape",
-      "schemaVersion": 1,
+      "definitionId": "proofkit.test-evidence-inventory.output.v2.root-shape",
+      "schemaVersion": 2,
       "rootType": "object",
       "closed": true,
       "definitionRefs": [],
@@ -14318,7 +14333,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:aa2813ab8406c0dba4a9ac4fc215cb607e2c2003e9b0921ac1f6a68faaacff0d"
+      "canonicalDigest": "sha256:6688b487f1c9936dd1583ab0d90e689c75cae278b04bb431950b9979aba4efa7"
     },
     {
       "definitionId": "proofkit.text-policy.input.v1.root-shape",

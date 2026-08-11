@@ -44,6 +44,61 @@ func TestBuildComposesInputPreservesDeclaredUniverseAndAllowsDownstreamFailures(
 	}
 }
 
+func TestBuildReturnsAliasFreeComposedInput(t *testing.T) {
+	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	output, exitCode, err := Build(input)
+	if err != nil {
+		t.Fatalf("Build() error=%v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("Build() exitCode=%d output=%#v", exitCode, output)
+	}
+	want := cloneJSONValue(output)
+	mutateJSONStrings(input)
+	if !reflect.DeepEqual(output, want) {
+		t.Fatalf("caller mutation changed composed output:\n got=%#v\nwant=%#v", output, want)
+	}
+}
+
+func TestAdmissionSnapshotsCompactContractBeforeComposition(t *testing.T) {
+	raw := validComposeInput(t, baseInventoryEntries()).(map[string]any)
+	admitted, err := admitInput(raw)
+	if err != nil {
+		t.Fatalf("admitInput() error=%v", err)
+	}
+	want := cloneJSONValue(admitted.CompactProofContract)
+	mutateJSONStrings(raw["compactProofContract"])
+
+	output, err := compose(admitted)
+	if err != nil {
+		t.Fatalf("compose() error=%v", err)
+	}
+	if !reflect.DeepEqual(output["compactProofContract"], want) {
+		t.Fatalf("compact contract changed after caller mutation:\n got=%#v\nwant=%#v", output["compactProofContract"], want)
+	}
+}
+
+func mutateJSONStrings(value any) {
+	switch typed := value.(type) {
+	case map[string]any:
+		for key, child := range typed {
+			if _, ok := child.(string); ok {
+				typed[key] = "mutated"
+				continue
+			}
+			mutateJSONStrings(child)
+		}
+	case []any:
+		for index, child := range typed {
+			if _, ok := child.(string); ok {
+				typed[index] = "mutated"
+				continue
+			}
+			mutateJSONStrings(child)
+		}
+	}
+}
+
 func TestBuildComposesDirectRequirementProofBindingAndInventory(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.035702766579458185352787503340754906774314209827550424808834264957824734855602")
 	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
@@ -382,7 +437,7 @@ func TestBuildRejectsObservedSurfaceIDCollisionWithDeclaredSurface(t *testing.T)
 func validComposeInput(t *testing.T, inventoryEntries string) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "composerInputId": "proofkit.coverage.compose",
   "viewInputId": "proofkit.coverage.view",
   "selectedOwnerIds": ["proofkit.coverage"],
@@ -414,29 +469,28 @@ func validComposeInput(t *testing.T, inventoryEntries string) any {
     "nonClaims": ["Coverage composer fixture source is test-only."]
   },
   "compactProofContract": {
-    "schema_version": 1,
-    "authority_state": "canonical",
+    "schema_version": 2,
+    "authority_state": "caller_owned_declaration",
     "contract_id": "proofkit.coverage.compact",
-    "contract_kind": "requirement_proof_binding",
-    "normalization_profile": "proofkit.compact.v1",
+    "contract_kind": "requirement_proof_route_declaration",
+    "normalization_profile": "proofkit.compact.declaration.v2",
     "non_claims": ["Compact fixture does not execute witnesses."],
     "surface_columns": ["surface_id", "required_environment_classes", "preconditioned_environment_classes"],
     "surfaces": [["proofkit.coverage", ["local-go"], []]],
     "witness_columns": ["selector", "environment_classes", "verify_commands", "resolution_order_index"],
-    "binding_columns": ["requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "proof_contract_state", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "mutation_resistance_state"],
+    "binding_columns": ["requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"],
     "bindings": [[
       "REQ-PROOFKIT-COVERAGE-001",
       "proofkit.coverage",
       "proofkit.coverage::scenario",
       "contract",
       "proofkit.coverage.invariant",
-      "witness_backed",
       "blocking",
       ["local-go"],
       ["internal/command/requirementcoverageinput/requirementcoverageinput_test.go::positive", ["local-go"], ["go test ./internal/command/requirementcoverageinput"], 0],
       ["internal/command/requirementcoverageinput/requirementcoverageinput_test.go::falsification", ["local-go"], ["go test ./internal/command/requirementcoverageinput"], 1],
       ["go test ./internal/command/requirementcoverageinput"],
-      "no_known_advisory_gap"
+      "proofkit.coverage.mutation_claim"
     ]]
   },
   "normalizedTestEvidenceInventory": {

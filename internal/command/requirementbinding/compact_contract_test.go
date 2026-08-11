@@ -2,12 +2,13 @@ package requirementbinding
 
 import (
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-func TestBuildResolverPreservesCompactMutationResistanceState(t *testing.T) {
+func TestBuildResolverPreservesDeclaredMutationResistanceClaim(t *testing.T) {
 	output, exitCode, err := BuildResolver(validCompactContract(), ResolverOptions{LocalEnvironmentClasses: []string{"local-go"}})
 	if err != nil {
 		t.Fatalf("BuildResolver() error = %v", err)
@@ -15,10 +16,12 @@ func TestBuildResolverPreservesCompactMutationResistanceState(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("BuildResolver() exitCode=%d, want 0", exitCode)
 	}
-	requirements := output.(map[string]any)["requirements"].([]any)
-	context := requirements[0].(map[string]any)["mutationResistanceContext"].(map[string]any)
-	if context["mutationResistanceState"] != "no_known_advisory_gap" {
-		t.Fatalf("mutationResistanceState=%v", context["mutationResistanceState"])
+	binding := output.(map[string]any)["bindings"].([]any)[0].(map[string]any)
+	if binding["declaredMutationResistanceClaimId"] != "claim.no_known_advisory_gap" {
+		t.Fatalf("declaredMutationResistanceClaimId=%v", binding["declaredMutationResistanceClaimId"])
+	}
+	if _, exists := binding["mutationResistanceContext"]; exists {
+		t.Fatalf("binding must not project assurance-shaped mutationResistanceContext: %#v", binding)
 	}
 }
 
@@ -40,8 +43,9 @@ func TestBuildResolverEmitsNamedLookupFacts(t *testing.T) {
 	if command["verifyCommandRef"] != "go test ./..." {
 		t.Fatalf("verifyCommandRef=%v", command["verifyCommandRef"])
 	}
-	if values := strings.Join(stringValues(command["requirementIds"].([]any)), ","); values != "REQ-PROOFKIT-COMPACT-001" {
-		t.Fatalf("command requirementIds=%s", values)
+	binding := record["bindings"].([]any)[0].(map[string]any)
+	if values := strings.Join(stringValues(command["bindingRecordIds"].([]any)), ","); values != binding["bindingRecordId"] {
+		t.Fatalf("command bindingRecordIds=%s", values)
 	}
 	environmentClasses := record["environmentClasses"].([]any)
 	if len(environmentClasses) != 1 {
@@ -51,8 +55,8 @@ func TestBuildResolverEmitsNamedLookupFacts(t *testing.T) {
 	if environment["environmentClass"] != "local-go" {
 		t.Fatalf("environmentClass=%v", environment["environmentClass"])
 	}
-	if selectors := strings.Join(stringValues(environment["witnessSelectors"].([]any)), ","); selectors != "tests/proofkit_test.go::TestCompact" {
-		t.Fatalf("environment witnessSelectors=%s", selectors)
+	if routeIDs := stringValues(environment["witnessRouteIds"].([]any)); len(routeIDs) != 2 || routeIDs[0] == routeIDs[1] {
+		t.Fatalf("environment witnessRouteIds=%#v, want two role-distinct routes", routeIDs)
 	}
 	conformance := record["conformanceProofContract"].(map[string]any)
 	if conformance["contractId"] != "proofkit.test.compact" {
@@ -76,7 +80,7 @@ func TestBuildResolverEmitsNamedLookupFacts(t *testing.T) {
 	}
 }
 
-func TestBuildResolverRejectsCompactBindingWithoutMutationResistanceColumn(t *testing.T) {
+func TestBuildResolverRejectsCompactBindingWithoutDeclaredMutationClaimColumn(t *testing.T) {
 	input := validCompactContract()
 	input["binding_columns"] = []any{
 		"requirement_id",
@@ -84,7 +88,6 @@ func TestBuildResolverRejectsCompactBindingWithoutMutationResistanceColumn(t *te
 		"scenario_id",
 		"invariant_role",
 		"owned_invariant",
-		"proof_contract_state",
 		"blocking_status",
 		"required_environment_classes",
 		"positive_witness",
@@ -98,7 +101,6 @@ func TestBuildResolverRejectsCompactBindingWithoutMutationResistanceColumn(t *te
 			"scenario.compact",
 			"contract",
 			"proofkit.compact",
-			"witness_backed",
 			"blocking",
 			[]any{"local-go"},
 			compactWitnessRow(),
@@ -108,8 +110,8 @@ func TestBuildResolverRejectsCompactBindingWithoutMutationResistanceColumn(t *te
 	}
 
 	_, exitCode, err := BuildResolver(input, ResolverOptions{LocalEnvironmentClasses: []string{"local-go"}})
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "mutation_resistance_state") {
-		t.Fatalf("BuildResolver() exitCode=%d err=%v, want missing mutation_resistance_state", exitCode, err)
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "declared_mutation_resistance_claim_id") {
+		t.Fatalf("BuildResolver() exitCode=%d err=%v, want missing declared_mutation_resistance_claim_id", exitCode, err)
 	}
 }
 
@@ -148,7 +150,7 @@ func TestBuildResolverRejectsCompactSecretLikeText(t *testing.T) {
 func TestBuildResolverRejectsCompactShellControlCommandText(t *testing.T) {
 	input := validCompactContract()
 	binding := input["bindings"].([]any)[0].([]any)
-	binding[10] = []any{"go test ./... && curl https://example.invalid"}
+	binding[9] = []any{"go test ./... && curl https://example.invalid"}
 
 	_, exitCode, err := BuildResolver(input, ResolverOptions{LocalEnvironmentClasses: []string{"local-go"}})
 	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "display-only command text") {
@@ -184,7 +186,7 @@ func TestBuildResolverRejectsUnscopedCompactIdentity(t *testing.T) {
 	for _, witness := range []struct {
 		index int
 		role  string
-	}{{index: 8, role: "positive"}, {index: 9, role: "falsification"}} {
+	}{{index: 7, role: "positive"}, {index: 8, role: "falsification"}} {
 		cases = append(cases,
 			selectorCase{
 				name: witness.role + " selector without anchor",
@@ -229,16 +231,16 @@ func mutateWitnessSelector(input map[string]any, witnessIndex int, selector stri
 
 func validCompactContract() map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"authority_state":       "canonical",
+		"schema_version":        json.Number("2"),
+		"authority_state":       "caller_owned_declaration",
 		"contract_id":           "proofkit.test.compact",
-		"contract_kind":         "requirement_proof_binding",
-		"normalization_profile": "proofkit.compact.v1",
+		"contract_kind":         "requirement_proof_route_declaration",
+		"normalization_profile": "proofkit.compact.declaration.v2",
 		"non_claims":            []any{"Compact test input does not execute witnesses."},
 		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
 		"surfaces":              []any{[]any{"proofkit.surface", []any{"local-go"}, []any{}}},
 		"witness_columns":       []any{"selector", "environment_classes", "verify_commands", "resolution_order_index"},
-		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "proof_contract_state", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "mutation_resistance_state"},
+		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"},
 		"bindings": []any{
 			[]any{
 				"REQ-PROOFKIT-COMPACT-001",
@@ -246,13 +248,12 @@ func validCompactContract() map[string]any {
 				"proofkit.surface::scenario.compact",
 				"contract",
 				"proofkit.compact",
-				"witness_backed",
 				"blocking",
 				[]any{"local-go"},
 				compactWitnessRow(),
 				compactWitnessRow(),
 				[]any{"go test ./..."},
-				"no_known_advisory_gap",
+				"claim.no_known_advisory_gap",
 			},
 		},
 	}

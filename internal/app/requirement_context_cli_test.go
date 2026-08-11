@@ -219,29 +219,26 @@ func readCLIJSONObject(t *testing.T, path string) map[string]any {
 func cliProofSourceSetInput(t *testing.T, projection string) map[string]any {
 	t.Helper()
 	fragment := map[string]any{
-		"schema_version":        json.Number("1"),
-		"contract_kind":         "requirement_proof_binding_fragment",
-		"contract_id":           "requirement-proof-bindings/fragment/v1",
-		"authority_state":       "canonical_requirement_to_proof_binding_fragment",
-		"normalization_profile": "json/v1:utf8+lf+compact-owner-row-arrays",
+		"schema_version":        json.Number("2"),
+		"contract_kind":         "requirement_proof_route_declaration_fragment",
+		"contract_id":           "requirement-proof-route-declarations/fragment/v3",
+		"authority_state":       "caller_owned_requirement_proof_route_fragment",
+		"normalization_profile": "json/v2:utf8+lf+owner-defaulted-declaration-row-arrays",
 		"source_id":             "source.local",
 		"surfaces": []any{
-			[]any{"source.local", []any{"unit"}, false, "not_allowed", "none", []any{"local-go"}, []any{}, "checked"},
+			[]any{"source.local", []any{"local-go"}, []any{}},
 		},
 		"bindings": []any{
 			[]any{
 				"REQ-PROOFKIT-SOURCE-001",
-				"source.local",
-				"source.local::owned_invariant",
-				"contract",
 				"owned_invariant",
-				"witness_backed",
+				"contract",
 				"blocking",
 				[]any{"local-go"},
-				[]any{"internal/source_test.go::TestPositive", []any{"local-go"}, []any{"go test ./..."}, json.Number("0")},
-				[]any{"internal/source_test.go::TestNegative", []any{"local-go"}, []any{"go test ./..."}, json.Number("1")},
+				[]any{"internal/source_test.go::TestPositive", json.Number("0")},
+				[]any{"internal/source_test.go::TestNegative", json.Number("1")},
 				[]any{"go test ./..."},
-				"checked",
+				"claim.checked",
 			},
 		},
 	}
@@ -250,28 +247,29 @@ func cliProofSourceSetInput(t *testing.T, projection string) map[string]any {
 		t.Fatal(err)
 	}
 	sum := sha256.Sum256(fragmentBytes)
-	path := "docs/contracts/requirement-proof-bindings/local.v1.json"
+	path := "docs/contracts/requirement-proof-routes/local.v3.json"
 	return map[string]any{
+		"schemaVersion": json.Number("2"),
 		"canonicalEnvelope": map[string]any{
-			"schemaVersion":        json.Number("1"),
-			"contractKind":         "requirement_proof_binding",
-			"contractId":           "requirement-proof-bindings/v1",
-			"authorityState":       "canonical_requirement_to_proof_binding",
-			"normalizationProfile": "json/v1:utf8+lf+compact-row-arrays",
+			"schemaVersion":        json.Number("2"),
+			"contractKind":         "requirement_proof_route_declaration_source",
+			"contractId":           "requirement-proof-route-declarations/v2",
+			"authorityState":       "caller_owned_requirement_proof_route_source",
+			"normalizationProfile": "json/v2:utf8+lf+declaration-row-arrays",
 			"nonClaims":            []any{"CLI source-set fixture does not prove repository coverage."},
-			"surfaceColumns":       []any{"surface_id", "proof_families", "rollout_claim_allowed", "rollout_claim_state", "rollout_claim_scope", "required_environment_classes", "preconditioned_environment_classes", "mutation_resistance_state"},
-			"bindingColumns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "proof_contract_state", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "mutation_resistance_state"},
+			"surfaceColumns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
+			"bindingColumns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"},
 			"witnessColumns":       []any{"selector", "environment_classes", "verify_commands", "resolution_order_index"},
 		},
 		"sourceSet": map[string]any{
-			"schema_version":        json.Number("1"),
-			"contract_kind":         "requirement_proof_binding_source_set",
-			"contract_id":           "requirement-proof-bindings/source-set/v1",
-			"authority_state":       "requirement_proof_binding_source_index",
-			"normalization_profile": "json/v1:utf8+lf+ordered-source-refs",
+			"schema_version":        json.Number("2"),
+			"contract_kind":         "requirement_proof_route_declaration_source_set",
+			"contract_id":           "requirement-proof-route-declarations/source-set/v2",
+			"authority_state":       "caller_owned_requirement_proof_route_source_index",
+			"normalization_profile": "json/v2:utf8+lf+ordered-source-refs",
 			"source_columns":        []any{"source_id", "path", "sha256", "role", "non_claims"},
 			"sources": []any{
-				[]any{"source.local", path, hex.EncodeToString(sum[:]), "requirement_proof_binding_fragment", []any{"CLI source owns its fixture rows."}},
+				[]any{"source.local", path, hex.EncodeToString(sum[:]), "requirement_proof_route_declaration_fragment", []any{"CLI source owns its fixture rows."}},
 			},
 			"non_claims": []any{"CLI source-set fixture does not prove repository coverage."},
 		},
@@ -282,29 +280,28 @@ func cliProofSourceSetInput(t *testing.T, projection string) map[string]any {
 
 func cliCompactProofContract() map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"authority_state":       "canonical",
+		"schema_version":        json.Number("2"),
+		"authority_state":       "caller_owned_declaration",
 		"contract_id":           "proofkit.cli.compact",
-		"contract_kind":         "requirement_proof_binding",
-		"normalization_profile": "proofkit.compact.v1",
+		"contract_kind":         "requirement_proof_route_declaration",
+		"normalization_profile": "proofkit.compact.declaration.v2",
 		"non_claims":            []any{"Compact CLI fixture does not execute witnesses."},
 		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
 		"surfaces":              []any{[]any{"proofkit.surface", []any{"local-go"}, []any{}}},
 		"witness_columns":       []any{"selector", "environment_classes", "verify_commands", "resolution_order_index"},
-		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "proof_contract_state", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "mutation_resistance_state"},
+		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"},
 		"bindings": []any{[]any{
 			"REQ-PROOFKIT-COMPACT-001",
 			"proofkit.surface",
 			"proofkit.surface::scenario.compact",
 			"contract",
 			"proofkit.compact",
-			"witness_backed",
 			"blocking",
 			[]any{"local-go"},
 			[]any{"tests/positive_test.go::TestPositive", []any{"local-go"}, []any{"go test ./... -run TestPositive"}, json.Number("0")},
 			[]any{"tests/negative_test.go::TestNegative", []any{"local-go"}, []any{"go test ./... -run TestNegative"}, json.Number("1")},
 			[]any{"go test ./... -run TestPositive", "go test ./... -run TestNegative"},
-			"no_known_advisory_gap",
+			"claim.no_known_advisory_gap",
 		}},
 	}
 }

@@ -92,9 +92,13 @@ type ResolverOptions struct {
 }
 
 type CompactFalsificationRoute struct {
+	BindingRecordID       string
 	FalsificationSelector string
 	OwnedInvariant        string
 	RequirementID         string
+	Role                  string
+	RouteID               string
+	ScenarioID            string
 	SurfaceID             string
 	VerifyCommands        []string
 }
@@ -177,9 +181,13 @@ func CompactFalsificationRoutes(raw any) ([]CompactFalsificationRoute, error) {
 	routes := make([]CompactFalsificationRoute, 0, len(kernelRoutes))
 	for _, route := range kernelRoutes {
 		routes = append(routes, CompactFalsificationRoute{
+			BindingRecordID:       route.BindingRecordID,
 			FalsificationSelector: route.FalsificationSelector,
 			OwnedInvariant:        route.OwnedInvariant,
 			RequirementID:         route.RequirementID,
+			Role:                  route.Role,
+			RouteID:               route.RouteID,
+			ScenarioID:            route.ScenarioID,
 			SurfaceID:             route.SurfaceID,
 			VerifyCommands:        append([]string{}, route.VerifyCommands...),
 		})

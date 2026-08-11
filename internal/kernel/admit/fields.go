@@ -523,11 +523,7 @@ func Bool(raw any, context string) (bool, error) {
 }
 
 func PositiveInteger(raw any, context string) (int, error) {
-	number, ok := raw.(json.Number)
-	if !ok {
-		return 0, fmt.Errorf("%s must be a positive integer", context)
-	}
-	value, err := number.Int64()
+	value, err := CanonicalInteger(raw, context)
 	if err != nil || value <= 0 || int64(int(value)) != value {
 		return 0, fmt.Errorf("%s must be a positive integer", context)
 	}
@@ -535,12 +531,39 @@ func PositiveInteger(raw any, context string) (int, error) {
 }
 
 func JSONNumberEquals(raw any, expected int64) bool {
+	value, err := CanonicalInteger(raw, "JSON integer")
+	return err == nil && value == expected
+}
+
+func CanonicalInteger(raw any, context string) (int64, error) {
 	number, ok := raw.(json.Number)
-	if !ok {
-		return false
+	if !ok || !canonicalIntegerLexeme(number.String()) {
+		return 0, fmt.Errorf("%s must be a canonical JSON integer", context)
 	}
 	value, err := number.Int64()
-	return err == nil && value == expected
+	if err != nil {
+		return 0, fmt.Errorf("%s must be a canonical JSON integer", context)
+	}
+	return value, nil
+}
+
+func canonicalIntegerLexeme(value string) bool {
+	if value == "0" {
+		return true
+	}
+	start := 0
+	if strings.HasPrefix(value, "-") {
+		start = 1
+	}
+	if start == len(value) || value[start] < '1' || value[start] > '9' {
+		return false
+	}
+	for index := start + 1; index < len(value); index++ {
+		if value[index] < '0' || value[index] > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 func StringSliceToAny(values []string) []any {

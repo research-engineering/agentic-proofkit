@@ -116,24 +116,80 @@ func TestAdmitOutputRejectsCompactProjectionDrift(t *testing.T) {
 		mutate func(map[string]any)
 		want   string
 	}{
-		{name: "command ids", mutate: func(row map[string]any) { row["commandIds"] = []any{"proofkit.coverage.other"} }, want: "compact commandIds are not derived from projected tests"},
-		{name: "witness selector", mutate: func(row map[string]any) { row["witnessSelectors"] = []any{"not-a-selector"} }, want: "selector identity"},
+		{name: "command ids", mutate: func(row map[string]any) { row["commandIds"] = []any{"proofkit.coverage.other"} }, want: "commandIds are not derived from projected tests"},
+		{name: "witness selector", mutate: func(row map[string]any) {
+			row["declaredWitnessRoutes"].([]any)[0].(map[string]any)["selector"] = "not-a-selector"
+		}, want: "repo/path::stable_anchor"},
 		{name: "verify command", mutate: func(row map[string]any) { row["verifyCommands"] = []any{"go test ./...; false"} }, want: "shell control tokens"},
 		{name: "valid witness selector substitution", mutate: func(row map[string]any) {
-			row["witnessSelectors"] = []any{"internal/command/requirementcoverageview/requirementcoverageview_test.go::falsification.substituted"}
-		}, want: "compact witnessSelectors are not derived from scenarios"},
+			row["declaredWitnessRoutes"].([]any)[0].(map[string]any)["selector"] = "internal/command/requirementcoverageview/requirementcoverageview_test.go::falsification.substituted"
+		}, want: "witnessRouteId does not match"},
 		{name: "valid verify command substitution", mutate: func(row map[string]any) {
 			row["verifyCommands"] = []any{"go test ./internal/command/requirementcontext"}
-		}, want: "compact verifyCommands are not derived from scenarios"},
+		}, want: "verifyCommands are not derived from scenarios"},
+		{name: "delimiter collision in route verify commands", mutate: func(row map[string]any) {
+			scenario := row["scenarios"].([]any)[0].(map[string]any)
+			scenarioRoute := scenario["declaredWitnessRoutes"].([]any)[0].(map[string]any)
+			projectedRoute := row["declaredWitnessRoutes"].([]any)[0].(map[string]any)
+			scenarioRoute["verifyCommands"] = []any{"alpha", "beta"}
+			projectedRoute["verifyCommands"] = []any{"alpha\x1fbeta"}
+			scenario["verifyCommands"] = []any{"alpha", "beta", "go test ./internal/command/requirementcoverageview"}
+			row["verifyCommands"] = []any{"alpha", "beta", "go test ./internal/command/requirementcoverageview"}
+		}, want: "declaredWitnessRoutes are not the exact scenario route union"},
 		{name: "valid but unscoped scenario id", mutate: func(row map[string]any) {
 			row["scenarios"].([]any)[0].(map[string]any)["scenarioId"] = "arbitrary-scenario"
 		}, want: "surface_id::stable_anchor"},
+		{name: "scenario surface mismatch", mutate: func(row map[string]any) {
+			row["scenarios"].([]any)[0].(map[string]any)["scenarioId"] = "other.surface::scenario"
+		}, want: "scenarioId must be scoped to surfaceId"},
+		{name: "scenario parent requirement mismatch", mutate: func(row map[string]any) {
+			row["scenarios"].([]any)[0].(map[string]any)["requirementId"] = "REQ-PROOFKIT-COVERAGE-OTHER"
+		}, want: "requirementId must match its parent requirement row"},
 	} {
 		t.Run(item.name, func(t *testing.T) {
 			record := buildCompact(t)
 			item.mutate(record["requirementCoverage"].([]any)[0].(map[string]any))
 			if _, err := AdmitOutput(record); err == nil || !strings.Contains(err.Error(), item.want) {
 				t.Fatalf("AdmitOutput() error=%v, want %q", err, item.want)
+			}
+		})
+	}
+}
+
+func TestAdmitOutputRequiresEveryCompactScenarioAndRouteField(t *testing.T) {
+	compactRecord := func(t *testing.T) map[string]any {
+		t.Helper()
+		input := validCoverageInput(t).(map[string]any)
+		input["requirementProofBinding"] = nil
+		input["compactProofContract"] = validCompactCoverageContract()
+		input["localEnvironmentPolicy"] = map[string]any{
+			"authority": "caller_provided", "localEnvironmentClasses": []any{"local-go"},
+		}
+		inventoryEntry(input)["witnessRefs"] = []any{}
+		view, _, err := BuildJSON(input, Options{})
+		if err != nil {
+			t.Fatalf("BuildJSON() error=%v", err)
+		}
+		return view.(map[string]any)
+	}
+	scenarioKeys := []string{"bindingRecordId", "bindingVerifyCommands", "declaredWitnessRoutes", "environmentClasses", "requiredEnvironmentClasses", "requirementId", "scenarioId", "surfaceId", "verifyCommands"}
+	for _, field := range scenarioKeys {
+		t.Run("scenario/"+field, func(t *testing.T) {
+			record := compactRecord(t)
+			scenario := record["requirementCoverage"].([]any)[0].(map[string]any)["scenarios"].([]any)[0].(map[string]any)
+			delete(scenario, field)
+			if _, err := AdmitOutput(record); err == nil {
+				t.Fatalf("AdmitOutput() admitted compact scenario without %s", field)
+			}
+		})
+	}
+	for _, field := range compactWitnessRouteKeys() {
+		t.Run("route/"+field, func(t *testing.T) {
+			record := compactRecord(t)
+			route := record["requirementCoverage"].([]any)[0].(map[string]any)["scenarios"].([]any)[0].(map[string]any)["declaredWitnessRoutes"].([]any)[0].(map[string]any)
+			delete(route, field)
+			if _, err := AdmitOutput(record); err == nil {
+				t.Fatalf("AdmitOutput() admitted compact route without %s", field)
 			}
 		})
 	}
@@ -157,7 +213,7 @@ func TestAdmitOutputRequiresEveryDeclaredRootField(t *testing.T) {
 
 func TestAdmitOutputRequiresEveryCoverageRowField(t *testing.T) {
 	for _, descriptor := range coverageRowDescriptors {
-		for _, field := range coverageRowKeys(descriptor.rowsKey) {
+		for _, field := range coverageRowKeys(descriptor.rowsKey, "structured") {
 			t.Run(descriptor.rowsKey+"/"+field, func(t *testing.T) {
 				record := coverageRecordWithOwnerInvariant(t)
 				delete(record[descriptor.rowsKey].([]any)[0].(map[string]any), field)
@@ -255,7 +311,7 @@ func TestAdmitOutputRequiresCanonicalCoverageRowOrder(t *testing.T) {
 			second[descriptor.idKey] = secondIDs[descriptor.rowsKey]
 			record[descriptor.rowsKey] = append(rows, second)
 			record[descriptor.countKey] = 2
-			if err := admitCoverageOutputRows(record, descriptor.rowsKey, descriptor.countKey, descriptor.idKey); err == nil || !strings.Contains(err.Error(), "sorted and unique") {
+			if err := admitCoverageOutputRows(record, descriptor.rowsKey, descriptor.countKey, descriptor.idKey, record["proofMode"].(string)); err == nil || !strings.Contains(err.Error(), "sorted and unique") {
 				t.Fatalf("admitCoverageOutputRows() error=%v, want canonical-order rejection", err)
 			}
 		})

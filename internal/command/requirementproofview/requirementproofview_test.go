@@ -2,10 +2,11 @@ package requirementproofview
 
 import (
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildHTMLIncludesStructuredScenarioWitnessDetails(t *testing.T) {
@@ -40,9 +41,13 @@ func TestBuildHTMLIncludesCompactScenarioWitnessDetails(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("BuildJSON() exitCode=%d, want 0", exitCode)
 	}
-	requirement := view.(map[string]any)["requirements"].([]any)[0].(map[string]any)
-	positive := requirement["positiveWitness"].(map[string]any)
-	falsification := requirement["falsificationWitness"].(map[string]any)
+	binding := view.(map[string]any)["bindings"].([]any)[0].(map[string]any)
+	routes := binding["declaredWitnessRoutes"].([]any)
+	falsification := routes[0].(map[string]any)
+	positive := routes[1].(map[string]any)
+	if falsification["role"] != "falsification" || positive["role"] != "positive" {
+		t.Fatalf("declared witness roles=%#v", routes)
+	}
 	if positive["selector"] != "tests/positive_proof_test.go::TestPositiveProof" {
 		t.Fatalf("positive selector=%v", positive["selector"])
 	}
@@ -50,7 +55,10 @@ func TestBuildHTMLIncludesCompactScenarioWitnessDetails(t *testing.T) {
 		t.Fatalf("falsification selector=%v", falsification["selector"])
 	}
 	if strings.Join(stringArray(positive["verifyCommands"]), "\n") == strings.Join(stringArray(falsification["verifyCommands"]), "\n") {
-		t.Fatalf("positive and falsification commands should be distinct: %#v", requirement)
+		t.Fatalf("positive and falsification commands should be distinct: %#v", binding)
+	}
+	if positive["witnessRouteId"] == falsification["witnessRouteId"] {
+		t.Fatalf("role-qualified route ids must differ: %#v", routes)
 	}
 
 	output, exitCode, err := BuildHTML(input, Options{LocalEnvironmentClasses: []string{"local-go"}})
@@ -61,10 +69,10 @@ func TestBuildHTMLIncludesCompactScenarioWitnessDetails(t *testing.T) {
 		t.Fatalf("BuildHTML() exitCode=%d, want 0", exitCode)
 	}
 	for _, want := range []string{
-		"Scenario and test witnesses",
+		"Declared witness routes",
 		"proofkit.surface::scenario.compact",
-		"Positive witness",
-		"Falsification witness",
+		"positive selector",
+		"falsification selector",
 		"tests/positive_proof_test.go::TestPositiveProof",
 		"tests/falsification_proof_test.go::TestFalsificationProof",
 		"go test ./... -run TestPositiveProof",
@@ -73,6 +81,51 @@ func TestBuildHTMLIncludesCompactScenarioWitnessDetails(t *testing.T) {
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("BuildHTML() output missing compact proof detail %q:\n%s", want, output)
+		}
+	}
+}
+
+func TestCompactViewCountsRouteOnlyCommands(t *testing.T) {
+	input := validCompactContract()
+	binding := input["bindings"].([]any)[0].([]any)
+	binding[9] = []any{}
+
+	view, exitCode, err := BuildJSON(input, Options{LocalEnvironmentClasses: []string{"local-go"}})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("BuildJSON() exitCode=%d error=%v", exitCode, err)
+	}
+	record := view.(map[string]any)
+	if record["commandCount"] != 2 {
+		t.Fatalf("route-only commandCount=%v, want 2", record["commandCount"])
+	}
+}
+
+func TestCompactViewPreservesTwoBindingsForOneRequirement(t *testing.T) {
+	input := validCompactContract()
+	bindings := input["bindings"].([]any)
+	second := append([]any{}, bindings[0].([]any)...)
+	second[2] = "proofkit.surface::scenario.second"
+	second[7] = validCompactWitnessRow("tests/shared_test.go::TestShared", "go test ./... -run TestShared", 2)
+	second[8] = validCompactWitnessRow("tests/shared_test.go::TestShared", "go test ./... -run TestShared", 3)
+	second[9] = []any{"go test ./... -run TestShared"}
+	input["bindings"] = append(bindings, second)
+
+	view, exitCode, err := BuildJSON(input, Options{LocalEnvironmentClasses: []string{"local-go"}})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("BuildJSON() exitCode=%d error=%v", exitCode, err)
+	}
+	record := view.(map[string]any)
+	if record["schemaVersion"] != 2 || record["bindingCount"] != 2 || record["requirementCount"] != 1 {
+		t.Fatalf("compact view counts=%#v", record)
+	}
+	projected := record["bindings"].([]any)
+	if projected[0].(map[string]any)["bindingRecordId"] == projected[1].(map[string]any)["bindingRecordId"] {
+		t.Fatalf("distinct scenarios collapsed to one binding identity: %#v", projected)
+	}
+	for _, item := range projected {
+		routes := item.(map[string]any)["declaredWitnessRoutes"].([]any)
+		if len(routes) != 2 {
+			t.Fatalf("declared witness routes=%#v, want two", routes)
 		}
 	}
 }
@@ -184,16 +237,16 @@ func validStructuredBindingInput() map[string]any {
 
 func validCompactContract() map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"authority_state":       "canonical",
+		"schema_version":        json.Number("2"),
+		"authority_state":       "caller_owned_declaration",
 		"contract_id":           "proofkit.test.compact",
-		"contract_kind":         "requirement_proof_binding",
-		"normalization_profile": "proofkit.compact.v1",
+		"contract_kind":         "requirement_proof_route_declaration",
+		"normalization_profile": "proofkit.compact.declaration.v2",
 		"non_claims":            []any{"Compact test input does not execute witnesses."},
 		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
 		"surfaces":              []any{[]any{"proofkit.surface", []any{"local-go"}, []any{}}},
 		"witness_columns":       []any{"selector", "environment_classes", "verify_commands", "resolution_order_index"},
-		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "proof_contract_state", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "mutation_resistance_state"},
+		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"},
 		"bindings": []any{
 			[]any{
 				"REQ-PROOFKIT-COMPACT-001",
@@ -201,13 +254,12 @@ func validCompactContract() map[string]any {
 				"proofkit.surface::scenario.compact",
 				"contract",
 				"proofkit.compact",
-				"witness_backed",
 				"blocking",
 				[]any{"local-go"},
 				validCompactWitnessRow("tests/positive_proof_test.go::TestPositiveProof", "go test ./... -run TestPositiveProof", 0),
 				validCompactWitnessRow("tests/falsification_proof_test.go::TestFalsificationProof", "go test ./... -run TestFalsificationProof", 1),
 				[]any{"go test ./... -run TestPositiveProof", "go test ./... -run TestFalsificationProof"},
-				"no_known_advisory_gap",
+				"proofkit.claim.mutation.compact",
 			},
 		},
 	}
@@ -219,16 +271,16 @@ func validCompactWitnessRow(selector string, command string, order int) []any {
 
 func maliciousCompactContract() map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"authority_state":       "canonical",
+		"schema_version":        json.Number("2"),
+		"authority_state":       "caller_owned_declaration",
 		"contract_id":           "proofkit.test.compact",
-		"contract_kind":         "requirement_proof_binding",
-		"normalization_profile": "proofkit.compact.v1",
+		"contract_kind":         "requirement_proof_route_declaration",
+		"normalization_profile": "proofkit.compact.declaration.v2",
 		"non_claims":            []any{"<script>alert(1)</script><img src=x onerror=alert(1)>\n# forged heading\n![x](https://example.test/x)\n| a | b |"},
 		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
 		"surfaces":              []any{[]any{"proofkit.surface", []any{"local-go"}, []any{}}},
 		"witness_columns":       []any{"selector", "environment_classes", "verify_commands", "resolution_order_index"},
-		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "proof_contract_state", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "mutation_resistance_state"},
+		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"},
 		"bindings": []any{
 			[]any{
 				"REQ-PROOFKIT-COMPACT-001",
@@ -236,13 +288,12 @@ func maliciousCompactContract() map[string]any {
 				"proofkit.surface::scenario.escape",
 				"contract",
 				"proofkit.compact",
-				"witness_backed",
 				"blocking",
 				[]any{"local-go"},
 				[]any{"docs/`evil`.go::TestEvil", []any{"local-go"}, []any{"go test ./..."}, json.Number("0")},
 				[]any{"docs/`evil`.go::TestEvil", []any{"local-go"}, []any{"go test ./..."}, json.Number("1")},
 				[]any{"go test ./..."},
-				"no_known_advisory_gap",
+				"proofkit.claim.mutation.escape",
 			},
 		},
 	}

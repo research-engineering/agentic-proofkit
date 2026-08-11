@@ -89,7 +89,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim native witness pass evidence, proof freshness, receipt authenticity, or merge approval."
+        "This requirement does not claim selector existence or resolution, oracle quality, native witness execution or pass evidence, mutation adequacy, finding completeness or absence, proof freshness, receipt authenticity, trust, assurance, merge approval, rollout approval, or production readiness."
       ]
     },
     {

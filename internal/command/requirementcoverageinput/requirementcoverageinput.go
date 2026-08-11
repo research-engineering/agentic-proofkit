@@ -70,8 +70,8 @@ func admitInput(raw any) (input, error) {
 	if err := admit.KnownKeys(record, []string{"compactProofContract", "composerInputId", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementProofBinding", "requirementSource", "schemaVersion", "selectedOwnerIds", "testEvidenceInventory", "viewInputId"}, "requirement coverage input compose input"); err != nil {
 		return input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return input{}, fmt.Errorf("requirement coverage input compose schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return input{}, fmt.Errorf("requirement coverage input compose schemaVersion must be 2")
 	}
 	if _, err := admit.RuleID(record["composerInputId"], "requirement coverage input compose composerInputId"); err != nil {
 		return input{}, err
@@ -132,14 +132,15 @@ func admitProofAndInventory(record map[string]any) (any, any, testevidenceinvent
 		if _, hasDirectProof := record["requirementProofBinding"]; hasDirectProof {
 			return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose normalized mode must not provide requirementProofBinding")
 		}
-		if _, err := compactproofcontract.Admit(record["compactProofContract"]); err != nil {
+		compactSnapshot := cloneJSONValue(record["compactProofContract"])
+		if _, err := compactproofcontract.Admit(compactSnapshot); err != nil {
 			return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 		}
 		normalized, err := testevidenceinventory.AdmitNormalizedProjection(normalizedRaw, nil, "normalizedTestEvidenceInventory")
 		if err != nil {
 			return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 		}
-		return nil, record["compactProofContract"], normalized, nil
+		return nil, compactSnapshot, normalized, nil
 	}
 	if _, hasCompact := record["compactProofContract"]; hasCompact {
 		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose direct mode must not provide compactProofContract")
@@ -285,7 +286,7 @@ func compose(input input) (map[string]any, error) {
 		return nil, err
 	}
 	output := map[string]any{
-		"schemaVersion":           json.Number("1"),
+		"schemaVersion":           json.Number("2"),
 		"viewInputId":             input.ViewInputID,
 		"requirementSource":       input.RequirementSource,
 		"requirementProofBinding": input.RequirementProofBinding,
@@ -299,7 +300,26 @@ func compose(input input) (map[string]any, error) {
 	if input.NormalizedInventory.Envelope != nil {
 		output["normalizedTestEvidenceInventory"] = input.NormalizedInventory.Envelope
 	}
-	return output, nil
+	return cloneJSONValue(output).(map[string]any), nil
+}
+
+func cloneJSONValue(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(typed))
+		for key, child := range typed {
+			result[key] = cloneJSONValue(child)
+		}
+		return result
+	case []any:
+		result := make([]any, len(typed))
+		for index, child := range typed {
+			result[index] = cloneJSONValue(child)
+		}
+		return result
+	default:
+		return typed
+	}
 }
 
 func mergeUniverse(base universe, entries []testevidenceinventory.Entry) (universe, error) {

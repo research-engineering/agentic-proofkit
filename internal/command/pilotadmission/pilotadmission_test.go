@@ -2,9 +2,12 @@ package pilotadmission
 
 import (
 	"encoding/json"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/compactfixture"
 )
 
 func TestBuildAcceptsCompletePilotContract(t *testing.T) {
@@ -45,20 +48,26 @@ func TestBuildAllFromContractEnvelopeAdmitsBothOwnedInputs(t *testing.T) {
 	stackDiverseInput["stackDiversity"] = validStackDiversity()
 	stackDiverseInput["cacheNegativeChecks"] = validCacheNegativeChecks()
 	impactInput := stackDiverseInput["impactDemos"].([]any)[0].(map[string]any)["impactInput"].(map[string]any)
-	impactInput["changedBindingRecordIds"] = []any{"REQ-PROOFKIT-001"}
+	impactInput["changedBindingRecordIds"] = []any{pilotTestBindingRecordID}
 	impactInput["changedPaths"] = []any{
 		"docs/specs/proofkit/requirements.v1.json",
 		"internal/proofkit/witness_test.go",
 	}
 	impactInput["changedWitnessPathCoverage"] = []any{
 		map[string]any{
-			"path":      "internal/proofkit/witness_test.go",
-			"recordIds": []any{"REQ-PROOFKIT-001"},
+			"path": "internal/proofkit/witness_test.go",
+			"routes": []any{map[string]any{
+				"bindingRecordId":      pilotTestBindingRecordID,
+				"resolutionOrderIndex": json.Number("0"),
+				"role":                 "positive",
+				"selector":             pilotTestWitnessSelector,
+				"witnessRouteId":       pilotTestWitnessRouteID,
+			}},
 		},
 	}
 
 	envelope := map[string]any{
-		"schema":            "proofkit.pilot-admission.v1",
+		"schema":            contractEnvelopeSchema,
 		"input":             firstInput,
 		"stackDiverseInput": stackDiverseInput,
 	}
@@ -81,7 +90,7 @@ func TestBuildAllFromContractEnvelopeAdmitsBothOwnedInputs(t *testing.T) {
 
 func validPilotInput() map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"pilotId":       "proofkit.test.pilot",
 		"profile": map[string]any{
 			"commandMatcherBridge":      "none",
@@ -155,26 +164,28 @@ func validPilotInput() map[string]any {
 			"generatedMirrorPaths":    []any{"docs/generated/requirements.md"},
 			"sourceOwnedChangedPaths": []any{"docs/specs/proofkit/requirements.v1.json"},
 			"impactInput": map[string]any{
-				"schemaVersion":              json.Number("1"),
+				"schemaVersion":              json.Number("2"),
 				"baseCommit":                 "base",
 				"baseRef":                    "main",
 				"changedBindingRecordIds":    []any{},
 				"changedPaths":               []any{"docs/specs/proofkit/requirements.v1.json"},
-				"changedRecordIds":           []any{"REQ-PROOFKIT-001"},
+				"changedRequirementIds":      []any{"REQ-PROOFKIT-001"},
 				"changedWitnessPathCoverage": []any{},
 				"generatedArtifactRules":     []any{},
 				"headCommit":                 nil,
 				"headRef":                    "feature/proofkit",
 				"ignoredProofLikePaths":      []any{},
 				"obligationCatalog": []any{map[string]any{
-					"blockingStatus":             "blocking",
-					"commands":                   []any{"go test ./..."},
-					"preconditioned":             false,
-					"proofContractState":         "witness_backed",
-					"recordId":                   "REQ-PROOFKIT-001",
-					"requiredEnvironmentClasses": []any{"local-go"},
-					"scenarioId":                 "proofkit.scenario",
-					"surfaceId":                  "proofkit.surface",
+					"bindingRecordId":                   pilotTestBindingRecordID,
+					"blockingStatus":                    "blocking",
+					"commands":                          []any{"go test ./..."},
+					"declaredWitnessRoutes":             pilotTestRoutes.Values([]string{"local-go"}, []string{"go test ./..."}),
+					"declaredMutationResistanceClaimId": "claim.unverified",
+					"preconditioned":                    false,
+					"requirementId":                     "REQ-PROOFKIT-001",
+					"requiredEnvironmentClasses":        []any{"local-go"},
+					"scenarioId":                        "proofkit.surface::proofkit.scenario",
+					"surfaceId":                         "proofkit.surface",
 				}},
 				"preexistingFailures":         []any{},
 				"proofLikePaths":              []any{},
@@ -188,6 +199,47 @@ func validPilotInput() map[string]any {
 		"rolloutClaim":        false,
 	}
 }
+
+func TestBuildRejectsCompleteLegacyV1Inputs(t *testing.T) {
+	direct := validPilotInput()
+	direct["schemaVersion"] = json.Number("1")
+	if _, _, err := Build(direct, Options{}); err == nil || !strings.Contains(err.Error(), "schemaVersion must be 2") {
+		t.Fatalf("Build() error = %v, want complete v1 direct-input rejection", err)
+	}
+
+	first := validPilotInput()
+	stackDiverse := validPilotInput()
+	legacyFirstEnvelope := map[string]any{
+		"schema": "proofkit.pilot-admission.v1",
+		"input":  first,
+	}
+	if _, _, err := BuildFromContractEnvelope(legacyFirstEnvelope, "input", Options{}); err == nil || !strings.Contains(err.Error(), "schema drift") {
+		t.Fatalf("BuildFromContractEnvelope() error = %v, want complete v1 envelope rejection", err)
+	}
+
+	legacyAggregateEnvelope := map[string]any{
+		"schema":            "proofkit.pilot-admission.v1",
+		"input":             first,
+		"stackDiverseInput": stackDiverse,
+	}
+	if _, _, _, _, err := BuildAllFromContractEnvelope(legacyAggregateEnvelope); err == nil || !strings.Contains(err.Error(), "schema drift") {
+		t.Fatalf("BuildAllFromContractEnvelope() error = %v, want complete v1 aggregate rejection", err)
+	}
+}
+
+const (
+	pilotTestWitnessSelector              = "internal/proofkit/witness_test.go::TestWitness"
+	pilotTestFalsificationWitnessSelector = "internal/proofkit/witness_test.go::TestWitnessFalsification"
+)
+
+var pilotTestRoutes = compactfixture.MustRoutes(compactproofcontract.BindingIdentity{
+	RequirementID: "REQ-PROOFKIT-001",
+	ScenarioID:    "proofkit.surface::proofkit.scenario",
+	SurfaceID:     "proofkit.surface",
+}, pilotTestWitnessSelector, pilotTestFalsificationWitnessSelector)
+
+var pilotTestBindingRecordID = pilotTestRoutes.BindingRecordID
+var pilotTestWitnessRouteID = pilotTestRoutes.PositiveRouteID
 
 func validStackDiversity() map[string]any {
 	dimensions := make([]any, 0, len(stackDiversityDimensions))

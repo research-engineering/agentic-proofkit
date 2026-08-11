@@ -1,62 +1,42 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.2.1",
-  "version": "0.3.0",
+  "previousVersion": "0.3.0",
+  "version": "0.4.0",
   "changeClass": "breaking",
   "breakingChanges": [
     {
-      "changeId": "proofkit.authoring.lossless-reference-projection",
-      "summary": "Requirement authoring plan output advances from schema v1 to v2, requires the complete admitted authoringRefs projection, and composes current and candidate requirement records only from canonical requirement-source owner projections."
+      "changeId": "proofkit.compact.consumer-contract-v2",
+      "summary": "Compact-aware adoption, pilot, conformance, impact, proof-view, coverage, inventory, context composition, context slicing, semantic diff, traceability graph, browser, source-set, and resolver command contracts advance atomically and reject legacy compact payloads."
     },
     {
-      "changeId": "proofkit.coverage.declaration-only-vocabulary",
-      "summary": "Caller-authored test routes, falsifier, oracle-signal, and supersession metadata now use declaration-only classes and mapped states; mapping no longer emits covered, verified, semantic-execution, oracle-review, or dominance-proof vocabulary, and related classifications and coverage metric fields are renamed."
+      "changeId": "proofkit.compact.declaration-contract-v2",
+      "summary": "Compact requirement proof inputs now use declaration-only v2 discriminators, rename mutation metadata as a caller claim, and remove assurance-shaped proof state and synthetic checked or finding counts."
     },
     {
-      "changeId": "proofkit.coverage.output-parent-reference-closure",
-      "summary": "Requirement coverage output advances from schema v1 to v2, retains complete test projections on requirement, owner-invariant, command, and unmapped-inventory surfaces, and re-admits the exact root and row shapes, row metadata, command-owned non-claims, canonical row order, coverage-basis owner scope and inventory commitments, inventory warnings and failures, compact scenario route unions, command state, parent references, retained unknown-reference diagnostics, and declared dead-zone diagnostics."
+      "changeId": "proofkit.compact.identity-role-closure",
+      "summary": "Compact bindings now preserve requirement, surface, and scenario identity while witness routes preserve binding, role, selector, and JSON-safe resolution order across every decision-bearing projection."
     },
     {
-      "changeId": "proofkit.migration.caller-declared-parity",
-      "summary": "Migration parity input statuses, diagnostics, and summaries now identify caller-declared claims, preserve each record's admitted non-claims, and no longer imply that Proofkit computed native parity."
-    },
-    {
-      "changeId": "proofkit.proof.requirement-state-vocabulary-closure",
-      "summary": "Requirement proof states now use one closed vocabulary across structured bindings, compact contracts, and re-admitted coverage output; arbitrary rule IDs and assurance-sounding states are rejected."
+      "changeId": "proofkit.compact.source-set-v2",
+      "summary": "Compact source-set normalization advances to wrapper, envelope, and source-set schema v2 with declaration-specific roles and fragment contract v3."
     }
   ],
-  "additions": [
-    {
-      "changeId": "proofkit.coverage.classification-contract-closure",
-      "summary": "The requirement coverage output contract now declares every reachable diagnostic classification, including proof_route_candidate_only and the fail-closed unclassified_gap fallback."
-    },
-    {
-      "changeId": "proofkit.release.coverage-metric-reachability",
-      "summary": "Release closeout now uses overflow-safe exact coverage-producer relations for inventory entries, route classes, proof-route candidates, the complete command inventory, and commands missing declaration-only routes, and binds both command projections to the actual CLI contract inventory from the same source snapshot."
-    }
-  ],
+  "additions": [],
   "migration": {
     "required": true,
     "steps": [
-      "Replace test inventory evidenceClass values semantic_falsifier, contract_admission, and property_or_fuzz with declared_semantic_falsifier_route, declared_contract_admission_route, and declared_property_or_fuzz_route.",
-      "Replace test inventory summary fields semanticFalsifierCount and weakOracleFailureCount with declaredSemanticFalsifierRouteCount and incompleteDeclaredOracleMetadataFailureCount; replace diagnostics missing_semantic_anchor and weak_or_empty_oracle with missing_declared_route_anchor and incomplete_declared_oracle_metadata; and replace rule IDs test_inventory.semantic_entries_have_anchors and test_inventory.strong_oracles with test_inventory.declared_routes_have_anchors and test_inventory.declared_oracle_metadata.",
-      "Within test-evidence-inventory-discovery-draft output, replace summary field weakOracleWarningCount with missingDeclaredAssertionSignalWarningCount, warning and action type weak_or_empty_oracle with missing_declared_assertion_signal, candidate quality finding suffix weak-oracle with missing-declared-assertion-signal, class empty_oracle with missing_edge, and suffix missing-semantic-anchor with missing-declared-route-anchor.",
-      "Within agent-route inspect_coverage stopConditions, replace weak-oracle language with missing declared assertion-signal language; treat the condition as routing guidance rather than an oracle-quality classification.",
-      "Replace falsifier field supersessionProofRef with supersessionDeclarationRef, diagnostic reasons missing_dominance_proof and unowned_dominance_proof with missing_supersession_declaration and unowned_supersession_declaration, and rule ID test_inventory.no_duplicate_falsifiers with test_inventory.declared_falsifier_supersession_consistency.",
-      "Replace requirement coverage states covered_by_semantic_falsifier, covered_by_property_or_fuzz, covered_by_contract_admission, covered_by_governance_invariant_nonproduct, command_semantic_falsifier_present, and missing_command_semantic_falsifier with mapped_to_declared_semantic_falsifier_route, mapped_to_declared_property_or_fuzz_route, mapped_to_declared_contract_admission_route, mapped_to_declared_governance_or_release_route_nonproduct, command_declared_semantic_falsifier_route_present, and missing_command_declared_semantic_falsifier_route; replace classification missing_semantic_test with missing_declared_test_route.",
-      "Consume proofkit.requirement-coverage-view.output.v2 with schemaVersion 2; preserve every admitted test-entry field, retain entries without selected parents in the required unmappedTests root array, consume the required coverageBasis owner scope, full-repository out-of-scope source identities, and retained-inventory digest, and consume compact scenarios with required verifyCommands and witnessSelectors arrays. Output re-admission now requires exact root and row shapes, exact row metadata, command-owned non-claims, canonical row order, owner-scoped compact scenario identities, exact missing-inventory warnings, and rejects owner-scope, inventory-failure, proof-route union, parent-reference, repeated-test, command-state, retained unknown-reference, mutable-fragment, dead-zone, and row-derived or scope-derived diagnostic drift; coverageBasis does not authenticate source inputs or producer identity.",
-      "Use only explicitly_deferred, not_bound, or witness_backed for requirement proofState values; compact binding rows contain positive and falsification witnesses and therefore require witness_backed proof_contract_state. Arbitrary rule IDs and assurance-sounding states are no longer admitted.",
-      "Replace coverage metric fields commandWithoutSemanticFalsifierRouteCount, commandsWithoutSemanticFalsifierRoute, semanticInventoryEntryCount, unknownSemanticCommandRefCount, and unknownSemanticCommandRefs with commandWithoutDeclaredSemanticFalsifierRouteCount, commandsWithoutDeclaredSemanticFalsifierRoute, declaredSemanticFalsifierRouteEntryCount, unknownDeclaredSemanticRouteCommandRefCount, and unknownDeclaredSemanticRouteCommandRefs; stop consuming removed semanticRouteCount, consume commandRoutes.commands and cliContract.commands, and require both inventories to equal the actual CLI contract command inventory from the same source snapshot.",
-      "Replace migration parity statuses matched, mismatched, not_comparable, and not_run with caller_declared_match, caller_declared_mismatch, caller_declared_not_comparable, and caller_declared_not_run.",
-      "Replace migration parity output fields admittedParityEvidenceCount, matchedCount, mismatchedCount, notComparableCount, notRunCount, and admittedParityEvidenceRefs with admittedParityClaimCount, callerDeclaredMatchCount, callerDeclaredMismatchCount, callerDeclaredNotComparableCount, callerDeclaredNotRunCount, and admittedParityClaimRefs; consume each migrationParity record's required nonClaims projection.",
-      "Consume proofkit.requirement-authoring-plan.output.v2 with schemaVersion 2, preserve its required authoringRefs array, treat nonAuthoritativeAdmissionPreview.requirementSourcePreview as a canonical requirement-source projection in which absent optional fields are omitted, and handle candidateRequirement owner-admission failures as input errors before composition."
+      "Replace compact root schema_version 1, authority_state canonical, contract_kind requirement_proof_binding, and normalization_profile proofkit.compact.v1 with schema_version 2, authority_state caller_owned_declaration, contract_kind requirement_proof_route_declaration, and normalization_profile proofkit.compact.declaration.v2.",
+      "Remove proof_contract_state; replace mutation_resistance_state with declared_mutation_resistance_claim_id; and stop consuming proofContractState, mutationResistanceContext, checkedWitnessSelectorCount, and findingCount from compact resolver projections.",
+      "Preserve each compact binding as requirementId, surfaceId, and scenarioId plus bindingRecordId, and preserve each witness route as bindingRecordId, role, selector, JSON-safe resolutionOrderIndex from 0 through 9007199254740991, and witnessRouteId; do not collapse equal selectors across positive and falsification roles.",
+      "Replace changedRecordIds with changedRequirementIds, replace resolver projectionKind proofkit.requirement-proof-resolver with proofkit.requirement-proof-route-resolver, and consume compact-aware adoption, pilot, conformance, impact, proof-view, coverage, inventory, context-compose, context-slice, semantic-diff, traceability-graph, browser, source-set, and resolver parent contracts at their 0.4.0 versions.",
+      "Regenerate requirement proof source sets with wrapper, canonical envelope, canonical contract, and source-set schema version 2, declaration-specific source roles, and fragment contract requirement-proof-route-declarations/fragment/v3."
     ]
   },
   "platformRequirements": [
     "Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64."
   ],
   "knownLimitations": [
-    "Execution-backed semantic command evidence remains open under COVERAGE-01; declared routes prove mapping only.",
+    "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
     "Requirement-source v2 representation and any textual DSL remain unselected until the typed-model and codec replacement gates pass.",
     "TSX source parsing remains unsupported."
   ],
