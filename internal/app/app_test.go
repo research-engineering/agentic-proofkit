@@ -249,7 +249,7 @@ func TestDuplicateFormatIsRejectedBeforeInputRead(t *testing.T) {
 }
 
 func TestSelfCheckRejectsDuplicateKeys(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.061049109061347524269448772857617649849822202469664158122537165529475398131547")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031584524343444160231600312979302740662395207275659075147050938676784401609593")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	status := Run(t.Context(), []string{"self-check", "--input", "-"}, strings.NewReader(`{"schemaVersion":1,"schemaVersion":2}`), &stdout, &stderr)

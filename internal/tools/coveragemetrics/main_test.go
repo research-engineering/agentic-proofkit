@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 )
 
 func TestReadJSONRejectsDuplicateKeys(t *testing.T) {
@@ -161,6 +163,48 @@ func TestBuildCommandRouteMetricsReportsUnknownDeclaredSemanticRouteCommandRefs(
 	}
 }
 
+func TestBuildCommandRouteMetricsSeparatesStaticDeclarationsFromExecutionEvidence(t *testing.T) {
+	commandRef := app.CommandCoverageCommandRef("target")
+	metrics := buildCommandRouteMetricsWithExecution(
+		cliContractWithCommands("target"),
+		[]app.CommandCoverageSummary{{Command: "target", CommandRef: commandRef, RouteCount: 1, ProofRouteCandidateCount: 1}},
+		testevidenceinventory.Inventory{Entries: []testevidenceinventory.Entry{{CommandRefs: []string{commandRef}, EvidenceClass: "proof_route_candidate"}}},
+		commandExecutionSummary{
+			CandidateCount:          1,
+			CandidateSetDigest:      strings.Repeat("1", 64),
+			CommandRefs:             []string{commandRef},
+			CounterfeitCorpusDigest: strings.Repeat("2", 64),
+			RecordDigest:            strings.Repeat("3", 64),
+			SourceSnapshotDigest:    strings.Repeat("4", 64),
+		},
+	)
+
+	if metrics.CommandWithoutExecutionBackedSemanticRouteCount != 0 || len(metrics.CommandsWithoutExecutionBackedSemanticRoute) != 0 {
+		t.Fatalf("execution-backed route was not closed: %#v", metrics)
+	}
+	if metrics.CommandWithoutDeclaredSemanticFalsifierRouteCount != 1 || strings.Join(metrics.CommandsWithoutDeclaredSemanticFalsifierRoute, ",") != "target" {
+		t.Fatalf("static declaration was incorrectly upgraded: %#v", metrics)
+	}
+	if metrics.ExecutionBackedSemanticRouteEntryCount != 1 || metrics.CommandOracleRecordDigest != strings.Repeat("3", 64) {
+		t.Fatalf("execution evidence identity was not projected: %#v", metrics)
+	}
+	if err := requireCommandRouteInventoryClosure(metrics); err != nil {
+		t.Fatalf("requireCommandRouteInventoryClosure() error = %v", err)
+	}
+}
+
+func TestBuildCommandRouteMetricsRejectsExecutionEvidenceForUnknownCommand(t *testing.T) {
+	metrics := buildCommandRouteMetricsWithExecution(
+		cliContractWithCommands("target"),
+		[]app.CommandCoverageSummary{{Command: "target", CommandRef: app.CommandCoverageCommandRef("target"), RouteCount: 1, ProofRouteCandidateCount: 1}},
+		testevidenceinventory.Inventory{},
+		commandExecutionSummary{CommandRefs: []string{"proofkit.cli.unknown"}},
+	)
+	if metrics.UnknownExecutionBackedSemanticRouteCommandRefCount != 1 || strings.Join(metrics.UnknownExecutionBackedSemanticRouteCommandRefs, ",") != "proofkit.cli.unknown" {
+		t.Fatalf("unknown execution command ref was not retained: %#v", metrics)
+	}
+}
+
 func TestBuildCommandRouteMetricsReportsContractRouteDrift(t *testing.T) {
 	metrics := buildCommandRouteMetrics(cliContractWithCommands("contract-only", "shared"), []app.CommandCoverageSummary{
 		{Command: "route-only", CommandRef: app.CommandCoverageCommandRef("route-only"), RouteCount: 1},
@@ -292,17 +336,170 @@ func TestRunWritesCurrentMetricsWhenCommandRouteInventoryBuilderFails(t *testing
 	}
 }
 
+func TestWriteCurrentExecutionMetricsInvalidatesBothArtifactsOnTerminalSourceDrift(t *testing.T) {
+	root := t.TempDir()
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldwd) })
+	previousValidate := commandOracleValidateCurrent
+	previousWrite := commandOracleWriteDiagnostic
+	previousInvalidate := commandOracleInvalidateDiagnostic
+	t.Cleanup(func() {
+		commandOracleValidateCurrent = previousValidate
+		commandOracleWriteDiagnostic = previousWrite
+		commandOracleInvalidateDiagnostic = previousInvalidate
+	})
+	validationCount := 0
+	commandOracleValidateCurrent = func(context.Context, string, commandoracle.Evidence) error {
+		validationCount++
+		if validationCount == 2 {
+			return errors.New("terminal source drift")
+		}
+		return nil
+	}
+	commandOracleWriteDiagnostic = func(root string, _ commandoracle.Evidence) error {
+		path := filepath.Join(root, filepath.FromSlash(commandoracle.RecordPath))
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(path, []byte("diagnostic"), 0o644)
+	}
+	commandOracleInvalidateDiagnostic = func(root string) error {
+		err := os.Remove(filepath.Join(root, filepath.FromSlash(commandoracle.RecordPath)))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	err = writeCurrentExecutionMetrics(context.Background(), metrics{}, commandoracle.Evidence{})
+	if err == nil || !strings.Contains(err.Error(), "terminal source drift") {
+		t.Fatalf("writeCurrentExecutionMetrics() error = %v", err)
+	}
+	for _, path := range []string{outputPath, commandoracle.RecordPath} {
+		if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("stale artifact %s remains after source drift: %v", path, err)
+		}
+	}
+}
+
+func TestWriteMetricsFileRejectsSymlinkEscapeWithoutMutation(t *testing.T) {
+	for _, testCase := range []struct {
+		name  string
+		setup func(t *testing.T, root, outside string)
+	}{
+		{
+			name: "destination symlink",
+			setup: func(t *testing.T, root, outside string) {
+				t.Helper()
+				if err := os.MkdirAll(filepath.Join(root, "artifacts", "proofkit"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(filepath.Join(outside, "victim.json"), filepath.Join(root, filepath.FromSlash(outputPath))); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name: "parent symlink",
+			setup: func(t *testing.T, root, outside string) {
+				t.Helper()
+				if err := os.Mkdir(filepath.Join(root, "artifacts"), 0o755); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(outside, filepath.Join(root, "artifacts", "proofkit")); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			root := t.TempDir()
+			outside := t.TempDir()
+			testCase.setup(t, root, outside)
+			oldwd, err := os.Getwd()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chdir(root); err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = os.Chdir(oldwd) })
+
+			if err := writeMetricsFile(metrics{}); err == nil {
+				t.Fatal("writeMetricsFile() admitted a symlink escape")
+			}
+			entries, err := os.ReadDir(outside)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(entries) != 0 {
+				t.Fatalf("outside directory was mutated: %v", entries)
+			}
+		})
+	}
+}
+
+func TestInvalidateMetricsFileRejectsSymlinkParentWithoutDeletingOutsideFile(t *testing.T) {
+	root := t.TempDir()
+	outside := t.TempDir()
+	if err := os.Mkdir(filepath.Join(root, "artifacts"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, filepath.Join(root, "artifacts", "proofkit")); err != nil {
+		t.Fatal(err)
+	}
+	outsidePath := filepath.Join(outside, "coverage-metrics.json")
+	if err := os.WriteFile(outsidePath, []byte("outside sentinel"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(oldwd) })
+
+	if err := invalidateMetricsFile(); err == nil {
+		t.Fatal("invalidateMetricsFile() admitted a symlink escape")
+	}
+	content, err := os.ReadFile(outsidePath)
+	if err != nil {
+		t.Fatalf("outside file was removed: %v", err)
+	}
+	if string(content) != "outside sentinel" {
+		t.Fatalf("outside file was mutated: %q", content)
+	}
+}
+
 func TestEachCommandRouteClosureConjunctHasIndependentFalsifier(t *testing.T) {
+	closed := closedCommandRouteMetricsFixture()
 	cases := []struct {
 		name    string
 		metrics commandRouteMetrics
 		want    string
 	}{
-		{name: "missing candidate", metrics: commandRouteMetrics{CommandsWithoutProofRouteCandidate: []string{"target"}}, want: "missingCandidates=[target]"},
-		{name: "unknown candidate ref", metrics: commandRouteMetrics{UnknownProofRouteCandidateRefs: []string{"proofkit.unknown"}}, want: "unknownCandidateRefs=[proofkit.unknown]"},
-		{name: "unknown declared route ref", metrics: commandRouteMetrics{UnknownDeclaredSemanticRouteCommandRefs: []string{"proofkit.unknown"}}, want: "unknownDeclaredSemanticRouteRefs=[proofkit.unknown]"},
-		{name: "contract only", metrics: commandRouteMetrics{ContractOnlyCommands: []string{"contract-only"}}, want: "contractOnly=[contract-only]"},
-		{name: "route only", metrics: commandRouteMetrics{RouteOnlyCommands: []string{"route-only"}}, want: "routeOnly=[route-only]"},
+		{name: "missing candidate", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) { value.CommandsWithoutProofRouteCandidate = []string{"target"} }), want: "missingCandidates=[target]"},
+		{name: "unknown candidate ref", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) { value.UnknownProofRouteCandidateRefs = []string{"proofkit.unknown"} }), want: "unknownCandidateRefs=[proofkit.unknown]"},
+		{name: "unknown declared route ref", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) {
+			value.UnknownDeclaredSemanticRouteCommandRefs = []string{"proofkit.unknown"}
+		}), want: "unknownDeclaredSemanticRouteRefs=[proofkit.unknown]"},
+		{name: "missing execution-backed route", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) {
+			value.CommandsWithoutExecutionBackedSemanticRoute = []string{"target"}
+		}), want: "missingExecutionBackedRoutes=[target]"},
+		{name: "unknown execution-backed ref", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) {
+			value.UnknownExecutionBackedSemanticRouteCommandRefs = []string{"proofkit.unknown"}
+		}), want: "unknownExecutionBackedRefs=[proofkit.unknown]"},
+		{name: "execution candidate partition mismatch", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) { value.ExecutionBackedSemanticRouteEntryCount = 2 }), want: "executionEntries=2 candidateEntries=1"},
+		{name: "invalid command oracle digest", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) { value.CommandOracleRecordDigest = "invalid" }), want: "commandOracleDigestsValid=false"},
+		{name: "contract only", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) { value.ContractOnlyCommands = []string{"contract-only"} }), want: "contractOnly=[contract-only]"},
+		{name: "route only", metrics: mutateCommandRouteMetrics(closed, func(value *commandRouteMetrics) { value.RouteOnlyCommands = []string{"route-only"} }), want: "routeOnly=[route-only]"},
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
@@ -312,9 +509,25 @@ func TestEachCommandRouteClosureConjunctHasIndependentFalsifier(t *testing.T) {
 			}
 		})
 	}
-	if err := requireCommandRouteInventoryClosure(commandRouteMetrics{}); err != nil {
+	if err := requireCommandRouteInventoryClosure(closed); err != nil {
 		t.Fatalf("requireCommandRouteInventoryClosure() error = %v, want nil", err)
 	}
+}
+
+func closedCommandRouteMetricsFixture() commandRouteMetrics {
+	return commandRouteMetrics{
+		ProofRouteCandidateInventoryEntryCount: 1,
+		ExecutionBackedSemanticRouteEntryCount: 1,
+		CommandOracleCandidateSetDigest:        strings.Repeat("1", 64),
+		CommandOracleCounterfeitCorpusDigest:   strings.Repeat("2", 64),
+		CommandOracleRecordDigest:              strings.Repeat("3", 64),
+		CommandOracleSourceSnapshotDigest:      strings.Repeat("4", 64),
+	}
+}
+
+func mutateCommandRouteMetrics(value commandRouteMetrics, mutate func(*commandRouteMetrics)) commandRouteMetrics {
+	mutate(&value)
+	return value
 }
 
 func TestEachLinkageDeadZoneConjunctHasIndependentFalsifier(t *testing.T) {
@@ -849,8 +1062,11 @@ func TestBuildMetricsCarriesRealCommandRouteCandidatesAndNonClaim(t *testing.T) 
 	if metrics.CommandRoutes.CommandWithoutDeclaredSemanticFalsifierRouteCount != metrics.CommandRoutes.CommandCount {
 		t.Fatalf("candidate-only commands did not remain missing semantic evidence: %#v", metrics.CommandRoutes)
 	}
-	if !containsNonClaim(metrics.NonClaims, "do not execute command route candidates") {
-		t.Fatalf("metrics nonClaims=%#v, want candidate execution non-claim", metrics.NonClaims)
+	if metrics.CommandRoutes.CommandWithoutExecutionBackedSemanticRouteCount != metrics.CommandRoutes.CommandCount {
+		t.Fatalf("unexecuted candidates did not remain missing execution evidence: %#v", metrics.CommandRoutes)
+	}
+	if !containsNonClaim(metrics.NonClaims, "do not become execution-backed semantic evidence") {
+		t.Fatalf("metrics nonClaims=%#v, want static-evidence boundary", metrics.NonClaims)
 	}
 }
 

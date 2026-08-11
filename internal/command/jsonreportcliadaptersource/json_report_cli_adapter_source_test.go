@@ -163,7 +163,7 @@ func TestGeneratedSourceAvoidsGenericIndexedAssignmentDrift(t *testing.T) {
 }
 
 func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.113810164796311271953578736163663817358813962387525070369353049827898529598997")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.053185673671850315997459957102069176684420983647605639631428960314206272025809")
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		t.Fatalf("node is required to prove generated TypeScript semantics: %v", err)

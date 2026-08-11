@@ -603,7 +603,7 @@ func (writer readyWriter) Write(bytes []byte) (int, error) {
 }
 
 func TestStartServerFailsClosedForNonLoopbackHosts(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.094034782477634282784990120509101846539349621662349085355544682336212659794052")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.023640023374539652452651315983351191617142195079844369423488208926061999224113")
 	for _, host := range []string{"0.0.0.0", "localhost"} {
 		t.Run(host, func(t *testing.T) {
 			_, err := StartServer(sourceInput(t), Options{

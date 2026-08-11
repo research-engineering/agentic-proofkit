@@ -128,7 +128,16 @@ static analysis, workflow linting, vulnerability checks, npm package artifact
 creation, package artifact verification, Python wheel artifact creation, Python
 wheel verification, release SBOM, release manifest and checksum generation,
 outside-consumer binary smoke proof, self-hosting receipt validation, and
-coverage metrics generation.
+coverage metrics generation. Coverage generation runs the exact owner-selected
+Go tests through package-scoped argv vectors from an exact-file materialized
+source snapshot, evaluates the independently authored counterfeit corpus
+through production admission owners, and emits a command-oracle diagnostic
+plus coverage metrics v2 only while the candidate, corpus, runtime, and source
+identities remain current. Release closeout re-admits that diagnostic through
+its sole strict owner, binds its digest to the same canonical byte read, and
+revalidates current producer reachability. This local cooperative execution
+does not prove assertion-branch execution, mutation adequacy, producer
+authentication, or provider admission.
 
 The dry-run package identity proves candidate tarball shape only. It does not
 prove the bytes served by the registry after publish.

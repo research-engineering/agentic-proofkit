@@ -97,7 +97,7 @@ func TestAdmitConsumerProjectionInputJSONRoundTripsThroughOwner(t *testing.T) {
 }
 
 func TestBuildRejectsPrivateSourceNPMProvenanceClaim(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.040417136410336177429000613084048687335976405838137408436642719228824047433829")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.105439509272579211435567089194759430024590675934332783957047489125678984707707")
 	input := validRegistryReleaseInput("npm_provenance", "private")
 
 	record, exitCode, err := Build(input)

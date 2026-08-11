@@ -596,6 +596,11 @@
       "expectedArtifacts": [
         {
           "kind": "report",
+          "path": "artifacts/proofkit/command-oracle-execution.json",
+          "required": true
+        },
+        {
+          "kind": "report",
           "path": "artifacts/proofkit/coverage-metrics.json",
           "required": true
         }
@@ -920,12 +925,16 @@
         "internal/app/command_registry.go",
         "internal/command",
         "internal/testsupport/commandcoverage",
+        "internal/tools/artifactfile",
+        "internal/tools/commandoracle",
         "internal/tools/coveragemetrics",
+        "internal/tools/repositorysnapshot",
         "proofkit/cli-contract.v2.json",
         "proofkit/requirement-bindings.json",
         "proofkit/witness-plan.json"
       ],
       "outputSelectors": [
+        "artifacts/proofkit/command-oracle-execution.json",
         "artifacts/proofkit/coverage-metrics.json"
       ],
       "resourceReads": [

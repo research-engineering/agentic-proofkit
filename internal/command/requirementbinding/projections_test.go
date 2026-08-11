@@ -72,7 +72,7 @@ func readOwnerJSON(t *testing.T, path string) any {
 }
 
 func TestBuildReportFailsUnknownRequirementBinding(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000376648692213538787264617164821843651034132903736657977168045531003514534050")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.104544593850875418975815490237416802070339444461856063303404358287592673340470")
 	input := validRequirementBindingInput()
 	input["bindings"].([]any)[0].(map[string]any)["requirementId"] = "REQ-PROOFKIT-MISSING"
 
@@ -155,7 +155,7 @@ func TestBuildReportRejectsEmptyWitnessCommandEnvironmentClasses(t *testing.T) {
 }
 
 func TestBuildEvidenceGraphBuildsGraphAndRejectsFailedReport(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.107818454717962585697455608706257308689211271216669906752699392232450827006825")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.103879939339912119536842874285920100618442305235744692163114660613220220633744")
 	graph, exitCode, err := BuildEvidenceGraph(validRequirementBindingInput())
 	if err != nil {
 		t.Fatalf("BuildEvidenceGraph() error=%v", err)
@@ -177,7 +177,7 @@ func TestBuildEvidenceGraphBuildsGraphAndRejectsFailedReport(t *testing.T) {
 }
 
 func TestBuildProofSliceSelectsRequirementsAndRejectsFailedReport(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.057814514043290257871128107874680755541616706843803515635545866062242868890363")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.108834399078649179642042963327326693613324047941888185048583794094499189388965")
 	input := validRequirementBindingInput()
 	input["selection"] = map[string]any{
 		"changedPaths":   []any{},

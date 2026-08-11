@@ -469,7 +469,7 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
-        "This requirement does not claim semantic command coverage, line coverage, dead-code absence, exhaustive semantic completeness for any test, native witness execution, receipt freshness, or merge satisfaction."
+        "Successful selected tests do not prove assertion-branch execution, mutation adequacy, line coverage, dead-code absence, exhaustive command semantics, malicious-test resistance, producer authentication, receipt freshness, merge satisfaction, or production readiness."
       ]
     },
     {
@@ -2337,6 +2337,38 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.artifact-file-boundary",
+      "witnessId": "proofkit.artifact-file.boundary",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/artifactfile/file_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestOperationsRejectFinalSymlinkWithoutTargetMutation",
+          "command": "go test ./internal/tools/artifactfile -run '^TestOperationsRejectFinalSymlinkWithoutTargetMutation$'"
+        },
+        {
+          "selector": "TestOperationsRejectSymlinkComponentsWithoutOutsideMutation",
+          "command": "go test ./internal/tools/artifactfile -run '^TestOperationsRejectSymlinkComponentsWithoutOutsideMutation$'"
+        },
+        {
+          "selector": "TestReadBoundedRejectsUnrepresentableLimit",
+          "command": "go test ./internal/tools/artifactfile -run '^TestReadBoundedRejectsUnrepresentableLimit$'"
+        },
+        {
+          "selector": "TestWriteReadAndRemoveRoundTrip",
+          "command": "go test ./internal/tools/artifactfile -run '^TestWriteReadAndRemoveRoundTrip$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.coverage-metrics",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
       "scenarioId": "proofkit.supply-chain-quality.coverage-metrics",
       "witnessId": "proofkit.coverage-metrics.linkage-report",
       "witnessKind": "contract",
@@ -2349,6 +2381,126 @@
         {
           "selector": "TestEachLinkageDeadZoneConjunctHasIndependentFalsifier",
           "command": "go test ./internal/tools/coveragemetrics -run '^TestEachLinkageDeadZoneConjunctHasIndependentFalsifier$'"
+        },
+        {
+          "selector": "TestInvalidateMetricsFileRejectsSymlinkParentWithoutDeletingOutsideFile",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestInvalidateMetricsFileRejectsSymlinkParentWithoutDeletingOutsideFile$'"
+        },
+        {
+          "selector": "TestWriteMetricsFileRejectsSymlinkEscapeWithoutMutation",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestWriteMetricsFileRejectsSymlinkEscapeWithoutMutation$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.coverage-metrics",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.command-oracle-counterfeit-corpus",
+      "witnessId": "proofkit.command-oracle.counterfeit-corpus",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandoracle/corpus_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCounterfeitCorpusClosesRequiredAxes",
+          "command": "go test ./internal/tools/commandoracle -run '^TestCounterfeitCorpusClosesRequiredAxes$'"
+        },
+        {
+          "selector": "TestCounterfeitCorpusClosureRejectsMissingRequiredAxes",
+          "command": "go test ./internal/tools/commandoracle -run '^TestCounterfeitCorpusClosureRejectsMissingRequiredAxes$'"
+        },
+        {
+          "selector": "TestEachCounterfeitCaseProducesItsCheckedInDecision",
+          "command": "go test ./internal/tools/commandoracle -run '^TestEachCounterfeitCaseProducesItsCheckedInDecision$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.coverage-metrics",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.command-oracle-execution-ledger",
+      "witnessId": "proofkit.command-oracle.execution-ledger",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandoracle/execute_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestExecuteBindsMaterializedSourceCandidatesAndRuntimeEvents",
+          "command": "go test ./internal/tools/commandoracle -run '^TestExecuteBindsMaterializedSourceCandidatesAndRuntimeEvents$'"
+        },
+        {
+          "selector": "TestRunGoTestsTerminatesOnContextDeadline",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestsTerminatesOnContextDeadline$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandTerminatesImmediatelyWhenStderrExceedsBound",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandTerminatesImmediatelyWhenStderrExceedsBound$'"
+        },
+        {
+          "selector": "TestRunGoTestsDoesNotExecuteCrossPackageNameMatches",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestsDoesNotExecuteCrossPackageNameMatches$'"
+        },
+        {
+          "selector": "TestValidateCurrentRejectsProducerUnreachableCandidateProjection",
+          "command": "go test ./internal/tools/commandoracle -run '^TestValidateCurrentRejectsProducerUnreachableCandidateProjection$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.coverage-metrics",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.command-oracle-source-snapshot",
+      "witnessId": "proofkit.command-oracle.source-snapshot",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/repositorysnapshot/snapshot_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCaptureContextTerminatesCanceledGitProcessGroup",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestCaptureContextTerminatesCanceledGitProcessGroup$'"
+        },
+        {
+          "selector": "TestCaptureContextTerminatesGitProcessGroupOnOutputOverflow",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestCaptureContextTerminatesGitProcessGroupOnOutputOverflow$'"
+        },
+        {
+          "selector": "TestCaptureRejectsSuccessfulGitDiagnosticsWithoutEcho",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestCaptureRejectsSuccessfulGitDiagnosticsWithoutEcho$'"
+        },
+        {
+          "selector": "TestMaterializeBindsCopiedBytesAndRejectsLiveMutation",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestMaterializeBindsCopiedBytesAndRejectsLiveMutation$'"
+        },
+        {
+          "selector": "TestMaterializeRejectsSymlinkAndNonEmptyDestination",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestMaterializeRejectsSymlinkAndNonEmptyDestination$'"
+        },
+        {
+          "selector": "TestMaterializeRejectsSymlinkedDestinationInsideSource",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestMaterializeRejectsSymlinkedDestinationInsideSource$'"
+        },
+        {
+          "selector": "TestValidRevisionAdmitsOnlyGitObjectIdentityAndOptionalSnapshotDigest",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestValidRevisionAdmitsOnlyGitObjectIdentityAndOptionalSnapshotDigest$'"
+        },
+        {
+          "selector": "TestValidateMaterializedRejectsSurplusFile",
+          "command": "go test ./internal/tools/repositorysnapshot -run '^TestValidateMaterializedRejectsSurplusFile$'"
         }
       ],
       "commandIds": [
@@ -2639,6 +2791,14 @@
         {
           "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
           "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        },
+        {
+          "selector": "TestSelfEvidenceInvokesCurrentCommandOracleOwner",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestSelfEvidenceInvokesCurrentCommandOracleOwner$'"
+        },
+        {
+          "selector": "TestSelfEvidenceRejectsProducerUnreachableCommandOracleRef",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestSelfEvidenceRejectsProducerUnreachableCommandOracleRef$'"
         }
       ],
       "commandIds": [

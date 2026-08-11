@@ -156,7 +156,7 @@ func TestValidateOptionsOwnsModePilotAndCompatibilityPolicy(t *testing.T) {
 }
 
 func TestBuildDelegatesModesWithParity(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.064840772979561884532437014395024443929767634378814122316392969426222714882392")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.073115937715906245510885594108709053081835764670748024087132020466101700061433")
 	cases := []struct {
 		name    string
 		options Options

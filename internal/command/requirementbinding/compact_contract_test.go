@@ -23,7 +23,7 @@ func TestBuildResolverPreservesCompactMutationResistanceState(t *testing.T) {
 }
 
 func TestBuildResolverEmitsNamedLookupFacts(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079097784231569243123760864431497247802974951490040482853947549382894609207552")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.111196201832829118735064910982698751650497890612272762431668463661114699885279")
 	output, exitCode, err := BuildResolver(validCompactContract(), ResolverOptions{LocalEnvironmentClasses: []string{"local-go"}})
 	if err != nil {
 		t.Fatalf("BuildResolver() error = %v", err)
@@ -157,7 +157,7 @@ func TestBuildResolverRejectsCompactShellControlCommandText(t *testing.T) {
 }
 
 func TestBuildResolverRejectsUnscopedCompactIdentity(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069762921155265534833897611463817586909954409189497461749409846690639299144534")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.076041686007458666270617161270722640013102244122307015251002781061987907765701")
 	type selectorCase struct {
 		name   string
 		mutate func(map[string]any)

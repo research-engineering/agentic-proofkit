@@ -121,7 +121,7 @@ func TestBuildHTMLEscapesCallerControlledCompactFields(t *testing.T) {
 }
 
 func TestBuildMarkdownEscapesCallerControlledCompactFields(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.002958980837736388688570945636786727657668783716021703161976564587172015017594")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.004013119203828558628733921363223531050236398733138199684571194055855497152335")
 	output, exitCode, err := BuildMarkdown(maliciousCompactContract(), Options{LocalEnvironmentClasses: []string{"local-go"}})
 	if err != nil {
 		t.Fatalf("BuildMarkdown() error = %v", err)

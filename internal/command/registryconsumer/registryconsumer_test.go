@@ -12,7 +12,7 @@ import (
 )
 
 func TestRegistryConsumerAcceptsRegistryReleaseProof(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.078570628200989177884060697900986161263859706648466286899141113980107918828824")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.033718356853491749326048145854675346348034022276684730993169590765794228506662")
 	record, exitCode, err := Build(validRegistryConsumerInput(t))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -178,7 +178,7 @@ func TestRegistryExpectedReleaseAuthorityOutputUsesOwnerDigest(t *testing.T) {
 }
 
 func TestRegistryConsumerRejectsLegacyRootImportProof(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.039930770239161369599321884905894984519351217077585815477648288469771222069580")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.014303427678413549037642209464102836025458053002613511670388392919823523961849")
 	input := validRegistryConsumerInput(t)
 	proof := input["proof"].(map[string]any)
 	proof["rootImportOutputSha256"] = sha256Hex()

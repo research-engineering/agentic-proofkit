@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.108125484608845771285185958596730048384317499814813362270908806756918268107297")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.052032679560954279991581640663936146133283843978254811517731144801933075103271")
 	t.Parallel()
 
 	report, exitCode, err := Build(map[string]any{
@@ -1318,7 +1318,7 @@ func TestBuildEnvelopeKeepsMachineRefIDsBoundedForLongInputRefs(t *testing.T) {
 }
 
 func TestBuildEnvelopeKeepsBlockedRoutesAsStopSignals(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022893294120171709584005915658023363866013069336456249164413421169696538215866")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.039089309512279322876166263378306645627644382088544574407694362092047953400284")
 	t.Parallel()
 
 	envelope, exitCode, err := BuildEnvelope(map[string]any{
@@ -1350,7 +1350,7 @@ func TestBuildEnvelopeKeepsBlockedRoutesAsStopSignals(t *testing.T) {
 }
 
 func TestBuildEnvelopeCarriesBlockedObservedReportPreconditions(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070004323406011051259833433994481535056161810177395705776549338061243536668298")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.112527168675876041372970118427108526301468859106766054318947512648421264085367")
 	t.Parallel()
 
 	envelope, exitCode, err := BuildEnvelope(map[string]any{

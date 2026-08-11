@@ -11,7 +11,7 @@ import (
 )
 
 func TestBuildFindsSecretLikeTextWithoutLeakingValue(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.044627298880588177227751226258246473779575152087534439636266250802154512519866")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.039817040606337266696292466844606855102291955096447906749917550657133356377901")
 	const sentinel = "abc123456789"
 	record, exitCode, err := Build(validInput(map[string][]byte{
 		"docs/ok.md":       []byte("plain text\n"),

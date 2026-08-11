@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAdmitsCandidateEvidenceAndRejectsUnpinnedImages(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079783886865424080333074209821707019130265643884720844463730606151075706943505")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069418897389528177020444235635879439930452356193962278098825404413216668484505")
 	record, exitCode, err := Build(validDeploymentEvidenceInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

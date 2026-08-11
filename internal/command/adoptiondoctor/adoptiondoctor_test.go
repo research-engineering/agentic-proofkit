@@ -77,7 +77,7 @@ func TestBuildEnforceTouchedSkipsGapsOutsideTouchedSelection(t *testing.T) {
 }
 
 func TestBuildFailsEnforcementForCandidateBoundaryAndMissingRoutes(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.007421917124002404912211613315239198743059540465995158650367800592497462368119")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.009316750311738530526586138484790439891684089174716743044696722390531958762956")
 	input := baseInput()
 	input["mode"] = "enforce-all"
 	input["checkedScope"] = "all"

@@ -14,7 +14,7 @@ import (
 )
 
 func TestBuildAdmitsProjectStructureScaffoldAndEmitsBoundedEnvelope(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059212367917167148851747700357371540728657804008449562600146109586760618366690")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.077605368601324151625037603028023832943347653489996031097831539301304492489683")
 	result, err := BuildResult(validProjectStructureInput())
 	if err != nil {
 		t.Fatalf("BuildResult() error=%v", err)
@@ -110,7 +110,7 @@ func TestBuildRejectsSecretLikeProjectStructureNonClaims(t *testing.T) {
 }
 
 func TestBuildRejectsProjectStructurePathDriftAndUnsafePaths(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.036326342746928185666570492555700463770379515182536792074657611113385319861032")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.101379439615551172730953420664832137049480746789667740612911039267803529974896")
 	cases := []struct {
 		name      string
 		mutate    func(map[string]any)

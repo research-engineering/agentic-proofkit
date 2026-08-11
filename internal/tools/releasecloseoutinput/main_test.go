@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -12,18 +13,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/app"
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
@@ -42,6 +46,7 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	commandOracleValidateCurrent = func(context.Context, string, commandoracle.Evidence) error { return nil }
 	exitCode := m.Run()
 	if completeFixtureBaseRoot != "" {
 		_ = os.RemoveAll(completeFixtureBaseRoot)
@@ -489,6 +494,43 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "candidate-only coverage v1",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := coverageMetricsFixture()
+				record["artifactKind"] = "proofkit.coverage-metrics.v1"
+				record["schemaVersion"] = 1
+				writeJSON(t, filepath.Join(root, filepath.FromSlash(coverageMetricsPath)), record)
+			},
+		},
+		{
+			name:        "missing command oracle diagnostic",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				if err := os.Remove(filepath.Join(root, filepath.FromSlash(commandOracleRecordPath))); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name:        "command oracle digest substitution",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := readJSONMap(t, filepath.Join(root, filepath.FromSlash(coverageMetricsPath)))
+				record["commandRoutes"].(map[string]any)["commandOracleRecordDigest"] = strings.Repeat("9", 64)
+				writeJSON(t, filepath.Join(root, filepath.FromSlash(coverageMetricsPath)), record)
+			},
+		},
+		{
+			name:        "command oracle source identity substitution",
+			criterionID: "proofkit.release_closeout.self_evidence",
+			mutate: func(root string) {
+				record := readJSONMap(t, filepath.Join(root, filepath.FromSlash(commandOracleRecordPath)))
+				record["sourceSnapshotDigest"] = strings.Repeat("9", 64)
+				writeJSON(t, filepath.Join(root, filepath.FromSlash(commandOracleRecordPath)), record)
+			},
+		},
+		{
 			name:        "self evidence report with unrelated passed rule",
 			criterionID: "proofkit.release_closeout.self_evidence",
 			mutate: func(root string) {
@@ -871,26 +913,35 @@ func producerReachableCommandRouteMetricsFixture() coverageCommandRouteMetrics {
 	missingDeclared := []string{"proofkit.cli.a", "proofkit.cli.b"}
 	commands := []string{"proofkit.cli.a", "proofkit.cli.b"}
 	return coverageCommandRouteMetrics{
-		AdmittedInventoryEntryCount:                       testIntPointer(3),
-		CommandCount:                                      testIntPointer(2),
-		Commands:                                          &commands,
-		CommandWithoutProofRouteCandidateCount:            testIntPointer(0),
-		CommandsWithoutProofRouteCandidate:                &empty,
-		ContractOnlyCommandCount:                          testIntPointer(0),
-		ContractOnlyCommands:                              &empty,
-		CommandWithoutDeclaredSemanticFalsifierRouteCount: testIntPointer(2),
-		CommandsWithoutDeclaredSemanticFalsifierRoute:     &missingDeclared,
-		RouteCount:                                        testIntPointer(3),
-		RouteOnlyCommandCount:                             testIntPointer(0),
-		RouteOnlyCommands:                                 &empty,
-		RouteSmokeCount:                                   testIntPointer(1),
-		ProofRouteCandidateInventoryEntryCount:            testIntPointer(2),
-		ProofRouteCandidateRouteCount:                     testIntPointer(2),
-		DeclaredSemanticFalsifierRouteEntryCount:          testIntPointer(0),
-		UnknownProofRouteCandidateRefCount:                testIntPointer(0),
-		UnknownProofRouteCandidateRefs:                    &empty,
-		UnknownDeclaredSemanticRouteCommandRefCount:       testIntPointer(0),
-		UnknownDeclaredSemanticRouteCommandRefs:           &empty,
+		AdmittedInventoryEntryCount:                        testIntPointer(3),
+		CommandCount:                                       testIntPointer(2),
+		Commands:                                           &commands,
+		CommandWithoutProofRouteCandidateCount:             testIntPointer(0),
+		CommandsWithoutProofRouteCandidate:                 &empty,
+		ContractOnlyCommandCount:                           testIntPointer(0),
+		ContractOnlyCommands:                               &empty,
+		CommandWithoutDeclaredSemanticFalsifierRouteCount:  testIntPointer(2),
+		CommandsWithoutDeclaredSemanticFalsifierRoute:      &missingDeclared,
+		RouteCount:                                         testIntPointer(3),
+		RouteOnlyCommandCount:                              testIntPointer(0),
+		RouteOnlyCommands:                                  &empty,
+		RouteSmokeCount:                                    testIntPointer(1),
+		ProofRouteCandidateInventoryEntryCount:             testIntPointer(2),
+		ProofRouteCandidateRouteCount:                      testIntPointer(2),
+		DeclaredSemanticFalsifierRouteEntryCount:           testIntPointer(0),
+		UnknownProofRouteCandidateRefCount:                 testIntPointer(0),
+		UnknownProofRouteCandidateRefs:                     &empty,
+		UnknownDeclaredSemanticRouteCommandRefCount:        testIntPointer(0),
+		UnknownDeclaredSemanticRouteCommandRefs:            &empty,
+		CommandOracleCandidateSetDigest:                    strings.Repeat("1", 64),
+		CommandOracleCounterfeitCorpusDigest:               strings.Repeat("2", 64),
+		CommandOracleRecordDigest:                          strings.Repeat("3", 64),
+		CommandOracleSourceSnapshotDigest:                  strings.Repeat("4", 64),
+		CommandWithoutExecutionBackedSemanticRouteCount:    testIntPointer(0),
+		CommandsWithoutExecutionBackedSemanticRoute:        &empty,
+		ExecutionBackedSemanticRouteEntryCount:             testIntPointer(2),
+		UnknownExecutionBackedSemanticRouteCommandRefCount: testIntPointer(0),
+		UnknownExecutionBackedSemanticRouteCommandRefs:     &empty,
 	}
 }
 
@@ -963,6 +1014,67 @@ func TestSelfEvidenceRejectsArbitraryValidJSON(t *testing.T) {
 	}
 	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
 	assertCloseoutOutcome(t, input, 1, "failed")
+}
+
+func TestSelfEvidenceRejectsProducerUnreachableCommandOracleRef(t *testing.T) {
+	root := completeFixture(t)
+	evidence, err := commandoracle.ReadDiagnostic(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := evidence.Record
+	record.Entries = append([]commandoracle.JoinedEntry(nil), record.Entries...)
+	record.Entries[0].Candidate.CommandRef = "proofkit.cli.counterfeit.command"
+	candidates := make([]app.CommandCoverageOracleCandidate, 0, len(record.Entries))
+	for _, entry := range record.Entries {
+		candidates = append(candidates, entry.Candidate)
+	}
+	record.CandidateSetDigest, err = commandoracle.CandidateSetDigest(candidates)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutated, err := commandoracle.EvidenceForRecord(record)
+	if err != nil {
+		t.Fatalf("counterfeit oracle must remain internally valid: %v", err)
+	}
+	if err := commandoracle.WriteDiagnostic(root, mutated); err != nil {
+		t.Fatal(err)
+	}
+	coveragePath := filepath.Join(root, filepath.FromSlash(coverageMetricsPath))
+	coverage := readJSONMap(t, coveragePath)
+	routes := coverage["commandRoutes"].(map[string]any)
+	routes["commandOracleCandidateSetDigest"] = mutated.Record.CandidateSetDigest
+	routes["commandOracleRecordDigest"] = mutated.RecordDigest
+	writeJSON(t, coveragePath, coverage)
+
+	input, err := buildInput(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+}
+
+func TestSelfEvidenceInvokesCurrentCommandOracleOwner(t *testing.T) {
+	root := completeFixture(t)
+	previous := commandOracleValidateCurrent
+	called := false
+	commandOracleValidateCurrent = func(_ context.Context, gotRoot string, evidence commandoracle.Evidence) error {
+		called = true
+		if gotRoot != root || evidence.Record.CommandID != commandoracle.CommandID {
+			t.Fatalf("current command oracle owner received root=%q record=%#v", gotRoot, evidence.Record)
+		}
+		return fmt.Errorf("counterfeit currentness failure")
+	}
+	t.Cleanup(func() { commandOracleValidateCurrent = previous })
+
+	input, err := buildInput(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !called {
+		t.Fatal("release closeout did not invoke the current command oracle owner")
+	}
+	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
 }
 
 func TestSelfEvidenceRequiresCurrentMatchingPackageArtifactExecution(t *testing.T) {
@@ -1181,7 +1293,7 @@ func populateCompleteFixture(t *testing.T, root string) {
 	writeJSON(t, filepath.Join(root, "proofkit", "requirement-bindings.json"), map[string]any{"schemaVersion": 1})
 	writeJSON(t, filepath.Join(root, "proofkit", "witness-plan.json"), map[string]any{"schemaVersion": 1})
 	writeJSON(t, filepath.Join(root, filepath.FromSlash(cliContractPath)), map[string]any{
-		"commands": []any{map[string]any{"command": "proofkit.coverage.command"}},
+		"commands": []any{map[string]any{"command": "coverage.command"}},
 	})
 	writeFile(t, filepath.Join(root, "source.txt"), "source-v1\n")
 	writeJSON(t, filepath.Join(root, "package.json"), map[string]any{
@@ -1243,7 +1355,16 @@ func writeLocalSelfEvidence(t *testing.T, root string, execution packageartifact
 		"generatedAt":    "2026-07-01T10:00:02Z",
 		"sourceRevision": execution.SourceRevision,
 	})
+	oracle := commandOracleFixture(execution)
+	if err := commandoracle.WriteDiagnostic(root, oracle); err != nil {
+		t.Fatal(err)
+	}
 	coverage := coverageMetricsFixture()
+	coverageRoutes := coverage["commandRoutes"].(map[string]any)
+	coverageRoutes["commandOracleCandidateSetDigest"] = oracle.Record.CandidateSetDigest
+	coverageRoutes["commandOracleCounterfeitCorpusDigest"] = oracle.Record.CounterfeitCorpusDigest
+	coverageRoutes["commandOracleRecordDigest"] = oracle.RecordDigest
+	coverageRoutes["commandOracleSourceSnapshotDigest"] = execution.SourceSnapshotDigest
 	coverage["provenance"] = coverageMetricsProvenanceFixture(execution)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/coverage-metrics.json"), coverage)
 	writeJSON(t, filepath.Join(root, "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"), selfEvidenceReportFixture("proofkit.proof-receipt-admission", "proofkit.self-hosting.proof-receipts", "proofkit.proof-receipt-admission.boundary", "proofkit.proof-receipt-admission.receipts"))
@@ -1452,33 +1573,42 @@ func refreshBundleChildReports(bundle map[string]any) {
 
 func coverageMetricsFixture() map[string]any {
 	return map[string]any{
-		"artifactKind":  "proofkit.coverage-metrics.v1",
-		"schemaVersion": 1,
+		"artifactKind":  "proofkit.coverage-metrics.v2",
+		"schemaVersion": 2,
 		"requirements":  map[string]any{"blocking": 1},
 		"proofBindings": map[string]any{"boundRequirementCount": 1},
 		"witnessPlan":   map[string]any{"commandCount": 1},
-		"cliContract":   map[string]any{"commandCount": 1, "commands": []any{"proofkit.coverage.command"}},
+		"cliContract":   map[string]any{"commandCount": 1, "commands": []any{"coverage.command"}},
 		"commandRoutes": map[string]any{
-			"admittedInventoryEntryCount":                       1,
-			"commandCount":                                      1,
-			"commands":                                          []any{"proofkit.coverage.command"},
-			"commandWithoutProofRouteCandidateCount":            0,
-			"commandsWithoutProofRouteCandidate":                []any{},
-			"commandWithoutDeclaredSemanticFalsifierRouteCount": 1,
-			"commandsWithoutDeclaredSemanticFalsifierRoute":     []any{"proofkit.coverage.command"},
-			"contractOnlyCommandCount":                          0,
-			"contractOnlyCommands":                              []any{},
-			"routeCount":                                        1,
-			"routeOnlyCommandCount":                             0,
-			"routeOnlyCommands":                                 []any{},
-			"routeSmokeCount":                                   0,
-			"proofRouteCandidateInventoryEntryCount":            1,
-			"proofRouteCandidateRouteCount":                     1,
-			"declaredSemanticFalsifierRouteEntryCount":          0,
-			"unknownProofRouteCandidateRefCount":                0,
-			"unknownProofRouteCandidateRefs":                    []any{},
-			"unknownDeclaredSemanticRouteCommandRefCount":       0,
-			"unknownDeclaredSemanticRouteCommandRefs":           []any{},
+			"admittedInventoryEntryCount":                        1,
+			"commandCount":                                       1,
+			"commands":                                           []any{"coverage.command"},
+			"commandWithoutProofRouteCandidateCount":             0,
+			"commandsWithoutProofRouteCandidate":                 []any{},
+			"commandWithoutDeclaredSemanticFalsifierRouteCount":  1,
+			"commandsWithoutDeclaredSemanticFalsifierRoute":      []any{"coverage.command"},
+			"contractOnlyCommandCount":                           0,
+			"contractOnlyCommands":                               []any{},
+			"routeCount":                                         1,
+			"routeOnlyCommandCount":                              0,
+			"routeOnlyCommands":                                  []any{},
+			"routeSmokeCount":                                    0,
+			"proofRouteCandidateInventoryEntryCount":             1,
+			"proofRouteCandidateRouteCount":                      1,
+			"declaredSemanticFalsifierRouteEntryCount":           0,
+			"unknownProofRouteCandidateRefCount":                 0,
+			"unknownProofRouteCandidateRefs":                     []any{},
+			"unknownDeclaredSemanticRouteCommandRefCount":        0,
+			"unknownDeclaredSemanticRouteCommandRefs":            []any{},
+			"commandOracleCandidateSetDigest":                    strings.Repeat("1", 64),
+			"commandOracleCounterfeitCorpusDigest":               strings.Repeat("2", 64),
+			"commandOracleRecordDigest":                          strings.Repeat("3", 64),
+			"commandOracleSourceSnapshotDigest":                  strings.Repeat("0", 64),
+			"commandWithoutExecutionBackedSemanticRouteCount":    0,
+			"commandsWithoutExecutionBackedSemanticRoute":        []any{},
+			"executionBackedSemanticRouteEntryCount":             1,
+			"unknownExecutionBackedSemanticRouteCommandRefCount": 0,
+			"unknownExecutionBackedSemanticRouteCommandRefs":     []any{},
 		},
 		"deadZones": map[string]any{
 			"bindingWithoutRequirementIds":  []any{},
@@ -1494,6 +1624,54 @@ func coverageMetricsFixture() map[string]any {
 			"sourceSnapshotDigest": strings.Repeat("0", 64),
 		},
 	}
+}
+
+func commandOracleFixture(execution packageartifactrecord.Record) commandoracle.Evidence {
+	candidate := app.CommandCoverageOracleCandidate{
+		AssertionOracleID:        "proofkit.oracle.fixture",
+		CommandRef:               "proofkit.cli.coverage.command",
+		ExpectedPublicOutcome:    "Fixture command rejects its declared counterfeit input.",
+		FalsificationEventID:     "proofkit.falsifier.fixture",
+		NegativeCaseID:           "proofkit.negative.fixture",
+		OracleKind:               "semantic_route_falsifier",
+		OwnerInvariantID:         "proofkit.invariant.fixture",
+		PackagePath:              "./internal/sample",
+		Selector:                 "internal/sample/sample_test.go::TestFixture",
+		SourceMarker:             "proofkit.command_coverage.source_oracle.v1.000000000000000000000000000000000000000000000000000000000000000000000000000001",
+		SourcePath:               "internal/sample/sample_test.go",
+		TestID:                   "proofkit.test.fixture",
+		TestName:                 "TestFixture",
+		WrongImplementationClass: "proofkit.wrong.fixture",
+	}
+	candidates := []app.CommandCoverageOracleCandidate{candidate}
+	candidateDigest, err := commandoracle.CandidateSetDigest(candidates)
+	if err != nil {
+		panic(err)
+	}
+	record := commandoracle.Record{
+		ArtifactKind:            commandoracle.ArtifactKind,
+		CandidateSetDigest:      candidateDigest,
+		CommandID:               commandoracle.CommandID,
+		CounterfeitCorpusDigest: strings.Repeat("2", 64),
+		Entries: []commandoracle.JoinedEntry{{
+			Candidate:         candidate,
+			ExecutionState:    "passed",
+			PackageImportPath: "example.test/proofkit/internal/sample",
+		}},
+		ExecutionCommands:    commandoracle.ExecutionCommandsForCandidates(candidates),
+		GoVersion:            runtime.Version(),
+		NonClaims:            commandoracle.RecordNonClaims(),
+		Platform:             runtime.GOOS + "/" + runtime.GOARCH,
+		SchemaVersion:        commandoracle.SchemaVersion,
+		SourceRevision:       execution.SourceRevision,
+		SourceSnapshotDigest: execution.SourceSnapshotDigest,
+		State:                "passed",
+	}
+	evidence, err := commandoracle.EvidenceForRecord(record)
+	if err != nil {
+		panic(err)
+	}
+	return evidence
 }
 
 func coverageMetricsProvenanceFixture(execution packageartifactrecord.Record) map[string]any {

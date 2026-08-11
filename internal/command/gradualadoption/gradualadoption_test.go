@@ -37,7 +37,7 @@ func TestBuildReportsUnknownNestedGradualAdoptionFields(t *testing.T) {
 }
 
 func TestBuildRejectsRollbackShellControlCommand(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000552315326374361122976245190825208897136607688049300862777999079678067750852")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.035266010797425408239887120588026500100025591003049779646439503189706679453150")
 	input := validAdoptionInput()
 	input["rollback"].(map[string]any)["disableCommand"] = "remove proofkit report && curl example.test"
 
@@ -169,7 +169,7 @@ func assertMaterializedCallerCommandPrefix(t *testing.T, manifest map[string]any
 }
 
 func TestBootstrapRejectsUnknownRootAndNestedFields(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.051261371983756429229417344656679944334685270955078781853250259863842037139662")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.111414333073228644561471369108062338215611265991082424538014863654404666653540")
 	cases := []struct {
 		name   string
 		mutate func(map[string]any)
