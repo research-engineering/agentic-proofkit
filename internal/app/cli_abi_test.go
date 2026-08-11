@@ -16,8 +16,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/browserfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/compactfixture"
 )
 
 func TestCLIABIGoldenCorpus(t *testing.T) {
@@ -319,7 +321,9 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 				`"normalizedKind": "proofkit.test-evidence-inventory.normalized"`,
 				`"projectionKind": "proofkit.proof-binding-test-inventory"`,
 				`"sourcePath": "internal/app/cli_falsification_test.go"`,
-				`"testId": "test.proofkit.cli.req_proofkit_cli_001"`,
+				`"testId": "test.proof_route.gljhambakfmjolmpilbjmacnihjdnmjepapjcokfmmkanfhgahofngpfchlegfce"`,
+				`"role": "falsification"`,
+				`"witnessRouteId": "sha256:0531a6ba4f63856925b36ac7213d763e9a93c84f664a7f10a18f709fc15e0fce"`,
 			},
 		},
 		{
@@ -402,7 +406,7 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 			wantStatus:     0,
 			wantStdoutJSON: true,
 			wantStdoutHas: []string{
-				`"changedRecordIds": [`,
+				`"changedRequirementIds": [`,
 				`"REQ-PROOFKIT-CLI-IMPACT-001"`,
 				`"obligationCatalog": [`,
 				`"proofkit.cli.impact::scenario"`,
@@ -1857,7 +1861,7 @@ func TestRequirementImpactInputComposeCLIOutputFeedsImpact(t *testing.T) {
 	if !json.Valid(composed) {
 		t.Fatalf("composed impact input is not JSON: %s", composed)
 	}
-	if !bytes.Contains(composed, []byte(`"changedRecordIds": [`)) || !bytes.Contains(composed, []byte(`"REQ-PROOFKIT-CLI-IMPACT-001"`)) {
+	if !bytes.Contains(composed, []byte(`"changedRequirementIds": [`)) || !bytes.Contains(composed, []byte(`"REQ-PROOFKIT-CLI-IMPACT-001"`)) {
 		t.Fatalf("composed impact input did not route changed requirement: %s", composed)
 	}
 	report := runCLI(t, []string{"impact", "--input", "-"}, string(composed))
@@ -1868,7 +1872,7 @@ func TestRequirementImpactInputComposeCLIOutputFeedsImpact(t *testing.T) {
 
 func cliAdoptionContractEnvelopeInput() string {
 	payload := map[string]any{
-		"schema":     "proofkit.adoption-contract-envelope.v1",
+		"schema":     "proofkit.adoption-contract-envelope.v2",
 		"envelopeId": "proofkit.cli.adoption.aggregate",
 		"workflow": map[string]any{
 			"schema":   "proofkit.adoption-workflow.v1",
@@ -1881,7 +1885,7 @@ func cliAdoptionContractEnvelopeInput() string {
 			"guidance":  cliGuidanceContract(),
 		},
 		"pilot": map[string]any{
-			"schema":            "proofkit.pilot-admission.v1",
+			"schema":            "proofkit.pilot-admission.v2",
 			"input":             cliPilotInput("proofkit.cli.pilot.first", false),
 			"stackDiverseInput": cliPilotInput("proofkit.cli.pilot.stack-diverse", true),
 		},
@@ -1895,7 +1899,7 @@ func cliAdoptionContractEnvelopeInput() string {
 }
 
 func cliPilotContractEnvelopeInput(mode string) string {
-	envelope := map[string]any{"schema": "proofkit.pilot-admission.v1"}
+	envelope := map[string]any{"schema": "proofkit.pilot-admission.v2"}
 	if mode == "first" || mode == "all" {
 		envelope["input"] = cliPilotInput("proofkit.cli.pilot.first", false)
 	}
@@ -1907,13 +1911,30 @@ func cliPilotContractEnvelopeInput(mode string) string {
 
 func cliConformanceProfileInput() string {
 	manifestNonClaim := "Conformance profile CLI fixture is not live proof."
+	scenarioID := "surface.local::proofkit.scenario"
+	bindingRecordID, err := compactproofcontract.BindingRecordID(compactproofcontract.BindingIdentity{
+		RequirementID: "REQ-PROOFKIT-001",
+		ScenarioID:    scenarioID,
+		SurfaceID:     "surface.local",
+	})
+	if err != nil {
+		panic(err)
+	}
+	selector := "internal/test.go::TestOK"
+	falsificationRouteID, err := compactproofcontract.WitnessRouteID(bindingRecordID, compactproofcontract.FalsificationWitnessRole, selector)
+	if err != nil {
+		panic(err)
+	}
+	positiveRouteID, err := compactproofcontract.WitnessRouteID(bindingRecordID, compactproofcontract.PositiveWitnessRole, selector)
+	if err != nil {
+		panic(err)
+	}
 	return cliJSON(map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"profileId":     "local",
 		"policy": map[string]any{
 			"knownEnvironmentClasses":             []any{"local-go"},
 			"localEnvironmentClasses":             []any{"local-go"},
-			"allowedProofContractStates":          []any{"witness_backed"},
 			"blockingStatuses":                    []any{"blocking"},
 			"failOnUnusedAllowedEnvironmentClass": true,
 			"expectedManifest": map[string]any{
@@ -1944,22 +1965,28 @@ func cliConformanceProfileInput() string {
 			}},
 		},
 		"proofContract": map[string]any{
-			"contractId": "proofkit.cli.proof-contract",
+			"contractId":      "proofkit.cli.proof-contract",
+			"declarationKind": "proofkit.requirement-proof-route-declaration",
+			"schemaVersion":   json.Number("2"),
 			"surfaces": []any{map[string]any{
 				"surfaceId":                        "surface.local",
 				"requiredEnvironmentClasses":       []any{"local-go"},
 				"preconditionedEnvironmentClasses": []any{},
 			}},
 			"bindings": []any{map[string]any{
-				"requirementId":              "REQ-PROOFKIT-001",
-				"surfaceId":                  "surface.local",
-				"scenarioId":                 "proofkit.scenario",
-				"blockingStatus":             "blocking",
-				"proofContractState":         "witness_backed",
-				"requiredEnvironmentClasses": []any{"local-go"},
-				"verifyCommands":             []any{"go test ./..."},
+				"bindingRecordId":                   bindingRecordID,
+				"blockingStatus":                    "blocking",
+				"declaredMutationResistanceClaimId": "proofkit.claim.mutation.cli",
+				"invariantRole":                     "contract",
+				"ownedInvariant":                    "proofkit.cli.invariant",
+				"requiredEnvironmentClasses":        []any{"local-go"},
+				"requirementId":                     "REQ-PROOFKIT-001",
+				"scenarioId":                        scenarioID,
+				"surfaceId":                         "surface.local",
+				"verifyCommands":                    []any{"go test ./..."},
 				"witnessRefs": []any{
-					map[string]any{"role": "unit", "selector": "internal/test.go::TestOK"},
+					map[string]any{"environmentClasses": []any{"local-go"}, "resolutionOrderIndex": json.Number("1"), "role": "falsification", "selector": selector, "verifyCommands": []any{"go test ./... -run TestFalsification"}, "witnessRouteId": falsificationRouteID},
+					map[string]any{"environmentClasses": []any{"local-go"}, "resolutionOrderIndex": json.Number("0"), "role": "positive", "selector": selector, "verifyCommands": []any{"go test ./... -run TestPositive"}, "witnessRouteId": positiveRouteID},
 				},
 			}},
 		},
@@ -1976,7 +2003,7 @@ func cliJSON(value any) string {
 
 func cliInvalidAdoptionContractEnvelopeInput() string {
 	payload := map[string]any{
-		"schema":     "proofkit.adoption-contract-envelope.v1",
+		"schema":     "proofkit.adoption-contract-envelope.v2",
 		"envelopeId": "proofkit.cli.adoption.aggregate",
 		"workflow": map[string]any{
 			"schema":   "proofkit.wrong-workflow.v1",
@@ -1989,7 +2016,7 @@ func cliInvalidAdoptionContractEnvelopeInput() string {
 			"guidance":  map[string]any{},
 		},
 		"pilot": map[string]any{
-			"schema":            "proofkit.pilot-admission.v1",
+			"schema":            "proofkit.pilot-admission.v2",
 			"input":             map[string]any{},
 			"stackDiverseInput": map[string]any{},
 		},
@@ -2159,7 +2186,7 @@ func cliAdoptionBudget() map[string]any {
 
 func cliPilotInput(pilotID string, stackDiverse bool) map[string]any {
 	input := map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"pilotId":       pilotID,
 		"profile": map[string]any{
 			"commandMatcherBridge":      "none",
@@ -2272,36 +2299,41 @@ func cliCacheNegativeChecks() []any {
 
 func cliImpactDemo(demoID string, stackDiverse bool) map[string]any {
 	impactInput := map[string]any{
-		"schemaVersion":              json.Number("1"),
+		"schemaVersion":              json.Number("2"),
 		"baseCommit":                 "base",
 		"baseRef":                    "main",
 		"changedBindingRecordIds":    []any{},
 		"changedPaths":               []any{"docs/specs/proofkit/requirements.v1.json"},
-		"changedRecordIds":           []any{"REQ-PROOFKIT-001"},
+		"changedRequirementIds":      []any{"REQ-PROOFKIT-001"},
 		"changedWitnessPathCoverage": []any{},
 		"generatedArtifactRules":     []any{},
 		"headCommit":                 nil,
 		"headRef":                    "feature/proofkit",
 		"ignoredProofLikePaths":      []any{},
 		"obligationCatalog": []any{map[string]any{
-			"blockingStatus":             "blocking",
-			"commands":                   []any{"go test ./..."},
-			"preconditioned":             false,
-			"proofContractState":         "witness_backed",
-			"recordId":                   "REQ-PROOFKIT-001",
-			"requiredEnvironmentClasses": []any{"local-go"},
-			"scenarioId":                 "proofkit.scenario",
-			"surfaceId":                  "proofkit.surface",
+			"bindingRecordId":                   cliPilotBindingRecordID,
+			"blockingStatus":                    "blocking",
+			"commands":                          []any{"go test ./..."},
+			"declaredWitnessRoutes":             cliPilotRoutes.Values([]string{"local-go"}, []string{"go test ./..."}),
+			"declaredMutationResistanceClaimId": "claim.unverified",
+			"preconditioned":                    false,
+			"requirementId":                     "REQ-PROOFKIT-001",
+			"requiredEnvironmentClasses":        []any{"local-go"},
+			"scenarioId":                        "proofkit.surface::proofkit.scenario",
+			"surfaceId":                         "proofkit.surface",
 		}},
 		"preexistingFailures":         []any{},
 		"proofLikePaths":              []any{},
 		"unboundProofChangeRationale": "No unbound proof-like path changed.",
 	}
 	if stackDiverse {
-		impactInput["changedBindingRecordIds"] = []any{"REQ-PROOFKIT-001"}
+		impactInput["changedBindingRecordIds"] = []any{cliPilotBindingRecordID}
 		impactInput["changedPaths"] = []any{"docs/specs/proofkit/requirements.v1.json", "internal/proofkit/witness_test.go"}
 		impactInput["changedWitnessPathCoverage"] = []any{
-			map[string]any{"path": "internal/proofkit/witness_test.go", "recordIds": []any{"REQ-PROOFKIT-001"}},
+			map[string]any{"path": "internal/proofkit/witness_test.go", "routes": []any{map[string]any{
+				"bindingRecordId": cliPilotBindingRecordID, "resolutionOrderIndex": json.Number("0"),
+				"role": "positive", "selector": cliPilotWitnessSelector, "witnessRouteId": cliPilotWitnessRouteID,
+			}}},
 		}
 	}
 	return map[string]any{
@@ -2311,6 +2343,18 @@ func cliImpactDemo(demoID string, stackDiverse bool) map[string]any {
 		"impactInput":             impactInput,
 	}
 }
+
+const (
+	cliPilotWitnessSelector              = "internal/proofkit/witness_test.go::TestWitness"
+	cliPilotFalsificationWitnessSelector = "internal/proofkit/witness_test.go::TestWitnessFalsification"
+)
+
+var cliPilotRoutes = compactfixture.MustRoutes(compactproofcontract.BindingIdentity{
+	RequirementID: "REQ-PROOFKIT-001", ScenarioID: "proofkit.surface::proofkit.scenario", SurfaceID: "proofkit.surface",
+}, cliPilotWitnessSelector, cliPilotFalsificationWitnessSelector)
+
+var cliPilotBindingRecordID = cliPilotRoutes.BindingRecordID
+var cliPilotWitnessRouteID = cliPilotRoutes.PositiveRouteID
 
 func cliTestEvidenceInventory() string {
 	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.semantic","selector":"go test ./internal/app -run TestCLI","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli","evidenceClass":"declared_semantic_falsifier_route","requirementRefs":["REQ-PROOFKIT-CLI-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.command"],"witnessRefs":["proofkit.cli.witness"],"falsifier":{"falsifierId":"falsifier.cli.semantic","negativeCaseId":"case.cli.semantic","wrongImplementationClassId":"wrong.cli.semantic","dominanceGroup":"cli.semantic","supersedes":[]},"oracle":{"oracleId":"oracle.cli.semantic","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"The CLI emits a failed report on invalid semantic coverage."},"nonClaims":[]}],"nonClaims":["CLI ABI fixture does not execute native tests."]}`
@@ -2343,7 +2387,7 @@ func cliTestEvidenceInventoryMissingAnchor() string {
 }
 
 func cliProofBindingDerivedInventoryInput() string {
-	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.derived.inventory","commandRefPolicy":{"prefix":"proofkit_cli"},"requirementSource":{"requirements":[{"requirementId":"REQ-PROOFKIT-CLI-001","ownerId":"proofkit.cli"}]},"compactProofContract":{"schema_version":1,"authority_state":"canonical","contract_id":"proofkit.cli.compact","contract_kind":"requirement_proof_binding","normalization_profile":"proofkit.compact.v1","non_claims":["CLI compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","proof_contract_state","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","mutation_resistance_state"],"bindings":[["REQ-PROOFKIT-CLI-001","proofkit.cli","proofkit.cli::scenario","contract","proofkit.cli.invariant","witness_backed","blocking",["local-go"],["internal/app/cli_positive_test.go::TestAcceptsCLIContract",["local-go"],["go test"],0],["internal/app/cli_falsification_test.go::TestRejectsCLIRegression",["local-go"],["go test"],1],["go test"],"no_known_advisory_gap"]]},"nonClaims":["CLI projection fixture does not execute native tests."]}`
+	return `{"schemaVersion":2,"inventoryId":"proofkit.cli.derived.inventory","commandRefPolicy":{"prefix":"proofkit_cli"},"requirementSource":{"requirements":[{"requirementId":"REQ-PROOFKIT-CLI-001","ownerId":"proofkit.cli"}]},"compactProofContract":{"schema_version":2,"authority_state":"caller_owned_declaration","contract_id":"proofkit.cli.compact","contract_kind":"requirement_proof_route_declaration","normalization_profile":"proofkit.compact.declaration.v2","non_claims":["CLI compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","declared_mutation_resistance_claim_id"],"bindings":[["REQ-PROOFKIT-CLI-001","proofkit.cli","proofkit.cli::scenario","contract","proofkit.cli.invariant","blocking",["local-go"],["internal/app/cli_positive_test.go::TestAcceptsCLIContract",["local-go"],["go test"],0],["internal/app/cli_falsification_test.go::TestRejectsCLIRegression",["local-go"],["go test"],1],["go test"],"claim.no_known_advisory_gap"]]},"nonClaims":["CLI projection fixture does not execute native tests."]}`
 }
 
 func cliTestDiscoveryDraftInput() string {
@@ -2351,19 +2395,19 @@ func cliTestDiscoveryDraftInput() string {
 }
 
 func cliCoverageInventory() string {
-	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.coverage.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.coverage.semantic","selector":"go test ./internal/app -run TestCoverage","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli.coverage","evidenceClass":"declared_semantic_falsifier_route","requirementRefs":["REQ-PROOFKIT-CLI-COVERAGE-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.coverage.command"],"witnessRefs":["proofkit.cli.coverage.witness"],"falsifier":{"falsifierId":"falsifier.cli.coverage","negativeCaseId":"case.cli.coverage","wrongImplementationClassId":"wrong.cli.coverage","dominanceGroup":"cli.coverage","supersedes":[]},"oracle":{"oracleId":"oracle.cli.coverage","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"Missing inventory leaves coverage failed."},"nonClaims":[]}],"nonClaims":["CLI coverage inventory fixture does not execute native tests."]}`
+	return `{"schemaVersion":1,"inventoryId":"proofkit.cli.coverage.inventory","authority":"caller_owned_inventory","entries":[{"testId":"test.cli.coverage.semantic","selector":"go test ./internal/app -run TestCoverage","sourcePath":"internal/app/cli_abi_test.go","ownerId":"proofkit.cli.coverage","evidenceClass":"declared_semantic_falsifier_route","requirementRefs":["REQ-PROOFKIT-CLI-COVERAGE-001"],"ownerInvariantRefs":[],"commandRefs":["proofkit.cli.coverage.command"],"witnessRefs":[],"falsifier":{"falsifierId":"falsifier.cli.coverage","negativeCaseId":"case.cli.coverage","wrongImplementationClassId":"wrong.cli.coverage","dominanceGroup":"cli.coverage","supersedes":[]},"oracle":{"oracleId":"oracle.cli.coverage","oracleKind":"negative_exit_and_diagnostic","expectedPublicOutcome":"failed report with diagnostic","assertionSummary":"Missing inventory leaves coverage failed."},"nonClaims":[]}],"nonClaims":["CLI coverage inventory fixture does not execute native tests."]}`
 }
 
 func cliCoverageInput(inventory string) string {
-	return `{"schemaVersion":1,"viewInputId":"proofkit.cli.coverage.view","requirementSource":{"schemaVersion":1,"sourceId":"proofkit.cli.coverage.source","specPackagePath":"docs/specs/proofkit-cli-coverage","overviewPath":"docs/specs/proofkit-cli-coverage/overview.md","requirementsPath":"docs/specs/proofkit-cli-coverage/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","ownerId":"proofkit.cli.coverage","invariant":"CLI coverage view preserves report ABI.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI coverage fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.coverage","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI coverage fixture source does not own native tests."]},"requirementProofBinding":{"schemaVersion":1,"bindingId":"proofkit.cli.coverage.binding","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","ownerId":"proofkit.cli.coverage","specPath":"docs/specs/proofkit-cli-coverage/requirements.v1.json","claimLevel":"blocking","proofState":"witness_backed","nonClaims":["CLI coverage fixture binding does not execute witnesses."]}],"bindings":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","scenarioId":"proofkit.cli.coverage.scenario","witnessId":"proofkit.cli.coverage.witness","witnessKind":"contract","witnessPath":"internal/app/cli_abi_test.go","commandIds":["proofkit.cli.coverage.command"],"environmentClasses":["local-go"]}],"witnessCommands":[{"commandId":"proofkit.cli.coverage.command","command":"go test ./internal/app","environmentClass":"local-go"}],"selection":{"changedPaths":[],"ownerIds":[],"requirementIds":[]},"nonClaims":["CLI coverage fixture binding does not prove command pass evidence."]},"compactProofContract":null,"ownerInvariantRegistry":null,"coverageUniverse":{"schemaVersion":1,"universeId":"proofkit.cli.coverage.universe","authority":"caller_owned_inventory","completenessDeclaration":"selected_owner_surfaces","ownerIds":["proofkit.cli.coverage"],"codeSurfaces":[{"surfaceId":"proofkit.cli.coverage.code","ownerId":"proofkit.cli.coverage","path":"internal/app"}],"specSurfaces":[{"surfaceId":"proofkit.cli.coverage.spec","ownerId":"proofkit.cli.coverage","path":"docs/specs/proofkit-cli-coverage/requirements.v1.json"}],"testSurfaces":[{"surfaceId":"proofkit.cli.coverage.test","ownerId":"proofkit.cli.coverage","path":"internal/app/cli_abi_test.go"}],"commandRefs":["proofkit.cli.coverage.command"],"nonClaims":["CLI coverage universe is selected-owner scope only."]},"testEvidenceInventory":` + inventory + `,"localEnvironmentPolicy":null,"options":{"scope":"graph"}}`
+	return `{"schemaVersion":2,"viewInputId":"proofkit.cli.coverage.view","requirementSource":{"schemaVersion":1,"sourceId":"proofkit.cli.coverage.source","specPackagePath":"docs/specs/proofkit-cli-coverage","overviewPath":"docs/specs/proofkit-cli-coverage/overview.md","requirementsPath":"docs/specs/proofkit-cli-coverage/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","ownerId":"proofkit.cli.coverage","invariant":"CLI coverage view preserves report ABI.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI coverage fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.coverage","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI coverage fixture source does not own native tests."]},"requirementProofBinding":{"schemaVersion":1,"bindingId":"proofkit.cli.coverage.binding","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","ownerId":"proofkit.cli.coverage","specPath":"docs/specs/proofkit-cli-coverage/requirements.v1.json","claimLevel":"blocking","proofState":"witness_backed","nonClaims":["CLI coverage fixture binding does not execute witnesses."]}],"bindings":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","scenarioId":"proofkit.cli.coverage.scenario","witnessId":"proofkit.cli.coverage.witness","witnessKind":"contract","witnessPath":"internal/app/cli_abi_test.go","commandIds":["proofkit.cli.coverage.command"],"environmentClasses":["local-go"]}],"witnessCommands":[{"commandId":"proofkit.cli.coverage.command","command":"go test ./internal/app","environmentClass":"local-go"}],"selection":{"changedPaths":[],"ownerIds":[],"requirementIds":[]},"nonClaims":["CLI coverage fixture binding does not prove command pass evidence."]},"compactProofContract":null,"ownerInvariantRegistry":null,"coverageUniverse":{"schemaVersion":1,"universeId":"proofkit.cli.coverage.universe","authority":"caller_owned_inventory","completenessDeclaration":"selected_owner_surfaces","ownerIds":["proofkit.cli.coverage"],"codeSurfaces":[{"surfaceId":"proofkit.cli.coverage.code","ownerId":"proofkit.cli.coverage","path":"internal/app"}],"specSurfaces":[{"surfaceId":"proofkit.cli.coverage.spec","ownerId":"proofkit.cli.coverage","path":"docs/specs/proofkit-cli-coverage/requirements.v1.json"}],"testSurfaces":[{"surfaceId":"proofkit.cli.coverage.test","ownerId":"proofkit.cli.coverage","path":"internal/app/cli_abi_test.go"}],"commandRefs":["proofkit.cli.coverage.command"],"nonClaims":["CLI coverage universe is selected-owner scope only."]},"testEvidenceInventory":` + inventory + `,"localEnvironmentPolicy":null,"options":{"scope":"graph"}}`
 }
 
 func cliCoverageInputComposeInput() string {
-	return `{"schemaVersion":1,"composerInputId":"proofkit.cli.coverage.compose","viewInputId":"proofkit.cli.coverage.compose.view","selectedOwnerIds":["proofkit.cli.coverage"],"requirementSource":{"schemaVersion":1,"sourceId":"proofkit.cli.coverage.source","specPackagePath":"docs/specs/proofkit-cli-coverage","overviewPath":"docs/specs/proofkit-cli-coverage/overview.md","requirementsPath":"docs/specs/proofkit-cli-coverage/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","ownerId":"proofkit.cli.coverage","invariant":"CLI coverage input composition preserves direct view input ABI.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI coverage composer fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.coverage","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI coverage composer fixture source does not own native tests."]},"compactProofContract":{"schema_version":1,"authority_state":"canonical","contract_id":"proofkit.cli.coverage.compact","contract_kind":"requirement_proof_binding","normalization_profile":"proofkit.compact.v1","non_claims":["CLI compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli.coverage",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","proof_contract_state","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","mutation_resistance_state"],"bindings":[["REQ-PROOFKIT-CLI-COVERAGE-001","proofkit.cli.coverage","proofkit.cli.coverage::scenario","contract","proofkit.cli.coverage.invariant","witness_backed","blocking",["local-go"],["internal/app/cli_abi_test.go::positive",["local-go"],["go test ./internal/app"],0],["internal/app/cli_abi_test.go::falsification",["local-go"],["go test ./internal/app"],1],["go test ./internal/app"],"no_known_advisory_gap"]]},"normalizedTestEvidenceInventory":{"schemaVersion":1,"normalizedInventoryId":"proofkit.cli.coverage.inventory.normalized","normalizedKind":"proofkit.test-evidence-inventory.normalized","sourceAuthority":"caller_owned_inventory","sourceCount":0,"sourceColumns":["source_id","path","sha256","role","non_claims"],"sources":[],"entrySources":[],"inputPaths":[],"inventory":` + cliCoverageInventory() + `,"nonClaims":["CLI normalized inventory fixture does not execute tests."]},"coverageUniverse":{"schemaVersion":1,"universeId":"proofkit.cli.coverage.compose.universe","authority":"caller_owned_inventory","completenessDeclaration":"selected_owner_surfaces","ownerIds":["proofkit.cli.coverage"],"codeSurfaces":[{"surfaceId":"proofkit.cli.coverage.code","ownerId":"proofkit.cli.coverage","path":"internal/app"}],"specSurfaces":[{"surfaceId":"proofkit.cli.coverage.spec","ownerId":"proofkit.cli.coverage","path":"docs/specs/proofkit-cli-coverage/requirements.v1.json"}],"testSurfaces":[],"commandRefs":[],"nonClaims":["CLI coverage composer universe is selected-owner scope only."]},"ownerInvariantRegistry":null,"localEnvironmentPolicy":{"authority":"caller_provided","localEnvironmentClasses":["local-go"]},"options":{"scope":"graph"}}`
+	return `{"schemaVersion":2,"composerInputId":"proofkit.cli.coverage.compose","viewInputId":"proofkit.cli.coverage.compose.view","selectedOwnerIds":["proofkit.cli.coverage"],"requirementSource":{"schemaVersion":1,"sourceId":"proofkit.cli.coverage.source","specPackagePath":"docs/specs/proofkit-cli-coverage","overviewPath":"docs/specs/proofkit-cli-coverage/overview.md","requirementsPath":"docs/specs/proofkit-cli-coverage/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-COVERAGE-001","ownerId":"proofkit.cli.coverage","invariant":"CLI coverage input composition preserves direct view input ABI.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI coverage composer fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.coverage","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI coverage composer fixture source does not own native tests."]},"compactProofContract":{"schema_version":2,"authority_state":"caller_owned_declaration","contract_id":"proofkit.cli.coverage.compact","contract_kind":"requirement_proof_route_declaration","normalization_profile":"proofkit.compact.declaration.v2","non_claims":["CLI compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli.coverage",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","declared_mutation_resistance_claim_id"],"bindings":[["REQ-PROOFKIT-CLI-COVERAGE-001","proofkit.cli.coverage","proofkit.cli.coverage::scenario","contract","proofkit.cli.coverage.invariant","blocking",["local-go"],["internal/app/cli_abi_test.go::positive",["local-go"],["go test ./internal/app"],0],["internal/app/cli_abi_test.go::falsification",["local-go"],["go test ./internal/app"],1],["go test ./internal/app"],"claim.no_known_advisory_gap"]]},"normalizedTestEvidenceInventory":{"schemaVersion":1,"normalizedInventoryId":"proofkit.cli.coverage.inventory.normalized","normalizedKind":"proofkit.test-evidence-inventory.normalized","sourceAuthority":"caller_owned_inventory","sourceCount":0,"sourceColumns":["source_id","path","sha256","role","non_claims"],"sources":[],"entrySources":[],"inputPaths":[],"inventory":` + cliCoverageInventory() + `,"nonClaims":["CLI normalized inventory fixture does not execute tests."]},"coverageUniverse":{"schemaVersion":1,"universeId":"proofkit.cli.coverage.compose.universe","authority":"caller_owned_inventory","completenessDeclaration":"selected_owner_surfaces","ownerIds":["proofkit.cli.coverage"],"codeSurfaces":[{"surfaceId":"proofkit.cli.coverage.code","ownerId":"proofkit.cli.coverage","path":"internal/app"}],"specSurfaces":[{"surfaceId":"proofkit.cli.coverage.spec","ownerId":"proofkit.cli.coverage","path":"docs/specs/proofkit-cli-coverage/requirements.v1.json"}],"testSurfaces":[],"commandRefs":[],"nonClaims":["CLI coverage composer universe is selected-owner scope only."]},"ownerInvariantRegistry":null,"localEnvironmentPolicy":{"authority":"caller_provided","localEnvironmentClasses":["local-go"]},"options":{"scope":"graph"}}`
 }
 
 func cliImpactInputComposeInput() string {
-	return `{"schemaVersion":1,"composerInputId":"proofkit.cli.impact.compose","baseRef":"main","baseCommit":"base-sha","headRef":"feature/impact","headCommit":null,"changedPathSources":[{"sourceId":"git_diff","paths":["docs/specs/proofkit-cli-impact/requirements.v1.json"]}],"baseRequirementSources":[{"schemaVersion":1,"sourceId":"proofkit.cli.impact.source","specPackagePath":"docs/specs/proofkit-cli-impact","overviewPath":"docs/specs/proofkit-cli-impact/overview.md","requirementsPath":"docs/specs/proofkit-cli-impact/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-IMPACT-001","ownerId":"proofkit.cli.impact","invariant":"CLI impact input composition preserves baseline impact routing.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI impact composer fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.impact","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI impact composer base source does not own native tests."]}],"currentRequirementSources":[{"schemaVersion":1,"sourceId":"proofkit.cli.impact.source","specPackagePath":"docs/specs/proofkit-cli-impact","overviewPath":"docs/specs/proofkit-cli-impact/overview.md","requirementsPath":"docs/specs/proofkit-cli-impact/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-IMPACT-001","ownerId":"proofkit.cli.impact","invariant":"CLI impact input composition preserves changed requirement routing.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI impact composer fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.impact","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI impact composer current source does not own native tests."]}],"baseCompactProofContract":{"schema_version":1,"authority_state":"canonical","contract_id":"proofkit.cli.impact.compact","contract_kind":"requirement_proof_binding","normalization_profile":"proofkit.compact.v1","non_claims":["CLI impact compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli.impact",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","proof_contract_state","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","mutation_resistance_state"],"bindings":[["REQ-PROOFKIT-CLI-IMPACT-001","proofkit.cli.impact","proofkit.cli.impact::scenario","contract","proofkit.cli.impact.invariant","witness_backed","blocking",["local-go"],["internal/app/cli_abi_test.go::positive_impact",["local-go"],["go test ./internal/app"],0],["internal/app/cli_abi_test.go::negative_impact",["local-go"],["go test ./internal/app"],1],["go test ./internal/app"],"no_known_advisory_gap"]]},"currentCompactProofContract":{"schema_version":1,"authority_state":"canonical","contract_id":"proofkit.cli.impact.compact","contract_kind":"requirement_proof_binding","normalization_profile":"proofkit.compact.v1","non_claims":["CLI impact compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli.impact",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","proof_contract_state","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","mutation_resistance_state"],"bindings":[["REQ-PROOFKIT-CLI-IMPACT-001","proofkit.cli.impact","proofkit.cli.impact::scenario","contract","proofkit.cli.impact.invariant","witness_backed","blocking",["local-go"],["internal/app/cli_abi_test.go::positive_impact",["local-go"],["go test ./internal/app"],0],["internal/app/cli_abi_test.go::negative_impact",["local-go"],["go test ./internal/app"],1],["go test ./internal/app"],"no_known_advisory_gap"]]},"proofBindingSourcePaths":["proofkit/requirement-bindings.json"],"localEnvironmentPolicy":{"localEnvironmentClasses":["local-go"]},"proofLikePathPolicy":{"ignoredProofLikePaths":[],"nonClaims":["CLI impact proof-like policy fixture does not prove proof adequacy."],"proofLikePathPatterns":[]},"generatedArtifactPolicyState":{"source":"generated_artifact_verifier","state":"complete","uncoveredGeneratedPaths":[]},"generatedArtifactRules":[],"preexistingFailures":[],"nonClaims":["CLI impact input composition fixture does not execute native tests."]}`
+	return `{"schemaVersion":2,"composerInputId":"proofkit.cli.impact.compose","baseRef":"main","baseCommit":"base-sha","headRef":"feature/impact","headCommit":null,"changedPathSources":[{"sourceId":"git_diff","paths":["docs/specs/proofkit-cli-impact/requirements.v1.json"]}],"baseRequirementSources":[{"schemaVersion":1,"sourceId":"proofkit.cli.impact.source","specPackagePath":"docs/specs/proofkit-cli-impact","overviewPath":"docs/specs/proofkit-cli-impact/overview.md","requirementsPath":"docs/specs/proofkit-cli-impact/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-IMPACT-001","ownerId":"proofkit.cli.impact","invariant":"CLI impact input composition preserves baseline impact routing.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI impact composer fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.impact","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI impact composer base source does not own native tests."]}],"currentRequirementSources":[{"schemaVersion":1,"sourceId":"proofkit.cli.impact.source","specPackagePath":"docs/specs/proofkit-cli-impact","overviewPath":"docs/specs/proofkit-cli-impact/overview.md","requirementsPath":"docs/specs/proofkit-cli-impact/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-CLI-IMPACT-001","ownerId":"proofkit.cli.impact","invariant":"CLI impact input composition preserves changed requirement routing.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":[],"nonClaims":["CLI impact composer fixture does not execute tests."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.cli.impact","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["CLI impact composer current source does not own native tests."]}],"baseCompactProofContract":{"schema_version":2,"authority_state":"caller_owned_declaration","contract_id":"proofkit.cli.impact.compact","contract_kind":"requirement_proof_route_declaration","normalization_profile":"proofkit.compact.declaration.v2","non_claims":["CLI impact compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli.impact",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","declared_mutation_resistance_claim_id"],"bindings":[["REQ-PROOFKIT-CLI-IMPACT-001","proofkit.cli.impact","proofkit.cli.impact::scenario","contract","proofkit.cli.impact.invariant","blocking",["local-go"],["internal/app/cli_abi_test.go::positive_impact",["local-go"],["go test ./internal/app"],0],["internal/app/cli_abi_test.go::negative_impact",["local-go"],["go test ./internal/app"],1],["go test ./internal/app"],"claim.no_known_advisory_gap"]]},"currentCompactProofContract":{"schema_version":2,"authority_state":"caller_owned_declaration","contract_id":"proofkit.cli.impact.compact","contract_kind":"requirement_proof_route_declaration","normalization_profile":"proofkit.compact.declaration.v2","non_claims":["CLI impact compact fixture does not execute witnesses."],"surface_columns":["surface_id","required_environment_classes","preconditioned_environment_classes"],"surfaces":[["proofkit.cli.impact",["local-go"],[]]],"witness_columns":["selector","environment_classes","verify_commands","resolution_order_index"],"binding_columns":["requirement_id","surface_id","scenario_id","invariant_role","owned_invariant","blocking_status","required_environment_classes","positive_witness","falsification_witness","verify_commands","declared_mutation_resistance_claim_id"],"bindings":[["REQ-PROOFKIT-CLI-IMPACT-001","proofkit.cli.impact","proofkit.cli.impact::scenario","contract","proofkit.cli.impact.invariant","blocking",["local-go"],["internal/app/cli_abi_test.go::positive_impact",["local-go"],["go test ./internal/app"],0],["internal/app/cli_abi_test.go::negative_impact",["local-go"],["go test ./internal/app"],1],["go test ./internal/app"],"claim.no_known_advisory_gap"]]},"proofBindingSourcePaths":["proofkit/requirement-bindings.json"],"localEnvironmentPolicy":{"localEnvironmentClasses":["local-go"]},"proofLikePathPolicy":{"ignoredProofLikePaths":[],"nonClaims":["CLI impact proof-like policy fixture does not prove proof adequacy."],"proofLikePathPatterns":[]},"generatedArtifactPolicyState":{"source":"generated_artifact_verifier","state":"complete","uncoveredGeneratedPaths":[]},"generatedArtifactRules":[],"preexistingFailures":[],"nonClaims":["CLI impact input composition fixture does not execute native tests."]}`
 }
 
 func cliWorkspaceManifestFactsInput() string {

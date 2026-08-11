@@ -6,7 +6,6 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
 )
 
 func validateCoverageOutputSemantics(record map[string]any) error {
@@ -124,7 +123,7 @@ func validateCoverageOutputSemantics(record map[string]any) error {
 			if err := admitCoverageRowSemantics(row, rowsKey, index, proofMode, inventoryUnavailable, completenessDeclaration, coverageBasis.ownerSet); err != nil {
 				return err
 			}
-			rowFailures, rowWarnings := expectedCoverageRowDiagnostics(row, rowsKey, completenessDeclaration)
+			rowFailures, rowWarnings := expectedCoverageRowDiagnostics(row, rowsKey, proofMode, completenessDeclaration)
 			requiredFailures = append(requiredFailures, rowFailures...)
 			requiredWarnings = append(requiredWarnings, rowWarnings...)
 		}
@@ -227,14 +226,14 @@ func admitCoverageRowSemantics(row map[string]any, rowsKey string, index int, pr
 	class := stringValue(row["evidenceClass"])
 	switch rowsKey {
 	case "requirementCoverage":
-		expectedState, expectedClass, err := expectedRequirementCoverageState(row, entries, inventoryUnavailable, context)
+		expectedState, expectedClass, err := expectedRequirementCoverageState(row, proofMode, entries, inventoryUnavailable, context)
 		if err != nil {
 			return err
 		}
 		if state != expectedState || class != expectedClass {
 			return fmt.Errorf("%s coverageState and evidenceClass are not derived from projected tests and lifecycle", context)
 		}
-		expectedFailures := expectedRequirementFailures(row, expectedState, completenessDeclaration)
+		expectedFailures := expectedRequirementFailures(row, proofMode, expectedState, completenessDeclaration)
 		if err := requireExactDerivedValue(row["failures"], admit.StringSliceToAny(expectedFailures), context+" failures"); err != nil {
 			return err
 		}
@@ -281,7 +280,7 @@ func admitCoverageStateClass(row map[string]any, lookup func(string) (coverageSt
 	return nil
 }
 
-func expectedRequirementCoverageState(row map[string]any, entries []testevidenceinventory.Entry, inventoryUnavailable bool, context string) (string, string, error) {
+func expectedRequirementCoverageState(row map[string]any, proofMode string, entries []testevidenceinventory.Entry, inventoryUnavailable bool, context string) (string, string, error) {
 	claimLevel, ok := row["claimLevel"].(string)
 	if !ok || (claimLevel != "advisory" && claimLevel != "blocking" && claimLevel != "deferred") {
 		return "", "", fmt.Errorf("%s claimLevel is invalid", context)
@@ -290,22 +289,13 @@ func expectedRequirementCoverageState(row map[string]any, entries []testevidence
 	if !ok || (lifecycleState != "active" && lifecycleState != "deprecated" && lifecycleState != "removed" && lifecycleState != "superseded") {
 		return "", "", fmt.Errorf("%s lifecycleState is invalid", context)
 	}
-	proofState, ok := row["proofState"].(string)
-	if !ok {
-		return "", "", fmt.Errorf("%s proofState must be a string", context)
-	}
-	if proofState != "" {
-		if _, err := admit.Enum(proofState, proofvocab.RequirementProofStateSet(), context+" proofState"); err != nil {
-			return "", "", err
-		}
-	}
 	if claimLevel == "deferred" {
 		return "deferred_with_owner", "", nil
 	}
 	if lifecycleState == "removed" {
 		return "not_applicable", "", nil
 	}
-	if proofState != "witness_backed" {
+	if !outputRowHasProofRoute(row, proofMode) {
 		return "missing_proof_binding_route", "", nil
 	}
 	if inventoryUnavailable {
@@ -315,17 +305,25 @@ func expectedRequirementCoverageState(row map[string]any, entries []testevidence
 	return state, class, nil
 }
 
-func expectedRequirementFailures(row map[string]any, state string, completenessDeclaration string) []string {
+func expectedRequirementFailures(row map[string]any, proofMode, state string, completenessDeclaration string) []string {
 	requirementID := stringValue(row["requirementId"])
 	claimLevel := stringValue(row["claimLevel"])
 	lifecycleState := stringValue(row["lifecycleState"])
-	proofState := stringValue(row["proofState"])
 	failures := []string{}
-	if proofState != "witness_backed" && claimLevel == "blocking" && lifecycleState == "active" {
+	if !outputRowHasProofRoute(row, proofMode) && claimLevel == "blocking" && lifecycleState == "active" {
 		failures = append(failures, "missing_proof_binding_route:"+requirementID)
 	}
 	if requirementMappingBlocks(claimLevel, lifecycleState, state, completenessDeclaration) {
 		failures = append(failures, state+":"+requirementID)
 	}
 	return sortedUnique(failures)
+}
+
+func outputRowHasProofRoute(row map[string]any, proofMode string) bool {
+	if proofMode == "compact" {
+		scenarios, scenariosOK := row["scenarios"].([]any)
+		routes, routesOK := row["declaredWitnessRoutes"].([]any)
+		return scenariosOK && routesOK && len(scenarios) > 0 && len(routes) > 0
+	}
+	return stringValue(row["proofState"]) == "witness_backed"
 }

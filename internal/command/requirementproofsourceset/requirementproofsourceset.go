@@ -15,8 +15,8 @@ import (
 )
 
 var sourceRoles = map[string]struct{}{
-	"requirement_proof_binding_contract": {},
-	"requirement_proof_binding_fragment": {},
+	"requirement_proof_route_declaration_contract": {},
+	"requirement_proof_route_declaration_fragment": {},
 }
 
 var projectionKinds = map[string]struct{}{
@@ -26,20 +26,11 @@ var projectionKinds = map[string]struct{}{
 
 var sourceSetColumns = []string{"source_id", "path", "sha256", "role", "non_claims"}
 
-var canonicalSurfaceColumns = []string{
-	"surface_id",
-	"proof_families",
-	"rollout_claim_allowed",
-	"rollout_claim_state",
-	"rollout_claim_scope",
-	"required_environment_classes",
-	"preconditioned_environment_classes",
-	"mutation_resistance_state",
-}
+var canonicalSurfaceColumns = compactproofcontract.SurfaceColumns()
 
-var canonicalBindingColumns = append([]string{}, compactproofcontract.BindingColumns...)
+var canonicalBindingColumns = compactproofcontract.BindingColumns()
 
-var canonicalWitnessColumns = append([]string{}, compactproofcontract.WitnessColumns...)
+var canonicalWitnessColumns = compactproofcontract.WitnessColumns()
 
 type Input struct {
 	SourceSet         map[string]any
@@ -111,7 +102,7 @@ func Build(raw any) (any, int, error) {
 		if isSourceSetPayload(payload) {
 			return nil, 1, fmt.Errorf("requirement proof binding source %s must not reference another source set", source.SourceID)
 		}
-		if source.Role == "requirement_proof_binding_fragment" {
+		if source.Role == "requirement_proof_route_declaration_fragment" {
 			if !isFragmentPayload(payload) {
 				return nil, 1, fmt.Errorf("requirement proof binding source %s.role must match compact fragment payload", source.SourceID)
 			}
@@ -159,6 +150,7 @@ func Build(raw any) (any, int, error) {
 		"selectedSourceIds": stringSliceToAny(project(sources, func(row sourceRow) string { return row.SourceID })),
 		"sourceCount":       len(sources),
 		"sourceSetCount":    len(allSources),
+		"schemaVersion":     json.Number("2"),
 	}
 	if input.Projection.Kind == "resolver_input" {
 		resolverInput, err := resolverProjection(combined, input.CanonicalEnvelope)
@@ -177,8 +169,11 @@ func admitInput(raw any) (Input, error) {
 	if !ok {
 		return Input{}, fmt.Errorf("requirement proof binding source-set normalization input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"canonicalEnvelope", "projection", "sourceSet", "sources"}, "requirement proof binding source-set normalization input"); err != nil {
+	if err := admit.KnownKeys(record, []string{"canonicalEnvelope", "projection", "schemaVersion", "sourceSet", "sources"}, "requirement proof binding source-set normalization input"); err != nil {
 		return Input{}, err
+	}
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return Input{}, fmt.Errorf("requirement proof route source-set normalization input schemaVersion must be 2")
 	}
 	envelope, err := admitCanonicalEnvelope(record["canonicalEnvelope"])
 	if err != nil {
@@ -236,10 +231,10 @@ func admitCanonicalEnvelope(raw any) (Envelope, error) {
 	if err := admit.KnownKeys(record, []string{"authorityState", "bindingColumns", "contractId", "contractKind", "nonClaims", "normalizationProfile", "schemaVersion", "surfaceColumns", "witnessColumns"}, "requirement proof binding canonical envelope"); err != nil {
 		return Envelope{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return Envelope{}, fmt.Errorf("requirement proof binding canonical envelope schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return Envelope{}, fmt.Errorf("requirement proof route declaration canonical envelope schemaVersion must be 2")
 	}
-	envelope := Envelope{SchemaVersion: 1}
+	envelope := Envelope{SchemaVersion: 2}
 	var err error
 	if envelope.ContractKind, err = strictText(record["contractKind"], "canonical envelope contractKind"); err != nil {
 		return Envelope{}, err
@@ -273,6 +268,15 @@ func admitCanonicalEnvelope(raw any) (Envelope, error) {
 	}
 	if err := assertExactArray(envelope.WitnessColumns, canonicalWitnessColumns, "canonical envelope witnessColumns"); err != nil {
 		return Envelope{}, err
+	}
+	if envelope.ContractKind != "requirement_proof_route_declaration_source" {
+		return Envelope{}, fmt.Errorf("canonical envelope contractKind must be requirement_proof_route_declaration_source")
+	}
+	if envelope.AuthorityState != "caller_owned_requirement_proof_route_source" {
+		return Envelope{}, fmt.Errorf("canonical envelope authorityState must be caller_owned_requirement_proof_route_source")
+	}
+	if envelope.NormalizationProfile != "json/v2:utf8+lf+declaration-row-arrays" {
+		return Envelope{}, fmt.Errorf("canonical envelope normalizationProfile must be json/v2:utf8+lf+declaration-row-arrays")
 	}
 	return envelope, nil
 }
@@ -324,14 +328,14 @@ func admitSourceSet(record map[string]any) ([]sourceRow, error) {
 	if err := admit.KnownKeys(record, []string{"authority_state", "contract_id", "contract_kind", "non_claims", "normalization_profile", "schema_version", "source_columns", "sources"}, "requirement proof binding source set"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schema_version"], 1) {
-		return nil, fmt.Errorf("requirement proof binding source set schema_version must be 1")
+	if !admit.JSONNumberEquals(record["schema_version"], 2) {
+		return nil, fmt.Errorf("requirement proof route declaration source set schema_version must be 2")
 	}
 	required := map[string]string{
-		"contract_kind":         "requirement_proof_binding_source_set",
-		"contract_id":           "requirement-proof-bindings/source-set/v1",
-		"authority_state":       "requirement_proof_binding_source_index",
-		"normalization_profile": "json/v1:utf8+lf+ordered-source-refs",
+		"contract_kind":         "requirement_proof_route_declaration_source_set",
+		"contract_id":           "requirement-proof-route-declarations/source-set/v2",
+		"authority_state":       "caller_owned_requirement_proof_route_source_index",
+		"normalization_profile": "json/v2:utf8+lf+ordered-source-refs",
 	}
 	for key, expected := range required {
 		value, err := strictText(record[key], "requirement proof binding source set "+key)
@@ -443,26 +447,23 @@ func inflateFragment(payload map[string]any, expectedSourceID string, envelope E
 	if err := admit.KnownKeys(payload, []string{"authority_state", "bindings", "contract_id", "contract_kind", "normalization_profile", "schema_version", "source_id", "surfaces"}, "requirement proof binding fragment "+expectedSourceID); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(payload["schema_version"], 1) {
-		return nil, fmt.Errorf("requirement proof binding fragment %s schema_version must be 1", expectedSourceID)
+	if !admit.JSONNumberEquals(payload["schema_version"], 2) {
+		return nil, fmt.Errorf("requirement proof route declaration fragment %s schema_version must be 2", expectedSourceID)
 	}
-	if payload["contract_kind"] != "requirement_proof_binding_fragment" {
-		return nil, fmt.Errorf("requirement proof binding fragment %s contract_kind must be requirement_proof_binding_fragment", expectedSourceID)
+	if payload["contract_kind"] != "requirement_proof_route_declaration_fragment" {
+		return nil, fmt.Errorf("requirement proof route declaration fragment %s contract_kind must be requirement_proof_route_declaration_fragment", expectedSourceID)
 	}
 	contractID, err := strictText(payload["contract_id"], "requirement proof binding fragment "+expectedSourceID+".contract_id")
 	if err != nil {
 		return nil, err
 	}
-	if contractID != "requirement-proof-bindings/fragment/v1" && contractID != "requirement-proof-bindings/fragment/v2" {
-		return nil, fmt.Errorf("requirement proof binding fragment %s.contract_id must be requirement-proof-bindings/fragment/v1 or requirement-proof-bindings/fragment/v2", expectedSourceID)
+	if contractID != "requirement-proof-route-declarations/fragment/v3" {
+		return nil, fmt.Errorf("requirement proof route declaration fragment %s.contract_id must be requirement-proof-route-declarations/fragment/v3", expectedSourceID)
 	}
-	if payload["authority_state"] != "canonical_requirement_to_proof_binding_fragment" {
-		return nil, fmt.Errorf("requirement proof binding fragment %s authority_state must be canonical_requirement_to_proof_binding_fragment", expectedSourceID)
+	if payload["authority_state"] != "caller_owned_requirement_proof_route_fragment" {
+		return nil, fmt.Errorf("requirement proof route declaration fragment %s authority_state must be caller_owned_requirement_proof_route_fragment", expectedSourceID)
 	}
-	expectedProfile := "json/v1:utf8+lf+compact-owner-row-arrays"
-	if contractID == "requirement-proof-bindings/fragment/v2" {
-		expectedProfile = "json/v1:utf8+lf+owner-defaulted-row-arrays"
-	}
+	expectedProfile := "json/v2:utf8+lf+owner-defaulted-declaration-row-arrays"
 	if payload["normalization_profile"] != expectedProfile {
 		return nil, fmt.Errorf("requirement proof binding fragment %s normalization_profile must be %s", expectedSourceID, expectedProfile)
 	}
@@ -476,70 +477,66 @@ func inflateFragment(payload map[string]any, expectedSourceID string, envelope E
 	if sourceID != expectedSourceID {
 		return nil, fmt.Errorf("requirement proof binding fragment source_id must match source set id %s", expectedSourceID)
 	}
-	bindings := payload["bindings"]
-	if contractID == "requirement-proof-bindings/fragment/v2" {
-		values, ok := bindings.([]any)
-		if !ok {
-			return nil, fmt.Errorf("requirement proof binding fragment %s.bindings must be an array", sourceID)
+	values, ok := payload["bindings"].([]any)
+	if !ok {
+		return nil, fmt.Errorf("requirement proof route declaration fragment %s.bindings must be an array", sourceID)
+	}
+	bindings := make([]any, 0, len(values))
+	for index, value := range values {
+		row, err := compactV3BindingToCanonical(value, sourceID, index+1)
+		if err != nil {
+			return nil, err
 		}
-		converted := make([]any, 0, len(values))
-		for index, value := range values {
-			row, err := compactV2BindingToCanonical(value, sourceID, index+1)
-			if err != nil {
-				return nil, err
-			}
-			converted = append(converted, row)
-		}
-		bindings = converted
+		bindings = append(bindings, row)
 	}
 	return admitCanonicalContract(canonicalContract(envelope, payload["surfaces"], bindings), envelope, "requirement proof binding fragment "+sourceID)
 }
 
-func compactV2BindingToCanonical(raw any, sourceID string, rowIndex int) ([]any, error) {
+func compactV3BindingToCanonical(raw any, sourceID string, rowIndex int) ([]any, error) {
 	row, ok := raw.([]any)
 	if !ok {
-		return nil, fmt.Errorf("fragment v2 binding row #%d must be an array", rowIndex)
+		return nil, fmt.Errorf("fragment v3 binding row #%d must be an array", rowIndex)
 	}
-	if len(row) != 10 && len(row) != 11 {
-		return nil, fmt.Errorf("fragment v2 binding row #%d must use compact binding columns", rowIndex)
+	if len(row) != 9 && len(row) != 10 {
+		return nil, fmt.Errorf("fragment v3 binding row #%d must use compact binding columns", rowIndex)
 	}
-	var requirementID, scenarioID, ownedInvariant, invariantRole, proofContractState, blockingStatus, requiredClasses, positive, falsification, verifyCommands, mutationState any
-	if len(row) == 10 {
-		requirementID, ownedInvariant, invariantRole, proofContractState, blockingStatus, requiredClasses, positive, falsification, verifyCommands, mutationState = row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]
-		ownedText, err := strictText(ownedInvariant, fmt.Sprintf("fragment v2 binding row #%d.owned_invariant", rowIndex))
+	var requirementID, scenarioID, ownedInvariant, invariantRole, blockingStatus, requiredClasses, positive, falsification, verifyCommands, declaredMutationClaimID any
+	if len(row) == 9 {
+		requirementID, ownedInvariant, invariantRole, blockingStatus, requiredClasses, positive, falsification, verifyCommands, declaredMutationClaimID = row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]
+		ownedText, err := strictText(ownedInvariant, fmt.Sprintf("fragment v3 binding row #%d.owned_invariant", rowIndex))
 		if err != nil {
 			return nil, err
 		}
 		scenarioID = sourceID + "::" + ownedText
 	} else {
-		requirementID, scenarioID, ownedInvariant, invariantRole, proofContractState, blockingStatus, requiredClasses, positive, falsification, verifyCommands, mutationState = row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9], row[10]
-		if _, err := strictText(scenarioID, fmt.Sprintf("fragment v2 binding row #%d.scenario_id", rowIndex)); err != nil {
+		requirementID, scenarioID, ownedInvariant, invariantRole, blockingStatus, requiredClasses, positive, falsification, verifyCommands, declaredMutationClaimID = row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[9]
+		if _, err := strictText(scenarioID, fmt.Sprintf("fragment v3 binding row #%d.scenario_id", rowIndex)); err != nil {
 			return nil, err
 		}
-		if _, err := strictText(ownedInvariant, fmt.Sprintf("fragment v2 binding row #%d.owned_invariant", rowIndex)); err != nil {
+		if _, err := strictText(ownedInvariant, fmt.Sprintf("fragment v3 binding row #%d.owned_invariant", rowIndex)); err != nil {
 			return nil, err
 		}
 	}
 	requiredArray, ok := requiredClasses.([]any)
 	if !ok {
-		return nil, fmt.Errorf("fragment v2 binding row #%d.required_environment_classes must be an array", rowIndex)
+		return nil, fmt.Errorf("fragment v3 binding row #%d.required_environment_classes must be an array", rowIndex)
 	}
 	verifyArray, ok := verifyCommands.([]any)
 	if !ok {
-		return nil, fmt.Errorf("fragment v2 binding row #%d.verify_commands must be an array", rowIndex)
+		return nil, fmt.Errorf("fragment v3 binding row #%d.verify_commands must be an array", rowIndex)
 	}
-	positiveWitness, err := compactV2Witness(positive, fmt.Sprintf("fragment v2 binding row #%d.positive_witness", rowIndex), requiredArray, verifyArray)
+	positiveWitness, err := compactV3Witness(positive, fmt.Sprintf("fragment v3 binding row #%d.positive_witness", rowIndex), requiredArray, verifyArray)
 	if err != nil {
 		return nil, err
 	}
-	falsificationWitness, err := compactV2Witness(falsification, fmt.Sprintf("fragment v2 binding row #%d.falsification_witness", rowIndex), requiredArray, verifyArray)
+	falsificationWitness, err := compactV3Witness(falsification, fmt.Sprintf("fragment v3 binding row #%d.falsification_witness", rowIndex), requiredArray, verifyArray)
 	if err != nil {
 		return nil, err
 	}
-	return []any{requirementID, sourceID, scenarioID, invariantRole, ownedInvariant, proofContractState, blockingStatus, requiredArray, positiveWitness, falsificationWitness, verifyArray, mutationState}, nil
+	return []any{requirementID, sourceID, scenarioID, invariantRole, ownedInvariant, blockingStatus, requiredArray, positiveWitness, falsificationWitness, verifyArray, declaredMutationClaimID}, nil
 }
 
-func compactV2Witness(raw any, context string, requiredClasses []any, verifyCommands []any) ([]any, error) {
+func compactV3Witness(raw any, context string, requiredClasses []any, verifyCommands []any) ([]any, error) {
 	row, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be an array", context)
@@ -548,7 +545,7 @@ func compactV2Witness(raw any, context string, requiredClasses []any, verifyComm
 		return row, nil
 	}
 	if len(row) != 2 {
-		return nil, fmt.Errorf("%s must use full witness columns or compact v2 witness row", context)
+		return nil, fmt.Errorf("%s must use full witness columns or compact v3 witness row", context)
 	}
 	selector, err := strictText(row[0], context+".selector")
 	if err != nil {
@@ -631,7 +628,7 @@ func resolverProjection(raw map[string]any, envelope Envelope) (map[string]any, 
 	for index, column := range envelope.SurfaceColumns {
 		surfaceColumnIndex[column] = index
 	}
-	requiredColumns := compactproofcontract.SurfaceColumns
+	requiredColumns := compactproofcontract.SurfaceColumns()
 	projectedSurfaces := make([]any, 0, len(surfaceValues))
 	for rowIndex, value := range surfaceValues {
 		row, ok := value.([]any)
@@ -656,8 +653,8 @@ func resolverProjection(raw map[string]any, envelope Envelope) (map[string]any, 
 		"contract_kind":         compactproofcontract.ContractKind,
 		"normalization_profile": compactproofcontract.NormalizationProfile,
 		"non_claims":            raw["non_claims"],
-		"schema_version":        json.Number("1"),
-		"surface_columns":       stringSliceToAny(compactproofcontract.SurfaceColumns),
+		"schema_version":        json.Number("2"),
+		"surface_columns":       stringSliceToAny(compactproofcontract.SurfaceColumns()),
 		"surfaces":              projectedSurfaces,
 		"witness_columns":       raw["witness_columns"],
 	}, nil
@@ -693,7 +690,7 @@ func canonicalContract(envelope Envelope, surfaces any, bindings any) map[string
 		"contract_kind":         envelope.ContractKind,
 		"non_claims":            stringSliceToAny(envelope.NonClaims),
 		"normalization_profile": envelope.NormalizationProfile,
-		"schema_version":        json.Number("1"),
+		"schema_version":        json.Number("2"),
 		"surface_columns":       stringSliceToAny(envelope.SurfaceColumns),
 		"surfaces":              surfaces,
 		"witness_columns":       stringSliceToAny(envelope.WitnessColumns),
@@ -701,11 +698,15 @@ func canonicalContract(envelope Envelope, surfaces any, bindings any) map[string
 }
 
 func isSourceSetPayload(payload map[string]any) bool {
-	return payload["contract_id"] == "requirement-proof-bindings/source-set/v1" || payload["sources"] != nil || payload["source_columns"] != nil
+	return payload["contract_id"] == "requirement-proof-route-declarations/source-set/v2" ||
+		payload["contract_id"] == "requirement-proof-bindings/source-set/v1" ||
+		payload["sources"] != nil || payload["source_columns"] != nil
 }
 
 func isFragmentPayload(payload map[string]any) bool {
-	return payload["contract_id"] == "requirement-proof-bindings/fragment/v1" || payload["contract_id"] == "requirement-proof-bindings/fragment/v2"
+	return payload["contract_id"] == "requirement-proof-route-declarations/fragment/v3" ||
+		payload["contract_id"] == "requirement-proof-bindings/fragment/v1" ||
+		payload["contract_id"] == "requirement-proof-bindings/fragment/v2"
 }
 
 func parseJSONObject(text string, context string) (map[string]any, error) {

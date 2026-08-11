@@ -12,7 +12,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const reportKind = "proofkit.pilot-admission"
+const (
+	contractEnvelopeSchema = "proofkit.pilot-admission.v2"
+	inputSchemaVersion     = 2
+	reportKind             = "proofkit.pilot-admission"
+)
 
 var stackDiversityDimensions = []string{
 	"docs_spec_layout",
@@ -135,8 +139,8 @@ func Build(raw any, options Options) (report.Record, int, error) {
 	if err := admit.KnownKeys(input, []string{"agentReportRoutes", "blockingRequirements", "cacheNegativeChecks", "cacheScheduler", "falsePositiveBudget", "impactDemo", "impactDemos", "infrastructureBudget", "metrics", "nonClaims", "packageVersionRef", "pilotId", "pilotMode", "profile", "rollback", "rolloutClaim", "schemaVersion", "stackDiversity", "timingBudget"}, "proofkit pilot admission input"); err != nil {
 		return report.Record{}, 1, err
 	}
-	if !admit.JSONNumberEquals(input["schemaVersion"], 1) {
-		return report.Record{}, 1, fmt.Errorf("proofkit pilot admission schemaVersion must be 1")
+	if !admit.JSONNumberEquals(input["schemaVersion"], inputSchemaVersion) {
+		return report.Record{}, 1, fmt.Errorf("proofkit pilot admission schemaVersion must be %d", inputSchemaVersion)
 	}
 	failures := []string{}
 	pilotID, err := admit.RuleID(input["pilotId"], "proofkit pilot pilotId")
@@ -250,8 +254,8 @@ func Build(raw any, options Options) (report.Record, int, error) {
 			if !ok {
 				continue
 			}
-			if recordID, ok := record["recordId"].(string); ok {
-				changedRequirementIDs[recordID] = struct{}{}
+			if requirementID, ok := record["requirementId"].(string); ok {
+				changedRequirementIDs[requirementID] = struct{}{}
 			}
 			impactObligationCount++
 		}
@@ -315,7 +319,7 @@ func Build(raw any, options Options) (report.Record, int, error) {
 }
 
 func BuildFromContractEnvelope(raw any, field string, options Options) (report.Record, int, error) {
-	envelope, err := contractenv.Object(raw, "proofkit.pilot-admission.v1", "pilot admission", field)
+	envelope, err := contractenv.Object(raw, contractEnvelopeSchema, "pilot admission", field)
 	if err != nil {
 		return report.Record{}, 1, err
 	}
@@ -327,7 +331,7 @@ func BuildFromContractEnvelope(raw any, field string, options Options) (report.R
 }
 
 func BuildAllFromContractEnvelope(raw any) (report.Record, int, report.Record, int, error) {
-	envelope, err := contractenv.Object(raw, "proofkit.pilot-admission.v1", "pilot admission", "input", "stackDiverseInput")
+	envelope, err := contractenv.Object(raw, contractEnvelopeSchema, "pilot admission", "input", "stackDiverseInput")
 	if err != nil {
 		return report.Record{}, 1, report.Record{}, 1, err
 	}
@@ -874,7 +878,7 @@ func assertStackDiverseImpactCoverage(impactReports []map[string]any, failures *
 			}
 		}
 	}
-	for _, reason := range []string{"proof_binding_changed", "proof_witness_changed", "record_changed"} {
+	for _, reason := range []string{"proof_binding_changed", "proof_witness_changed", "requirement_changed"} {
 		if _, ok := covered[reason]; !ok {
 			*failures = append(*failures, "stack-diverse pilot missing impact demo for "+reason)
 		}

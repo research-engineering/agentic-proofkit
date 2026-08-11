@@ -53,6 +53,79 @@ func TestBuildCombinesCanonicalSourceAndRejectsSHADrift(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsEveryLegacySourceSetDiscriminator(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*testing.T, map[string]any)
+		want   string
+	}{
+		{
+			name: "wrapper v1",
+			mutate: func(_ *testing.T, input map[string]any) {
+				input["schemaVersion"] = json.Number("1")
+			},
+			want: "input schemaVersion must be 2",
+		},
+		{
+			name: "canonical envelope v1",
+			mutate: func(_ *testing.T, input map[string]any) {
+				input["canonicalEnvelope"].(map[string]any)["schemaVersion"] = json.Number("1")
+			},
+			want: "canonical envelope schemaVersion must be 2",
+		},
+		{
+			name: "source set v1",
+			mutate: func(_ *testing.T, input map[string]any) {
+				input["sourceSet"].(map[string]any)["schema_version"] = json.Number("1")
+			},
+			want: "source set schema_version must be 2",
+		},
+		{
+			name: "fragment v2",
+			mutate: func(t *testing.T, input map[string]any) {
+				mutateFirstFragment(t, input, func(fragment map[string]any) {
+					fragment["contract_id"] = "requirement-proof-bindings/fragment/v2"
+				})
+			},
+			want: "contract_id must be requirement-proof-route-declarations/fragment/v3",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := validFragmentSourceSetInput(t)
+			test.mutate(t, input)
+			if _, _, err := Build(input); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("Build() error=%v, want %q", err, test.want)
+			}
+		})
+	}
+}
+
+func TestBuildFragmentV3DiagnosticsNameCurrentGrammar(t *testing.T) {
+	input := validFragmentSourceSetInput(t)
+	mutateFirstFragment(t, input, func(fragment map[string]any) {
+		fragment["bindings"].([]any)[0].([]any)[5] = "not-an-array"
+	})
+
+	_, _, err := Build(input)
+	if err == nil || !strings.Contains(err.Error(), "fragment v3 binding row #1.required_environment_classes") {
+		t.Fatalf("Build() error=%v, want fragment v3 diagnostic", err)
+	}
+}
+
+func mutateFirstFragment(t *testing.T, input map[string]any, mutate func(map[string]any)) {
+	t.Helper()
+	source := input["sources"].([]any)[0].(map[string]any)
+	var fragment map[string]any
+	if err := json.Unmarshal([]byte(source["text"].(string)), &fragment); err != nil {
+		t.Fatalf("decode fragment fixture: %v", err)
+	}
+	mutate(fragment)
+	text := compactJSON(t, fragment)
+	source["text"] = text
+	input["sourceSet"].(map[string]any)["sources"].([]any)[0].([]any)[2] = sha256Hex(text)
+}
+
 func TestBuildSelectsSourceSetRowsAndEmitsResolverInput(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.106477495378157513392694067858829301266454618332683944940209642307095597996567")
 	input := validFragmentSourceSetInput(t)
@@ -82,13 +155,13 @@ func TestBuildSelectsSourceSetRowsAndEmitsResolverInput(t *testing.T) {
 		t.Fatalf("selectedSourceIds=%v, want source-set order alpha,beta", got)
 	}
 	resolverInput := record["resolverInput"].(map[string]any)
-	if resolverInput["contract_kind"] != "requirement_proof_binding" {
-		t.Fatalf("resolverInput contract_kind=%v, want requirement_proof_binding", resolverInput["contract_kind"])
+	if resolverInput["contract_kind"] != "requirement_proof_route_declaration" {
+		t.Fatalf("resolverInput contract_kind=%v, want requirement_proof_route_declaration", resolverInput["contract_kind"])
 	}
 	if got := resolverInput["surface_columns"]; !equalAnyStringSlice(got, []string{"surface_id", "required_environment_classes", "preconditioned_environment_classes"}) {
 		t.Fatalf("resolverInput surface_columns=%v", got)
 	}
-	if got := resolverInput["surface_columns"]; !equalAnyStringSlice(got, compactproofcontract.SurfaceColumns) {
+	if got := resolverInput["surface_columns"]; !equalAnyStringSlice(got, compactproofcontract.SurfaceColumns()) {
 		t.Fatalf("resolverInput surface_columns drifted from compact owner=%v", got)
 	}
 	rows := resolverInput["bindings"].([]any)
@@ -118,7 +191,7 @@ func TestBuildAllowsUnselectedKnownSourceTextsAndRejectsUnknownSourceText(t *tes
 	if record["sourceCount"] != 1 || record["sourceSetCount"] != 2 {
 		t.Fatalf("source counts=%v/%v, want 1/2", record["sourceCount"], record["sourceSetCount"])
 	}
-	if got := record["inputPaths"]; !equalAnyStringSlice(got, []string{"docs/contracts/requirement-proof-bindings/beta.v1.json"}) {
+	if got := record["inputPaths"]; !equalAnyStringSlice(got, []string{"docs/contracts/requirement-proof-routes/beta.v3.json"}) {
 		t.Fatalf("inputPaths=%v, want selected source path only", got)
 	}
 	resolverInput := record["resolverInput"].(map[string]any)
@@ -146,7 +219,7 @@ func TestBuildAllowsUnselectedKnownSourceTextsAndRejectsUnknownSourceText(t *tes
 
 	rejected := validFragmentSourceSetInput(t)
 	rejected["sources"] = append(rejected["sources"].([]any), map[string]any{
-		"path": "docs/contracts/requirement-proof-bindings/extra.v1.json",
+		"path": "docs/contracts/requirement-proof-routes/extra.v3.json",
 		"text": `{"contract_id":"unused"}`,
 	})
 	_, _, err = Build(rejected)
@@ -235,7 +308,7 @@ func TestBuildRejectsNestedSourceSetPayload(t *testing.T) {
 	}
 }
 
-func TestBuildInflatesFragmentV2Defaults(t *testing.T) {
+func TestBuildInflatesFragmentV3Defaults(t *testing.T) {
 	input := validFragmentSourceSetInput(t)
 	input["projection"] = map[string]any{
 		"kind":              "canonical_contract",
@@ -256,14 +329,14 @@ func TestBuildInflatesFragmentV2Defaults(t *testing.T) {
 	}
 	row := rows[0].([]any)
 	if row[1] != "source.beta" || row[2] != "source.beta::beta_invariant" {
-		t.Fatalf("v2 defaults surface/scenario=%v/%v, want source.beta/source.beta::beta_invariant", row[1], row[2])
+		t.Fatalf("v3 defaults surface/scenario=%v/%v, want source.beta/source.beta::beta_invariant", row[1], row[2])
 	}
-	positive := row[8].([]any)
+	positive := row[7].([]any)
 	if got := positive[1]; !equalAnyStringSlice(got, []string{"local-go"}) {
-		t.Fatalf("v2 positive environment classes=%v, want inherited local-go", got)
+		t.Fatalf("v3 positive environment classes=%v, want inherited local-go", got)
 	}
 	if got := positive[2]; !equalAnyStringSlice(got, []string{"go test ./..."}) {
-		t.Fatalf("v2 positive verify commands=%v, want inherited command", got)
+		t.Fatalf("v3 positive verify commands=%v, want inherited command", got)
 	}
 }
 
@@ -273,13 +346,8 @@ func validSourceSetInput(t *testing.T) map[string]any {
 	contract := canonicalContract(envelope, []any{
 		[]any{
 			"surface.local",
-			[]any{"unit"},
-			false,
-			"not_allowed",
-			"none",
 			[]any{"local-go"},
 			[]any{},
-			"checked",
 		},
 	}, []any{
 		[]any{
@@ -288,19 +356,19 @@ func validSourceSetInput(t *testing.T) map[string]any {
 			"surface.local::proofkit.scenario",
 			"contract",
 			"owned_invariant",
-			"witness_backed",
 			"blocking",
 			[]any{"local-go"},
 			[]any{"internal/test.go::TestPositive", []any{"local-go"}, []any{"go test ./..."}, json.Number("0")},
 			[]any{"internal/test.go::TestNegative", []any{"local-go"}, []any{"go test ./..."}, json.Number("1")},
 			[]any{"go test ./..."},
-			"checked",
+			"claim.checked",
 		},
 	})
 	text := compactJSON(t, contract)
 	return map[string]any{
+		"schemaVersion": json.Number("2"),
 		"canonicalEnvelope": map[string]any{
-			"schemaVersion":        json.Number("1"),
+			"schemaVersion":        json.Number("2"),
 			"contractKind":         envelope.ContractKind,
 			"contractId":           envelope.ContractID,
 			"authorityState":       envelope.AuthorityState,
@@ -311,18 +379,18 @@ func validSourceSetInput(t *testing.T) map[string]any {
 			"witnessColumns":       stringSliceToAny(envelope.WitnessColumns),
 		},
 		"sourceSet": map[string]any{
-			"schema_version":        json.Number("1"),
-			"contract_kind":         "requirement_proof_binding_source_set",
-			"contract_id":           "requirement-proof-bindings/source-set/v1",
-			"authority_state":       "requirement_proof_binding_source_index",
-			"normalization_profile": "json/v1:utf8+lf+ordered-source-refs",
+			"schema_version":        json.Number("2"),
+			"contract_kind":         "requirement_proof_route_declaration_source_set",
+			"contract_id":           "requirement-proof-route-declarations/source-set/v2",
+			"authority_state":       "caller_owned_requirement_proof_route_source_index",
+			"normalization_profile": "json/v2:utf8+lf+ordered-source-refs",
 			"source_columns":        stringSliceToAny(sourceSetColumns),
 			"sources": []any{
 				[]any{
 					"source.local",
-					"docs/contracts/requirement-proof-bindings/local.v1.json",
+					"docs/contracts/requirement-proof-routes/local.v2.json",
 					sha256Hex(text),
-					"requirement_proof_binding_contract",
+					"requirement_proof_route_declaration_contract",
 					[]any{"Source-set test input is not repository proof."},
 				},
 			},
@@ -330,7 +398,7 @@ func validSourceSetInput(t *testing.T) map[string]any {
 		},
 		"sources": []any{
 			map[string]any{
-				"path": "docs/contracts/requirement-proof-bindings/local.v1.json",
+				"path": "docs/contracts/requirement-proof-routes/local.v2.json",
 				"text": text,
 			},
 		},
@@ -339,11 +407,11 @@ func validSourceSetInput(t *testing.T) map[string]any {
 
 func validCanonicalEnvelope() Envelope {
 	return Envelope{
-		SchemaVersion:        1,
-		ContractKind:         "requirement_proof_binding",
-		ContractID:           "requirement-proof-bindings/v1",
-		AuthorityState:       "canonical_requirement_to_proof_binding",
-		NormalizationProfile: "json/v1:utf8+lf+compact-row-arrays",
+		SchemaVersion:        2,
+		ContractKind:         "requirement_proof_route_declaration_source",
+		ContractID:           "requirement-proof-route-declarations/v2",
+		AuthorityState:       "caller_owned_requirement_proof_route_source",
+		NormalizationProfile: "json/v2:utf8+lf+declaration-row-arrays",
 		NonClaims:            []string{"Requirement proof binding test input does not prove repository coverage."},
 		SurfaceColumns:       canonicalSurfaceColumns,
 		BindingColumns:       canonicalBindingColumns,
@@ -354,13 +422,14 @@ func validCanonicalEnvelope() Envelope {
 func validFragmentSourceSetInput(t *testing.T) map[string]any {
 	t.Helper()
 	envelope := validCanonicalEnvelope()
-	alpha := fragmentV1("source.alpha", "REQ-PROOFKIT-ALPHA-001", "alpha_invariant")
-	beta := fragmentV2("source.beta", "REQ-PROOFKIT-BETA-001", "beta_invariant")
+	alpha := fragmentV3Full("source.alpha", "REQ-PROOFKIT-ALPHA-001", "alpha_invariant")
+	beta := fragmentV3Compact("source.beta", "REQ-PROOFKIT-BETA-001", "beta_invariant")
 	alphaText := compactJSON(t, alpha)
 	betaText := compactJSON(t, beta)
 	return map[string]any{
+		"schemaVersion": json.Number("2"),
 		"canonicalEnvelope": map[string]any{
-			"schemaVersion":        json.Number("1"),
+			"schemaVersion":        json.Number("2"),
 			"contractKind":         envelope.ContractKind,
 			"contractId":           envelope.ContractID,
 			"authorityState":       envelope.AuthorityState,
@@ -371,78 +440,75 @@ func validFragmentSourceSetInput(t *testing.T) map[string]any {
 			"witnessColumns":       stringSliceToAny(envelope.WitnessColumns),
 		},
 		"sourceSet": map[string]any{
-			"schema_version":        json.Number("1"),
-			"contract_kind":         "requirement_proof_binding_source_set",
-			"contract_id":           "requirement-proof-bindings/source-set/v1",
-			"authority_state":       "requirement_proof_binding_source_index",
-			"normalization_profile": "json/v1:utf8+lf+ordered-source-refs",
+			"schema_version":        json.Number("2"),
+			"contract_kind":         "requirement_proof_route_declaration_source_set",
+			"contract_id":           "requirement-proof-route-declarations/source-set/v2",
+			"authority_state":       "caller_owned_requirement_proof_route_source_index",
+			"normalization_profile": "json/v2:utf8+lf+ordered-source-refs",
 			"source_columns":        stringSliceToAny(sourceSetColumns),
 			"sources": []any{
-				[]any{"source.alpha", "docs/contracts/requirement-proof-bindings/alpha.v1.json", sha256Hex(alphaText), "requirement_proof_binding_fragment", []any{"Alpha source owns alpha rows."}},
-				[]any{"source.beta", "docs/contracts/requirement-proof-bindings/beta.v1.json", sha256Hex(betaText), "requirement_proof_binding_fragment", []any{"Beta source owns beta rows."}},
+				[]any{"source.alpha", "docs/contracts/requirement-proof-routes/alpha.v3.json", sha256Hex(alphaText), "requirement_proof_route_declaration_fragment", []any{"Alpha source owns alpha rows."}},
+				[]any{"source.beta", "docs/contracts/requirement-proof-routes/beta.v3.json", sha256Hex(betaText), "requirement_proof_route_declaration_fragment", []any{"Beta source owns beta rows."}},
 			},
 			"non_claims": []any{"Source set test input does not prove repository coverage."},
 		},
 		"sources": []any{
-			map[string]any{"path": "docs/contracts/requirement-proof-bindings/alpha.v1.json", "text": alphaText},
-			map[string]any{"path": "docs/contracts/requirement-proof-bindings/beta.v1.json", "text": betaText},
+			map[string]any{"path": "docs/contracts/requirement-proof-routes/alpha.v3.json", "text": alphaText},
+			map[string]any{"path": "docs/contracts/requirement-proof-routes/beta.v3.json", "text": betaText},
 		},
 	}
 }
 
-func fragmentV1(sourceID string, requirementID string, ownedInvariant string) map[string]any {
+func fragmentV3Full(sourceID string, requirementID string, ownedInvariant string) map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"contract_kind":         "requirement_proof_binding_fragment",
-		"contract_id":           "requirement-proof-bindings/fragment/v1",
-		"authority_state":       "canonical_requirement_to_proof_binding_fragment",
-		"normalization_profile": "json/v1:utf8+lf+compact-owner-row-arrays",
+		"schema_version":        json.Number("2"),
+		"contract_kind":         "requirement_proof_route_declaration_fragment",
+		"contract_id":           "requirement-proof-route-declarations/fragment/v3",
+		"authority_state":       "caller_owned_requirement_proof_route_fragment",
+		"normalization_profile": "json/v2:utf8+lf+owner-defaulted-declaration-row-arrays",
 		"source_id":             sourceID,
 		"surfaces": []any{
-			[]any{sourceID, []any{"unit"}, false, "not_allowed", "none", []any{"local-go"}, []any{}, "checked"},
+			[]any{sourceID, []any{"local-go"}, []any{}},
 		},
 		"bindings": []any{
 			[]any{
 				requirementID,
-				sourceID,
 				sourceID + "::" + ownedInvariant,
 				"contract",
 				ownedInvariant,
-				"witness_backed",
 				"blocking",
 				[]any{"local-go"},
 				[]any{"internal/" + ownedInvariant + "_test.go::TestPositive", []any{"local-go"}, []any{"go test ./..."}, json.Number("0")},
 				[]any{"internal/" + ownedInvariant + "_test.go::TestNegative", []any{"local-go"}, []any{"go test ./..."}, json.Number("1")},
 				[]any{"go test ./..."},
-				"checked",
+				"claim.checked",
 			},
 		},
 	}
 }
 
-func fragmentV2(sourceID string, requirementID string, ownedInvariant string) map[string]any {
+func fragmentV3Compact(sourceID string, requirementID string, ownedInvariant string) map[string]any {
 	return map[string]any{
-		"schema_version":        json.Number("1"),
-		"contract_kind":         "requirement_proof_binding_fragment",
-		"contract_id":           "requirement-proof-bindings/fragment/v2",
-		"authority_state":       "canonical_requirement_to_proof_binding_fragment",
-		"normalization_profile": "json/v1:utf8+lf+owner-defaulted-row-arrays",
+		"schema_version":        json.Number("2"),
+		"contract_kind":         "requirement_proof_route_declaration_fragment",
+		"contract_id":           "requirement-proof-route-declarations/fragment/v3",
+		"authority_state":       "caller_owned_requirement_proof_route_fragment",
+		"normalization_profile": "json/v2:utf8+lf+owner-defaulted-declaration-row-arrays",
 		"source_id":             sourceID,
 		"surfaces": []any{
-			[]any{sourceID, []any{"unit"}, false, "not_allowed", "none", []any{"local-go"}, []any{}, "checked"},
+			[]any{sourceID, []any{"local-go"}, []any{}},
 		},
 		"bindings": []any{
 			[]any{
 				requirementID,
 				ownedInvariant,
 				"contract",
-				"witness_backed",
 				"blocking",
 				[]any{"local-go"},
 				[]any{"internal/" + ownedInvariant + "_test.go::TestPositive", json.Number("0")},
 				[]any{"internal/" + ownedInvariant + "_test.go::TestNegative", json.Number("1")},
 				[]any{"go test ./..."},
-				"checked",
+				"claim.checked",
 			},
 		},
 	}

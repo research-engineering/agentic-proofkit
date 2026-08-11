@@ -35,7 +35,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-002",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement proof binding reports validate caller-owned requirement-to-witness mappings, require compact scenarios to use admitted surface_id::stable_anchor identities, require compact witness selectors to use admitted repo/path::stable_anchor identities, admit caller-owned source-set fragments and selected-source resolver projections, and derive typed compact proof contract projections for surfaces, scenarios, witnesses, commands, environment classes, conformance facts, and falsification routes without executing witnesses or deciding proof freshness.",
+      "invariant": "Requirement proof route declaration admission preserves each compact binding identity as requirementId, surfaceId, and scenarioId; preserves each witness route as bindingRecordId, role, selector, a JSON-safe non-negative resolutionOrderIndex, and witnessRouteId; admits exactly one positive and one falsification role even when both roles use the same selector; requires declaration-only v2 compact discriminators and admitted source-set v2 or fragment-v3 identities; rejects legacy proof-state, synthetic checked or finding counts, collapsed roles, and identity-loss projections; and derives only caller-owned declaration or lookup facts without executing witnesses or deciding selector resolution, oracle quality, mutation adequacy, proof freshness, trust, assurance, merge, rollout, or production readiness.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [
@@ -45,7 +45,7 @@
         "NC-PROOFKIT-SPEC-002"
       ],
       "nonClaims": [
-        "This requirement does not claim native witness pass evidence, proof freshness, receipt authenticity, or merge approval."
+        "This requirement does not claim selector existence or resolution, oracle quality, native witness execution or pass evidence, mutation adequacy, finding completeness or absence, proof freshness, receipt authenticity, trust, assurance, merge approval, rollout approval, or production readiness."
       ],
       "lifecycle": {
         "state": "active",
@@ -251,7 +251,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-010",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Requirement impact input composition converts caller-owned base and current requirement sources, single-current-binding compact proof contracts, changed-path facts, generated-artifact policy, local environment policy, and proof-like path policy into a direct impact command input while preserving downstream impact semantics and without scanning repositories, executing witnesses, deciding freshness, or becoming a second impact evaluator.",
+      "invariant": "Requirement impact input composition converts caller-owned base and current requirement sources, compact proof contracts with one or more current bindings per active blocking requirement, changed-path facts, generated-artifact policy, local environment policy, and proof-like path policy into a direct impact command input; treats every referenced surface semantic change as a change to every referencing binding under the proof-binding source-path policy; preserves downstream impact semantics; and does not scan repositories, execute witnesses, decide freshness, or become a second impact evaluator.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": [

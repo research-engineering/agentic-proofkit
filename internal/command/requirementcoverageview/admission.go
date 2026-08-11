@@ -18,8 +18,8 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 	if err := admit.KnownKeys(record, []string{"compactProofContract", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementProofBinding", "requirementSource", "schemaVersion", "testEvidenceInventory", "viewInputId"}, "requirement coverage view input"); err != nil {
 		return compositeInput{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return compositeInput{}, fmt.Errorf("requirement coverage view schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return compositeInput{}, fmt.Errorf("requirement coverage view schemaVersion must be 2")
 	}
 	viewInputID, err := admit.RuleID(record["viewInputId"], "requirement coverage view viewInputId")
 	if err != nil {
@@ -137,75 +137,96 @@ func structuredProofProjection(graph map[string]any) proofProjection {
 }
 func compactProofProjection(projection map[string]any) (proofProjection, error) {
 	requirements := map[string]proofRequirement{}
-	witnessSelectors := []string{}
-	for _, rawRequirement := range anyArray(projection["requirements"]) {
-		requirement := rawRequirement.(map[string]any)
-		requirementID := stringValue(requirement["requirementId"])
-		selectors := compactRequirementWitnessSelectors(requirement)
-		witnessSelectors = append(witnessSelectors, selectors...)
+	witnessRouteIDs := []string{}
+	for _, rawBinding := range anyArray(projection["bindings"]) {
+		binding := rawBinding.(map[string]any)
+		requirementID := stringValue(binding["requirementId"])
+		routes, err := compactBindingWitnessRoutes(binding)
+		if err != nil {
+			return proofProjection{}, err
+		}
+		for _, route := range routes {
+			witnessRouteIDs = append(witnessRouteIDs, route.WitnessRouteID)
+		}
+		scenario := compactBindingScenario(binding, routes)
 		previous := requirements[requirementID]
-		proofState := stringValue(requirement["proofContractState"])
-		if previous.ProofState != "" && previous.ProofState != proofState {
-			return proofProjection{}, fmt.Errorf("compact requirement coverage view has conflicting proofContractState for %s", requirementID)
-		}
 		requirements[requirementID] = proofRequirement{
-			EnvironmentClasses: sortedUnique(append(previous.EnvironmentClasses, compactRequirementEnvironmentClasses(requirement)...)),
-			ProofState:         proofState,
-			Scenarios:          append(previous.Scenarios, compactRequirementScenarios(requirement)...),
-			VerifyCommands:     sortedUnique(append(previous.VerifyCommands, stringArray(requirement["verifyCommands"])...)),
-			WitnessSelectors:   sortedUnique(append(previous.WitnessSelectors, selectors...)),
+			DeclaredWitnessRoutes: append(previous.DeclaredWitnessRoutes, routes...),
+			EnvironmentClasses:    sortedUnique(append(previous.EnvironmentClasses, compactBindingEnvironmentClasses(binding, routes)...)),
+			Scenarios:             append(previous.Scenarios, scenario),
+			VerifyCommands:        sortedUnique(append(previous.VerifyCommands, scenario.VerifyCommands...)),
 		}
+	}
+	for requirementID, requirement := range requirements {
+		sort.Slice(requirement.DeclaredWitnessRoutes, func(left, right int) bool {
+			return requirement.DeclaredWitnessRoutes[left].WitnessRouteID < requirement.DeclaredWitnessRoutes[right].WitnessRouteID
+		})
+		sort.Slice(requirement.Scenarios, func(left, right int) bool {
+			return requirement.Scenarios[left].ScenarioID < requirement.Scenarios[right].ScenarioID
+		})
+		requirements[requirementID] = requirement
 	}
 	return proofProjection{
 		ContractID: stringValue(projection["contractId"]), Mode: "compact",
-		Requirements: requirements, WitnessSelectors: sortedUnique(witnessSelectors),
+		Requirements: requirements, WitnessRouteIDs: sortedUnique(witnessRouteIDs),
 	}, nil
 }
 
-func compactRequirementScenarios(requirement map[string]any) []scenario {
-	scenarioID := stringValue(requirement["scenarioId"])
-	if scenarioID == "" {
-		return nil
+func compactBindingScenario(binding map[string]any, routes []declaredWitnessRoute) scenario {
+	bindingVerifyCommands := stringArray(binding["verifyCommands"])
+	routeVerifyCommands := make([][]string, 0, len(routes))
+	for _, route := range routes {
+		routeVerifyCommands = append(routeVerifyCommands, route.VerifyCommands)
 	}
-	return []scenario{{
-		EnvironmentClasses: compactRequirementEnvironmentClasses(requirement),
-		ScenarioID:         scenarioID,
-		VerifyCommands:     stringArray(requirement["verifyCommands"]),
-		WitnessSelectors:   compactRequirementWitnessSelectors(requirement),
-	}}
+	return scenario{
+		BindingRecordID:            stringValue(binding["bindingRecordId"]),
+		BindingVerifyCommands:      bindingVerifyCommands,
+		DeclaredWitnessRoutes:      append([]declaredWitnessRoute{}, routes...),
+		EnvironmentClasses:         compactBindingEnvironmentClasses(binding, routes),
+		RequiredEnvironmentClasses: stringArray(binding["requiredEnvironmentClasses"]),
+		RequirementID:              stringValue(binding["requirementId"]),
+		ScenarioID:                 stringValue(binding["scenarioId"]),
+		SurfaceID:                  stringValue(binding["surfaceId"]),
+		VerifyCommands:             compactScenarioCommandClosure(bindingVerifyCommands, routeVerifyCommands...),
+	}
 }
 
-func compactRequirementEnvironmentClasses(requirement map[string]any) []string {
-	values := append([]string{}, stringArray(requirement["requiredEnvironmentClasses"])...)
-	for _, witness := range compactRequirementWitnesses(requirement) {
-		values = append(values, stringArray(witness["environmentClasses"])...)
+func compactBindingEnvironmentClasses(binding map[string]any, routes []declaredWitnessRoute) []string {
+	values := append([]string{}, stringArray(binding["requiredEnvironmentClasses"])...)
+	for _, route := range routes {
+		values = append(values, route.EnvironmentClasses...)
 	}
 	return sortedUnique(values)
 }
 
-func compactRequirementWitnessSelectors(requirement map[string]any) []string {
-	selectors := []string{}
-	for _, witness := range compactRequirementWitnesses(requirement) {
-		selector := stringValue(witness["selector"])
-		if selector != "" {
-			selectors = append(selectors, selector)
-		}
-	}
-	return sortedUnique(selectors)
-}
-
-func compactRequirementWitnesses(requirement map[string]any) []map[string]any {
-	witnesses, ok := requirement["testWitnesses"].(map[string]any)
+func compactBindingWitnessRoutes(binding map[string]any) ([]declaredWitnessRoute, error) {
+	witnesses, ok := binding["testWitnesses"].(map[string]any)
 	if !ok {
-		return nil
+		return nil, fmt.Errorf("compact requirement coverage binding %s must retain testWitnesses", stringValue(binding["bindingRecordId"]))
 	}
-	result := []map[string]any{}
+	result := make([]declaredWitnessRoute, 0, 2)
 	for _, role := range []string{"falsification", "positive"} {
-		if witness, ok := witnesses[role].(map[string]any); ok {
-			result = append(result, witness)
+		witness, ok := witnesses[role].(map[string]any)
+		if !ok || stringValue(witness["role"]) != role {
+			return nil, fmt.Errorf("compact requirement coverage binding %s must retain exactly the %s witness route", stringValue(binding["bindingRecordId"]), role)
 		}
+		result = append(result, declaredWitnessRoute{
+			BindingRecordID:    stringValue(binding["bindingRecordId"]),
+			EnvironmentClasses: stringArray(witness["environmentClasses"]),
+			RequirementID:      stringValue(binding["requirementId"]),
+			ResolutionOrder:    intValue(witness["resolutionOrderIndex"]),
+			Role:               role,
+			ScenarioID:         stringValue(binding["scenarioId"]),
+			Selector:           stringValue(witness["selector"]),
+			SurfaceID:          stringValue(binding["surfaceId"]),
+			VerifyCommands:     stringArray(witness["verifyCommandRefs"]),
+			WitnessRouteID:     stringValue(witness["witnessRouteId"]),
+		})
 	}
-	return result
+	sort.Slice(result, func(left, right int) bool {
+		return result[left].WitnessRouteID < result[right].WitnessRouteID
+	})
+	return result, nil
 }
 
 func admitCoverageUniverse(raw any) (coverageUniverse, error) {

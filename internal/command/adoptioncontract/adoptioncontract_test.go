@@ -8,7 +8,9 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
 	"github.com/research-engineering/agentic-proofkit/internal/command/gradualadoption"
 	"github.com/research-engineering/agentic-proofkit/internal/command/pilotadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/compactfixture"
 )
 
 func TestBuildRejectsMalformedAggregateRoot(t *testing.T) {
@@ -123,6 +125,19 @@ func TestBuildRejectsMalformedAggregateRoot(t *testing.T) {
 				t.Fatalf("Build() error=%v, want %q", err, item.want)
 			}
 		})
+	}
+}
+
+func TestBuildRejectsCompleteLegacyV1Aggregate(t *testing.T) {
+	input := validAggregateEnvelope()
+	input["schema"] = "proofkit.adoption-contract-envelope.v1"
+	input["pilot"].(map[string]any)["schema"] = "proofkit.pilot-admission.v1"
+	for _, field := range []string{"input", "stackDiverseInput"} {
+		input["pilot"].(map[string]any)[field].(map[string]any)["schemaVersion"] = json.Number("1")
+	}
+
+	if _, _, err := Build(input, Options{Mode: "pilot", Pilot: "all"}); err == nil || !strings.Contains(err.Error(), "schema drift") {
+		t.Fatalf("Build() error=%v, want complete v1 aggregate rejection", err)
 	}
 }
 
@@ -421,7 +436,7 @@ func testPilotEnvelope(input map[string]any, field string) map[string]any {
 
 func validAggregateEnvelope() map[string]any {
 	return map[string]any{
-		"schema":     "proofkit.adoption-contract-envelope.v1",
+		"schema":     aggregateEnvelopeSchema,
 		"envelopeId": "proofkit.test.adoption.aggregate",
 		"workflow": map[string]any{
 			"schema":   "proofkit.adoption-workflow.v1",
@@ -434,7 +449,7 @@ func validAggregateEnvelope() map[string]any {
 			"guidance":  guidanceContract(),
 		},
 		"pilot": map[string]any{
-			"schema":            "proofkit.pilot-admission.v1",
+			"schema":            pilotEnvelopeSchema,
 			"input":             pilotInput("proofkit.test.pilot.first", false),
 			"stackDiverseInput": pilotInput("proofkit.test.pilot.stack-diverse", true),
 		},
@@ -599,7 +614,7 @@ func budget() map[string]any {
 
 func pilotInput(pilotID string, stackDiverse bool) map[string]any {
 	input := map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"pilotId":       pilotID,
 		"profile": map[string]any{
 			"commandMatcherBridge":      "none",
@@ -715,36 +730,41 @@ func cacheNegativeChecks() []any {
 
 func impactDemo(demoID string, stackDiverse bool) map[string]any {
 	impactInput := map[string]any{
-		"schemaVersion":              json.Number("1"),
+		"schemaVersion":              json.Number("2"),
 		"baseCommit":                 "base",
 		"baseRef":                    "main",
 		"changedBindingRecordIds":    []any{},
 		"changedPaths":               []any{"docs/specs/proofkit/requirements.v1.json"},
-		"changedRecordIds":           []any{"REQ-PROOFKIT-001"},
+		"changedRequirementIds":      []any{"REQ-PROOFKIT-001"},
 		"changedWitnessPathCoverage": []any{},
 		"generatedArtifactRules":     []any{},
 		"headCommit":                 nil,
 		"headRef":                    "feature/proofkit",
 		"ignoredProofLikePaths":      []any{},
 		"obligationCatalog": []any{map[string]any{
-			"blockingStatus":             "blocking",
-			"commands":                   []any{"go test ./..."},
-			"preconditioned":             false,
-			"proofContractState":         "witness_backed",
-			"recordId":                   "REQ-PROOFKIT-001",
-			"requiredEnvironmentClasses": []any{"local-go"},
-			"scenarioId":                 "proofkit.scenario",
-			"surfaceId":                  "proofkit.surface",
+			"bindingRecordId":                   adoptionTestBindingRecordID,
+			"blockingStatus":                    "blocking",
+			"commands":                          []any{"go test ./..."},
+			"declaredWitnessRoutes":             adoptionTestRoutes.Values([]string{"local-go"}, []string{"go test ./..."}),
+			"declaredMutationResistanceClaimId": "claim.unverified",
+			"preconditioned":                    false,
+			"requirementId":                     "REQ-PROOFKIT-001",
+			"requiredEnvironmentClasses":        []any{"local-go"},
+			"scenarioId":                        "proofkit.surface::proofkit.scenario",
+			"surfaceId":                         "proofkit.surface",
 		}},
 		"preexistingFailures":         []any{},
 		"proofLikePaths":              []any{},
 		"unboundProofChangeRationale": "No unbound proof-like path changed.",
 	}
 	if stackDiverse {
-		impactInput["changedBindingRecordIds"] = []any{"REQ-PROOFKIT-001"}
+		impactInput["changedBindingRecordIds"] = []any{adoptionTestBindingRecordID}
 		impactInput["changedPaths"] = []any{"docs/specs/proofkit/requirements.v1.json", "internal/proofkit/witness_test.go"}
 		impactInput["changedWitnessPathCoverage"] = []any{
-			map[string]any{"path": "internal/proofkit/witness_test.go", "recordIds": []any{"REQ-PROOFKIT-001"}},
+			map[string]any{"path": "internal/proofkit/witness_test.go", "routes": []any{map[string]any{
+				"bindingRecordId": adoptionTestBindingRecordID, "resolutionOrderIndex": json.Number("0"),
+				"role": "positive", "selector": adoptionTestWitnessSelector, "witnessRouteId": adoptionTestWitnessRouteID,
+			}}},
 		}
 	}
 	return map[string]any{
@@ -754,3 +774,15 @@ func impactDemo(demoID string, stackDiverse bool) map[string]any {
 		"impactInput":             impactInput,
 	}
 }
+
+const (
+	adoptionTestWitnessSelector              = "internal/proofkit/witness_test.go::TestWitness"
+	adoptionTestFalsificationWitnessSelector = "internal/proofkit/witness_test.go::TestWitnessFalsification"
+)
+
+var adoptionTestRoutes = compactfixture.MustRoutes(compactproofcontract.BindingIdentity{
+	RequirementID: "REQ-PROOFKIT-001", ScenarioID: "proofkit.surface::proofkit.scenario", SurfaceID: "proofkit.surface",
+}, adoptionTestWitnessSelector, adoptionTestFalsificationWitnessSelector)
+
+var adoptionTestBindingRecordID = adoptionTestRoutes.BindingRecordID
+var adoptionTestWitnessRouteID = adoptionTestRoutes.PositiveRouteID

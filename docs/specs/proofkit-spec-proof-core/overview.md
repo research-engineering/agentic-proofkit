@@ -16,14 +16,13 @@ execution receipts, and merge policy.
   or scanning overview prose as authority; one shipped, marker-bounded example
   is parsed as bounded expansion-free literal shell words and executed through
   the installed current product as a first valid input.
-- `REQ-PROOFKIT-SPEC-002`: requirement proof binding reports validate
-  caller-owned requirement-to-witness mappings, require compact scenarios to be
-  admitted `surface_id::stable_anchor` identities, require compact witness
-  selectors to use `repo/path::stable_anchor` identities, admit caller-owned
-  source-set fragments and selected-source resolver projections, and derive
-  typed compact proof contract projections for surfaces, scenarios, witnesses,
-  commands, environment classes, conformance facts, and falsification routes
-  without executing witnesses or deciding proof freshness.
+- `REQ-PROOFKIT-SPEC-002`: compact proof route declarations preserve the full
+  requirement/surface/scenario binding identity and role-qualified witness-route
+  identity, preserve each route's JSON-safe non-negative resolution order, admit
+  declaration-only v2 contracts plus source-set v2 and fragment v3 inputs, retain
+  distinct positive and falsification roles even for one shared selector, and
+  reject legacy proof-state, synthetic evidence counts, collapsed roles, and
+  identity-loss projections without claiming execution or assurance.
 - `REQ-PROOFKIT-SPEC-003`: witness planning accepts caller-owned structured
   command metadata, scheduler constraints, environment classes, and
   binding-derived command projections only through admitted witness vocabulary
@@ -79,11 +78,13 @@ execution receipts, and merge policy.
   serving with one exact supported-view vocabulary without accepting
   caller-owned raw HTML or making rendered output authoritative.
 - `REQ-PROOFKIT-SPEC-010`: requirement impact input composition converts
-  caller-owned base/current requirement sources, single-current-binding compact
-  proof contracts, changed-path facts, generated-artifact policy, local
-  environment policy, and proof-like path policy into a direct `impact` input
-  without scanning repositories, executing witnesses, or becoming a second
-  impact evaluator.
+  caller-owned base/current requirement sources, compact proof contracts with
+  one or more current bindings per active blocking requirement, changed-path
+  facts, generated-artifact policy, local environment policy, and proof-like
+  path policy into a direct `impact` input, treating every referenced surface
+  semantic change as a change to every referencing binding under the
+  proof-binding source-path policy, without scanning repositories, executing
+  witnesses, or becoming a second impact evaluator.
 - `REQ-PROOFKIT-SPEC-011`: adoption contract envelope admission validates a
   complete caller-owned aggregate adoption envelope, selects one child route
   through orthogonal CLI flags, rejects repeated single-value mode or pilot

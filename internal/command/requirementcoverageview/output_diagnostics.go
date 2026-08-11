@@ -11,11 +11,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-func expectedCoverageRowDiagnostics(row map[string]any, rowsKey string, completenessDeclaration string) ([]string, []string) {
+func expectedCoverageRowDiagnostics(row map[string]any, rowsKey, proofMode, completenessDeclaration string) ([]string, []string) {
 	state := stringValue(row["coverageState"])
 	switch rowsKey {
 	case "requirementCoverage":
-		failures := expectedRequirementFailures(row, state, completenessDeclaration)
+		failures := expectedRequirementFailures(row, proofMode, state, completenessDeclaration)
 		warnings := []string{}
 		if requirementMappingWarns(stringValue(row["claimLevel"]), state, completenessDeclaration) {
 			warnings = append(warnings, state+":"+stringValue(row["requirementId"]))

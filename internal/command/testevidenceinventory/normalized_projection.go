@@ -4,10 +4,40 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 )
+
+const ProofBindingProjectionKind = "proofkit.proof-binding-test-inventory"
+
+var proofBindingEntryNonClaims = []string{
+	"This inventory entry does not execute native tests or authenticate receipts.",
+	"This inventory entry projects proof-route wiring only and cannot satisfy semantic coverage.",
+}
+
+// ProofBindingTestID owns the stable inventory identity derived from a compact
+// falsification witness route. Both the producer and normalized re-admission use
+// this function so a synchronized mapping/entry mutation cannot fabricate an ID.
+func ProofBindingTestID(witnessRouteID string) (string, error) {
+	witnessRouteID, err := admit.SHA256Ref(witnessRouteID, "proof-binding test inventory witnessRouteId")
+	if err != nil {
+		return "", err
+	}
+	fragment := strings.NewReplacer(
+		"0", "g", "1", "h", "2", "i", "3", "j", "4", "k",
+		"5", "l", "6", "m", "7", "n", "8", "o", "9", "p",
+	).Replace(strings.TrimPrefix(witnessRouteID, "sha256:"))
+	return admit.RuleID("test.proof_route."+fragment, "proof-binding test inventory derived testId")
+}
+
+func ProofBindingEntryNonClaims() []string {
+	return append([]string{}, proofBindingEntryNonClaims...)
+}
 
 // NormalizedProjection is the owner-owned projection used by downstream
 // commands that need the flattened direct inventory and its source-set envelope.
@@ -87,14 +117,24 @@ func AdmitNormalizedProjection(raw any, directInventory any, context string) (No
 	if directInventory != nil && !reflect.DeepEqual(record["inventory"], directInventory) {
 		return NormalizedProjection{}, fmt.Errorf("%s inventory must match testEvidenceInventory", context)
 	}
+	projectionKind := ""
 	if record["projectionKind"] != nil {
-		if _, err := admit.RuleID(record["projectionKind"], context+" projectionKind"); err != nil {
+		projectionKind, err = admit.RuleID(record["projectionKind"], context+" projectionKind")
+		if err != nil {
 			return NormalizedProjection{}, err
 		}
 	}
-	if record["projectionSummary"] != nil {
-		if _, ok := record["projectionSummary"].(map[string]any); !ok {
-			return NormalizedProjection{}, fmt.Errorf("%s projectionSummary must be an object when present", context)
+	if (projectionKind == "") != (record["projectionSummary"] == nil) {
+		return NormalizedProjection{}, fmt.Errorf("%s projectionKind and projectionSummary must be present together", context)
+	}
+	var projectionSummary map[string]any
+	if projectionKind != "" {
+		if projectionKind != ProofBindingProjectionKind {
+			return NormalizedProjection{}, fmt.Errorf("%s projectionKind is unsupported", context)
+		}
+		projectionSummary, err = admitProofBindingProjectionSummary(record["projectionSummary"], result.Inventory.Entries, context+" projectionSummary")
+		if err != nil {
+			return NormalizedProjection{}, err
 		}
 	}
 	envelope := map[string]any{
@@ -110,13 +150,177 @@ func AdmitNormalizedProjection(raw any, directInventory any, context string) (No
 		"inventory":             InventoryValue(result.Inventory),
 		"nonClaims":             admit.StringSliceToAny(nonClaims),
 	}
-	if record["projectionKind"] != nil {
-		envelope["projectionKind"] = record["projectionKind"]
+	if projectionKind != "" {
+		envelope["projectionKind"] = projectionKind
 	}
-	if record["projectionSummary"] != nil {
-		envelope["projectionSummary"] = record["projectionSummary"]
+	if projectionSummary != nil {
+		envelope["projectionSummary"] = projectionSummary
 	}
 	return NormalizedProjection{Envelope: envelope, Inventory: InventoryValue(result.Inventory), Result: result}, nil
+}
+
+func admitProofBindingProjectionSummary(raw any, entries []Entry, context string) (map[string]any, error) {
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be an object", context)
+	}
+	if err := admit.KnownKeys(record, []string{"commandRefCount", "entryCount", "routeEntryMappings", "schemaVersion"}, context); err != nil {
+		return nil, err
+	}
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return nil, fmt.Errorf("%s schemaVersion must be 2", context)
+	}
+	entryCount, err := nonNegativeInteger(record["entryCount"], context+" entryCount")
+	if err != nil {
+		return nil, err
+	}
+	if entryCount != len(entries) {
+		return nil, fmt.Errorf("%s entryCount must equal nested inventory entries", context)
+	}
+	commandRefs := []string{}
+	entriesByID := make(map[string]Entry, len(entries))
+	for _, entry := range entries {
+		entriesByID[entry.TestID] = entry
+		commandRefs = append(commandRefs, entry.CommandRefs...)
+	}
+	commandRefCount, err := nonNegativeInteger(record["commandRefCount"], context+" commandRefCount")
+	if err != nil {
+		return nil, err
+	}
+	if commandRefCount != len(sortedUnique(commandRefs)) {
+		return nil, fmt.Errorf("%s commandRefCount must equal unique nested inventory commandRefs", context)
+	}
+	mappings, err := admitRouteEntryMappings(record["routeEntryMappings"], entriesByID, context+" routeEntryMappings")
+	if err != nil {
+		return nil, err
+	}
+	if len(mappings) != len(entries) {
+		return nil, fmt.Errorf("%s routeEntryMappings must map every nested inventory entry exactly once", context)
+	}
+	return map[string]any{
+		"commandRefCount":    json.Number(fmt.Sprintf("%d", commandRefCount)),
+		"entryCount":         json.Number(fmt.Sprintf("%d", entryCount)),
+		"routeEntryMappings": mappings,
+		"schemaVersion":      json.Number("2"),
+	}, nil
+}
+
+func admitRouteEntryMappings(raw any, entriesByID map[string]Entry, context string) ([]any, error) {
+	values, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be an array", context)
+	}
+	result := make([]any, 0, len(values))
+	previousRouteID := ""
+	seenTests := map[string]struct{}{}
+	for index, rawMapping := range values {
+		record, ok := rawMapping.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("%s[%d] must be an object", context, index)
+		}
+		mappingContext := fmt.Sprintf("%s[%d]", context, index)
+		if err := admit.KnownKeys(record, []string{"bindingRecordId", "requirementId", "resolutionOrderIndex", "role", "scenarioId", "selector", "surfaceId", "testId", "witnessRouteId"}, mappingContext); err != nil {
+			return nil, err
+		}
+		bindingRecordID, err := admit.SHA256Ref(record["bindingRecordId"], mappingContext+" bindingRecordId")
+		if err != nil {
+			return nil, err
+		}
+		requirementID, err := admit.RuleID(record["requirementId"], mappingContext+" requirementId")
+		if err != nil {
+			return nil, err
+		}
+		surfaceID, err := admit.RuleID(record["surfaceId"], mappingContext+" surfaceId")
+		if err != nil {
+			return nil, err
+		}
+		scenarioText, err := admit.NonEmptyText(record["scenarioId"], mappingContext+" scenarioId")
+		if err != nil {
+			return nil, err
+		}
+		scenarioID, scenarioSurfaceID, err := compactproofcontract.AdmitScenarioID(scenarioText, mappingContext+" scenarioId")
+		if err != nil {
+			return nil, err
+		}
+		if scenarioSurfaceID != surfaceID {
+			return nil, fmt.Errorf("%s scenarioId must be scoped to surfaceId", mappingContext)
+		}
+		expectedBindingRecordID, err := compactproofcontract.BindingRecordID(compactproofcontract.BindingIdentity{RequirementID: requirementID, ScenarioID: scenarioID, SurfaceID: surfaceID})
+		if err != nil {
+			return nil, err
+		}
+		if bindingRecordID != expectedBindingRecordID {
+			return nil, fmt.Errorf("%s bindingRecordId does not match its requirement, surface, and scenario identity", mappingContext)
+		}
+		role, err := admit.Enum(record["role"], map[string]struct{}{compactproofcontract.FalsificationWitnessRole: {}}, mappingContext+" role")
+		if err != nil {
+			return nil, err
+		}
+		selectorText, err := admit.NonEmptyText(record["selector"], mappingContext+" selector")
+		if err != nil {
+			return nil, err
+		}
+		selector, err := compactproofcontract.AdmitWitnessSelector(selectorText, mappingContext+" selector")
+		if err != nil {
+			return nil, err
+		}
+		witnessRouteID, err := admit.SHA256Ref(record["witnessRouteId"], mappingContext+" witnessRouteId")
+		if err != nil {
+			return nil, err
+		}
+		expectedRouteID, err := compactproofcontract.WitnessRouteID(bindingRecordID, role, selector)
+		if err != nil {
+			return nil, err
+		}
+		if witnessRouteID != expectedRouteID {
+			return nil, fmt.Errorf("%s witnessRouteId does not match its binding, role, and selector identity", mappingContext)
+		}
+		resolutionOrderIndex, err := compactproofcontract.AdmitResolutionOrderIndex(record["resolutionOrderIndex"], mappingContext+" resolutionOrderIndex")
+		if err != nil {
+			return nil, err
+		}
+		expectedTestID, err := ProofBindingTestID(witnessRouteID)
+		if err != nil {
+			return nil, err
+		}
+		if previousRouteID != "" && previousRouteID >= witnessRouteID {
+			return nil, fmt.Errorf("%s must be sorted and unique by witnessRouteId", context)
+		}
+		previousRouteID = witnessRouteID
+		testID, err := admit.RuleID(record["testId"], mappingContext+" testId")
+		if err != nil {
+			return nil, err
+		}
+		if testID != expectedTestID {
+			return nil, fmt.Errorf("%s testId does not match witnessRouteId", mappingContext)
+		}
+		if _, duplicate := seenTests[testID]; duplicate {
+			return nil, fmt.Errorf("%s must not map multiple routes to testId %s", context, testID)
+		}
+		seenTests[testID] = struct{}{}
+		entry, exists := entriesByID[testID]
+		if !exists {
+			return nil, fmt.Errorf("%s testId %s does not resolve to a nested inventory entry", mappingContext, testID)
+		}
+		if entry.Selector != selector || !slices.Equal(entry.RequirementRefs, []string{requirementID}) || !slices.Equal(entry.WitnessRefs, []string{witnessRouteID}) {
+			return nil, fmt.Errorf("%s does not match its nested inventory entry", mappingContext)
+		}
+		if entry.EvidenceClass != EvidenceClassProofRouteCandidate || entry.Falsifier != nil || entry.Oracle != nil || len(entry.OwnerInvariantRefs) != 0 || len(entry.QualityFindings) != 0 || !slices.Equal(entry.NonClaims, proofBindingEntryNonClaims) {
+			return nil, fmt.Errorf("%s nested inventory entry must retain exact proof-route-candidate semantics", mappingContext)
+		}
+		result = append(result, map[string]any{
+			"bindingRecordId":      bindingRecordID,
+			"requirementId":        requirementID,
+			"resolutionOrderIndex": json.Number(strconv.Itoa(resolutionOrderIndex)),
+			"role":                 role,
+			"scenarioId":           scenarioID,
+			"selector":             selector,
+			"surfaceId":            surfaceID,
+			"testId":               testID,
+			"witnessRouteId":       witnessRouteID,
+		})
+	}
+	return result, nil
 }
 
 func admitNormalizedSources(raw any, context string) ([]SourceMetadata, error) {

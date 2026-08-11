@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
@@ -18,8 +19,8 @@ func TestBuildProfileResolvesRequiredSurfaceAndRejectsMissingSurface(t *testing.
 	if result.ExitCode != 0 || result.Report.State != "passed" || result.ProfileReport.ProfileResolutionState != "resolved" {
 		t.Fatalf("BuildProfile() exit=%d state=%s profileState=%s", result.ExitCode, result.Report.State, result.ProfileReport.ProfileResolutionState)
 	}
-	if result.ProfileReport.RequirementCount != 1 || result.ProfileReport.WitnessMappingCount != 1 {
-		t.Fatalf("profile counts=%#v, want one requirement and witness", result.ProfileReport)
+	if result.ProfileReport.BindingCount != 1 || result.ProfileReport.RequirementCount != 1 || result.ProfileReport.WitnessMappingCount != 2 {
+		t.Fatalf("profile counts=%#v, want one binding, one requirement, and two witness routes", result.ProfileReport)
 	}
 
 	input := validConformanceProfileInput()
@@ -34,6 +35,101 @@ func TestBuildProfileResolvesRequiredSurfaceAndRejectsMissingSurface(t *testing.
 	}
 	if !strings.Contains(strings.Join(result.ProfileReport.Failures, "\n"), "surface.missing") {
 		t.Fatalf("failures=%#v, want missing surface", result.ProfileReport.Failures)
+	}
+}
+
+func TestBuildProfilePreservesMultipleBindingsAndRoleQualifiedRoutes(t *testing.T) {
+	input := validConformanceProfileInput()
+	proofContract := input["proofContract"].(map[string]any)
+	proofContract["bindings"] = append(
+		proofContract["bindings"].([]any),
+		conformanceBindingFixture("go test ./... -run TestSecond", "surface.local::scenario.second"),
+	)
+
+	result, err := BuildProfile(input, "local")
+	if err != nil {
+		t.Fatalf("BuildProfile() error=%v", err)
+	}
+	if result.ExitCode != 0 {
+		t.Fatalf("BuildProfile() exit=%d failures=%#v", result.ExitCode, result.ProfileReport.Failures)
+	}
+	if result.ProfileReport.BindingCount != 2 || result.ProfileReport.RequirementCount != 1 || result.ProfileReport.WitnessMappingCount != 4 {
+		t.Fatalf("profile counts=%#v", result.ProfileReport)
+	}
+
+	invalid := validConformanceProfileInput()
+	refs := invalid["proofContract"].(map[string]any)["bindings"].([]any)[0].(map[string]any)["witnessRefs"].([]any)
+	invalid["proofContract"].(map[string]any)["bindings"].([]any)[0].(map[string]any)["witnessRefs"] = refs[:1]
+	if _, err := BuildProfile(invalid, "local"); err == nil || !strings.Contains(err.Error(), "exactly positive and falsification") {
+		t.Fatalf("BuildProfile() missing-role error=%v", err)
+	}
+}
+
+func TestBindingFromPreservesAndBoundsWitnessResolutionOrder(t *testing.T) {
+	binding := conformanceBindingFixture("go test ./...", "surface.local::scenario")
+	refs := binding["witnessRefs"].([]any)
+	refs[0].(map[string]any)["resolutionOrderIndex"] = json.Number("7")
+	refs[1].(map[string]any)["resolutionOrderIndex"] = json.Number("3")
+
+	admitted, err := bindingFrom(binding)
+	if err != nil {
+		t.Fatalf("bindingFrom() error=%v", err)
+	}
+	if admitted.WitnessRefs[0].Role != compactproofcontract.FalsificationWitnessRole || admitted.WitnessRefs[0].ResolutionOrderIndex != 7 {
+		t.Fatalf("falsification witness=%#v, want preserved resolution order 7", admitted.WitnessRefs[0])
+	}
+	if admitted.WitnessRefs[1].Role != compactproofcontract.PositiveWitnessRole || admitted.WitnessRefs[1].ResolutionOrderIndex != 3 {
+		t.Fatalf("positive witness=%#v, want preserved resolution order 3", admitted.WitnessRefs[1])
+	}
+	assertStringSlice(t, admitted.WitnessRefs[0].EnvironmentClasses, []string{"local-go"})
+	assertStringSlice(t, admitted.WitnessRefs[0].VerifyCommands, []string{"go test ./... -run TestFalsification"})
+	assertStringSlice(t, admitted.WitnessRefs[1].EnvironmentClasses, []string{"local-go"})
+	assertStringSlice(t, admitted.WitnessRefs[1].VerifyCommands, []string{"go test ./... -run TestPositive"})
+
+	delete(refs[0].(map[string]any), "resolutionOrderIndex")
+	if _, err := bindingFrom(binding); err == nil || !strings.Contains(err.Error(), "JSON-safe non-negative integer") {
+		t.Fatalf("bindingFrom() missing resolutionOrderIndex error=%v", err)
+	}
+
+	binding = conformanceBindingFixture("go test ./...", "surface.local::scenario")
+	binding["witnessRefs"].([]any)[0].(map[string]any)["resolutionOrderIndex"] = json.Number("9007199254740992")
+	if _, err := bindingFrom(binding); err == nil || !strings.Contains(err.Error(), "JSON-safe non-negative integer") {
+		t.Fatalf("bindingFrom() unsafe resolutionOrderIndex error=%v", err)
+	}
+}
+
+func TestBuildProfileEvaluatesWitnessOwnedEnvironmentAndCommands(t *testing.T) {
+	input := validConformanceProfileInput()
+	binding := input["proofContract"].(map[string]any)["bindings"].([]any)[0].(map[string]any)
+	positive := binding["witnessRefs"].([]any)[1].(map[string]any)
+	positive["environmentClasses"] = []any{"remote-provider"}
+	positive["verifyCommands"] = []any{"go test ./... -run TestRemotePositive"}
+	input["policy"].(map[string]any)["knownEnvironmentClasses"] = []any{"local-go", "remote-provider"}
+
+	result, err := BuildProfile(input, "local")
+	if err != nil {
+		t.Fatalf("BuildProfile() error=%v", err)
+	}
+	if result.ExitCode == 0 || !strings.Contains(strings.Join(result.ProfileReport.Failures, "\n"), "uses unallowed environment remote-provider") {
+		t.Fatalf("BuildProfile() exit=%d failures=%#v, want witness environment rejection", result.ExitCode, result.ProfileReport.Failures)
+	}
+	if !contains(result.ProfileReport.VerifyCommands, "go test ./... -run TestRemotePositive") {
+		t.Fatalf("profile commands=%#v, want witness-owned command", result.ProfileReport.VerifyCommands)
+	}
+}
+
+func TestBuildProfileRejectsBindingForUndeclaredSurface(t *testing.T) {
+	input := validConformanceProfileInput()
+	proofContract := input["proofContract"].(map[string]any)
+	existing := proofContract["bindings"].([]any)
+	proofContract["bindings"] = []any{
+		conformanceBindingFixtureForSurface("go test ./... -run TestGhost", "surface.ghost", "surface.ghost::scenario"),
+		existing[0],
+	}
+
+	_, err := BuildProfile(input, "local")
+	if err == nil || !strings.Contains(err.Error(), "references unknown surfaceId surface.ghost") {
+		t.Fatalf("BuildProfile() dangling surface error=%v", err)
 	}
 }
 
@@ -102,33 +198,62 @@ func TestListReturnsSortedProfileIDsAndRejectsInvalidInput(t *testing.T) {
 }
 
 func TestBindingFromRejectsShellControlVerifyCommand(t *testing.T) {
-	_, err := bindingFrom(map[string]any{
-		"blockingStatus":             "blocking",
-		"proofContractState":         "witness_backed",
-		"requiredEnvironmentClasses": []any{"local-go"},
-		"requirementId":              "REQ-PROOFKIT-001",
-		"scenarioId":                 "proofkit.scenario",
-		"surfaceId":                  "proofkit.surface",
-		"verifyCommands":             []any{"go test ./... && curl example.test"},
-		"witnessRefs": []any{map[string]any{
-			"role":     "unit",
-			"selector": "internal/test.go",
-		}},
-	})
+	_, err := bindingFrom(conformanceBindingFixture("go test ./... && curl example.test", "surface.local::scenario"))
 	if err == nil || !strings.Contains(err.Error(), "display-only command text") {
 		t.Fatalf("bindingFrom() error=%v, want display-only command rejection", err)
+	}
+}
+
+func TestBindingFromRejectsIdentityOutsideCompactOwnerGrammar(t *testing.T) {
+	tests := []struct {
+		name string
+		edit func(map[string]any)
+		want string
+	}{
+		{
+			name: "unscoped scenario",
+			edit: func(binding map[string]any) {
+				binding["scenarioId"] = "unscoped-scenario"
+			},
+			want: "surface_id::stable_anchor",
+		},
+		{
+			name: "scenario surface mismatch",
+			edit: func(binding map[string]any) {
+				binding["scenarioId"] = "surface.other::scenario"
+			},
+			want: "must be scoped under surfaceId surface.local",
+		},
+		{
+			name: "unsafe selector",
+			edit: func(binding map[string]any) {
+				for _, raw := range binding["witnessRefs"].([]any) {
+					ref := raw.(map[string]any)
+					ref["selector"] = "../outside.go::TestOutside"
+				}
+			},
+			want: "must not escape the repository root",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			binding := conformanceBindingFixture("go test ./...", "surface.local::scenario")
+			test.edit(binding)
+			if _, err := bindingFrom(binding); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("bindingFrom() error=%v, want %q", err, test.want)
+			}
+		})
 	}
 }
 
 func validConformanceProfileInput() map[string]any {
 	manifestNonClaim := "Conformance profile test manifest is not live proof."
 	return map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"profileId":     "local",
 		"policy": map[string]any{
 			"knownEnvironmentClasses":             []any{"local-go"},
 			"localEnvironmentClasses":             []any{"local-go"},
-			"allowedProofContractStates":          []any{"witness_backed"},
 			"blockingStatuses":                    []any{"blocking"},
 			"failOnUnusedAllowedEnvironmentClass": true,
 			"expectedManifest": map[string]any{
@@ -161,7 +286,9 @@ func validConformanceProfileInput() map[string]any {
 			},
 		},
 		"proofContract": map[string]any{
-			"contractId": "proofkit.test.proof-contract",
+			"contractId":      "proofkit.test.proof-contract",
+			"declarationKind": "proofkit.requirement-proof-route-declaration",
+			"schemaVersion":   json.Number("2"),
 			"surfaces": []any{
 				map[string]any{
 					"surfaceId":                        "surface.local",
@@ -169,20 +296,48 @@ func validConformanceProfileInput() map[string]any {
 					"preconditionedEnvironmentClasses": []any{},
 				},
 			},
-			"bindings": []any{
-				map[string]any{
-					"requirementId":              "REQ-PROOFKIT-001",
-					"surfaceId":                  "surface.local",
-					"scenarioId":                 "proofkit.scenario",
-					"blockingStatus":             "blocking",
-					"proofContractState":         "witness_backed",
-					"requiredEnvironmentClasses": []any{"local-go"},
-					"verifyCommands":             []any{"go test ./..."},
-					"witnessRefs": []any{
-						map[string]any{"role": "unit", "selector": "internal/test.go::TestOK"},
-					},
-				},
-			},
+			"bindings": []any{conformanceBindingFixture("go test ./...", "surface.local::scenario")},
+		},
+	}
+}
+
+func conformanceBindingFixture(command, scenarioID string) map[string]any {
+	return conformanceBindingFixtureForSurface(command, "surface.local", scenarioID)
+}
+
+func conformanceBindingFixtureForSurface(command, surfaceID, scenarioID string) map[string]any {
+	identity := compactproofcontract.BindingIdentity{
+		RequirementID: "REQ-PROOFKIT-001",
+		ScenarioID:    scenarioID,
+		SurfaceID:     surfaceID,
+	}
+	bindingRecordID, err := compactproofcontract.BindingRecordID(identity)
+	if err != nil {
+		panic(err)
+	}
+	selector := "internal/test.go::TestOK"
+	falsificationRouteID, err := compactproofcontract.WitnessRouteID(bindingRecordID, compactproofcontract.FalsificationWitnessRole, selector)
+	if err != nil {
+		panic(err)
+	}
+	positiveRouteID, err := compactproofcontract.WitnessRouteID(bindingRecordID, compactproofcontract.PositiveWitnessRole, selector)
+	if err != nil {
+		panic(err)
+	}
+	return map[string]any{
+		"bindingRecordId":                   bindingRecordID,
+		"blockingStatus":                    "blocking",
+		"declaredMutationResistanceClaimId": "proofkit.claim.mutation.test",
+		"invariantRole":                     "contract",
+		"ownedInvariant":                    "proofkit.test.invariant",
+		"requiredEnvironmentClasses":        []any{"local-go"},
+		"requirementId":                     identity.RequirementID,
+		"scenarioId":                        identity.ScenarioID,
+		"surfaceId":                         identity.SurfaceID,
+		"verifyCommands":                    []any{command},
+		"witnessRefs": []any{
+			map[string]any{"environmentClasses": []any{"local-go"}, "resolutionOrderIndex": json.Number("0"), "role": "falsification", "selector": selector, "verifyCommands": []any{"go test ./... -run TestFalsification"}, "witnessRouteId": falsificationRouteID},
+			map[string]any{"environmentClasses": []any{"local-go"}, "resolutionOrderIndex": json.Number("1"), "role": "positive", "selector": selector, "verifyCommands": []any{"go test ./... -run TestPositive"}, "witnessRouteId": positiveRouteID},
 		},
 	}
 }

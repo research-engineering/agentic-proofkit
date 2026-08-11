@@ -85,7 +85,7 @@ func build(raw any) (map[string]any, error) {
 		"proofMode":                   input.Proof.Mode,
 		"requirementCoverage":         mapsToAny(requirements),
 		"requirementCoverageCount":    len(requirements),
-		"schemaVersion":               2,
+		"schemaVersion":               3,
 		"sourceId":                    input.Source.SourceID,
 		"state":                       state,
 		"testInventoryId":             inventoryID(input.Inventory),
@@ -151,7 +151,7 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 	result := make([]map[string]any, 0, len(sourceRequirements))
 	for _, requirement := range sourceRequirements {
 		proof, hasProof := input.Proof.Requirements[requirement.RequirementID]
-		hasProofRoute := hasProof && proof.ProofState == "witness_backed"
+		hasProofRoute := hasProof && (input.Proof.Mode == "compact" && len(proof.Scenarios) > 0 || input.Proof.Mode == "structured" && proof.ProofState == "witness_backed")
 		entriesForRequirement := entriesReferencingRequirement(entries, requirement.RequirementID)
 		commandIDs := proof.CommandIDs
 		if hasProof && input.Proof.Mode == "compact" && len(commandIDs) == 0 {
@@ -171,7 +171,7 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 		}
 		requirementFailures = sortedUnique(requirementFailures)
 		*failures = append(*failures, requirementFailures...)
-		result = append(result, map[string]any{
+		row := map[string]any{
 			"claimLevel":         requirement.ClaimLevel,
 			"commandIds":         admit.StringSliceToAny(commandIDs),
 			"coverageState":      state,
@@ -182,17 +182,21 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 			"lifecycleState":     requirement.Lifecycle.State,
 			"nonClaims":          admit.StringSliceToAny(requirement.NonClaims),
 			"ownerId":            requirement.OwnerID,
-			"proofState":         proof.ProofState,
 			"requirementId":      requirement.RequirementID,
 			"scenarioCount":      len(scenarios),
-			"scenarios":          scenariosToAny(scenarios),
+			"scenarios":          scenariosToAny(scenarios, input.Proof.Mode),
 			"specPath":           input.Source.RequirementsPath,
 			"testIds":            admit.StringSliceToAny(entryIDs(entriesForRequirement)),
 			"tests":              testEntriesToAny(entriesForRequirement),
 			"verifyCommands":     admit.StringSliceToAny(proof.VerifyCommands),
-			"witnessRefs":        admit.StringSliceToAny(proof.WitnessRefs),
-			"witnessSelectors":   admit.StringSliceToAny(proof.WitnessSelectors),
-		})
+		}
+		if input.Proof.Mode == "compact" {
+			row["declaredWitnessRoutes"] = declaredWitnessRoutesToAny(proof.DeclaredWitnessRoutes)
+		} else {
+			row["proofState"] = proof.ProofState
+			row["witnessRefs"] = admit.StringSliceToAny(proof.WitnessRefs)
+		}
+		result = append(result, row)
 	}
 	for requirementID := range input.Proof.Requirements {
 		requirement, ok := sourceRequirementByID(input.Source, requirementID)
@@ -327,7 +331,9 @@ func scopedProofWitnessRefs(input compositeInput, ownerSet map[string]struct{}) 
 			continue
 		}
 		result = append(result, proof.WitnessRefs...)
-		result = append(result, proof.WitnessSelectors...)
+		for _, route := range proof.DeclaredWitnessRoutes {
+			result = append(result, route.WitnessRouteID)
+		}
 	}
 	return sortedUnique(result)
 }

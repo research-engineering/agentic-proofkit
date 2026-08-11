@@ -51,8 +51,8 @@ func AdmitOutput(raw any) (map[string]any, error) {
 			return nil, fmt.Errorf("requirement coverage output is missing required field %s", key)
 		}
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) && record["schemaVersion"] != 2 {
-		return nil, fmt.Errorf("requirement coverage output schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) && record["schemaVersion"] != 3 {
+		return nil, fmt.Errorf("requirement coverage output schemaVersion must be 3")
 	}
 	if record["viewKind"] != "proofkit.requirement-coverage-view" || record["authority"] != "lookup_only" {
 		return nil, fmt.Errorf("requirement coverage output identity is invalid")
@@ -74,8 +74,12 @@ func AdmitOutput(raw any) (map[string]any, error) {
 	if _, err := admit.Enum(record["state"], map[string]struct{}{"failed": {}, "passed": {}}, "requirement coverage output state"); err != nil {
 		return nil, err
 	}
+	proofMode, err := admit.Enum(record["proofMode"], map[string]struct{}{"compact": {}, "structured": {}}, "requirement coverage output proofMode")
+	if err != nil {
+		return nil, err
+	}
 	for _, row := range coverageRowDescriptors {
-		if err := admitCoverageOutputRows(record, row.rowsKey, row.countKey, row.idKey); err != nil {
+		if err := admitCoverageOutputRows(record, row.rowsKey, row.countKey, row.idKey, proofMode); err != nil {
 			return nil, err
 		}
 	}
@@ -122,7 +126,7 @@ func SelectRequirements(output map[string]any, selected map[string]struct{}) map
 	}
 }
 
-func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey string) error {
+func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey, proofMode string) error {
 	rows, ok := record[rowsKey].([]any)
 	if !ok {
 		return fmt.Errorf("requirement coverage output %s must be an array", rowsKey)
@@ -136,7 +140,7 @@ func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey str
 		if !ok {
 			return fmt.Errorf("requirement coverage output %s[%d] must be an object", rowsKey, index)
 		}
-		rowKeys := coverageRowKeys(rowsKey)
+		rowKeys := coverageRowKeys(rowsKey, proofMode)
 		if err := admit.KnownKeys(row, rowKeys, "requirement coverage output "+rowsKey); err != nil {
 			return err
 		}
@@ -145,7 +149,7 @@ func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey str
 				return fmt.Errorf("requirement coverage output %s[%d] is missing required field %s", rowsKey, index, key)
 			}
 		}
-		if err := admitCoverageNestedRows(row, rowsKey); err != nil {
+		if err := admitCoverageNestedRows(row, rowsKey, proofMode); err != nil {
 			return err
 		}
 		id, err := admit.RuleID(row[idKey], fmt.Sprintf("requirement coverage output %s[%d].%s", rowsKey, index, idKey))
@@ -179,7 +183,7 @@ func cloneCoverageJSONValue(value any) any {
 	}
 }
 
-func admitCoverageNestedRows(row map[string]any, rowsKey string) error {
+func admitCoverageNestedRows(row map[string]any, rowsKey, proofMode string) error {
 	if err := admitNestedRecords(row["tests"], projectedTestKeys, "requirement coverage output tests"); err != nil {
 		return err
 	}
@@ -190,7 +194,22 @@ func admitCoverageNestedRows(row map[string]any, rowsKey string) error {
 		}
 	}
 	if rowsKey == "requirementCoverage" {
-		return admitNestedRecords(row["scenarios"], []string{"commandIds", "environmentClasses", "scenarioId", "verifyCommands", "witnessId", "witnessKind", "witnessPath", "witnessSelectors"}, "requirement coverage output scenarios")
+		if proofMode == "compact" {
+			if err := admitNestedRecords(row["declaredWitnessRoutes"], compactWitnessRouteKeys(), "requirement coverage output declaredWitnessRoutes"); err != nil {
+				return err
+			}
+			if err := admitNestedRecords(row["scenarios"], []string{"bindingRecordId", "bindingVerifyCommands", "declaredWitnessRoutes", "environmentClasses", "requiredEnvironmentClasses", "requirementId", "scenarioId", "surfaceId", "verifyCommands"}, "requirement coverage output scenarios"); err != nil {
+				return err
+			}
+			for _, rawScenario := range row["scenarios"].([]any) {
+				scenario := rawScenario.(map[string]any)
+				if err := admitNestedRecords(scenario["declaredWitnessRoutes"], compactWitnessRouteKeys(), "requirement coverage output scenario declaredWitnessRoutes"); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		return admitNestedRecords(row["scenarios"], []string{"commandIds", "environmentClasses", "scenarioId", "verifyCommands", "witnessId", "witnessKind", "witnessPath"}, "requirement coverage output scenarios")
 	}
 	return nil
 }
@@ -212,10 +231,14 @@ func admitNestedRecords(raw any, keys []string, context string) error {
 	return nil
 }
 
-func coverageRowKeys(rowsKey string) []string {
+func coverageRowKeys(rowsKey, proofMode string) []string {
 	switch rowsKey {
 	case "requirementCoverage":
-		return []string{"claimLevel", "commandIds", "coverageState", "environmentClasses", "evidenceClass", "failures", "invariant", "lifecycleState", "nonClaims", "ownerId", "proofState", "requirementId", "scenarioCount", "scenarios", "specPath", "testIds", "tests", "verifyCommands", "witnessRefs", "witnessSelectors"}
+		common := []string{"claimLevel", "commandIds", "coverageState", "environmentClasses", "evidenceClass", "failures", "invariant", "lifecycleState", "nonClaims", "ownerId", "requirementId", "scenarioCount", "scenarios", "specPath", "testIds", "tests", "verifyCommands"}
+		if proofMode == "compact" {
+			return append(common, "declaredWitnessRoutes")
+		}
+		return append(common, "proofState", "witnessRefs")
 	case "ownerInvariantCoverage":
 		return []string{"coverageState", "evidenceClass", "nonClaims", "ownerId", "ownerInvariantId", "sourcePath", "summary", "testIds", "tests", "warnings"}
 	case "commandCoverage":
@@ -223,6 +246,10 @@ func coverageRowKeys(rowsKey string) []string {
 	default:
 		return nil
 	}
+}
+
+func compactWitnessRouteKeys() []string {
+	return []string{"bindingRecordId", "environmentClasses", "requirementId", "resolutionOrderIndex", "role", "scenarioId", "selector", "surfaceId", "verifyCommands", "witnessRouteId"}
 }
 
 func wireCountEquals(raw any, expected int) bool {

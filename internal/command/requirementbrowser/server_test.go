@@ -703,7 +703,7 @@ func proofInput(t *testing.T) any {
 func coverageInput(t *testing.T) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "viewInputId": "proofkit.browser.coverage.view",
   "requirementSource": {
     "schemaVersion": 1,

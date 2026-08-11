@@ -35,7 +35,21 @@ func IsCompact(raw any) bool {
 	if !ok {
 		return false
 	}
-	return record["schema_version"] != nil && record["contract_kind"] == "requirement_proof_binding"
+	for _, key := range []string{
+		"authority_state",
+		"binding_columns",
+		"contract_id",
+		"contract_kind",
+		"normalization_profile",
+		"schema_version",
+		"surface_columns",
+		"witness_columns",
+	} {
+		if _, exists := record[key]; exists {
+			return true
+		}
+	}
+	return false
 }
 
 func BuildJSON(raw any, options Options) (any, int, error) {
@@ -178,18 +192,16 @@ func compactView(raw any, options Options) (map[string]any, error) {
 		return nil, err
 	}
 	record := projection.(map[string]any)
-	requirements := anyArray(record["requirements"])
-	viewRequirements := make([]any, 0, len(requirements))
-	commandSet := map[string]struct{}{}
+	bindings := anyArray(record["bindings"])
+	viewBindings := make([]any, 0, len(bindings))
+	requirementSet := map[string]struct{}{}
 	preconditioned := 0
-	for _, item := range requirements {
-		requirement := compactRequirement(item.(map[string]any))
-		viewRequirements = append(viewRequirements, requirement)
-		if bool, _ := requirement["preconditioned"].(bool); bool {
+	for _, item := range bindings {
+		binding := compactBinding(item.(map[string]any))
+		viewBindings = append(viewBindings, binding)
+		requirementSet[stringValue(binding["requirementId"])] = struct{}{}
+		if value, _ := binding["preconditioned"].(bool); value {
 			preconditioned++
-		}
-		for _, command := range stringArray(requirement["verifyCommands"]) {
-			commandSet[command] = struct{}{}
 		}
 	}
 	nonClaims := append([]string{}, defaultNonClaims...)
@@ -199,49 +211,51 @@ func compactView(raw any, options Options) (map[string]any, error) {
 		"Compact requirement proof views do not infer spec paths, owner routes, or local environment policy.",
 	)
 	return map[string]any{
-		"authority":                      "lookup_only",
-		"commandCount":                   len(commandSet),
-		"contractId":                     record["contractId"],
-		"localEnvironmentPolicy":         record["localEnvironmentPolicy"],
-		"nonClaims":                      admit.StringSliceToAny(sortedUnique(nonClaims)),
-		"preconditionedRequirementCount": preconditioned,
-		"requirementCount":               len(viewRequirements),
-		"requirements":                   viewRequirements,
-		"schemaVersion":                  1,
-		"viewKind":                       "proofkit.compact-requirement-proof-view",
+		"authority":                  "lookup_only",
+		"bindingCount":               len(viewBindings),
+		"bindings":                   viewBindings,
+		"commandCount":               len(anyArray(record["commands"])),
+		"contractId":                 record["contractId"],
+		"localEnvironmentPolicy":     record["localEnvironmentPolicy"],
+		"nonClaims":                  admit.StringSliceToAny(sortedUnique(nonClaims)),
+		"preconditionedBindingCount": preconditioned,
+		"requirementCount":           len(requirementSet),
+		"schemaVersion":              2,
+		"viewKind":                   "proofkit.compact-requirement-proof-view",
 	}, nil
 }
 
-func compactRequirement(requirement map[string]any) map[string]any {
-	witnesses := requirement["testWitnesses"].(map[string]any)
-	positive := compactWitness(witnesses["positive"].(map[string]any))
-	falsification := compactWitness(witnesses["falsification"].(map[string]any))
+func compactBinding(binding map[string]any) map[string]any {
+	witnesses := binding["testWitnesses"].(map[string]any)
+	routes := []any{
+		compactWitnessRoute(binding["bindingRecordId"], witnesses["falsification"].(map[string]any)),
+		compactWitnessRoute(binding["bindingRecordId"], witnesses["positive"].(map[string]any)),
+	}
 	return map[string]any{
-		"blockingStatus":             requirement["blockingStatus"],
-		"falsificationWitness":       falsification,
-		"invariantRole":              requirement["invariantRole"],
-		"mutationResistanceState":    requirement["mutationResistanceContext"].(map[string]any)["mutationResistanceState"],
-		"ownedInvariant":             requirement["ownedInvariant"],
-		"positiveWitness":            positive,
-		"preconditioned":             requirement["preconditioned"],
-		"proofContractState":         requirement["proofContractState"],
-		"requiredEnvironmentClasses": requirement["requiredEnvironmentClasses"],
-		"requirementId":              requirement["requirementId"],
-		"scenarioId":                 requirement["scenarioId"],
-		"surfaceId":                  requirement["surfaceId"],
-		"verifyCommands":             requirement["verifyCommands"],
-		"witnessSelectors": admit.StringSliceToAny(sortedUnique([]string{
-			stringValue(positive["selector"]),
-			stringValue(falsification["selector"]),
-		})),
+		"bindingRecordId":                   binding["bindingRecordId"],
+		"blockingStatus":                    binding["blockingStatus"],
+		"declaredMutationResistanceClaimId": binding["declaredMutationResistanceClaimId"],
+		"declaredWitnessRoutes":             routes,
+		"invariantRole":                     binding["invariantRole"],
+		"ownedInvariant":                    binding["ownedInvariant"],
+		"preconditioned":                    binding["preconditioned"],
+		"requiredEnvironmentClasses":        binding["requiredEnvironmentClasses"],
+		"requirementId":                     binding["requirementId"],
+		"scenarioId":                        binding["scenarioId"],
+		"surfaceId":                         binding["surfaceId"],
+		"verifyCommands":                    binding["verifyCommands"],
 	}
 }
 
-func compactWitness(witness map[string]any) map[string]any {
+func compactWitnessRoute(bindingRecordID any, witness map[string]any) map[string]any {
 	return map[string]any{
-		"environmentClasses": witness["environmentClasses"],
-		"selector":           witness["selector"],
-		"verifyCommands":     witness["verifyCommandRefs"],
+		"bindingRecordId":      bindingRecordID,
+		"environmentClasses":   witness["environmentClasses"],
+		"resolutionOrderIndex": witness["resolutionOrderIndex"],
+		"role":                 witness["role"],
+		"selector":             witness["selector"],
+		"verifyCommands":       witness["verifyCommandRefs"],
+		"witnessRouteId":       witness["witnessRouteId"],
 	}
 }
 
@@ -299,38 +313,42 @@ func compactMarkdown(view map[string]any) string {
 		"# Compact Requirement Proof View: " + markdownText(stringValue(view["contractId"])),
 		"",
 		"Authority: " + markdownText(stringValue(view["authority"])),
+		fmt.Sprintf("Bindings: %d", intValue(view["bindingCount"])),
 		fmt.Sprintf("Requirements: %d", intValue(view["requirementCount"])),
-		fmt.Sprintf("Preconditioned requirements: %d", intValue(view["preconditionedRequirementCount"])),
+		fmt.Sprintf("Preconditioned bindings: %d", intValue(view["preconditionedBindingCount"])),
 		fmt.Sprintf("Commands: %d", intValue(view["commandCount"])),
 		"Local environment policy: " + plainListOrNone(stringArray(policy["localEnvironmentClasses"])),
 		"",
-		"## Requirements",
+		"## Bindings",
 		"",
 	}
-	requirements := anyArray(view["requirements"])
-	if len(requirements) == 0 {
-		lines = append(lines, "No requirements declared.", "")
+	bindings := anyArray(view["bindings"])
+	if len(bindings) == 0 {
+		lines = append(lines, "No bindings declared.", "")
 	} else {
-		for _, item := range requirements {
-			requirement := item.(map[string]any)
+		for _, item := range bindings {
+			binding := item.(map[string]any)
 			lines = append(lines,
-				"### "+markdownText(stringValue(requirement["requirementId"])),
+				"### "+markdownText(stringValue(binding["requirementId"]))+" / "+markdownText(stringValue(binding["scenarioId"])),
 				"",
-				"- Surface: "+markdownText(stringValue(requirement["surfaceId"])),
-				"- Scenario: "+markdownText(stringValue(requirement["scenarioId"])),
-				"- Invariant: "+markdownText(stringValue(requirement["ownedInvariant"])),
-				"- Invariant role: "+markdownText(stringValue(requirement["invariantRole"])),
-				"- Proof state: "+markdownText(stringValue(requirement["proofContractState"])),
-				"- Blocking: "+markdownText(stringValue(requirement["blockingStatus"])),
-				"- Preconditioned: "+fmt.Sprint(requirement["preconditioned"]),
-				"- Mutation resistance: "+markdownText(stringValue(requirement["mutationResistanceState"])),
-				"- Positive witness: "+inlineCode(stringValue(requirement["positiveWitness"].(map[string]any)["selector"])),
-				"- Falsification witness: "+inlineCode(stringValue(requirement["falsificationWitness"].(map[string]any)["selector"])),
-				"- Commands: "+inlineCodeListOrNone(stringArray(requirement["verifyCommands"])),
-				"- Environments: "+plainListOrNone(stringArray(requirement["requiredEnvironmentClasses"])),
-				"- Witness selectors: "+inlineCodeListOrNone(stringArray(requirement["witnessSelectors"])),
-				"",
+				"- Binding record: "+inlineCode(stringValue(binding["bindingRecordId"])),
+				"- Surface: "+markdownText(stringValue(binding["surfaceId"])),
+				"- Invariant: "+markdownText(stringValue(binding["ownedInvariant"])),
+				"- Invariant role: "+markdownText(stringValue(binding["invariantRole"])),
+				"- Blocking: "+markdownText(stringValue(binding["blockingStatus"])),
+				"- Preconditioned: "+fmt.Sprint(binding["preconditioned"]),
+				"- Caller mutation-resistance claim: "+inlineCode(stringValue(binding["declaredMutationResistanceClaimId"])),
+				"- Commands: "+inlineCodeListOrNone(stringArray(binding["verifyCommands"])),
+				"- Environments: "+plainListOrNone(stringArray(binding["requiredEnvironmentClasses"])),
 			)
+			for _, routeValue := range anyArray(binding["declaredWitnessRoutes"]) {
+				route := routeValue.(map[string]any)
+				lines = append(lines,
+					"- "+markdownText(stringValue(route["role"]))+" witness: "+inlineCode(stringValue(route["selector"])),
+					"  route: "+inlineCode(stringValue(route["witnessRouteId"]))+"; order: "+fmt.Sprint(route["resolutionOrderIndex"])+"; commands: "+inlineCodeListOrNone(stringArray(route["verifyCommands"])),
+				)
+			}
+			lines = append(lines, "")
 		}
 	}
 	lines = append(lines, "## View Non-Claims", "")
@@ -424,45 +442,48 @@ func html(view map[string]any) string {
 }
 
 func compactHTML(view map[string]any) string {
-	requirements := anyArray(view["requirements"])
-	cards := make([]browserdoc.Card, 0, len(requirements))
-	rows := make([]browserdoc.Row, 0, len(requirements))
+	bindings := anyArray(view["bindings"])
+	cards := make([]browserdoc.Card, 0, len(bindings))
+	rows := make([]browserdoc.Row, 0, len(bindings))
 	surfaces := []string{}
 	blockingValues := []string{}
-	proofStates := []string{}
+	invariantRoles := []string{}
 	preconditionedValues := []string{}
-	for _, item := range requirements {
-		requirement := item.(map[string]any)
-		surface := stringValue(requirement["surfaceId"])
-		blocking := stringValue(requirement["blockingStatus"])
-		proofState := stringValue(requirement["proofContractState"])
-		preconditioned := fmt.Sprint(requirement["preconditioned"])
+	for _, item := range bindings {
+		binding := item.(map[string]any)
+		surface := stringValue(binding["surfaceId"])
+		blocking := stringValue(binding["blockingStatus"])
+		invariantRole := stringValue(binding["invariantRole"])
+		preconditioned := fmt.Sprint(binding["preconditioned"])
 		surfaces = append(surfaces, surface)
 		blockingValues = append(blockingValues, blocking)
-		proofStates = append(proofStates, proofState)
+		invariantRoles = append(invariantRoles, invariantRole)
 		preconditionedValues = append(preconditionedValues, preconditioned)
-		filters := []browserdoc.FilterValue{{Key: "surface", Value: surface}, {Key: "blocking", Value: blocking}, {Key: "proof-state", Value: proofState}, {Key: "preconditioned", Value: preconditioned}}
+		filters := []browserdoc.FilterValue{{Key: "surface", Value: surface}, {Key: "blocking", Value: blocking}, {Key: "invariant-role", Value: invariantRole}, {Key: "preconditioned", Value: preconditioned}}
+		routeSearch := compactRouteSearchValues(binding)
 		cards = append(cards, browserdoc.Card{
-			ID:           stringValue(requirement["requirementId"]),
-			Title:        stringValue(requirement["ownedInvariant"]),
+			ID:           stringValue(binding["bindingRecordId"]),
+			Title:        stringValue(binding["ownedInvariant"]),
 			GroupID:      "surface:" + surface,
 			GroupLabel:   "Surface: " + surface,
-			Body:         compactProofRequirementBody(requirement),
-			SearchText:   browserdoc.SearchText(append([]string{stringValue(requirement["requirementId"]), surface, stringValue(requirement["scenarioId"]), stringValue(requirement["invariantRole"]), stringValue(requirement["ownedInvariant"]), proofState, blocking, preconditioned, stringValue(requirement["mutationResistanceState"])}, append(stringArray(requirement["verifyCommands"]), append(stringArray(requirement["requiredEnvironmentClasses"]), stringArray(requirement["witnessSelectors"])...)...)...)),
+			Body:         compactProofBindingBody(binding),
+			SearchText:   browserdoc.SearchText(append([]string{stringValue(binding["bindingRecordId"]), stringValue(binding["requirementId"]), surface, stringValue(binding["scenarioId"]), invariantRole, stringValue(binding["ownedInvariant"]), blocking, preconditioned, stringValue(binding["declaredMutationResistanceClaimId"])}, append(stringArray(binding["verifyCommands"]), append(stringArray(binding["requiredEnvironmentClasses"]), routeSearch...)...)...)),
 			FilterValues: filters,
 		})
 		rows = append(rows, browserdoc.Row{
-			ID: stringValue(requirement["requirementId"]),
+			ID: stringValue(binding["bindingRecordId"]),
 			Cells: []browserdoc.Cell{
-				browserdoc.TableCell("requirement", stringValue(requirement["requirementId"]), true),
+				browserdoc.TableCell("binding", stringValue(binding["bindingRecordId"]), true),
+				browserdoc.TableCell("requirement", stringValue(binding["requirementId"]), true),
 				browserdoc.TableCell("surface", surface, false),
-				browserdoc.TableCell("invariant", stringValue(requirement["ownedInvariant"]), false),
+				browserdoc.TableCell("scenario", stringValue(binding["scenarioId"]), false),
+				browserdoc.TableCell("invariant", stringValue(binding["ownedInvariant"]), false),
 				browserdoc.TableCell("blocking", blocking, false),
 				browserdoc.TableCell("preconditioned", preconditioned, false),
-				{Key: "commands", Value: browserdoc.ListOrNone(stringArray(requirement["verifyCommands"]), true)},
-				{Key: "witnesses", Value: browserdoc.ListOrNone(stringArray(requirement["witnessSelectors"]), true)},
+				{Key: "commands", Value: browserdoc.ListOrNone(stringArray(binding["verifyCommands"]), true)},
+				{Key: "witnesses", Value: browserdoc.ListOrNone(compactRouteLabels(binding), true)},
 			},
-			SearchText:   browserdoc.SearchText(append([]string{stringValue(requirement["requirementId"]), surface, stringValue(requirement["scenarioId"]), stringValue(requirement["ownedInvariant"]), blocking, preconditioned}, append(stringArray(requirement["verifyCommands"]), stringArray(requirement["witnessSelectors"])...)...)),
+			SearchText:   browserdoc.SearchText(append([]string{stringValue(binding["bindingRecordId"]), stringValue(binding["requirementId"]), surface, stringValue(binding["scenarioId"]), stringValue(binding["ownedInvariant"]), blocking, preconditioned}, append(stringArray(binding["verifyCommands"]), routeSearch...)...)),
 			FilterValues: filters,
 		})
 	}
@@ -471,26 +492,29 @@ func compactHTML(view map[string]any) string {
 		Title:     "Compact Requirement Proof View: " + stringValue(view["contractId"]),
 		Authority: stringValue(view["authority"]),
 		SummaryItems: []browserdoc.SummaryItem{
+			browserdoc.Summary("Bindings", fmt.Sprint(intValue(view["bindingCount"])), false),
 			browserdoc.Summary("Requirements", fmt.Sprint(intValue(view["requirementCount"])), false),
-			browserdoc.Summary("Preconditioned requirements", fmt.Sprint(intValue(view["preconditionedRequirementCount"])), false),
+			browserdoc.Summary("Preconditioned bindings", fmt.Sprint(intValue(view["preconditionedBindingCount"])), false),
 			browserdoc.Summary("Commands", fmt.Sprint(intValue(view["commandCount"])), false),
 			{Label: "Local environment policy", Value: browserdoc.ListOrNone(stringArray(policy["localEnvironmentClasses"]), false)},
 		},
 		HierarchySections: []browserdoc.HierarchySection{
-			{Title: "Surface hierarchy", Items: surfaceHierarchy(requirements)},
-			{Title: "Environment classes", Items: environmentHierarchy(requirements)},
+			{Title: "Surface hierarchy", Items: surfaceHierarchy(bindings)},
+			{Title: "Environment classes", Items: environmentHierarchy(bindings)},
 		},
 		Filters: []browserdoc.Filter{
 			browserdoc.NewFilter("surface", "Surface", surfaces),
 			browserdoc.NewFilter("blocking", "Blocking", blockingValues),
-			browserdoc.NewFilter("proof-state", "Proof state", proofStates),
+			browserdoc.NewFilter("invariant-role", "Invariant role", invariantRoles),
 			browserdoc.NewFilter("preconditioned", "Preconditioned", preconditionedValues),
 		},
 		Cards: cards,
 		Table: &browserdoc.Table{
 			Columns: []browserdoc.Column{
+				{Key: "binding", Label: "Binding"},
 				{Key: "requirement", Label: "Requirement"},
 				{Key: "surface", Label: "Surface"},
+				{Key: "scenario", Label: "Scenario"},
 				{Key: "invariant", Label: "Invariant"},
 				{Key: "blocking", Label: "Blocking"},
 				{Key: "preconditioned", Label: "Preconditioned"},
@@ -520,30 +544,53 @@ func proofRequirementBody(requirement map[string]any) browserdoc.Fragment {
 	)
 }
 
-func compactProofRequirementBody(requirement map[string]any) browserdoc.Fragment {
-	positive := requirement["positiveWitness"].(map[string]any)
-	falsification := requirement["falsificationWitness"].(map[string]any)
+func compactProofBindingBody(binding map[string]any) browserdoc.Fragment {
+	routeDefinitions := make([]browserdoc.DefinitionItem, 0, len(anyArray(binding["declaredWitnessRoutes"]))*4)
+	for _, routeValue := range anyArray(binding["declaredWitnessRoutes"]) {
+		route := routeValue.(map[string]any)
+		prefix := stringValue(route["role"])
+		routeDefinitions = append(routeDefinitions,
+			browserdoc.Definition(prefix+" route", browserdoc.Code(stringValue(route["witnessRouteId"]))),
+			browserdoc.Definition(prefix+" selector", browserdoc.Code(stringValue(route["selector"]))),
+			browserdoc.Definition(prefix+" resolution order", browserdoc.Text(fmt.Sprint(route["resolutionOrderIndex"]))),
+			browserdoc.Definition(prefix+" commands", browserdoc.ListOrNone(stringArray(route["verifyCommands"]), true)),
+		)
+	}
 	return browserdoc.Concat(
 		browserdoc.DefinitionList(
-			browserdoc.Definition("Surface", browserdoc.Text(stringValue(requirement["surfaceId"]))),
-			browserdoc.Definition("Scenario", browserdoc.Text(stringValue(requirement["scenarioId"]))),
-			browserdoc.Definition("Invariant role", browserdoc.Text(stringValue(requirement["invariantRole"]))),
-			browserdoc.Definition("Proof state", browserdoc.Text(stringValue(requirement["proofContractState"]))),
-			browserdoc.Definition("Blocking", browserdoc.Text(stringValue(requirement["blockingStatus"]))),
-			browserdoc.Definition("Preconditioned", browserdoc.Text(fmt.Sprint(requirement["preconditioned"]))),
-			browserdoc.Definition("Mutation resistance", browserdoc.Text(stringValue(requirement["mutationResistanceState"]))),
-			browserdoc.Definition("Commands", browserdoc.ListOrNone(stringArray(requirement["verifyCommands"]), true)),
-			browserdoc.Definition("Environments", browserdoc.ListOrNone(stringArray(requirement["requiredEnvironmentClasses"]), false)),
+			browserdoc.Definition("Binding record", browserdoc.Code(stringValue(binding["bindingRecordId"]))),
+			browserdoc.Definition("Requirement", browserdoc.Text(stringValue(binding["requirementId"]))),
+			browserdoc.Definition("Surface", browserdoc.Text(stringValue(binding["surfaceId"]))),
+			browserdoc.Definition("Scenario", browserdoc.Text(stringValue(binding["scenarioId"]))),
+			browserdoc.Definition("Invariant role", browserdoc.Text(stringValue(binding["invariantRole"]))),
+			browserdoc.Definition("Blocking", browserdoc.Text(stringValue(binding["blockingStatus"]))),
+			browserdoc.Definition("Preconditioned", browserdoc.Text(fmt.Sprint(binding["preconditioned"]))),
+			browserdoc.Definition("Caller mutation-resistance claim", browserdoc.Code(stringValue(binding["declaredMutationResistanceClaimId"]))),
+			browserdoc.Definition("Commands", browserdoc.ListOrNone(stringArray(binding["verifyCommands"]), true)),
+			browserdoc.Definition("Environments", browserdoc.ListOrNone(stringArray(binding["requiredEnvironmentClasses"]), false)),
 		),
-		browserdoc.Details("Scenario and test witnesses", browserdoc.DefinitionList(
-			browserdoc.Definition("Scenario", browserdoc.Text(stringValue(requirement["scenarioId"]))),
-			browserdoc.Definition("Positive witness", browserdoc.Code(stringValue(positive["selector"]))),
-			browserdoc.Definition("Positive commands", browserdoc.ListOrNone(stringArray(positive["verifyCommands"]), true)),
-			browserdoc.Definition("Falsification witness", browserdoc.Code(stringValue(falsification["selector"]))),
-			browserdoc.Definition("Falsification commands", browserdoc.ListOrNone(stringArray(falsification["verifyCommands"]), true)),
-			browserdoc.Definition("Witness selectors", browserdoc.ListOrNone(stringArray(requirement["witnessSelectors"]), true)),
-		)),
+		browserdoc.Details("Declared witness routes", browserdoc.DefinitionList(routeDefinitions...)),
 	)
+}
+
+func compactRouteSearchValues(binding map[string]any) []string {
+	values := []string{}
+	for _, routeValue := range anyArray(binding["declaredWitnessRoutes"]) {
+		route := routeValue.(map[string]any)
+		values = append(values, stringValue(route["role"]), stringValue(route["selector"]), stringValue(route["witnessRouteId"]))
+		values = append(values, stringArray(route["environmentClasses"])...)
+		values = append(values, stringArray(route["verifyCommands"])...)
+	}
+	return values
+}
+
+func compactRouteLabels(binding map[string]any) []string {
+	labels := []string{}
+	for _, routeValue := range anyArray(binding["declaredWitnessRoutes"]) {
+		route := routeValue.(map[string]any)
+		labels = append(labels, stringValue(route["role"])+": "+stringValue(route["selector"]))
+	}
+	return labels
 }
 
 func structuredScenariosHTML(scenarios []any) browserdoc.Fragment {

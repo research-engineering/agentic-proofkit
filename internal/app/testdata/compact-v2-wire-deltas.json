@@ -1,0 +1,3928 @@
+{
+  "baseline": {
+    "cliContractDirectionDigestsSha256": "sha256:975520b3a923c2794b4c19edbcd0ebc80f39250c50cb3341901d79ca3c68fd72",
+    "evidenceClass": "owner_authored_frozen_observation",
+    "nonClaims": [
+      "The frozen baseline observation is checksum-bound owner-authored migration evidence; it does not independently authenticate Git history or reproduce prior executable behavior."
+    ],
+    "observationsSha256": "sha256:c06726f159dc000296729e4530b82e222c1f61cb9716a3e140576117c9d24343",
+    "sourceVersion": "0.3.0"
+  },
+  "deltas": [
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "adoption.aggregate-pilot-input-impact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/pilot/input/impactDemos/0/impactInput",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:8dc6bb737830cc7045fa4174047b0070ae0209d4b8baee77b0786cc63b475db1"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:0a9fbcff0b7cda61799b54608f6930b5145ef0ac1dc23f3278a3deedf3e6b917"
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "aggregate"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "adoption.aggregate-pilot-input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/pilot/input/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "aggregate"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "adoption.aggregate-pilot-schema",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/pilot/schema",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.pilot-admission.v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.pilot-admission.v1"
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "aggregate"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "adoption.aggregate-pilot-stack-impact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/pilot/stackDiverseInput/impactDemos/0/impactInput",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:1a47cc49bb03d704c88bb808bb89234699aa27e0bb8f97c69bf45aacf241b397"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:4aa05c307cdd483534478ab6712c020efb9392aa012a0d123bf8a2826025d823"
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "aggregate"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "adoption.aggregate-pilot-stack-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/pilot/stackDiverseInput/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "aggregate"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "adoption.aggregate-schema",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schema",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.adoption-contract-envelope.v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.adoption-contract-envelope.v1"
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "aggregate"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.adoption-contract-envelope.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6cc68424faff9a02d89fb8cc06dd1528048c5647c7fc617a7b828ac8314cb7c5"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:95f39506df766206c53855e176b130e88762fc8c181bb7f1185d28ba9ad7887b"
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.adoption-contract-envelope.output-contract",
+      "direction": "output",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:7c62bb035f151f33451625c659d01484af41c7d673fc915e77842b04b9143083"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:49091e34ec987cd58ec7a14e8c75391630b56587283736f78816853dce5d3743"
+      },
+      "surface": "adoption-contract-envelope",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.conformance-profile.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:fb042c5797ee1f55b02efbddfa6be87bf1730b8e0efd22983b4fe425e5fe5203"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:1eaef4e029693707ba351487e9b78812131e2d8c5ab351ab8197d2ce9650e203"
+      },
+      "surface": "conformance-profile",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.conformance-profile.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:2cb62861094f005ca0c62fdb48ef23798497c18a31c4318c45fef0c85333eb11"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:e408b8e52d8f91bf7631b0d3e790bf3b52e49d607b01fc2aee78e4488fcda133"
+      },
+      "surface": "conformance-profile",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.evidence-graph.input-contract",
+      "direction": "input",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:74adb489ab86459f682d36b230e81cc8f3044e497cbc9b02aa1e1aff7e813653"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:a3f8f2fab993d60563f590bbd6e4f65655f79e5c5c49077fdce11743612a1b7e"
+      },
+      "surface": "evidence-graph",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.evidence-graph.output-contract",
+      "direction": "output",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:8392a1aacc60d4b8413259da93832a830b4dbdb1881107a31f5520e9e056de70"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:1efc37a2fdfa6ebb48defdb36895cddd66bc372bc39a67e15fc76c68a1b309ce"
+      },
+      "surface": "evidence-graph",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.impact.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:809d344e54815d94917f603b1473625425b598e8ab3f1d49f860c5ecbe9bcfb8"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:b39940b1c3233d7689db80baa07a7cfe6e36b273ec5566239fd625b57e03b08a"
+      },
+      "surface": "impact",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.impact.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6f107f179d59151be76c5d7e99240211f0ddcaea540d885af0975a5564a7e1ed"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:eb77e6b5f1aeada5040b3e40ffa1c605065455495978a46bafbb95efced6f76f"
+      },
+      "surface": "impact",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.pilot-admission.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:14c6a96a792711c1ce7cea82c42be66aabb19120f116d0d04212706ffc30ec4e"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:b8719469e180bbfeaf03a5d8125b4b83bff7ddb3e095472b6f85137209566c76"
+      },
+      "surface": "pilot-admission",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.pilot-admission.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6c37a9c16971bed4db083f549406750ed4a39f483c235364ee51c3ac8e3b8d74"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:b014eb19080f091fdc5bf024bfb35575f365a0609b2d340f54d6d34e52d8ca5f"
+      },
+      "surface": "pilot-admission",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.proof-slice.input-contract",
+      "direction": "input",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:c0d58bb85234ffc50bee59324fb299a50a44b416b26ecb552791e8fcfbea9cca"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:2a1bdcd2281b7db25b4c9e275fd2458ee0731d653389f00653f89198fd33013c"
+      },
+      "surface": "proof-slice",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.proof-slice.output-contract",
+      "direction": "output",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:d30b1254b9b7202d332770eb2ff4606eac3c0668b2830e2f817d06c922d0d887"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:8341fea581edc0d88d6f8d82d31e1f5456cf2096cf9ddc8c47dae4db1e34f1c3"
+      },
+      "surface": "proof-slice",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.requirement-bindings.input-contract",
+      "direction": "input",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:f4000a7948841954f8bc92e7d7cd58d4e8d1c4a43d7179264b93defe69033dd7"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:da6665e9376459d4f0215a291851c9aad74dc3d0dfb0eb8633d9ba0a33f9481f"
+      },
+      "surface": "requirement-bindings",
+      "variant": "union"
+    },
+    {
+      "class": "metadata_freshness",
+      "deltaId": "cli.requirement-bindings.output-contract",
+      "direction": "output",
+      "jsonPointer": "/contract",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:5db1c67a808acc1ebfc464fe5d817a5396b11cd12684109e47a586d387f759a8"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:76f1d95a858eec300ff7a3708510c97b81b510714a476bfca0ae1a6667cc7f5d"
+      },
+      "surface": "requirement-bindings",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-browser-server.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:2c0e74874879650486c37660c5dd2e37e497b8f30a53820e4e5c3595476d2262"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:33f9ba10fd867e09aad17ab3db6dfadccb58c38b31c27bfd7f6c8dc9695e1fec"
+      },
+      "surface": "requirement-browser-server",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-coverage-input-compose.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:b95003601c3b19929e6760c62173bcd630ccb86e536063a8a21078034e35a9dc"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:660147e767e895d6658ce903e97132167271f66017e1afde829da906825fe60b"
+      },
+      "surface": "requirement-coverage-input-compose",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-coverage-input-compose.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:1795d91a93b7a1fba08c507c6b791df24b712938510f744d504952121c022dcd"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:8acc225a866bafe8200a688c88b0b960b0e67133358e524ebc9ea75ed96cb183"
+      },
+      "surface": "requirement-coverage-input-compose",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-coverage-view.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:31ad080adcd6e58ad21c670c5016ad91d28dabc1edb7e8bb03a8d6c98fa3ae03"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:ce4930765ade2b76df6469319475c24dba1639c2708f21f41132a412fc7131f0"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-coverage-view.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:1388cbe40f51a804380c4f99dbd97deb0e5711c10391ce15164e5eb66b6d2033"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:5c0dc5c5822d9b706a0f7511869ae94788a4c1b7691ee63996b00f8034005712"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-impact-input-compose.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:7a48347d513cd327d076d253252a014db07502eb952eb4d818b0d1c9841ff643"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:9265cba2fabb87e5f2e27533951811b684e3de33a56c53d5997be83bee5949f7"
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-impact-input-compose.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:07f5bc2cca2edeb08b6fd7d4659504114f3747ca68119971e8a3ce955bce24ef"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:5c987933ef170ec2d7ea4d5060de0a632244ebad64924169a8cf9193b83b225d"
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-proof-resolver.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:31bc06fd1a58e718ba20daa5226244dda3480d5e7688d91f81efb44b4402e39c"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:768afded96071f369bba2928e863484f6553f4be806d721a715f108f64e08ced"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-proof-resolver.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:51ae126ed6c53aee773474bec3c837742bd1fd87ba8b881cc1dad79cc98b1bcc"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:e1c6128a392c77f7e8e77e4812282f9fbd830a6656e3c5bfd91ddec7d4c68823"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-proof-source-set.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:105053e5484e4ee1c3e9e3643fab4e71e4d8b062ed39e08139db5bc5490272d9"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:475d7b0b6d89bf85abf06b983a216d55e6ad1eb1ea966b1171d41740124c9db0"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-proof-source-set.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:87ba5cc065eb2232e98b451648dec7224029e3a661724c6f9cea28ad8f236c13"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:6b4ece97f93ff659f935cf8f171643d9a76dbb14f55eba3b6b67aa929dbdb579"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-proof-view.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6f553c8c054e4269eea657524ab7ac77cee33fe5962229ad4b0c49a5ee7e03b6"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:86c276e9e719889a99b32045a1ad4468919c8f6fa262ca8a54472c0a3414629a"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.requirement-proof-view.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:7d3eae95fcad5141b36db3e9919ae14453bcf9ea6891a7e2a93b34753c0a3556"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:a6aec4b7f1165158b185bd06bc0c4544b39044723aba95caba9d7d42865171cb"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.test-evidence-inventory.input-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:5a3887ee5bb04b2059eb8966e029026fcace91f631623cf0cec8853612f2aa85"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:254026c5a05c207586f4e02a7543d6bbdd8c8a785c965188004be7d4da9f7aaf"
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "parent_contract",
+      "deltaId": "cli.test-evidence-inventory.output-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:3cf31e81537f2a673e048edbe0f56d973b423efce54c66a21f169796dd0ec6cd"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:fca399e0369606a00da8a65b1a7df36fdaef60d720690dac4eda489de2b2252e"
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "union"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.declaration-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.authority-state",
+      "direction": "input",
+      "groupId": "declaration-root",
+      "jsonPointer": "/authority_state",
+      "migrationStepDigest": "sha256:a4a556ee77d2a8c5bea219df76eb24a945d2d2e1cecfc4a088b6374535aa2800",
+      "new": {
+        "presence": "present",
+        "value": "caller_owned_declaration"
+      },
+      "old": {
+        "presence": "present",
+        "value": "canonical"
+      },
+      "surface": "compact-contract",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.declaration-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.binding-columns",
+      "direction": "input",
+      "groupId": "declaration-fields",
+      "jsonPointer": "/binding_columns",
+      "migrationStepDigest": "sha256:6f08e4203a79328b0b1102a915318145d4267e46a5d9dc61d77548c4364a2d8b",
+      "new": {
+        "presence": "present",
+        "value": [
+          "requirement_id",
+          "surface_id",
+          "scenario_id",
+          "invariant_role",
+          "owned_invariant",
+          "blocking_status",
+          "required_environment_classes",
+          "positive_witness",
+          "falsification_witness",
+          "verify_commands",
+          "declared_mutation_resistance_claim_id"
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "requirement_id",
+          "surface_id",
+          "scenario_id",
+          "invariant_role",
+          "owned_invariant",
+          "proof_contract_state",
+          "blocking_status",
+          "required_environment_classes",
+          "positive_witness",
+          "falsification_witness",
+          "verify_commands",
+          "mutation_resistance_state"
+        ]
+      },
+      "surface": "compact-contract",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.declaration-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.bindings",
+      "direction": "input",
+      "groupId": "declaration-fields",
+      "jsonPointer": "/bindings",
+      "migrationStepDigest": "sha256:6f08e4203a79328b0b1102a915318145d4267e46a5d9dc61d77548c4364a2d8b",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6d4e582a0138f3260f99fb2cc2955b9c9a35260f36d1c27095e70ea4a9dd292d"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:a77354557d828e20d03b4f45813fd6e5c14a9f328e57c67b4c89e41625160622"
+      },
+      "surface": "compact-contract",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.declaration-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.contract-kind",
+      "direction": "input",
+      "groupId": "declaration-root",
+      "jsonPointer": "/contract_kind",
+      "migrationStepDigest": "sha256:a4a556ee77d2a8c5bea219df76eb24a945d2d2e1cecfc4a088b6374535aa2800",
+      "new": {
+        "presence": "present",
+        "value": "requirement_proof_route_declaration"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding"
+      },
+      "surface": "compact-contract",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.declaration-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.normalization-profile",
+      "direction": "input",
+      "groupId": "declaration-root",
+      "jsonPointer": "/normalization_profile",
+      "migrationStepDigest": "sha256:a4a556ee77d2a8c5bea219df76eb24a945d2d2e1cecfc4a088b6374535aa2800",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.compact.declaration.v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.compact.v1"
+      },
+      "surface": "compact-contract",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "compact.resolver-bindings-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindings",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:d6bed7b50c0663bcc6c1a78d2b257e12f387a4d73416f96b44f45af3f1a5c57b"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "compact.resolver-commands",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/commands",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordIds": [
+              "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803"
+            ],
+            "environmentClasses": [
+              "local-go"
+            ],
+            "verifyCommandRef": "go test ./...",
+            "witnessRouteIds": [
+              "sha256:23e2c5c66d485bd4bc3fe051283f2fbd752d55e827e26f7564e3903a49d8753a",
+              "sha256:e030b29fb58b3e0836b666bcbd1c3c7c64b7268d5b7a76b74130f361e1fcc4d4"
+            ]
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "scenarioIds": [
+              "proofkit.surface::scenario.compact"
+            ],
+            "surfaceIds": [
+              "proofkit.surface"
+            ],
+            "verifyCommandRef": "go test ./...",
+            "witnessSelectors": [
+              "tests/proofkit_falsification_test.go::TestRejectsCompactRegression",
+              "tests/proofkit_positive_test.go::TestAcceptsCompactContract"
+            ]
+          }
+        ]
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "compact.resolver-conformance-contract",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/conformanceProofContract",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:ec59c07da472ce62128846a9c9789e34ff36ffaad8fa5ea21fc6a53751b3009a"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:2767ebcb6ad7bd0c214d9f0a408e71838966e634c011e6575807176aeb3b3fc6"
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "compact.resolver-environment-classes",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/environmentClasses",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordIds": [
+              "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803"
+            ],
+            "environmentClass": "local-go",
+            "surfaceIds": [
+              "proofkit.surface"
+            ],
+            "witnessRouteIds": [
+              "sha256:23e2c5c66d485bd4bc3fe051283f2fbd752d55e827e26f7564e3903a49d8753a",
+              "sha256:e030b29fb58b3e0836b666bcbd1c3c7c64b7268d5b7a76b74130f361e1fcc4d4"
+            ]
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "environmentClass": "local-go",
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "surfaceIds": [
+              "proofkit.surface"
+            ],
+            "witnessSelectors": [
+              "tests/proofkit_falsification_test.go::TestRejectsCompactRegression",
+              "tests/proofkit_positive_test.go::TestAcceptsCompactContract"
+            ]
+          }
+        ]
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.resolver-non-claims",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/nonClaims",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:32c5b2f5fb8229d5bd314e9546c167cadbeba222e4ca6235e35adb0326e9e7b4"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "Compact test input does not execute witnesses.",
+          "Consumers own local environment-class policy supplied to preconditioned projection.",
+          "Consumers own proof freshness, command pass evidence, rollout approval, and production readiness.",
+          "Requirement proof resolver projections are lookup-only and do not execute native witnesses."
+        ]
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.resolver-projection-kind",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/projectionKind",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.requirement-proof-route-resolver"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.requirement-proof-resolver"
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "compact.resolver-requirements-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/requirements",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:7eec1298258e768668b2d970d3edca19be583f83b1e7227ad8641bc7c700c359"
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "compact.resolver-scenarios",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/scenarios",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordId": "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803",
+            "requirementId": "REQ-PROOFKIT-COMPACT-001",
+            "scenarioId": "proofkit.surface::scenario.compact",
+            "surfaceId": "proofkit.surface"
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "requirementId": "REQ-PROOFKIT-COMPACT-001",
+            "scenarioId": "proofkit.surface::scenario.compact"
+          }
+        ]
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.resolver-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "compact.resolver-surfaces",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/surfaces",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordIds": [
+              "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803"
+            ],
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "surfaceId": "proofkit.surface"
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "surfaceId": "proofkit.surface"
+          }
+        ]
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "compact.resolver-witness-routes-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessRoutes",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:f7c5bd118ffbed357b1d3bebd9d77c669136efc0d75871fc3d733ca03b7b9033"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "compact.resolver-witness-selectors-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessSelectors",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:107e421d953ce9a2b0090a6ba69aca74aa590ca426e4c04047295b261d9aae30"
+      },
+      "surface": "compact-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.declaration-contract-v2",
+      "class": "replace",
+      "deltaId": "compact.schema-version",
+      "direction": "input",
+      "groupId": "declaration-root",
+      "jsonPointer": "/schema_version",
+      "migrationStepDigest": "sha256:a4a556ee77d2a8c5bea219df76eb24a945d2d2e1cecfc4a088b6374535aa2800",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "compact-contract",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "remove",
+      "deltaId": "conformance.input-allowed-proof-states-remove",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/policy/allowedProofContractStates",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "witness_backed"
+        ]
+      },
+      "surface": "conformance-profile",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "conformance.input-proof-contract-bindings",
+      "direction": "input",
+      "groupId": "identity-role",
+      "jsonPointer": "/proofContract/bindings",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:35f7f2368cd28e6ac9d582f7988e2a9f5e9e9dd025572e7842dd230523089a72"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "blockingStatus": "blocking",
+            "proofContractState": "witness_backed",
+            "requiredEnvironmentClasses": [
+              "local-go"
+            ],
+            "requirementId": "REQ-PROOFKIT-001",
+            "scenarioId": "proofkit.scenario",
+            "surfaceId": "surface.local",
+            "verifyCommands": [
+              "go test ./..."
+            ],
+            "witnessRefs": [
+              {
+                "role": "unit",
+                "selector": "internal/test.go::TestOK"
+              }
+            ]
+          }
+        ]
+      },
+      "surface": "conformance-profile",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "conformance.input-proof-contract-declaration-kind",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/proofContract/declarationKind",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.requirement-proof-route-declaration"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "conformance-profile",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "conformance.input-proof-contract-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/proofContract/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "conformance-profile",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "conformance.input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "conformance-profile",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "conformance.output-binding-count",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindingCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": 1
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "conformance.output-command-count",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/commandCount",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 3
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "conformance.output-preconditioned-binding-count",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/preconditionedBindingCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": 0
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "conformance.output-preconditioned-requirement-count-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/preconditionedRequirementCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": 0
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "conformance.output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "conformance.output-verify-commands",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/verifyCommands",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "go test ./...",
+          "go test ./... -run TestFalsification",
+          "go test ./... -run TestPositive"
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "go test ./..."
+        ]
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "conformance.output-witness-mapping-count",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessMappingCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "conformance-profile",
+      "variant": "profile"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.browser-workspace-snapshot-id",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/snapshotId",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:d91a190ca30bc3123b0618b960f6fefd22ee62a8a4a9c23556faa3766da6dc11"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:dce67c55126686a95eda7444f97e42f18fe3680e2618d70de4b918fc7bd25997"
+      },
+      "surface": "requirement-browser-server",
+      "variant": "workspace-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.compose-coverage-content",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/coverageSha256",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:1f1c73fa67ffbdcc60d051e8f8b24f9bb16a52af25ea8217991712d00f54f83f"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:2201ac846d7af7474eda95d17d47f93552d2051c948b6542728818e21a4a6aef"
+      },
+      "surface": "requirement-context-compose",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.compose-stable-identities",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/identities",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": {
+          "bindingRecordIds": [
+            "sha256:d3dd5656d5d1196af01be86473b156d9ed4338f907f38321803ec0293b5a3061"
+          ],
+          "witnessRouteIds": [
+            "sha256:6c2d9be9266cab6a9be42147798b25643dc92665f6f644e2443996f175598f82",
+            "sha256:dab948afb2765258e891a77b2c56d135e7e80168698adfa5cd092c3f8e2401bb"
+          ]
+        }
+      },
+      "old": {
+        "presence": "present",
+        "value": {
+          "bindingRecordIds": [],
+          "witnessRouteIds": []
+        }
+      },
+      "surface": "requirement-context-compose",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.diff-base-snapshot-id",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/baseSnapshotId",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:641bef7cd208a9502da434eaead78266cefc5d69814d24c11642cb6ded90981b"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:c2b761689d53e3200c493dc6b2ef79192fe50e99acc882eee0806e49600e5208"
+      },
+      "surface": "requirement-semantic-diff",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.diff-current-snapshot-id",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/currentSnapshotId",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:d91a190ca30bc3123b0618b960f6fefd22ee62a8a4a9c23556faa3766da6dc11"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:dce67c55126686a95eda7444f97e42f18fe3680e2618d70de4b918fc7bd25997"
+      },
+      "surface": "requirement-semantic-diff",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.diff-output-content",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/outputSha256",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:10ae49a7e7b483196d3a99df904f0936223d2aa4a32a05ac6dc0b47a89d25cea"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:a3153c3a9b9a20fdab118c8b66854549ad45012c3da54f32b5c8ac22f7614015"
+      },
+      "surface": "requirement-semantic-diff",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.graph-output-content",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/outputSha256",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:2b1fd23514320f11f93ce4840ae5075b3a56c22e00477ff974890cdd82f73b67"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:c9e5dbc1b656d36d3e36200e153f22b7c36aa963c7f88de99047bc398dff3ab5"
+      },
+      "surface": "requirement-traceability-graph",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.graph-snapshot-id",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/snapshotId",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:d91a190ca30bc3123b0618b960f6fefd22ee62a8a4a9c23556faa3766da6dc11"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:dce67c55126686a95eda7444f97e42f18fe3680e2618d70de4b918fc7bd25997"
+      },
+      "surface": "requirement-traceability-graph",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.slice-coverage-content",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/coverageSha256",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "sha256:75985707ffb0d45514c238f0c4cd329ebdba3a4f22812390c32a9ae260b831b5"
+      },
+      "old": {
+        "presence": "present",
+        "value": "sha256:c8ed3bb243bdc030e51bce6ac941799e29d9a26b46a12a3ab3abcd692121eaec"
+      },
+      "surface": "requirement-context-slice",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "context.slice-stable-identities",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/identities",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": {
+          "bindingRecordIds": [
+            "sha256:d3dd5656d5d1196af01be86473b156d9ed4338f907f38321803ec0293b5a3061"
+          ],
+          "witnessRouteIds": [
+            "sha256:6c2d9be9266cab6a9be42147798b25643dc92665f6f644e2443996f175598f82",
+            "sha256:dab948afb2765258e891a77b2c56d135e7e80168698adfa5cd092c3f8e2401bb"
+          ]
+        }
+      },
+      "old": {
+        "presence": "present",
+        "value": {
+          "bindingRecordIds": [],
+          "witnessRouteIds": []
+        }
+      },
+      "surface": "requirement-context-slice",
+      "variant": "coverage-runtime"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.compose-input-compact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/compactProofContract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:20ed89f300f29cfde3ffafc985db335f0e69466f8292bfb86755bbfb0eafe392"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:abc262ff5cafeef758b207a5d4e31bb73aa4705c570ac20a3de36264e6f19ed2"
+      },
+      "surface": "requirement-coverage-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.compose-input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-coverage-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.compose-output-compact-contract",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/compactProofContract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:20ed89f300f29cfde3ffafc985db335f0e69466f8292bfb86755bbfb0eafe392"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:abc262ff5cafeef758b207a5d4e31bb73aa4705c570ac20a3de36264e6f19ed2"
+      },
+      "surface": "requirement-coverage-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.compose-output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-coverage-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "coverage.scenario-binding-record-id-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindingRecordId",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": "sha256:d3dd5656d5d1196af01be86473b156d9ed4338f907f38321803ec0293b5a3061"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "coverage.scenario-binding-verify-commands-add",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/bindingVerifyCommands",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "go test ./internal/app"
+        ]
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "coverage.scenario-command-ids-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/commandIds",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": []
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "coverage.scenario-declared-routes-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/declaredWitnessRoutes",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:d97810dbc4382aff76c692a5597b2f068e7511190d23d38fa17158a0925da147"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "coverage.scenario-required-environments-add",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/requiredEnvironmentClasses",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "local-go"
+        ]
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "coverage.scenario-requirement-id-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/requirementId",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": "REQ-PROOFKIT-CLI-COVERAGE-001"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "coverage.scenario-surface-id-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/surfaceId",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.cli.coverage"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "coverage.scenario-witness-id-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessId",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": ""
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "coverage.scenario-witness-kind-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessKind",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": ""
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "coverage.scenario-witness-path-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessPath",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": ""
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "coverage.scenario-witness-selectors-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessSelectors",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "internal/app/cli_abi_test.go::falsification",
+          "internal/app/cli_abi_test.go::positive"
+        ]
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "compact-scenario"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.view-input-compact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/compactProofContract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:20ed89f300f29cfde3ffafc985db335f0e69466f8292bfb86755bbfb0eafe392"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:abc262ff5cafeef758b207a5d4e31bb73aa4705c570ac20a3de36264e6f19ed2"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.view-input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "coverage.view-output-requirement-coverage",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/requirementCoverage",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:05f1f0996d49a90113d61425c194fd1ae16e7afcb40a87612a1b76ec56cdbff7"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:6c3e2ca35d1cb8278a3d16b240340b5c61a6f3fa42e91e356093a69376d1c984"
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "root"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "coverage.view-output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 3
+      },
+      "old": {
+        "presence": "present",
+        "value": 2
+      },
+      "surface": "requirement-coverage-view",
+      "variant": "root"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "remove",
+      "deltaId": "impact.changed-record-ids-input-remove",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/changedRecordIds",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "REQ-PROOFKIT-CLI-IMPACT-001"
+        ]
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "remove",
+      "deltaId": "impact.changed-record-ids-output-remove",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/changedRecordIds",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "REQ-PROOFKIT-CLI-IMPACT-001"
+        ]
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "impact.changed-requirement-ids-input-add",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/changedRequirementIds",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "REQ-PROOFKIT-CLI-IMPACT-001"
+        ]
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "impact.changed-requirement-ids-output-add",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/changedRequirementIds",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "REQ-PROOFKIT-CLI-IMPACT-001"
+        ]
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "impact.compose-input-base-compact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/baseCompactProofContract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:54b5836240949c9c0086926af9b3e032a2e95704d5e4e82f34fab3ad851db308"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:ec919ff4d89865812379ac3687a02674d282ebf975e0ecfb93dad275683e8244"
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "impact.compose-input-current-compact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/currentCompactProofContract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:54b5836240949c9c0086926af9b3e032a2e95704d5e4e82f34fab3ad851db308"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:ec919ff4d89865812379ac3687a02674d282ebf975e0ecfb93dad275683e8244"
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "impact.compose-input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "remove",
+      "deltaId": "impact.compose-output-changed-record-ids-remove",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/changedRecordIds",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "REQ-PROOFKIT-CLI-IMPACT-001"
+        ]
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "impact.compose-output-changed-requirement-ids-add",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/changedRequirementIds",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "REQ-PROOFKIT-CLI-IMPACT-001"
+        ]
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "impact.compose-output-obligation-catalog",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/obligationCatalog",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordId": "sha256:1e5d0eec1e1c97631b7ed0efd7abe2098619be102620ec69ace2e5823f671ec6",
+            "blockingStatus": "blocking",
+            "commands": [
+              "go test ./internal/app"
+            ],
+            "declaredMutationResistanceClaimId": "claim.no_known_advisory_gap",
+            "declaredWitnessRoutes": [
+              {
+                "bindingRecordId": "sha256:1e5d0eec1e1c97631b7ed0efd7abe2098619be102620ec69ace2e5823f671ec6",
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "resolutionOrderIndex": 0,
+                "role": "positive",
+                "selector": "internal/app/cli_abi_test.go::positive_impact",
+                "verifyCommands": [
+                  "go test ./internal/app"
+                ],
+                "witnessRouteId": "sha256:2afbbd9a905e6886c3fe137a3b55969c263112805c33d7a3cb3767571ab90fd6"
+              },
+              {
+                "bindingRecordId": "sha256:1e5d0eec1e1c97631b7ed0efd7abe2098619be102620ec69ace2e5823f671ec6",
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "resolutionOrderIndex": 1,
+                "role": "falsification",
+                "selector": "internal/app/cli_abi_test.go::negative_impact",
+                "verifyCommands": [
+                  "go test ./internal/app"
+                ],
+                "witnessRouteId": "sha256:6d21b451f44c488c6b9f06b56f2abe0ac2f22f12a05b10ac8d181d0a1714b334"
+              }
+            ],
+            "preconditioned": false,
+            "requiredEnvironmentClasses": [
+              "local-go"
+            ],
+            "requirementId": "REQ-PROOFKIT-CLI-IMPACT-001",
+            "scenarioId": "proofkit.cli.impact::scenario",
+            "surfaceId": "proofkit.cli.impact"
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "blockingStatus": "blocking",
+            "commands": [
+              "go test ./internal/app"
+            ],
+            "preconditioned": false,
+            "proofContractState": "witness_backed",
+            "recordId": "REQ-PROOFKIT-CLI-IMPACT-001",
+            "requiredEnvironmentClasses": [
+              "local-go"
+            ],
+            "scenarioId": "proofkit.cli.impact::scenario",
+            "surfaceId": "proofkit.cli.impact"
+          }
+        ]
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "impact.compose-output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "impact.compose-output-witness-coverage",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/changedWitnessPathCoverage",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6eb13705ca8ceb7656d8d389a3efbb7a1193f25ccc81c1ec35ff92d561578269"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "path": "internal/app/cli_abi_test.go",
+            "recordIds": [
+              "REQ-PROOFKIT-CLI-IMPACT-001"
+            ]
+          }
+        ]
+      },
+      "surface": "requirement-impact-input-compose",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "impact.input-obligation-catalog-replace",
+      "direction": "input",
+      "groupId": "identity-role",
+      "jsonPointer": "/obligationCatalog",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordId": "sha256:1e5d0eec1e1c97631b7ed0efd7abe2098619be102620ec69ace2e5823f671ec6",
+            "blockingStatus": "blocking",
+            "commands": [
+              "go test ./internal/app"
+            ],
+            "declaredMutationResistanceClaimId": "claim.no_known_advisory_gap",
+            "declaredWitnessRoutes": [
+              {
+                "bindingRecordId": "sha256:1e5d0eec1e1c97631b7ed0efd7abe2098619be102620ec69ace2e5823f671ec6",
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "resolutionOrderIndex": 0,
+                "role": "positive",
+                "selector": "internal/app/cli_abi_test.go::positive_impact",
+                "verifyCommands": [
+                  "go test ./internal/app"
+                ],
+                "witnessRouteId": "sha256:2afbbd9a905e6886c3fe137a3b55969c263112805c33d7a3cb3767571ab90fd6"
+              },
+              {
+                "bindingRecordId": "sha256:1e5d0eec1e1c97631b7ed0efd7abe2098619be102620ec69ace2e5823f671ec6",
+                "environmentClasses": [
+                  "local-go"
+                ],
+                "resolutionOrderIndex": 1,
+                "role": "falsification",
+                "selector": "internal/app/cli_abi_test.go::negative_impact",
+                "verifyCommands": [
+                  "go test ./internal/app"
+                ],
+                "witnessRouteId": "sha256:6d21b451f44c488c6b9f06b56f2abe0ac2f22f12a05b10ac8d181d0a1714b334"
+              }
+            ],
+            "preconditioned": false,
+            "requiredEnvironmentClasses": [
+              "local-go"
+            ],
+            "requirementId": "REQ-PROOFKIT-CLI-IMPACT-001",
+            "scenarioId": "proofkit.cli.impact::scenario",
+            "surfaceId": "proofkit.cli.impact"
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "blockingStatus": "blocking",
+            "commands": [
+              "go test ./internal/app"
+            ],
+            "preconditioned": false,
+            "proofContractState": "witness_backed",
+            "recordId": "REQ-PROOFKIT-CLI-IMPACT-001",
+            "requiredEnvironmentClasses": [
+              "local-go"
+            ],
+            "scenarioId": "proofkit.cli.impact::scenario",
+            "surfaceId": "proofkit.cli.impact"
+          }
+        ]
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "impact.input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "impact.input-witness-coverage-replace",
+      "direction": "input",
+      "groupId": "identity-role",
+      "jsonPointer": "/changedWitnessPathCoverage",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6eb13705ca8ceb7656d8d389a3efbb7a1193f25ccc81c1ec35ff92d561578269"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "path": "internal/app/cli_abi_test.go",
+            "recordIds": [
+              "REQ-PROOFKIT-CLI-IMPACT-001"
+            ]
+          }
+        ]
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "impact.output-obligations-replace",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/obligations",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:a741d0316e3ada5c6b7e0539add0619dd12ad656c27db15f085ddb4dcde1769f"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "blockingStatus": "blocking",
+            "changeReasons": [
+              "proof_witness_changed",
+              "record_changed"
+            ],
+            "commands": [
+              "go test ./internal/app"
+            ],
+            "preconditioned": false,
+            "proofContractState": "witness_backed",
+            "recordId": "REQ-PROOFKIT-CLI-IMPACT-001",
+            "requiredEnvironmentClasses": [
+              "local-go"
+            ],
+            "scenarioId": "proofkit.cli.impact::scenario",
+            "surfaceId": "proofkit.cli.impact"
+          }
+        ]
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "impact.output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "impact",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "inventory.input-compact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/compactProofContract",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:9c619bbe4928fd1556f05aa11622ac07dd327ec0e008a168f5d5c6bd7a965061"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:a3a28f907973b504dd1f758fc6f8a57cba53e5e5cbb6d1b90f7580ee44965a98"
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "proof-binding"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "inventory.input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "proof-binding"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "inventory.output-entry",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/inventory/entries/0",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:5e78053a51b8fbee87a627cca577ef899ea05497764406d4a3abb656e0e6893c"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:c7de9d5095231e7dc75fdfdc9d7b4b6088e3c8009a55722007d24fd01cb9908b"
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "normalized"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "inventory.output-projection-mappings-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/projectionSummary/routeEntryMappings",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:bb0bc0dfd3df884a059286f3ff85870178412150d6ddca3b329c81626f3b3371"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "normalized"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "add",
+      "deltaId": "inventory.output-projection-schema-version-add",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/projectionSummary/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "test-evidence-inventory",
+      "variant": "normalized"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.direct-impact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/impactDemos/0/impactInput",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:8dc6bb737830cc7045fa4174047b0070ae0209d4b8baee77b0786cc63b475db1"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:0a9fbcff0b7cda61799b54608f6930b5145ef0ac1dc23f3278a3deedf3e6b917"
+      },
+      "surface": "pilot-admission",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.direct-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "pilot-admission",
+      "variant": "direct"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.envelope-input-impact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/input/impactDemos/0/impactInput",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:8dc6bb737830cc7045fa4174047b0070ae0209d4b8baee77b0786cc63b475db1"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:0a9fbcff0b7cda61799b54608f6930b5145ef0ac1dc23f3278a3deedf3e6b917"
+      },
+      "surface": "pilot-admission",
+      "variant": "envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.envelope-input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/input/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "pilot-admission",
+      "variant": "envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.envelope-schema",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schema",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.pilot-admission.v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.pilot-admission.v1"
+      },
+      "surface": "pilot-admission",
+      "variant": "envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.envelope-stack-impact-contract",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/stackDiverseInput/impactDemos/0/impactInput",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:1a47cc49bb03d704c88bb808bb89234699aa27e0bb8f97c69bf45aacf241b397"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:4aa05c307cdd483534478ab6712c020efb9392aa012a0d123bf8a2826025d823"
+      },
+      "surface": "pilot-admission",
+      "variant": "envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "pilot.envelope-stack-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/stackDiverseInput/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "pilot-admission",
+      "variant": "envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.input-authority-state",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/authority_state",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "caller_owned_declaration"
+      },
+      "old": {
+        "presence": "present",
+        "value": "canonical"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.input-binding-columns",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/binding_columns",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": [
+          "requirement_id",
+          "surface_id",
+          "scenario_id",
+          "invariant_role",
+          "owned_invariant",
+          "blocking_status",
+          "required_environment_classes",
+          "positive_witness",
+          "falsification_witness",
+          "verify_commands",
+          "declared_mutation_resistance_claim_id"
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "requirement_id",
+          "surface_id",
+          "scenario_id",
+          "invariant_role",
+          "owned_invariant",
+          "proof_contract_state",
+          "blocking_status",
+          "required_environment_classes",
+          "positive_witness",
+          "falsification_witness",
+          "verify_commands",
+          "mutation_resistance_state"
+        ]
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "proof-view.input-bindings",
+      "direction": "input",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindings",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:6d4e582a0138f3260f99fb2cc2955b9c9a35260f36d1c27095e70ea4a9dd292d"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:a77354557d828e20d03b4f45813fd6e5c14a9f328e57c67b4c89e41625160622"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.input-contract-kind",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/contract_kind",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "requirement_proof_route_declaration"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.input-normalization-profile",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/normalization_profile",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.compact.declaration.v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.compact.v1"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.input-schema-version",
+      "direction": "input",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schema_version",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "proof-view.output-binding-count-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindingCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": 1
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "proof-view.output-bindings-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindings",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:e355cce18aaa1c86f2e46e282e609e64c2b1ea84602fa47b129b6f4e11eaa086"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.output-non-claims",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/nonClaims",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:baa1bf8ad22379e83157ac1c5091dce69819ef6c886f18baab4b4a047161e645"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:be3257bdac22dbf6b9cec674c394ec1aec1c73c5bee37c66df881f5e24546605"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "proof-view.output-preconditioned-binding-count",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/preconditionedBindingCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": 0
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "proof-view.output-preconditioned-requirement-count-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/preconditionedRequirementCount",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "value": 0
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "proof-view.output-requirements-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/requirements",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:906ad3238a0978dd1e7050bee2cc8d3f43e82024c1962be39904247b272c794d"
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "proof-view.output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-proof-view",
+      "variant": "compact"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "resolver.output-bindings-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/bindings",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:d6bed7b50c0663bcc6c1a78d2b257e12f387a4d73416f96b44f45af3f1a5c57b"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "resolver.output-commands",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/commands",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordIds": [
+              "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803"
+            ],
+            "environmentClasses": [
+              "local-go"
+            ],
+            "verifyCommandRef": "go test ./...",
+            "witnessRouteIds": [
+              "sha256:23e2c5c66d485bd4bc3fe051283f2fbd752d55e827e26f7564e3903a49d8753a",
+              "sha256:e030b29fb58b3e0836b666bcbd1c3c7c64b7268d5b7a76b74130f361e1fcc4d4"
+            ]
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "scenarioIds": [
+              "proofkit.surface::scenario.compact"
+            ],
+            "surfaceIds": [
+              "proofkit.surface"
+            ],
+            "verifyCommandRef": "go test ./...",
+            "witnessSelectors": [
+              "tests/proofkit_falsification_test.go::TestRejectsCompactRegression",
+              "tests/proofkit_positive_test.go::TestAcceptsCompactContract"
+            ]
+          }
+        ]
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "resolver.output-conformance-contract",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/conformanceProofContract",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:ec59c07da472ce62128846a9c9789e34ff36ffaad8fa5ea21fc6a53751b3009a"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:2767ebcb6ad7bd0c214d9f0a408e71838966e634c011e6575807176aeb3b3fc6"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "resolver.output-environment-classes",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/environmentClasses",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordIds": [
+              "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803"
+            ],
+            "environmentClass": "local-go",
+            "surfaceIds": [
+              "proofkit.surface"
+            ],
+            "witnessRouteIds": [
+              "sha256:23e2c5c66d485bd4bc3fe051283f2fbd752d55e827e26f7564e3903a49d8753a",
+              "sha256:e030b29fb58b3e0836b666bcbd1c3c7c64b7268d5b7a76b74130f361e1fcc4d4"
+            ]
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "environmentClass": "local-go",
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "surfaceIds": [
+              "proofkit.surface"
+            ],
+            "witnessSelectors": [
+              "tests/proofkit_falsification_test.go::TestRejectsCompactRegression",
+              "tests/proofkit_positive_test.go::TestAcceptsCompactContract"
+            ]
+          }
+        ]
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "resolver.output-non-claims",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/nonClaims",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:32c5b2f5fb8229d5bd314e9546c167cadbeba222e4ca6235e35adb0326e9e7b4"
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "Compact test input does not execute witnesses.",
+          "Consumers own local environment-class policy supplied to preconditioned projection.",
+          "Consumers own proof freshness, command pass evidence, rollout approval, and production readiness.",
+          "Requirement proof resolver projections are lookup-only and do not execute native witnesses."
+        ]
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "resolver.output-projection-kind",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/projectionKind",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": "proofkit.requirement-proof-route-resolver"
+      },
+      "old": {
+        "presence": "present",
+        "value": "proofkit.requirement-proof-resolver"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "resolver.output-requirements-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/requirements",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:7eec1298258e768668b2d970d3edca19be583f83b1e7227ad8641bc7c700c359"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "resolver.output-scenarios",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/scenarios",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordId": "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803",
+            "requirementId": "REQ-PROOFKIT-COMPACT-001",
+            "scenarioId": "proofkit.surface::scenario.compact",
+            "surfaceId": "proofkit.surface"
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "requirementId": "REQ-PROOFKIT-COMPACT-001",
+            "scenarioId": "proofkit.surface::scenario.compact"
+          }
+        ]
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.consumer-contract-v2",
+      "class": "replace",
+      "deltaId": "resolver.output-schema-version",
+      "direction": "output",
+      "groupId": "consumer-contract",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "replace",
+      "deltaId": "resolver.output-surfaces",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/surfaces",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "value": [
+          {
+            "bindingRecordIds": [
+              "sha256:3e12335736f4aae18fc88fa1b7d704a77dbdbb7889ab6584f792adf43eb3e803"
+            ],
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "surfaceId": "proofkit.surface"
+          }
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          {
+            "requirementIds": [
+              "REQ-PROOFKIT-COMPACT-001"
+            ],
+            "surfaceId": "proofkit.surface"
+          }
+        ]
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "add",
+      "deltaId": "resolver.output-witness-routes-add",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessRoutes",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:f7c5bd118ffbed357b1d3bebd9d77c669136efc0d75871fc3d733ca03b7b9033"
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.identity-role-closure",
+      "class": "remove",
+      "deltaId": "resolver.output-witness-selectors-remove",
+      "direction": "output",
+      "groupId": "identity-role",
+      "jsonPointer": "/witnessSelectors",
+      "migrationStepDigest": "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+      "new": {
+        "presence": "absent"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:107e421d953ce9a2b0090a6ba69aca74aa590ca426e4c04047295b261d9aae30"
+      },
+      "surface": "requirement-proof-resolver",
+      "variant": "resolver"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-authority-state",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/authorityState",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "caller_owned_requirement_proof_route_source"
+      },
+      "old": {
+        "presence": "present",
+        "value": "canonical_requirement_to_proof_binding"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-binding-columns",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/bindingColumns",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": [
+          "requirement_id",
+          "surface_id",
+          "scenario_id",
+          "invariant_role",
+          "owned_invariant",
+          "blocking_status",
+          "required_environment_classes",
+          "positive_witness",
+          "falsification_witness",
+          "verify_commands",
+          "declared_mutation_resistance_claim_id"
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "requirement_id",
+          "surface_id",
+          "scenario_id",
+          "invariant_role",
+          "owned_invariant",
+          "proof_contract_state",
+          "blocking_status",
+          "required_environment_classes",
+          "positive_witness",
+          "falsification_witness",
+          "verify_commands",
+          "mutation_resistance_state"
+        ]
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-contract-id",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/contractId",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement-proof-route-declarations/v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement-proof-bindings/v1"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-contract-kind",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/contractKind",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement_proof_route_declaration_source"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-normalization-profile",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/normalizationProfile",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "json/v2:utf8+lf+declaration-row-arrays"
+      },
+      "old": {
+        "presence": "present",
+        "value": "json/v1:utf8+lf+compact-row-arrays"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-schema-version",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.canonical-envelope-surface-columns",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/surfaceColumns",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": [
+          "surface_id",
+          "required_environment_classes",
+          "preconditioned_environment_classes"
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "surface_id",
+          "proof_families",
+          "rollout_claim_allowed",
+          "rollout_claim_state",
+          "rollout_claim_scope",
+          "required_environment_classes",
+          "preconditioned_environment_classes",
+          "mutation_resistance_state"
+        ]
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "canonical-envelope"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-authority-state",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/authority_state",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "caller_owned_requirement_proof_route_fragment"
+      },
+      "old": {
+        "presence": "present",
+        "value": "canonical_requirement_to_proof_binding_fragment"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-bindings",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/bindings",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": [
+          [
+            "REQ-PROOFKIT-SOURCE-001",
+            "owned_invariant",
+            "contract",
+            "blocking",
+            [
+              "local-go"
+            ],
+            [
+              "internal/source_test.go::TestPositive",
+              0
+            ],
+            [
+              "internal/source_test.go::TestNegative",
+              1
+            ],
+            [
+              "go test ./..."
+            ],
+            "claim.checked"
+          ]
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:e2da077062e954a804bc282dd8034a771578569fde6602001370dd4b5a47fd52"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-contract-id",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/contract_id",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement-proof-route-declarations/fragment/v3"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement-proof-bindings/fragment/v1"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-contract-kind",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/contract_kind",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement_proof_route_declaration_fragment"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding_fragment"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-normalization-profile",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/normalization_profile",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "json/v2:utf8+lf+owner-defaulted-declaration-row-arrays"
+      },
+      "old": {
+        "presence": "present",
+        "value": "json/v1:utf8+lf+compact-owner-row-arrays"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-role",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/role",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement_proof_route_declaration_fragment"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding_fragment"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-row"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-schema-version",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/schema_version",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.fragment-surfaces",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/surfaces",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": [
+          [
+            "source.local",
+            [
+              "local-go"
+            ],
+            []
+          ]
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          [
+            "source.local",
+            [
+              "unit"
+            ],
+            false,
+            "not_allowed",
+            "none",
+            [
+              "local-go"
+            ],
+            [],
+            "checked"
+          ]
+        ]
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "fragment"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.source-set-authority-state",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/authority_state",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "caller_owned_requirement_proof_route_source_index"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding_source_index"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-set"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.source-set-contract-id",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/contract_id",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement-proof-route-declarations/source-set/v2"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement-proof-bindings/source-set/v1"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-set"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.source-set-contract-kind",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/contract_kind",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "requirement_proof_route_declaration_source_set"
+      },
+      "old": {
+        "presence": "present",
+        "value": "requirement_proof_binding_source_set"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-set"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.source-set-normalization-profile",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/normalization_profile",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": "json/v2:utf8+lf+ordered-source-refs"
+      },
+      "old": {
+        "presence": "present",
+        "value": "json/v1:utf8+lf+ordered-source-refs"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-set"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.source-set-schema-version",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/schema_version",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "present",
+        "value": 1
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-set"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.source-set-sources",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/sources",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": [
+          [
+            "source.local",
+            "docs/contracts/requirement-proof-routes/local.v3.json",
+            "4c800ece11e43aad6c8ec6e671b69843a2b48b203c296c8585824029d4898731",
+            "requirement_proof_route_declaration_fragment",
+            [
+              "CLI source owns its fixture rows."
+            ]
+          ]
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          [
+            "source.local",
+            "docs/contracts/requirement-proof-bindings/local.v1.json",
+            "e5fd84201f8bd864646f06e06d96b8fabcee58fb787e3208b64322bb79dfbc73",
+            "requirement_proof_binding_fragment",
+            [
+              "CLI source owns its fixture rows."
+            ]
+          ]
+        ]
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "source-set"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.wrapper-input-canonical-envelope",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/canonicalEnvelope",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:39832e1d10e0ae475de10eca41146e2cf95966517fd325617c896906f49db3f8"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:e2f75059c9333a16665247795e29964e29f4374801654f9b724c9082900772f5"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "add",
+      "deltaId": "source.wrapper-input-schema-version",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.wrapper-input-source-set",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/sourceSet",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:e2fe277e9febb8c258d96ec54c85d5417a9cc814a5dfc705762ba1b5bd4810b5"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:8b899d25138fc3acf2813b80209c387cb447f4c83cd51a41924f4704046f8619"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.wrapper-input-sources",
+      "direction": "input",
+      "groupId": "source-set",
+      "jsonPointer": "/sources",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:11e352b3408d6ff112dc1c3384ff6a5c67e0b645ea2d31a71499cc182908eed5"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:e12dc1e2b7a85c2da15e0bbd71a272e37b8eac767bdffe6e017c2daa4a6766ae"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.wrapper-output-contract",
+      "direction": "output",
+      "groupId": "source-set",
+      "jsonPointer": "/contract",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "valueSha256": "sha256:b4e3091ad294f008ecbd4ffec03aa5b9f17e4068b9e09d137df34cbc2440eb8a"
+      },
+      "old": {
+        "presence": "present",
+        "valueSha256": "sha256:577f16192ce464761c806449efdbb247739b7942897f5bc8b7f12268c6f8b5d3"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "replace",
+      "deltaId": "source.wrapper-output-input-paths",
+      "direction": "output",
+      "groupId": "source-set",
+      "jsonPointer": "/inputPaths",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": [
+          "docs/contracts/requirement-proof-routes/local.v3.json"
+        ]
+      },
+      "old": {
+        "presence": "present",
+        "value": [
+          "docs/contracts/requirement-proof-bindings/local.v1.json"
+        ]
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    },
+    {
+      "breakingChangeId": "proofkit.compact.source-set-v2",
+      "class": "add",
+      "deltaId": "source.wrapper-output-schema-version",
+      "direction": "output",
+      "groupId": "source-set",
+      "jsonPointer": "/schemaVersion",
+      "migrationStepDigest": "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+      "new": {
+        "presence": "present",
+        "value": 2
+      },
+      "old": {
+        "presence": "absent"
+      },
+      "surface": "requirement-proof-source-set",
+      "variant": "wrapper"
+    }
+  ],
+  "ownedBreakingChangeIds": [
+    "proofkit.compact.consumer-contract-v2",
+    "proofkit.compact.declaration-contract-v2",
+    "proofkit.compact.identity-role-closure",
+    "proofkit.compact.source-set-v2"
+  ],
+  "ownedMigrationStepDigests": [
+    "sha256:2e5f489aaab8712ce3b124e4ad818ca1afcb00b65b9aade0cda3b2c5cba4ab21",
+    "sha256:5062c5587aa4c92b98e4fc78597b8d8d3f039f833673ae58cd29567ea918c0fc",
+    "sha256:6f08e4203a79328b0b1102a915318145d4267e46a5d9dc61d77548c4364a2d8b",
+    "sha256:75e15bf1ac4e7803d4e82460730d9414f15b4298bfb05edd926b32c68b387051",
+    "sha256:a4a556ee77d2a8c5bea219df76eb24a945d2d2e1cecfc4a088b6374535aa2800"
+  ],
+  "productionConsumerCandidates": [
+    "cmd/agentic-proofkit/main.go",
+    "internal/app/adoption_commands.go",
+    "internal/app/app.go",
+    "internal/app/command_registry.go",
+    "internal/app/conformance_command.go",
+    "internal/app/requirement_browser_command.go",
+    "internal/app/requirement_commands.go",
+    "internal/app/requirement_context_command.go",
+    "internal/app/requirement_proof_resolver_command.go",
+    "internal/app/test_evidence_inventory_command.go",
+    "internal/command/adoptioncontract/adoptioncontract.go",
+    "internal/command/conformanceprofile/conformanceprofile.go",
+    "internal/command/impact/impact.go",
+    "internal/command/pilotadmission/pilotadmission.go",
+    "internal/command/proofbindingtestinventory/proofbindingtestinventory.go",
+    "internal/command/requirementbinding/requirementbinding.go",
+    "internal/command/requirementbrowser/requirementbrowser.go",
+    "internal/command/requirementbrowser/server.go",
+    "internal/command/requirementbrowser/workspace.go",
+    "internal/command/requirementcontext/compose.go",
+    "internal/command/requirementcontext/model.go",
+    "internal/command/requirementcontext/slice.go",
+    "internal/command/requirementcontext/v1_adapter.go",
+    "internal/command/requirementcoverageinput/requirementcoverageinput.go",
+    "internal/command/requirementcoverageview/admission.go",
+    "internal/command/requirementcoverageview/build.go",
+    "internal/command/requirementcoverageview/output_admission.go",
+    "internal/command/requirementcoverageview/output_diagnostics.go",
+    "internal/command/requirementcoverageview/output_proof_projection.go",
+    "internal/command/requirementcoverageview/output_semantics.go",
+    "internal/command/requirementcoverageview/projection.go",
+    "internal/command/requirementcoverageview/requirementcoverageview.go",
+    "internal/command/requirementcoverageview/types.go",
+    "internal/command/requirementdiff/requirementdiff.go",
+    "internal/command/requirementgraph/requirementgraph.go",
+    "internal/command/requirementimpactinput/requirementimpactinput.go",
+    "internal/command/requirementproofsourceset/requirementproofsourceset.go",
+    "internal/command/requirementproofview/requirementproofview.go",
+    "internal/command/testevidenceinventory/normalized_projection.go",
+    "internal/command/testevidenceinventory/source_set.go",
+    "internal/command/testevidenceinventory/testevidenceinventory.go",
+    "internal/tools/browsertestserver/main.go",
+    "internal/tools/coveragemetrics/main.go"
+  ],
+  "productionConsumerEvidenceClass": "conservative_static_candidate_inventory",
+  "productionConsumerNonClaims": [
+    "Candidate inclusion proves a bounded static dependency or schema signal only; it does not prove runtime invocation, semantic ownership, or an absence of consumers that violate the declared static signal policy."
+  ],
+  "releaseVersion": "0.4.0",
+  "schemaVersion": 2
+}

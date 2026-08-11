@@ -12,6 +12,11 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/contractenv"
 )
 
+const (
+	aggregateEnvelopeSchema = "proofkit.adoption-contract-envelope.v2"
+	pilotEnvelopeSchema     = "proofkit.pilot-admission.v2"
+)
+
 var supportedModes = []string{"adoption", "bootstrap", "guidance", "pilot", "workflow"}
 var supportedPilotVariants = []string{"all", "first", "stack-diverse"}
 var modes = stringSet(supportedModes)
@@ -85,7 +90,7 @@ func BuildWithRenderer(raw any, options Options, renderer cliexec.Renderer) (any
 }
 
 func admitAggregate(raw any) (aggregateEnvelope, error) {
-	record, err := contractenv.Object(raw, "proofkit.adoption-contract-envelope.v1", "adoption contract envelope", "envelopeId", "gradual", "nonClaims", "pilot", "workflow")
+	record, err := contractenv.Object(raw, aggregateEnvelopeSchema, "adoption contract envelope", "envelopeId", "gradual", "nonClaims", "pilot", "workflow")
 	if err != nil {
 		return aggregateEnvelope{}, err
 	}
@@ -111,7 +116,7 @@ func admitAggregate(raw any) (aggregateEnvelope, error) {
 	if err != nil {
 		return aggregateEnvelope{}, err
 	}
-	if err := admitChildEnvelope(pilot, "proofkit.pilot-admission.v1", []string{"input", "schema", "stackDiverseInput"}, "adoption contract pilot envelope"); err != nil {
+	if err := admitChildEnvelope(pilot, pilotEnvelopeSchema, []string{"input", "schema", "stackDiverseInput"}, "adoption contract pilot envelope"); err != nil {
 		return aggregateEnvelope{}, err
 	}
 	nonClaims, err := admit.SortedTextArray(record["nonClaims"], "adoption contract envelope nonClaims", true)
@@ -215,7 +220,7 @@ func guidanceEnvelope(envelope aggregateEnvelope) map[string]any {
 
 func pilotEnvelope(envelope aggregateEnvelope, field string) map[string]any {
 	return map[string]any{
-		"schema": "proofkit.pilot-admission.v1",
+		"schema": pilotEnvelopeSchema,
 		field:    envelope.Pilot[field],
 	}
 }
