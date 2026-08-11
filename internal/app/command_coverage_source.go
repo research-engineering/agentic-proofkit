@@ -24,6 +24,13 @@ func routeSemanticSourceProblem(command string, route commandCoverageRoute) stri
 	return goTestSemanticOracleProblem(filePath, route.testName, route.sourceOracleMarker(command))
 }
 
+func routeSemanticSourceProblemAtRoot(command string, route commandCoverageRoute, root string) string {
+	if !route.isSemanticCandidate() {
+		return ""
+	}
+	return goTestSemanticOracleProblem(filepath.Join(root, filepath.FromSlash(route.file)), route.testName, route.sourceOracleMarker(command))
+}
+
 func commandCoverageRouteFilePath(routeFile string) (string, error) {
 	if filepath.IsAbs(routeFile) {
 		return routeFile, nil

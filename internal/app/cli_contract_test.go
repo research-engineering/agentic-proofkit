@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "6a3b6504546419e9198af89ea90af19d543dac26af975aeef1075b4ff7d88491"
+	cliContractPublicABISHA256               = "440f53b6433deef5e254d0d48665e79eda10cf4c0bceafe8acfedb42a6f46df6"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1335,7 +1335,7 @@ func stringsAsAny(values []string) []any {
 }
 
 func TestHelpCommandContractForms(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012212946147973847974188673193955565304078130183905790171739464374424221304025")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079695171929558035833123525411377372802577641283912049521939698994087384245655")
 	for _, args := range [][]string{{"help"}, {"help", "--help"}, {"help", "-h"}, {"--help"}, {"-h"}, {"help", "repo-profile-admission"}, {"repo-profile-admission", "--help"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var stdout bytes.Buffer

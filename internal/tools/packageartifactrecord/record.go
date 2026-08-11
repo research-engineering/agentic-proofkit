@@ -20,6 +20,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
 const (
@@ -450,27 +451,11 @@ func isSHA256(value string) bool {
 }
 
 func SourceSnapshot(root string) (string, string, error) {
-	paths, err := gitPaths(root)
+	snapshot, err := repositorysnapshot.Capture(root)
 	if err != nil {
 		return "", "", err
 	}
-	digest, err := digestPaths(root, paths)
-	if err != nil {
-		return "", "", err
-	}
-	head, err := gitOutput(root, "rev-parse", "HEAD")
-	if err != nil {
-		return "", "", err
-	}
-	status, err := gitOutput(root, "status", "--porcelain=v1", "--untracked-files=all")
-	if err != nil {
-		return "", "", err
-	}
-	revision := strings.TrimSpace(head)
-	if strings.TrimSpace(status) != "" {
-		revision += "+worktree.sha256:" + digest
-	}
-	return revision, digest, nil
+	return snapshot.Revision, snapshot.Digest, nil
 }
 
 func ArtifactSnapshot(root string) (string, error) {
@@ -557,53 +542,6 @@ func ToolchainDigest() (string, error) {
 		writeDigestField(hash, content)
 	}
 	return hex.EncodeToString(hash.Sum(nil)), nil
-}
-
-func gitPaths(root string) ([]string, error) {
-	paths, err := gitNullPaths(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
-	if err != nil {
-		return nil, err
-	}
-	deleted, err := gitNullPaths(root, "ls-files", "-z", "--deleted")
-	if err != nil {
-		return nil, err
-	}
-	deletedSet := make(map[string]struct{}, len(deleted))
-	for _, path := range deleted {
-		deletedSet[path] = struct{}{}
-	}
-	current := make([]string, 0, len(paths))
-	for _, path := range paths {
-		if _, removed := deletedSet[path]; !removed {
-			current = append(current, path)
-		}
-	}
-	sort.Strings(current)
-	return current, nil
-}
-
-func gitNullPaths(root string, args ...string) ([]string, error) {
-	command := exec.Command("git", args...)
-	command.Dir = root
-	output, err := command.Output()
-	if err != nil {
-		return nil, err
-	}
-	parts := strings.Split(string(output), "\x00")
-	paths := make([]string, 0, len(parts))
-	for _, path := range parts {
-		if path != "" {
-			paths = append(paths, filepath.ToSlash(path))
-		}
-	}
-	return paths, nil
-}
-
-func gitOutput(root string, args ...string) (string, error) {
-	command := exec.Command("git", args...)
-	command.Dir = root
-	output, err := command.Output()
-	return string(output), err
 }
 
 func digestPaths(root string, paths []string) (string, error) {

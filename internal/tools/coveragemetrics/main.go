@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,12 +23,18 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/gotestsource"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
 const outputPath = "artifacts/proofkit/coverage-metrics.json"
 
 var commandCoverageInventoryInput = app.CommandCoverageInventory
+var commandOracleExecute = commandoracle.Execute
+var commandOracleInvalidateDiagnostic = commandoracle.InvalidateDiagnostic
+var commandOracleValidateCurrent = commandoracle.ValidateCurrent
+var commandOracleWriteDiagnostic = commandoracle.WriteDiagnostic
 
 type requirementSource struct {
 	Requirements []requirementRecord `json:"requirements"`
@@ -125,26 +132,44 @@ type cliContractMetrics struct {
 }
 
 type commandRouteMetrics struct {
-	AdmittedInventoryEntryCount                       int      `json:"admittedInventoryEntryCount"`
-	CommandCount                                      int      `json:"commandCount"`
-	Commands                                          []string `json:"commands"`
-	CommandWithoutProofRouteCandidateCount            int      `json:"commandWithoutProofRouteCandidateCount"`
-	CommandsWithoutProofRouteCandidate                []string `json:"commandsWithoutProofRouteCandidate"`
-	ContractOnlyCommandCount                          int      `json:"contractOnlyCommandCount"`
-	ContractOnlyCommands                              []string `json:"contractOnlyCommands"`
-	CommandWithoutDeclaredSemanticFalsifierRouteCount int      `json:"commandWithoutDeclaredSemanticFalsifierRouteCount"`
-	CommandsWithoutDeclaredSemanticFalsifierRoute     []string `json:"commandsWithoutDeclaredSemanticFalsifierRoute"`
-	RouteCount                                        int      `json:"routeCount"`
-	RouteOnlyCommandCount                             int      `json:"routeOnlyCommandCount"`
-	RouteOnlyCommands                                 []string `json:"routeOnlyCommands"`
-	RouteSmokeCount                                   int      `json:"routeSmokeCount"`
-	ProofRouteCandidateInventoryEntryCount            int      `json:"proofRouteCandidateInventoryEntryCount"`
-	ProofRouteCandidateRouteCount                     int      `json:"proofRouteCandidateRouteCount"`
-	DeclaredSemanticFalsifierRouteEntryCount          int      `json:"declaredSemanticFalsifierRouteEntryCount"`
-	UnknownProofRouteCandidateRefs                    []string `json:"unknownProofRouteCandidateRefs"`
-	UnknownProofRouteCandidateRefCount                int      `json:"unknownProofRouteCandidateRefCount"`
-	UnknownDeclaredSemanticRouteCommandRefs           []string `json:"unknownDeclaredSemanticRouteCommandRefs"`
-	UnknownDeclaredSemanticRouteCommandRefCount       int      `json:"unknownDeclaredSemanticRouteCommandRefCount"`
+	AdmittedInventoryEntryCount                        int      `json:"admittedInventoryEntryCount"`
+	CommandCount                                       int      `json:"commandCount"`
+	Commands                                           []string `json:"commands"`
+	CommandWithoutProofRouteCandidateCount             int      `json:"commandWithoutProofRouteCandidateCount"`
+	CommandsWithoutProofRouteCandidate                 []string `json:"commandsWithoutProofRouteCandidate"`
+	ContractOnlyCommandCount                           int      `json:"contractOnlyCommandCount"`
+	ContractOnlyCommands                               []string `json:"contractOnlyCommands"`
+	CommandWithoutDeclaredSemanticFalsifierRouteCount  int      `json:"commandWithoutDeclaredSemanticFalsifierRouteCount"`
+	CommandsWithoutDeclaredSemanticFalsifierRoute      []string `json:"commandsWithoutDeclaredSemanticFalsifierRoute"`
+	RouteCount                                         int      `json:"routeCount"`
+	RouteOnlyCommandCount                              int      `json:"routeOnlyCommandCount"`
+	RouteOnlyCommands                                  []string `json:"routeOnlyCommands"`
+	RouteSmokeCount                                    int      `json:"routeSmokeCount"`
+	ProofRouteCandidateInventoryEntryCount             int      `json:"proofRouteCandidateInventoryEntryCount"`
+	ProofRouteCandidateRouteCount                      int      `json:"proofRouteCandidateRouteCount"`
+	DeclaredSemanticFalsifierRouteEntryCount           int      `json:"declaredSemanticFalsifierRouteEntryCount"`
+	UnknownProofRouteCandidateRefs                     []string `json:"unknownProofRouteCandidateRefs"`
+	UnknownProofRouteCandidateRefCount                 int      `json:"unknownProofRouteCandidateRefCount"`
+	UnknownDeclaredSemanticRouteCommandRefs            []string `json:"unknownDeclaredSemanticRouteCommandRefs"`
+	UnknownDeclaredSemanticRouteCommandRefCount        int      `json:"unknownDeclaredSemanticRouteCommandRefCount"`
+	CommandOracleCandidateSetDigest                    string   `json:"commandOracleCandidateSetDigest"`
+	CommandOracleCounterfeitCorpusDigest               string   `json:"commandOracleCounterfeitCorpusDigest"`
+	CommandOracleRecordDigest                          string   `json:"commandOracleRecordDigest"`
+	CommandOracleSourceSnapshotDigest                  string   `json:"commandOracleSourceSnapshotDigest"`
+	CommandWithoutExecutionBackedSemanticRouteCount    int      `json:"commandWithoutExecutionBackedSemanticRouteCount"`
+	CommandsWithoutExecutionBackedSemanticRoute        []string `json:"commandsWithoutExecutionBackedSemanticRoute"`
+	ExecutionBackedSemanticRouteEntryCount             int      `json:"executionBackedSemanticRouteEntryCount"`
+	UnknownExecutionBackedSemanticRouteCommandRefCount int      `json:"unknownExecutionBackedSemanticRouteCommandRefCount"`
+	UnknownExecutionBackedSemanticRouteCommandRefs     []string `json:"unknownExecutionBackedSemanticRouteCommandRefs"`
+}
+
+type commandExecutionSummary struct {
+	CandidateCount          int
+	CandidateSetDigest      string
+	CommandRefs             []string
+	CounterfeitCorpusDigest string
+	RecordDigest            string
+	SourceSnapshotDigest    string
 }
 
 type deadZoneMetrics struct {
@@ -162,6 +187,9 @@ func main() {
 }
 
 func run() error {
+	if err := invalidateExecutionMetrics(); err != nil {
+		return err
+	}
 	requirements, err := readRequirements()
 	if err != nil {
 		return err
@@ -183,16 +211,36 @@ func run() error {
 		out := buildMetrics(requirements, bindings, witnesses, contract, testevidenceinventory.Inventory{})
 		return writeMetrics(out, err)
 	}
-	out := buildMetrics(requirements, bindings, witnesses, contract, commandInventory)
-	if err := bindCurrentSourceProvenance(&out); err != nil {
+	executionEvidence, err := commandOracleExecute(context.Background(), ".")
+	if err != nil {
+		out := buildMetrics(requirements, bindings, witnesses, contract, commandInventory)
+		if provenanceErr := bindCurrentSourceProvenance(&out); provenanceErr != nil {
+			err = errors.Join(err, provenanceErr)
+		}
 		return writeMetrics(out, err)
 	}
+	out := buildMetricsWithExecution(requirements, bindings, witnesses, contract, commandInventory, commandExecutionSummaryFromEvidence(executionEvidence))
+	bindCommandOracleProvenance(&out, executionEvidence)
 	closeoutErr := errors.Join(
 		requireCommandRouteInventoryClosure(out.CommandRoutes),
 		requireNoLinkageDeadZones(out.DeadZones),
 		validateBindingWitnessSelectorsAtRoot(".", bindings),
 	)
-	return writeMetrics(out, closeoutErr)
+	if closeoutErr != nil {
+		return writeMetrics(out, closeoutErr)
+	}
+	return writeCurrentExecutionMetrics(context.Background(), out, executionEvidence)
+}
+
+func commandExecutionSummaryFromEvidence(evidence commandoracle.Evidence) commandExecutionSummary {
+	return commandExecutionSummary{
+		CandidateCount:          len(evidence.Candidates),
+		CandidateSetDigest:      evidence.Record.CandidateSetDigest,
+		CommandRefs:             commandoracle.ExecutionCommandRefs(evidence),
+		CounterfeitCorpusDigest: evidence.Record.CounterfeitCorpusDigest,
+		RecordDigest:            evidence.RecordDigest,
+		SourceSnapshotDigest:    evidence.Record.SourceSnapshotDigest,
+	}
 }
 
 func validateBindingWitnessSelectorsAtRoot(root string, bindings bindingFile) error {
@@ -272,7 +320,40 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestScorecardPublicPublishDeclaresRequiredOutputInputs",
 			"TestSecurityScannerWorkflowsSeparateProviderPublicationPermissions",
 		},
-		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}: {"TestEachCommandRouteClosureConjunctHasIndependentFalsifier", "TestEachLinkageDeadZoneConjunctHasIndependentFalsifier"},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.artifact-file-boundary"}: {
+			"TestOperationsRejectFinalSymlinkWithoutTargetMutation",
+			"TestOperationsRejectSymlinkComponentsWithoutOutsideMutation",
+			"TestReadBoundedRejectsUnrepresentableLimit",
+			"TestWriteReadAndRemoveRoundTrip",
+		},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}: {
+			"TestEachCommandRouteClosureConjunctHasIndependentFalsifier",
+			"TestEachLinkageDeadZoneConjunctHasIndependentFalsifier",
+			"TestInvalidateMetricsFileRejectsSymlinkParentWithoutDeletingOutsideFile",
+			"TestWriteMetricsFileRejectsSymlinkEscapeWithoutMutation",
+		},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-execution-ledger"}: {
+			"TestExecuteBindsMaterializedSourceCandidatesAndRuntimeEvents",
+			"TestRunGoTestCommandTerminatesImmediatelyWhenStderrExceedsBound",
+			"TestRunGoTestsDoesNotExecuteCrossPackageNameMatches",
+			"TestRunGoTestsTerminatesOnContextDeadline",
+			"TestValidateCurrentRejectsProducerUnreachableCandidateProjection",
+		},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-counterfeit-corpus"}: {
+			"TestCounterfeitCorpusClosesRequiredAxes",
+			"TestCounterfeitCorpusClosureRejectsMissingRequiredAxes",
+			"TestEachCounterfeitCaseProducesItsCheckedInDecision",
+		},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-source-snapshot"}: {
+			"TestCaptureContextTerminatesCanceledGitProcessGroup",
+			"TestCaptureContextTerminatesGitProcessGroupOnOutputOverflow",
+			"TestCaptureRejectsSuccessfulGitDiagnosticsWithoutEcho",
+			"TestMaterializeBindsCopiedBytesAndRejectsLiveMutation",
+			"TestMaterializeRejectsSymlinkAndNonEmptyDestination",
+			"TestMaterializeRejectsSymlinkedDestinationInsideSource",
+			"TestValidRevisionAdmitsOnlyGitObjectIdentityAndOptionalSnapshotDigest",
+			"TestValidateMaterializedRejectsSurplusFile",
+		},
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-executability"}: {
 			"TestBindingWitnessSelectorsAcceptUnnamedGoTestParameter",
 			"TestBindingWitnessSelectorsRejectInvalidGoTestSignature",
@@ -341,6 +422,8 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		},
 		{"REQ-PROOFKIT-QUALITY-015", "proofkit.supply-chain-quality.release-closeout-completion-criteria"}: {
 			"TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+			"TestSelfEvidenceInvokesCurrentCommandOracleOwner",
+			"TestSelfEvidenceRejectsProducerUnreachableCommandOracleRef",
 		},
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}: {
 			"TestAdmitEnforcesVersionedChangeClass",
@@ -427,8 +510,12 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-005", "proofkit.supply-chain-quality.codeql-permission-separation"}:                "scripts/workflow_security_scanner_oracles_test.go",
 		{"REQ-PROOFKIT-QUALITY-006", "proofkit.supply-chain-quality.osv-permission-separation"}:                   "scripts/workflow_security_scanner_oracles_test.go",
 		{"REQ-PROOFKIT-QUALITY-007", "proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs"}: "scripts/workflow_security_scanner_oracles_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.artifact-file-boundary"}:                      "internal/tools/artifactfile/file_test.go",
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-executability"}:              "internal/tools/coveragemetrics/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}:                            "internal/tools/coveragemetrics/main_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-execution-ledger"}:             "internal/tools/commandoracle/execute_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-counterfeit-corpus"}:           "internal/tools/commandoracle/corpus_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-source-snapshot"}:              "internal/tools/repositorysnapshot/snapshot_test.go",
 		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.ci-required-aggregate-exactness"}:             "scripts/workflow_package_gate_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}:                "scripts/workflow_package_gate_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-016", "proofkit.supply-chain-quality.release-platform-python-wheels"}:              "internal/tools/pythonpackage/metadata_test.go",
@@ -698,27 +785,70 @@ func bindCurrentSourceProvenance(out *metrics) error {
 	return nil
 }
 
+func bindCommandOracleProvenance(out *metrics, evidence commandoracle.Evidence) {
+	out.Provenance = coverageProvenance{
+		GeneratedAt:          time.Now().UTC().Format(time.RFC3339Nano),
+		ProducerCommandID:    "proofkit.coverage-metrics",
+		SourceRevision:       evidence.Record.SourceRevision,
+		SourceSnapshotDigest: evidence.Record.SourceSnapshotDigest,
+	}
+}
+
 func writeMetrics(out metrics, routeErr error) error {
-	if err := os.MkdirAll(filepath.Dir(outputPath), 0o755); err != nil {
-		return err
-	}
-	content, err := json.MarshalIndent(out, "", "  ")
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(outputPath, append(content, '\n'), 0o644); err != nil {
+	if err := writeMetricsFile(out); err != nil {
 		return err
 	}
 	if routeErr != nil {
 		return routeErr
 	}
+	printMetricsSummary(out)
+	return nil
+}
+
+func writeCurrentExecutionMetrics(ctx context.Context, out metrics, evidence commandoracle.Evidence) error {
+	if err := commandOracleValidateCurrent(ctx, ".", evidence); err != nil {
+		return errors.Join(err, invalidateExecutionMetrics())
+	}
+	if err := commandOracleWriteDiagnostic(".", evidence); err != nil {
+		return errors.Join(err, invalidateExecutionMetrics())
+	}
+	if err := writeMetricsFile(out); err != nil {
+		return errors.Join(err, invalidateExecutionMetrics())
+	}
+	if err := commandOracleValidateCurrent(ctx, ".", evidence); err != nil {
+		return errors.Join(err, invalidateExecutionMetrics())
+	}
+	printMetricsSummary(out)
+	return nil
+}
+
+func invalidateExecutionMetrics() error {
+	err := commandOracleInvalidateDiagnostic(".")
+	if removeErr := invalidateMetricsFile(); removeErr != nil {
+		err = errors.Join(err, removeErr)
+	}
+	return err
+}
+
+func invalidateMetricsFile() error {
+	return artifactfile.Remove(".", outputPath)
+}
+
+func writeMetricsFile(out metrics) error {
+	content, err := json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return err
+	}
+	return artifactfile.WriteAtomic(".", outputPath, append(content, '\n'), 0o644)
+}
+
+func printMetricsSummary(out metrics) {
 	fmt.Printf("coverage metrics: requirements=%d bound=%d scenarios=%d commands=%d\n",
 		out.Requirements.TotalRecords,
 		out.ProofBindings.BoundRequirementCount,
 		out.ProofBindings.ScenarioCount,
 		out.CLIContract.CommandCount,
 	)
-	return nil
 }
 
 func readRequirements() ([]requirementRecord, error) {
@@ -785,6 +915,10 @@ func readJSON[T any](path string) (T, error) {
 }
 
 func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnesses witnessPlan, contract cliContract, commandInventory testevidenceinventory.Inventory) metrics {
+	return buildMetricsWithExecution(requirements, bindings, witnesses, contract, commandInventory, commandExecutionSummary{})
+}
+
+func buildMetricsWithExecution(requirements []requirementRecord, bindings bindingFile, witnesses witnessPlan, contract cliContract, commandInventory testevidenceinventory.Inventory, execution commandExecutionSummary) metrics {
 	requirementIDs := map[string]struct{}{}
 	active := 0
 	blocking := 0
@@ -837,10 +971,10 @@ func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnes
 	sort.Strings(scenarioWithoutCommand)
 	sort.Strings(scenarioWithoutRequirement)
 	contractCommands := cliContractCommandNames(contract)
-	commandRoutes := buildCommandRouteMetrics(contract, app.CommandCoverageSummaries(), commandInventory)
+	commandRoutes := buildCommandRouteMetricsWithExecution(contract, app.CommandCoverageSummaries(), commandInventory, execution)
 	return metrics{
-		ArtifactKind:  "proofkit.coverage-metrics.v1",
-		SchemaVersion: 1,
+		ArtifactKind:  "proofkit.coverage-metrics.v2",
+		SchemaVersion: 2,
 		Requirements: requirementMetrics{
 			Active:       active,
 			Blocking:     blocking,
@@ -863,9 +997,9 @@ func buildMetrics(requirements []requirementRecord, bindings bindingFile, witnes
 		},
 		NonClaims: []string{
 			"Coverage metrics report explicit requirement, binding, witness, and CLI inventory linkage only.",
-			"Coverage metrics classify static command route metadata as proof_route_candidate; route prose, source markers, test existence, and failure-capable AST nodes do not become execution-backed semantic evidence.",
-			"Coverage metrics do not execute command route candidates or observe a concrete falsification event.",
-			"Coverage metrics do not claim line coverage, semantic correctness, command execution, receipt freshness, or merge satisfaction.",
+			"Static command route metadata remains proof_route_candidate; route prose, source markers, test existence, and failure-capable AST nodes do not become execution-backed semantic evidence.",
+			"Execution-backed command route counts require a current materialized source snapshot, exact selected Go test lifecycle events, and owner-reserved cooperative attributes.",
+			"Successful selected tests do not prove assertion-branch execution, mutation adequacy, exhaustive semantic correctness, producer authentication, receipt freshness, merge satisfaction, or production readiness.",
 		},
 	}
 }
@@ -896,119 +1030,6 @@ func readCommandCoverageInventoryFrom(raw any) (testevidenceinventory.Inventory,
 		return testevidenceinventory.Inventory{}, fmt.Errorf("command coverage inventory admission failed: %v", result.Failures)
 	}
 	return result.Inventory, nil
-}
-
-func buildCommandRouteMetrics(contract cliContract, summaries []app.CommandCoverageSummary, inventory testevidenceinventory.Inventory) commandRouteMetrics {
-	missingCandidates := []string{}
-	missingDeclaredSemanticRoutes := []string{}
-	contractRefs := map[string]string{}
-	knownRefs := map[string]struct{}{}
-	candidateRefs := map[string]struct{}{}
-	declaredSemanticRouteRefs := map[string]struct{}{}
-	routeOnlyCount := 0
-	candidateEntryCount := 0
-	declaredSemanticRouteEntryCount := 0
-	for _, command := range contract.Commands {
-		contractRefs[app.CommandCoverageCommandRef(command.Command)] = command.Command
-	}
-	for _, summary := range summaries {
-		knownRefs[summary.CommandRef] = struct{}{}
-	}
-	for _, entry := range inventory.Entries {
-		switch entry.EvidenceClass {
-		case testevidenceinventory.EvidenceClassDeclaredSemanticFalsifierRoute:
-			declaredSemanticRouteEntryCount++
-			for _, commandRef := range entry.CommandRefs {
-				declaredSemanticRouteRefs[commandRef] = struct{}{}
-			}
-		case testevidenceinventory.EvidenceClassProofRouteCandidate:
-			candidateEntryCount++
-			for _, commandRef := range entry.CommandRefs {
-				candidateRefs[commandRef] = struct{}{}
-			}
-		case "routing_smoke_nonclaim":
-			routeOnlyCount++
-		}
-	}
-	unknownDeclaredSemanticRouteRefs := []string{}
-	for ref := range declaredSemanticRouteRefs {
-		if _, ok := knownRefs[ref]; !ok {
-			unknownDeclaredSemanticRouteRefs = append(unknownDeclaredSemanticRouteRefs, ref)
-		}
-	}
-	unknownCandidateRefs := []string{}
-	for ref := range candidateRefs {
-		if _, ok := knownRefs[ref]; !ok {
-			unknownCandidateRefs = append(unknownCandidateRefs, ref)
-		}
-	}
-	contractOnly := []string{}
-	for ref, command := range contractRefs {
-		if _, ok := knownRefs[ref]; !ok {
-			contractOnly = append(contractOnly, command)
-		}
-	}
-	routeOnly := []string{}
-	for _, summary := range summaries {
-		if _, ok := contractRefs[summary.CommandRef]; !ok {
-			routeOnly = append(routeOnly, summary.Command)
-		}
-	}
-	sort.Strings(contractOnly)
-	sort.Strings(routeOnly)
-	sort.Strings(unknownCandidateRefs)
-	sort.Strings(unknownDeclaredSemanticRouteRefs)
-	out := commandRouteMetrics{
-		AdmittedInventoryEntryCount:                 len(inventory.Entries),
-		CommandCount:                                len(summaries),
-		ContractOnlyCommands:                        contractOnly,
-		ContractOnlyCommandCount:                    len(contractOnly),
-		RouteOnlyCommands:                           routeOnly,
-		RouteOnlyCommandCount:                       len(routeOnly),
-		RouteSmokeCount:                             routeOnlyCount,
-		ProofRouteCandidateInventoryEntryCount:      candidateEntryCount,
-		DeclaredSemanticFalsifierRouteEntryCount:    declaredSemanticRouteEntryCount,
-		UnknownProofRouteCandidateRefs:              unknownCandidateRefs,
-		UnknownProofRouteCandidateRefCount:          len(unknownCandidateRefs),
-		UnknownDeclaredSemanticRouteCommandRefs:     unknownDeclaredSemanticRouteRefs,
-		UnknownDeclaredSemanticRouteCommandRefCount: len(unknownDeclaredSemanticRouteRefs),
-	}
-	for _, summary := range summaries {
-		out.Commands = append(out.Commands, summary.Command)
-		out.RouteCount += summary.RouteCount
-		out.ProofRouteCandidateRouteCount += summary.ProofRouteCandidateCount
-		if _, ok := candidateRefs[summary.CommandRef]; !ok {
-			missingCandidates = append(missingCandidates, summary.Command)
-		}
-		if _, ok := declaredSemanticRouteRefs[summary.CommandRef]; !ok {
-			missingDeclaredSemanticRoutes = append(missingDeclaredSemanticRoutes, summary.Command)
-		}
-	}
-	sort.Strings(out.Commands)
-	sort.Strings(missingCandidates)
-	sort.Strings(missingDeclaredSemanticRoutes)
-	out.CommandsWithoutProofRouteCandidate = missingCandidates
-	out.CommandWithoutProofRouteCandidateCount = len(missingCandidates)
-	out.CommandsWithoutDeclaredSemanticFalsifierRoute = missingDeclaredSemanticRoutes
-	out.CommandWithoutDeclaredSemanticFalsifierRouteCount = len(missingDeclaredSemanticRoutes)
-	return out
-}
-
-func requireCommandRouteInventoryClosure(metrics commandRouteMetrics) error {
-	if len(metrics.CommandsWithoutProofRouteCandidate) == 0 &&
-		len(metrics.UnknownProofRouteCandidateRefs) == 0 &&
-		len(metrics.UnknownDeclaredSemanticRouteCommandRefs) == 0 &&
-		len(metrics.ContractOnlyCommands) == 0 &&
-		len(metrics.RouteOnlyCommands) == 0 {
-		return nil
-	}
-	return fmt.Errorf("command proof-route inventory defects: missingCandidates=%v unknownCandidateRefs=%v unknownDeclaredSemanticRouteRefs=%v contractOnly=%v routeOnly=%v",
-		metrics.CommandsWithoutProofRouteCandidate,
-		metrics.UnknownProofRouteCandidateRefs,
-		metrics.UnknownDeclaredSemanticRouteCommandRefs,
-		metrics.ContractOnlyCommands,
-		metrics.RouteOnlyCommands,
-	)
 }
 
 func requireNoLinkageDeadZones(metrics deadZoneMetrics) error {

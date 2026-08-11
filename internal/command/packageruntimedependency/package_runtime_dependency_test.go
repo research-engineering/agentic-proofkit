@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAdmitsExternalRuntimeDependencyAndRejectsWorkspaceResolution(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.027617011738725950397530096345580960352335933116627715389463795934691621119686")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022262543555161298264303898252120278311624176226118336531091301958798480297007")
 	input := validPackageRuntimeDependencyInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

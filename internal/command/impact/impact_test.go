@@ -85,7 +85,7 @@ func TestBuildRejectsShellControlTokensInObligationCommands(t *testing.T) {
 }
 
 func TestBuildRoutesChangedRecordToObligationAndRejectsUnboundProofChange(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.015680759158531317531499583930144280843140752606638002248368777967073648841036")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.004126818763873109094701885631231832544658829793890758986188782288995889572211")
 	input := validImpactInput()
 	input["changedRecordIds"] = []any{"REQ-PROOFKIT-001"}
 	input["obligationCatalog"] = []any{

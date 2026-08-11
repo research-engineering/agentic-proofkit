@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAdmitsAlignedRequiredBranchAndRejectsRequiredDrift(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.059237477459693884008799222027390418858342772482064960101818015827014505791733")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.071179729500816627799208554853464300619289513317734324260194435111694229088770")
 	record, exitCode, err := Build(validBranchAuthorityInput("main"))
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

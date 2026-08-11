@@ -13,7 +13,7 @@ import (
 )
 
 func TestBuildProjectsManifestFactsAndPlanningInputs(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.045131377523903059328620085892776244655592414046718681948892749746792823542716")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.072879230585900406731220760823785361194395031187183819675511483181285804453184")
 	output, exitCode, err := Build(validInput(t))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -79,7 +79,7 @@ func TestBuildOutputsAreAdmittedByWorkspacePlanningCommands(t *testing.T) {
 }
 
 func TestBuildRejectsUnsafeManifestPathAndDuplicatePackageIdentity(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.042789860620987407196887112869252006583828805316041850684999615267856780669343")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.076788067606744061308755388073116836267887021333035147502494382368969043524666")
 	t.Run("unsafe manifest path", func(t *testing.T) {
 		input := validInput(t).(map[string]any)
 		input["packages"].([]any)[0].(map[string]any)["manifestPath"] = "../package.json"

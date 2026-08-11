@@ -66,7 +66,7 @@ func validateContextJSONPointers(output any, contextRefs []any) (int, error) {
 }
 
 func TestBuildDeduplicatesAndFailsClosedOnInvalidPaths(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.020996495977209692976965486603091189537178619363476268911749132800454063351641")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.060535997331386831986160802626392669912987256775670711883112001232124039341072")
 	result, err := Build(map[string]any{
 		"schemaVersion":       json.Number("1"),
 		"reportId":            "proofkit.test.changed-path-set",

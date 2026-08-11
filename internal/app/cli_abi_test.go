@@ -21,7 +21,7 @@ import (
 )
 
 func TestCLIABIGoldenCorpus(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.072652008964654291511814074625765716851058391430332230195872382093981424771505")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.019844608890608007981435607465632554695607593958274064855839894961505266938135")
 	specPath := filepath.Join(repoRoot(t), "docs/specs/proofkit-package-boundary/requirements.v1.json")
 	specContent, err := os.ReadFile(specPath)
 	if err != nil {
@@ -1071,7 +1071,7 @@ func TestOutputWriterRejectsDeterministicParentSwap(t *testing.T) {
 }
 
 func TestRequirementBrowserServerSpecTreeCLIABI(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.006501090000492450297502395866607916441745680520470690190439229497945905166304")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.053429100218927507111827924045562630374131695751215621621358073482708475349353")
 	var input any
 	if err := json.Unmarshal([]byte(cliRequirementSpecTreeInput()), &input); err != nil {
 		t.Fatalf("root-oracle input must be JSON: %v", err)
@@ -1225,7 +1225,7 @@ func waitForBrowserLauncherURL(t *testing.T, urlFile string, result <-chan int, 
 }
 
 func TestAdoptionDoctorCLIABI(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.018061704360080936767110902235369680299779598229946624164723476412925521966788")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069327963569220983248235596502245621103210642467353785655205406140014773697960")
 	cases := []struct {
 		name       string
 		args       []string

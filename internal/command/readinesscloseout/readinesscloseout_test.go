@@ -160,7 +160,7 @@ func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
 }
 
 func TestBuildRejectsBroadNegationAndFrontierOverclaim(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.066064424951322431464180586591196427645864429207324866346989790552124866941997")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.007267731246771664992521702627347665138317306947213538578926686143640960390811")
 	markdown := closedFrontierMarkdown(
 		"Future authoring rows must not require separate owner proof before merge authority is established.",
 	)

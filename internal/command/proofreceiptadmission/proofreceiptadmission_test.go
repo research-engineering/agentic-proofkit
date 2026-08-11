@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildAdmitsAdvisoryReceiptAndRejectsMergeSatisfyingWithoutProvenance(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.076311225906412383451940890026527143214204102348303993661137717946500939722995")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.046833331227659402056123694228405967213258150200955697512043665799069784736285")
 	record, exitCode, err := Build(validProofReceiptInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

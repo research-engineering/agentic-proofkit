@@ -142,7 +142,7 @@ func TestBuildRejectsCandidateMissingRequiredAuthoringFields(t *testing.T) {
 }
 
 func TestBuildRejectsCandidateSourceAdmissionFailure(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.085104032906462850481973845525599803854236430725230974151578780375965864330575")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.001844210971300640912460155205486111610590080014844769281330826828830013003484")
 	input := validInput()
 	candidate := firstUpdate(input)["candidateRequirement"].(map[string]any)
 	candidate["proofBindingRefs"] = []any{}

@@ -39,14 +39,14 @@ func TestSupportedCommandsHaveExplicitCoverageRoutes(t *testing.T) {
 }
 
 func TestCommandCoverageRejectsPackageRouteToAppSmokeTest(t *testing.T) {
-	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke", commandCoverageExpectedPublicOutcome), "Unrelated app smoke must not satisfy package-level semantic coverage.")
+	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke"), "Unrelated app smoke must not satisfy package-level semantic coverage.")
 	if problem := routeSemanticOwnerProblem("registry-consumer", route); problem == "" {
 		t.Fatal("package-level semantic route to app smoke test was admitted")
 	}
 }
 
 func TestCommandCoverageInventoryRejectsSemanticRouteOutsideOwnerScope(t *testing.T) {
-	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke", commandCoverageExpectedPublicOutcome), "Unrelated app smoke must not satisfy package-level semantic coverage.")
+	route := packageFalsifierRoute("internal/app/command_coverage_test.go", "TestNoInputCommandsHaveCommandSpecificBehavior", semanticRouteProof("test.unrelated_app_smoke"), "Unrelated app smoke must not satisfy package-level semantic coverage.")
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
 		t.Fatal("production command coverage inventory builder admitted a semantic route outside the command owner scope")
 	}
@@ -56,7 +56,7 @@ func TestCommandCoverageInventoryRejectsSameOwnerUnrelatedNonEmptyTest(t *testin
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAddsMandatoryBoundaryNonClaims",
-		semanticRouteProof("registryconsumer.registry_consumer_accepts_registry_release_proof", commandCoverageExpectedPublicOutcome),
+		semanticRouteProof("registryconsumer.registry_consumer_accepts_registry_release_proof"),
 		"Same-owner unrelated assertion must not satisfy registry-consumer release-proof semantic coverage.",
 	)
 	_, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}})
@@ -66,21 +66,21 @@ func TestCommandCoverageInventoryRejectsSameOwnerUnrelatedNonEmptyTest(t *testin
 }
 
 func TestCommandCoverageRejectsPackageRouteToDifferentCommandPackage(t *testing.T) {
-	route := packageFalsifierRoute("internal/command/externalconsumer/externalconsumer_test.go", "TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock", semanticRouteProof("test.unrelated_command_package", commandCoverageExpectedPublicOutcome), "Unrelated command package must not satisfy registry-consumer semantic coverage.")
+	route := packageFalsifierRoute("internal/command/externalconsumer/externalconsumer_test.go", "TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock", semanticRouteProof("test.unrelated_command_package"), "Unrelated command package must not satisfy registry-consumer semantic coverage.")
 	if problem := routeSemanticOwnerProblem("registry-consumer", route); problem == "" {
 		t.Fatal("package-level semantic route to unrelated command package was admitted")
 	}
 }
 
 func TestCommandCoverageRejectsDirectRouteToDifferentAppCommand(t *testing.T) {
-	route := directCLIRoute("internal/app/cli_abi_test.go", "TestRequirementBrowserServerSpecTreeCLIABI", semanticRouteProof("test.unrelated_app_cli_abi", commandCoverageExpectedPublicOutcome), "Unrelated app CLI ABI test must not satisfy adoption-doctor semantic coverage.")
+	route := directCLIRoute("internal/app/cli_abi_test.go", "TestRequirementBrowserServerSpecTreeCLIABI", semanticRouteProof("test.unrelated_app_cli_abi"), "Unrelated app CLI ABI test must not satisfy adoption-doctor semantic coverage.")
 	if problem := routeSemanticOwnerProblem("adoption-doctor", route); problem == "" {
 		t.Fatal("direct app semantic route to unrelated command was admitted")
 	}
 }
 
 func TestCommandCoverageRejectsRouteWithoutDescriptorOwner(t *testing.T) {
-	route := packageFalsifierRoute("internal/command/registryconsumer/registryconsumer_test.go", "TestRegistryConsumerAcceptsRegistryReleaseProof", semanticRouteProof("test.unsupported_descriptor_owner", commandCoverageExpectedPublicOutcome), "Unsupported command must not satisfy package-level semantic coverage.")
+	route := packageFalsifierRoute("internal/command/registryconsumer/registryconsumer_test.go", "TestRegistryConsumerAcceptsRegistryReleaseProof", semanticRouteProof("test.unsupported_descriptor_owner"), "Unsupported command must not satisfy package-level semantic coverage.")
 	if problem := routeSemanticOwnerProblem("unsupported-command", route); problem == "" {
 		t.Fatal("package-level semantic route without descriptor owner was admitted")
 	}
@@ -99,12 +99,12 @@ func TestCommandCoverageRejectsSemanticRouteWithoutProofMetadata(t *testing.T) {
 }
 
 func TestCommandCoverageRejectsSemanticRouteWithoutExpectedOutcome(t *testing.T) {
-	route := packageFalsifierRoute(
-		"internal/command/registryconsumer/registryconsumer_test.go",
-		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		commandCoverageSemanticProof{ref: "registryconsumer.accepts_registry_release_proof"},
-		"Semantic command route must bind an expected public outcome.",
-	)
+	route := commandCoverageRoute{
+		file:          "internal/command/registryconsumer/registryconsumer_test.go",
+		kind:          "package_level_falsifier",
+		semanticProof: semanticRouteProof("registryconsumer.accepts_registry_release_proof"),
+		testName:      "TestRegistryConsumerAcceptsRegistryReleaseProof",
+	}
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
 		t.Fatal("semantic route without expected public outcome was admitted by production inventory builder")
 	}
@@ -114,7 +114,7 @@ func TestCommandCoverageRejectsRouteIndexDerivedSemanticProofID(t *testing.T) {
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		semanticRouteProof("registryconsumer.route_7", commandCoverageExpectedPublicOutcome),
+		semanticRouteProof("registryconsumer.route_7"),
 		"Semantic command route must not derive proof identity from route order.",
 	)
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
@@ -126,7 +126,7 @@ func TestCommandCoverageRejectsProseDerivedSemanticProofID(t *testing.T) {
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		semanticRouteProof("Registry consumer accepts release proof", commandCoverageExpectedPublicOutcome),
+		semanticRouteProof("Registry consumer accepts release proof"),
 		"Semantic command route must not derive proof identity from prose.",
 	)
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
@@ -136,7 +136,7 @@ func TestCommandCoverageRejectsProseDerivedSemanticProofID(t *testing.T) {
 
 func TestCommandCoverageRejectsRouteOnlyWithSemanticProofMetadata(t *testing.T) {
 	route := requiredInputAdmissionRoute
-	route.semanticProof = semanticRouteProof("test.route_only_with_semantic_proof", commandCoverageExpectedPublicOutcome)
+	route.semanticProof = semanticRouteProof("test.route_only_with_semantic_proof")
 	if _, err := commandCoverageInventoryFrom(map[string][]commandCoverageRoute{"registry-consumer": {route}}); err == nil {
 		t.Fatal("route-only smoke accepted semantic proof metadata in production inventory builder")
 	}
@@ -184,11 +184,58 @@ func TestCommandCoverageInventoryIsAdmittedAndBindsProofRouteCandidates(t *testi
 	}
 }
 
+func TestCommandCoverageOracleCandidatesAreExactAndRouteSpecific(t *testing.T) {
+	candidates, err := CommandCoverageOracleCandidates()
+	if err != nil {
+		t.Fatalf("CommandCoverageOracleCandidates() error = %v", err)
+	}
+	wantCount := 0
+	for _, summary := range CommandCoverageSummaries() {
+		wantCount += summary.ProofRouteCandidateCount
+	}
+	if len(candidates) != wantCount || len(candidates) == 0 {
+		t.Fatalf("candidate count = %d, want %d", len(candidates), wantCount)
+	}
+	seenMarkers := map[string]struct{}{}
+	seenOutcomes := map[string]struct{}{}
+	for index, candidate := range candidates {
+		if strings.TrimSpace(candidate.ExpectedPublicOutcome) == "" {
+			t.Fatalf("candidate has no route-specific outcome: %#v", candidate)
+		}
+		if _, exists := seenMarkers[candidate.SourceMarker]; exists {
+			t.Fatalf("duplicate candidate marker %s", candidate.SourceMarker)
+		}
+		seenMarkers[candidate.SourceMarker] = struct{}{}
+		seenOutcomes[candidate.ExpectedPublicOutcome] = struct{}{}
+		if index > 0 && strings.Join(candidateIdentity(candidates[index-1]), "\x00") >= strings.Join(candidateIdentity(candidate), "\x00") {
+			t.Fatalf("candidates are not in strict canonical order at %d", index)
+		}
+	}
+	if len(seenOutcomes) < 2 {
+		t.Fatalf("route-specific outcomes collapsed: %#v", seenOutcomes)
+	}
+}
+
+func TestCommandCoverageSourceMarkerBindsRouteSpecificOutcome(t *testing.T) {
+	route := packageFalsifierRoute(
+		"internal/command/registryconsumer/registryconsumer_test.go",
+		"TestRegistryConsumerAcceptsRegistryReleaseProof",
+		semanticRouteProof("registryconsumer.marker_binds_outcome"),
+		"Registry consumer accepts only an admitted registry release proof.",
+	)
+	first := route.sourceOracleMarker("registry-consumer")
+	route.rationale = "Registry consumer rejects a registry release proof with mismatched identity."
+	second := route.sourceOracleMarker("registry-consumer")
+	if first == second {
+		t.Fatalf("route-specific outcome did not change source marker: %s", first)
+	}
+}
+
 func TestCommandCoverageInventoryProjectsStableCandidateRefWithoutSemanticProof(t *testing.T) {
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		semanticRouteProof("registryconsumer.accepts_registry_release_proof", commandCoverageExpectedPublicOutcome),
+		semanticRouteProof("registryconsumer.accepts_registry_release_proof"),
 		"Registry consumer release proof must be tied to an owner-declared semantic proof identity.",
 	)
 	entry := route.inventoryEntry("registry-consumer", 99)
@@ -327,7 +374,7 @@ func TestGoTestSemanticOracleProblemRejectsMismatchedBindingFact(t *testing.T) {
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		semanticRouteProof("registryconsumer.registry_consumer_accepts_registry_release_proof", commandCoverageExpectedPublicOutcome),
+		semanticRouteProof("registryconsumer.registry_consumer_accepts_registry_release_proof"),
 		"Registry consumer release proof must be tied to an owner-declared semantic proof identity.",
 	)
 	filePath := filepath.Join(repoRoot(t), route.file)
@@ -362,7 +409,7 @@ func TestUnreachableFatalCannotBecomeSemanticEvidence(t *testing.T) {
 	route := packageFalsifierRoute(
 		"internal/command/registryconsumer/registryconsumer_test.go",
 		"TestRegistryConsumerAcceptsRegistryReleaseProof",
-		semanticRouteProof("registryconsumer.unreachable_fatal_regression", commandCoverageExpectedPublicOutcome),
+		semanticRouteProof("registryconsumer.unreachable_fatal_regression"),
 		"An unreachable assertion must remain candidate-only.",
 	)
 	marker := route.sourceOracleMarker("registry-consumer")
@@ -419,7 +466,7 @@ func TestRequiredInputCommandsRejectMalformedCallerRecords(t *testing.T) {
 }
 
 func TestNoInputCommandsHaveCommandSpecificBehavior(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069735802754139690645953016388349571937723357477618679005916661691281309389599")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.102282482911729620466899441592793892640151459429551384318004264301951934933567")
 	t.Run("stack-preset", func(t *testing.T) {
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer

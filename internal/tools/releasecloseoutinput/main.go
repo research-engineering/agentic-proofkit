@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -25,16 +26,20 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
 )
+
+var commandOracleValidateCurrent = commandoracle.ValidateCurrent
 
 const (
 	completionID                = "proofkit.release_closeout.current_package_gate"
 	ciProvenancePath            = "artifacts/proofkit/ci-provenance.json"
 	cliContractPath             = "proofkit/cli-contract.v2.json"
 	coverageMetricsPath         = "artifacts/proofkit/coverage-metrics.json"
+	commandOracleRecordPath     = commandoracle.RecordPath
 	proofReceiptReportPath      = "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"
 	proofReceiptsPath           = "artifacts/proofkit/self-hosting-proof-receipts.json"
 	producerReportPath          = "artifacts/proofkit/self-hosting-receipt-producer-admission-report.json"
@@ -153,26 +158,35 @@ type coverageMetricsProvenance struct {
 }
 
 type coverageCommandRouteMetrics struct {
-	AdmittedInventoryEntryCount                       *int      `json:"admittedInventoryEntryCount"`
-	CommandCount                                      *int      `json:"commandCount"`
-	Commands                                          *[]string `json:"commands"`
-	CommandWithoutProofRouteCandidateCount            *int      `json:"commandWithoutProofRouteCandidateCount"`
-	CommandsWithoutProofRouteCandidate                *[]string `json:"commandsWithoutProofRouteCandidate"`
-	ContractOnlyCommandCount                          *int      `json:"contractOnlyCommandCount"`
-	ContractOnlyCommands                              *[]string `json:"contractOnlyCommands"`
-	CommandWithoutDeclaredSemanticFalsifierRouteCount *int      `json:"commandWithoutDeclaredSemanticFalsifierRouteCount"`
-	CommandsWithoutDeclaredSemanticFalsifierRoute     *[]string `json:"commandsWithoutDeclaredSemanticFalsifierRoute"`
-	RouteCount                                        *int      `json:"routeCount"`
-	RouteOnlyCommandCount                             *int      `json:"routeOnlyCommandCount"`
-	RouteOnlyCommands                                 *[]string `json:"routeOnlyCommands"`
-	RouteSmokeCount                                   *int      `json:"routeSmokeCount"`
-	ProofRouteCandidateInventoryEntryCount            *int      `json:"proofRouteCandidateInventoryEntryCount"`
-	ProofRouteCandidateRouteCount                     *int      `json:"proofRouteCandidateRouteCount"`
-	DeclaredSemanticFalsifierRouteEntryCount          *int      `json:"declaredSemanticFalsifierRouteEntryCount"`
-	UnknownProofRouteCandidateRefCount                *int      `json:"unknownProofRouteCandidateRefCount"`
-	UnknownProofRouteCandidateRefs                    *[]string `json:"unknownProofRouteCandidateRefs"`
-	UnknownDeclaredSemanticRouteCommandRefCount       *int      `json:"unknownDeclaredSemanticRouteCommandRefCount"`
-	UnknownDeclaredSemanticRouteCommandRefs           *[]string `json:"unknownDeclaredSemanticRouteCommandRefs"`
+	AdmittedInventoryEntryCount                        *int      `json:"admittedInventoryEntryCount"`
+	CommandCount                                       *int      `json:"commandCount"`
+	Commands                                           *[]string `json:"commands"`
+	CommandWithoutProofRouteCandidateCount             *int      `json:"commandWithoutProofRouteCandidateCount"`
+	CommandsWithoutProofRouteCandidate                 *[]string `json:"commandsWithoutProofRouteCandidate"`
+	ContractOnlyCommandCount                           *int      `json:"contractOnlyCommandCount"`
+	ContractOnlyCommands                               *[]string `json:"contractOnlyCommands"`
+	CommandWithoutDeclaredSemanticFalsifierRouteCount  *int      `json:"commandWithoutDeclaredSemanticFalsifierRouteCount"`
+	CommandsWithoutDeclaredSemanticFalsifierRoute      *[]string `json:"commandsWithoutDeclaredSemanticFalsifierRoute"`
+	RouteCount                                         *int      `json:"routeCount"`
+	RouteOnlyCommandCount                              *int      `json:"routeOnlyCommandCount"`
+	RouteOnlyCommands                                  *[]string `json:"routeOnlyCommands"`
+	RouteSmokeCount                                    *int      `json:"routeSmokeCount"`
+	ProofRouteCandidateInventoryEntryCount             *int      `json:"proofRouteCandidateInventoryEntryCount"`
+	ProofRouteCandidateRouteCount                      *int      `json:"proofRouteCandidateRouteCount"`
+	DeclaredSemanticFalsifierRouteEntryCount           *int      `json:"declaredSemanticFalsifierRouteEntryCount"`
+	UnknownProofRouteCandidateRefCount                 *int      `json:"unknownProofRouteCandidateRefCount"`
+	UnknownProofRouteCandidateRefs                     *[]string `json:"unknownProofRouteCandidateRefs"`
+	UnknownDeclaredSemanticRouteCommandRefCount        *int      `json:"unknownDeclaredSemanticRouteCommandRefCount"`
+	UnknownDeclaredSemanticRouteCommandRefs            *[]string `json:"unknownDeclaredSemanticRouteCommandRefs"`
+	CommandOracleCandidateSetDigest                    string    `json:"commandOracleCandidateSetDigest"`
+	CommandOracleCounterfeitCorpusDigest               string    `json:"commandOracleCounterfeitCorpusDigest"`
+	CommandOracleRecordDigest                          string    `json:"commandOracleRecordDigest"`
+	CommandOracleSourceSnapshotDigest                  string    `json:"commandOracleSourceSnapshotDigest"`
+	CommandWithoutExecutionBackedSemanticRouteCount    *int      `json:"commandWithoutExecutionBackedSemanticRouteCount"`
+	CommandsWithoutExecutionBackedSemanticRoute        *[]string `json:"commandsWithoutExecutionBackedSemanticRoute"`
+	ExecutionBackedSemanticRouteEntryCount             *int      `json:"executionBackedSemanticRouteEntryCount"`
+	UnknownExecutionBackedSemanticRouteCommandRefCount *int      `json:"unknownExecutionBackedSemanticRouteCommandRefCount"`
+	UnknownExecutionBackedSemanticRouteCommandRefs     *[]string `json:"unknownExecutionBackedSemanticRouteCommandRefs"`
 }
 
 type coverageDeadZoneMetrics struct {
@@ -245,6 +259,7 @@ type SelfEvidenceSnapshot struct {
 	cliContractCommands   []string
 	ciProvenance          selfEvidenceDocument[map[string]any]
 	coverageMetrics       selfEvidenceDocument[coverageMetricsEvidence]
+	commandOracle         commandoracle.Evidence
 	execution             packageartifactrecord.Record
 	proofReceiptReport    selfEvidenceDocument[selfEvidenceReport]
 	proofReceipts         selfEvidenceDocument[proofReceiptSetEvidence]
@@ -512,6 +527,7 @@ func releaseChannelClassificationCriterion(root string, packageManifest packageJ
 
 func selfEvidenceCriterion(root string) criterion {
 	evidence := []string{
+		commandOracleRecordPath,
 		coverageMetricsPath,
 		packageartifactrecord.RecordPath,
 		proofReceiptReportPath,
@@ -524,7 +540,7 @@ func selfEvidenceCriterion(root string) criterion {
 	ok := selfEvidenceValid(root)
 	return blockingCriterion(
 		"proofkit.release_closeout.self_evidence",
-		"Current package-artifact execution, self-hosting receipt, producer admission, spec-proof bundle, and coverage metrics evidence must form one coherent local advisory closeout snapshot.",
+		"Current package-artifact execution, command-oracle diagnostic, self-hosting receipt, producer admission, spec-proof bundle, and coverage metrics evidence must form one coherent local advisory closeout snapshot.",
 		ok,
 		evidence,
 		[]string{"npm:self:receipt", "npm:self:coverage"},
@@ -556,6 +572,13 @@ func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
 	}
 	coverageMetrics, err := readSelfEvidenceDocument[coverageMetricsEvidence](root, coverageMetricsPath)
 	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	commandOracle, err := commandoracle.ReadDiagnostic(root)
+	if err != nil {
+		return SelfEvidenceSnapshot{}, err
+	}
+	if err := commandOracleValidateCurrent(context.Background(), root, commandOracle); err != nil {
 		return SelfEvidenceSnapshot{}, err
 	}
 	proofReceiptReport, err := readSelfEvidenceDocument[selfEvidenceReport](root, proofReceiptReportPath)
@@ -594,6 +617,7 @@ func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
 		cliContractCommands:   cliContractCommands,
 		ciProvenance:          ciProvenance,
 		coverageMetrics:       coverageMetrics,
+		commandOracle:         commandOracle,
 		execution:             execution,
 		proofReceiptReport:    proofReceiptReport,
 		proofReceipts:         proofReceipts,
@@ -619,6 +643,7 @@ func readSelfEvidenceDocument[T any](root string, path string) (selfEvidenceDocu
 func (snapshot SelfEvidenceSnapshot) valid() bool {
 	return coverageMetricsRecordMatches(snapshot.coverageMetrics.value, snapshot.cliContractCommands) &&
 		coverageMetricsMatchExecution(snapshot.coverageMetrics.value, snapshot.execution) &&
+		coverageMetricsMatchCommandOracle(snapshot.coverageMetrics.value, snapshot.commandOracle, snapshot.cliContractCommands) &&
 		proofReceiptReportMatchesDocument(snapshot.proofReceiptReport, snapshot.proofReceipts) &&
 		proofReceiptDocumentMatches(snapshot.proofReceipts) &&
 		receiptProducerReportMatchesDocument(snapshot.producerReport, snapshot.producerPolicy) &&
@@ -627,6 +652,37 @@ func (snapshot SelfEvidenceSnapshot) valid() bool {
 		specProofBundleDocumentMatches(snapshot.specProofBundle) &&
 		snapshot.identityConsistent(snapshot.execution) &&
 		snapshot.receiptDigestsConsistent(snapshot.execution)
+}
+
+func coverageMetricsMatchCommandOracle(metrics coverageMetricsEvidence, evidence commandoracle.Evidence, cliContractCommands []string) bool {
+	oracle := evidence.Record
+	routes := metrics.CommandRoutes
+	expectedCommandRefs := make([]string, 0, len(cliContractCommands))
+	for _, command := range cliContractCommands {
+		expectedCommandRefs = append(expectedCommandRefs, "proofkit.cli."+command)
+	}
+	sort.Strings(expectedCommandRefs)
+	oracleCommandRefs := commandoracle.ExecutionCommandRefs(evidence)
+	return oracle.ArtifactKind == commandoracle.ArtifactKind &&
+		oracle.CommandID == commandoracle.CommandID &&
+		oracle.SchemaVersion == commandoracle.SchemaVersion &&
+		oracle.State == "passed" &&
+		len(oracle.Entries) > 0 &&
+		len(oracle.ExecutionCommands) > 0 &&
+		len(oracle.NonClaims) > 0 &&
+		reflect.DeepEqual(oracleCommandRefs, expectedCommandRefs) &&
+		isSHA256(oracle.CandidateSetDigest) &&
+		isSHA256(oracle.CounterfeitCorpusDigest) &&
+		isSHA256(oracle.SourceSnapshotDigest) &&
+		isSHA256(evidence.RecordDigest) &&
+		routes.ExecutionBackedSemanticRouteEntryCount != nil &&
+		*routes.ExecutionBackedSemanticRouteEntryCount == len(oracle.Entries) &&
+		routes.CommandOracleCandidateSetDigest == oracle.CandidateSetDigest &&
+		routes.CommandOracleCounterfeitCorpusDigest == oracle.CounterfeitCorpusDigest &&
+		routes.CommandOracleRecordDigest == evidence.RecordDigest &&
+		routes.CommandOracleSourceSnapshotDigest == oracle.SourceSnapshotDigest &&
+		metrics.Provenance.SourceRevision == oracle.SourceRevision &&
+		metrics.Provenance.SourceSnapshotDigest == oracle.SourceSnapshotDigest
 }
 
 func coverageMetricsMatchExecution(record coverageMetricsEvidence, execution packageartifactrecord.Record) bool {
@@ -879,8 +935,8 @@ func packageArtifactCommandDigest(execution packageartifactrecord.Record) (strin
 }
 
 func coverageMetricsRecordMatches(record coverageMetricsEvidence, cliContractCommands []string) bool {
-	return record.SchemaVersion == 1 &&
-		record.ArtifactKind == "proofkit.coverage-metrics.v1" &&
+	return record.SchemaVersion == 2 &&
+		record.ArtifactKind == "proofkit.coverage-metrics.v2" &&
 		coverageCLIContractMatches(record.CLIContract, cliContractCommands) &&
 		len(record.NonClaims) > 0 &&
 		len(record.ProofBindings) > 0 &&
@@ -994,8 +1050,11 @@ func commandRouteDefectsEmpty(routes coverageCommandRouteMetrics, cliContractCom
 		positiveInt(routes.ProofRouteCandidateInventoryEntryCount) &&
 		positiveInt(routes.ProofRouteCandidateRouteCount) &&
 		nonNegativeInt(routes.DeclaredSemanticFalsifierRouteEntryCount) &&
+		positiveInt(routes.ExecutionBackedSemanticRouteEntryCount) &&
 		commandRouteMetricsProducerReachable(routes, cliContractCommands) &&
 		countMatchesStringSlice(routes.CommandWithoutDeclaredSemanticFalsifierRouteCount, routes.CommandsWithoutDeclaredSemanticFalsifierRoute) &&
+		zeroInt(routes.CommandWithoutExecutionBackedSemanticRouteCount) &&
+		zeroInt(routes.UnknownExecutionBackedSemanticRouteCommandRefCount) &&
 		zeroInt(routes.CommandWithoutProofRouteCandidateCount) &&
 		zeroInt(routes.ContractOnlyCommandCount) &&
 		zeroInt(routes.RouteOnlyCommandCount) &&
@@ -1005,7 +1064,13 @@ func commandRouteDefectsEmpty(routes coverageCommandRouteMetrics, cliContractCom
 		emptyStringSlice(routes.ContractOnlyCommands) &&
 		emptyStringSlice(routes.RouteOnlyCommands) &&
 		emptyStringSlice(routes.UnknownProofRouteCandidateRefs) &&
-		emptyStringSlice(routes.UnknownDeclaredSemanticRouteCommandRefs)
+		emptyStringSlice(routes.UnknownDeclaredSemanticRouteCommandRefs) &&
+		emptyStringSlice(routes.CommandsWithoutExecutionBackedSemanticRoute) &&
+		emptyStringSlice(routes.UnknownExecutionBackedSemanticRouteCommandRefs) &&
+		isSHA256(routes.CommandOracleCandidateSetDigest) &&
+		isSHA256(routes.CommandOracleCounterfeitCorpusDigest) &&
+		isSHA256(routes.CommandOracleRecordDigest) &&
+		isSHA256(routes.CommandOracleSourceSnapshotDigest)
 }
 
 func commandRouteMetricsProducerReachable(routes coverageCommandRouteMetrics, cliContractCommands []string) bool {
@@ -1019,7 +1084,12 @@ func commandRouteMetricsProducerReachable(routes coverageCommandRouteMetrics, cl
 		routes.ProofRouteCandidateInventoryEntryCount == nil ||
 		routes.ProofRouteCandidateRouteCount == nil ||
 		routes.DeclaredSemanticFalsifierRouteEntryCount == nil ||
-		routes.CommandWithoutDeclaredSemanticFalsifierRouteCount == nil {
+		routes.CommandWithoutDeclaredSemanticFalsifierRouteCount == nil ||
+		routes.ExecutionBackedSemanticRouteEntryCount == nil ||
+		routes.CommandWithoutExecutionBackedSemanticRouteCount == nil ||
+		routes.CommandsWithoutExecutionBackedSemanticRoute == nil ||
+		routes.UnknownExecutionBackedSemanticRouteCommandRefCount == nil ||
+		routes.UnknownExecutionBackedSemanticRouteCommandRefs == nil {
 		return false
 	}
 	admitted := *routes.AdmittedInventoryEntryCount
@@ -1031,12 +1101,16 @@ func commandRouteMetricsProducerReachable(routes coverageCommandRouteMetrics, cl
 	declaredEntries := *routes.DeclaredSemanticFalsifierRouteEntryCount
 	missingCandidates := *routes.CommandWithoutProofRouteCandidateCount
 	missingDeclared := *routes.CommandWithoutDeclaredSemanticFalsifierRouteCount
+	executionBacked := *routes.ExecutionBackedSemanticRouteEntryCount
+	missingExecutionBacked := *routes.CommandWithoutExecutionBackedSemanticRouteCount
+	unknownExecutionBacked := *routes.UnknownExecutionBackedSemanticRouteCommandRefCount
 	if admitted < 0 || commands < 0 || routeCount < 0 || routeSmokeCount < 0 ||
 		candidateEntries < 0 || candidateRoutes < 0 || declaredEntries < 0 ||
-		missingCandidates < 0 || missingDeclared < 0 ||
+		missingCandidates < 0 || missingDeclared < 0 || executionBacked < 0 || missingExecutionBacked < 0 || unknownExecutionBacked < 0 ||
 		admitted != routeCount || candidateEntries != candidateRoutes ||
 		candidateEntries > admitted || routeSmokeCount != admitted-candidateEntries ||
 		declaredEntries != 0 || missingCandidates > commands || missingDeclared != commands ||
+		executionBacked != candidateEntries || missingExecutionBacked != 0 || unknownExecutionBacked != 0 ||
 		candidateRoutes < commands-missingCandidates || len(*routes.Commands) != commands ||
 		!reflect.DeepEqual(*routes.Commands, *routes.CommandsWithoutDeclaredSemanticFalsifierRoute) ||
 		!reflect.DeepEqual(*routes.Commands, cliContractCommands) {
@@ -1048,7 +1122,21 @@ func commandRouteMetricsProducerReachable(routes coverageCommandRouteMetrics, cl
 		sortedUniqueStringSlice(routes.ContractOnlyCommands) &&
 		sortedUniqueStringSlice(routes.RouteOnlyCommands) &&
 		sortedUniqueStringSlice(routes.UnknownProofRouteCandidateRefs) &&
-		sortedUniqueStringSlice(routes.UnknownDeclaredSemanticRouteCommandRefs)
+		sortedUniqueStringSlice(routes.UnknownDeclaredSemanticRouteCommandRefs) &&
+		sortedUniqueStringSlice(routes.CommandsWithoutExecutionBackedSemanticRoute) &&
+		sortedUniqueStringSlice(routes.UnknownExecutionBackedSemanticRouteCommandRefs)
+}
+
+func isSHA256(value string) bool {
+	if len(value) != 64 {
+		return false
+	}
+	for _, character := range value {
+		if (character < '0' || character > '9') && (character < 'a' || character > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 func admittedCLIContractCommands(contract cliContractEvidence) ([]string, error) {

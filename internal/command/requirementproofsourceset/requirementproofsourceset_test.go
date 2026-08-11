@@ -54,7 +54,7 @@ func TestBuildCombinesCanonicalSourceAndRejectsSHADrift(t *testing.T) {
 }
 
 func TestBuildSelectsSourceSetRowsAndEmitsResolverInput(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.103606270231233266473620303120670087653439368563763197580781857201403855835422")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.106477495378157513392694067858829301266454618332683944940209642307095597996567")
 	input := validFragmentSourceSetInput(t)
 	input["projection"] = map[string]any{
 		"kind":              "resolver_input",

@@ -20,7 +20,7 @@ func TestBuildAcceptsMergeSatisfyingProducerReceipt(t *testing.T) {
 }
 
 func TestBuildRejectsAdvisoryProducerForMergeSatisfyingReceipt(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.016058221490407979556173242304898277468063189448256779462558039961547903134881")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.053308755633390310507952668654187701868931366930577643796604589279359393321955")
 	input := validAdmission()
 	producer := input["producers"].([]any)[0].(map[string]any)
 	producer["admissionLevel"] = "advisory"

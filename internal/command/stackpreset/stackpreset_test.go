@@ -9,7 +9,7 @@ import (
 )
 
 func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.021096613433872109936380474204032410537184334172715554175894648026752262369407")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.076944518366669573920389884498853536696905439692658896257172669916814288705961")
 	if len(presetIDs) != len(presets) {
 		t.Fatalf("presetIDs=%d presets=%d, want one id per preset", len(presetIDs), len(presets))
 	}
@@ -84,7 +84,7 @@ func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T
 }
 
 func TestUnknownPresetIsRejected(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.086360966252379017579457694274778024752791571205403533089233505435328802293079")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070141068460637498789620042072455227278667326750769337227893395903279066165874")
 	if IsPresetID("unknown") {
 		t.Fatal("IsPresetID accepted unknown preset")
 	}

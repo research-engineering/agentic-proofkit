@@ -58,15 +58,20 @@ vulnerability absence, or consumer rollout safety by itself.
 - `REQ-PROOFKIT-QUALITY-009`: performance-sensitive parser and serializer
   paths expose benchmark entrypoints without making wall-clock budgets a
   required PR gate before stable baselines exist.
-- `REQ-PROOFKIT-QUALITY-010`: coverage metrics report requirement, binding,
-  witness, CLI inventory linkage, and descriptor-owned command proof-route
-  candidates from admitted test-evidence-inventory rows, while critical
-  anti-vacuity scenarios retain exact closed selector inventories. Each linkage and route
-  conjunct has an independent fail-closed falsifier, and each source-checkout
-  selector resolves to a valid function in an active Go test file with its
-  exact executable command; static route metadata, prose, source markers, test
-  existence, and failure-capable syntax never become semantic falsifier
-  evidence.
+- `REQ-PROOFKIT-QUALITY-010`: coverage metrics keep static proof-route
+  candidates separate from an execution-backed command-oracle ledger. The
+  ledger runs exact selected Go tests through package-scoped argv vectors from
+  one exact-file materialized source snapshot, joins reserved lifecycle
+  attributes to every candidate identity, terminates bounded subprocesses on
+  cancellation or output overflow, confines atomic artifact publication and
+  invalidation to non-symlink repository paths, and fails closed on incomplete
+  command coverage or event, source, selection, producer-reachability, and
+  identity drift. A versioned counterfeit corpus owns checked-in expected
+  decisions for every required policy axis, evidence class, record coordinate,
+  and substitution axis; its mutations execute the production admission and
+  lifecycle owners rather than a generated expectation copy. Passing selected
+  tests does not prove assertion-branch execution, mutation adequacy, or
+  exhaustive command semantics.
 - `REQ-PROOFKIT-QUALITY-011`: CI separates the OS-independent full
   source/package gate from macOS platform smoke, executes the complete Go
   package set through its owner command, uses explicit hosted runner labels
@@ -102,12 +107,11 @@ vulnerability absence, or consumer rollout safety by itself.
   fields after validation.
 - `REQ-PROOFKIT-QUALITY-015`: the package gate includes an admitted release
   closeout completion-criteria report so unit tests alone cannot satisfy
-  release closeout, and coverage-metric re-admission uses overflow-safe exact
-  producer relations plus the complete command inventory, and compares both
-  coverage command projections with the actual `cli-contract.v2.json` command
-  inventory from the same source snapshot, so neither an impossible count
-  partition nor a coordinated same-size command substitution can satisfy
-  closeout.
+  release closeout. Coverage re-admission rejects candidate-only v1, requires
+  overflow-safe exact producer relations plus the complete command inventory,
+  and binds coverage v2 to the current command-oracle diagnostic through the
+  ledger owner's one-read canonical admission, current-owner revalidation, and
+  record, candidate-set, corpus, revision, and source-snapshot digests.
 - `REQ-PROOFKIT-QUALITY-016`: release platform targets use one private owner
   that projects platform suffixes, Go build targets, npm OS/CPU metadata,
   package tar entries, Python wheel tags, PyPI candidate completeness,
