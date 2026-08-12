@@ -21,7 +21,12 @@
       "summary": "Compact source-set normalization advances to wrapper, envelope, and source-set schema v2 with declaration-specific roles and fragment contract v3."
     }
   ],
-  "additions": [],
+  "additions": [
+    {
+      "changeId": "proofkit.requirement-source.typed-model",
+      "summary": "Add a bounded representation-neutral internal typed model for requirement-source v2 experiments without adding a source codec, persistence format, public CLI, or source cutover."
+    }
+  ],
   "migration": {
     "required": true,
     "steps": [
@@ -37,7 +42,7 @@
   ],
   "knownLimitations": [
     "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
-    "Requirement-source v2 representation and any textual DSL remain unselected until the typed-model and codec replacement gates pass.",
+    "The requirement-source v2 codec remains unselected until SOURCE-CODEC-01 passes; the typed model is internal and no source cutover is claimed.",
     "TSX source parsing remains unsupported."
   ],
   "rollback": {

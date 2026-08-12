@@ -201,7 +201,9 @@ var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.compact.source-set-v2", Summary: "Compact source-set normalization advances to wrapper, envelope, and source-set schema v2 with declaration-specific roles and fragment contract v3."},
 }
 
-var currentAdditions = []Change{}
+var currentAdditions = []Change{
+	{ChangeID: "proofkit.requirement-source.typed-model", Summary: "Add a bounded representation-neutral internal typed model for requirement-source v2 experiments without adding a source codec, persistence format, public CLI, or source cutover."},
+}
 
 var currentMigrationSteps = []string{
 	"Replace compact root schema_version 1, authority_state canonical, contract_kind requirement_proof_binding, and normalization_profile proofkit.compact.v1 with schema_version 2, authority_state caller_owned_declaration, contract_kind requirement_proof_route_declaration, and normalization_profile proofkit.compact.declaration.v2.",
@@ -263,7 +265,7 @@ func currentExpectedReleaseNotes() string {
 		"## Known Limitations",
 		"",
 		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
-		"- Requirement-source v2 representation and any textual DSL remain unselected until the typed-model and codec replacement gates pass.",
+		"- The requirement-source v2 codec remains unselected until SOURCE-CODEC-01 passes; the typed model is internal and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
 		"",
 		"## Install",
