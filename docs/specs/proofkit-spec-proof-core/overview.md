@@ -142,6 +142,14 @@ execution receipts, and merge policy.
   evidence planes, consumes the normalized v1/v2 context boundary, and accepts
   code topology only as explicit caller-owned input with source-digest,
   parent-edge, abstraction-order, and pre-materialization budget closure.
+- `REQ-PROOFKIT-SPEC-024`: a private representation-neutral requirement-source
+  v2 model separates immutable atomic, authoring-layout, and typed-reference
+  projections, closes every metadata owner, group-member relation, and typed
+  reference under independently observed input, instantiated-scenario, and
+  expanded-output bounds with fixed budget-error precedence, and proves exact
+  package, field, representation, variant, and positive/negative relation
+  coverage without attributing correlated edits to independent field
+  causality, selecting a codec, or changing a public source boundary.
 
 ## Non-Claims
 

@@ -671,6 +671,14 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; this requirement also does not infer code topology, line or branch coverage, native execution, merge approval, release approval, rollout approval, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This private single-source model does not select or expose a source codec, parse or serialize a persisted source, retain a normalized mirror, establish cross-source requirement identity, authenticate derivation objects, digests, selectors, or freshness, authenticate a caller-declared sourceKind or prove its author's authority or trust class, cut over any current requirement consumer, prove requirement meaning or implementation correctness, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
     }
   ],
   "bindings": [
@@ -3789,6 +3797,297 @@
       "witnessId": "proofkit.requirement-traceability.evidence-plane-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementgraph/requirementgraph_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-normalization-closure",
+      "witnessId": "proofkit.requirement-source-v2.normalization-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/model_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNormalizeBuildsDeterministicSeparatedProjections",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeBuildsDeterministicSeparatedProjections$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsInvalidReferenceAndMetadataPartitions",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsInvalidReferenceAndMetadataPartitions$'"
+        },
+        {
+          "selector": "TestNormalizeBuildsEveryTypedReferenceRole",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeBuildsEveryTypedReferenceRole$'"
+        },
+        {
+          "selector": "TestModelAccessorsDoNotExposeMutableOwnerState",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestModelAccessorsDoNotExposeMutableOwnerState$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsBudgetBeforeMemberSemantics",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsBudgetBeforeMemberSemantics$'"
+        },
+        {
+          "selector": "TestNormalizeEnforcesExactInputTextBudgetBeforeElementSemantics",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeEnforcesExactInputTextBudgetBeforeElementSemantics$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsExpandedProjectionBudgetsBeforeMemberSemantics",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsExpandedProjectionBudgetsBeforeMemberSemantics$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsContradictoryScenarioObservations",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsContradictoryScenarioObservations$'"
+        },
+        {
+          "selector": "TestNormalizeReportsUnreferencedDefinitionsDeterministically",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeReportsUnreferencedDefinitionsDeterministically$'"
+        },
+        {
+          "selector": "TestNormalizeDiagnosticsDoNotEchoCallerText",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeDiagnosticsDoNotEchoCallerText$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsNestedCollectionBudgetBeforeElementSemantics",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsNestedCollectionBudgetBeforeElementSemantics$'"
+        },
+        {
+          "selector": "TestNormalizeSeparatesAuthoringLayoutFromAtomicSemantics",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeSeparatesAuthoringLayoutFromAtomicSemantics$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-variant-closure",
+      "witnessId": "proofkit.requirement-source-v2.variant-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/variants_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNormalizeAdmitsEveryDeclaredEnumVariantThroughWholeModel",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeAdmitsEveryDeclaredEnumVariantThroughWholeModel$'"
+        },
+        {
+          "selector": "TestNormalizeProjectsEveryManifestVariantThroughWholeModel",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeProjectsEveryManifestVariantThroughWholeModel$'"
+        },
+        {
+          "selector": "TestNormalizeAdmitsAndProjectsMetadataEnumVariantsFromEachOwner",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeAdmitsAndProjectsMetadataEnumVariantsFromEachOwner$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsUnknownEnumVariantsThroughWholeModel",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsUnknownEnumVariantsThroughWholeModel$'"
+        },
+        {
+          "selector": "TestNormalizePreservesEveryDeclaredPresenceVariant",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizePreservesEveryDeclaredPresenceVariant$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-instantiated-scenario-closure",
+      "witnessId": "proofkit.requirement-source-v2.instantiated-scenario-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/scenario_evaluation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNormalizeRejectsContradictoryInstantiatedObservations",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsContradictoryInstantiatedObservations$'"
+        },
+        {
+          "selector": "TestScenarioEvaluationBudgetMatchesIndependentInstantiation",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestScenarioEvaluationBudgetMatchesIndependentInstantiation$'"
+        },
+        {
+          "selector": "TestScenarioParameterValuesAreSubstitutedOnce",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestScenarioParameterValuesAreSubstitutedOnce$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-identity-aware-mutation-closure",
+      "witnessId": "proofkit.requirement-source-v2.identity-aware-mutation-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/draft_observation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestChangedDraftFieldIDsIsIdentityAware",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestChangedDraftFieldIDsIsIdentityAware$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-metadata-owner-closure",
+      "witnessId": "proofkit.requirement-source-v2.metadata-owner-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/metadata_ownership_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNormalizePreservesExactMetadataOwnershipMatrix",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizePreservesExactMetadataOwnershipMatrix$'"
+        },
+        {
+          "selector": "TestNormalizeClosesEveryOriginOwnerReference",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeClosesEveryOriginOwnerReference$'"
+        },
+        {
+          "selector": "TestNormalizeRejectsOverlapAndGapForEveryMetadataField",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestNormalizeRejectsOverlapAndGapForEveryMetadataField$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-expanded-budget-closure",
+      "witnessId": "proofkit.requirement-source-v2.expanded-budget-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/projection_budget_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestExpandedProjectionBudgetMatchesIndependentMaterialization",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestExpandedProjectionBudgetMatchesIndependentMaterialization$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-enum-inventory-closure",
+      "witnessId": "proofkit.requirement-source-v2.enum-inventory-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/variant_inventory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIndependentManifestMatchesExactProductionEnumInventory",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestIndependentManifestMatchesExactProductionEnumInventory$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-field-projection-closure",
+      "witnessId": "proofkit.requirement-source-v2.field-projection-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/completeness_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIndependentManifestClosesEveryFieldThroughRealMutants",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestIndependentManifestClosesEveryFieldThroughRealMutants$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-typed-field-inventory-closure",
+      "witnessId": "proofkit.requirement-source-v2.typed-field-inventory-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/field_inventory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIndependentManifestMatchesExactTypedInputFieldInventory",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestIndependentManifestMatchesExactTypedInputFieldInventory$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-input-budget-closure",
+      "witnessId": "proofkit.requirement-source-v2.input-budget-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/input_budget_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInputCollectionBudgetMatchesIndependentObserver",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestInputCollectionBudgetMatchesIndependentObserver$'"
+        },
+        {
+          "selector": "TestInputTextBudgetUsesArchitectureIndependentWidth",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestInputTextBudgetUsesArchitectureIndependentWidth$'"
+        },
+        {
+          "selector": "TestLimitConfigurationRejectsEveryInvalidBoundary",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestLimitConfigurationRejectsEveryInvalidBoundary$'"
+        },
+        {
+          "selector": "TestPreflightBudgetErrorPrecedence",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestPreflightBudgetErrorPrecedence$'"
+        },
+        {
+          "selector": "TestPreflightCardinalityBudgetsHaveExactTransitions",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestPreflightCardinalityBudgetsHaveExactTransitions$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-manifest-admission-closure",
+      "witnessId": "proofkit.requirement-source-v2.manifest-admission-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/completeness_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCompletenessRecordsUseExactStrictJSONAdmission",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestCompletenessRecordsUseExactStrictJSONAdmission$'"
+        },
+        {
+          "selector": "TestIndependentManifestClosesEnumAndPresenceVariants",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestIndependentManifestClosesEnumAndPresenceVariants$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-package-boundary-closure",
+      "witnessId": "proofkit.requirement-source-v2.package-boundary-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/package_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRepresentationNeutralPackageBoundaryIsExact",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestRepresentationNeutralPackageBoundaryIsExact$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-v2-relation-negative-closure",
+      "witnessId": "proofkit.requirement-source-v2.relation-negative-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcemodel/mutant_relation_negative_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestMutantRelationPredicatesRejectNearMisses",
+          "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestMutantRelationPredicatesRejectNearMisses$'"
+        }
+      ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },
