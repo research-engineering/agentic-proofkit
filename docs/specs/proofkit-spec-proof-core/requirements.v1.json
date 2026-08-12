@@ -555,6 +555,19 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-024",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "A private representation-neutral requirement-source v2 model admits one bounded source into immutable atomic, authoring-layout, and typed-reference projections; it preserves atomic requirement identity while expanding grouped statement stems and premises, preserves group-to-member relations under composite identity, assigns every effective metadata field to exactly one resolving profile or member owner, admits lifecycle, deferral, update-policy, scenario, vocabulary, non-claim, and derivation semantics through closed variants and references, applies architecture-independent input, instantiated-scenario, and expanded-materialization cardinality and text budgets in a fixed precedence before per-item semantic work, rejects both lexical and single-pass parameter-instantiated observation contradictions, normalizes admitted set-like values deterministically, emits nondisclosing diagnostics deterministically for each exact input, and preserves ordered action sequences. An independently authored exact typed-field and closed-variant manifest plus an identity-aware admitted semantic mutant corpus proves individual field projection, both metadata-owner branches, or an explicitly named referential relation with negative near-miss controls and without attributing correlated edits to independent field causality; independent structural observers prove exact package exports and direct imports, representation neutrality, exact input, instantiated-scenario, and expanded-output costs, and exact versus limit-minus-one budget behavior.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-024"],
+      "nonClaims": ["This private single-source model does not select or expose a source codec, parse or serialize a persisted source, retain a normalized mirror, establish cross-source requirement identity, authenticate derivation objects, digests, selectors, or freshness, authenticate a caller-declared sourceKind or prove its author's authority or trust class, cut over any current requirement consumer, prove requirement meaning or implementation correctness, execute native witnesses, approve merge or release, or establish rollout or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [
