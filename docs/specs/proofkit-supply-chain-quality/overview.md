@@ -160,9 +160,10 @@ vulnerability absence, or consumer rollout safety by itself.
   failed attempts retain attempt-scoped action, DOM, network, and source traces
   without continuous screenshot capture plus a bounded best-effort failure
   screenshot, without creating passed proof.
-- `REQ-PROOFKIT-QUALITY-023`: Python wheels independently bind advertised
-  platform compatibility to decoded executable bytes, and the wheel set rejects
-  version, identity, presence, and digest drift; wheels carry Core Metadata 2.4
+- `REQ-PROOFKIT-QUALITY-023`: npm platform binaries and Python wheels
+  independently bind to the same release binary for every target; wheels also
+  bind advertised platform compatibility to decoded executable bytes, reject
+  version, identity, presence, and digest drift, and carry Core Metadata 2.4
   plus an exact, RECORD-closed repository license payload.
 - `REQ-PROOFKIT-QUALITY-024`: a closed version-bound machine record binds the
   exact previous/current SemVer pair and compatible/breaking class, declares the
@@ -185,8 +186,9 @@ vulnerability absence, or consumer rollout safety by itself.
   preimplementation byte corpus for the pinned control, format, and separator
   table without changing decoded values.
 - `REQ-PROOFKIT-QUALITY-027`: report-visible diagnostics and structural text
-  apply the same scalar, control/format, and split-secret taxonomy and replace
-  rejected caller values as a whole without echoing any fragment.
+  apply the same scalar, Unicode-whitespace, control/format, and split-secret
+  taxonomy, replace rejected caller values as a whole without echoing any
+  fragment, and own dynamic stderr projection for repository tools.
 
 ## Non-Claims
 

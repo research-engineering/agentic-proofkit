@@ -18,7 +18,7 @@ func agentEnvelope(value projection) (map[string]any, error) {
 			"purpose":       "Admitted change-workflow context selected by least dependency closure.",
 			"ref":           ref.ArtifactPath,
 			"refId":         ref.RefID,
-			"role":          contextRole(ref.RefKind),
+			"role":          contextRole(ref, value.Input.GoverningAuthorityRefID),
 			"subjectDigest": ref.SubjectDigest,
 		})
 	}
@@ -36,16 +36,21 @@ func agentEnvelope(value projection) (map[string]any, error) {
 	blocked := []map[string]any{}
 	if value.Decision.OutputKind == "next_action" {
 		prompt := value.Prompt
-		actionPlan = append(actionPlan, map[string]any{
+		action := map[string]any{
 			"commandIds":   []any{},
 			"evidenceRefs": stringsValue(contextRefIDs(value.Closure.Retained)),
 			"instruction":  prompt["candidateAction"],
 			"nonClaims":    []any{promptNonClaim},
 			"owner":        prompt["ownerOrEscalationTarget"],
+			"outputKind":   value.Decision.OutputKind,
 			"phase":        value.Decision.ActiveStageID,
 			"rationale":    "The admitted checkpoint relation selects exactly one next action for the active stage.",
 			"stepId":       "proofkit.change-workflow-plan.next-action",
-		})
+		}
+		if value.Decision.SuccessorStateDelta != nil {
+			action["successorStateDelta"] = successorValue(*value.Decision.SuccessorStateDelta)
+		}
+		actionPlan = append(actionPlan, action)
 		if value.Input.GoverningAuthorityRefID == nil {
 			blocked = append(blocked, map[string]any{
 				"description":    missingOwnerStop,
@@ -55,6 +60,18 @@ func agentEnvelope(value projection) (map[string]any, error) {
 				"preconditionId": "proofkit.change-workflow-plan.missing-governing-authority",
 			})
 		}
+	} else {
+		actionPlan = append(actionPlan, map[string]any{
+			"commandIds":   []any{},
+			"evidenceRefs": stringsValue(contextRefIDs(value.Closure.Retained)),
+			"instruction":  "Stop because the admitted workflow snapshot is complete; do not infer merge, release, rollout, or readiness.",
+			"nonClaims":    []any{promptNonClaim},
+			"outputKind":   value.Decision.OutputKind,
+			"owner":        "consumer_repository",
+			"phase":        "terminal",
+			"rationale":    "The complete stage prefix and null checkpoint select the disjoint terminal workflow variant.",
+			"stepId":       "proofkit.change-workflow-plan.workflow-complete",
+		})
 	}
 	sourceHash, err := stableHash(value.Plan)
 	if err != nil {
@@ -111,15 +128,18 @@ func stableHash(value map[string]any) (string, error) {
 	return "sha256:" + hex.EncodeToString(digest[:]), nil
 }
 
-func contextRole(kind string) string {
-	if kind == "authority" {
+func contextRole(ref contextRef, governingAuthorityRefID *string) string {
+	if governingAuthorityRefID != nil && ref.RefID == *governingAuthorityRefID {
 		return "semantic_owner"
 	}
-	if kind == "finding" {
+	if ref.RefKind == "finding" {
 		return "review_finding"
 	}
-	if kind == "witness" {
+	if ref.RefKind == "witness" {
 		return "proof_binding"
+	}
+	if ref.RefKind == "artifact" {
+		return "evidence"
 	}
 	return "owner_surface"
 }

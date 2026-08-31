@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -64,7 +65,7 @@ func main() {
 		err = run(root, *check)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }

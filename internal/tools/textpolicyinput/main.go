@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
@@ -152,6 +153,6 @@ func isBinaryCandidate(path string) bool {
 }
 
 func exit(err error) {
-	_, _ = fmt.Fprintln(os.Stderr, err.Error())
+	diagnostic.WriteError(os.Stderr, err)
 	os.Exit(1)
 }

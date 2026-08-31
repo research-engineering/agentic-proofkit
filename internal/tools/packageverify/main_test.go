@@ -307,8 +307,8 @@ func TestPackageVerifierDiagnosticNondisclosure(t *testing.T) {
 		want  string
 	}{
 		{value: "package verification failed for api_key=abc123456789", want: "<redacted-diagnostic-value>\n"},
-		{value: "package verification failed for line\nbreak", want: "package verification failed for line<redacted-control-rune>break\n"},
-		{value: "package verification failed for unsafe\u200bvalue", want: "package verification failed for unsafe<redacted-control-rune>value\n"},
+		{value: "package verification failed for line\nbreak", want: "<redacted-diagnostic-value>\n"},
+		{value: "package verification failed for unsafe\u200bvalue", want: "<redacted-diagnostic-value>\n"},
 		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "<redacted-diagnostic-value>\n"},
 	} {
 		var output bytes.Buffer
@@ -1429,6 +1429,37 @@ func TestVerifyRootPackageRejectsEachForbiddenRootEntry(t *testing.T) {
 				t.Fatalf("verifyRootPackage() error=%v, want rejection of %s", err, forbidden)
 			}
 		})
+	}
+}
+
+func TestPackedPlatformBinariesMatchReleaseBinaryBytes(t *testing.T) {
+	root := t.TempDir()
+	withWorkingDirectory(t, root)
+	entries := map[string]string{}
+	current, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		t.Fatal(err)
+	}
+	nonCurrentEntry := ""
+	for _, target := range releaseplatform.Targets() {
+		content := []byte("release-binary-" + target.PlatformSuffix)
+		writeFileBytes(t, filepath.FromSlash(target.BinaryPath), content)
+		entries[target.PackageTarEntry] = string(content)
+		if target.PlatformSuffix != current.PlatformSuffix && nonCurrentEntry == "" {
+			nonCurrentEntry = target.PackageTarEntry
+		}
+	}
+	artifact := tarballArtifact(t, writePackageTarball(t, entries))
+	if err := verifyPackedPlatformBinariesMatchSource(artifact); err != nil {
+		t.Fatalf("matching carrier bytes rejected: %v", err)
+	}
+	if nonCurrentEntry == "" {
+		t.Fatal("test requires at least one non-current release target")
+	}
+	entries[nonCurrentEntry] = "mutated-non-current-binary"
+	artifact = tarballArtifact(t, writePackageTarball(t, entries))
+	if err := verifyPackedPlatformBinariesMatchSource(artifact); err == nil || !strings.Contains(err.Error(), "does not match release binary") {
+		t.Fatalf("mutated non-current carrier error=%v", err)
 	}
 }
 

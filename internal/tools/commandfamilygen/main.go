@@ -18,6 +18,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 )
 
 const (
@@ -57,7 +58,7 @@ func main() {
 		err = run(root, *check)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }

@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"strings"
 	"testing"
@@ -20,19 +21,99 @@ func TestAgentWorkflowCLITruthTable(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.110027854485263740098018592752615689790850067351556445289115876582278838003288")
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.008921652518915565373824823596859113418310007148763537766174180247340157842807")
 	const (
-		semanticOutputClasses  = 24
-		frozenRejectionClasses = 45
-		extraRejectionCases    = 2
-		helpClasses            = 10
-		colorClasses           = 8
+		semanticOutputClasses     = 24
+		envelopeTransitionClasses = 8
+		frozenRejectionClasses    = 45
+		extraRejectionCases       = 2
+		helpClasses               = 10
+		colorClasses              = 8
 	)
-	if got, want := semanticOutputClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 89; got != want {
+	if got, want := semanticOutputClasses+envelopeTransitionClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 97; got != want {
 		t.Fatalf("agent workflow CLI truth-table cardinality = %d, want %d", got, want)
 	}
 	t.Run("semantic output classes", testAgentWorkflowSemanticOutputClasses)
+	t.Run("envelope transition classes", testAgentWorkflowEnvelopeTransitionClasses)
 	t.Run("usage errors precede input", testAgentWorkflowUsageErrorsPrecedeInput)
 	t.Run("exclusive help classes", testAgentWorkflowHelpClasses)
 	t.Run("terminal capability product", testAgentWorkflowTerminalCapabilityProduct)
+}
+
+func testAgentWorkflowEnvelopeTransitionClasses(t *testing.T) {
+	const digest = "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+	stages := []string{"architecture", "design", "implementation_plan", "implementation", "verification", "pull_request", "closeout"}
+	for stageIndex := range stages {
+		t.Run(stages[stageIndex], func(t *testing.T) {
+			completed := make([]any, stageIndex)
+			for index := 0; index < stageIndex; index++ {
+				completed[index] = stages[index]
+			}
+			prior := map[string]any{
+				"checkpoint": map[string]any{
+					"assessmentSubjectDigest": digest,
+					"state":                   "review_passed",
+					"subjectDigest":           digest,
+					"subjectRefId":            "ctx.artifact",
+				},
+				"completedStageIds": completed,
+				"contextRefs": []any{
+					map[string]any{
+						"artifactPath":     "evidence/artifact.json",
+						"dependencyRefIds": []any{},
+						"refId":            "ctx.artifact",
+						"refKind":          "artifact",
+						"subjectDigest":    digest,
+					},
+				},
+				"governingAuthorityRefId": nil,
+				"requiredContextRefIds":   []any{},
+				"schemaVersion":           json.Number("1"),
+			}
+			payload, err := stablejson.MarshalLayout(prior, stablejson.LayoutCompact)
+			if err != nil {
+				t.Fatal(err)
+			}
+			status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", "-", "--agent-envelope"}, bytes.NewReader(payload), PresentationCapabilities{})
+			if status != 0 || stderr != "" {
+				t.Fatalf("status=%d stderr=%q", status, stderr)
+			}
+			envelope := decodeCLIJSON(t, stdout).(map[string]any)
+			action := envelope["actionPlan"].([]any)[0].(map[string]any)
+			delta, ok := action["successorStateDelta"].(map[string]any)
+			if action["outputKind"] != "next_action" || !ok {
+				t.Fatalf("transition envelope is incomplete: %v", action)
+			}
+			merged, err := changeworkflowplan.MergeSuccessor(prior, delta)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := changeworkflowplan.Build(merged); err != nil {
+				t.Fatalf("CLI-projected successor is not admitted: %v", err)
+			}
+		})
+	}
+
+	t.Run("terminal", func(t *testing.T) {
+		terminal := map[string]any{
+			"checkpoint":              nil,
+			"completedStageIds":       []any{"architecture", "design", "implementation_plan", "implementation", "verification", "pull_request", "closeout"},
+			"contextRefs":             []any{},
+			"governingAuthorityRefId": nil,
+			"requiredContextRefIds":   []any{},
+			"schemaVersion":           json.Number("1"),
+		}
+		payload, err := stablejson.MarshalLayout(terminal, stablejson.LayoutCompact)
+		if err != nil {
+			t.Fatal(err)
+		}
+		status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", "-", "--agent-envelope"}, bytes.NewReader(payload), PresentationCapabilities{})
+		if status != 0 || stderr != "" {
+			t.Fatalf("status=%d stderr=%q", status, stderr)
+		}
+		action := decodeCLIJSON(t, stdout).(map[string]any)["actionPlan"].([]any)[0].(map[string]any)
+		if action["outputKind"] != "workflow_complete" || action["phase"] != "terminal" {
+			t.Fatalf("terminal envelope is incomplete: %v", action)
+		}
+	})
 }
 
 func testAgentWorkflowSemanticOutputClasses(t *testing.T) {

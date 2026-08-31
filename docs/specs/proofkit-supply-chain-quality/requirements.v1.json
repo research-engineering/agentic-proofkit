@@ -298,7 +298,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Each Python wheel binds its embedded executable to the release binary digest, and the wheel-set verifier independently rejects version drift, duplicate identities, missing files, and SHA drift; each wheel independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
+      "invariant": "Every npm platform-binary tar entry and every Python wheel independently binds its embedded executable bytes to the same release-platform binary, so npm-to-release and wheel-to-release equality jointly imply cross-carrier byte identity for all shipped targets; the wheel-set verifier independently rejects version drift, duplicate identities, missing files, and SHA drift; each wheel independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
       "claimLevel": "blocking",
       "riskClass": "critical",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -350,7 +350,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-027",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Every report-visible diagnostic and structural-text sanitizer accepts only Unicode 15.0.0 scalar strings, recognizes the pinned Cc, Cf, Zl, and Zp range table and contiguous or control-split secret-shaped values through one shared taxonomy, and replaces any rejected caller-owned value as a whole with one fixed command-owned label without emitting its bytes, code points, prefix, suffix, or caller-controlled replacement text.",
+      "invariant": "Every report-visible diagnostic and structural-text sanitizer accepts only Unicode 15.0.0 scalar strings, recognizes one explicit Unicode whitespace alphabet plus the pinned Cc, Cf, Zl, and Zp range table and contiguous or control-split secret-shaped values through one shared taxonomy, and replaces any rejected caller-owned value as a whole with one fixed command-owned label without emitting its bytes, code points, prefix, suffix, or caller-controlled replacement text; every repository tool entrypoint routes dynamic stderr errors through that owner rather than writing raw error values.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

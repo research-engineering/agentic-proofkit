@@ -168,8 +168,12 @@ func TestRedactDiagnosticValueReplacesRejectedValuesAsAWhole(t *testing.T) {
 		input string
 		want  string
 	}{
-		{input: "line\nbreak", want: "line<redacted-control-rune>break"},
-		{input: "unsafe\u200bvalue", want: "unsafe<redacted-control-rune>value"},
+		{input: "line\nbreak", want: redactedValueLabel},
+		{input: "unsafe\u0085value", want: redactedValueLabel},
+		{input: "unsafe\u200bvalue", want: redactedValueLabel},
+		{input: "unsafe\u2028value", want: redactedValueLabel},
+		{input: "unsafe\u2029value", want: redactedValueLabel},
+		{input: "unsafe\u202evalue", want: redactedValueLabel},
 		{input: string([]byte{'p', 'a', 't', 'h', 0xff}), want: redactedValueLabel},
 	} {
 		if got := RedactStructuralText(test.input); got != test.want {

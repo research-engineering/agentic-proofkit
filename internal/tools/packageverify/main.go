@@ -24,7 +24,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
@@ -182,7 +182,7 @@ func main() {
 }
 
 func writeVerificationFailure(writer io.Writer, err error) {
-	_, _ = fmt.Fprintln(writer, admit.RedactStructuralText(err.Error()))
+	diagnostic.WriteError(writer, err)
 }
 
 func runVerifier() error {
@@ -223,6 +223,9 @@ func runVerifier() error {
 	if err := verifyPackedOwnerRecordsMatchSource(rootPackage); err != nil {
 		return err
 	}
+	if err := verifyPackedPlatformBinariesMatchSource(rootPackage); err != nil {
+		return err
+	}
 	if err := verifyNoStalePackageDocs(rootPackage); err != nil {
 		return err
 	}
@@ -251,6 +254,23 @@ func verifyPackedOwnerRecordsMatchSource(artifact rootPackageArtifact) error {
 		}
 		if !bytes.Equal(packed, source) {
 			return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
+		}
+	}
+	return nil
+}
+
+func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error {
+	for _, target := range releaseplatform.Targets() {
+		packed, err := readTarFileFromBytes(artifact.Content, target.PackageTarEntry)
+		if err != nil {
+			return err
+		}
+		source, err := os.ReadFile(filepath.FromSlash(target.BinaryPath))
+		if err != nil {
+			return fmt.Errorf("read release binary for %s: %w", target.PlatformSuffix, err)
+		}
+		if !bytes.Equal(packed, source) {
+			return fmt.Errorf("packed platform binary does not match release binary for %s", target.PlatformSuffix)
 		}
 	}
 	return nil

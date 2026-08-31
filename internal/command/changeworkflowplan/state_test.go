@@ -147,6 +147,51 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 			}
 		}
 	})
+	t.Run("agent_envelope_transition_is_executable", func(t *testing.T) {
+		for index := range workflowCatalog.Stages {
+			prior := inputForStage(index, "review_passed")
+			envelope, err := BuildAgentEnvelope(prior)
+			if err != nil {
+				t.Fatalf("stage %d envelope rejected: %v", index, err)
+			}
+			actions := envelope["actionPlan"].([]any)
+			if len(actions) != 1 {
+				t.Fatalf("stage %d action count=%d, want 1", index, len(actions))
+			}
+			action := actions[0].(map[string]any)
+			if action["outputKind"] != "next_action" {
+				t.Fatalf("stage %d outputKind=%v", index, action["outputKind"])
+			}
+			delta, ok := action["successorStateDelta"].(map[string]any)
+			if !ok {
+				t.Fatalf("stage %d envelope omits successorStateDelta: %v", index, action)
+			}
+			merged, err := MergeSuccessor(prior, delta)
+			if err != nil {
+				t.Fatalf("stage %d envelope delta rejected: %v", index, err)
+			}
+			if _, err := Build(merged); err != nil {
+				t.Fatalf("stage %d envelope successor rejected: %v", index, err)
+			}
+		}
+	})
+	t.Run("agent_envelope_terminal_is_explicit", func(t *testing.T) {
+		envelope, err := BuildAgentEnvelope(terminalInput())
+		if err != nil {
+			t.Fatal(err)
+		}
+		actions := envelope["actionPlan"].([]any)
+		if len(actions) != 1 {
+			t.Fatalf("terminal action count=%d, want 1", len(actions))
+		}
+		action := actions[0].(map[string]any)
+		if action["outputKind"] != "workflow_complete" || action["phase"] != "terminal" {
+			t.Fatalf("terminal action is not explicit: %v", action)
+		}
+		if _, present := action["successorStateDelta"]; present {
+			t.Fatalf("terminal action contains successorStateDelta: %v", action)
+		}
+	})
 	t.Run("review_passed_accepts", func(t *testing.T) {
 		for index := range workflowCatalog.Stages {
 			plan := requireBuild(t, inputForStage(index, "review_passed"))

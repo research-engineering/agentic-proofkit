@@ -774,6 +774,7 @@
         "internal/kernel/browserdoc",
         "internal/kernel/cliexec",
         "internal/kernel/compactproofcontract",
+        "internal/kernel/diagnostic",
         "internal/kernel/digest",
         "internal/kernel/markdownfmt",
         "internal/kernel/proofvocab",

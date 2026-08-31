@@ -33,20 +33,23 @@ introduced.
 - `REQ-PROOFKIT-WORKFLOW-002`: named optional built-in profile, exact
   seven-stage order, prefix/checkpoint biconditional, and a disjoint terminal
   output.
-- `REQ-PROOFKIT-WORKFLOW-003`: 28 active state rows, one terminal row, and an
-  exact successor-state delta that preserves governing authority and context.
+- `REQ-PROOFKIT-WORKFLOW-003`: 28 active state rows, one terminal row, an
+  executable envelope transition for every accepted stage, and an explicit
+  terminal stop packet.
 - `REQ-PROOFKIT-WORKFLOW-004`: typed subject/finding resolution and internally
   consistent caller-declared digests.
 - `REQ-PROOFKIT-WORKFLOW-005`: shared 256-byte stable-ID admission before work,
   global candidate-dependency resolution, one explicit nullable
-  governing-authority reference, bounded least dependency closure over
-  explicit seeds, exact omission accounting, and output-byte limits.
+  governing-authority reference, role-preserving bounded least dependency
+  closure over explicit seeds, exact omission accounting, and output-byte
+  limits.
 - `REQ-PROOFKIT-WORKFLOW-006`: only existing launcher and presentation
   capabilities outside explicit input, with no ambient repository authority,
   setup facade, hidden policy, or agent-route extension.
 - `REQ-PROOFKIT-WORKFLOW-007`: pure deterministic repository-neutral
   native-evidence guidance from one versioned typed table with five closed
-  applicability classes.
+  applicability classes, explicit absent-channel decisions, and finite
+  nondisclosure corpora.
 - `REQ-PROOFKIT-WORKFLOW-008`: display-safe caller admission, no-leak denial,
   bounded actionable text with required coordinates, and no styling of caller
   values.

@@ -22,10 +22,10 @@ func TestDiagnosticsDoNotLeakArtifactValues(t *testing.T) {
 		value string
 		want  string
 	}{
-		{value: "artifact api_key=abc123456789 failed", want: "browser runtime proof verification failed: <redacted-diagnostic-value>\n"},
-		{value: "artifact line\nbreak failed", want: "browser runtime proof verification failed: artifact line<redacted-control-rune>break failed\n"},
-		{value: "artifact unsafe\u200bvalue failed", want: "browser runtime proof verification failed: artifact unsafe<redacted-control-rune>value failed\n"},
-		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "browser runtime proof verification failed: <redacted-diagnostic-value>\n"},
+		{value: "artifact api_key=abc123456789 failed", want: "<redacted-diagnostic-value>\n"},
+		{value: "artifact line\nbreak failed", want: "<redacted-diagnostic-value>\n"},
+		{value: "artifact unsafe\u200bvalue failed", want: "<redacted-diagnostic-value>\n"},
+		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "<redacted-diagnostic-value>\n"},
 	} {
 		var output bytes.Buffer
 		writeBrowserProofFailure(&output, errors.New(test.value))

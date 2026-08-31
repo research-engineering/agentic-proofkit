@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -436,5 +437,5 @@ func exit(err error) {
 }
 
 func writeBrowserProofFailure(writer io.Writer, err error) {
-	_, _ = fmt.Fprintln(writer, "browser runtime proof verification failed:", admit.RedactStructuralText(err.Error()))
+	diagnostic.WriteError(writer, err)
 }

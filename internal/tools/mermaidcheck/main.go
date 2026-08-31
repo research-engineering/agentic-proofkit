@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
@@ -39,7 +40,7 @@ func (e checkError) Error() string {
 
 func main() {
 	if err := run(os.Args[1:], os.Stdout); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }

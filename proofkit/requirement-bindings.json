@@ -3634,6 +3634,21 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.npm-python-carrier-binary-byte-identity",
+      "witnessId": "proofkit.package-verifier.platform-binary-byte-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackedPlatformBinariesMatchReleaseBinaryBytes",
+          "command": "go test ./internal/tools/packageverify -run '^TestPackedPlatformBinariesMatchReleaseBinaryBytes$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
       "witnessId": "proofkit.python-package.macho-platform-falsifier",
       "witnessKind": "contract",
@@ -3848,6 +3863,21 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.dynamic-stderr-diagnostic-owner",
+      "witnessId": "proofkit.tool-diagnostic.dynamic-stderr-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/diagnostic_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestToolDiagnosticBoundaryRejectsDirectDynamicStderrWrites",
+          "command": "go test ./scripts -run '^TestToolDiagnosticBoundaryRejectsDirectDynamicStderrWrites$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
       "scenarioId": "proofkit.supply-chain-quality.go-report-visible-whole-value-redaction",
       "witnessId": "proofkit.admit.whole-value-redaction-falsifier",
       "witnessKind": "contract",
@@ -3890,6 +3920,21 @@
         {
           "selector": "TestGeneratedTypeScriptAdapterExecutesCoreSemantics",
           "command": "go test ./internal/command/jsonreportcliadaptersource -run '^TestGeneratedTypeScriptAdapterExecutesCoreSemantics$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.shared-diagnostic-writer-whole-value-redaction",
+      "witnessId": "proofkit.diagnostic.whole-value-redaction-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/diagnostic/diagnostic_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWriteErrorPreservesSafeTextAndRedactsRejectedValuesAsAWhole",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestWriteErrorPreservesSafeTextAndRedactsRejectedValuesAsAWhole$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

@@ -202,6 +202,48 @@ func TestWorkflowClosurePredicates(t *testing.T) {
 			t.Fatalf("unexpected omission summary: %v", omitted)
 		}
 	})
+	t.Run("envelope_roles_preserve_reference_semantics", func(t *testing.T) {
+		input := initialInput()
+		input["contextRefs"] = []any{
+			contextValue("ctx.artifact", "artifact", testDigest, nil),
+			contextValue("ctx.authority", "authority", "sha256:1111111111111111111111111111111111111111111111111111111111111111", nil),
+			contextValue("ctx.authority.other", "authority", "sha256:2222222222222222222222222222222222222222222222222222222222222222", nil),
+			contextValue("ctx.finding", "finding", "sha256:3333333333333333333333333333333333333333333333333333333333333333", nil),
+			contextValue("ctx.witness", "witness", "sha256:4444444444444444444444444444444444444444444444444444444444444444", nil),
+		}
+		input["governingAuthorityRefId"] = "ctx.authority"
+		input["requiredContextRefIds"] = []any{"ctx.artifact", "ctx.authority.other", "ctx.finding", "ctx.witness"}
+		envelope, err := BuildAgentEnvelope(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		roles := map[string]string{}
+		for _, raw := range envelope["contextRefs"].([]any) {
+			ref := raw.(map[string]any)
+			roles[ref["refId"].(string)] = ref["role"].(string)
+		}
+		want := map[string]string{
+			"ctx.artifact":        "evidence",
+			"ctx.authority":       "semantic_owner",
+			"ctx.authority.other": "owner_surface",
+			"ctx.finding":         "review_finding",
+			"ctx.witness":         "proof_binding",
+		}
+		requireEqual(t, roles, want)
+
+		input["governingAuthorityRefId"] = nil
+		input["requiredContextRefIds"] = []any{"ctx.authority"}
+		envelope, err = BuildAgentEnvelope(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, raw := range envelope["contextRefs"].([]any) {
+			ref := raw.(map[string]any)
+			if ref["role"] == "semantic_owner" {
+				t.Fatalf("unselected authority was laundered into semantic owner: %v", ref)
+			}
+		}
+	})
 	t.Run("text_cap", func(t *testing.T) {
 		lines, err := BuildTextProjection(initialInput())
 		if err != nil {

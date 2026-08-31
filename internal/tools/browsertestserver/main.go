@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/browserfixture"
 )
 
@@ -24,6 +24,6 @@ func main() {
 }
 
 func fatal(err error) {
-	_, _ = fmt.Fprintln(os.Stderr, err)
+	diagnostic.WriteError(os.Stderr, err)
 	os.Exit(1)
 }
