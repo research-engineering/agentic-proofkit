@@ -2,7 +2,7 @@ module github.com/research-engineering/agentic-proofkit
 
 go 1.26
 
-toolchain go1.26.5
+toolchain go1.26.7
 
 tool (
 	github.com/rhysd/actionlint/cmd/actionlint
