@@ -188,7 +188,7 @@ func TestOwnerFilterPreservesStableIdentityAcrossOwnershipChange(t *testing.T) {
 }
 
 func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.078549664710316599082962403097259031550446698569117313237162339371160705954076")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.020074570913264891573344859495254807591700934304007335407083834667788859243594")
 	baseline := contextFixture(t, "The shared requirement remains stable.")
 	current := contextFixture(t, "The shared requirement changes its invariant.")
 	baseRequirements := baseline["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)

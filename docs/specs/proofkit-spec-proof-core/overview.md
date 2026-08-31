@@ -35,9 +35,13 @@ execution receipts, and merge policy.
   candidates explicit, keep merge approval consumer-owned, and fail closed for
   unknown or unmatched proof inputs.
 - `REQ-PROOFKIT-SPEC-005`: rendered proof views and agent envelopes remain
-  bounded, reference-closed derived presentations over structured source,
-  count each semantic omission once, and never become canonical proof or
-  requirement authority.
+  bounded, reference-closed derived presentations over structured source and
+  never become canonical proof or requirement authority; agent envelopes also
+  admit lossless safe local identities before display sanitization, omit unsafe
+  identities without turning a redaction label into a lookup key, count each
+  semantic omission once, and use unique, pairwise-disjoint local target-ID
+  domains so each retained untyped local reference resolves to at most one
+  target in their union.
 - `REQ-PROOFKIT-SPEC-006`: test evidence inventory, explicit test-discovery
   draft projections, proof-binding-derived inventory projections, normalized
   inventory projections, coverage-view input composition, and requirement

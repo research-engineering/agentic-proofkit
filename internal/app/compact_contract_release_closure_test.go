@@ -18,7 +18,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
-const compactV2WireManifestPath = "internal/app/testdata/compact-v2-wire-deltas.json"
+const (
+	compactV2ReleaseRecordPath = "internal/app/testdata/compact-v2-release-change-record.json"
+	compactV2WireManifestPath  = "internal/app/testdata/compact-v2-wire-deltas.json"
+)
 
 type compactWireManifest struct {
 	Baseline                        compactWireBaseline `json:"baseline"`
@@ -107,7 +110,7 @@ var expectedCompactMetadataFreshnessDirections = []string{
 func TestCompactV2WireDeltaReleaseAndParentContractClosure(t *testing.T) {
 	manifest := readCompactWireManifest(t)
 	root := repoRoot(t)
-	record, err := releasechange.Read(filepath.Join(root, releasechange.RecordPath))
+	record, err := releasechange.Read(filepath.Join(root, compactV2ReleaseRecordPath))
 	if err != nil {
 		t.Fatalf("read release change record: %v", err)
 	}
@@ -135,11 +138,7 @@ func TestCompactV2WireDeltaReleaseAndParentContractClosure(t *testing.T) {
 		migrationSteps[digest] = step
 	}
 
-	contract := readCLIContract(t)
-	commands := make(map[string]cliContractCommand, len(contract.Commands))
-	for _, command := range contract.Commands {
-		commands[command.Command] = command
-	}
+	frozenV2 := readCompactV2WireObservationDocument(t)
 	referencedBreaking := map[string]struct{}{}
 	referencedSteps := map[string]struct{}{}
 	previousDeltaID := ""
@@ -166,7 +165,7 @@ func TestCompactV2WireDeltaReleaseAndParentContractClosure(t *testing.T) {
 			referencedSteps[delta.MigrationStepDigest] = struct{}{}
 		}
 		if delta.Class == "parent_contract" || delta.Class == "metadata_freshness" {
-			assertCompactParentContractDelta(t, commands, delta)
+			assertCompactParentContractDelta(t, frozenV2.CLIContractDirectionDigests, delta)
 		}
 	}
 	assertCompactParentContractChangeSetClosure(t, manifest)
@@ -378,35 +377,14 @@ func assertSHA256Ref(t *testing.T, value, context string) {
 	}
 }
 
-func assertCompactParentContractDelta(t *testing.T, commands map[string]cliContractCommand, delta compactWireDelta) {
+func assertCompactParentContractDelta(t *testing.T, directionDigests map[string]string, delta compactWireDelta) {
 	t.Helper()
-	command, ok := commands[delta.Surface]
+	actual, ok := directionDigests[delta.Surface+"|"+delta.Direction]
 	if !ok {
-		t.Fatalf("parent-contract delta %s references unknown command %s", delta.DeltaID, delta.Surface)
+		t.Fatalf("parent-contract delta %s references absent frozen direction %s|%s", delta.DeltaID, delta.Surface, delta.Direction)
 	}
-	raw := command.InputContract
-	if delta.Direction == "output" {
-		raw = command.OutputContract
-	} else if delta.Direction != "input" {
-		t.Fatalf("parent-contract delta %s has invalid direction %s", delta.DeltaID, delta.Direction)
-	}
-	if raw == nil {
-		t.Fatalf("parent-contract delta %s references absent %s contract", delta.DeltaID, delta.Direction)
-	}
-	content, err := json.Marshal(raw)
-	if err != nil {
-		t.Fatalf("encode parent-contract delta %s source: %v", delta.DeltaID, err)
-	}
-	actual, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
-	if err != nil {
-		t.Fatalf("admit parent-contract delta %s source: %v", delta.DeltaID, err)
-	}
-	encoded, err := stablejson.Marshal(actual)
-	if err != nil {
-		t.Fatalf("encode parent-contract delta %s: %v", delta.DeltaID, err)
-	}
-	if delta.New.ValueSHA256 != sha256Text(string(encoded)) {
-		t.Fatalf("parent-contract delta %s digest=%s want %s", delta.DeltaID, sha256Text(string(encoded)), delta.New.ValueSHA256)
+	if delta.New.ValueSHA256 != actual {
+		t.Fatalf("parent-contract delta %s frozen digest=%s want %s", delta.DeltaID, actual, delta.New.ValueSHA256)
 	}
 }
 
@@ -428,7 +406,7 @@ func assertCompactParentContractChangeSetClosure(t *testing.T, manifest compactW
 	if got := sha256Text(string(encodedBaseline)); got != manifest.Baseline.CLIContractDirectionDigestsSHA256 {
 		t.Fatalf("baseline CLI contract direction digest=%s want %s", got, manifest.Baseline.CLIContractDirectionDigestsSHA256)
 	}
-	current := currentCLIContractDirectionDigests(t)
+	current := readCompactV2WireObservationDocument(t).CLIContractDirectionDigests
 	allKeys := map[string]struct{}{}
 	for key := range baseline.CLIContractDirectionDigests {
 		allKeys[key] = struct{}{}
@@ -458,7 +436,7 @@ func assertCompactParentContractChangeSetClosure(t *testing.T, manifest compactW
 func assertCompactParentContractSemanticClassification(t *testing.T, manifest compactWireManifest) {
 	t.Helper()
 	oldObservations := readCompactV1WireObservations(t)
-	currentObservations := currentCompactV2WireObservations(t)
+	currentObservations := readCompactV2WireObservations(t)
 	metadataOnly := []string{}
 	for _, delta := range manifest.Deltas {
 		if delta.Class != "parent_contract" && delta.Class != "metadata_freshness" {
@@ -506,35 +484,6 @@ func compactWithoutNativeSourceDigest(t *testing.T, value any, context string) a
 	}
 	delete(nativeSource, "canonicalDigest")
 	return record
-}
-
-func currentCLIContractDirectionDigests(t *testing.T) map[string]string {
-	t.Helper()
-	result := map[string]string{}
-	for _, command := range readCLIContract(t).Commands {
-		for _, item := range []struct {
-			direction string
-			value     any
-		}{{direction: "input", value: command.InputContract}, {direction: "output", value: command.OutputContract}} {
-			if item.value == nil {
-				continue
-			}
-			content, err := json.Marshal(item.value)
-			if err != nil {
-				t.Fatalf("encode %s %s contract: %v", command.Command, item.direction, err)
-			}
-			canonical, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
-			if err != nil {
-				t.Fatalf("admit %s %s contract: %v", command.Command, item.direction, err)
-			}
-			encoded, err := stablejson.Marshal(canonical)
-			if err != nil {
-				t.Fatalf("canonicalize %s %s contract: %v", command.Command, item.direction, err)
-			}
-			result[command.Command+"|"+item.direction] = sha256Text(string(encoded))
-		}
-	}
-	return result
 }
 
 func validSHA256Digest(value string) bool {

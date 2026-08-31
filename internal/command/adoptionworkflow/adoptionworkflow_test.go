@@ -18,7 +18,7 @@ func TestBuildRejectsUnknownInputRefField(t *testing.T) {
 }
 
 func TestBuildGeneratesBoundedCommandArgv(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.071485626206261445985975684684155922995969280410048467184237861241913337881344")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.042007474063434113226412640301108503934031277804250309702701090283402397774706")
 	result, err := BuildResult(validWorkflowInput())
 	if err != nil {
 		t.Fatalf("BuildResult() error=%v", err)

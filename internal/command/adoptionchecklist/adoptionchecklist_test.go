@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildClassifiesRequiredChecklistItemsAndPreservesOptionalNonFailures(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069749879516188799356142053767399217128942865655819702242129484856747289540132")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.082438870412319112278242336710384449607452146725689050310681504683060604203472")
 	record, exitCode, err := Build(validChecklistInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

@@ -1,0 +1,340 @@
+package app
+
+import (
+	"bytes"
+	"io"
+	"strings"
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/changeworkflowplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+)
+
+const validChangeWorkflowInput = `{"checkpoint":{"state":"not_started"},"completedStageIds":[],"contextRefs":[],"governingAuthorityRefId":null,"requiredContextRefIds":[],"schemaVersion":1}`
+
+func TestAgentWorkflowCLITruthTable(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.110027854485263740098018592752615689790850067351556445289115876582278838003288")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.008921652518915565373824823596859113418310007148763537766174180247340157842807")
+	const (
+		semanticOutputClasses  = 24
+		frozenRejectionClasses = 44
+		extraRejectionCases    = 2
+		helpClasses            = 10
+		colorClasses           = 8
+	)
+	if got, want := semanticOutputClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 88; got != want {
+		t.Fatalf("agent workflow CLI truth-table cardinality = %d, want %d", got, want)
+	}
+	t.Run("semantic output classes", testAgentWorkflowSemanticOutputClasses)
+	t.Run("usage errors precede input", testAgentWorkflowUsageErrorsPrecedeInput)
+	t.Run("exclusive help classes", testAgentWorkflowHelpClasses)
+	t.Run("terminal capability product", testAgentWorkflowTerminalCapabilityProduct)
+}
+
+func testAgentWorkflowSemanticOutputClasses(t *testing.T) {
+	workflowValue, err := admission.DecodeJSON(strings.NewReader(validChangeWorkflowInput), 1<<20)
+	if err != nil {
+		t.Fatalf("decode workflow fixture: %v", err)
+	}
+	wantPlan, err := changeworkflowplan.Build(workflowValue)
+	if err != nil {
+		t.Fatalf("build workflow fixture: %v", err)
+	}
+	wantText, err := changeworkflowplan.BuildText(workflowValue)
+	if err != nil {
+		t.Fatalf("build workflow text fixture: %v", err)
+	}
+	wantGuidanceText, err := nativeevidenceguidance.RenderPlainText()
+	if err != nil {
+		t.Fatalf("build guidance text fixture: %v", err)
+	}
+
+	for _, explicitFormat := range []bool{false, true} {
+		for _, layout := range []string{"default", "pretty", "compact"} {
+			for _, envelope := range []bool{false, true} {
+				name := strings.Join([]string{"planner", formatClass(explicitFormat), layout, envelopeClass(envelope)}, "/")
+				t.Run(name, func(t *testing.T) {
+					args := []string{"change-workflow-plan", "--input", "-"}
+					if explicitFormat {
+						args = append(args, "--format", "json")
+					}
+					if envelope {
+						args = append(args, "--agent-envelope")
+					}
+					args = withWorkflowLayout(layout, args)
+					status, stdout, stderr := executeAgentWorkflowCLI(t, args, strings.NewReader(validChangeWorkflowInput), PresentationCapabilities{})
+					if status != 0 || stderr != "" || strings.Contains(stdout, "\x1b[") {
+						t.Fatalf("status=%d stderr=%q stdout=%q", status, stderr, stdout)
+					}
+					value := decodeCLIJSON(t, stdout)
+					if envelope {
+						record := value.(map[string]any)
+						if record["envelopeId"] != "proofkit.change-workflow-plan.agent-envelope" {
+							t.Fatalf("unexpected envelope identity: %#v", record["envelopeId"])
+						}
+					} else if !equalCLIJSON(t, value, wantPlan) {
+						t.Fatalf("planner JSON projection drifted")
+					}
+					assertJSONLayout(t, stdout, layout)
+				})
+			}
+		}
+	}
+
+	for _, args := range [][]string{
+		{"change-workflow-plan", "--input", "-", "--format", "text"},
+		{"change-workflow-plan", "--input", "-", "--format", "text", "--color", "never"},
+		{"change-workflow-plan", "--input", "-", "--format", "text", "--color", "auto"},
+	} {
+		status, stdout, stderr := executeAgentWorkflowCLI(t, args, strings.NewReader(validChangeWorkflowInput), PresentationCapabilities{})
+		if status != 0 || stderr != "" || stdout != wantText || strings.Contains(stdout, "\x1b[") {
+			t.Fatalf("planner text status=%d stderr=%q stdout=%q want=%q", status, stderr, stdout, wantText)
+		}
+	}
+
+	for _, explicitFormat := range []bool{false, true} {
+		for _, layout := range []string{"default", "pretty", "compact"} {
+			t.Run(strings.Join([]string{"guidance", formatClass(explicitFormat), layout}, "/"), func(t *testing.T) {
+				args := []string{"native-evidence-guidance"}
+				if explicitFormat {
+					args = append(args, "--format", "json")
+				}
+				args = withWorkflowLayout(layout, args)
+				status, stdout, stderr := executeAgentWorkflowCLI(t, args, strings.NewReader("unread"), PresentationCapabilities{})
+				if status != 0 || stderr != "" || strings.Contains(stdout, "\x1b[") {
+					t.Fatalf("status=%d stderr=%q stdout=%q", status, stderr, stdout)
+				}
+				record := decodeCLIJSON(t, stdout).(map[string]any)
+				if record["guidanceId"] != nativeevidenceguidance.GuidanceID {
+					t.Fatalf("unexpected guidance identity: %#v", record["guidanceId"])
+				}
+				assertJSONLayout(t, stdout, layout)
+			})
+		}
+	}
+	for _, args := range [][]string{
+		{"native-evidence-guidance", "--format", "text"},
+		{"native-evidence-guidance", "--format", "text", "--color", "never"},
+		{"native-evidence-guidance", "--format", "text", "--color", "auto"},
+	} {
+		status, stdout, stderr := executeAgentWorkflowCLI(t, args, strings.NewReader("unread"), PresentationCapabilities{})
+		if status != 0 || stderr != "" || stdout != wantGuidanceText || strings.Contains(stdout, "\x1b[") {
+			t.Fatalf("guidance text status=%d stderr=%q stdout=%q want=%q", status, stderr, stdout, wantGuidanceText)
+		}
+	}
+}
+
+func testAgentWorkflowUsageErrorsPrecedeInput(t *testing.T) {
+	cases := map[string][]string{
+		"planner/json auto":                    {"change-workflow-plan", "--input", "-", "--color", "auto"},
+		"planner/json auto envelope":           {"change-workflow-plan", "--input", "-", "--color", "auto", "--agent-envelope"},
+		"planner/json explicit never":          {"change-workflow-plan", "--input", "-", "--color", "never"},
+		"planner/text envelope never":          {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "never", "--agent-envelope"},
+		"planner/text envelope auto":           {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "auto", "--agent-envelope"},
+		"planner/text layout pretty":           {"--json-layout", "pretty", "change-workflow-plan", "--input", "-", "--format", "text"},
+		"planner/text layout compact":          {"--json-layout", "compact", "change-workflow-plan", "--input", "-", "--format", "text"},
+		"planner/missing input":                {"change-workflow-plan"},
+		"planner/output":                       {"change-workflow-plan", "--input", "-", "--output", "out.json"},
+		"planner/duplicate input":              {"change-workflow-plan", "--input", "-", "--input", "second.json"},
+		"planner/duplicate pointer":            {"change-workflow-plan", "--input", "-", "--input-pointer", "", "--input-pointer", "/other"},
+		"planner/duplicate format":             {"change-workflow-plan", "--input", "-", "--format", "json", "--format", "text"},
+		"planner/duplicate color":              {"change-workflow-plan", "--input", "-", "--color", "never", "--color", "auto"},
+		"planner/unknown flag":                 {"change-workflow-plan", "--input", "-", "--unknown"},
+		"planner/missing input value":          {"change-workflow-plan", "--input"},
+		"planner/missing pointer value":        {"change-workflow-plan", "--input", "-", "--input-pointer"},
+		"planner/missing format value":         {"change-workflow-plan", "--input", "-", "--format"},
+		"planner/missing color value":          {"change-workflow-plan", "--input", "-", "--color"},
+		"planner/bad pointer":                  {"change-workflow-plan", "--input", "-", "--input-pointer", "workflow"},
+		"planner/bad format":                   {"change-workflow-plan", "--input", "-", "--format", "yaml"},
+		"planner/bad color":                    {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "always"},
+		"planner/post-command layout":          {"change-workflow-plan", "--json-layout", "compact", "--input", "-"},
+		"planner/surplus operand":              {"change-workflow-plan", "--input", "-", "surplus"},
+		"guidance/input":                       {"native-evidence-guidance", "--input", "-"},
+		"guidance/pointer":                     {"native-evidence-guidance", "--input-pointer", "/workflow"},
+		"guidance/output":                      {"native-evidence-guidance", "--output", "out.json"},
+		"guidance/envelope":                    {"native-evidence-guidance", "--agent-envelope"},
+		"guidance/json auto":                   {"native-evidence-guidance", "--color", "auto"},
+		"guidance/json explicit never":         {"native-evidence-guidance", "--color", "never"},
+		"guidance/text layout pretty":          {"--json-layout", "pretty", "native-evidence-guidance", "--format", "text"},
+		"guidance/text layout compact":         {"--json-layout", "compact", "native-evidence-guidance", "--format", "text"},
+		"guidance/duplicate format":            {"native-evidence-guidance", "--format", "json", "--format", "text"},
+		"guidance/duplicate color":             {"native-evidence-guidance", "--color", "never", "--color", "auto"},
+		"guidance/unknown flag":                {"native-evidence-guidance", "--unknown"},
+		"guidance/missing format value":        {"native-evidence-guidance", "--format"},
+		"guidance/missing color value":         {"native-evidence-guidance", "--color"},
+		"guidance/bad format":                  {"native-evidence-guidance", "--format", "yaml"},
+		"guidance/bad color":                   {"native-evidence-guidance", "--format", "text", "--color", "always"},
+		"guidance/post-command layout":         {"native-evidence-guidance", "--json-layout", "compact"},
+		"guidance/surplus operand":             {"native-evidence-guidance", "surplus"},
+		"global/missing layout value planner":  {"--json-layout", "change-workflow-plan", "--input", "-"},
+		"global/missing layout value guidance": {"--json-layout", "native-evidence-guidance"},
+		"global/bad layout planner":            {"--json-layout", "dense", "change-workflow-plan", "--input", "-"},
+		"global/bad layout guidance":           {"--json-layout", "dense", "native-evidence-guidance"},
+		"global/duplicate layout planner":      {"--json-layout", "pretty", "--json-layout", "compact", "change-workflow-plan", "--input", "-"},
+		"global/duplicate layout guidance":     {"--json-layout", "pretty", "--json-layout", "compact", "native-evidence-guidance"},
+	}
+	if got, want := len(cases)-2, 44; got != want {
+		t.Fatalf("frozen rejection class count = %d, want %d", got, want)
+	}
+	for name, args := range cases {
+		args := args
+		t.Run(name, func(t *testing.T) {
+			status, stdout, stderr := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+			if status != 1 || stdout != "" || stderr == "" || strings.Contains(stderr, "\x1b[") {
+				t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout, stderr)
+			}
+		})
+	}
+}
+
+func testAgentWorkflowHelpClasses(t *testing.T) {
+	valid := [][]string{
+		{"change-workflow-plan", "--help"},
+		{"change-workflow-plan", "-h"},
+		{"native-evidence-guidance", "--help"},
+		{"native-evidence-guidance", "-h"},
+	}
+	for _, args := range valid {
+		status, stdout, stderr := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+		if status != 0 || stdout == "" || stderr != "" || strings.Contains(stdout, "\x1b[") {
+			t.Fatalf("args=%v status=%d stdout=%q stderr=%q", args, status, stdout, stderr)
+		}
+	}
+	invalid := []struct {
+		args []string
+		want string
+	}{
+		{args: []string{"--json-layout", "compact", "change-workflow-plan", "--help"}, want: "--json-layout is valid only for JSON command output"},
+		{args: []string{"--json-layout", "compact", "native-evidence-guidance", "--help"}, want: "--json-layout is valid only for JSON command output"},
+		{args: []string{"change-workflow-plan", "--input", "-", "--help"}, want: "help accepts no additional arguments"},
+		{args: []string{"change-workflow-plan", "-h", "--input", "-"}, want: "help accepts no additional arguments"},
+		{args: []string{"native-evidence-guidance", "--format", "text", "--help"}, want: "help accepts no additional arguments"},
+		{args: []string{"native-evidence-guidance", "-h", "--format", "text"}, want: "help accepts no additional arguments"},
+	}
+	for _, item := range invalid {
+		status, stdout, stderr := executeAgentWorkflowCLI(t, item.args, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+		if status != 1 || stdout != "" || !strings.Contains(stderr, item.want) || strings.Contains(stderr, "\x1b[") {
+			t.Fatalf("args=%v status=%d stdout=%q stderr=%q", item.args, status, stdout, stderr)
+		}
+	}
+}
+
+func testAgentWorkflowTerminalCapabilityProduct(t *testing.T) {
+	workflowValue, err := admission.DecodeJSON(strings.NewReader(validChangeWorkflowInput), 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantWorkflowText, err := changeworkflowplan.BuildText(workflowValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantGuidanceText, err := nativeevidenceguidance.RenderPlainText()
+	if err != nil {
+		t.Fatal(err)
+	}
+	commands := []struct {
+		name  string
+		args  []string
+		stdin func() io.Reader
+		plain string
+	}{
+		{name: "change-workflow-plan", args: []string{"change-workflow-plan", "--input", "-", "--format", "text", "--color", "auto"}, stdin: func() io.Reader { return strings.NewReader(validChangeWorkflowInput) }, plain: wantWorkflowText},
+		{name: "native-evidence-guidance", args: []string{"native-evidence-guidance", "--format", "text", "--color", "auto"}, stdin: func() io.Reader { return strings.NewReader("unread") }, plain: wantGuidanceText},
+	}
+	for _, command := range commands {
+		for _, tty := range []bool{false, true} {
+			for _, noColorPresent := range []bool{false, true} {
+				name := command.name + "/tty=" + boolName(tty) + "/no-color=" + boolName(noColorPresent)
+				t.Run(name, func(t *testing.T) {
+					status, stdout, stderr := executeAgentWorkflowCLI(t, command.args, command.stdin(), PresentationCapabilities{StdoutIsTTY: tty, NoColorPresent: noColorPresent})
+					if status != 0 || stderr != "" {
+						t.Fatalf("status=%d stderr=%q", status, stderr)
+					}
+					wantANSI := tty && !noColorPresent
+					if gotANSI := strings.Contains(stdout, "\x1b["); gotANSI != wantANSI {
+						t.Fatalf("ANSI presence=%t want=%t stdout=%q", gotANSI, wantANSI, stdout)
+					}
+					if plain := stripTestANSI(stdout); plain != command.plain {
+						t.Fatalf("stripped output=%q want=%q", plain, command.plain)
+					}
+				})
+			}
+		}
+	}
+}
+
+func executeAgentWorkflowCLI(t *testing.T, args []string, stdin io.Reader, capabilities PresentationCapabilities) (int, string, string) {
+	t.Helper()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := RunWithRendererAndCapabilities(t.Context(), args, stdin, &stdout, &stderr, cliexec.PathRenderer(), capabilities)
+	return status, stdout.String(), stderr.String()
+}
+
+func decodeCLIJSON(t *testing.T, output string) any {
+	t.Helper()
+	value, err := admission.DecodeJSON(strings.NewReader(output), 1<<20)
+	if err != nil {
+		t.Fatalf("decode CLI JSON: %v\n%s", err, output)
+	}
+	return value
+}
+
+func equalCLIJSON(t *testing.T, left any, right any) bool {
+	t.Helper()
+	leftBytes, err := marshalCompactForTest(left)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rightBytes, err := marshalCompactForTest(right)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bytes.Equal(leftBytes, rightBytes)
+}
+
+func marshalCompactForTest(value any) ([]byte, error) {
+	return stablejson.MarshalLayout(value, stablejson.LayoutCompact)
+}
+
+func withWorkflowLayout(layout string, args []string) []string {
+	if layout == "default" {
+		return args
+	}
+	return append([]string{"--json-layout", layout}, args...)
+}
+
+func assertJSONLayout(t *testing.T, output string, layout string) {
+	t.Helper()
+	if layout == "compact" && strings.Count(output, "\n") != 1 {
+		t.Fatalf("compact JSON has non-terminal newlines: %q", output)
+	}
+	if layout != "compact" && strings.Count(output, "\n") < 2 {
+		t.Fatalf("pretty JSON lacks structural newlines: %q", output)
+	}
+}
+
+func formatClass(explicit bool) string {
+	if explicit {
+		return "explicit-json"
+	}
+	return "default-json"
+}
+
+func envelopeClass(value bool) string {
+	if value {
+		return "envelope"
+	}
+	return "report"
+}
+
+func boolName(value bool) string {
+	if value {
+		return "true"
+	}
+	return "false"
+}

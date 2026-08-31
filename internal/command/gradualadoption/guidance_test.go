@@ -62,7 +62,7 @@ func TestGuidanceKeepsCommandOwnedNonClaims(t *testing.T) {
 }
 
 func TestGuidanceEnforcementFailsClosedForCandidateBoundaries(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.021210643414670754890972585342688421403224755441264357584078647180199403727299")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.044709354056905809499345300248047687983790301962467365024195419559832004542603")
 	cases := []struct {
 		name           string
 		mode           string

@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAcceptsCommandMatcherHints(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.066388111489441355762289763185156364551197665370738732325425583942920333391935")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.106890548054406001004200802811128777808529327608133121770809409737631248388044")
 	result, err := BuildResult(validScaffoldInput())
 	if err != nil {
 		t.Fatalf("BuildResult() error = %v", err)

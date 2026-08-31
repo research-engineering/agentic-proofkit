@@ -9,7 +9,7 @@ import (
 )
 
 func TestBuildAdmitsSatisfiedBlockingObligationsAndRejectsMissingReceipt(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.001377148545194323854964413239799966083945326665458969842188702848644583442833")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.035346661213959533171503523197295468035986020575117976769954315363650060625537")
 	result, err := Build(validObligationDecisionInput("satisfied", "not_applicable"))
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

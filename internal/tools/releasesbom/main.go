@@ -188,7 +188,7 @@ func goModuleInventory() ([]goModuleRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("go list modules: %w", err)
 	}
-	decoder := json.NewDecoder(strings.NewReader(string(output)))
+	decoder := json.NewDecoder(bytes.NewReader(output))
 	out := []goModuleRecord{}
 	for {
 		var module goModuleRecord

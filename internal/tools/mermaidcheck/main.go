@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 var (
@@ -81,10 +83,14 @@ func markdownFilesFromGitAt(dir string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list candidate Markdown files: %w", err)
 	}
+	decoded, err := unicodepolicy.DecodeUTF8(out)
+	if err != nil {
+		return nil, fmt.Errorf("candidate Markdown file inventory is not valid UTF-8")
+	}
 
 	var files []string
 	seen := make(map[string]struct{})
-	for _, path := range strings.Split(string(out), "\x00") {
+	for _, path := range strings.Split(decoded, "\x00") {
 		if path == "" {
 			continue
 		}

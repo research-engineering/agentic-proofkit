@@ -116,9 +116,9 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-005",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "Rendered proof views and agent envelopes remain bounded, reference-closed derived presentations over structured source, count each semantic omission once, and never become canonical proof or requirement authority.",
+      "invariant": "Rendered proof views and agent envelopes remain bounded, reference-closed derived presentations over structured source and never become canonical proof or requirement authority; agent envelopes additionally admit local target IDs and untyped local references as lossless safe identities before display sanitization, omit unsafe identities without using a replacement label as a lookup key, count each semantic omission once, and require target IDs to be unique within each local domain and pairwise disjoint across local domains so every retained untyped local reference resolves to at most one target in their union.",
       "claimLevel": "blocking",
-      "riskClass": "medium",
+      "riskClass": "high",
       "proofBindingRefs": [
         "proofkit/requirement-bindings.json"
       ],

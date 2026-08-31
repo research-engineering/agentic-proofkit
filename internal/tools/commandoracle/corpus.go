@@ -1,6 +1,7 @@
 package commandoracle
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -98,7 +99,7 @@ func ValidateCounterfeitCorpus(root string) (string, error) {
 }
 
 func admitCorpus(content []byte) (counterfeitCorpus, error) {
-	raw, err := admission.DecodeJSON(strings.NewReader(string(content)), maxCorpusBytes)
+	raw, err := admission.DecodeJSON(bytes.NewReader(content), maxCorpusBytes)
 	if err != nil {
 		return counterfeitCorpus{}, decision("corpus.json_invalid")
 	}

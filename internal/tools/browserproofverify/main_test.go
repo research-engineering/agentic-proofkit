@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -15,6 +16,21 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
+
+func TestDiagnosticsDoNotLeakArtifactValues(t *testing.T) {
+	for _, value := range []string{
+		"artifact api_key=abc123456789 failed",
+		"artifact line\nbreak failed",
+		"artifact unsafe\u200bvalue failed",
+		string([]byte{'p', 'a', 't', 'h', 0xff}),
+	} {
+		var output bytes.Buffer
+		writeBrowserProofFailure(&output, errors.New(value))
+		if got, want := output.String(), "browser runtime proof verification failed: <redacted-diagnostic-value>\n"; got != want {
+			t.Fatalf("visible browser proof diagnostic = %q, want %q", got, want)
+		}
+	}
+}
 
 func TestInputManifestClosesGoDependenciesAndWitnessPolicy(t *testing.T) {
 	root, err := repositoryRoot()

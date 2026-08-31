@@ -127,7 +127,7 @@ func mutateFirstFragment(t *testing.T, input map[string]any, mutate func(map[str
 }
 
 func TestBuildSelectsSourceSetRowsAndEmitsResolverInput(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.106477495378157513392694067858829301266454618332683944940209642307095597996567")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.098739271914051045049143171660941588813365344851520126355916621566896893381817")
 	input := validFragmentSourceSetInput(t)
 	input["projection"] = map[string]any{
 		"kind":              "resolver_input",

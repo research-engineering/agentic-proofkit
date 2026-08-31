@@ -1,13 +1,15 @@
 package stablejson
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf16"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 var jsonNumberPattern = regexp.MustCompile(`^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?$`)
@@ -46,7 +48,7 @@ func writeValue(builder *strings.Builder, value any, depth int, layout Layout) e
 			builder.WriteString("false")
 		}
 	case string:
-		builder.WriteString(quote(typed))
+		return writeQuotedString(builder, typed)
 	case json.Number:
 		if !isJSONNumberToken(typed.String()) {
 			return fmt.Errorf("invalid JSON number: %s", typed.String())
@@ -106,6 +108,9 @@ func writeObject(builder *strings.Builder, values map[string]any, depth int, lay
 	}
 	keys := make([]string, 0, len(values))
 	for key := range values {
+		if !unicodepolicy.ValidScalarString(key) {
+			return fmt.Errorf("stable JSON object key is not valid UTF-8")
+		}
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
@@ -123,7 +128,9 @@ func writeObject(builder *strings.Builder, values map[string]any, depth int, lay
 		if layout == LayoutPretty {
 			writeIndent(builder, depth+1)
 		}
-		builder.WriteString(quote(key))
+		if err := writeQuotedString(builder, key); err != nil {
+			return err
+		}
 		builder.WriteByte(':')
 		if layout == LayoutPretty {
 			builder.WriteByte(' ')
@@ -146,25 +153,44 @@ func writeIndent(builder *strings.Builder, depth int) {
 	}
 }
 
-func quote(value string) string {
-	if isUnescapedASCII(value) {
-		return `"` + value + `"`
+func writeQuotedString(builder *strings.Builder, value string) error {
+	if !unicodepolicy.ValidScalarString(value) {
+		return fmt.Errorf("stable JSON string is not valid UTF-8")
 	}
-	var buffer bytes.Buffer
-	encoder := json.NewEncoder(&buffer)
-	encoder.SetEscapeHTML(false)
-	if err := encoder.Encode(value); err != nil {
-		panic(err)
-	}
-	return strings.TrimSuffix(buffer.String(), "\n")
-}
-
-func isUnescapedASCII(value string) bool {
-	for index := 0; index < len(value); index++ {
-		character := value[index]
-		if character < 0x20 || character >= 0x80 || character == '"' || character == '\\' {
-			return false
+	builder.WriteByte('"')
+	for _, character := range value {
+		switch character {
+		case '"':
+			builder.WriteString(`\"`)
+		case '\\':
+			builder.WriteString(`\\`)
+		case '\b':
+			builder.WriteString(`\b`)
+		case '\t':
+			builder.WriteString(`\t`)
+		case '\n':
+			builder.WriteString(`\n`)
+		case '\f':
+			builder.WriteString(`\f`)
+		case '\r':
+			builder.WriteString(`\r`)
+		default:
+			if unicodepolicy.IsUnsafeScalar(character) {
+				writeUnicodeEscape(builder, character)
+			} else {
+				builder.WriteRune(character)
+			}
 		}
 	}
-	return true
+	builder.WriteByte('"')
+	return nil
+}
+
+func writeUnicodeEscape(builder *strings.Builder, value rune) {
+	if value <= 0xffff {
+		_, _ = fmt.Fprintf(builder, `\u%04x`, value)
+		return
+	}
+	high, low := utf16.EncodeRune(value)
+	_, _ = fmt.Fprintf(builder, `\u%04x\u%04x`, high, low)
 }

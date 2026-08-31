@@ -3,14 +3,16 @@ package agentroute
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.052032679560954279991581640663936146133283843978254811517731144801933075103271")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.038668421823758140886315800700905449361627837129826444684062024338436022702756")
 	t.Parallel()
 
 	report, exitCode, err := Build(map[string]any{
@@ -1290,6 +1292,56 @@ func TestBuildEnvelopeCreatesUniqueRefsForRepeatedRenderCommands(t *testing.T) {
 	}
 }
 
+func TestEnvelopeProducerOwnsUniqueDisjointLocalIdentities(t *testing.T) {
+	report, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.render_all",
+		"goal":          "render_human_view",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{"kind": "coverage_view_input", "ref": "docs/contracts/coverage-view-input.v1.json"},
+			map[string]any{"kind": "proof_binding", "ref": "docs/contracts/requirement-proof-bindings/module.json"},
+			map[string]any{"kind": "requirement_source", "ref": "docs/specs/module/requirements.v1.json"},
+		},
+	})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Build() exit=%d error=%v", exitCode, err)
+	}
+	reportID := report["reportId"].(string)
+	commands := mapsFromAny(report["nextCommands"])
+	contexts := append(guidanceContextRefs(mapFromAny(report["guidanceSlice"]), reportID), inputContextRefs(commands, reportID)...)
+	assertProducerIdentityDomain(t, commandContextRefs(commands, reportID), "commandId", map[string]string{})
+	commandDomain := producerIdentityDomain(t, commandContextRefs(commands, reportID), "commandId")
+	assertProducerIdentityDomain(t, contexts, "refId", commandDomain)
+}
+
+func assertProducerIdentityDomain(t *testing.T, records []map[string]any, key string, foreign map[string]string) {
+	t.Helper()
+	producerIdentityDomain(t, records, key)
+	for _, record := range records {
+		identity := record[key].(string)
+		if owner, collision := foreign[identity]; collision {
+			t.Fatalf("%s identity %q collides with %s domain", key, identity, owner)
+		}
+	}
+}
+
+func producerIdentityDomain(t *testing.T, records []map[string]any, key string) map[string]string {
+	t.Helper()
+	seen := map[string]string{}
+	for _, record := range records {
+		identity, err := admit.RuleID(record[key], "agent-route "+key)
+		if err != nil {
+			t.Fatalf("%s identity %v is invalid: %v", key, record[key], err)
+		}
+		if prior, duplicate := seen[identity]; duplicate {
+			t.Fatalf("duplicate %s identity %q; prior domain=%s", key, identity, prior)
+		}
+		seen[identity] = key
+	}
+	return seen
+}
+
 func TestBuildEnvelopeKeepsMachineRefIDsBoundedForLongInputRefs(t *testing.T) {
 	t.Parallel()
 
@@ -1318,7 +1370,7 @@ func TestBuildEnvelopeKeepsMachineRefIDsBoundedForLongInputRefs(t *testing.T) {
 }
 
 func TestBuildEnvelopeKeepsBlockedRoutesAsStopSignals(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.039089309512279322876166263378306645627644382088544574407694362092047953400284")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.099464793393504510007974878444175682277628390527264398410332327062001832620126")
 	t.Parallel()
 
 	envelope, exitCode, err := BuildEnvelope(map[string]any{
@@ -1350,7 +1402,7 @@ func TestBuildEnvelopeKeepsBlockedRoutesAsStopSignals(t *testing.T) {
 }
 
 func TestBuildEnvelopeCarriesBlockedObservedReportPreconditions(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.112527168675876041372970118427108526301468859106766054318947512648421264085367")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.104071069265834506379769173345836014913259107788654398096334463906261390666732")
 	t.Parallel()
 
 	envelope, exitCode, err := BuildEnvelope(map[string]any{

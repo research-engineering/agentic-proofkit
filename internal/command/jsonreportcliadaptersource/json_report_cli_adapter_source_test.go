@@ -15,7 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:dc1478adc582d4bdfeab52ca1e3facaac23cfe9a78e9351620e11edae9cd9ba0"
+const expectedTypeScriptSourceSha256 = "sha256:c1c0c4608b3dee6520c4de90a24adcad342f0aeeab02fb8face911e55d00f064"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -163,7 +163,7 @@ func TestGeneratedSourceAvoidsGenericIndexedAssignmentDrift(t *testing.T) {
 }
 
 func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.053185673671850315997459957102069176684420983647605639631428960314206272025809")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.091236415555979919321510491623647940156692204483402355271747696953075393053294")
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		t.Fatalf("node is required to prove generated TypeScript semantics: %v", err)
@@ -265,6 +265,10 @@ process.stdin.on("end", () => {
     process.stdout.write(JSON.stringify({schemaVersion: 1, state: "passed", inputless: true}) + "\n");
     process.exit(0);
   }
+  if (command === "json-invalid-utf8") {
+    process.stdout.write(Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0xff, 0x7d]));
+    process.exit(0);
+  }
   process.stderr.write("unknown command");
   process.exit(2);
 });
@@ -320,6 +324,83 @@ assert.equal(helpText, "help text");
 
 assert.equal(proofkitStableJsonString({z: 1, a: true}), "{\n  \"a\": true,\n  \"z\": 1\n}\n");
 assert.equal(proofkitStableJsonString({z: 1, a: true}, "compact"), "{\"a\":true,\"z\":1}\n");
+assert.equal(
+  proofkitStableJsonString({value: "\u007f\u0085\u200b\u2028\u2029\u{e0001}", "\u{10000}": "supplementary", "\ue000": "bmp"}, "compact"),
+  "{\"value\":\"\\u007f\\u0085\\u200b\\u2028\\u2029\\udb40\\udc01\",\"\ue000\":\"bmp\",\"\u{10000}\":\"supplementary\"}\n",
+);
+for (const [value, expected] of [
+  ["alpha", "{\"value\":\"alpha\"}\n"],
+  ["<&>", "{\"value\":\"<&>\"}\n"],
+  ["\u{1f600}", "{\"value\":\"\u{1f600}\"}\n"],
+  ["e\u0301", "{\"value\":\"e\u0301\"}\n"],
+  ["\b\t\n\f\r", "{\"value\":\"\\b\\t\\n\\f\\r\"}\n"],
+  ["\0", "{\"value\":\"\\u0000\"}\n"],
+  ["\u007f", "{\"value\":\"\\u007f\"}\n"],
+  ["\u0085", "{\"value\":\"\\u0085\"}\n"],
+  ["\u200b", "{\"value\":\"\\u200b\"}\n"],
+  ["\u{e0001}", "{\"value\":\"\\udb40\\udc01\"}\n"],
+  ["\u2028", "{\"value\":\"\\u2028\"}\n"],
+  ["\u2029", "{\"value\":\"\\u2029\"}\n"],
+]) {
+  const encoded = proofkitStableJsonString({value}, "compact");
+  assert.equal(encoded, expected);
+  assert.equal(parseProofkitJsonStrict(encoded).value, value);
+}
+const unsafeScalarRangesForTest = [
+  [0x000000, 0x00001f, 1], [0x00007f, 0x00009f, 1], [0x0000ad, 0x000600, 1363],
+  [0x000601, 0x000605, 1], [0x00061c, 0x0006dd, 193], [0x00070f, 0x000890, 385],
+  [0x000891, 0x0008e2, 81], [0x00180e, 0x00200b, 2045], [0x00200c, 0x00200f, 1],
+  [0x002028, 0x002028, 1], [0x002029, 0x002029, 1], [0x00202a, 0x00202e, 1],
+  [0x002060, 0x002064, 1], [0x002066, 0x00206f, 1], [0x00feff, 0x00fff9, 250],
+  [0x00fffa, 0x00fffb, 1], [0x0110bd, 0x0110cd, 16], [0x013430, 0x01343f, 1],
+  [0x01bca0, 0x01bca3, 1], [0x01d173, 0x01d17a, 1], [0x0e0001, 0x0e0020, 31],
+  [0x0e0021, 0x0e007f, 1],
+];
+const unsafeScalarsForTest = new Set();
+for (const [start, end, step] of unsafeScalarRangesForTest) {
+  for (let value = start; value <= end; value += step) unsafeScalarsForTest.add(value);
+}
+function expectedScalarEncodingForTest(value) {
+  if (value === 0x08) return "\\b";
+  if (value === 0x09) return "\\t";
+  if (value === 0x0a) return "\\n";
+  if (value === 0x0c) return "\\f";
+  if (value === 0x0d) return "\\r";
+  if (unsafeScalarsForTest.has(value)) {
+    if (value <= 0xffff) return "\\u" + value.toString(16).padStart(4, "0");
+    const adjusted = value - 0x10000;
+    return "\\u" + (0xd800 + (adjusted >> 10)).toString(16) + "\\u" + (0xdc00 + (adjusted & 0x3ff)).toString(16);
+  }
+  if (value === 0x22) return "\\\"";
+  if (value === 0x5c) return "\\\\";
+  return String.fromCodePoint(value);
+}
+for (let value = 0; value <= 0x10ffff; value += 1) {
+  if (value >= 0xd800 && value <= 0xdfff) continue;
+  const scalar = String.fromCodePoint(value);
+  assert.equal(
+    proofkitStableJsonString({value: scalar}, "compact"),
+    "{\"value\":\"" + expectedScalarEncodingForTest(value) + "\"}\n",
+    "U+" + value.toString(16).padStart(4, "0"),
+  );
+}
+for (const invalidScalar of ["\ud800", "\udc00", "\ud800a"]) {
+  assert.throws(() => proofkitStableJsonValue({value: invalidScalar}), /Unicode scalar values/);
+  assert.throws(() => proofkitStableJsonValue({[invalidScalar]: "key"}), /Unicode scalar values/);
+}
+for (let unit = 0xd800; unit <= 0xdfff; unit += 1) {
+  const invalidScalar = String.fromCharCode(unit);
+  assert.throws(() => proofkitStableJsonValue({value: invalidScalar}), /Unicode scalar values/);
+  assert.throws(() => proofkitStableJsonValue({[invalidScalar]: "key"}), /Unicode scalar values/);
+}
+for (let high = 0xd800; high <= 0xdbff; high += 1) {
+  for (let low = 0xdc00; low <= 0xdfff; low += 1) {
+    const scalar = String.fromCharCode(high, low);
+    proofkitStableJsonValue({value: scalar});
+    proofkitStableJsonValue({[scalar]: "key"});
+  }
+}
+assert.throws(() => parseProofkitJsonStrict('{"value":"\\ud800"}'), /Unicode scalar values/);
 const prototypeKey = JSON.parse('{"__proto__":{"polluted":true}}');
 assert.equal(proofkitStableJsonString(prototypeKey), '{\n  "__proto__": {\n    "polluted": true\n  }\n}\n');
 assert.equal(({}).polluted, undefined);
@@ -415,18 +496,18 @@ assert.throws(
 );
 writeFileSync("oversize.json", "{\"ok\":true}");
 assert.throws(() => readProofkitJsonReportInput("oversize.json", {maxInputBytes: 4}), /exceeds maxInputBytes/);
+writeFileSync("malformed-utf8.json", Buffer.from([0x7b, 0x22, 0x78, 0x22, 0x3a, 0xff, 0x7d]));
+assert.throws(
+  () => readProofkitJsonReportInput("malformed-utf8.json"),
+  (error) => error instanceof Error && /input file is not valid UTF-8/.test(error.message) && !error.message.includes("ff"),
+);
 assert.throws(
   () => readProofkitJsonReportInput("missing\napi_key=abc123456789.json"),
-  (error) =>
-    error instanceof Error &&
-    /<redacted-control-rune>/.test(error.message) &&
-    /\[REDACTED\]/.test(error.message) &&
-    !/abc123456789/.test(error.message) &&
-    !/\n/.test(error.message),
+  (error) => error instanceof Error && error.message === "<redacted-diagnostic-value>",
 );
 assert.throws(
   () => readProofkitJsonReportInput("missing-prefix.json", {failureMessagePrefix: "Bearer prefixsecret123456789"}),
-  (error) => error instanceof Error && /Bearer \[REDACTED\]/.test(error.message) && !/prefixsecret123456789/.test(error.message),
+  (error) => error instanceof Error && error.message === "<redacted-diagnostic-value>",
 );
 
 const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
@@ -447,11 +528,15 @@ assert.throws(
 );
 assert.throws(
   () => runProofkitJsonCommand("json-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
-  /\[REDACTED\]/,
+  (error) => error instanceof Error && error.message === "<redacted-diagnostic-value>",
 );
 assert.throws(
   () => runProofkitJsonCommand("json-openai-secret-process-fail", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
-  /\[REDACTED\]/,
+  (error) => error instanceof Error && error.message === "<redacted-diagnostic-value>",
+);
+assert.throws(
+  () => runProofkitJsonCommand("json-invalid-utf8", {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+  (error) => error instanceof Error && error.message === "Proofkit stdout is not valid UTF-8",
 );
 const outputPass = runProofkitJsonCommand("requirement-spec-tree-view", {ok: true}, ["--output", "proofkit-output.json"], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
 assert.equal(outputPass.status, 0);
@@ -545,30 +630,34 @@ let errorText = "";
 process.exitCode = undefined;
 runProofkitJsonReportCliMain({
   argv: [],
-  run: () => { throw new Error("ghp_123456789012345678901234567890123456"); },
-  writeError: (value) => { errorText += value; },
+	run: () => { throw new Error("ghp_123456789012345678901234567890123456"); },
+	writeError: (value) => { errorText += value; },
 });
 	assert.equal(process.exitCode, 1);
-	assert.match(errorText, /\[REDACTED\]/);
+	assert.equal(errorText, "<redacted-diagnostic-value>\n");
 	process.exitCode = 0;
-	assert.equal(formatProofkitCliError("Bearer abcdefghijklmnopqrstuvwxyz"), "Bearer [REDACTED]");
-	assert.equal(formatProofkitCliError("Bearer abcdefgh"), "Bearer [REDACTED]");
-	assert.equal(formatProofkitCliError("api_key=abc123456789"), "[REDACTED]");
-	assert.equal(formatProofkitCliError("ghp_short"), "[REDACTED]");
+	const fixedDiagnostic = "<redacted-diagnostic-value>";
+	assert.equal(formatProofkitCliError("Bearer abcdefghijklmnopqrstuvwxyz"), fixedDiagnostic);
+	assert.equal(formatProofkitCliError("Bearer abcdefgh"), fixedDiagnostic);
+	assert.equal(formatProofkitCliError("api_key=abc123456789"), fixedDiagnostic);
+	assert.equal(formatProofkitCliError("ghp_short"), fixedDiagnostic);
 	const authorizationHeader = formatProofkitCliError("request failed: Authorization: Basic YWxpY2U6c2VjcmV0");
-	assert.match(authorizationHeader, /\[REDACTED\]/);
-	assert.doesNotMatch(authorizationHeader, /YWxpY2U6c2VjcmV0|Basic/);
+	assert.equal(authorizationHeader, fixedDiagnostic);
 	const controlRunes = formatProofkitCliError("line one\nline two\t\u007fend");
-	assert.equal(controlRunes, "line one<redacted-control-rune>line two<redacted-control-rune>end");
+	assert.equal(controlRunes, fixedDiagnostic);
 	const truncated = formatProofkitCliError("x".repeat(520));
 	assert.equal(truncated.length, 512 + "...<truncated-diagnostic>".length);
 	assert.match(truncated, /\.\.\.<truncated-diagnostic>$/);
 	for (const fixture of redactionFixtures) {
-	  const redacted = formatProofkitCliError(fixture.input);
-	  for (const needle of fixture.sensitiveNeedles) {
-	    assert.equal(redacted.includes(needle), false, fixture.name + " leaked " + needle + " via " + redacted);
+	  assert.equal(formatProofkitCliError("prefix " + fixture.input + " suffix"), fixedDiagnostic, fixture.name + " contiguous");
+	  const wrapped = "prefix " + fixture.input + " suffix";
+	  for (const separator of ["\0", "\u007f", "\u0085", "\u200b", "\u{e0001}", "\u2028", "\u2029"]) {
+	    for (const offset of [Math.floor(wrapped.length / 3), Math.floor(wrapped.length / 2), Math.floor(wrapped.length * 2 / 3)]) {
+	      assert.equal(formatProofkitCliError(wrapped.slice(0, offset) + separator + wrapped.slice(offset)), fixedDiagnostic, fixture.name + " split");
+	    }
 	  }
 	}
+	assert.equal(formatProofkitCliError("\ud800"), fixedDiagnostic);
 
 console.log("generated adapter semantics ok");
 `

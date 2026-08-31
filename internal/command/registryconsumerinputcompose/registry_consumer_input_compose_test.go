@@ -23,7 +23,7 @@ var testRequiredPreconditionIDs = []string{
 }
 
 func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.061624550493343445773564486888927869310676729537690954962361875225762539722512")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.023911378784767042896710443491291732363632403560408817977627023926149328856779")
 	input := validComposeInput(t)
 	output, exitCode, err := Build(input)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
 }
 
 func TestBuildBlocksUnavailableRequiredPreconditionsWithoutAcceptedInput(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.074432687060893820701506224431203998502881951879706934067424442564366527870298")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.013575457214699883334108189665727805186537481376269434889166294251758361114827")
 	for _, preconditionID := range testRequiredPreconditionIDs {
 		t.Run(preconditionID, func(t *testing.T) {
 			input := validComposeInput(t)

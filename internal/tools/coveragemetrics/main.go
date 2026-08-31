@@ -682,9 +682,9 @@ func activePackageFunctions(activeFiles map[string]struct{}, packageName string)
 func activeGoTestFiles(root, packagePath string) (map[string]struct{}, error) {
 	command := exec.Command("go", "list", "-json", packagePath)
 	command.Dir = root
-	output, err := command.CombinedOutput()
+	output, err := command.Output()
 	if err != nil {
-		return nil, fmt.Errorf("go list %s: %w: %s", packagePath, err, strings.TrimSpace(string(output)))
+		return nil, fmt.Errorf("go list %s: %w", packagePath, err)
 	}
 	var listed struct {
 		Dir          string

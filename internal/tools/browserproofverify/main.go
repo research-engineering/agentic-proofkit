@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const proofPath = "artifacts/proofkit/browser-runtime-proof.json"
@@ -421,10 +423,18 @@ func gitOutput(root string, args ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(output)), nil
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("git output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }
 
 func exit(err error) {
-	fmt.Fprintln(os.Stderr, "browser runtime proof verification failed:", admit.RedactStructuralText(err.Error()))
+	writeBrowserProofFailure(os.Stderr, err)
 	os.Exit(1)
+}
+
+func writeBrowserProofFailure(writer io.Writer, err error) {
+	_, _ = fmt.Fprintln(writer, "browser runtime proof verification failed:", admit.RedactStructuralText(err.Error()))
 }

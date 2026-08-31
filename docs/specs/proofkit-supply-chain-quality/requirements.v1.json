@@ -333,6 +333,32 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Every repository-owned stable JSON implementation used by a public or retained-evidence path accepts only Unicode 15.0.0 scalar strings, rejecting malformed UTF-8 byte strings and unpaired UTF-16 surrogates as applicable, emits the same deterministic semantic-preserving JSON escapes for the pinned Cc, Cf, Zl, and Zp range table, preserves ordinary decoded values, and remains byte-compatible with one independently authored literal corpus frozen before implementation.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-026"],
+      "nonClaims": ["This bounded encoding policy does not prove terminal-rendering equivalence or safety of arbitrary downstream decoders."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Every report-visible diagnostic and structural-text sanitizer accepts only Unicode 15.0.0 scalar strings, recognizes the pinned Cc, Cf, Zl, and Zp range table and contiguous or control-split secret-shaped values through one shared taxonomy, and replaces any rejected caller-owned value as a whole with one fixed command-owned label without emitting its bytes, code points, prefix, suffix, or caller-controlled replacement text.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-027"],
+      "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ]
 }

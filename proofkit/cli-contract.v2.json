@@ -28,6 +28,7 @@
         "--help",
         "-h"
       ],
+      "commandHelpExclusive": true,
       "helpCommandPositionalTarget": "optional_supported_command",
       "helpCatalogFormsSource": "proofkit/command-families.v1.json",
       "helpReadsCommandInput": false
@@ -206,7 +207,7 @@
         "rootDefinitionDigest": "sha256:104d1e8bef615582ead1c7c8c64b7e1643a76c2bc2a1f224189c372cf8cc4aa1",
         "nativeSource": {
           "path": "internal/command/adoptiondoctor",
-          "canonicalDigest": "sha256:cec92b209d2fa36cf5da43a7049d3c24212f6762a085b065e75b46f1c5fda625",
+          "canonicalDigest": "sha256:6ec8b4f324c102c1059c051f99209c91b4f7fe5a7218a03d8717c2791b8dd189",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -237,7 +238,7 @@
         "rootDefinitionDigest": "sha256:90583a47b9bdd605b2d3f24dcb1a5dbb2b4d9da20d7be097da381c9c77229e62",
         "nativeSource": {
           "path": "internal/command/adoptiondoctor",
-          "canonicalDigest": "sha256:cec92b209d2fa36cf5da43a7049d3c24212f6762a085b065e75b46f1c5fda625",
+          "canonicalDigest": "sha256:6ec8b4f324c102c1059c051f99209c91b4f7fe5a7218a03d8717c2791b8dd189",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -510,7 +511,7 @@
         "rootDefinitionDigest": "sha256:fd1121285d1b357ed848febc248700a75417d06619e22ed36991631d7526375b",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:21ffaf8d53060e31f3dec92d7f39cf6e7654cc2268bde47599211d1d914acfeb",
+          "canonicalDigest": "sha256:2fc5d42c6126069aad7cad9a18acf9683289ce54be3a0d2f3aef6f429e2bcbdf",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -586,7 +587,7 @@
         "rootDefinitionDigest": "sha256:db7d5b29083a939eea0f23253632394212b0d73b5f1b6206d0811d236d6a84ca",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:21ffaf8d53060e31f3dec92d7f39cf6e7654cc2268bde47599211d1d914acfeb",
+          "canonicalDigest": "sha256:2fc5d42c6126069aad7cad9a18acf9683289ce54be3a0d2f3aef6f429e2bcbdf",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -815,6 +816,122 @@
       }
     },
     {
+      "command": "change-workflow-plan",
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_caller_input",
+      "agentEnvelope": true,
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--agent-envelope",
+        "--color",
+        "--format",
+        "--input",
+        "--input-pointer"
+      ],
+      "singleOccurrenceFlags": [
+        "--agent-envelope",
+        "--color",
+        "--format",
+        "--input",
+        "--input-pointer"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "inputContract": {
+        "contractId": "proofkit.change-workflow-plan.input.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.change-workflow-plan.input.v1.root-shape",
+        "rootDefinitionDigest": "sha256:6632a481380bfb07d754ef622661b291f805b1b168b1824089bdd5cc9bdd4b0e",
+        "nativeSource": {
+          "path": "internal/command/changeworkflowplan",
+          "canonicalDigest": "sha256:53a35103619a6f992e670e165dd01e6277a32b04faaa26ea6fd799017ebb7dd4",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeAdmissionWitnessSelector": {
+          "path": "internal/command/changeworkflowplan/state_test.go",
+          "test": "TestWorkflowStatePredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowStatePredicates$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "root-shape-only definition proofkit.change-workflow-plan.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-WORKFLOW-001",
+          "REQ-PROOFKIT-WORKFLOW-002",
+          "REQ-PROOFKIT-WORKFLOW-003",
+          "REQ-PROOFKIT-WORKFLOW-004",
+          "REQ-PROOFKIT-WORKFLOW-005",
+          "REQ-PROOFKIT-WORKFLOW-006",
+          "REQ-PROOFKIT-WORKFLOW-008",
+          "REQ-PROOFKIT-WORKFLOW-011"
+        ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.change-workflow-plan.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.change-workflow-plan.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:d0c7c2f1b2d78da4260757c8bdbccda4f9dfe4f69d3ba3a0af24338508f32da9",
+        "nativeSource": {
+          "path": "internal/command/changeworkflowplan",
+          "canonicalDigest": "sha256:53a35103619a6f992e670e165dd01e6277a32b04faaa26ea6fd799017ebb7dd4",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeOutputWitnessSelector": {
+          "path": "internal/command/changeworkflowplan/state_test.go",
+          "test": "TestWorkflowStatePredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowStatePredicates$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "JSON plan and agent-envelope variants; text is a bounded derived presentation",
+          "root-shape-only definition proofkit.change-workflow-plan.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-WORKFLOW-001",
+          "REQ-PROOFKIT-WORKFLOW-002",
+          "REQ-PROOFKIT-WORKFLOW-003",
+          "REQ-PROOFKIT-WORKFLOW-005",
+          "REQ-PROOFKIT-WORKFLOW-008",
+          "REQ-PROOFKIT-WORKFLOW-009",
+          "REQ-PROOFKIT-WORKFLOW-011"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
+      }
+    },
+    {
       "command": "changed-path-set",
       "input": "required",
       "stdin": true,
@@ -1024,7 +1141,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.conformance-profile.output.v2.root-shape",
-        "rootDefinitionDigest": "sha256:b3b1ed639969bba5213bb70e0a4ab9f86b69f180ad677ced78e600f87d55fb4f",
+        "rootDefinitionDigest": "sha256:5817a9d259deb8ff48d8dc6298b46164e7b132304ca1d865967c611d147b1793",
         "nativeSource": {
           "path": "internal/command/conformanceprofile",
         "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
@@ -1805,7 +1922,7 @@
         "rootDefinitionDigest": "sha256:9378c7663485f39089cf6c39a3d2f778e28b5801637229fe9524a9652a7b0737",
         "nativeSource": {
           "path": "internal/command/jsonreportcliadaptersource",
-          "canonicalDigest": "sha256:f806f423a29816180d2fc5d0b8735276d39bd86ec3cbaa8282a1b5a3015b7399",
+          "canonicalDigest": "sha256:1bacd24b71f570d953dcd878f2edd6563fdace2705042fa81a0cbabb1ecfd7e3",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -1994,6 +2111,78 @@
           "REQ-PROOFKIT-PACKAGE-002",
           "REQ-PROOFKIT-QUALITY-004"
         ]
+      }
+    },
+    {
+      "command": "native-evidence-guidance",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "built_in_package_catalog",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--format"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--format"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.native-evidence-guidance.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.native-evidence-guidance.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:218011a133540f57ef74f8748747e00d33b6757c9f77725ecef39f45fb19423f",
+        "nativeSource": {
+          "path": "internal/command/nativeevidenceguidance",
+          "canonicalDigest": "sha256:3b08daa3b023df2a7687999893a5b357c0345a854e2b25ebca84ab3a514db8a1",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeOutputWitnessSelector": {
+          "path": "internal/command/nativeevidenceguidance/guidance_test.go",
+          "test": "TestGuidanceSlotPredicates",
+          "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidanceSlotPredicates$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "JSON guidance report; text is a bounded derived presentation",
+          "root-shape-only definition proofkit.native-evidence-guidance.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-WORKFLOW-007",
+          "REQ-PROOFKIT-WORKFLOW-008",
+          "REQ-PROOFKIT-WORKFLOW-009",
+          "REQ-PROOFKIT-WORKFLOW-010",
+          "REQ-PROOFKIT-WORKFLOW-011"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
       }
     },
     {
@@ -2231,7 +2420,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:6e888333db0edc8a6eaeb91dad38b876f0bbee22a43c1bd2424e155e5a58dc88",
+            "canonicalDigest": "sha256:fe81ca3521d27f477bca5fdee31da075348b3835440215c9d1df1ebdbb8c870e",
             "evidenceClass": "source_checkout"
           },
           {
@@ -3566,7 +3755,7 @@
         "rootDefinitionDigest": "sha256:41bc233c96bd468bc96eeb0447e037cacdbcf92bb04161052303e8747e4282f2",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
+          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3606,7 +3795,7 @@
         "rootDefinitionDigest": "sha256:cdadd7b589d682a122cfe2b801f001a3b22a2269aa4977ebe073932d11e1f816",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
+          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3653,7 +3842,7 @@
         "rootDefinitionDigest": "sha256:43852cf1a52b3c1f000ec95e460fbad157a6b6a39958d20f81c9e1e4d31e3c6f",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
+          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -3691,7 +3880,7 @@
         "rootDefinitionDigest": "sha256:61f7fd43e2e9da5bde9b61bb86e02cbf337a43c6891ca888c1d42936e5b16456",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:c814fcecb510be1b2fbe1d9911825d29874491e42a7e6e69b55e0f678b332492",
+          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5473,7 +5662,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:6e888333db0edc8a6eaeb91dad38b876f0bbee22a43c1bd2424e155e5a58dc88",
+          "canonicalDigest": "sha256:fe81ca3521d27f477bca5fdee31da075348b3835440215c9d1df1ebdbb8c870e",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5502,7 +5691,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:6e888333db0edc8a6eaeb91dad38b876f0bbee22a43c1bd2424e155e5a58dc88",
+          "canonicalDigest": "sha256:fe81ca3521d27f477bca5fdee31da075348b3835440215c9d1df1ebdbb8c870e",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5993,7 +6182,7 @@
         "rootDefinitionDigest": "sha256:af1e6196ddee9ee4262ca14c9cca1451c89241ebeef177af4a12be866b088f9a",
         "nativeSource": {
           "path": "internal/command/textpolicy",
-          "canonicalDigest": "sha256:7b46a4a0372f3ecd5a9ae7c42a0ba0200d436834cfcdfa8a2d4860be0d8f78d6",
+          "canonicalDigest": "sha256:d6a41f1ddc42a71b1d03ae52cad8793c1e96557181f8d1032bb0bcaa3f3d9b7f",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6020,7 +6209,7 @@
         "rootDefinitionDigest": "sha256:a47795a1a72dcece9e3e513c8d33829fed187a959450d1ce007697a434b26df1",
         "nativeSource": {
           "path": "internal/command/textpolicy",
-          "canonicalDigest": "sha256:7b46a4a0372f3ecd5a9ae7c42a0ba0200d436834cfcdfa8a2d4860be0d8f78d6",
+          "canonicalDigest": "sha256:d6a41f1ddc42a71b1d03ae52cad8793c1e96557181f8d1032bb0bcaa3f3d9b7f",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -6125,7 +6314,7 @@
         "rootDefinitionDigest": "sha256:687efe1fe441443ad7bcab69f05987b47a25672da8032e7471bd7c48ebd95a30",
         "nativeSource": {
           "path": "internal/command/publicapi",
-          "canonicalDigest": "sha256:9f21766bc6d4dd042ff0e3bd3f4f7278448a9822e48399e56f9c5d2d9b02351b",
+          "canonicalDigest": "sha256:59a2876503e61689f968c462ef98065084c1844db1469e691f144b81d3ae76a9",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6167,7 +6356,7 @@
         "rootDefinitionDigest": "sha256:93da5f4d5efd4c482cb5da37bb60a80f8e47e4eab549428790ddd1a4e680009d",
         "nativeSource": {
           "path": "internal/command/publicapi",
-          "canonicalDigest": "sha256:9f21766bc6d4dd042ff0e3bd3f4f7278448a9822e48399e56f9c5d2d9b02351b",
+          "canonicalDigest": "sha256:59a2876503e61689f968c462ef98065084c1844db1469e691f144b81d3ae76a9",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -7920,6 +8109,219 @@
       "canonicalDigest": "sha256:d20d4d55690f7b98768d8bb1c2c313f78bdf9ac8163fa6d1ff694664b2d7d999"
     },
     {
+      "definitionId": "proofkit.change-workflow-plan.input.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "checkpoint",
+              "completedStageIds",
+              "contextRefs",
+              "governingAuthorityRefId",
+              "requiredContextRefIds",
+              "schemaVersion"
+            ],
+            "requiredFields": [
+              "checkpoint",
+              "completedStageIds",
+              "contextRefs",
+              "governingAuthorityRefId",
+              "requiredContextRefIds",
+              "schemaVersion"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON input"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:6632a481380bfb07d754ef622661b291f805b1b168b1824089bdd5cc9bdd4b0e"
+    },
+    {
+      "definitionId": "proofkit.change-workflow-plan.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "actionPlan",
+              "blockedPreconditions",
+              "bounds",
+              "clarificationQuestions",
+              "commands",
+              "contextRefs",
+              "costContract",
+              "envelopeId",
+              "nonClaims",
+              "omitted",
+              "receiptRefs",
+              "routeQuestions",
+              "schemaVersion",
+              "sourceReport"
+            ],
+            "requiredFields": [
+              "actionPlan",
+              "blockedPreconditions",
+              "bounds",
+              "clarificationQuestions",
+              "commands",
+              "contextRefs",
+              "costContract",
+              "envelopeId",
+              "nonClaims",
+              "omitted",
+              "receiptRefs",
+              "routeQuestions",
+              "schemaVersion",
+              "sourceReport"
+            ],
+            "rootKind": "object",
+            "variantId": "01-agent-envelope",
+            "when": [
+              "--agent-envelope"
+            ]
+          },
+          {
+            "allowedFields": [
+              "action",
+              "activeStageId",
+              "authority",
+              "checkpointState",
+              "completedStageIds",
+              "nonClaims",
+              "omittedContextCount",
+              "omittedContextRefIds",
+              "outputKind",
+              "prompt",
+              "reportId",
+              "reportKind",
+              "retainedContextRefIds",
+              "retainedContextRefs",
+              "schemaVersion"
+            ],
+            "requiredFields": [
+              "action",
+              "activeStageId",
+              "authority",
+              "checkpointState",
+              "completedStageIds",
+              "nonClaims",
+              "omittedContextCount",
+              "omittedContextRefIds",
+              "outputKind",
+              "prompt",
+              "reportId",
+              "reportKind",
+              "retainedContextRefIds",
+              "retainedContextRefs",
+              "schemaVersion"
+            ],
+            "rootKind": "object",
+            "variantId": "02-next-action",
+            "when": [
+              "without --agent-envelope; outputKind=next_action; without successorStateDelta"
+            ]
+          },
+          {
+            "allowedFields": [
+              "action",
+              "activeStageId",
+              "authority",
+              "checkpointState",
+              "completedStageIds",
+              "nonClaims",
+              "omittedContextCount",
+              "omittedContextRefIds",
+              "outputKind",
+              "prompt",
+              "reportId",
+              "reportKind",
+              "retainedContextRefIds",
+              "retainedContextRefs",
+              "schemaVersion",
+              "successorStateDelta"
+            ],
+            "requiredFields": [
+              "action",
+              "activeStageId",
+              "authority",
+              "checkpointState",
+              "completedStageIds",
+              "nonClaims",
+              "omittedContextCount",
+              "omittedContextRefIds",
+              "outputKind",
+              "prompt",
+              "reportId",
+              "reportKind",
+              "retainedContextRefIds",
+              "retainedContextRefs",
+              "schemaVersion",
+              "successorStateDelta"
+            ],
+            "rootKind": "object",
+            "variantId": "03-accept-stage",
+            "when": [
+              "without --agent-envelope; outputKind=next_action; successorStateDelta"
+            ]
+          },
+          {
+            "allowedFields": [
+              "authority",
+              "completedStageIds",
+              "nonClaims",
+              "omittedContextCount",
+              "omittedContextRefIds",
+              "outputKind",
+              "reportId",
+              "reportKind",
+              "retainedContextRefIds",
+              "retainedContextRefs",
+              "schemaVersion"
+            ],
+            "requiredFields": [
+              "authority",
+              "completedStageIds",
+              "nonClaims",
+              "omittedContextCount",
+              "omittedContextRefIds",
+              "outputKind",
+              "reportId",
+              "reportKind",
+              "retainedContextRefIds",
+              "retainedContextRefs",
+              "schemaVersion"
+            ],
+            "rootKind": "object",
+            "variantId": "04-workflow-complete",
+            "when": [
+              "without --agent-envelope; outputKind=workflow_complete"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:d0c7c2f1b2d78da4260757c8bdbccda4f9dfe4f69d3ba3a0af24338508f32da9"
+    },
+    {
       "definitionId": "proofkit.changed-path-set.input.v1.root-shape",
       "schemaVersion": 1,
       "rootType": "object",
@@ -8274,7 +8676,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:b3b1ed639969bba5213bb70e0a4ab9f86b69f180ad677ced78e600f87d55fb4f"
+      "canonicalDigest": "sha256:5817a9d259deb8ff48d8dc6298b46164e7b132304ca1d865967c611d147b1793"
     },
     {
       "definitionId": "proofkit.custom-rule-boundary.input.v1.root-shape",
@@ -9520,6 +9922,42 @@
         ]
       },
       "canonicalDigest": "sha256:e6a152b5ca41396f25874b1d1ddd1dbc323bd9e927a18c5fe5088ad527fe65cd"
+    },
+    {
+      "definitionId": "proofkit.native-evidence-guidance.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "guidanceId",
+              "nonClaims",
+              "schemaVersion",
+              "slots"
+            ],
+            "requiredFields": [
+              "guidanceId",
+              "nonClaims",
+              "schemaVersion",
+              "slots"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON mode"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:218011a133540f57ef74f8748747e00d33b6757c9f77725ecef39f45fb19423f"
     },
     {
       "definitionId": "proofkit.obligation-decision.input.v1.root-shape",

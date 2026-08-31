@@ -9,7 +9,7 @@ import (
 )
 
 func TestBuildAdmitsTrustedReceiptAndRejectsMissingProvenance(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.014682110212614408688669170070931583072458934622263058290594375355449658410585")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.030410956818640054490182664092187883427834500350571279664954937294396542369892")
 	input := validReceiptTrustClassInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

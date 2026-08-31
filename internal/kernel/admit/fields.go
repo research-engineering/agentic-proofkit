@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const (
@@ -35,6 +37,7 @@ var (
 const (
 	maxDiagnosticRunes = 512
 	maxRuleIDBytes     = 256
+	redactedValueLabel = "<redacted-diagnostic-value>"
 )
 
 type RedactionFixture struct {
@@ -159,6 +162,10 @@ func ContainsSecretLikeValue(value string) bool {
 	return ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value)
 }
 
+func ContainsReportVisibleUnsafeValue(value string) bool {
+	return unicodepolicy.ContainsUnsafeScalar(value) || ContainsSecretLikeValue(value)
+}
+
 func ContainsSecretLikePathValue(value string) bool {
 	return ContainsURLCredentialValue(value) || secretPathContextPattern.MatchString(value) || secretPathTokenPattern.MatchString(value)
 }
@@ -172,13 +179,16 @@ func ContainsURLCredentialValue(value string) bool {
 }
 
 func RedactSecretLikeValue(value string) string {
-	value = secretValuePattern.ReplaceAllString(value, "<redacted-secret-like-value>")
-	return urlUserInfoPattern.ReplaceAllString(value, "<redacted-secret-like-value>")
+	if ContainsSecretLikeValue(value) {
+		return redactedValueLabel
+	}
+	return value
 }
 
 func RedactDiagnosticValue(value string) string {
-	value = RedactSecretLikeValue(value)
-	value = redactControlRunes(value)
+	if ContainsReportVisibleUnsafeValue(value) {
+		return redactedValueLabel
+	}
 	runes := []rune(value)
 	if len(runes) <= maxDiagnosticRunes {
 		return value
@@ -187,24 +197,10 @@ func RedactDiagnosticValue(value string) string {
 }
 
 func RedactStructuralText(value string) string {
-	return redactControlRunes(RedactSecretLikeValue(value))
-}
-
-func redactControlRunes(value string) string {
-	var builder strings.Builder
-	redacting := false
-	for _, character := range value {
-		if character < 0x20 || character == 0x7f {
-			if !redacting {
-				builder.WriteString("<redacted-control-rune>")
-				redacting = true
-			}
-			continue
-		}
-		redacting = false
-		builder.WriteRune(character)
+	if ContainsReportVisibleUnsafeValue(value) {
+		return redactedValueLabel
 	}
-	return builder.String()
+	return value
 }
 
 func DisplayOnlyCommandText(raw any, context string) (string, error) {

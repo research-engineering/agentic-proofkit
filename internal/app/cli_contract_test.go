@@ -18,11 +18,12 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 const (
-	cliContractPublicABISHA256               = "fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9"
+	cliContractPublicABISHA256               = "2af9b2e3b77b8309f295a2ffeeec70cb4de4d51cb6fbfa45e7733da810ddc1df"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -726,10 +727,19 @@ func assertBoundCommandContract(t *testing.T, command string, direction string, 
 		t.Fatalf("%s %s selector is not source-checkout evidence", command, direction)
 	}
 	resolved := resolvedCommandContract(t, value, definitions)
-	encoded, err := json.Marshal(resolved)
+	intermediate, err := json.Marshal(resolved)
 	if err != nil {
 		t.Fatal(err)
 	}
+	canonicalValue, err := admission.DecodeJSON(bytes.NewReader(intermediate), int64(len(intermediate)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := stablejson.MarshalLayout(canonicalValue, stablejson.LayoutCompact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded = bytes.TrimSuffix(encoded, []byte{'\n'})
 	sum := sha256.Sum256(encoded)
 	gotDigest := "sha256:" + fmt.Sprintf("%x", sum[:])
 	if gotDigest != wantDigest {
@@ -1335,7 +1345,7 @@ func stringsAsAny(values []string) []any {
 }
 
 func TestHelpCommandContractForms(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079695171929558035833123525411377372802577641283912049521939698994087384245655")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.021600527281664046126364606050061357909698227432892268285315907924565443932022")
 	for _, args := range [][]string{{"help"}, {"help", "--help"}, {"help", "-h"}, {"--help"}, {"-h"}, {"help", "repo-profile-admission"}, {"repo-profile-admission", "--help"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var stdout bytes.Buffer
@@ -1683,10 +1693,11 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(processContract["helpGrammar"], &helpGrammar); err != nil {
 		t.Fatalf("decode help grammar: %v", err)
 	}
-	assertKeys(t, "CLI help grammar", keysAny(helpGrammar), []string{"commandHelpFlags", "helpCatalogFormsSource", "helpCommandPositionalTarget", "helpReadsCommandInput", "rootHelpFlags"})
+	assertKeys(t, "CLI help grammar", keysAny(helpGrammar), []string{"commandHelpExclusive", "commandHelpFlags", "helpCatalogFormsSource", "helpCommandPositionalTarget", "helpReadsCommandInput", "rootHelpFlags"})
 	assertStringSet(t, stringsFromAny(helpGrammar["rootHelpFlags"].([]any)), []string{"--help", "-h"}, "root help flags")
 	assertStringSet(t, stringsFromAny(helpGrammar["commandHelpFlags"].([]any)), []string{"--help", "-h"}, "command help flags")
-	if helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command" ||
+	if helpGrammar["commandHelpExclusive"] != true ||
+		helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command" ||
 		helpGrammar["helpCatalogFormsSource"] != "proofkit/command-families.v1.json" ||
 		helpGrammar["helpReadsCommandInput"] != false {
 		t.Fatalf("CLI help grammar does not describe runtime help routing: %#v", helpGrammar)

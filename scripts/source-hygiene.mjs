@@ -2,6 +2,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
+import {decodeUTF8Strict} from "./stable-json.mjs";
+
 const textExtensions = new Set([
   ".css",
   ".go",
@@ -39,13 +41,13 @@ function containsOrganizationSpecificToken(text) {
 }
 
 function trackedFiles() {
-  return execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+  return decodeUTF8Strict(execFileSync("git", ["ls-files", "-z"]), "Git file inventory")
     .split("\0")
     .filter(Boolean);
 }
 
 function trackedIndexEntries() {
-  return execFileSync("git", ["ls-files", "-s", "-z"], { encoding: "utf8" })
+  return decodeUTF8Strict(execFileSync("git", ["ls-files", "-s", "-z"]), "Git index inventory")
     .split("\0")
     .filter(Boolean)
     .map((entry) => {
@@ -69,9 +71,10 @@ for (const entry of trackedIndexEntries()) {
     continue;
   }
 
-  const lowerText = execFileSync("git", ["cat-file", "-p", entry.object], {
-    encoding: "utf8",
-  }).toLowerCase();
+  const lowerText = decodeUTF8Strict(
+    execFileSync("git", ["cat-file", "-p", entry.object]),
+    "tracked text object",
+  ).toLowerCase();
   if (containsOrganizationSpecificToken(lowerText)) {
     organizationSpecific.add(entry.file);
   }
@@ -82,7 +85,7 @@ for (const file of trackedFiles()) {
     continue;
   }
 
-  const lowerText = readFileSync(file, "utf8").toLowerCase();
+  const lowerText = decodeUTF8Strict(readFileSync(file), "worktree text file").toLowerCase();
   if (containsOrganizationSpecificToken(lowerText)) {
     organizationSpecific.add(file);
   }

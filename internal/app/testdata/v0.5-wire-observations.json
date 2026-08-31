@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "edgeId": "proofkit.public-wire.0.4.0-to-0.5.0",
+  "previousVersion": "0.4.0",
+  "version": "0.5.0",
+  "evidenceClass": "owner_authored_frozen_version_edge_observation",
+  "previousPublicAbiSha256": "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9",
+  "currentPublicAbiSha256": "sha256:2af9b2e3b77b8309f295a2ffeeec70cb4de4d51cb6fbfa45e7733da810ddc1df",
+  "addedCommandContracts": [
+    {
+      "command": "change-workflow-plan",
+      "inputContractSha256": "sha256:0851ad1ad3990009ca769e6f7e7e4402f289c35484123ccb88097ab21c3b9f18",
+      "outputContractSha256": "sha256:1a9f6fd253fa01c55f29990d67f1e46ead8068c7f16880df45a645021c26dae1"
+    },
+    {
+      "command": "native-evidence-guidance",
+      "inputContractSha256": "",
+      "outputContractSha256": "sha256:ed40668acec3a8e2ae097b0ce011994e7facf6feda23e0057c4dcbe660a1a1b7"
+    }
+  ],
+  "breakingChangeIds": [
+    "proofkit.agent-envelope.local-identity-closure",
+    "proofkit.stable-json.unicode-scalar-v2"
+  ],
+  "nonClaims": [
+    "This owner-authored version-edge observation binds reviewed public contract identities; it does not authenticate Git history, registry publication, provider ingestion, native witness truth, rollout, or production readiness."
+  ]
+}

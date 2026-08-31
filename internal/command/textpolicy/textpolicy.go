@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const reportKind = "proofkit.text-policy"
@@ -279,7 +279,8 @@ func isBinaryCandidate(path string, suffixes []string) bool {
 
 func verifyFile(policy Policy, path string, data []byte) ([]string, bool) {
 	failures := []string{}
-	if !utf8.Valid(data) {
+	decoded, err := unicodepolicy.DecodeUTF8(data)
+	if err != nil {
 		return []string{fmt.Sprintf("%s: not valid UTF-8", path)}, false
 	}
 	if policy.RequireFinalNewline && len(data) > 0 && data[len(data)-1] != '\n' {
@@ -288,7 +289,7 @@ func verifyFile(policy Policy, path string, data []byte) ([]string, bool) {
 	if policy.AsciiOnly {
 		line := 1
 		column := 1
-		for _, value := range string(data) {
+		for _, value := range decoded {
 			switch value {
 			case '\n':
 				line++
@@ -308,7 +309,7 @@ func verifyFile(policy Policy, path string, data []byte) ([]string, bool) {
 		}
 	}
 	if policy.RejectTrailingWhitespace {
-		for lineIndex, lineData := range strings.Split(string(data), "\n") {
+		for lineIndex, lineData := range strings.Split(decoded, "\n") {
 			if strings.HasSuffix(lineData, " ") || strings.HasSuffix(lineData, "\t") {
 				failures = append(failures, fmt.Sprintf("%s:%d: trailing whitespace", path, lineIndex+1))
 				return failures, true

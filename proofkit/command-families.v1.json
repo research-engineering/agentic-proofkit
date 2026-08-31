@@ -18,6 +18,15 @@
       ]
     },
     {
+      "familyId": "agent-workflow-planning",
+      "label": "Agent workflow planning",
+      "purpose": "Plan bounded engineering-change stages and expose repository-neutral native-evidence guidance.",
+      "commands": [
+        "change-workflow-plan",
+        "native-evidence-guidance"
+      ]
+    },
+    {
       "familyId": "cli-metadata-and-conformance",
       "label": "CLI metadata and conformance",
       "purpose": "Expose, route, generate, and self-check CLI contract surfaces.",

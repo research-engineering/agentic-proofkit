@@ -249,7 +249,7 @@ func TestDuplicateFormatIsRejectedBeforeInputRead(t *testing.T) {
 }
 
 func TestSelfCheckRejectsDuplicateKeys(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031584524343444160231600312979302740662395207275659075147050938676784401609593")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.001861517770766202473963888516884835242792304213831715864713877788735391460974")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	status := Run(t.Context(), []string{"self-check", "--input", "-"}, strings.NewReader(`{"schemaVersion":1,"schemaVersion":2}`), &stdout, &stderr)
@@ -621,7 +621,7 @@ func TestCLIDiagnosticsRedactSecretLikeCallerLabels(t *testing.T) {
 			if strings.Contains(stderr.String(), secret) {
 				t.Fatalf("stderr leaked secret-shaped caller label: %s", stderr.String())
 			}
-			if !strings.Contains(stderr.String(), "<redacted-secret-like-value>") {
+			if !strings.Contains(stderr.String(), "<redacted-diagnostic-value>") {
 				t.Fatalf("stderr=%q, want redaction placeholder", stderr.String())
 			}
 		})
@@ -729,7 +729,7 @@ func TestCLIDiagnosticsRedactControlAndOversizedCallerLabels(t *testing.T) {
 			name:       "control rune",
 			command:    "bad\ncommand",
 			forbidden:  "bad\ncommand",
-			wantMarker: "<redacted-control-rune>",
+			wantMarker: "<redacted-diagnostic-value>",
 			maxStderr:  128,
 		},
 		{

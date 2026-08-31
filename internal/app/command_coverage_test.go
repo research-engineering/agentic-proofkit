@@ -466,7 +466,7 @@ func TestRequiredInputCommandsRejectMalformedCallerRecords(t *testing.T) {
 }
 
 func TestNoInputCommandsHaveCommandSpecificBehavior(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.102282482911729620466899441592793892640151459429551384318004264301951934933567")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070498585436389324351139272251942930131041611602879828983669878551280280496659")
 	t.Run("stack-preset", func(t *testing.T) {
 		var stdout bytes.Buffer
 		var stderr bytes.Buffer
@@ -526,6 +526,8 @@ func noInputRuntimeSmokeArgs(command string) ([]string, bool) {
 		return []string{"init", "--preset", "fresh"}, true
 	case "json-report-cli-adapter-source":
 		return []string{"json-report-cli-adapter-source", "--language", "typescript"}, true
+	case "native-evidence-guidance":
+		return []string{"native-evidence-guidance"}, true
 	case "stack-preset":
 		return []string{"stack-preset", "--preset", "typescript_workspace"}, true
 	default:

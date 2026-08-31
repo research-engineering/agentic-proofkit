@@ -10,7 +10,7 @@ import (
 )
 
 func TestEvaluatePreservesUTF8ASCIIWhitespaceAndBinaryFalsifiers(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031094312573272652863042278542901905945454475685240528067456704904488178168569")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.063809241610934477437716286923029349318149179919687982782786287816761572189049")
 	result, err := Evaluate(validInput(map[string][]byte{
 		"binary.ZIP":         []byte{0xff, 0xfe},
 		"docs/empty.md":      {},

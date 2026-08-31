@@ -16,7 +16,7 @@ import (
 )
 
 func TestComposeAndSliceRoundTrip(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.073105413718212685720467657880735003544056444223060540529926611328658669412386")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.014989945418882269851301771813751592528811970506607223135861291503422294739361")
 	root := fixtureRepository(t)
 	contextValue, err := Compose(root, fixtureCatalog())
 	if err != nil {
@@ -315,7 +315,7 @@ func resignSnapshot(t *testing.T, value map[string]any) {
 }
 
 func TestSliceRejectsTamperedSnapshotAndUnknownNode(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070746173522414644645062396948230600718686825876357257505266577982734819530024")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069162415320540756982773651649760342296713012215029052933916884217327976783225")
 	root := fixtureRepository(t)
 	contextValue, err := Compose(root, fixtureCatalog())
 	if err != nil {

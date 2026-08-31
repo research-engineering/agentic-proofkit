@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildRejectsCrossSurfaceRouteReferenceWithoutDelegation(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.052171025929495006005566277017011611265246234017302535159618229629097907645234")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.110309146081359910709631703704262165828281547205541367081938214321694298792717")
 	record, exitCode, err := Build(validBindingPartitionInput(false))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

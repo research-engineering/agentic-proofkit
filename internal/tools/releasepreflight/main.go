@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/retainedevidence"
 )
@@ -205,7 +206,11 @@ func run(args []string) error {
 		if err != nil {
 			return fmt.Errorf("read release notes: %w", err)
 		}
-		if err := validateGitHubReleaseMetadata(release, options["tag"], string(notes)); err != nil {
+		notesText, err := unicodepolicy.DecodeUTF8(notes)
+		if err != nil {
+			return fmt.Errorf("release notes are not valid UTF-8")
+		}
+		if err := validateGitHubReleaseMetadata(release, options["tag"], notesText); err != nil {
 			return err
 		}
 		if args[0] == "github-metadata" {
@@ -615,8 +620,12 @@ func readLineSet(path string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return nil, fmt.Errorf("line-set input is not valid UTF-8")
+	}
 	lines := []string{}
-	for _, line := range strings.Split(string(content), "\n") {
+	for _, line := range strings.Split(decoded, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			lines = append(lines, line)

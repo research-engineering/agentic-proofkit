@@ -8,7 +8,7 @@ import (
 )
 
 func TestChangedPackagePlanAdmitsPackagesRootAndSchema(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000915784104466894868430403781008280151510309816212488025513280699400857148130")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.099901347117709869449512361041699546156858878065694966382459003909292505090347")
 	input := validChangedPackagePlanInput()
 
 	plan, err := BuildChangedPackagePlan(input)
@@ -83,7 +83,7 @@ func TestShardPartitionRejectsUnknownNestedFields(t *testing.T) {
 }
 
 func TestShardPartitionAdmitsCoveredRootsAndRejectsMissingDependency(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.011525493414109086910947302412685558638860644500578844199382862426651697571033")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.078289321613275805064332964500278192564264874761019976788520205993988052208613")
 	partition, exitCode, err := BuildShardPartition(validShardPartitionInput())
 	if err != nil {
 		t.Fatalf("BuildShardPartition() error=%v", err)

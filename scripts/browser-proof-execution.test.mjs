@@ -46,6 +46,18 @@ test("browser proof server readiness timeout terminates the child", async () => 
   assert.equal(child.listenerCount("exit"), 0);
 });
 
+test("browser proof server rejects malformed UTF-8 without disclosing buffered output", async () => {
+  const child = new FakeChild((signal) => {
+    if (signal === "SIGTERM") child.exit(signal);
+  });
+  queueMicrotask(() => child.stdout.write(Buffer.from([0x67, 0x68, 0x70, 0x5f, 0xff])));
+  await assert.rejects(
+    startBrowserServer("server", {spawnProcess: () => child, readinessTimeoutMs: 50, stopTimeoutMs: 50}),
+    (error) => error.message.includes("not valid UTF-8") && !error.message.includes("ghp_"),
+  );
+  assert.deepEqual(child.signals, ["SIGTERM"]);
+});
+
 test("browser proof server cleanup escalates from SIGTERM to SIGKILL", async () => {
   const child = new FakeChild((signal) => {
     if (signal === "SIGKILL") child.exit(signal);

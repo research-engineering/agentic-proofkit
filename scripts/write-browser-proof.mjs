@@ -4,7 +4,7 @@ import {writeFileSync} from "node:fs";
 
 import {executeBrowserProof} from "./browser-proof-execution.mjs";
 import {isSafeRepoPath, loadBrowserProofInputResolution} from "./browser-proof-inputs.mjs";
-import {stableJSONStringify} from "./stable-json.mjs";
+import {decodeUTF8Strict, stableJSONStringify} from "./stable-json.mjs";
 
 const testCommand = ["node_modules/@playwright/test/cli.js", "test"];
 const resolution = loadBrowserProofInputResolution();
@@ -28,8 +28,11 @@ const {assets, projects, testResult} = execution;
 const inputResolution = {serverTarget: resolution.serverTarget, writerPath: resolution.writerPath};
 const inputDigest = createHash("sha256").update(stableJSONStringify({assets, inputResolution})).digest("hex");
 const engines = projects.map(({browserName, browserVersion}) => ({name: browserName, version: browserVersion}));
-const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], {encoding: "utf8"}).trim();
-const sourceTreeState = execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {encoding: "utf8"}).trim() === "" ? "clean" : "dirty";
+const sourceRevision = decodeUTF8Strict(execFileSync("git", ["rev-parse", "HEAD"]), "git source revision output").trim();
+const sourceTreeState = decodeUTF8Strict(
+  execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"]),
+  "git source tree status output",
+).trim() === "" ? "clean" : "dirty";
 const record = {
   assets,
   command: {argv: testCommand, exitCode: testResult.status, inputMode: "materialized_snapshot", runner: "node"},

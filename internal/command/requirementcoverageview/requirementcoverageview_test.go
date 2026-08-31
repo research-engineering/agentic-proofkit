@@ -836,7 +836,7 @@ func TestBuildJSONAgentEnvelopeUsesSharedEnvelopeKernel(t *testing.T) {
 }
 
 func TestBuildJSONRejectsRouteOnlyCoverageForBlockingRequirement(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031718276374641887712984669039991110874842587862832715070881908134515964679634")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.096123496880170047039891532537520304154987278051414410267040570752441936434036")
 	input := validCoverageInput(t)
 	entry := inventoryEntry(input)
 	entry["evidenceClass"] = "routing_smoke_nonclaim"

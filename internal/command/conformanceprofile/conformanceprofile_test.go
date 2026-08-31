@@ -11,7 +11,7 @@ import (
 )
 
 func TestBuildProfileResolvesRequiredSurfaceAndRejectsMissingSurface(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.018828880652012560180983294316467397502747610605037816609704340855648617186412")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.017521924525350696937249995164410482366782574304425862200993353758269414126866")
 	result, err := BuildProfile(validConformanceProfileInput(), "local")
 	if err != nil {
 		t.Fatalf("BuildProfile() error=%v", err)
@@ -134,7 +134,7 @@ func TestBuildProfileRejectsBindingForUndeclaredSurface(t *testing.T) {
 }
 
 func TestBuildVerificationRejectsDuplicateProfiles(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.049942093994206845167684609448858504077053804318310280433394779107021396059359")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.036639960952229987549870295720973534981562391579856063345276588288961992986796")
 	input := validConformanceProfileInput()
 	profiles := input["manifest"].(map[string]any)["profiles"].([]any)
 	input["manifest"].(map[string]any)["profiles"] = append(profiles, profiles[0])
@@ -172,7 +172,7 @@ func TestBuildVerificationRejectsSecretLikeReportVisibleText(t *testing.T) {
 }
 
 func TestListReturnsSortedProfileIDsAndRejectsInvalidInput(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.051339077909994076367504988840992439039749956644468897314149305148259581754885")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.104729246445054007965678203600621319804834851985992223272065794196468497560959")
 	input := validConformanceProfileInput()
 	manifest := input["manifest"].(map[string]any)
 	profile := manifest["profiles"].([]any)[0].(map[string]any)

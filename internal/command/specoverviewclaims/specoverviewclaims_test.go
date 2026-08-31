@@ -103,7 +103,7 @@ func TestBuildRejectsPathDrift(t *testing.T) {
 }
 
 func TestBuildRejectsInvalidOverviewClaimBoundaryFacts(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.112682775494295917012327305050927168210732804488321621459110580984044195720333")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.071708772941318180080085691269138354451193033877238779698194084459052687236048")
 	cases := []struct {
 		name string
 		err  string
@@ -166,7 +166,7 @@ func TestBuildRejectsInvalidOverviewClaimBoundaryFacts(t *testing.T) {
 }
 
 func TestBuildRejectsNonDurableRequirementCitationsForEveryNonDurableKind(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.009542672296287244834772220636187272276005726456609804775418682151340119727196")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.040101711721168417394454420228310006687353944771608587629015602089455554500668")
 	for _, claimKind := range []string{"example_or_rationale", "quoted_or_code", "section_heading"} {
 		t.Run(claimKind, func(t *testing.T) {
 			input := validBoundary()

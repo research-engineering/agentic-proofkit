@@ -176,7 +176,7 @@ func equalStrings(left []string, right []string) bool {
 }
 
 func TestBuildAdmitsAtomicObligationAndRejectsMissingRoute(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.007102825729733194306222688479474522145093834474110859044235069588057227816672")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.041102869859879089463580716091283530617461432011352987316450558030999125563323")
 	input := validProofObligationAlgebraInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

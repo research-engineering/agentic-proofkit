@@ -23,8 +23,11 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 const rootPackageName = "@research-engineering/agentic-proofkit"
@@ -172,9 +175,13 @@ type jsonAdapterSourceSmokeSummary struct {
 
 func main() {
 	if err := runVerifier(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		writeVerificationFailure(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func writeVerificationFailure(writer io.Writer, err error) {
+	_, _ = fmt.Fprintln(writer, admit.RedactStructuralText(err.Error()))
 }
 
 func runVerifier() error {
@@ -548,6 +555,8 @@ func allowedRootEntry(path string) bool {
 		"package/proofkit/receipt-producer-policy.json":                              {},
 		"package/proofkit/requirement-bindings.json":                                 {},
 		"package/proofkit/witness-plan.json":                                         {},
+		"package/docs/specs/proofkit-agent-workflow/overview.md":                     {},
+		"package/docs/specs/proofkit-agent-workflow/requirements.v1.json":            {},
 		"package/docs/specs/proofkit-consumer-infra-retirement/overview.md":          {},
 		"package/docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json": {},
 		"package/docs/specs/proofkit-package-boundary/overview.md":                   {},
@@ -804,7 +813,11 @@ func readTarTextEntriesFromGzip(gzipReader io.Reader) (map[string]string, error)
 		if err != nil {
 			return nil, err
 		}
-		entries[header.Name] = string(content)
+		decoded, err := unicodepolicy.DecodeUTF8(content)
+		if err != nil {
+			return nil, fmt.Errorf("package text entry is not valid UTF-8")
+		}
+		entries[header.Name] = decoded
 	}
 	return entries, nil
 }
@@ -1776,9 +1789,13 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 
 func installedRootHelpFamilyArgv(content []byte) ([]string, error) {
 	const routeFragment = "agentic-proofkit help families"
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return nil, fmt.Errorf("installed README is not valid UTF-8")
+	}
 	var command string
 	matchCount := 0
-	for _, line := range strings.Split(string(content), "\n") {
+	for _, line := range strings.Split(decoded, "\n") {
 		if !strings.Contains(line, routeFragment) {
 			continue
 		}
@@ -1895,7 +1912,11 @@ func parseInstalledLeafHelpRoutes(help string) ([]installedHelpRoute, error) {
 }
 
 func requireInstalledInvocationSyntax(content []byte, command string) error {
-	lines := strings.Split(string(content), "\n")
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return fmt.Errorf("installed README is not valid UTF-8")
+	}
+	lines := strings.Split(decoded, "\n")
 	var usage string
 	var installed string
 	usageCount := 0
@@ -1976,7 +1997,11 @@ func installedREADMEPath(content []byte) (string, error) {
 	const expected = "node_modules/@research-engineering/agentic-proofkit/README.md"
 	var discovered string
 	matchCount := 0
-	for _, line := range strings.Split(string(content), "\n") {
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return "", fmt.Errorf("installed README is not valid UTF-8")
+	}
+	for _, line := range strings.Split(decoded, "\n") {
 		line = strings.TrimLeft(line, " \t")
 		if !strings.HasPrefix(line, prefix) {
 			continue
@@ -2167,7 +2192,10 @@ func installedContractPresetIDs(content []byte) ([]string, error) {
 }
 
 func installedREADMEFirstInput(content []byte) ([]string, []byte, error) {
-	text := string(content)
+	text, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return nil, nil, fmt.Errorf("installed README is not valid UTF-8")
+	}
 	const startMarker = "<!-- proofkit:first-valid-input:start -->"
 	const endMarker = "<!-- proofkit:first-valid-input:end -->"
 	if strings.Count(text, startMarker) != 1 || strings.Count(text, endMarker) != 1 {
@@ -2386,6 +2414,12 @@ func verifyInstalledJSONABI(consumer string) error {
 	if err := verifyJSONAdapterSourceSmoke(consumer); err != nil {
 		return err
 	}
+	if err := workflowsmoke.Verify(func(input []byte, args ...string) (workflowsmoke.Result, error) {
+		result, err := runInstalledWithInput(consumer, input, args...)
+		return workflowsmoke.Result{ExitCode: result.ExitCode, Stdout: result.Stdout, Stderr: result.Stderr}, err
+	}); err != nil {
+		return fmt.Errorf("outside consumer agent-workflow smoke failed: %w", err)
+	}
 	return nil
 }
 
@@ -2423,8 +2457,8 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 	if report.SourceFileName != "proofkit-json-report-cli-adapter.ts" {
 		return fmt.Errorf("sourceFileName=%s, want proofkit-json-report-cli-adapter.ts", report.SourceFileName)
 	}
-	if report.GeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v1" {
-		return fmt.Errorf("generatorId=%s, want proofkit.json-report-cli-adapter-source.typescript.v1", report.GeneratorID)
+	if report.GeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v2" {
+		return fmt.Errorf("generatorId=%s, want proofkit.json-report-cli-adapter-source.typescript.v2", report.GeneratorID)
 	}
 	if report.Source != expectedSource {
 		return fmt.Errorf("json adapter source does not match current owner source")
@@ -2553,7 +2587,7 @@ func verifyOutsideConsumerImports(consumer string) error {
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
-const payload = JSON.parse(readFileSync("proofkit-import-boundary.json", "utf8"));
+const payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(readFileSync("proofkit-import-boundary.json")));
 const manifest = require(payload.manifestSpecifier);
 if (manifest.name !== payload.expectedManifestName) {
   throw new Error("package.json export did not resolve package manifest");

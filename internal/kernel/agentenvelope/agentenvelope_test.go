@@ -276,14 +276,8 @@ func TestInvalidInputEnvelopeRedactsSecretLikeDiagnostics(t *testing.T) {
 	if strings.Contains(text, secret) {
 		t.Fatalf("invalid input envelope leaked secret-shaped diagnostic: %s", text)
 	}
-	if !strings.Contains(text, "<redacted-secret-like-value>") {
-		t.Fatalf("invalid input envelope text=%q, want redaction placeholder", text)
-	}
-	if !strings.Contains(text, "<redacted-control-rune>") {
-		t.Fatalf("invalid input envelope text=%q, want control placeholder", text)
-	}
-	if !strings.Contains(text, "<truncated-diagnostic>") {
-		t.Fatalf("invalid input envelope text=%q, want truncation marker", text)
+	if got := strings.Count(text, "<redacted-diagnostic-value>"); got != 2 {
+		t.Fatalf("invalid input envelope redaction count=%d text=%q, want two whole-value labels", got, text)
 	}
 }
 
@@ -326,7 +320,7 @@ func TestBuildRedactsReportVisibleCallerTextAndSnapshotsInput(t *testing.T) {
 	sourceReport["debugDump"] = secret
 
 	assertEnvelopeDoesNotContain(t, envelope, secret)
-	assertEnvelopeContains(t, envelope, "<redacted-secret-like-value>")
+	assertEnvelopeContains(t, envelope, "<redacted-diagnostic-value>")
 	projected := envelope["sourceReport"].(map[string]any)
 	if _, ok := projected["debugDump"]; ok {
 		t.Fatalf("sourceReport projection leaked debugDump: %#v", projected)
@@ -406,7 +400,7 @@ func TestBuildRedactsTypedContainersAndUnsupportedValues(t *testing.T) {
 	defined["nested"] = definedSlice{secret + ".mutated"}
 
 	assertEnvelopeDoesNotContain(t, envelope, secret)
-	assertEnvelopeContains(t, envelope, "<redacted-secret-like-value>")
+	assertEnvelopeContains(t, envelope, "<redacted-diagnostic-value>")
 	assertEnvelopeContains(t, envelope, "<unsupported-report-visible-value>")
 	serialized, err := stablejson.Marshal(envelope)
 	if err != nil {

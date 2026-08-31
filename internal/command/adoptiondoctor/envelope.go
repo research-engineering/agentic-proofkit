@@ -68,17 +68,18 @@ func commandRefs(routes []ownerRoute) []map[string]any {
 func contextRefs(routes []ownerRoute, candidates []candidateBoundary, surfaces []authoritySurface) []map[string]any {
 	refs := []map[string]any{}
 	for _, route := range routes {
-		for _, path := range append(append([]string{}, route.SpecPaths...), append(route.ProofBindingPaths, route.NativeWitnessRefs...)...) {
-			refs = append(refs, contextRef(route.RouteID+"."+path, path, route.Owner, "owner_route"))
+		paths := append(append([]string{}, route.SpecPaths...), append(route.ProofBindingPaths, route.NativeWitnessRefs...)...)
+		for index, path := range paths {
+			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", route.RouteID, index+1), path, route.Owner, "owner_route"))
 		}
 	}
 	for _, candidate := range candidates {
-		for _, path := range candidate.AffectedPaths {
-			refs = append(refs, contextRef(candidate.BoundaryID+"."+path, path, candidate.CandidateOwner, "candidate_boundary"))
+		for index, path := range candidate.AffectedPaths {
+			refs = append(refs, contextRef(fmt.Sprintf("%s.context.%03d", candidate.BoundaryID, index+1), path, candidate.CandidateOwner, "candidate_boundary"))
 		}
 	}
 	for _, surface := range surfaces {
-		refs = append(refs, contextRef(surface.SurfaceID+"."+surface.Path, surface.Path, surface.Owner, "stale_authority_surface"))
+		refs = append(refs, contextRef(surface.SurfaceID+".context", surface.Path, surface.Owner, "stale_authority_surface"))
 	}
 	sort.Slice(refs, func(left int, right int) bool {
 		return refs[left]["refId"].(string) < refs[right]["refId"].(string)

@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
@@ -281,6 +282,14 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	nodeVersion, err := optionalCommandOutput("node", "--version")
+	if err != nil {
+		return err
+	}
+	npmVersion, err := optionalCommandOutput("npm", "--version")
+	if err != nil {
+		return err
+	}
 	releaseDir := filepath.Join("artifacts", "release")
 	if err := os.MkdirAll(releaseDir, 0o755); err != nil {
 		return err
@@ -316,8 +325,8 @@ func run() error {
 		},
 		Toolchain: toolchainIdentity{
 			Go:   goVersion,
-			Node: optionalCommandOutput("node", "--version"),
-			Npm:  optionalCommandOutput("npm", "--version"),
+			Node: nodeVersion,
+			Npm:  npmVersion,
 		},
 		Channels:          releaseChannels(localRecords, registryRecords, npmPublicationMode, pythonPackages, pypiRegistry, pypiPublicationMode, assets, trustedPublishers),
 		LocalPackEvidence: packageEvidenceSet(localRecords, assetShaByFilename(assets)),
@@ -393,7 +402,11 @@ func optionalPublicationMode(path string, label string) (string, error) {
 		}
 		return "", err
 	}
-	mode := strings.TrimSpace(string(content))
+	mode, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return "", fmt.Errorf("publication mode is not valid UTF-8")
+	}
+	mode = strings.TrimSpace(mode)
 	mode, err = trustedpublisher.AdmitPublicationMode(mode, fmt.Sprintf("%s publication mode", label))
 	if err != nil {
 		return "", err
@@ -1086,7 +1099,11 @@ func goModule() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, line := range strings.Split(string(content), "\n") {
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return "", fmt.Errorf("go.mod is not valid UTF-8")
+	}
+	for _, line := range strings.Split(decoded, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "module ") {
 			moduleName := strings.TrimSpace(strings.TrimPrefix(line, "module "))
@@ -1104,13 +1121,21 @@ func commandOutput(name string, args ...string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
 	}
-	return strings.TrimSpace(string(output)), nil
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("toolchain command output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }
 
-func optionalCommandOutput(name string, args ...string) string {
+func optionalCommandOutput(name string, args ...string) (string, error) {
 	output, err := exec.Command(name, args...).Output()
 	if err != nil {
-		return ""
+		return "", nil
 	}
-	return strings.TrimSpace(string(output))
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("optional toolchain command output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }

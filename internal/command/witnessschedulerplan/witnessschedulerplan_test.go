@@ -22,7 +22,7 @@ func TestBuildRejectsNetworkMetadataContradictions(t *testing.T) {
 }
 
 func TestBuildRejectsUnsafeParallelWriteCollision(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.104676796118456324923039124511231127526363393383801390782562378512319721449269")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031235317036465371542022481065610116329891022492706535866504864985411543775232")
 	input := validSchedulerPlanInput()
 	command(input)["id"] = "proofkit.left"
 	schedulerPolicy(input)["commandId"] = "proofkit.left"

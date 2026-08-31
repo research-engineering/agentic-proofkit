@@ -2,6 +2,7 @@ package commandoracle
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"io"
 	"sort"
@@ -116,7 +117,7 @@ func parseEvents(reader io.Reader, ledger *eventLedger) error {
 }
 
 func admitEvent(line []byte) (testEvent, error) {
-	raw, err := admission.DecodeJSON(strings.NewReader(string(line)), maxEventLineBytes)
+	raw, err := admission.DecodeJSON(bytes.NewReader(line), maxEventLineBytes)
 	if err != nil {
 		return testEvent{}, decision("event.json_invalid")
 	}

@@ -82,6 +82,47 @@ func TestSourceHygieneIgnoresTokenSubstringsInsideContentDigests(t *testing.T) {
 	}
 }
 
+func TestSourceHygieneRejectsMalformedUTF8(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		stageBad  bool
+		wantLabel string
+	}{
+		{name: "staged blob", stageBad: true, wantLabel: "tracked text object is not valid UTF-8"},
+		{name: "worktree file", wantLabel: "worktree text file is not valid UTF-8"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			scriptPath := sourceHygieneScriptPath(t)
+			tempDir := t.TempDir()
+			runCommand(t, tempDir, "git", "init")
+			path := filepath.Join(tempDir, "fixture.md")
+			if err := os.WriteFile(path, []byte("clean\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			runCommand(t, tempDir, "git", "add", "fixture.md")
+			malformed := []byte{'g', 'h', 'p', '_', 0xff}
+			if test.stageBad {
+				if err := os.WriteFile(path, malformed, 0o644); err != nil {
+					t.Fatal(err)
+				}
+				runCommand(t, tempDir, "git", "add", "fixture.md")
+			} else if err := os.WriteFile(path, malformed, 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			command := exec.Command("node", scriptPath)
+			command.Dir = tempDir
+			output, err := command.CombinedOutput()
+			if err == nil {
+				t.Fatalf("source hygiene accepted malformed UTF-8: %s", output)
+			}
+			if !strings.Contains(string(output), test.wantLabel) || strings.Contains(string(output), "ghp_") {
+				t.Fatalf("source hygiene diagnostic = %q, want fixed label without input bytes", output)
+			}
+		})
+	}
+}
+
 func assertSourceHygieneRejects(t *testing.T, scriptPath string, repoRoot string, file string, evidenceClass string) {
 	t.Helper()
 	command := exec.Command("node", scriptPath)

@@ -14,7 +14,7 @@ const testDigest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const otherDigest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 func TestBuildAdmitsCallerDeclaredMatchAndRejectsDigestDrift(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031283583526771024463426071371708324157925862677375589108846795108748604685801")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.060127479049105070527667173413539037917647131744551077145203058285425049963485")
 	input := validMigrationParityInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

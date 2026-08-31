@@ -3,13 +3,14 @@ import {createHash} from "node:crypto";
 import {lstatSync, mkdirSync, readFileSync, writeFileSync} from "node:fs";
 import {dirname, isAbsolute, join} from "node:path";
 
+import {decodeUTF8Strict} from "./stable-json.mjs";
+
 export const browserProofInputManifestPath = "scripts/browser-runtime-proof-inputs.v1.json";
 
 export function loadBrowserProofInputResolution() {
-  const encoded = process.env.PROOFKIT_BROWSER_INPUT_RESOLUTION ?? execFileSync(
-    "go",
-    ["run", "./internal/tools/browserproofverify", "--resolve-inputs"],
-    {encoding: "utf8"},
+  const encoded = process.env.PROOFKIT_BROWSER_INPUT_RESOLUTION ?? decodeUTF8Strict(
+    execFileSync("go", ["run", "./internal/tools/browserproofverify", "--resolve-inputs"]),
+    "browser proof input resolution output",
   );
   const resolution = JSON.parse(encoded);
   if (!resolution || typeof resolution !== "object" || Array.isArray(resolution)) throw new Error("browser proof input resolution must be an object");

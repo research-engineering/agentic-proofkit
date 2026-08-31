@@ -11,7 +11,7 @@ import (
 )
 
 func TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.030059518418876335628059921154117881105808166179626900465875767444982225149190")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.007511982496023718289618789322046194511126847157745362202397214109385639625930")
 	input := validExternalConsumerInput(t)
 	record, exitCode, err := Build(input)
 	if err != nil {

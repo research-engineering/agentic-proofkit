@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAdmitsSafeCommandAndRejectsShellCommand(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.088457406797103795279543653822179063516575466007372745444447470717382611396483")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.085190431407182739545830738835155395836062703209880873059377949976085217132650")
 	plan, err := Build(validWitnessPlanInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -44,7 +44,7 @@ func TestBuildAdmitsOptionalDirectInputSchemaVersionOne(t *testing.T) {
 }
 
 func TestBuildProjectsRequirementBindingsToWitnessPlan(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.097064780769502204057926611195131645878255373766343559374932016116089291062973")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012411978339439760206999646729446091824827781410305387149567149181015055010570")
 	input := map[string]any{
 		"schemaVersion":           json.Number("1"),
 		"projection":              "requirement-bindings",

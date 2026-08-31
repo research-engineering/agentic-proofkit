@@ -80,11 +80,10 @@ type pypiFile struct {
 type pypiHTTPStatusError struct {
 	StatusCode int
 	Status     string
-	Body       string
 }
 
 func (err pypiHTTPStatusError) Error() string {
-	return fmt.Sprintf("pypi returned %s: %s", err.Status, err.Body)
+	return fmt.Sprintf("pypi returned %s", err.Status)
 }
 
 type pypiMissingWheelError struct {
@@ -238,11 +237,10 @@ func fetchPyPIRelease(name string, version string) (pypiResponse, error) {
 	}
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(io.LimitReader(response.Body, 4096))
+		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
 		return pypiResponse{}, pypiHTTPStatusError{
 			StatusCode: response.StatusCode,
 			Status:     response.Status,
-			Body:       strings.TrimSpace(string(body)),
 		}
 	}
 	out, err := decodePyPIResponse(response.Body)

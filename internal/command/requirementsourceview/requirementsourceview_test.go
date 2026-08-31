@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.005704906455553467725586561316636717684357758836129946697278325918285718879720")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.115603095301227499403457054570913397276777831949518460396011319173029743458113")
 	input := validRequirementSource()
 	input["specPackagePath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`"
 	input["overviewPath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`/overview.md"

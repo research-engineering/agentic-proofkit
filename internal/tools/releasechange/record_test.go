@@ -195,22 +195,18 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 }
 
 var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.compact.consumer-contract-v2", Summary: "Compact-aware adoption, pilot, conformance, impact, proof-view, coverage, inventory, context composition, context slicing, semantic diff, traceability graph, browser, source-set, and resolver command contracts advance atomically and reject legacy compact payloads."},
-	{ChangeID: "proofkit.compact.declaration-contract-v2", Summary: "Compact requirement proof inputs now use declaration-only v2 discriminators, rename mutation metadata as a caller claim, and remove assurance-shaped proof state and synthetic checked or finding counts."},
-	{ChangeID: "proofkit.compact.identity-role-closure", Summary: "Compact bindings now preserve requirement, surface, and scenario identity while witness routes preserve binding, role, selector, and JSON-safe resolution order across every decision-bearing projection."},
-	{ChangeID: "proofkit.compact.source-set-v2", Summary: "Compact source-set normalization advances to wrapper, envelope, and source-set schema v2 with declaration-specific roles and fragment contract v3."},
+	{ChangeID: "proofkit.agent-envelope.local-identity-closure", Summary: "Agent envelopes now require unique, pairwise-disjoint command, context, and receipt identities and fail closed by pruning unsafe or ambiguous local targets and references with bounded omissions."},
+	{ChangeID: "proofkit.stable-json.unicode-scalar-v2", Summary: "Go, JavaScript, and generated TypeScript stable JSON now reject non-scalar strings and deterministically escape the pinned Unicode 15 control and format policy; the generated TypeScript adapter identity advances to v2."},
 }
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.requirement-source.typed-model", Summary: "Add a bounded representation-neutral internal typed model for requirement-source v2 experiments without adding a source codec, persistence format, public CLI, or source cutover."},
+	{ChangeID: "proofkit.agent-workflow.change-planner", Summary: "Add a bounded change-workflow-plan command with canonical JSON, derived agent-envelope, plain-text, and capability-gated terminal-color projections."},
+	{ChangeID: "proofkit.agent-workflow.native-evidence-guidance", Summary: "Add a no-input native-evidence-guidance command that exposes the repository-owned decision template as canonical JSON or plain text without executing or approving consumer witnesses."},
 }
 
 var currentMigrationSteps = []string{
-	"Replace compact root schema_version 1, authority_state canonical, contract_kind requirement_proof_binding, and normalization_profile proofkit.compact.v1 with schema_version 2, authority_state caller_owned_declaration, contract_kind requirement_proof_route_declaration, and normalization_profile proofkit.compact.declaration.v2.",
-	"Remove proof_contract_state; replace mutation_resistance_state with declared_mutation_resistance_claim_id; and stop consuming proofContractState, mutationResistanceContext, checkedWitnessSelectorCount, and findingCount from compact resolver projections.",
-	"Preserve each compact binding as requirementId, surfaceId, and scenarioId plus bindingRecordId, and preserve each witness route as bindingRecordId, role, selector, JSON-safe resolutionOrderIndex from 0 through 9007199254740991, and witnessRouteId; do not collapse equal selectors across positive and falsification roles.",
-	"Replace changedRecordIds with changedRequirementIds, replace resolver projectionKind proofkit.requirement-proof-resolver with proofkit.requirement-proof-route-resolver, and consume compact-aware adoption, pilot, conformance, impact, proof-view, coverage, inventory, context-compose, context-slice, semantic-diff, traceability-graph, browser, source-set, and resolver parent contracts at their 0.4.0 versions.",
-	"Regenerate requirement proof source sets with wrapper, canonical envelope, canonical contract, and source-set schema version 2, declaration-specific source roles, and fragment contract requirement-proof-route-declarations/fragment/v3.",
+	"Ensure every agent-envelope command, context, and receipt ID is individually safe and unique, keep the three local identity domains pairwise disjoint, and remove or rename references to ambiguous local targets before adopting 0.5.0.",
+	"Ensure every stable-JSON string is a Unicode scalar sequence, accept deterministic escaping of pinned Unicode 15 control and format code points, and regenerate TypeScript adapters against generator proofkit.json-report-cli-adapter-source.typescript.v2.",
 }
 
 func validateCurrentChangeRecord(record Record, notes string) error {
@@ -231,7 +227,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.4.0",
+		"# @research-engineering/agentic-proofkit 0.5.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -264,6 +260,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Known Limitations",
 		"",
+		"- Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
 		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
 		"- The requirement-source v2 codec remains unselected until SOURCE-CODEC-01 passes; the typed model is internal and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
@@ -273,7 +270,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.4.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -284,7 +281,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Rollback",
 		"",
-		"- Pin npm consumers to the previous admitted version 0.3.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.3.0`.",
+		"- Pin npm consumers to the previous admitted version 0.4.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.4.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

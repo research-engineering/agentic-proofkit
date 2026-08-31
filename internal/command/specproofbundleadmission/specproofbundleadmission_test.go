@@ -213,7 +213,7 @@ func childReportValueWithReceipts(state string, exitCode string, failures []any,
 }
 
 func TestBuildRejectsForgedReceiptAdmissionChild(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.114880187029418565756618053091883445515213775524954029606797760062822359451460")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022413626354530887841322966459922061567082717524509677004724621035769110085423")
 	input := validBundleInput(t)
 	receiptAdmission := input["receiptAdmission"].(map[string]any)
 	receiptAdmission["receipts"] = []any{

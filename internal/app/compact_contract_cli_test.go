@@ -452,3 +452,44 @@ func runCLIForJSON(t *testing.T, args []string, input string) map[string]any {
 	}
 	return record
 }
+
+func compactV2WireContract() map[string]any {
+	return map[string]any{
+		"schema_version":        json.Number("2"),
+		"authority_state":       "caller_owned_declaration",
+		"contract_id":           "proofkit.test.compact",
+		"contract_kind":         "requirement_proof_route_declaration",
+		"normalization_profile": "proofkit.compact.declaration.v2",
+		"non_claims":            []any{"Compact test input does not execute witnesses."},
+		"surface_columns":       []any{"surface_id", "required_environment_classes", "preconditioned_environment_classes"},
+		"surfaces":              []any{[]any{"proofkit.surface", []any{"local-go"}, []any{}}},
+		"witness_columns":       []any{"selector", "environment_classes", "verify_commands", "resolution_order_index"},
+		"binding_columns":       []any{"requirement_id", "surface_id", "scenario_id", "invariant_role", "owned_invariant", "blocking_status", "required_environment_classes", "positive_witness", "falsification_witness", "verify_commands", "declared_mutation_resistance_claim_id"},
+		"bindings": []any{[]any{
+			"REQ-PROOFKIT-COMPACT-001",
+			"proofkit.surface",
+			"proofkit.surface::scenario.compact",
+			"contract",
+			"proofkit.compact",
+			"blocking",
+			[]any{"local-go"},
+			[]any{"tests/proofkit_positive_test.go::TestAcceptsCompactContract", []any{"local-go"}, []any{"go test ./..."}, json.Number("0")},
+			[]any{"tests/proofkit_falsification_test.go::TestRejectsCompactRegression", []any{"local-go"}, []any{"go test ./..."}, json.Number("1")},
+			[]any{"go test ./..."},
+			"no_known_advisory_gap",
+		}},
+	}
+}
+
+func strictJSONObjectFromText(t *testing.T, text, context string) map[string]any {
+	t.Helper()
+	value, err := admission.DecodeJSON(strings.NewReader(text), int64(len(text)))
+	if err != nil {
+		t.Fatalf("decode %s: %v", context, err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		t.Fatalf("%s must be an object", context)
+	}
+	return record
+}

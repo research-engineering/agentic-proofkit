@@ -21,7 +21,7 @@ func TestBuildAcceptsCompletePilotContract(t *testing.T) {
 }
 
 func TestBuildRejectsUnknownPilotContractField(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.057912462745542653837414866608340350115558004021771379883888595693744581144285")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022694204409755669452952597914671471098671263975815015361039173611690240692220")
 	input := validPilotInput()
 	input["ignoredPolicy"] = true
 

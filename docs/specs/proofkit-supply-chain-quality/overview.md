@@ -180,6 +180,13 @@ vulnerability absence, or consumer rollout safety by itself.
   commit identities, admitted status expressions, the required aggregate shell
   program, and read-only treatment of an existing release are source-oracle
   invariants.
+- `REQ-PROOFKIT-QUALITY-026`: every public or retained-evidence stable JSON
+  implementation accepts only the repository-pinned Unicode scalar set and matches one
+  preimplementation byte corpus for the pinned control, format, and separator
+  table without changing decoded values.
+- `REQ-PROOFKIT-QUALITY-027`: report-visible diagnostics and structural text
+  apply the same scalar, control/format, and split-secret taxonomy and replace
+  rejected caller values as a whole without echoing any fragment.
 
 ## Non-Claims
 

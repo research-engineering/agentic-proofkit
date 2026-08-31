@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -1676,7 +1677,7 @@ func checksumFileMatches(root string, checksumPath string, targetPaths []string)
 	if err != nil {
 		return false
 	}
-	return string(content) == strings.Join(expected, "\n")+"\n"
+	return bytes.Equal(content, []byte(strings.Join(expected, "\n")+"\n"))
 }
 
 func checksumLines(root string, targetPaths []string) ([]string, error) {
@@ -1729,7 +1730,7 @@ func releaseNotesMatchChangeRecord(root string, path string, manifest packageJSO
 	}
 	pypiPublished := fileExists(root, "artifacts/pypi-registry/pypi-release.json")
 	expected := releasechange.RenderMarkdown(record, manifest.Name, pythonPackageName, pypiPublished)
-	return string(content) == expected
+	return bytes.Equal(content, []byte(expected))
 }
 
 func hasChannelStatus(manifest releaseManifest, authority string, allowed ...string) bool {

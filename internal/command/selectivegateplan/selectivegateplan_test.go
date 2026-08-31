@@ -182,7 +182,7 @@ func TestBuildRejectsDisplayOnlyCommandShellControlTokens(t *testing.T) {
 }
 
 func TestBuildFailsClosedForUncoveredUnknownEdge(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.109203724066169697433019740792211532942871969238130040996597287475731754319862")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.021216979417723937319190282666772611980004038696116294692928111604113772494057")
 	input := validPlanInput()
 	input["unknownEdges"] = []any{unknownEdgeInput("edge.dynamic", "dynamic_or_unknown")}
 

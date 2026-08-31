@@ -12,6 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const (
@@ -66,7 +67,11 @@ func run(root string) error {
 	if len(modeBytes) > 64 {
 		return fmt.Errorf("npm publication mode exceeds byte limit")
 	}
-	mode, err := trustedpublisher.AdmitPublicationMode(strings.TrimSpace(string(modeBytes)), "npm registry evidence publicationMode")
+	modeText, err := unicodepolicy.DecodeUTF8(modeBytes)
+	if err != nil {
+		return fmt.Errorf("npm publication mode is not valid UTF-8")
+	}
+	mode, err := trustedpublisher.AdmitPublicationMode(strings.TrimSpace(modeText), "npm registry evidence publicationMode")
 	if err != nil {
 		return err
 	}

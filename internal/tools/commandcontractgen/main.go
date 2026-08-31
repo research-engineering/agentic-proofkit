@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 const (
@@ -877,7 +878,11 @@ func renderPresets(sourceDigest string, presets []string) ([]byte, error) {
 }
 
 func canonicalJSON(value any) ([]byte, error) {
-	return json.Marshal(value)
+	encoded, err := stablejson.MarshalLayout(value, stablejson.LayoutCompact)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(encoded, []byte{'\n'}), nil
 }
 
 func sha256Digest(content []byte) string {

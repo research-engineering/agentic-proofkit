@@ -234,7 +234,7 @@ func TestBuildRejectsUnsafeStructuredFalsificationSelector(t *testing.T) {
 }
 
 func TestBuildRejectsDerivedCommandRefCollision(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.015764554175908530517697174697685677859930004803180746537891295020670383915624")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.062842352098499757205217828134841664768355685286488912174783955445428381971012")
 	input := validInput()
 	binding := input["compactProofContract"].(map[string]any)["bindings"].([]any)[0].([]any)
 	falsification := binding[8].([]any)

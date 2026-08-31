@@ -2,12 +2,14 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha1"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -296,6 +298,21 @@ func TestReadManifestFromTarRejectsUnknownPackageManifestFields(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), secretShapedKey) || strings.Contains(err.Error(), "ghp_") {
 		t.Fatalf("readManifestFromTar() leaked unsupported field name: %v", err)
+	}
+}
+
+func TestPackageVerifierDiagnosticNondisclosure(t *testing.T) {
+	for _, value := range []string{
+		"package verification failed for api_key=abc123456789",
+		"package verification failed for line\nbreak",
+		"package verification failed for unsafe\u200bvalue",
+		string([]byte{'p', 'a', 't', 'h', 0xff}),
+	} {
+		var output bytes.Buffer
+		writeVerificationFailure(&output, errors.New(value))
+		if got, want := output.String(), "<redacted-diagnostic-value>\n"; got != want {
+			t.Fatalf("visible package diagnostic = %q, want %q", got, want)
+		}
 	}
 }
 
@@ -1592,7 +1609,7 @@ export function runProofkitNoInputJsonCommand(): void {
 }
 
 func jsonAdapterSmokeStdout(source string, sourceHash string, artifactKind string) []byte {
-	return []byte(`{"schemaVersion":1,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v1","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
+	return []byte(`{"schemaVersion":1,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v2","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
 }
 
 func quotedJSON(value string) string {

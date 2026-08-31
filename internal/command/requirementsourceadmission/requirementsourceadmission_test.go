@@ -50,7 +50,7 @@ func TestEvaluateAcceptsActiveBlockingRequirementWithProofRoute(t *testing.T) {
 }
 
 func TestEvaluateRejectsBlockingRequirementWithoutProofRoute(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.049105822013487377720513422847314427679030355003527858634951221583838655591366")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.072077823236321697138427281525724834744695054203573403855376161988559434150965")
 	input := validSource()
 	requirement := input["requirements"].([]any)[0].(map[string]any)
 	requirement["proofBindingRefs"] = []any{}

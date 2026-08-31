@@ -18,7 +18,7 @@ import (
 )
 
 func TestBuildKeepsTraceabilityEvidencePlanesDistinct(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022500508667327863554430021675314177435444085857004785904226266316397359221432")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.011566084091414968930866467013093603154294001800098001627050138117499521212186")
 	contextValue := graphContextFixture(t)
 	code := "package handler\n\nfunc Handle() { return }\n"
 	codeDigest := digest.SHA256TextRef(code)
@@ -70,7 +70,7 @@ func TestBuildKeepsTraceabilityEvidencePlanesDistinct(t *testing.T) {
 }
 
 func TestAdmitOutputRejectsDanglingAndIncoherentCodeParents(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.000951313542647162551115118684533813603727933293140621118035893199512478060879")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.002184183541549890800355191013261195744179206833558045852123912699485122962134")
 	output, err := Build(graphPermutationInput(t))
 	if err != nil {
 		t.Fatal(err)

@@ -738,7 +738,10 @@ func refreshDefinitionDigests(contract map[string]any) {
 	for _, raw := range contract["contractDefinitions"].([]any) {
 		definition := raw.(map[string]any)
 		delete(definition, "canonicalDigest")
-		encoded, _ := canonicalJSON(definition)
+		encoded, err := canonicalJSON(definition)
+		if err != nil {
+			panic(err)
+		}
 		sum := sha256.Sum256(encoded)
 		definition["canonicalDigest"] = "sha256:" + hex.EncodeToString(sum[:])
 	}
@@ -751,7 +754,9 @@ func readFixtureContract(t *testing.T, root string) map[string]any {
 		t.Fatal(err)
 	}
 	var value map[string]any
-	if err := json.Unmarshal(content, &value); err != nil {
+	decoder := json.NewDecoder(bytes.NewReader(content))
+	decoder.UseNumber()
+	if err := decoder.Decode(&value); err != nil {
 		t.Fatal(err)
 	}
 	return value

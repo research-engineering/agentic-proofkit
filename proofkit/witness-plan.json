@@ -780,6 +780,7 @@
         "internal/kernel/report",
         "internal/kernel/secretjson",
         "internal/kernel/stablejson",
+        "internal/kernel/unicodepolicy",
         "internal/kernel/witnesscommand",
         "internal/testsupport/browserfixture",
         "internal/tools/browserproofverify",

@@ -36,7 +36,7 @@ func TestRunProofkitVerdictCases(t *testing.T) {
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			err := proofkitVerdict("fixture", test.processErr, []byte(test.output))
+			err := proofkitVerdict(test.processErr, []byte(test.output))
 			if test.wantError == "" {
 				if err != nil {
 					t.Fatalf("proofkitVerdict() error=%v, want nil", err)
@@ -47,6 +47,17 @@ func TestRunProofkitVerdictCases(t *testing.T) {
 				t.Fatalf("proofkitVerdict() error=%v, want %q", err, test.wantError)
 			}
 		})
+	}
+}
+
+func TestProofkitVerdictDoesNotExposeChildOutput(t *testing.T) {
+	const sentinel = "Bearer child-output-secret-abcdefghijklmnop"
+	err := proofkitVerdict(errors.New("exit status 7"), []byte(sentinel))
+	if err == nil {
+		t.Fatal("proofkitVerdict accepted a failed child process")
+	}
+	if strings.Contains(err.Error(), sentinel) || strings.Contains(err.Error(), "abcdefghijklmnop") {
+		t.Fatalf("proofkitVerdict exposed child output: %q", err)
 	}
 }
 
