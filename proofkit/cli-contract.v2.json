@@ -859,7 +859,7 @@
         "rootDefinitionDigest": "sha256:6632a481380bfb07d754ef622661b291f805b1b168b1824089bdd5cc9bdd4b0e",
         "nativeSource": {
           "path": "internal/command/changeworkflowplan",
-          "canonicalDigest": "sha256:53a35103619a6f992e670e165dd01e6277a32b04faaa26ea6fd799017ebb7dd4",
+          "canonicalDigest": "sha256:990cf34a04fb15f2a60339c0713e1644f26f1e81462a4daf171e3613acc87bce",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -894,7 +894,7 @@
         "rootDefinitionDigest": "sha256:d0c7c2f1b2d78da4260757c8bdbccda4f9dfe4f69d3ba3a0af24338508f32da9",
         "nativeSource": {
           "path": "internal/command/changeworkflowplan",
-          "canonicalDigest": "sha256:53a35103619a6f992e670e165dd01e6277a32b04faaa26ea6fd799017ebb7dd4",
+          "canonicalDigest": "sha256:990cf34a04fb15f2a60339c0713e1644f26f1e81462a4daf171e3613acc87bce",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

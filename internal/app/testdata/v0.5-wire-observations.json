@@ -5,12 +5,12 @@
   "version": "0.5.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
   "previousPublicAbiSha256": "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9",
-  "currentPublicAbiSha256": "sha256:2af9b2e3b77b8309f295a2ffeeec70cb4de4d51cb6fbfa45e7733da810ddc1df",
+  "currentPublicAbiSha256": "sha256:b6a9ca9e0e9f2cf4df12282d1d1d95d9412984a78a98976b72efb8bcaedcc299",
   "addedCommandContracts": [
     {
       "command": "change-workflow-plan",
-      "inputContractSha256": "sha256:0851ad1ad3990009ca769e6f7e7e4402f289c35484123ccb88097ab21c3b9f18",
-      "outputContractSha256": "sha256:1a9f6fd253fa01c55f29990d67f1e46ead8068c7f16880df45a645021c26dae1"
+      "inputContractSha256": "sha256:9ee0780f92de00257b389ae7f04c8a92e2ef52614139f56600332c9cc823919e",
+      "outputContractSha256": "sha256:e851ab050ce8623957c25bac08ab8d05e45918f763410310ba432c80e05ffd9d"
     },
     {
       "command": "native-evidence-guidance",
