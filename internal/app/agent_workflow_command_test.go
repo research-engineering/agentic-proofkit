@@ -21,12 +21,12 @@ func TestAgentWorkflowCLITruthTable(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.008921652518915565373824823596859113418310007148763537766174180247340157842807")
 	const (
 		semanticOutputClasses  = 24
-		frozenRejectionClasses = 44
+		frozenRejectionClasses = 45
 		extraRejectionCases    = 2
 		helpClasses            = 10
 		colorClasses           = 8
 	)
-	if got, want := semanticOutputClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 88; got != want {
+	if got, want := semanticOutputClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 89; got != want {
 		t.Fatalf("agent workflow CLI truth-table cardinality = %d, want %d", got, want)
 	}
 	t.Run("semantic output classes", testAgentWorkflowSemanticOutputClasses)
@@ -149,6 +149,7 @@ func testAgentWorkflowUsageErrorsPrecedeInput(t *testing.T) {
 		"planner/missing format value":         {"change-workflow-plan", "--input", "-", "--format"},
 		"planner/missing color value":          {"change-workflow-plan", "--input", "-", "--color"},
 		"planner/bad pointer":                  {"change-workflow-plan", "--input", "-", "--input-pointer", "workflow"},
+		"planner/malformed UTF-8 pointer":      {"change-workflow-plan", "--input", "-", "--input-pointer", string([]byte{'/', 0xff})},
 		"planner/bad format":                   {"change-workflow-plan", "--input", "-", "--format", "yaml"},
 		"planner/bad color":                    {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "always"},
 		"planner/post-command layout":          {"change-workflow-plan", "--json-layout", "compact", "--input", "-"},
@@ -177,7 +178,7 @@ func testAgentWorkflowUsageErrorsPrecedeInput(t *testing.T) {
 		"global/duplicate layout planner":      {"--json-layout", "pretty", "--json-layout", "compact", "change-workflow-plan", "--input", "-"},
 		"global/duplicate layout guidance":     {"--json-layout", "pretty", "--json-layout", "compact", "native-evidence-guidance"},
 	}
-	if got, want := len(cases)-2, 44; got != want {
+	if got, want := len(cases)-2, 45; got != want {
 		t.Fatalf("frozen rejection class count = %d, want %d", got, want)
 	}
 	for name, args := range cases {

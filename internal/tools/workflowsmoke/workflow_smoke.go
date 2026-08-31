@@ -2,13 +2,20 @@ package workflowsmoke
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/changeworkflowplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-const workflowInput = `{"checkpoint":{"state":"not_started"},"completedStageIds":[],"contextRefs":[],"governingAuthorityRefId":null,"requiredContextRefIds":[],"schemaVersion":1}`
+const (
+	workflowInput     = `{"checkpoint":{"state":"not_started"},"completedStageIds":[],"contextRefs":[],"governingAuthorityRefId":null,"requiredContextRefIds":[],"schemaVersion":1}`
+	invocationTimeout = 30 * time.Second
+)
 
 // Result is the observable process contract for one installed CLI invocation.
 type Result struct {
@@ -17,102 +24,110 @@ type Result struct {
 	Stderr   []byte
 }
 
-// Runner invokes one installed carrier with the supplied stdin and argv.
-type Runner func(input []byte, args ...string) (Result, error)
+// StdinClass declares whether an invocation owns stdin bytes or must not read
+// stdin at all.
+type StdinClass uint8
+
+const (
+	StdinBytes StdinClass = iota
+	StdinMustRemainUnread
+)
+
+// Invocation is one immutable installed-carrier request.
+type Invocation struct {
+	Args       []string
+	Input      []byte
+	StdinClass StdinClass
+}
+
+// Runner invokes one installed carrier under the supplied lifecycle context.
+type Runner func(context.Context, Invocation) (Result, error)
 
 // Verify exercises the public agent-workflow relation through one installed
-// CLI carrier. It owns expectations; carrier adapters own process execution.
-func Verify(run Runner) error {
+// CLI carrier. Command owners provide exact expectations; adapters own only
+// process execution.
+func Verify(ctx context.Context, run Runner) error {
+	if ctx == nil || run == nil {
+		return fmt.Errorf("workflow smoke requires a context and runner")
+	}
 	input := []byte(workflowInput)
-
-	plan, err := invoke(run, "planner JSON", input, "change-workflow-plan", "--input", "-")
+	inputValue, err := admission.DecodeJSON(bytes.NewReader(input), int64(len(input)))
 	if err != nil {
-		return err
+		return fmt.Errorf("decode workflow smoke fixture: %w", err)
 	}
-	planValue, err := verifyJSONObject(plan, "planner JSON")
+	expectedPlan, err := changeworkflowplan.Build(inputValue)
 	if err != nil {
-		return err
+		return fmt.Errorf("build expected planner JSON: %w", err)
 	}
-	if err := requireString(planValue, "reportKind", "proofkit.change-workflow-plan"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
+	expectedEnvelope, err := changeworkflowplan.BuildAgentEnvelope(inputValue)
+	if err != nil {
+		return fmt.Errorf("build expected planner envelope: %w", err)
 	}
-	if err := requireString(planValue, "reportId", "proofkit.change-workflow-plan"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
+	expectedText, err := changeworkflowplan.BuildText(inputValue)
+	if err != nil {
+		return fmt.Errorf("build expected planner text: %w", err)
 	}
-	if err := requireString(planValue, "outputKind", "next_action"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
+	expectedGuidance, err := nativeevidenceguidance.Build()
+	if err != nil {
+		return fmt.Errorf("build expected native evidence guidance: %w", err)
 	}
-	if err := requireString(planValue, "activeStageId", "architecture"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
-	}
-	if err := requireString(planValue, "action", "author"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
-	}
-	if err := requireString(planValue, "checkpointState", "not_started"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
-	}
-	if err := requireString(planValue, "workflowProfileId", "proofkit.reviewed-change.v1"); err != nil {
-		return fmt.Errorf("planner JSON: %w", err)
+	expectedGuidanceText, err := nativeevidenceguidance.RenderPlainText()
+	if err != nil {
+		return fmt.Errorf("build expected native evidence guidance text: %w", err)
 	}
 
-	compact, err := invoke(run, "planner compact JSON", input, "--json-layout", "compact", "change-workflow-plan", "--input", "-")
+	plan, err := invoke(ctx, run, "planner JSON", bytesInvocation(input, "change-workflow-plan", "--input", "-"))
 	if err != nil {
 		return err
 	}
-	compactValue, err := verifyJSONObject(compact, "planner compact JSON")
+	if err := verifyExactJSONObject(plan, expectedPlan, "planner JSON"); err != nil {
+		return err
+	}
+
+	compact, err := invoke(ctx, run, "planner compact JSON", bytesInvocation(input, "--json-layout", "compact", "change-workflow-plan", "--input", "-"))
 	if err != nil {
 		return err
 	}
-	if err := verifyCanonicalCompactJSON(compact.Stdout, compactValue); err != nil {
+	if err := verifyExactJSONObject(compact, expectedPlan, "planner compact JSON"); err != nil {
+		return err
+	}
+	if err := verifyCanonicalCompactJSON(compact.Stdout, expectedPlan); err != nil {
 		return fmt.Errorf("planner compact JSON: %w", err)
 	}
 
-	envelope, err := invoke(run, "planner agent envelope", input, "change-workflow-plan", "--input", "-", "--agent-envelope")
+	envelope, err := invoke(ctx, run, "planner agent envelope", bytesInvocation(input, "change-workflow-plan", "--input", "-", "--agent-envelope"))
 	if err != nil {
 		return err
 	}
-	envelopeValue, err := verifyJSONObject(envelope, "planner agent envelope")
+	if err := verifyExactJSONObject(envelope, expectedEnvelope, "planner agent envelope"); err != nil {
+		return err
+	}
+
+	text, err := invoke(ctx, run, "planner text", bytesInvocation(input, "change-workflow-plan", "--input", "-", "--format", "text", "--color", "never"))
 	if err != nil {
 		return err
 	}
-	if err := requireString(envelopeValue, "envelopeId", "proofkit.change-workflow-plan.agent-envelope"); err != nil {
-		return fmt.Errorf("planner agent envelope: %w", err)
-	}
-	sourceReport, ok := envelopeValue["sourceReport"].(map[string]any)
-	if !ok {
-		return fmt.Errorf("planner agent envelope: sourceReport must be an object")
-	}
-	for field, want := range map[string]string{"reportId": "proofkit.change-workflow-plan", "reportKind": "proofkit.change-workflow-plan", "state": "passed"} {
-		if err := requireString(sourceReport, field, want); err != nil {
-			return fmt.Errorf("planner agent envelope sourceReport: %w", err)
-		}
+	if !bytes.Equal(text.Stdout, []byte(expectedText)) || bytes.Contains(text.Stdout, []byte("\x1b[")) {
+		return fmt.Errorf("planner text does not equal the command-owned plain-text projection")
 	}
 
-	text, err := invoke(run, "planner text", input, "change-workflow-plan", "--input", "-", "--format", "text", "--color", "never")
-	if err != nil {
+	if err := verifyFailure(ctx, run, "required input", bytesInvocation(nil, "change-workflow-plan"), "requires --input <path|->"); err != nil {
 		return err
 	}
-	if !bytes.HasPrefix(text.Stdout, []byte("Change workflow plan\n")) || bytes.Contains(text.Stdout, []byte("\x1b[")) {
-		return fmt.Errorf("planner text must be plain text with the canonical heading")
-	}
-
-	if err := verifyFailure(run, "required input", nil, "requires --input <path|->", "change-workflow-plan"); err != nil {
+	if err := verifyFailure(ctx, run, "pre-read input pointer", bytesInvocation(nil, "change-workflow-plan", "--input", "proofkit-smoke-missing-input.json", "--input-pointer", "invalid"), "JSON pointer"); err != nil {
 		return err
 	}
-	if err := verifyFailure(run, "pre-read input pointer", nil, "JSON pointer", "change-workflow-plan", "--input", "proofkit-smoke-missing-input.json", "--input-pointer", "invalid"); err != nil {
+	if err := verifyFailure(ctx, run, "JSON color denial", bytesInvocation(input, "change-workflow-plan", "--input", "-", "--color", "never"), "--color is valid only with --format text"); err != nil {
 		return err
 	}
-	if err := verifyFailure(run, "JSON color denial", input, "--color is valid only with --format text", "change-workflow-plan", "--input", "-", "--color", "never"); err != nil {
+	if err := verifyFailure(ctx, run, "exclusive help", bytesInvocation(input, "change-workflow-plan", "--help", "--format", "text"), "help accepts no additional arguments"); err != nil {
 		return err
 	}
-	if err := verifyFailure(run, "exclusive help", input, "help accepts no additional arguments", "change-workflow-plan", "--help", "--format", "text"); err != nil {
-		return err
-	}
-	if err := verifyFailure(run, "surplus positional operand", input, "unsupported argument", "change-workflow-plan", "--input", "-", "surplus"); err != nil {
+	if err := verifyFailure(ctx, run, "surplus positional operand", bytesInvocation(input, "change-workflow-plan", "--input", "-", "surplus"), "unsupported argument"); err != nil {
 		return err
 	}
 
-	help, err := invoke(run, "exclusive help success", []byte("must remain unread"), "change-workflow-plan", "--help")
+	help, err := invoke(ctx, run, "exclusive help success", unreadInvocation("change-workflow-plan", "--help"))
 	if err != nil {
 		return err
 	}
@@ -120,43 +135,36 @@ func Verify(run Runner) error {
 		return fmt.Errorf("exclusive help success must emit plain command help")
 	}
 
-	guidance, err := invoke(run, "no-input guidance JSON", []byte("must remain unread"), "native-evidence-guidance")
+	guidance, err := invoke(ctx, run, "no-input guidance JSON", unreadInvocation("native-evidence-guidance"))
 	if err != nil {
 		return err
 	}
-	guidanceValue, err := verifyJSONObject(guidance, "no-input guidance JSON")
-	if err != nil {
+	if err := verifyExactJSONObject(guidance, expectedGuidance.JSONValue(), "no-input guidance JSON"); err != nil {
 		return err
-	}
-	if err := requireString(guidanceValue, "guidanceId", "proofkit.native-evidence-guidance.v1"); err != nil {
-		return fmt.Errorf("no-input guidance JSON: %w", err)
-	}
-	slots, ok := guidanceValue["slots"].([]any)
-	if !ok || len(slots) != 22 {
-		return fmt.Errorf("no-input guidance JSON: slots must contain 22 records")
-	}
-	if err := requireStringObject(slots[0], "slotId", "semantic_owner"); err != nil {
-		return fmt.Errorf("no-input guidance JSON: first slot: %w", err)
-	}
-	if err := requireStringObject(slots[0], "applicabilityClass", "always"); err != nil {
-		return fmt.Errorf("no-input guidance JSON: first slot: %w", err)
-	}
-	if err := requireStringObject(slots[len(slots)-1], "slotId", "non_claims"); err != nil {
-		return fmt.Errorf("no-input guidance JSON: last slot: %w", err)
 	}
 
-	guidanceText, err := invoke(run, "no-input guidance text", []byte("must remain unread"), "native-evidence-guidance", "--format", "text", "--color", "never")
+	guidanceText, err := invoke(ctx, run, "no-input guidance text", unreadInvocation("native-evidence-guidance", "--format", "text", "--color", "never"))
 	if err != nil {
 		return err
 	}
-	if !bytes.HasPrefix(guidanceText.Stdout, []byte("semantic_owner: applicability: always; decision:")) || bytes.Contains(guidanceText.Stdout, []byte("\x1b[")) {
-		return fmt.Errorf("no-input guidance text must be plain text with the canonical first slot")
+	if !bytes.Equal(guidanceText.Stdout, []byte(expectedGuidanceText)) || bytes.Contains(guidanceText.Stdout, []byte("\x1b[")) {
+		return fmt.Errorf("no-input guidance text does not equal the command-owned plain-text projection")
 	}
 	return nil
 }
 
-func invoke(run Runner, label string, input []byte, args ...string) (Result, error) {
-	result, err := run(input, args...)
+func bytesInvocation(input []byte, args ...string) Invocation {
+	return Invocation{Args: append([]string(nil), args...), Input: append([]byte(nil), input...), StdinClass: StdinBytes}
+}
+
+func unreadInvocation(args ...string) Invocation {
+	return Invocation{Args: append([]string(nil), args...), StdinClass: StdinMustRemainUnread}
+}
+
+func invoke(ctx context.Context, run Runner, label string, invocation Invocation) (Result, error) {
+	invocationContext, cancel := context.WithTimeout(ctx, invocationTimeout)
+	defer cancel()
+	result, err := run(invocationContext, invocation)
 	if err != nil {
 		return Result{}, fmt.Errorf("%s carrier invocation: %w", label, err)
 	}
@@ -172,8 +180,10 @@ func invoke(run Runner, label string, input []byte, args ...string) (Result, err
 	return result, nil
 }
 
-func verifyFailure(run Runner, label string, input []byte, diagnosticFragment string, args ...string) error {
-	result, err := run(input, args...)
+func verifyFailure(ctx context.Context, run Runner, label string, invocation Invocation, diagnosticFragment string) error {
+	invocationContext, cancel := context.WithTimeout(ctx, invocationTimeout)
+	defer cancel()
+	result, err := run(invocationContext, invocation)
 	if err != nil {
 		return fmt.Errorf("%s carrier invocation: %w", label, err)
 	}
@@ -186,20 +196,30 @@ func verifyFailure(run Runner, label string, input []byte, diagnosticFragment st
 	return nil
 }
 
-func verifyJSONObject(result Result, label string) (map[string]any, error) {
-	value, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), int64(len(result.Stdout)))
+func verifyExactJSONObject(result Result, expected map[string]any, label string) error {
+	actual, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), maximumStdoutBytes)
 	if err != nil {
-		return nil, fmt.Errorf("%s stdout must contain exactly one strict JSON value: %w", label, err)
+		return fmt.Errorf("%s stdout must contain exactly one strict JSON value: %w", label, err)
 	}
-	record, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("%s stdout JSON must be an object", label)
+	if _, ok := actual.(map[string]any); !ok {
+		return fmt.Errorf("%s stdout JSON must be an object", label)
 	}
-	return record, nil
+	actualCanonical, err := stablejson.MarshalLayout(actual, stablejson.LayoutCompact)
+	if err != nil {
+		return fmt.Errorf("%s actual JSON is not canonicalizable: %w", label, err)
+	}
+	expectedCanonical, err := stablejson.MarshalLayout(expected, stablejson.LayoutCompact)
+	if err != nil {
+		return fmt.Errorf("%s expected JSON is not canonicalizable: %w", label, err)
+	}
+	if !bytes.Equal(actualCanonical, expectedCanonical) {
+		return fmt.Errorf("%s JSON does not equal the command-owned projection", label)
+	}
+	return nil
 }
 
-func verifyCanonicalCompactJSON(output []byte, value any) error {
-	canonical, err := stablejson.MarshalLayout(value, stablejson.LayoutCompact)
+func verifyCanonicalCompactJSON(output []byte, expected map[string]any) error {
+	canonical, err := stablejson.MarshalLayout(expected, stablejson.LayoutCompact)
 	if err != nil {
 		return err
 	}
@@ -207,20 +227,4 @@ func verifyCanonicalCompactJSON(output []byte, value any) error {
 		return fmt.Errorf("stdout is not one newline-terminated canonical compact JSON value")
 	}
 	return nil
-}
-
-func requireString(record map[string]any, field string, want string) error {
-	got, ok := record[field].(string)
-	if !ok || got != want {
-		return fmt.Errorf("%s=%v, want %q", field, record[field], want)
-	}
-	return nil
-}
-
-func requireStringObject(value any, field string, want string) error {
-	record, ok := value.(map[string]any)
-	if !ok {
-		return fmt.Errorf("value must be an object")
-	}
-	return requireString(record, field, want)
 }

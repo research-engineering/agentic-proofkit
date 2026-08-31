@@ -3,13 +3,13 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"debug/elf"
 	"debug/macho"
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -458,25 +458,10 @@ func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath st
 }
 
 func verifyInstalledWorkflowSmoke(dir string, executable string, prefix ...string) error {
-	return workflowsmoke.Verify(func(input []byte, args ...string) (workflowsmoke.Result, error) {
-		argv := append(append([]string(nil), prefix...), args...)
-		command := exec.Command(executable, argv...)
-		command.Dir = dir
-		command.Stdin = bytes.NewReader(input)
-		var stdout bytes.Buffer
-		var stderr bytes.Buffer
-		command.Stdout = &stdout
-		command.Stderr = &stderr
-		err := command.Run()
-		exitCode := 0
-		if err != nil {
-			var exitErr *exec.ExitError
-			if !errors.As(err, &exitErr) {
-				return workflowsmoke.Result{}, err
-			}
-			exitCode = exitErr.ExitCode()
-		}
-		return workflowsmoke.Result{ExitCode: exitCode, Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, nil
+	return workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
+		Directory:  dir,
+		Executable: executable,
+		Prefix:     append([]string(nil), prefix...),
 	})
 }
 

@@ -55,7 +55,7 @@ func TestParseAndSelectParsedPreserveSelectionSemantics(t *testing.T) {
 }
 
 func TestParseRejectsInvalidSyntaxWithoutDocumentAccess(t *testing.T) {
-	for _, value := range []string{"not-a-pointer", "/bad~", "/bad~2escape"} {
+	for _, value := range []string{"not-a-pointer", "/bad~", "/bad~2escape", string([]byte{'/', 0xff})} {
 		t.Run(value, func(t *testing.T) {
 			if _, err := Parse(value); err == nil {
 				t.Fatal("expected syntax error")

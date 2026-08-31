@@ -18,16 +18,19 @@ import (
 )
 
 func TestDiagnosticsDoNotLeakArtifactValues(t *testing.T) {
-	for _, value := range []string{
-		"artifact api_key=abc123456789 failed",
-		"artifact line\nbreak failed",
-		"artifact unsafe\u200bvalue failed",
-		string([]byte{'p', 'a', 't', 'h', 0xff}),
+	for _, test := range []struct {
+		value string
+		want  string
+	}{
+		{value: "artifact api_key=abc123456789 failed", want: "browser runtime proof verification failed: <redacted-diagnostic-value>\n"},
+		{value: "artifact line\nbreak failed", want: "browser runtime proof verification failed: artifact line<redacted-control-rune>break failed\n"},
+		{value: "artifact unsafe\u200bvalue failed", want: "browser runtime proof verification failed: artifact unsafe<redacted-control-rune>value failed\n"},
+		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "browser runtime proof verification failed: <redacted-diagnostic-value>\n"},
 	} {
 		var output bytes.Buffer
-		writeBrowserProofFailure(&output, errors.New(value))
-		if got, want := output.String(), "browser runtime proof verification failed: <redacted-diagnostic-value>\n"; got != want {
-			t.Fatalf("visible browser proof diagnostic = %q, want %q", got, want)
+		writeBrowserProofFailure(&output, errors.New(test.value))
+		if got := output.String(); got != test.want {
+			t.Fatalf("visible browser proof diagnostic = %q, want %q", got, test.want)
 		}
 	}
 }

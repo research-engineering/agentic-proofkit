@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 // Pointer is an admitted RFC 6901 pointer. Its tokens are immutable outside
@@ -16,6 +17,9 @@ type Pointer struct {
 
 // Parse admits pointer syntax without consulting a JSON document.
 func Parse(value string) (Pointer, error) {
+	if !unicodepolicy.ValidScalarString(value) {
+		return Pointer{}, fmt.Errorf("JSON pointer must be valid UTF-8")
+	}
 	if value == "" {
 		return Pointer{}, nil
 	}

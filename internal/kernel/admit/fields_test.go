@@ -164,6 +164,18 @@ func TestRedactDiagnosticValueReplacesRejectedValuesAsAWhole(t *testing.T) {
 			t.Fatalf("RedactDiagnosticValue unsafe class = %q, want fixed label", got)
 		}
 	}
+	for _, test := range []struct {
+		input string
+		want  string
+	}{
+		{input: "line\nbreak", want: "line<redacted-control-rune>break"},
+		{input: "unsafe\u200bvalue", want: "unsafe<redacted-control-rune>value"},
+		{input: string([]byte{'p', 'a', 't', 'h', 0xff}), want: redactedValueLabel},
+	} {
+		if got := RedactStructuralText(test.input); got != test.want {
+			t.Fatalf("RedactStructuralText(%q)=%q want %q", test.input, got, test.want)
+		}
+	}
 	longSafe := strings.Repeat("x", maxDiagnosticRunes+20)
 	if got := RedactDiagnosticValue(longSafe); !strings.HasSuffix(got, "...<truncated-diagnostic>") {
 		t.Fatalf("safe long diagnostic was not bounded: %q", got)

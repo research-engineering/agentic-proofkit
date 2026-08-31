@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha1"
 	"crypto/sha512"
 	"encoding/base64"
@@ -2414,9 +2415,10 @@ func verifyInstalledJSONABI(consumer string) error {
 	if err := verifyJSONAdapterSourceSmoke(consumer); err != nil {
 		return err
 	}
-	if err := workflowsmoke.Verify(func(input []byte, args ...string) (workflowsmoke.Result, error) {
-		result, err := runInstalledWithInput(consumer, input, args...)
-		return workflowsmoke.Result{ExitCode: result.ExitCode, Stdout: result.Stdout, Stderr: result.Stderr}, err
+	if err := workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
+		Directory:  consumer,
+		Executable: "npm",
+		Prefix:     []string{"exec", "--offline", "--", "agentic-proofkit"},
 	}); err != nil {
 		return fmt.Errorf("outside consumer agent-workflow smoke failed: %w", err)
 	}

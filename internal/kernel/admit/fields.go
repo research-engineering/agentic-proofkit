@@ -197,10 +197,33 @@ func RedactDiagnosticValue(value string) string {
 }
 
 func RedactStructuralText(value string) string {
-	if ContainsReportVisibleUnsafeValue(value) {
+	if !unicodepolicy.ValidScalarString(value) || ContainsSecretLikeValue(value) || ContainsSecretLikeValue(withoutUnsafeScalars(value)) {
 		return redactedValueLabel
 	}
-	return value
+	var builder strings.Builder
+	redacting := false
+	for _, character := range value {
+		if unicodepolicy.IsUnsafeScalar(character) {
+			if !redacting {
+				builder.WriteString("<redacted-control-rune>")
+				redacting = true
+			}
+			continue
+		}
+		redacting = false
+		builder.WriteRune(character)
+	}
+	return builder.String()
+}
+
+func withoutUnsafeScalars(value string) string {
+	var builder strings.Builder
+	for _, character := range value {
+		if !unicodepolicy.IsUnsafeScalar(character) {
+			builder.WriteRune(character)
+		}
+	}
+	return builder.String()
 }
 
 func DisplayOnlyCommandText(raw any, context string) (string, error) {

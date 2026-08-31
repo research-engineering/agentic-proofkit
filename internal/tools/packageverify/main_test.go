@@ -302,16 +302,19 @@ func TestReadManifestFromTarRejectsUnknownPackageManifestFields(t *testing.T) {
 }
 
 func TestPackageVerifierDiagnosticNondisclosure(t *testing.T) {
-	for _, value := range []string{
-		"package verification failed for api_key=abc123456789",
-		"package verification failed for line\nbreak",
-		"package verification failed for unsafe\u200bvalue",
-		string([]byte{'p', 'a', 't', 'h', 0xff}),
+	for _, test := range []struct {
+		value string
+		want  string
+	}{
+		{value: "package verification failed for api_key=abc123456789", want: "<redacted-diagnostic-value>\n"},
+		{value: "package verification failed for line\nbreak", want: "package verification failed for line<redacted-control-rune>break\n"},
+		{value: "package verification failed for unsafe\u200bvalue", want: "package verification failed for unsafe<redacted-control-rune>value\n"},
+		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "<redacted-diagnostic-value>\n"},
 	} {
 		var output bytes.Buffer
-		writeVerificationFailure(&output, errors.New(value))
-		if got, want := output.String(), "<redacted-diagnostic-value>\n"; got != want {
-			t.Fatalf("visible package diagnostic = %q, want %q", got, want)
+		writeVerificationFailure(&output, errors.New(test.value))
+		if got := output.String(); got != test.want {
+			t.Fatalf("visible package diagnostic = %q, want %q", got, test.want)
 		}
 	}
 }

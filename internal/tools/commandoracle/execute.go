@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
@@ -161,7 +162,7 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 	command := exec.CommandContext(ctx, goExecutable, argv[1:]...)
 	command.Dir = root
 	command.WaitDelay = processWaitDelay
-	configureProcessGroup(command)
+	processgroup.Configure(command)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		return decision("process.stdout_pipe_failed")
@@ -192,15 +193,15 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 		case parseErr = <-parseDone:
 			parseComplete = true
 			if parseErr != nil {
-				_ = terminateProcessGroup(command)
+				_ = processgroup.Terminate(command)
 			}
 		case <-overflowChannel:
 			overflowed = true
 			overflowChannel = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		case <-contextChannel:
 			contextChannel = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		}
 	}
 	waitDone := make(chan error, 1)
@@ -214,10 +215,10 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 		case <-overflowChannel:
 			overflowed = true
 			overflowChannel = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		case <-contextChannel:
 			contextChannel = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		}
 	}
 	<-stderrDone

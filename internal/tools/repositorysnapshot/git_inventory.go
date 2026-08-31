@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 )
 
 const (
@@ -93,7 +95,7 @@ func gitOutput(ctx context.Context, root string, args ...string) (string, error)
 	command := exec.CommandContext(ctx, "git", args...)
 	command.Dir = root
 	command.WaitDelay = processWaitDelay
-	configureProcessGroup(command)
+	processgroup.Configure(command)
 	stdout := newBoundedBuffer()
 	stderr := newBoundedBuffer()
 	command.Stdout = stdout
@@ -116,14 +118,14 @@ func gitOutput(ctx context.Context, root string, args ...string) (string, error)
 		case <-stdoutExceeded:
 			overflowed = true
 			stdoutExceeded = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		case <-stderrExceeded:
 			overflowed = true
 			stderrExceeded = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		case <-contextDone:
 			contextDone = nil
-			_ = terminateProcessGroup(command)
+			_ = processgroup.Terminate(command)
 		}
 	}
 	if ctx.Err() != nil {
