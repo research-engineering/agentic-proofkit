@@ -5,7 +5,7 @@
   "version": "0.5.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
   "previousPublicAbiSha256": "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9",
-  "currentPublicAbiSha256": "sha256:0ca5482ce0300d2e3b4b44d818e066539ebf535771c197800f56403a9d2f1097",
+  "currentPublicAbiSha256": "sha256:757a547c72d2a5e274f8f00bc58adc665cc4495a268fd3e48ce3a6fa0c06f22c",
   "addedCommandContracts": [
     {
       "command": "change-workflow-plan",
@@ -17,6 +17,11 @@
       "inputContractSha256": "",
       "outputContractSha256": "sha256:c1d23df574e948ea7160931f53790a6d133ae12eeceefe9e5fa15430d653ff7e"
     }
+  ],
+  "additionChangeIds": [
+    "proofkit.agent-workflow.change-planner",
+    "proofkit.agent-workflow.native-evidence-guidance",
+    "proofkit.release.cross-carrier-binary-identity"
   ],
   "breakingChangeIds": [
     "proofkit.agent-envelope.local-identity-closure",

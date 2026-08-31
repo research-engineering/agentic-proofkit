@@ -2,13 +2,29 @@ package unicodepolicy
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"slices"
 	"strings"
 	"testing"
 	"unicode"
 )
+
+type unsafeScalarCorpus struct {
+	SchemaVersion  int                       `json:"schemaVersion"`
+	UnicodeVersion string                    `json:"unicodeVersion"`
+	TableSHA256    string                    `json:"tableSha256"`
+	Ranges         []unsafeScalarCorpusRange `json:"ranges"`
+}
+
+type unsafeScalarCorpusRange struct {
+	Category string `json:"category"`
+	Start    rune   `json:"start"`
+	End      rune   `json:"end"`
+	Step     rune   `json:"step"`
+}
 
 func TestUnsafeScalarTableIdentityAndCardinality(t *testing.T) {
 	var source strings.Builder
@@ -33,6 +49,29 @@ func TestUnsafeScalarTableIdentityAndCardinality(t *testing.T) {
 	}
 	if unsafeCount != 237 {
 		t.Fatalf("unsafe scalar count = %d, want 237", unsafeCount)
+	}
+}
+
+func TestUnsafeScalarTableMatchesVersionedOwnerCorpus(t *testing.T) {
+	content, err := os.ReadFile("testdata/unsafe-scalar-ranges.v1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var corpus unsafeScalarCorpus
+	if err := json.Unmarshal(content, &corpus); err != nil {
+		t.Fatal(err)
+	}
+	if corpus.SchemaVersion != 1 || corpus.UnicodeVersion != UnicodeVersion || corpus.TableSHA256 != TableSHA256 {
+		t.Fatalf("Unicode owner corpus identity is stale: %#v", corpus)
+	}
+	if len(corpus.Ranges) != len(unsafeScalarRanges) {
+		t.Fatalf("Unicode owner corpus range count=%d want %d", len(corpus.Ranges), len(unsafeScalarRanges))
+	}
+	for index, actual := range corpus.Ranges {
+		expected := unsafeScalarRanges[index]
+		if actual.Category != expected.category || actual.Start != expected.start || actual.End != expected.end || actual.Step != expected.step {
+			t.Fatalf("Unicode owner corpus range %d=%#v want %#v", index, actual, expected)
+		}
 	}
 }
 

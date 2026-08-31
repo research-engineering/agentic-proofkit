@@ -17,6 +17,7 @@ const agentWorkflowVersionEdgePath = "internal/app/testdata/v0.5-wire-observatio
 
 type agentWorkflowVersionEdge struct {
 	AddedCommandContracts   []agentWorkflowCommandContract `json:"addedCommandContracts"`
+	AdditionChangeIDs       []string                       `json:"additionChangeIds"`
 	BreakingChangeIDs       []string                       `json:"breakingChangeIds"`
 	CurrentPublicABISHA256  string                         `json:"currentPublicAbiSha256"`
 	EdgeID                  string                         `json:"edgeId"`
@@ -52,6 +53,14 @@ func TestAgentWorkflowVersionEdgeClosesPublicWireAdditions(t *testing.T) {
 		{name: "previous ABI", mutate: func(value *agentWorkflowVersionEdge) { value.PreviousPublicABISHA256 = value.CurrentPublicABISHA256 }},
 		{name: "command contract", mutate: func(value *agentWorkflowVersionEdge) { value.AddedCommandContracts[0].OutputContractSHA256 += "0" }},
 		{name: "missing command", mutate: func(value *agentWorkflowVersionEdge) { value.AddedCommandContracts = value.AddedCommandContracts[1:] }},
+		{name: "addition owner", mutate: func(value *agentWorkflowVersionEdge) { value.AdditionChangeIDs[0] += ".drift" }},
+		{name: "missing addition", mutate: func(value *agentWorkflowVersionEdge) { value.AdditionChangeIDs = value.AdditionChangeIDs[1:] }},
+		{name: "reordered additions", mutate: func(value *agentWorkflowVersionEdge) {
+			value.AdditionChangeIDs[0], value.AdditionChangeIDs[1] = value.AdditionChangeIDs[1], value.AdditionChangeIDs[0]
+		}},
+		{name: "surplus addition", mutate: func(value *agentWorkflowVersionEdge) {
+			value.AdditionChangeIDs = append(value.AdditionChangeIDs, "proofkit.surplus")
+		}},
 		{name: "breaking owner", mutate: func(value *agentWorkflowVersionEdge) { value.BreakingChangeIDs[0] += ".drift" }},
 	}
 	for _, mutant := range mutants {
@@ -79,7 +88,7 @@ func readAgentWorkflowVersionEdge(t *testing.T) agentWorkflowVersionEdge {
 	if !ok {
 		t.Fatal("agent workflow version edge must be an object")
 	}
-	assertExactObjectKeys(t, root, []string{"addedCommandContracts", "breakingChangeIds", "currentPublicAbiSha256", "edgeId", "evidenceClass", "nonClaims", "previousPublicAbiSha256", "previousVersion", "schemaVersion", "version"}, "agent workflow version edge")
+	assertExactObjectKeys(t, root, []string{"addedCommandContracts", "additionChangeIds", "breakingChangeIds", "currentPublicAbiSha256", "edgeId", "evidenceClass", "nonClaims", "previousPublicAbiSha256", "previousVersion", "schemaVersion", "version"}, "agent workflow version edge")
 	commandContracts, ok := root["addedCommandContracts"].([]any)
 	if !ok {
 		t.Fatal("agent workflow version edge addedCommandContracts must be an array")
@@ -115,6 +124,13 @@ func validateAgentWorkflowVersionEdge(record agentWorkflowVersionEdge, releaseRe
 	if !slices.Equal(record.AddedCommandContracts, expectedCommands) {
 		return fmt.Errorf("version-edge added command contracts are not exact")
 	}
+	additions := make([]string, 0, len(releaseRecord.Additions))
+	for _, change := range releaseRecord.Additions {
+		additions = append(additions, change.ChangeID)
+	}
+	if !slices.Equal(record.AdditionChangeIDs, additions) {
+		return fmt.Errorf("version-edge addition owners are not exact")
+	}
 	breaking := make([]string, 0, len(releaseRecord.BreakingChanges))
 	for _, change := range releaseRecord.BreakingChanges {
 		breaking = append(breaking, change.ChangeID)
@@ -130,6 +146,7 @@ func validateAgentWorkflowVersionEdge(record agentWorkflowVersionEdge, releaseRe
 
 func cloneAgentWorkflowVersionEdge(record agentWorkflowVersionEdge) agentWorkflowVersionEdge {
 	record.AddedCommandContracts = append([]agentWorkflowCommandContract(nil), record.AddedCommandContracts...)
+	record.AdditionChangeIDs = append([]string(nil), record.AdditionChangeIDs...)
 	record.BreakingChangeIDs = append([]string(nil), record.BreakingChangeIDs...)
 	record.NonClaims = append([]string(nil), record.NonClaims...)
 	return record

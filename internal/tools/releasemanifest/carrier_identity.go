@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -20,14 +21,21 @@ const (
 	wheelBinaryEntry               = "agentic_proofkit/bin/agentic-proofkit"
 )
 
-func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) error {
+func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) (returnErr error) {
 	if pythonPackages == nil {
 		return nil
 	}
 	if len(localRecords) != 1 {
 		return fmt.Errorf("cross-carrier identity requires exactly one npm package artifact")
 	}
-	npmBinaries, err := readNPMCarrierBinaries(filepath.Join(packageDir, localRecords[0].Filename))
+	scratch, err := os.MkdirTemp("", "proofkit-carrier-binaries-")
+	if err != nil {
+		return fmt.Errorf("create cross-carrier scratch directory: %w", err)
+	}
+	defer func() {
+		returnErr = errors.Join(returnErr, os.RemoveAll(scratch))
+	}()
+	npmBinaries, err := extractNPMCarrierBinaries(filepath.Join(packageDir, localRecords[0].Filename), scratch)
 	if err != nil {
 		return fmt.Errorf("decode npm package carrier: %w", err)
 	}
@@ -51,18 +59,23 @@ func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, local
 		if !exists {
 			return fmt.Errorf("python package carrier is missing a release-platform wheel")
 		}
-		wheelBinary, err := readWheelCarrierBinary(filepath.Join(pythonDir, wheel.Filename))
+		equal, err := wheelCarrierBinaryEquals(filepath.Join(pythonDir, wheel.Filename), npmBinary)
 		if err != nil {
 			return fmt.Errorf("decode python wheel carrier: %w", err)
 		}
-		if !bytes.Equal(npmBinary, wheelBinary) {
+		if !equal {
 			return fmt.Errorf("npm and python package carriers contain different release-platform binary bytes")
 		}
 	}
 	return nil
 }
 
-func readNPMCarrierBinaries(path string) (map[string][]byte, error) {
+type extractedCarrierBinary struct {
+	path string
+	size int64
+}
+
+func extractNPMCarrierBinaries(path string, scratch string) (map[string]extractedCarrierBinary, error) {
 	file, err := openBoundedCarrier(path)
 	if err != nil {
 		return nil, err
@@ -78,7 +91,8 @@ func readNPMCarrierBinaries(path string) (map[string][]byte, error) {
 	for _, target := range releaseplatform.Targets() {
 		expected[target.PackageTarEntry] = target.PlatformSuffix
 	}
-	binaries := make(map[string][]byte, len(expected))
+	binaries := make(map[string]extractedCarrierBinary, len(expected))
+	seenNames := make(map[string]struct{})
 	var totalSize int64
 	entryCount := 0
 	for {
@@ -93,6 +107,10 @@ func readNPMCarrierBinaries(path string) (map[string][]byte, error) {
 		if entryCount > maxCarrierArchiveEntries {
 			return nil, fmt.Errorf("npm package carrier exceeds the entry limit")
 		}
+		if _, duplicate := seenNames[header.Name]; duplicate {
+			return nil, fmt.Errorf("npm package carrier contains duplicate entries")
+		}
+		seenNames[header.Name] = struct{}{}
 		if header.Size < 0 || header.Size > maxCarrierArchiveBytes-totalSize {
 			return nil, fmt.Errorf("npm package carrier exceeds the uncompressed byte limit")
 		}
@@ -107,11 +125,23 @@ func readNPMCarrierBinaries(path string) (map[string][]byte, error) {
 		if header.Typeflag != tar.TypeReg {
 			return nil, fmt.Errorf("npm package carrier release-platform binary is not a regular file")
 		}
-		content, err := readBoundedCarrierMember(tarReader, header.Size)
+		if header.Size > maxCarrierBinaryBytes {
+			return nil, fmt.Errorf("package carrier binary exceeds the byte limit")
+		}
+		destination := filepath.Join(scratch, platformSuffix)
+		binary, err := os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 		if err != nil {
 			return nil, err
 		}
-		binaries[platformSuffix] = content
+		written, copyErr := io.CopyN(binary, tarReader, header.Size)
+		closeErr := binary.Close()
+		if err := errors.Join(copyErr, closeErr); err != nil {
+			return nil, err
+		}
+		if written != header.Size {
+			return nil, fmt.Errorf("package carrier binary size differs from its archive header")
+		}
+		binaries[platformSuffix] = extractedCarrierBinary{path: destination, size: written}
 	}
 	if len(binaries) != len(expected) {
 		return nil, fmt.Errorf("npm package carrier lacks exact release-platform binary closure")
@@ -119,55 +149,98 @@ func readNPMCarrierBinaries(path string) (map[string][]byte, error) {
 	return binaries, nil
 }
 
-func readWheelCarrierBinary(path string) ([]byte, error) {
+func wheelCarrierBinaryEquals(path string, expected extractedCarrierBinary) (bool, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	if !info.Mode().IsRegular() || info.Size() > maxCarrierArchiveBytes {
-		return nil, fmt.Errorf("python wheel carrier is not an admitted regular archive")
+		return false, fmt.Errorf("python wheel carrier is not an admitted regular archive")
 	}
 	reader, err := zip.OpenReader(path)
 	if err != nil {
-		return nil, err
+		return false, err
 	}
 	defer reader.Close()
 	if len(reader.File) > maxCarrierArchiveEntries {
-		return nil, fmt.Errorf("python wheel carrier exceeds the entry limit")
+		return false, fmt.Errorf("python wheel carrier exceeds the entry limit")
 	}
 	seen := map[string]struct{}{}
-	var binary []byte
+	found := false
+	equal := false
 	for _, entry := range reader.File {
 		if _, duplicate := seen[entry.Name]; duplicate {
-			return nil, fmt.Errorf("python wheel carrier contains duplicate entries")
+			return false, fmt.Errorf("python wheel carrier contains duplicate entries")
 		}
 		seen[entry.Name] = struct{}{}
 		if entry.Name != wheelBinaryEntry {
 			continue
 		}
 		if entry.Mode()&os.ModeSymlink != 0 || !entry.FileInfo().Mode().IsRegular() {
-			return nil, fmt.Errorf("python wheel carrier binary is not a regular file")
+			return false, fmt.Errorf("python wheel carrier binary is not a regular file")
 		}
 		if entry.UncompressedSize64 > uint64(maxCarrierBinaryBytes) {
-			return nil, fmt.Errorf("python wheel carrier binary exceeds the byte limit")
+			return false, fmt.Errorf("python wheel carrier binary exceeds the byte limit")
+		}
+		if found {
+			return false, fmt.Errorf("python wheel carrier contains duplicate embedded binaries")
+		}
+		found = true
+		if int64(entry.UncompressedSize64) != expected.size {
+			continue
 		}
 		member, err := entry.Open()
 		if err != nil {
-			return nil, err
+			return false, err
 		}
-		binary, err = readBoundedCarrierMember(member, int64(entry.UncompressedSize64))
-		closeErr := member.Close()
+		expectedFile, err := os.Open(expected.path)
 		if err != nil {
-			return nil, err
+			member.Close()
+			return false, err
 		}
-		if closeErr != nil {
-			return nil, closeErr
+		equal, err = equalCarrierStreams(member, expectedFile)
+		memberCloseErr := member.Close()
+		expectedCloseErr := expectedFile.Close()
+		if err != nil {
+			return false, err
+		}
+		if memberCloseErr != nil {
+			return false, memberCloseErr
+		}
+		if expectedCloseErr != nil {
+			return false, expectedCloseErr
 		}
 	}
-	if binary == nil {
-		return nil, fmt.Errorf("python wheel carrier lacks its embedded binary")
+	if !found {
+		return false, fmt.Errorf("python wheel carrier lacks its embedded binary")
 	}
-	return binary, nil
+	return equal, nil
+}
+
+func equalCarrierStreams(left io.Reader, right io.Reader) (bool, error) {
+	leftBuffer := make([]byte, 64*1024)
+	rightBuffer := make([]byte, len(leftBuffer))
+	for {
+		leftCount, leftErr := io.ReadFull(left, leftBuffer)
+		rightCount, rightErr := io.ReadFull(right, rightBuffer)
+		if leftCount != rightCount || !bytes.Equal(leftBuffer[:leftCount], rightBuffer[:rightCount]) {
+			return false, nil
+		}
+		leftDone := leftErr == io.EOF || leftErr == io.ErrUnexpectedEOF
+		rightDone := rightErr == io.EOF || rightErr == io.ErrUnexpectedEOF
+		if leftDone || rightDone {
+			if !leftDone || !rightDone {
+				return false, nil
+			}
+			return true, nil
+		}
+		if leftErr != nil {
+			return false, leftErr
+		}
+		if rightErr != nil {
+			return false, rightErr
+		}
+	}
 }
 
 func openBoundedCarrier(path string) (*os.File, error) {
@@ -185,18 +258,4 @@ func openBoundedCarrier(path string) (*os.File, error) {
 		return nil, fmt.Errorf("package carrier is not an admitted regular archive")
 	}
 	return file, nil
-}
-
-func readBoundedCarrierMember(reader io.Reader, declaredSize int64) ([]byte, error) {
-	if declaredSize < 0 || declaredSize > maxCarrierBinaryBytes {
-		return nil, fmt.Errorf("package carrier binary exceeds the byte limit")
-	}
-	content, err := io.ReadAll(io.LimitReader(reader, maxCarrierBinaryBytes+1))
-	if err != nil {
-		return nil, err
-	}
-	if int64(len(content)) != declaredSize {
-		return nil, fmt.Errorf("package carrier binary size differs from its archive header")
-	}
-	return content, nil
 }

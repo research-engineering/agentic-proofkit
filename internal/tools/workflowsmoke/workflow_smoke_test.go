@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -145,6 +146,15 @@ func TestWorkflowSmokeProcessHelper(t *testing.T) {
 	case "read-stdin":
 		_, _ = io.Copy(io.Discard, os.Stdin)
 	case "no-read":
+	case "spawn-descendant":
+		child := exec.Command(os.Args[0], "-test.run=^TestWorkflowSmokeProcessHelper$", "--")
+		child.Env = append(os.Environ(), processHelperMode+"=hang")
+		if err := child.Start(); err != nil {
+			_, _ = fmt.Fprintln(os.Stderr, "start descendant failed")
+			os.Exit(2)
+		}
+		_, _ = fmt.Fprintln(os.Stdout, child.Process.Pid)
+		_ = child.Process.Release()
 	default:
 		_, _ = fmt.Fprintf(os.Stderr, "unsupported helper mode")
 		os.Exit(2)

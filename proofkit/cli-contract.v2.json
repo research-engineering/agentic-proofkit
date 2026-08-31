@@ -1923,7 +1923,7 @@
         "rootDefinitionDigest": "sha256:9378c7663485f39089cf6c39a3d2f778e28b5801637229fe9524a9652a7b0737",
         "nativeSource": {
           "path": "internal/command/jsonreportcliadaptersource",
-          "canonicalDigest": "sha256:1bacd24b71f570d953dcd878f2edd6563fdace2705042fa81a0cbabb1ecfd7e3",
+          "canonicalDigest": "sha256:4844b3312ab79264da9a70cc722df8b02fcda77182f5d1c717c39abee0143a83",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

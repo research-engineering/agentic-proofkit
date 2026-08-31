@@ -30,10 +30,19 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 
 	t.Run("duplicate_tar_member", func(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
-		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), true)
+		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "binary")
 		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
-		if err == nil || !strings.Contains(err.Error(), "duplicates a release-platform binary") {
+		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
 			t.Fatalf("duplicate npm binary was not rejected: %v", err)
+		}
+	})
+
+	t.Run("duplicate_non_binary_tar_member", func(t *testing.T) {
+		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "metadata")
+		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
+			t.Fatalf("duplicate npm metadata entry was not rejected: %v", err)
 		}
 	})
 }
@@ -50,7 +59,7 @@ func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, strin
 		t.Fatal(err)
 	}
 	records := []packRecord{{Filename: "proofkit.tgz"}}
-	writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), false)
+	writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "")
 	packages := &pythonPackageSet{Packages: make([]pythonWheelRecord, 0, len(releaseplatform.Targets()))}
 	for _, target := range releaseplatform.Targets() {
 		filename := target.PlatformSuffix + ".whl"
@@ -67,7 +76,7 @@ func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, strin
 	return packageDir, pythonDir, records, packages
 }
 
-func writeNPMCarrier(t *testing.T, path string, duplicate bool) {
+func writeNPMCarrier(t *testing.T, path string, duplicate string) {
 	t.Helper()
 	file, err := os.Create(path)
 	if err != nil {
@@ -75,9 +84,20 @@ func writeNPMCarrier(t *testing.T, path string, duplicate bool) {
 	}
 	gzipWriter := gzip.NewWriter(file)
 	tarWriter := tar.NewWriter(gzipWriter)
+	if duplicate == "metadata" {
+		for range 2 {
+			content := []byte("metadata")
+			if err := tarWriter.WriteHeader(&tar.Header{Name: "package/README.md", Mode: 0o644, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := tarWriter.Write(content); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	for index, target := range releaseplatform.Targets() {
 		copies := 1
-		if duplicate && index == 0 {
+		if duplicate == "binary" && index == 0 {
 			copies = 2
 		}
 		for range copies {

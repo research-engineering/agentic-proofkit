@@ -626,7 +626,7 @@
       "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes."]
+      "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes or claim that every repository-internal tool invocation uses the installed-carrier timeout policy."]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
@@ -3664,6 +3664,21 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-artifact-immutable-snapshot",
+      "witnessId": "proofkit.release-manifest.immutable-artifact-epoch-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/artifact_snapshot_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseArtifactSnapshotOwnsOneImmutableEpoch",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestReleaseArtifactSnapshotOwnsOneImmutableEpoch$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
       "witnessId": "proofkit.python-package.macho-platform-falsifier",
       "witnessKind": "contract",
@@ -3815,6 +3830,10 @@
       "witnessKind": "contract",
       "witnessPath": "internal/kernel/unicodepolicy/unicodepolicy_test.go",
       "witnessSelectors": [
+        {
+          "selector": "TestUnsafeScalarTableMatchesVersionedOwnerCorpus",
+          "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesVersionedOwnerCorpus$'"
+        },
         {
           "selector": "TestUnsafeScalarTableMatchesEveryUnicode15Scalar",
           "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesEveryUnicode15Scalar$'"
@@ -4038,6 +4057,40 @@
         {
           "selector": "TestDiagnosticsDoNotLeakArtifactValues",
           "command": "go test ./internal/tools/browserproofverify -run '^TestDiagnosticsDoNotLeakArtifactValues$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.installed-carrier-process-bounds",
+      "witnessId": "proofkit.workflow-smoke.process-bounds-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunProcessRejectsTimeout",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessRejectsTimeout$'"
+        },
+        {
+          "selector": "TestRunProcessRejectsOutputOverflow",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessRejectsOutputOverflow$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.installed-carrier-process-group-cleanup",
+      "witnessId": "proofkit.workflow-smoke.process-group-cleanup-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/process_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunProcessTerminatesDescendantsAfterSuccessfulParentExit",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessTerminatesDescendantsAfterSuccessfulParentExit$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

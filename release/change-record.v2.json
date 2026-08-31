@@ -10,7 +10,7 @@
     },
     {
       "changeId": "proofkit.diagnostic.bounded-error-boundary",
-      "summary": "CLI and repository-tool diagnostics now reject malformed or report-unsafe values as a whole, cap admitted text, and bound child-process stdout, stderr, lifetime, and process-group cleanup instead of forwarding raw child errors."
+      "summary": "CLI and repository-tool diagnostics now reject malformed or report-unsafe values as a whole, cap admitted text, capture failed child stderr before whole-value sanitization, and keep successful child stderr out of diagnostics; installed-carrier smoke additionally bounds stdout, stderr, lifetime, and process-group cleanup."
     },
     {
       "changeId": "proofkit.stable-json.unicode-scalar-v2",
@@ -28,7 +28,7 @@
     },
     {
       "changeId": "proofkit.release.cross-carrier-binary-identity",
-      "summary": "Release assembly now independently decodes final npm and Python archives under fixed bounds and directly requires byte-identical embedded binaries for every release platform."
+      "summary": "Release assembly now admits final npm, Python, and SBOM artifacts once into a bounded immutable snapshot, independently rejects duplicate archive entries, directly compares embedded platform binaries in bounded chunks, and derives release and SBOM checksums from the same artifact epoch."
     }
   ],
   "migration": {

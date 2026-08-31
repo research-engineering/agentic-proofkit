@@ -15,7 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:c1c0c4608b3dee6520c4de90a24adcad342f0aeeab02fb8face911e55d00f064"
+const expectedTypeScriptSourceSha256 = "sha256:a171cc1b95c6078b7190ac50fc9fd298db8f42bfc9b65bbb67fa77d63dc04a93"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -178,7 +178,7 @@ func TestGeneratedTypeScriptAdapterExecutesCoreSemantics(t *testing.T) {
 	if err := os.WriteFile(fakeProofkitPath, []byte(fakeProofkitBinarySource), 0o755); err != nil {
 		t.Fatalf("write fake proofkit: %v", err)
 	}
-	if err := os.WriteFile(harnessPath, []byte(generatedAdapterHarnessSource(fakeProofkitPath)), 0o644); err != nil {
+	if err := os.WriteFile(harnessPath, []byte(generatedAdapterHarnessSource(t, fakeProofkitPath)), 0o644); err != nil {
 		t.Fatalf("write harness: %v", err)
 	}
 	command := exec.Command(nodePath, "--experimental-strip-types", harnessPath)
@@ -274,7 +274,8 @@ process.stdin.on("end", () => {
 });
 `
 
-func generatedAdapterHarnessSource(fakeProofkitPath string) string {
+func generatedAdapterHarnessSource(t *testing.T, fakeProofkitPath string) string {
+	t.Helper()
 	return `import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -346,16 +347,7 @@ for (const [value, expected] of [
   assert.equal(encoded, expected);
   assert.equal(parseProofkitJsonStrict(encoded).value, value);
 }
-const unsafeScalarRangesForTest = [
-  [0x000000, 0x00001f, 1], [0x00007f, 0x00009f, 1], [0x0000ad, 0x000600, 1363],
-  [0x000601, 0x000605, 1], [0x00061c, 0x0006dd, 193], [0x00070f, 0x000890, 385],
-  [0x000891, 0x0008e2, 81], [0x00180e, 0x00200b, 2045], [0x00200c, 0x00200f, 1],
-  [0x002028, 0x002028, 1], [0x002029, 0x002029, 1], [0x00202a, 0x00202e, 1],
-  [0x002060, 0x002064, 1], [0x002066, 0x00206f, 1], [0x00feff, 0x00fff9, 250],
-  [0x00fffa, 0x00fffb, 1], [0x0110bd, 0x0110cd, 16], [0x013430, 0x01343f, 1],
-  [0x01bca0, 0x01bca3, 1], [0x01d173, 0x01d17a, 1], [0x0e0001, 0x0e0020, 31],
-  [0x0e0021, 0x0e007f, 1],
-];
+const unsafeScalarRangesForTest = ` + unsafeScalarRangesLiteral(t) + `;
 const unsafeScalarsForTest = new Set();
 for (const [start, end, step] of unsafeScalarRangesForTest) {
   for (let value = start; value <= end; value += step) unsafeScalarsForTest.add(value);
@@ -661,6 +653,40 @@ runProofkitJsonReportCliMain({
 
 console.log("generated adapter semantics ok");
 `
+}
+
+func unsafeScalarRangesLiteral(t *testing.T) string {
+	t.Helper()
+	type corpusRange struct {
+		Start int `json:"start"`
+		End   int `json:"end"`
+		Step  int `json:"step"`
+	}
+	type corpus struct {
+		SchemaVersion int           `json:"schemaVersion"`
+		Ranges        []corpusRange `json:"ranges"`
+	}
+	path := filepath.Join("..", "..", "kernel", "unicodepolicy", "testdata", "unsafe-scalar-ranges.v1.json")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var owner corpus
+	if err := json.Unmarshal(content, &owner); err != nil {
+		t.Fatal(err)
+	}
+	if owner.SchemaVersion != 1 || len(owner.Ranges) == 0 {
+		t.Fatal("Unicode owner corpus identity is invalid")
+	}
+	projection := make([][3]int, 0, len(owner.Ranges))
+	for _, item := range owner.Ranges {
+		projection = append(projection, [3]int{item.Start, item.End, item.Step})
+	}
+	encoded, err := json.Marshal(projection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(encoded)
 }
 
 func redactionFixturesLiteral() string {

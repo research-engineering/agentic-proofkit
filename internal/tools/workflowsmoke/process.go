@@ -34,8 +34,8 @@ func VerifyProcess(ctx context.Context, carrier ProcessCarrier) error {
 	})
 }
 
-// RunProcess executes one bounded carrier invocation. Output overflow and
-// cancellation terminate the whole process group on supported Unix hosts.
+// RunProcess executes one bounded carrier invocation and terminates its whole
+// process group before returning on every post-start path.
 func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocation) (Result, error) {
 	if ctx == nil || carrier.Executable == "" {
 		return Result{}, fmt.Errorf("process carrier requires a context and executable")
@@ -71,8 +71,12 @@ func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocati
 	} else {
 		command.Stdin = bytes.NewReader(invocation.Input)
 	}
-	err := command.Run()
+	runErr := command.Run()
+	cleanupErr := processgroup.Terminate(command)
 	result := Result{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}
+	if cleanupErr != nil {
+		return Result{}, fmt.Errorf("terminate process carrier group: %w", cleanupErr)
+	}
 	if stdout.Overflowed() {
 		return Result{}, fmt.Errorf("process carrier stdout exceeds %d bytes", maximumStdoutBytes)
 	}
@@ -82,15 +86,15 @@ func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocati
 	if ctx.Err() != nil {
 		return Result{}, fmt.Errorf("process carrier invocation canceled: %w", ctx.Err())
 	}
-	if err == nil {
+	if runErr == nil {
 		return result, nil
 	}
 	var exitError *exec.ExitError
-	if errors.As(err, &exitError) {
+	if errors.As(runErr, &exitError) {
 		result.ExitCode = exitError.ExitCode()
 		return result, nil
 	}
-	return Result{}, fmt.Errorf("process carrier invocation failed: %w", err)
+	return Result{}, fmt.Errorf("process carrier invocation failed: %w", runErr)
 }
 
 type boundedBuffer struct {

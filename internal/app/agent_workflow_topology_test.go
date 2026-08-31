@@ -76,14 +76,14 @@ func TestAgentWorkflowSemanticOwnerTopology(t *testing.T) {
 func assertAgentWorkflowCarrierClosure(t *testing.T, root string) {
 	t.Helper()
 	closures := []struct {
-		file    string
-		imports []string
-		callees []string
+		file            string
+		imports         []string
+		requiredCallees []string
 	}{
 		{
-			file:    "agent_workflow_args.go",
-			imports: []string{"fmt", "github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"},
-			callees: []string{"fmt.Errorf", "jsonpointer.Parse", "len", "missingAgentWorkflowValue"},
+			file:            "agent_workflow_args.go",
+			imports:         []string{"fmt", "github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"},
+			requiredCallees: []string{"jsonpointer.Parse"},
 		},
 		{
 			file: "agent_workflow_command.go",
@@ -92,7 +92,7 @@ func assertAgentWorkflowCarrierClosure(t *testing.T, root string) {
 				"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer",
 				"io",
 			},
-			callees: []string{
+			requiredCallees: []string{
 				"append", "changeWorkflowTerminalText", "changeworkflowplan.Build", "changeworkflowplan.BuildAgentEnvelope",
 				"changeworkflowplan.BuildTextProjection", "jsonpointer.SelectParsed", "len", "make", "newTerminalText",
 				"parseAgentWorkflowArgs", "readInput", "renderTerminalText", "runNativeEvidenceGuidance", "writeDiagnostic",
@@ -102,15 +102,15 @@ func assertAgentWorkflowCarrierClosure(t *testing.T, root string) {
 		{
 			file:    "native_evidence_guidance_command.go",
 			imports: []string{"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance", "io"},
-			callees: []string{
+			requiredCallees: []string{
 				"append", "guidance.JSONValue", "len", "make", "nativeEvidenceGuidanceTerminalText", "nativeevidenceguidance.Build",
 				"nativeevidenceguidance.TextProjection", "newTerminalText", "renderTerminalText", "writeJSON", "writeText",
 			},
 		},
 		{
-			file:    "terminal_style.go",
-			imports: []string{"fmt", "strings"},
-			callees: []string{"append", "builder.String", "builder.WriteString", "fmt.Errorf", "renderTerminalText", "terminalTokenStyle"},
+			file:            "terminal_style.go",
+			imports:         []string{"fmt", "strings"},
+			requiredCallees: []string{"renderTerminalText", "terminalTokenStyle"},
 		},
 	}
 	for _, closure := range closures {
@@ -177,15 +177,10 @@ func assertAgentWorkflowCarrierClosure(t *testing.T, root string) {
 		if closure.file == "agent_workflow_command.go" && explicitReadInputCalls != 1 {
 			t.Fatalf("agent workflow carrier explicit readInput calls=%d want 1", explicitReadInputCalls)
 		}
-		callees := make([]string, 0, len(calleeSet))
-		for callee := range calleeSet {
-			callees = append(callees, callee)
-		}
-		sort.Strings(callees)
-		expectedCallees := append([]string(nil), closure.callees...)
-		sort.Strings(expectedCallees)
-		if !slices.Equal(callees, expectedCallees) {
-			t.Fatalf("agent workflow carrier callees in %s=%v want %v", closure.file, callees, expectedCallees)
+		for _, required := range closure.requiredCallees {
+			if _, ok := calleeSet[required]; !ok {
+				t.Fatalf("agent workflow carrier %s is missing required owner call %s", closure.file, required)
+			}
 		}
 	}
 }

@@ -455,10 +455,13 @@ func TestReleaseAssetsRejectStalePackageArtifacts(t *testing.T) {
 	writeFile(t, "artifacts/pypi/agentic_proofkit-1.2.3-py3-none-any.whl", "wheel")
 	writeFile(t, "artifacts/release/sbom.cdx.json", "{}")
 
-	_, _, _, err = releaseAssets(
+	snapshot, err := newReleaseArtifactSnapshot(
 		[]packRecord{{Filename: "agentic-proofkit-1.2.3.tgz", Name: "agentic-proofkit", Version: "1.2.3", Integrity: "sha512-x", Shasum: "abc"}},
 		&pythonPackageSet{Packages: []pythonWheelRecord{{Filename: "agentic_proofkit-1.2.3-py3-none-any.whl"}}},
 	)
+	if snapshot != nil {
+		t.Cleanup(func() { _ = snapshot.Close() })
+	}
 	if err == nil || !strings.Contains(err.Error(), "unexpected file") {
 		t.Fatalf("releaseAssets() error=%v, want unexpected stale package artifact", err)
 	}

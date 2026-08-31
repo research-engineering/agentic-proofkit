@@ -2491,8 +2491,8 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 	if report.SourceFileName != "proofkit-json-report-cli-adapter.ts" {
 		return fmt.Errorf("sourceFileName=%s, want proofkit-json-report-cli-adapter.ts", report.SourceFileName)
 	}
-	if report.GeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v2" {
-		return fmt.Errorf("generatorId=%s, want proofkit.json-report-cli-adapter-source.typescript.v2", report.GeneratorID)
+	if report.GeneratorID != jsonreportcliadaptersource.TypeScriptGeneratorID {
+		return fmt.Errorf("generatorId=%s, want %s", report.GeneratorID, jsonreportcliadaptersource.TypeScriptGeneratorID)
 	}
 	if report.Source != expectedSource {
 		return fmt.Errorf("json adapter source does not match current owner source")

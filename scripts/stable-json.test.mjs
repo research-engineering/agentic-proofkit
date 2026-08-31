@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import test from "node:test";
 
 import {
@@ -8,6 +9,11 @@ import {
   redactDiagnosticValue,
   stableJSONStringify,
 } from "./stable-json.mjs";
+
+const unicodePolicyCorpus = JSON.parse(readFileSync(
+  new URL("../internal/kernel/unicodepolicy/testdata/unsafe-scalar-ranges.v1.json", import.meta.url),
+  "utf8",
+));
 
 test("stableJSONStringify sorts object keys without HTML escaping", () => {
   assert.equal(
@@ -56,16 +62,9 @@ test("stable JSON Unicode corpus", () => {
 });
 
 test("stable JSON Unicode table classifies every scalar and complement", () => {
-  const ranges = [
-    [0x000000, 0x00001f, 1], [0x00007f, 0x00009f, 1], [0x0000ad, 0x000600, 1363],
-    [0x000601, 0x000605, 1], [0x00061c, 0x0006dd, 193], [0x00070f, 0x000890, 385],
-    [0x000891, 0x0008e2, 81], [0x00180e, 0x00200b, 2045], [0x00200c, 0x00200f, 1],
-    [0x002028, 0x002028, 1], [0x002029, 0x002029, 1], [0x00202a, 0x00202e, 1],
-    [0x002060, 0x002064, 1], [0x002066, 0x00206f, 1], [0x00feff, 0x00fff9, 250],
-    [0x00fffa, 0x00fffb, 1], [0x0110bd, 0x0110cd, 16], [0x013430, 0x01343f, 1],
-    [0x01bca0, 0x01bca3, 1], [0x01d173, 0x01d17a, 1], [0x0e0001, 0x0e0020, 31],
-    [0x0e0021, 0x0e007f, 1],
-  ];
+  assert.equal(unicodePolicyCorpus.schemaVersion, 1);
+  assert.equal(unicodePolicyCorpus.unicodeVersion, "15.0.0");
+  const ranges = unicodePolicyCorpus.ranges.map(({start, end, step}) => [start, end, step]);
   const expected = new Set();
   for (const [start, end, step] of ranges) {
     for (let value = start; value <= end; value += step) expected.add(value);

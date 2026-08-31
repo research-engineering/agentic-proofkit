@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -202,7 +203,7 @@ func main() {
 	}
 }
 
-func run() error {
+func run() (returnErr error) {
 	manifest, err := readPackageJSON("package.json")
 	if err != nil {
 		return err
@@ -264,13 +265,20 @@ func run() error {
 	if err := requirePythonPackagesMatchPackage(manifest, pythonPackages, "local Python package evidence"); err != nil {
 		return err
 	}
-	if err := verifyCrossCarrierBinaryIdentity(filepath.Join("artifacts", "package"), filepath.Join("artifacts", "pypi"), localRecords, pythonPackages); err != nil {
+	artifactSnapshot, err := newReleaseArtifactSnapshot(localRecords, pythonPackages)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		returnErr = errors.Join(returnErr, artifactSnapshot.Close())
+	}()
+	if err := artifactSnapshot.VerifyCrossCarrierBinaryIdentity(localRecords, pythonPackages); err != nil {
 		return err
 	}
 	if err := requirePyPIRegistryMatchesLocal(pypiRegistry, pythonPackages, manifest); err != nil {
 		return err
 	}
-	assets, checksums, sbomSubjectChecksums, err := releaseAssets(localRecords, pythonPackages)
+	assets, checksums, sbomSubjectChecksums, err := artifactSnapshot.ReleaseEvidence(localRecords, pythonPackages)
 	if err != nil {
 		return err
 	}
@@ -292,6 +300,9 @@ func run() error {
 	}
 	npmVersion, err := optionalCommandOutput("npm", "--version")
 	if err != nil {
+		return err
+	}
+	if err := artifactSnapshot.RevalidateSources(); err != nil {
 		return err
 	}
 	releaseDir := filepath.Join("artifacts", "release")
@@ -746,51 +757,6 @@ func sortPackRecords(records []packRecord) {
 		}
 		return records[left].Name < records[right].Name
 	})
-}
-
-func releaseAssets(localRecords []packRecord, pythonPackages *pythonPackageSet) ([]assetEvidence, []string, []string, error) {
-	paths := expectedPackageArtifactPaths(localRecords, pythonPackages)
-	if len(paths) == 0 {
-		return nil, nil, nil, fmt.Errorf("release assets require at least one package artifact")
-	}
-	packagePaths, err := optionalGlob(filepath.Join("artifacts", "package", "*.tgz"))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err := requireExactPathSet(packagePaths, expectedPackageArtifactPaths(localRecords, nil), "release package artifact"); err != nil {
-		return nil, nil, nil, err
-	}
-	pythonWheelPaths, err := optionalGlob(filepath.Join("artifacts", "pypi", "*.whl"))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err := requireExactPathSet(pythonWheelPaths, expectedPythonWheelPaths(pythonPackages), "release Python wheel artifact"); err != nil {
-		return nil, nil, nil, err
-	}
-	sbomSubjectPaths := append([]string{}, paths...)
-	paths = append(paths, filepath.Join("artifacts", "release", "sbom.cdx.json"))
-	sort.Strings(paths)
-	sort.Strings(sbomSubjectPaths)
-	assets := make([]assetEvidence, 0, len(paths))
-	checksums := make([]string, 0, len(paths))
-	sbomSubjectChecksums := make([]string, 0, len(sbomSubjectPaths))
-	for _, path := range paths {
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		filename := filepath.Base(path)
-		assets = append(assets, assetEvidence{Filename: filename, Sha256: sum})
-		checksums = append(checksums, fmt.Sprintf("%s  %s", sum, filename))
-	}
-	for _, path := range sbomSubjectPaths {
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		sbomSubjectChecksums = append(sbomSubjectChecksums, fmt.Sprintf("%s  %s", sum, filepath.Base(path)))
-	}
-	return assets, checksums, sbomSubjectChecksums, nil
 }
 
 func checksumLines(paths []string) ([]string, error) {

@@ -8,6 +8,7 @@ import (
 
 const LanguageTypeScript = "typescript"
 const FormatJSON = "json"
+const TypeScriptGeneratorID = "proofkit.json-report-cli-adapter-source.typescript.v2"
 
 var exportedSymbols = []string{
 	"ProofkitCommandRunOptions",
@@ -65,7 +66,7 @@ func (bundle Bundle) JSONValue() map[string]any {
 	return map[string]any{
 		"schemaVersion":   1,
 		"artifactKind":    "proofkit.json-report-cli-adapter-source",
-		"generatorId":     "proofkit.json-report-cli-adapter-source.typescript.v2",
+		"generatorId":     TypeScriptGeneratorID,
 		"language":        bundle.Language,
 		"format":          bundle.Format,
 		"sourceFileName":  "proofkit-json-report-cli-adapter.ts",
@@ -344,24 +345,29 @@ function isProofkitScalarString(value: string): boolean {
     if (unit >= 0xd800 && unit <= 0xdbff) {
       const low = value.charCodeAt(index + 1);
       if (!(low >= 0xdc00 && low <= 0xdfff)) {
-		return false;
+        return false;
       }
       index += 1;
     } else if (unit >= 0xdc00 && unit <= 0xdfff) {
-		return false;
+      return false;
     }
   }
-	return true;
+  return true;
 }
 
 function compareProofkitScalarStrings(left: string, right: string): number {
-  const leftScalars = Array.from(left, (character) => character.codePointAt(0) as number);
-  const rightScalars = Array.from(right, (character) => character.codePointAt(0) as number);
-  const sharedLength = Math.min(leftScalars.length, rightScalars.length);
-  for (let index = 0; index < sharedLength; index += 1) {
-    if (leftScalars[index] !== rightScalars[index]) return (leftScalars[index] as number) - (rightScalars[index] as number);
+  let leftIndex = 0;
+  let rightIndex = 0;
+  while (leftIndex < left.length && rightIndex < right.length) {
+    const leftScalar = left.codePointAt(leftIndex) as number;
+    const rightScalar = right.codePointAt(rightIndex) as number;
+    if (leftScalar !== rightScalar) return leftScalar - rightScalar;
+    leftIndex += leftScalar > 0xffff ? 2 : 1;
+    rightIndex += rightScalar > 0xffff ? 2 : 1;
   }
-  return leftScalars.length - rightScalars.length;
+  if (leftIndex < left.length) return 1;
+  if (rightIndex < right.length) return -1;
+  return 0;
 }
 
 function isProofkitUnsafeScalar(value: number): boolean {
