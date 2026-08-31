@@ -49,9 +49,22 @@ var expectedWorkflowStateMatrix = []expectedWorkflowRow{
 
 func TestWorkflowStatePredicates(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.046999593271228979057731418772803126658652333387186990019354835268016126566224")
-	if !workflowCatalog.ActiveActionsRequireGoverningAuthority {
-		t.Fatal("workflow catalog does not own the active-action governing-authority prerequisite")
-	}
+	t.Run("catalog_owns_active_action_authority_prerequisite", func(t *testing.T) {
+		value, err := project(initialInput())
+		if err != nil {
+			t.Fatal(err)
+		}
+		blocked, clarifications := envelopeBlockers(value, workflowCatalog)
+		if len(blocked) != 1 || len(clarifications) != 1 {
+			t.Fatalf("catalog prerequisite did not block missing authority: blocked=%v clarifications=%v", blocked, clarifications)
+		}
+		permissive := workflowCatalog
+		permissive.ActiveActionsRequireGoverningAuthority = false
+		blocked, clarifications = envelopeBlockers(value, permissive)
+		if len(blocked) != 0 || len(clarifications) != 0 {
+			t.Fatalf("disabled catalog prerequisite retained authority blockers: blocked=%v clarifications=%v", blocked, clarifications)
+		}
+	})
 	t.Run("checkpoint_requires_incomplete", func(t *testing.T) {
 		input := terminalInput()
 		input["checkpoint"] = map[string]any{"state": "not_started"}

@@ -1594,6 +1594,13 @@ func validPackRecords(root string, path string, manifest packageJSON) bool {
 }
 
 func packRecordBytesMatch(root string, record packRecord) bool {
+	return packRecordBytesMatchWithin(root, record, maxNPMTarballBytes)
+}
+
+func packRecordBytesMatchWithin(root string, record packRecord, maxBytes int64) bool {
+	if maxBytes <= 0 {
+		return false
+	}
 	if filepath.Base(record.Filename) != record.Filename || filepath.Clean(record.Filename) != record.Filename || !filepath.IsLocal(record.Filename) {
 		return false
 	}
@@ -1607,7 +1614,7 @@ func packRecordBytesMatch(root string, record packRecord) bool {
 		return false
 	}
 	before, err := rootHandle.Lstat(relativePath)
-	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxNPMTarballBytes {
+	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxBytes {
 		return false
 	}
 	file, err := rootHandle.Open(relativePath)
@@ -1621,7 +1628,7 @@ func packRecordBytesMatch(root string, record packRecord) bool {
 	}
 	sha1Hash := sha1.New()
 	sha512Hash := sha512.New()
-	written, err := io.Copy(io.MultiWriter(sha1Hash, sha512Hash), io.LimitReader(file, maxNPMTarballBytes+1))
+	written, err := io.Copy(io.MultiWriter(sha1Hash, sha512Hash), io.LimitReader(file, maxBytes+1))
 	if err != nil || written != before.Size() || hex.EncodeToString(sha1Hash.Sum(nil)) != record.Shasum || "sha512-"+base64.StdEncoding.EncodeToString(sha512Hash.Sum(nil)) != record.Integrity {
 		return false
 	}

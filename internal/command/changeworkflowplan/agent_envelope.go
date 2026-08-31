@@ -33,7 +33,7 @@ func agentEnvelope(value projection) (map[string]any, error) {
 		})
 	}
 	actionPlan := []map[string]any{}
-	blocked, clarifications := envelopeBlockers(value)
+	blocked, clarifications := envelopeBlockers(value, workflowCatalog)
 	if value.Decision.OutputKind == "next_action" {
 		if len(blocked) == 0 {
 			prompt := value.Prompt
@@ -120,13 +120,13 @@ func agentEnvelope(value projection) (map[string]any, error) {
 	return envelope, nil
 }
 
-func envelopeBlockers(value projection) ([]map[string]any, []map[string]any) {
+func envelopeBlockers(value projection, catalog workflowCatalogDefinition) ([]map[string]any, []map[string]any) {
 	if value.Decision.OutputKind != "next_action" {
 		return []map[string]any{}, []map[string]any{}
 	}
 	blocked := []map[string]any{}
 	clarifications := []map[string]any{}
-	if workflowCatalog.ActiveActionsRequireGoverningAuthority && value.Input.GoverningAuthorityRefID == nil {
+	if catalog.ActiveActionsRequireGoverningAuthority && value.Input.GoverningAuthorityRefID == nil {
 		blocked = append(blocked, map[string]any{
 			"description":    missingOwnerStop,
 			"evidenceRefs":   []any{},

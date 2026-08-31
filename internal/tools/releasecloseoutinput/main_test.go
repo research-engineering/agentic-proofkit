@@ -907,6 +907,25 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 	}
 }
 
+func TestPackRecordBytesMatchEnforcesByteLimit(t *testing.T) {
+	root := t.TempDir()
+	content := []byte("package")
+	writeNPMArtifact(t, root, testNPMTarballName, content)
+	record := packRecord{
+		Filename:  testNPMTarballName,
+		Integrity: testNPMIntegrity(content),
+		Name:      testNPMPackageName,
+		Shasum:    testSHA1(content),
+		Version:   "1.2.3",
+	}
+	if !packRecordBytesMatchWithin(root, record, int64(len(content))) {
+		t.Fatal("exact byte limit rejected a valid npm tarball")
+	}
+	if packRecordBytesMatchWithin(root, record, int64(len(content)-1)) {
+		t.Fatal("limit-minus-one admitted an oversized npm tarball")
+	}
+}
+
 func TestCommandRouteMetricsProducerReachabilityMatchesExactProducerPartition(t *testing.T) {
 	routes := producerReachableCommandRouteMetricsFixture()
 	expectedCommands := producerReachableCLIContractCommands()

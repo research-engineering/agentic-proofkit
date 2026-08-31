@@ -3664,6 +3664,29 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-npm-byte-admission",
+      "witnessId": "proofkit.release-closeout.npm-byte-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        },
+        {
+          "selector": "TestPackRecordBytesMatchEnforcesByteLimit",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestPackRecordBytesMatchEnforcesByteLimit$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.release-artifact-immutable-snapshot",
       "witnessId": "proofkit.release-manifest.immutable-artifact-epoch-falsifier",
       "witnessKind": "contract",
@@ -4797,6 +4820,25 @@
       ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
+      "scenarioId": "proofkit.agent-workflow.catalog-prerequisite-causality",
+      "witnessId": "proofkit.agent-workflow.catalog-prerequisite-causality-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/changeworkflowplan/state_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowStatePredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowStatePredicates$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     },
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-010",

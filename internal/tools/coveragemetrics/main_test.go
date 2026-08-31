@@ -590,6 +590,7 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 
 	for _, scenarioID := range []string{
 		"proofkit.agent-workflow.bounded-safe-text",
+		"proofkit.agent-workflow.catalog-prerequisite-causality",
 		"proofkit.agent-workflow.cli-presentation-capability-product",
 		"proofkit.agent-workflow.installed-carrier-smoke-closure",
 		"proofkit.agent-workflow.native-evidence-guidance-purity",
@@ -624,6 +625,7 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.installed-package-json-abi-smoke",
 		"proofkit.supply-chain-quality.osv-permission-separation",
 		"proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
+		"proofkit.supply-chain-quality.release-closeout-npm-byte-admission",
 		"proofkit.supply-chain-quality.release-platform-python-wheels",
 		"proofkit.supply-chain-quality.release-change-record-projection",
 		"proofkit.supply-chain-quality.release-predecessor-lineage",
