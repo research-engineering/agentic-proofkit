@@ -164,8 +164,9 @@ vulnerability absence, or consumer rollout safety by itself.
   independently bind to the same release binary for every target; a separate
   bounded decoder also compares the final tar and wheel members directly,
   without a mutable intermediate; package-set wheel and embedded-binary digest
-  claims must equal bytes decoded from one immutable snapshot and release
-  closeout recomputes them independently; wheels bind advertised platform
+  claims, including npm SHA-1/SRI, must equal bytes decoded from one immutable
+  snapshot and release closeout recomputes them through repository-confined,
+  bounded, identity-checked non-symlink handles; wheels bind advertised platform
   compatibility to decoded executable bytes, reject version, identity,
   presence, and digest drift, and carry Core Metadata 2.4 plus an exact,
   RECORD-closed repository license payload.

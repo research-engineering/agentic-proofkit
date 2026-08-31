@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,6 +36,7 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 	}
 	records := []packRecord{{Filename: "proofkit.tgz"}}
 	writeNPMCarrier(t, filepath.Join("artifacts", "package", records[0].Filename), "")
+	records[0].Shasum, records[0].Integrity = npmFileClaims(t, filepath.Join("artifacts", "package", records[0].Filename))
 	packages := &pythonPackageSet{Packages: make([]pythonWheelRecord, 0, len(releaseplatform.Targets()))}
 	for _, target := range releaseplatform.Targets() {
 		filename := target.PlatformSuffix + ".whl"
@@ -61,6 +66,31 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 			t.Fatal(err)
 		}
 	})
+	admittedRecords, err := snapshot.AdmittedNPMRecords(records)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(admittedRecords) != 1 || admittedRecords[0].Shasum != records[0].Shasum || admittedRecords[0].Integrity != records[0].Integrity {
+		t.Fatalf("admitted npm records drifted: %#v", admittedRecords)
+	}
+	for _, mutant := range []struct {
+		name   string
+		mutate func(*packRecord)
+	}{
+		{name: "npm shasum", mutate: func(record *packRecord) { record.Shasum = strings.Repeat("0", 40) }},
+		{name: "npm integrity", mutate: func(record *packRecord) { record.Integrity = "sha512-" + strings.Repeat("A", 88) }},
+	} {
+		t.Run(mutant.name, func(t *testing.T) {
+			mutated := append([]packRecord(nil), records...)
+			mutant.mutate(&mutated[0])
+			if err := requireRegistryRecordsMatchLocal(mutated, mutated); err != nil {
+				t.Fatalf("declaration-only control should agree before byte admission: %v", err)
+			}
+			if _, err := snapshot.AdmittedNPMRecords(mutated); err == nil || !strings.Contains(err.Error(), "digest claims do not match") {
+				t.Fatalf("npm digest mutant was admitted: %v", err)
+			}
+		})
+	}
 	if err := snapshot.VerifyCrossCarrierBinaryIdentity(records, packages); err != nil {
 		t.Fatal(err)
 	}
@@ -122,6 +152,17 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 	if _, _, _, err := snapshot.ReleaseEvidence(records, packages); err == nil || !strings.Contains(err.Error(), "snapshot is closed") {
 		t.Fatalf("closed snapshot remained readable: %v", err)
 	}
+}
+
+func npmFileClaims(t *testing.T, path string) (string, string) {
+	t.Helper()
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sha1Sum := sha1.Sum(content)
+	sha512Sum := sha512.Sum512(content)
+	return hex.EncodeToString(sha1Sum[:]), "sha512-" + base64.StdEncoding.EncodeToString(sha512Sum[:])
 }
 
 func containsChecksumLine(lines []string, expected string) bool {

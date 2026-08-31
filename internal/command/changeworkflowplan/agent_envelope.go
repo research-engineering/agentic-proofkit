@@ -126,7 +126,7 @@ func envelopeBlockers(value projection) ([]map[string]any, []map[string]any) {
 	}
 	blocked := []map[string]any{}
 	clarifications := []map[string]any{}
-	if value.Input.GoverningAuthorityRefID == nil {
+	if workflowCatalog.ActiveActionsRequireGoverningAuthority && value.Input.GoverningAuthorityRefID == nil {
 		blocked = append(blocked, map[string]any{
 			"description":    missingOwnerStop,
 			"evidenceRefs":   []any{},

@@ -26,12 +26,14 @@ type actionProfile struct {
 }
 
 type workflowCatalogDefinition struct {
-	Stages            []stageDefinition
-	CheckpointActions []checkpointDefinition
-	ActionProfiles    map[string]actionProfile
+	Stages                                 []stageDefinition
+	CheckpointActions                      []checkpointDefinition
+	ActionProfiles                         map[string]actionProfile
+	ActiveActionsRequireGoverningAuthority bool
 }
 
 var workflowCatalog = workflowCatalogDefinition{
+	ActiveActionsRequireGoverningAuthority: true,
 	Stages: []stageDefinition{
 		{ID: "architecture", FirstAction: "author"},
 		{ID: "design", FirstAction: "author", RequiresIncomingSubject: true},

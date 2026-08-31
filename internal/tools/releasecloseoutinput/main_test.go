@@ -201,6 +201,35 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "symlinked package tarball",
+			criterionID: "proofkit.release_closeout.package_artifacts",
+			mutate: func(root string) {
+				tarballPath := filepath.Join(root, "artifacts", "package", testNPMTarballName)
+				mustRemove(t, tarballPath)
+				outsidePath := filepath.Join(t.TempDir(), "outside.tgz")
+				writeFile(t, outsidePath, "package")
+				if err := os.Symlink(outsidePath, tarballPath); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name:        "symlinked package directory",
+			criterionID: "proofkit.release_closeout.package_artifacts",
+			mutate: func(root string) {
+				replaceDirectoryWithSymlink(t, filepath.Join(root, "artifacts", "package"))
+			},
+		},
+		{
+			name:        "traversing package identity",
+			criterionID: "proofkit.release_closeout.package_artifacts",
+			mutate: func(root string) {
+				manifest := readJSONMap(t, filepath.Join(root, "package.json"))
+				manifest["name"] = "scope/../../../../../outside"
+				writeJSON(t, filepath.Join(root, "package.json"), manifest)
+			},
+		},
+		{
 			name:        "stale npm pack metadata",
 			criterionID: "proofkit.release_closeout.package_artifacts",
 			mutate: func(root string) {
@@ -244,6 +273,13 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			criterionID: "proofkit.release_closeout.python_wrappers",
 			mutate: func(root string) {
 				mustRemove(t, filepath.Join(root, "artifacts", "pypi", testPythonWheelName))
+			},
+		},
+		{
+			name:        "symlinked Python artifact directory",
+			criterionID: "proofkit.release_closeout.python_wrappers",
+			mutate: func(root string) {
+				replaceDirectoryWithSymlink(t, filepath.Join(root, "artifacts", "pypi"))
 			},
 		},
 		{
@@ -2159,6 +2195,17 @@ func toMap(t *testing.T, input completionInput) map[string]any {
 func mustRemove(t *testing.T, path string) {
 	t.Helper()
 	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func replaceDirectoryWithSymlink(t *testing.T, path string) {
+	t.Helper()
+	target := filepath.Join(t.TempDir(), filepath.Base(path))
+	if err := os.Rename(path, target); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
 		t.Fatal(err)
 	}
 }

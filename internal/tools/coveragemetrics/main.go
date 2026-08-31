@@ -590,6 +590,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		if !isRequired {
 			continue
 		}
+		if _, duplicate := seenRequired[key]; duplicate {
+			return fmt.Errorf("required independent-falsifier binding is duplicated: %s/%s", binding.RequirementID, binding.ScenarioID)
+		}
 		wantPath, hasRequiredPath := requiredPaths[key]
 		if !hasRequiredPath {
 			return fmt.Errorf("binding %s has selectors but no exact witness path inventory", binding.ScenarioID)

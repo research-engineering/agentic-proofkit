@@ -1,7 +1,10 @@
 package main
 
 import (
+	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -21,9 +24,11 @@ type releaseArtifactSnapshot struct {
 }
 
 type releaseArtifact struct {
-	filename string
-	sha256   string
-	size     int64
+	filename  string
+	integrity string
+	sha1      string
+	sha256    string
+	size      int64
 }
 
 func newReleaseArtifactSnapshot(localRecords []packRecord, pythonPackages *pythonPackageSet) (*releaseArtifactSnapshot, error) {
@@ -144,6 +149,25 @@ func (snapshot *releaseArtifactSnapshot) AdmittedPythonPackageSet(pythonPackages
 	return &admitted, nil
 }
 
+func (snapshot *releaseArtifactSnapshot) AdmittedNPMRecords(records []packRecord) ([]packRecord, error) {
+	if err := snapshot.requireOpen(); err != nil {
+		return nil, err
+	}
+	admitted := append([]packRecord(nil), records...)
+	for index := range admitted {
+		artifact, ok := snapshot.bySource[filepath.Join("artifacts", "package", admitted[index].Filename)]
+		if !ok {
+			return nil, fmt.Errorf("release artifact snapshot lacks an expected npm tarball")
+		}
+		if admitted[index].Shasum != artifact.sha1 || admitted[index].Integrity != artifact.integrity {
+			return nil, fmt.Errorf("npm pack digest claims do not match immutable tarball bytes")
+		}
+		admitted[index].Shasum = artifact.sha1
+		admitted[index].Integrity = artifact.integrity
+	}
+	return admitted, nil
+}
+
 func (snapshot *releaseArtifactSnapshot) ReleaseEvidence(localRecords []packRecord, pythonPackages *pythonPackageSet) ([]assetEvidence, []string, []string, error) {
 	if err := snapshot.requireOpen(); err != nil {
 		return nil, nil, nil, err
@@ -222,8 +246,10 @@ func snapshotReleaseArtifact(snapshotRoot string, sourcePath string) (releaseArt
 	if err != nil {
 		return releaseArtifact{}, fmt.Errorf("create release snapshot file: %w", err)
 	}
-	hash := sha256.New()
-	written, copyErr := io.Copy(io.MultiWriter(target, hash), io.LimitReader(source, maxReleaseArtifactBytes+1))
+	sha1Hash := sha1.New()
+	sha256Hash := sha256.New()
+	sha512Hash := sha512.New()
+	written, copyErr := io.Copy(io.MultiWriter(target, sha1Hash, sha256Hash, sha512Hash), io.LimitReader(source, maxReleaseArtifactBytes+1))
 	syncErr := target.Sync()
 	closeErr := target.Close()
 	if copyErr != nil {
@@ -245,9 +271,11 @@ func snapshotReleaseArtifact(snapshotRoot string, sourcePath string) (releaseArt
 		return releaseArtifact{}, fmt.Errorf("release artifact changed during immutable admission")
 	}
 	return releaseArtifact{
-		filename: filepath.Base(clean),
-		sha256:   hex.EncodeToString(hash.Sum(nil)),
-		size:     written,
+		filename:  filepath.Base(clean),
+		integrity: "sha512-" + base64.StdEncoding.EncodeToString(sha512Hash.Sum(nil)),
+		sha1:      hex.EncodeToString(sha1Hash.Sum(nil)),
+		sha256:    hex.EncodeToString(sha256Hash.Sum(nil)),
+		size:      written,
 	}, nil
 }
 

@@ -250,16 +250,10 @@ func run() (returnErr error) {
 	if err := requirePublicationMode(npmPublicationMode, "npm", len(registryRecords) > 0); err != nil {
 		return err
 	}
-	if err := requireNPMRegistryMatchesLocal(npmRegistry, registryRecords, localRecords, npmPublicationMode); err != nil {
-		return err
-	}
 	if err := requirePublicationMode(pypiPublicationMode, "pypi", pypiRegistry != nil); err != nil {
 		return err
 	}
 	if err := requirePackRecordsMatchPackage(manifest, localRecords, "local npm package evidence"); err != nil {
-		return err
-	}
-	if err := requireRegistryRecordsMatchLocal(registryRecords, localRecords); err != nil {
 		return err
 	}
 	if err := requirePythonPackagesMatchPackage(manifest, pythonPackages, "local Python package evidence"); err != nil {
@@ -272,6 +266,16 @@ func run() (returnErr error) {
 	defer func() {
 		returnErr = errors.Join(returnErr, artifactSnapshot.Close())
 	}()
+	localRecords, err = artifactSnapshot.AdmittedNPMRecords(localRecords)
+	if err != nil {
+		return err
+	}
+	if err := requireNPMRegistryMatchesLocal(npmRegistry, registryRecords, localRecords, npmPublicationMode); err != nil {
+		return err
+	}
+	if err := requireRegistryRecordsMatchLocal(registryRecords, localRecords); err != nil {
+		return err
+	}
 	if err := artifactSnapshot.VerifyCrossCarrierBinaryIdentity(localRecords, pythonPackages); err != nil {
 		return err
 	}

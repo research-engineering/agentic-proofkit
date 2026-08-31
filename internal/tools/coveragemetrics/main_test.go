@@ -725,6 +725,21 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 			t.Fatalf("surplus workflow binding error=%v", err)
 		}
 	})
+	t.Run("workflow/duplicate-binding", func(t *testing.T) {
+		mutated := cloneBindingFile(bindings)
+		for _, binding := range bindings.Bindings {
+			if binding.ScenarioID != "proofkit.agent-workflow.pure-single-admission-owner" {
+				continue
+			}
+			mutated.Bindings = append(mutated.Bindings, binding)
+			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+			if err == nil || !strings.Contains(err.Error(), "required independent-falsifier binding is duplicated") {
+				t.Fatalf("duplicate workflow binding error=%v", err)
+			}
+			return
+		}
+		t.Fatal("workflow duplicate-binding seed is missing")
+	})
 
 	for _, scenarioID := range []string{
 		"proofkit.package-boundary.cli-output-root-witnesses",

@@ -54,6 +54,7 @@ const (
 	packageGateEnvironmentClass       = "local-go-python"
 	pythonPackageName                 = "agentic-proofkit"
 	pythonWheelBinaryEntry            = "agentic_proofkit/bin/agentic-proofkit"
+	maxNPMTarballBytes          int64 = 256 << 20
 	maxPythonWheelBytes         int64 = 256 << 20
 	maxPythonBinaryBytes        int64 = 64 << 20
 	maxPythonWheelEntries             = 4096
@@ -453,13 +454,17 @@ func buildInput(root string) (completionInput, error) {
 
 func packageArtifactCriterion(root string, manifest packageJSON) criterion {
 	packPath := "artifacts/package/npm-pack.json"
-	tarballPath := filepath.Join("artifacts", "package", npmTarballName(manifest.Name, manifest.Version))
-	ok := fileExists(root, tarballPath) && validPackRecords(root, packPath, manifest)
+	tarballName, nameOK := npmTarballName(manifest.Name, manifest.Version)
+	evidence := []string{"package.json", packPath}
+	if nameOK {
+		evidence = append(evidence, filepath.ToSlash(filepath.Join("artifacts", "package", tarballName)))
+	}
+	ok := nameOK && validPackRecords(root, packPath, manifest)
 	return blockingCriterion(
 		"proofkit.release_closeout.package_artifacts",
 		"Local npm package artifact and npm pack metadata must exist for the current package version.",
 		ok,
-		[]string{"package.json", packPath, filepath.ToSlash(tarballPath)},
+		evidence,
 		[]string{"npm:package:artifact", "internal/tools/packageverify"},
 		[]string{"npm pack metadata is missing, invalid, or does not describe the current package.", "The current package tarball is missing or empty."},
 		[]string{"This criterion does not claim npm registry publication or consumer installation."},
@@ -1564,11 +1569,19 @@ func evidenceRefsIfSatisfied(status string, refs []string) []string {
 	return []string{}
 }
 
-func npmTarballName(name string, version string) string {
-	return strings.Replace(strings.Replace(name, "@", "", 1), "/", "-", 1) + "-" + version + ".tgz"
+func npmTarballName(name string, version string) (string, bool) {
+	filename := strings.Replace(strings.Replace(name, "@", "", 1), "/", "-", 1) + "-" + version + ".tgz"
+	if filename == "" || filepath.Base(filename) != filename || filepath.Clean(filename) != filename || !filepath.IsLocal(filename) {
+		return "", false
+	}
+	return filename, true
 }
 
 func validPackRecords(root string, path string, manifest packageJSON) bool {
+	expectedFilename, ok := npmTarballName(manifest.Name, manifest.Version)
+	if !ok {
+		return false
+	}
 	records, err := readTypedJSON[[]packRecord](root, path)
 	if err != nil || len(records) != 1 {
 		return false
@@ -1576,23 +1589,55 @@ func validPackRecords(root string, path string, manifest packageJSON) bool {
 	record := records[0]
 	return record.Name == manifest.Name &&
 		record.Version == manifest.Version &&
-		record.Filename == npmTarballName(manifest.Name, manifest.Version) &&
+		record.Filename == expectedFilename &&
 		packRecordBytesMatch(root, record)
 }
 
 func packRecordBytesMatch(root string, record packRecord) bool {
-	content, err := os.ReadFile(filepath.Join(root, "artifacts", "package", record.Filename))
-	if err != nil || len(content) == 0 {
+	if filepath.Base(record.Filename) != record.Filename || filepath.Clean(record.Filename) != record.Filename || !filepath.IsLocal(record.Filename) {
 		return false
 	}
-	sha1Sum := sha1.Sum(content)
-	if hex.EncodeToString(sha1Sum[:]) != record.Shasum {
+	relativePath := filepath.Join("artifacts", "package", record.Filename)
+	rootHandle, err := os.OpenRoot(root)
+	if err != nil {
 		return false
 	}
-	hash := sha512.New()
-	_, _ = hash.Write(content)
-	integrity := "sha512-" + base64.StdEncoding.EncodeToString(hash.Sum(nil))
-	return integrity == record.Integrity
+	defer rootHandle.Close()
+	if !artifactDirectoriesAdmitted(rootHandle, relativePath) {
+		return false
+	}
+	before, err := rootHandle.Lstat(relativePath)
+	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxNPMTarballBytes {
+		return false
+	}
+	file, err := rootHandle.Open(relativePath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	opened, err := file.Stat()
+	if err != nil || !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
+		return false
+	}
+	sha1Hash := sha1.New()
+	sha512Hash := sha512.New()
+	written, err := io.Copy(io.MultiWriter(sha1Hash, sha512Hash), io.LimitReader(file, maxNPMTarballBytes+1))
+	if err != nil || written != before.Size() || hex.EncodeToString(sha1Hash.Sum(nil)) != record.Shasum || "sha512-"+base64.StdEncoding.EncodeToString(sha512Hash.Sum(nil)) != record.Integrity {
+		return false
+	}
+	after, statErr := file.Stat()
+	pathAfter, pathErr := rootHandle.Lstat(relativePath)
+	return statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+}
+
+func artifactDirectoriesAdmitted(root *os.Root, path string) bool {
+	for current := filepath.Dir(path); current != "."; current = filepath.Dir(current) {
+		info, err := root.Lstat(current)
+		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return false
+		}
+	}
+	return true
 }
 
 func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pythonWheel, bool) {
@@ -1621,6 +1666,9 @@ func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
 		return false
 	}
 	defer root.Close()
+	if !artifactDirectoriesAdmitted(root, relativePath) {
+		return false
+	}
 	before, err := root.Lstat(relativePath)
 	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxPythonWheelBytes {
 		return false
@@ -1674,12 +1722,16 @@ func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
 }
 
 func releaseChecksumInventoriesMatch(root string, manifest packageJSON) bool {
+	expectedFilename, ok := npmTarballName(manifest.Name, manifest.Version)
+	if !ok {
+		return false
+	}
 	packRecords, err := readTypedJSON[[]packRecord](root, "artifacts/package/npm-pack.json")
 	if err != nil || len(packRecords) != 1 {
 		return false
 	}
 	packRecord := packRecords[0]
-	if packRecord.Name != manifest.Name || packRecord.Version != manifest.Version || packRecord.Filename != npmTarballName(manifest.Name, manifest.Version) {
+	if packRecord.Name != manifest.Name || packRecord.Version != manifest.Version || packRecord.Filename != expectedFilename {
 		return false
 	}
 	wheels, ok := readPythonPackageSet(root, "artifacts/pypi/python-packages.json", manifest)

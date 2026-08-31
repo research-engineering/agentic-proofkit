@@ -5,14 +5,14 @@
   "version": "0.5.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
   "previousPublicAbiSha256": "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9",
-  "currentPublicAbiSha256": "sha256:dd4be9498e7dece58fd354cf7d0aa625c09ba205c7bc7a287d5b28df868981a4",
+  "currentPublicAbiSha256": "sha256:626a47493ebc3bffa3652bc56b013bde88e1989557ef2bfae48e6ecc753add5d",
   "previousTypeScriptGeneratorId": "proofkit.json-report-cli-adapter-source.typescript.v1",
   "currentTypeScriptGeneratorId": "proofkit.json-report-cli-adapter-source.typescript.v2",
   "addedCommandContracts": [
     {
       "command": "change-workflow-plan",
-      "inputContractSha256": "sha256:d60c2cd30f64a98c9c512e16dead65cef9457910b7d59ec332fa3be48bcc8994",
-      "outputContractSha256": "sha256:9ea80c03c46e0ec9a8b51fbff8be32da9d7cc734bb76968fb671bf4bfcae8173"
+      "inputContractSha256": "sha256:76a06617a1538570cd2d068a55645cfb2f570934ac11d89338d55451f3611470",
+      "outputContractSha256": "sha256:161995e61f16d6026640f4eb7d2c73189aa21afded7c0704a7b561301155a490"
     },
     {
       "command": "native-evidence-guidance",
