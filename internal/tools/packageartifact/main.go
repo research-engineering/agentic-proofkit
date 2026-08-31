@@ -7,12 +7,13 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
 func main() {
 	if err := run(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -37,9 +38,14 @@ func (commandRunner) Run(root string, argv []string) (int, error) {
 	command.Env = os.Environ()
 	command.Stdin = os.Stdin
 	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
+	stderr := diagnostic.NewStderrCapture()
+	command.Stderr = stderr
 	if err := command.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		if childErr := stderr.Failure("package artifact child stderr"); childErr != nil {
+			err = fmt.Errorf("%w; %s", err, childErr)
+		}
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			return exitError.ExitCode(), err
 		}
 		return 1, err

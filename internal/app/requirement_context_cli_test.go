@@ -21,10 +21,10 @@ import (
 )
 
 func TestRequirementContextCommandsComposeThroughWholeCLI(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.015005723751943372102052485735054220409079175497974852772238314306849909704926")
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.049495764657602855686625469543032083639688769989400372107516147133048789250421")
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.057489097167034237791564307746461892229693375121512105387246196474554343257848")
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.011976964944325039688029974963654018529660938760094284739788591455188270918568")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.097109304805955804866101416335094065400345464281933061498534528351192063227949")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.057550300858348527262188220465911463572498394140028790265329600017071610078423")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.113360119918311296442974485154252820603874120183883324682989554068354518930712")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.064478426397925014174625523910101201444776310349803627924470071707127905708426")
 	root := t.TempDir()
 	tree := map[string]any{
 		"schemaVersion": json.Number("2"), "treeId": "consumer.spec-tree", "rootNodeId": "consumer.root",

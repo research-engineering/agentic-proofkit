@@ -36,7 +36,7 @@ func TestBuildCodeBaselineEmitsCandidateRequirementsAndBindings(t *testing.T) {
 }
 
 func TestBuildCodeBaselineFailsMissingCandidateRequirementAndAnchor(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.112196325409848896148926885908046594150757046298431637036021245352716060102765")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.041970606749231645876678604048526384598001204543928460199336186892471779260591")
 	t.Parallel()
 
 	input := validCapabilityMapInput("code_baseline")

@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAdmitsWorkspaceRegistryAndRejectsMissingScriptTarget(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.050787429179113333482394128925978139548470597502501014010332804049210083823789")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.063080661639755003031032251305144344878025724678482041048084098938166996025209")
 	record, exitCode, err := Build(validWorkspaceRegistryInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

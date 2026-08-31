@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 2,
+  "previousVersion": "0.3.0",
+  "version": "0.4.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.compact.consumer-contract-v2",
+      "summary": "Compact-aware adoption, pilot, conformance, impact, proof-view, coverage, inventory, context composition, context slicing, semantic diff, traceability graph, browser, source-set, and resolver command contracts advance atomically and reject legacy compact payloads."
+    },
+    {
+      "changeId": "proofkit.compact.declaration-contract-v2",
+      "summary": "Compact requirement proof inputs now use declaration-only v2 discriminators, rename mutation metadata as a caller claim, and remove assurance-shaped proof state and synthetic checked or finding counts."
+    },
+    {
+      "changeId": "proofkit.compact.identity-role-closure",
+      "summary": "Compact bindings now preserve requirement, surface, and scenario identity while witness routes preserve binding, role, selector, and JSON-safe resolution order across every decision-bearing projection."
+    },
+    {
+      "changeId": "proofkit.compact.source-set-v2",
+      "summary": "Compact source-set normalization advances to wrapper, envelope, and source-set schema v2 with declaration-specific roles and fragment contract v3."
+    }
+  ],
+  "additions": [
+    {
+      "changeId": "proofkit.requirement-source.typed-model",
+      "summary": "Add a bounded representation-neutral internal typed model for requirement-source v2 experiments without adding a source codec, persistence format, public CLI, or source cutover."
+    }
+  ],
+  "migration": {
+    "required": true,
+    "steps": [
+      "Replace compact root schema_version 1, authority_state canonical, contract_kind requirement_proof_binding, and normalization_profile proofkit.compact.v1 with schema_version 2, authority_state caller_owned_declaration, contract_kind requirement_proof_route_declaration, and normalization_profile proofkit.compact.declaration.v2.",
+      "Remove proof_contract_state; replace mutation_resistance_state with declared_mutation_resistance_claim_id; and stop consuming proofContractState, mutationResistanceContext, checkedWitnessSelectorCount, and findingCount from compact resolver projections.",
+      "Preserve each compact binding as requirementId, surfaceId, and scenarioId plus bindingRecordId, and preserve each witness route as bindingRecordId, role, selector, JSON-safe resolutionOrderIndex from 0 through 9007199254740991, and witnessRouteId; do not collapse equal selectors across positive and falsification roles.",
+      "Replace changedRecordIds with changedRequirementIds, replace resolver projectionKind proofkit.requirement-proof-resolver with proofkit.requirement-proof-route-resolver, and consume compact-aware adoption, pilot, conformance, impact, proof-view, coverage, inventory, context-compose, context-slice, semantic-diff, traceability-graph, browser, source-set, and resolver parent contracts at their 0.4.0 versions.",
+      "Regenerate requirement proof source sets with wrapper, canonical envelope, canonical contract, and source-set schema version 2, declaration-specific source roles, and fragment contract requirement-proof-route-declarations/fragment/v3."
+    ]
+  },
+  "platformRequirements": [
+    "Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64."
+  ],
+  "knownLimitations": [
+    "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
+    "The requirement-source v2 codec remains unselected until SOURCE-CODEC-01 passes; the typed model is internal and no source cutover is claimed.",
+    "TSX source parsing remains unsupported."
+  ],
+  "rollback": {
+    "strategy": "previous_admitted_version"
+  }
+}

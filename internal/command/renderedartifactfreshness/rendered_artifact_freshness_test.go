@@ -11,7 +11,7 @@ const digestA = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const digestB = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 func TestBuildAdmitsFreshRenderedArtifactAndRejectsDigestDrift(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.068616017028884434484440707243549301670259924558596491643742977971172281661381")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.049617193320719810984976907462617729632660787371463429579186089921079683505007")
 	input := validRenderedArtifactFreshnessInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

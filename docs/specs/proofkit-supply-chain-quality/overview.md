@@ -160,10 +160,16 @@ vulnerability absence, or consumer rollout safety by itself.
   failed attempts retain attempt-scoped action, DOM, network, and source traces
   without continuous screenshot capture plus a bounded best-effort failure
   screenshot, without creating passed proof.
-- `REQ-PROOFKIT-QUALITY-023`: Python wheels independently bind advertised
-  platform compatibility to decoded executable bytes, and the wheel set rejects
-  version, identity, presence, and digest drift; wheels carry Core Metadata 2.4
-  plus an exact, RECORD-closed repository license payload.
+- `REQ-PROOFKIT-QUALITY-023`: npm platform binaries and Python wheels
+  independently bind to the same release binary for every target; a separate
+  bounded decoder also compares the final tar and wheel members directly,
+  without a mutable intermediate; package-set wheel and embedded-binary digest
+  claims, including npm SHA-1/SRI, must equal bytes decoded from one immutable
+  snapshot and release closeout recomputes them through repository-confined,
+  bounded, identity-checked non-symlink handles; wheels bind advertised platform
+  compatibility to decoded executable bytes, reject version, identity,
+  presence, and digest drift, and carry Core Metadata 2.4 plus an exact,
+  RECORD-closed repository license payload.
 - `REQ-PROOFKIT-QUALITY-024`: a closed version-bound machine record binds the
   exact previous/current SemVer pair and compatible/breaking class, declares the
   exact complete current breaking, addition, and migration inventories
@@ -180,6 +186,18 @@ vulnerability absence, or consumer rollout safety by itself.
   commit identities, admitted status expressions, the required aggregate shell
   program, and read-only treatment of an existing release are source-oracle
   invariants.
+- `REQ-PROOFKIT-QUALITY-026`: every public or retained-evidence stable JSON
+  implementation accepts only the repository-pinned Unicode scalar set and matches one
+  preimplementation byte corpus for the pinned control, format, and separator
+  table without changing decoded values.
+- `REQ-PROOFKIT-QUALITY-027`: report-visible diagnostics and structural text
+  apply the same scalar, Unicode-whitespace, control/format, and split-secret
+  taxonomy, replace rejected caller values as a whole without echoing any
+	  fragment, bound diagnostic output, and own dynamic Go/JavaScript error
+	  projection plus failure-only bounded child-process diagnostics for repository
+	  tools. On supported Unix hosts, an installed-carrier success additionally
+	  requires confirmed process-group absence after the parent is reaped; cleanup
+	  timeout is an explicit failure rather than a successful terminal result.
 
 ## Non-Claims
 

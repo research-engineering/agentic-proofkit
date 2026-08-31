@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildRejectsPolicyChangeProvedByNewlyAdmittedProducerTuple(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.023031113506101401680342008180057163880726687061377420204317138240585982404187")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.063770797143416748034373520228921815878182407804123939519151781443908375478611")
 	record, exitCode, err := Build(validProducerPolicySelfProofInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

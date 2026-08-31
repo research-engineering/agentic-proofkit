@@ -15,6 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -31,7 +32,7 @@ const (
 
 func main() {
 	if err := run(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -316,25 +317,25 @@ func runProofkit(command string, inputPath string, outputPath string) error {
 	result := exec.Command(binaryPath, command, "--input", inputPath)
 	output, err := result.CombinedOutput()
 	if err != nil {
-		return proofkitVerdict(command, err, output)
+		return proofkitVerdict(err, output)
 	}
 	if err := os.WriteFile(outputPath, output, 0o644); err != nil {
 		return err
 	}
-	return proofkitVerdict(command, nil, output)
+	return proofkitVerdict(nil, output)
 }
 
-func proofkitVerdict(command string, processErr error, output []byte) error {
+func proofkitVerdict(processErr error, output []byte) error {
 	if processErr != nil {
-		return fmt.Errorf("%s failed: %w\n%s", command, processErr, string(output))
+		return fmt.Errorf("proofkit command failed: %w", processErr)
 	}
 	reportOutput, err := admission.DecodeJSON(bytes.NewReader(output), maxJSONBytes)
 	if err != nil {
-		return fmt.Errorf("%s emitted invalid JSON: %w", command, err)
+		return fmt.Errorf("proofkit command emitted invalid JSON: %w", err)
 	}
 	record, ok := reportOutput.(map[string]any)
 	if !ok || record["state"] != "passed" {
-		return fmt.Errorf("%s did not pass", command)
+		return fmt.Errorf("proofkit command did not pass")
 	}
 	return nil
 }

@@ -22,6 +22,7 @@ const (
 	commandRunnerAdoptionContractEnvelope    commandRunner = "adoption_contract_envelope"
 	commandRunnerAdoptionDoctor              commandRunner = "adoption_doctor"
 	commandRunnerAdoptionWorkflow            commandRunner = "adoption_workflow"
+	commandRunnerAgentWorkflow               commandRunner = "agent_workflow"
 	commandRunnerAgentRoute                  commandRunner = "agent_route"
 	commandRunnerConformanceProfile          commandRunner = "conformance_profile"
 	commandRunnerContractEnvelope            commandRunner = "contract_envelope"
@@ -98,6 +99,7 @@ var commandDescriptors = []commandDescriptor{
 	command("binding-partition", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("bindingpartition")),
 	command("branch-authority", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("branchauthority")),
 	command("capability-map-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("capabilitymapadmission")),
+	command("change-workflow-plan", commandInputRequired, flags("--agent-envelope", "--color", "--format", "--input", "--input-pointer"), modes("json", "text"), ownerDirs("changeworkflowplan"), withRunner(commandRunnerAgentWorkflow), withSemanticAppTests("TestAgentWorkflowCLITruthTable"), withAgentEnvelope(), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withSingleOccurrenceFlags("--agent-envelope", "--color", "--input", "--input-pointer")),
 	command("changed-path-set", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("changedpathset"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("completion-criteria", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("completioncriteria")),
 	command("conformance-profile", commandInputRequired, flags("--format", "--input", "--input-pointer", "--list", "--profile", "--verify"), modes("json", "markdown"), ownerDirs("conformanceprofile"), withRunner(commandRunnerConformanceProfile), withExactlyOneOfFlags("--list", "--profile", "--verify"), withFlagValueRequirement("--format", "markdown", "--profile")),
@@ -115,6 +117,7 @@ var commandDescriptors = []commandDescriptor{
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource), withRequiredFlags("--language")),
 	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
+	command("native-evidence-guidance", commandInputNone, flags("--color", "--format"), modes("json", "text"), ownerDirs("nativeevidenceguidance"), withRunner(commandRunnerAgentWorkflow), withSemanticAppTests("TestAgentWorkflowCLITruthTable"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withSingleOccurrenceFlags("--color")),
 	command("obligation-decision", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("obligationdecision"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency")),
 	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope(), withFlagValueRequirement("--pilot", "all", "--contract-envelope")),
@@ -175,6 +178,7 @@ var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerAdoptionContractEnvelope:    {},
 	commandRunnerAdoptionDoctor:              {},
 	commandRunnerAdoptionWorkflow:            {},
+	commandRunnerAgentWorkflow:               {},
 	commandRunnerAgentRoute:                  {},
 	commandRunnerConformanceProfile:          {},
 	commandRunnerContractEnvelope:            {},
@@ -220,7 +224,7 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 		option(&descriptor)
 	}
 	if slices.Contains(descriptor.allowedFlags, "--format") {
-		descriptor.singleOccurrenceFlags = []string{"--format"}
+		descriptor.singleOccurrenceFlags = sortedUniqueStrings(append(descriptor.singleOccurrenceFlags, "--format"))
 	}
 	explicitFlagChoices := cloneStringMap(descriptor.flagValueChoices)
 	if metadata, ok := generatedCommandContractMetadataByName[name]; ok {
@@ -347,6 +351,12 @@ func withSingleOccurrenceFlags(flags ...string) commandDescriptorOption {
 	return func(descriptor *commandDescriptor) {
 		descriptor.singleOccurrenceFlags = append(descriptor.singleOccurrenceFlags, flags...)
 	}
+}
+
+func sortedUniqueStrings(values []string) []string {
+	result := cloneStrings(values)
+	sort.Strings(result)
+	return slices.Compact(result)
 }
 
 func flags(values ...string) []string {

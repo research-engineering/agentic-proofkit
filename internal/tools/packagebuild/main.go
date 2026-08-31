@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
@@ -24,7 +25,7 @@ type repositoryJSON struct {
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -82,8 +83,12 @@ func run(args []string) error {
 			"GOARCH="+target.GOARCH,
 		)
 		command.Stdout = os.Stdout
-		command.Stderr = os.Stderr
+		stderr := diagnostic.NewStderrCapture()
+		command.Stderr = stderr
 		if err := command.Run(); err != nil {
+			if childErr := stderr.Failure("go build stderr"); childErr != nil {
+				return fmt.Errorf("build %s/%s: %w; %s", target.GOOS, target.GOARCH, err, childErr)
+			}
 			return fmt.Errorf("build %s/%s: %w", target.GOOS, target.GOARCH, err)
 		}
 	}

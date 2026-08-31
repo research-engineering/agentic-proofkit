@@ -2,12 +2,14 @@ package main
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"crypto/sha1"
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -296,6 +298,24 @@ func TestReadManifestFromTarRejectsUnknownPackageManifestFields(t *testing.T) {
 	}
 	if strings.Contains(err.Error(), secretShapedKey) || strings.Contains(err.Error(), "ghp_") {
 		t.Fatalf("readManifestFromTar() leaked unsupported field name: %v", err)
+	}
+}
+
+func TestPackageVerifierDiagnosticNondisclosure(t *testing.T) {
+	for _, test := range []struct {
+		value string
+		want  string
+	}{
+		{value: "package verification failed for api_key=abc123456789", want: "<redacted-diagnostic-value>\n"},
+		{value: "package verification failed for line\nbreak", want: "<redacted-diagnostic-value>\n"},
+		{value: "package verification failed for unsafe\u200bvalue", want: "<redacted-diagnostic-value>\n"},
+		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "<redacted-diagnostic-value>\n"},
+	} {
+		var output bytes.Buffer
+		writeVerificationFailure(&output, errors.New(test.value))
+		if got := output.String(); got != test.want {
+			t.Fatalf("visible package diagnostic = %q, want %q", got, test.want)
+		}
 	}
 }
 
@@ -1412,6 +1432,37 @@ func TestVerifyRootPackageRejectsEachForbiddenRootEntry(t *testing.T) {
 	}
 }
 
+func TestPackedPlatformBinariesMatchReleaseBinaryBytes(t *testing.T) {
+	root := t.TempDir()
+	withWorkingDirectory(t, root)
+	entries := map[string]string{}
+	current, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		t.Fatal(err)
+	}
+	nonCurrentEntry := ""
+	for _, target := range releaseplatform.Targets() {
+		content := []byte("release-binary-" + target.PlatformSuffix)
+		writeFileBytes(t, filepath.FromSlash(target.BinaryPath), content)
+		entries[target.PackageTarEntry] = string(content)
+		if target.PlatformSuffix != current.PlatformSuffix && nonCurrentEntry == "" {
+			nonCurrentEntry = target.PackageTarEntry
+		}
+	}
+	artifact := tarballArtifact(t, writePackageTarball(t, entries))
+	if err := verifyPackedPlatformBinariesMatchSource(artifact); err != nil {
+		t.Fatalf("matching carrier bytes rejected: %v", err)
+	}
+	if nonCurrentEntry == "" {
+		t.Fatal("test requires at least one non-current release target")
+	}
+	entries[nonCurrentEntry] = "mutated-non-current-binary"
+	artifact = tarballArtifact(t, writePackageTarball(t, entries))
+	if err := verifyPackedPlatformBinariesMatchSource(artifact); err == nil || !strings.Contains(err.Error(), "does not match release binary") {
+		t.Fatalf("mutated non-current carrier error=%v", err)
+	}
+}
+
 func TestVerifyTextPolicySmokeReportRequiresJSONABI(t *testing.T) {
 	wantSummary := textPolicySmokeSummary{
 		CheckedTextFileCount: 1,
@@ -1592,7 +1643,7 @@ export function runProofkitNoInputJsonCommand(): void {
 }
 
 func jsonAdapterSmokeStdout(source string, sourceHash string, artifactKind string) []byte {
-	return []byte(`{"schemaVersion":1,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v1","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
+	return []byte(`{"schemaVersion":1,"artifactKind":` + quotedJSON(artifactKind) + `,"format":"json","generatorId":"proofkit.json-report-cli-adapter-source.typescript.v2","language":"typescript","source":` + quotedJSON(source) + `,"sourceFileName":"proofkit-json-report-cli-adapter.ts","sourceSha256":` + quotedJSON(sourceHash) + `,"summary":{"exportedSymbolCount":24,"lineCount":600}}`)
 }
 
 func quotedJSON(value string) string {

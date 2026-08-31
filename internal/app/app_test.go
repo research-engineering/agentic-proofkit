@@ -180,6 +180,30 @@ func TestJSONLayoutUsesDescriptorParsedFlags(t *testing.T) {
 	}
 }
 
+func TestCommandHelpUsesDescriptorParsedTokenRoles(t *testing.T) {
+	for _, descriptor := range commandDescriptors {
+		valueFlags := make([]string, 0)
+		for _, flag := range descriptor.allowedFlags {
+			if flagRequiresValue(flag) {
+				valueFlags = append(valueFlags, flag)
+			}
+		}
+		for _, valueFlag := range valueFlags {
+			for _, helpLikeValue := range []string{"--help", "-h"} {
+				t.Run(descriptor.name+"/"+valueFlag+"/"+helpLikeValue, func(t *testing.T) {
+					parsed := classifyDescriptorArguments(descriptor, []string{valueFlag, helpLikeValue})
+					if parsed.present["--help"] || parsed.present["-h"] {
+						t.Fatalf("descriptor parser reclassified %s value %s as command help: %#v", valueFlag, helpLikeValue, parsed)
+					}
+					if !slices.Equal(parsed.values[valueFlag], []string{helpLikeValue}) {
+						t.Fatalf("descriptor parser value for %s = %v, want %s", valueFlag, parsed.values[valueFlag], helpLikeValue)
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestJSONLayoutPreservesFlagShapedInputPathAtProcessBoundary(t *testing.T) {
 	t.Chdir(t.TempDir())
 	treeInput := `{"schemaVersion":2,"treeId":"consumer.tree","rootNodeId":"spec.root","callerAnnotations":[],"edges":[],"overlays":[],"nodes":[{"nodeId":"spec.root","nodeKind":"meta_spec","label":"Root","displayOrder":1,"callerAnnotations":[],"sourceRefs":[{"sourceRefId":"spec.root.requirements","sourceRefKind":"source_id","sourceRole":"requirements","sourceId":"consumer.requirements"}]}]}`
@@ -249,7 +273,7 @@ func TestDuplicateFormatIsRejectedBeforeInputRead(t *testing.T) {
 }
 
 func TestSelfCheckRejectsDuplicateKeys(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031584524343444160231600312979302740662395207275659075147050938676784401609593")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.001861517770766202473963888516884835242792304213831715864713877788735391460974")
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	status := Run(t.Context(), []string{"self-check", "--input", "-"}, strings.NewReader(`{"schemaVersion":1,"schemaVersion":2}`), &stdout, &stderr)
@@ -621,7 +645,7 @@ func TestCLIDiagnosticsRedactSecretLikeCallerLabels(t *testing.T) {
 			if strings.Contains(stderr.String(), secret) {
 				t.Fatalf("stderr leaked secret-shaped caller label: %s", stderr.String())
 			}
-			if !strings.Contains(stderr.String(), "<redacted-secret-like-value>") {
+			if !strings.Contains(stderr.String(), "<redacted-diagnostic-value>") {
 				t.Fatalf("stderr=%q, want redaction placeholder", stderr.String())
 			}
 		})
@@ -729,7 +753,7 @@ func TestCLIDiagnosticsRedactControlAndOversizedCallerLabels(t *testing.T) {
 			name:       "control rune",
 			command:    "bad\ncommand",
 			forbidden:  "bad\ncommand",
-			wantMarker: "<redacted-control-rune>",
+			wantMarker: "<redacted-diagnostic-value>",
 			maxStderr:  128,
 		},
 		{

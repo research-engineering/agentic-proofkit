@@ -39,6 +39,31 @@ func TestSelectRFC6901Pointers(t *testing.T) {
 	}
 }
 
+func TestParseAndSelectParsedPreserveSelectionSemantics(t *testing.T) {
+	input := map[string]any{"a/b": []any{map[string]any{"a~b": "selected"}}}
+	pointer, err := Parse("/a~1b/0/a~0b")
+	if err != nil {
+		t.Fatalf("Parse returned error: %v", err)
+	}
+	got, err := SelectParsed(input, pointer)
+	if err != nil {
+		t.Fatalf("SelectParsed returned error: %v", err)
+	}
+	if got != "selected" {
+		t.Fatalf("SelectParsed returned %v, want selected", got)
+	}
+}
+
+func TestParseRejectsInvalidSyntaxWithoutDocumentAccess(t *testing.T) {
+	for _, value := range []string{"not-a-pointer", "/bad~", "/bad~2escape", string([]byte{'/', 0xff})} {
+		t.Run(value, func(t *testing.T) {
+			if _, err := Parse(value); err == nil {
+				t.Fatal("expected syntax error")
+			}
+		})
+	}
+}
+
 func TestSelectRejectsInvalidPointers(t *testing.T) {
 	input := map[string]any{"items": []any{"first"}}
 	for _, pointer := range []string{

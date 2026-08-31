@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildAdmitsBoundedCustomRuleAndRejectsUnsafeEffects(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.025087881226507484990874681833161710116470838935948976618942966583527556385445")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.046497704421132552698102058363700040328502241838693800191968778531845096719907")
 	record, exitCode, err := Build(validCustomRuleBoundaryInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

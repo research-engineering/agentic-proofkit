@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildBlocksUnsatisfiedBlockingCriterion(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.013180397593748965161681129039250936414813610855632261268268126314868701130095")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.060093238757751048087414494533172778045450968319349399251124235403640311929783")
 	record, exitCode, err := Build(validCompletionCriteriaInput("satisfied"))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

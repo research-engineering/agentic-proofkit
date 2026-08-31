@@ -2,7 +2,7 @@ module github.com/research-engineering/agentic-proofkit
 
 go 1.26
 
-toolchain go1.26.5
+toolchain go1.26.7
 
 tool (
 	github.com/rhysd/actionlint/cmd/actionlint
@@ -13,6 +13,7 @@ tool (
 require go.yaml.in/yaml/v4 v4.0.0-rc.3 // indirect
 
 require (
+	github.com/mattn/go-isatty v0.0.22
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/mod v0.37.0
 	golang.org/x/tools v0.47.0
@@ -25,7 +26,6 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/google/renameio v1.0.1 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/mattn/go-runewidth v0.0.24 // indirect
 	github.com/mattn/go-shellwords v1.0.13 // indirect
 	github.com/rhysd/actionlint v1.7.12 // indirect

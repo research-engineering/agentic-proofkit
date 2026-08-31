@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -15,6 +16,24 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
+
+func TestDiagnosticsDoNotLeakArtifactValues(t *testing.T) {
+	for _, test := range []struct {
+		value string
+		want  string
+	}{
+		{value: "artifact api_key=abc123456789 failed", want: "<redacted-diagnostic-value>\n"},
+		{value: "artifact line\nbreak failed", want: "<redacted-diagnostic-value>\n"},
+		{value: "artifact unsafe\u200bvalue failed", want: "<redacted-diagnostic-value>\n"},
+		{value: string([]byte{'p', 'a', 't', 'h', 0xff}), want: "<redacted-diagnostic-value>\n"},
+	} {
+		var output bytes.Buffer
+		writeBrowserProofFailure(&output, errors.New(test.value))
+		if got := output.String(); got != test.want {
+			t.Fatalf("visible browser proof diagnostic = %q, want %q", got, test.want)
+		}
+	}
+}
 
 func TestInputManifestClosesGoDependenciesAndWitnessPolicy(t *testing.T) {
 	root, err := repositoryRoot()

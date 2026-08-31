@@ -10,7 +10,7 @@ import (
 )
 
 func TestBuildAdmitsCurrentDurableDocumentAndRejectsAuthorityDrift(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.002977780838547275321268818409231101675805953197916588621169638796768812025486")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.102216015058845344738900781252724796284847214615642762869434165828132457895378")
 	record, exitCode, err := Build(validDocumentLifecycleInput())
 	if err != nil {
 		t.Fatalf("Build() error=%v", err)

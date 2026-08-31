@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"crypto/sha1"
 	"crypto/sha512"
 	"encoding/base64"
@@ -14,17 +15,20 @@ import (
 	"io"
 	"maps"
 	"os"
-	"os/exec"
 	pathpkg "path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 const rootPackageName = "@research-engineering/agentic-proofkit"
@@ -32,6 +36,7 @@ const rootBinaryName = "agentic-proofkit"
 const installedNPMExecCommandPrefix = "npm exec --offline -- agentic-proofkit "
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
+const packageVerifyProcessTimeout = 30 * time.Second
 
 var (
 	packageCoordinatePattern = regexp.MustCompile(`(?:@research-engineering/agentic-proofkit|agentic-proofkit)@v?[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?`)
@@ -172,9 +177,13 @@ type jsonAdapterSourceSmokeSummary struct {
 
 func main() {
 	if err := runVerifier(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		writeVerificationFailure(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func writeVerificationFailure(writer io.Writer, err error) {
+	diagnostic.WriteError(writer, err)
 }
 
 func runVerifier() error {
@@ -215,6 +224,9 @@ func runVerifier() error {
 	if err := verifyPackedOwnerRecordsMatchSource(rootPackage); err != nil {
 		return err
 	}
+	if err := verifyPackedPlatformBinariesMatchSource(rootPackage); err != nil {
+		return err
+	}
 	if err := verifyNoStalePackageDocs(rootPackage); err != nil {
 		return err
 	}
@@ -243,6 +255,23 @@ func verifyPackedOwnerRecordsMatchSource(artifact rootPackageArtifact) error {
 		}
 		if !bytes.Equal(packed, source) {
 			return fmt.Errorf("packed owner record %s does not match source owner %s", entry, sourcePath)
+		}
+	}
+	return nil
+}
+
+func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error {
+	for _, target := range releaseplatform.Targets() {
+		packed, err := readTarFileFromBytes(artifact.Content, target.PackageTarEntry)
+		if err != nil {
+			return err
+		}
+		source, err := os.ReadFile(filepath.FromSlash(target.BinaryPath))
+		if err != nil {
+			return fmt.Errorf("read release binary for %s: %w", target.PlatformSuffix, err)
+		}
+		if !bytes.Equal(packed, source) {
+			return fmt.Errorf("packed platform binary does not match release binary for %s", target.PlatformSuffix)
 		}
 	}
 	return nil
@@ -548,6 +577,8 @@ func allowedRootEntry(path string) bool {
 		"package/proofkit/receipt-producer-policy.json":                              {},
 		"package/proofkit/requirement-bindings.json":                                 {},
 		"package/proofkit/witness-plan.json":                                         {},
+		"package/docs/specs/proofkit-agent-workflow/overview.md":                     {},
+		"package/docs/specs/proofkit-agent-workflow/requirements.v1.json":            {},
 		"package/docs/specs/proofkit-consumer-infra-retirement/overview.md":          {},
 		"package/docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json": {},
 		"package/docs/specs/proofkit-package-boundary/overview.md":                   {},
@@ -804,7 +835,11 @@ func readTarTextEntriesFromGzip(gzipReader io.Reader) (map[string]string, error)
 		if err != nil {
 			return nil, err
 		}
-		entries[header.Name] = string(content)
+		decoded, err := unicodepolicy.DecodeUTF8(content)
+		if err != nil {
+			return nil, fmt.Errorf("package text entry is not valid UTF-8")
+		}
+		entries[header.Name] = decoded
 	}
 	return entries, nil
 }
@@ -1620,9 +1655,20 @@ func withExactTarballConsumer(artifact rootPackageArtifact, verify func(string) 
 }
 
 func run(dir string, name string, args ...string) ([]byte, error) {
-	command := exec.Command(name, args...)
-	command.Dir = dir
-	return command.CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), packageVerifyProcessTimeout)
+	defer cancel()
+	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory:  dir,
+		Executable: name,
+	}, workflowsmoke.Invocation{Args: args, StdinClass: workflowsmoke.StdinBytes})
+	if err != nil {
+		return nil, err
+	}
+	output := append(append([]byte(nil), result.Stdout...), result.Stderr...)
+	if result.ExitCode != 0 {
+		return output, fmt.Errorf("process exited with code %d", result.ExitCode)
+	}
+	return output, nil
 }
 
 type installedCommandOperation func(string, []byte, ...string) (installedCommandResult, error)
@@ -1776,9 +1822,13 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 
 func installedRootHelpFamilyArgv(content []byte) ([]string, error) {
 	const routeFragment = "agentic-proofkit help families"
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return nil, fmt.Errorf("installed README is not valid UTF-8")
+	}
 	var command string
 	matchCount := 0
-	for _, line := range strings.Split(string(content), "\n") {
+	for _, line := range strings.Split(decoded, "\n") {
 		if !strings.Contains(line, routeFragment) {
 			continue
 		}
@@ -1895,7 +1945,11 @@ func parseInstalledLeafHelpRoutes(help string) ([]installedHelpRoute, error) {
 }
 
 func requireInstalledInvocationSyntax(content []byte, command string) error {
-	lines := strings.Split(string(content), "\n")
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return fmt.Errorf("installed README is not valid UTF-8")
+	}
+	lines := strings.Split(decoded, "\n")
 	var usage string
 	var installed string
 	usageCount := 0
@@ -1976,7 +2030,11 @@ func installedREADMEPath(content []byte) (string, error) {
 	const expected = "node_modules/@research-engineering/agentic-proofkit/README.md"
 	var discovered string
 	matchCount := 0
-	for _, line := range strings.Split(string(content), "\n") {
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return "", fmt.Errorf("installed README is not valid UTF-8")
+	}
+	for _, line := range strings.Split(decoded, "\n") {
 		line = strings.TrimLeft(line, " \t")
 		if !strings.HasPrefix(line, prefix) {
 			continue
@@ -2167,7 +2225,10 @@ func installedContractPresetIDs(content []byte) ([]string, error) {
 }
 
 func installedREADMEFirstInput(content []byte) ([]string, []byte, error) {
-	text := string(content)
+	text, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return nil, nil, fmt.Errorf("installed README is not valid UTF-8")
+	}
 	const startMarker = "<!-- proofkit:first-valid-input:start -->"
 	const endMarker = "<!-- proofkit:first-valid-input:end -->"
 	if strings.Count(text, startMarker) != 1 || strings.Count(text, endMarker) != 1 {
@@ -2386,6 +2447,13 @@ func verifyInstalledJSONABI(consumer string) error {
 	if err := verifyJSONAdapterSourceSmoke(consumer); err != nil {
 		return err
 	}
+	if err := workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
+		Directory:  consumer,
+		Executable: "npm",
+		Prefix:     []string{"exec", "--offline", "--", "agentic-proofkit"},
+	}); err != nil {
+		return fmt.Errorf("outside consumer agent-workflow smoke failed: %w", err)
+	}
 	return nil
 }
 
@@ -2423,8 +2491,8 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 	if report.SourceFileName != "proofkit-json-report-cli-adapter.ts" {
 		return fmt.Errorf("sourceFileName=%s, want proofkit-json-report-cli-adapter.ts", report.SourceFileName)
 	}
-	if report.GeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v1" {
-		return fmt.Errorf("generatorId=%s, want proofkit.json-report-cli-adapter-source.typescript.v1", report.GeneratorID)
+	if report.GeneratorID != jsonreportcliadaptersource.TypeScriptGeneratorID {
+		return fmt.Errorf("generatorId=%s, want %s", report.GeneratorID, jsonreportcliadaptersource.TypeScriptGeneratorID)
 	}
 	if report.Source != expectedSource {
 		return fmt.Errorf("json adapter source does not match current owner source")
@@ -2461,23 +2529,16 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 }
 
 func runWithInput(dir string, name string, input []byte, args ...string) (installedCommandResult, error) {
-	command := exec.Command(name, args...)
-	command.Dir = dir
-	command.Stdin = bytes.NewReader(input)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	command.Stdout = &stdout
-	command.Stderr = &stderr
-	err := command.Run()
-	exitCode := 0
+	ctx, cancel := context.WithTimeout(context.Background(), packageVerifyProcessTimeout)
+	defer cancel()
+	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory:  dir,
+		Executable: name,
+	}, workflowsmoke.Invocation{Args: args, Input: input, StdinClass: workflowsmoke.StdinBytes})
 	if err != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
-			return installedCommandResult{}, err
-		}
-		exitCode = exitErr.ExitCode()
+		return installedCommandResult{}, err
 	}
-	return installedCommandResult{ExitCode: exitCode, Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, nil
+	return installedCommandResult{ExitCode: result.ExitCode, Stdout: result.Stdout, Stderr: result.Stderr}, nil
 }
 
 func runInstalledWithInput(dir string, input []byte, args ...string) (installedCommandResult, error) {
@@ -2553,7 +2614,7 @@ func verifyOutsideConsumerImports(consumer string) error {
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 const require = createRequire(import.meta.url);
-const payload = JSON.parse(readFileSync("proofkit-import-boundary.json", "utf8"));
+const payload = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(readFileSync("proofkit-import-boundary.json")));
 const manifest = require(payload.manifestSpecifier);
 if (manifest.name !== payload.expectedManifestName) {
   throw new Error("package.json export did not resolve package manifest");

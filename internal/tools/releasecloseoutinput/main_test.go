@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/sha1"
@@ -200,6 +201,35 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "symlinked package tarball",
+			criterionID: "proofkit.release_closeout.package_artifacts",
+			mutate: func(root string) {
+				tarballPath := filepath.Join(root, "artifacts", "package", testNPMTarballName)
+				mustRemove(t, tarballPath)
+				outsidePath := filepath.Join(t.TempDir(), "outside.tgz")
+				writeFile(t, outsidePath, "package")
+				if err := os.Symlink(outsidePath, tarballPath); err != nil {
+					t.Fatal(err)
+				}
+			},
+		},
+		{
+			name:        "symlinked package directory",
+			criterionID: "proofkit.release_closeout.package_artifacts",
+			mutate: func(root string) {
+				replaceDirectoryWithSymlink(t, filepath.Join(root, "artifacts", "package"))
+			},
+		},
+		{
+			name:        "traversing package identity",
+			criterionID: "proofkit.release_closeout.package_artifacts",
+			mutate: func(root string) {
+				manifest := readJSONMap(t, filepath.Join(root, "package.json"))
+				manifest["name"] = "scope/../../../../../outside"
+				writeJSON(t, filepath.Join(root, "package.json"), manifest)
+			},
+		},
+		{
 			name:        "stale npm pack metadata",
 			criterionID: "proofkit.release_closeout.package_artifacts",
 			mutate: func(root string) {
@@ -246,6 +276,13 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 			},
 		},
 		{
+			name:        "symlinked Python artifact directory",
+			criterionID: "proofkit.release_closeout.python_wrappers",
+			mutate: func(root string) {
+				replaceDirectoryWithSymlink(t, filepath.Join(root, "artifacts", "pypi"))
+			},
+		},
+		{
 			name:        "stale Python package metadata",
 			criterionID: "proofkit.release_closeout.python_wrappers",
 			mutate: func(root string) {
@@ -256,6 +293,26 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 						map[string]any{"name": testPythonPackageName, "version": "9.9.9", "filename": testPythonWheelName},
 					},
 				})
+			},
+		},
+		{
+			name:        "stale Python wheel digest",
+			criterionID: "proofkit.release_closeout.python_wrappers",
+			mutate: func(root string) {
+				path := filepath.Join(root, "artifacts", "pypi", "python-packages.json")
+				record := readJSONMap(t, path)
+				record["packages"].([]any)[0].(map[string]any)["sha256"] = strings.Repeat("0", 64)
+				writeJSON(t, path, record)
+			},
+		},
+		{
+			name:        "stale Python binary digest",
+			criterionID: "proofkit.release_closeout.python_wrappers",
+			mutate: func(root string) {
+				path := filepath.Join(root, "artifacts", "pypi", "python-packages.json")
+				record := readJSONMap(t, path)
+				record["packages"].([]any)[0].(map[string]any)["binarySha256"] = strings.Repeat("0", 64)
+				writeJSON(t, path, record)
 			},
 		},
 		{
@@ -850,6 +907,25 @@ func TestBuildInputFailsClosedForEachBlockingEvidenceClass(t *testing.T) {
 	}
 }
 
+func TestPackRecordBytesMatchEnforcesByteLimit(t *testing.T) {
+	root := t.TempDir()
+	content := []byte("package")
+	writeNPMArtifact(t, root, testNPMTarballName, content)
+	record := packRecord{
+		Filename:  testNPMTarballName,
+		Integrity: testNPMIntegrity(content),
+		Name:      testNPMPackageName,
+		Shasum:    testSHA1(content),
+		Version:   "1.2.3",
+	}
+	if !packRecordBytesMatchWithin(root, record, int64(len(content))) {
+		t.Fatal("exact byte limit rejected a valid npm tarball")
+	}
+	if packRecordBytesMatchWithin(root, record, int64(len(content)-1)) {
+		t.Fatal("limit-minus-one admitted an oversized npm tarball")
+	}
+}
+
 func TestCommandRouteMetricsProducerReachabilityMatchesExactProducerPartition(t *testing.T) {
 	routes := producerReachableCommandRouteMetricsFixture()
 	expectedCommands := producerReachableCLIContractCommands()
@@ -1305,14 +1381,14 @@ func populateCompleteFixture(t *testing.T, root string) {
 	runFixtureGit(t, root, "add", ".gitignore", "go.mod", "go.sum", "package.json", "proofkit", "release", "source.txt")
 	runFixtureGit(t, root, "commit", "-m", "fixture")
 	writeNPMArtifact(t, root, testNPMTarballName, []byte("package"))
+	wheelSHA256, binarySHA256 := writePythonWheelFixture(t, root)
 	writeJSON(t, filepath.Join(root, "artifacts", "pypi", "python-packages.json"), map[string]any{
 		"packageName":    testPythonPackageName,
 		"packageVersion": "1.2.3",
 		"packages": []any{
-			map[string]any{"name": testPythonPackageName, "version": "1.2.3", "filename": testPythonWheelName},
+			map[string]any{"binarySha256": binarySHA256, "filename": testPythonWheelName, "name": testPythonPackageName, "sha256": wheelSHA256, "version": "1.2.3"},
 		},
 	})
-	writeFile(t, filepath.Join(root, "artifacts", "pypi", testPythonWheelName), "wheel")
 	changeRecord, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(releasechange.RecordPath)))
 	if err != nil {
 		t.Fatal(err)
@@ -1331,6 +1407,42 @@ func populateCompleteFixture(t *testing.T, root string) {
 	})
 	execution := writePackageArtifactExecutionFixture(t, root)
 	writeLocalSelfEvidence(t, root, execution)
+}
+
+func writePythonWheelFixture(t *testing.T, root string) (string, string) {
+	t.Helper()
+	path := filepath.Join(root, "artifacts", "pypi", testPythonWheelName)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wheel := zip.NewWriter(file)
+	header := &zip.FileHeader{Name: pythonWheelBinaryEntry, Method: zip.Store}
+	header.SetMode(0o755)
+	member, err := wheel.CreateHeader(header)
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := []byte("fixture-binary")
+	if _, err := member.Write(binary); err != nil {
+		t.Fatal(err)
+	}
+	if err := wheel.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wheelDigest := sha256.Sum256(content)
+	binaryDigest := sha256.Sum256(binary)
+	return hex.EncodeToString(wheelDigest[:]), hex.EncodeToString(binaryDigest[:])
 }
 
 func releaseChangeRecordFixture() map[string]any {
@@ -2102,6 +2214,17 @@ func toMap(t *testing.T, input completionInput) map[string]any {
 func mustRemove(t *testing.T, path string) {
 	t.Helper()
 	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func replaceDirectoryWithSymlink(t *testing.T, path string) {
+	t.Helper()
+	target := filepath.Join(t.TempDir(), filepath.Base(path))
+	if err := os.Rename(path, target); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(target, path); err != nil {
 		t.Fatal(err)
 	}
 }

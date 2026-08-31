@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 )
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }

@@ -57,7 +57,7 @@ func TestBuildRejectsUnanchoredProofRouteCandidate(t *testing.T) {
 }
 
 func TestBuildDiscoveryDraftEmitsCandidateOnlyInventory(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.096318819151227230864150155118957615254328016145569586137207173056023856414640")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.079852718523712688279279462908322529234519011079936607265160783492663433095905")
 	record, exitCode, err := BuildDiscoveryDraft(validDiscoveryDraft())
 	if err != nil {
 		t.Fatalf("BuildDiscoveryDraft() error = %v", err)
@@ -283,7 +283,7 @@ func TestBuildDiscoveryDraftRejectsUnsafeAndContradictoryFacts(t *testing.T) {
 }
 
 func TestBuildRejectsIncompleteDeclaredOracleMetadataAndDuplicateFalsifier(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.040537407725353522942442370438759713872175874575309347907987603239091331652992")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.040558695906086109940767673091001712973305283651826863842030853731406212097284")
 	input := validInventory(t)
 	entries := input.(map[string]any)["entries"].([]any)
 	first := cloneMap(entries[0].(map[string]any))

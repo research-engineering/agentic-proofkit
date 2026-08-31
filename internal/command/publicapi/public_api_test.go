@@ -124,7 +124,7 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsUnsupportedSourceSyntaxExtension
 }
 
 func TestVerifyTypeScriptPackagePublicAPIRejectsExportsFromDifferentDeclaredSource(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.004792030078784317588665526148252597261312386806264755602821268098843148288440")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.102601143831468331304027263274996643907811804363888943260186270355665494704279")
 	repoRoot := writeTypeScriptPackageFixture(t)
 	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
 	if err := os.WriteFile(filepath.Join(packageRoot, "src", "other.ts"), []byte(`export const OTHER = 1;`), 0o600); err != nil {
@@ -160,7 +160,7 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsExportsFromDifferentDeclaredSour
 }
 
 func TestVerifyTypeScriptPackagePublicAPIRejectsExportStar(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.060836943116930548342946569118531229790270856128186493541932275964533781302400")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.084948126543701304270396527668710328555075166247372923591595608358272315175292")
 	repoRoot := writeTypeScriptPackageFixture(t)
 	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
 	if err := os.WriteFile(sourcePath, []byte(`export * from "./internal";`), 0o600); err != nil {

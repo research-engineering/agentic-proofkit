@@ -9,6 +9,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 var binarySuffixes = []string{
@@ -105,7 +108,11 @@ func repoRoot() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("resolve git repository root: %w", err)
 	}
-	return strings.TrimSpace(string(output)), nil
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("git repository root output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }
 
 func repoFiles(repoRoot string) ([]string, error) {
@@ -115,9 +122,13 @@ func repoFiles(repoRoot string) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list git files: %w", err)
 	}
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return nil, fmt.Errorf("git file inventory is not valid UTF-8")
+	}
 	seen := map[string]struct{}{}
 	files := []string{}
-	for _, path := range strings.Split(string(output), "\x00") {
+	for _, path := range strings.Split(decoded, "\x00") {
 		if path == "" {
 			continue
 		}
@@ -142,6 +153,6 @@ func isBinaryCandidate(path string) bool {
 }
 
 func exit(err error) {
-	_, _ = fmt.Fprintln(os.Stderr, err.Error())
+	diagnostic.WriteError(os.Stderr, err)
 	os.Exit(1)
 }

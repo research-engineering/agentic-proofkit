@@ -15,7 +15,7 @@ import (
 )
 
 func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.023234960845452171243291914185559159842773576460263008556765730794053386182086")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.030089205175258355525512374181401591961738735214675037864934765862429075466299")
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
 	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition must route changed blocking requirement records to caller-owned proof obligations."

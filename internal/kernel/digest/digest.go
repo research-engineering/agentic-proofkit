@@ -8,7 +8,11 @@ import (
 )
 
 func SHA256TextRef(text string) string {
-	sum := sha256.Sum256([]byte(text))
+	return SHA256BytesRef([]byte(text))
+}
+
+func SHA256BytesRef(value []byte) string {
+	sum := sha256.Sum256(value)
 	return "sha256:" + hex.EncodeToString(sum[:])
 }
 

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,9 +15,11 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const proofPath = "artifacts/proofkit/browser-runtime-proof.json"
@@ -123,8 +126,12 @@ func runBrowserProof(root string) (resultErr error) {
 	environment = withEnvironmentValue(environment, browserProofCandidateEnvironment, runPaths.CandidatePath)
 	command.Env = environment
 	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
+	stderr := diagnostic.NewStderrCapture()
+	command.Stderr = stderr
 	if err := command.Run(); err != nil {
+		if childErr := stderr.Failure("browser proof writer stderr"); childErr != nil {
+			return fmt.Errorf("run browser proof writer: %w; %s", err, childErr)
+		}
 		return fmt.Errorf("run browser proof writer: %w", err)
 	}
 	value, err := readRootedJSON(root, runPaths.CandidatePath, 8<<20)
@@ -421,10 +428,18 @@ func gitOutput(root string, args ...string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return strings.TrimSpace(string(output)), nil
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("git output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }
 
 func exit(err error) {
-	fmt.Fprintln(os.Stderr, "browser runtime proof verification failed:", admit.RedactStructuralText(err.Error()))
+	writeBrowserProofFailure(os.Stderr, err)
 	os.Exit(1)
+}
+
+func writeBrowserProofFailure(writer io.Writer, err error) {
+	diagnostic.WriteError(writer, err)
 }

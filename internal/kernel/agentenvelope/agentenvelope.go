@@ -45,14 +45,15 @@ type Input struct {
 }
 
 func Build(input Input) map[string]any {
-	actionPlan := sortMaps(sanitizeMapList(input.ActionPlan), "stepId")
-	contextRefs := sortMaps(sanitizeMapList(input.ContextRefs), "refId")
-	routeQuestions := sortMaps(sanitizeMapList(input.RouteQuestions), "questionId")
-	clarificationQuestions := sortMaps(sanitizeMapList(input.ClarificationQuestion), "questionId")
-	blockedPreconditions := sortMaps(sanitizeMapList(input.BlockedPreconditions), "preconditionId")
-	omitted := sortMaps(sanitizeMapList(input.Omitted), "omissionId")
-	receiptRefs := sortMaps(sanitizeMapList(input.ReceiptRefs), "receiptRefId")
-	commands := sortMaps(sanitizeMapList(input.Commands), "commandId")
+	prepared := prepareLocalReferences(input)
+	actionPlan := sortMaps(sanitizeMapList(prepared.actionPlan), "stepId")
+	contextRefs := sortMaps(sanitizeMapList(prepared.contextRefs), "refId")
+	routeQuestions := sortMaps(sanitizeMapList(prepared.routeQuestions), "questionId")
+	clarificationQuestions := sortMaps(sanitizeMapList(prepared.clarificationQuestions), "questionId")
+	blockedPreconditions := sortMaps(sanitizeMapList(prepared.blockedPreconditions), "preconditionId")
+	omitted := sortMaps(sanitizeMapList(prepared.omitted), "omissionId")
+	receiptRefs := sortMaps(sanitizeMapList(prepared.receiptRefs), "receiptRefId")
+	commands := sortMaps(sanitizeMapList(prepared.commands), "commandId")
 	omittedCount := 0
 	for _, item := range omitted {
 		if count, ok := item["omittedCount"].(int); ok {
@@ -74,9 +75,9 @@ func Build(input Input) map[string]any {
 			"omittedCount":    omittedCount,
 		}
 	}
-	truncated := false
+	truncated := prepared.identityDegraded
 	originalTargets := collectLocalReferenceTargets(commands, contextRefs, receiptRefs)
-	actionPlan, omitted, truncated = limitActionPlan(actionPlan, omitted, bounds)
+	actionPlan, omitted, truncated = limitActionPlan(actionPlan, omitted, bounds, truncated)
 	blockedPreconditions, omitted, truncated = limitList(blockedPreconditions, "blockedPrecondition", "preconditionId", "maxBlockedPreconditions", hardMaxBlockedPreconditions, omitted, bounds, truncated)
 	clarificationQuestions, omitted, truncated = limitList(clarificationQuestions, "clarificationQuestion", "questionId", "maxClarificationQuestions", hardMaxClarificationQuestions, omitted, bounds, truncated)
 	routeQuestions, omitted, truncated = limitList(routeQuestions, "routeQuestion", "questionId", "maxRouteQuestions", hardMaxRouteQuestions, omitted, bounds, truncated)
@@ -86,13 +87,13 @@ func Build(input Input) map[string]any {
 	receiptRefs, omitted, truncated = limitListPrioritized(receiptRefs, "receiptRef", "receiptRefId", "maxReceiptRefs", hardMaxReceiptRefs, priorities.receipts, omitted, bounds, truncated)
 	omitted, truncated = limitOmitted(omitted, bounds, truncated)
 	retainedTargets := collectLocalReferenceTargets(commands, contextRefs, receiptRefs)
-	removedReferenceCount := 0
+	removedReferenceCount := prepared.removedReferenceCount
 	for _, records := range []*[]map[string]any{&actionPlan, &blockedPreconditions, &clarificationQuestions, &routeQuestions, &omitted, &commands, &contextRefs, &receiptRefs} {
 		var removed int
 		*records, removed = pruneDanglingLocalReferences(*records, originalTargets, retainedTargets)
 		removedReferenceCount += removed
 	}
-	referenceClosurePreserved := localReferenceClosurePreserved(originalTargets, retainedTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
+	referenceClosurePreserved := !prepared.identityDegraded && localReferenceClosurePreserved(originalTargets, retainedTargets, actionPlan, blockedPreconditions, clarificationQuestions, routeQuestions, omitted, commands, contextRefs, receiptRefs)
 	if removedReferenceCount > 0 {
 		bounds["prunedLocalReferenceCount"] = removedReferenceCount
 		truncated = true
@@ -309,9 +310,9 @@ func boundViolations(bounds map[string]any, counts envelopeCounts) []string {
 	return violations
 }
 
-func limitActionPlan(values []map[string]any, omitted []map[string]any, bounds map[string]any) ([]map[string]any, []map[string]any, bool) {
+func limitActionPlan(values []map[string]any, omitted []map[string]any, bounds map[string]any, truncated bool) ([]map[string]any, []map[string]any, bool) {
 	limit := itemLimit(bounds, "maxActionItems", hardMaxActionItems)
-	result, omitted, truncated := limitList(values, "actionItem", "stepId", "maxActionItems", hardMaxActionItems, omitted, bounds, false)
+	result, omitted, truncated := limitList(values, "actionItem", "stepId", "maxActionItems", hardMaxActionItems, omitted, bounds, truncated)
 	evidenceLimit := itemLimit(bounds, "maxActionEvidenceRefs", hardMaxActionEvidenceRefs)
 	remainingEvidenceRefs := evidenceLimit
 	for index, item := range result {

@@ -150,56 +150,67 @@ func TestMergeNonClaimsPreservesRequiredClaimsAndRejectsSecretLikeCallerText(t *
 	}
 }
 
-func TestRedactDiagnosticValueRemovesSensitiveAndUnsafeSubstrings(t *testing.T) {
+func TestRedactDiagnosticValueReplacesRejectedValuesAsAWhole(t *testing.T) {
 	t.Parallel()
 
-	diagnostic := "open proofkit/ghp_secretvalue/input.json:\n" + strings.Repeat("x", 600)
-	redacted := RedactDiagnosticValue(diagnostic)
-	if strings.Contains(redacted, "ghp_secretvalue") {
-		t.Fatalf("RedactDiagnosticValue leaked secret-shaped token: %q", redacted)
-	}
-	if !strings.Contains(redacted, "<redacted-secret-like-value>") {
-		t.Fatalf("RedactDiagnosticValue(%q) = %q, want secret placeholder", diagnostic, redacted)
-	}
-	if !strings.Contains(redacted, "<redacted-control-rune>") {
-		t.Fatalf("RedactDiagnosticValue(%q) = %q, want control placeholder", diagnostic, redacted)
-	}
-	if !strings.Contains(redacted, "<truncated-diagnostic>") {
-		t.Fatalf("RedactDiagnosticValue(%q) = %q, want truncation marker", diagnostic, redacted)
-	}
-
-	headerDiagnostic := "request failed: Authorization: Basic YWxpY2U6c2VjcmV0"
-	headerRedacted := RedactDiagnosticValue(headerDiagnostic)
-	if strings.Contains(headerRedacted, "YWxpY2U6c2VjcmV0") || strings.Contains(headerRedacted, "Basic") {
-		t.Fatalf("RedactDiagnosticValue leaked authorization header value: %q", headerRedacted)
-	}
-
+	const want = "<redacted-diagnostic-value>"
 	for _, fixture := range ReportVisibleRedactionFixtures() {
-		redacted := RedactDiagnosticValue(fixture.Input)
-		for _, needle := range fixture.SensitiveNeedles {
-			if strings.Contains(redacted, needle) {
-				t.Fatalf("RedactDiagnosticValue leaked %s needle %q in %q", fixture.Name, needle, redacted)
-			}
+		if got := RedactDiagnosticValue("prefix " + fixture.Input + " suffix"); got != want {
+			t.Fatalf("RedactDiagnosticValue(%s) = %q, want fixed label", fixture.Name, got)
 		}
+	}
+	for _, value := range []string{"line\nbreak", "unsafe\u0085value", "unsafe\u200bvalue", "unsafe\u2028value", "unsafe\u2029value", "unsafe\U000e0001value", string([]byte{0xff})} {
+		if got := RedactDiagnosticValue(value); got != want {
+			t.Fatalf("RedactDiagnosticValue unsafe class = %q, want fixed label", got)
+		}
+	}
+	for _, test := range []struct {
+		input string
+		want  string
+	}{
+		{input: "line\nbreak", want: redactedValueLabel},
+		{input: "unsafe\u0085value", want: redactedValueLabel},
+		{input: "unsafe\u200bvalue", want: redactedValueLabel},
+		{input: "unsafe\u2028value", want: redactedValueLabel},
+		{input: "unsafe\u2029value", want: redactedValueLabel},
+		{input: "unsafe\u202evalue", want: redactedValueLabel},
+		{input: string([]byte{'p', 'a', 't', 'h', 0xff}), want: redactedValueLabel},
+	} {
+		if got := RedactStructuralText(test.input); got != test.want {
+			t.Fatalf("RedactStructuralText(%q)=%q want %q", test.input, got, test.want)
+		}
+	}
+	longSafe := strings.Repeat("x", maxDiagnosticRunes+20)
+	if got := RedactDiagnosticValue(longSafe); !strings.HasSuffix(got, "...<truncated-diagnostic>") {
+		t.Fatalf("safe long diagnostic was not bounded: %q", got)
 	}
 }
 
-func TestRedactStructuralTextPreservesLongStructureAndRedactsSensitiveTokens(t *testing.T) {
+func TestReportVisibleRedactionMatrixRejectsSplitSecretsWithoutDisclosure(t *testing.T) {
 	t.Parallel()
 
-	longToken := strings.Repeat("x", maxDiagnosticRunes+20)
-	structural := RedactStructuralText(longToken + "\n" + "Authorization: Bearer abcdefghijklmnop")
-	if strings.Contains(structural, "<truncated-diagnostic>") {
-		t.Fatalf("RedactStructuralText truncated structural token: %q", structural)
+	const want = "<redacted-diagnostic-value>"
+	separators := []string{"\x00", "\x7f", "\u0085", "\u200b", "\U000e0001", "\u2028", "\u2029"}
+	for _, fixture := range ReportVisibleRedactionFixtures() {
+		base := "prefix " + fixture.Input + " suffix"
+		if got := RedactStructuralText(base); got != want {
+			t.Fatalf("contiguous %s structural redaction = %q", fixture.Name, got)
+		}
+		for _, separator := range separators {
+			for _, offset := range []int{len(base) / 3, len(base) / 2, len(base) * 2 / 3} {
+				value := base[:offset] + separator + base[offset:]
+				if got := RedactDiagnosticValue(value); got != want {
+					t.Fatalf("split %s diagnostic redaction = %q", fixture.Name, got)
+				}
+				if got := RedactStructuralText(value); got != want {
+					t.Fatalf("split %s structural redaction = %q", fixture.Name, got)
+				}
+			}
+		}
 	}
-	if !strings.Contains(structural, longToken) {
-		t.Fatalf("RedactStructuralText lost long structural token: %q", structural)
-	}
-	if !strings.Contains(structural, "<redacted-control-rune>") {
-		t.Fatalf("RedactStructuralText(%q) = %q, want control placeholder", longToken, structural)
-	}
-	if !strings.Contains(structural, "<redacted-secret-like-value>") {
-		t.Fatalf("RedactStructuralText(%q) = %q, want secret placeholder", longToken, structural)
+	longSafe := strings.Repeat("x", maxDiagnosticRunes+20)
+	if got := RedactStructuralText(longSafe); got != longSafe {
+		t.Fatalf("safe structural text changed: %q", got)
 	}
 }
 

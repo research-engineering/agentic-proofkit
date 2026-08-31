@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"debug/elf"
 	"debug/macho"
@@ -21,6 +22,8 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 const (
@@ -445,7 +448,21 @@ func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath st
 	if !bytes.Contains(output, []byte("CLI/JSON is the public cross-language contract")) {
 		return fmt.Errorf("python console script smoke did not expose CLI contract")
 	}
+	if err := verifyInstalledWorkflowSmoke(consumer, venvPython, "-m", "agentic_proofkit"); err != nil {
+		return fmt.Errorf("python module agent-workflow smoke failed: %w", err)
+	}
+	if err := verifyInstalledWorkflowSmoke(consumer, binPath); err != nil {
+		return fmt.Errorf("python console script agent-workflow smoke failed: %w", err)
+	}
 	return verifyInstalledPythonPresetContinuation(consumer, venvPython)
+}
+
+func verifyInstalledWorkflowSmoke(dir string, executable string, prefix ...string) error {
+	return workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
+		Directory:  dir,
+		Executable: executable,
+		Prefix:     append([]string(nil), prefix...),
+	})
 }
 
 func verifyInstalledPythonPresetContinuation(consumer string, venvPython string) error {
@@ -620,9 +637,13 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 }
 
 func exactDisplayedRouteOperands(output []byte, prefix string, context string) ([]string, error) {
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return nil, fmt.Errorf("installed Python wheel route output is not valid UTF-8")
+	}
 	operands := []string{}
 	seen := map[string]struct{}{}
-	for _, line := range strings.Split(strings.TrimSuffix(string(output), "\n"), "\n") {
+	for _, line := range strings.Split(strings.TrimSuffix(decoded, "\n"), "\n") {
 		route, admitted := strings.CutPrefix(line, "    ")
 		if !admitted {
 			continue

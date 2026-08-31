@@ -291,7 +291,15 @@ func inputRefID(reportID string, inputRef string) string {
 }
 
 func shortTextHash(text string) string {
-	return strings.TrimPrefix(digest.SHA256TextRef(text), "sha256:")[:16]
+	hexToken := []byte(strings.TrimPrefix(digest.SHA256TextRef(text), "sha256:")[:16])
+	for index, value := range hexToken {
+		if value >= '0' && value <= '9' {
+			hexToken[index] = 'a' + value - '0'
+			continue
+		}
+		hexToken[index] = 'k' + value - 'a'
+	}
+	return string(hexToken)
 }
 
 func requiredInputLabel(item map[string]any) string {

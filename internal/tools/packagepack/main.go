@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 )
 
 type packRecord struct {
@@ -23,7 +24,7 @@ type packRecord struct {
 
 func main() {
 	if err := run(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }

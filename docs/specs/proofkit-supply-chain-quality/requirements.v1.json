@@ -298,7 +298,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "ownerId": "proofkit.supply-chain-quality",
-      "invariant": "Each Python wheel binds its embedded executable to the release binary digest, and the wheel-set verifier independently rejects version drift, duplicate identities, missing files, and SHA drift; each wheel independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
+      "invariant": "Every npm platform-binary tar entry and every Python wheel independently binds its embedded executable bytes to the same release-platform binary, and release metadata generation admits every final npm tarball, wheel, and SBOM exactly once into one bounded regular non-symlink immutable snapshot, derives npm pack SHA-1 and SRI claims, final carrier decoding, direct chunked binary equality, wheel and embedded-binary digests, release checksums, and SBOM-subject checksums only from that epoch, requires every npm pack and Python package-set digest claim to equal those decoded bytes, and revalidates every source identity before metadata persistence without relying on a mutable intermediate dist directory or claimed digests; release closeout independently reopens every declared repository-confined npm tarball and wheel through bounded identity-checked non-symlink handles, recomputes npm SHA-1 and SRI plus both wheel and embedded-binary digests, and rejects unsafe or duplicate archive topology before accepting package evidence; both tar and wheel decoders reject duplicate entry names and require exact release-platform closure; the wheel-set verifier independently rejects version drift, duplicate identities, missing files, and SHA drift; each wheel independently decodes Darwin Mach-O bytes so an advertised macOS platform minimum is never lower than the executable minimum, uses Core Metadata 2.4 License-Expression and License-File fields, carries an exact repository LICENSE copy under the wheel licenses directory, and closes every payload entry through RECORD.",
       "claimLevel": "blocking",
       "riskClass": "critical",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -330,6 +330,32 @@
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-QUALITY-025"],
       "nonClaims": ["This requirement does not claim external action safety, tag equivalence, provider execution, branch-protection configuration, release publication, or provider-side asset immutability."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Every repository-owned stable JSON implementation used by a public or retained-evidence path accepts only Unicode 15.0.0 scalar strings, rejecting malformed UTF-8 byte strings and unpaired UTF-16 surrogates as applicable, emits the same deterministic semantic-preserving JSON escapes for the pinned Cc, Cf, Zl, and Zp range table, preserves ordinary decoded values, and remains byte-compatible with one versioned owner-authored literal range corpus whose Go projection is exhaustively checked against the Unicode 15.0.0 category oracle and whose JavaScript and generated TypeScript projections are exhaustively checked over the scalar domain.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-026"],
+      "nonClaims": ["This bounded encoding policy does not prove terminal-rendering equivalence or safety of arbitrary downstream decoders."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "ownerId": "proofkit.supply-chain-quality",
+      "invariant": "Every report-visible diagnostic and structural-text sanitizer accepts only Unicode 15.0.0 scalar strings, recognizes one explicit Unicode whitespace alphabet plus the pinned Cc, Cf, Zl, and Zp range table and contiguous or control-split secret-shaped values through one shared taxonomy, replaces any rejected caller-owned value as a whole with one fixed command-owned label without emitting its bytes, code points, prefix, suffix, or caller-controlled replacement text, and bounds admitted diagnostic projection to 512 Unicode scalars; every Go and JavaScript repository tool entrypoint routes dynamic errors through that owner, failed child-process stderr that enters this diagnostic boundary is captured under a fixed byte limit before whole-value sanitization while successful child stderr is not projected, direct child stderr wiring is rejected, and the installed-carrier smoke adapter bounds stdout, stderr, time, and cleanup; on supported Unix hosts, a successful installed-carrier result requires confirmed process-group absence after the command parent is reaped, while cleanup timeout or probe failure is an explicit failed operation rather than a successful terminal result.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-QUALITY-027"],
+      "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes or claim that every repository-internal tool invocation uses the installed-carrier timeout policy."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.supply-chain-quality", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}

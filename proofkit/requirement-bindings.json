@@ -613,6 +613,22 @@
       "nonClaims": ["This requirement does not claim external action safety, tag equivalence, provider execution, branch-protection configuration, release publication, or provider-side asset immutability."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This bounded encoding policy does not prove terminal-rendering equivalence or safety of arbitrary downstream decoders."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "ownerId": "proofkit.supply-chain-quality",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes or claim that every repository-internal tool invocation uses the installed-carrier timeout policy."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
       "ownerId": "proofkit.spec-proof-core",
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
@@ -679,6 +695,94 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This private single-source model does not select or expose a source codec, parse or serialize a persisted source, retain a normalized mirror, establish cross-source requirement identity, authenticate derivation objects, digests, selectors, or freshness, authenticate a caller-declared sourceKind or prove its author's authority or trust class, cut over any current requirement consumer, prove requirement meaning or implementation correctness, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["The planner does not authenticate caller assertions or prove that a planned action was executed, correct, reviewed, or completed."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-002",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Stage ordering does not prove the semantic adequacy of any architecture, design, plan, implementation, verification, pull request, or closeout artifact."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-003",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["The snapshot relation does not own pending work, elapsed time, predecessor history, waiver, abort, reopen, or external task-state transitions."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-004",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Digest equality proves only internal equality of caller-declared identity fields and does not bind actual bytes, authenticate the reviewer, establish currentness or trust, or prove assessment quality."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-005",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Structural least closure relative to caller-declared seeds and edges does not prove context truth, freshness, semantic sufficiency, global minimality, or provider token usage."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-006",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Explicit caller input does not establish repository identity, policy, source meaning, authorization to mutate, or the truth of observations made outside Proofkit."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-007",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["The template does not generate, execute, approve, authenticate, or prove adequacy of a consuming repository's script, witness, oracle, receipt, policy, or cleanup implementation."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-008",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Bounded nondisclosure admission does not prove absence of every possible sensitive value or every terminal interpretation."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-009",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Terminal styling is presentation only and does not claim identical rendering across terminal emulators."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Structural minimality does not prove universal usability, open-world optimality, lower provider token use, or lower cognitive cost for every user and repository."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-011",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Public-surface closure does not claim wheel documentation parity and does not prove registry publication, provider ingestion, compatibility on untested platforms, native witness truth, merge approval, rollout, or production readiness."]
     }
   ],
   "bindings": [
@@ -1413,12 +1517,53 @@
       "witnessId": "proofkit.agent-envelope.reference-closure",
       "witnessKind": "contract",
       "witnessPath": "internal/kernel/agentenvelope/agentenvelope_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildPrunesReferencesToTruncatedLocalTargets",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildPrunesReferencesToTruncatedLocalTargets$'"
+        },
+        {
+          "selector": "TestBuildPrunesCommandIDsWithoutRetainedCommands",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildPrunesCommandIDsWithoutRetainedCommands$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-005",
+      "scenarioId": "proofkit.spec-proof-core.agent-envelope-local-identity-admission",
+      "witnessId": "proofkit.agent-envelope.local-identity-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/agentenvelope/reference_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildRejectsDuplicateAndCrossDomainLocalIdentities",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildRejectsDuplicateAndCrossDomainLocalIdentities$'"
+        },
+        {
+          "selector": "TestBuildPrunesAmbiguousIdentityFromEveryReferenceContainer",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildPrunesAmbiguousIdentityFromEveryReferenceContainer$'"
+        },
+        {
+          "selector": "TestBuildOmitsUnsafeTargetsAndReferencesBeforeDisplaySanitization",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildOmitsUnsafeTargetsAndReferencesBeforeDisplaySanitization$'"
+        },
+        {
+          "selector": "TestBuildCountsStandaloneUnsafeReferenceOmissions",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildCountsStandaloneUnsafeReferenceOmissions$'"
+        },
+        {
+          "selector": "TestBuildPreservesUniqueLocalAndSafeExternalReferences",
+          "command": "go test ./internal/kernel/agentenvelope -run '^TestBuildPreservesUniqueLocalAndSafeExternalReferences$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-006",
@@ -3489,6 +3634,74 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.npm-python-carrier-binary-byte-identity",
+      "witnessId": "proofkit.package-verifier.platform-binary-byte-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackedPlatformBinariesMatchReleaseBinaryBytes",
+          "command": "go test ./internal/tools/packageverify -run '^TestPackedPlatformBinariesMatchReleaseBinaryBytes$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.final-cross-carrier-binary-byte-identity",
+      "witnessId": "proofkit.release-manifest.cross-carrier-byte-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/carrier_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCrossCarrierBinaryIdentityReadsFinalArchives",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestCrossCarrierBinaryIdentityReadsFinalArchives$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-closeout-npm-byte-admission",
+      "witnessId": "proofkit.release-closeout.npm-byte-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasecloseoutinput/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        },
+        {
+          "selector": "TestPackRecordBytesMatchEnforcesByteLimit",
+          "command": "go test ./internal/tools/releasecloseoutinput -run '^TestPackRecordBytesMatchEnforcesByteLimit$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.release-artifact-immutable-snapshot",
+      "witnessId": "proofkit.release-manifest.immutable-artifact-epoch-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/artifact_snapshot_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReleaseArtifactSnapshotOwnsOneImmutableEpoch",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestReleaseArtifactSnapshotOwnsOneImmutableEpoch$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
       "witnessId": "proofkit.python-package.macho-platform-falsifier",
       "witnessKind": "contract",
@@ -3631,6 +3844,279 @@
         }
       ],
       "commandIds": ["proofkit.actionlint", "proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "scenarioId": "proofkit.supply-chain-quality.unicode-scalar-policy",
+      "witnessId": "proofkit.unicode-policy.scalar-table-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/unicodepolicy/unicodepolicy_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestUnsafeScalarTableMatchesVersionedOwnerCorpus",
+          "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesVersionedOwnerCorpus$'"
+        },
+        {
+          "selector": "TestUnsafeScalarTableMatchesEveryUnicode15Scalar",
+          "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesEveryUnicode15Scalar$'"
+        },
+        {
+          "selector": "TestValidScalarStringRejectsMalformedUTF8",
+          "command": "go test ./internal/kernel/unicodepolicy -run '^TestValidScalarStringRejectsMalformedUTF8$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "scenarioId": "proofkit.supply-chain-quality.go-stable-json-unicode-parity",
+      "witnessId": "proofkit.stable-json.go-unicode-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/stablejson/stablejson_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestUnicodePolicyCorpus",
+          "command": "go test ./internal/kernel/stablejson -run '^TestUnicodePolicyCorpus$'"
+        },
+        {
+          "selector": "TestMarshalRejectsEveryMalformedUTF8Class",
+          "command": "go test ./internal/kernel/stablejson -run '^TestMarshalRejectsEveryMalformedUTF8Class$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "scenarioId": "proofkit.supply-chain-quality.javascript-stable-json-unicode-parity",
+      "witnessId": "proofkit.stable-json.javascript-unicode-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/stable_json_selector_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestStableJSONJavaScriptUnicodePredicates",
+          "command": "go test ./scripts -run '^TestStableJSONJavaScriptUnicodePredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-026",
+      "scenarioId": "proofkit.supply-chain-quality.generated-typescript-stable-json-unicode-parity",
+      "witnessId": "proofkit.generated-typescript-adapter.unicode-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/jsonreportcliadaptersource/json_report_cli_adapter_source_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGeneratedTypeScriptAdapterExecutesCoreSemantics",
+          "command": "go test ./internal/command/jsonreportcliadaptersource -run '^TestGeneratedTypeScriptAdapterExecutesCoreSemantics$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.dynamic-stderr-diagnostic-owner",
+      "witnessId": "proofkit.tool-diagnostic.dynamic-stderr-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/diagnostic_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestToolDiagnosticBoundaryRejectsDirectDynamicStderrWrites",
+          "command": "go test ./scripts -run '^TestToolDiagnosticBoundaryRejectsDirectDynamicStderrWrites$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.go-bounded-diagnostic-capture",
+      "witnessId": "proofkit.diagnostic.bounded-capture-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/diagnostic/diagnostic_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDiagnosticTextEnforcesWholeValueSafetyAndRuneBound",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestDiagnosticTextEnforcesWholeValueSafetyAndRuneBound$'"
+        },
+        {
+          "selector": "TestStderrCaptureSanitizesWholeValuesAndBoundsMemory",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestStderrCaptureSanitizesWholeValuesAndBoundsMemory$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.javascript-entrypoint-diagnostic-owner",
+      "witnessId": "proofkit.javascript-entrypoint.diagnostic-owner-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/diagnostic-entrypoints.test.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.browser-proof-writer-diagnostic-nondisclosure",
+      "witnessId": "proofkit.browser-proof-writer.diagnostic-nondisclosure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/diagnostic_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBrowserProofWriterRedactsInvalidResolution",
+          "command": "go test ./scripts -run '^TestBrowserProofWriterRedactsInvalidResolution$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.source-hygiene-diagnostic-nondisclosure",
+      "witnessId": "proofkit.source-hygiene.diagnostic-nondisclosure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/source_hygiene_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSourceHygieneRedactsSecretShapedTrackedPath",
+          "command": "go test ./scripts -run '^TestSourceHygieneRedactsSecretShapedTrackedPath$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.go-report-visible-whole-value-redaction",
+      "witnessId": "proofkit.admit.whole-value-redaction-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/admit/fields_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRedactDiagnosticValueReplacesRejectedValuesAsAWhole",
+          "command": "go test ./internal/kernel/admit -run '^TestRedactDiagnosticValueReplacesRejectedValuesAsAWhole$'"
+        },
+        {
+          "selector": "TestReportVisibleRedactionMatrixRejectsSplitSecretsWithoutDisclosure",
+          "command": "go test ./internal/kernel/admit -run '^TestReportVisibleRedactionMatrixRejectsSplitSecretsWithoutDisclosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.javascript-report-visible-whole-value-redaction",
+      "witnessId": "proofkit.stable-json.javascript-redaction-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/stable_json_selector_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestStableJSONJavaScriptDiagnosticWholeValueRedaction",
+          "command": "go test ./scripts -run '^TestStableJSONJavaScriptDiagnosticWholeValueRedaction$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.generated-typescript-report-visible-whole-value-redaction",
+      "witnessId": "proofkit.generated-typescript-adapter.redaction-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/jsonreportcliadaptersource/json_report_cli_adapter_source_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGeneratedTypeScriptAdapterExecutesCoreSemantics",
+          "command": "go test ./internal/command/jsonreportcliadaptersource -run '^TestGeneratedTypeScriptAdapterExecutesCoreSemantics$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.shared-diagnostic-writer-whole-value-redaction",
+      "witnessId": "proofkit.diagnostic.whole-value-redaction-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/diagnostic/diagnostic_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWriteErrorPreservesSafeTextAndRedactsRejectedValuesAsAWhole",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestWriteErrorPreservesSafeTextAndRedactsRejectedValuesAsAWhole$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.package-verifier-diagnostic-nondisclosure",
+      "witnessId": "proofkit.package-verifier.diagnostic-nondisclosure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPackageVerifierDiagnosticNondisclosure",
+          "command": "go test ./internal/tools/packageverify -run '^TestPackageVerifierDiagnosticNondisclosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.browser-proof-verifier-diagnostic-nondisclosure",
+      "witnessId": "proofkit.browser-proof-verifier.diagnostic-nondisclosure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/browserproofverify/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDiagnosticsDoNotLeakArtifactValues",
+          "command": "go test ./internal/tools/browserproofverify -run '^TestDiagnosticsDoNotLeakArtifactValues$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.installed-carrier-process-bounds",
+      "witnessId": "proofkit.workflow-smoke.process-bounds-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunProcessRejectsTimeout",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessRejectsTimeout$'"
+        },
+        {
+          "selector": "TestRunProcessRejectsOutputOverflow",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessRejectsOutputOverflow$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.installed-carrier-process-group-cleanup",
+      "witnessId": "proofkit.workflow-smoke.process-group-cleanup-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/process_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunProcessTerminatesDescendantsAfterSuccessfulParentExit",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessTerminatesDescendantsAfterSuccessfulParentExit$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },
     {
@@ -4150,6 +4636,288 @@
       "witnessPath": "tests/browser/workspace.spec.mjs",
       "commandIds": ["proofkit.browser-check"],
       "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
+      "scenarioId": "proofkit.agent-workflow.pure-single-admission-owner",
+      "witnessId": "proofkit.agent-workflow.pure-single-admission-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/change_workflow_plan_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowPurityPredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowPurityPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-002",
+      "scenarioId": "proofkit.agent-workflow.stage-prefix-and-terminal-relation",
+      "witnessId": "proofkit.agent-workflow.stage-prefix-terminal-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/state_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowStatePredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowStatePredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-003",
+      "scenarioId": "proofkit.agent-workflow.total-checkpoint-successor-relation",
+      "witnessId": "proofkit.agent-workflow.checkpoint-successor-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/state_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowCheckpointPredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowCheckpointPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-004",
+      "scenarioId": "proofkit.agent-workflow.review-identity-closure",
+      "witnessId": "proofkit.agent-workflow.review-identity-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/admission_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowIdentityPredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowIdentityPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-005",
+      "scenarioId": "proofkit.agent-workflow.reference-closed-bounded-context",
+      "witnessId": "proofkit.agent-workflow.context-closure-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/context_closure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowClosurePredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowClosurePredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-006",
+      "scenarioId": "proofkit.agent-workflow.no-ambient-authority",
+      "witnessId": "proofkit.agent-workflow.no-ambient-authority-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/dependency_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowAmbientAuthorityPredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowAmbientAuthorityPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-007",
+      "scenarioId": "proofkit.agent-workflow.native-evidence-guidance-slot-closure",
+      "witnessId": "proofkit.agent-workflow.guidance-slot-closure-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/nativeevidenceguidance/guidance_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceSlotPredicates",
+          "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidanceSlotPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-007",
+      "scenarioId": "proofkit.agent-workflow.native-evidence-guidance-purity",
+      "witnessId": "proofkit.agent-workflow.guidance-purity-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/nativeevidenceguidance/dependency_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceNoAmbientDependencyPredicates",
+          "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidanceNoAmbientDependencyPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-008",
+      "scenarioId": "proofkit.agent-workflow.prompt-coordinate-and-escalation-closure",
+      "witnessId": "proofkit.agent-workflow.prompt-coordinate-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/prompt_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowPromptPredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowPromptPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-008",
+      "scenarioId": "proofkit.agent-workflow.bounded-safe-text",
+      "witnessId": "proofkit.agent-workflow.bounded-safe-text-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/text_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowTerminalTextIsOperationallyComplete",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowTerminalTextIsOperationallyComplete$'"
+        },
+        {
+          "selector": "TestWorkflowTextPredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowTextPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-009",
+      "scenarioId": "proofkit.agent-workflow.cli-presentation-capability-product",
+      "witnessId": "proofkit.agent-workflow.cli-presentation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_workflow_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentWorkflowCLITruthTable",
+          "command": "go test ./internal/app -run '^TestAgentWorkflowCLITruthTable$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-009",
+      "scenarioId": "proofkit.agent-workflow.style-strip-parity",
+      "witnessId": "proofkit.agent-workflow.style-strip-parity-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/changeworkflowplan/text_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowTextProjectionParity",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowTextProjectionParity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
+      "scenarioId": "proofkit.agent-workflow.catalog-prerequisite-causality",
+      "witnessId": "proofkit.agent-workflow.catalog-prerequisite-causality-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/changeworkflowplan/state_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowStatePredicates",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowStatePredicates$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
+      "scenarioId": "proofkit.agent-workflow.semantic-owner-minimality",
+      "witnessId": "proofkit.agent-workflow.semantic-owner-minimality-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/nativeevidenceguidance/guidance_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidancePurityPredicates",
+          "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidancePurityPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
+      "scenarioId": "proofkit.agent-workflow.semantic-owner-topology",
+      "witnessId": "proofkit.agent-workflow.semantic-owner-topology-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_workflow_topology_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentWorkflowSemanticOwnerTopology",
+          "command": "go test ./internal/app -run '^TestAgentWorkflowSemanticOwnerTopology$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-011",
+      "scenarioId": "proofkit.agent-workflow.public-cli-relation-closure",
+      "witnessId": "proofkit.agent-workflow.public-cli-relation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_workflow_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentWorkflowCLITruthTable",
+          "command": "go test ./internal/app -run '^TestAgentWorkflowCLITruthTable$'"
+        }
+      ],
+      "commandIds": ["proofkit.command-contract-check", "proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-011",
+      "scenarioId": "proofkit.agent-workflow.installed-carrier-smoke-closure",
+      "witnessId": "proofkit.agent-workflow.installed-carrier-smoke-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyAcceptsApplicationCLI",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyAcceptsApplicationCLI$'"
+        },
+        {
+          "selector": "TestVerifyRejectsCarrierContractMutations",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyRejectsCarrierContractMutations$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
+      "environmentClasses": ["local-go", "local-go-python"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-011",
+      "scenarioId": "proofkit.agent-workflow.version-edge-wire-observation",
+      "witnessId": "proofkit.agent-workflow.version-edge-wire-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_workflow_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentWorkflowVersionEdgeClosesPublicWireAdditions",
+          "command": "go test ./internal/app -run '^TestAgentWorkflowVersionEdgeClosesPublicWireAdditions$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
     }
   ],
   "witnessCommands": [

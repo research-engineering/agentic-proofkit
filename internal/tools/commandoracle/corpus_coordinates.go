@@ -63,7 +63,7 @@ func syntheticRecordValue() (map[string]any, error) {
 		CounterfeitCorpusDigest: strings.Repeat("2", 64),
 		Entries:                 entries,
 		ExecutionCommands:       executionCommands(candidates),
-		GoVersion:               "go1.26.5",
+		GoVersion:               "go1.26.7",
 		NonClaims:               RecordNonClaims(),
 		Platform:                "darwin/arm64",
 		SchemaVersion:           SchemaVersion,

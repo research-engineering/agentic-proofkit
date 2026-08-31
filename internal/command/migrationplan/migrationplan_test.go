@@ -8,7 +8,7 @@ import (
 )
 
 func TestSortedFollowUpCommandsRejectsShellControlTokens(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.068167811965828868524495721027219601964718026488781175287330661603079334133111")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.111566014894964379159287917127840775005896615125222459864418913754403534133338")
 	_, err := sortedFollowUpCommands([]any{map[string]any{
 		"command":   "go test ./... && curl example.test",
 		"commandId": "proofkit.followup",

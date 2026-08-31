@@ -29,7 +29,7 @@ func TestBuildRejectsLifecycleTransitionWithoutNewEvidence(t *testing.T) {
 }
 
 func TestBuildRejectsRequirementSourceTransitionContractViolations(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.064796430251047638129056627618050421615250184739595429149390171993569993200591")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.055034508158962348386865908543647126084818400787416007817692072895213278443259")
 	cases := []struct {
 		name      string
 		want      string

@@ -6,21 +6,49 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
-func Select(input any, pointer string) (any, error) {
-	if pointer == "" {
-		return input, nil
+// Pointer is an admitted RFC 6901 pointer. Its tokens are immutable outside
+// this package, so syntax admission can precede input I/O without reparsing.
+type Pointer struct {
+	tokens []string
+}
+
+// Parse admits pointer syntax without consulting a JSON document.
+func Parse(value string) (Pointer, error) {
+	if !unicodepolicy.ValidScalarString(value) {
+		return Pointer{}, fmt.Errorf("JSON pointer must be valid UTF-8")
 	}
-	if !strings.HasPrefix(pointer, "/") {
-		return nil, fmt.Errorf("JSON pointer must be an RFC 6901 pointer")
+	if value == "" {
+		return Pointer{}, nil
 	}
-	current := input
-	for position, rawPart := range strings.Split(pointer[1:], "/") {
+	if !strings.HasPrefix(value, "/") {
+		return Pointer{}, fmt.Errorf("JSON pointer must be an RFC 6901 pointer")
+	}
+	tokens := make([]string, 0, strings.Count(value, "/"))
+	for _, rawPart := range strings.Split(value[1:], "/") {
 		part, err := decodePointerToken(rawPart)
 		if err != nil {
-			return nil, err
+			return Pointer{}, err
 		}
+		tokens = append(tokens, part)
+	}
+	return Pointer{tokens: tokens}, nil
+}
+
+func Select(input any, pointer string) (any, error) {
+	parsed, err := Parse(pointer)
+	if err != nil {
+		return nil, err
+	}
+	return SelectParsed(input, parsed)
+}
+
+// SelectParsed resolves an already-admitted pointer against input.
+func SelectParsed(input any, pointer Pointer) (any, error) {
+	current := input
+	for position, part := range pointer.tokens {
 		switch typed := current.(type) {
 		case []any:
 			index, err := arrayIndex(part)

@@ -24,6 +24,10 @@ func Run(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, 
 }
 
 func RunWithRenderer(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer) int {
+	return RunWithRendererAndCapabilities(ctx, args, stdin, stdout, stderr, renderer, PresentationCapabilities{})
+}
+
+func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer, capabilities PresentationCapabilities) int {
 	args, layout, layoutExplicit, err := parseProcessOptions(args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -49,6 +53,10 @@ func RunWithRenderer(ctx context.Context, args []string, stdin io.Reader, stdout
 		return writeText(commandUsageWithRenderer(descriptor, renderer), 0, nil, stdout, stderr)
 	}
 	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
+	if descriptor.runner != commandRunnerHelp && (parsedArguments.present["--help"] || parsedArguments.present["-h"]) {
+		writeDiagnosticf(stderr, "%s help accepts no additional arguments", descriptor.name)
+		return 1
+	}
 	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1
@@ -128,6 +136,8 @@ func RunWithRenderer(ctx context.Context, args []string, stdin io.Reader, stdout
 			supportsContractEnvelope:    true,
 			supportsMaterializationFile: false,
 		})
+	case commandRunnerAgentWorkflow:
+		return runAgentWorkflowCommand(args[0], args[1:], stdin, stdout, stderr, capabilities)
 	case commandRunnerAgentRoute:
 		return runAgentRoute(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerContractEnvelope:

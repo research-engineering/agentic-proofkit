@@ -15,7 +15,7 @@ import (
 )
 
 func TestBuildComposesInputPreservesDeclaredUniverseAndAllowsDownstreamFailures(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.077615860756811261841718576176256104140210383495891744406155830486424738479038")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.083035171813898501427594128067554887214808924680328054190631175708411343072409")
 	output, exitCode, err := Build(validComposeInput(t, baseInventoryEntries()))
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
@@ -100,7 +100,7 @@ func mutateJSONStrings(value any) {
 }
 
 func TestBuildComposesDirectRequirementProofBindingAndInventory(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.035702766579458185352787503340754906774314209827550424808834264957824734855602")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070158111768335561723850873410063317795356942001573297865826302278939990585054")
 	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
 	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
 	delete(input, "compactProofContract")
@@ -291,7 +291,7 @@ func TestBuildRejectsDirectInventoryWithoutNormalizedEnvelope(t *testing.T) {
 }
 
 func TestBuildRejectsFabricatedDirectEnvelopeWithSourceMetadata(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.082003289099884097239481684858563895288262439491982038468563724937356701005316")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.060779660800594907269041501547271398346431553050593761603864645719347862956228")
 	input := validComposeInput(t, baseInventoryEntries()).(map[string]any)
 	normalized := input["normalizedTestEvidenceInventory"].(map[string]any)
 	normalized["sourceCount"] = json.Number("1")

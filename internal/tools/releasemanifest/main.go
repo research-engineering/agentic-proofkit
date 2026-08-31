@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -14,9 +15,11 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
@@ -195,12 +198,12 @@ type trustedPublisherSet struct {
 
 func main() {
 	if err := run(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func run() error {
+func run() (returnErr error) {
 	manifest, err := readPackageJSON("package.json")
 	if err != nil {
 		return err
@@ -218,10 +221,6 @@ func run() error {
 	}
 	sortPackRecords(localRecords)
 	pythonPackages, err := optionalPythonPackageSet(filepath.Join("artifacts", "pypi", "python-packages.json"))
-	if err != nil {
-		return err
-	}
-	assets, checksums, sbomSubjectChecksums, err := releaseAssets(localRecords, pythonPackages)
 	if err != nil {
 		return err
 	}
@@ -251,22 +250,44 @@ func run() error {
 	if err := requirePublicationMode(npmPublicationMode, "npm", len(registryRecords) > 0); err != nil {
 		return err
 	}
-	if err := requireNPMRegistryMatchesLocal(npmRegistry, registryRecords, localRecords, npmPublicationMode); err != nil {
-		return err
-	}
 	if err := requirePublicationMode(pypiPublicationMode, "pypi", pypiRegistry != nil); err != nil {
 		return err
 	}
 	if err := requirePackRecordsMatchPackage(manifest, localRecords, "local npm package evidence"); err != nil {
 		return err
 	}
-	if err := requireRegistryRecordsMatchLocal(registryRecords, localRecords); err != nil {
-		return err
-	}
 	if err := requirePythonPackagesMatchPackage(manifest, pythonPackages, "local Python package evidence"); err != nil {
 		return err
 	}
+	artifactSnapshot, err := newReleaseArtifactSnapshot(localRecords, pythonPackages)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		returnErr = errors.Join(returnErr, artifactSnapshot.Close())
+	}()
+	localRecords, err = artifactSnapshot.AdmittedNPMRecords(localRecords)
+	if err != nil {
+		return err
+	}
+	if err := requireNPMRegistryMatchesLocal(npmRegistry, registryRecords, localRecords, npmPublicationMode); err != nil {
+		return err
+	}
+	if err := requireRegistryRecordsMatchLocal(registryRecords, localRecords); err != nil {
+		return err
+	}
+	if err := artifactSnapshot.VerifyCrossCarrierBinaryIdentity(localRecords, pythonPackages); err != nil {
+		return err
+	}
+	pythonPackages, err = artifactSnapshot.AdmittedPythonPackageSet(pythonPackages)
+	if err != nil {
+		return err
+	}
 	if err := requirePyPIRegistryMatchesLocal(pypiRegistry, pythonPackages, manifest); err != nil {
+		return err
+	}
+	assets, checksums, sbomSubjectChecksums, err := artifactSnapshot.ReleaseEvidence(localRecords, pythonPackages)
+	if err != nil {
 		return err
 	}
 	trustedPublishers, err := trustedPublisherSetFromEnv(manifest, npmPublicationMode, pypiPublicationMode, os.Getenv)
@@ -279,6 +300,17 @@ func run() error {
 	}
 	goVersion, err := commandOutput("go", "version")
 	if err != nil {
+		return err
+	}
+	nodeVersion, err := optionalCommandOutput("node", "--version")
+	if err != nil {
+		return err
+	}
+	npmVersion, err := optionalCommandOutput("npm", "--version")
+	if err != nil {
+		return err
+	}
+	if err := artifactSnapshot.RevalidateSources(); err != nil {
 		return err
 	}
 	releaseDir := filepath.Join("artifacts", "release")
@@ -316,8 +348,8 @@ func run() error {
 		},
 		Toolchain: toolchainIdentity{
 			Go:   goVersion,
-			Node: optionalCommandOutput("node", "--version"),
-			Npm:  optionalCommandOutput("npm", "--version"),
+			Node: nodeVersion,
+			Npm:  npmVersion,
 		},
 		Channels:          releaseChannels(localRecords, registryRecords, npmPublicationMode, pythonPackages, pypiRegistry, pypiPublicationMode, assets, trustedPublishers),
 		LocalPackEvidence: packageEvidenceSet(localRecords, assetShaByFilename(assets)),
@@ -393,7 +425,11 @@ func optionalPublicationMode(path string, label string) (string, error) {
 		}
 		return "", err
 	}
-	mode := strings.TrimSpace(string(content))
+	mode, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return "", fmt.Errorf("publication mode is not valid UTF-8")
+	}
+	mode = strings.TrimSpace(mode)
 	mode, err = trustedpublisher.AdmitPublicationMode(mode, fmt.Sprintf("%s publication mode", label))
 	if err != nil {
 		return "", err
@@ -731,51 +767,6 @@ func sortPackRecords(records []packRecord) {
 	})
 }
 
-func releaseAssets(localRecords []packRecord, pythonPackages *pythonPackageSet) ([]assetEvidence, []string, []string, error) {
-	paths := expectedPackageArtifactPaths(localRecords, pythonPackages)
-	if len(paths) == 0 {
-		return nil, nil, nil, fmt.Errorf("release assets require at least one package artifact")
-	}
-	packagePaths, err := optionalGlob(filepath.Join("artifacts", "package", "*.tgz"))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err := requireExactPathSet(packagePaths, expectedPackageArtifactPaths(localRecords, nil), "release package artifact"); err != nil {
-		return nil, nil, nil, err
-	}
-	pythonWheelPaths, err := optionalGlob(filepath.Join("artifacts", "pypi", "*.whl"))
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err := requireExactPathSet(pythonWheelPaths, expectedPythonWheelPaths(pythonPackages), "release Python wheel artifact"); err != nil {
-		return nil, nil, nil, err
-	}
-	sbomSubjectPaths := append([]string{}, paths...)
-	paths = append(paths, filepath.Join("artifacts", "release", "sbom.cdx.json"))
-	sort.Strings(paths)
-	sort.Strings(sbomSubjectPaths)
-	assets := make([]assetEvidence, 0, len(paths))
-	checksums := make([]string, 0, len(paths))
-	sbomSubjectChecksums := make([]string, 0, len(sbomSubjectPaths))
-	for _, path := range paths {
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		filename := filepath.Base(path)
-		assets = append(assets, assetEvidence{Filename: filename, Sha256: sum})
-		checksums = append(checksums, fmt.Sprintf("%s  %s", sum, filename))
-	}
-	for _, path := range sbomSubjectPaths {
-		sum, err := fileSHA256(path)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		sbomSubjectChecksums = append(sbomSubjectChecksums, fmt.Sprintf("%s  %s", sum, filepath.Base(path)))
-	}
-	return assets, checksums, sbomSubjectChecksums, nil
-}
-
 func checksumLines(paths []string) ([]string, error) {
 	sort.Strings(paths)
 	lines := make([]string, 0, len(paths))
@@ -1086,7 +1077,11 @@ func goModule() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, line := range strings.Split(string(content), "\n") {
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return "", fmt.Errorf("go.mod is not valid UTF-8")
+	}
+	for _, line := range strings.Split(decoded, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "module ") {
 			moduleName := strings.TrimSpace(strings.TrimPrefix(line, "module "))
@@ -1104,13 +1099,21 @@ func commandOutput(name string, args ...string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s %s: %w", name, strings.Join(args, " "), err)
 	}
-	return strings.TrimSpace(string(output)), nil
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("toolchain command output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }
 
-func optionalCommandOutput(name string, args ...string) string {
+func optionalCommandOutput(name string, args ...string) (string, error) {
 	output, err := exec.Command(name, args...).Output()
 	if err != nil {
-		return ""
+		return "", nil
 	}
-	return strings.TrimSpace(string(output))
+	decoded, err := unicodepolicy.DecodeUTF8(output)
+	if err != nil {
+		return "", fmt.Errorf("optional toolchain command output is not valid UTF-8")
+	}
+	return strings.TrimSpace(decoded), nil
 }

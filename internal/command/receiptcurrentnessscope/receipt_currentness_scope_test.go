@@ -10,7 +10,7 @@ const digestA = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const digestB = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 func TestBuildAdmitsCurrentScopedReceiptAndRejectsStaleDigest(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.022236487108238931965127542889597957904695079808409845972751946122899435814532")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.062583477063651355819549431634216824110543333801082185408854830094943563627829")
 	input := validReceiptCurrentnessScopeInput()
 	record, exitCode, err := Build(input)
 	if err != nil {

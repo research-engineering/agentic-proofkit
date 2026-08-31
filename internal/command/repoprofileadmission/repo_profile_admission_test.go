@@ -8,7 +8,7 @@ import (
 )
 
 func TestBuildAdmitsValidRepoProfileAndRejectsRootPackageMismatch(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.042220601016185803105807340743508604421080385922243495458605947963572735177886")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.027996698767714019826017834835995643014194594460281065828476658982639257237081")
 	record, exitCode, err := Build(validRepoProfileInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

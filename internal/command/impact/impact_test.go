@@ -159,7 +159,7 @@ func TestBuildFailsWhenChangedRequirementHasNoCurrentBinding(t *testing.T) {
 }
 
 func TestBuildRoutesChangedRecordToObligationAndRejectsUnboundProofChange(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.004126818763873109094701885631231832544658829793890758986188782288995889572211")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.030107091047572360894804051055525132879054413918312412051082152497137096358221")
 	input := validImpactInput()
 	input["changedRequirementIds"] = []any{"REQ-PROOFKIT-001"}
 	input["obligationCatalog"] = []any{validImpactObligation()}

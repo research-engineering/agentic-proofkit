@@ -7,13 +7,18 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const (
-	secretContextPatternSource     = `authorization\s*:\s*[^\r\n]+|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
-	secretSharedTokenPatternSource = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
-	secretScalarTokenPatternSource = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
-	secretPathTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
+	secretWhitespaceClassSource      = `\t\n\v\f\r \x{0085}\p{Zs}\p{Zl}\p{Zp}`
+	secretWhitespacePatternSource    = `[` + secretWhitespaceClassSource + `]`
+	secretNonWhitespacePatternSource = `[^` + secretWhitespaceClassSource + `]`
+	secretContextPatternSource       = `authorization` + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
+	secretSharedTokenPatternSource   = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
+	secretScalarTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
+	secretPathTokenPatternSource     = secretSharedTokenPatternSource + `|sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
 )
 
 var (
@@ -27,7 +32,7 @@ var (
 	secretValuePattern         = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
 	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
 	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
-	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/\s:@]+:[^/\s@]+@`)
+	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
 	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
 	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
@@ -35,6 +40,7 @@ var (
 const (
 	maxDiagnosticRunes = 512
 	maxRuleIDBytes     = 256
+	redactedValueLabel = "<redacted-diagnostic-value>"
 )
 
 type RedactionFixture struct {
@@ -55,6 +61,8 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "authorization_header", Input: "request failed: Authorization: Basic YWxpY2U6c2VjcmV0", SensitiveNeedles: []string{"Authorization", "Basic", "YWxpY2U6c2VjcmV0"}},
 		{Name: "bearer_token", Input: "Bearer abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "api_key_label", Input: "api_key=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
+		{Name: "api_key_unicode_whitespace", Input: "api_key\u00a0=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
+		{Name: "api_key_control_split", Input: "api_\u200bkey=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "github_pat", Input: githubPAT, SensitiveNeedles: []string{githubPAT}},
@@ -156,11 +164,23 @@ func SHA256HexRef(raw any, context string) (string, error) {
 }
 
 func ContainsSecretLikeValue(value string) bool {
-	return ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value)
+	if ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value) {
+		return true
+	}
+	withoutUnsafe := withoutUnsafeScalars(value)
+	return withoutUnsafe != value && (ContainsSecretTokenLikeValue(withoutUnsafe) || ContainsURLCredentialValue(withoutUnsafe))
+}
+
+func ContainsReportVisibleUnsafeValue(value string) bool {
+	return unicodepolicy.ContainsUnsafeScalar(value) || ContainsSecretLikeValue(value)
 }
 
 func ContainsSecretLikePathValue(value string) bool {
-	return ContainsURLCredentialValue(value) || secretPathContextPattern.MatchString(value) || secretPathTokenPattern.MatchString(value)
+	if ContainsURLCredentialValue(value) || secretPathContextPattern.MatchString(value) || secretPathTokenPattern.MatchString(value) {
+		return true
+	}
+	withoutUnsafe := withoutUnsafeScalars(value)
+	return withoutUnsafe != value && (ContainsURLCredentialValue(withoutUnsafe) || secretPathContextPattern.MatchString(withoutUnsafe) || secretPathTokenPattern.MatchString(withoutUnsafe))
 }
 
 func ContainsSecretTokenLikeValue(value string) bool {
@@ -172,13 +192,16 @@ func ContainsURLCredentialValue(value string) bool {
 }
 
 func RedactSecretLikeValue(value string) string {
-	value = secretValuePattern.ReplaceAllString(value, "<redacted-secret-like-value>")
-	return urlUserInfoPattern.ReplaceAllString(value, "<redacted-secret-like-value>")
+	if ContainsSecretLikeValue(value) {
+		return redactedValueLabel
+	}
+	return value
 }
 
 func RedactDiagnosticValue(value string) string {
-	value = RedactSecretLikeValue(value)
-	value = redactControlRunes(value)
+	if !unicodepolicy.ValidScalarString(value) || ContainsReportVisibleUnsafeValue(value) {
+		return redactedValueLabel
+	}
 	runes := []rune(value)
 	if len(runes) <= maxDiagnosticRunes {
 		return value
@@ -187,22 +210,18 @@ func RedactDiagnosticValue(value string) string {
 }
 
 func RedactStructuralText(value string) string {
-	return redactControlRunes(RedactSecretLikeValue(value))
+	if !unicodepolicy.ValidScalarString(value) || unicodepolicy.ContainsUnsafeScalar(value) || ContainsSecretLikeValue(value) {
+		return redactedValueLabel
+	}
+	return value
 }
 
-func redactControlRunes(value string) string {
+func withoutUnsafeScalars(value string) string {
 	var builder strings.Builder
-	redacting := false
 	for _, character := range value {
-		if character < 0x20 || character == 0x7f {
-			if !redacting {
-				builder.WriteString("<redacted-control-rune>")
-				redacting = true
-			}
-			continue
+		if !unicodepolicy.IsUnsafeScalar(character) {
+			builder.WriteRune(character)
 		}
-		redacting = false
-		builder.WriteRune(character)
 	}
 	return builder.String()
 }

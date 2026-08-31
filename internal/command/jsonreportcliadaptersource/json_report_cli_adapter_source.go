@@ -8,6 +8,7 @@ import (
 
 const LanguageTypeScript = "typescript"
 const FormatJSON = "json"
+const TypeScriptGeneratorID = "proofkit.json-report-cli-adapter-source.typescript.v2"
 
 var exportedSymbols = []string{
 	"ProofkitCommandRunOptions",
@@ -65,7 +66,7 @@ func (bundle Bundle) JSONValue() map[string]any {
 	return map[string]any{
 		"schemaVersion":   1,
 		"artifactKind":    "proofkit.json-report-cli-adapter-source",
-		"generatorId":     "proofkit.json-report-cli-adapter-source.typescript.v1",
+		"generatorId":     TypeScriptGeneratorID,
 		"language":        bundle.Language,
 		"format":          bundle.Format,
 		"sourceFileName":  "proofkit-json-report-cli-adapter.ts",
@@ -123,6 +124,19 @@ const defaultMaxBuffer = 64 * 1024 * 1024;
 const defaultMaxInputBytes = 32 * 1024 * 1024;
 const maxDiagnosticRunes = 512;
 const maxJsonNestingDepth = 512;
+const unsafeScalarRanges: readonly (readonly [number, number, number])[] = [
+  [0x000000, 0x00001f, 1], [0x00007f, 0x00009f, 1],
+  [0x0000ad, 0x000600, 1363], [0x000601, 0x000605, 1],
+  [0x00061c, 0x0006dd, 193], [0x00070f, 0x000890, 385],
+  [0x000891, 0x0008e2, 81], [0x00180e, 0x00200b, 2045],
+  [0x00200c, 0x00200f, 1], [0x002028, 0x002028, 1],
+  [0x002029, 0x002029, 1], [0x00202a, 0x00202e, 1],
+  [0x002060, 0x002064, 1], [0x002066, 0x00206f, 1],
+  [0x00feff, 0x00fff9, 250], [0x00fffa, 0x00fffb, 1],
+  [0x0110bd, 0x0110cd, 16], [0x013430, 0x01343f, 1],
+  [0x01bca0, 0x01bca3, 1], [0x01d173, 0x01d17a, 1],
+  [0x0e0001, 0x0e0020, 31], [0x0e0021, 0x0e007f, 1],
+];
 
 export type ProofkitJsonValue =
   | null
@@ -211,8 +225,11 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
   if (depth > maxJsonNestingDepth) {
     throw new Error("stable JSON value exceeds nesting depth limit");
   }
-  if (value === null || typeof value === "boolean" || typeof value === "string") {
+  if (value === null || typeof value === "boolean") {
     return value;
+  }
+  if (typeof value === "string") {
+    return assertProofkitScalarString(value);
   }
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
@@ -264,7 +281,7 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
     if (ownKeys.some((key) => typeof key === "symbol")) {
       throw new Error("stable JSON objects must not contain symbol keys");
     }
-    for (const key of (ownKeys as string[]).sort()) {
+    for (const key of (ownKeys as string[]).map(assertProofkitScalarString).sort(compareProofkitScalarStrings)) {
       if (key.length === 0 || key.includes("\0")) {
         throw new Error("stable JSON object keys must be non-empty text");
       }
@@ -286,7 +303,119 @@ function stableJsonValueAtDepth(value: unknown, depth: number, active: WeakSet<o
 }
 
 export function proofkitStableJsonString(value: unknown, layout: "pretty" | "compact" = "pretty"): string {
-  return JSON.stringify(proofkitStableJsonValue(value), null, layout === "pretty" ? 2 : undefined) + "\n";
+  return writeProofkitStableJson(proofkitStableJsonValue(value), 0, layout) + "\n";
+}
+
+function writeProofkitStableJson(value: ProofkitJsonValue, depth: number, layout: "pretty" | "compact"): string {
+  if (value === null) return "null";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (typeof value === "number") return JSON.stringify(value);
+  if (typeof value === "string") return quoteProofkitScalarString(value);
+  const pretty = layout === "pretty";
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    const separator = pretty ? ",\n" : ",";
+    const prefix = pretty ? "\n" : "";
+    const suffix = pretty ? "\n" + "  ".repeat(depth) : "";
+    const entries = value.map((entry) => (pretty ? "  ".repeat(depth + 1) : "") + writeProofkitStableJson(entry, depth + 1, layout));
+    return "[" + prefix + entries.join(separator) + suffix + "]";
+  }
+  const record = value as Readonly<Record<string, ProofkitJsonValue>>;
+  const keys = Object.keys(record).sort(compareProofkitScalarStrings);
+  if (keys.length === 0) return "{}";
+  const separator = pretty ? ",\n" : ",";
+  const prefix = pretty ? "\n" : "";
+  const suffix = pretty ? "\n" + "  ".repeat(depth) : "";
+  const entries = keys.map((key) =>
+    (pretty ? "  ".repeat(depth + 1) : "") + quoteProofkitScalarString(key) + (pretty ? ": " : ":") + writeProofkitStableJson(record[key] as ProofkitJsonValue, depth + 1, layout)
+  );
+  return "{" + prefix + entries.join(separator) + suffix + "}";
+}
+
+function assertProofkitScalarString(value: string): string {
+	if (!isProofkitScalarString(value)) {
+		throw new Error("stable JSON strings must contain only Unicode scalar values");
+	}
+	return value;
+}
+
+function isProofkitScalarString(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const low = value.charCodeAt(index + 1);
+      if (!(low >= 0xdc00 && low <= 0xdfff)) {
+        return false;
+      }
+      index += 1;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function compareProofkitScalarStrings(left: string, right: string): number {
+  let leftIndex = 0;
+  let rightIndex = 0;
+  while (leftIndex < left.length && rightIndex < right.length) {
+    const leftScalar = left.codePointAt(leftIndex) as number;
+    const rightScalar = right.codePointAt(rightIndex) as number;
+    if (leftScalar !== rightScalar) return leftScalar - rightScalar;
+    leftIndex += leftScalar > 0xffff ? 2 : 1;
+    rightIndex += rightScalar > 0xffff ? 2 : 1;
+  }
+  if (leftIndex < left.length) return 1;
+  if (rightIndex < right.length) return -1;
+  return 0;
+}
+
+function isProofkitUnsafeScalar(value: number): boolean {
+  let low = 0;
+  let high = unsafeScalarRanges.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if ((unsafeScalarRanges[middle] as readonly [number, number, number])[1] < value) low = middle + 1;
+    else high = middle;
+  }
+  if (low === unsafeScalarRanges.length) return false;
+  const [start, end, step] = unsafeScalarRanges[low] as readonly [number, number, number];
+  return value >= start && value <= end && (value - start) % step === 0;
+}
+
+function quoteProofkitScalarString(value: string): string {
+  assertProofkitScalarString(value);
+  let output = "\"";
+  for (const character of value) {
+    const scalar = character.codePointAt(0) as number;
+    switch (scalar) {
+      case 0x22: output += "\\\""; break;
+      case 0x5c: output += "\\\\"; break;
+      case 0x08: output += "\\b"; break;
+      case 0x09: output += "\\t"; break;
+      case 0x0a: output += "\\n"; break;
+      case 0x0c: output += "\\f"; break;
+      case 0x0d: output += "\\r"; break;
+      default: output += isProofkitUnsafeScalar(scalar) ? proofkitUnicodeEscape(scalar) : character;
+    }
+  }
+  return output + "\"";
+}
+
+function proofkitUnicodeEscape(value: number): string {
+  if (value <= 0xffff) return "\\u" + value.toString(16).padStart(4, "0");
+  const adjusted = value - 0x10000;
+  const high = 0xd800 + (adjusted >> 10);
+  const low = 0xdc00 + (adjusted & 0x3ff);
+  return "\\u" + high.toString(16) + "\\u" + low.toString(16);
+}
+
+function decodeProofkitUTF8(bytes: Uint8Array, fixedLabel: string): string {
+  try {
+    return new TextDecoder("utf-8", {fatal: true}).decode(bytes);
+  } catch {
+    throw new Error(fixedLabel + " is not valid UTF-8");
+  }
 }
 
 export function formatProofkitCliError(error: unknown): string {
@@ -294,7 +423,10 @@ export function formatProofkitCliError(error: unknown): string {
 }
 
 function redactDiagnosticValue(value: string): string {
-  return truncateDiagnosticValue(redactControlRunes(redactSecretLikeText(value)));
+	if (!isProofkitScalarString(value) || containsProofkitUnsafeScalar(value) || containsProofkitSecretLikeValue(value)) {
+		return "<redacted-diagnostic-value>";
+	}
+	return truncateDiagnosticValue(value);
 }
 
 function truncateDiagnosticValue(value: string): string {
@@ -305,22 +437,27 @@ function truncateDiagnosticValue(value: string): string {
   return runes.slice(0, maxDiagnosticRunes).join("") + "...<truncated-diagnostic>";
 }
 
-function redactControlRunes(value: string): string {
-  let output = "";
-  let redacting = false;
+function containsProofkitUnsafeScalar(value: string): boolean {
   for (const character of value) {
-    const codePoint = character.codePointAt(0) ?? 0;
-    if (codePoint < 0x20 || codePoint === 0x7f) {
-      if (!redacting) {
-        output += "<redacted-control-rune>";
-        redacting = true;
-      }
-      continue;
-    }
-    output += character;
-    redacting = false;
+		if (isProofkitUnsafeScalar(character.codePointAt(0) as number)) return true;
   }
-  return output;
+	return false;
+}
+
+function containsProofkitSecretLikeValue(value: string): boolean {
+	return [
+		/authorization\s*:\s*[^\r\n]+/iu,
+		/bearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,
+		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+/iu,
+		/github_pat_[A-Za-z0-9_]+/iu,
+		/gh[pousr]_[A-Za-z0-9_]+/iu,
+		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,
+		/xox[abprs]-[A-Za-z0-9-]+/iu,
+		/glpat-[A-Za-z0-9_-]+/iu,
+		/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu,
+		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
+		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
+	].some((pattern) => pattern.test(value));
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(
@@ -425,7 +562,7 @@ function readProofkitBoundedTextFile(filePath: string, options: ProofkitReportIn
       }
       chunks.push(Buffer.from(chunk.subarray(0, bytesRead)));
     }
-    return Buffer.concat(chunks, total).toString("utf8");
+    return decodeProofkitUTF8(Buffer.concat(chunks, total), "input file");
   } finally {
     closeSync(fd);
   }
@@ -549,16 +686,20 @@ function runProofkitCommand(command: string, input: unknown, args: readonly stri
   }
   const processArgs = options.jsonLayout === undefined ? [] : ["--json-layout", options.jsonLayout];
   const childArgs = options.inputMode === "none" ? [...processArgs, command, ...prepared.args] : [...processArgs, command, "--input", "-", ...prepared.args];
-  const child = spawnSync(options.binaryPath, childArgs, {
+  const childResult = spawnSync(options.binaryPath, childArgs, {
     cwd: options.cwd,
-    encoding: "utf8",
     env: options.env,
     input: options.inputMode === "none" ? undefined : proofkitStableJsonString(input),
     maxBuffer: options.maxBuffer ?? defaultMaxBuffer,
   });
-  if (child.error !== undefined) {
-    throw new Error(formatProofkitCliError(child.error));
+  if (childResult.error !== undefined) {
+    throw new Error(formatProofkitCliError(childResult.error));
   }
+  const child: ProofkitProcessResult = {
+    status: childResult.status,
+    stdout: decodeProofkitUTF8(childResult.stdout, "Proofkit stdout"),
+    stderr: decodeProofkitUTF8(childResult.stderr, "Proofkit stderr"),
+  };
   return {child, outputFile: prepared.outputFile};
 }
 
@@ -786,7 +927,7 @@ class ProofkitJsonScanner {
       const char = this.source[this.index] ?? "";
       this.index += 1;
       if (char === "\"") {
-        return output;
+        return assertProofkitScalarString(output);
       }
       if (char === "\\") {
         output += this.parseEscape();
@@ -987,22 +1128,14 @@ function admitRunOptions(options: ProofkitCommandRunOptions): void {
 }
 
 function formatReadFailure(filePath: string, error: unknown, options: ProofkitReportInputReadOptions): string {
-  const message = redactDiagnosticValue(filePath) + ": " + formatProofkitCliError(error);
-  return redactDiagnosticValue(options.failureMessagePrefix === undefined ? message : options.failureMessagePrefix + ": " + message);
-}
-
-function redactSecretLikeText(value: string): string {
-  return value
-    .replaceAll(/authorization\s*:\s*[^\r\n]+/giu, "authorization: [REDACTED]")
-    .replaceAll(/bearer\s+[A-Za-z0-9._~+/=-]{8,}/giu, "Bearer [REDACTED]")
-    .replaceAll(/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+/giu, "[REDACTED]")
-    .replaceAll(/github_pat_[A-Za-z0-9_]+/giu, "[REDACTED]")
-    .replaceAll(/gh[pousr]_[A-Za-z0-9_]+/giu, "[REDACTED]")
-    .replaceAll(/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/giu, "[REDACTED]")
-    .replaceAll(/xox[abprs]-[A-Za-z0-9-]+/giu, "[REDACTED]")
-    .replaceAll(/glpat-[A-Za-z0-9_-]+/giu, "[REDACTED]")
-    .replaceAll(/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/giu, "[REDACTED]")
-    .replaceAll(/-----BEGIN [A-Z ]*PRIVATE KEY-----/giu, "[REDACTED]")
-    .replaceAll(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/giu, "[REDACTED]");
+	const fixed = "<redacted-diagnostic-value>";
+	const pathLabel = redactDiagnosticValue(filePath);
+	const errorLabel = formatProofkitCliError(error);
+	if (pathLabel === fixed || errorLabel === fixed) return fixed;
+	const message = pathLabel + ": " + errorLabel;
+	if (options.failureMessagePrefix === undefined) return redactDiagnosticValue(message);
+	const prefix = redactDiagnosticValue(options.failureMessagePrefix);
+	if (prefix === fixed) return fixed;
+	return redactDiagnosticValue(prefix + ": " + message);
 }
 `

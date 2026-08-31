@@ -1,6 +1,8 @@
 package main
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -22,6 +24,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
@@ -35,21 +38,26 @@ import (
 var commandOracleValidateCurrent = commandoracle.ValidateCurrent
 
 const (
-	completionID                = "proofkit.release_closeout.current_package_gate"
-	ciProvenancePath            = "artifacts/proofkit/ci-provenance.json"
-	cliContractPath             = "proofkit/cli-contract.v2.json"
-	coverageMetricsPath         = "artifacts/proofkit/coverage-metrics.json"
-	commandOracleRecordPath     = commandoracle.RecordPath
-	proofReceiptReportPath      = "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"
-	proofReceiptsPath           = "artifacts/proofkit/self-hosting-proof-receipts.json"
-	producerReportPath          = "artifacts/proofkit/self-hosting-receipt-producer-admission-report.json"
-	producerPolicyPath          = "artifacts/proofkit/self-hosting-receipt-producer-admission.json"
-	specProofBundleReportPath   = "artifacts/proofkit/self-hosting-spec-proof-bundle-admission-report.json"
-	specProofBundlePath         = "artifacts/proofkit/self-hosting-spec-proof-bundle.json"
-	npmCandidateNonClaim        = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
-	pypiPlannedNonClaim         = "PyPI is not a dependency authority for this version until PyPI package evidence exists."
-	packageGateEnvironmentClass = "local-go-python"
-	pythonPackageName           = "agentic-proofkit"
+	completionID                      = "proofkit.release_closeout.current_package_gate"
+	ciProvenancePath                  = "artifacts/proofkit/ci-provenance.json"
+	cliContractPath                   = "proofkit/cli-contract.v2.json"
+	coverageMetricsPath               = "artifacts/proofkit/coverage-metrics.json"
+	commandOracleRecordPath           = commandoracle.RecordPath
+	proofReceiptReportPath            = "artifacts/proofkit/self-hosting-proof-receipt-admission-report.json"
+	proofReceiptsPath                 = "artifacts/proofkit/self-hosting-proof-receipts.json"
+	producerReportPath                = "artifacts/proofkit/self-hosting-receipt-producer-admission-report.json"
+	producerPolicyPath                = "artifacts/proofkit/self-hosting-receipt-producer-admission.json"
+	specProofBundleReportPath         = "artifacts/proofkit/self-hosting-spec-proof-bundle-admission-report.json"
+	specProofBundlePath               = "artifacts/proofkit/self-hosting-spec-proof-bundle.json"
+	npmCandidateNonClaim              = "Local npm package artifacts are candidate tarball evidence; they do not prove npm registry publication, registry install authority, or consumer adoption."
+	pypiPlannedNonClaim               = "PyPI is not a dependency authority for this version until PyPI package evidence exists."
+	packageGateEnvironmentClass       = "local-go-python"
+	pythonPackageName                 = "agentic-proofkit"
+	pythonWheelBinaryEntry            = "agentic_proofkit/bin/agentic-proofkit"
+	maxNPMTarballBytes          int64 = 256 << 20
+	maxPythonWheelBytes         int64 = 256 << 20
+	maxPythonBinaryBytes        int64 = 64 << 20
+	maxPythonWheelEntries             = 4096
 )
 
 type completionInput struct {
@@ -99,9 +107,11 @@ type pythonPackageSet struct {
 }
 
 type pythonWheel struct {
-	Filename string `json:"filename"`
-	Name     string `json:"name"`
-	Version  string `json:"version"`
+	BinarySha256 string `json:"binarySha256"`
+	Filename     string `json:"filename"`
+	Name         string `json:"name"`
+	Sha256       string `json:"sha256"`
+	Version      string `json:"version"`
 }
 
 type releaseManifest struct {
@@ -397,7 +407,7 @@ type specBundleVocabulary struct {
 
 func main() {
 	if err := run(os.Stdout); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -444,13 +454,17 @@ func buildInput(root string) (completionInput, error) {
 
 func packageArtifactCriterion(root string, manifest packageJSON) criterion {
 	packPath := "artifacts/package/npm-pack.json"
-	tarballPath := filepath.Join("artifacts", "package", npmTarballName(manifest.Name, manifest.Version))
-	ok := fileExists(root, tarballPath) && validPackRecords(root, packPath, manifest)
+	tarballName, nameOK := npmTarballName(manifest.Name, manifest.Version)
+	evidence := []string{"package.json", packPath}
+	if nameOK {
+		evidence = append(evidence, filepath.ToSlash(filepath.Join("artifacts", "package", tarballName)))
+	}
+	ok := nameOK && validPackRecords(root, packPath, manifest)
 	return blockingCriterion(
 		"proofkit.release_closeout.package_artifacts",
 		"Local npm package artifact and npm pack metadata must exist for the current package version.",
 		ok,
-		[]string{"package.json", packPath, filepath.ToSlash(tarballPath)},
+		evidence,
 		[]string{"npm:package:artifact", "internal/tools/packageverify"},
 		[]string{"npm pack metadata is missing, invalid, or does not describe the current package.", "The current package tarball is missing or empty."},
 		[]string{"This criterion does not claim npm registry publication or consumer installation."},
@@ -1555,11 +1569,19 @@ func evidenceRefsIfSatisfied(status string, refs []string) []string {
 	return []string{}
 }
 
-func npmTarballName(name string, version string) string {
-	return strings.Replace(strings.Replace(name, "@", "", 1), "/", "-", 1) + "-" + version + ".tgz"
+func npmTarballName(name string, version string) (string, bool) {
+	filename := strings.Replace(strings.Replace(name, "@", "", 1), "/", "-", 1) + "-" + version + ".tgz"
+	if filename == "" || filepath.Base(filename) != filename || filepath.Clean(filename) != filename || !filepath.IsLocal(filename) {
+		return "", false
+	}
+	return filename, true
 }
 
 func validPackRecords(root string, path string, manifest packageJSON) bool {
+	expectedFilename, ok := npmTarballName(manifest.Name, manifest.Version)
+	if !ok {
+		return false
+	}
 	records, err := readTypedJSON[[]packRecord](root, path)
 	if err != nil || len(records) != 1 {
 		return false
@@ -1567,23 +1589,62 @@ func validPackRecords(root string, path string, manifest packageJSON) bool {
 	record := records[0]
 	return record.Name == manifest.Name &&
 		record.Version == manifest.Version &&
-		record.Filename == npmTarballName(manifest.Name, manifest.Version) &&
+		record.Filename == expectedFilename &&
 		packRecordBytesMatch(root, record)
 }
 
 func packRecordBytesMatch(root string, record packRecord) bool {
-	content, err := os.ReadFile(filepath.Join(root, "artifacts", "package", record.Filename))
-	if err != nil || len(content) == 0 {
+	return packRecordBytesMatchWithin(root, record, maxNPMTarballBytes)
+}
+
+func packRecordBytesMatchWithin(root string, record packRecord, maxBytes int64) bool {
+	if maxBytes <= 0 {
 		return false
 	}
-	sha1Sum := sha1.Sum(content)
-	if hex.EncodeToString(sha1Sum[:]) != record.Shasum {
+	if filepath.Base(record.Filename) != record.Filename || filepath.Clean(record.Filename) != record.Filename || !filepath.IsLocal(record.Filename) {
 		return false
 	}
-	hash := sha512.New()
-	_, _ = hash.Write(content)
-	integrity := "sha512-" + base64.StdEncoding.EncodeToString(hash.Sum(nil))
-	return integrity == record.Integrity
+	relativePath := filepath.Join("artifacts", "package", record.Filename)
+	rootHandle, err := os.OpenRoot(root)
+	if err != nil {
+		return false
+	}
+	defer rootHandle.Close()
+	if !artifactDirectoriesAdmitted(rootHandle, relativePath) {
+		return false
+	}
+	before, err := rootHandle.Lstat(relativePath)
+	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxBytes {
+		return false
+	}
+	file, err := rootHandle.Open(relativePath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	opened, err := file.Stat()
+	if err != nil || !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
+		return false
+	}
+	sha1Hash := sha1.New()
+	sha512Hash := sha512.New()
+	written, err := io.Copy(io.MultiWriter(sha1Hash, sha512Hash), io.LimitReader(file, maxBytes+1))
+	if err != nil || written != before.Size() || hex.EncodeToString(sha1Hash.Sum(nil)) != record.Shasum || "sha512-"+base64.StdEncoding.EncodeToString(sha512Hash.Sum(nil)) != record.Integrity {
+		return false
+	}
+	after, statErr := file.Stat()
+	pathAfter, pathErr := rootHandle.Lstat(relativePath)
+	return statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+}
+
+func artifactDirectoriesAdmitted(root *os.Root, path string) bool {
+	for current := filepath.Dir(path); current != "."; current = filepath.Dir(current) {
+		info, err := root.Lstat(current)
+		if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return false
+		}
+	}
+	return true
 }
 
 func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pythonWheel, bool) {
@@ -1592,23 +1653,92 @@ func readPythonPackageSet(root string, path string, manifest packageJSON) ([]pyt
 		return nil, false
 	}
 	for _, item := range packages.Packages {
-		if item.Name != pythonPackageName || item.Version != manifest.Version || item.Filename == "" {
+		if item.Name != pythonPackageName || item.Version != manifest.Version || item.Filename == "" || !isSHA256(item.Sha256) || !isSHA256(item.BinarySha256) {
 			return packages.Packages, false
 		}
-		if !fileExists(root, filepath.Join("artifacts", "pypi", item.Filename)) {
+		if !pythonWheelBytesMatch(root, item) {
 			return packages.Packages, false
 		}
 	}
 	return packages.Packages, true
 }
 
+func pythonWheelBytesMatch(rootPath string, wheel pythonWheel) bool {
+	if filepath.Base(wheel.Filename) != wheel.Filename || filepath.Clean(wheel.Filename) != wheel.Filename || !filepath.IsLocal(wheel.Filename) {
+		return false
+	}
+	relativePath := filepath.Join("artifacts", "pypi", wheel.Filename)
+	root, err := os.OpenRoot(rootPath)
+	if err != nil {
+		return false
+	}
+	defer root.Close()
+	if !artifactDirectoriesAdmitted(root, relativePath) {
+		return false
+	}
+	before, err := root.Lstat(relativePath)
+	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Size() <= 0 || before.Size() > maxPythonWheelBytes {
+		return false
+	}
+	file, err := root.Open(relativePath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	opened, err := file.Stat()
+	if err != nil || !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
+		return false
+	}
+	wheelHash := sha256.New()
+	written, err := io.Copy(wheelHash, io.LimitReader(file, maxPythonWheelBytes+1))
+	if err != nil || written != before.Size() || hex.EncodeToString(wheelHash.Sum(nil)) != wheel.Sha256 {
+		return false
+	}
+	reader, err := zip.NewReader(file, before.Size())
+	if err != nil || len(reader.File) > maxPythonWheelEntries {
+		return false
+	}
+	seen := make(map[string]struct{}, len(reader.File))
+	found := false
+	for _, entry := range reader.File {
+		if _, duplicate := seen[entry.Name]; duplicate {
+			return false
+		}
+		seen[entry.Name] = struct{}{}
+		if entry.Name != pythonWheelBinaryEntry {
+			continue
+		}
+		if found || entry.Mode()&os.ModeSymlink != 0 || !entry.FileInfo().Mode().IsRegular() || entry.UncompressedSize64 > uint64(maxPythonBinaryBytes) {
+			return false
+		}
+		found = true
+		member, err := entry.Open()
+		if err != nil {
+			return false
+		}
+		binaryHash := sha256.New()
+		binarySize, copyErr := io.Copy(binaryHash, io.LimitReader(member, maxPythonBinaryBytes+1))
+		closeErr := member.Close()
+		if copyErr != nil || closeErr != nil || binarySize != int64(entry.UncompressedSize64) || hex.EncodeToString(binaryHash.Sum(nil)) != wheel.BinarySha256 {
+			return false
+		}
+	}
+	after, statErr := file.Stat()
+	pathAfter, pathErr := root.Lstat(relativePath)
+	return found && statErr == nil && pathErr == nil && pathAfter.Mode()&os.ModeSymlink == 0 && os.SameFile(before, after) && os.SameFile(after, pathAfter) && before.Size() == after.Size() && before.ModTime().Equal(after.ModTime())
+}
+
 func releaseChecksumInventoriesMatch(root string, manifest packageJSON) bool {
+	expectedFilename, ok := npmTarballName(manifest.Name, manifest.Version)
+	if !ok {
+		return false
+	}
 	packRecords, err := readTypedJSON[[]packRecord](root, "artifacts/package/npm-pack.json")
 	if err != nil || len(packRecords) != 1 {
 		return false
 	}
 	packRecord := packRecords[0]
-	if packRecord.Name != manifest.Name || packRecord.Version != manifest.Version || packRecord.Filename != npmTarballName(manifest.Name, manifest.Version) {
+	if packRecord.Name != manifest.Name || packRecord.Version != manifest.Version || packRecord.Filename != expectedFilename {
 		return false
 	}
 	wheels, ok := readPythonPackageSet(root, "artifacts/pypi/python-packages.json", manifest)
@@ -1676,7 +1806,7 @@ func checksumFileMatches(root string, checksumPath string, targetPaths []string)
 	if err != nil {
 		return false
 	}
-	return string(content) == strings.Join(expected, "\n")+"\n"
+	return bytes.Equal(content, []byte(strings.Join(expected, "\n")+"\n"))
 }
 
 func checksumLines(root string, targetPaths []string) ([]string, error) {
@@ -1729,7 +1859,7 @@ func releaseNotesMatchChangeRecord(root string, path string, manifest packageJSO
 	}
 	pypiPublished := fileExists(root, "artifacts/pypi-registry/pypi-release.json")
 	expected := releasechange.RenderMarkdown(record, manifest.Name, pythonPackageName, pypiPublished)
-	return string(content) == expected
+	return bytes.Equal(content, []byte(expected))
 }
 
 func hasChannelStatus(manifest releaseManifest, authority string, allowed ...string) bool {

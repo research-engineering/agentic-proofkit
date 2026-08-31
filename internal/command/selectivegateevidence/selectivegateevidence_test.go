@@ -33,7 +33,7 @@ func TestBuildRejectsNonBooleanPublicAPIPlanFlag(t *testing.T) {
 }
 
 func TestProjectObligationDecisionBuildsInputAndRejectsUnroutedCommand(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.018388928679990711151132651696474760405977786383365901536442241248004003958482")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.088917990761715208703387156728584028126802229067385672185331276611475401525262")
 	projected, err := ProjectObligationDecision(validProjectionInput())
 	if err != nil {
 		t.Fatalf("ProjectObligationDecision() error=%v", err)
@@ -247,7 +247,7 @@ func TestBuildRejectsFailedProducerAdmissionReport(t *testing.T) {
 }
 
 func TestBuildRejectsMergeSatisfyingEvidenceWithoutProducerAdmission(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.112550534058264454186632868263981916290936959138554398802013554630682769870797")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.012598928187089744067552607028228262907235005555210470674455355974318859179759")
 	input := validEvidenceInput()
 	delete(input, "producerAdmission")
 
@@ -473,7 +473,7 @@ func TestBuildAddsBoundaryNonClaims(t *testing.T) {
 }
 
 func TestBuildReportsMergeEvidenceWithoutApprovingMerge(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.025252982453387603468032289952983834092931240062565910622005306249337590832380")
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.045002366166899401519856978666954540484585836647606801288212397375230123404662")
 	result, err := Build(validEvidenceInput())
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

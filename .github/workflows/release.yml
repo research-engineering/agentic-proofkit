@@ -467,7 +467,7 @@ jobs:
             ["schemaVersion", 1],
             ["artifactKind", "proofkit.json-report-cli-adapter-source"],
             ["format", "json"],
-            ["generatorId", "proofkit.json-report-cli-adapter-source.typescript.v1"],
+            ["generatorId", "proofkit.json-report-cli-adapter-source.typescript.v2"],
             ["language", "typescript"],
             ["sourceFileName", "proofkit-json-report-cli-adapter.ts"]
           ]) {

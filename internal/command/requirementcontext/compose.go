@@ -311,7 +311,7 @@ func readCatalogSource(root *os.Root, path string) (any, []byte, string, error) 
 	if err != nil {
 		return nil, nil, "", err
 	}
-	return value, content, digest.SHA256TextRef(string(content)), nil
+	return value, content, digest.SHA256BytesRef(content), nil
 }
 
 func expectedDigestCoverage(sources []Source) string {

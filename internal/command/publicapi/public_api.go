@@ -12,6 +12,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const (
@@ -465,9 +466,13 @@ func (scan *scanCache) readRelativeFileSnapshot(root *os.Root, lexical string, r
 		return admittedFileSnapshot{}, fmt.Errorf("%s changed identity or size during confined read", context)
 	}
 	scan.bytesRead += int64(len(content))
+	decoded, err := unicodepolicy.DecodeUTF8(content)
+	if err != nil {
+		return admittedFileSnapshot{}, fmt.Errorf("TypeScript public API source is not valid UTF-8")
+	}
 	snapshot := admittedFileSnapshot{
 		canonical: canonical,
-		content:   string(content),
+		content:   decoded,
 		digest:    sha256.Sum256(content),
 		identity:  before,
 	}

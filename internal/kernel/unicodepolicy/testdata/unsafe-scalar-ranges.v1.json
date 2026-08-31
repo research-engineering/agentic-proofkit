@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "unicodeVersion": "15.0.0",
+  "tableSha256": "16873769cae138cd0129781932e487ed558510e52a0237dcfcb558081994cfd9",
+  "ranges": [
+    {"category": "Cc", "start": 0, "end": 31, "step": 1},
+    {"category": "Cc", "start": 127, "end": 159, "step": 1},
+    {"category": "Cf", "start": 173, "end": 1536, "step": 1363},
+    {"category": "Cf", "start": 1537, "end": 1541, "step": 1},
+    {"category": "Cf", "start": 1564, "end": 1757, "step": 193},
+    {"category": "Cf", "start": 1807, "end": 2192, "step": 385},
+    {"category": "Cf", "start": 2193, "end": 2274, "step": 81},
+    {"category": "Cf", "start": 6158, "end": 8203, "step": 2045},
+    {"category": "Cf", "start": 8204, "end": 8207, "step": 1},
+    {"category": "Zl", "start": 8232, "end": 8232, "step": 1},
+    {"category": "Zp", "start": 8233, "end": 8233, "step": 1},
+    {"category": "Cf", "start": 8234, "end": 8238, "step": 1},
+    {"category": "Cf", "start": 8288, "end": 8292, "step": 1},
+    {"category": "Cf", "start": 8294, "end": 8303, "step": 1},
+    {"category": "Cf", "start": 65279, "end": 65529, "step": 250},
+    {"category": "Cf", "start": 65530, "end": 65531, "step": 1},
+    {"category": "Cf", "start": 69821, "end": 69837, "step": 16},
+    {"category": "Cf", "start": 78896, "end": 78911, "step": 1},
+    {"category": "Cf", "start": 113824, "end": 113827, "step": 1},
+    {"category": "Cf", "start": 119155, "end": 119162, "step": 1},
+    {"category": "Cf", "start": 917505, "end": 917536, "step": 31},
+    {"category": "Cf", "start": 917537, "end": 917631, "step": 1}
+  ]
+}

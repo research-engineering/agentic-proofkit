@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
@@ -105,7 +106,7 @@ type cyclonedxDependency struct {
 
 func main() {
 	if err := run(); err != nil {
-		_, _ = fmt.Fprintln(os.Stderr, err.Error())
+		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
 }
@@ -188,7 +189,7 @@ func goModuleInventory() ([]goModuleRecord, error) {
 	if err != nil {
 		return nil, fmt.Errorf("go list modules: %w", err)
 	}
-	decoder := json.NewDecoder(strings.NewReader(string(output)))
+	decoder := json.NewDecoder(bytes.NewReader(output))
 	out := []goModuleRecord{}
 	for {
 		var module goModuleRecord
