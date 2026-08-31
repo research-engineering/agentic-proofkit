@@ -12,7 +12,7 @@ func leastClosure(input admittedInput) (closureResult, error) {
 	if input.GoverningAuthorityRefID != nil {
 		seeds = append(seeds, *input.GoverningAuthorityRefID)
 	}
-	if input.Checkpoint != nil && input.Checkpoint.State != "not_started" {
+	if input.Checkpoint != nil && input.Checkpoint.SubjectRefID != "" {
 		seeds = append(seeds, input.Checkpoint.SubjectRefID)
 		seeds = append(seeds, input.Checkpoint.FindingRefs...)
 	}

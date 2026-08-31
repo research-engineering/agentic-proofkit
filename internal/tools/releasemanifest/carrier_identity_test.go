@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"compress/gzip"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,14 +17,25 @@ import (
 func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 	t.Run("matching_carriers", func(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
-		if err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages); err != nil {
+		identities, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		if err != nil {
 			t.Fatal(err)
+		}
+		if len(identities) != len(releaseplatform.Targets()) {
+			t.Fatalf("decoded identity count=%d", len(identities))
+		}
+		for _, target := range releaseplatform.Targets() {
+			filename := target.PlatformSuffix + ".whl"
+			want := sha256.Sum256(carrierBinary(target.PlatformSuffix))
+			if got := identities[filename].binarySHA256; got != fmt.Sprintf("%x", want) {
+				t.Fatalf("binary digest for %s=%s", filename, got)
+			}
 		}
 	})
 
 	t.Run("wheel_mutation", func(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "linux-x64")
-		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
 		if err == nil || !strings.Contains(err.Error(), "different release-platform binary bytes") {
 			t.Fatalf("mutated wheel was not rejected: %v", err)
 		}
@@ -31,7 +44,7 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 	t.Run("duplicate_tar_member", func(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
 		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "binary")
-		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
 		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
 			t.Fatalf("duplicate npm binary was not rejected: %v", err)
 		}
@@ -40,7 +53,7 @@ func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
 	t.Run("duplicate_non_binary_tar_member", func(t *testing.T) {
 		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
 		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), "metadata")
-		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		_, err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
 		if err == nil || !strings.Contains(err.Error(), "contains duplicate entries") {
 			t.Fatalf("duplicate npm metadata entry was not rejected: %v", err)
 		}

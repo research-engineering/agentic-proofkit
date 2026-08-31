@@ -72,7 +72,7 @@ func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocati
 		command.Stdin = bytes.NewReader(invocation.Input)
 	}
 	runErr := command.Run()
-	cleanupErr := processgroup.Terminate(command)
+	cleanupErr := processgroup.TerminateAndWait(command, processWaitDelay)
 	result := Result{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}
 	if cleanupErr != nil {
 		return Result{}, fmt.Errorf("terminate process carrier group: %w", cleanupErr)

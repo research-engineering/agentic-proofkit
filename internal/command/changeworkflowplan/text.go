@@ -21,6 +21,18 @@ func textProjection(value projection) []TextLine {
 			TextLine{Label: "Stop condition", Value: prompt["stopCondition"].(string)},
 			TextLine{Label: "Expected next checkpoint", Value: prompt["expectedNextCheckpoint"].(string)},
 		)
+		if delta := value.Decision.SuccessorStateDelta; delta != nil {
+			lines = append(lines, TextLine{Label: "Successor completed stages", Value: joinStrings(delta.CompletedStageIDs)})
+			if delta.Checkpoint == nil {
+				lines = append(lines, TextLine{Label: "Successor checkpoint", Value: "none"})
+			} else {
+				lines = append(lines,
+					TextLine{Label: "Successor checkpoint", Value: delta.Checkpoint.State},
+					TextLine{Label: "Successor subject ref", Value: delta.Checkpoint.SubjectRefID},
+					TextLine{Label: "Successor subject digest", Value: delta.Checkpoint.SubjectDigest},
+				)
+			}
+		}
 	} else {
 		lines = append(lines,
 			TextLine{Label: "Checkpoint", Value: "none"},

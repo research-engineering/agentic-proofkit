@@ -8,6 +8,8 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 )
 
 func TestAdmitAndRenderVersionBoundChangeRecord(t *testing.T) {
@@ -209,7 +211,7 @@ var currentAdditions = []Change{
 var currentMigrationSteps = []string{
 	"Ensure every agent-envelope command, context, and receipt ID is individually safe and unique, keep the three local identity domains pairwise disjoint, and remove or rename references to ambiguous local targets before adopting 0.5.0.",
 	"Treat stderr as a bounded diagnostic class rather than an exact echo of caller or child-process text, and remove consumers that depend on raw forwarded diagnostics.",
-	"Ensure every stable-JSON string is a Unicode scalar sequence, accept deterministic escaping of pinned Unicode 15 control and format code points, and regenerate TypeScript adapters against generator proofkit.json-report-cli-adapter-source.typescript.v2.",
+	"Ensure every stable-JSON string is a Unicode scalar sequence, accept deterministic escaping of pinned Unicode 15 control and format code points, and regenerate TypeScript adapters against generator " + jsonreportcliadaptersource.TypeScriptGeneratorID + ".",
 }
 
 func validateCurrentChangeRecord(record Record, notes string) error {

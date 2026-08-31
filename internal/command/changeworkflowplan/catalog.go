@@ -3,19 +3,25 @@ package changeworkflowplan
 const workflowProfileID = "proofkit.reviewed-change.v1"
 
 type stageDefinition struct {
-	ID          string
-	FirstAction string
+	ID                      string
+	FirstAction             string
+	RequiresIncomingSubject bool
 }
 
 type checkpointDefinition struct {
-	State          string
-	Action         string
-	UseStageAction bool
+	State               string
+	Action              string
+	UseStageAction      bool
+	RequiresSubject     bool
+	RequiresAssessment  bool
+	RequiresFindingRefs bool
 }
 
 type actionProfile struct {
 	CandidateAction        string
+	EmitsSuccessorDelta    bool
 	ExpectedNextCheckpoint string
+	RequiresWitness        bool
 	StopCondition          string
 }
 
@@ -28,18 +34,18 @@ type workflowCatalogDefinition struct {
 var workflowCatalog = workflowCatalogDefinition{
 	Stages: []stageDefinition{
 		{ID: "architecture", FirstAction: "author"},
-		{ID: "design", FirstAction: "author"},
-		{ID: "implementation_plan", FirstAction: "author"},
-		{ID: "implementation", FirstAction: "implement"},
-		{ID: "verification", FirstAction: "verify"},
-		{ID: "pull_request", FirstAction: "open_pull_request"},
-		{ID: "closeout", FirstAction: "closeout"},
+		{ID: "design", FirstAction: "author", RequiresIncomingSubject: true},
+		{ID: "implementation_plan", FirstAction: "author", RequiresIncomingSubject: true},
+		{ID: "implementation", FirstAction: "implement", RequiresIncomingSubject: true},
+		{ID: "verification", FirstAction: "verify", RequiresIncomingSubject: true},
+		{ID: "pull_request", FirstAction: "open_pull_request", RequiresIncomingSubject: true},
+		{ID: "closeout", FirstAction: "closeout", RequiresIncomingSubject: true},
 	},
 	CheckpointActions: []checkpointDefinition{
 		{State: "not_started", UseStageAction: true},
-		{State: "ready_for_review", Action: "review"},
-		{State: "review_findings", Action: "repair"},
-		{State: "review_passed", Action: "accept_stage"},
+		{State: "ready_for_review", Action: "review", RequiresSubject: true},
+		{State: "review_findings", Action: "repair", RequiresSubject: true, RequiresAssessment: true, RequiresFindingRefs: true},
+		{State: "review_passed", Action: "accept_stage", RequiresSubject: true, RequiresAssessment: true},
 	},
 	ActionProfiles: map[string]actionProfile{
 		"author": {
@@ -56,6 +62,7 @@ var workflowCatalog = workflowCatalogDefinition{
 			CandidateAction:        "Run the consuming repository's positive controls and independent near-miss falsifiers against the exact caller-declared subject.",
 			StopCondition:          "Stop after bounded verification evidence and its subject digest are ready for independent review.",
 			ExpectedNextCheckpoint: "ready_for_review",
+			RequiresWitness:        true,
 		},
 		"open_pull_request": {
 			CandidateAction:        "Open a pull request only under consuming-repository policy for the exact reviewed head and expose its native checks without claiming merge authority.",
@@ -81,6 +88,7 @@ var workflowCatalog = workflowCatalogDefinition{
 			CandidateAction:        "Apply only the reported successorStateDelta to the prior snapshot, preserve all context fields byte-for-byte, and submit the merged snapshot for ordinary admission.",
 			StopCondition:          "Stop after constructing the merged immutable snapshot; do not infer execution, approval, merge, or release from stage acceptance.",
 			ExpectedNextCheckpoint: "successor_state_delta",
+			EmitsSuccessorDelta:    true,
 		},
 	},
 }
@@ -88,4 +96,40 @@ var workflowCatalog = workflowCatalogDefinition{
 func actionProfileFor(action string) (actionProfile, bool) {
 	profile, ok := workflowCatalog.ActionProfiles[action]
 	return profile, ok
+}
+
+func checkpointDefinitionFor(state string) (checkpointDefinition, bool) {
+	for _, definition := range workflowCatalog.CheckpointActions {
+		if definition.State == state {
+			return definition, true
+		}
+	}
+	return checkpointDefinition{}, false
+}
+
+func checkpointRequiresSubject(definition checkpointDefinition, stage stageDefinition) bool {
+	return definition.RequiresSubject || definition.UseStageAction && stage.RequiresIncomingSubject
+}
+
+func checkpointFieldNames(definition checkpointDefinition, stage stageDefinition) []string {
+	fields := []string{"state"}
+	if checkpointRequiresSubject(definition, stage) {
+		fields = append(fields, "subjectDigest", "subjectRefId")
+	}
+	if definition.RequiresAssessment {
+		fields = append(fields, "assessmentSubjectDigest")
+	}
+	if definition.RequiresFindingRefs {
+		fields = append(fields, "findingRefs")
+	}
+	return fields
+}
+
+func initialCheckpointDefinition() checkpointDefinition {
+	for _, definition := range workflowCatalog.CheckpointActions {
+		if definition.UseStageAction {
+			return definition
+		}
+	}
+	panic("workflow catalog has no initial checkpoint definition")
 }

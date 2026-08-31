@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,8 +35,20 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 	packages := &pythonPackageSet{Packages: make([]pythonWheelRecord, 0, len(releaseplatform.Targets()))}
 	for _, target := range releaseplatform.Targets() {
 		filename := target.PlatformSuffix + ".whl"
-		writeWheelCarrier(t, filepath.Join("artifacts", "pypi", filename), carrierBinary(target.PlatformSuffix))
-		packages.Packages = append(packages.Packages, pythonWheelRecord{Filename: filename, PlatformSuffix: target.PlatformSuffix})
+		binary := carrierBinary(target.PlatformSuffix)
+		path := filepath.Join("artifacts", "pypi", filename)
+		writeWheelCarrier(t, path, binary)
+		wheelSHA256, err := fileSHA256(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		binarySHA256 := sha256.Sum256(binary)
+		packages.Packages = append(packages.Packages, pythonWheelRecord{
+			BinarySha256:   fmt.Sprintf("%x", binarySHA256),
+			Filename:       filename,
+			PlatformSuffix: target.PlatformSuffix,
+			Sha256:         wheelSHA256,
+		})
 	}
 	writeFile(t, filepath.Join("artifacts", "release", "sbom.cdx.json"), "{}")
 
@@ -49,6 +63,37 @@ func TestReleaseArtifactSnapshotOwnsOneImmutableEpoch(t *testing.T) {
 	})
 	if err := snapshot.VerifyCrossCarrierBinaryIdentity(records, packages); err != nil {
 		t.Fatal(err)
+	}
+	for _, mutant := range []struct {
+		name   string
+		mutate func(*pythonWheelRecord)
+	}{
+		{name: "wheel digest", mutate: func(record *pythonWheelRecord) { record.Sha256 = strings.Repeat("0", 64) }},
+		{name: "binary digest", mutate: func(record *pythonWheelRecord) { record.BinarySha256 = strings.Repeat("0", 64) }},
+	} {
+		t.Run(mutant.name, func(t *testing.T) {
+			mutated := *packages
+			mutated.Packages = append([]pythonWheelRecord(nil), packages.Packages...)
+			mutant.mutate(&mutated.Packages[0])
+			if err := snapshot.VerifyCrossCarrierBinaryIdentity(records, &mutated); err == nil || !strings.Contains(err.Error(), "digest claims do not match") {
+				t.Fatalf("digest mutant was admitted: %v", err)
+			}
+			if _, err := snapshot.AdmittedPythonPackageSet(packages); err == nil {
+				t.Fatal("failed digest verification retained stale admitted identities")
+			}
+			if err := snapshot.VerifyCrossCarrierBinaryIdentity(records, packages); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+	admittedPackages, err := snapshot.AdmittedPythonPackageSet(packages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := range admittedPackages.Packages {
+		if admittedPackages.Packages[index].Sha256 != packages.Packages[index].Sha256 || admittedPackages.Packages[index].BinarySha256 != packages.Packages[index].BinarySha256 {
+			t.Fatalf("derived package identity %d drifted", index)
+		}
 	}
 	assets, checksums, subjectChecksums, err := snapshot.ReleaseEvidence(records, packages)
 	if err != nil {

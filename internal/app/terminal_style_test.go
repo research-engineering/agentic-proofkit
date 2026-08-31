@@ -9,12 +9,12 @@ func TestTerminalStyleCapabilityRelation(t *testing.T) {
 	view := newTerminalText(
 		terminalTextToken{kind: terminalTokenLabel, text: "Action"},
 		terminalTextToken{kind: terminalTokenPlain, text: ": inspect\n"},
-		terminalTextToken{kind: terminalTokenSecondary, text: "Next"},
+		terminalTextToken{kind: terminalTokenLabel, text: "Next"},
 		terminalTextToken{kind: terminalTokenPlain, text: ": verify\n"},
 	)
-	plain, err := plainTerminalText(view)
+	plain, err := renderTerminalText(view, "never", PresentationCapabilities{})
 	if err != nil {
-		t.Fatalf("plainTerminalText() error = %v", err)
+		t.Fatalf("renderTerminalText() plain error = %v", err)
 	}
 	for _, test := range []struct {
 		name         string
@@ -52,7 +52,7 @@ func TestTerminalStyleRejectsUnknownModesAndTokens(t *testing.T) {
 }
 
 func stripTestANSI(value string) string {
-	for _, sequence := range []string{ansiLabel, ansiSecondary, ansiReset} {
+	for _, sequence := range []string{ansiLabel, ansiReset} {
 		value = strings.ReplaceAll(value, sequence, "")
 	}
 	return value

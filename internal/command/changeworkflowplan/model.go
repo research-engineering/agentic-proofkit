@@ -55,6 +55,8 @@ type stateDecision struct {
 	Action              string
 	ActiveStageID       string
 	CheckpointState     string
+	RequiresSubject     bool
+	RequiresWitness     bool
 	OutputKind          string
 	SuccessorStateDelta *successorStateDelta
 }
@@ -64,7 +66,10 @@ type stateRow struct {
 	ActiveStageID   string
 	CheckpointState string
 	CompletedCount  int
+	EmitsSuccessor  bool
 	OutputKind      string
+	RequiresSubject bool
+	RequiresWitness bool
 	Terminal        bool
 }
 

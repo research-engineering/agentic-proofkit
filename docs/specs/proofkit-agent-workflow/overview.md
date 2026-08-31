@@ -35,10 +35,12 @@ introduced.
   output.
 - `REQ-PROOFKIT-WORKFLOW-003`: 28 active state rows, one terminal row,
   authority- and witness-gated executable envelope transitions, closed
-  blockers and clarifications when those preconditions are absent, and an
-  explicit terminal stop packet.
-- `REQ-PROOFKIT-WORKFLOW-004`: typed subject/finding resolution and internally
-  consistent caller-declared digests.
+  blockers and clarifications when those preconditions are absent, exact
+  accepted-subject carry into each nonterminal successor, and an explicit
+  terminal stop packet.
+- `REQ-PROOFKIT-WORKFLOW-004`: typed subject/finding resolution, incoming
+  subject identity on every noninitial stage, and internally consistent
+  caller-declared digests.
 - `REQ-PROOFKIT-WORKFLOW-005`: shared 256-byte stable-ID admission before work,
   global candidate-dependency resolution, one explicit nullable
   governing-authority reference, role-preserving bounded least dependency
@@ -53,12 +55,15 @@ introduced.
   nondisclosure corpora.
 - `REQ-PROOFKIT-WORKFLOW-008`: display-safe caller admission, no-leak denial,
   exact retained-or-missing witness projection, bounded actionable and
-  terminal text with required coordinates, and no styling of caller values.
+  terminal text with required coordinates and exact rendered successor delta,
+  and no styling of caller values.
 - `REQ-PROOFKIT-WORKFLOW-009`: explicit text/color selection and confinement of
   ANSI to eligible terminal stdout.
-- `REQ-PROOFKIT-WORKFLOW-010`: one production owner per semantic relation,
-  independently authored semantic oracles, and an AST-checked two-command
-  carrier topology with no runtime experiment or external template residue.
+- `REQ-PROOFKIT-WORKFLOW-010`: one production catalog owner for stage,
+  checkpoint-schema, action-prerequisite, and successor semantics,
+  independently authored semantic and literal-duplication oracles, and an
+  AST-checked two-command carrier topology with no runtime experiment or
+  external template residue.
 - `REQ-PROOFKIT-WORKFLOW-011`: a finite factorized CLI relation closed across
   descriptor/dispatcher/family/help/root-contract/witness/generated/package
   surfaces, with npm-only non-runtime specification docs and cross-channel

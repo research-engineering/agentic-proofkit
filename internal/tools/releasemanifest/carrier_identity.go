@@ -5,6 +5,8 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -21,53 +23,60 @@ const (
 	wheelBinaryEntry               = "agentic_proofkit/bin/agentic-proofkit"
 )
 
-func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) (returnErr error) {
+type pythonWheelIdentity struct {
+	binarySHA256 string
+	wheelSHA256  string
+}
+
+func verifyCrossCarrierBinaryIdentity(packageDir string, pythonDir string, localRecords []packRecord, pythonPackages *pythonPackageSet) (identities map[string]pythonWheelIdentity, returnErr error) {
 	if pythonPackages == nil {
-		return nil
+		return nil, nil
 	}
 	if len(localRecords) != 1 {
-		return fmt.Errorf("cross-carrier identity requires exactly one npm package artifact")
+		return nil, fmt.Errorf("cross-carrier identity requires exactly one npm package artifact")
 	}
 	scratch, err := os.MkdirTemp("", "proofkit-carrier-binaries-")
 	if err != nil {
-		return fmt.Errorf("create cross-carrier scratch directory: %w", err)
+		return nil, fmt.Errorf("create cross-carrier scratch directory: %w", err)
 	}
 	defer func() {
 		returnErr = errors.Join(returnErr, os.RemoveAll(scratch))
 	}()
 	npmBinaries, err := extractNPMCarrierBinaries(filepath.Join(packageDir, localRecords[0].Filename), scratch)
 	if err != nil {
-		return fmt.Errorf("decode npm package carrier: %w", err)
+		return nil, fmt.Errorf("decode npm package carrier: %w", err)
 	}
 	wheelsBySuffix := make(map[string]pythonWheelRecord, len(pythonPackages.Packages))
 	for _, record := range pythonPackages.Packages {
 		if _, exists := wheelsBySuffix[record.PlatformSuffix]; exists {
-			return fmt.Errorf("cross-carrier identity contains a duplicate Python platform suffix")
+			return nil, fmt.Errorf("cross-carrier identity contains a duplicate Python platform suffix")
 		}
 		wheelsBySuffix[record.PlatformSuffix] = record
 	}
 	targets := releaseplatform.Targets()
 	if len(wheelsBySuffix) != len(targets) {
-		return fmt.Errorf("cross-carrier identity requires exact release-platform wheel closure")
+		return nil, fmt.Errorf("cross-carrier identity requires exact release-platform wheel closure")
 	}
+	identities = make(map[string]pythonWheelIdentity, len(targets))
 	for _, target := range targets {
 		npmBinary, exists := npmBinaries[target.PlatformSuffix]
 		if !exists {
-			return fmt.Errorf("npm package carrier is missing a release-platform binary")
+			return nil, fmt.Errorf("npm package carrier is missing a release-platform binary")
 		}
 		wheel, exists := wheelsBySuffix[target.PlatformSuffix]
 		if !exists {
-			return fmt.Errorf("python package carrier is missing a release-platform wheel")
+			return nil, fmt.Errorf("python package carrier is missing a release-platform wheel")
 		}
-		equal, err := wheelCarrierBinaryEquals(filepath.Join(pythonDir, wheel.Filename), npmBinary)
+		equal, binarySHA256, err := wheelCarrierBinaryEquals(filepath.Join(pythonDir, wheel.Filename), npmBinary)
 		if err != nil {
-			return fmt.Errorf("decode python wheel carrier: %w", err)
+			return nil, fmt.Errorf("decode python wheel carrier: %w", err)
 		}
 		if !equal {
-			return fmt.Errorf("npm and python package carriers contain different release-platform binary bytes")
+			return nil, fmt.Errorf("npm and python package carriers contain different release-platform binary bytes")
 		}
+		identities[wheel.Filename] = pythonWheelIdentity{binarySHA256: binarySHA256}
 	}
-	return nil
+	return identities, nil
 }
 
 type extractedCarrierBinary struct {
@@ -149,41 +158,42 @@ func extractNPMCarrierBinaries(path string, scratch string) (map[string]extracte
 	return binaries, nil
 }
 
-func wheelCarrierBinaryEquals(path string, expected extractedCarrierBinary) (bool, error) {
+func wheelCarrierBinaryEquals(path string, expected extractedCarrierBinary) (bool, string, error) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	if !info.Mode().IsRegular() || info.Size() > maxCarrierArchiveBytes {
-		return false, fmt.Errorf("python wheel carrier is not an admitted regular archive")
+		return false, "", fmt.Errorf("python wheel carrier is not an admitted regular archive")
 	}
 	reader, err := zip.OpenReader(path)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 	defer reader.Close()
 	if len(reader.File) > maxCarrierArchiveEntries {
-		return false, fmt.Errorf("python wheel carrier exceeds the entry limit")
+		return false, "", fmt.Errorf("python wheel carrier exceeds the entry limit")
 	}
 	seen := map[string]struct{}{}
 	found := false
 	equal := false
+	binarySHA256 := ""
 	for _, entry := range reader.File {
 		if _, duplicate := seen[entry.Name]; duplicate {
-			return false, fmt.Errorf("python wheel carrier contains duplicate entries")
+			return false, "", fmt.Errorf("python wheel carrier contains duplicate entries")
 		}
 		seen[entry.Name] = struct{}{}
 		if entry.Name != wheelBinaryEntry {
 			continue
 		}
 		if entry.Mode()&os.ModeSymlink != 0 || !entry.FileInfo().Mode().IsRegular() {
-			return false, fmt.Errorf("python wheel carrier binary is not a regular file")
+			return false, "", fmt.Errorf("python wheel carrier binary is not a regular file")
 		}
 		if entry.UncompressedSize64 > uint64(maxCarrierBinaryBytes) {
-			return false, fmt.Errorf("python wheel carrier binary exceeds the byte limit")
+			return false, "", fmt.Errorf("python wheel carrier binary exceeds the byte limit")
 		}
 		if found {
-			return false, fmt.Errorf("python wheel carrier contains duplicate embedded binaries")
+			return false, "", fmt.Errorf("python wheel carrier contains duplicate embedded binaries")
 		}
 		found = true
 		if int64(entry.UncompressedSize64) != expected.size {
@@ -191,30 +201,34 @@ func wheelCarrierBinaryEquals(path string, expected extractedCarrierBinary) (boo
 		}
 		member, err := entry.Open()
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		expectedFile, err := os.Open(expected.path)
 		if err != nil {
 			member.Close()
-			return false, err
+			return false, "", err
 		}
-		equal, err = equalCarrierStreams(member, expectedFile)
+		hash := sha256.New()
+		equal, err = equalCarrierStreams(io.TeeReader(member, hash), expectedFile)
 		memberCloseErr := member.Close()
 		expectedCloseErr := expectedFile.Close()
 		if err != nil {
-			return false, err
+			return false, "", err
 		}
 		if memberCloseErr != nil {
-			return false, memberCloseErr
+			return false, "", memberCloseErr
 		}
 		if expectedCloseErr != nil {
-			return false, expectedCloseErr
+			return false, "", expectedCloseErr
+		}
+		if equal {
+			binarySHA256 = hex.EncodeToString(hash.Sum(nil))
 		}
 	}
 	if !found {
-		return false, fmt.Errorf("python wheel carrier lacks its embedded binary")
+		return false, "", fmt.Errorf("python wheel carrier lacks its embedded binary")
 	}
-	return equal, nil
+	return equal, binarySHA256, nil
 }
 
 func equalCarrierStreams(left io.Reader, right io.Reader) (bool, error) {

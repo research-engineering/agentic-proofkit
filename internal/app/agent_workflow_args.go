@@ -11,7 +11,6 @@ type agentWorkflowArgs struct {
 	inputPointer   jsonpointer.Pointer
 	pointerPresent bool
 	format         string
-	formatExplicit bool
 	color          string
 	colorExplicit  bool
 	agentEnvelope  bool
@@ -57,7 +56,6 @@ func parseAgentWorkflowArgs(command string, args []string) (agentWorkflowArgs, e
 					return agentWorkflowArgs{}, fmt.Errorf("--format requires one of: json, text")
 				}
 				options.format = value
-				options.formatExplicit = true
 			case "--input":
 				options.inputPath = value
 			case "--input-pointer":

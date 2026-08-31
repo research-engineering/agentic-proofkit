@@ -9,6 +9,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
@@ -16,17 +17,19 @@ import (
 const agentWorkflowVersionEdgePath = "internal/app/testdata/v0.5-wire-observations.json"
 
 type agentWorkflowVersionEdge struct {
-	AddedCommandContracts   []agentWorkflowCommandContract `json:"addedCommandContracts"`
-	AdditionChangeIDs       []string                       `json:"additionChangeIds"`
-	BreakingChangeIDs       []string                       `json:"breakingChangeIds"`
-	CurrentPublicABISHA256  string                         `json:"currentPublicAbiSha256"`
-	EdgeID                  string                         `json:"edgeId"`
-	EvidenceClass           string                         `json:"evidenceClass"`
-	NonClaims               []string                       `json:"nonClaims"`
-	PreviousPublicABISHA256 string                         `json:"previousPublicAbiSha256"`
-	PreviousVersion         string                         `json:"previousVersion"`
-	SchemaVersion           int                            `json:"schemaVersion"`
-	Version                 string                         `json:"version"`
+	AddedCommandContracts         []agentWorkflowCommandContract `json:"addedCommandContracts"`
+	AdditionChangeIDs             []string                       `json:"additionChangeIds"`
+	BreakingChangeIDs             []string                       `json:"breakingChangeIds"`
+	CurrentPublicABISHA256        string                         `json:"currentPublicAbiSha256"`
+	CurrentTypeScriptGeneratorID  string                         `json:"currentTypeScriptGeneratorId"`
+	EdgeID                        string                         `json:"edgeId"`
+	EvidenceClass                 string                         `json:"evidenceClass"`
+	NonClaims                     []string                       `json:"nonClaims"`
+	PreviousPublicABISHA256       string                         `json:"previousPublicAbiSha256"`
+	PreviousTypeScriptGeneratorID string                         `json:"previousTypeScriptGeneratorId"`
+	PreviousVersion               string                         `json:"previousVersion"`
+	SchemaVersion                 int                            `json:"schemaVersion"`
+	Version                       string                         `json:"version"`
 }
 
 type agentWorkflowCommandContract struct {
@@ -51,6 +54,10 @@ func TestAgentWorkflowVersionEdgeClosesPublicWireAdditions(t *testing.T) {
 	}{
 		{name: "current ABI", mutate: func(value *agentWorkflowVersionEdge) { value.CurrentPublicABISHA256 += "0" }},
 		{name: "previous ABI", mutate: func(value *agentWorkflowVersionEdge) { value.PreviousPublicABISHA256 = value.CurrentPublicABISHA256 }},
+		{name: "current TypeScript generator", mutate: func(value *agentWorkflowVersionEdge) { value.CurrentTypeScriptGeneratorID += ".drift" }},
+		{name: "previous TypeScript generator", mutate: func(value *agentWorkflowVersionEdge) {
+			value.PreviousTypeScriptGeneratorID = value.CurrentTypeScriptGeneratorID
+		}},
 		{name: "command contract", mutate: func(value *agentWorkflowVersionEdge) { value.AddedCommandContracts[0].OutputContractSHA256 += "0" }},
 		{name: "missing command", mutate: func(value *agentWorkflowVersionEdge) { value.AddedCommandContracts = value.AddedCommandContracts[1:] }},
 		{name: "addition owner", mutate: func(value *agentWorkflowVersionEdge) { value.AdditionChangeIDs[0] += ".drift" }},
@@ -88,7 +95,7 @@ func readAgentWorkflowVersionEdge(t *testing.T) agentWorkflowVersionEdge {
 	if !ok {
 		t.Fatal("agent workflow version edge must be an object")
 	}
-	assertExactObjectKeys(t, root, []string{"addedCommandContracts", "additionChangeIds", "breakingChangeIds", "currentPublicAbiSha256", "edgeId", "evidenceClass", "nonClaims", "previousPublicAbiSha256", "previousVersion", "schemaVersion", "version"}, "agent workflow version edge")
+	assertExactObjectKeys(t, root, []string{"addedCommandContracts", "additionChangeIds", "breakingChangeIds", "currentPublicAbiSha256", "currentTypeScriptGeneratorId", "edgeId", "evidenceClass", "nonClaims", "previousPublicAbiSha256", "previousTypeScriptGeneratorId", "previousVersion", "schemaVersion", "version"}, "agent workflow version edge")
 	commandContracts, ok := root["addedCommandContracts"].([]any)
 	if !ok {
 		t.Fatal("agent workflow version edge addedCommandContracts must be an array")
@@ -116,6 +123,9 @@ func validateAgentWorkflowVersionEdge(record agentWorkflowVersionEdge, releaseRe
 	}
 	if record.PreviousPublicABISHA256 != "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9" || record.CurrentPublicABISHA256 != "sha256:"+cliContractPublicABISHA256 || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("version-edge ABI identity is invalid")
+	}
+	if record.PreviousTypeScriptGeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v1" || record.CurrentTypeScriptGeneratorID != jsonreportcliadaptersource.TypeScriptGeneratorID || record.PreviousTypeScriptGeneratorID == record.CurrentTypeScriptGeneratorID {
+		return fmt.Errorf("version-edge TypeScript generator identity is invalid")
 	}
 	expectedCommands := []agentWorkflowCommandContract{
 		{Command: "change-workflow-plan", InputContractSHA256: generatedCommandContractMetadataByName["change-workflow-plan"].InputContractSHA256, OutputContractSHA256: generatedCommandContractMetadataByName["change-workflow-plan"].OutputContractSHA256},

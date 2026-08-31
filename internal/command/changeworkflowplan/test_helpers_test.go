@@ -58,9 +58,12 @@ func inputForStage(stageIndex int, checkpointState string) map[string]any {
 		completed[index] = workflowCatalog.Stages[index].ID
 	}
 	input["completedStageIds"] = completed
-	if checkpointState != "not_started" {
+	if checkpointState != initialCheckpointDefinition().State {
 		input = reviewInput(checkpointState)
 		input["completedStageIds"] = completed
+	} else if stageIndex > 0 {
+		input["checkpoint"] = map[string]any{"state": checkpointState, "subjectDigest": testDigest, "subjectRefId": "ctx.artifact"}
+		input["contextRefs"] = []any{contextValue("ctx.artifact", "artifact", testDigest, nil)}
 	}
 	return input
 }

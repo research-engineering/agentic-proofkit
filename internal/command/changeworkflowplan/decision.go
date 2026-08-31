@@ -10,12 +10,19 @@ func buildCheckpointRelation() []stateRow {
 			if checkpoint.UseStageAction {
 				action = stage.FirstAction
 			}
+			profile, ok := actionProfileFor(action)
+			if !ok {
+				panic("workflow catalog action has no profile")
+			}
 			rows = append(rows, stateRow{
 				Action:          action,
 				ActiveStageID:   stage.ID,
 				CheckpointState: checkpoint.State,
 				CompletedCount:  stageIndex,
+				EmitsSuccessor:  profile.EmitsSuccessorDelta,
 				OutputKind:      "next_action",
+				RequiresSubject: checkpointRequiresSubject(checkpoint, stage),
+				RequiresWitness: profile.RequiresWitness,
 			})
 		}
 	}
@@ -41,12 +48,20 @@ func decide(input admittedInput) (stateDecision, error) {
 			ActiveStageID:   row.ActiveStageID,
 			CheckpointState: row.CheckpointState,
 			OutputKind:      row.OutputKind,
+			RequiresSubject: row.RequiresSubject,
+			RequiresWitness: row.RequiresWitness,
 		}
-		if row.Action == "accept_stage" {
+		if row.EmitsSuccessor {
 			completed := append(cloneStrings(input.CompletedStageIDs), row.ActiveStageID)
 			var nextCheckpoint *checkpoint
 			if len(completed) < len(workflowCatalog.Stages) {
-				nextCheckpoint = &checkpoint{State: "not_started", FindingRefs: []string{}}
+				initial := initialCheckpointDefinition()
+				nextCheckpoint = &checkpoint{
+					FindingRefs:   []string{},
+					State:         initial.State,
+					SubjectDigest: input.Checkpoint.SubjectDigest,
+					SubjectRefID:  input.Checkpoint.SubjectRefID,
+				}
 			}
 			decision.SuccessorStateDelta = &successorStateDelta{Checkpoint: nextCheckpoint, CompletedStageIDs: completed}
 		}

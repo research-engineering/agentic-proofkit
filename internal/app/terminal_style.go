@@ -6,9 +6,8 @@ import (
 )
 
 const (
-	ansiReset     = "\x1b[0m"
-	ansiLabel     = "\x1b[1;36m"
-	ansiSecondary = "\x1b[36m"
+	ansiReset = "\x1b[0m"
+	ansiLabel = "\x1b[1;36m"
 )
 
 // PresentationCapabilities are immutable process-boundary facts. Library
@@ -21,9 +20,8 @@ type PresentationCapabilities struct {
 type terminalTokenKind string
 
 const (
-	terminalTokenPlain     terminalTokenKind = "plain"
-	terminalTokenLabel     terminalTokenKind = "label"
-	terminalTokenSecondary terminalTokenKind = "secondary"
+	terminalTokenPlain terminalTokenKind = "plain"
+	terminalTokenLabel terminalTokenKind = "label"
 )
 
 type terminalTextToken struct {
@@ -61,18 +59,12 @@ func renderTerminalText(value terminalText, colorMode string, capabilities Prese
 	return builder.String(), nil
 }
 
-func plainTerminalText(value terminalText) (string, error) {
-	return renderTerminalText(value, "never", PresentationCapabilities{})
-}
-
 func terminalTokenStyle(kind terminalTokenKind) (string, error) {
 	switch kind {
 	case terminalTokenPlain:
 		return "", nil
 	case terminalTokenLabel:
 		return ansiLabel, nil
-	case terminalTokenSecondary:
-		return ansiSecondary, nil
 	default:
 		return "", fmt.Errorf("unsupported terminal token kind")
 	}

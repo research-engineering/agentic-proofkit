@@ -31,18 +31,11 @@ func TestRunProcessTerminatesDescendantsAfterSuccessfulParentExit(t *testing.T) 
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = process.Kill() })
-	deadline := time.Now().Add(2 * time.Second)
-	for {
-		err := process.Signal(syscall.Signal(0))
-		if errors.Is(err, os.ErrProcessDone) || errors.Is(err, syscall.ESRCH) {
-			return
+	err = process.Signal(syscall.Signal(0))
+	if !errors.Is(err, os.ErrProcessDone) && !errors.Is(err, syscall.ESRCH) {
+		if err == nil {
+			t.Fatalf("descendant process %d remained present after successful carrier return", pid)
 		}
-		if err != nil {
-			t.Fatalf("probe descendant process: %v", err)
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("descendant process %d remained alive after successful carrier return", pid)
-		}
-		time.Sleep(20 * time.Millisecond)
+		t.Fatalf("probe descendant process: %v", err)
 	}
 }

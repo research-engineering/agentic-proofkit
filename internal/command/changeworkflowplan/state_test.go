@@ -133,22 +133,36 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 			input["checkpoint"] = checkpointValue
 			requireReject(t, input)
 		}
+		missingSubject := inputForStage(1, "not_started")
+		missingSubject["checkpoint"] = map[string]any{"state": "not_started"}
+		requireReject(t, missingSubject)
 	})
 	t.Run("merged_successor_admitted", func(t *testing.T) {
-		for index := range workflowCatalog.Stages {
+		stages := []string{"architecture", "design", "implementation_plan", "implementation", "verification", "pull_request", "closeout"}
+		for index := range stages {
 			prior := inputForStage(index, "review_passed")
 			plan := requireBuild(t, prior)
-			merged, err := MergeSuccessor(prior, plan["successorStateDelta"].(map[string]any))
+			delta := plan["successorStateDelta"].(map[string]any)
+			assertExactSuccessorDelta(t, delta, stages, index)
+			merged, err := MergeSuccessor(prior, delta)
 			if err != nil {
 				t.Fatalf("stage %d successor rejected: %v", index, err)
 			}
-			if _, err := Build(merged); err != nil {
+			next, err := Build(merged)
+			if err != nil {
 				t.Fatalf("stage %d merged successor rejected: %v", index, err)
+			}
+			if index+1 < len(stages) && next["activeStageId"] != stages[index+1] {
+				t.Fatalf("stage %d successor remained at %v", index, next["activeStageId"])
+			}
+			if index+1 == len(stages) && next["outputKind"] != "workflow_complete" {
+				t.Fatalf("final successor outputKind=%v", next["outputKind"])
 			}
 		}
 	})
 	t.Run("agent_envelope_transition_is_executable", func(t *testing.T) {
-		for index := range workflowCatalog.Stages {
+		stages := []string{"architecture", "design", "implementation_plan", "implementation", "verification", "pull_request", "closeout"}
+		for index := range stages {
 			prior := inputForStage(index, "review_passed")
 			envelope, err := BuildAgentEnvelope(prior)
 			if err != nil {
@@ -166,6 +180,7 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 			if !ok {
 				t.Fatalf("stage %d envelope omits successorStateDelta: %v", index, action)
 			}
+			assertExactSuccessorDelta(t, delta, stages, index)
 			merged, err := MergeSuccessor(prior, delta)
 			if err != nil {
 				t.Fatalf("stage %d envelope delta rejected: %v", index, err)
@@ -224,7 +239,10 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 		if action["owner"] != "ctx.authority" {
 			t.Fatalf("verification action lost owner or witness identity: %v", action)
 		}
-		requireEqual(t, action["evidenceRefs"], []any{"ctx.authority", "ctx.witness"})
+		requireEqual(t, action["evidenceRefs"], []any{"ctx.artifact", "ctx.authority", "ctx.witness"})
+		if action["subjectRefId"] != "ctx.artifact" || action["subjectDigest"] != testDigest {
+			t.Fatalf("verification action lost exact subject identity: %v", action)
+		}
 	})
 	t.Run("review_passed_accepts", func(t *testing.T) {
 		for index := range workflowCatalog.Stages {
@@ -284,9 +302,31 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 	})
 }
 
+func assertExactSuccessorDelta(t *testing.T, delta map[string]any, stages []string, stageIndex int) {
+	t.Helper()
+	wantCompleted := make([]any, stageIndex+1)
+	for index := 0; index <= stageIndex; index++ {
+		wantCompleted[index] = stages[index]
+	}
+	requireEqual(t, delta["completedStageIds"], wantCompleted)
+	if stageIndex+1 == len(stages) {
+		if delta["checkpoint"] != nil {
+			t.Fatalf("final successor checkpoint=%v, want nil", delta["checkpoint"])
+		}
+		return
+	}
+	wantCheckpoint := map[string]any{
+		"state":         "not_started",
+		"subjectDigest": testDigest,
+		"subjectRefId":  "ctx.artifact",
+	}
+	requireEqual(t, delta["checkpoint"], wantCheckpoint)
+}
+
 func verificationInput(withWitness bool) map[string]any {
 	input := inputForStage(4, "not_started")
 	contextRefs := []any{
+		contextValue("ctx.artifact", "artifact", testDigest, nil),
 		contextValue("ctx.authority", "authority", "sha256:1111111111111111111111111111111111111111111111111111111111111111", nil),
 	}
 	required := []any{}

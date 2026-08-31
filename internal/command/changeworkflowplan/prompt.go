@@ -37,7 +37,7 @@ func buildPrompt(input admittedInput, decision stateDecision, closure closureRes
 	if input.GoverningAuthorityRefID != nil {
 		coordinates["governingAuthorityRefId"] = *input.GoverningAuthorityRefID
 	}
-	if input.Checkpoint != nil && input.Checkpoint.State != "not_started" {
+	if input.Checkpoint != nil && input.Checkpoint.SubjectRefID != "" {
 		coordinates["subjectDigest"] = input.Checkpoint.SubjectDigest
 		coordinates["subjectRefId"] = input.Checkpoint.SubjectRefID
 	}

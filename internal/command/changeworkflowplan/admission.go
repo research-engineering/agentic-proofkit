@@ -8,13 +8,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
-var checkpointStates = map[string]struct{}{
-	"not_started":      {},
-	"ready_for_review": {},
-	"review_findings":  {},
-	"review_passed":    {},
-}
-
 var contextRefKinds = map[string]struct{}{
 	"artifact":  {},
 	"authority": {},
@@ -42,7 +35,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if err != nil {
 		return admittedInput{}, err
 	}
-	checkpointValue, err := admitCheckpoint(record["checkpoint"], len(completed) == len(workflowCatalog.Stages))
+	checkpointValue, err := admitCheckpoint(record["checkpoint"], len(completed))
 	if err != nil {
 		return admittedInput{}, err
 	}
@@ -88,8 +81,8 @@ func admitCompletedStages(raw any) ([]string, error) {
 	return result, nil
 }
 
-func admitCheckpoint(raw any, complete bool) (*checkpoint, error) {
-	if complete {
+func admitCheckpoint(raw any, completedStageCount int) (*checkpoint, error) {
+	if completedStageCount == len(workflowCatalog.Stages) {
 		if raw != nil {
 			return nil, reject("proofkit.workflow.complete_checkpoint", "a complete workflow requires a null checkpoint")
 		}
@@ -99,16 +92,13 @@ func admitCheckpoint(raw any, complete bool) (*checkpoint, error) {
 	if !ok {
 		return nil, reject("proofkit.workflow.incomplete_checkpoint", "an incomplete workflow requires a checkpoint object")
 	}
-	state, err := admit.Enum(record["state"], checkpointStates, "change workflow checkpoint state")
-	if err != nil {
+	state, ok := record["state"].(string)
+	definition, known := checkpointDefinitionFor(state)
+	if !ok || !known {
 		return nil, reject("proofkit.workflow.checkpoint_variant", "checkpoint state is invalid")
 	}
-	expectedKeys := map[string][]string{
-		"not_started":      {"state"},
-		"ready_for_review": {"state", "subjectDigest", "subjectRefId"},
-		"review_findings":  {"assessmentSubjectDigest", "findingRefs", "state", "subjectDigest", "subjectRefId"},
-		"review_passed":    {"assessmentSubjectDigest", "state", "subjectDigest", "subjectRefId"},
-	}[state]
+	stage := workflowCatalog.Stages[completedStageCount]
+	expectedKeys := checkpointFieldNames(definition, stage)
 	if err := knownKeys(record, expectedKeys, "proofkit.workflow.checkpoint_fields"); err != nil {
 		return nil, err
 	}
@@ -118,18 +108,19 @@ func admitCheckpoint(raw any, complete bool) (*checkpoint, error) {
 		}
 	}
 	result := &checkpoint{State: state, FindingRefs: []string{}}
-	if state == "not_started" {
-		return result, nil
+	if checkpointRequiresSubject(definition, stage) {
+		var err error
+		result.SubjectRefID, err = admitRefID(record["subjectRefId"])
+		if err != nil {
+			return nil, err
+		}
+		result.SubjectDigest, err = admitDigest(record["subjectDigest"])
+		if err != nil {
+			return nil, err
+		}
 	}
-	result.SubjectRefID, err = admitRefID(record["subjectRefId"])
-	if err != nil {
-		return nil, err
-	}
-	result.SubjectDigest, err = admitDigest(record["subjectDigest"])
-	if err != nil {
-		return nil, err
-	}
-	if state == "review_findings" || state == "review_passed" {
+	if definition.RequiresAssessment {
+		var err error
 		result.AssessmentSubjectDigest, err = admitDigest(record["assessmentSubjectDigest"])
 		if err != nil {
 			return nil, err
@@ -138,7 +129,8 @@ func admitCheckpoint(raw any, complete bool) (*checkpoint, error) {
 			return nil, reject("proofkit.workflow.assessment_digest_mismatch", "assessmentSubjectDigest must equal subjectDigest")
 		}
 	}
-	if state == "review_findings" {
+	if definition.RequiresFindingRefs {
+		var err error
 		result.FindingRefs, err = admitRefIDArray(record["findingRefs"], "finding refs", maxFindings)
 		if err != nil {
 			return nil, err
@@ -290,7 +282,7 @@ func validateGlobalReferences(input admittedInput) error {
 			return reject("proofkit.workflow.governing_authority", "governingAuthorityRefId must resolve an authority ref")
 		}
 	}
-	if input.Checkpoint == nil || input.Checkpoint.State == "not_started" {
+	if input.Checkpoint == nil || input.Checkpoint.SubjectRefID == "" {
 		return nil
 	}
 	subject, ok := byID[input.Checkpoint.SubjectRefID]

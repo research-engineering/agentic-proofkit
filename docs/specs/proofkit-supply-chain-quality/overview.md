@@ -163,7 +163,9 @@ vulnerability absence, or consumer rollout safety by itself.
 - `REQ-PROOFKIT-QUALITY-023`: npm platform binaries and Python wheels
   independently bind to the same release binary for every target; a separate
   bounded decoder also compares the final tar and wheel members directly,
-  without a mutable intermediate; wheels bind advertised platform
+  without a mutable intermediate; package-set wheel and embedded-binary digest
+  claims must equal bytes decoded from one immutable snapshot and release
+  closeout recomputes them independently; wheels bind advertised platform
   compatibility to decoded executable bytes, reject version, identity,
   presence, and digest drift, and carry Core Metadata 2.4 plus an exact,
   RECORD-closed repository license payload.
@@ -190,9 +192,11 @@ vulnerability absence, or consumer rollout safety by itself.
 - `REQ-PROOFKIT-QUALITY-027`: report-visible diagnostics and structural text
   apply the same scalar, Unicode-whitespace, control/format, and split-secret
   taxonomy, replace rejected caller values as a whole without echoing any
-  fragment, bound diagnostic output, and own dynamic Go/JavaScript error
-  projection plus failure-only bounded child-process diagnostics for repository
-  tools.
+	  fragment, bound diagnostic output, and own dynamic Go/JavaScript error
+	  projection plus failure-only bounded child-process diagnostics for repository
+	  tools. On supported Unix hosts, an installed-carrier success additionally
+	  requires confirmed process-group absence after the parent is reaped; cleanup
+	  timeout is an explicit failure rather than a successful terminal result.
 
 ## Non-Claims
 

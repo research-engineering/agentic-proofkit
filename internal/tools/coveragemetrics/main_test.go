@@ -589,6 +589,23 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 	}
 
 	for _, scenarioID := range []string{
+		"proofkit.agent-workflow.bounded-safe-text",
+		"proofkit.agent-workflow.cli-presentation-capability-product",
+		"proofkit.agent-workflow.installed-carrier-smoke-closure",
+		"proofkit.agent-workflow.native-evidence-guidance-purity",
+		"proofkit.agent-workflow.native-evidence-guidance-slot-closure",
+		"proofkit.agent-workflow.no-ambient-authority",
+		"proofkit.agent-workflow.prompt-coordinate-and-escalation-closure",
+		"proofkit.agent-workflow.public-cli-relation-closure",
+		"proofkit.agent-workflow.pure-single-admission-owner",
+		"proofkit.agent-workflow.reference-closed-bounded-context",
+		"proofkit.agent-workflow.review-identity-closure",
+		"proofkit.agent-workflow.semantic-owner-minimality",
+		"proofkit.agent-workflow.semantic-owner-topology",
+		"proofkit.agent-workflow.stage-prefix-and-terminal-relation",
+		"proofkit.agent-workflow.style-strip-parity",
+		"proofkit.agent-workflow.total-checkpoint-successor-relation",
+		"proofkit.agent-workflow.version-edge-wire-observation",
 		"proofkit.package-boundary.cli-output-root-witnesses",
 		"proofkit.package-boundary.generated-command-caller-preservation",
 		"proofkit.package-boundary.generated-command-field-inventory",
@@ -671,7 +688,11 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 			mutated := cloneBindingFile(bindings)
 			mutated.Bindings[index].ScenarioID += ".transferred"
 			err := validateBindingWitnessSelectorsAtRoot(root, mutated)
-			if err == nil || !strings.Contains(err.Error(), "required independent-falsifier binding is missing") {
+			want := "required independent-falsifier binding is missing"
+			if strings.HasPrefix(bindings.Bindings[index].RequirementID, "REQ-PROOFKIT-WORKFLOW-") {
+				want = "workflow binding is absent from the exact independent-falsifier inventory"
+			}
+			if err == nil || !strings.Contains(err.Error(), want) {
 				t.Fatalf("scenario-transfer error=%v", err)
 			}
 		})
@@ -692,6 +713,18 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("workflow/surplus-binding", func(t *testing.T) {
+		mutated := cloneBindingFile(bindings)
+		mutated.Bindings = append(mutated.Bindings, bindingScenario{
+			RequirementID: "REQ-PROOFKIT-WORKFLOW-001",
+			ScenarioID:    "proofkit.agent-workflow.uninventoried-surplus",
+		})
+		err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+		if err == nil || !strings.Contains(err.Error(), "workflow binding is absent from the exact independent-falsifier inventory") {
+			t.Fatalf("surplus workflow binding error=%v", err)
+		}
+	})
 
 	for _, scenarioID := range []string{
 		"proofkit.package-boundary.cli-output-root-witnesses",

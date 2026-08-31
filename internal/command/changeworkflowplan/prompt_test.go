@@ -19,6 +19,7 @@ var expectedWorkflowActionProfiles = map[string]actionProfile{
 	"verify": {
 		CandidateAction:        "Run the consuming repository's positive controls and independent near-miss falsifiers against the exact caller-declared subject.",
 		ExpectedNextCheckpoint: "ready_for_review",
+		RequiresWitness:        true,
 		StopCondition:          "Stop after bounded verification evidence and its subject digest are ready for independent review.",
 	},
 	"open_pull_request": {
@@ -43,6 +44,7 @@ var expectedWorkflowActionProfiles = map[string]actionProfile{
 	},
 	"accept_stage": {
 		CandidateAction:        "Apply only the reported successorStateDelta to the prior snapshot, preserve all context fields byte-for-byte, and submit the merged snapshot for ordinary admission.",
+		EmitsSuccessorDelta:    true,
 		ExpectedNextCheckpoint: "successor_state_delta",
 		StopCondition:          "Stop after constructing the merged immutable snapshot; do not infer execution, approval, merge, or release from stage acceptance.",
 	},

@@ -15,7 +15,7 @@ func TestWorkflowTextPredicates(t *testing.T) {
 		if len(lines) > maxTextLines || len(result.Text) > maxTextBytes {
 			t.Fatalf("text exceeds bounds: %d lines, %d bytes", len(lines), len(result.Text))
 		}
-		for _, coordinate := range []string{"architecture", "accept_stage", "review_passed", "ctx.authority", "successor_state_delta", "Omitted context: 1", "Non-claim:"} {
+		for _, coordinate := range []string{"architecture", "accept_stage", "review_passed", "ctx.authority", "successor_state_delta", "Successor completed stages: architecture", "Successor checkpoint: not_started", "Successor subject ref: ctx.artifact", "Successor subject digest: " + testDigest, "Omitted context: 1", "Non-claim:"} {
 			if !strings.Contains(result.Text, coordinate) {
 				t.Fatalf("text omits coordinate %q: %s", coordinate, result.Text)
 			}
@@ -36,7 +36,7 @@ func TestWorkflowTextProjectionParity(t *testing.T) {
 	if rendered != result.Text {
 		t.Fatalf("structured projection drifted from canonical text\ngot: %q\nwant: %q", rendered, result.Text)
 	}
-	if result.Text != "Change workflow plan\nOutput: next_action\nCompleted stages: none\nActive stage: architecture\nAction: accept_stage\nCheckpoint: review_passed\nOwner or escalation: ctx.authority\nStop condition: Stop after constructing the merged immutable snapshot; do not infer execution, approval, merge, or release from stage acceptance.\nExpected next checkpoint: successor_state_delta\nOmitted context: 1\nNon-claim: Change workflow plans do not approve repository edits, merge, release, rollout, or production readiness.\n" {
+	if result.Text != "Change workflow plan\nOutput: next_action\nCompleted stages: none\nActive stage: architecture\nAction: accept_stage\nCheckpoint: review_passed\nOwner or escalation: ctx.authority\nStop condition: Stop after constructing the merged immutable snapshot; do not infer execution, approval, merge, or release from stage acceptance.\nExpected next checkpoint: successor_state_delta\nSuccessor completed stages: architecture\nSuccessor checkpoint: not_started\nSuccessor subject ref: ctx.artifact\nSuccessor subject digest: "+testDigest+"\nOmitted context: 1\nNon-claim: Change workflow plans do not approve repository edits, merge, release, rollout, or production readiness.\n" {
 		t.Fatalf("canonical plain bytes changed: %q", result.Text)
 	}
 }

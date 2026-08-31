@@ -89,6 +89,23 @@ func testAgentWorkflowEnvelopeTransitionClasses(t *testing.T) {
 			if action["outputKind"] != "next_action" || !ok {
 				t.Fatalf("transition envelope is incomplete: %v", action)
 			}
+			wantCompleted := make([]any, stageIndex+1)
+			for index := 0; index <= stageIndex; index++ {
+				wantCompleted[index] = stages[index]
+			}
+			if !equalCLIJSON(t, delta["completedStageIds"], wantCompleted) {
+				t.Fatalf("transition completedStageIds=%v want %v", delta["completedStageIds"], wantCompleted)
+			}
+			if stageIndex+1 == len(stages) {
+				if delta["checkpoint"] != nil {
+					t.Fatalf("final transition checkpoint=%v want nil", delta["checkpoint"])
+				}
+			} else {
+				wantCheckpoint := map[string]any{"state": "not_started", "subjectDigest": digest, "subjectRefId": "ctx.artifact"}
+				if !equalCLIJSON(t, delta["checkpoint"], wantCheckpoint) {
+					t.Fatalf("transition checkpoint=%v want %v", delta["checkpoint"], wantCheckpoint)
+				}
+			}
 			merged, err := changeworkflowplan.MergeSuccessor(prior, delta)
 			if err != nil {
 				t.Fatal(err)

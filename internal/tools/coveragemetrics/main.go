@@ -257,8 +257,25 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		scenarioID    string
 	}
 	required := map[inventoryKey][]string{
-		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}: {"TestVerifyRootPackageRejectsEachForbiddenRootEntry"},
-		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.launcher-profile-admission"}:         {"TestLauncherProfileAdmissionMatrix"},
+		{"REQ-PROOFKIT-WORKFLOW-001", "proofkit.agent-workflow.pure-single-admission-owner"}:              {"TestWorkflowPurityPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-002", "proofkit.agent-workflow.stage-prefix-and-terminal-relation"}:       {"TestWorkflowStatePredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-003", "proofkit.agent-workflow.total-checkpoint-successor-relation"}:      {"TestWorkflowCheckpointPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-004", "proofkit.agent-workflow.review-identity-closure"}:                  {"TestWorkflowIdentityPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-005", "proofkit.agent-workflow.reference-closed-bounded-context"}:         {"TestWorkflowClosurePredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-006", "proofkit.agent-workflow.no-ambient-authority"}:                     {"TestWorkflowAmbientAuthorityPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-007", "proofkit.agent-workflow.native-evidence-guidance-purity"}:          {"TestGuidanceNoAmbientDependencyPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-007", "proofkit.agent-workflow.native-evidence-guidance-slot-closure"}:    {"TestGuidanceSlotPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-008", "proofkit.agent-workflow.bounded-safe-text"}:                        {"TestWorkflowTerminalTextIsOperationallyComplete", "TestWorkflowTextPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-008", "proofkit.agent-workflow.prompt-coordinate-and-escalation-closure"}: {"TestWorkflowPromptPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-009", "proofkit.agent-workflow.cli-presentation-capability-product"}:      {"TestAgentWorkflowCLITruthTable"},
+		{"REQ-PROOFKIT-WORKFLOW-009", "proofkit.agent-workflow.style-strip-parity"}:                       {"TestWorkflowTextProjectionParity"},
+		{"REQ-PROOFKIT-WORKFLOW-010", "proofkit.agent-workflow.semantic-owner-minimality"}:                {"TestGuidancePurityPredicates"},
+		{"REQ-PROOFKIT-WORKFLOW-010", "proofkit.agent-workflow.semantic-owner-topology"}:                  {"TestAgentWorkflowSemanticOwnerTopology"},
+		{"REQ-PROOFKIT-WORKFLOW-011", "proofkit.agent-workflow.installed-carrier-smoke-closure"}:          {"TestVerifyAcceptsApplicationCLI", "TestVerifyRejectsCarrierContractMutations"},
+		{"REQ-PROOFKIT-WORKFLOW-011", "proofkit.agent-workflow.public-cli-relation-closure"}:              {"TestAgentWorkflowCLITruthTable"},
+		{"REQ-PROOFKIT-WORKFLOW-011", "proofkit.agent-workflow.version-edge-wire-observation"}:            {"TestAgentWorkflowVersionEdgeClosesPublicWireAdditions"},
+		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}:      {"TestVerifyRootPackageRejectsEachForbiddenRootEntry"},
+		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.launcher-profile-admission"}:              {"TestLauncherProfileAdmissionMatrix"},
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-field-inventory"}: {
 			"TestGeneratedCommandInvocationProfileFieldInventory",
 			"TestGeneratedCommandInvocationProfileRouteClosure",
@@ -490,6 +507,23 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		},
 	}
 	requiredPaths := map[inventoryKey]string{
+		{"REQ-PROOFKIT-WORKFLOW-001", "proofkit.agent-workflow.pure-single-admission-owner"}:                      "internal/command/changeworkflowplan/change_workflow_plan_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-002", "proofkit.agent-workflow.stage-prefix-and-terminal-relation"}:               "internal/command/changeworkflowplan/state_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-003", "proofkit.agent-workflow.total-checkpoint-successor-relation"}:              "internal/command/changeworkflowplan/state_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-004", "proofkit.agent-workflow.review-identity-closure"}:                          "internal/command/changeworkflowplan/admission_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-005", "proofkit.agent-workflow.reference-closed-bounded-context"}:                 "internal/command/changeworkflowplan/context_closure_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-006", "proofkit.agent-workflow.no-ambient-authority"}:                             "internal/command/changeworkflowplan/dependency_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-007", "proofkit.agent-workflow.native-evidence-guidance-purity"}:                  "internal/command/nativeevidenceguidance/dependency_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-007", "proofkit.agent-workflow.native-evidence-guidance-slot-closure"}:            "internal/command/nativeevidenceguidance/guidance_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-008", "proofkit.agent-workflow.bounded-safe-text"}:                                "internal/command/changeworkflowplan/text_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-008", "proofkit.agent-workflow.prompt-coordinate-and-escalation-closure"}:         "internal/command/changeworkflowplan/prompt_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-009", "proofkit.agent-workflow.cli-presentation-capability-product"}:              "internal/app/agent_workflow_command_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-009", "proofkit.agent-workflow.style-strip-parity"}:                               "internal/command/changeworkflowplan/text_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-010", "proofkit.agent-workflow.semantic-owner-minimality"}:                        "internal/command/nativeevidenceguidance/guidance_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-010", "proofkit.agent-workflow.semantic-owner-topology"}:                          "internal/app/agent_workflow_topology_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-011", "proofkit.agent-workflow.installed-carrier-smoke-closure"}:                  "internal/tools/workflowsmoke/workflow_smoke_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-011", "proofkit.agent-workflow.public-cli-relation-closure"}:                      "internal/app/agent_workflow_command_test.go",
+		{"REQ-PROOFKIT-WORKFLOW-011", "proofkit.agent-workflow.version-edge-wire-observation"}:                    "internal/app/agent_workflow_version_edge_test.go",
 		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}:              "internal/tools/packageverify/main_test.go",
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.launcher-profile-admission"}:                      "internal/kernel/cliexec/cliexec_test.go",
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-field-inventory"}:               "internal/app/invocation_profile_test.go",
@@ -550,6 +584,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 	for _, binding := range bindings.Bindings {
 		key := inventoryKey{requirementID: binding.RequirementID, scenarioID: binding.ScenarioID}
 		want, isRequired := required[key]
+		if strings.HasPrefix(binding.RequirementID, "REQ-PROOFKIT-WORKFLOW-") && !isRequired {
+			return fmt.Errorf("workflow binding is absent from the exact independent-falsifier inventory: %s/%s", binding.RequirementID, binding.ScenarioID)
+		}
 		if !isRequired {
 			continue
 		}

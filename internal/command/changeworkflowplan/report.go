@@ -124,7 +124,22 @@ func successorValue(delta successorStateDelta) map[string]any {
 		"checkpoint":        nil,
 	}
 	if delta.Checkpoint != nil {
-		result["checkpoint"] = map[string]any{"state": delta.Checkpoint.State}
+		result["checkpoint"] = checkpointValue(*delta.Checkpoint)
+	}
+	return result
+}
+
+func checkpointValue(value checkpoint) map[string]any {
+	result := map[string]any{"state": value.State}
+	if value.SubjectRefID != "" {
+		result["subjectDigest"] = value.SubjectDigest
+		result["subjectRefId"] = value.SubjectRefID
+	}
+	if value.AssessmentSubjectDigest != "" {
+		result["assessmentSubjectDigest"] = value.AssessmentSubjectDigest
+	}
+	if len(value.FindingRefs) > 0 {
+		result["findingRefs"] = stringsValue(value.FindingRefs)
 	}
 	return result
 }

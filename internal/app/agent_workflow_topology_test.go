@@ -56,6 +56,7 @@ func TestAgentWorkflowSemanticOwnerTopology(t *testing.T) {
 
 	root := repoRoot(t)
 	assertSingleSemanticTableOwner(t, filepath.Join(root, "internal/command/changeworkflowplan"), "workflowCatalog", "catalog.go")
+	assertWorkflowVocabularyOwnedByCatalog(t, filepath.Join(root, "internal/command/changeworkflowplan"))
 	assertSingleSemanticTableOwner(t, filepath.Join(root, "internal/command/nativeevidenceguidance"), "guidanceTable", "guidance.go")
 	for _, retiredOwner := range []struct {
 		dir  string
@@ -71,6 +72,71 @@ func TestAgentWorkflowSemanticOwnerTopology(t *testing.T) {
 	assertNoRuntimeGuidanceResources(t, filepath.Join(root, "internal/command/changeworkflowplan"))
 	assertNoRuntimeGuidanceResources(t, filepath.Join(root, "internal/command/nativeevidenceguidance"))
 	assertAgentWorkflowCarrierClosure(t, root)
+}
+
+func assertWorkflowVocabularyOwnedByCatalog(t *testing.T, dir string) {
+	t.Helper()
+	catalogPath := filepath.Join(dir, "catalog.go")
+	catalog, err := parser.ParseFile(token.NewFileSet(), catalogPath, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parse %s: %v", catalogPath, err)
+	}
+	vocabulary := map[string]struct{}{}
+	ast.Inspect(catalog, func(node ast.Node) bool {
+		literal := (*ast.BasicLit)(nil)
+		switch value := node.(type) {
+		case *ast.ValueSpec:
+			if len(value.Names) == 1 && value.Names[0].Name == "workflowProfileID" && len(value.Values) == 1 {
+				literal, _ = value.Values[0].(*ast.BasicLit)
+			}
+		case *ast.KeyValueExpr:
+			switch key := value.Key.(type) {
+			case *ast.Ident:
+				if key.Name == "ID" || key.Name == "FirstAction" || key.Name == "State" || key.Name == "Action" {
+					literal, _ = value.Value.(*ast.BasicLit)
+				}
+			case *ast.BasicLit:
+				literal = key
+			}
+		}
+		if literal == nil || literal.Kind != token.STRING {
+			return true
+		}
+		decoded, err := strconv.Unquote(literal.Value)
+		if err != nil {
+			t.Fatalf("decode catalog literal: %v", err)
+		}
+		vocabulary[decoded] = struct{}{}
+		return true
+	})
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || entry.Name() == "catalog.go" || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		path := filepath.Join(dir, entry.Name())
+		parsed, err := parser.ParseFile(token.NewFileSet(), path, nil, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("parse %s: %v", path, err)
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			literal, ok := node.(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+			value, err := strconv.Unquote(literal.Value)
+			if err != nil {
+				t.Fatalf("decode workflow literal in %s: %v", path, err)
+			}
+			if _, duplicate := vocabulary[value]; duplicate {
+				t.Fatalf("%s duplicates workflow catalog semantic literal %q", entry.Name(), value)
+			}
+			return true
+		})
+	}
 }
 
 func assertAgentWorkflowCarrierClosure(t *testing.T, root string) {
@@ -110,7 +176,7 @@ func assertAgentWorkflowCarrierClosure(t *testing.T, root string) {
 		{
 			file:            "terminal_style.go",
 			imports:         []string{"fmt", "strings"},
-			requiredCallees: []string{"renderTerminalText", "terminalTokenStyle"},
+			requiredCallees: []string{"terminalTokenStyle"},
 		},
 	}
 	for _, closure := range closures {

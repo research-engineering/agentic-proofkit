@@ -859,7 +859,7 @@
         "rootDefinitionDigest": "sha256:6632a481380bfb07d754ef622661b291f805b1b168b1824089bdd5cc9bdd4b0e",
         "nativeSource": {
           "path": "internal/command/changeworkflowplan",
-          "canonicalDigest": "sha256:072cd4568529c5e253f1e5f296ba77fcf013ecd04f85f4c34b72082f7c57f0f5",
+          "canonicalDigest": "sha256:fb52771062a3cfdea6d9b97e4b7469be3d62f00e4421646f3c9a47ec079c4d25",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -894,7 +894,7 @@
         "rootDefinitionDigest": "sha256:ca7b2acffdcbfd28222eb61f2bd8687f76f20cb789b712ee3ffc2756a3674ff8",
         "nativeSource": {
           "path": "internal/command/changeworkflowplan",
-          "canonicalDigest": "sha256:072cd4568529c5e253f1e5f296ba77fcf013ecd04f85f4c34b72082f7c57f0f5",
+          "canonicalDigest": "sha256:fb52771062a3cfdea6d9b97e4b7469be3d62f00e4421646f3c9a47ec079c4d25",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2421,7 +2421,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:ceba9fe3379339a2ff137ccaa1ff89bb0136cd306bf70fb3ca8354324d2a1acf",
+            "canonicalDigest": "sha256:af43c7dae19e019887fd3c43ddef4d453966b517880dc3fb76be5f3ed048281d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -5663,7 +5663,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:ceba9fe3379339a2ff137ccaa1ff89bb0136cd306bf70fb3ca8354324d2a1acf",
+          "canonicalDigest": "sha256:af43c7dae19e019887fd3c43ddef4d453966b517880dc3fb76be5f3ed048281d",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5692,7 +5692,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:ceba9fe3379339a2ff137ccaa1ff89bb0136cd306bf70fb3ca8354324d2a1acf",
+          "canonicalDigest": "sha256:af43c7dae19e019887fd3c43ddef4d453966b517880dc3fb76be5f3ed048281d",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

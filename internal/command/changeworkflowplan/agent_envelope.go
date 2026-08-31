@@ -51,6 +51,10 @@ func agentEnvelope(value projection) (map[string]any, error) {
 			if value.Decision.SuccessorStateDelta != nil {
 				action["successorStateDelta"] = successorValue(*value.Decision.SuccessorStateDelta)
 			}
+			if value.Input.Checkpoint != nil && value.Input.Checkpoint.SubjectRefID != "" {
+				action["subjectDigest"] = value.Input.Checkpoint.SubjectDigest
+				action["subjectRefId"] = value.Input.Checkpoint.SubjectRefID
+			}
 			actionPlan = append(actionPlan, action)
 		}
 	} else {
@@ -141,8 +145,28 @@ func envelopeBlockers(value projection) ([]map[string]any, []map[string]any) {
 			"questionId":         "proofkit.change-workflow-plan.clarify-governing-authority",
 		})
 	}
+	if value.Decision.RequiresSubject && (value.Input.Checkpoint == nil || value.Input.Checkpoint.SubjectRefID == "") {
+		retainedRefIDs := contextRefIDs(value.Closure.Retained)
+		blocked = append(blocked, map[string]any{
+			"description":    "The active workflow action requires one admitted artifact subject and equal digest.",
+			"evidenceRefs":   stringsValue(retainedRefIDs),
+			"nonClaim":       "A declared artifact subject does not prove its content, freshness, review state, or suitability.",
+			"owner":          "consumer_repository",
+			"preconditionId": "proofkit.change-workflow-plan.missing-action-subject",
+		})
+		clarifications = append(clarifications, map[string]any{
+			"askWhen":            "The selected action requires a subject but the admitted checkpoint has no artifact identity.",
+			"blocking":           true,
+			"evidenceRefs":       stringsValue(retainedRefIDs),
+			"expectedAnswerKind": "artifact_subject_ref",
+			"nonClaim":           "Supplying an artifact ref does not authenticate or approve the referenced subject.",
+			"owner":              "consumer_repository",
+			"question":           "Which admitted artifact ref and digest identify the exact subject for this action?",
+			"questionId":         "proofkit.change-workflow-plan.clarify-action-subject",
+		})
+	}
 	witnessRefIDs := contextRefIDsOfKind(value.Closure.Retained, "witness")
-	if value.Decision.Action == "verify" && len(witnessRefIDs) == 0 {
+	if value.Decision.RequiresWitness && len(witnessRefIDs) == 0 {
 		retainedRefIDs := contextRefIDs(value.Closure.Retained)
 		blocked = append(blocked, map[string]any{
 			"description":    "Verification requires a retained caller-owned witness ref; use native-evidence-guidance to define repository-specific positive controls and near-miss falsifiers.",

@@ -275,6 +275,10 @@ func run() (returnErr error) {
 	if err := artifactSnapshot.VerifyCrossCarrierBinaryIdentity(localRecords, pythonPackages); err != nil {
 		return err
 	}
+	pythonPackages, err = artifactSnapshot.AdmittedPythonPackageSet(pythonPackages)
+	if err != nil {
+		return err
+	}
 	if err := requirePyPIRegistryMatchesLocal(pypiRegistry, pythonPackages, manifest); err != nil {
 		return err
 	}

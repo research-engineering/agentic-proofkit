@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"time"
 )
 
 // Configure retains exec.CommandContext's direct-process cancellation on
@@ -24,4 +25,10 @@ func Terminate(command *exec.Cmd) error {
 		return nil
 	}
 	return err
+}
+
+// TerminateAndWait terminates the direct child. The caller invokes it after
+// exec.Cmd.Run has already waited for that child on unsupported platforms.
+func TerminateAndWait(command *exec.Cmd, _ time.Duration) error {
+	return Terminate(command)
 }

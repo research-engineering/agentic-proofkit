@@ -15,8 +15,9 @@ import (
 const maxReleaseArtifactBytes int64 = 512 << 20
 
 type releaseArtifactSnapshot struct {
-	root     string
-	bySource map[string]releaseArtifact
+	root                  string
+	bySource              map[string]releaseArtifact
+	pythonWheelIdentities map[string]pythonWheelIdentity
 }
 
 type releaseArtifact struct {
@@ -76,6 +77,7 @@ func (snapshot *releaseArtifactSnapshot) Close() error {
 	}
 	snapshot.root = ""
 	snapshot.bySource = nil
+	snapshot.pythonWheelIdentities = nil
 	return nil
 }
 
@@ -83,12 +85,63 @@ func (snapshot *releaseArtifactSnapshot) VerifyCrossCarrierBinaryIdentity(localR
 	if err := snapshot.requireOpen(); err != nil {
 		return err
 	}
-	return verifyCrossCarrierBinaryIdentity(
+	snapshot.pythonWheelIdentities = nil
+	identities, err := verifyCrossCarrierBinaryIdentity(
 		filepath.Join(snapshot.root, "artifacts", "package"),
 		filepath.Join(snapshot.root, "artifacts", "pypi"),
 		localRecords,
 		pythonPackages,
 	)
+	if err != nil {
+		return err
+	}
+	if pythonPackages == nil {
+		snapshot.pythonWheelIdentities = nil
+		return nil
+	}
+	if len(identities) != len(pythonPackages.Packages) {
+		return fmt.Errorf("python wheel identity decoder lacks exact package closure")
+	}
+	for _, record := range pythonPackages.Packages {
+		identity, ok := identities[record.Filename]
+		if !ok {
+			return fmt.Errorf("python wheel identity decoder lacks an expected package")
+		}
+		artifact, ok := snapshot.bySource[filepath.Join("artifacts", "pypi", record.Filename)]
+		if !ok {
+			return fmt.Errorf("release artifact snapshot lacks an expected Python wheel")
+		}
+		identity.wheelSHA256 = artifact.sha256
+		if record.Sha256 != identity.wheelSHA256 || record.BinarySha256 != identity.binarySHA256 {
+			return fmt.Errorf("python package-set digest claims do not match immutable wheel bytes")
+		}
+		identities[record.Filename] = identity
+	}
+	snapshot.pythonWheelIdentities = identities
+	return nil
+}
+
+func (snapshot *releaseArtifactSnapshot) AdmittedPythonPackageSet(pythonPackages *pythonPackageSet) (*pythonPackageSet, error) {
+	if err := snapshot.requireOpen(); err != nil {
+		return nil, err
+	}
+	if pythonPackages == nil {
+		return nil, nil
+	}
+	if len(snapshot.pythonWheelIdentities) != len(pythonPackages.Packages) {
+		return nil, fmt.Errorf("python wheel bytes have not passed exact immutable identity admission")
+	}
+	admitted := *pythonPackages
+	admitted.Packages = append([]pythonWheelRecord(nil), pythonPackages.Packages...)
+	for index := range admitted.Packages {
+		identity, ok := snapshot.pythonWheelIdentities[admitted.Packages[index].Filename]
+		if !ok {
+			return nil, fmt.Errorf("python wheel identity admission lacks an expected package")
+		}
+		admitted.Packages[index].Sha256 = identity.wheelSHA256
+		admitted.Packages[index].BinarySha256 = identity.binarySHA256
+	}
+	return &admitted, nil
 }
 
 func (snapshot *releaseArtifactSnapshot) ReleaseEvidence(localRecords []packRecord, pythonPackages *pythonPackageSet) ([]assetEvidence, []string, []string, error) {
