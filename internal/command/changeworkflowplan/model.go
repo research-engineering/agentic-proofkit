@@ -17,26 +17,12 @@ const (
 	missingConsumerWitness  = "missing_consumer_witness"
 )
 
-var stageTable = []stageDefinition{
-	{ID: "architecture", FirstAction: "author"},
-	{ID: "design", FirstAction: "author"},
-	{ID: "implementation_plan", FirstAction: "author"},
-	{ID: "implementation", FirstAction: "implement"},
-	{ID: "verification", FirstAction: "verify"},
-	{ID: "pull_request", FirstAction: "open_pull_request"},
-	{ID: "closeout", FirstAction: "closeout"},
-}
-
 var boundaryNonClaims = []string{
 	"Change workflow plans do not authenticate caller assertions, context, digests, checkpoint state, or external state.",
 	"Change workflow plans do not approve repository edits, merge, release, rollout, or production readiness.",
 	"Change workflow plans do not execute or supervise agents, native witnesses, repository operations, providers, or CI.",
 	"Change workflow prompts, reports, text, and envelopes are derived projections and are not semantic authority.",
-}
-
-type stageDefinition struct {
-	ID          string
-	FirstAction string
+	"The reviewed-change workflow is an optional built-in profile and is not a universal consuming-repository process policy.",
 }
 
 type contextRef struct {

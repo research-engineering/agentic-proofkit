@@ -126,13 +126,17 @@ function isScalarString(value) {
 }
 
 function compareScalarStrings(left, right) {
-  const leftScalars = Array.from(left, (character) => character.codePointAt(0));
-  const rightScalars = Array.from(right, (character) => character.codePointAt(0));
-  const sharedLength = Math.min(leftScalars.length, rightScalars.length);
-  for (let index = 0; index < sharedLength; index += 1) {
-    if (leftScalars[index] !== rightScalars[index]) return leftScalars[index] - rightScalars[index];
+  let leftIndex = 0;
+  let rightIndex = 0;
+  while (leftIndex < left.length && rightIndex < right.length) {
+    const leftScalar = left.codePointAt(leftIndex);
+    const rightScalar = right.codePointAt(rightIndex);
+    if (leftScalar !== rightScalar) return leftScalar - rightScalar;
+    leftIndex += leftScalar > 0xffff ? 2 : 1;
+    rightIndex += rightScalar > 0xffff ? 2 : 1;
   }
-  return leftScalars.length - rightScalars.length;
+  if (leftIndex === left.length && rightIndex === right.length) return 0;
+  return leftIndex === left.length ? -1 : 1;
 }
 
 export function isUnsafeScalar(value) {

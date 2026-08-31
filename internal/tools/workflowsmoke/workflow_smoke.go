@@ -51,6 +51,9 @@ func Verify(run Runner) error {
 	if err := requireString(planValue, "checkpointState", "not_started"); err != nil {
 		return fmt.Errorf("planner JSON: %w", err)
 	}
+	if err := requireString(planValue, "workflowProfileId", "proofkit.reviewed-change.v1"); err != nil {
+		return fmt.Errorf("planner JSON: %w", err)
+	}
 
 	compact, err := invoke(run, "planner compact JSON", input, "--json-layout", "compact", "change-workflow-plan", "--input", "-")
 	if err != nil {
@@ -135,6 +138,9 @@ func Verify(run Runner) error {
 	if err := requireStringObject(slots[0], "slotId", "semantic_owner"); err != nil {
 		return fmt.Errorf("no-input guidance JSON: first slot: %w", err)
 	}
+	if err := requireStringObject(slots[0], "applicabilityClass", "always"); err != nil {
+		return fmt.Errorf("no-input guidance JSON: first slot: %w", err)
+	}
 	if err := requireStringObject(slots[len(slots)-1], "slotId", "non_claims"); err != nil {
 		return fmt.Errorf("no-input guidance JSON: last slot: %w", err)
 	}
@@ -143,7 +149,7 @@ func Verify(run Runner) error {
 	if err != nil {
 		return err
 	}
-	if !bytes.HasPrefix(guidanceText.Stdout, []byte("semantic_owner: decision:")) || bytes.Contains(guidanceText.Stdout, []byte("\x1b[")) {
+	if !bytes.HasPrefix(guidanceText.Stdout, []byte("semantic_owner: applicability: always; decision:")) || bytes.Contains(guidanceText.Stdout, []byte("\x1b[")) {
 		return fmt.Errorf("no-input guidance text must be plain text with the canonical first slot")
 	}
 	return nil

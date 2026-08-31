@@ -103,6 +103,7 @@ func planValue(value projection) map[string]any {
 		"retainedContextRefIds": stringsValue(contextRefIDs(value.Closure.Retained)),
 		"retainedContextRefs":   contextRefsValue(value.Closure.Retained),
 		"schemaVersion":         json.Number("1"),
+		"workflowProfileId":     workflowProfileID,
 	}
 	if value.Decision.OutputKind == "workflow_complete" {
 		return plan

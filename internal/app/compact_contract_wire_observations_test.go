@@ -133,6 +133,26 @@ func TestCompactV2WireDeltasResolveAgainstFrozenVersionEdgeObservations(t *testi
 	assertCompactWireDeltaFrontierClosure(t, manifest.Deltas, oldObservations, currentObservations)
 }
 
+func TestCurrentCompactV2WireSemanticsMatchFrozenVersionEdge(t *testing.T) {
+	frozen := readCompactV2WireObservations(t)
+	current := currentCompactV2WireObservations(t)
+	assertExactStringSet(t, sortedMapKeys(frozen), expectedCompactWireObservationKeys, "frozen compact v2 observation closure")
+	assertExactStringSet(t, sortedMapKeys(current), expectedCompactWireObservationKeys, "current compact v2 observation closure")
+	for _, key := range expectedCompactWireObservationKeys {
+		frozenValue := frozen[key]
+		currentValue := current[key]
+		if strings.HasSuffix(key, "|union") {
+			frozenValue = compactWithoutContractFreshnessDigests(t, frozenValue, key+" frozen")
+			currentValue = compactWithoutContractFreshnessDigests(t, currentValue, key+" current")
+		}
+		if !compactJSONEqual(frozenValue, currentValue) {
+			pointers := []string{}
+			collectUncoveredCompactWireDiffs(frozenValue, true, currentValue, true, "", map[string]string{}, map[string]struct{}{}, &pointers)
+			t.Fatalf("current compact v2 observation %s drifted from the frozen version-edge semantics at %v", key, pointers)
+		}
+	}
+}
+
 func readCompactV1WireObservations(t *testing.T) map[string]any {
 	t.Helper()
 	return compactWireObservationMap(t, readCompactV1WireObservationDocument(t), "compact v1")

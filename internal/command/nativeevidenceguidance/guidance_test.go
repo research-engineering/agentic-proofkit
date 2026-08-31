@@ -3,6 +3,8 @@ package nativeevidenceguidance
 import (
 	"crypto/sha256"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"testing"
 
@@ -10,28 +12,28 @@ import (
 )
 
 var slotFingerprints = [...]string{
-	"4f7d1ea4203b97065c619f024d88f3f1fb1eb3df8c022a7cab69ad8af0b0d251",
-	"1b6b182ab32c13c303bb31cab396112256daa9d7361ef99f6cc7af6fc088fa81",
-	"45df453e81d723ccef3cf29eb3ccde7ba90bac72356194e49ba19f26fc252fd1",
-	"555d5b05c5588974c86b471dfd9af8ee9b4774ee75ff981a5148902fa9974ba8",
-	"80c46416ff3b4855c832b1c126180e4c0d630265a814f47874ab4a99e752a9fa",
-	"ecf29279f0527277c0ea62aa5210917659743357d17b88696175cd85a513c6fb",
-	"fed68d4a0833735bff84ab5509dfc07a233611aa7c3ca2593efdb2fe6de31f46",
-	"5f76850ecd6571cc081365656f89e4888bf6ce53f6f47efceaebb8e83f271427",
-	"8adea3ac35394b6bebf904f51a1a488cad8d156713566076c8ba529e36b725d8",
-	"e7ca629cbe625bb8c342dfadb1ca9ecb3e4456d7dbe394e3bf7e158b5ed8d048",
-	"ed669cec6efc72612632050c1173395741290639e9bca106352276212e387a0e",
-	"4f72cdb349f7d87a8a25ce0c6180dd403224792c710b274b9b393d6c3b64cf93",
-	"d5883acd09e114ca0571af5c845c9770e31b11178d59aa3bcebeead8e8ad7e51",
-	"d2f65a835de4d04ed0d8d5b322ab694a26ff68f85055d4a13790ea13e45bb6b8",
-	"d5a74ef4e8e16ee74991962d72871787e92508b32e2460344e99f87c87950aaf",
-	"df63e39402c6daa6aa078e18e75d741da855f9490c7d4cfad3dbcbef37aa1b55",
-	"10ef4f5cbc7b81d12479bb1b2c48be1d59349e40ca0859e23fd0376bca6279de",
-	"6d63c32605c2a21ae866e7edfb1dc6b9c752e5e87987d6cf8d62627e8f0f78d4",
-	"833a7d9fb8309efce8b1ad5c728fe7c393ae5d90cdfd50a71e88df3acab731e2",
-	"c6caf7c6e81f0aab3b4261fde6c490d46cc3db0cc3869d79dbad44553e913f7a",
-	"6c83ba103d8c1b4ad61d196bc90bd8c6033c3b7b35173efbc6b7be8e192cc3bb",
-	"05ed48165f9ef51ca30d2f0cad31050cd65beca08dca56ced734e27dca35711c",
+	"8c9fb4466291b8a60aeed04ffe91e684753424bb71cf93ba0eb7c73ae31b5d21",
+	"f68141d84607e4f343982c753116bb0aeba8e4fcbc65a25cb0284548ac95853c",
+	"930d361a8fde04b1391f2040254efa3c8ae30506a08776072955645d233f53c6",
+	"11e011fe5d90085990ef5837ae40b5d1c179ba787f56d544d855c1fd29324844",
+	"62b191cc9e5752295aa04c16aab4bbbf67be9ba67893ebae7b9a3d47b1e9542c",
+	"e214e2c6203145b94a43f0f4992fd3b40232f439acbd7a17ec3de22da73c9dd8",
+	"b9f830de4358ce0976002226a55d3e21479a7a02b8e6a6d28e2cba58d7222095",
+	"4b34d7c224d13957e333ca1aa7eaac1d5ff19b5b54dfc8fb436f6e20fc735e25",
+	"f45e880bad5b6f8e14a1d4f321ddcfdbefa83a143732c0b961459edb202c15e8",
+	"f70d28729dc5589400787d398f868225f010bb159c822e57494ddfcffb3227af",
+	"04a4843479b418e0f09d45077136bbd07c7b58b8e3f7143d045796051fc0e46f",
+	"496e80d2cdfc106b0c36d9032ea2d3671c83ab670c363959f7cb30e6ed4fe3cc",
+	"5c05b800f6579a9f120be7e3563a9d4dd60ed74ff46cb58651df91762b3cfb0a",
+	"9f186415e33a8899b6ab423c61f9889372d4cb5b5d30dff669152a5100c3d565",
+	"0a2e2c9f6c4294f51f82fc0f131512e5926784a04f1028db1f744361e7693cf8",
+	"c1efe0f8cc0aa87bc6c05bf4ce603ceae72acbba4b357b64c588e6d9b6bfc2a0",
+	"e72db7215f074d0353c635af40bb14263a5f3a8de895af849a5bf679ff3adc04",
+	"be53fb4f4f32e22557922b20c62b42a5f5b8dc645aba27b7caf9af9e88eda905",
+	"b55ed27e5e8dc19dfb7ae997d35b0566e55140bf75570f6b2e2a46b3ae84852b",
+	"fc0065447b033670bb33c6be89d0080aa0ce7f0e60c4e74f7b24f46ec3a49119",
+	"a7aa8e953573653e9c6f4924ba5205a65c61de6d9ff247d7048f082d0dab4e9d",
+	"232e97077ee39087aebd1f2bc3baa5abdd1ff848f8f5779b5489be96b5668b50",
 }
 
 func TestGuidanceSlotPredicates(t *testing.T) {
@@ -43,13 +45,26 @@ func TestGuidanceSlotPredicates(t *testing.T) {
 	if guidance.SchemaVersion != SchemaVersion || guidance.GuidanceID != GuidanceID || len(guidance.Slots) != SlotCount {
 		t.Fatalf("Build() = %#v, want fixed versioned 22-slot guidance", guidance)
 	}
+	actualFingerprints := make([]string, len(guidance.Slots))
+	for index, slot := range guidance.Slots {
+		actualFingerprints[index] = slotFingerprint(slot)
+	}
+	if !slices.Equal(actualFingerprints, slotFingerprints[:]) {
+		t.Fatalf("slot fingerprints = %#v", actualFingerprints)
+	}
+	classCounts := map[string]int{}
 	for _, slot := range guidance.Slots {
-		slot := slot
-		t.Run("slot_"+slot.SlotID, func(t *testing.T) {
-			if got, want := slotFingerprint(slot), slotFingerprints[slot.Order-1]; got != want {
-				t.Fatalf("slot %s fingerprint = %s, want %s", slot.SlotID, got, want)
-			}
-		})
+		classCounts[slot.ApplicabilityClass]++
+	}
+	wantClassCounts := map[string]int{
+		ApplicabilityAlways:                15,
+		ApplicabilityDeclaredInputChannels: 1,
+		ApplicabilityEnvironmentOrNetwork:  1,
+		ApplicabilityExternalProcess:       4,
+		ApplicabilityMutableArtifacts:      1,
+	}
+	if !maps.Equal(classCounts, wantClassCounts) {
+		t.Fatalf("applicability class partition = %#v, want %#v", classCounts, wantClassCounts)
 	}
 }
 
@@ -97,7 +112,7 @@ func TestGuidancePlainTextIsBoundedAndComplete(t *testing.T) {
 		t.Fatalf("Build() error = %v", err)
 	}
 	for _, slot := range guidance.Slots {
-		for _, required := range []string{slot.SlotID, slot.RequiredConsumerDecision, slot.CompletionCriterion} {
+		for _, required := range []string{slot.SlotID, slot.ApplicabilityClass, slot.RequiredConsumerDecision, slot.CompletionCriterion} {
 			if !strings.Contains(text, required) {
 				t.Fatalf("text omits required slot projection %q", required)
 			}
@@ -152,6 +167,6 @@ func TestGuidanceJSONProjectionIsFreshAndComplete(t *testing.T) {
 }
 
 func slotFingerprint(slot Slot) string {
-	value := fmt.Sprintf("%d\x1f%s\x1f%s\x1f%s\x1f%s", slot.Order, slot.SlotID, slot.Question, slot.RequiredConsumerDecision, slot.CompletionCriterion)
+	value := fmt.Sprintf("%d\x1f%s\x1f%s\x1f%s\x1f%s\x1f%s", slot.Order, slot.SlotID, slot.ApplicabilityClass, slot.Question, slot.RequiredConsumerDecision, slot.CompletionCriterion)
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(value)))
 }

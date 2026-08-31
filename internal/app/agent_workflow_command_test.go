@@ -221,6 +221,15 @@ func testAgentWorkflowHelpClasses(t *testing.T) {
 			t.Fatalf("args=%v status=%d stdout=%q stderr=%q", item.args, status, stdout, stderr)
 		}
 	}
+
+	t.Run("help_like_input_paths_are_values", func(t *testing.T) {
+		for _, path := range []string{"--help", "-h"} {
+			status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", path}, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+			if status != 1 || stdout != "" || stderr == "" || strings.Contains(stderr, "help accepts no additional arguments") {
+				t.Fatalf("path=%q status=%d stdout=%q stderr=%q", path, status, stdout, stderr)
+			}
+		}
+	})
 }
 
 func testAgentWorkflowTerminalCapabilityProduct(t *testing.T) {

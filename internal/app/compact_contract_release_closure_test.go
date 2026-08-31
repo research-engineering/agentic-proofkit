@@ -436,7 +436,7 @@ func assertCompactParentContractChangeSetClosure(t *testing.T, manifest compactW
 func assertCompactParentContractSemanticClassification(t *testing.T, manifest compactWireManifest) {
 	t.Helper()
 	oldObservations := readCompactV1WireObservations(t)
-	currentObservations := readCompactV2WireObservations(t)
+	currentObservations := currentCompactV2WireObservations(t)
 	metadataOnly := []string{}
 	for _, delta := range manifest.Deltas {
 		if delta.Class != "parent_contract" && delta.Class != "metadata_freshness" {
@@ -455,6 +455,45 @@ func assertCompactParentContractSemanticClassification(t *testing.T, manifest co
 	}
 	sort.Strings(metadataOnly)
 	assertExactStringSet(t, metadataOnly, expectedCompactMetadataFreshnessDirections, "metadata-only CLI parent-contract direction closure")
+}
+
+func compactWithoutContractFreshnessDigests(t *testing.T, value any, context string) any {
+	t.Helper()
+	content, err := json.Marshal(value)
+	if err != nil {
+		t.Fatalf("encode %s: %v", context, err)
+	}
+	clone, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatalf("clone %s: %v", context, err)
+	}
+	record, ok := clone.(map[string]any)
+	if !ok {
+		t.Fatalf("%s must be an object", context)
+	}
+	contract, ok := record["contract"].(map[string]any)
+	if !ok {
+		t.Fatalf("%s must contain a contract object", context)
+	}
+	delete(contract, "rootDefinitionDigest")
+	if nativeSources, ok := contract["nativeSources"].([]any); ok {
+		for index, raw := range nativeSources {
+			nativeSource, ok := raw.(map[string]any)
+			if !ok {
+				t.Fatalf("%s nativeSources[%d] must be an object", context, index)
+			}
+			delete(nativeSource, "canonicalDigest")
+		}
+	}
+	nativeSource, ok := contract["nativeSource"].(map[string]any)
+	if !ok {
+		return record
+	}
+	if _, ok := nativeSource["canonicalDigest"]; !ok {
+		return record
+	}
+	delete(nativeSource, "canonicalDigest")
+	return record
 }
 
 func compactWithoutNativeSourceDigest(t *testing.T, value any, context string) any {
@@ -477,9 +516,6 @@ func compactWithoutNativeSourceDigest(t *testing.T, value any, context string) a
 	}
 	nativeSource, ok := contract["nativeSource"].(map[string]any)
 	if !ok {
-		return record
-	}
-	if _, ok := nativeSource["canonicalDigest"]; !ok {
 		return record
 	}
 	delete(nativeSource, "canonicalDigest")

@@ -55,7 +55,7 @@ func inputForStage(stageIndex int, checkpointState string) map[string]any {
 	input := initialInput()
 	completed := make([]any, stageIndex)
 	for index := 0; index < stageIndex; index++ {
-		completed[index] = stageTable[index].ID
+		completed[index] = workflowCatalog.Stages[index].ID
 	}
 	input["completedStageIds"] = completed
 	if checkpointState != "not_started" {
@@ -73,8 +73,8 @@ func terminalInput() map[string]any {
 }
 
 func stageIDs() []string {
-	result := make([]string, len(stageTable))
-	for index, stage := range stageTable {
+	result := make([]string, len(workflowCatalog.Stages))
+	for index, stage := range workflowCatalog.Stages {
 		result[index] = stage.ID
 	}
 	return result

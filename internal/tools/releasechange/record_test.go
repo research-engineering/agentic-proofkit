@@ -200,8 +200,8 @@ var currentBreakingChanges = []Change{
 }
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.agent-workflow.change-planner", Summary: "Add a bounded change-workflow-plan command with canonical JSON, derived agent-envelope, plain-text, and capability-gated terminal-color projections."},
-	{ChangeID: "proofkit.agent-workflow.native-evidence-guidance", Summary: "Add a no-input native-evidence-guidance command that exposes the repository-owned decision template as canonical JSON or plain text without executing or approving consumer witnesses."},
+	{ChangeID: "proofkit.agent-workflow.change-planner", Summary: "Add a bounded change-workflow-plan command for the named optional proofkit.reviewed-change.v1 profile with canonical JSON, derived agent-envelope, plain-text, and capability-gated terminal-color projections."},
+	{ChangeID: "proofkit.agent-workflow.native-evidence-guidance", Summary: "Add a no-input native-evidence-guidance command that exposes the repository-owned decision template and closed applicability classes as canonical JSON or plain text without executing or approving consumer witnesses."},
 }
 
 var currentMigrationSteps = []string{

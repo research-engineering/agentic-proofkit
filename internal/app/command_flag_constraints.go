@@ -16,6 +16,11 @@ func classifyDescriptorArguments(descriptor commandDescriptor, args []string) de
 	parsed := descriptorArguments{counts: map[string]int{}, present: map[string]bool{}, values: map[string][]string{}}
 	for index := 0; index < len(args); index++ {
 		argument := args[index]
+		if argument == "--help" || argument == "-h" {
+			parsed.present[argument] = true
+			parsed.counts[argument]++
+			continue
+		}
 		if !slices.Contains(descriptor.allowedFlags, argument) {
 			continue
 		}

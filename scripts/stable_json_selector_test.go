@@ -9,31 +9,21 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/nodetestselector"
 )
 
-func TestStableJSONJavaScriptUnicodePolicy(t *testing.T) {
-	runStableJSONJavaScriptSelector(t, "stableJSONStringify escapes unsafe scalars and preserves scalar key order")
-}
-
-func TestStableJSONJavaScriptUnicodeCorpus(t *testing.T) {
-	runStableJSONJavaScriptSelector(t, "stable JSON Unicode corpus")
-}
-
-func TestStableJSONJavaScriptExhaustiveUnicodeTable(t *testing.T) {
-	runStableJSONJavaScriptSelector(t, "stable JSON Unicode table classifies every scalar and complement")
-}
-
-func TestStableJSONJavaScriptRejectsEverySurrogate(t *testing.T) {
-	runStableJSONJavaScriptSelector(t, "stableJSONStringify rejects every unpaired surrogate code unit in keys and values")
-}
-
-func TestStableJSONJavaScriptAdmitsEverySurrogatePair(t *testing.T) {
-	runStableJSONJavaScriptSelector(t, "stableJSONStringify admits every valid UTF-16 surrogate pair in keys and values")
+func TestStableJSONJavaScriptUnicodePredicates(t *testing.T) {
+	runStableJSONJavaScriptSelectors(t, []string{
+		"stable JSON Unicode corpus",
+		"stable JSON Unicode table classifies every scalar and complement",
+		"stableJSONStringify admits every valid UTF-16 surrogate pair in keys and values",
+		"stableJSONStringify escapes unsafe scalars and preserves scalar key order",
+		"stableJSONStringify rejects every unpaired surrogate code unit in keys and values",
+	})
 }
 
 func TestStableJSONJavaScriptDiagnosticWholeValueRedaction(t *testing.T) {
-	runStableJSONJavaScriptSelector(t, "diagnostic whole-value redaction")
+	runStableJSONJavaScriptSelectors(t, []string{"diagnostic whole-value redaction"})
 }
 
-func runStableJSONJavaScriptSelector(t *testing.T, name string) {
+func runStableJSONJavaScriptSelectors(t *testing.T, names []string) {
 	t.Helper()
 	nodePath, err := exec.LookPath("node")
 	if err != nil {
@@ -41,7 +31,7 @@ func runStableJSONJavaScriptSelector(t *testing.T, name string) {
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
 	defer cancel()
-	if err := nodetestselector.Run(ctx, nodePath, ".", "stable-json.test.mjs", name); err != nil {
-		t.Fatalf("run exact JavaScript selector: %v", err)
+	if err := nodetestselector.RunSet(ctx, nodePath, ".", "stable-json.test.mjs", names); err != nil {
+		t.Fatalf("run exact JavaScript selector set: %v", err)
 	}
 }

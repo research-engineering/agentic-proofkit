@@ -24,6 +24,30 @@ func TestAdmitTAPRequiresExactlyOneSelectedPass(t *testing.T) {
 	}
 }
 
+func TestAdmitTAPSetRequiresEverySelectedPassExactlyOnce(t *testing.T) {
+	valid := "TAP version 13\n# Subtest: first test\nok 1 - first test\n# Subtest: second test\nok 2 - second test\n1..2\n# tests 2\n# pass 2\n# fail 0\n# cancelled 0\n# skipped 0\n# todo 0\n"
+	names := []string{"first test", "second test"}
+	if err := admitTAPSet(valid, names); err != nil {
+		t.Fatalf("admitTAPSet(valid) error = %v", err)
+	}
+	for _, mutant := range []string{
+		strings.Replace(valid, "# Subtest: second test\nok 2 - second test\n", "", 1),
+		strings.Replace(valid, "ok 2 - second test", "ok 2 - first test", 1),
+		strings.Replace(valid, "# tests 2", "# tests 1", 1),
+		valid + "# Subtest: first test\nok 3 - first test\n",
+		strings.Replace(valid, "1..2\n", "# Subtest: unselected test\nok 3 - unselected test\n1..3\n", 1),
+	} {
+		if err := admitTAPSet(mutant, names); err == nil {
+			t.Fatalf("admitTAPSet accepted mutant %q", mutant)
+		}
+	}
+	for _, invalidNames := range [][]string{{"second test", "first test"}, {"first test", "first test"}, {"first test", ""}} {
+		if err := admitTAPSet(valid, invalidNames); err == nil {
+			t.Fatalf("admitTAPSet accepted invalid names %q", invalidNames)
+		}
+	}
+}
+
 func TestBoundedBufferRejectsOneByteOverLimit(t *testing.T) {
 	var buffer boundedBuffer
 	if _, err := buffer.Write(make([]byte, maximumTAPBytes)); err != nil {

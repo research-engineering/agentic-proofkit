@@ -42,7 +42,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if err != nil {
 		return admittedInput{}, err
 	}
-	checkpointValue, err := admitCheckpoint(record["checkpoint"], len(completed) == len(stageTable))
+	checkpointValue, err := admitCheckpoint(record["checkpoint"], len(completed) == len(workflowCatalog.Stages))
 	if err != nil {
 		return admittedInput{}, err
 	}
@@ -74,13 +74,13 @@ func admitInput(raw any) (admittedInput, error) {
 
 func admitCompletedStages(raw any) ([]string, error) {
 	values, ok := raw.([]any)
-	if !ok || len(values) > len(stageTable) {
+	if !ok || len(values) > len(workflowCatalog.Stages) {
 		return nil, reject("proofkit.workflow.stage_prefix", "completedStageIds must be a stage prefix")
 	}
 	result := make([]string, len(values))
 	for index, rawValue := range values {
 		value, ok := rawValue.(string)
-		if !ok || value != stageTable[index].ID {
+		if !ok || value != workflowCatalog.Stages[index].ID {
 			return nil, reject("proofkit.workflow.stage_prefix", "completedStageIds must be a stage prefix")
 		}
 		result[index] = value

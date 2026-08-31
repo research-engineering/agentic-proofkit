@@ -5,17 +5,17 @@
   "version": "0.5.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
   "previousPublicAbiSha256": "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9",
-  "currentPublicAbiSha256": "sha256:b6a9ca9e0e9f2cf4df12282d1d1d95d9412984a78a98976b72efb8bcaedcc299",
+  "currentPublicAbiSha256": "sha256:d0f923fe01da20aabbb1ea7c7fa972ad350f3486560488284e128051b0125d8e",
   "addedCommandContracts": [
     {
       "command": "change-workflow-plan",
-      "inputContractSha256": "sha256:9ee0780f92de00257b389ae7f04c8a92e2ef52614139f56600332c9cc823919e",
-      "outputContractSha256": "sha256:e851ab050ce8623957c25bac08ab8d05e45918f763410310ba432c80e05ffd9d"
+      "inputContractSha256": "sha256:85fa3562d37a532ffbb8a2f7e2282af3d2b0d24c5b341fcb582f7adb2cb7ed50",
+      "outputContractSha256": "sha256:bcb22b1f930d1f63c24dd73681d9758eaaadfd41dde70360b432c21a55150803"
     },
     {
       "command": "native-evidence-guidance",
       "inputContractSha256": "",
-      "outputContractSha256": "sha256:ed40668acec3a8e2ae097b0ce011994e7facf6feda23e0057c4dcbe660a1a1b7"
+      "outputContractSha256": "sha256:70d892de1ef24e113bed39bb648e2b51ef2dae812e985a9bee186cac20821ef4"
     }
   ],
   "breakingChangeIds": [

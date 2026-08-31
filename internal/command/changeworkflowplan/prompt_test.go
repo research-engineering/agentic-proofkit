@@ -5,6 +5,49 @@ import (
 	"testing"
 )
 
+var expectedWorkflowActionProfiles = map[string]actionProfile{
+	"author": {
+		CandidateAction:        "Author only the active-stage artifact under the consuming repository's semantic owner and bind the result to a caller-owned artifact reference and digest.",
+		ExpectedNextCheckpoint: "ready_for_review",
+		StopCondition:          "Stop after the artifact and digest are ready for independent review.",
+	},
+	"implement": {
+		CandidateAction:        "Implement only the accepted owner-scoped plan, preserving its non-claims and adding its native positive and negative proof paths.",
+		ExpectedNextCheckpoint: "ready_for_review",
+		StopCondition:          "Stop after the implementation artifact and digest are ready for independent review.",
+	},
+	"verify": {
+		CandidateAction:        "Run the consuming repository's positive controls and independent near-miss falsifiers against the exact caller-declared subject.",
+		ExpectedNextCheckpoint: "ready_for_review",
+		StopCondition:          "Stop after bounded verification evidence and its subject digest are ready for independent review.",
+	},
+	"open_pull_request": {
+		CandidateAction:        "Open a pull request only under consuming-repository policy for the exact reviewed head and expose its native checks without claiming merge authority.",
+		ExpectedNextCheckpoint: "ready_for_review",
+		StopCondition:          "Stop after the pull-request artifact and exact head digest are ready for independent review.",
+	},
+	"closeout": {
+		CandidateAction:        "Assemble bounded closeout evidence for the exact reviewed subject without merging, releasing, rolling out, or declaring production readiness.",
+		ExpectedNextCheckpoint: "ready_for_review",
+		StopCondition:          "Stop after the closeout artifact and digest are ready for independent review.",
+	},
+	"review": {
+		CandidateAction:        "Independently attempt to falsify the active-stage artifact under its declared owner, bounds, non-claims, and exact subject digest.",
+		ExpectedNextCheckpoint: "review_findings_or_review_passed",
+		StopCondition:          "Stop with review_findings bound to every admitted finding, or review_passed bound to the unchanged assessed subject digest.",
+	},
+	"repair": {
+		CandidateAction:        "Repair every referenced finding under the same semantic owner, produce a new subject digest, and do not emit a pass claim.",
+		ExpectedNextCheckpoint: "ready_for_review",
+		StopCondition:          "Stop when the repaired artifact and new digest are ready for another independent review.",
+	},
+	"accept_stage": {
+		CandidateAction:        "Apply only the reported successorStateDelta to the prior snapshot, preserve all context fields byte-for-byte, and submit the merged snapshot for ordinary admission.",
+		ExpectedNextCheckpoint: "successor_state_delta",
+		StopCondition:          "Stop after constructing the merged immutable snapshot; do not infer execution, approval, merge, or release from stage acceptance.",
+	},
+}
+
 func TestWorkflowPromptPredicates(t *testing.T) {
 	t.Run("caller_not_styled", func(t *testing.T) {
 		input := initialInput()
@@ -19,15 +62,15 @@ func TestWorkflowPromptPredicates(t *testing.T) {
 		}
 	})
 	t.Run("candidate_action", func(t *testing.T) {
-		for index := range stageTable {
+		for index := range workflowCatalog.Stages {
 			for _, state := range []string{"not_started", "ready_for_review", "review_findings", "review_passed"} {
 				plan := requireBuild(t, inputForStage(index, state))
 				prompt := plan["prompt"].(map[string]any)
 				if len(prompt) != 9 {
 					t.Fatalf("prompt has %d fields", len(prompt))
 				}
-				profile := promptProfiles[plan["action"].(string)]
-				if prompt["candidateAction"] != profile.CandidateAction {
+				profile, exists := expectedWorkflowActionProfiles[plan["action"].(string)]
+				if !exists || prompt["candidateAction"] != profile.CandidateAction || prompt["expectedNextCheckpoint"] != profile.ExpectedNextCheckpoint {
 					t.Fatal("candidate action drifted from action owner")
 				}
 			}
@@ -49,9 +92,13 @@ func TestWorkflowPromptPredicates(t *testing.T) {
 		}
 	})
 	t.Run("expected_checkpoint", func(t *testing.T) {
-		for action, profile := range promptProfiles {
-			if profile.ExpectedNextCheckpoint == "" {
-				t.Fatalf("action %s has no expected checkpoint", action)
+		if len(workflowCatalog.ActionProfiles) != len(expectedWorkflowActionProfiles) {
+			t.Fatalf("action profile count=%d want %d", len(workflowCatalog.ActionProfiles), len(expectedWorkflowActionProfiles))
+		}
+		for action, expected := range expectedWorkflowActionProfiles {
+			profile, exists := workflowCatalog.ActionProfiles[action]
+			if !exists || profile != expected {
+				t.Fatalf("action profile %s=%#v want %#v", action, profile, expected)
 			}
 		}
 	})
@@ -105,7 +152,7 @@ func TestWorkflowPromptPredicates(t *testing.T) {
 		}
 	})
 	t.Run("stop_condition", func(t *testing.T) {
-		for action, profile := range promptProfiles {
+		for action, profile := range expectedWorkflowActionProfiles {
 			if !strings.HasPrefix(profile.StopCondition, "Stop ") || strings.Contains(strings.ToLower(profile.StopCondition), "wait") {
 				t.Fatalf("action %s has a non-terminal stop condition", action)
 			}

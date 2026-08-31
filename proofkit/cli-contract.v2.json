@@ -859,7 +859,7 @@
         "rootDefinitionDigest": "sha256:6632a481380bfb07d754ef622661b291f805b1b168b1824089bdd5cc9bdd4b0e",
         "nativeSource": {
           "path": "internal/command/changeworkflowplan",
-          "canonicalDigest": "sha256:990cf34a04fb15f2a60339c0713e1644f26f1e81462a4daf171e3613acc87bce",
+          "canonicalDigest": "sha256:2453c3d2a15b756153a3e553ed093327efade8a7ee8423f1ef8e405e9beb92a5",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -891,10 +891,10 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.change-workflow-plan.output.v1.root-shape",
-        "rootDefinitionDigest": "sha256:d0c7c2f1b2d78da4260757c8bdbccda4f9dfe4f69d3ba3a0af24338508f32da9",
+        "rootDefinitionDigest": "sha256:ca7b2acffdcbfd28222eb61f2bd8687f76f20cb789b712ee3ffc2756a3674ff8",
         "nativeSource": {
           "path": "internal/command/changeworkflowplan",
-          "canonicalDigest": "sha256:990cf34a04fb15f2a60339c0713e1644f26f1e81462a4daf171e3613acc87bce",
+          "canonicalDigest": "sha256:2453c3d2a15b756153a3e553ed093327efade8a7ee8423f1ef8e405e9beb92a5",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -906,6 +906,7 @@
         "compatibilitySummary": [
           "schemaVersion=1",
           "JSON plan and agent-envelope variants; text is a bounded derived presentation",
+          "non-envelope JSON plan variants identify the optional built-in workflow profile",
           "root-shape-only definition proofkit.change-workflow-plan.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
@@ -2150,7 +2151,7 @@
         "rootDefinitionDigest": "sha256:218011a133540f57ef74f8748747e00d33b6757c9f77725ecef39f45fb19423f",
         "nativeSource": {
           "path": "internal/command/nativeevidenceguidance",
-          "canonicalDigest": "sha256:3b08daa3b023df2a7687999893a5b357c0345a854e2b25ebca84ab3a514db8a1",
+          "canonicalDigest": "sha256:c36dc61cc915ef446305eee5d325791da82581d794700ac0bb6adcb69c54e80f",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2420,7 +2421,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:fe81ca3521d27f477bca5fdee31da075348b3835440215c9d1df1ebdbb8c870e",
+            "canonicalDigest": "sha256:ceba9fe3379339a2ff137ccaa1ff89bb0136cd306bf70fb3ca8354324d2a1acf",
             "evidenceClass": "source_checkout"
           },
           {
@@ -5662,7 +5663,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:fe81ca3521d27f477bca5fdee31da075348b3835440215c9d1df1ebdbb8c870e",
+          "canonicalDigest": "sha256:ceba9fe3379339a2ff137ccaa1ff89bb0136cd306bf70fb3ca8354324d2a1acf",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5691,7 +5692,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:fe81ca3521d27f477bca5fdee31da075348b3835440215c9d1df1ebdbb8c870e",
+          "canonicalDigest": "sha256:ceba9fe3379339a2ff137ccaa1ff89bb0136cd306bf70fb3ca8354324d2a1acf",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -8216,7 +8217,8 @@
               "reportKind",
               "retainedContextRefIds",
               "retainedContextRefs",
-              "schemaVersion"
+              "schemaVersion",
+              "workflowProfileId"
             ],
             "requiredFields": [
               "action",
@@ -8233,7 +8235,8 @@
               "reportKind",
               "retainedContextRefIds",
               "retainedContextRefs",
-              "schemaVersion"
+              "schemaVersion",
+              "workflowProfileId"
             ],
             "rootKind": "object",
             "variantId": "02-next-action",
@@ -8258,7 +8261,8 @@
               "retainedContextRefIds",
               "retainedContextRefs",
               "schemaVersion",
-              "successorStateDelta"
+              "successorStateDelta",
+              "workflowProfileId"
             ],
             "requiredFields": [
               "action",
@@ -8276,7 +8280,8 @@
               "retainedContextRefIds",
               "retainedContextRefs",
               "schemaVersion",
-              "successorStateDelta"
+              "successorStateDelta",
+              "workflowProfileId"
             ],
             "rootKind": "object",
             "variantId": "03-accept-stage",
@@ -8296,7 +8301,8 @@
               "reportKind",
               "retainedContextRefIds",
               "retainedContextRefs",
-              "schemaVersion"
+              "schemaVersion",
+              "workflowProfileId"
             ],
             "requiredFields": [
               "authority",
@@ -8309,7 +8315,8 @@
               "reportKind",
               "retainedContextRefIds",
               "retainedContextRefs",
-              "schemaVersion"
+              "schemaVersion",
+              "workflowProfileId"
             ],
             "rootKind": "object",
             "variantId": "04-workflow-complete",
@@ -8319,7 +8326,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:d0c7c2f1b2d78da4260757c8bdbccda4f9dfe4f69d3ba3a0af24338508f32da9"
+      "canonicalDigest": "sha256:ca7b2acffdcbfd28222eb61f2bd8687f76f20cb789b712ee3ffc2756a3674ff8"
     },
     {
       "definitionId": "proofkit.changed-path-set.input.v1.root-shape",

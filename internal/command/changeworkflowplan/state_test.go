@@ -1,10 +1,51 @@
 package changeworkflowplan
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
+
+type expectedWorkflowRow struct {
+	StageIndex      int
+	StageID         string
+	CheckpointState string
+	Action          string
+	OutputKind      string
+}
+
+var expectedWorkflowStateMatrix = []expectedWorkflowRow{
+	{0, "architecture", "not_started", "author", "next_action"},
+	{0, "architecture", "ready_for_review", "review", "next_action"},
+	{0, "architecture", "review_findings", "repair", "next_action"},
+	{0, "architecture", "review_passed", "accept_stage", "next_action"},
+	{1, "design", "not_started", "author", "next_action"},
+	{1, "design", "ready_for_review", "review", "next_action"},
+	{1, "design", "review_findings", "repair", "next_action"},
+	{1, "design", "review_passed", "accept_stage", "next_action"},
+	{2, "implementation_plan", "not_started", "author", "next_action"},
+	{2, "implementation_plan", "ready_for_review", "review", "next_action"},
+	{2, "implementation_plan", "review_findings", "repair", "next_action"},
+	{2, "implementation_plan", "review_passed", "accept_stage", "next_action"},
+	{3, "implementation", "not_started", "implement", "next_action"},
+	{3, "implementation", "ready_for_review", "review", "next_action"},
+	{3, "implementation", "review_findings", "repair", "next_action"},
+	{3, "implementation", "review_passed", "accept_stage", "next_action"},
+	{4, "verification", "not_started", "verify", "next_action"},
+	{4, "verification", "ready_for_review", "review", "next_action"},
+	{4, "verification", "review_findings", "repair", "next_action"},
+	{4, "verification", "review_passed", "accept_stage", "next_action"},
+	{5, "pull_request", "not_started", "open_pull_request", "next_action"},
+	{5, "pull_request", "ready_for_review", "review", "next_action"},
+	{5, "pull_request", "review_findings", "repair", "next_action"},
+	{5, "pull_request", "review_passed", "accept_stage", "next_action"},
+	{6, "closeout", "not_started", "closeout", "next_action"},
+	{6, "closeout", "ready_for_review", "review", "next_action"},
+	{6, "closeout", "review_findings", "repair", "next_action"},
+	{6, "closeout", "review_passed", "accept_stage", "next_action"},
+	{-1, "", "", "", "workflow_complete"},
+}
 
 func TestWorkflowStatePredicates(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.046999593271228979057731418772803126658652333387186990019354835268016126566224")
@@ -20,7 +61,7 @@ func TestWorkflowStatePredicates(t *testing.T) {
 		}
 	})
 	t.Run("first_incomplete_active", func(t *testing.T) {
-		for index, stage := range stageTable {
+		for index, stage := range workflowCatalog.Stages {
 			plan := requireBuild(t, inputForStage(index, "not_started"))
 			if plan["activeStageId"] != stage.ID {
 				t.Fatalf("stage %d selected %v", index, plan["activeStageId"])
@@ -94,7 +135,7 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 		}
 	})
 	t.Run("merged_successor_admitted", func(t *testing.T) {
-		for index := range stageTable {
+		for index := range workflowCatalog.Stages {
 			prior := inputForStage(index, "review_passed")
 			plan := requireBuild(t, prior)
 			merged, err := MergeSuccessor(prior, plan["successorStateDelta"].(map[string]any))
@@ -107,7 +148,7 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 		}
 	})
 	t.Run("review_passed_accepts", func(t *testing.T) {
-		for index := range stageTable {
+		for index := range workflowCatalog.Stages {
 			plan := requireBuild(t, inputForStage(index, "review_passed"))
 			if plan["action"] != "accept_stage" {
 				t.Fatalf("stage %d action is %v", index, plan["action"])
@@ -116,7 +157,7 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 	})
 	t.Run("terminal_disjoint", func(t *testing.T) {
 		terminal := requireBuild(t, terminalInput())
-		for index := range stageTable {
+		for index := range workflowCatalog.Stages {
 			for _, state := range []string{"not_started", "ready_for_review", "review_findings", "review_passed"} {
 				active := requireBuild(t, inputForStage(index, state))
 				if active["outputKind"] == terminal["outputKind"] {
@@ -125,22 +166,41 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 			}
 		}
 	})
-	t.Run("twenty_eight_actions", func(t *testing.T) {
-		if len(checkpointRelation) != 29 {
-			t.Fatalf("relation has %d rows", len(checkpointRelation))
+	t.Run("independent_twenty_nine_row_matrix", func(t *testing.T) {
+		if len(checkpointRelation) != len(expectedWorkflowStateMatrix) {
+			t.Fatalf("relation has %d rows, want %d", len(checkpointRelation), len(expectedWorkflowStateMatrix))
 		}
-		seen := 0
-		for index := range stageTable {
-			for _, state := range []string{"not_started", "ready_for_review", "review_findings", "review_passed"} {
-				plan := requireBuild(t, inputForStage(index, state))
-				if _, ok := plan["action"].(string); !ok {
-					t.Fatal("active row has no action")
-				}
-				seen++
+		seen := map[string]struct{}{}
+		for _, expected := range expectedWorkflowStateMatrix {
+			name := expected.OutputKind
+			input := terminalInput()
+			if expected.StageIndex >= 0 {
+				name = fmt.Sprintf("%02d/%s", expected.StageIndex, expected.CheckpointState)
+				input = inputForStage(expected.StageIndex, expected.CheckpointState)
 			}
+			t.Run(name, func(t *testing.T) {
+				plan := requireBuild(t, input)
+				if plan["outputKind"] != expected.OutputKind {
+					t.Fatalf("outputKind=%v want %s", plan["outputKind"], expected.OutputKind)
+				}
+				if expected.StageIndex < 0 {
+					if _, present := plan["action"]; present {
+						t.Fatalf("terminal plan contains action: %v", plan)
+					}
+					return
+				}
+				key := expected.StageID + "|" + expected.CheckpointState
+				if _, duplicate := seen[key]; duplicate {
+					t.Fatalf("duplicate expected matrix row %s", key)
+				}
+				seen[key] = struct{}{}
+				if plan["activeStageId"] != expected.StageID || plan["checkpointState"] != expected.CheckpointState || plan["action"] != expected.Action {
+					t.Fatalf("plan coordinates=%v/%v/%v want %s/%s/%s", plan["activeStageId"], plan["checkpointState"], plan["action"], expected.StageID, expected.CheckpointState, expected.Action)
+				}
+			})
 		}
-		if seen != 28 {
-			t.Fatalf("got %d active rows", seen)
+		if len(seen) != 28 {
+			t.Fatalf("matrix has %d unique active rows, want 28", len(seen))
 		}
 	})
 }

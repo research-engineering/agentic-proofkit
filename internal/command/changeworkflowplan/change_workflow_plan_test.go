@@ -19,6 +19,9 @@ func TestWorkflowPurityPredicates(t *testing.T) {
 		if plan["authority"] != "derived_non_authoritative_plan" {
 			t.Fatal("plan does not deny semantic authority")
 		}
+		if plan["workflowProfileId"] != workflowProfileID {
+			t.Fatal("plan does not name its optional built-in workflow profile")
+		}
 		if len(plan["nonClaims"].([]any)) != len(boundaryNonClaims) {
 			t.Fatal("plan lost boundary non-claims")
 		}

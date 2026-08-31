@@ -12,10 +12,6 @@ func isCommandHelpRequest(args []string) bool {
 	return len(args) == 2 && args[0] != "help" && (args[1] == "--help" || args[1] == "-h")
 }
 
-func hasCommandHelpFlag(args []string) bool {
-	return slices.Contains(args, "--help") || slices.Contains(args, "-h")
-}
-
 func commandUsage(descriptor commandDescriptor) string {
 	return commandUsageWithRenderer(descriptor, cliexec.PathRenderer())
 }

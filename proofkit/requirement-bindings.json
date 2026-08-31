@@ -3824,20 +3824,8 @@
       "witnessPath": "scripts/stable_json_selector_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestStableJSONJavaScriptUnicodeCorpus",
-          "command": "go test ./scripts -run '^TestStableJSONJavaScriptUnicodeCorpus$'"
-        },
-        {
-          "selector": "TestStableJSONJavaScriptExhaustiveUnicodeTable",
-          "command": "go test ./scripts -run '^TestStableJSONJavaScriptExhaustiveUnicodeTable$'"
-        },
-        {
-          "selector": "TestStableJSONJavaScriptRejectsEverySurrogate",
-          "command": "go test ./scripts -run '^TestStableJSONJavaScriptRejectsEverySurrogate$'"
-        },
-        {
-          "selector": "TestStableJSONJavaScriptAdmitsEverySurrogatePair",
-          "command": "go test ./scripts -run '^TestStableJSONJavaScriptAdmitsEverySurrogatePair$'"
+          "selector": "TestStableJSONJavaScriptUnicodePredicates",
+          "command": "go test ./scripts -run '^TestStableJSONJavaScriptUnicodePredicates$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4645,6 +4633,21 @@
         {
           "selector": "TestGuidancePurityPredicates",
           "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidancePurityPredicates$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
+      "scenarioId": "proofkit.agent-workflow.semantic-owner-topology",
+      "witnessId": "proofkit.agent-workflow.semantic-owner-topology-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_workflow_topology_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentWorkflowSemanticOwnerTopology",
+          "command": "go test ./internal/app -run '^TestAgentWorkflowSemanticOwnerTopology$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

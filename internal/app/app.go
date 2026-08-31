@@ -52,11 +52,11 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 		}
 		return writeText(commandUsageWithRenderer(descriptor, renderer), 0, nil, stdout, stderr)
 	}
-	if descriptor.runner != commandRunnerHelp && hasCommandHelpFlag(args[1:]) {
+	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
+	if descriptor.runner != commandRunnerHelp && (parsedArguments.present["--help"] || parsedArguments.present["-h"]) {
 		writeDiagnosticf(stderr, "%s help accepts no additional arguments", descriptor.name)
 		return 1
 	}
-	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
 	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {
 		writeDiagnostic(stderr, err)
 		return 1

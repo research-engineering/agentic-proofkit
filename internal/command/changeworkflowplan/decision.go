@@ -3,28 +3,23 @@ package changeworkflowplan
 var checkpointRelation = buildCheckpointRelation()
 
 func buildCheckpointRelation() []stateRow {
-	rows := make([]stateRow, 0, len(stageTable)*len(checkpointStates)+1)
-	for stageIndex, stage := range stageTable {
-		for _, state := range []string{"not_started", "ready_for_review", "review_findings", "review_passed"} {
-			action := stage.FirstAction
-			switch state {
-			case "ready_for_review":
-				action = "review"
-			case "review_findings":
-				action = "repair"
-			case "review_passed":
-				action = "accept_stage"
+	rows := make([]stateRow, 0, len(workflowCatalog.Stages)*len(workflowCatalog.CheckpointActions)+1)
+	for stageIndex, stage := range workflowCatalog.Stages {
+		for _, checkpoint := range workflowCatalog.CheckpointActions {
+			action := checkpoint.Action
+			if checkpoint.UseStageAction {
+				action = stage.FirstAction
 			}
 			rows = append(rows, stateRow{
 				Action:          action,
 				ActiveStageID:   stage.ID,
-				CheckpointState: state,
+				CheckpointState: checkpoint.State,
 				CompletedCount:  stageIndex,
 				OutputKind:      "next_action",
 			})
 		}
 	}
-	return append(rows, stateRow{CompletedCount: len(stageTable), OutputKind: "workflow_complete", Terminal: true})
+	return append(rows, stateRow{CompletedCount: len(workflowCatalog.Stages), OutputKind: "workflow_complete", Terminal: true})
 }
 
 func decide(input admittedInput) (stateDecision, error) {
@@ -50,7 +45,7 @@ func decide(input admittedInput) (stateDecision, error) {
 		if row.Action == "accept_stage" {
 			completed := append(cloneStrings(input.CompletedStageIDs), row.ActiveStageID)
 			var nextCheckpoint *checkpoint
-			if len(completed) < len(stageTable) {
+			if len(completed) < len(workflowCatalog.Stages) {
 				nextCheckpoint = &checkpoint{State: "not_started", FindingRefs: []string{}}
 			}
 			decision.SuccessorStateDelta = &successorStateDelta{Checkpoint: nextCheckpoint, CompletedStageIDs: completed}

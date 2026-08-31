@@ -180,6 +180,30 @@ func TestJSONLayoutUsesDescriptorParsedFlags(t *testing.T) {
 	}
 }
 
+func TestCommandHelpUsesDescriptorParsedTokenRoles(t *testing.T) {
+	for _, descriptor := range commandDescriptors {
+		valueFlags := make([]string, 0)
+		for _, flag := range descriptor.allowedFlags {
+			if flagRequiresValue(flag) {
+				valueFlags = append(valueFlags, flag)
+			}
+		}
+		for _, valueFlag := range valueFlags {
+			for _, helpLikeValue := range []string{"--help", "-h"} {
+				t.Run(descriptor.name+"/"+valueFlag+"/"+helpLikeValue, func(t *testing.T) {
+					parsed := classifyDescriptorArguments(descriptor, []string{valueFlag, helpLikeValue})
+					if parsed.present["--help"] || parsed.present["-h"] {
+						t.Fatalf("descriptor parser reclassified %s value %s as command help: %#v", valueFlag, helpLikeValue, parsed)
+					}
+					if !slices.Equal(parsed.values[valueFlag], []string{helpLikeValue}) {
+						t.Fatalf("descriptor parser value for %s = %v, want %s", valueFlag, parsed.values[valueFlag], helpLikeValue)
+					}
+				})
+			}
+		}
+	}
+}
+
 func TestJSONLayoutPreservesFlagShapedInputPathAtProcessBoundary(t *testing.T) {
 	t.Chdir(t.TempDir())
 	treeInput := `{"schemaVersion":2,"treeId":"consumer.tree","rootNodeId":"spec.root","callerAnnotations":[],"edges":[],"overlays":[],"nodes":[{"nodeId":"spec.root","nodeKind":"meta_spec","label":"Root","displayOrder":1,"callerAnnotations":[],"sourceRefs":[{"sourceRefId":"spec.root.requirements","sourceRefKind":"source_id","sourceRole":"requirements","sourceId":"consumer.requirements"}]}]}`
