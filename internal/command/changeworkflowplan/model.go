@@ -15,6 +15,7 @@ const (
 	maxTextLines            = 24
 	missingAuthorityTarget  = "missing_consuming_repository_semantic_owner"
 	missingConsumerWitness  = "missing_consumer_witness"
+	retainedConsumerWitness = "retained_consumer_witness_refs"
 )
 
 var boundaryNonClaims = []string{

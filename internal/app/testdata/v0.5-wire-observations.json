@@ -5,12 +5,12 @@
   "version": "0.5.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
   "previousPublicAbiSha256": "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9",
-  "currentPublicAbiSha256": "sha256:4ab2fdc8c70526ddbc96107b32562cab6d9abba72263a3de20a234895a409ebb",
+  "currentPublicAbiSha256": "sha256:0ca5482ce0300d2e3b4b44d818e066539ebf535771c197800f56403a9d2f1097",
   "addedCommandContracts": [
     {
       "command": "change-workflow-plan",
-      "inputContractSha256": "sha256:82e6c110323dfbd7e743375a3fcce462e4ceab198bd17c9b8bc893446a5849f7",
-      "outputContractSha256": "sha256:97a0005561846d34efe6e07976b4df99411e1c4eefd62cbc5c14ef58b7493169"
+      "inputContractSha256": "sha256:0e6586bb23f5dc9479112d2123bfd1527ade0d20cf7f2bd14783a3ec26f8bb3e",
+      "outputContractSha256": "sha256:ee5eaadeb593ee592a2d043a8284aae7add80d0d5323b59902b6ebbd0af645f5"
     },
     {
       "command": "native-evidence-guidance",
@@ -20,6 +20,7 @@
   ],
   "breakingChangeIds": [
     "proofkit.agent-envelope.local-identity-closure",
+    "proofkit.diagnostic.bounded-error-boundary",
     "proofkit.stable-json.unicode-scalar-v2"
   ],
   "nonClaims": [

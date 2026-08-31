@@ -59,6 +59,16 @@ func contextRefIDs(refs []contextRef) []string {
 	return result
 }
 
+func contextRefIDsOfKind(refs []contextRef, kind string) []string {
+	result := []string{}
+	for _, ref := range refs {
+		if ref.RefKind == kind {
+			result = append(result, ref.RefID)
+		}
+	}
+	return result
+}
+
 func contextRefPaths(refs []contextRef) []string {
 	result := make([]string, len(refs))
 	for index, ref := range refs {

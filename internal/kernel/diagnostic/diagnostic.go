@@ -13,7 +13,7 @@ func Text(err error) string {
 	if err == nil {
 		return ""
 	}
-	return admit.RedactStructuralText(err.Error())
+	return admit.RedactDiagnosticValue(err.Error())
 }
 
 // WriteError writes one sanitized diagnostic line when err is non-nil.

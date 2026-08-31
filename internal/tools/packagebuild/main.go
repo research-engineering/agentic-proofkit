@@ -83,8 +83,12 @@ func run(args []string) error {
 			"GOARCH="+target.GOARCH,
 		)
 		command.Stdout = os.Stdout
-		command.Stderr = os.Stderr
+		stderr := diagnostic.NewStderrCapture()
+		command.Stderr = stderr
 		if err := command.Run(); err != nil {
+			if childErr := stderr.Failure("go build stderr"); childErr != nil {
+				return fmt.Errorf("build %s/%s: %w; %s", target.GOOS, target.GOARCH, err, childErr)
+			}
 			return fmt.Errorf("build %s/%s: %w", target.GOOS, target.GOARCH, err)
 		}
 	}

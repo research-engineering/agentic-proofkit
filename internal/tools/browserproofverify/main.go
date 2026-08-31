@@ -126,8 +126,12 @@ func runBrowserProof(root string) (resultErr error) {
 	environment = withEnvironmentValue(environment, browserProofCandidateEnvironment, runPaths.CandidatePath)
 	command.Env = environment
 	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
+	stderr := diagnostic.NewStderrCapture()
+	command.Stderr = stderr
 	if err := command.Run(); err != nil {
+		if childErr := stderr.Failure("browser proof writer stderr"); childErr != nil {
+			return fmt.Errorf("run browser proof writer: %w; %s", err, childErr)
+		}
 		return fmt.Errorf("run browser proof writer: %w", err)
 	}
 	value, err := readRootedJSON(root, runPaths.CandidatePath, 8<<20)

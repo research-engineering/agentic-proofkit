@@ -1,0 +1,130 @@
+package main
+
+import (
+	"archive/tar"
+	"archive/zip"
+	"compress/gzip"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
+)
+
+func TestCrossCarrierBinaryIdentityReadsFinalArchives(t *testing.T) {
+	t.Run("matching_carriers", func(t *testing.T) {
+		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+		if err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("wheel_mutation", func(t *testing.T) {
+		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "linux-x64")
+		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		if err == nil || !strings.Contains(err.Error(), "different release-platform binary bytes") {
+			t.Fatalf("mutated wheel was not rejected: %v", err)
+		}
+	})
+
+	t.Run("duplicate_tar_member", func(t *testing.T) {
+		packageDir, pythonDir, records, packages := writeCarrierFixture(t, "")
+		writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), true)
+		err := verifyCrossCarrierBinaryIdentity(packageDir, pythonDir, records, packages)
+		if err == nil || !strings.Contains(err.Error(), "duplicates a release-platform binary") {
+			t.Fatalf("duplicate npm binary was not rejected: %v", err)
+		}
+	})
+}
+
+func writeCarrierFixture(t *testing.T, mutatedWheelSuffix string) (string, string, []packRecord, *pythonPackageSet) {
+	t.Helper()
+	root := t.TempDir()
+	packageDir := filepath.Join(root, "package")
+	pythonDir := filepath.Join(root, "pypi")
+	if err := os.MkdirAll(packageDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(pythonDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	records := []packRecord{{Filename: "proofkit.tgz"}}
+	writeNPMCarrier(t, filepath.Join(packageDir, records[0].Filename), false)
+	packages := &pythonPackageSet{Packages: make([]pythonWheelRecord, 0, len(releaseplatform.Targets()))}
+	for _, target := range releaseplatform.Targets() {
+		filename := target.PlatformSuffix + ".whl"
+		content := carrierBinary(target.PlatformSuffix)
+		if target.PlatformSuffix == mutatedWheelSuffix {
+			content = append(content, []byte("-mutated")...)
+		}
+		writeWheelCarrier(t, filepath.Join(pythonDir, filename), content)
+		packages.Packages = append(packages.Packages, pythonWheelRecord{
+			Filename:       filename,
+			PlatformSuffix: target.PlatformSuffix,
+		})
+	}
+	return packageDir, pythonDir, records, packages
+}
+
+func writeNPMCarrier(t *testing.T, path string, duplicate bool) {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	gzipWriter := gzip.NewWriter(file)
+	tarWriter := tar.NewWriter(gzipWriter)
+	for index, target := range releaseplatform.Targets() {
+		copies := 1
+		if duplicate && index == 0 {
+			copies = 2
+		}
+		for range copies {
+			content := carrierBinary(target.PlatformSuffix)
+			if err := tarWriter.WriteHeader(&tar.Header{Name: target.PackageTarEntry, Mode: 0o755, Size: int64(len(content)), Typeflag: tar.TypeReg}); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := tarWriter.Write(content); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err := tarWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeWheelCarrier(t *testing.T, path string, content []byte) {
+	t.Helper()
+	file, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wheel := zip.NewWriter(file)
+	header := &zip.FileHeader{Name: wheelBinaryEntry, Method: zip.Store}
+	header.SetMode(0o755)
+	member, err := wheel.CreateHeader(header)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := member.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if err := wheel.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := file.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func carrierBinary(platformSuffix string) []byte {
+	return []byte("binary:" + platformSuffix)
+}

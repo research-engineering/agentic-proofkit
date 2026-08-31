@@ -63,8 +63,15 @@ func testAgentWorkflowEnvelopeTransitionClasses(t *testing.T) {
 						"refKind":          "artifact",
 						"subjectDigest":    digest,
 					},
+					map[string]any{
+						"artifactPath":     "evidence/authority.json",
+						"dependencyRefIds": []any{},
+						"refId":            "ctx.authority",
+						"refKind":          "authority",
+						"subjectDigest":    "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+					},
 				},
-				"governingAuthorityRefId": nil,
+				"governingAuthorityRefId": "ctx.authority",
 				"requiredContextRefIds":   []any{},
 				"schemaVersion":           json.Number("1"),
 			}

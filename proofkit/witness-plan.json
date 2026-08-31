@@ -796,6 +796,7 @@
         "scripts/browser-proof-inputs.test.mjs",
         "scripts/browser-runtime-proof-inputs.v1.json",
         "scripts/browser-selection-authority.test.mjs",
+        "scripts/diagnostic.mjs",
         "scripts/stable-json.mjs",
         "scripts/stable-json.test.mjs",
         "scripts/write-browser-proof.mjs",

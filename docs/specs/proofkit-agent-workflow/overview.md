@@ -33,9 +33,10 @@ introduced.
 - `REQ-PROOFKIT-WORKFLOW-002`: named optional built-in profile, exact
   seven-stage order, prefix/checkpoint biconditional, and a disjoint terminal
   output.
-- `REQ-PROOFKIT-WORKFLOW-003`: 28 active state rows, one terminal row, an
-  executable envelope transition for every accepted stage, and an explicit
-  terminal stop packet.
+- `REQ-PROOFKIT-WORKFLOW-003`: 28 active state rows, one terminal row,
+  authority- and witness-gated executable envelope transitions, closed
+  blockers and clarifications when those preconditions are absent, and an
+  explicit terminal stop packet.
 - `REQ-PROOFKIT-WORKFLOW-004`: typed subject/finding resolution and internally
   consistent caller-declared digests.
 - `REQ-PROOFKIT-WORKFLOW-005`: shared 256-byte stable-ID admission before work,
@@ -51,8 +52,8 @@ introduced.
   applicability classes, explicit absent-channel decisions, and finite
   nondisclosure corpora.
 - `REQ-PROOFKIT-WORKFLOW-008`: display-safe caller admission, no-leak denial,
-  bounded actionable text with required coordinates, and no styling of caller
-  values.
+  exact retained-or-missing witness projection, bounded actionable and
+  terminal text with required coordinates, and no styling of caller values.
 - `REQ-PROOFKIT-WORKFLOW-009`: explicit text/color selection and confinement of
   ANSI to eligible terminal stdout.
 - `REQ-PROOFKIT-WORKFLOW-010`: one production owner per semantic relation,

@@ -223,10 +223,6 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	assets, checksums, sbomSubjectChecksums, err := releaseAssets(localRecords, pythonPackages)
-	if err != nil {
-		return err
-	}
 	registryRecords, err := optionalPackRecords(filepath.Join("artifacts", "registry", "npm-pack.json"))
 	if err != nil {
 		return err
@@ -268,7 +264,14 @@ func run() error {
 	if err := requirePythonPackagesMatchPackage(manifest, pythonPackages, "local Python package evidence"); err != nil {
 		return err
 	}
+	if err := verifyCrossCarrierBinaryIdentity(filepath.Join("artifacts", "package"), filepath.Join("artifacts", "pypi"), localRecords, pythonPackages); err != nil {
+		return err
+	}
 	if err := requirePyPIRegistryMatchesLocal(pypiRegistry, pythonPackages, manifest); err != nil {
+		return err
+	}
+	assets, checksums, sbomSubjectChecksums, err := releaseAssets(localRecords, pythonPackages)
+	if err != nil {
 		return err
 	}
 	trustedPublishers, err := trustedPublisherSetFromEnv(manifest, npmPublicationMode, pypiPublicationMode, os.Getenv)

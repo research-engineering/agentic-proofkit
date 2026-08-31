@@ -196,16 +196,19 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 
 var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.agent-envelope.local-identity-closure", Summary: "Agent envelopes now require unique, pairwise-disjoint command, context, and receipt identities and fail closed by pruning unsafe or ambiguous local targets and references with bounded omissions."},
+	{ChangeID: "proofkit.diagnostic.bounded-error-boundary", Summary: "CLI and repository-tool diagnostics now reject malformed or report-unsafe values as a whole, cap admitted text, and bound child-process stdout, stderr, lifetime, and process-group cleanup instead of forwarding raw child errors."},
 	{ChangeID: "proofkit.stable-json.unicode-scalar-v2", Summary: "Go, JavaScript, and generated TypeScript stable JSON now reject non-scalar strings and deterministically escape the pinned Unicode 15 control and format policy; the generated TypeScript adapter identity advances to v2."},
 }
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.agent-workflow.change-planner", Summary: "Add a bounded change-workflow-plan command for the named optional proofkit.reviewed-change.v1 profile with canonical JSON, derived agent-envelope, plain-text, and capability-gated terminal-color projections."},
+	{ChangeID: "proofkit.agent-workflow.change-planner", Summary: "Add a bounded change-workflow-plan command for the named optional proofkit.reviewed-change.v1 profile with canonical JSON, derived authority- and witness-gated agent-envelope, plain-text, and capability-gated terminal-color projections."},
 	{ChangeID: "proofkit.agent-workflow.native-evidence-guidance", Summary: "Add a no-input native-evidence-guidance command that exposes the repository-owned decision template and closed applicability classes as canonical JSON or plain text without executing or approving consumer witnesses."},
+	{ChangeID: "proofkit.release.cross-carrier-binary-identity", Summary: "Release assembly now independently decodes final npm and Python archives under fixed bounds and directly requires byte-identical embedded binaries for every release platform."},
 }
 
 var currentMigrationSteps = []string{
 	"Ensure every agent-envelope command, context, and receipt ID is individually safe and unique, keep the three local identity domains pairwise disjoint, and remove or rename references to ambiguous local targets before adopting 0.5.0.",
+	"Treat stderr as a bounded diagnostic class rather than an exact echo of caller or child-process text, and remove consumers that depend on raw forwarded diagnostics.",
 	"Ensure every stable-JSON string is a Unicode scalar sequence, accept deterministic escaping of pinned Unicode 15 control and format code points, and regenerate TypeScript adapters against generator proofkit.json-report-cli-adapter-source.typescript.v2.",
 }
 

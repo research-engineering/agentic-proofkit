@@ -3649,6 +3649,21 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
+      "scenarioId": "proofkit.supply-chain-quality.final-cross-carrier-binary-byte-identity",
+      "witnessId": "proofkit.release-manifest.cross-carrier-byte-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasemanifest/carrier_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCrossCarrierBinaryIdentityReadsFinalArchives",
+          "command": "go test ./internal/tools/releasemanifest -run '^TestCrossCarrierBinaryIdentityReadsFinalArchives$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "scenarioId": "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",
       "witnessId": "proofkit.python-package.macho-platform-falsifier",
       "witnessKind": "contract",
@@ -3871,6 +3886,64 @@
         {
           "selector": "TestToolDiagnosticBoundaryRejectsDirectDynamicStderrWrites",
           "command": "go test ./scripts -run '^TestToolDiagnosticBoundaryRejectsDirectDynamicStderrWrites$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.go-bounded-diagnostic-capture",
+      "witnessId": "proofkit.diagnostic.bounded-capture-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/diagnostic/diagnostic_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDiagnosticTextEnforcesWholeValueSafetyAndRuneBound",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestDiagnosticTextEnforcesWholeValueSafetyAndRuneBound$'"
+        },
+        {
+          "selector": "TestStderrCaptureSanitizesWholeValuesAndBoundsMemory",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestStderrCaptureSanitizesWholeValuesAndBoundsMemory$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.javascript-entrypoint-diagnostic-owner",
+      "witnessId": "proofkit.javascript-entrypoint.diagnostic-owner-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/diagnostic-entrypoints.test.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.browser-proof-writer-diagnostic-nondisclosure",
+      "witnessId": "proofkit.browser-proof-writer.diagnostic-nondisclosure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/diagnostic_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBrowserProofWriterRedactsInvalidResolution",
+          "command": "go test ./scripts -run '^TestBrowserProofWriterRedactsInvalidResolution$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.source-hygiene-diagnostic-nondisclosure",
+      "witnessId": "proofkit.source-hygiene.diagnostic-nondisclosure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/source_hygiene_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSourceHygieneRedactsSecretShapedTrackedPath",
+          "command": "go test ./scripts -run '^TestSourceHygieneRedactsSecretShapedTrackedPath$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4630,6 +4703,10 @@
       "witnessKind": "technical",
       "witnessPath": "internal/command/changeworkflowplan/text_test.go",
       "witnessSelectors": [
+        {
+          "selector": "TestWorkflowTerminalTextIsOperationallyComplete",
+          "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowTerminalTextIsOperationallyComplete$'"
+        },
         {
           "selector": "TestWorkflowTextPredicates",
           "command": "go test ./internal/command/changeworkflowplan -run '^TestWorkflowTextPredicates$'"

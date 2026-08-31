@@ -15,12 +15,12 @@ import (
 	"io"
 	"maps"
 	"os"
-	"os/exec"
 	pathpkg "path"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
@@ -36,6 +36,7 @@ const rootBinaryName = "agentic-proofkit"
 const installedNPMExecCommandPrefix = "npm exec --offline -- agentic-proofkit "
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
+const packageVerifyProcessTimeout = 30 * time.Second
 
 var (
 	packageCoordinatePattern = regexp.MustCompile(`(?:@research-engineering/agentic-proofkit|agentic-proofkit)@v?[0-9]+\.[0-9]+\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?`)
@@ -1654,9 +1655,20 @@ func withExactTarballConsumer(artifact rootPackageArtifact, verify func(string) 
 }
 
 func run(dir string, name string, args ...string) ([]byte, error) {
-	command := exec.Command(name, args...)
-	command.Dir = dir
-	return command.CombinedOutput()
+	ctx, cancel := context.WithTimeout(context.Background(), packageVerifyProcessTimeout)
+	defer cancel()
+	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory:  dir,
+		Executable: name,
+	}, workflowsmoke.Invocation{Args: args, StdinClass: workflowsmoke.StdinBytes})
+	if err != nil {
+		return nil, err
+	}
+	output := append(append([]byte(nil), result.Stdout...), result.Stderr...)
+	if result.ExitCode != 0 {
+		return output, fmt.Errorf("process exited with code %d", result.ExitCode)
+	}
+	return output, nil
 }
 
 type installedCommandOperation func(string, []byte, ...string) (installedCommandResult, error)
@@ -2517,23 +2529,16 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 }
 
 func runWithInput(dir string, name string, input []byte, args ...string) (installedCommandResult, error) {
-	command := exec.Command(name, args...)
-	command.Dir = dir
-	command.Stdin = bytes.NewReader(input)
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	command.Stdout = &stdout
-	command.Stderr = &stderr
-	err := command.Run()
-	exitCode := 0
+	ctx, cancel := context.WithTimeout(context.Background(), packageVerifyProcessTimeout)
+	defer cancel()
+	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory:  dir,
+		Executable: name,
+	}, workflowsmoke.Invocation{Args: args, Input: input, StdinClass: workflowsmoke.StdinBytes})
 	if err != nil {
-		var exitErr *exec.ExitError
-		if !errors.As(err, &exitErr) {
-			return installedCommandResult{}, err
-		}
-		exitCode = exitErr.ExitCode()
+		return installedCommandResult{}, err
 	}
-	return installedCommandResult{ExitCode: exitCode, Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}, nil
+	return installedCommandResult{ExitCode: result.ExitCode, Stdout: result.Stdout, Stderr: result.Stderr}, nil
 }
 
 func runInstalledWithInput(dir string, input []byte, args ...string) (installedCommandResult, error) {

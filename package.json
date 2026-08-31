@@ -36,7 +36,7 @@
     "build": "go run ./internal/tools/packagebuild",
     "check": "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout",
     "browser:check": "npm run browser:static-check && npm run browser:test",
-    "browser:static-check": "tsc -p tsconfig.browser.json && node --test scripts/browser-proof-execution.test.mjs scripts/browser-proof-inputs.test.mjs scripts/browser-selection-authority.test.mjs scripts/stable-json.test.mjs",
+    "browser:static-check": "tsc -p tsconfig.browser.json && node --test scripts/browser-proof-execution.test.mjs scripts/browser-proof-inputs.test.mjs scripts/browser-selection-authority.test.mjs scripts/diagnostic-entrypoints.test.mjs scripts/stable-json.test.mjs",
     "browser:test": "go run ./internal/tools/browserproofverify --run",
     "command-family:check": "go run ./internal/tools/commandfamilygen --check",
     "go:actionlint": "go tool actionlint",

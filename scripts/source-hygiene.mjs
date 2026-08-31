@@ -2,6 +2,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 
+import {runDiagnosticEntrypoint} from "./diagnostic.mjs";
 import {decodeUTF8Strict} from "./stable-json.mjs";
 
 const textExtensions = new Set([
@@ -64,35 +65,37 @@ function isTextFile(file) {
   return textExtensions.has(extension);
 }
 
-const organizationSpecific = new Set();
+await runDiagnosticEntrypoint(() => {
+  const organizationSpecific = new Set();
 
-for (const entry of trackedIndexEntries()) {
-  if (!isTextFile(entry.file)) {
-    continue;
+  for (const entry of trackedIndexEntries()) {
+    if (!isTextFile(entry.file)) {
+      continue;
+    }
+
+    const lowerText = decodeUTF8Strict(
+      execFileSync("git", ["cat-file", "-p", entry.object]),
+      "tracked text object",
+    ).toLowerCase();
+    if (containsOrganizationSpecificToken(lowerText)) {
+      organizationSpecific.add(entry.file);
+    }
   }
 
-  const lowerText = decodeUTF8Strict(
-    execFileSync("git", ["cat-file", "-p", entry.object]),
-    "tracked text object",
-  ).toLowerCase();
-  if (containsOrganizationSpecificToken(lowerText)) {
-    organizationSpecific.add(entry.file);
-  }
-}
+  for (const file of trackedFiles()) {
+    if (!isTextFile(file) || !existsSync(file)) {
+      continue;
+    }
 
-for (const file of trackedFiles()) {
-  if (!isTextFile(file) || !existsSync(file)) {
-    continue;
+    const lowerText = decodeUTF8Strict(readFileSync(file), "worktree text file").toLowerCase();
+    if (containsOrganizationSpecificToken(lowerText)) {
+      organizationSpecific.add(file);
+    }
   }
 
-  const lowerText = decodeUTF8Strict(readFileSync(file), "worktree text file").toLowerCase();
-  if (containsOrganizationSpecificToken(lowerText)) {
-    organizationSpecific.add(file);
+  if (organizationSpecific.size > 0) {
+    throw new Error(
+      `organization-specific text leaked into Proofkit: ${[...organizationSpecific].sort().join(", ")}`,
+    );
   }
-}
-
-if (organizationSpecific.size > 0) {
-  throw new Error(
-    `organization-specific text leaked into Proofkit: ${[...organizationSpecific].sort().join(", ")}`,
-  );
-}
+});

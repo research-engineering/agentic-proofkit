@@ -119,6 +119,17 @@ func TestWorkflowPromptPredicates(t *testing.T) {
 			t.Fatalf("unexpected proof state: %v", proof)
 		}
 	})
+	t.Run("retained_witness", func(t *testing.T) {
+		input := initialInput()
+		input["contextRefs"] = []any{contextValue("ctx.witness", "witness", testDigest, nil)}
+		input["requiredContextRefIds"] = []any{"ctx.witness"}
+		plan := requireBuild(t, input)
+		proof := plan["prompt"].(map[string]any)["proofCommandOrMissingWitness"].(map[string]any)
+		if proof["state"] != retainedConsumerWitness || len(proof) != 2 {
+			t.Fatalf("unexpected retained proof state: %v", proof)
+		}
+		requireEqual(t, proof["witnessRefIds"], []any{"ctx.witness"})
+	})
 	t.Run("nonclaim", func(t *testing.T) {
 		plan := requireBuild(t, initialInput())
 		value := plan["prompt"].(map[string]any)["nonClaim"].(string)

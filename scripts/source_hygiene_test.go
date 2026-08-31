@@ -123,6 +123,31 @@ func TestSourceHygieneRejectsMalformedUTF8(t *testing.T) {
 	}
 }
 
+func TestSourceHygieneRedactsSecretShapedTrackedPath(t *testing.T) {
+	scriptPath := sourceHygieneScriptPath(t)
+	tempDir := t.TempDir()
+	runCommand(t, tempDir, "git", "init")
+	secretPath := strings.Join([]string{"api", "_key=", "abc123456789.md"}, "")
+	bannedToken := strings.Join([]string{"a", "fc"}, "")
+	if err := os.WriteFile(filepath.Join(tempDir, secretPath), []byte("leaked "+bannedToken+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runCommand(t, tempDir, "git", "add", secretPath)
+
+	command := exec.Command("node", scriptPath)
+	command.Dir = tempDir
+	var stdout strings.Builder
+	var stderr strings.Builder
+	command.Stdout = &stdout
+	command.Stderr = &stderr
+	if err := command.Run(); err == nil {
+		t.Fatal("source hygiene accepted organization-specific content")
+	}
+	if stdout.Len() != 0 || stderr.String() != "<redacted-diagnostic-value>\n" || strings.Contains(stderr.String(), "abc123456789") {
+		t.Fatalf("stdout=%q stderr=%q", stdout.String(), stderr.String())
+	}
+}
+
 func assertSourceHygieneRejects(t *testing.T, scriptPath string, repoRoot string, file string, evidenceClass string) {
 	t.Helper()
 	command := exec.Command("node", scriptPath)

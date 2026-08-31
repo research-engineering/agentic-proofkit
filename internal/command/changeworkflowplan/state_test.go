@@ -192,6 +192,40 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 			t.Fatalf("terminal action contains successorStateDelta: %v", action)
 		}
 	})
+	t.Run("agent_envelope_blocks_missing_authority", func(t *testing.T) {
+		envelope, err := BuildAgentEnvelope(initialInput())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(envelope["actionPlan"].([]any)) != 0 || len(envelope["blockedPreconditions"].([]any)) != 1 || len(envelope["clarificationQuestions"].([]any)) != 1 {
+			t.Fatalf("missing authority did not suppress execution: %v", envelope)
+		}
+	})
+	t.Run("agent_envelope_requires_retained_verification_witness", func(t *testing.T) {
+		withoutWitness := verificationInput(false)
+		envelope, err := BuildAgentEnvelope(withoutWitness)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(envelope["actionPlan"].([]any)) != 0 || len(envelope["blockedPreconditions"].([]any)) != 1 || len(envelope["clarificationQuestions"].([]any)) != 1 {
+			t.Fatalf("verification without a witness was executable: %v", envelope)
+		}
+
+		withWitness := verificationInput(true)
+		envelope, err = BuildAgentEnvelope(withWitness)
+		if err != nil {
+			t.Fatal(err)
+		}
+		actions := envelope["actionPlan"].([]any)
+		if len(actions) != 1 || len(envelope["blockedPreconditions"].([]any)) != 0 || len(envelope["clarificationQuestions"].([]any)) != 0 {
+			t.Fatalf("verification with a witness remained blocked: %v", envelope)
+		}
+		action := actions[0].(map[string]any)
+		if action["owner"] != "ctx.authority" {
+			t.Fatalf("verification action lost owner or witness identity: %v", action)
+		}
+		requireEqual(t, action["evidenceRefs"], []any{"ctx.authority", "ctx.witness"})
+	})
 	t.Run("review_passed_accepts", func(t *testing.T) {
 		for index := range workflowCatalog.Stages {
 			plan := requireBuild(t, inputForStage(index, "review_passed"))
@@ -248,4 +282,20 @@ func TestWorkflowCheckpointPredicates(t *testing.T) {
 			t.Fatalf("matrix has %d unique active rows, want 28", len(seen))
 		}
 	})
+}
+
+func verificationInput(withWitness bool) map[string]any {
+	input := inputForStage(4, "not_started")
+	contextRefs := []any{
+		contextValue("ctx.authority", "authority", "sha256:1111111111111111111111111111111111111111111111111111111111111111", nil),
+	}
+	required := []any{}
+	if withWitness {
+		contextRefs = append(contextRefs, contextValue("ctx.witness", "witness", testDigest, nil))
+		required = append(required, "ctx.witness")
+	}
+	input["contextRefs"] = contextRefs
+	input["governingAuthorityRefId"] = "ctx.authority"
+	input["requiredContextRefIds"] = required
+	return input
 }

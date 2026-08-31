@@ -199,7 +199,7 @@ func RedactSecretLikeValue(value string) string {
 }
 
 func RedactDiagnosticValue(value string) string {
-	if ContainsReportVisibleUnsafeValue(value) {
+	if !unicodepolicy.ValidScalarString(value) || ContainsReportVisibleUnsafeValue(value) {
 		return redactedValueLabel
 	}
 	runes := []rune(value)

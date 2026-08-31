@@ -41,6 +41,17 @@ func TestWorkflowTextProjectionParity(t *testing.T) {
 	}
 }
 
+func TestWorkflowTerminalTextIsOperationallyComplete(t *testing.T) {
+	result, err := Project(terminalInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "Change workflow plan\nOutput: workflow_complete\nCompleted stages: architecture, design, implementation_plan, implementation, verification, pull_request, closeout\nCheckpoint: none\nOwner or escalation: consumer_repository\nStop condition: " + terminalStop + "\nExpected next checkpoint: none\nOmitted context: 0\nNon-claim: Change workflow plans do not approve repository edits, merge, release, rollout, or production readiness.\n"
+	if result.Text != want {
+		t.Fatalf("terminal text is not operationally complete: %q", result.Text)
+	}
+}
+
 func TestWorkflowTextProjectionDefensiveCopy(t *testing.T) {
 	input := initialInput()
 	first, err := BuildTextProjection(input)

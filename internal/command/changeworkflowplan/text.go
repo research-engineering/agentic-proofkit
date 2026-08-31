@@ -22,7 +22,12 @@ func textProjection(value projection) []TextLine {
 			TextLine{Label: "Expected next checkpoint", Value: prompt["expectedNextCheckpoint"].(string)},
 		)
 	} else {
-		lines = append(lines, TextLine{Label: "Checkpoint", Value: "none"})
+		lines = append(lines,
+			TextLine{Label: "Checkpoint", Value: "none"},
+			TextLine{Label: "Owner or escalation", Value: "consumer_repository"},
+			TextLine{Label: "Stop condition", Value: terminalStop},
+			TextLine{Label: "Expected next checkpoint", Value: "none"},
+		)
 	}
 	lines = append(lines,
 		TextLine{Label: "Omitted context", Value: integerText(len(value.Closure.Omitted))},

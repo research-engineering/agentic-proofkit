@@ -38,9 +38,14 @@ func (commandRunner) Run(root string, argv []string) (int, error) {
 	command.Env = os.Environ()
 	command.Stdin = os.Stdin
 	command.Stdout = os.Stdout
-	command.Stderr = os.Stderr
+	stderr := diagnostic.NewStderrCapture()
+	command.Stderr = stderr
 	if err := command.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
+		if childErr := stderr.Failure("package artifact child stderr"); childErr != nil {
+			err = fmt.Errorf("%w; %s", err, childErr)
+		}
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
 			return exitError.ExitCode(), err
 		}
 		return 1, err

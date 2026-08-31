@@ -16,6 +16,7 @@
     "scripts/browser-proof-inputs.mjs",
     "scripts/browser-proof-inputs.test.mjs",
     "scripts/browser-selection-authority.test.mjs",
+    "scripts/diagnostic.mjs",
     "scripts/stable-json.mjs",
     "scripts/stable-json.test.mjs",
     "tsconfig.browser.json"

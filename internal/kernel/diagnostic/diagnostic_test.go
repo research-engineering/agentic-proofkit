@@ -39,3 +39,32 @@ func TestWriteErrorIgnoresNil(t *testing.T) {
 		t.Fatalf("nil error produced output %q", output.String())
 	}
 }
+
+func TestDiagnosticTextEnforcesWholeValueSafetyAndRuneBound(t *testing.T) {
+	if got := Text(errors.New(strings.Repeat("a", 512))); got != strings.Repeat("a", 512) {
+		t.Fatalf("512-rune diagnostic changed: %q", got)
+	}
+	if got := Text(errors.New(strings.Repeat("a", 513))); got != strings.Repeat("a", 512)+"...<truncated-diagnostic>" {
+		t.Fatalf("513-rune diagnostic was not bounded: %q", got)
+	}
+	if got := Text(errors.New(string([]byte{'g', 'h', 'p', '_', 0xff}))); got != "<redacted-diagnostic-value>" {
+		t.Fatalf("malformed UTF-8 diagnostic was not redacted: %q", got)
+	}
+}
+
+func TestStderrCaptureSanitizesWholeValuesAndBoundsMemory(t *testing.T) {
+	secret := strings.Join([]string{"api", "_key=", "abc123456789"}, "")
+	capture := NewStderrCapture()
+	_, _ = capture.Write([]byte(secret))
+	err := capture.Failure("child")
+	if err == nil || strings.Contains(err.Error(), "abc123456789") || !strings.Contains(err.Error(), "<redacted-diagnostic-value>") {
+		t.Fatalf("secret child stderr was not redacted: %v", err)
+	}
+
+	overflow := NewStderrCapture()
+	_, _ = overflow.Write([]byte(strings.Repeat("x", maxCapturedStderrBytes+1)))
+	err = overflow.Failure("child")
+	if err == nil || err.Error() != "child exceeded the stderr capture limit" {
+		t.Fatalf("overflow diagnostic = %v", err)
+	}
+}

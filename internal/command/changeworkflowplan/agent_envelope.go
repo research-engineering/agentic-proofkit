@@ -33,38 +33,31 @@ func agentEnvelope(value projection) (map[string]any, error) {
 		})
 	}
 	actionPlan := []map[string]any{}
-	blocked := []map[string]any{}
+	blocked, clarifications := envelopeBlockers(value)
 	if value.Decision.OutputKind == "next_action" {
-		prompt := value.Prompt
-		action := map[string]any{
-			"commandIds":   []any{},
-			"evidenceRefs": stringsValue(contextRefIDs(value.Closure.Retained)),
-			"instruction":  prompt["candidateAction"],
-			"nonClaims":    []any{promptNonClaim},
-			"owner":        prompt["ownerOrEscalationTarget"],
-			"outputKind":   value.Decision.OutputKind,
-			"phase":        value.Decision.ActiveStageID,
-			"rationale":    "The admitted checkpoint relation selects exactly one next action for the active stage.",
-			"stepId":       "proofkit.change-workflow-plan.next-action",
-		}
-		if value.Decision.SuccessorStateDelta != nil {
-			action["successorStateDelta"] = successorValue(*value.Decision.SuccessorStateDelta)
-		}
-		actionPlan = append(actionPlan, action)
-		if value.Input.GoverningAuthorityRefID == nil {
-			blocked = append(blocked, map[string]any{
-				"description":    missingOwnerStop,
-				"evidenceRefs":   []any{},
-				"nonClaim":       "This blocker does not identify or authorize a consuming-repository owner.",
-				"owner":          "consumer_repository",
-				"preconditionId": "proofkit.change-workflow-plan.missing-governing-authority",
-			})
+		if len(blocked) == 0 {
+			prompt := value.Prompt
+			action := map[string]any{
+				"commandIds":   []any{},
+				"evidenceRefs": stringsValue(contextRefIDs(value.Closure.Retained)),
+				"instruction":  prompt["candidateAction"],
+				"nonClaims":    []any{promptNonClaim},
+				"owner":        prompt["ownerOrEscalationTarget"],
+				"outputKind":   value.Decision.OutputKind,
+				"phase":        value.Decision.ActiveStageID,
+				"rationale":    "The admitted checkpoint relation selects exactly one next action for the active stage.",
+				"stepId":       "proofkit.change-workflow-plan.next-action",
+			}
+			if value.Decision.SuccessorStateDelta != nil {
+				action["successorStateDelta"] = successorValue(*value.Decision.SuccessorStateDelta)
+			}
+			actionPlan = append(actionPlan, action)
 		}
 	} else {
 		actionPlan = append(actionPlan, map[string]any{
 			"commandIds":   []any{},
 			"evidenceRefs": stringsValue(contextRefIDs(value.Closure.Retained)),
-			"instruction":  "Stop because the admitted workflow snapshot is complete; do not infer merge, release, rollout, or readiness.",
+			"instruction":  terminalStop,
 			"nonClaims":    []any{promptNonClaim},
 			"outputKind":   value.Decision.OutputKind,
 			"owner":        "consumer_repository",
@@ -81,18 +74,22 @@ func agentEnvelope(value projection) (map[string]any, error) {
 		ActionPlan:           actionPlan,
 		BlockedPreconditions: blocked,
 		Bounds: map[string]any{
-			"escalation":      "Caller must inspect omitted context or unresolved governing authority before mutation.",
-			"fanout":          envelopeFanout(len(omitted), len(blocked)),
-			"maxActionItems":  len(actionPlan),
-			"maxCommandRefs":  0,
-			"maxContextRefs":  len(contextRefs),
-			"maxOmittedItems": len(omitted),
-			"maxReceiptRefs":  0,
-			"maxTokenBudget":  nil,
-			"nonClaim":        "Bounds count emitted records only and do not prove tokenizer-specific cost or semantic sufficiency.",
-			"omittedCount":    len(value.Closure.Omitted),
+			"escalation":                "Caller must inspect omitted context or resolve blocked authority and witness preconditions before mutation or verification.",
+			"fanout":                    envelopeFanout(len(omitted), len(blocked)),
+			"maxActionEvidenceRefs":     len(value.Closure.Retained),
+			"maxActionItems":            len(actionPlan),
+			"maxBlockedPreconditions":   len(blocked),
+			"maxClarificationQuestions": len(clarifications),
+			"maxCommandRefs":            0,
+			"maxContextRefs":            len(contextRefs),
+			"maxOmittedItems":           len(omitted),
+			"maxReceiptRefs":            0,
+			"maxRouteQuestions":         3,
+			"maxTokenBudget":            nil,
+			"nonClaim":                  "Bounds count emitted records only and do not prove tokenizer-specific cost or semantic sufficiency.",
+			"omittedCount":              len(value.Closure.Omitted),
 		},
-		ClarificationQuestion: []map[string]any{},
+		ClarificationQuestion: clarifications,
 		Commands:              []map[string]any{},
 		ContextRefs:           contextRefs,
 		EnvelopeID:            "proofkit.change-workflow-plan.agent-envelope",
@@ -117,6 +114,55 @@ func agentEnvelope(value projection) (map[string]any, error) {
 		return nil, err
 	}
 	return envelope, nil
+}
+
+func envelopeBlockers(value projection) ([]map[string]any, []map[string]any) {
+	if value.Decision.OutputKind != "next_action" {
+		return []map[string]any{}, []map[string]any{}
+	}
+	blocked := []map[string]any{}
+	clarifications := []map[string]any{}
+	if value.Input.GoverningAuthorityRefID == nil {
+		blocked = append(blocked, map[string]any{
+			"description":    missingOwnerStop,
+			"evidenceRefs":   []any{},
+			"nonClaim":       "This blocker does not identify or authorize a consuming-repository owner.",
+			"owner":          "consumer_repository",
+			"preconditionId": "proofkit.change-workflow-plan.missing-governing-authority",
+		})
+		clarifications = append(clarifications, map[string]any{
+			"askWhen":            "No governing authority ref is admitted for the active workflow stage.",
+			"blocking":           true,
+			"evidenceRefs":       []any{},
+			"expectedAnswerKind": "governing_authority_ref",
+			"nonClaim":           "Naming an authority ref does not prove its content, scope, or authority.",
+			"owner":              "consumer_repository",
+			"question":           "Which admitted caller-owned context ref is the governing semantic authority for this stage?",
+			"questionId":         "proofkit.change-workflow-plan.clarify-governing-authority",
+		})
+	}
+	witnessRefIDs := contextRefIDsOfKind(value.Closure.Retained, "witness")
+	if value.Decision.Action == "verify" && len(witnessRefIDs) == 0 {
+		retainedRefIDs := contextRefIDs(value.Closure.Retained)
+		blocked = append(blocked, map[string]any{
+			"description":    "Verification requires a retained caller-owned witness ref; use native-evidence-guidance to define repository-specific positive controls and near-miss falsifiers.",
+			"evidenceRefs":   stringsValue(retainedRefIDs),
+			"nonClaim":       "A declared witness ref does not prove execution, correctness, freshness, or command success.",
+			"owner":          "consumer_repository",
+			"preconditionId": "proofkit.change-workflow-plan.missing-consumer-witness",
+		})
+		clarifications = append(clarifications, map[string]any{
+			"askWhen":            "The active verification stage has no retained caller-owned witness ref.",
+			"blocking":           true,
+			"evidenceRefs":       stringsValue(retainedRefIDs),
+			"expectedAnswerKind": "consumer_witness_ref",
+			"nonClaim":           "Supplying a witness ref does not execute or validate the referenced native evidence.",
+			"owner":              "consumer_repository",
+			"question":           "Which admitted witness ref binds the consuming repository's positive controls and independent near-miss falsifiers?",
+			"questionId":         "proofkit.change-workflow-plan.clarify-consumer-witness",
+		})
+	}
+	return blocked, clarifications
 }
 
 func stableHash(value map[string]any) (string, error) {

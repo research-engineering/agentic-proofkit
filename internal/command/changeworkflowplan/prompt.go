@@ -4,6 +4,7 @@ const (
 	promptUncertainty = "Caller-declared context, digests, checkpoint state, and external state are unauthenticated."
 	promptNonClaim    = "This packet does not prove execution, correctness, review quality, merge approval, release approval, rollout, or production readiness."
 	missingOwnerStop  = "Do not mutate the repository until the caller supplies the consuming-repository semantic owner and governing authority coordinates."
+	terminalStop      = "Stop because the admitted workflow snapshot is complete; do not infer merge, release, rollout, or readiness."
 )
 
 func buildPrompt(input admittedInput, decision stateDecision, closure closureResult) (map[string]any, error) {
@@ -50,10 +51,21 @@ func buildPrompt(input admittedInput, decision stateDecision, closure closureRes
 		"nonClaim":                     promptNonClaim,
 		"observedFact":                 observedFact,
 		"ownerOrEscalationTarget":      ownerTarget,
-		"proofCommandOrMissingWitness": map[string]any{"state": missingConsumerWitness},
+		"proofCommandOrMissingWitness": proofAvailability(closure.Retained),
 		"stopCondition":                stopCondition,
 		"uncertainty":                  promptUncertainty,
 	}, nil
+}
+
+func proofAvailability(refs []contextRef) map[string]any {
+	witnessRefIDs := contextRefIDsOfKind(refs, "witness")
+	if len(witnessRefIDs) == 0 {
+		return map[string]any{"state": missingConsumerWitness}
+	}
+	return map[string]any{
+		"state":         retainedConsumerWitness,
+		"witnessRefIds": stringsValue(witnessRefIDs),
+	}
 }
 
 func nullableStringValue(value *string) any {
