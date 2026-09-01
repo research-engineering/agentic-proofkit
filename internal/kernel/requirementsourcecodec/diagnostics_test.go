@@ -2,6 +2,7 @@ package requirementsourcecodec
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 )
 
@@ -15,6 +16,38 @@ func TestInvalidUTF8UsesByteOnlyCoordinates(t *testing.T) {
 	}
 	if diagnostic.Span != (ByteSpan{Start: 6, End: 7}) {
 		t.Fatalf("invalid UTF-8 span = %#v", diagnostic.Span)
+	}
+}
+
+func TestBareCRAndCRLFAdvanceScalarLinesOnce(t *testing.T) {
+	for _, item := range []struct {
+		name      string
+		separator string
+	}{
+		{name: "bare CR", separator: "\r"},
+		{name: "CRLF", separator: "\r\n"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			payload := []byte(strings.Join([]string{
+				"{", `  "kind":"proofkit.requirement-source",`, `  "schemaVersion":2,`, `  "sourceId":"safe",`, `  "extra":true`, "}",
+			}, item.separator))
+			_, err := Parse(payload)
+			assertDiagnostic(t, err, "unknown_field", "/<unknown>")
+			start := err.(*Error).Diagnostic().Start
+			if start == nil || start.Line != 5 || start.ScalarColumn != 3 {
+				t.Fatalf("diagnostic start = %#v", start)
+			}
+		})
+	}
+}
+
+func TestMultipleValueDiagnosticSpansSecondToken(t *testing.T) {
+	payload := append(append([]byte(nil), mustPayload(t)...), []byte(" true")...)
+	_, err := Parse(payload)
+	assertDiagnostic(t, err, "multiple_values", "")
+	span := err.(*Error).Diagnostic().Span
+	if !bytes.Equal(payload[span.Start:span.End], []byte("true")) {
+		t.Fatalf("multiple-value span = %q", payload[span.Start:span.End])
 	}
 }
 

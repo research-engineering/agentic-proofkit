@@ -9,9 +9,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
-	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 const agentWorkflowVersionEdgePath = "internal/app/testdata/v0.5-wire-observations.json"
@@ -40,11 +38,7 @@ type agentWorkflowCommandContract struct {
 
 func TestAgentWorkflowVersionEdgeClosesPublicWireAdditions(t *testing.T) {
 	record := readAgentWorkflowVersionEdge(t)
-	releaseRecord, err := releasechange.Read(filepath.Join(repoRoot(t), releasechange.RecordPath))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := validateAgentWorkflowVersionEdge(record, releaseRecord); err != nil {
+	if err := validateAgentWorkflowVersionEdge(record); err != nil {
 		t.Fatal(err)
 	}
 
@@ -74,7 +68,7 @@ func TestAgentWorkflowVersionEdgeClosesPublicWireAdditions(t *testing.T) {
 		t.Run(mutant.name, func(t *testing.T) {
 			value := cloneAgentWorkflowVersionEdge(record)
 			mutant.mutate(&value)
-			if err := validateAgentWorkflowVersionEdge(value, releaseRecord); err == nil {
+			if err := validateAgentWorkflowVersionEdge(value); err == nil {
 				t.Fatal("version-edge mutant was admitted")
 			}
 		})
@@ -114,38 +108,32 @@ func readAgentWorkflowVersionEdge(t *testing.T) agentWorkflowVersionEdge {
 	return decoded
 }
 
-func validateAgentWorkflowVersionEdge(record agentWorkflowVersionEdge, releaseRecord releasechange.Record) error {
+func validateAgentWorkflowVersionEdge(record agentWorkflowVersionEdge) error {
 	if record.SchemaVersion != 1 || record.EdgeID != "proofkit.public-wire.0.4.0-to-0.5.0" || record.EvidenceClass != "owner_authored_frozen_version_edge_observation" {
 		return fmt.Errorf("version-edge identity is invalid")
 	}
-	if record.PreviousVersion != releaseRecord.PreviousVersion || record.Version != releaseRecord.Version {
+	if record.PreviousVersion != "0.4.0" || record.Version != "0.5.0" {
 		return fmt.Errorf("version-edge release identity is stale")
 	}
-	if record.PreviousPublicABISHA256 != "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9" || record.CurrentPublicABISHA256 != "sha256:"+cliContractPublicABISHA256 || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
+	if record.PreviousPublicABISHA256 != "sha256:fc03740aea9e7f525a4388e5d7f557cde07e11b0db0c05101fe937c28a1129d9" || record.CurrentPublicABISHA256 != "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623" || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("version-edge ABI identity is invalid")
 	}
-	if record.PreviousTypeScriptGeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v1" || record.CurrentTypeScriptGeneratorID != jsonreportcliadaptersource.TypeScriptGeneratorID || record.PreviousTypeScriptGeneratorID == record.CurrentTypeScriptGeneratorID {
+	if record.PreviousTypeScriptGeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v1" || record.CurrentTypeScriptGeneratorID != "proofkit.json-report-cli-adapter-source.typescript.v2" || record.PreviousTypeScriptGeneratorID == record.CurrentTypeScriptGeneratorID {
 		return fmt.Errorf("version-edge TypeScript generator identity is invalid")
 	}
 	expectedCommands := []agentWorkflowCommandContract{
-		{Command: "change-workflow-plan", InputContractSHA256: generatedCommandContractMetadataByName["change-workflow-plan"].InputContractSHA256, OutputContractSHA256: generatedCommandContractMetadataByName["change-workflow-plan"].OutputContractSHA256},
-		{Command: "native-evidence-guidance", InputContractSHA256: generatedCommandContractMetadataByName["native-evidence-guidance"].InputContractSHA256, OutputContractSHA256: generatedCommandContractMetadataByName["native-evidence-guidance"].OutputContractSHA256},
+		{Command: "change-workflow-plan", InputContractSHA256: "sha256:e3124fc636b7f66b24daf8e1435cea11da15a741abeabe0cc3d3890b13c71625", OutputContractSHA256: "sha256:cd035e9b71d83c341b1a937a18699fd727cb4b0d694983d715b064292ae4d8bd"},
+		{Command: "native-evidence-guidance", InputContractSHA256: "", OutputContractSHA256: "sha256:c1d23df574e948ea7160931f53790a6d133ae12eeceefe9e5fa15430d653ff7e"},
 	}
 	if !slices.Equal(record.AddedCommandContracts, expectedCommands) {
 		return fmt.Errorf("version-edge added command contracts are not exact")
 	}
-	additions := make([]string, 0, len(releaseRecord.Additions))
-	for _, change := range releaseRecord.Additions {
-		additions = append(additions, change.ChangeID)
-	}
-	if !slices.Equal(record.AdditionChangeIDs, additions) {
+	expectedAdditions := []string{"proofkit.agent-workflow.change-planner", "proofkit.agent-workflow.native-evidence-guidance", "proofkit.release.cross-carrier-binary-identity"}
+	if !slices.Equal(record.AdditionChangeIDs, expectedAdditions) {
 		return fmt.Errorf("version-edge addition owners are not exact")
 	}
-	breaking := make([]string, 0, len(releaseRecord.BreakingChanges))
-	for _, change := range releaseRecord.BreakingChanges {
-		breaking = append(breaking, change.ChangeID)
-	}
-	if !slices.Equal(record.BreakingChangeIDs, breaking) {
+	expectedBreaking := []string{"proofkit.agent-envelope.local-identity-closure", "proofkit.diagnostic.bounded-error-boundary", "proofkit.stable-json.unicode-scalar-v2"}
+	if !slices.Equal(record.BreakingChangeIDs, expectedBreaking) {
 		return fmt.Errorf("version-edge breaking change owners are not exact")
 	}
 	if !slices.Equal(record.NonClaims, []string{"This owner-authored version-edge observation binds reviewed public contract identities; it does not authenticate Git history, registry publication, provider ingestion, native witness truth, rollout, or production readiness."}) {

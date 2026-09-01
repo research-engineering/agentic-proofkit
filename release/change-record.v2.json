@@ -1,43 +1,18 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.4.0",
-  "version": "0.5.0",
-  "changeClass": "breaking",
-  "breakingChanges": [
-    {
-      "changeId": "proofkit.agent-envelope.local-identity-closure",
-      "summary": "Agent envelopes now require unique, pairwise-disjoint command, context, and receipt identities and fail closed by pruning unsafe or ambiguous local targets and references with bounded omissions."
-    },
-    {
-      "changeId": "proofkit.diagnostic.bounded-error-boundary",
-      "summary": "CLI and repository-tool diagnostics now reject malformed or report-unsafe values as a whole, cap admitted text, capture failed child stderr before whole-value sanitization, and keep successful child stderr out of diagnostics; installed-carrier smoke additionally bounds stdout, stderr, lifetime, and process-group cleanup."
-    },
-    {
-      "changeId": "proofkit.stable-json.unicode-scalar-v2",
-      "summary": "Go, JavaScript, and generated TypeScript stable JSON now reject non-scalar strings and deterministically escape the pinned Unicode 15 control and format policy; the generated TypeScript adapter identity advances to v2."
-    }
-  ],
+  "previousVersion": "0.5.0",
+  "version": "0.5.1",
+  "changeClass": "compatible",
+  "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.agent-workflow.change-planner",
-      "summary": "Add a bounded change-workflow-plan command for the named optional proofkit.reviewed-change.v1 profile with canonical JSON, derived authority- and witness-gated agent-envelope, plain-text, and capability-gated terminal-color projections."
-    },
-    {
-      "changeId": "proofkit.agent-workflow.native-evidence-guidance",
-      "summary": "Add a no-input native-evidence-guidance command that exposes the repository-owned decision template and closed applicability classes as canonical JSON or plain text without executing or approving consumer witnesses."
-    },
-    {
-      "changeId": "proofkit.release.cross-carrier-binary-identity",
-      "summary": "Release assembly now admits final npm, Python, and SBOM artifacts once into a bounded immutable snapshot, independently rejects duplicate archive entries, directly compares embedded platform binaries in bounded chunks, and derives release and SBOM checksums from the same artifact epoch."
+      "changeId": "proofkit.requirement-source.codec-selection",
+      "summary": "Select the private bounded grouped-JSON requirement-source v2 codec from byte-bound V3 screen evidence, with exact collection-limit ownership, nondisclosing source diagnostics, lexical source maps, decision-metric closure, and owner-scoped grammar identity proof."
     }
   ],
   "migration": {
-    "required": true,
-    "steps": [
-      "Ensure every agent-envelope command, context, and receipt ID is individually safe and unique, keep the three local identity domains pairwise disjoint, and remove or rename references to ambiguous local targets before adopting 0.5.0.",
-      "Treat stderr as a bounded diagnostic class rather than an exact echo of caller or child-process text, and remove consumers that depend on raw forwarded diagnostics.",
-      "Ensure every stable-JSON string is a Unicode scalar sequence, accept deterministic escaping of pinned Unicode 15 control and format code points, and regenerate TypeScript adapters against generator proofkit.json-report-cli-adapter-source.typescript.v2."
-    ]
+    "required": false,
+    "steps": []
   },
   "platformRequirements": [
     "Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64."
@@ -45,7 +20,7 @@
   "knownLimitations": [
     "Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
     "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
-    "The requirement-source v2 codec remains unselected until SOURCE-CODEC-01 passes; the typed model is internal and no source cutover is claimed.",
+    "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
     "TSX source parsing remains unsupported."
   ],
   "rollback": {

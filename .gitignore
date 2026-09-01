@@ -4,6 +4,7 @@ node_modules/
 playwright-report/
 test-results/
 *.tgz
+!internal/kernel/requirementsourcecodec/testdata/screen-v3.tgz
 .DS_Store
 
 .env

@@ -157,10 +157,14 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-025`: a versioned disjoint-role experiment selects one
   private v2 source grammar, grouped JSON with an entity-local hybrid layout;
   its strict bounded codec delegates meaning to the representation-neutral
-  model, preserves every projection and metadata-presence state, emits
-  deterministic nondisclosing source locations, and is closed by independent
-  field, limit, selection, mutant, round-trip, fuzz-seed, and package-boundary
-  witnesses without migrating current sources or exposing a new public CLI.
+  model, binds each collection to one model-limit owner, preserves every
+  projection, metadata-presence state, and lexical source location, and emits
+  deterministic nondisclosing diagnostics. A bounded traversal-, symlink-, and
+  duplicate-closed archive byte-binds the exact V3 screen, while independent
+  field, limit, selection, mutant, round-trip, fuzz-seed, package, and
+  repository identity witnesses close the selected owner boundary without
+  migrating current sources, exposing a new public CLI, or claiming that no
+  future owner-approved grammar can be added.
 
 ## Non-Claims
 

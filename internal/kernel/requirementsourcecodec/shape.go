@@ -11,12 +11,26 @@ import (
 
 type shapeKind uint8
 
+type collectionLimitID string
+
 const (
 	shapeObject shapeKind = iota + 1
 	shapeArray
 	shapeString
 	shapeInteger
 	shapeBoolean
+)
+
+const (
+	limitCollectionItems     collectionLimitID = "max_collection_items"
+	limitDefinitions         collectionLimitID = "max_definitions"
+	limitDerivations         collectionLimitID = "max_derivations"
+	limitExamplesPerScenario collectionLimitID = "max_examples_per_scenario"
+	limitGroups              collectionLimitID = "max_groups"
+	limitMembersPerGroup     collectionLimitID = "max_members_per_group"
+	limitProfiles            collectionLimitID = "max_profiles"
+	limitScenarios           collectionLimitID = "max_scenarios"
+	limitTerms               collectionLimitID = "max_terms"
 )
 
 type shapeField struct {
@@ -31,6 +45,7 @@ type shape struct {
 	element     *shape
 	nullable    bool
 	maxItems    int
+	limitOwner  collectionLimitID
 	exactString string
 	exactInt    *int64
 }
@@ -39,7 +54,7 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 	stringValue := scalar(shapeString)
 	booleanValue := scalar(shapeBoolean)
 	integerValue := scalar(shapeInteger)
-	stringsValue := array(stringValue, limits.MaxCollectionItems)
+	stringsValue := array(stringValue, limitCollectionItems, limits)
 	lifecycleValue := object(requiredFields(map[string]*shape{
 		"state": stringValue, "replacementRequirementIds": stringsValue, "evidenceRefs": stringsValue,
 	}))
@@ -67,14 +82,14 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 	memberValue := object(requiredFields(map[string]*shape{"requirementId": stringValue, "statementCompletion": stringValue, "fields": metadataValue}))
 	groupValue := object(requiredFields(map[string]*shape{
 		"groupId": stringValue, "profileId": stringValue, "statementStem": stringValue, "sharedPremises": stringsValue,
-		"members": array(memberValue, limits.MaxMembersPerGroup),
+		"members": array(memberValue, limitMembersPerGroup, limits),
 	}))
-	valuesValue := &shape{kind: shapeObject, dynamic: stringValue, maxItems: limits.MaxCollectionItems}
+	valuesValue := dynamicMap(stringValue, limitCollectionItems, limits)
 	exampleValue := object(requiredFields(map[string]*shape{"exampleId": stringValue, "values": valuesValue}))
 	scenarioValue := object(requiredFields(map[string]*shape{
 		"scenarioId": stringValue, "requirementIds": stringsValue, "parameters": stringsValue,
 		"preconditions": stringsValue, "actionSequence": stringsValue, "expectedObservations": stringsValue,
-		"forbiddenObservations": stringsValue, "examples": array(exampleValue, limits.MaxExamplesPerScenario),
+		"forbiddenObservations": stringsValue, "examples": array(exampleValue, limitExamplesPerScenario, limits),
 		"vocabularyRefs": stringsValue, "nonClaimRefs": stringsValue,
 	}))
 	version := int64(SchemaVersion)
@@ -88,12 +103,12 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 		"sourceId":            stringValue,
 		"specPackagePath":     stringValue,
 		"sourceNonClaimRefs":  stringsValue,
-		"nonClaimDefinitions": array(nonClaimValue, limits.MaxDefinitions),
-		"vocabulary":          array(termValue, limits.MaxTerms),
-		"derivations":         array(derivationValue, limits.MaxDerivations),
-		"profiles":            array(profileValue, limits.MaxProfiles),
-		"groups":              array(groupValue, limits.MaxGroups),
-		"scenarios":           array(scenarioValue, limits.MaxScenarios),
+		"nonClaimDefinitions": array(nonClaimValue, limitDefinitions, limits),
+		"vocabulary":          array(termValue, limitTerms, limits),
+		"derivations":         array(derivationValue, limitDerivations, limits),
+		"profiles":            array(profileValue, limitProfiles, limits),
+		"groups":              array(groupValue, limitGroups, limits),
+		"scenarios":           array(scenarioValue, limitScenarios, limits),
 	}))
 }
 
@@ -253,8 +268,37 @@ func object(fields map[string]shapeField) *shape {
 	return &shape{kind: shapeObject, fields: fields}
 }
 
-func array(element *shape, maxItems int) *shape {
-	return &shape{kind: shapeArray, element: element, maxItems: maxItems}
+func array(element *shape, owner collectionLimitID, limits requirementsourcemodel.Limits) *shape {
+	return &shape{kind: shapeArray, element: element, maxItems: collectionLimit(owner, limits), limitOwner: owner}
+}
+
+func dynamicMap(element *shape, owner collectionLimitID, limits requirementsourcemodel.Limits) *shape {
+	return &shape{kind: shapeObject, dynamic: element, maxItems: collectionLimit(owner, limits), limitOwner: owner}
+}
+
+func collectionLimit(owner collectionLimitID, limits requirementsourcemodel.Limits) int {
+	switch owner {
+	case limitCollectionItems:
+		return limits.MaxCollectionItems
+	case limitDefinitions:
+		return limits.MaxDefinitions
+	case limitDerivations:
+		return limits.MaxDerivations
+	case limitExamplesPerScenario:
+		return limits.MaxExamplesPerScenario
+	case limitGroups:
+		return limits.MaxGroups
+	case limitMembersPerGroup:
+		return limits.MaxMembersPerGroup
+	case limitProfiles:
+		return limits.MaxProfiles
+	case limitScenarios:
+		return limits.MaxScenarios
+	case limitTerms:
+		return limits.MaxTerms
+	default:
+		panic("unknown collection limit owner")
+	}
 }
 
 func scalar(kind shapeKind) *shape {

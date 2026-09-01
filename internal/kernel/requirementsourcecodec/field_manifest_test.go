@@ -26,11 +26,12 @@ type manifestRecord struct {
 }
 
 type manifestField struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Required bool   `json:"required"`
-	Nullable bool   `json:"nullable"`
-	Constant string `json:"constant,omitempty"`
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Required   bool   `json:"required"`
+	Nullable   bool   `json:"nullable"`
+	Constant   string `json:"constant,omitempty"`
+	LimitOwner string `json:"limitOwner,omitempty"`
 }
 
 func TestFieldManifestMatchesWireDTOAndClosedShape(t *testing.T) {
@@ -91,7 +92,7 @@ func wireRecordManifest(t *testing.T) []manifestRecord {
 				t.Fatalf("%s.%s has invalid JSON tag", recordType.Name(), field.Name)
 			}
 			fieldType, nullable := manifestType(field.Type, recordType.Name(), name)
-			item := manifestField{Name: name, Type: fieldType, Required: !options["omitempty"], Nullable: nullable}
+			item := manifestField{Name: name, Type: fieldType, Required: !options["omitempty"], Nullable: nullable, LimitOwner: manifestLimitOwner(recordType.Name(), name)}
 			if recordType == reflect.TypeOf(document{}) && name == "schemaVersion" {
 				item.Constant = "2"
 			}
@@ -151,7 +152,7 @@ func assertShapeRecord(t *testing.T, recordID string, actual *shape, records map
 		if !exists || shapeField.required != field.Required || shapeField.shape.nullable != field.Nullable {
 			t.Fatalf("shape field %s.%s mismatch", recordID, field.Name)
 		}
-		assertShapeType(t, field.Type, shapeField.shape, records, seen)
+		assertShapeType(t, field.Type, field.LimitOwner, shapeField.shape, records, seen)
 		if field.Constant != "" {
 			switch shapeField.shape.kind {
 			case shapeString:
@@ -169,24 +170,65 @@ func assertShapeRecord(t *testing.T, recordID string, actual *shape, records map
 	}
 }
 
-func assertShapeType(t *testing.T, expected string, actual *shape, records map[string]manifestRecord, seen map[string]struct{}) {
+func assertShapeType(t *testing.T, expected string, limitOwner string, actual *shape, records map[string]manifestRecord, seen map[string]struct{}) {
 	t.Helper()
 	switch {
-	case expected == "string" && actual.kind == shapeString:
+	case expected == "string" && actual.kind == shapeString && limitOwner == "" && actual.limitOwner == "":
 		return
-	case expected == "boolean" && actual.kind == shapeBoolean:
+	case expected == "boolean" && actual.kind == shapeBoolean && limitOwner == "" && actual.limitOwner == "":
 		return
-	case expected == "integer" && actual.kind == shapeInteger:
+	case expected == "integer" && actual.kind == shapeInteger && limitOwner == "" && actual.limitOwner == "":
 		return
 	case expected == "map:string" && actual.kind == shapeObject && actual.dynamic != nil && actual.dynamic.kind == shapeString:
+		assertShapeLimitOwner(t, limitOwner, actual)
 		return
 	case strings.HasPrefix(expected, "array:") && actual.kind == shapeArray:
-		assertShapeType(t, strings.TrimPrefix(expected, "array:"), actual.element, records, seen)
+		assertShapeLimitOwner(t, limitOwner, actual)
+		assertShapeType(t, strings.TrimPrefix(expected, "array:"), "", actual.element, records, seen)
 		return
-	case strings.HasPrefix(expected, "record:") && actual.kind == shapeObject:
+	case strings.HasPrefix(expected, "record:") && actual.kind == shapeObject && limitOwner == "" && actual.limitOwner == "":
 		assertShapeRecord(t, strings.TrimPrefix(expected, "record:"), actual, records, seen)
 		return
 	default:
 		t.Fatalf("shape type mismatch: expected %s, actual kind %d", expected, actual.kind)
 	}
+}
+
+func assertShapeLimitOwner(t *testing.T, expected string, actual *shape) {
+	t.Helper()
+	owner := collectionLimitID(expected)
+	if expected == "" || actual.limitOwner != owner || actual.maxItems != collectionLimit(owner, requirementsourcemodel.DefaultLimits()) {
+		t.Fatalf("shape limit owner = %q/%d, want %q", actual.limitOwner, actual.maxItems, expected)
+	}
+}
+
+func manifestLimitOwner(recordID string, fieldName string) string {
+	owners := map[string]collectionLimitID{
+		"deferral.evidenceRefs":               limitCollectionItems,
+		"derivation.requirementIds":           limitCollectionItems,
+		"derivation.nonClaimRefs":             limitCollectionItems,
+		"document.sourceNonClaimRefs":         limitCollectionItems,
+		"document.nonClaimDefinitions":        limitDefinitions,
+		"document.vocabulary":                 limitTerms,
+		"document.derivations":                limitDerivations,
+		"document.profiles":                   limitProfiles,
+		"document.groups":                     limitGroups,
+		"document.scenarios":                  limitScenarios,
+		"example.values":                      limitCollectionItems,
+		"group.sharedPremises":                limitCollectionItems,
+		"group.members":                       limitMembersPerGroup,
+		"lifecycle.replacementRequirementIds": limitCollectionItems,
+		"lifecycle.evidenceRefs":              limitCollectionItems,
+		"metadataFields.nonClaimRefs":         limitCollectionItems,
+		"scenario.requirementIds":             limitCollectionItems,
+		"scenario.parameters":                 limitCollectionItems,
+		"scenario.preconditions":              limitCollectionItems,
+		"scenario.actionSequence":             limitCollectionItems,
+		"scenario.expectedObservations":       limitCollectionItems,
+		"scenario.forbiddenObservations":      limitCollectionItems,
+		"scenario.examples":                   limitExamplesPerScenario,
+		"scenario.vocabularyRefs":             limitCollectionItems,
+		"scenario.nonClaimRefs":               limitCollectionItems,
+	}
+	return string(owners[recordID+"."+fieldName])
 }

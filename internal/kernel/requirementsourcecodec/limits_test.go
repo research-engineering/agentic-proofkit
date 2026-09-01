@@ -56,6 +56,19 @@ func TestTokenAndNestingLimitsPrecedeShapeAdmission(t *testing.T) {
 	}
 }
 
+func TestLexicalTokenLimitDominatesNestingWhenBothFail(t *testing.T) {
+	modelLimits := compactTestModelLimits()
+	codecLimits := pairedCodecLimits(t, modelLimits)
+	payload := []byte(strings.Repeat("[", codecLimits.MaxNesting+1) + strings.Repeat("0,", codecLimits.MaxTokens) + "0" + strings.Repeat("]", codecLimits.MaxNesting+1))
+	if int64(len(payload)) > codecLimits.MaxRawBytes {
+		t.Fatal("combined precedence falsifier unexpectedly exceeds the raw-byte bound")
+	}
+	_, err := ParseWithLimits(payload, codecLimits, modelLimits)
+	if ErrorCode(err) != "token_limit_exceeded" {
+		t.Fatalf("combined token/nesting error = %v", err)
+	}
+}
+
 func TestRepresentationCollectionLimitPrecedesModelSemantics(t *testing.T) {
 	modelLimits := compactTestModelLimits()
 	codecLimits := pairedCodecLimits(t, modelLimits)

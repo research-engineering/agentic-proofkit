@@ -99,3 +99,26 @@ func TestReturnedSourceMapIsImmutable(t *testing.T) {
 		t.Fatal("caller mutation escaped into source-map owner state")
 	}
 }
+
+func TestSourceMapIndexesLexicalWireOrderNotNormalizedOrder(t *testing.T) {
+	payload := mutateRoot(t, mustPayload(t), func(root map[string]any) {
+		groups := root["groups"].([]any)
+		for left, right := 0, len(groups)-1; left < right; left, right = left+1, right-1 {
+			groups[left], groups[right] = groups[right], groups[left]
+		}
+	})
+	result, err := Parse(payload)
+	if err != nil {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	location, ok := result.SourceMap.Location("/groups/0/groupId")
+	if !ok {
+		t.Fatal("source map lacks lexical first group")
+	}
+	if got := payload[location.ValueSpan.Start:location.ValueSpan.End]; !bytes.Equal(got, []byte(`"RGRP-CODEC-SUPERSEDED"`)) {
+		t.Fatalf("lexical first group = %q", got)
+	}
+	if result.Model.Layout().Groups[0].GroupID != "RGRP-CODEC-DEFERRED" {
+		t.Fatal("model projection did not retain its independent normalized order")
+	}
+}

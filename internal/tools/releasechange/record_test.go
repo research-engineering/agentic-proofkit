@@ -8,8 +8,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 )
 
 func TestAdmitAndRenderVersionBoundChangeRecord(t *testing.T) {
@@ -196,23 +194,13 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.agent-envelope.local-identity-closure", Summary: "Agent envelopes now require unique, pairwise-disjoint command, context, and receipt identities and fail closed by pruning unsafe or ambiguous local targets and references with bounded omissions."},
-	{ChangeID: "proofkit.diagnostic.bounded-error-boundary", Summary: "CLI and repository-tool diagnostics now reject malformed or report-unsafe values as a whole, cap admitted text, capture failed child stderr before whole-value sanitization, and keep successful child stderr out of diagnostics; installed-carrier smoke additionally bounds stdout, stderr, lifetime, and process-group cleanup."},
-	{ChangeID: "proofkit.stable-json.unicode-scalar-v2", Summary: "Go, JavaScript, and generated TypeScript stable JSON now reject non-scalar strings and deterministically escape the pinned Unicode 15 control and format policy; the generated TypeScript adapter identity advances to v2."},
-}
+var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.agent-workflow.change-planner", Summary: "Add a bounded change-workflow-plan command for the named optional proofkit.reviewed-change.v1 profile with canonical JSON, derived authority- and witness-gated agent-envelope, plain-text, and capability-gated terminal-color projections."},
-	{ChangeID: "proofkit.agent-workflow.native-evidence-guidance", Summary: "Add a no-input native-evidence-guidance command that exposes the repository-owned decision template and closed applicability classes as canonical JSON or plain text without executing or approving consumer witnesses."},
-	{ChangeID: "proofkit.release.cross-carrier-binary-identity", Summary: "Release assembly now admits final npm, Python, and SBOM artifacts once into a bounded immutable snapshot, independently rejects duplicate archive entries, directly compares embedded platform binaries in bounded chunks, and derives release and SBOM checksums from the same artifact epoch."},
+	{ChangeID: "proofkit.requirement-source.codec-selection", Summary: "Select the private bounded grouped-JSON requirement-source v2 codec from byte-bound V3 screen evidence, with exact collection-limit ownership, nondisclosing source diagnostics, lexical source maps, decision-metric closure, and owner-scoped grammar identity proof."},
 }
 
-var currentMigrationSteps = []string{
-	"Ensure every agent-envelope command, context, and receipt ID is individually safe and unique, keep the three local identity domains pairwise disjoint, and remove or rename references to ambiguous local targets before adopting 0.5.0.",
-	"Treat stderr as a bounded diagnostic class rather than an exact echo of caller or child-process text, and remove consumers that depend on raw forwarded diagnostics.",
-	"Ensure every stable-JSON string is a Unicode scalar sequence, accept deterministic escaping of pinned Unicode 15 control and format code points, and regenerate TypeScript adapters against generator " + jsonreportcliadaptersource.TypeScriptGeneratorID + ".",
-}
+var currentMigrationSteps = []string{}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -232,10 +220,11 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.5.0",
+		"# @research-engineering/agentic-proofkit 0.5.1",
 		"",
 		"## Breaking Contract Changes",
 		"",
+		"- None.",
 	}
 	for _, change := range currentBreakingChanges {
 		lines = append(lines, currentChangeBullet(change))
@@ -251,12 +240,8 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"Migration is required:",
-		"",
+		"No consumer migration is required.",
 	)
-	for _, step := range currentMigrationSteps {
-		lines = append(lines, "- "+step)
-	}
 	lines = append(lines,
 		"",
 		"## Platform Requirements",
@@ -267,7 +252,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"- Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
 		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
-		"- The requirement-source v2 codec remains unselected until SOURCE-CODEC-01 passes; the typed model is internal and no source cutover is claimed.",
+		"- The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
 		"",
 		"## Install",
@@ -275,7 +260,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.1",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -286,7 +271,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Rollback",
 		"",
-		"- Pin npm consumers to the previous admitted version 0.4.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.4.0`.",
+		"- Pin npm consumers to the previous admitted version 0.5.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

@@ -702,7 +702,7 @@
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its corpus, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
+      "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its byte-bound corpus, prevent a future owner-approved grammar from being added, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
     },
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
@@ -4602,6 +4602,29 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-selection-evidence-closure",
+      "witnessId": "proofkit.requirement-source-codec.selection-evidence-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/selection_evidence_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSelectionEvidenceIsByteBoundAndProjectsDecision",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestSelectionEvidenceIsByteBoundAndProjectsDecision$'"
+        },
+        {
+          "selector": "TestScreenTreeDigestRejectsByteAndInventoryMutation",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestScreenTreeDigestRejectsByteAndInventoryMutation$'"
+        },
+        {
+          "selector": "TestScreenArchiveAdmissionRejectsUnsafeTopology",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestScreenArchiveAdmissionRejectsUnsafeTopology$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
       "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-replacement-predicate-closure",
       "witnessId": "proofkit.requirement-source-codec.replacement-predicate-closure-falsifier",
       "witnessKind": "contract",
@@ -4625,6 +4648,10 @@
         {
           "selector": "TestProductionPackageHasOneCodecAndNoSyntaxDependency",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestProductionPackageHasOneCodecAndNoSyntaxDependency$'"
+        },
+        {
+          "selector": "TestRepositoryHasOneV2GrammarIdentityOwner",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestRepositoryHasOneV2GrammarIdentityOwner$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4671,6 +4698,10 @@
         {
           "selector": "TestReturnedSourceMapIsImmutable",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestReturnedSourceMapIsImmutable$'"
+        },
+        {
+          "selector": "TestSourceMapIndexesLexicalWireOrderNotNormalizedOrder",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestSourceMapIndexesLexicalWireOrderNotNormalizedOrder$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4688,8 +4719,20 @@
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestHybridLayoutKeepsStableSiblingEntityLinesUnchanged$'"
         },
         {
+          "selector": "TestHybridLayoutUsesCommaFirstEntityArrays",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestHybridLayoutUsesCommaFirstEntityArrays$'"
+        },
+        {
           "selector": "TestCanonicalStringsEscapeUnsafeScalarsWithoutHTMLEscaping",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCanonicalStringsEscapeUnsafeScalarsWithoutHTMLEscaping$'"
+        },
+        {
+          "selector": "TestCanonicalMapKeysAreSorted",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCanonicalMapKeysAreSorted$'"
+        },
+        {
+          "selector": "TestOrderedActionsRetainOrder",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestOrderedActionsRetainOrder$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4722,8 +4765,28 @@
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestRawByteBoundaryIsExactAndDominatesUTF8$'"
         },
         {
+          "selector": "TestTokenAndNestingLimitsPrecedeShapeAdmission",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestTokenAndNestingLimitsPrecedeShapeAdmission$'"
+        },
+        {
+          "selector": "TestLexicalTokenLimitDominatesNestingWhenBothFail",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestLexicalTokenLimitDominatesNestingWhenBothFail$'"
+        },
+        {
+          "selector": "TestRepresentationCollectionLimitPrecedesModelSemantics",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestRepresentationCollectionLimitPrecedesModelSemantics$'"
+        },
+        {
           "selector": "TestDynamicMapCollectionLimitPrecedesParameterSemantics",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestDynamicMapCollectionLimitPrecedesParameterSemantics$'"
+        },
+        {
+          "selector": "TestModelResourcePreflightPrecedesSemanticValidation",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestModelResourcePreflightPrecedesSemanticValidation$'"
+        },
+        {
+          "selector": "TestCodecLimitsCannotUnderCoverModel",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCodecLimitsCannotUnderCoverModel$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4766,6 +4829,14 @@
         {
           "selector": "TestValidUnicodeDiagnosticsUseScalarColumns",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestValidUnicodeDiagnosticsUseScalarColumns$'"
+        },
+        {
+          "selector": "TestBareCRAndCRLFAdvanceScalarLinesOnce",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestBareCRAndCRLFAdvanceScalarLinesOnce$'"
+        },
+        {
+          "selector": "TestMultipleValueDiagnosticSpansSecondToken",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestMultipleValueDiagnosticSpansSecondToken$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4781,6 +4852,14 @@
         {
           "selector": "TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys$'"
+        },
+        {
+          "selector": "TestPreShapeDiagnosticsDoNotDiscloseUnknownKeys",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestPreShapeDiagnosticsDoNotDiscloseUnknownKeys$'"
+        },
+        {
+          "selector": "TestParseDiagnosticsRedactSemanticEntityIDsAndResolveExactSpan",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestParseDiagnosticsRedactSemanticEntityIDsAndResolveExactSpan$'"
         },
         {
           "selector": "TestParseAcceptsValidUnicodeSurrogatePairLosslessly",

@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -71,7 +72,7 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 			}
 		}
 	}
-	wantFiles := []string{"document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"}
+	wantFiles := []string{"diagnostic_path.go", "document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"}
 	if !reflect.DeepEqual(productionFiles, wantFiles) {
 		t.Fatalf("production codec files = %v, want exact single-grammar surface %v", productionFiles, wantFiles)
 	}
@@ -85,5 +86,48 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 	sort.Strings(want)
 	if !reflect.DeepEqual(exported, want) {
 		t.Fatalf("exported codec surface = %v, want %v", exported, want)
+	}
+}
+
+func TestRepositoryHasOneV2GrammarIdentityOwner(t *testing.T) {
+	repositoryRoot := filepath.Clean(filepath.Join("..", "..", ".."))
+	owners := []string{}
+	err := filepath.WalkDir(repositoryRoot, func(pathValue string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			switch entry.Name() {
+			case ".git", "artifacts", "dist", "node_modules", "testdata":
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(pathValue) != ".go" || strings.HasSuffix(pathValue, "_test.go") {
+			return nil
+		}
+		parsed, err := parser.ParseFile(token.NewFileSet(), pathValue, nil, 0)
+		if err != nil {
+			return err
+		}
+		ast.Inspect(parsed, func(node ast.Node) bool {
+			literal, ok := node.(*ast.BasicLit)
+			if !ok || literal.Kind != token.STRING {
+				return true
+			}
+			value, err := strconv.Unquote(literal.Value)
+			if err == nil && value == DocumentKind {
+				owners = append(owners, strings.TrimPrefix(pathValue, repositoryRoot+string(filepath.Separator)))
+			}
+			return true
+		})
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"internal/kernel/requirementsourcecodec/types.go"}
+	if !reflect.DeepEqual(owners, want) {
+		t.Fatalf("v2 grammar identity owners = %v, want %v", owners, want)
 	}
 }

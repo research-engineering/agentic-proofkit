@@ -39,6 +39,8 @@ type SourceMap struct {
 	entries map[string]Location
 }
 
+// Location resolves a lexical JSON pointer in the admitted wire source. Array
+// indexes describe the caller's source order, not normalized model order.
 func (sourceMap SourceMap) Location(pointer string) (Location, bool) {
 	location, exists := sourceMap.entries[pointer]
 	return cloneLocation(location), exists

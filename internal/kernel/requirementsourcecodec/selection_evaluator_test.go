@@ -21,14 +21,17 @@ func selectJSONLayout(record codecSelection) string {
 		}
 	}
 	sort.Slice(eligible, func(left, right int) bool {
-		leftKey := []int{eligible[left].WeightedTokensO200kBase, eligible[left].WeightedCanonicalBytes, eligible[left].ChangedBytes, eligible[left].ChangedLines}
-		rightKey := []int{eligible[right].WeightedTokensO200kBase, eligible[right].WeightedCanonicalBytes, eligible[right].ChangedBytes, eligible[right].ChangedLines}
-		for index := range leftKey {
-			if leftKey[index] != rightKey[index] {
-				return leftKey[index] < rightKey[index]
+		for _, metricID := range record.JSONLayoutOrder {
+			if metricID == "candidate_id" {
+				return eligible[left].CandidateID < eligible[right].CandidateID
+			}
+			leftValue := layoutMetricValue(eligible[left], metricID)
+			rightValue := layoutMetricValue(eligible[right], metricID)
+			if leftValue != rightValue {
+				return leftValue < rightValue
 			}
 		}
-		return eligible[left].CandidateID < eligible[right].CandidateID
+		return false
 	})
 	if len(eligible) == 0 {
 		return ""
@@ -53,11 +56,27 @@ func challengerEligible(record codecSelection) bool {
 		challenger.EditLocality &&
 		materiallyBetter(baseline.WeightedCanonicalBytes, challenger.WeightedCanonicalBytes, policy.MinimumByteImprovementBasisPoints) &&
 		materiallyBetter(baseline.WeightedTokensO200kBase, challenger.WeightedTokensO200kBase, policy.MinimumTokenImprovementBasisPoints) &&
-		challenger.AggregateDiffState == "passed" && challenger.PerEditDiffState == "passed" &&
+		challenger.AggregateDiffRegressionBasisPoints != nil && *challenger.AggregateDiffRegressionBasisPoints <= policy.MaximumAggregateDiffRegressionBasisPoints &&
+		challenger.PerEditDiffRegressionBasisPoints != nil && *challenger.PerEditDiffRegressionBasisPoints <= policy.MaximumPerEditDiffRegressionBasisPoints &&
 		challenger.ParseTimeState == "passed" && challenger.FormatTimeState == "passed" &&
 		challenger.LowerCostDominanceState == "passed" &&
 		withinRatio(baseline.ProjectedProductionLOC, challenger.ProjectedProductionLOC, policy.MaximumProjectedProductionCostBasisPoints) &&
 		withinRatio(baseline.ProjectedProductionBranches, challenger.ProjectedProductionBranches, policy.MaximumProjectedProductionCostBasisPoints)
+}
+
+func layoutMetricValue(value screenObservation, metricID string) int {
+	switch metricID {
+	case "weighted_tokens_o200k_base":
+		return value.WeightedTokensO200kBase
+	case "weighted_canonical_bytes":
+		return value.WeightedCanonicalBytes
+	case "changed_bytes":
+		return value.ChangedBytes
+	case "changed_lines":
+		return value.ChangedLines
+	default:
+		panic("unknown JSON layout metric")
+	}
 }
 
 func observationByID(observations []screenObservation, candidateID string) (screenObservation, bool) {
@@ -108,8 +127,10 @@ func TestChallengerEligibilityRequiresEveryReplacementPredicate(t *testing.T) {
 		{name: "edit locality", mutate: challengerMutation(func(item *screenObservation) { item.EditLocality = false })},
 		{name: "material byte improvement", mutate: challengerMutation(func(item *screenObservation) { item.WeightedCanonicalBytes = 2605964 })},
 		{name: "material token improvement", mutate: challengerMutation(func(item *screenObservation) { item.WeightedTokensO200kBase = 698724 })},
-		{name: "aggregate diff", mutate: challengerMutation(func(item *screenObservation) { item.AggregateDiffState = "failed" })},
-		{name: "per-edit diff", mutate: challengerMutation(func(item *screenObservation) { item.PerEditDiffState = "failed" })},
+		{name: "aggregate diff present", mutate: challengerMutation(func(item *screenObservation) { item.AggregateDiffRegressionBasisPoints = nil })},
+		{name: "aggregate diff threshold", mutate: challengerMutation(func(item *screenObservation) { item.AggregateDiffRegressionBasisPoints = integerPointer(501) })},
+		{name: "per-edit diff present", mutate: challengerMutation(func(item *screenObservation) { item.PerEditDiffRegressionBasisPoints = nil })},
+		{name: "per-edit diff threshold", mutate: challengerMutation(func(item *screenObservation) { item.PerEditDiffRegressionBasisPoints = integerPointer(1501) })},
 		{name: "parse time", mutate: challengerMutation(func(item *screenObservation) { item.ParseTimeState = "missing" })},
 		{name: "format time", mutate: challengerMutation(func(item *screenObservation) { item.FormatTimeState = "missing" })},
 		{name: "lower-cost dominance", mutate: challengerMutation(func(item *screenObservation) { item.LowerCostDominanceState = "failed" })},
@@ -141,8 +162,8 @@ func eligibleChallengerRecord(t *testing.T) codecSelection {
 		item.WeightedTokensO200kBase = 620_000
 		item.ProjectedProductionLOC = 600
 		item.ProjectedProductionBranches = 60
-		item.AggregateDiffState = "passed"
-		item.PerEditDiffState = "passed"
+		item.AggregateDiffRegressionBasisPoints = integerPointer(0)
+		item.PerEditDiffRegressionBasisPoints = integerPointer(0)
 		item.ParseTimeState = "passed"
 		item.FormatTimeState = "passed"
 		item.LowerCostDominanceState = "passed"

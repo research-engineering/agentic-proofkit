@@ -3,6 +3,7 @@ package requirementsourcecodec
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -10,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
@@ -21,6 +23,7 @@ type codecSelection struct {
 	Kind               string              `json:"kind"`
 	ScreenEvidence     screenEvidence      `json:"screenEvidence"`
 	Roles              selectionRoles      `json:"roles"`
+	JSONLayoutOrder    []string            `json:"jsonLayoutOrder"`
 	MetricRegistry     []selectionMetric   `json:"metricRegistry"`
 	ReplacementPolicy  replacementPolicy   `json:"replacementPolicy"`
 	ScreenObservations []screenObservation `json:"screenObservations"`
@@ -30,14 +33,20 @@ type codecSelection struct {
 }
 
 type screenEvidence struct {
-	ScreenManifestVersion       int               `json:"screenManifestVersion"`
-	ScreenManifestSHA256        string            `json:"screenManifestSha256"`
-	SelectionOpeningSHA256      string            `json:"selectionOpeningSha256"`
-	FixtureIndexSHA256          string            `json:"fixtureIndexSha256"`
-	ObservationsSHA256          string            `json:"observationsSha256"`
-	IndependentValidationSHA256 string            `json:"independentValidationSha256"`
-	ReviewResultsSHA256         string            `json:"reviewResultsSha256"`
-	TokenProducerDigests        map[string]string `json:"tokenProducerDigests"`
+	ArchiveFormat       string           `json:"archiveFormat"`
+	ArchivePath         string           `json:"archivePath"`
+	ArchiveSHA256       string           `json:"archiveSha256"`
+	RootPath            string           `json:"rootPath"`
+	TreeDigestAlgorithm string           `json:"treeDigestAlgorithm"`
+	TreeSHA256          string           `json:"treeSha256"`
+	ArtifactCount       int              `json:"artifactCount"`
+	Artifacts           []screenArtifact `json:"artifacts"`
+}
+
+type screenArtifact struct {
+	Role   string `json:"role"`
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
 }
 
 type selectionRoles struct {
@@ -72,22 +81,22 @@ type replacementPolicy struct {
 }
 
 type screenObservation struct {
-	CandidateID                 string `json:"candidateId"`
-	FieldClosure                string `json:"fieldClosure"`
-	ReviewAccuracyBasisPoints   *int   `json:"reviewAccuracyBasisPoints"`
-	InvalidMutationFalseAccepts *int   `json:"invalidMutationFalseAccepts"`
-	EditLocality                bool   `json:"editLocality"`
-	WeightedCanonicalBytes      int    `json:"weightedCanonicalBytes"`
-	WeightedTokensO200kBase     int    `json:"weightedTokensO200kBase"`
-	ChangedLines                int    `json:"changedLines"`
-	ChangedBytes                int    `json:"changedBytes"`
-	ProjectedProductionLOC      int    `json:"projectedProductionLoc"`
-	ProjectedProductionBranches int    `json:"projectedProductionBranches"`
-	AggregateDiffState          string `json:"aggregateDiffState"`
-	PerEditDiffState            string `json:"perEditDiffState"`
-	ParseTimeState              string `json:"parseTimeState"`
-	FormatTimeState             string `json:"formatTimeState"`
-	LowerCostDominanceState     string `json:"lowerCostDominanceState"`
+	CandidateID                        string `json:"candidateId"`
+	FieldClosure                       string `json:"fieldClosure"`
+	ReviewAccuracyBasisPoints          *int   `json:"reviewAccuracyBasisPoints"`
+	InvalidMutationFalseAccepts        *int   `json:"invalidMutationFalseAccepts"`
+	EditLocality                       bool   `json:"editLocality"`
+	WeightedCanonicalBytes             int    `json:"weightedCanonicalBytes"`
+	WeightedTokensO200kBase            int    `json:"weightedTokensO200kBase"`
+	ChangedLines                       int    `json:"changedLines"`
+	ChangedBytes                       int    `json:"changedBytes"`
+	ProjectedProductionLOC             int    `json:"projectedProductionLoc"`
+	ProjectedProductionBranches        int    `json:"projectedProductionBranches"`
+	AggregateDiffRegressionBasisPoints *int   `json:"aggregateDiffRegressionBasisPoints"`
+	PerEditDiffRegressionBasisPoints   *int   `json:"perEditDiffRegressionBasisPoints"`
+	ParseTimeState                     string `json:"parseTimeState"`
+	FormatTimeState                    string `json:"formatTimeState"`
+	LowerCostDominanceState            string `json:"lowerCostDominanceState"`
 }
 
 type selectionDecision struct {
@@ -100,10 +109,11 @@ type selectionDecision struct {
 
 func TestSelectionRecordIsClosedAndDecisionIsReproducible(t *testing.T) {
 	record := readCodecSelection(t)
-	if record.SchemaVersion != 1 || record.Kind != "proofkit.requirement-source-codec-selection" || record.ScreenEvidence.ScreenManifestVersion != 3 {
+	if record.SchemaVersion != 1 || record.Kind != "proofkit.requirement-source-codec-selection" {
 		t.Fatalf("selection identity = %#v", record)
 	}
-	assertScreenDigests(t, record.ScreenEvidence)
+	assertScreenEvidenceMetadata(t, record.ScreenEvidence)
+	assertJSONLayoutOrder(t, record.JSONLayoutOrder)
 	assertSortedUniqueMetricRegistry(t, record.MetricRegistry)
 	assertReplacementPolicy(t, record.ReplacementPolicy)
 	assertDisjointRoles(t, record.Roles)
@@ -145,28 +155,42 @@ func readCodecSelection(t *testing.T) codecSelection {
 	return record
 }
 
-func assertScreenDigests(t *testing.T, value screenEvidence) {
+func assertScreenEvidenceMetadata(t *testing.T, value screenEvidence) {
 	t.Helper()
-	digests := []string{
-		value.ScreenManifestSHA256, value.SelectionOpeningSHA256, value.FixtureIndexSHA256,
-		value.ObservationsSHA256, value.IndependentValidationSHA256, value.ReviewResultsSHA256,
+	if value.ArchiveFormat != "tar+gzip" || value.ArchivePath != "testdata/screen-v3.tgz" || value.RootPath != "." || value.TreeDigestAlgorithm != "sha256(sorted(relative-path NUL file-sha256 LF))" || value.ArtifactCount != 197 {
+		t.Fatalf("screen evidence root = %#v", value)
 	}
-	for _, digest := range value.TokenProducerDigests {
-		digests = append(digests, digest)
+	pathClean := filepath.ToSlash(filepath.Clean(value.ArchivePath))
+	if filepath.IsAbs(value.ArchivePath) || pathClean != value.ArchivePath || strings.HasPrefix(pathClean, "../") {
+		t.Fatalf("unsafe screen archive path %q", value.ArchivePath)
 	}
-	for _, digest := range digests {
-		if _, err := admit.LowercaseSHA256(digest, "digest"); err != nil {
-			t.Fatalf("invalid screen digest %q", digest)
+	if _, err := admit.LowercaseSHA256(value.ArchiveSHA256, "archiveSha256"); err != nil {
+		t.Fatalf("invalid screen archive digest %q", value.ArchiveSHA256)
+	}
+	if _, err := admit.LowercaseSHA256(value.TreeSHA256, "treeSha256"); err != nil {
+		t.Fatalf("invalid screen tree digest %q", value.TreeSHA256)
+	}
+	wantRoles := []string{"fixture-index", "independent-validation", "observations", "review-results", "screen-decision", "screen-manifest", "selection-opening", "token-go", "token-python"}
+	roles := make([]string, len(value.Artifacts))
+	for index, artifact := range value.Artifacts {
+		roles[index] = artifact.Role
+		if artifact.Path == "" || filepath.IsAbs(artifact.Path) || strings.Contains(artifact.Path, "..") {
+			t.Fatalf("unsafe screen artifact path %q", artifact.Path)
+		}
+		if _, err := admit.LowercaseSHA256(artifact.SHA256, artifact.Role); err != nil {
+			t.Fatalf("invalid screen artifact digest %q", artifact.SHA256)
 		}
 	}
-	wantProducers := []string{"openai-tiktoken-0.14.0", "tiktoken-go-0.8.1"}
-	actualProducers := make([]string, 0, len(value.TokenProducerDigests))
-	for producer := range value.TokenProducerDigests {
-		actualProducers = append(actualProducers, producer)
+	if !reflect.DeepEqual(roles, wantRoles) {
+		t.Fatalf("screen artifact roles = %v, want %v", roles, wantRoles)
 	}
-	sort.Strings(actualProducers)
-	if !reflect.DeepEqual(actualProducers, wantProducers) {
-		t.Fatalf("token producers = %v, want %v", actualProducers, wantProducers)
+}
+
+func assertJSONLayoutOrder(t *testing.T, order []string) {
+	t.Helper()
+	want := []string{"weighted_tokens_o200k_base", "weighted_canonical_bytes", "changed_bytes", "changed_lines", "candidate_id"}
+	if !reflect.DeepEqual(order, want) {
+		t.Fatalf("JSON layout order = %v, want %v", order, want)
 	}
 }
 
@@ -190,17 +214,17 @@ func assertSortedUniqueMetricRegistry(t *testing.T, metrics []selectionMetric) {
 		}
 	}
 	wantIDs := []string{
-		"changed_bytes", "changed_lines", "edit_locality", "field_closure", "format_time",
-		"invalid_mutation_false_accepts", "parse_time", "projected_production_branches",
-		"projected_production_loc", "review_accuracy_basis_points", "weighted_canonical_bytes",
-		"weighted_tokens_o200k_base",
+		"aggregate_diff_regression_basis_points", "changed_bytes", "changed_lines", "edit_locality", "field_closure", "format_time_state",
+		"invalid_mutation_false_accepts", "lower_cost_dominance_state", "parse_time_state", "per_edit_diff_regression_basis_points",
+		"projected_production_branches", "projected_production_loc", "review_accuracy_basis_points",
+		"weighted_canonical_bytes", "weighted_tokens_o200k_base",
 	}
 	if !reflect.DeepEqual(ids, wantIDs) {
 		t.Fatalf("metric IDs = %v, want exact registry %v", ids, wantIDs)
 	}
 	for _, metric := range metrics {
-		if metric.MetricID == "parse_time" || metric.MetricID == "format_time" {
-			if metric.Stage != "replacement" || metric.Role != "primary" || metric.Direction != "minimize" || metric.Missing != "reject" || metric.Requirement != "noninferior" {
+		if metric.Stage == "replacement" {
+			if metric.Role != "hard" || metric.Missing != "reject" {
 				t.Fatalf("replacement performance metric = %#v", metric)
 			}
 		} else if metric.Stage != "screen" {
@@ -284,23 +308,58 @@ func assertObservationClosure(t *testing.T, record codecSelection) {
 		if observation.InvalidMutationFalseAccepts != nil && *observation.InvalidMutationFalseAccepts < 0 {
 			t.Fatalf("candidate %q has invalid false-accept count", observation.CandidateID)
 		}
-		states := []string{observation.AggregateDiffState, observation.PerEditDiffState, observation.ParseTimeState, observation.FormatTimeState, observation.LowerCostDominanceState}
+		states := []string{observation.ParseTimeState, observation.FormatTimeState, observation.LowerCostDominanceState}
 		for _, state := range states {
 			if !allowedState[state] {
 				t.Fatalf("candidate %q has invalid replacement state %q", observation.CandidateID, state)
 			}
 		}
 		if _, isChallenger := challengers[observation.CandidateID]; !isChallenger {
+			if observation.AggregateDiffRegressionBasisPoints != nil || observation.PerEditDiffRegressionBasisPoints != nil {
+				t.Fatalf("non-challenger %q has replacement diff observations", observation.CandidateID)
+			}
 			for _, state := range states {
 				if state != "not_applicable" {
 					t.Fatalf("non-challenger %q has replacement state %q", observation.CandidateID, state)
 				}
 			}
+		} else if observation.AggregateDiffRegressionBasisPoints == nil || observation.PerEditDiffRegressionBasisPoints == nil || *observation.AggregateDiffRegressionBasisPoints < 0 || *observation.PerEditDiffRegressionBasisPoints < 0 {
+			t.Fatalf("challenger %q lacks bounded diff observations", observation.CandidateID)
 		}
 	}
 	if !reflect.DeepEqual(actual, want) {
 		t.Fatalf("screen observations = %v, want %v", actual, want)
 	}
+}
+
+func (value *screenObservation) UnmarshalJSON(payload []byte) error {
+	type alias screenObservation
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	var decoded alias
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &fields); err != nil {
+		return err
+	}
+	required := []string{
+		"candidateId", "fieldClosure", "reviewAccuracyBasisPoints", "invalidMutationFalseAccepts", "editLocality",
+		"weightedCanonicalBytes", "weightedTokensO200kBase", "changedLines", "changedBytes", "projectedProductionLoc",
+		"projectedProductionBranches", "aggregateDiffRegressionBasisPoints", "perEditDiffRegressionBasisPoints",
+		"parseTimeState", "formatTimeState", "lowerCostDominanceState",
+	}
+	if len(fields) != len(required) {
+		return fmt.Errorf("screen observation must contain exactly %d fields", len(required))
+	}
+	for _, field := range required {
+		if _, exists := fields[field]; !exists {
+			return fmt.Errorf("screen observation is missing %s", field)
+		}
+	}
+	*value = screenObservation(decoded)
+	return nil
 }
 
 func stringSet(values []string) map[string]struct{} {
@@ -313,15 +372,29 @@ func stringSet(values []string) map[string]struct{} {
 
 func assertHardGateSelectorsExact(t *testing.T, selectors []string) {
 	t.Helper()
-	want := []string{
-		"TestFieldManifestMatchesWireDTOAndClosedShape",
-		"TestFormatParseRoundTripPreservesEveryProjection",
-		"TestCanonicalFormatIsIdempotent",
-		"TestChallengerEligibilityRequiresEveryReplacementPredicate",
-		"TestCodecMutantManifestClosesRepresentationFailures",
-		"TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys",
-		"TestRawByteBoundaryIsExactAndDominatesUTF8",
-		"TestHybridLayoutKeepsStableSiblingEntityLinesUnchanged",
+	payload, err := os.ReadFile(filepath.Join("..", "..", "..", "proofkit", "requirement-bindings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var bindings struct {
+		Bindings []struct {
+			RequirementID    string `json:"requirementId"`
+			WitnessSelectors []struct {
+				Selector string `json:"selector"`
+			} `json:"witnessSelectors"`
+		} `json:"bindings"`
+	}
+	if err := json.Unmarshal(payload, &bindings); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{}
+	for _, binding := range bindings.Bindings {
+		if binding.RequirementID != "REQ-PROOFKIT-SPEC-025" {
+			continue
+		}
+		for _, witness := range binding.WitnessSelectors {
+			want = append(want, witness.Selector)
+		}
 	}
 	if !reflect.DeepEqual(selectors, want) {
 		t.Fatalf("hard-gate selectors = %v, want %v", selectors, want)

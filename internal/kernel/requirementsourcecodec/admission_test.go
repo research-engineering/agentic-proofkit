@@ -38,6 +38,66 @@ func TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys(t *testing.T) {
 	}
 }
 
+func TestPreShapeDiagnosticsDoNotDiscloseUnknownKeys(t *testing.T) {
+	const sentinel = "ghp_0123456789abcdefghijklmnopqrstuvwxyz"
+	payload := []byte(`{"` + sentinel + `":` + strings.Repeat("[", defaultMaxNesting+1) + `0` + strings.Repeat("]", defaultMaxNesting+1) + `}`)
+	_, err := Parse(payload)
+	if ErrorCode(err) != "nesting_limit_exceeded" {
+		t.Fatalf("Parse() error = %v", err)
+	}
+	diagnostic := err.(*Error).Diagnostic()
+	if strings.Contains(err.Error(), sentinel) || strings.Contains(diagnostic.Path, sentinel) || !strings.HasPrefix(diagnostic.Path, "/<unknown>") {
+		t.Fatalf("pre-shape diagnostic disclosed caller key: %#v", diagnostic)
+	}
+}
+
+func TestParseDiagnosticsRedactSemanticEntityIDsAndResolveExactSpan(t *testing.T) {
+	const definitionID = "NCL-CODEC-UNREFERENCED"
+	payload := mutateRoot(t, mustPayload(t), func(root map[string]any) {
+		definitions := root["nonClaimDefinitions"].([]any)
+		root["nonClaimDefinitions"] = append(definitions, map[string]any{
+			"nonClaimId": definitionID,
+			"statement":  "This declaration is intentionally unreferenced.",
+		})
+	})
+	_, err := Parse(payload)
+	assertDiagnostic(t, err, "unreferenced_definition", "/nonClaimDefinitions/4")
+	diagnostic := err.(*Error).Diagnostic()
+	if strings.Contains(err.Error(), definitionID) || strings.Contains(diagnostic.Path, definitionID) || !bytes.Contains(payload[diagnostic.Span.Start:diagnostic.Span.End], []byte(`"nonClaimId":"`+definitionID+`"`)) {
+		t.Fatalf("definition diagnostic is not identity-safe and exact: %#v", diagnostic)
+	}
+
+	requirementPayload := mutateRoot(t, mustPayload(t), func(root map[string]any) {
+		groups := root["groups"].([]any)
+		members := groups[0].(map[string]any)["members"].([]any)
+		fields := members[0].(map[string]any)["fields"].(map[string]any)
+		fields["deferral"] = nil
+	})
+	_, err = Parse(requirementPayload)
+	if ErrorCode(err) != "missing_deferral" {
+		t.Fatalf("requirement semantic error = %v", err)
+	}
+	requirementDiagnostic := err.(*Error).Diagnostic()
+	if strings.Contains(requirementDiagnostic.Path, "REQ-") || requirementDiagnostic.Path != "/groups/0/members/0/fields/deferral" {
+		t.Fatalf("requirement diagnostic path = %q", requirementDiagnostic.Path)
+	}
+
+	profilePayload := mutateRoot(t, mustPayload(t), func(root map[string]any) {
+		profiles := root["profiles"].([]any)
+		copyValue := map[string]any{}
+		for key, value := range profiles[0].(map[string]any) {
+			copyValue[key] = value
+		}
+		copyValue["profileId"] = "RPROF-CODEC-UNUSED"
+		root["profiles"] = append(profiles, copyValue)
+	})
+	_, err = Parse(profilePayload)
+	assertDiagnostic(t, err, "vacuous_profile", "/profiles/1")
+	if strings.Contains(err.Error(), "RPROF-CODEC-UNUSED") {
+		t.Fatalf("profile diagnostic disclosed caller identity: %v", err)
+	}
+}
+
 func TestParseRejectsMalformedJSON(t *testing.T) {
 	for _, payload := range [][]byte{
 		{},
