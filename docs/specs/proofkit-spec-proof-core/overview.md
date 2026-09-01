@@ -154,6 +154,13 @@ execution receipts, and merge policy.
   package, field, representation, variant, and positive/negative relation
   coverage without attributing correlated edits to independent field
   causality, selecting a codec, or changing a public source boundary.
+- `REQ-PROOFKIT-SPEC-025`: a versioned disjoint-role experiment selects one
+  private v2 source grammar, grouped JSON with an entity-local hybrid layout;
+  its strict bounded codec delegates meaning to the representation-neutral
+  model, preserves every projection and metadata-presence state, emits
+  deterministic nondisclosing source locations, and is closed by independent
+  field, limit, selection, mutant, round-trip, fuzz-seed, and package-boundary
+  witnesses without migrating current sources or exposing a new public CLI.
 
 ## Non-Claims
 

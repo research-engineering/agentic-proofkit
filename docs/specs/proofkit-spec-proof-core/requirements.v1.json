@@ -568,6 +568,19 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "A private requirement-source codec selection admits exactly one v2 persisted grammar, grouped JSON with the frozen entity-local hybrid layout, after a versioned disjoint-role screen rejects compact and pretty JSON layouts for edit-locality failure and admits no YAML, TOML, or restricted-text parser authority. The selected codec maps bounded UTF-8 bytes through duplicate-, case-, unknown-, missing-, null-, integer-, and Unicode-scalar-closed structural admission into exactly one requirementsourcemodel.NormalizeWithLimits call; emits immutable atomic, authoring-layout, and typed-reference projections plus a deterministic source map; formats only a model re-admitted by the semantic owner; preserves metadata absence, present-null deferral, present-record deferral, ordered actions, and sorted dynamic maps; emits fixed-order entity-local canonical JSON with exact unsafe-scalar escaping and one final line feed; and applies raw-byte, UTF-8, lexical-token, nesting, representation-cardinality, model-resource, model-semantic, and canonical-output failure precedence without disclosing caller text. Independently authored field, limit-coefficient, selection, and executable mutant manifests close the DTO, structural schema, resource formula, candidate roles, decision, diagnostic paths, and losing-grammar boundary; round-trip, idempotence, source-span replay, exact-limit, fuzz-seed, and package-boundary witnesses reject a second production grammar or semantic owner.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-025"],
+      "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its corpus, execute native witnesses, approve merge or release, or establish rollout or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source-codec-limit-coefficients",
+  "canonicalByteBaseOverhead": 4096,
+  "lexicalTokenBaseOverhead": 1024,
+  "minimumJsonNesting": 7,
+  "maximumJsonNesting": 64,
+  "canonicalByteCoefficients": [
+    {"id": "collection_items", "coefficient": 32},
+    {"id": "definitions", "coefficient": 96},
+    {"id": "derivations", "coefficient": 384},
+    {"id": "examples", "coefficient": 256},
+    {"id": "groups", "coefficient": 320},
+    {"id": "members", "coefficient": 768},
+    {"id": "profiles", "coefficient": 448},
+    {"id": "scenarios", "coefficient": 896},
+    {"id": "terms", "coefficient": 160},
+    {"id": "total_text_bytes", "coefficient": 3}
+  ],
+  "lexicalTokenCoefficients": [
+    {"id": "collection_items", "coefficient": 32},
+    {"id": "definitions", "coefficient": 32},
+    {"id": "derivations", "coefficient": 32},
+    {"id": "examples", "coefficient": 32},
+    {"id": "groups", "coefficient": 32},
+    {"id": "members", "coefficient": 32},
+    {"id": "profiles", "coefficient": 32},
+    {"id": "scenarios", "coefficient": 32},
+    {"id": "terms", "coefficient": 32}
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source-codec-mutants",
+  "mutants": [
+    {"mutantId": "case_folded_field", "layer": "shape", "expectedCode": "noncanonical_field", "expectedPath": "/sourceId", "property": "exact-field-spelling"},
+    {"mutantId": "duplicate_field", "layer": "lexical", "expectedCode": "duplicate_field", "expectedPath": "", "property": "unique-object-fields"},
+    {"mutantId": "dynamic_key_wrong_type", "layer": "shape", "expectedCode": "invalid_type", "expectedPath": "/scenarios/0/examples/0/values/<entry>", "property": "dynamic-value-type-and-key-nondisclosure"},
+    {"mutantId": "explicit_null", "layer": "shape", "expectedCode": "invalid_null", "expectedPath": "/sourceId", "property": "nullability-closure"},
+    {"mutantId": "fractional_integer", "layer": "shape", "expectedCode": "invalid_integer", "expectedPath": "/schemaVersion", "property": "integer-lexeme"},
+    {"mutantId": "invalid_utf8", "layer": "raw", "expectedCode": "invalid_utf8", "expectedPath": "", "property": "utf8-validity"},
+    {"mutantId": "lone_surrogate", "layer": "lexical", "expectedCode": "invalid_unicode_escape", "expectedPath": "/nonClaimDefinitions/0/statement", "property": "unicode-scalar-losslessness"},
+    {"mutantId": "missing_required", "layer": "shape", "expectedCode": "missing_field", "expectedPath": "/sourceId", "property": "required-field-closure"},
+    {"mutantId": "multiple_values", "layer": "syntax", "expectedCode": "multiple_values", "expectedPath": "", "property": "single-document-closure"},
+    {"mutantId": "negative_zero", "layer": "shape", "expectedCode": "invalid_integer", "expectedPath": "/derivations/0/selector/start", "property": "integer-lexeme"},
+    {"mutantId": "secret_shaped_text", "layer": "model", "expectedCode": "invalid_text", "expectedPath": "/nonClaimDefinitions/0/statement", "property": "report-visible-nondisclosure"},
+    {"mutantId": "semantic_duplicate_id", "layer": "model", "expectedCode": "duplicate_id", "expectedPath": "/nonClaimDefinitions", "property": "semantic-owner-delegation"},
+    {"mutantId": "unknown_field", "layer": "shape", "expectedCode": "unknown_field", "expectedPath": "/<unknown>", "property": "closed-record-fields"},
+    {"mutantId": "wrong_identity", "layer": "shape", "expectedCode": "invalid_identity", "expectedPath": "/schemaVersion", "property": "representation-identity"},
+    {"mutantId": "wrong_type", "layer": "shape", "expectedCode": "invalid_type", "expectedPath": "/sourceId", "property": "field-type-closure"}
+  ]
+}

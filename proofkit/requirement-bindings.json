@@ -697,6 +697,14 @@
       "nonClaims": ["This private single-source model does not select or expose a source codec, parse or serialize a persisted source, retain a normalized mirror, establish cross-source requirement identity, authenticate derivation objects, digests, selectors, or freshness, authenticate a caller-declared sourceKind or prove its author's authority or trust class, cut over any current requirement consumer, prove requirement meaning or implementation correctness, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its corpus, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
@@ -4572,6 +4580,226 @@
         {
           "selector": "TestMutantRelationPredicatesRejectNearMisses",
           "command": "go test ./internal/kernel/requirementsourcemodel -run '^TestMutantRelationPredicatesRejectNearMisses$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-selection-closure",
+      "witnessId": "proofkit.requirement-source-codec.selection-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/selection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSelectionRecordIsClosedAndDecisionIsReproducible",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestSelectionRecordIsClosedAndDecisionIsReproducible$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-replacement-predicate-closure",
+      "witnessId": "proofkit.requirement-source-codec.replacement-predicate-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/selection_evaluator_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestChallengerEligibilityRequiresEveryReplacementPredicate",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestChallengerEligibilityRequiresEveryReplacementPredicate$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-package-boundary-closure",
+      "witnessId": "proofkit.requirement-source-codec.package-boundary-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/package_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProductionPackageHasOneCodecAndNoSyntaxDependency",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestProductionPackageHasOneCodecAndNoSyntaxDependency$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-field-closure",
+      "witnessId": "proofkit.requirement-source-codec.field-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/field_manifest_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestFieldManifestMatchesWireDTOAndClosedShape",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestFieldManifestMatchesWireDTOAndClosedShape$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-roundtrip-closure",
+      "witnessId": "proofkit.requirement-source-codec.roundtrip-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/roundtrip_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestFormatParseRoundTripPreservesEveryProjection",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestFormatParseRoundTripPreservesEveryProjection$'"
+        },
+        {
+          "selector": "TestCanonicalFormatIsIdempotent",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCanonicalFormatIsIdempotent$'"
+        },
+        {
+          "selector": "TestFormatPreservesMetadataAbsenceNullAndRecord",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestFormatPreservesMetadataAbsenceNullAndRecord$'"
+        },
+        {
+          "selector": "TestSourceMapReplaysKeyAndValueSpans",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestSourceMapReplaysKeyAndValueSpans$'"
+        },
+        {
+          "selector": "TestReturnedSourceMapIsImmutable",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestReturnedSourceMapIsImmutable$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-layout-closure",
+      "witnessId": "proofkit.requirement-source-codec.layout-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/format_layout_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestHybridLayoutKeepsStableSiblingEntityLinesUnchanged",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestHybridLayoutKeepsStableSiblingEntityLinesUnchanged$'"
+        },
+        {
+          "selector": "TestCanonicalStringsEscapeUnsafeScalarsWithoutHTMLEscaping",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCanonicalStringsEscapeUnsafeScalarsWithoutHTMLEscaping$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-mutant-closure",
+      "witnessId": "proofkit.requirement-source-codec.mutant-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/mutant_manifest_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCodecMutantManifestClosesRepresentationFailures",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCodecMutantManifestClosesRepresentationFailures$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-resource-closure",
+      "witnessId": "proofkit.requirement-source-codec.resource-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/limits_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRawByteBoundaryIsExactAndDominatesUTF8",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestRawByteBoundaryIsExactAndDominatesUTF8$'"
+        },
+        {
+          "selector": "TestDynamicMapCollectionLimitPrecedesParameterSemantics",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestDynamicMapCollectionLimitPrecedesParameterSemantics$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-limit-formula-closure",
+      "witnessId": "proofkit.requirement-source-codec.limit-formula-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/limit_manifest_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestLimitCoefficientManifestMatchesProductionFormula",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestLimitCoefficientManifestMatchesProductionFormula$'"
+        },
+        {
+          "selector": "TestLimitArithmeticRejectsOverflow",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestLimitArithmeticRejectsOverflow$'"
+        },
+        {
+          "selector": "TestCanonicalByteBoundCoversWorstAdmittedEscapeExpansion",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestCanonicalByteBoundCoversWorstAdmittedEscapeExpansion$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-diagnostic-closure",
+      "witnessId": "proofkit.requirement-source-codec.diagnostic-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/diagnostics_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInvalidUTF8UsesByteOnlyCoordinates",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestInvalidUTF8UsesByteOnlyCoordinates$'"
+        },
+        {
+          "selector": "TestValidUnicodeDiagnosticsUseScalarColumns",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestValidUnicodeDiagnosticsUseScalarColumns$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-admission-closure",
+      "witnessId": "proofkit.requirement-source-codec.admission-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/admission_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys$'"
+        },
+        {
+          "selector": "TestParseAcceptsValidUnicodeSurrogatePairLosslessly",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestParseAcceptsValidUnicodeSurrogatePairLosslessly$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-fuzz-seed-closure",
+      "witnessId": "proofkit.requirement-source-codec.fuzz-seed-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/codec_fuzz_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestFuzzSeedCorpusRoundTrips",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestFuzzSeedCorpusRoundTrips$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

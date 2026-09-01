@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source-codec-selection",
+  "screenEvidence": {
+    "screenManifestVersion": 3,
+    "screenManifestSha256": "80de3139937b864076254a7cca36820bdf54bef7c06e4aad1091d77910e643ea",
+    "selectionOpeningSha256": "72306508677a38683186e965cf6efc21aba080571d89b4d9c8cb4e65a2162347",
+    "fixtureIndexSha256": "505bb896082805708975bbc698e2414f625cb85bb1272512483c8c263efb54e0",
+    "observationsSha256": "0abd85c4dfaf3f8a3cdd1bad366e1961d5e57ed47a8bd14321a48f308ae66b7d",
+    "independentValidationSha256": "f565439bc2d8001a67f37cca5125bf6d1b70c4ba6cf1cb3f038b1fb1b2c670b2",
+    "reviewResultsSha256": "3e632343ef36f27f472ecf7560d2b75f7cad4a35c15678ce7eb078b277512b63",
+    "tokenProducerDigests": {
+      "openai-tiktoken-0.14.0": "e19d6985ad9599c86bbd672aef93dfed4e1643e48282e0e1ee91a388721e55db",
+      "tiktoken-go-0.8.1": "7c185ae59f0551c86fb2f30fa0ea338103baa278e267cafb0e43e6205f0fa4eb"
+    }
+  },
+  "roles": {
+    "statusQuoComparators": ["flat-v1"],
+    "modelAblations": [
+      "grouped-profile-off-stem-off",
+      "grouped-profile-off-stem-on",
+      "grouped-profile-on-stem-off",
+      "grouped-profile-on-stem-on"
+    ],
+    "screenOnlyComparators": ["toml-tristate-v1", "yaml-strict-v1"],
+    "jsonLayouts": ["json-compact-v1", "json-hybrid-v1", "json-pretty-v1"],
+    "restrictedTextChallengers": ["proofkit-source-text-v1"],
+    "codecCandidates": ["grouped-json-v1"]
+  },
+  "metricRegistry": [
+    {"metricId": "changed_bytes", "stage": "screen", "role": "primary", "direction": "minimize", "baseline": "eligible-json-layouts", "aggregation": "sum-over-frozen-edits", "requirement": "lexicographic-minimum", "missing": "reject", "materialThreshold": 0},
+    {"metricId": "changed_lines", "stage": "screen", "role": "primary", "direction": "minimize", "baseline": "eligible-json-layouts", "aggregation": "sum-over-frozen-edits", "requirement": "lexicographic-minimum", "missing": "reject", "materialThreshold": 0},
+    {"metricId": "edit_locality", "stage": "screen", "role": "hard", "direction": "equal", "baseline": "affected-entity-registry", "aggregation": "all-frozen-edits", "requirement": "true", "missing": "fail", "materialThreshold": 0},
+    {"metricId": "field_closure", "stage": "screen", "role": "hard", "direction": "equal", "baseline": "codec-field-manifest-v1", "aggregation": "all-fields", "requirement": "passed", "missing": "fail", "materialThreshold": 0},
+    {"metricId": "format_time", "stage": "replacement", "role": "primary", "direction": "minimize", "baseline": "selected-grouped-json-v1", "aggregation": "paired-randomized-confidence-bound", "requirement": "noninferior", "missing": "reject", "materialThreshold": 0},
+    {"metricId": "invalid_mutation_false_accepts", "stage": "screen", "role": "hard", "direction": "minimize", "baseline": "frozen-invalid-review-task", "aggregation": "sum", "requirement": "zero", "missing": "fail", "materialThreshold": 0},
+    {"metricId": "parse_time", "stage": "replacement", "role": "primary", "direction": "minimize", "baseline": "selected-grouped-json-v1", "aggregation": "paired-randomized-confidence-bound", "requirement": "noninferior", "missing": "reject", "materialThreshold": 0},
+    {"metricId": "projected_production_branches", "stage": "screen", "role": "report_only", "direction": "minimize", "baseline": "selected-json-layout", "aggregation": "estimate", "requirement": "none", "missing": "unknown", "materialThreshold": 0},
+    {"metricId": "projected_production_loc", "stage": "screen", "role": "report_only", "direction": "minimize", "baseline": "selected-json-layout", "aggregation": "estimate", "requirement": "none", "missing": "unknown", "materialThreshold": 0},
+    {"metricId": "review_accuracy_basis_points", "stage": "screen", "role": "hard", "direction": "maximize", "baseline": "maximum-observed-json-layout", "aggregation": "exact-gold-answers", "requirement": "equal-to-maximum", "missing": "fail", "materialThreshold": 0},
+    {"metricId": "weighted_canonical_bytes", "stage": "screen", "role": "primary", "direction": "minimize", "baseline": "eligible-json-layouts", "aggregation": "weighted-sum", "requirement": "lexicographic-minimum", "missing": "reject", "materialThreshold": 0},
+    {"metricId": "weighted_tokens_o200k_base", "stage": "screen", "role": "primary", "direction": "minimize", "baseline": "eligible-json-layouts", "aggregation": "weighted-sum", "requirement": "lexicographic-minimum", "missing": "reject", "materialThreshold": 0}
+  ],
+  "replacementPolicy": {
+    "minimumByteImprovementBasisPoints": 1000,
+    "minimumTokenImprovementBasisPoints": 1000,
+    "maximumAggregateDiffRegressionBasisPoints": 500,
+    "maximumPerEditDiffRegressionBasisPoints": 1500,
+    "minimumReviewAccuracyBasisPoints": 10000,
+    "maximumInvalidMutationFalseAccepts": 0,
+    "maximumProjectedProductionCostBasisPoints": 15000
+  },
+  "screenObservations": [
+    {"candidateId": "json-compact-v1", "fieldClosure": "passed", "reviewAccuracyBasisPoints": 10000, "invalidMutationFalseAccepts": 0, "editLocality": false, "weightedCanonicalBytes": 2458590, "weightedTokensO200kBase": 652930, "changedLines": 16, "changedBytes": 57377, "projectedProductionLoc": 520, "projectedProductionBranches": 44, "aggregateDiffState": "not_applicable", "perEditDiffState": "not_applicable", "parseTimeState": "not_applicable", "formatTimeState": "not_applicable", "lowerCostDominanceState": "not_applicable"},
+    {"candidateId": "json-hybrid-v1", "fieldClosure": "passed", "reviewAccuracyBasisPoints": 10000, "invalidMutationFalseAccepts": 0, "editLocality": true, "weightedCanonicalBytes": 2605965, "weightedTokensO200kBase": 698725, "changedLines": 34, "changedBytes": 5721, "projectedProductionLoc": 535, "projectedProductionBranches": 46, "aggregateDiffState": "not_applicable", "perEditDiffState": "not_applicable", "parseTimeState": "not_applicable", "formatTimeState": "not_applicable", "lowerCostDominanceState": "not_applicable"},
+    {"candidateId": "json-pretty-v1", "fieldClosure": "passed", "reviewAccuracyBasisPoints": 10000, "invalidMutationFalseAccepts": 0, "editLocality": false, "weightedCanonicalBytes": 4477120, "weightedTokensO200kBase": 1018030, "changedLines": 200, "changedBytes": 6863, "projectedProductionLoc": 520, "projectedProductionBranches": 44, "aggregateDiffState": "not_applicable", "perEditDiffState": "not_applicable", "parseTimeState": "not_applicable", "formatTimeState": "not_applicable", "lowerCostDominanceState": "not_applicable"},
+    {"candidateId": "proofkit-source-text-v1", "fieldClosure": "not_applicable", "reviewAccuracyBasisPoints": null, "invalidMutationFalseAccepts": null, "editLocality": false, "weightedCanonicalBytes": 3899810, "weightedTokensO200kBase": 769855, "changedLines": 166, "changedBytes": 6091, "projectedProductionLoc": 910, "projectedProductionBranches": 92, "aggregateDiffState": "failed", "perEditDiffState": "failed", "parseTimeState": "missing", "formatTimeState": "missing", "lowerCostDominanceState": "failed"},
+    {"candidateId": "toml-tristate-v1", "fieldClosure": "not_applicable", "reviewAccuracyBasisPoints": null, "invalidMutationFalseAccepts": null, "editLocality": false, "weightedCanonicalBytes": 3167570, "weightedTokensO200kBase": 827095, "changedLines": 154, "changedBytes": 4949, "projectedProductionLoc": 720, "projectedProductionBranches": 65, "aggregateDiffState": "not_applicable", "perEditDiffState": "not_applicable", "parseTimeState": "not_applicable", "formatTimeState": "not_applicable", "lowerCostDominanceState": "not_applicable"},
+    {"candidateId": "yaml-strict-v1", "fieldClosure": "not_applicable", "reviewAccuracyBasisPoints": null, "invalidMutationFalseAccepts": null, "editLocality": false, "weightedCanonicalBytes": 3397905, "weightedTokensO200kBase": 783225, "changedLines": 153, "changedBytes": 5685, "projectedProductionLoc": 690, "projectedProductionBranches": 61, "aggregateDiffState": "not_applicable", "perEditDiffState": "not_applicable", "parseTimeState": "not_applicable", "formatTimeState": "not_applicable", "lowerCostDominanceState": "not_applicable"}
+  ],
+  "decision": {
+    "state": "grouped_json_only",
+    "selectedJsonLayout": "json-hybrid-v1",
+    "selectedChallenger": null,
+    "selectedCodec": "grouped-json-v1",
+    "productionGrammarCount": 1
+  },
+  "hardGateSelectors": [
+    "TestFieldManifestMatchesWireDTOAndClosedShape",
+    "TestFormatParseRoundTripPreservesEveryProjection",
+    "TestCanonicalFormatIsIdempotent",
+    "TestChallengerEligibilityRequiresEveryReplacementPredicate",
+    "TestCodecMutantManifestClosesRepresentationFailures",
+    "TestParseDiagnosticsDoNotDiscloseCallerTextOrDynamicKeys",
+    "TestRawByteBoundaryIsExactAndDominatesUTF8",
+    "TestHybridLayoutKeepsStableSiblingEntityLinesUnchanged"
+  ],
+  "nonClaims": [
+    "The screen does not prove corpus-external review or token outcomes.",
+    "The codec selection does not re-prove grouped-model causal benefits owned by REQ-PROOFKIT-SPEC-024.",
+    "No restricted-text challenger reached the replacement stage; missing parse and format comparisons therefore reject replacement rather than proving performance parity.",
+    "Screen-only YAML and TOML renderers are not admitted source codecs.",
+    "The rejected restricted-text sketch is not a grammar or parser authority.",
+    "The selected private codec does not migrate current sources or alter the public CLI."
+  ]
+}

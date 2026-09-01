@@ -1,0 +1,152 @@
+{
+  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source-codec-field-manifest",
+  "rootRecordId": "document",
+  "records": [
+    {
+      "recordId": "byteRange",
+      "fields": [
+        {"name": "start", "type": "integer", "required": true, "nullable": false},
+        {"name": "end", "type": "integer", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "deferral",
+      "fields": [
+        {"name": "ownerId", "type": "string", "required": true, "nullable": false},
+        {"name": "riskAcceptedBy", "type": "string", "required": true, "nullable": false},
+        {"name": "reviewCondition", "type": "string", "required": true, "nullable": false},
+        {"name": "expiryRef", "type": "string", "required": true, "nullable": false},
+        {"name": "mergePolicy", "type": "string", "required": true, "nullable": false},
+        {"name": "evidenceRefs", "type": "array:string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "derivation",
+      "fields": [
+        {"name": "derivationId", "type": "string", "required": true, "nullable": false},
+        {"name": "sourceKind", "type": "string", "required": true, "nullable": false},
+        {"name": "sourceRef", "type": "record:gitBlobRef", "required": true, "nullable": false},
+        {"name": "selector", "type": "record:byteRange", "required": true, "nullable": false},
+        {"name": "requirementIds", "type": "array:string", "required": true, "nullable": false},
+        {"name": "nonClaimRefs", "type": "array:string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "document",
+      "fields": [
+        {"name": "schemaVersion", "type": "integer", "required": true, "nullable": false, "constant": "2"},
+        {"name": "kind", "type": "string", "required": true, "nullable": false, "constant": "proofkit.requirement-source"},
+        {"name": "sourceId", "type": "string", "required": true, "nullable": false},
+        {"name": "specPackagePath", "type": "string", "required": true, "nullable": false},
+        {"name": "sourceNonClaimRefs", "type": "array:string", "required": true, "nullable": false},
+        {"name": "nonClaimDefinitions", "type": "array:record:nonClaimDefinition", "required": true, "nullable": false},
+        {"name": "vocabulary", "type": "array:record:vocabularyTerm", "required": true, "nullable": false},
+        {"name": "derivations", "type": "array:record:derivation", "required": true, "nullable": false},
+        {"name": "profiles", "type": "array:record:profile", "required": true, "nullable": false},
+        {"name": "groups", "type": "array:record:group", "required": true, "nullable": false},
+        {"name": "scenarios", "type": "array:record:scenario", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "example",
+      "fields": [
+        {"name": "exampleId", "type": "string", "required": true, "nullable": false},
+        {"name": "values", "type": "map:string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "gitBlobRef",
+      "fields": [
+        {"name": "objectFormat", "type": "string", "required": true, "nullable": false},
+        {"name": "commitOid", "type": "string", "required": true, "nullable": false},
+        {"name": "path", "type": "string", "required": true, "nullable": false},
+        {"name": "sha256", "type": "string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "group",
+      "fields": [
+        {"name": "groupId", "type": "string", "required": true, "nullable": false},
+        {"name": "profileId", "type": "string", "required": true, "nullable": false},
+        {"name": "statementStem", "type": "string", "required": true, "nullable": false},
+        {"name": "sharedPremises", "type": "array:string", "required": true, "nullable": false},
+        {"name": "members", "type": "array:record:member", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "lifecycle",
+      "fields": [
+        {"name": "state", "type": "string", "required": true, "nullable": false},
+        {"name": "replacementRequirementIds", "type": "array:string", "required": true, "nullable": false},
+        {"name": "evidenceRefs", "type": "array:string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "member",
+      "fields": [
+        {"name": "requirementId", "type": "string", "required": true, "nullable": false},
+        {"name": "statementCompletion", "type": "string", "required": true, "nullable": false},
+        {"name": "fields", "type": "record:metadataFields", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "metadataFields",
+      "fields": [
+        {"name": "ownerId", "type": "string", "required": false, "nullable": false},
+        {"name": "claimLevel", "type": "string", "required": false, "nullable": false},
+        {"name": "riskClass", "type": "string", "required": false, "nullable": false},
+        {"name": "nonClaimRefs", "type": "array:string", "required": false, "nullable": false},
+        {"name": "lifecycle", "type": "record:lifecycle", "required": false, "nullable": false},
+        {"name": "deferral", "type": "record:deferral", "required": false, "nullable": true},
+        {"name": "updatePolicy", "type": "record:updatePolicy", "required": false, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "nonClaimDefinition",
+      "fields": [
+        {"name": "nonClaimId", "type": "string", "required": true, "nullable": false},
+        {"name": "statement", "type": "string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "profile",
+      "fields": [
+        {"name": "profileId", "type": "string", "required": true, "nullable": false},
+        {"name": "fields", "type": "record:metadataFields", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "scenario",
+      "fields": [
+        {"name": "scenarioId", "type": "string", "required": true, "nullable": false},
+        {"name": "requirementIds", "type": "array:string", "required": true, "nullable": false},
+        {"name": "parameters", "type": "array:string", "required": true, "nullable": false},
+        {"name": "preconditions", "type": "array:string", "required": true, "nullable": false},
+        {"name": "actionSequence", "type": "array:string", "required": true, "nullable": false},
+        {"name": "expectedObservations", "type": "array:string", "required": true, "nullable": false},
+        {"name": "forbiddenObservations", "type": "array:string", "required": true, "nullable": false},
+        {"name": "examples", "type": "array:record:example", "required": true, "nullable": false},
+        {"name": "vocabularyRefs", "type": "array:string", "required": true, "nullable": false},
+        {"name": "nonClaimRefs", "type": "array:string", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "updatePolicy",
+      "fields": [
+        {"name": "reviewOwnerId", "type": "string", "required": true, "nullable": false},
+        {"name": "requiresImpactDeclaration", "type": "boolean", "required": true, "nullable": false},
+        {"name": "requiresProofBindingReview", "type": "boolean", "required": true, "nullable": false}
+      ]
+    },
+    {
+      "recordId": "vocabularyTerm",
+      "fields": [
+        {"name": "termId", "type": "string", "required": true, "nullable": false},
+        {"name": "kind", "type": "string", "required": true, "nullable": false},
+        {"name": "label", "type": "string", "required": true, "nullable": false},
+        {"name": "definition", "type": "string", "required": true, "nullable": false}
+      ]
+    }
+  ]
+}
