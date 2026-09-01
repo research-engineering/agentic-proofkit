@@ -702,7 +702,7 @@
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its byte-bound corpus, prevent a future owner-approved grammar from being added, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
+      "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its byte-bound corpus, prove the open-world absence of undeclared semantically equivalent parsers, prevent a future owner-approved grammar from being added, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
     },
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
@@ -4618,6 +4618,25 @@
         {
           "selector": "TestScreenArchiveAdmissionRejectsUnsafeTopology",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestScreenArchiveAdmissionRejectsUnsafeTopology$'"
+        },
+        {
+          "selector": "TestScreenArchiveAdmissionRejectsTrailingCompressedData",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestScreenArchiveAdmissionRejectsTrailingCompressedData$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-025",
+      "scenarioId": "proofkit.spec-proof-core.requirement-source-codec-decision-projection-closure",
+      "witnessId": "proofkit.requirement-source-codec.decision-projection-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/requirementsourcecodec/selection_projection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDecisionProjectionRejectsReplacementObservationDrift",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestDecisionProjectionRejectsReplacementObservationDrift$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4633,6 +4652,10 @@
         {
           "selector": "TestChallengerEligibilityRequiresEveryReplacementPredicate",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestChallengerEligibilityRequiresEveryReplacementPredicate$'"
+        },
+        {
+          "selector": "TestSelectionMetricRegistrySemanticsDriveEvaluator",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestSelectionMetricRegistrySemanticsDriveEvaluator$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4650,8 +4673,8 @@
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestProductionPackageHasOneCodecAndNoSyntaxDependency$'"
         },
         {
-          "selector": "TestRepositoryHasOneV2GrammarIdentityOwner",
-          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestRepositoryHasOneV2GrammarIdentityOwner$'"
+          "selector": "TestSelectedV2GrammarOwnerRecordIsExact",
+          "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestSelectedV2GrammarOwnerRecordIsExact$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

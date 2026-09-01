@@ -21,6 +21,12 @@
       {"role": "token-python", "path": "out-v3/tokens-python.v3.json", "sha256": "e19d6985ad9599c86bbd672aef93dfed4e1643e48282e0e1ee91a388721e55db"}
     ]
   },
+  "grammarOwner": {
+    "ownerPackage": "internal/kernel/requirementsourcecodec",
+    "documentKind": "proofkit.requirement-source",
+    "schemaVersion": 2,
+    "productionFiles": ["diagnostic_path.go", "document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"]
+  },
   "roles": {
     "statusQuoComparators": ["flat-v1"],
     "modelAblations": [
@@ -81,9 +87,12 @@
     "TestSelectionEvidenceIsByteBoundAndProjectsDecision",
     "TestScreenTreeDigestRejectsByteAndInventoryMutation",
     "TestScreenArchiveAdmissionRejectsUnsafeTopology",
+    "TestScreenArchiveAdmissionRejectsTrailingCompressedData",
+    "TestDecisionProjectionRejectsReplacementObservationDrift",
     "TestChallengerEligibilityRequiresEveryReplacementPredicate",
+    "TestSelectionMetricRegistrySemanticsDriveEvaluator",
     "TestProductionPackageHasOneCodecAndNoSyntaxDependency",
-    "TestRepositoryHasOneV2GrammarIdentityOwner",
+    "TestSelectedV2GrammarOwnerRecordIsExact",
     "TestFieldManifestMatchesWireDTOAndClosedShape",
     "TestFormatParseRoundTripPreservesEveryProjection",
     "TestCanonicalFormatIsIdempotent",
@@ -123,6 +132,7 @@
     "No restricted-text challenger reached the replacement stage; missing parse and format comparisons therefore reject replacement rather than proving performance parity.",
     "Screen-only YAML and TOML renderers are not admitted source codecs.",
     "The rejected restricted-text sketch is not a grammar or parser authority.",
+    "The admitted grammar-owner record and exact package inventory do not prove the open-world absence of undeclared semantically equivalent parsers.",
     "The selected private codec does not migrate current sources or alter the public CLI."
   ]
 }

@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -17,6 +18,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
 const (
@@ -67,37 +70,6 @@ type tokenReportEvidence struct {
 	} `json:"records"`
 }
 
-type screenDecisionEvidence struct {
-	SchemaVersion       int               `json:"schemaVersion"`
-	Kind                string            `json:"kind"`
-	ManifestSHA256      string            `json:"manifestSha256"`
-	ObservationSHA256   string            `json:"observationSha256"`
-	OpeningSHA256       string            `json:"openingSha256"`
-	ReviewResultsSHA256 string            `json:"reviewResultsSha256"`
-	TokenReportSHA256   map[string]string `json:"tokenReportSha256"`
-	ValidationSHA256    string            `json:"validationSha256"`
-	State               string            `json:"state"`
-	SelectedJSONLayout  string            `json:"selectedJsonLayout"`
-	SelectedChallenger  *string           `json:"selectedChallenger"`
-	Candidates          []struct {
-		CandidateID             string `json:"candidateId"`
-		WeightedCanonicalBytes  int    `json:"weightedCanonicalBytes"`
-		WeightedTokensO200kBase int    `json:"weightedTokensO200kBase"`
-		ChangedLines            int    `json:"changedLines"`
-		ChangedBytes            int    `json:"changedBytes"`
-		EditLocality            bool   `json:"editLocality"`
-		JSONFieldClosure        string `json:"jsonFieldClosure"`
-		Review                  *struct {
-			AccuracyBasisPoints         int `json:"accuracyBasisPoints"`
-			InvalidMutationFalseAccepts int `json:"invalidMutationFalseAccepts"`
-		} `json:"review"`
-		ProjectedProduction struct {
-			LOC      int `json:"loc"`
-			Branches int `json:"branches"`
-		} `json:"projectedProduction"`
-	} `json:"candidates"`
-}
-
 func TestSelectionEvidenceIsByteBoundAndProjectsDecision(t *testing.T) {
 	record := readCodecSelection(t)
 	root := readScreenArchive(t, record.ScreenEvidence)
@@ -139,9 +111,11 @@ func TestSelectionEvidenceIsByteBoundAndProjectsDecision(t *testing.T) {
 		}
 	}
 
-	decision := readEvidence[screenDecisionEvidence](t, root, artifacts["screen-decision"].Path)
+	decision := readStrictEvidence[screenDecisionEvidence](t, root, artifacts["screen-decision"].Path)
 	assertDecisionLinks(t, decision, artifacts)
-	assertDecisionProjection(t, record, decision)
+	if err := verifyDecisionProjection(record, decision); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestScreenTreeDigestRejectsByteAndInventoryMutation(t *testing.T) {
@@ -183,6 +157,16 @@ func TestScreenArchiveAdmissionRejectsUnsafeTopology(t *testing.T) {
 	}
 }
 
+func TestScreenArchiveAdmissionRejectsTrailingCompressedData(t *testing.T) {
+	first := screenArchiveFixture(t, []tar.Header{{Name: "entry", Mode: 0o444, Size: 1, Typeflag: tar.TypeReg}})
+	second := screenArchiveFixture(t, []tar.Header{{Name: "link", Linkname: "../escape", Mode: 0o777, Typeflag: tar.TypeSymlink}})
+	payload := append(append([]byte(nil), first...), second...)
+	_, err := decodeScreenArchive(payload)
+	if err == nil || !strings.Contains(err.Error(), "trailing compressed data") {
+		t.Fatalf("decodeScreenArchive() error = %v, want trailing compressed data rejection", err)
+	}
+}
+
 func verifyScreenArtifacts(t *testing.T, root fs.FS, values []screenArtifact) map[string]screenArtifact {
 	t.Helper()
 	result := make(map[string]screenArtifact, len(values))
@@ -201,59 +185,26 @@ func assertDecisionLinks(t *testing.T, value screenDecisionEvidence, artifacts m
 	if value.SchemaVersion != 3 || value.Kind != "proofkit.requirement-source-codec-screen-decision" {
 		t.Fatalf("screen decision identity = %#v", value)
 	}
+	wantTokenReports := map[string]string{
+		"openai-tiktoken-0.14.0": artifacts["token-python"].SHA256,
+		"tiktoken-go-0.8.1":      artifacts["token-go"].SHA256,
+	}
+	if !reflect.DeepEqual(value.TokenReportSHA256, wantTokenReports) {
+		t.Fatalf("decision token-report links = %v, want %v", value.TokenReportSHA256, wantTokenReports)
+	}
 	want := map[string]string{
 		"screen-manifest":        value.ManifestSHA256,
 		"observations":           value.ObservationSHA256,
 		"selection-opening":      value.OpeningSHA256,
 		"review-results":         value.ReviewResultsSHA256,
 		"independent-validation": value.ValidationSHA256,
-		"token-python":           value.TokenReportSHA256["openai-tiktoken-0.14.0"],
-		"token-go":               value.TokenReportSHA256["tiktoken-go-0.8.1"],
+		"token-python":           wantTokenReports["openai-tiktoken-0.14.0"],
+		"token-go":               wantTokenReports["tiktoken-go-0.8.1"],
 	}
 	for role, digest := range want {
 		if artifacts[role].SHA256 != digest {
 			t.Fatalf("decision link %q = %q, want %q", role, digest, artifacts[role].SHA256)
 		}
-	}
-}
-
-func assertDecisionProjection(t *testing.T, record codecSelection, decision screenDecisionEvidence) {
-	t.Helper()
-	if decision.State != record.Decision.State || decision.SelectedJSONLayout != record.Decision.SelectedJSONLayout || !reflect.DeepEqual(decision.SelectedChallenger, record.Decision.SelectedChallenger) {
-		t.Fatalf("screen decision projection mismatch: %#v", decision)
-	}
-	byID := make(map[string]screenObservation, len(record.ScreenObservations))
-	for _, item := range record.ScreenObservations {
-		byID[item.CandidateID] = item
-	}
-	seen := make(map[string]struct{}, len(decision.Candidates))
-	for _, candidate := range decision.Candidates {
-		if _, duplicate := seen[candidate.CandidateID]; duplicate {
-			t.Fatalf("decision repeats candidate %q", candidate.CandidateID)
-		}
-		seen[candidate.CandidateID] = struct{}{}
-		observation, exists := byID[candidate.CandidateID]
-		if !exists {
-			t.Fatalf("decision contains unknown candidate %q", candidate.CandidateID)
-		}
-		if observation.WeightedCanonicalBytes != candidate.WeightedCanonicalBytes || observation.WeightedTokensO200kBase != candidate.WeightedTokensO200kBase ||
-			observation.ChangedLines != candidate.ChangedLines || observation.ChangedBytes != candidate.ChangedBytes || observation.EditLocality != candidate.EditLocality ||
-			observation.ProjectedProductionLOC != candidate.ProjectedProduction.LOC || observation.ProjectedProductionBranches != candidate.ProjectedProduction.Branches {
-			t.Fatalf("candidate %q observation drift", candidate.CandidateID)
-		}
-		if candidate.JSONFieldClosure != "" && observation.FieldClosure != candidate.JSONFieldClosure {
-			t.Fatalf("candidate %q field closure drift", candidate.CandidateID)
-		}
-		if candidate.Review != nil && (observation.ReviewAccuracyBasisPoints == nil || observation.InvalidMutationFalseAccepts == nil ||
-			*observation.ReviewAccuracyBasisPoints != candidate.Review.AccuracyBasisPoints || *observation.InvalidMutationFalseAccepts != candidate.Review.InvalidMutationFalseAccepts) {
-			t.Fatalf("candidate %q review projection drift", candidate.CandidateID)
-		}
-		if candidate.Review == nil && (observation.ReviewAccuracyBasisPoints != nil || observation.InvalidMutationFalseAccepts != nil) {
-			t.Fatalf("candidate %q unexpected review projection", candidate.CandidateID)
-		}
-	}
-	if len(decision.Candidates) != len(record.ScreenObservations) {
-		t.Fatalf("decision candidate count = %d, want %d", len(decision.Candidates), len(record.ScreenObservations))
 	}
 }
 
@@ -285,6 +236,25 @@ func readEvidence[T any](t *testing.T, root fs.FS, filePath string) T {
 	return result
 }
 
+func readStrictEvidence[T any](t *testing.T, root fs.FS, filePath string) T {
+	t.Helper()
+	payload, err := fs.ReadFile(root, filePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := admission.DecodeTypedJSON[T](bytes.NewReader(payload), int64(len(payload)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.DisallowUnknownFields()
+	var strict T
+	if err := decoder.Decode(&strict); err != nil {
+		t.Fatal(err)
+	}
+	return result
+}
+
 func readScreenArchive(t *testing.T, evidence screenEvidence) fstest.MapFS {
 	t.Helper()
 	payload, err := os.ReadFile(evidence.ArchivePath)
@@ -306,7 +276,8 @@ func readScreenArchive(t *testing.T, evidence screenEvidence) fstest.MapFS {
 }
 
 func decodeScreenArchive(payload []byte) (fstest.MapFS, error) {
-	compressed, err := gzip.NewReader(bytes.NewReader(payload))
+	remaining := bytes.NewReader(payload)
+	compressed, err := gzip.NewReader(remaining)
 	if err != nil {
 		return nil, err
 	}
@@ -352,6 +323,16 @@ func decodeScreenArchive(payload []byte) (fstest.MapFS, error) {
 		}
 		totalBytes += header.Size
 		result[clean] = &fstest.MapFile{Data: content, Mode: 0o444}
+	}
+	trailingUncompressed, err := io.Copy(io.Discard, compressed)
+	if err != nil {
+		return nil, err
+	}
+	if trailingUncompressed != 0 {
+		return nil, errors.New("screen archive has trailing uncompressed data")
+	}
+	if remaining.Len() != 0 {
+		return nil, errors.New("screen archive has trailing compressed data")
 	}
 	return result, nil
 }

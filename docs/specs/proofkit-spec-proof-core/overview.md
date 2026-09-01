@@ -155,16 +155,19 @@ execution receipts, and merge policy.
   coverage without attributing correlated edits to independent field
   causality, selecting a codec, or changing a public source boundary.
 - `REQ-PROOFKIT-SPEC-025`: a versioned disjoint-role experiment selects one
-  private v2 source grammar, grouped JSON with an entity-local hybrid layout;
+  admitted private v2 source-grammar owner record, grouped JSON with an
+  entity-local hybrid layout;
   its strict bounded codec delegates meaning to the representation-neutral
   model, binds each collection to one model-limit owner, preserves every
   projection, metadata-presence state, and lexical source location, and emits
-  deterministic nondisclosing diagnostics. A bounded traversal-, symlink-, and
-  duplicate-closed archive byte-binds the exact V3 screen, while independent
+  deterministic nondisclosing diagnostics. A bounded single-member traversal-,
+  symlink-, duplicate-, and trailing-data-closed archive byte-binds the exact
+  V3 screen, while independent
   field, limit, selection, mutant, round-trip, fuzz-seed, package, and
-  repository identity witnesses close the selected owner boundary without
-  migrating current sources, exposing a new public CLI, or claiming that no
-  future owner-approved grammar can be added.
+  admitted grammar-owner-record and package-inventory witnesses close the
+  selected owner boundary without migrating current sources, exposing a new
+  public CLI, proving open-world absence of undeclared equivalent parsers, or
+  claiming that no future owner-approved grammar can be added.
 
 ## Non-Claims
 

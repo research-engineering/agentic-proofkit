@@ -22,6 +22,7 @@ type codecSelection struct {
 	SchemaVersion      int                 `json:"schemaVersion"`
 	Kind               string              `json:"kind"`
 	ScreenEvidence     screenEvidence      `json:"screenEvidence"`
+	GrammarOwner       grammarOwner        `json:"grammarOwner"`
 	Roles              selectionRoles      `json:"roles"`
 	JSONLayoutOrder    []string            `json:"jsonLayoutOrder"`
 	MetricRegistry     []selectionMetric   `json:"metricRegistry"`
@@ -30,6 +31,13 @@ type codecSelection struct {
 	Decision           selectionDecision   `json:"decision"`
 	HardGateSelectors  []string            `json:"hardGateSelectors"`
 	NonClaims          []string            `json:"nonClaims"`
+}
+
+type grammarOwner struct {
+	OwnerPackage    string   `json:"ownerPackage"`
+	DocumentKind    string   `json:"documentKind"`
+	SchemaVersion   int      `json:"schemaVersion"`
+	ProductionFiles []string `json:"productionFiles"`
 }
 
 type screenEvidence struct {
@@ -196,40 +204,8 @@ func assertJSONLayoutOrder(t *testing.T, order []string) {
 
 func assertSortedUniqueMetricRegistry(t *testing.T, metrics []selectionMetric) {
 	t.Helper()
-	ids := make([]string, len(metrics))
-	for index, metric := range metrics {
-		ids[index] = metric.MetricID
-		if metric.MetricID == "" || metric.Stage == "" || metric.Role == "" || metric.Direction == "" || metric.Baseline == "" || metric.Aggregation == "" || metric.Requirement == "" || metric.Missing == "" || metric.MaterialThreshold < 0 {
-			t.Fatalf("incomplete metric row %#v", metric)
-		}
-	}
-	want := append([]string(nil), ids...)
-	sort.Strings(want)
-	if !reflect.DeepEqual(ids, want) {
-		t.Fatalf("metric IDs = %v, want sorted unique %v", ids, want)
-	}
-	for index := 1; index < len(ids); index++ {
-		if ids[index-1] == ids[index] {
-			t.Fatalf("duplicate metric %q", ids[index])
-		}
-	}
-	wantIDs := []string{
-		"aggregate_diff_regression_basis_points", "changed_bytes", "changed_lines", "edit_locality", "field_closure", "format_time_state",
-		"invalid_mutation_false_accepts", "lower_cost_dominance_state", "parse_time_state", "per_edit_diff_regression_basis_points",
-		"projected_production_branches", "projected_production_loc", "review_accuracy_basis_points",
-		"weighted_canonical_bytes", "weighted_tokens_o200k_base",
-	}
-	if !reflect.DeepEqual(ids, wantIDs) {
-		t.Fatalf("metric IDs = %v, want exact registry %v", ids, wantIDs)
-	}
-	for _, metric := range metrics {
-		if metric.Stage == "replacement" {
-			if metric.Role != "hard" || metric.Missing != "reject" {
-				t.Fatalf("replacement performance metric = %#v", metric)
-			}
-		} else if metric.Stage != "screen" {
-			t.Fatalf("screen metric %q has stage %q", metric.MetricID, metric.Stage)
-		}
+	if _, ok := admittedSelectionMetricRegistry(metrics); !ok {
+		t.Fatalf("metric registry = %#v, want exact admitted semantics %#v", metrics, selectionMetricSemantics)
 	}
 }
 

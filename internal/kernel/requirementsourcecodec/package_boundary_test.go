@@ -4,7 +4,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -14,6 +13,7 @@ import (
 )
 
 func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
+	record := readCodecSelection(t)
 	allowedOwners := map[string]struct{}{
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel": {},
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy":          {},
@@ -72,7 +72,7 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 			}
 		}
 	}
-	wantFiles := []string{"diagnostic_path.go", "document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"}
+	wantFiles := record.GrammarOwner.ProductionFiles
 	if !reflect.DeepEqual(productionFiles, wantFiles) {
 		t.Fatalf("production codec files = %v, want exact single-grammar surface %v", productionFiles, wantFiles)
 	}
@@ -89,45 +89,28 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 	}
 }
 
-func TestRepositoryHasOneV2GrammarIdentityOwner(t *testing.T) {
-	repositoryRoot := filepath.Clean(filepath.Join("..", "..", ".."))
-	owners := []string{}
-	err := filepath.WalkDir(repositoryRoot, func(pathValue string, entry os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			switch entry.Name() {
-			case ".git", "artifacts", "dist", "node_modules", "testdata":
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if filepath.Ext(pathValue) != ".go" || strings.HasSuffix(pathValue, "_test.go") {
-			return nil
-		}
-		parsed, err := parser.ParseFile(token.NewFileSet(), pathValue, nil, 0)
-		if err != nil {
-			return err
-		}
-		ast.Inspect(parsed, func(node ast.Node) bool {
-			literal, ok := node.(*ast.BasicLit)
-			if !ok || literal.Kind != token.STRING {
-				return true
-			}
-			value, err := strconv.Unquote(literal.Value)
-			if err == nil && value == DocumentKind {
-				owners = append(owners, strings.TrimPrefix(pathValue, repositoryRoot+string(filepath.Separator)))
-			}
-			return true
-		})
-		return nil
-	})
+func TestSelectedV2GrammarOwnerRecordIsExact(t *testing.T) {
+	owner := readCodecSelection(t).GrammarOwner
+	wantFiles := []string{"diagnostic_path.go", "document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"}
+	if owner.OwnerPackage != "internal/kernel/requirementsourcecodec" || owner.DocumentKind != DocumentKind || owner.SchemaVersion != SchemaVersion || !reflect.DeepEqual(owner.ProductionFiles, wantFiles) {
+		t.Fatalf("grammar owner = %#v, want package identity and exact production inventory %v", owner, wantFiles)
+	}
+	if !sort.StringsAreSorted(owner.ProductionFiles) {
+		t.Fatalf("grammar owner production files are not sorted: %v", owner.ProductionFiles)
+	}
+	packagePath, err := filepath.Abs(".")
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"internal/kernel/requirementsourcecodec/types.go"}
-	if !reflect.DeepEqual(owners, want) {
-		t.Fatalf("v2 grammar identity owners = %v, want %v", owners, want)
+	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(repositoryRoot, packagePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.ToSlash(relative) != owner.OwnerPackage {
+		t.Fatalf("grammar owner package = %q, actual package = %q", owner.OwnerPackage, filepath.ToSlash(relative))
 	}
 }

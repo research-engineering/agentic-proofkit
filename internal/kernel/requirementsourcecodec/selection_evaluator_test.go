@@ -1,11 +1,75 @@
 package requirementsourcecodec
 
 import (
+	"reflect"
 	"sort"
 	"testing"
 )
 
+var selectionMetricSemantics = []selectionMetric{
+	{MetricID: "aggregate_diff_regression_basis_points", Stage: "replacement", Role: "hard", Direction: "minimize", Baseline: "selected-json-layout", Aggregation: "maximum-aggregate-diff-regression", Requirement: "at-most-policy-threshold", Missing: "reject", MaterialThreshold: 500},
+	{MetricID: "changed_bytes", Stage: "screen", Role: "primary", Direction: "minimize", Baseline: "eligible-json-layouts", Aggregation: "sum-over-frozen-edits", Requirement: "lexicographic-minimum", Missing: "reject", MaterialThreshold: 0},
+	{MetricID: "changed_lines", Stage: "screen", Role: "primary", Direction: "minimize", Baseline: "eligible-json-layouts", Aggregation: "sum-over-frozen-edits", Requirement: "lexicographic-minimum", Missing: "reject", MaterialThreshold: 0},
+	{MetricID: "edit_locality", Stage: "screen", Role: "hard", Direction: "equal", Baseline: "affected-entity-registry", Aggregation: "all-frozen-edits", Requirement: "true", Missing: "fail", MaterialThreshold: 0},
+	{MetricID: "field_closure", Stage: "screen", Role: "hard", Direction: "equal", Baseline: "codec-field-manifest-v1", Aggregation: "all-fields", Requirement: "passed", Missing: "fail", MaterialThreshold: 0},
+	{MetricID: "format_time_state", Stage: "replacement", Role: "hard", Direction: "equal", Baseline: "selected-grouped-json-v1", Aggregation: "paired-randomized-confidence-bound", Requirement: "passed", Missing: "reject", MaterialThreshold: 0},
+	{MetricID: "invalid_mutation_false_accepts", Stage: "screen", Role: "hard", Direction: "minimize", Baseline: "frozen-invalid-review-task", Aggregation: "sum", Requirement: "zero", Missing: "fail", MaterialThreshold: 0},
+	{MetricID: "lower_cost_dominance_state", Stage: "replacement", Role: "hard", Direction: "equal", Baseline: "eligible-lower-cost-comparators", Aggregation: "all-primary-metrics", Requirement: "passed", Missing: "reject", MaterialThreshold: 0},
+	{MetricID: "parse_time_state", Stage: "replacement", Role: "hard", Direction: "equal", Baseline: "selected-grouped-json-v1", Aggregation: "paired-randomized-confidence-bound", Requirement: "passed", Missing: "reject", MaterialThreshold: 0},
+	{MetricID: "per_edit_diff_regression_basis_points", Stage: "replacement", Role: "hard", Direction: "minimize", Baseline: "selected-json-layout", Aggregation: "maximum-per-edit-class-diff-regression", Requirement: "at-most-policy-threshold", Missing: "reject", MaterialThreshold: 1500},
+	{MetricID: "projected_production_branches", Stage: "replacement", Role: "hard", Direction: "minimize", Baseline: "selected-json-layout", Aggregation: "estimate", Requirement: "at-most-policy-ratio", Missing: "reject", MaterialThreshold: 15000},
+	{MetricID: "projected_production_loc", Stage: "replacement", Role: "hard", Direction: "minimize", Baseline: "selected-json-layout", Aggregation: "estimate", Requirement: "at-most-policy-ratio", Missing: "reject", MaterialThreshold: 15000},
+	{MetricID: "review_accuracy_basis_points", Stage: "screen", Role: "hard", Direction: "maximize", Baseline: "maximum-observed-json-layout", Aggregation: "exact-gold-answers", Requirement: "equal-to-maximum", Missing: "fail", MaterialThreshold: 0},
+	{MetricID: "weighted_canonical_bytes", Stage: "screen", Role: "primary", Direction: "minimize", Baseline: "eligible-json-layouts", Aggregation: "weighted-sum", Requirement: "lexicographic-minimum", Missing: "reject", MaterialThreshold: 0},
+	{MetricID: "weighted_tokens_o200k_base", Stage: "screen", Role: "primary", Direction: "minimize", Baseline: "eligible-json-layouts", Aggregation: "weighted-sum", Requirement: "lexicographic-minimum", Missing: "reject", MaterialThreshold: 0},
+}
+
+func admittedSelectionMetricRegistry(metrics []selectionMetric) (map[string]selectionMetric, bool) {
+	if !reflect.DeepEqual(metrics, selectionMetricSemantics) {
+		return nil, false
+	}
+	result := make(map[string]selectionMetric, len(metrics))
+	for _, metric := range metrics {
+		result[metric.MetricID] = metric
+	}
+	return result, true
+}
+
 func selectJSONLayout(record codecSelection) string {
+	eligibility, eligibilityOK := jsonLayoutEligibility(record)
+	if !eligibilityOK {
+		return ""
+	}
+	eligibleRows := []screenObservation{}
+	for _, observation := range record.ScreenObservations {
+		if eligibility[observation.CandidateID] {
+			eligibleRows = append(eligibleRows, observation)
+		}
+	}
+	sort.Slice(eligibleRows, func(left, right int) bool {
+		for _, metricID := range record.JSONLayoutOrder {
+			if metricID == "candidate_id" {
+				return eligibleRows[left].CandidateID < eligibleRows[right].CandidateID
+			}
+			leftValue := layoutMetricValue(eligibleRows[left], metricID)
+			rightValue := layoutMetricValue(eligibleRows[right], metricID)
+			if leftValue != rightValue {
+				return leftValue < rightValue
+			}
+		}
+		return false
+	})
+	if len(eligibleRows) == 0 {
+		return ""
+	}
+	return eligibleRows[0].CandidateID
+}
+
+func jsonLayoutEligibility(record codecSelection) (map[string]bool, bool) {
+	metrics, ok := admittedSelectionMetricRegistry(record.MetricRegistry)
+	if !ok || !jsonLayoutOrderIsAdmitted(record.JSONLayoutOrder, metrics) {
+		return nil, false
+	}
 	maximumAccuracy := 0
 	jsonIDs := stringSet(record.Roles.JSONLayouts)
 	for _, observation := range record.ScreenObservations {
@@ -13,33 +77,22 @@ func selectJSONLayout(record codecSelection) string {
 			maximumAccuracy = *observation.ReviewAccuracyBasisPoints
 		}
 	}
-	eligible := []screenObservation{}
-	for _, observation := range record.ScreenObservations {
-		_, isJSON := jsonIDs[observation.CandidateID]
-		if isJSON && observation.FieldClosure == "passed" && observation.ReviewAccuracyBasisPoints != nil && *observation.ReviewAccuracyBasisPoints == maximumAccuracy && observation.InvalidMutationFalseAccepts != nil && *observation.InvalidMutationFalseAccepts == 0 && observation.EditLocality {
-			eligible = append(eligible, observation)
+	result := make(map[string]bool, len(record.Roles.JSONLayouts))
+	for _, candidateID := range record.Roles.JSONLayouts {
+		observation, exists := observationByID(record.ScreenObservations, candidateID)
+		if !exists {
+			return nil, false
 		}
+		result[candidateID] = jsonLayoutPassesHardMetrics(observation, maximumAccuracy, metrics)
 	}
-	sort.Slice(eligible, func(left, right int) bool {
-		for _, metricID := range record.JSONLayoutOrder {
-			if metricID == "candidate_id" {
-				return eligible[left].CandidateID < eligible[right].CandidateID
-			}
-			leftValue := layoutMetricValue(eligible[left], metricID)
-			rightValue := layoutMetricValue(eligible[right], metricID)
-			if leftValue != rightValue {
-				return leftValue < rightValue
-			}
-		}
-		return false
-	})
-	if len(eligible) == 0 {
-		return ""
-	}
-	return eligible[0].CandidateID
+	return result, true
 }
 
 func challengerEligible(record codecSelection) bool {
+	metrics, ok := admittedSelectionMetricRegistry(record.MetricRegistry)
+	if !ok {
+		return false
+	}
 	selectedJSON := selectJSONLayout(record)
 	if selectedJSON == "" || len(record.Roles.RestrictedTextChallengers) != 1 {
 		return false
@@ -50,18 +103,112 @@ func challengerEligible(record codecSelection) bool {
 		return false
 	}
 	policy := record.ReplacementPolicy
-	return challenger.FieldClosure == "passed" &&
-		challenger.ReviewAccuracyBasisPoints != nil && *challenger.ReviewAccuracyBasisPoints >= policy.MinimumReviewAccuracyBasisPoints &&
-		challenger.InvalidMutationFalseAccepts != nil && *challenger.InvalidMutationFalseAccepts <= policy.MaximumInvalidMutationFalseAccepts &&
-		challenger.EditLocality &&
+	return challengerPassesScreenMetrics(challenger, policy, metrics) &&
 		materiallyBetter(baseline.WeightedCanonicalBytes, challenger.WeightedCanonicalBytes, policy.MinimumByteImprovementBasisPoints) &&
 		materiallyBetter(baseline.WeightedTokensO200kBase, challenger.WeightedTokensO200kBase, policy.MinimumTokenImprovementBasisPoints) &&
-		challenger.AggregateDiffRegressionBasisPoints != nil && *challenger.AggregateDiffRegressionBasisPoints <= policy.MaximumAggregateDiffRegressionBasisPoints &&
-		challenger.PerEditDiffRegressionBasisPoints != nil && *challenger.PerEditDiffRegressionBasisPoints <= policy.MaximumPerEditDiffRegressionBasisPoints &&
-		challenger.ParseTimeState == "passed" && challenger.FormatTimeState == "passed" &&
-		challenger.LowerCostDominanceState == "passed" &&
-		withinRatio(baseline.ProjectedProductionLOC, challenger.ProjectedProductionLOC, policy.MaximumProjectedProductionCostBasisPoints) &&
-		withinRatio(baseline.ProjectedProductionBranches, challenger.ProjectedProductionBranches, policy.MaximumProjectedProductionCostBasisPoints)
+		challengerPassesReplacementMetrics(baseline, challenger, policy, metrics)
+}
+
+func jsonLayoutOrderIsAdmitted(order []string, metrics map[string]selectionMetric) bool {
+	for _, metricID := range order {
+		if metricID == "candidate_id" {
+			continue
+		}
+		metric, exists := metrics[metricID]
+		if !exists || metric.Stage != "screen" || metric.Role != "primary" || metric.Direction != "minimize" || metric.Requirement != "lexicographic-minimum" {
+			return false
+		}
+	}
+	return reflect.DeepEqual(order, []string{"weighted_tokens_o200k_base", "weighted_canonical_bytes", "changed_bytes", "changed_lines", "candidate_id"})
+}
+
+func jsonLayoutPassesHardMetrics(observation screenObservation, maximumAccuracy int, metrics map[string]selectionMetric) bool {
+	for _, metric := range metrics {
+		if metric.Stage != "screen" || metric.Role != "hard" {
+			continue
+		}
+		switch metric.MetricID {
+		case "field_closure":
+			if observation.FieldClosure != metric.Requirement {
+				return false
+			}
+		case "review_accuracy_basis_points":
+			if observation.ReviewAccuracyBasisPoints == nil || *observation.ReviewAccuracyBasisPoints != maximumAccuracy {
+				return false
+			}
+		case "invalid_mutation_false_accepts":
+			if observation.InvalidMutationFalseAccepts == nil || *observation.InvalidMutationFalseAccepts != metric.MaterialThreshold {
+				return false
+			}
+		case "edit_locality":
+			if !observation.EditLocality {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func challengerPassesScreenMetrics(observation screenObservation, policy replacementPolicy, metrics map[string]selectionMetric) bool {
+	for _, metric := range metrics {
+		if metric.Stage != "screen" || metric.Role != "hard" {
+			continue
+		}
+		switch metric.MetricID {
+		case "field_closure":
+			if observation.FieldClosure != metric.Requirement {
+				return false
+			}
+		case "review_accuracy_basis_points":
+			if observation.ReviewAccuracyBasisPoints == nil || *observation.ReviewAccuracyBasisPoints < policy.MinimumReviewAccuracyBasisPoints {
+				return false
+			}
+		case "invalid_mutation_false_accepts":
+			if observation.InvalidMutationFalseAccepts == nil || *observation.InvalidMutationFalseAccepts > policy.MaximumInvalidMutationFalseAccepts {
+				return false
+			}
+		case "edit_locality":
+			if !observation.EditLocality {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func challengerPassesReplacementMetrics(baseline screenObservation, challenger screenObservation, policy replacementPolicy, metrics map[string]selectionMetric) bool {
+	for _, metric := range metrics {
+		if metric.Stage != "replacement" || metric.Role != "hard" {
+			continue
+		}
+		passed := false
+		switch metric.MetricID {
+		case "aggregate_diff_regression_basis_points":
+			passed = challenger.AggregateDiffRegressionBasisPoints != nil && *challenger.AggregateDiffRegressionBasisPoints <= policy.MaximumAggregateDiffRegressionBasisPoints
+		case "per_edit_diff_regression_basis_points":
+			passed = challenger.PerEditDiffRegressionBasisPoints != nil && *challenger.PerEditDiffRegressionBasisPoints <= policy.MaximumPerEditDiffRegressionBasisPoints
+		case "parse_time_state":
+			passed = challenger.ParseTimeState == metric.Requirement
+		case "format_time_state":
+			passed = challenger.FormatTimeState == metric.Requirement
+		case "lower_cost_dominance_state":
+			passed = challenger.LowerCostDominanceState == metric.Requirement
+		case "projected_production_loc":
+			passed = withinRatio(baseline.ProjectedProductionLOC, challenger.ProjectedProductionLOC, policy.MaximumProjectedProductionCostBasisPoints)
+		case "projected_production_branches":
+			passed = withinRatio(baseline.ProjectedProductionBranches, challenger.ProjectedProductionBranches, policy.MaximumProjectedProductionCostBasisPoints)
+		default:
+			return false
+		}
+		if !passed {
+			return false
+		}
+	}
+	return true
 }
 
 func layoutMetricValue(value screenObservation, metricID string) int {
@@ -145,6 +292,30 @@ func TestChallengerEligibilityRequiresEveryReplacementPredicate(t *testing.T) {
 				t.Fatal("incomplete replacement predicate was accepted")
 			}
 		})
+	}
+}
+
+func TestSelectionMetricRegistrySemanticsDriveEvaluator(t *testing.T) {
+	record := readCodecSelection(t)
+	if selectJSONLayout(record) == "" {
+		t.Fatal("admitted metric registry did not produce a JSON selection")
+	}
+
+	roleDrift := record
+	roleDrift.MetricRegistry = append([]selectionMetric(nil), record.MetricRegistry...)
+	for index := range roleDrift.MetricRegistry {
+		if roleDrift.MetricRegistry[index].MetricID == "review_accuracy_basis_points" {
+			roleDrift.MetricRegistry[index].Role = "report-only"
+		}
+	}
+	if selectJSONLayout(roleDrift) != "" || challengerEligible(roleDrift) {
+		t.Fatal("evaluator accepted a registry that downgraded a hard metric")
+	}
+
+	missingMetric := record
+	missingMetric.MetricRegistry = append([]selectionMetric(nil), record.MetricRegistry[:len(record.MetricRegistry)-1]...)
+	if selectJSONLayout(missingMetric) != "" || challengerEligible(missingMetric) {
+		t.Fatal("evaluator accepted an incomplete metric registry")
 	}
 }
 
