@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -86,8 +87,9 @@ func TestDecisionProjectionRejectsReplacementObservationDrift(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		mutate func(*codecSelection, *screenDecisionEvidence)
+		name      string
+		wantError string
+		mutate    func(*codecSelection, *screenDecisionEvidence)
 	}{
 		{name: "aggregate diff", mutate: func(value *codecSelection, _ *screenDecisionEvidence) {
 			mutateObservation(value, "proofkit-source-text-v1", func(item *screenObservation) { item.AggregateDiffRegressionBasisPoints = integerPointer(0) })
@@ -105,15 +107,75 @@ func TestDecisionProjectionRejectsReplacementObservationDrift(t *testing.T) {
 		{name: "challenger predicate", mutate: func(_ *codecSelection, value *screenDecisionEvidence) {
 			value.ChallengerPredicates.AggregateDiffNoninferior = true
 		}},
+		{name: "aggregate line regression", wantError: "screen challenger predicates", mutate: func(value *codecSelection, decision *screenDecisionEvidence) {
+			mutateObservation(value, "proofkit-source-text-v1", func(item *screenObservation) {
+				item.ChangedLines = 36
+				item.ChangedBytes = 5721
+				item.EditLocality = true
+				item.AggregateDiffRegressionBasisPoints = integerPointer(588)
+				item.PerEditDiffRegressionBasisPoints = integerPointer(833)
+			})
+			baseline := decisionCandidate(decision, "json-hybrid-v1")
+			challenger := decisionCandidate(decision, "proofkit-source-text-v1")
+			challenger.EditRows = cloneDecisionEditRows(baseline.EditRows)
+			challenger.ChangedLines = 36
+			challenger.ChangedBytes = 5721
+			challenger.EditLocality = true
+			for index := range challenger.EditRows {
+				if challenger.EditRows[index].EditID == "merge" || challenger.EditRows[index].EditID == "split" {
+					challenger.EditRows[index].ChangedLines++
+				}
+			}
+			decision.ChallengerPredicates.AggregateDiffNoninferior = true
+			decision.ChallengerPredicates.EditLocality = true
+			decision.ChallengerPredicates.PerEditDiffNoninferior = true
+		}},
+		{name: "per-edit line regression", wantError: "screen challenger predicates", mutate: func(value *codecSelection, decision *screenDecisionEvidence) {
+			mutateObservation(value, "proofkit-source-text-v1", func(item *screenObservation) {
+				item.ChangedLines = 35
+				item.ChangedBytes = 5721
+				item.EditLocality = true
+				item.AggregateDiffRegressionBasisPoints = integerPointer(294)
+				item.PerEditDiffRegressionBasisPoints = integerPointer(10000)
+			})
+			baseline := decisionCandidate(decision, "json-hybrid-v1")
+			challenger := decisionCandidate(decision, "proofkit-source-text-v1")
+			challenger.EditRows = cloneDecisionEditRows(baseline.EditRows)
+			challenger.ChangedLines = 35
+			challenger.ChangedBytes = 5721
+			challenger.EditLocality = true
+			for index := range challenger.EditRows {
+				if challenger.EditRows[index].EditID == "add" {
+					challenger.EditRows[index].ChangedLines++
+				}
+			}
+			decision.ChallengerPredicates.AggregateDiffNoninferior = true
+			decision.ChallengerPredicates.EditLocality = true
+			decision.ChallengerPredicates.PerEditDiffNoninferior = true
+		}},
+		{name: "production branch regression", wantError: "screen challenger predicates", mutate: func(value *codecSelection, decision *screenDecisionEvidence) {
+			mutateObservation(value, "proofkit-source-text-v1", func(item *screenObservation) {
+				item.ProjectedProductionLOC = 535
+				item.ProjectedProductionBranches = 70
+			})
+			challenger := decisionCandidate(decision, "proofkit-source-text-v1")
+			challenger.ProjectedProduction.LOC = 535
+			challenger.ProjectedProduction.Branches = 70
+			decision.ChallengerPredicates.ProjectedProductionCost = true
+		}},
 	}
 	for _, item := range tests {
 		t.Run(item.name, func(t *testing.T) {
 			mutatedRecord := readCodecSelection(t)
 			mutatedRecord.ScreenObservations = append([]screenObservation(nil), mutatedRecord.ScreenObservations...)
-			mutatedDecision := decision
+			mutatedDecision := cloneScreenDecisionEvidence(decision)
 			item.mutate(&mutatedRecord, &mutatedDecision)
-			if err := verifyDecisionProjection(mutatedRecord, mutatedDecision); err == nil {
+			err := verifyDecisionProjection(mutatedRecord, mutatedDecision)
+			if err == nil {
 				t.Fatal("decision projection admitted a causal evidence mutation")
+			}
+			if item.wantError != "" && !strings.Contains(err.Error(), item.wantError) {
+				t.Fatalf("decision projection error = %q, want %q", err, item.wantError)
 			}
 		})
 	}
@@ -264,6 +326,10 @@ func frozenScreenChallengerPredicates(record codecSelection, candidates map[stri
 			strictlyDominates = false
 		}
 	}
+	perEditRegression, err := maximumEditRegression(baseline.EditRows, challenger.EditRows)
+	if err != nil {
+		return screenChallengerPredicates{}, err
+	}
 	return screenChallengerPredicates{
 		GroupedJSONAccepted:                   record.Decision.SelectedJSONLayout != "",
 		ReviewPresent:                         challenger.Review != nil,
@@ -272,9 +338,9 @@ func frozenScreenChallengerPredicates(record codecSelection, candidates map[stri
 		EditLocality:                          challenger.EditLocality,
 		ByteImprovement:                       materiallyBetter(baseline.WeightedCanonicalBytes, challenger.WeightedCanonicalBytes, record.ReplacementPolicy.MinimumByteImprovementBasisPoints),
 		TokenImprovement:                      materiallyBetter(baseline.WeightedTokensO200kBase, challenger.WeightedTokensO200kBase, record.ReplacementPolicy.MinimumTokenImprovementBasisPoints),
-		AggregateDiffNoninferior:              regressionBasisPoints(baseline.ChangedBytes, challenger.ChangedBytes) <= record.ReplacementPolicy.MaximumAggregateDiffRegressionBasisPoints,
-		PerEditDiffNoninferior:                perEditBytesNoninferior(baseline.EditRows, challenger.EditRows, record.ReplacementPolicy.MaximumPerEditDiffRegressionBasisPoints),
-		ProjectedProductionCost:               regressionBasisPoints(baseline.ProjectedProduction.LOC, challenger.ProjectedProduction.LOC) <= record.ReplacementPolicy.MaximumProjectedProductionCostBasisPoints-10000,
+		AggregateDiffNoninferior:              aggregateDiffRegression(baseline, challenger) <= record.ReplacementPolicy.MaximumAggregateDiffRegressionBasisPoints,
+		PerEditDiffNoninferior:                perEditRegression <= record.ReplacementPolicy.MaximumPerEditDiffRegressionBasisPoints,
+		ProjectedProductionCost:               projectedProductionWithinPolicy(baseline, challenger, record.ReplacementPolicy.MaximumProjectedProductionCostBasisPoints),
 		LowerCostComparisonComplete:           lowerCostComplete,
 		StrictlyDominatesLowerCostComparators: lowerCostComplete && strictlyDominates,
 	}, nil
@@ -295,23 +361,6 @@ func dominatesEveryPrimaryMetric(challenger screenDecisionCandidate, candidate s
 	return nonWorse && strict
 }
 
-func perEditBytesNoninferior(baselineRows []screenDecisionEditRow, challengerRows []screenDecisionEditRow, maximum int) bool {
-	baseline := make(map[string]screenDecisionEditRow, len(baselineRows))
-	for _, row := range baselineRows {
-		baseline[row.EditID] = row
-	}
-	if len(baseline) != len(challengerRows) {
-		return false
-	}
-	for _, row := range challengerRows {
-		baselineRow, exists := baseline[row.EditID]
-		if !exists || regressionBasisPoints(baselineRow.ChangedBytes, row.ChangedBytes) > maximum {
-			return false
-		}
-	}
-	return true
-}
-
 func verifyReplacementProjection(record codecSelection, candidates map[string]screenDecisionCandidate, predicates screenChallengerPredicates) error {
 	if len(record.Roles.RestrictedTextChallengers) != 1 {
 		return errors.New("selection must have exactly one restricted-text challenger")
@@ -322,10 +371,7 @@ func verifyReplacementProjection(record codecSelection, candidates map[string]sc
 	if !baselineExists || !challengerExists || !observationExists {
 		return errors.New("replacement projection lacks baseline or challenger")
 	}
-	aggregate := maximum(
-		regressionBasisPoints(baseline.ChangedLines, challenger.ChangedLines),
-		regressionBasisPoints(baseline.ChangedBytes, challenger.ChangedBytes),
-	)
+	aggregate := aggregateDiffRegression(baseline, challenger)
 	perEdit, err := maximumEditRegression(baseline.EditRows, challenger.EditRows)
 	if err != nil {
 		return err
@@ -345,6 +391,18 @@ func verifyReplacementProjection(record codecSelection, candidates map[string]sc
 		return fmt.Errorf("challenger lower-cost dominance = %q, want %q", observation.LowerCostDominanceState, wantDominance)
 	}
 	return nil
+}
+
+func aggregateDiffRegression(baseline screenDecisionCandidate, challenger screenDecisionCandidate) int {
+	return maximum(
+		regressionBasisPoints(baseline.ChangedLines, challenger.ChangedLines),
+		regressionBasisPoints(baseline.ChangedBytes, challenger.ChangedBytes),
+	)
+}
+
+func projectedProductionWithinPolicy(baseline screenDecisionCandidate, challenger screenDecisionCandidate, maximumBasisPoints int) bool {
+	return withinRatio(baseline.ProjectedProduction.LOC, challenger.ProjectedProduction.LOC, maximumBasisPoints) &&
+		withinRatio(baseline.ProjectedProduction.Branches, challenger.ProjectedProduction.Branches, maximumBasisPoints)
 }
 
 func maximumEditRegression(baselineRows []screenDecisionEditRow, challengerRows []screenDecisionEditRow) (int, error) {
@@ -397,4 +455,30 @@ func cloneBoolMap(value map[string]bool) map[string]bool {
 		result[key] = item
 	}
 	return result
+}
+
+func cloneScreenDecisionEvidence(value screenDecisionEvidence) screenDecisionEvidence {
+	result := value
+	result.Candidates = append([]screenDecisionCandidate(nil), value.Candidates...)
+	for index := range result.Candidates {
+		result.Candidates[index].EditRows = cloneDecisionEditRows(value.Candidates[index].EditRows)
+	}
+	return result
+}
+
+func cloneDecisionEditRows(value []screenDecisionEditRow) []screenDecisionEditRow {
+	result := append([]screenDecisionEditRow(nil), value...)
+	for index := range result {
+		result[index].LocalityViolations = append([]string(nil), value[index].LocalityViolations...)
+	}
+	return result
+}
+
+func decisionCandidate(value *screenDecisionEvidence, candidateID string) *screenDecisionCandidate {
+	for index := range value.Candidates {
+		if value.Candidates[index].CandidateID == candidateID {
+			return &value.Candidates[index]
+		}
+	}
+	panic("missing frozen decision candidate")
 }
