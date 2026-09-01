@@ -12,7 +12,7 @@ func Normalize(draft Draft) (Model, error) {
 }
 
 func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
-	if err := validateLimits(limits); err != nil {
+	if err := ValidateLimits(limits); err != nil {
 		return Model{}, err
 	}
 	if err := preflight(draft, limits); err != nil {

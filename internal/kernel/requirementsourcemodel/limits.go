@@ -59,6 +59,10 @@ func DefaultLimits() Limits {
 	}
 }
 
+func ValidateLimits(value Limits) error {
+	return validateLimits(value)
+}
+
 func validateLimits(value Limits) error {
 	checks := []struct {
 		actual int

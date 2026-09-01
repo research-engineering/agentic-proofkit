@@ -40,7 +40,7 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 		"RiskClass", "RiskCritical", "RiskHigh", "RiskLow", "RiskMedium",
 		"Scenario", "ScenarioValue", "SourceClarification", "SourceCodeSnapshot", "SourceDesign", "SourceKind", "SourceOwnerDecision", "SourcePlan",
 		"TermAction", "TermKind", "TermObservable", "TermState", "TermSubject", "TermValue",
-		"UpdatePolicy", "ValidationError", "VocabularyTerm",
+		"UpdatePolicy", "ValidateLimits", "ValidationError", "VocabularyTerm",
 	}
 	sort.Strings(actualExports)
 	sort.Strings(expectedExports)
