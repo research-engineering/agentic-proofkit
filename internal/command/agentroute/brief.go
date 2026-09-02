@@ -142,16 +142,12 @@ func briefContextRefs(commands []map[string]any, reportID string) []any {
 func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 	blockers := make([]any, 0, maxBriefBlockerItems)
 	total := 0
-	appendBounded := func(blocker map[string]any) {
-		total++
-		if len(blockers) < maxBriefBlockerItems {
-			blockers = append(blockers, blocker)
-		}
-	}
 	if stringFromMap(report, "state") == "blocked_unknown_goal" {
-		appendBounded(map[string]any{
-			"blockerId": reportID + ".blocker.unknown-goal",
-			"kind":      "unknown_goal",
+		appendBoundedBriefBlocker(&blockers, &total, func() map[string]any {
+			return map[string]any{
+				"blockerId": reportID + ".blocker.unknown-goal",
+				"kind":      "unknown_goal",
+			}
 		})
 	}
 	requiredInputs, _ := report["requiredInputs"].([]any)
@@ -160,11 +156,13 @@ func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 		if !ok {
 			continue
 		}
-		appendBounded(map[string]any{
-			"blockerId":           fmt.Sprintf("%s.blocker.required-input.%02d", reportID, index+1),
-			"kind":                "missing_input",
-			"sourceReportPointer": fmt.Sprintf("/requiredInputs/%d", index),
-			"subject":             requiredInputLabel(item),
+		appendBoundedBriefBlocker(&blockers, &total, func() map[string]any {
+			return map[string]any{
+				"blockerId":           fmt.Sprintf("%s.blocker.required-input.%02d", reportID, index+1),
+				"kind":                "missing_input",
+				"sourceReportPointer": fmt.Sprintf("/requiredInputs/%d", index),
+				"subject":             requiredInputLabel(item),
+			}
 		})
 	}
 	observedReports, _ := report["observedReports"].([]any)
@@ -177,15 +175,25 @@ func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 		if state == "passed" {
 			continue
 		}
-		appendBounded(map[string]any{
-			"blockerId":           fmt.Sprintf("%s.blocker.observed-report.%02d", reportID, index+1),
-			"kind":                "observed_report",
-			"sourceReportPointer": fmt.Sprintf("/observedReports/%d", index),
-			"state":               state,
-			"subject":             stringFromMap(item, "kind"),
+		appendBoundedBriefBlocker(&blockers, &total, func() map[string]any {
+			return map[string]any{
+				"blockerId":           fmt.Sprintf("%s.blocker.observed-report.%02d", reportID, index+1),
+				"kind":                "observed_report",
+				"sourceReportPointer": fmt.Sprintf("/observedReports/%d", index),
+				"state":               state,
+				"subject":             stringFromMap(item, "kind"),
+			}
 		})
 	}
 	return blockers, total - len(blockers)
+}
+
+func appendBoundedBriefBlocker(blockers *[]any, total *int, build func() map[string]any) {
+	*total = *total + 1
+	if len(*blockers) >= maxBriefBlockerItems {
+		return
+	}
+	*blockers = append(*blockers, build())
 }
 
 func briefOmissionSummary(report map[string]any, availableCommandCount int, omittedBlockerCount int) map[string]any {
@@ -202,8 +210,18 @@ func briefOmissionSummary(report map[string]any, availableCommandCount int, omit
 			"route_questions",
 		},
 		"omittedBlockerCount":       omittedBlockerCount,
-		"sourceOmittedCommandCount": len(mapsFromAny(report["omitted"])),
+		"sourceOmittedCommandCount": omittedCommandCount(report["omitted"]),
 	}
+}
+
+func omittedCommandCount(raw any) int {
+	count := 0
+	for _, item := range mapsFromAny(raw) {
+		if stringFromMap(item, "command") != "" {
+			count++
+		}
+	}
+	return count
 }
 
 func nonNegativeInt(raw any) (int, bool) {

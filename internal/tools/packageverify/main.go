@@ -1427,12 +1427,17 @@ func verifyCLIContractBoundaryPolicyClosure(content string, textEntries map[stri
 		}
 	}
 	commands, _ := contract["commands"].([]any)
+	agentRouteCount := 0
 	for _, rawCommand := range commands {
 		command, _ := rawCommand.(map[string]any)
+		if command["command"] != "agent-route" {
+			continue
+		}
+		agentRouteCount++
 		output, _ := command["outputContract"].(map[string]any)
 		brief, _ := output["briefPacketContract"].(map[string]any)
 		if brief == nil {
-			continue
+			return fmt.Errorf("package CLI agent-route briefPacketContract must be present")
 		}
 		refs := stringArrayField(brief, "boundaryPolicyRefs")
 		for _, requirementID := range refs {
@@ -1443,6 +1448,9 @@ func verifyCLIContractBoundaryPolicyClosure(content string, textEntries map[stri
 		if !slices.Equal(refs, []string{"REQ-PROOFKIT-SPEC-005", "REQ-PROOFKIT-SPEC-026"}) {
 			return fmt.Errorf("package CLI brief contract boundaryPolicyRefs must equal the exact canonical policy set")
 		}
+	}
+	if agentRouteCount != 1 {
+		return fmt.Errorf("package CLI contract must contain exactly one agent-route command")
 	}
 	return nil
 }

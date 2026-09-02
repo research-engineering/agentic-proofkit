@@ -532,7 +532,7 @@
         "rootDefinitionDigest": "sha256:fd1121285d1b357ed848febc248700a75417d06619e22ed36991631d7526375b",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:a2359fd9f5a667a0da31e5b12331239ce77d9d997205c85d78ad8771034f0369",
+          "canonicalDigest": "sha256:3256eac5777824ad0b7b9bce6537efdb42b75430579a1a3f160577cf8cdce379",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -557,7 +557,8 @@
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
           "REQ-PROOFKIT-QUALITY-004",
-          "REQ-PROOFKIT-SPEC-005"
+          "REQ-PROOFKIT-SPEC-005",
+          "REQ-PROOFKIT-SPEC-026"
         ]
       },
       "outputContract": {
@@ -661,7 +662,7 @@
           },
           {
             "path": "internal/command/agentroute",
-            "canonicalDigest": "sha256:a2359fd9f5a667a0da31e5b12331239ce77d9d997205c85d78ad8771034f0369",
+            "canonicalDigest": "sha256:3256eac5777824ad0b7b9bce6537efdb42b75430579a1a3f160577cf8cdce379",
             "evidenceClass": "source_checkout"
           }
         ],
