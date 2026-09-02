@@ -182,6 +182,10 @@ func TestCaptureContextTerminatesCanceledGitProcessGroup(t *testing.T) {
 	}
 }
 
+func TestCaptureContextTerminatesGitProcessGroupOnOutputOverflow(t *testing.T) {
+	testCaptureContextTerminatesGitProcessGroupOnOutputOverflow(t)
+}
+
 func TestCaptureRejectsSuccessfulGitDiagnosticsWithoutEcho(t *testing.T) {
 	bin := t.TempDir()
 	gitPath := filepath.Join(bin, "git")

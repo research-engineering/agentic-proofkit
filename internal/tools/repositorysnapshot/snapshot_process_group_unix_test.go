@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func TestCaptureContextTerminatesGitProcessGroupOnOutputOverflow(t *testing.T) {
+func testCaptureContextTerminatesGitProcessGroupOnOutputOverflow(t *testing.T) {
 	bin := t.TempDir()
 	gitPath := filepath.Join(bin, "git")
 	processGroupPath := filepath.Join(t.TempDir(), "process-group")
