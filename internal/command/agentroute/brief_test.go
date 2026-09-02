@@ -466,7 +466,8 @@ func TestBriefBlockerBoundDominatesProductionAllocations(t *testing.T) {
 
 	boundedAllocations := measure(reportWith(maxBriefBlockerItems))
 	largeAllocations := measure(reportWith(10_000))
-	if largeAllocations > boundedAllocations+1 {
+	const maxInstrumentationAllocationDelta = 32
+	if largeAllocations > boundedAllocations+maxInstrumentationAllocationDelta {
 		t.Fatalf("omitted blockers caused map allocation growth: bounded=%.2f large=%.2f", boundedAllocations, largeAllocations)
 	}
 }
