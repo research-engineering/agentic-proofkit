@@ -161,9 +161,10 @@ Semantic context routes are `requirement-context-compose`,
 3. Use `agent-route` when a coding agent needs a deterministic next-command
    report from explicit current state. Use `agent-route --agent-envelope` when
    the agent needs exactly one next action or terminal state, bounded blockers,
-   caller-owned context refs, exact omission counts, and stable boundary-policy
-   refs instead of the full route report. Resolve further detail from the
-   original input only after checking the brief's source digest; request
+   caller-owned context refs, exact omission counts, and uniquely resolvable
+   shipped boundary-policy requirement refs instead of the full route report.
+   Resolve further detail with the packet's exact output-argument suffixes and
+   retained original input only after checking the brief's source digest; request
    `--agent-envelope-mode full` only when the generic envelope is actually
    needed. Treat `blocked_*` states as stop signals, not as permission to guess
    missing inputs. `knownChangedPaths` are

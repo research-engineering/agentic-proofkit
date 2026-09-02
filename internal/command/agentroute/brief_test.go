@@ -1,6 +1,7 @@
 package agentroute
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -62,6 +63,13 @@ func TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable(t *testing.T) {
 	}
 	if detail["sourceReportDigest"] != wantDigest || detail["requiresOriginalInput"] != true {
 		t.Fatalf("brief detail access is not source-bound: %#v", detail)
+	}
+	outputArgs := detail["outputArgs"].(map[string]any)
+	if !slices.Equal(stringsFromAny(outputArgs["full"]), []string{"--agent-envelope", "--agent-envelope-mode", "full"}) || len(outputArgs["report"].([]any)) != 0 {
+		t.Fatalf("brief detail access is not executable: %#v", detail)
+	}
+	if !slices.Equal(stringsFromAny(brief["boundaryPolicyRefs"]), []string{briefBoundaryPolicyDerivedView, briefBoundaryPolicyRoutePacket}) {
+		t.Fatalf("brief boundary policy refs are not exact: %#v", brief["boundaryPolicyRefs"])
 	}
 
 	briefBytes, err := stablejson.Marshal(brief)
@@ -198,6 +206,61 @@ func TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity(t *testin
 	}
 	if len(encoded) > maxAgentBriefBytes || strings.Contains(string(encoded), longRef) {
 		t.Fatalf("compacted brief bytes=%d leaked oversized ref", len(encoded))
+	}
+}
+
+func TestAgentBriefCompactsAtDeclaredByteBoundary(t *testing.T) {
+	t.Parallel()
+
+	var boundaryReport map[string]any
+	var unboundedBytes int
+	for refRunes := 800; refRunes <= 2400; refRunes += 8 {
+		report, exitCode, err := Build(map[string]any{
+			"schemaVersion": jsonNumber("1"),
+			"routeId":       "consumer.route.boundary",
+			"goal":          "validate_requirement_source",
+			"mode":          "observe",
+			"availableInputs": []any{
+				map[string]any{"kind": "requirement_source", "ref": "docs/specs/" + strings.Repeat("a", refRunes) + ".json"},
+			},
+		})
+		if err != nil || exitCode != 0 {
+			t.Fatalf("Build() exit=%d error=%v", exitCode, err)
+		}
+		unbounded, err := projectAgentBrief(report)
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := stablejson.Marshal(unbounded)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(encoded) > maxAgentBriefBytes && len(encoded) <= maxAgentBriefBytes+1024 {
+			boundaryReport = report
+			unboundedBytes = len(encoded)
+			break
+		}
+	}
+	if boundaryReport == nil {
+		t.Fatal("failed to construct an admitted brief immediately above the declared byte bound")
+	}
+	brief, err := AgentBrief(boundaryReport)
+	if err != nil {
+		t.Fatal(err)
+	}
+	action := brief["nextAction"].(map[string]any)
+	if action["argvState"] != "detail_required" {
+		t.Fatalf("unbounded brief bytes=%d was not compacted at limit=%d: %#v", unboundedBytes, maxAgentBriefBytes, action)
+	}
+	if _, retained := action["argv"]; retained {
+		t.Fatal("boundary-compacted brief retained inline argv")
+	}
+	encoded, err := stablejson.Marshal(brief)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(encoded) > maxAgentBriefBytes {
+		t.Fatalf("compacted brief bytes=%d exceed limit=%d", len(encoded), maxAgentBriefBytes)
 	}
 }
 

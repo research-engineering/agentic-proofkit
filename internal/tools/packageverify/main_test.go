@@ -737,6 +737,20 @@ func TestPackagePublicReferenceClosure(t *testing.T) {
 			want: "dangling package-public route MISSING.json",
 		},
 		{
+			name: "dangling brief boundary policy requirement",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], "REQ-PROOFKIT-SPEC-026", "REQ-MISSING-026", 1)
+			},
+			want: "boundary policy ref must resolve to exactly one shipped requirement",
+		},
+		{
+			name: "ambiguous brief boundary policy requirement",
+			mutate: func(entries map[string]string) {
+				entries["package/docs/specs/example/requirements.v1.json"] = strings.Replace(entries["package/docs/specs/example/requirements.v1.json"], `]}`, `,{"requirementId":"REQ-PROOFKIT-SPEC-026"}]}`, 1)
+			},
+			want: "boundary policy ref must resolve to exactly one shipped requirement",
+		},
+		{
 			name: "dangling binding witness path",
 			mutate: func(entries map[string]string) {
 				entries["package/proofkit/requirement-bindings.json"] = `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"MISSING.go"}]}`
@@ -1380,12 +1394,12 @@ func packageReferenceClosureFixture() map[string]string {
 		"package/ADOPTION.md":                             "Adoption.\n",
 		"package/docs/proofkit-contract-map.md":           "Contract map.\n",
 		"package/docs/specs/example/overview.md":          "Example.\n",
-		"package/docs/specs/example/requirements.v1.json": `{"specPackagePath":"docs/specs/example","overviewPath":"docs/specs/example/overview.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[]}`,
+		"package/docs/specs/example/requirements.v1.json": `{"specPackagePath":"docs/specs/example","overviewPath":"docs/specs/example/overview.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-SPEC-005"},{"requirementId":"REQ-PROOFKIT-SPEC-026"}]}`,
 		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"internal/tools/packageverify/main_test.go","witnessSelectors":[{"selector":"TestPackagePublicReferenceClosure","command":"go test ./internal/tools/packageverify -run '^TestPackagePublicReferenceClosure$'"}]}]}`,
 		"package/proofkit/witness-plan.json":              `{"commands":[],"policies":[]}`,
 		"package/proofkit/command-families.v1.json":       `{"families":[]}`,
 		"package/proofkit/receipt-producer-policy.json":   `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/specs/example/requirements.v1.json"]}]}`,
-		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}},"outputContract":{"briefPacketContract":{"fieldRules":{"boundaryPolicyRefs":"policy field description","contextRefs":"runtime field description"}},"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
+		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}},"outputContract":{"briefPacketContract":{"boundaryPolicyRefs":["REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"],"fieldRules":{"boundaryPolicyRefs":"policy field description","contextRefs":"runtime field description"}},"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
 	}
 }
 

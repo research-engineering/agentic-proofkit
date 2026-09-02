@@ -420,9 +420,9 @@
                   "witness_command_catalog"
                 ]
               },
-          "ref": {
-            "format": "safe repo-relative materialized caller-owned file, report ref, or scanner root ref; stdin sentinel - is forbidden and scanner root refs may be ."
-          }
+              "ref": {
+                "format": "safe repo-relative materialized caller-owned file, report ref, or scanner root ref; stdin sentinel - is forbidden and scanner root refs may be ."
+              }
             },
             "uniqueBy": "kind"
           },
@@ -435,7 +435,6 @@
             "nonClaim": "serve_local_view only adds --serve to requirement-browser-server routes; it does not create a public server or approve rendered artifacts."
           },
           "goal": {
-            "required": true,
             "enum": [
               "admit_receipts",
               "adopt_repository",
@@ -456,7 +455,8 @@
               "unknown",
               "validate_requirement_source",
               "verify_typescript_public_api"
-            ]
+            ],
+            "required": true
           },
           "knownChangedPaths": {
             "default": [],
@@ -464,20 +464,21 @@
             "nonClaim": "knownChangedPaths is diagnostic-only; selective routing requires a caller-owned changed_path_set input ref."
           },
           "mode": {
-            "required": true,
             "enum": [
               "enforce-all",
               "enforce-touched",
               "observe",
               "warn"
-            ]
+            ],
+            "required": true
           },
           "nonClaims": {
             "default": [],
-            "maxItems": 8,
-            "maxItemRunes": 240
+            "maxItemRunes": 240,
+            "maxItems": 8
           },
           "observedReports": {
+            "blockingSemantics": "any observed report state other than passed blocks command emission",
             "default": [],
             "item": {
               "kind": {
@@ -493,7 +494,7 @@
                 ]
               },
               "ref": {
-                "format": "safe repo-relative report ref"
+                "format": "safe repo-relative materialized caller-owned report ref; stdin sentinel - is forbidden"
               },
               "state": {
                 "enum": [
@@ -505,7 +506,6 @@
                 ]
               }
             },
-            "blockingSemantics": "any observed report state other than passed blocks command emission",
             "uniqueBy": "ref"
           },
           "openBrowser": {
@@ -513,9 +513,9 @@
             "nonClaim": "openBrowser only adds --open when browserMode is serve_local_view."
           },
           "routeId": {
-            "required": true,
             "format": "safe stable id",
-            "maxRunes": 96
+            "maxRunes": 96,
+            "required": true
           },
           "schemaVersion": {
             "required": true,
@@ -532,7 +532,7 @@
         "rootDefinitionDigest": "sha256:fd1121285d1b357ed848febc248700a75417d06619e22ed36991631d7526375b",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:c4957046177c5cc8192deae96efd6b492a8f2a1a0c3d02da4dd4b3f4f97ca1cf",
+          "canonicalDigest": "sha256:3164cabec37654591d8e3c88444734d1584647d07b12e149ae17a95ad5b27d8a",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -565,10 +565,27 @@
         "schemaVersion": 3,
         "authority": "deterministic route report, brief packet, full envelope, or invalid-input repair packet selected from the admitted invocation",
         "briefPacketContract": {
+          "boundaryPolicyRefs": [
+            "REQ-PROOFKIT-SPEC-005",
+            "REQ-PROOFKIT-SPEC-026"
+          ],
           "contractId": "proofkit.agent-route.brief.v1",
-          "schemaVersion": 1,
-          "maxPrettyJSONBytes": 3072,
+          "fieldRules": {
+            "blockers": "required-input blockers followed by sorted non-passed observed-report blockers; retain at most four and count the exact remainder",
+            "boundaryPolicyRefs": "exactly the shipped and uniquely resolvable requirement IDs REQ-PROOFKIT-SPEC-005 and REQ-PROOFKIT-SPEC-026; policy prose is not duplicated",
+            "contextRefs": "only caller-owned artifact operands of the selected next command, each addressed by an RFC 6901 pointer into the source report",
+            "detailAccess": "binds source report ID and stable digest and provides exact outputArgs suffixes for report and full retrieval from the original admitted input",
+            "nextAction": "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
+            "omissionSummary": "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
+            "packetKind": "proofkit.agent-route.brief",
+            "schemaVersion": "1"
+          },
           "maxBlockers": 4,
+          "maxPrettyJSONBytes": 3072,
+          "nonClaims": [
+            "The brief packet is derived route guidance, not requirement, proof, execution, merge, release, rollout, deployment, or readiness authority.",
+            "The packet byte bound does not claim tokenizer-specific token consumption or semantic sufficiency."
+          ],
           "requiredFields": [
             "blockers",
             "boundaryPolicyRefs",
@@ -582,20 +599,7 @@
             "schemaVersion",
             "state"
           ],
-          "fieldRules": {
-            "blockers": "required-input blockers followed by sorted non-passed observed-report blockers; retain at most four and count the exact remainder",
-            "boundaryPolicyRefs": "exactly NC-PROOFKIT-SPEC-005 and NC-PROOFKIT-SPEC-026; policy prose is not duplicated",
-            "contextRefs": "only caller-owned artifact operands of the selected next command, each addressed by an RFC 6901 pointer into the source report",
-            "detailAccess": "binds source report ID and stable digest and advertises report and full retrieval from the original admitted input",
-            "nextAction": "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
-            "omissionSummary": "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
-            "packetKind": "proofkit.agent-route.brief",
-            "schemaVersion": "1"
-          },
-          "nonClaims": [
-            "The brief packet is derived route guidance, not requirement, proof, execution, merge, release, rollout, deployment, or readiness authority.",
-            "The packet byte bound does not claim tokenizer-specific token consumption or semantic sufficiency."
-          ]
+          "schemaVersion": 1
         },
         "changesFromV2": [
           "bare --agent-envelope emits proofkit.agent-route.brief",
@@ -614,7 +618,7 @@
           },
           {
             "path": "internal/command/agentroute",
-            "canonicalDigest": "sha256:c4957046177c5cc8192deae96efd6b492a8f2a1a0c3d02da4dd4b3f4f97ca1cf",
+            "canonicalDigest": "sha256:3164cabec37654591d8e3c88444734d1584647d07b12e149ae17a95ad5b27d8a",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -1148,7 +1152,7 @@
         "rootDefinitionDigest": "sha256:b343c1093476cd9f50970f58608e43c1a6ae681a2c06b17c217ab4f22ea454e5",
         "nativeSource": {
           "path": "internal/command/conformanceprofile",
-        "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
+          "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -1175,7 +1179,7 @@
         "rootDefinitionDigest": "sha256:5817a9d259deb8ff48d8dc6298b46164e7b132304ca1d865967c611d147b1793",
         "nativeSource": {
           "path": "internal/command/conformanceprofile",
-        "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
+          "canonicalDigest": "sha256:fba2ae58bf66cfc43834368dec84ca85abd11e08a541786dc59eafaf7628c322",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

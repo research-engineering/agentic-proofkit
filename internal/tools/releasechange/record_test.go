@@ -196,6 +196,7 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 
 var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.agent-route.brief-default", Summary: "Change bare agent-route --agent-envelope output from the generic full envelope to the bounded proofkit.agent-route.brief packet."},
+	{ChangeID: "proofkit.agent-route.materialized-artifact-refs", Summary: "Reject the stdin transport sentinel as an available-input or observed-report artifact identity; route references must name materialized caller-owned artifacts."},
 	{ChangeID: "proofkit.platform.macos-13", Summary: "Raise published Darwin package compatibility to macOS 13.0 so wheel tags remain truthful for binaries built with Go 1.27.1."},
 }
 
@@ -206,6 +207,7 @@ var currentAdditions = []Change{
 
 var currentMigrationSteps = []string{
 	"Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
+	"Consumers that used the stdin transport sentinel as an agent-route availableInputs or observedReports ref must materialize that artifact and pass its safe repo-relative path instead.",
 	"Darwin consumers must use macOS 13.0 or later; contributors that build from source must use Go 1.27.1.",
 }
 

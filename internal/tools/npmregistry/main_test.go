@@ -52,6 +52,51 @@ func TestRunRejectsRegistryPackageSetSubstitution(t *testing.T) {
 	}
 }
 
+func TestCapturePackReportsNormalizesNPM12KeyedOutput(t *testing.T) {
+	root := t.TempDir()
+	first := filepath.Join(root, "pack-first.json")
+	second := filepath.Join(root, "pack-second.json")
+	output := filepath.Join(root, "npm-pack.json")
+	writeFixture(t, first, `{"second":{"filename":"second.tgz","integrity":"sha512-second","name":"second","shasum":"second","version":"1.0.0"}}`)
+	writeFixture(t, second, `{"first":{"filename":"first.tgz","integrity":"sha512-first","name":"first","shasum":"first","version":"1.0.0"}}`)
+	if err := capturePackReports(output, []string{first, second}); err != nil {
+		t.Fatalf("capturePackReports() error=%v", err)
+	}
+	content, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var records []map[string]any
+	if err := json.Unmarshal(content, &records); err != nil {
+		t.Fatal(err)
+	}
+	if len(records) != 2 || records[0]["name"] != "first" || records[1]["name"] != "second" {
+		t.Fatalf("normalized records=%#v", records)
+	}
+}
+
+func TestCapturePackReportsRejectsLegacyAndAmbiguousOutput(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{name: "legacy array", value: `[{"name":"first"}]`, want: "cannot unmarshal array"},
+		{name: "multiple keyed records", value: `{"first":{"name":"first"},"second":{"name":"second"}}`, want: "exactly one"},
+		{name: "key mismatch", value: `{"other":{"filename":"first.tgz","integrity":"sha512-first","name":"first","shasum":"first","version":"1.0.0"}}`, want: "key must equal"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := t.TempDir()
+			input := filepath.Join(root, "pack.json")
+			writeFixture(t, input, test.value)
+			err := capturePackReports(filepath.Join(root, "normalized.json"), []string{input})
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("capturePackReports() error=%v want=%q", err, test.want)
+			}
+		})
+	}
+}
+
 func writeFixture(t *testing.T, path string, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

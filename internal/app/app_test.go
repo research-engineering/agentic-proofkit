@@ -638,6 +638,29 @@ func TestCLIRejectsUnadvertisedFlagsWithoutStdout(t *testing.T) {
 	}
 }
 
+func TestAgentRouteModeAdmissionPrecedesInputRead(t *testing.T) {
+	cases := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "mode without envelope", args: []string{"agent-route", "--input", "-", "--agent-envelope-mode", "full"}, want: "--agent-envelope-mode requires --agent-envelope"},
+		{name: "invalid mode", args: []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "expanded"}, want: "--agent-envelope-mode requires one of: brief, full"},
+		{name: "repeated mode", args: []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "brief", "--agent-envelope-mode", "full"}, want: "--agent-envelope-mode may be specified only once"},
+		{name: "unsupported flag", args: []string{"agent-route", "--input", "-", "--format", "json"}, want: "unsupported argument for agent-route: --format"},
+	}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), item.args, panicReader{}, &stdout, &stderr)
+			if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), item.want) {
+				t.Fatalf("status=%d stdout=%q stderr=%q want=%q", status, stdout.String(), stderr.String(), item.want)
+			}
+		})
+	}
+}
+
 func TestCLIDiagnosticsRedactSecretLikeCallerLabels(t *testing.T) {
 	secret := "ghp_FAKEFAKE1234567890"
 	cases := []struct {

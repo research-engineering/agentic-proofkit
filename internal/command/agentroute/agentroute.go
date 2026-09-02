@@ -476,7 +476,7 @@ func InputContract() map[string]any {
 				"default": []any{},
 				"item": map[string]any{
 					"kind":  map[string]any{"enum": sortedKeys(reportKindValues)},
-					"ref":   map[string]any{"format": "safe repo-relative report ref"},
+					"ref":   map[string]any{"format": "safe repo-relative materialized caller-owned report ref; stdin sentinel - is forbidden"},
 					"state": map[string]any{"enum": sortedKeys(reportStateValues)},
 				},
 				"blockingSemantics": "any observed report state other than passed blocks command emission",
@@ -501,6 +501,7 @@ func OutputContract() map[string]any {
 		"schemaVersion": 3,
 		"authority":     "deterministic route report, brief packet, full envelope, or invalid-input repair packet selected from the admitted invocation",
 		"briefPacketContract": map[string]any{
+			"boundaryPolicyRefs": briefBoundaryPolicyRefs(),
 			"contractId":         "proofkit.agent-route.brief.v1",
 			"schemaVersion":      1,
 			"maxPrettyJSONBytes": maxAgentBriefBytes,
@@ -520,9 +521,9 @@ func OutputContract() map[string]any {
 			},
 			"fieldRules": map[string]any{
 				"blockers":           "required-input blockers followed by sorted non-passed observed-report blockers; retain at most four and count the exact remainder",
-				"boundaryPolicyRefs": "exactly NC-PROOFKIT-SPEC-005 and NC-PROOFKIT-SPEC-026; policy prose is not duplicated",
+				"boundaryPolicyRefs": "exactly the shipped and uniquely resolvable requirement IDs REQ-PROOFKIT-SPEC-005 and REQ-PROOFKIT-SPEC-026; policy prose is not duplicated",
 				"contextRefs":        "only caller-owned artifact operands of the selected next command, each addressed by an RFC 6901 pointer into the source report",
-				"detailAccess":       "binds source report ID and stable digest and advertises report and full retrieval from the original admitted input",
+				"detailAccess":       "binds source report ID and stable digest and provides exact outputArgs suffixes for report and full retrieval from the original admitted input",
 				"nextAction":         "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
 				"omissionSummary":    "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
 				"packetKind":         "proofkit.agent-route.brief",
@@ -663,10 +664,15 @@ func admitAvailableInputs(raw any) (map[string]string, error) {
 }
 
 func admitAvailableInputRef(kind string, value string, context string) (string, error) {
+	allowRepoRoot := kind == "typescript_public_api_repo_root" || kind == "requirement_context_repo_root"
+	return admitMaterializedRouteRef(value, context, allowRepoRoot)
+}
+
+func admitMaterializedRouteRef(value string, context string, allowRepoRoot bool) (string, error) {
 	if value == "-" {
 		return "", fmt.Errorf("%s must identify a materialized caller-owned artifact, not the stdin transport sentinel", context)
 	}
-	if (kind == "typescript_public_api_repo_root" || kind == "requirement_context_repo_root") && value == "." {
+	if allowRepoRoot && value == "." {
 		return value, nil
 	}
 	return admit.SafeRepoRelativePath(value, context)
@@ -701,7 +707,7 @@ func admitObservedReports(raw any) ([]observedReport, error) {
 		if err != nil {
 			return nil, err
 		}
-		ref, err := admit.SafeRepoRelativePath(refText, fmt.Sprintf("agent route observedReports[%d].ref", index))
+		ref, err := admitMaterializedRouteRef(refText, fmt.Sprintf("agent route observedReports[%d].ref", index), false)
 		if err != nil {
 			return nil, err
 		}

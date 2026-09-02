@@ -388,22 +388,9 @@ jobs:
               sleep 10
             done
           done < artifacts/registry/package-names.txt
-          node <<'NODE'
-          const { readFileSync, readdirSync, writeFileSync } = require("node:fs");
-
-          const files = readdirSync("artifacts/registry")
-            .filter((file) => file.startsWith("pack-") && file.endsWith(".json"))
-            .sort();
-          const records = files.map((file) => {
-            const parsed = JSON.parse(readFileSync(`artifacts/registry/${file}`, "utf8"));
-            if (!Array.isArray(parsed) || parsed.length !== 1) {
-              throw new Error(`registry npm pack report ${file} must contain exactly one record`);
-            }
-            return parsed[0];
-          });
-          records.sort((left, right) => left.name.localeCompare(right.name));
-          writeFileSync("artifacts/registry/npm-pack.json", `${JSON.stringify(records, null, 2)}\n`);
-          NODE
+          go run ./internal/tools/npmregistry capture-pack-reports \
+            artifacts/registry/npm-pack.json \
+            artifacts/registry/pack-*.json
           npm run npm:registry-evidence
 
       - name: Verify root-only registry install and signatures

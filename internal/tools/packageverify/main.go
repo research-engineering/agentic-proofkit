@@ -949,7 +949,11 @@ func verifyPackagePublicReferenceClosure(artifact rootPackageArtifact, entries m
 	if err := verifyReceiptPolicyReferences(textEntries["package/proofkit/receipt-producer-policy.json"], entries); err != nil {
 		return err
 	}
-	return verifyCLIContractSourceClassifications(textEntries["package/proofkit/cli-contract.v2.json"], entries)
+	cliContract := textEntries["package/proofkit/cli-contract.v2.json"]
+	if err := verifyCLIContractSourceClassifications(cliContract, entries); err != nil {
+		return err
+	}
+	return verifyCLIContractBoundaryPolicyClosure(cliContract, textEntries)
 }
 
 const readmePreOneExactPinPolicy = "Pre-1.0 releases may contain owner-declared breaking changes, so npm consumers\nmust retain the exact saved version instead of replacing it with a version\nrange."
@@ -1315,6 +1319,7 @@ func verifyCLIContractSourceClassifications(content string, entries map[string]s
 		"/commands/*/outputContract/nativeSource/path":                                 "source_checkout",
 		"/commands/*/outputContract/nativeSources/*/path":                              "source_checkout",
 		"/commands/*/outputContract/ownerRequirementRefs":                              "requirement_identifier",
+		"/commands/*/outputContract/briefPacketContract/boundaryPolicyRefs":            "requirement_identifier",
 		"/commands/*/outputContract/briefPacketContract/fieldRules/boundaryPolicyRefs": "contract_field_description",
 		"/commands/*/outputContract/briefPacketContract/fieldRules/contextRefs":        "contract_field_description",
 		"/commands/*/outputContract/qualityFindingFields/evidenceRefs":                 "runtime_field",
@@ -1389,6 +1394,52 @@ func verifyCLIContractSourceClassifications(content string, entries map[string]s
 						return err
 					}
 				}
+			}
+		}
+	}
+	return nil
+}
+
+func verifyCLIContractBoundaryPolicyClosure(content string, textEntries map[string]string) error {
+	contract, err := decodePackageJSONObject(content, "CLI contract")
+	if err != nil {
+		return err
+	}
+	requirementIDCounts := map[string]int{}
+	for entry, source := range textEntries {
+		if !strings.HasPrefix(entry, "package/docs/specs/") || !strings.HasSuffix(entry, "/requirements.v1.json") {
+			continue
+		}
+		value, err := decodePackageJSONObject(source, entry)
+		if err != nil {
+			return err
+		}
+		requirements, _ := value["requirements"].([]any)
+		for _, rawRequirement := range requirements {
+			requirement, ok := rawRequirement.(map[string]any)
+			if !ok {
+				return fmt.Errorf("package %s requirement must be an object", entry)
+			}
+			if requirementID, _ := requirement["requirementId"].(string); requirementID != "" {
+				requirementIDCounts[requirementID]++
+			}
+		}
+	}
+	commands, _ := contract["commands"].([]any)
+	for _, rawCommand := range commands {
+		command, _ := rawCommand.(map[string]any)
+		output, _ := command["outputContract"].(map[string]any)
+		brief, _ := output["briefPacketContract"].(map[string]any)
+		if brief == nil {
+			continue
+		}
+		refs := stringArrayField(brief, "boundaryPolicyRefs")
+		if len(refs) == 0 {
+			return fmt.Errorf("package CLI brief contract boundaryPolicyRefs must be non-empty")
+		}
+		for _, requirementID := range refs {
+			if requirementIDCounts[requirementID] != 1 {
+				return fmt.Errorf("package CLI brief boundary policy ref must resolve to exactly one shipped requirement")
 			}
 		}
 	}

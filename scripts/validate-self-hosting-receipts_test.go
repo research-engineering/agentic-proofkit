@@ -927,10 +927,13 @@ func TestReleaseWorkflowDelegatesNPMRegistryEvidenceToRepositoryOwner(t *testing
 		t.Fatalf("find npm registry evidence step: index=%d error=%v", stepIndex, err)
 	}
 	run := publish.Steps[stepIndex].Run
+	if strings.Count(run, "go run ./internal/tools/npmregistry capture-pack-reports") != 1 {
+		t.Fatalf("npm registry evidence step must normalize npm 12 keyed reports through its repository owner exactly once: %s", run)
+	}
 	if strings.Count(run, "npm run npm:registry-evidence") != 1 {
 		t.Fatalf("npm registry evidence step must invoke its repository owner exactly once: %s", run)
 	}
-	for _, forbidden := range []string{"proofkit.published-registry-artifact-set.v1", "authorityValidator", "registry_release"} {
+	for _, forbidden := range []string{"proofkit.published-registry-artifact-set.v1", "authorityValidator", "registry_release", "Array.isArray(parsed)", "JSON.parse(readFileSync"} {
 		if strings.Contains(run, forbidden) {
 			t.Fatalf("workflow duplicates typed npm registry authority field %q", forbidden)
 		}

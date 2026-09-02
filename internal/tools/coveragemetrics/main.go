@@ -514,6 +514,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		},
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-projection"}: {
 			"TestAgentBriefClosesEverySelectedCommandInputReference",
+			"TestAgentBriefCompactsAtDeclaredByteBoundary",
 			"TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable",
 			"TestAgentBriefNamesCompleteInputBundleBlocker",
 			"TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails",

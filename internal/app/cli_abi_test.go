@@ -2472,6 +2472,27 @@ func TestAgentRouteEnvelopeModesUseExactRootShapes(t *testing.T) {
 	if detail["sourceReportDigest"] != wantDigest || detail["sourceReportId"] != report["reportId"] {
 		t.Fatalf("brief detail access does not resolve the exact route report: %#v", detail)
 	}
+	outputArgs := jsonObject(t, detail["outputArgs"])
+	for outputKind, outputName := range map[string]string{"report": "route report", "full": "explicit full envelope"} {
+		rawArgs, ok := outputArgs[outputKind].([]any)
+		if !ok {
+			t.Fatalf("detail outputArgs.%s must be an array: %#v", outputKind, outputArgs[outputKind])
+		}
+		args := []string{"agent-route", "--input", "-"}
+		for _, rawArg := range rawArgs {
+			arg, ok := rawArg.(string)
+			if !ok {
+				t.Fatalf("detail outputArgs.%s contains non-string argument", outputKind)
+			}
+			args = append(args, arg)
+		}
+		var replayStdout bytes.Buffer
+		var replayStderr bytes.Buffer
+		status := Run(t.Context(), args, strings.NewReader(valid), &replayStdout, &replayStderr)
+		if status != 0 || replayStderr.Len() != 0 || !bytes.Equal(replayStdout.Bytes(), outputs[outputName]) {
+			t.Fatalf("detail outputArgs.%s did not reproduce %s: status=%d stdout=%s stderr=%s", outputKind, outputName, status, replayStdout.String(), replayStderr.String())
+		}
+	}
 	sourceReport := jsonObject(t, full["sourceReport"])
 	if sourceReport["reportId"] != report["reportId"] {
 		t.Fatalf("full envelope does not resolve the same route report: %#v", sourceReport)

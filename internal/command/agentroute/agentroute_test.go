@@ -88,17 +88,27 @@ func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
 func TestBuildRejectsStdinTransportSentinelAsArtifactReference(t *testing.T) {
 	t.Parallel()
 
-	_, exitCode, err := Build(map[string]any{
-		"schemaVersion": jsonNumber("1"),
-		"routeId":       "consumer.route.stdin-sentinel",
-		"goal":          "validate_requirement_source",
-		"mode":          "observe",
-		"availableInputs": []any{
-			map[string]any{"kind": "requirement_source", "ref": "-"},
-		},
-	})
-	if err == nil || exitCode != 1 || !strings.Contains(err.Error(), "stdin transport sentinel") {
-		t.Fatalf("stdin sentinel exit=%d error=%v", exitCode, err)
+	for _, test := range []struct {
+		name  string
+		field string
+		value []any
+	}{
+		{name: "available input", field: "availableInputs", value: []any{map[string]any{"kind": "requirement_source", "ref": "-"}}},
+		{name: "observed report", field: "observedReports", value: []any{map[string]any{"kind": "requirement_source", "ref": "-", "state": "warning"}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := map[string]any{
+				"schemaVersion": jsonNumber("1"),
+				"routeId":       "consumer.route.stdin-sentinel",
+				"goal":          "validate_requirement_source",
+				"mode":          "observe",
+				test.field:      test.value,
+			}
+			_, exitCode, err := Build(input)
+			if err == nil || exitCode != 1 || !strings.Contains(err.Error(), "stdin transport sentinel") {
+				t.Fatalf("stdin sentinel exit=%d error=%v", exitCode, err)
+			}
+		})
 	}
 }
 

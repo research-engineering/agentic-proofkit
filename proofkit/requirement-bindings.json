@@ -4962,8 +4962,27 @@
           "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity$'"
         },
         {
+          "selector": "TestAgentBriefCompactsAtDeclaredByteBoundary",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefCompactsAtDeclaredByteBoundary$'"
+        },
+        {
           "selector": "TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails",
           "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-flag-pre-read-admission",
+      "witnessId": "proofkit.agent-route.flag-pre-read-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/app_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentRouteModeAdmissionPrecedesInputRead",
+          "command": "go test ./internal/app -run '^TestAgentRouteModeAdmissionPrecedesInputRead$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

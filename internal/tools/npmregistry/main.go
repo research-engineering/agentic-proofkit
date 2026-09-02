@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/npmpack"
 )
 
 const (
@@ -43,10 +45,53 @@ type registryArtifactSet struct {
 }
 
 func main() {
-	if err := run("."); err != nil {
+	var err error
+	if len(os.Args) > 1 && os.Args[1] == "capture-pack-reports" {
+		if len(os.Args) < 4 {
+			err = fmt.Errorf("capture-pack-reports requires an output path and at least one input report")
+		} else {
+			err = capturePackReports(os.Args[2], os.Args[3:])
+		}
+	} else if len(os.Args) != 1 {
+		err = fmt.Errorf("unsupported npm registry evidence argument")
+	} else {
+		err = run(".")
+	}
+	if err != nil {
 		diagnostic.WriteError(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func capturePackReports(outputPath string, inputPaths []string) error {
+	records := make([]npmpack.Record, 0, len(inputPaths))
+	seenNames := map[string]struct{}{}
+	seenFiles := map[string]struct{}{}
+	for _, inputPath := range inputPaths {
+		file, err := os.Open(inputPath)
+		if err != nil {
+			return err
+		}
+		record, decodeErr := npmpack.DecodeNPM12Report(file, maxPackRecordBytes)
+		closeErr := file.Close()
+		err = errors.Join(decodeErr, closeErr)
+		if err != nil {
+			return fmt.Errorf("admit npm pack report: %w", err)
+		}
+		if _, duplicate := seenNames[record.Name]; duplicate {
+			return fmt.Errorf("npm pack reports contain duplicate package name")
+		}
+		if _, duplicate := seenFiles[record.Filename]; duplicate {
+			return fmt.Errorf("npm pack reports contain duplicate package filename")
+		}
+		seenNames[record.Name] = struct{}{}
+		seenFiles[record.Filename] = struct{}{}
+		records = append(records, record)
+	}
+	sort.Slice(records, func(left int, right int) bool {
+		return records[left].Name < records[right].Name
+	})
+	return writeJSON(outputPath, records)
 }
 
 func run(root string) error {

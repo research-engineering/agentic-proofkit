@@ -13,40 +13,16 @@ const (
 	EnvelopeModeBrief EnvelopeMode = "brief"
 	EnvelopeModeFull  EnvelopeMode = "full"
 
-	maxAgentBriefBytes   = 3072
-	maxBriefBlockerItems = 4
+	briefBoundaryPolicyDerivedView = "REQ-PROOFKIT-SPEC-005"
+	briefBoundaryPolicyRoutePacket = "REQ-PROOFKIT-SPEC-026"
+	maxAgentBriefBytes             = 3072
+	maxBriefBlockerItems           = 4
 )
 
 func AgentBrief(report map[string]any) (map[string]any, error) {
-	reportID := stringFromMap(report, "reportId")
-	if reportID == "" {
-		reportID = "proofkit.agent-route.unknown"
-	}
-	reportDigest, err := digest.StableJSONSHA256Ref(report)
+	packet, err := projectAgentBrief(report)
 	if err != nil {
-		return nil, fmt.Errorf("digest agent-route report: %w", err)
-	}
-
-	nextCommands := mapsFromAny(report["nextCommands"])
-	blockers, omittedBlockerCount := briefBlockers(report, reportID)
-	packet := map[string]any{
-		"blockers":           blockers,
-		"boundaryPolicyRefs": []any{"NC-PROOFKIT-SPEC-005", "NC-PROOFKIT-SPEC-026"},
-		"contextRefs":        briefContextRefs(nextCommands, reportID),
-		"detailAccess": map[string]any{
-			"availableModes":        []any{"full", "report"},
-			"commandRef":            "agent-route",
-			"requiresOriginalInput": true,
-			"sourceReportDigest":    reportDigest,
-			"sourceReportId":        reportID,
-		},
-		"nextAction":      briefNextAction(nextCommands, reportID),
-		"omissionSummary": briefOmissionSummary(report, nextCommands, omittedBlockerCount),
-		"packetId":        reportID + ".agent-brief",
-		"packetKind":      "proofkit.agent-route.brief",
-		"routeFamily":     stringFromMap(report, "selectedRouteFamily"),
-		"schemaVersion":   1,
-		"state":           stringFromMap(report, "state"),
+		return nil, err
 	}
 	encoded, err := stablejson.Marshal(packet)
 	if err != nil {
@@ -63,6 +39,50 @@ func AgentBrief(report map[string]any) (map[string]any, error) {
 		return nil, fmt.Errorf("agent-route brief exceeds %d bytes", maxAgentBriefBytes)
 	}
 	return packet, nil
+}
+
+func projectAgentBrief(report map[string]any) (map[string]any, error) {
+	reportID := stringFromMap(report, "reportId")
+	if reportID == "" {
+		reportID = "proofkit.agent-route.unknown"
+	}
+	reportDigest, err := digest.StableJSONSHA256Ref(report)
+	if err != nil {
+		return nil, fmt.Errorf("digest agent-route report: %w", err)
+	}
+
+	nextCommands := mapsFromAny(report["nextCommands"])
+	blockers, omittedBlockerCount := briefBlockers(report, reportID)
+	return map[string]any{
+		"blockers":           blockers,
+		"boundaryPolicyRefs": briefBoundaryPolicyRefs(),
+		"contextRefs":        briefContextRefs(nextCommands, reportID),
+		"detailAccess": map[string]any{
+			"commandRef":            "agent-route",
+			"outputArgs":            briefDetailOutputArgs(),
+			"requiresOriginalInput": true,
+			"sourceReportDigest":    reportDigest,
+			"sourceReportId":        reportID,
+		},
+		"nextAction":      briefNextAction(nextCommands, reportID),
+		"omissionSummary": briefOmissionSummary(report, nextCommands, omittedBlockerCount),
+		"packetId":        reportID + ".agent-brief",
+		"packetKind":      "proofkit.agent-route.brief",
+		"routeFamily":     stringFromMap(report, "selectedRouteFamily"),
+		"schemaVersion":   1,
+		"state":           stringFromMap(report, "state"),
+	}, nil
+}
+
+func briefBoundaryPolicyRefs() []any {
+	return []any{briefBoundaryPolicyDerivedView, briefBoundaryPolicyRoutePacket}
+}
+
+func briefDetailOutputArgs() map[string]any {
+	return map[string]any{
+		"full":   []any{"--agent-envelope", "--agent-envelope-mode", "full"},
+		"report": []any{},
+	}
 }
 
 func briefNextAction(commands []map[string]any, reportID string) any {
