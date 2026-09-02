@@ -705,6 +705,14 @@
       "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its byte-bound corpus, prove the open-world absence of undeclared semantically equivalent parsers, prevent a future owner-approved grammar from being added, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["The 3072-byte packet bound and stable source-report digest do not prove provider token consumption, semantic sufficiency, source freshness, command execution, native witness truth, or policy approval; detail retrieval requires the caller to retain the original admitted input."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
@@ -1107,6 +1115,10 @@
         {
           "selector": "TestAdoptionContractEnvelopeCLIABI",
           "command": "go test ./internal/app -run '^TestAdoptionContractEnvelopeCLIABI$'"
+        },
+        {
+          "selector": "TestAgentRouteEnvelopeModesUseExactRootShapes",
+          "command": "go test ./internal/app -run '^TestAgentRouteEnvelopeModesUseExactRootShapes$'"
         },
         {
           "selector": "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
@@ -2322,6 +2334,10 @@
         {
           "selector": "TestAdoptionContractEnvelopeCLIABI",
           "command": "go test ./internal/app -run '^TestAdoptionContractEnvelopeCLIABI$'"
+        },
+        {
+          "selector": "TestAgentRouteEnvelopeModesUseExactRootShapes",
+          "command": "go test ./internal/app -run '^TestAgentRouteEnvelopeModesUseExactRootShapes$'"
         },
         {
           "selector": "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
@@ -3866,8 +3882,8 @@
           "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesVersionedOwnerCorpus$'"
         },
         {
-          "selector": "TestUnsafeScalarTableMatchesEveryUnicode15Scalar",
-          "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesEveryUnicode15Scalar$'"
+          "selector": "TestUnsafeScalarTableMatchesEveryUnicode17Scalar",
+          "command": "go test ./internal/kernel/unicodepolicy -run '^TestUnsafeScalarTableMatchesEveryUnicode17Scalar$'"
         },
         {
           "selector": "TestValidScalarStringRejectsMalformedUTF8",
@@ -4902,6 +4918,82 @@
         {
           "selector": "TestFuzzSeedCorpusRoundTrips",
           "command": "go test ./internal/kernel/requirementsourcecodec -run '^TestFuzzSeedCorpusRoundTrips$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-brief-cli-abi",
+      "witnessId": "proofkit.agent-route-brief.cli-abi-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_abi_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentRouteEnvelopeModesUseExactRootShapes",
+          "command": "go test ./internal/app -run '^TestAgentRouteEnvelopeModesUseExactRootShapes$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-brief-projection",
+      "witnessId": "proofkit.agent-route-brief.projection-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentroute/brief_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable$'"
+        },
+        {
+          "selector": "TestAgentBriefClosesEverySelectedCommandInputReference",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefClosesEverySelectedCommandInputReference$'"
+        },
+        {
+          "selector": "TestAgentBriefNamesCompleteInputBundleBlocker",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefNamesCompleteInputBundleBlocker$'"
+        },
+        {
+          "selector": "TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity",
+          "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity$'"
+        },
+        {
+          "selector": "TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails",
+          "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-materialized-ref-admission",
+      "witnessId": "proofkit.agent-route.materialized-ref-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentroute/agentroute_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildRejectsStdinTransportSentinelAsArtifactReference",
+          "command": "go test ./internal/command/agentroute -run '^TestBuildRejectsStdinTransportSentinelAsArtifactReference$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-brief-version-edge",
+      "witnessId": "proofkit.agent-route-brief.version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_route_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentRouteVersionEdgeClosesBriefDefaultMigration",
+          "command": "go test ./internal/app -run '^TestAgentRouteVersionEdgeClosesBriefDefaultMigration$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

@@ -125,7 +125,7 @@ func admitEvent(line []byte) (testEvent, error) {
 	if !ok {
 		return testEvent{}, decision("event.object_required")
 	}
-	if err := admit.KnownKeys(record, []string{"Action", "Elapsed", "FailedBuild", "Key", "Output", "Package", "Test", "Time", "Value"}, "go test event"); err != nil {
+	if err := admit.KnownKeys(record, []string{"Action", "Elapsed", "FailedBuild", "Key", "Output", "OutputType", "Package", "Path", "Test", "Time", "Value"}, "go test event"); err != nil {
 		return testEvent{}, decision("event.unknown_field")
 	}
 	action, ok := record["Action"].(string)
@@ -135,7 +135,7 @@ func admitEvent(line []byte) (testEvent, error) {
 	if !validEventAction(action) {
 		return testEvent{}, decision("event.action_unknown")
 	}
-	for _, key := range []string{"FailedBuild", "Key", "Package", "Test", "Value"} {
+	for _, key := range []string{"FailedBuild", "Key", "OutputType", "Package", "Path", "Test", "Value"} {
 		if value, exists := record[key]; exists {
 			if _, ok := value.(string); !ok {
 				return testEvent{}, decision("event.field_type_invalid")

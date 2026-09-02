@@ -629,8 +629,8 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.License != "MIT" {
 		return fmt.Errorf("root package license must be MIT, got %s", manifest.License)
 	}
-	if manifest.PackageManager != "npm@11.18.0" {
-		return fmt.Errorf("root package packageManager must be npm@11.18.0, got %s", manifest.PackageManager)
+	if manifest.PackageManager != "npm@12.0.2" {
+		return fmt.Errorf("root package packageManager must be npm@12.0.2, got %s", manifest.PackageManager)
 	}
 	if manifest.Type != "module" {
 		return fmt.Errorf("root package type must be module, got %s", manifest.Type)
@@ -638,7 +638,7 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.SideEffects {
 		return fmt.Errorf("root package sideEffects must be false")
 	}
-	expectedDevDependencies := map[string]string{"@playwright/test": "1.62.0", "axe-core": "4.12.1", "typescript": "7.0.2"}
+	expectedDevDependencies := map[string]string{"@playwright/test": "1.62.1", "axe-core": "4.13.0", "typescript": "7.0.2"}
 	if !maps.Equal(manifest.DevDependencies, expectedDevDependencies) {
 		return fmt.Errorf("root package devDependencies must equal the source-only browser proof toolchain")
 	}
@@ -1300,25 +1300,27 @@ func verifyCLIContractSourceClassifications(content string, entries map[string]s
 		return err
 	}
 	if err := verifyClosedReferenceInventory("CLI contract", value, map[string]string{
-		"/processContract/helpGrammar/helpCatalogFormsSource":           "package_public",
-		"/commands/*/inputContract/fields/availableInputs/item/ref":     "runtime_field",
-		"/commands/*/inputContract/fields/knownChangedPaths":            "runtime_field",
-		"/commands/*/inputContract/fields/observedReports/item/ref":     "runtime_field",
-		"/commands/*/inputContract/nativeAdmissionWitnessSelector":      "source_checkout_selector",
-		"/commands/*/inputContract/nativeAdmissionWitnessSelector/path": "source_checkout",
-		"/commands/*/inputContract/nativeSource/path":                   "source_checkout",
-		"/commands/*/inputContract/nativeSources/*/path":                "source_checkout",
-		"/commands/*/inputContract/ownerRequirementRefs":                "requirement_identifier",
-		"/commands/*/inputContract/rootDefinitionRef":                   "schema_identifier",
-		"/commands/*/outputContract/nativeOutputWitnessSelector":        "source_checkout_selector",
-		"/commands/*/outputContract/nativeOutputWitnessSelector/path":   "source_checkout",
-		"/commands/*/outputContract/nativeSource/path":                  "source_checkout",
-		"/commands/*/outputContract/nativeSources/*/path":               "source_checkout",
-		"/commands/*/outputContract/ownerRequirementRefs":               "requirement_identifier",
-		"/commands/*/outputContract/qualityFindingFields/evidenceRefs":  "runtime_field",
-		"/commands/*/outputContract/records/dependencyRef":              "runtime_field",
-		"/commands/*/outputContract/rootDefinitionRef":                  "schema_identifier",
-		"/contractDefinitions/*/definitionRefs":                         "schema_identifier",
+		"/processContract/helpGrammar/helpCatalogFormsSource":                          "package_public",
+		"/commands/*/inputContract/fields/availableInputs/item/ref":                    "runtime_field",
+		"/commands/*/inputContract/fields/knownChangedPaths":                           "runtime_field",
+		"/commands/*/inputContract/fields/observedReports/item/ref":                    "runtime_field",
+		"/commands/*/inputContract/nativeAdmissionWitnessSelector":                     "source_checkout_selector",
+		"/commands/*/inputContract/nativeAdmissionWitnessSelector/path":                "source_checkout",
+		"/commands/*/inputContract/nativeSource/path":                                  "source_checkout",
+		"/commands/*/inputContract/nativeSources/*/path":                               "source_checkout",
+		"/commands/*/inputContract/ownerRequirementRefs":                               "requirement_identifier",
+		"/commands/*/inputContract/rootDefinitionRef":                                  "schema_identifier",
+		"/commands/*/outputContract/nativeOutputWitnessSelector":                       "source_checkout_selector",
+		"/commands/*/outputContract/nativeOutputWitnessSelector/path":                  "source_checkout",
+		"/commands/*/outputContract/nativeSource/path":                                 "source_checkout",
+		"/commands/*/outputContract/nativeSources/*/path":                              "source_checkout",
+		"/commands/*/outputContract/ownerRequirementRefs":                              "requirement_identifier",
+		"/commands/*/outputContract/briefPacketContract/fieldRules/boundaryPolicyRefs": "contract_field_description",
+		"/commands/*/outputContract/briefPacketContract/fieldRules/contextRefs":        "contract_field_description",
+		"/commands/*/outputContract/qualityFindingFields/evidenceRefs":                 "runtime_field",
+		"/commands/*/outputContract/records/dependencyRef":                             "runtime_field",
+		"/commands/*/outputContract/rootDefinitionRef":                                 "schema_identifier",
+		"/contractDefinitions/*/definitionRefs":                                        "schema_identifier",
 	}); err != nil {
 		return err
 	}
@@ -2447,12 +2449,90 @@ func verifyInstalledJSONABI(consumer string) error {
 	if err := verifyJSONAdapterSourceSmoke(consumer); err != nil {
 		return err
 	}
+	if err := verifyInstalledAgentRouteEnvelopeModes(consumer); err != nil {
+		return err
+	}
 	if err := workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
 		Directory:  consumer,
 		Executable: "npm",
-		Prefix:     []string{"exec", "--offline", "--", "agentic-proofkit"},
+		Prefix:     []string{"--silent", "exec", "--offline", "--", "agentic-proofkit"},
 	}); err != nil {
 		return fmt.Errorf("outside consumer agent-workflow smoke failed: %w", err)
+	}
+	return nil
+}
+
+func verifyInstalledAgentRouteEnvelopeModes(consumer string) error {
+	input := []byte(`{"schemaVersion":1,"routeId":"proofkit.package-smoke.agent-route","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/example/requirements.v1.json"}]}` + "\n")
+	bareBrief, err := runInstalledWithInput(consumer, input, "agent-route", "--input", "-", "--agent-envelope")
+	if err != nil {
+		return fmt.Errorf("outside consumer bare agent-route brief smoke failed to run: %w", err)
+	}
+	if err := verifyInstalledAgentRouteBrief(bareBrief); err != nil {
+		return fmt.Errorf("outside consumer bare agent-route brief smoke failed: %w", err)
+	}
+	explicitBrief, err := runInstalledWithInput(consumer, input, "agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "brief")
+	if err != nil {
+		return fmt.Errorf("outside consumer explicit agent-route brief smoke failed to run: %w", err)
+	}
+	if err := verifyInstalledAgentRouteBrief(explicitBrief); err != nil {
+		return fmt.Errorf("outside consumer explicit agent-route brief smoke failed: %w", err)
+	}
+	if !bytes.Equal(bareBrief.Stdout, explicitBrief.Stdout) {
+		return fmt.Errorf("outside consumer bare and explicit agent-route brief outputs differ")
+	}
+	full, err := runInstalledWithInput(consumer, input, "agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "full")
+	if err != nil {
+		return fmt.Errorf("outside consumer full agent-route envelope smoke failed to run: %w", err)
+	}
+	if err := verifyInstalledAgentRouteFullEnvelope(full); err != nil {
+		return fmt.Errorf("outside consumer full agent-route envelope smoke failed: %w", err)
+	}
+	return nil
+}
+
+func verifyInstalledAgentRouteBrief(result installedCommandResult) error {
+	if result.ExitCode != 0 {
+		return fmt.Errorf("exit code %d, want 0; stdout=%s stderr=%s", result.ExitCode, result.Stdout, result.Stderr)
+	}
+	if len(result.Stderr) != 0 {
+		return fmt.Errorf("stderr must be empty, got %q", string(result.Stderr))
+	}
+	packet, err := admission.DecodeTypedJSON[map[string]any](bytes.NewReader(result.Stdout), 1<<20)
+	if err != nil {
+		return fmt.Errorf("stdout must be one strict JSON object: %w", err)
+	}
+	if packet["packetKind"] != "proofkit.agent-route.brief" || packet["state"] != "routed" {
+		return fmt.Errorf("unexpected brief identity or state")
+	}
+	if _, ok := packet["nextAction"].(map[string]any); !ok {
+		return fmt.Errorf("brief nextAction must be an object")
+	}
+	if len(result.Stdout) > 3072 {
+		return fmt.Errorf("brief output is %d bytes, want at most 3072", len(result.Stdout))
+	}
+	return nil
+}
+
+func verifyInstalledAgentRouteFullEnvelope(result installedCommandResult) error {
+	if result.ExitCode != 0 {
+		return fmt.Errorf("exit code %d, want 0; stdout=%s stderr=%s", result.ExitCode, result.Stdout, result.Stderr)
+	}
+	if len(result.Stderr) != 0 {
+		return fmt.Errorf("stderr must be empty, got %q", string(result.Stderr))
+	}
+	envelope, err := admission.DecodeTypedJSON[map[string]any](bytes.NewReader(result.Stdout), 8<<20)
+	if err != nil {
+		return fmt.Errorf("stdout must be one strict JSON object: %w", err)
+	}
+	if envelope["envelopeId"] != "proofkit.package-smoke.agent-route.agent-envelope" {
+		return fmt.Errorf("unexpected full envelope identity")
+	}
+	if _, ok := envelope["actionPlan"].([]any); !ok {
+		return fmt.Errorf("full envelope actionPlan must be an array")
+	}
+	if _, brief := envelope["packetKind"]; brief {
+		return fmt.Errorf("full envelope must not use the brief packet root")
 	}
 	return nil
 }
@@ -2542,7 +2622,7 @@ func runWithInput(dir string, name string, input []byte, args ...string) (instal
 }
 
 func runInstalledWithInput(dir string, input []byte, args ...string) (installedCommandResult, error) {
-	npmArgs := append([]string{"exec", "--offline", "--", "agentic-proofkit"}, args...)
+	npmArgs := append([]string{"--silent", "exec", "--offline", "--", "agentic-proofkit"}, args...)
 	return runWithInput(dir, "npm", input, npmArgs...)
 }
 

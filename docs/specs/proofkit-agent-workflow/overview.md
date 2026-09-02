@@ -20,11 +20,12 @@ The public capability is deliberately small:
 3. Existing descriptors, dispatch, command families, root-shape CLI contracts,
    agent envelopes, and package gates provide public-surface closure.
 
-Neither command scans a repository. Both command cores are stateless pure
-projections with no filesystem, Git, process, environment, clock, random,
-network, container, or provider dependency. No setup facade, agent-route extension,
-external prompt resource, persisted experiment state, or second source codec is
-introduced.
+Neither workflow command scans a repository. Both command cores are stateless
+pure projections with no filesystem, Git, process, environment, clock, random,
+network, container, or provider dependency. Neither workflow command adds a
+setup facade, hidden route policy, external prompt resource, persisted
+experiment state, or second source codec. Agent-route brief and full
+projections remain independently owned by the spec-proof-core package.
 
 ## Requirements
 
@@ -48,7 +49,7 @@ introduced.
   limits.
 - `REQ-PROOFKIT-WORKFLOW-006`: only existing launcher and presentation
   capabilities outside explicit input, with no ambient repository authority,
-  setup facade, hidden policy, or agent-route extension.
+  setup facade, hidden policy, or ownership of agent-route projections.
 - `REQ-PROOFKIT-WORKFLOW-007`: pure deterministic repository-neutral
   native-evidence guidance from one versioned typed table with five closed
   applicability classes, explicit absent-channel decisions, and finite

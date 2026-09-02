@@ -54,16 +54,36 @@ func run() error {
 }
 
 func npmPack(packageRoot string) ([]packRecord, error) {
-	output, err := exec.Command("npm", "pack", "--json", "--pack-destination", filepath.Join("artifacts", "package"), packageRoot).CombinedOutput()
+	command := exec.Command("npm", "--silent", "pack", "--json", "--pack-destination", filepath.Join("artifacts", "package"), packageRoot)
+	stderr := diagnostic.NewStderrCapture()
+	command.Stderr = stderr
+	output, err := command.Output()
 	if err != nil {
-		return nil, fmt.Errorf("npm pack %s: %w\n%s", packageRoot, err, output)
+		if childErr := stderr.Failure("npm pack child stderr"); childErr != nil {
+			return nil, fmt.Errorf("npm pack %s: %w; %s", packageRoot, err, childErr)
+		}
+		return nil, fmt.Errorf("npm pack %s: %w", packageRoot, err)
 	}
-	records, err := admission.DecodeTypedJSON[[]packRecord](bytes.NewReader(output), int64(len(output)))
+	records, err := decodeNPM12PackOutput(output)
 	if err != nil {
-		return nil, fmt.Errorf("parse npm pack output for %s: %w\n%s", packageRoot, err, output)
-	}
-	if len(records) != 1 {
-		return nil, fmt.Errorf("npm pack %s must return exactly one record", packageRoot)
+		return nil, fmt.Errorf("parse npm pack output for %s: %w", packageRoot, err)
 	}
 	return records, nil
+}
+
+func decodeNPM12PackOutput(output []byte) ([]packRecord, error) {
+	keyed, err := admission.DecodeTypedJSON[map[string]packRecord](bytes.NewReader(output), int64(len(output)))
+	if err != nil {
+		return nil, err
+	}
+	if len(keyed) != 1 {
+		return nil, fmt.Errorf("npm pack output must contain exactly one keyed record")
+	}
+	for key, record := range keyed {
+		if key != record.Name {
+			return nil, fmt.Errorf("npm pack output key must equal the record package name")
+		}
+		return []packRecord{record}, nil
+	}
+	return nil, fmt.Errorf("npm pack output must contain exactly one keyed record")
 }

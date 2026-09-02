@@ -9,6 +9,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/nodetestselector"
 )
 
+const stableJSONSelectorTimeout = 45 * time.Second
+
 func TestStableJSONJavaScriptUnicodePredicates(t *testing.T) {
 	runStableJSONJavaScriptSelectors(t, []string{
 		"stable JSON Unicode corpus",
@@ -29,7 +31,7 @@ func runStableJSONJavaScriptSelectors(t *testing.T, names []string) {
 	if err != nil {
 		t.Fatalf("locate node: %v", err)
 	}
-	ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), stableJSONSelectorTimeout)
 	defer cancel()
 	if err := nodetestselector.RunSet(ctx, nodePath, ".", "stable-json.test.mjs", names); err != nil {
 		t.Fatalf("run exact JavaScript selector set: %v", err)

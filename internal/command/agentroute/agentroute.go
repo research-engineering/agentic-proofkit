@@ -463,7 +463,7 @@ func InputContract() map[string]any {
 				"default": []any{},
 				"item": map[string]any{
 					"kind": map[string]any{"enum": sortedKeys(inputKindValues)},
-					"ref":  map[string]any{"format": "safe repo-relative caller-owned file, report ref, or scanner root ref; scanner root refs may be ."},
+					"ref":  map[string]any{"format": "safe repo-relative materialized caller-owned file, report ref, or scanner root ref; stdin sentinel - is forbidden and scanner root refs may be ."},
 				},
 				"uniqueBy": "kind",
 			},
@@ -497,40 +497,48 @@ func InputContract() map[string]any {
 
 func OutputContract() map[string]any {
 	return map[string]any{
-		"contractId":    "proofkit.agent-route.output.v2",
-		"schemaVersion": 2,
-		"authority":     "deterministic route report derived from admitted agent-route input",
-		"requiredFields": []any{
-			"guidanceSlice",
-			"reportId",
-			"reportKind",
-			"schemaVersion",
-			"selectedRouteFamily",
-			"state",
-		},
-		"fields": map[string]any{
-			"schemaVersion": map[string]any{"value": 2},
-			"selectedRouteFamily": map[string]any{
-				"enum": routeFamilyContractValues(),
+		"contractId":    "proofkit.agent-route.output.v3",
+		"schemaVersion": 3,
+		"authority":     "deterministic route report, brief packet, full envelope, or invalid-input repair packet selected from the admitted invocation",
+		"briefPacketContract": map[string]any{
+			"contractId":         "proofkit.agent-route.brief.v1",
+			"schemaVersion":      1,
+			"maxPrettyJSONBytes": maxAgentBriefBytes,
+			"maxBlockers":        maxBriefBlockerItems,
+			"requiredFields": []any{
+				"blockers",
+				"boundaryPolicyRefs",
+				"contextRefs",
+				"detailAccess",
+				"nextAction",
+				"omissionSummary",
+				"packetId",
+				"packetKind",
+				"routeFamily",
+				"schemaVersion",
+				"state",
 			},
-			"guidanceSlice": map[string]any{
-				"requiredFields":  []any{"routeFamily"},
-				"routeFamilyRule": "must equal selectedRouteFamily",
+			"fieldRules": map[string]any{
+				"blockers":           "required-input blockers followed by sorted non-passed observed-report blockers; retain at most four and count the exact remainder",
+				"boundaryPolicyRefs": "exactly NC-PROOFKIT-SPEC-005 and NC-PROOFKIT-SPEC-026; policy prose is not duplicated",
+				"contextRefs":        "only caller-owned artifact operands of the selected next command, each addressed by an RFC 6901 pointer into the source report",
+				"detailAccess":       "binds source report ID and stable digest and advertises report and full retrieval from the original admitted input",
+				"nextAction":         "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
+				"omissionSummary":    "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
+				"packetKind":         "proofkit.agent-route.brief",
+				"schemaVersion":      "1",
+			},
+			"nonClaims": []any{
+				"The brief packet is derived route guidance, not requirement, proof, execution, merge, release, rollout, deployment, or readiness authority.",
+				"The packet byte bound does not claim tokenizer-specific token consumption or semantic sufficiency.",
 			},
 		},
-		"changesFromV1": []any{
-			"selectedFamily is replaced by selectedRouteFamily",
-			"guidanceSlice.family is replaced by guidanceSlice.routeFamily",
+		"changesFromV2": []any{
+			"bare --agent-envelope emits proofkit.agent-route.brief",
+			"--agent-envelope-mode full preserves the prior generic envelope projection",
+			"route report schemaVersion advances to 3 without changing its semantic fields",
 		},
 	}
-}
-
-func routeFamilyContractValues() []any {
-	values := map[string]struct{}{string(routeFamilyUnknown): {}}
-	for _, spec := range routeSpecs {
-		values[string(spec.RouteFamily)] = struct{}{}
-	}
-	return sortedKeys(values)
 }
 
 func admitInput(raw any) (routeInput, error) {
@@ -655,6 +663,9 @@ func admitAvailableInputs(raw any) (map[string]string, error) {
 }
 
 func admitAvailableInputRef(kind string, value string, context string) (string, error) {
+	if value == "-" {
+		return "", fmt.Errorf("%s must identify a materialized caller-owned artifact, not the stdin transport sentinel", context)
+	}
 	if (kind == "typescript_public_api_repo_root" || kind == "requirement_context_repo_root") && value == "." {
 		return value, nil
 	}
@@ -839,7 +850,7 @@ func buildUnknownGoal(input routeInput) map[string]any {
 		"reportId":            input.RouteID,
 		"reportKind":          "proofkit.agent-route",
 		"requiredInputs":      []any{},
-		"schemaVersion":       2,
+		"schemaVersion":       3,
 		"selectedRouteFamily": string(routeFamilyUnknown),
 		"state":               "blocked_unknown_goal",
 		"stopConditions":      []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
@@ -873,7 +884,7 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		"reportId":            input.RouteID,
 		"reportKind":          "proofkit.agent-route",
 		"requiredInputs":      requiredInputReports(missing),
-		"schemaVersion":       2,
+		"schemaVersion":       3,
 		"selectedRouteFamily": string(spec.RouteFamily),
 		"state":               state,
 		"stopConditions":      toAnySlice(spec.StopConditions),

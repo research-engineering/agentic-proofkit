@@ -94,11 +94,16 @@ Route ambiguous modernization work through the smallest matching family:
 
 ## Agent Decision Procedure
 
-Agents should use `agent-route` for executable routing and
-`agent-route --agent-envelope` when a bounded work packet is needed. The command
-returns deterministic JSON from explicit caller-owned facts; the envelope is an
-opt-in derived projection over the same report. This map explains the route
-families without becoming an execution, freshness, or merge decision.
+Agents should use `agent-route` for the complete deterministic route report and
+`agent-route --agent-envelope` for the default bounded brief packet. Explicit
+`--agent-envelope-mode brief` is byte-identical to the bare envelope form;
+`--agent-envelope-mode full` preserves the complete generic agent envelope for
+debugging or demand-loaded detail. Every brief binds its source report ID and
+stable digest in one top-level `detailAccess` record, so callers retain the
+original admitted input and recompute report or full detail instead of adding a
+detail reference to every item. All three forms are derived from explicit
+caller-owned facts. This map explains route families without becoming an
+execution, freshness, or merge decision.
 The exact route input vocabulary is machine-readable in
 `proofkit/cli-contract.v2.json` under `agent-route.inputContract`; the Go
 admission implementation owns nested and semantic behavior, while the shipped
@@ -110,7 +115,7 @@ Formal rule:
 goal plus caller-owned state
   -> smallest matching command family
   -> explicit required input
-  -> deterministic report or bounded envelope
+  -> deterministic report, bounded brief, or explicit full envelope
   -> caller-owned execution, proof freshness, and merge decision
 ```
 
@@ -154,14 +159,18 @@ Semantic context routes are `requirement-context-compose`,
 2. Start from this map when a human or agent only needs the correct command
    family.
 3. Use `agent-route` when a coding agent needs a deterministic next-command
-   packet from explicit current state. Use `agent-route --agent-envelope` when
-   the agent needs compact context refs, blockers, command refs, and non-claims
-   instead of a plain route report. Treat `blocked_*` states as stop signals,
-   not as permission to guess missing inputs. `knownChangedPaths` are
+   report from explicit current state. Use `agent-route --agent-envelope` when
+   the agent needs exactly one next action or terminal state, bounded blockers,
+   caller-owned context refs, exact omission counts, and stable boundary-policy
+   refs instead of the full route report. Resolve further detail from the
+   original input only after checking the brief's source digest; request
+   `--agent-envelope-mode full` only when the generic envelope is actually
+   needed. Treat `blocked_*` states as stop signals, not as permission to guess
+   missing inputs. `knownChangedPaths` are
    diagnostic-only until the caller supplies a `changed_path_set`; browser
    server startup requires explicit `browserMode: "serve_local_view"`.
-4. Use agent-envelope output only when a coding agent needs bounded context;
-   do not expand whole proof graphs into chat.
+4. Prefer the brief packet for agent context; do not expand full route reports,
+   full envelopes, or proof graphs into chat without a specific detail need.
 5. Treat generated views and rendered HTML as presentation only. They never
    replace the structured source record.
 6. Escalate to the consuming repository's owner policy whenever Proofkit reports

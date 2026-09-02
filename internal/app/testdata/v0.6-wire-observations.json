@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "edgeId": "proofkit.public-wire.0.5.1-to-0.6.0",
+  "previousVersion": "0.5.1",
+  "version": "0.6.0",
+  "evidenceClass": "owner_authored_frozen_version_edge_observation",
+  "previousPublicAbiSha256": "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623",
+  "currentPublicAbiSha256": "sha256:39f9f4314eec9e4d5baad8baf0eecbed5063d3830f074977df73ab934cafb277",
+  "changedCommandContract": {
+    "command": "agent-route",
+    "previousInputContractSha256": "sha256:6b5af8287f2972bbef4c68c247f43fb16d0f0d8739e5e6d3a66543af20d2644d",
+    "currentInputContractSha256": "sha256:285eaeb48845d41357cd3fc131ebb16fe11cd876bca92e9eba94dad14268acfd",
+    "previousOutputContractSha256": "sha256:44ec313a43360b6138ad6c3ae5de4abd51bbf312060880c108a6351606695915",
+    "currentOutputContractSha256": "sha256:1718051d01ebae24922baac191c9e43b281007b4ee502b9a391dfd0aa63b0039"
+  },
+  "breakingChangeIds": [
+    "proofkit.agent-route.brief-default"
+  ],
+  "additionChangeIds": [
+    "proofkit.agent-route.envelope-detail-mode"
+  ],
+  "migrationSteps": [
+    "Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope."
+  ],
+  "nonClaims": [
+    "This owner-authored version-edge observation binds reviewed public contract identities; it does not authenticate Git history, registry publication, provider ingestion, native witness truth, rollout, or production readiness."
+  ]
+}

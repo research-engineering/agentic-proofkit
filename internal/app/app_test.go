@@ -334,18 +334,18 @@ func TestAgentRouteCLIOutputUsesVersionedRouteFamilyFields(t *testing.T) {
 	if err := json.Unmarshal(stdout.Bytes(), &report); err != nil {
 		t.Fatalf("stdout must be a JSON route report: %v", err)
 	}
-	if report["schemaVersion"] != float64(2) || report["selectedRouteFamily"] != "requirement_source" {
-		t.Fatalf("agent-route output does not satisfy schema v2 route-family contract: %#v", report)
+	if report["schemaVersion"] != float64(3) || report["selectedRouteFamily"] != "requirement_source" {
+		t.Fatalf("agent-route output does not satisfy schema v3 route-family contract: %#v", report)
 	}
 	if _, legacy := report["selectedFamily"]; legacy {
-		t.Fatalf("agent-route schema v2 retained selectedFamily: %#v", report)
+		t.Fatalf("agent-route schema v3 retained selectedFamily: %#v", report)
 	}
 	guidance := report["guidanceSlice"].(map[string]any)
 	if guidance["routeFamily"] != report["selectedRouteFamily"] {
 		t.Fatalf("guidance routeFamily=%v selectedRouteFamily=%v", guidance["routeFamily"], report["selectedRouteFamily"])
 	}
 	if _, legacy := guidance["family"]; legacy {
-		t.Fatalf("agent-route schema v2 retained guidanceSlice.family: %#v", guidance)
+		t.Fatalf("agent-route schema v3 retained guidanceSlice.family: %#v", guidance)
 	}
 }
 
@@ -359,6 +359,37 @@ func TestAgentRouteAgentEnvelopeCLIABI(t *testing.T) {
 	}
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr must be empty: %s", stderr.String())
+	}
+	var packet map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &packet); err != nil {
+		t.Fatalf("stdout must be JSON brief packet: %v", err)
+	}
+	if packet["packetId"] != "consumer.route.requirement_source.agent-brief" || packet["packetKind"] != "proofkit.agent-route.brief" {
+		t.Fatalf("unexpected brief identity: %#v", packet)
+	}
+	if packet["state"] != "routed" || packet["routeFamily"] != "requirement_source" {
+		t.Fatalf("unexpected brief route state: %#v", packet)
+	}
+	action := packet["nextAction"].(map[string]any)
+	if action["commandRef"] != "requirement-source-admission" || action["argvState"] != "inline" {
+		t.Fatalf("unexpected brief next action: %#v", action)
+	}
+	if _, duplicated := packet["nonClaims"]; duplicated {
+		t.Fatalf("brief must cite policy instead of duplicating caller prose: %#v", packet)
+	}
+	detail := packet["detailAccess"].(map[string]any)
+	if detail["commandRef"] != "agent-route" || detail["requiresOriginalInput"] != true {
+		t.Fatalf("brief does not expose explicit detail access: %#v", detail)
+	}
+}
+
+func TestAgentRouteFullAgentEnvelopeCLIABI(t *testing.T) {
+	input := `{"schemaVersion":1,"routeId":"consumer.route.requirement_source","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/module/requirements.v1.json"}],"nonClaims":["Caller route fixture is not merge proof."]}`
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	status := Run(t.Context(), []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "full"}, strings.NewReader(input), &stdout, &stderr)
+	if status != 0 || stderr.Len() != 0 {
+		t.Fatalf("agent-route full envelope failed status=%d stdout=%s stderr=%s", status, stdout.String(), stderr.String())
 	}
 	var envelope map[string]any
 	if err := json.Unmarshal(stdout.Bytes(), &envelope); err != nil {
@@ -585,6 +616,9 @@ func TestCLIRejectsUnadvertisedFlagsWithoutStdout(t *testing.T) {
 		{args: []string{"test-evidence-inventory", "--input", "-", "--projection", "unknown"}, wantStderrHas: "test-evidence-inventory --projection must be proof-binding-derived or discovery-draft"},
 		{args: []string{"test-evidence-inventory", "--input", "-", "--projection"}, wantStderrHas: "test-evidence-inventory --projection requires proof-binding-derived or discovery-draft"},
 		{args: []string{"selective-gate-obligation-decision-input", "--input", "missing.json", "--agent-envelope"}, wantStderrHas: "unsupported argument for selective-gate-obligation-decision-input: --agent-envelope"},
+		{args: []string{"agent-route", "--input", "-", "--agent-envelope-mode", "full"}, wantStderrHas: "--agent-envelope-mode requires --agent-envelope"},
+		{args: []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "expanded"}, wantStderrHas: "--agent-envelope-mode requires one of: brief, full"},
+		{args: []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "brief", "--agent-envelope-mode", "full"}, wantStderrHas: "--agent-envelope-mode may be specified only once"},
 	}
 	for _, item := range cases {
 		t.Run(strings.Join(item.args, " "), func(t *testing.T) {

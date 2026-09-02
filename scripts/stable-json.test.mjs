@@ -63,7 +63,7 @@ test("stable JSON Unicode corpus", () => {
 
 test("stable JSON Unicode table classifies every scalar and complement", () => {
   assert.equal(unicodePolicyCorpus.schemaVersion, 1);
-  assert.equal(unicodePolicyCorpus.unicodeVersion, "15.0.0");
+  assert.equal(unicodePolicyCorpus.unicodeVersion, "17.0.0");
   const ranges = unicodePolicyCorpus.ranges.map(({start, end, step}) => [start, end, step]);
   const expected = new Set();
   for (const [start, end, step] of ranges) {

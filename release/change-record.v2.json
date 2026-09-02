@@ -1,24 +1,41 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.5.0",
-  "version": "0.5.1",
-  "changeClass": "compatible",
-  "breakingChanges": [],
+  "previousVersion": "0.5.1",
+  "version": "0.6.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.agent-route.brief-default",
+      "summary": "Change bare agent-route --agent-envelope output from the generic full envelope to the bounded proofkit.agent-route.brief packet."
+    },
+    {
+      "changeId": "proofkit.platform.macos-13",
+      "summary": "Raise published Darwin package compatibility to macOS 13.0 so wheel tags remain truthful for binaries built with Go 1.27.1."
+    }
+  ],
   "additions": [
     {
-      "changeId": "proofkit.requirement-source.codec-selection",
-      "summary": "Select the private bounded grouped-JSON requirement-source v2 codec from byte-bound V3 screen evidence, with exact collection-limit ownership, nondisclosing source diagnostics, lexical source maps, decision-metric closure, and owner-scoped grammar identity proof."
+      "changeId": "proofkit.agent-route.envelope-detail-mode",
+      "summary": "Add --agent-envelope-mode brief|full so agents can request bounded default guidance or the complete generic envelope explicitly."
+    },
+    {
+      "changeId": "proofkit.toolchain.currentness",
+      "summary": "Update the verified build and CI baseline to Go 1.27.1 with Unicode 17.0.0, Node 26.8.1, npm 12.0.2, Python 3.14.7, and the current stable repository-owned dependency and action pins."
     }
   ],
   "migration": {
-    "required": false,
-    "steps": []
+    "required": true,
+    "steps": [
+      "Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
+      "Darwin consumers must use macOS 13.0 or later; contributors that build from source must use Go 1.27.1."
+    ]
   },
   "platformRequirements": [
-    "Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64."
+    "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
   ],
   "knownLimitations": [
     "Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
+    "Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
     "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
     "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
     "TSX source parsing remains unsupported."

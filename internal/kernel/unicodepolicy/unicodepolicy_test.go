@@ -88,7 +88,7 @@ func TestUnsafeScalarClassification(t *testing.T) {
 	}
 }
 
-func TestUnsafeScalarTableMatchesEveryUnicode15Scalar(t *testing.T) {
+func TestUnsafeScalarTableMatchesEveryUnicode17Scalar(t *testing.T) {
 	if unicode.Version != UnicodeVersion {
 		t.Fatalf("Go Unicode version = %s, want %s", unicode.Version, UnicodeVersion)
 	}

@@ -34,7 +34,11 @@ func runAgentRoute(args []string, stdin io.Reader, stdout io.Writer, stderr io.W
 		}
 	}
 	if options.agentEnvelope {
-		output, exitCode, err := agentroute.BuildEnvelopeWithRenderer(input, renderer)
+		mode := agentroute.EnvelopeModeBrief
+		if options.agentEnvelopeMode != "" {
+			mode = agentroute.EnvelopeMode(options.agentEnvelopeMode)
+		}
+		output, exitCode, err := agentroute.BuildEnvelopeModeWithRenderer(input, renderer, mode)
 		if err != nil {
 			return writeJSON(agentenvelope.InvalidInput(diagnosticMessage(err)), 1, nil, stdout, stderr)
 		}

@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623"
+	cliContractPublicABISHA256               = "39f9f4314eec9e4d5baad8baf0eecbed5063d3830f074977df73ab934cafb277"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1040,7 +1040,7 @@ func TestCLIContractModeSpecificPromises(t *testing.T) {
 	assertScopeClass(t, commands["json-report-cli-adapter-source"], commandScopeBuiltInPackageCatalog)
 	assertScopeClass(t, commands["typescript-public-api-surfaces"], commandScopeExplicitFileSystemScan)
 	assertCommand(t, commands["adoption-contract-envelope"], "required", []string{"--agent-envelope", "--checked-scope", "--guidance-mode", "--input", "--materialization-manifest", "--mode", "--pilot", "--touched-rule-id"}, []string{"json"})
-	assertCommand(t, commands["agent-route"], "required", []string{"--agent-envelope", "--input", "--input-pointer"}, []string{"json"})
+	assertCommand(t, commands["agent-route"], "required", []string{"--agent-envelope", "--agent-envelope-mode", "--input", "--input-pointer"}, []string{"json"})
 	assertCommand(t, commands["capability-map-admission"], "required", []string{"--input", "--input-pointer"}, []string{"json"})
 	assertCommand(t, commands["conformance-profile"], "required", []string{"--format", "--input", "--input-pointer", "--list", "--profile", "--verify"}, []string{"json", "markdown"})
 	assertCommand(t, commands["requirement-coverage-input-compose"], "required", []string{"--input", "--input-pointer"}, []string{"json"})

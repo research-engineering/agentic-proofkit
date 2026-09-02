@@ -78,12 +78,27 @@ func parsePlanningArgs(command string, args []string) (planningArgs, error) {
 				return planningArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, args[index])
 			}
 			options.agentEnvelope = true
+		case "--agent-envelope-mode":
+			if command != "agent-route" {
+				return planningArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, args[index])
+			}
+			if options.agentEnvelopeMode != "" || index+1 >= len(args) {
+				return planningArgs{}, fmt.Errorf("--agent-envelope-mode requires brief or full")
+			}
+			options.agentEnvelopeMode = args[index+1]
+			if options.agentEnvelopeMode != "brief" && options.agentEnvelopeMode != "full" {
+				return planningArgs{}, fmt.Errorf("--agent-envelope-mode requires brief or full")
+			}
+			index++
 		default:
 			return planningArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, args[index])
 		}
 	}
 	if options.inputPath == "" {
 		return planningArgs{}, fmt.Errorf("%s requires --input <path|->", command)
+	}
+	if options.agentEnvelopeMode != "" && !options.agentEnvelope {
+		return planningArgs{}, fmt.Errorf("--agent-envelope-mode requires --agent-envelope")
 	}
 	return options, nil
 }

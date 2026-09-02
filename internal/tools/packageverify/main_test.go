@@ -238,13 +238,13 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 		{
 			name: "missing dependency",
 			patch: func(manifest string) string {
-				return strings.Replace(manifest, "    \"axe-core\": \"4.12.1\",\n", "", 1)
+				return strings.Replace(manifest, "    \"axe-core\": \"4.13.0\",\n", "", 1)
 			},
 		},
 		{
 			name: "wrong dependency version",
 			patch: func(manifest string) string {
-				return strings.Replace(manifest, "\"axe-core\": \"4.12.1\"", "\"axe-core\": \"4.12.0\"", 1)
+				return strings.Replace(manifest, "\"axe-core\": \"4.13.0\"", "\"axe-core\": \"4.12.1\"", 1)
 			},
 		},
 		{
@@ -253,7 +253,7 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 				return strings.Replace(
 					manifest,
 					"  \"devDependencies\": {\n",
-					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.12.1\",\n",
+					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.13.0\",\n",
 					1,
 				)
 			},
@@ -1385,7 +1385,7 @@ func packageReferenceClosureFixture() map[string]string {
 		"package/proofkit/witness-plan.json":              `{"commands":[],"policies":[]}`,
 		"package/proofkit/command-families.v1.json":       `{"families":[]}`,
 		"package/proofkit/receipt-producer-policy.json":   `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/specs/example/requirements.v1.json"]}]}`,
-		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
+		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}},"outputContract":{"briefPacketContract":{"fieldRules":{"boundaryPolicyRefs":"policy field description","contextRefs":"runtime field description"}},"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
 	}
 }
 
@@ -1757,12 +1757,12 @@ func packageManifestFixture(repositoryURL string) string {
   "name": "@research-engineering/agentic-proofkit",
   "version": "1.2.3",
   "license": "MIT",
-  "packageManager": "npm@11.18.0",
+  "packageManager": "npm@12.0.2",
   "type": "module",
   "sideEffects": false,
   "devDependencies": {
-    "@playwright/test": "1.62.0",
-    "axe-core": "4.12.1",
+    "@playwright/test": "1.62.1",
+    "axe-core": "4.13.0",
     "typescript": "7.0.2"
   },
   "repository": {

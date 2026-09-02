@@ -371,6 +371,14 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 			ExecutableCommand: "go test ./internal/app -run '^TestAdoptionContractEnvelopeCLIABI$'",
 		},
 		{
+			Command:           "agent-route",
+			NativeSourceForm:  "nativeSources",
+			NativeSourcePaths: []string{"internal/app", "internal/command/agentroute"},
+			SelectorPath:      "internal/app/cli_abi_test.go",
+			SelectorTest:      "TestAgentRouteEnvelopeModesUseExactRootShapes",
+			ExecutableCommand: "go test ./internal/app -run '^TestAgentRouteEnvelopeModesUseExactRootShapes$'",
+		},
+		{
 			Command:           "pilot-admission",
 			NativeSourceForm:  "nativeSources",
 			NativeSourcePaths: []string{"internal/app", "internal/command/pilotadmission"},
@@ -407,6 +415,11 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 		{
 			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
 			ScenarioID:    "proofkit.package-boundary.cli-output-root-witnesses",
+			SelectorTest:  "TestAgentRouteEnvelopeModesUseExactRootShapes",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.cli-output-root-witnesses",
 			SelectorTest:  "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 		},
 		{
@@ -423,6 +436,11 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",
 			ScenarioID:    "proofkit.supply-chain-quality.cli-abi-golden",
 			SelectorTest:  "TestAdoptionContractEnvelopeCLIABI",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.cli-abi-golden",
+			SelectorTest:  "TestAgentRouteEnvelopeModesUseExactRootShapes",
 		},
 		{
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",
@@ -443,6 +461,11 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 			RequirementID: "REQ-PROOFKIT-SPEC-011",
 			ScenarioID:    "proofkit.spec-proof-core.adoption-contract-envelope-cli-abi",
 			SelectorTest:  "TestAdoptionContractEnvelopeCLIABI",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-SPEC-026",
+			ScenarioID:    "proofkit.spec-proof-core.agent-route-brief-cli-abi",
+			SelectorTest:  "TestAgentRouteEnvelopeModesUseExactRootShapes",
 		},
 	}
 }

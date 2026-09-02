@@ -247,9 +247,7 @@ func writeWheel(path string, entries []wheelEntry) error {
 			Method:             zip.Deflate,
 			Modified:           time.Date(1980, 1, 1, 0, 0, 0, 0, time.UTC),
 			CRC32:              crc32.ChecksumIEEE(entry.Content),
-			CompressedSize:     uint32(len(compressed)),
 			CompressedSize64:   uint64(len(compressed)),
-			UncompressedSize:   uint32(len(entry.Content)),
 			UncompressedSize64: uint64(len(entry.Content)),
 		}
 		header.SetMode(entry.Mode)

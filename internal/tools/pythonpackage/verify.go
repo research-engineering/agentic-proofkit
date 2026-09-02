@@ -601,6 +601,9 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 	if err := writeJSONFixture(agentRoutePath, agentRoute); err != nil {
 		return err
 	}
+	if err := verifyInstalledPythonAgentRouteEnvelopeModes(consumer, environment, renderer, agentRoutePath); err != nil {
+		return err
+	}
 	routeOutput, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("agent-route", "--input", agentRoutePath))
 	if err != nil {
 		return fmt.Errorf("installed Python wheel agent route failed: %w\n%s", err, routeOutput)
@@ -634,6 +637,69 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 		return fmt.Errorf("installed Python wheel emitted agent-route argv failed: %w\n%s", err, commandOutput)
 	}
 	return requirePythonPassedJSON(commandOutput, "installed Python wheel emitted agent-route argv")
+}
+
+func verifyInstalledPythonAgentRouteEnvelopeModes(consumer string, environment []string, renderer cliexec.Renderer, inputPath string) error {
+	bareBrief, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("agent-route", "--input", inputPath, "--agent-envelope"))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel bare agent-route brief failed: %w\n%s", err, bareBrief)
+	}
+	if err := verifyInstalledPythonAgentRouteBrief(bareBrief); err != nil {
+		return fmt.Errorf("installed Python wheel bare agent-route brief is invalid: %w", err)
+	}
+	explicitBrief, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("agent-route", "--input", inputPath, "--agent-envelope", "--agent-envelope-mode", "brief"))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel explicit agent-route brief failed: %w\n%s", err, explicitBrief)
+	}
+	if err := verifyInstalledPythonAgentRouteBrief(explicitBrief); err != nil {
+		return fmt.Errorf("installed Python wheel explicit agent-route brief is invalid: %w", err)
+	}
+	if !bytes.Equal(bareBrief, explicitBrief) {
+		return fmt.Errorf("installed Python wheel bare and explicit agent-route brief outputs differ")
+	}
+	full, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("agent-route", "--input", inputPath, "--agent-envelope", "--agent-envelope-mode", "full"))
+	if err != nil {
+		return fmt.Errorf("installed Python wheel full agent-route envelope failed: %w\n%s", err, full)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(full), 8<<20)
+	if err != nil {
+		return fmt.Errorf("installed Python wheel full agent-route envelope must be one strict JSON value: %w", err)
+	}
+	envelope, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("installed Python wheel full agent-route envelope must be an object")
+	}
+	if envelope["envelopeId"] != "proofkit.python.consumer.route.agent-envelope" {
+		return fmt.Errorf("installed Python wheel full agent-route envelope has unexpected identity")
+	}
+	if _, ok := envelope["actionPlan"].([]any); !ok {
+		return fmt.Errorf("installed Python wheel full agent-route envelope actionPlan must be an array")
+	}
+	if _, brief := envelope["packetKind"]; brief {
+		return fmt.Errorf("installed Python wheel full agent-route envelope uses the brief packet root")
+	}
+	return nil
+}
+
+func verifyInstalledPythonAgentRouteBrief(output []byte) error {
+	value, err := admission.DecodeJSON(bytes.NewReader(output), 1<<20)
+	if err != nil {
+		return fmt.Errorf("output must be one strict JSON value: %w", err)
+	}
+	packet, ok := value.(map[string]any)
+	if !ok {
+		return fmt.Errorf("output must be an object")
+	}
+	if packet["packetKind"] != "proofkit.agent-route.brief" || packet["state"] != "routed" {
+		return fmt.Errorf("output has unexpected brief identity or state")
+	}
+	if _, ok := packet["nextAction"].(map[string]any); !ok {
+		return fmt.Errorf("output nextAction must be an object")
+	}
+	if len(output) > 3072 {
+		return fmt.Errorf("output is %d bytes, want at most 3072", len(output))
+	}
+	return nil
 }
 
 func exactDisplayedRouteOperands(output []byte, prefix string, context string) ([]string, error) {

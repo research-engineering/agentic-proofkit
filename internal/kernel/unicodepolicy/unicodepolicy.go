@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	UnicodeVersion = "15.0.0"
-	TableSHA256    = "16873769cae138cd0129781932e487ed558510e52a0237dcfcb558081994cfd9"
+	UnicodeVersion = "17.0.0"
+	TableSHA256    = "3d7664f62e9abe69851726e858e1214a860dbe2ab0a2adbd6b3c79cbb4ff2649"
 )
 
 type scalarRange struct {

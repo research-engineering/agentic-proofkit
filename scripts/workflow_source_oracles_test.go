@@ -241,7 +241,7 @@ func TestWorkflowExternalActionsUseFullCommitSHAs(t *testing.T) {
 		t.Fatal(err)
 	}
 	base := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
-	for _, reference := range []string{"actions/checkout@v7", "actions/checkout@9c091bb"} {
+	for _, reference := range []string{"actions/checkout@v7", "actions/checkout@3d3c42e"} {
 		t.Run(reference, func(t *testing.T) {
 			workflow := cloneWorkflow(t, base)
 			job := workflow.Jobs["source-quality"]
