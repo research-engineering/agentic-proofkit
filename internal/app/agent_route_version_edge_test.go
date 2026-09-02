@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
@@ -48,23 +49,25 @@ func TestAgentRouteVersionEdgeClosesBriefDefaultMigration(t *testing.T) {
 	mutants := []struct {
 		name   string
 		mutate func(*agentRouteVersionEdge)
+		want   string
 	}{
-		{name: "current ABI", mutate: func(value *agentRouteVersionEdge) { value.CurrentPublicABISHA256 += "0" }},
-		{name: "previous ABI", mutate: func(value *agentRouteVersionEdge) { value.PreviousPublicABISHA256 = value.CurrentPublicABISHA256 }},
-		{name: "command", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.Command = "help" }},
-		{name: "current input contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.CurrentInputContractSHA256 += "0" }},
-		{name: "current output contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.CurrentOutputContractSHA256 += "0" }},
-		{name: "previous input contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.PreviousInputContractSHA256 += "0" }},
-		{name: "previous output contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.PreviousOutputContractSHA256 += "0" }},
-		{name: "change record reference", mutate: func(value *agentRouteVersionEdge) { value.ChangeRecordRef += ".drift" }},
-		{name: "change record digest", mutate: func(value *agentRouteVersionEdge) { value.ChangeRecordSHA256 += "0" }},
+		{name: "current ABI", mutate: func(value *agentRouteVersionEdge) { value.CurrentPublicABISHA256 += "0" }, want: "ABI identity is invalid"},
+		{name: "previous ABI", mutate: func(value *agentRouteVersionEdge) { value.PreviousPublicABISHA256 = value.CurrentPublicABISHA256 }, want: "ABI identity is invalid"},
+		{name: "command", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.Command = "help" }, want: "changed command contract is not exact"},
+		{name: "current input contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.CurrentInputContractSHA256 += "0" }, want: "changed command contract is not exact"},
+		{name: "current output contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.CurrentOutputContractSHA256 += "0" }, want: "changed command contract is not exact"},
+		{name: "previous input contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.PreviousInputContractSHA256 += "0" }, want: "changed command contract is not exact"},
+		{name: "previous output contract", mutate: func(value *agentRouteVersionEdge) { value.ChangedCommandContract.PreviousOutputContractSHA256 += "0" }, want: "changed command contract is not exact"},
+		{name: "change record reference", mutate: func(value *agentRouteVersionEdge) { value.ChangeRecordRef += ".drift" }, want: "change record reference is not exact"},
+		{name: "change record digest", mutate: func(value *agentRouteVersionEdge) { value.ChangeRecordSHA256 += "0" }, want: "change record digest is not exact"},
 	}
 	for _, mutant := range mutants {
 		t.Run(mutant.name, func(t *testing.T) {
 			value := cloneAgentRouteVersionEdge(record)
 			mutant.mutate(&value)
-			if err := validateAgentRouteVersionEdge(value, root); err == nil {
-				t.Fatal("version-edge mutant was admitted")
+			err := validateAgentRouteVersionEdge(value, root)
+			if err == nil || !strings.Contains(err.Error(), mutant.want) {
+				t.Fatalf("version-edge mutant error=%v want class %q", err, mutant.want)
 			}
 		})
 	}

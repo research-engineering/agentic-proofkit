@@ -438,6 +438,39 @@ func TestBriefBlockerBoundDominatesMapMaterialization(t *testing.T) {
 	}
 }
 
+func TestBriefBlockerBoundDominatesProductionAllocations(t *testing.T) {
+	reportWith := func(count int) map[string]any {
+		reports := make([]any, count)
+		for index := range reports {
+			reports[index] = map[string]any{
+				"kind":  "requirement_source",
+				"state": "warning",
+			}
+		}
+		return map[string]any{
+			"observedReports": reports,
+			"state":           "blocked_ambiguous_state",
+		}
+	}
+	measure := func(report map[string]any) float64 {
+		var blockers []any
+		var omitted int
+		allocations := testing.AllocsPerRun(20, func() {
+			blockers, omitted = briefBlockers(report, "consumer.route.bounded-work")
+		})
+		if len(blockers) != maxBriefBlockerItems || omitted != len(report["observedReports"].([]any))-maxBriefBlockerItems {
+			t.Fatalf("allocation probe produced invalid blockers: len=%d omitted=%d", len(blockers), omitted)
+		}
+		return allocations
+	}
+
+	boundedAllocations := measure(reportWith(maxBriefBlockerItems))
+	largeAllocations := measure(reportWith(10_000))
+	if largeAllocations > boundedAllocations+1 {
+		t.Fatalf("omitted blockers caused map allocation growth: bounded=%.2f large=%.2f", boundedAllocations, largeAllocations)
+	}
+}
+
 func TestBuildEnvelopeModeRejectsUnknownMode(t *testing.T) {
 	t.Parallel()
 
