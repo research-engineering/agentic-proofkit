@@ -111,27 +111,44 @@ func gitOutput(ctx context.Context, root string, args ...string) (string, error)
 	stderrExceeded := stderr.Exceeded()
 	contextDone := ctx.Done()
 	waitComplete := false
+	terminationRequested := false
 	for !waitComplete {
 		select {
 		case waitErr = <-waitDone:
 			waitComplete = true
 		case <-stdoutExceeded:
 			overflowed = true
+			terminationRequested = true
 			stdoutExceeded = nil
 			_ = processgroup.Terminate(command)
 		case <-stderrExceeded:
 			overflowed = true
+			terminationRequested = true
 			stderrExceeded = nil
 			_ = processgroup.Terminate(command)
 		case <-contextDone:
+			terminationRequested = true
 			contextDone = nil
 			_ = processgroup.Terminate(command)
+		}
+	}
+	outputOverflowed := overflowed || stdout.Overflowed() || stderr.Overflowed()
+	if terminationRequested || ctx.Err() != nil || outputOverflowed {
+		if err := processgroup.TerminateAndWait(command, processWaitDelay); err != nil {
+			switch {
+			case ctx.Err() != nil:
+				return "", fmt.Errorf("repository snapshot operation canceled and process cleanup failed: %w", ctx.Err())
+			case outputOverflowed:
+				return "", fmt.Errorf("git output exceeds resource limit and process cleanup failed")
+			default:
+				return "", fmt.Errorf("git process cleanup failed")
+			}
 		}
 	}
 	if ctx.Err() != nil {
 		return "", fmt.Errorf("repository snapshot operation canceled: %w", ctx.Err())
 	}
-	if overflowed || stdout.Overflowed() || stderr.Overflowed() {
+	if outputOverflowed {
 		return "", fmt.Errorf("git output exceeds resource limit")
 	}
 	if waitErr != nil {
