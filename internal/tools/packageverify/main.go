@@ -18,6 +18,7 @@ import (
 	pathpkg "path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -1434,13 +1435,13 @@ func verifyCLIContractBoundaryPolicyClosure(content string, textEntries map[stri
 			continue
 		}
 		refs := stringArrayField(brief, "boundaryPolicyRefs")
-		if len(refs) == 0 {
-			return fmt.Errorf("package CLI brief contract boundaryPolicyRefs must be non-empty")
-		}
 		for _, requirementID := range refs {
 			if requirementIDCounts[requirementID] != 1 {
 				return fmt.Errorf("package CLI brief boundary policy ref must resolve to exactly one shipped requirement")
 			}
+		}
+		if !slices.Equal(refs, []string{"REQ-PROOFKIT-SPEC-005", "REQ-PROOFKIT-SPEC-026"}) {
+			return fmt.Errorf("package CLI brief contract boundaryPolicyRefs must equal the exact canonical policy set")
 		}
 	}
 	return nil

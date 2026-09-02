@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "3dc6dead6d21c6a463426594c2e10e2b9dceffd0d16a08ed0fb9ebe2e679e0c0"
+	cliContractPublicABISHA256               = "ae7614f6c05a84cae1d3c8eda4a8426df0ceb5696d1548fe20d9ffc6ec4a3f53"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2316,6 +2316,43 @@ func TestAgentRouteInputContractMatchesAdmission(t *testing.T) {
 	wantOutput := canonicalJSONValue(t, agentroute.OutputContract())
 	if !reflect.DeepEqual(gotOutput, wantOutput) {
 		t.Fatalf("agent-route output contract drift\ngot:  %#v\nwant: %#v", gotOutput, wantOutput)
+	}
+}
+
+func TestAgentRouteOutputContractPreservesReportSemantics(t *testing.T) {
+	contract := readCLIContract(t)
+	var output map[string]any
+	for _, command := range contract.Commands {
+		if command.Command == "agent-route" {
+			output = canonicalJSONValue(t, command.OutputContract).(map[string]any)
+			break
+		}
+	}
+	if output == nil {
+		t.Fatal("agent-route output contract is missing")
+	}
+	report, ok := output["reportContract"].(map[string]any)
+	if !ok || report["contractId"] != "proofkit.agent-route.report.v3" || report["schemaVersion"] != float64(3) {
+		t.Fatalf("agent-route report contract identity is invalid: %#v", report)
+	}
+	assertStringSet(t, stringsFromAny(report["requiredFields"].([]any)), []string{
+		"guidanceSlice", "reportId", "reportKind", "schemaVersion", "selectedRouteFamily", "state", "summary",
+	}, "agent-route report contract required fields")
+	fields := report["fields"].(map[string]any)
+	if fields["schemaVersion"].(map[string]any)["value"] != float64(3) {
+		t.Fatalf("agent-route report schema value drifted: %#v", fields["schemaVersion"])
+	}
+	family := fields["selectedRouteFamily"].(map[string]any)
+	assertStringSet(t, stringsFromAny(family["enum"].([]any)), []string{
+		"adoption", "migration", "release_and_deployment", "rendered_views", "repository_structure", "requirement_proof_binding", "requirement_source", "selective_evidence", "selective_planning", "test_inventory_and_coverage", "unknown",
+	}, "agent-route report route families")
+	guidance := fields["guidanceSlice"].(map[string]any)
+	if guidance["routeFamilyRule"] != "must equal selectedRouteFamily" {
+		t.Fatalf("agent-route guidance relation drifted: %#v", guidance)
+	}
+	summary := fields["summary"].(map[string]any)
+	if summary["availableCommandCount"] != "exact count before blocked-state command suppression" || summary["launcherProfile"] != "exact admitted command-renderer profile that affects route argv and report identity" {
+		t.Fatalf("agent-route report summary contract drifted: %#v", summary)
 	}
 }
 

@@ -409,11 +409,11 @@ func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int,
 		return nil, 1, err
 	}
 	if input.Goal == "unknown" {
-		return buildUnknownGoal(input), 1, nil
+		return buildUnknownGoal(input, renderer), 1, nil
 	}
 	spec, ok := routeSpecs[input.Goal]
 	if !ok {
-		return buildUnknownGoal(input), 1, nil
+		return buildUnknownGoal(input, renderer), 1, nil
 	}
 	missing := missingRequiredInputs(spec, input)
 	state := "routed"
@@ -500,6 +500,33 @@ func OutputContract() map[string]any {
 		"contractId":    "proofkit.agent-route.output.v3",
 		"schemaVersion": 3,
 		"authority":     "deterministic route report, brief packet, full envelope, or invalid-input repair packet selected from the admitted invocation",
+		"reportContract": map[string]any{
+			"contractId":    "proofkit.agent-route.report.v3",
+			"schemaVersion": 3,
+			"requiredFields": []any{
+				"guidanceSlice",
+				"reportId",
+				"reportKind",
+				"schemaVersion",
+				"selectedRouteFamily",
+				"state",
+				"summary",
+			},
+			"fields": map[string]any{
+				"schemaVersion": map[string]any{"value": 3},
+				"selectedRouteFamily": map[string]any{
+					"enum": routeFamilyContractValues(),
+				},
+				"guidanceSlice": map[string]any{
+					"requiredFields":  []any{"routeFamily"},
+					"routeFamilyRule": "must equal selectedRouteFamily",
+				},
+				"summary": map[string]any{
+					"availableCommandCount": "exact count before blocked-state command suppression",
+					"launcherProfile":       "exact admitted command-renderer profile that affects route argv and report identity",
+				},
+			},
+		},
 		"briefPacketContract": map[string]any{
 			"boundaryPolicyRefs": briefBoundaryPolicyRefs(),
 			"contractId":         "proofkit.agent-route.brief.v1",
@@ -520,10 +547,10 @@ func OutputContract() map[string]any {
 				"state",
 			},
 			"fieldRules": map[string]any{
-				"blockers":           "required-input blockers followed by sorted non-passed observed-report blockers; retain at most four and count the exact remainder",
+				"blockers":           "unknown-goal blocker when applicable, then required-input blockers, then sorted non-passed observed-report blockers; retain at most four and count the exact remainder without materializing the omitted blocker maps",
 				"boundaryPolicyRefs": "exactly the shipped and uniquely resolvable requirement IDs REQ-PROOFKIT-SPEC-005 and REQ-PROOFKIT-SPEC-026; policy prose is not duplicated",
 				"contextRefs":        "only caller-owned artifact operands of the selected next command, each addressed by an RFC 6901 pointer into the source report",
-				"detailAccess":       "binds source report ID and stable digest and provides exact outputArgs suffixes for report and full retrieval from the original admitted input",
+				"detailAccess":       "binds source report ID, stable digest, and launcher profile and provides exact outputArgs suffixes for report and full retrieval from the original admitted input and launcher context",
 				"nextAction":         "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
 				"omissionSummary":    "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
 				"packetKind":         "proofkit.agent-route.brief",
@@ -537,9 +564,17 @@ func OutputContract() map[string]any {
 		"changesFromV2": []any{
 			"bare --agent-envelope emits proofkit.agent-route.brief",
 			"--agent-envelope-mode full preserves the prior generic envelope projection",
-			"route report schemaVersion advances to 3 without changing its semantic fields",
+			"route report schemaVersion advances to 3 while preserving prior route-family semantics and adding exact launcher and available-command context",
 		},
 	}
+}
+
+func routeFamilyContractValues() []any {
+	values := map[string]struct{}{string(routeFamilyUnknown): {}}
+	for _, spec := range routeSpecs {
+		values[string(spec.RouteFamily)] = struct{}{}
+	}
+	return sortedKeys(values)
 }
 
 func admitInput(raw any) (routeInput, error) {
@@ -835,7 +870,7 @@ func inputGroupSatisfied(group []string, available map[string]string) bool {
 	return len(group) == 0
 }
 
-func buildUnknownGoal(input routeInput) map[string]any {
+func buildUnknownGoal(input routeInput, renderer cliexec.Renderer) map[string]any {
 	spec := routeSpec{
 		RouteFamily:  routeFamilyUnknown,
 		SliceSummary: "Unknown goals are deliberately not routed.",
@@ -847,9 +882,10 @@ func buildUnknownGoal(input routeInput) map[string]any {
 		"diagnostics": []any{
 			map[string]any{"key": "goal", "value": input.Goal},
 		},
-		"escalations":  []any{"Escalate to the consuming repository owner; do not guess a Proofkit route from an unknown goal."},
-		"nextCommands": []any{},
-		"nonClaims":    mergedNonClaims(input.CallerNonClaims),
+		"escalations":     []any{"Escalate to the consuming repository owner; do not guess a Proofkit route from an unknown goal."},
+		"nextCommands":    []any{},
+		"nonClaims":       mergedNonClaims(input.CallerNonClaims),
+		"observedReports": observedReportReports(input.ObservedReports),
 		"omitted": []any{
 			map[string]any{"reason": "Unknown goals are not routed because that would create an implicit policy owner inside Proofkit."},
 		},
@@ -863,20 +899,23 @@ func buildUnknownGoal(input routeInput) map[string]any {
 		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
-			"browserMode":         input.BrowserMode,
-			"availableInputCount": len(input.AvailableInputs),
-			"callerNonClaimCount": len(input.CallerNonClaims),
-			"goal":                input.Goal,
-			"knownChangedPaths":   len(input.KnownChangedPaths),
-			"mode":                input.Mode,
-			"observedReportCount": len(input.ObservedReports),
-			"openBrowser":         input.OpenBrowser,
+			"availableCommandCount": 0,
+			"browserMode":           input.BrowserMode,
+			"availableInputCount":   len(input.AvailableInputs),
+			"callerNonClaimCount":   len(input.CallerNonClaims),
+			"goal":                  input.Goal,
+			"knownChangedPaths":     len(input.KnownChangedPaths),
+			"launcherProfile":       renderer.Profile(),
+			"mode":                  input.Mode,
+			"observedReportCount":   len(input.ObservedReports),
+			"openBrowser":           input.OpenBrowser,
 		},
 	}
 }
 
 func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any, renderer cliexec.Renderer) map[string]any {
-	nextCommands := commandReports(spec.NextCommands, input, renderer)
+	availableCommands := commandReports(spec.NextCommands, input, renderer)
+	nextCommands := availableCommands
 	if state != "routed" {
 		nextCommands = []any{}
 	}
@@ -897,14 +936,16 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
-			"browserMode":         input.BrowserMode,
-			"availableInputCount": len(input.AvailableInputs),
-			"callerNonClaimCount": len(input.CallerNonClaims),
-			"goal":                input.Goal,
-			"knownChangedPaths":   len(input.KnownChangedPaths),
-			"mode":                input.Mode,
-			"observedReportCount": len(input.ObservedReports),
-			"openBrowser":         input.OpenBrowser,
+			"availableCommandCount": len(availableCommands),
+			"browserMode":           input.BrowserMode,
+			"availableInputCount":   len(input.AvailableInputs),
+			"callerNonClaimCount":   len(input.CallerNonClaims),
+			"goal":                  input.Goal,
+			"knownChangedPaths":     len(input.KnownChangedPaths),
+			"launcherProfile":       renderer.Profile(),
+			"mode":                  input.Mode,
+			"observedReportCount":   len(input.ObservedReports),
+			"openBrowser":           input.OpenBrowser,
 		},
 	}
 }

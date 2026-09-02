@@ -197,7 +197,9 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.agent-route.brief-default", Summary: "Change bare agent-route --agent-envelope output from the generic full envelope to the bounded proofkit.agent-route.brief packet."},
 	{ChangeID: "proofkit.agent-route.materialized-artifact-refs", Summary: "Reject the stdin transport sentinel as an available-input or observed-report artifact identity; route references must name materialized caller-owned artifacts."},
+	{ChangeID: "proofkit.agent-route.report-schema-v3", Summary: "Advance the bare agent-route report to schemaVersion 3 while preserving route-family semantics and adding exact launcher-profile and pre-suppression available-command context."},
 	{ChangeID: "proofkit.platform.macos-13", Summary: "Raise published Darwin package compatibility to macOS 13.0 so wheel tags remain truthful for binaries built with Go 1.27.1."},
+	{ChangeID: "proofkit.toolchain.npm-12", Summary: "Require npm 12.0.2 for repository-owned contributor and release scripts and consume npm view and pack evidence using npm 12 wire forms."},
 }
 
 var currentAdditions = []Change{
@@ -207,8 +209,10 @@ var currentAdditions = []Change{
 
 var currentMigrationSteps = []string{
 	"Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
+	"Consumers of the bare agent-route report must admit schemaVersion 3; the prior route-family fields remain, and summary now binds launcherProfile and availableCommandCount.",
 	"Consumers that used the stdin transport sentinel as an agent-route availableInputs or observedReports ref must materialize that artifact and pass its safe repo-relative path instead.",
-	"Darwin consumers must use macOS 13.0 or later; contributors that build from source must use Go 1.27.1.",
+	"Darwin consumers must use macOS 13.0 or later.",
+	"Contributors must use Go 1.27.1, Node 26.8.1, npm 12.0.2, and Python 3.14.7 for repository-owned build and release workflows.",
 }
 
 func validateCurrentChangeRecord(record Record, notes string) error {

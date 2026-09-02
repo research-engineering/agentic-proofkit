@@ -105,24 +105,29 @@ func validateAgentRouteVersionEdge(record agentRouteVersionEdge) error {
 	if record.PreviousVersion != "0.5.1" || record.Version != "0.6.0" {
 		return fmt.Errorf("agent-route version-edge release identity is stale")
 	}
-	if record.PreviousPublicABISHA256 != "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623" || record.CurrentPublicABISHA256 != "sha256:3dc6dead6d21c6a463426594c2e10e2b9dceffd0d16a08ed0fb9ebe2e679e0c0" || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
+	if record.PreviousPublicABISHA256 != "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623" || record.CurrentPublicABISHA256 != "sha256:"+cliContractPublicABISHA256 || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("agent-route version-edge ABI identity is invalid")
+	}
+	currentMetadata, ok := generatedCommandContractMetadataByName["agent-route"]
+	if !ok {
+		return fmt.Errorf("agent-route version-edge current command metadata is missing")
 	}
 	wantContract := agentRouteChangedCommandContract{
 		Command:                      "agent-route",
 		PreviousInputContractSHA256:  "sha256:6b5af8287f2972bbef4c68c247f43fb16d0f0d8739e5e6d3a66543af20d2644d",
-		CurrentInputContractSHA256:   "sha256:60bafcd877e0bd26bb9fbd37343ba7e19d61d314afbd7062754c8574ffd36c41",
+		CurrentInputContractSHA256:   currentMetadata.InputContractSHA256,
 		PreviousOutputContractSHA256: "sha256:44ec313a43360b6138ad6c3ae5de4abd51bbf312060880c108a6351606695915",
-		CurrentOutputContractSHA256:  "sha256:e160ea2e5531b6675f7c4edfb01a2fb0d32fd7c74189e9c38774c41a211dc29e",
+		CurrentOutputContractSHA256:  currentMetadata.OutputContractSHA256,
 	}
 	if record.ChangedCommandContract != wantContract {
 		return fmt.Errorf("agent-route version-edge changed command contract is not exact")
 	}
-	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.agent-route.brief-default", "proofkit.agent-route.materialized-artifact-refs"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.agent-route.envelope-detail-mode"}) {
+	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.agent-route.brief-default", "proofkit.agent-route.materialized-artifact-refs", "proofkit.agent-route.report-schema-v3"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.agent-route.envelope-detail-mode"}) {
 		return fmt.Errorf("agent-route version-edge change owners are not exact")
 	}
 	if !slices.Equal(record.MigrationSteps, []string{
 		"Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
+		"Consumers of the bare agent-route report must admit schemaVersion 3; the prior route-family fields remain, and summary now binds launcherProfile and availableCommandCount.",
 		"Consumers that used the stdin transport sentinel as an agent-route availableInputs or observedReports ref must materialize that artifact and pass its safe repo-relative path instead.",
 	}) {
 		return fmt.Errorf("agent-route version-edge migration is not exact")

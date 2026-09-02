@@ -61,14 +61,14 @@ func TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if detail["sourceReportDigest"] != wantDigest || detail["requiresOriginalInput"] != true {
+	if detail["sourceReportDigest"] != wantDigest || detail["requiresOriginalInput"] != true || detail["requiresOriginalLauncherContext"] != true || detail["launcherProfile"] != cliexec.ProfilePath {
 		t.Fatalf("brief detail access is not source-bound: %#v", detail)
 	}
 	outputArgs := detail["outputArgs"].(map[string]any)
 	if !slices.Equal(stringsFromAny(outputArgs["full"]), []string{"--agent-envelope", "--agent-envelope-mode", "full"}) || len(outputArgs["report"].([]any)) != 0 {
 		t.Fatalf("brief detail access is not executable: %#v", detail)
 	}
-	if !slices.Equal(stringsFromAny(brief["boundaryPolicyRefs"]), []string{briefBoundaryPolicyDerivedView, briefBoundaryPolicyRoutePacket}) {
+	if !slices.Equal(stringsFromAny(brief["boundaryPolicyRefs"]), []string{"REQ-PROOFKIT-SPEC-005", "REQ-PROOFKIT-SPEC-026"}) {
 		t.Fatalf("brief boundary policy refs are not exact: %#v", brief["boundaryPolicyRefs"])
 	}
 
@@ -211,6 +211,10 @@ func TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity(t *testin
 
 func TestAgentBriefCompactsAtDeclaredByteBoundary(t *testing.T) {
 	t.Parallel()
+	const ownerDeclaredByteLimit = 3072
+	if maxAgentBriefBytes != ownerDeclaredByteLimit {
+		t.Fatalf("agent brief byte limit=%d want owner-declared %d", maxAgentBriefBytes, ownerDeclaredByteLimit)
+	}
 
 	var boundaryReport map[string]any
 	var unboundedBytes int
@@ -264,6 +268,87 @@ func TestAgentBriefCompactsAtDeclaredByteBoundary(t *testing.T) {
 	}
 }
 
+func TestAgentBriefPreservesBlockedRouteOmissionsAndUnknownReportBlockers(t *testing.T) {
+	t.Parallel()
+
+	blockedInput := map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.blocked-available",
+		"goal":          "validate_requirement_source",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{"kind": "requirement_source", "ref": "docs/specs/example/requirements.v1.json"},
+		},
+		"observedReports": []any{
+			map[string]any{"kind": "requirement_source", "ref": "artifacts/proofkit/source-report.json", "state": "warning"},
+		},
+	}
+	report, reportExitCode, err := Build(blockedInput)
+	if err != nil || reportExitCode != 1 {
+		t.Fatalf("Build(blocked) exit=%d error=%v", reportExitCode, err)
+	}
+	brief, briefExitCode, err := buildBriefEnvelope(blockedInput)
+	if err != nil || briefExitCode != 1 {
+		t.Fatalf("BuildEnvelope(blocked) exit=%d error=%v", briefExitCode, err)
+	}
+	available := report["summary"].(map[string]any)["availableCommandCount"]
+	if available == 0 || brief["omissionSummary"].(map[string]any)["availableAlternativeCommandCount"] != available {
+		t.Fatalf("blocked route lost available command accounting: report=%#v brief=%#v", report["summary"], brief["omissionSummary"])
+	}
+
+	unknownInput := map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.unknown-observed",
+		"goal":          "unknown",
+		"mode":          "observe",
+		"observedReports": []any{
+			map[string]any{"kind": "release", "ref": "artifacts/proofkit/release-report.json", "state": "failed"},
+		},
+	}
+	unknown, exitCode, err := buildBriefEnvelope(unknownInput)
+	if err != nil || exitCode != 1 {
+		t.Fatalf("BuildEnvelope(unknown) exit=%d error=%v", exitCode, err)
+	}
+	blockers := unknown["blockers"].([]any)
+	if len(blockers) != 2 || blockers[0].(map[string]any)["kind"] != "unknown_goal" || blockers[1].(map[string]any)["kind"] != "observed_report" {
+		t.Fatalf("unknown route did not retain ordered blockers: %#v", blockers)
+	}
+}
+
+func TestAgentBriefBindsLauncherContextThatAffectsReportDigest(t *testing.T) {
+	t.Parallel()
+
+	input := map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.launcher",
+		"goal":          "validate_requirement_source",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{"kind": "requirement_source", "ref": "docs/specs/example/requirements.v1.json"},
+		},
+	}
+	npmRenderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfileNPMOffline, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pathBrief, _, err := BuildEnvelopeModeWithRenderer(input, cliexec.PathRenderer(), EnvelopeModeBrief)
+	if err != nil {
+		t.Fatal(err)
+	}
+	npmBrief, _, err := BuildEnvelopeModeWithRenderer(input, npmRenderer, EnvelopeModeBrief)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pathDetail := pathBrief["detailAccess"].(map[string]any)
+	npmDetail := npmBrief["detailAccess"].(map[string]any)
+	if pathDetail["launcherProfile"] != cliexec.ProfilePath || npmDetail["launcherProfile"] != cliexec.ProfileNPMOffline {
+		t.Fatalf("brief launcher profiles are not exact: path=%#v npm=%#v", pathDetail, npmDetail)
+	}
+	if pathDetail["sourceReportDigest"] == npmDetail["sourceReportDigest"] {
+		t.Fatal("launcher-dependent route reports unexpectedly share a digest")
+	}
+}
+
 func TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails(t *testing.T) {
 	t.Parallel()
 
@@ -294,6 +379,22 @@ func TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails(t *testing.T) {
 	omissions := brief["omissionSummary"].(map[string]any)
 	if omissions["omittedBlockerCount"] != 2 {
 		t.Fatalf("omitted blocker count drifted: %#v", omissions)
+	}
+}
+
+func TestBriefBlockerBoundDominatesMapMaterialization(t *testing.T) {
+	t.Parallel()
+
+	reports := make([]any, 10_000)
+	for index := range reports {
+		reports[index] = map[string]any{"kind": "requirement_source", "state": "warning"}
+	}
+	blockers, omitted := briefBlockers(map[string]any{
+		"observedReports": reports,
+		"state":           "blocked_ambiguous_state",
+	}, "consumer.route.bounded-work")
+	if len(blockers) != 4 || cap(blockers) != 4 || omitted != len(reports)-4 {
+		t.Fatalf("blocker bound did not dominate materialization: len=%d cap=%d omitted=%d", len(blockers), cap(blockers), omitted)
 	}
 }
 

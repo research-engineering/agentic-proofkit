@@ -751,6 +751,21 @@ func TestPackagePublicReferenceClosure(t *testing.T) {
 			want: "boundary policy ref must resolve to exactly one shipped requirement",
 		},
 		{
+			name: "incomplete brief boundary policy set",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"`, `"REQ-PROOFKIT-SPEC-005"`, 1)
+			},
+			want: "must equal the exact canonical policy set",
+		},
+		{
+			name: "surplus resolvable brief boundary policy ref",
+			mutate: func(entries map[string]string) {
+				entries["package/docs/specs/example/requirements.v1.json"] = strings.Replace(entries["package/docs/specs/example/requirements.v1.json"], `]}`, `,{"requirementId":"REQ-OTHER"}]}`, 1)
+				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"`, `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026","REQ-OTHER"`, 1)
+			},
+			want: "must equal the exact canonical policy set",
+		},
+		{
 			name: "dangling binding witness path",
 			mutate: func(entries map[string]string) {
 				entries["package/proofkit/requirement-bindings.json"] = `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"MISSING.go"}]}`

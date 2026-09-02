@@ -99,10 +99,11 @@ Agents should use `agent-route` for the complete deterministic route report and
 `--agent-envelope-mode brief` is byte-identical to the bare envelope form;
 `--agent-envelope-mode full` preserves the complete generic agent envelope for
 debugging or demand-loaded detail. Every brief binds its source report ID and
-stable digest in one top-level `detailAccess` record, so callers retain the
-original admitted input and recompute report or full detail instead of adding a
-detail reference to every item. All three forms are derived from explicit
-caller-owned facts. This map explains route families without becoming an
+stable digest and admitted launcher profile in one top-level `detailAccess`
+record, so callers retain the original admitted input and launcher context and
+recompute report or full detail instead of adding a detail reference to every
+item. All three forms are derived from explicit caller-owned facts. This map
+explains route families without becoming an
 execution, freshness, or merge decision.
 The exact route input vocabulary is machine-readable in
 `proofkit/cli-contract.v2.json` under `agent-route.inputContract`; the Go
@@ -164,7 +165,7 @@ Semantic context routes are `requirement-context-compose`,
    caller-owned context refs, exact omission counts, and uniquely resolvable
    shipped boundary-policy requirement refs instead of the full route report.
    Resolve further detail with the packet's exact output-argument suffixes and
-   retained original input only after checking the brief's source digest; request
+   retained original input and launcher context only after checking the brief's source digest and launcher profile; request
    `--agent-envelope-mode full` only when the generic envelope is actually
    needed. Treat `blocked_*` states as stop signals, not as permission to guess
    missing inputs. `knownChangedPaths` are

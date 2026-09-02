@@ -513,12 +513,21 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestAgentRouteEnvelopeModesUseExactRootShapes",
 		},
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-projection"}: {
+			"TestAgentBriefBindsLauncherContextThatAffectsReportDigest",
 			"TestAgentBriefClosesEverySelectedCommandInputReference",
 			"TestAgentBriefCompactsAtDeclaredByteBoundary",
 			"TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable",
 			"TestAgentBriefNamesCompleteInputBundleBlocker",
+			"TestAgentBriefPreservesBlockedRouteOmissionsAndUnknownReportBlockers",
+			"TestBriefBlockerBoundDominatesMapMaterialization",
 			"TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails",
 			"TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-flag-pre-read-admission"}: {
+			"TestAgentRouteModeAdmissionPrecedesInputRead",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-report-contract-closure"}: {
+			"TestAgentRouteOutputContractPreservesReportSemantics",
 		},
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-version-edge"}: {
 			"TestAgentRouteVersionEdgeClosesBriefDefaultMigration",
@@ -605,7 +614,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-cli-abi"}:                           "internal/app/cli_abi_test.go",
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-projection"}:                        "internal/command/agentroute/brief_test.go",
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-version-edge"}:                      "internal/app/agent_route_version_edge_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-flag-pre-read-admission"}:                 "internal/app/app_test.go",
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-materialized-ref-admission"}:              "internal/command/agentroute/agentroute_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-report-contract-closure"}:                 "internal/app/cli_contract_test.go",
 	}
 	if len(requiredPaths) != len(required) {
 		return fmt.Errorf("required selector path inventory=%d, selector inventory=%d", len(requiredPaths), len(required))

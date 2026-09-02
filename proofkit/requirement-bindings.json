@@ -710,7 +710,7 @@
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["The 3072-byte packet bound and stable source-report digest do not prove provider token consumption, semantic sufficiency, source freshness, command execution, native witness truth, or policy approval; detail retrieval requires the caller to retain the original admitted input."]
+      "nonClaims": ["The 3072-byte packet bound and stable source-report digest do not prove provider token consumption, semantic sufficiency, source freshness, command execution, native witness truth, or policy approval; detail retrieval requires the caller to retain the original admitted input and launcher context."]
     },
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
@@ -4946,28 +4946,40 @@
       "witnessPath": "internal/command/agentroute/brief_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable",
-          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable$'"
+          "selector": "TestAgentBriefBindsLauncherContextThatAffectsReportDigest",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefBindsLauncherContextThatAffectsReportDigest$'"
         },
         {
           "selector": "TestAgentBriefClosesEverySelectedCommandInputReference",
           "command": "go test ./internal/command/agentroute -run '^TestAgentBriefClosesEverySelectedCommandInputReference$'"
         },
         {
-          "selector": "TestAgentBriefNamesCompleteInputBundleBlocker",
-          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefNamesCompleteInputBundleBlocker$'"
-        },
-        {
-          "selector": "TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity",
-          "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity$'"
-        },
-        {
           "selector": "TestAgentBriefCompactsAtDeclaredByteBoundary",
           "command": "go test ./internal/command/agentroute -run '^TestAgentBriefCompactsAtDeclaredByteBoundary$'"
         },
         {
+          "selector": "TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable$'"
+        },
+        {
+          "selector": "TestAgentBriefNamesCompleteInputBundleBlocker",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefNamesCompleteInputBundleBlocker$'"
+        },
+        {
+          "selector": "TestAgentBriefPreservesBlockedRouteOmissionsAndUnknownReportBlockers",
+          "command": "go test ./internal/command/agentroute -run '^TestAgentBriefPreservesBlockedRouteOmissionsAndUnknownReportBlockers$'"
+        },
+        {
+          "selector": "TestBriefBlockerBoundDominatesMapMaterialization",
+          "command": "go test ./internal/command/agentroute -run '^TestBriefBlockerBoundDominatesMapMaterialization$'"
+        },
+        {
           "selector": "TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails",
           "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails$'"
+        },
+        {
+          "selector": "TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity",
+          "command": "go test ./internal/command/agentroute -run '^TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4998,6 +5010,21 @@
         {
           "selector": "TestBuildRejectsStdinTransportSentinelAsArtifactReference",
           "command": "go test ./internal/command/agentroute -run '^TestBuildRejectsStdinTransportSentinelAsArtifactReference$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "scenarioId": "proofkit.spec-proof-core.agent-route-report-contract-closure",
+      "witnessId": "proofkit.agent-route.report-contract-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_contract_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAgentRouteOutputContractPreservesReportSemantics",
+          "command": "go test ./internal/app -run '^TestAgentRouteOutputContractPreservesReportSemantics$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

@@ -1,6 +1,7 @@
 package agentroute
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
@@ -53,19 +54,30 @@ func projectAgentBrief(report map[string]any) (map[string]any, error) {
 
 	nextCommands := mapsFromAny(report["nextCommands"])
 	blockers, omittedBlockerCount := briefBlockers(report, reportID)
+	summary := mapFromAny(report["summary"])
+	availableCommandCount, ok := nonNegativeInt(summary["availableCommandCount"])
+	if !ok {
+		return nil, fmt.Errorf("agent-route report summary availableCommandCount must be a non-negative integer")
+	}
+	launcherProfile := stringFromMap(summary, "launcherProfile")
+	if launcherProfile == "" {
+		return nil, fmt.Errorf("agent-route report summary launcherProfile must be non-empty")
+	}
 	return map[string]any{
 		"blockers":           blockers,
 		"boundaryPolicyRefs": briefBoundaryPolicyRefs(),
 		"contextRefs":        briefContextRefs(nextCommands, reportID),
 		"detailAccess": map[string]any{
-			"commandRef":            "agent-route",
-			"outputArgs":            briefDetailOutputArgs(),
-			"requiresOriginalInput": true,
-			"sourceReportDigest":    reportDigest,
-			"sourceReportId":        reportID,
+			"commandRef":                      "agent-route",
+			"launcherProfile":                 launcherProfile,
+			"outputArgs":                      briefDetailOutputArgs(),
+			"requiresOriginalLauncherContext": true,
+			"requiresOriginalInput":           true,
+			"sourceReportDigest":              reportDigest,
+			"sourceReportId":                  reportID,
 		},
 		"nextAction":      briefNextAction(nextCommands, reportID),
-		"omissionSummary": briefOmissionSummary(report, nextCommands, omittedBlockerCount),
+		"omissionSummary": briefOmissionSummary(report, availableCommandCount, omittedBlockerCount),
 		"packetId":        reportID + ".agent-brief",
 		"packetKind":      "proofkit.agent-route.brief",
 		"routeFamily":     stringFromMap(report, "selectedRouteFamily"),
@@ -128,21 +140,44 @@ func briefContextRefs(commands []map[string]any, reportID string) []any {
 }
 
 func briefBlockers(report map[string]any, reportID string) ([]any, int) {
-	blockers := []any{}
-	for index, item := range mapsFromAny(report["requiredInputs"]) {
-		blockers = append(blockers, map[string]any{
+	blockers := make([]any, 0, maxBriefBlockerItems)
+	total := 0
+	appendBounded := func(blocker map[string]any) {
+		total++
+		if len(blockers) < maxBriefBlockerItems {
+			blockers = append(blockers, blocker)
+		}
+	}
+	if stringFromMap(report, "state") == "blocked_unknown_goal" {
+		appendBounded(map[string]any{
+			"blockerId": reportID + ".blocker.unknown-goal",
+			"kind":      "unknown_goal",
+		})
+	}
+	requiredInputs, _ := report["requiredInputs"].([]any)
+	for index, raw := range requiredInputs {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		appendBounded(map[string]any{
 			"blockerId":           fmt.Sprintf("%s.blocker.required-input.%02d", reportID, index+1),
 			"kind":                "missing_input",
 			"sourceReportPointer": fmt.Sprintf("/requiredInputs/%d", index),
 			"subject":             requiredInputLabel(item),
 		})
 	}
-	for index, item := range mapsFromAny(report["observedReports"]) {
+	observedReports, _ := report["observedReports"].([]any)
+	for index, raw := range observedReports {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
 		state := stringFromMap(item, "state")
 		if state == "passed" {
 			continue
 		}
-		blockers = append(blockers, map[string]any{
+		appendBounded(map[string]any{
 			"blockerId":           fmt.Sprintf("%s.blocker.observed-report.%02d", reportID, index+1),
 			"kind":                "observed_report",
 			"sourceReportPointer": fmt.Sprintf("/observedReports/%d", index),
@@ -150,21 +185,12 @@ func briefBlockers(report map[string]any, reportID string) ([]any, int) {
 			"subject":             stringFromMap(item, "kind"),
 		})
 	}
-	if len(blockers) == 0 && stringFromMap(report, "state") == "blocked_unknown_goal" {
-		blockers = append(blockers, map[string]any{
-			"blockerId": reportID + ".blocker.unknown-goal",
-			"kind":      "unknown_goal",
-		})
-	}
-	if len(blockers) <= maxBriefBlockerItems {
-		return blockers, 0
-	}
-	return blockers[:maxBriefBlockerItems], len(blockers) - maxBriefBlockerItems
+	return blockers, total - len(blockers)
 }
 
-func briefOmissionSummary(report map[string]any, commands []map[string]any, omittedBlockerCount int) map[string]any {
-	alternativeCount := len(commands)
-	if alternativeCount > 0 {
+func briefOmissionSummary(report map[string]any, availableCommandCount int, omittedBlockerCount int) map[string]any {
+	alternativeCount := availableCommandCount
+	if stringFromMap(report, "state") == "routed" && alternativeCount > 0 {
 		alternativeCount--
 	}
 	return map[string]any{
@@ -177,6 +203,21 @@ func briefOmissionSummary(report map[string]any, commands []map[string]any, omit
 		},
 		"omittedBlockerCount":       omittedBlockerCount,
 		"sourceOmittedCommandCount": len(mapsFromAny(report["omitted"])),
+	}
+}
+
+func nonNegativeInt(raw any) (int, bool) {
+	switch value := raw.(type) {
+	case int:
+		return value, value >= 0
+	case json.Number:
+		integer, err := value.Int64()
+		if err != nil || integer < 0 || int64(int(integer)) != integer {
+			return 0, false
+		}
+		return int(integer), true
+	default:
+		return 0, false
 	}
 }
 

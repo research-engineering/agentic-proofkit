@@ -347,6 +347,10 @@ func TestAgentRouteCLIOutputUsesVersionedRouteFamilyFields(t *testing.T) {
 	if _, legacy := guidance["family"]; legacy {
 		t.Fatalf("agent-route schema v3 retained guidanceSlice.family: %#v", guidance)
 	}
+	summary := report["summary"].(map[string]any)
+	if summary["availableCommandCount"] != float64(1) || summary["launcherProfile"] != "path" {
+		t.Fatalf("agent-route schema v3 summary lost exact route context: %#v", summary)
+	}
 }
 
 func TestAgentRouteAgentEnvelopeCLIABI(t *testing.T) {
@@ -378,7 +382,7 @@ func TestAgentRouteAgentEnvelopeCLIABI(t *testing.T) {
 		t.Fatalf("brief must cite policy instead of duplicating caller prose: %#v", packet)
 	}
 	detail := packet["detailAccess"].(map[string]any)
-	if detail["commandRef"] != "agent-route" || detail["requiresOriginalInput"] != true {
+	if detail["commandRef"] != "agent-route" || detail["requiresOriginalInput"] != true || detail["requiresOriginalLauncherContext"] != true || detail["launcherProfile"] != "path" {
 		t.Fatalf("brief does not expose explicit detail access: %#v", detail)
 	}
 }
