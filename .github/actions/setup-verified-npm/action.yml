@@ -10,14 +10,14 @@ runs:
         set -euo pipefail
 
         npm_version="$(node -p "require('./package.json').packageManager.split('@').at(-1)")"
-        expected_version="11.18.0"
+        expected_version="12.0.2"
         if [ "$npm_version" != "$expected_version" ]; then
           echo "packageManager npm version drift: expected $expected_version, got $npm_version" >&2
           exit 1
         fi
 
-        tarball_url="https://registry.npmjs.org/npm/-/npm-11.18.0.tgz"
-        tarball_integrity="sha512-T67M4L5wNm0cZ7EBLErcEkY1SmzEW/WJ+SADBzsFUY1UdAPfFHXFQtZ6SEXiK0+vzXysCvAsepbMaBTwnrAD+w=="
+        tarball_url="https://registry.npmjs.org/npm/-/npm-12.0.2.tgz"
+        tarball_integrity="sha512-uIXokLlBj6FpNUTQX1PmT5pz7BlIN9QlixX+zdaSNHsd0qUXsbDLr50xzY6Sw7cJVr0uzHKDOle0swmPW/p5Qw=="
         tool_root="$RUNNER_TEMP/proofkit-verified-npm"
         archive="$tool_root/npm.tgz"
         bin_dir="$tool_root/bin"

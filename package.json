@@ -1,11 +1,11 @@
 {
   "name": "@research-engineering/agentic-proofkit",
   "description": "Reusable proof profile, report, graph, and witness-planning primitives.",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,
-  "packageManager": "npm@11.18.0",
+  "packageManager": "npm@12.0.2",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org"
@@ -74,8 +74,8 @@
     "x64"
   ],
   "devDependencies": {
-    "@playwright/test": "1.62.0",
-    "axe-core": "4.12.1",
+    "@playwright/test": "1.62.1",
+    "axe-core": "4.13.0",
     "typescript": "7.0.2"
   }
 }

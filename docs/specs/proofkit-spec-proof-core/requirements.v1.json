@@ -581,6 +581,19 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-026",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Agent-route output contract v3 derives every report, brief packet, and full envelope from one fully admitted immutable route input, one admitted launcher profile, and one command-owned route report: route artifact refs in both available inputs and observed reports identify materialized caller-owned artifacts and never use the stdin transport sentinel; the nested report contract preserves the exact required route-report fields, schemaVersion 3, closed route-family vocabulary, guidance-to-selected-family relation, pre-suppression available-command count, and launcher profile; a bare --agent-envelope and explicit brief mode emit the same deterministic schema-v1 proofkit.agent-route.brief root while explicit full mode preserves the prior generic envelope; a routed brief selects exactly the first canonical nextCommands entry as its sole nextAction, retains its exact command and argv identity when the 3072-byte pretty stable-JSON bound permits, otherwise removes only inline argv and marks argvState detail_required, while every blocked state emits null nextAction; blockers are projected in deterministic unknown-goal, required-input, then sorted non-passed observed-report order, retain at most four typed entries without materializing omitted blocker maps, and report the exact omitted remainder; contextRefs refer to all and only caller-owned artifact operands of the selected command through resolvable source-report JSON pointers; one top-level detailAccess record binds the source report ID, stable digest, and launcher profile, provides exact report and full output-argument suffixes for replay with the original input and launcher context, and no per-item detail reference is added; omissionSummary exactly counts pre-suppression unselected available commands, source-omitted commands, and omitted blockers; fixed uniquely resolvable shipped requirement IDs replace repeated boundary-policy prose; the complete brief is at most 3072 bytes, and unsupported modes, invalid flag values, repeated single-value flags, or a detail mode without --agent-envelope fail before input is read. Reports and envelopes remain derived route guidance and never become requirement, proof, execution, merge, release, rollout, deployment, or readiness authority.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-026"],
+      "nonClaims": ["The 3072-byte packet bound and stable source-report digest do not prove provider token consumption, semantic sufficiency, source freshness, command execution, native witness truth, or policy approval; detail retrieval requires the caller to retain the original admitted input and launcher context."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

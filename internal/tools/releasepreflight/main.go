@@ -131,8 +131,8 @@ func run(args []string) error {
 		if err != nil {
 			return fmt.Errorf("decode npm expected metadata: %w", err)
 		}
-		var actual npmView
-		if err := readJSON(options["actual-file"], &actual); err != nil {
+		actual, err := readNPMViewRecord[npmView](options["actual-file"])
+		if err != nil {
 			return err
 		}
 		return compareNPMExisting(expected, actual)
@@ -145,8 +145,8 @@ func run(args []string) error {
 		if err != nil {
 			return err
 		}
-		var latest npmReleaseIdentity
-		if err := readJSON(options["latest-file"], &latest); err != nil {
+		latest, err := readNPMViewRecord[npmReleaseIdentity](options["latest-file"])
+		if err != nil {
 			return err
 		}
 		return validateNPMReleaseLineage(
@@ -652,6 +652,22 @@ func readJSON(path string, out any) error {
 		return fmt.Errorf("decode %s: %w", path, err)
 	}
 	return nil
+}
+
+func readNPMViewRecord[T any](path string) (T, error) {
+	var zero T
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return zero, fmt.Errorf("read %s: %w", path, err)
+	}
+	records, err := admission.DecodeTypedJSON[[]T](bytes.NewReader(content), maxReleaseJSONBytes)
+	if err != nil {
+		return zero, fmt.Errorf("decode %s as npm 12 view output: %w", path, err)
+	}
+	if len(records) != 1 {
+		return zero, fmt.Errorf("decode %s as npm 12 view output: expected exactly one record, got %d", path, len(records))
+	}
+	return records[0], nil
 }
 
 func parseFlags(args []string, required ...string) (map[string]string, error) {

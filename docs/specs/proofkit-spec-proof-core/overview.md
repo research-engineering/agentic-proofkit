@@ -168,6 +168,11 @@ execution receipts, and merge policy.
   selected owner boundary without migrating current sources, exposing a new
   public CLI, proving open-world absence of undeclared equivalent parsers, or
   claiming that no future owner-approved grammar can be added.
+- `REQ-PROOFKIT-SPEC-026`: agent-route v3 emits a deterministic 3072-byte
+  brief packet by default with one canonical action or typed blockers, exact
+  omission accounting, stable source-report identity, one top-level detail
+  access record, and explicit full-envelope retrieval without repeating policy
+  prose or promoting route guidance to authority.
 
 ## Non-Claims
 

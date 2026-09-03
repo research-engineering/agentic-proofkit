@@ -194,13 +194,26 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{}
-
-var currentAdditions = []Change{
-	{ChangeID: "proofkit.requirement-source.codec-selection", Summary: "Select the private bounded grouped-JSON requirement-source v2 codec from byte-bound V3 screen evidence, with exact collection-limit ownership, nondisclosing source diagnostics, lexical source maps, decision-metric closure, and owner-scoped grammar identity proof."},
+var currentBreakingChanges = []Change{
+	{ChangeID: "proofkit.agent-route.brief-default", Summary: "Change bare agent-route --agent-envelope output from the generic full envelope to the bounded proofkit.agent-route.brief packet."},
+	{ChangeID: "proofkit.agent-route.materialized-artifact-refs", Summary: "Reject the stdin transport sentinel as an available-input or observed-report artifact identity; route references must name materialized caller-owned artifacts."},
+	{ChangeID: "proofkit.agent-route.report-schema-v3", Summary: "Advance the bare agent-route report to schemaVersion 3 while preserving route-family semantics and adding exact launcher-profile and pre-suppression available-command context."},
+	{ChangeID: "proofkit.platform.macos-13", Summary: "Raise published Darwin package compatibility to macOS 13.0 so wheel tags remain truthful for binaries built with Go 1.27.1."},
+	{ChangeID: "proofkit.toolchain.npm-12", Summary: "Require npm 12.0.2 for repository-owned contributor and release scripts and consume npm view and pack evidence using npm 12 wire forms."},
 }
 
-var currentMigrationSteps = []string{}
+var currentAdditions = []Change{
+	{ChangeID: "proofkit.agent-route.envelope-detail-mode", Summary: "Add --agent-envelope-mode brief|full so agents can request bounded default guidance or the complete generic envelope explicitly."},
+	{ChangeID: "proofkit.toolchain.currentness", Summary: "Update the verified build and CI baseline to Go 1.27.1 with Unicode 17.0.0, Node 26.8.1, npm 12.0.2, Python 3.14.7, and the current stable repository-owned dependency and action pins."},
+}
+
+var currentMigrationSteps = []string{
+	"Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
+	"Consumers of the bare agent-route report must admit schemaVersion 3; the prior route-family fields remain, and summary now binds launcherProfile and availableCommandCount.",
+	"Consumers that used the stdin transport sentinel as an agent-route availableInputs or observedReports ref must materialize that artifact and pass its safe repo-relative path instead.",
+	"Darwin consumers must use macOS 13.0 or later.",
+	"Contributors must use Go 1.27.1, Node 26.8.1, npm 12.0.2, and Python 3.14.7 for repository-owned build and release workflows.",
+}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -220,11 +233,10 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.5.1",
+		"# @research-engineering/agentic-proofkit 0.6.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
-		"- None.",
 	}
 	for _, change := range currentBreakingChanges {
 		lines = append(lines, currentChangeBullet(change))
@@ -240,17 +252,22 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"No consumer migration is required.",
+		"Migration is required:",
+		"",
 	)
+	for _, step := range currentMigrationSteps {
+		lines = append(lines, "- "+step)
+	}
 	lines = append(lines,
 		"",
 		"## Platform Requirements",
 		"",
-		"- Published Darwin package binaries require macOS 12.0 or later on arm64 and x86_64.",
+		"- Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64.",
 		"",
 		"## Known Limitations",
 		"",
 		"- Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
+		"- Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
 		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
 		"- The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
@@ -260,7 +277,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.1",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.6.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -271,7 +288,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Rollback",
 		"",
-		"- Pin npm consumers to the previous admitted version 0.5.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.0`.",
+		"- Pin npm consumers to the previous admitted version 0.5.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.5.1`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

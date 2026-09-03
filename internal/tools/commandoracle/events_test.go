@@ -11,6 +11,8 @@ func TestAdmitEventRejectsUnknownActionAndInvalidAuxiliaryTypes(t *testing.T) {
 		{name: "unknown action", line: `{"Action":"counterfeit","Package":"example.test/p"}`, want: "event.action_unknown"},
 		{name: "elapsed string", line: `{"Action":"start","Elapsed":"0","Package":"example.test/p"}`, want: "event.field_type_invalid"},
 		{name: "output object", line: `{"Action":"output","Output":{},"Package":"example.test/p"}`, want: "event.field_type_invalid"},
+		{name: "output type object", line: `{"Action":"output","Output":"x","OutputType":{},"Package":"example.test/p"}`, want: "event.field_type_invalid"},
+		{name: "path object", line: `{"Action":"output","Output":"x","Package":"example.test/p","Path":{}}`, want: "event.field_type_invalid"},
 		{name: "time number", line: `{"Action":"start","Package":"example.test/p","Time":1}`, want: "event.field_type_invalid"},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -18,6 +20,13 @@ func TestAdmitEventRejectsUnknownActionAndInvalidAuxiliaryTypes(t *testing.T) {
 				t.Fatalf("admitEvent() error = %v, want %s", err, testCase.want)
 			}
 		})
+	}
+}
+
+func TestAdmitEventAcceptsGo127OutputMetadata(t *testing.T) {
+	line := []byte(`{"Action":"output","Output":"x","OutputType":"frame","Package":"example.test/p","Path":"internal/sample/sample_test.go"}`)
+	if _, err := admitEvent(line); err != nil {
+		t.Fatalf("admitEvent() error = %v", err)
 	}
 }
 

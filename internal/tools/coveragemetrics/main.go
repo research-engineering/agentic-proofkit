@@ -284,6 +284,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.generated-command-caller-preservation"}: {"TestBootstrapPreservesCallerDisplayCommandInGuidancePayload"},
 		{"REQ-PROOFKIT-PACKAGE-002", "proofkit.package-boundary.cli-output-root-witnesses"}: {
 			"TestAdoptionContractEnvelopeCLIABI",
+			"TestAgentRouteEnvelopeModesUseExactRootShapes",
 			"TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 			"TestSelfCheckOutputUsesExactRootShape",
 			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
@@ -305,6 +306,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.cli-abi-golden"}: {
 			"TestAdoptionContractEnvelopeCLIABI",
+			"TestAgentRouteEnvelopeModesUseExactRootShapes",
 			"TestRequiredInputCommandsRouteStructuralErrorsByMode",
 			"TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 			"TestRequirementBrowserOneShotCLIOutputVariants",
@@ -507,6 +509,32 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-012", "proofkit.spec-proof-core.requirement-authoring-ref-provenance"}: {
 			"TestBuildPreservesDigestBoundAuthoringRefIdentity",
 		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-cli-abi"}: {
+			"TestAgentRouteEnvelopeModesUseExactRootShapes",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-projection"}: {
+			"TestAgentBriefBindsLauncherContextThatAffectsReportDigest",
+			"TestAgentBriefClosesEverySelectedCommandInputReference",
+			"TestAgentBriefCompactsAtDeclaredByteBoundary",
+			"TestAgentBriefIsBoundedAndFullEnvelopeRemainsAvailable",
+			"TestAgentBriefNamesCompleteInputBundleBlocker",
+			"TestAgentBriefPreservesBlockedRouteOmissionsAndUnknownReportBlockers",
+			"TestBriefBlockerBoundDominatesMapMaterialization",
+			"TestBuildEnvelopeCapsBlockersAndCountsOmittedDetails",
+			"TestBuildEnvelopeCompactsOversizedArgvWithoutLosingActionIdentity",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-flag-pre-read-admission"}: {
+			"TestAgentRouteModeAdmissionPrecedesInputRead",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-report-contract-closure"}: {
+			"TestAgentRouteOutputContractPreservesReportSemantics",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-version-edge"}: {
+			"TestAgentRouteVersionEdgeClosesBriefDefaultMigration",
+		},
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-materialized-ref-admission"}: {
+			"TestBuildRejectsStdinTransportSentinelAsArtifactReference",
+		},
 		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}: {
 			"TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField",
 		},
@@ -583,6 +611,12 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-006", "proofkit.spec-proof-core.test-inventory-and-coverage-view"}:                    "internal/command/requirementcoverageview/output_closure_test.go",
 		{"REQ-PROOFKIT-SPEC-006", "proofkit.spec-proof-core.declared-route-mapping-without-assurance"}:            "internal/command/requirementcoverageview/requirementcoverageview_test.go",
 		{"REQ-PROOFKIT-SPEC-012", "proofkit.spec-proof-core.requirement-authoring-ref-provenance"}:                "internal/command/requirementauthoringplan/requirement_authoring_plan_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-cli-abi"}:                           "internal/app/cli_abi_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-projection"}:                        "internal/command/agentroute/brief_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-brief-version-edge"}:                      "internal/app/agent_route_version_edge_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-flag-pre-read-admission"}:                 "internal/app/app_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-materialized-ref-admission"}:              "internal/command/agentroute/agentroute_test.go",
+		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-report-contract-closure"}:                 "internal/app/cli_contract_test.go",
 	}
 	if len(requiredPaths) != len(required) {
 		return fmt.Errorf("required selector path inventory=%d, selector inventory=%d", len(requiredPaths), len(required))

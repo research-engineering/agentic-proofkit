@@ -9,18 +9,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/npmpack"
 )
-
-type packRecord struct {
-	Filename  string `json:"filename"`
-	ID        string `json:"id,omitempty"`
-	Integrity string `json:"integrity"`
-	Name      string `json:"name"`
-	Shasum    string `json:"shasum"`
-	Version   string `json:"version"`
-}
 
 func main() {
 	if err := run(); err != nil {
@@ -37,7 +28,7 @@ func run() error {
 	if err := os.MkdirAll(packageDir, 0o755); err != nil {
 		return err
 	}
-	records := []packRecord{}
+	records := []npmpack.Record{}
 	rootRecords, err := npmPack(".")
 	if err != nil {
 		return err
@@ -53,17 +44,20 @@ func run() error {
 	return os.WriteFile(filepath.Join(packageDir, "npm-pack.json"), append(content, '\n'), 0o644)
 }
 
-func npmPack(packageRoot string) ([]packRecord, error) {
-	output, err := exec.Command("npm", "pack", "--json", "--pack-destination", filepath.Join("artifacts", "package"), packageRoot).CombinedOutput()
+func npmPack(packageRoot string) ([]npmpack.Record, error) {
+	command := exec.Command("npm", "--silent", "pack", "--json", "--pack-destination", filepath.Join("artifacts", "package"), packageRoot)
+	stderr := diagnostic.NewStderrCapture()
+	command.Stderr = stderr
+	output, err := command.Output()
 	if err != nil {
-		return nil, fmt.Errorf("npm pack %s: %w\n%s", packageRoot, err, output)
+		if childErr := stderr.Failure("npm pack child stderr"); childErr != nil {
+			return nil, fmt.Errorf("npm pack %s: %w; %s", packageRoot, err, childErr)
+		}
+		return nil, fmt.Errorf("npm pack %s: %w", packageRoot, err)
 	}
-	records, err := admission.DecodeTypedJSON[[]packRecord](bytes.NewReader(output), int64(len(output)))
+	record, err := npmpack.DecodeNPM12Report(bytes.NewReader(output), int64(len(output)))
 	if err != nil {
-		return nil, fmt.Errorf("parse npm pack output for %s: %w\n%s", packageRoot, err, output)
+		return nil, fmt.Errorf("parse npm pack output for %s: %w", packageRoot, err)
 	}
-	if len(records) != 1 {
-		return nil, fmt.Errorf("npm pack %s must return exactly one record", packageRoot)
-	}
-	return records, nil
+	return []npmpack.Record{record}, nil
 }

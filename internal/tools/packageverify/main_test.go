@@ -238,13 +238,13 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 		{
 			name: "missing dependency",
 			patch: func(manifest string) string {
-				return strings.Replace(manifest, "    \"axe-core\": \"4.12.1\",\n", "", 1)
+				return strings.Replace(manifest, "    \"axe-core\": \"4.13.0\",\n", "", 1)
 			},
 		},
 		{
 			name: "wrong dependency version",
 			patch: func(manifest string) string {
-				return strings.Replace(manifest, "\"axe-core\": \"4.12.1\"", "\"axe-core\": \"4.12.0\"", 1)
+				return strings.Replace(manifest, "\"axe-core\": \"4.13.0\"", "\"axe-core\": \"4.12.1\"", 1)
 			},
 		},
 		{
@@ -253,7 +253,7 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 				return strings.Replace(
 					manifest,
 					"  \"devDependencies\": {\n",
-					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.12.1\",\n",
+					"  \"devDependencies\": {\n    \"@axe-core/playwright\": \"4.13.0\",\n",
 					1,
 				)
 			},
@@ -735,6 +735,53 @@ func TestPackagePublicReferenceClosure(t *testing.T) {
 				entries["package/proofkit/cli-contract.v2.json"] = `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"MISSING.json"}},"commands":[]}`
 			},
 			want: "dangling package-public route MISSING.json",
+		},
+		{
+			name: "dangling brief boundary policy requirement",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], "REQ-PROOFKIT-SPEC-026", "REQ-MISSING-026", 1)
+			},
+			want: "boundary policy ref must resolve to exactly one shipped requirement",
+		},
+		{
+			name: "missing agent-route brief packet contract",
+			mutate: func(entries map[string]string) {
+				var contract map[string]any
+				if err := json.Unmarshal([]byte(entries["package/proofkit/cli-contract.v2.json"]), &contract); err != nil {
+					panic(err)
+				}
+				command := contract["commands"].([]any)[0].(map[string]any)
+				output := command["outputContract"].(map[string]any)
+				delete(output, "briefPacketContract")
+				encoded, err := json.Marshal(contract)
+				if err != nil {
+					panic(err)
+				}
+				entries["package/proofkit/cli-contract.v2.json"] = string(encoded)
+			},
+			want: "agent-route briefPacketContract must be present",
+		},
+		{
+			name: "ambiguous brief boundary policy requirement",
+			mutate: func(entries map[string]string) {
+				entries["package/docs/specs/example/requirements.v1.json"] = strings.Replace(entries["package/docs/specs/example/requirements.v1.json"], `]}`, `,{"requirementId":"REQ-PROOFKIT-SPEC-026"}]}`, 1)
+			},
+			want: "boundary policy ref must resolve to exactly one shipped requirement",
+		},
+		{
+			name: "incomplete brief boundary policy set",
+			mutate: func(entries map[string]string) {
+				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"`, `"REQ-PROOFKIT-SPEC-005"`, 1)
+			},
+			want: "must equal the exact canonical policy set",
+		},
+		{
+			name: "surplus resolvable brief boundary policy ref",
+			mutate: func(entries map[string]string) {
+				entries["package/docs/specs/example/requirements.v1.json"] = strings.Replace(entries["package/docs/specs/example/requirements.v1.json"], `]}`, `,{"requirementId":"REQ-OTHER"}]}`, 1)
+				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"`, `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026","REQ-OTHER"`, 1)
+			},
+			want: "must equal the exact canonical policy set",
 		},
 		{
 			name: "dangling binding witness path",
@@ -1380,12 +1427,12 @@ func packageReferenceClosureFixture() map[string]string {
 		"package/ADOPTION.md":                             "Adoption.\n",
 		"package/docs/proofkit-contract-map.md":           "Contract map.\n",
 		"package/docs/specs/example/overview.md":          "Example.\n",
-		"package/docs/specs/example/requirements.v1.json": `{"specPackagePath":"docs/specs/example","overviewPath":"docs/specs/example/overview.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[]}`,
+		"package/docs/specs/example/requirements.v1.json": `{"specPackagePath":"docs/specs/example","overviewPath":"docs/specs/example/overview.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-SPEC-005"},{"requirementId":"REQ-PROOFKIT-SPEC-026"}]}`,
 		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"internal/tools/packageverify/main_test.go","witnessSelectors":[{"selector":"TestPackagePublicReferenceClosure","command":"go test ./internal/tools/packageverify -run '^TestPackagePublicReferenceClosure$'"}]}]}`,
 		"package/proofkit/witness-plan.json":              `{"commands":[],"policies":[]}`,
 		"package/proofkit/command-families.v1.json":       `{"families":[]}`,
 		"package/proofkit/receipt-producer-policy.json":   `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/specs/example/requirements.v1.json"]}]}`,
-		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"fixture","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
+		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"agent-route","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}},"outputContract":{"briefPacketContract":{"boundaryPolicyRefs":["REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"],"fieldRules":{"boundaryPolicyRefs":"policy field description","contextRefs":"runtime field description"}},"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
 	}
 }
 
@@ -1757,12 +1804,12 @@ func packageManifestFixture(repositoryURL string) string {
   "name": "@research-engineering/agentic-proofkit",
   "version": "1.2.3",
   "license": "MIT",
-  "packageManager": "npm@11.18.0",
+  "packageManager": "npm@12.0.2",
   "type": "module",
   "sideEffects": false,
   "devDependencies": {
-    "@playwright/test": "1.62.0",
-    "axe-core": "4.12.1",
+    "@playwright/test": "1.62.1",
+    "axe-core": "4.13.0",
     "typescript": "7.0.2"
   },
   "repository": {

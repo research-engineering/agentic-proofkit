@@ -30,11 +30,11 @@ jobs:
       SEM_LOCAL: "1"
       SEM_NO_TELEMETRY: "1"
       SEM_NO_UPDATE_CHECK: "1"
-      SEM_VERSION: v0.20.0
-      SEM_LINUX_X86_64_SHA256: cf7249d797bed05d59e16cfa1b417e872087d558611e9f675a13810edba33dbf
+      SEM_VERSION: v0.24.0
+      SEM_LINUX_X86_64_SHA256: 90f31b67a351aa2ec6492167d35c5636e9128bee9c528529219423c146831a4e
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false

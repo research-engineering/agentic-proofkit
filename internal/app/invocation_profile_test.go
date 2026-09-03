@@ -133,7 +133,7 @@ func TestGeneratedCommandInvocationProfileRouteClosure(t *testing.T) {
 			invocationProfileAssertArgvInventory(t, renderer, agentRoute, agentRouteInventory)
 			invocationProfileAssertArgvInventoryMutants(t, renderer, agentRoute, agentRouteInventory)
 
-			agentRouteEnvelope := invocationProfileRun(t, renderer, []string{"agent-route", "--input", "-", "--agent-envelope"}, invocationProfileEncode(t, agentRouteInput))
+			agentRouteEnvelope := invocationProfileRun(t, renderer, []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "full"}, invocationProfileEncode(t, agentRouteInput))
 			agentRouteEnvelopeInventory := map[string]int{"$.commands[*].argv": 1}
 			invocationProfileAssertArgvInventory(t, renderer, agentRouteEnvelope, agentRouteEnvelopeInventory)
 			invocationProfileAssertArgvInventoryMutantsAt(t, renderer, agentRouteEnvelope, agentRouteEnvelopeInventory, "commands")

@@ -19,10 +19,29 @@ func BuildEnvelopeWithRenderer(raw any, renderer cliexec.Renderer) (map[string]a
 	if err != nil {
 		return nil, 1, err
 	}
-	return AgentEnvelope(report), exitCode, nil
+	return FullAgentEnvelope(report), exitCode, nil
 }
 
-func AgentEnvelope(report map[string]any) map[string]any {
+func BuildEnvelopeModeWithRenderer(raw any, renderer cliexec.Renderer, mode EnvelopeMode) (map[string]any, int, error) {
+	report, exitCode, err := BuildWithRenderer(raw, renderer)
+	if err != nil {
+		return nil, 1, err
+	}
+	switch mode {
+	case EnvelopeModeBrief:
+		packet, err := AgentBrief(report)
+		if err != nil {
+			return nil, 1, err
+		}
+		return packet, exitCode, nil
+	case EnvelopeModeFull:
+		return FullAgentEnvelope(report), exitCode, nil
+	default:
+		return nil, 1, fmt.Errorf("unsupported agent-route envelope mode: %s", mode)
+	}
+}
+
+func FullAgentEnvelope(report map[string]any) map[string]any {
 	routeState := stringFromMap(report, "state")
 	sourceState := "failed"
 	if routeState == "routed" {
@@ -315,6 +334,29 @@ func requiredInputLabel(item map[string]any) string {
 		}
 		sort.Strings(parts)
 		return strings.Join(parts, "_or_")
+	}
+	if rawBundles, ok := item["oneOfBundles"].([]any); ok {
+		bundles := make([]string, 0, len(rawBundles))
+		for _, rawBundle := range rawBundles {
+			values, ok := rawBundle.([]any)
+			if !ok {
+				continue
+			}
+			parts := make([]string, 0, len(values))
+			for _, value := range values {
+				if text, ok := value.(string); ok {
+					parts = append(parts, text)
+				}
+			}
+			sort.Strings(parts)
+			if len(parts) > 0 {
+				bundles = append(bundles, strings.Join(parts, "_and_"))
+			}
+		}
+		sort.Strings(bundles)
+		if len(bundles) > 0 {
+			return strings.Join(bundles, "_or_")
+		}
 	}
 	return "caller_owned_input"
 }

@@ -409,11 +409,11 @@ func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int,
 		return nil, 1, err
 	}
 	if input.Goal == "unknown" {
-		return buildUnknownGoal(input), 1, nil
+		return buildUnknownGoal(input, renderer), 1, nil
 	}
 	spec, ok := routeSpecs[input.Goal]
 	if !ok {
-		return buildUnknownGoal(input), 1, nil
+		return buildUnknownGoal(input, renderer), 1, nil
 	}
 	missing := missingRequiredInputs(spec, input)
 	state := "routed"
@@ -463,7 +463,7 @@ func InputContract() map[string]any {
 				"default": []any{},
 				"item": map[string]any{
 					"kind": map[string]any{"enum": sortedKeys(inputKindValues)},
-					"ref":  map[string]any{"format": "safe repo-relative caller-owned file, report ref, or scanner root ref; scanner root refs may be ."},
+					"ref":  map[string]any{"format": "safe repo-relative materialized caller-owned file, report ref, or scanner root ref; stdin sentinel - is forbidden and scanner root refs may be ."},
 				},
 				"uniqueBy": "kind",
 			},
@@ -476,7 +476,7 @@ func InputContract() map[string]any {
 				"default": []any{},
 				"item": map[string]any{
 					"kind":  map[string]any{"enum": sortedKeys(reportKindValues)},
-					"ref":   map[string]any{"format": "safe repo-relative report ref"},
+					"ref":   map[string]any{"format": "safe repo-relative materialized caller-owned report ref; stdin sentinel - is forbidden"},
 					"state": map[string]any{"enum": sortedKeys(reportStateValues)},
 				},
 				"blockingSemantics": "any observed report state other than passed blocks command emission",
@@ -497,30 +497,74 @@ func InputContract() map[string]any {
 
 func OutputContract() map[string]any {
 	return map[string]any{
-		"contractId":    "proofkit.agent-route.output.v2",
-		"schemaVersion": 2,
-		"authority":     "deterministic route report derived from admitted agent-route input",
-		"requiredFields": []any{
-			"guidanceSlice",
-			"reportId",
-			"reportKind",
-			"schemaVersion",
-			"selectedRouteFamily",
-			"state",
-		},
-		"fields": map[string]any{
-			"schemaVersion": map[string]any{"value": 2},
-			"selectedRouteFamily": map[string]any{
-				"enum": routeFamilyContractValues(),
+		"contractId":    "proofkit.agent-route.output.v3",
+		"schemaVersion": 3,
+		"authority":     "deterministic route report, brief packet, full envelope, or invalid-input repair packet selected from the admitted invocation",
+		"reportContract": map[string]any{
+			"contractId":    "proofkit.agent-route.report.v3",
+			"schemaVersion": 3,
+			"requiredFields": []any{
+				"guidanceSlice",
+				"reportId",
+				"reportKind",
+				"schemaVersion",
+				"selectedRouteFamily",
+				"state",
+				"summary",
 			},
-			"guidanceSlice": map[string]any{
-				"requiredFields":  []any{"routeFamily"},
-				"routeFamilyRule": "must equal selectedRouteFamily",
+			"fields": map[string]any{
+				"schemaVersion": map[string]any{"value": 3},
+				"selectedRouteFamily": map[string]any{
+					"enum": routeFamilyContractValues(),
+				},
+				"guidanceSlice": map[string]any{
+					"requiredFields":  []any{"routeFamily"},
+					"routeFamilyRule": "must equal selectedRouteFamily",
+				},
+				"summary": map[string]any{
+					"availableCommandCount": "exact count before blocked-state command suppression",
+					"launcherProfile":       "exact admitted command-renderer profile that affects route argv and report identity",
+				},
 			},
 		},
-		"changesFromV1": []any{
-			"selectedFamily is replaced by selectedRouteFamily",
-			"guidanceSlice.family is replaced by guidanceSlice.routeFamily",
+		"briefPacketContract": map[string]any{
+			"boundaryPolicyRefs": briefBoundaryPolicyRefs(),
+			"contractId":         "proofkit.agent-route.brief.v1",
+			"schemaVersion":      1,
+			"maxPrettyJSONBytes": maxAgentBriefBytes,
+			"maxBlockers":        maxBriefBlockerItems,
+			"requiredFields": []any{
+				"blockers",
+				"boundaryPolicyRefs",
+				"contextRefs",
+				"detailAccess",
+				"nextAction",
+				"omissionSummary",
+				"packetId",
+				"packetKind",
+				"routeFamily",
+				"schemaVersion",
+				"state",
+			},
+			"fieldRules": map[string]any{
+				"blockers":           "unknown-goal blocker when applicable, then required-input blockers, then sorted non-passed observed-report blockers; retain at most four and count the exact remainder without materializing the omitted blocker maps",
+				"boundaryPolicyRefs": "exactly the shipped and uniquely resolvable requirement IDs REQ-PROOFKIT-SPEC-005 and REQ-PROOFKIT-SPEC-026; policy prose is not duplicated",
+				"contextRefs":        "only caller-owned artifact operands of the selected next command, each addressed by an RFC 6901 pointer into the source report",
+				"detailAccess":       "binds source report ID, stable digest, and launcher profile and provides exact outputArgs suffixes for report and full retrieval from the original admitted input and launcher context",
+				"nextAction":         "null for blocked states; otherwise the first canonical nextCommands entry with exact command identity and inline argv unless the byte bound requires argvState=detail_required",
+				"omissionSummary":    "exact counts for unselected available commands, source-omitted commands, and blockers omitted by the packet bound",
+				"packetKind":         "proofkit.agent-route.brief",
+				"schemaVersion":      "1",
+			},
+			"nonClaims": []any{
+				"The brief packet is derived route guidance, not requirement, proof, execution, merge, release, rollout, deployment, or readiness authority.",
+				"The packet byte bound does not claim tokenizer-specific token consumption or semantic sufficiency.",
+			},
+		},
+		"changesFromV2": []any{
+			"bare --agent-envelope emits proofkit.agent-route.brief",
+			"--agent-envelope-mode full preserves the prior generic envelope projection",
+			"route report schemaVersion advances to 3 while preserving prior route-family semantics and adding exact launcher and available-command context",
 		},
 	}
 }
@@ -655,7 +699,15 @@ func admitAvailableInputs(raw any) (map[string]string, error) {
 }
 
 func admitAvailableInputRef(kind string, value string, context string) (string, error) {
-	if (kind == "typescript_public_api_repo_root" || kind == "requirement_context_repo_root") && value == "." {
+	allowRepoRoot := kind == "typescript_public_api_repo_root" || kind == "requirement_context_repo_root"
+	return admitMaterializedRouteRef(value, context, allowRepoRoot)
+}
+
+func admitMaterializedRouteRef(value string, context string, allowRepoRoot bool) (string, error) {
+	if value == "-" {
+		return "", fmt.Errorf("%s must identify a materialized caller-owned artifact, not the stdin transport sentinel", context)
+	}
+	if allowRepoRoot && value == "." {
 		return value, nil
 	}
 	return admit.SafeRepoRelativePath(value, context)
@@ -690,7 +742,7 @@ func admitObservedReports(raw any) ([]observedReport, error) {
 		if err != nil {
 			return nil, err
 		}
-		ref, err := admit.SafeRepoRelativePath(refText, fmt.Sprintf("agent route observedReports[%d].ref", index))
+		ref, err := admitMaterializedRouteRef(refText, fmt.Sprintf("agent route observedReports[%d].ref", index), false)
 		if err != nil {
 			return nil, err
 		}
@@ -818,7 +870,7 @@ func inputGroupSatisfied(group []string, available map[string]string) bool {
 	return len(group) == 0
 }
 
-func buildUnknownGoal(input routeInput) map[string]any {
+func buildUnknownGoal(input routeInput, renderer cliexec.Renderer) map[string]any {
 	spec := routeSpec{
 		RouteFamily:  routeFamilyUnknown,
 		SliceSummary: "Unknown goals are deliberately not routed.",
@@ -830,36 +882,40 @@ func buildUnknownGoal(input routeInput) map[string]any {
 		"diagnostics": []any{
 			map[string]any{"key": "goal", "value": input.Goal},
 		},
-		"escalations":  []any{"Escalate to the consuming repository owner; do not guess a Proofkit route from an unknown goal."},
-		"nextCommands": []any{},
-		"nonClaims":    mergedNonClaims(input.CallerNonClaims),
+		"escalations":     []any{"Escalate to the consuming repository owner; do not guess a Proofkit route from an unknown goal."},
+		"nextCommands":    []any{},
+		"nonClaims":       mergedNonClaims(input.CallerNonClaims),
+		"observedReports": observedReportReports(input.ObservedReports),
 		"omitted": []any{
 			map[string]any{"reason": "Unknown goals are not routed because that would create an implicit policy owner inside Proofkit."},
 		},
 		"reportId":            input.RouteID,
 		"reportKind":          "proofkit.agent-route",
 		"requiredInputs":      []any{},
-		"schemaVersion":       2,
+		"schemaVersion":       3,
 		"selectedRouteFamily": string(routeFamilyUnknown),
 		"state":               "blocked_unknown_goal",
 		"stopConditions":      []any{"Stop before running a Proofkit command until the caller supplies a known goal."},
 		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
-			"browserMode":         input.BrowserMode,
-			"availableInputCount": len(input.AvailableInputs),
-			"callerNonClaimCount": len(input.CallerNonClaims),
-			"goal":                input.Goal,
-			"knownChangedPaths":   len(input.KnownChangedPaths),
-			"mode":                input.Mode,
-			"observedReportCount": len(input.ObservedReports),
-			"openBrowser":         input.OpenBrowser,
+			"availableCommandCount": 0,
+			"browserMode":           input.BrowserMode,
+			"availableInputCount":   len(input.AvailableInputs),
+			"callerNonClaimCount":   len(input.CallerNonClaims),
+			"goal":                  input.Goal,
+			"knownChangedPaths":     len(input.KnownChangedPaths),
+			"launcherProfile":       renderer.Profile(),
+			"mode":                  input.Mode,
+			"observedReportCount":   len(input.ObservedReports),
+			"openBrowser":           input.OpenBrowser,
 		},
 	}
 }
 
 func buildReport(input routeInput, spec routeSpec, state string, missing []map[string]any, renderer cliexec.Renderer) map[string]any {
-	nextCommands := commandReports(spec.NextCommands, input, renderer)
+	availableCommands := commandReports(spec.NextCommands, input, renderer)
+	nextCommands := availableCommands
 	if state != "routed" {
 		nextCommands = []any{}
 	}
@@ -873,21 +929,23 @@ func buildReport(input routeInput, spec routeSpec, state string, missing []map[s
 		"reportId":            input.RouteID,
 		"reportKind":          "proofkit.agent-route",
 		"requiredInputs":      requiredInputReports(missing),
-		"schemaVersion":       2,
+		"schemaVersion":       3,
 		"selectedRouteFamily": string(spec.RouteFamily),
 		"state":               state,
 		"stopConditions":      toAnySlice(spec.StopConditions),
 		"callerNonClaims":     toAnySlice(input.CallerNonClaims),
 		"guidanceSlice":       guidanceSliceReport(input.Goal, spec),
 		"summary": map[string]any{
-			"browserMode":         input.BrowserMode,
-			"availableInputCount": len(input.AvailableInputs),
-			"callerNonClaimCount": len(input.CallerNonClaims),
-			"goal":                input.Goal,
-			"knownChangedPaths":   len(input.KnownChangedPaths),
-			"mode":                input.Mode,
-			"observedReportCount": len(input.ObservedReports),
-			"openBrowser":         input.OpenBrowser,
+			"availableCommandCount": len(availableCommands),
+			"browserMode":           input.BrowserMode,
+			"availableInputCount":   len(input.AvailableInputs),
+			"callerNonClaimCount":   len(input.CallerNonClaims),
+			"goal":                  input.Goal,
+			"knownChangedPaths":     len(input.KnownChangedPaths),
+			"launcherProfile":       renderer.Profile(),
+			"mode":                  input.Mode,
+			"observedReportCount":   len(input.ObservedReports),
+			"openBrowser":           input.OpenBrowser,
 		},
 	}
 }

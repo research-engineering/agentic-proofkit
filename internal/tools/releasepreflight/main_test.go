@@ -174,7 +174,7 @@ func TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity(t *testing.T) {
 	  "knownLimitations": [],
 	  "rollback": {"strategy": "previous_admitted_version"}
 	}`)
-	writeFile(t, latestPath, `{"name":"@research-engineering/agentic-proofkit","version":"0.2.0"}`)
+	writeFile(t, latestPath, `[{"name":"@research-engineering/agentic-proofkit","version":"0.2.0"}]`)
 	args := []string{
 		"npm-lineage",
 		"--change-record-file", recordPath,
@@ -187,7 +187,7 @@ func TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity(t *testing.T) {
 		t.Fatalf("run(npm-lineage) error = %v", err)
 	}
 
-	writeFile(t, latestPath, `{"name":"@research-engineering/agentic-proofkit","version":"0.1.160"}`)
+	writeFile(t, latestPath, `[{"name":"@research-engineering/agentic-proofkit","version":"0.1.160"}]`)
 	if err := run(args); err == nil || !strings.Contains(err.Error(), "expected 0.2.0") {
 		t.Fatalf("run(npm-lineage) error = %v, want lineage gap rejection", err)
 	}
@@ -219,7 +219,7 @@ func TestCompareNPMCandidateArtifactsBindsDownloadedBytes(t *testing.T) {
 
 func TestRunNPMExistingRejectsAmbiguousExpectedJSON(t *testing.T) {
 	actualFile := filepath.Join(t.TempDir(), "npm-view.json")
-	if err := os.WriteFile(actualFile, []byte(`{"name":"agentic-proofkit","version":"1.2.3","dist":{"shasum":"sha","integrity":"integrity"}}`), 0o600); err != nil {
+	if err := os.WriteFile(actualFile, []byte(`[{"name":"agentic-proofkit","version":"1.2.3","dist":{"shasum":"sha","integrity":"integrity"}}]`), 0o600); err != nil {
 		t.Fatalf("write npm view: %v", err)
 	}
 	err := run([]string{
@@ -229,6 +229,38 @@ func TestRunNPMExistingRejectsAmbiguousExpectedJSON(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "duplicate object key") {
 		t.Fatalf("run(npm-existing) error=%v, want duplicate-key rejection", err)
+	}
+}
+
+func TestRunNPMExistingAdmitsExactlyOneNPM12ViewRecord(t *testing.T) {
+	root := t.TempDir()
+	actualFile := filepath.Join(root, "npm-view.json")
+	expectedJSON := `{"name":"agentic-proofkit","version":"1.2.3","filename":"agentic-proofkit.tgz","shasum":"sha","integrity":"integrity"}`
+	args := []string{"npm-existing", "--expected-json", expectedJSON, "--actual-file", actualFile}
+
+	writeFile(t, actualFile, `[{"name":"agentic-proofkit","version":"1.2.3","dist":{"shasum":"sha","integrity":"integrity"}}]`)
+	if err := run(args); err != nil {
+		t.Fatalf("run(npm-existing) error=%v", err)
+	}
+
+	invalid := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{name: "legacy object", content: `{"name":"agentic-proofkit","version":"1.2.3"}`, want: "npm 12 view output"},
+		{name: "empty array", content: `[]`, want: "expected exactly one record, got 0"},
+		{name: "multiple records", content: `[{"name":"agentic-proofkit"},{"name":"other"}]`, want: "expected exactly one record, got 2"},
+		{name: "duplicate key", content: `[{"name":"agentic-proofkit","name":"other","version":"1.2.3"}]`, want: "duplicate object key"},
+	}
+	for _, item := range invalid {
+		t.Run(item.name, func(t *testing.T) {
+			writeFile(t, actualFile, item.content)
+			err := run(args)
+			if err == nil || !strings.Contains(err.Error(), item.want) {
+				t.Fatalf("run(npm-existing) error=%v, want %q", err, item.want)
+			}
+		})
 	}
 }
 

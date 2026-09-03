@@ -264,9 +264,10 @@ type requirementBrowserArgs struct {
 }
 
 type planningArgs struct {
-	agentEnvelope bool
-	inputPath     string
-	inputPointer  string
+	agentEnvelope     bool
+	agentEnvelopeMode string
+	inputPath         string
+	inputPointer      string
 }
 
 type testEvidenceInventoryArgs struct {

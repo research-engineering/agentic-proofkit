@@ -183,20 +183,7 @@ func TestCaptureContextTerminatesCanceledGitProcessGroup(t *testing.T) {
 }
 
 func TestCaptureContextTerminatesGitProcessGroupOnOutputOverflow(t *testing.T) {
-	bin := t.TempDir()
-	gitPath := filepath.Join(bin, "git")
-	script := "#!/bin/sh\n/bin/dd if=/dev/zero bs=17825792 count=1 1>&2\n/bin/sleep 10\n"
-	if err := os.WriteFile(gitPath, []byte(script), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("PATH", bin)
-	started := time.Now()
-	if _, err := CaptureContext(context.Background(), t.TempDir()); err == nil || !strings.Contains(err.Error(), "output exceeds resource limit") {
-		t.Fatalf("CaptureContext() error = %v, want output-limit rejection", err)
-	}
-	if elapsed := time.Since(started); elapsed > 3*time.Second {
-		t.Fatalf("CaptureContext() output-limit termination took %s", elapsed)
-	}
+	testCaptureContextTerminatesGitProcessGroupOnOutputOverflow(t)
 }
 
 func TestCaptureRejectsSuccessfulGitDiagnosticsWithoutEcho(t *testing.T) {

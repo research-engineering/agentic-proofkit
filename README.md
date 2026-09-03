@@ -50,7 +50,7 @@ CLI, not as a Python SDK. Python projects should still treat CLI/JSON records,
 exit codes, and package metadata as the public contract.
 
 <!-- proofkit:platform-python:start -->
-Supported binary targets are macOS 12 or later on arm64 or x64.
+Supported binary targets are macOS 13 or later on arm64 or x64.
 Linux manylinux 2.17 or later is supported on arm64 or x64. Windows is unsupported. The Python
 runner requires Python 3.9 or later and wraps the same Go CLI; it is not a
 Python SDK.

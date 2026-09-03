@@ -36,8 +36,8 @@ func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
 	if state := report["state"]; state != "routed" {
 		t.Fatalf("state = %v, want routed", state)
 	}
-	if schemaVersion := report["schemaVersion"]; schemaVersion != 2 {
-		t.Fatalf("schemaVersion = %v, want 2 for selectedRouteFamily output", schemaVersion)
+	if schemaVersion := report["schemaVersion"]; schemaVersion != 3 {
+		t.Fatalf("schemaVersion = %v, want 3 for selectedRouteFamily output", schemaVersion)
 	}
 	if family := report["selectedRouteFamily"]; family != "requirement_source" {
 		t.Fatalf("selectedRouteFamily = %v, want requirement_source", family)
@@ -77,11 +77,38 @@ func TestBuildRoutesRequirementSourceAndBlocksUnknownGoal(t *testing.T) {
 	if state := blocked["state"]; state != "blocked_unknown_goal" {
 		t.Fatalf("unknown state = %v, want blocked_unknown_goal", state)
 	}
-	if schemaVersion := blocked["schemaVersion"]; schemaVersion != 2 {
-		t.Fatalf("unknown schemaVersion = %v, want 2", schemaVersion)
+	if schemaVersion := blocked["schemaVersion"]; schemaVersion != 3 {
+		t.Fatalf("unknown schemaVersion = %v, want 3", schemaVersion)
 	}
 	if commands := blocked["nextCommands"].([]any); len(commands) != 0 {
 		t.Fatalf("unknown nextCommands length = %d, want 0", len(commands))
+	}
+}
+
+func TestBuildRejectsStdinTransportSentinelAsArtifactReference(t *testing.T) {
+	t.Parallel()
+
+	for _, test := range []struct {
+		name  string
+		field string
+		value []any
+	}{
+		{name: "available input", field: "availableInputs", value: []any{map[string]any{"kind": "requirement_source", "ref": "-"}}},
+		{name: "observed report", field: "observedReports", value: []any{map[string]any{"kind": "requirement_source", "ref": "-", "state": "warning"}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := map[string]any{
+				"schemaVersion": jsonNumber("1"),
+				"routeId":       "consumer.route.stdin-sentinel",
+				"goal":          "validate_requirement_source",
+				"mode":          "observe",
+				test.field:      test.value,
+			}
+			_, exitCode, err := Build(input)
+			if err == nil || exitCode != 1 || !strings.Contains(err.Error(), "stdin transport sentinel") {
+				t.Fatalf("stdin sentinel exit=%d error=%v", exitCode, err)
+			}
+		})
 	}
 }
 

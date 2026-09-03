@@ -16,7 +16,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/browserfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/compactfixture"
@@ -2341,6 +2343,159 @@ func cliImpactDemo(demoID string, stackDiverse bool) map[string]any {
 		"generatedMirrorPaths":    []any{"docs/generated/requirements.md"},
 		"sourceOwnedChangedPaths": []any{"docs/specs/proofkit/requirements.v1.json"},
 		"impactInput":             impactInput,
+	}
+}
+
+func TestAgentRouteEnvelopeModesUseExactRootShapes(t *testing.T) {
+	valid := `{"schemaVersion":1,"routeId":"proofkit.cli.agent-route","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/example/requirements.v1.json"}]}`
+	unknown := `{"schemaVersion":1,"routeId":"proofkit.cli.agent-route.unknown","goal":"unknown","mode":"observe"}`
+	invalid := `{"schemaVersion":1,"routeId":"proofkit.cli.agent-route.invalid","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"../requirements.v1.json"}]}`
+	cases := []struct {
+		name          string
+		args          []string
+		input         string
+		wantStatus    int
+		rootVariant   string
+		rootCondition string
+		assert        func(t *testing.T, value map[string]any)
+	}{
+		{
+			name:          "route report",
+			args:          []string{"agent-route", "--input", "-"},
+			input:         valid,
+			wantStatus:    0,
+			rootVariant:   "04-routed",
+			rootCondition: "without --agent-envelope; known goal",
+			assert: func(t *testing.T, value map[string]any) {
+				assertStringField(t, value, "reportKind", "proofkit.agent-route")
+				assertStringField(t, value, "state", "routed")
+			},
+		},
+		{
+			name:          "unknown goal report",
+			args:          []string{"agent-route", "--input", "-"},
+			input:         unknown,
+			wantStatus:    1,
+			rootVariant:   "05-unknown-goal",
+			rootCondition: "without --agent-envelope; goal=unknown",
+			assert: func(t *testing.T, value map[string]any) {
+				assertStringField(t, value, "state", "blocked_unknown_goal")
+			},
+		},
+		{
+			name:          "bare brief",
+			args:          []string{"agent-route", "--input", "-", "--agent-envelope"},
+			input:         valid,
+			wantStatus:    0,
+			rootVariant:   "01-agent-brief",
+			rootCondition: "--agent-envelope=present --agent-envelope-mode=absent|brief; admitted route input",
+			assert: func(t *testing.T, value map[string]any) {
+				assertStringField(t, value, "packetKind", "proofkit.agent-route.brief")
+				assertStringField(t, value, "state", "routed")
+			},
+		},
+		{
+			name:          "explicit brief",
+			args:          []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "brief"},
+			input:         valid,
+			wantStatus:    0,
+			rootVariant:   "01-agent-brief",
+			rootCondition: "--agent-envelope=present --agent-envelope-mode=absent|brief; admitted route input",
+			assert: func(t *testing.T, value map[string]any) {
+				assertStringField(t, value, "packetKind", "proofkit.agent-route.brief")
+			},
+		},
+		{
+			name:          "explicit full envelope",
+			args:          []string{"agent-route", "--input", "-", "--agent-envelope", "--agent-envelope-mode", "full"},
+			input:         valid,
+			wantStatus:    0,
+			rootVariant:   "02-agent-envelope-full",
+			rootCondition: "--agent-envelope=present --agent-envelope-mode=full; admitted route input",
+			assert: func(t *testing.T, value map[string]any) {
+				assertStringField(t, value, "envelopeId", "proofkit.cli.agent-route.agent-envelope")
+			},
+		},
+		{
+			name:          "invalid input repair envelope",
+			args:          []string{"agent-route", "--input", "-", "--agent-envelope"},
+			input:         invalid,
+			wantStatus:    1,
+			rootVariant:   "03-invalid-input-repair",
+			rootCondition: "--agent-envelope=present; route input or input-pointer admission failed",
+			assert: func(t *testing.T, value map[string]any) {
+				assertStringField(t, value, "envelopeId", "proofkit.agent-envelope.invalid-input")
+			},
+		},
+	}
+	outputs := map[string][]byte{}
+	for _, item := range cases {
+		t.Run(item.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			status := Run(t.Context(), item.args, strings.NewReader(item.input), &stdout, &stderr)
+			if status != item.wantStatus || stderr.Len() != 0 {
+				t.Fatalf("status=%d want=%d stdout=%s stderr=%s", status, item.wantStatus, stdout.String(), stderr.String())
+			}
+			var value any
+			if err := json.Unmarshal(stdout.Bytes(), &value); err != nil {
+				t.Fatalf("stdout must be one JSON value: %v\n%s", err, stdout.String())
+			}
+			assertPublicCLIRootVariant(t, "agent-route", "output", item.rootVariant, value)
+			assertPublicCLIRootVariantCondition(t, "agent-route", "output", item.rootVariant, item.rootCondition)
+			item.assert(t, jsonObject(t, value))
+			outputs[item.name] = append([]byte(nil), stdout.Bytes()...)
+		})
+	}
+	if !bytes.Equal(outputs["bare brief"], outputs["explicit brief"]) {
+		t.Fatal("bare and explicit brief modes emitted different bytes")
+	}
+	var report map[string]any
+	var brief map[string]any
+	var full map[string]any
+	reportValue, err := admission.DecodeJSON(bytes.NewReader(outputs["route report"]), int64(len(outputs["route report"])))
+	if err != nil {
+		t.Fatal(err)
+	}
+	report = jsonObject(t, reportValue)
+	if err := json.Unmarshal(outputs["bare brief"], &brief); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(outputs["explicit full envelope"], &full); err != nil {
+		t.Fatal(err)
+	}
+	detail := jsonObject(t, brief["detailAccess"])
+	wantDigest, err := digest.StableJSONSHA256Ref(report)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail["sourceReportDigest"] != wantDigest || detail["sourceReportId"] != report["reportId"] {
+		t.Fatalf("brief detail access does not resolve the exact route report: %#v", detail)
+	}
+	outputArgs := jsonObject(t, detail["outputArgs"])
+	for outputKind, outputName := range map[string]string{"report": "route report", "full": "explicit full envelope"} {
+		rawArgs, ok := outputArgs[outputKind].([]any)
+		if !ok {
+			t.Fatalf("detail outputArgs.%s must be an array: %#v", outputKind, outputArgs[outputKind])
+		}
+		args := []string{"agent-route", "--input", "-"}
+		for _, rawArg := range rawArgs {
+			arg, ok := rawArg.(string)
+			if !ok {
+				t.Fatalf("detail outputArgs.%s contains non-string argument", outputKind)
+			}
+			args = append(args, arg)
+		}
+		var replayStdout bytes.Buffer
+		var replayStderr bytes.Buffer
+		status := Run(t.Context(), args, strings.NewReader(valid), &replayStdout, &replayStderr)
+		if status != 0 || replayStderr.Len() != 0 || !bytes.Equal(replayStdout.Bytes(), outputs[outputName]) {
+			t.Fatalf("detail outputArgs.%s did not reproduce %s: status=%d stdout=%s stderr=%s", outputKind, outputName, status, replayStdout.String(), replayStderr.String())
+		}
+	}
+	sourceReport := jsonObject(t, full["sourceReport"])
+	if sourceReport["reportId"] != report["reportId"] {
+		t.Fatalf("full envelope does not resolve the same route report: %#v", sourceReport)
 	}
 }
 

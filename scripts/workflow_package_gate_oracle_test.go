@@ -19,10 +19,10 @@ import (
 const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
-const setupVerifiedNPMActionSHA256 = "ead7e280f6430a9e83a544d5200217efaa36bf7aaedc879f417141fddfb20e8e"
-const ciSourceQualityStepInventorySHA256 = "90143666d13b499059937564e0829ecb1799946edb2975f187759cf5ef246da0"
-const ciBrowserRuntimeStepInventorySHA256 = "4880405e46ad4daad339117e76174a579e77cdfb70dde9c18d4afc7873f30aa4"
-const releaseCandidateStepInventorySHA256 = "12e2b229f711fb83e7a4230a455f764f03b5e36abf17ac0e53539037718b9e65"
+const setupVerifiedNPMActionSHA256 = "73e760391a9f93b95034aec8edd12af081051ce6859d3114e3561c4d255d061f"
+const ciSourceQualityStepInventorySHA256 = "08f0a637b09bc8071ae771d57cf7a74493fd392aa10a2e952e9e73de00e591c7"
+const ciBrowserRuntimeStepInventorySHA256 = "75774851de2c5d6a020d2ee9aa4d1c877d4d9d879b4272e715bdaaf7f7da9cec"
+const releaseCandidateStepInventorySHA256 = "32077f0273db85606716b297776fec5c1777e96cf25b695995846d5b259ce0aa"
 
 type packageGateWorkflowExpectation struct {
 	label                              string
@@ -1528,14 +1528,14 @@ func validateExactPlatformSmokeSteps(job githubJob) error {
 	expected := []githubStep{
 		{
 			Name: "Checkout",
-			Uses: "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+			Uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
 			With: map[string]any{"persist-credentials": false},
 		},
 		{
 			Name: "Setup Node",
-			Uses: "actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e",
+			Uses: "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
 			With: map[string]any{
-				"node-version":          "24.18.0",
+				"node-version":          "26.8.1",
 				"package-manager-cache": false,
 			},
 		},
