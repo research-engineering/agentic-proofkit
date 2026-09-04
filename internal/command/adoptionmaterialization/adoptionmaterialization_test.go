@@ -108,6 +108,68 @@ func TestMaterializationOutputAdmissionRejectsCrossOwnerMutants(t *testing.T) {
 	}
 }
 
+func TestReceiptAdmissionRejectsOperationAttributionMutants(t *testing.T) {
+	transactionID := "sha256:" + strings.Repeat("a", 64)
+	desiredStateID := "sha256:" + strings.Repeat("b", 64)
+	tests := []Receipt{
+		{
+			ExpectedDesiredStateID: desiredStateID,
+			ExpectedTransactionID:  transactionID,
+			NonClaims:              mergedNonClaims(nil),
+			Operation:              OperationApply,
+			State:                  ReceiptStatePassed,
+			TransactionResult: &repositorytransaction.Result{
+				AppliedCount: 1, AppliedCountKnown: true, RecoveredBy: repositorytransaction.RecoveryResume,
+				State: repositorytransaction.StateApplied, TransactionID: transactionID,
+			},
+		},
+		{
+			ExpectedTransactionID: transactionID,
+			NonClaims:             mergedNonClaims(nil),
+			Operation:             OperationRecover,
+			State:                 ReceiptStatePassed,
+			TransactionResult: &repositorytransaction.Result{
+				AppliedCount: 1, AppliedCountKnown: true, State: repositorytransaction.StateApplied, TransactionID: transactionID,
+			},
+		},
+	}
+	for index := range tests {
+		identity := tests[index].identityValue()
+		receiptID, err := digest.StableJSONSHA256Ref(identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tests[index].ReceiptID = receiptID
+		if _, err := AdmitReceiptOutput(jsonRoundTripValue(t, tests[index].JSONValue())); err == nil {
+			t.Fatalf("AdmitReceiptOutput() admitted operation-attribution mutant %d", index)
+		}
+	}
+}
+
+func TestRecoveryWithUnknownJournalIdentityCannotPass(t *testing.T) {
+	root := t.TempDir()
+	active := filepath.Join(root, ".agentic-proofkit", "transactions", "active")
+	if err := os.MkdirAll(active, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	for _, directory := range []string{filepath.Join(root, ".agentic-proofkit"), filepath.Join(root, ".agentic-proofkit", "transactions"), active} {
+		if err := os.Chmod(directory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(active, "journal.tmp"), []byte("{"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	transactionID := "sha256:" + strings.Repeat("c", 64)
+	receipt, exitCode, err := Recover(context.Background(), root, transactionID, repositorytransaction.RecoveryRollback)
+	if err != nil || exitCode != 1 || receipt.State != ReceiptStateRecoveryRequired || receipt.TransactionResult == nil || receipt.TransactionResult.TransactionID != "" {
+		t.Fatalf("Recover() receipt=%#v exit=%d error=%v", receipt, exitCode, err)
+	}
+	if _, err := AdmitReceiptOutput(jsonRoundTripValue(t, receipt.JSONValue())); err != nil {
+		t.Fatalf("AdmitReceiptOutput() rejected the fail-closed recovery receipt: %v", err)
+	}
+}
+
 func jsonRoundTripValue(t *testing.T, value any) any {
 	t.Helper()
 	content, err := stablejson.Marshal(value)

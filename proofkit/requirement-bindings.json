@@ -5911,12 +5911,20 @@
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestRecoveryActionAndTerminalReceiptAreStable$'"
         },
         {
+          "selector": "TestRecoveryActionIsDurableBeforeDirectionalMutation",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestRecoveryActionIsDurableBeforeDirectionalMutation$'"
+        },
+        {
+          "selector": "TestMalformedRecoveryActionBlocksMutation",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestMalformedRecoveryActionBlocksMutation$'"
+        },
+        {
           "selector": "TestAppliedTerminalReceiptReplaysCompleteResult",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestAppliedTerminalReceiptReplaysCompleteResult$'"
         },
         {
-          "selector": "TestPreparingReplacementPreservesPreviousTerminalReceipt",
-          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparingReplacementPreservesPreviousTerminalReceipt$'"
+          "selector": "TestPreparingRollbackAtomicallyReplacesPreviousTerminalReceipt",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparingRollbackAtomicallyReplacesPreviousTerminalReceipt$'"
         },
         {
           "selector": "TestReadyReplacementRetiresPreviousReceiptAndPreservesCompleteResult",
@@ -5925,6 +5933,10 @@
         {
           "selector": "TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity$'"
+        },
+        {
+          "selector": "TestPreparingFailureCannotClaimRollbackAfterTargetDivergence",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparingFailureCannotClaimRollbackAfterTargetDivergence$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5948,6 +5960,10 @@
         {
           "selector": "TestApplyRejectsConcurrentCooperativeWriter",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyRejectsConcurrentCooperativeWriter$'"
+        },
+        {
+          "selector": "TestRecoverDoesNotInventIdentityForPartialPreparingJournal",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestRecoverDoesNotInventIdentityForPartialPreparingJournal$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

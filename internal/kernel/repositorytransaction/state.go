@@ -89,6 +89,13 @@ func validateExecutablePlan(plan Plan, rootID string) error {
 	return nil
 }
 
+func validateActivePlan(plan Plan) error {
+	if changedCount(plan) == 0 {
+		return fmt.Errorf("repository transaction active plan requires at least one changed target")
+	}
+	return nil
+}
+
 func verifyCreatedDirectories(root *os.Root, plan Plan) error {
 	directorySet := map[string]struct{}{}
 	for _, operation := range plan.Operations {

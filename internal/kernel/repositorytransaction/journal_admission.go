@@ -3,9 +3,12 @@ package repositorytransaction
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 func journalValue(plan Plan) map[string]any {
@@ -75,6 +78,9 @@ func admitJournal(raw any) (Plan, error) {
 	}
 	plan := Plan{CreatedDirectories: directories, DesiredStateID: desiredStateID, Operations: operations, RootID: rootID, TransactionID: transactionID}
 	if err := validatePlanShape(plan); err != nil {
+		return Plan{}, err
+	}
+	if err := validateJournalBound(plan); err != nil {
 		return Plan{}, err
 	}
 	wantDesiredStateID, err := digest.StableJSONSHA256Ref(desiredStateIdentityValue(plan))
@@ -203,6 +209,45 @@ func validatePlanShape(plan Plan) error {
 		if !ownsTarget {
 			return fmt.Errorf("repository transaction created directory does not own a target")
 		}
+	}
+	created := make(map[string]struct{}, len(plan.CreatedDirectories))
+	for _, directory := range plan.CreatedDirectories {
+		created[directory] = struct{}{}
+	}
+	for _, operation := range plan.Operations {
+		parent := path.Dir(operation.Path)
+		if parent == "." {
+			continue
+		}
+		prefixes, err := pathidentity.Prefixes(parent)
+		if err != nil {
+			return fmt.Errorf("repository transaction operation parent is invalid")
+		}
+		createdAncestor := false
+		for _, prefix := range prefixes {
+			_, isCreated := created[prefix.Path]
+			if isCreated {
+				createdAncestor = true
+				if operation.Before.Exists {
+					return fmt.Errorf("repository transaction created directory contradicts an existing target")
+				}
+				continue
+			}
+			if createdAncestor {
+				return fmt.Errorf("repository transaction created directory chain is incomplete")
+			}
+		}
+	}
+	return nil
+}
+
+func validateJournalBound(plan Plan) error {
+	content, err := stablejson.Marshal(journalValue(plan))
+	if err != nil {
+		return fmt.Errorf("encode repository transaction journal")
+	}
+	if len(content) > MaximumJournalBytes {
+		return fmt.Errorf("repository transaction journal exceeds the byte limit")
 	}
 	return nil
 }

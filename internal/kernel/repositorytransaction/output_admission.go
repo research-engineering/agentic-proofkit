@@ -127,7 +127,7 @@ func AdmitResultOutput(raw any) (Result, error) {
 func validateResultRelation(result Result) error {
 	switch result.State {
 	case StateApplied:
-		if !result.AppliedCountKnown || result.TransactionID == "" || result.FailureClass != "" || result.RecoveredBy == RecoveryRollback {
+		if !result.AppliedCountKnown || result.AppliedCount == 0 || result.TransactionID == "" || result.FailureClass != "" || result.RecoveredBy == RecoveryRollback {
 			return fmt.Errorf("applied repository transaction result is inconsistent")
 		}
 	case StateAlreadySatisfied:
@@ -135,7 +135,7 @@ func validateResultRelation(result Result) error {
 			return fmt.Errorf("already-satisfied repository transaction result is inconsistent")
 		}
 	case StateRolledBack:
-		if !result.AppliedCountKnown || result.AppliedCount != 0 || result.RecoveredBy == RecoveryResume {
+		if !result.AppliedCountKnown || result.AppliedCount != 0 || result.TransactionID == "" || result.RecoveredBy == RecoveryResume || result.RecoveredBy == "" && result.FailureClass == "" {
 			return fmt.Errorf("rolled-back repository transaction result is inconsistent")
 		}
 	case StateCleanupRequired, StateDurabilityUnknown, StateRecoveryRequired:

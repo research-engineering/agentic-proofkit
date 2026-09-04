@@ -633,6 +633,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestApplyFaultAfterFirstPublishRestoresExactBeforeState",
 			"TestApplyRejectsConcurrentCooperativeWriter",
 			"TestProcessDeathAfterRenameIsRecoverable",
+			"TestRecoverDoesNotInventIdentityForPartialPreparingJournal",
 		},
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-portable-path-identity"}: {
 			"TestPortableEquivalenceAndContainment",
@@ -640,9 +641,12 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-terminal-state"}: {
 			"TestAppliedTerminalReceiptReplaysCompleteResult",
 			"TestApplyExecutesFrozenPlan",
-			"TestPreparingReplacementPreservesPreviousTerminalReceipt",
+			"TestMalformedRecoveryActionBlocksMutation",
+			"TestPreparingFailureCannotClaimRollbackAfterTargetDivergence",
+			"TestPreparingRollbackAtomicallyReplacesPreviousTerminalReceipt",
 			"TestReadyReplacementRetiresPreviousReceiptAndPreservesCompleteResult",
 			"TestRecoveryActionAndTerminalReceiptAreStable",
+			"TestRecoveryActionIsDurableBeforeDirectionalMutation",
 			"TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity",
 		},
 		{"REQ-PROOFKIT-SPEC-034", "proofkit.spec-proof-core.adoption-materialization-version-edge"}: {

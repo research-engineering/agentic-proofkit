@@ -16,6 +16,7 @@ const (
 	faultAfterDirectory    failurePoint = "after_directory"
 	faultBeforePublish     failurePoint = "before_publish"
 	faultAfterPublish      failurePoint = "after_publish"
+	faultAfterRollback     failurePoint = "after_rollback"
 	faultAfterTerminal     failurePoint = "after_terminal"
 	faultAfterStateRemoval failurePoint = "after_state_removal"
 	faultBeforeCleanup     failurePoint = "before_cleanup"
@@ -105,7 +106,7 @@ func (runtime engine) apply(ctx context.Context, rootPath string, plan Plan) (Re
 		return Result{}, fmt.Errorf("repository transaction apply cancelled: %w", err)
 	}
 	if err := prepareJournal(root, plan); err != nil {
-		return runtime.finishPreparingFailure(root, plan, "journal_prepare_failed")
+		return runtime.abortPreparingFailure(root, plan)
 	}
 	if err := ctx.Err(); err != nil {
 		return runtime.finishPreparingFailure(root, plan, "cancelled")

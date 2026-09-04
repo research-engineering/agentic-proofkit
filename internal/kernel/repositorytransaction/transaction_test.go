@@ -229,6 +229,10 @@ func TestRecoverAttributesOnlyCanonicalPreparingJournalIdentity(t *testing.T) {
 	if err != nil || result.State != StateRolledBack || result.TransactionID != plan.TransactionID {
 		t.Fatalf("Recover(canonical temp) result=%#v err=%v", result, err)
 	}
+	replayed, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryRollback)
+	if err != nil || replayed != result {
+		t.Fatalf("Recover(canonical temp replay) result=%#v err=%v, want %#v", replayed, err, result)
+	}
 }
 
 func TestRecoverDoesNotInventIdentityForPartialPreparingJournal(t *testing.T) {
@@ -246,13 +250,57 @@ func TestRecoverDoesNotInventIdentityForPartialPreparingJournal(t *testing.T) {
 	if err := root.Close(); err != nil {
 		t.Fatal(err)
 	}
-	suppliedID := "sha256:" + strings.Repeat("1", 64)
-	result, err := Recover(context.Background(), rootPath, suppliedID, RecoveryRollback)
-	if err != nil || result.State != StateRolledBack || result.TransactionID != "" || !result.AppliedCountKnown || result.AppliedCount != 0 {
-		t.Fatalf("Recover(partial temp) result=%#v err=%v", result, err)
+	for _, digit := range []string{"1", "2"} {
+		suppliedID := "sha256:" + strings.Repeat(digit, 64)
+		result, err := Recover(context.Background(), rootPath, suppliedID, RecoveryRollback)
+		if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "invalid_journal" || result.TransactionID != "" {
+			t.Fatalf("Recover(partial temp, %s) result=%#v err=%v", digit, result, err)
+		}
+		if result.JSONValue()["transactionId"] != nil {
+			t.Fatalf("partial recovery attributed caller identity: %#v", result.JSONValue())
+		}
+		content, err := os.ReadFile(filepath.Join(rootPath, filepath.FromSlash(journalTemp)))
+		if err != nil || string(content) != "{" {
+			t.Fatalf("identity-unknown recovery mutated retained state: content=%q err=%v", content, err)
+		}
 	}
-	if result.JSONValue()["transactionId"] != nil {
-		t.Fatalf("partial recovery attributed caller identity: %#v", result.JSONValue())
+}
+
+func TestRecoverRejectsCanonicalZeroChangePreparingJournal(t *testing.T) {
+	rootPath := t.TempDir()
+	mustWriteTestFile(t, rootPath, "proofkit/a.json", "same\n", 0o644)
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/a.json", Content: []byte("same\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureDirectory(root, activeDirectory, 0o700); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	content, err := stablejson.Marshal(journalValue(plan))
+	if err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := writeOwnedFile(root, journalTemp, content, 0o600); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryRollback)
+	if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "invalid_control_state" || result.TransactionID != plan.TransactionID {
+		t.Fatalf("Recover() result=%#v error=%v", result, err)
+	}
+	assertTestFile(t, rootPath, "proofkit/a.json", "same\n", 0o644)
+	if _, err := os.Stat(filepath.Join(rootPath, filepath.FromSlash(journalTemp))); err != nil {
+		t.Fatalf("zero-change recovery mutated retained state: %v", err)
 	}
 }
 
@@ -635,7 +683,7 @@ func crashHelperTargets() []Target {
 	}
 }
 
-func TestPreparingFailureWithoutActiveStateIsRolledBack(t *testing.T) {
+func TestPreparingFailureWithoutActiveStateIsRejected(t *testing.T) {
 	rootPath := t.TempDir()
 	root, rootID, err := openRepository(rootPath)
 	if err != nil {
@@ -643,12 +691,8 @@ func TestPreparingFailureWithoutActiveStateIsRolledBack(t *testing.T) {
 	}
 	defer root.Close()
 	plan := Plan{RootID: rootID, TransactionID: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
-	result, err := (engine{}).finishPreparingFailure(root, plan, "journal_prepare_failed")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.State != StateRolledBack || result.FailureClass != "journal_prepare_failed" {
-		t.Fatalf("finishPreparingFailure() result = %#v", result)
+	if _, err := (engine{}).finishPreparingFailure(root, plan, "journal_prepare_failed"); err == nil {
+		t.Fatal("finishPreparingFailure() admitted absent preparing state")
 	}
 }
 

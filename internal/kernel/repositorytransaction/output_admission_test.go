@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
 func TestPlanAndResultOutputAdmissionRejectSemanticMutants(t *testing.T) {
@@ -38,6 +40,14 @@ func TestPlanAndResultOutputAdmissionRejectSemanticMutants(t *testing.T) {
 	if _, err := AdmitResultOutput(mutant); err == nil {
 		t.Fatal("AdmitResultOutput() admitted applied work in an already-satisfied result")
 	}
+	for _, impossible := range []Result{
+		{AppliedCountKnown: true, State: StateApplied, TransactionID: transactionID},
+		{AppliedCountKnown: true, State: StateRolledBack, TransactionID: transactionID},
+	} {
+		if _, err := AdmitResultOutput(impossible.JSONValue()); err == nil {
+			t.Fatalf("AdmitResultOutput() admitted unreachable result %#v", impossible)
+		}
+	}
 }
 
 func TestAdmitPlanOutputRejectsPortableAliasAsLexicalParent(t *testing.T) {
@@ -51,4 +61,41 @@ func TestAdmitPlanOutputRejectsPortableAliasAsLexicalParent(t *testing.T) {
 	if _, err := AdmitPlanOutput(record); err == nil || !strings.Contains(err.Error(), "portable identities") {
 		t.Fatalf("AdmitPlanOutput() error=%v, want portable parent-alias rejection", err)
 	}
+}
+
+func TestAdmitPlanOutputRejectsImpossibleCreatedDirectoryRelations(t *testing.T) {
+	root := t.TempDir()
+	plan, err := BuildPlan(context.Background(), root, []Target{{Path: "a/b/record.json", Content: []byte("desired\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	incomplete := clonePlan(plan)
+	incomplete.CreatedDirectories = []string{"a"}
+	refreshPlanIdentity(t, &incomplete)
+	if _, err := AdmitPlanOutput(incomplete.JSONValue()); err == nil || !strings.Contains(err.Error(), "chain is incomplete") {
+		t.Fatalf("AdmitPlanOutput(incomplete chain) error=%v", err)
+	}
+
+	contradictory := clonePlan(plan)
+	contradictory.Operations[0].Before = Snapshot{ByteCount: 6, Exists: true, Mode: 0o644, SHA256: digest.SHA256BytesRef([]byte("before"))}
+	contradictory.Operations[0].Action = ActionReplace
+	refreshPlanIdentity(t, &contradictory)
+	if _, err := AdmitPlanOutput(contradictory.JSONValue()); err == nil || !strings.Contains(err.Error(), "contradicts an existing target") {
+		t.Fatalf("AdmitPlanOutput(contradictory before state) error=%v", err)
+	}
+}
+
+func refreshPlanIdentity(t *testing.T, plan *Plan) {
+	t.Helper()
+	desiredStateID, err := digest.StableJSONSHA256Ref(desiredStateIdentityValue(*plan))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.DesiredStateID = desiredStateID
+	transactionID, err := digest.StableJSONSHA256Ref(planIdentityValue(*plan))
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan.TransactionID = transactionID
 }

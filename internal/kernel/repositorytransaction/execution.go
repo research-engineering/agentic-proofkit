@@ -49,6 +49,9 @@ func (runtime engine) rollbackAfterFailure(ctx context.Context, root *os.Root, p
 	if err != nil {
 		return Result{FailureClass: failureClass, State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
 	}
+	if err := selectRecoveryAction(root, plan.TransactionID, RecoveryRollback); err != nil {
+		return Result{FailureClass: "recovery_action_persistence_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	}
 	if err := runtime.rollbackPrefix(ctx, root, plan, prefix); err != nil {
 		return resultWithObservedPrefix(root, plan, Result{FailureClass: "rollback_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}), nil
 	}
@@ -73,6 +76,7 @@ func (runtime engine) rollbackAfterFailure(ctx context.Context, root *os.Root, p
 
 func (runtime engine) rollbackPrefix(ctx context.Context, root *os.Root, plan Plan, prefix int) error {
 	changed := changedOperationIndexes(plan)
+	restored := 0
 	for position := prefix - 1; position >= 0; position-- {
 		if err := ctx.Err(); err != nil {
 			return fmt.Errorf("repository transaction rollback cancelled: %w", err)
@@ -83,9 +87,11 @@ func (runtime engine) rollbackPrefix(ctx context.Context, root *os.Root, plan Pl
 			if err := removeCreatedTarget(root, operation); err != nil {
 				return err
 			}
-			continue
+		} else if err := publishContent(root, plan, operationIndex, operation.After, operation.beforeContent, operation.Before.Mode); err != nil {
+			return err
 		}
-		if err := publishContent(root, plan, operationIndex, operation.After, operation.beforeContent, operation.Before.Mode); err != nil {
+		restored++
+		if err := runtime.callFault(faultAfterRollback, restored); err != nil {
 			return err
 		}
 	}
@@ -98,15 +104,44 @@ func (runtime engine) finishPreparingFailure(root *os.Root, plan Plan, failureCl
 		return Result{FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
 	if !exists {
-		return Result{AppliedCountKnown: true, FailureClass: failureClass, State: StateRolledBack, TransactionID: plan.TransactionID}, nil
+		return Result{}, fmt.Errorf("repository transaction preparing state is absent")
 	}
-	if err := cleanupActive(root, &plan); err != nil {
+	if err := verifyTargetVector(root, plan, 0); err != nil {
+		return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	}
+	if err := selectRecoveryAction(root, plan.TransactionID, RecoveryRollback); err != nil {
+		return Result{FailureClass: "recovery_action_persistence_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	}
+	if err := writeMarker(root, rolledBackMarker); err != nil {
+		return Result{AppliedCountKnown: true, FailureClass: "terminal_marker_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	}
+	if err := discardTerminalReceipt(root); err != nil {
+		return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	}
+	terminal := Result{AppliedCountKnown: true, FailureClass: failureClass, State: StateRolledBack, TransactionID: plan.TransactionID}
+	if err := runtime.archiveAndCleanupTerminal(root, plan, terminal); err != nil {
 		if errors.Is(err, errCleanupDurabilityUnknown) {
 			return Result{AppliedCountKnown: true, FailureClass: "preparing_cleanup_durability_unknown", State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
 		}
 		return Result{AppliedCountKnown: true, FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
-	return Result{AppliedCountKnown: true, FailureClass: failureClass, State: StateRolledBack, TransactionID: plan.TransactionID}, nil
+	return terminal, nil
+}
+
+func (runtime engine) abortPreparingFailure(root *os.Root, plan Plan) (Result, error) {
+	exists, err := pathExists(root, activeDirectory)
+	if err != nil {
+		return Result{FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
+	}
+	if exists {
+		if err := cleanupActive(root, &plan); err != nil {
+			if errors.Is(err, errCleanupDurabilityUnknown) {
+				return Result{FailureClass: "preparing_cleanup_durability_unknown", State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
+			}
+			return Result{FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
+		}
+	}
+	return Result{}, fmt.Errorf("repository transaction journal preparation failed")
 }
 
 func removeInterruptedTemporary(root *os.Root, plan Plan) error {

@@ -13,9 +13,13 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
 )
 
-const activeDirectory = ControlDirectory + "/active"
+const (
+	activeDirectory         = ControlDirectory + "/active"
+	maximumDirectoryEntries = 16 << 10
+)
 
 func openRepository(rootPath string) (*os.Root, string, error) {
 	if strings.TrimSpace(rootPath) == "" {
@@ -49,6 +53,67 @@ func openRepository(rootPath string) (*os.Root, string, error) {
 	return root, digest.SHA256TextRef(filepath.Clean(absolute) + "\x00" + identity), nil
 }
 
+func exactEntryExists(root *os.Root, directory, component string) (bool, error) {
+	wantedKey, err := pathidentity.Key(component)
+	if err != nil {
+		return false, fmt.Errorf("repository transaction path component is invalid")
+	}
+	if directory == "" {
+		directory = "."
+	}
+	handle, err := root.Open(filepath.FromSlash(directory))
+	if err != nil {
+		return false, fmt.Errorf("open repository transaction parent directory")
+	}
+	defer handle.Close()
+	entries, err := handle.ReadDir(maximumDirectoryEntries + 1)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return false, fmt.Errorf("read repository transaction parent directory")
+	}
+	if len(entries) > maximumDirectoryEntries {
+		return false, fmt.Errorf("repository transaction parent directory exceeds its entry limit")
+	}
+	exact := false
+	for _, entry := range entries {
+		entryKey, keyErr := pathidentity.Key(entry.Name())
+		if keyErr != nil || entryKey != wantedKey {
+			continue
+		}
+		if entry.Name() != component || exact {
+			return false, fmt.Errorf("repository transaction path has an ambiguous portable filesystem identity")
+		}
+		exact = true
+	}
+	return exact, nil
+}
+
+func exactRouteExists(root *os.Root, relativePath string) (bool, error) {
+	current := ""
+	components := strings.Split(relativePath, "/")
+	for index, component := range components {
+		parent := current
+		if parent == "" {
+			parent = "."
+		}
+		exists, err := exactEntryExists(root, parent, component)
+		if err != nil || !exists {
+			return false, err
+		}
+		if current == "" {
+			current = component
+		} else {
+			current += "/" + component
+		}
+		if index < len(components)-1 {
+			info, err := root.Lstat(filepath.FromSlash(current))
+			if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+				return false, fmt.Errorf("repository transaction path traverses a symlink or non-directory")
+			}
+		}
+	}
+	return true, nil
+}
+
 func inspectParentDirectories(root *os.Root, directory string) ([]string, error) {
 	if directory == "." || directory == "" {
 		return nil, nil
@@ -67,12 +132,17 @@ func inspectParentDirectories(root *os.Root, directory string) ([]string, error)
 			missing = append(missing, current)
 			continue
 		}
-		info, err := root.Lstat(filepath.FromSlash(current))
-		if errors.Is(err, fs.ErrNotExist) {
+		parent := path.Dir(current)
+		exists, err := exactEntryExists(root, parent, component)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
 			ancestorMissing = true
 			missing = append(missing, current)
 			continue
 		}
+		info, err := root.Lstat(filepath.FromSlash(current))
 		if err != nil {
 			return nil, fmt.Errorf("inspect repository transaction parent")
 		}
@@ -91,11 +161,15 @@ func inspectTarget(root *os.Root, relativePath string, maximum int64) (Snapshot,
 	if len(missing) > 0 {
 		return Snapshot{}, nil, nil
 	}
-	native := filepath.FromSlash(relativePath)
-	routeInfo, err := root.Lstat(native)
-	if errors.Is(err, fs.ErrNotExist) {
+	targetExists, err := exactEntryExists(root, path.Dir(relativePath), path.Base(relativePath))
+	if err != nil {
+		return Snapshot{}, nil, err
+	}
+	if !targetExists {
 		return Snapshot{}, nil, nil
 	}
+	native := filepath.FromSlash(relativePath)
+	routeInfo, err := root.Lstat(native)
 	if err != nil {
 		return Snapshot{}, nil, fmt.Errorf("inspect repository transaction target")
 	}
@@ -131,10 +205,11 @@ func inspectTarget(root *os.Root, relativePath string, maximum int64) (Snapshot,
 }
 
 func pathExists(root *os.Root, relativePath string) (bool, error) {
-	info, err := root.Lstat(filepath.FromSlash(relativePath))
-	if errors.Is(err, fs.ErrNotExist) {
-		return false, nil
+	exact, err := exactRouteExists(root, relativePath)
+	if err != nil || !exact {
+		return false, err
 	}
+	info, err := root.Lstat(filepath.FromSlash(relativePath))
 	if err != nil {
 		return false, fmt.Errorf("inspect repository transaction state")
 	}
@@ -152,8 +227,12 @@ func ensureDirectory(root *os.Root, relativePath string, mode fs.FileMode) error
 		} else {
 			current += "/" + component
 		}
-		_, err := root.Lstat(filepath.FromSlash(current))
-		if errors.Is(err, fs.ErrNotExist) {
+		parent := path.Dir(current)
+		exists, err := exactEntryExists(root, parent, component)
+		if err != nil {
+			return err
+		}
+		if !exists {
 			if err := root.Mkdir(filepath.FromSlash(current), mode); err != nil {
 				return fmt.Errorf("create repository transaction directory")
 			}
@@ -163,8 +242,6 @@ func ensureDirectory(root *os.Root, relativePath string, mode fs.FileMode) error
 			if err := syncDirectory(root, path.Dir(current)); err != nil {
 				return err
 			}
-		} else if err != nil {
-			return fmt.Errorf("inspect repository transaction directory")
 		}
 		if err := validatePrivateDirectory(root, current, mode); err != nil {
 			return err
@@ -174,6 +251,10 @@ func ensureDirectory(root *os.Root, relativePath string, mode fs.FileMode) error
 }
 
 func validatePrivateDirectory(root *os.Root, relativePath string, mode fs.FileMode) error {
+	exact, err := exactRouteExists(root, relativePath)
+	if err != nil || !exact {
+		return fmt.Errorf("repository transaction directory route is invalid")
+	}
 	native := filepath.FromSlash(relativePath)
 	routeInfo, err := root.Lstat(native)
 	if err != nil || routeInfo.Mode()&os.ModeSymlink != 0 || !routeInfo.IsDir() || routeInfo.Mode().Perm() != mode.Perm() || routeInfo.Mode()&(fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky) != 0 {
@@ -281,10 +362,14 @@ func writeAtomicOwnedFile(root *os.Root, relativePath, temporaryPath string, con
 }
 
 func discardOwnedTemporaryFile(root *os.Root, relativePath string) error {
-	info, err := root.Lstat(filepath.FromSlash(relativePath))
-	if errors.Is(err, fs.ErrNotExist) {
+	exists, err := exactRouteExists(root, relativePath)
+	if err != nil {
+		return err
+	}
+	if !exists {
 		return nil
 	}
+	info, err := root.Lstat(filepath.FromSlash(relativePath))
 	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode()&^fs.ModePerm != 0 {
 		return fmt.Errorf("repository transaction temporary file is unsafe")
 	}
@@ -299,6 +384,10 @@ func discardOwnedTemporaryFile(root *os.Root, relativePath string) error {
 }
 
 func readOwnedFile(root *os.Root, relativePath string, maximum int64) ([]byte, error) {
+	exists, err := exactRouteExists(root, relativePath)
+	if err != nil || !exists {
+		return nil, fmt.Errorf("repository transaction file route is invalid")
+	}
 	file, err := openNoFollow(root, filepath.FromSlash(relativePath))
 	if err != nil {
 		return nil, fmt.Errorf("open repository transaction file")

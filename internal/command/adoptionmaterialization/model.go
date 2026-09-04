@@ -55,6 +55,7 @@ const (
 var boundaryNonClaims = []string{
 	"Adoption materialization does not authenticate caller declarations or approve requirement meaning, proof adequacy, merge, release, rollout, or production readiness.",
 	"Adoption materialization provides recoverable ordered-prefix writes for cooperative writers, not simultaneous multi-file visibility or power-loss durability.",
+	"Materialization apply does not execute a re-admitted standalone plan; it re-admits the candidate and recomputes the executable transaction.",
 	"The project routing manifest names canonical records but does not replace their semantic owners or prove their continuing validity.",
 }
 

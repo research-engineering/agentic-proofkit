@@ -203,6 +203,15 @@ func validateReceiptRelation(receipt Receipt) error {
 	if receipt.State == ReceiptStatePassed && receipt.TransactionResult.TransactionID != "" && receipt.TransactionResult.TransactionID != receipt.ExpectedTransactionID {
 		return fmt.Errorf("adoption materialization passed receipt transaction identity is inconsistent")
 	}
+	if receipt.State == ReceiptStatePassed && receipt.TransactionResult.TransactionID == "" {
+		return fmt.Errorf("adoption materialization passed receipt requires an observed transaction identity")
+	}
+	if receipt.Operation == OperationApply && receipt.TransactionResult.RecoveredBy != "" {
+		return fmt.Errorf("adoption materialization apply receipt must not claim recovery attribution")
+	}
+	if receipt.Operation == OperationRecover && receipt.State == ReceiptStatePassed && receipt.TransactionResult.RecoveredBy == "" {
+		return fmt.Errorf("adoption materialization recovery receipt requires recovery attribution")
+	}
 	return nil
 }
 

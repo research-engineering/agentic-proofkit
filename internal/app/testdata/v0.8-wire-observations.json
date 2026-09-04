@@ -9,18 +9,18 @@
   "changeRecordRef": "release/change-record.v2.json",
   "changeRecordSha256": "sha256:4c8434f7b77a5c623441b021a37b50786d56aba7f65091c38be5ed902231318d",
   "previousPublicAbiSha256": "sha256:c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7",
-  "currentPublicAbiSha256": "sha256:77dfd235e5a7404101cc8588e4eea718117a0e6dd020b407e353027ad51c8369",
+  "currentPublicAbiSha256": "sha256:b7cc6ef91dd06ab8bd8073337034084d0fec5110d232a8e1a1f1e77055b4bec5",
   "addedCommandContracts": [
     {
       "command": "adopt-materialize-apply",
       "route": ["adopt", "materialize", "apply"],
       "inputContract": {
         "contractId": "proofkit.adopt-materialize-apply.input.v1",
-        "contractSha256": "sha256:7782c5ec512dc383edb9fc62fb64ea6109dd1ed49d9869b230ebe96f2aeec9fa"
+        "contractSha256": "sha256:5b4a8043a3a4df5a520e0dfb90408eafd3ea024b79c31fd9f769a804a12c5b3b"
       },
       "outputContract": {
         "contractId": "proofkit.adopt-materialize-apply.output.v1",
-        "contractSha256": "sha256:a1742452337ae99102291012ea8cc1157e15f7b96c728df8f1067aa24dbfdc70"
+        "contractSha256": "sha256:b046c5bc0535a410366c6c793516cd9f2dd20b1ea1082901a81c740658ee5321"
       }
     },
     {
@@ -28,11 +28,11 @@
       "route": ["adopt", "materialize", "plan"],
       "inputContract": {
         "contractId": "proofkit.adopt-materialize-plan.input.v1",
-        "contractSha256": "sha256:4c769f5f13e04c8c57c6ac67c1805c55cfa350e890541153fd5d46fd2d850e86"
+        "contractSha256": "sha256:c1567aad5ea3bbf26effe1ae9d393024cd3e8b99ea3a608aeecd08a2848a61b9"
       },
       "outputContract": {
         "contractId": "proofkit.adopt-materialize-plan.output.v1",
-        "contractSha256": "sha256:84026c514413ebaa5f0b8fe91e02df63631ab87c742b1b0b9468fe8f84f97207"
+        "contractSha256": "sha256:b55914700a4aa7ba48de5beb7d6aa2e4650676f3a0300cdb0830bc749b22acd7"
       }
     },
     {
@@ -40,7 +40,7 @@
       "route": ["adopt", "materialize", "recover"],
       "outputContract": {
         "contractId": "proofkit.adopt-materialize-recover.output.v1",
-        "contractSha256": "sha256:dddb3d69b6765c1549a8efc9c70962a109c60087e51db9e62b36dfa100628385"
+        "contractSha256": "sha256:e722c36007389a0471b193e642041a9fb2cd6e4286ab6d7f5f097506e8ed0f2c"
       }
     }
   ],

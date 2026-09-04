@@ -26,6 +26,9 @@ type terminalControlIdentity struct {
 }
 
 func validateActiveState(root *os.Root, plan Plan) error {
+	if err := validateActivePlan(plan); err != nil {
+		return err
+	}
 	entries, err := activeEntries(root)
 	if err != nil {
 		return err
@@ -43,6 +46,8 @@ func validateTransactionEntries(entries []fs.DirEntry, plan *Plan, allowPartialT
 		"committed.tmp":         {},
 		"rolled-back":           {},
 		"rolled-back.tmp":       {},
+		"recovery-action.json":  {},
+		"recovery-action.tmp":   {},
 		terminalReceiptName:     {},
 		terminalReceiptTempName: {},
 	}
@@ -137,8 +142,8 @@ func pendingTransactionState(root *os.Root) (pendingState, error) {
 			pending.TransactionID = plan.TransactionID
 			return pending, nil
 		}
-		if transactionID, identityKnown, _, inspectErr := incompleteJournalCanBeDiscarded(root); inspectErr == nil && identityKnown {
-			pending.TransactionID = transactionID
+		if plan, admitted, inspectErr := loadPreparingJournal(root); inspectErr == nil && admitted {
+			pending.TransactionID = plan.TransactionID
 		}
 		return pending, nil
 	}
@@ -271,41 +276,41 @@ func isBoundedTransactionEntryName(name string) bool {
 	return false
 }
 
-func incompleteJournalCanBeDiscarded(root *os.Root) (string, bool, bool, error) {
+func loadPreparingJournal(root *os.Root) (Plan, bool, error) {
 	ready, err := markerExists(root, readyMarker)
 	if err == nil && ready {
-		return "", false, false, nil
+		return Plan{}, false, nil
 	}
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return "", false, false, err
+		return Plan{}, false, err
 	}
 	entries, err := activeEntries(root)
 	if err != nil {
-		return "", false, false, err
+		return Plan{}, false, err
 	}
 	for _, entry := range entries {
 		if entry.Name() != "journal.tmp" || entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
-			return "", false, false, nil
+			return Plan{}, false, nil
 		}
 	}
 	if len(entries) == 0 {
-		return "", false, true, nil
+		return Plan{}, false, nil
 	}
 	content, err := readOwnedFile(root, journalTemp, MaximumJournalBytes)
 	if err != nil {
-		return "", false, false, err
+		return Plan{}, false, err
 	}
 	value, err := admission.DecodeJSON(bytes.NewReader(content), MaximumJournalBytes)
 	if err != nil {
-		return "", false, true, nil
+		return Plan{}, false, nil
 	}
 	plan, err := admitJournal(value)
 	if err != nil {
-		return "", false, true, nil
+		return Plan{}, false, nil
 	}
 	canonical, err := stablejson.Marshal(journalValue(plan))
 	if err != nil || !bytes.Equal(content, canonical) {
-		return "", false, true, nil
+		return Plan{}, false, nil
 	}
-	return plan.TransactionID, true, true, nil
+	return plan, true, nil
 }

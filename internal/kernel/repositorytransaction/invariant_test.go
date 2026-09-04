@@ -106,6 +106,40 @@ func TestDirectoryOwnershipRejectsInodeSubstitution(t *testing.T) {
 	}
 }
 
+func TestDirectoryOwnershipRejectsPortableRouteAlias(t *testing.T) {
+	rootPath := t.TempDir()
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "new/target.json", Content: []byte("desired\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaveInterruptedPrefix(t, rootPath, plan, 0)
+	intermediate := filepath.Join(rootPath, "renaming")
+	if err := os.Rename(filepath.Join(rootPath, "new"), intermediate); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(intermediate, filepath.Join(rootPath, "New")); err != nil {
+		t.Fatal(err)
+	}
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := inspectOwnedTargetDirectory(root, "new"); err == nil || !strings.Contains(err.Error(), "portable filesystem identity") {
+		root.Close()
+		t.Fatalf("inspectOwnedTargetDirectory() error=%v, want portable-alias rejection", err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryRollback)
+	if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "ambiguous_target_state" {
+		t.Fatalf("Recover() result=%#v error=%v", result, err)
+	}
+	if info, err := os.Stat(filepath.Join(rootPath, "New")); err != nil || !info.IsDir() {
+		t.Fatalf("portable directory alias was removed: %v", err)
+	}
+}
+
 func TestRecoveryActionAndTerminalReceiptAreStable(t *testing.T) {
 	root := t.TempDir()
 	plan, err := BuildPlan(context.Background(), root, []Target{{Path: "proofkit/target.json", Content: []byte("desired\n"), Mode: 0o644}})
@@ -137,6 +171,117 @@ func TestRecoveryActionAndTerminalReceiptAreStable(t *testing.T) {
 	mismatch, err = Recover(context.Background(), root, plan.TransactionID, RecoveryResume)
 	if err != nil || mismatch.State != StateRecoveryRequired || mismatch.FailureClass != "rolled_back_state_mismatch" {
 		t.Fatalf("Recover(resume terminal rollback)=%#v, %v", mismatch, err)
+	}
+}
+
+func TestRecoveryActionIsDurableBeforeDirectionalMutation(t *testing.T) {
+	tests := []struct {
+		name           string
+		firstAction    string
+		opposite       string
+		prefix         int
+		failurePoint   failurePoint
+		wantAAfter     string
+		wantBAfter     string
+		wantFinalState string
+	}{
+		{name: "resume", firstAction: RecoveryResume, opposite: RecoveryRollback, prefix: 0, failurePoint: faultAfterPublish, wantAAfter: "after-a\n", wantBAfter: "before-b\n", wantFinalState: StateApplied},
+		{name: "rollback", firstAction: RecoveryRollback, opposite: RecoveryResume, prefix: 2, failurePoint: faultAfterRollback, wantAAfter: "after-a\n", wantBAfter: "before-b\n", wantFinalState: StateRolledBack},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			rootPath := t.TempDir()
+			mustWriteTestFile(t, rootPath, "proofkit/a.json", "before-a\n", 0o644)
+			mustWriteTestFile(t, rootPath, "proofkit/b.json", "before-b\n", 0o644)
+			plan, err := BuildPlan(context.Background(), rootPath, []Target{
+				{Path: "proofkit/a.json", Content: []byte("after-a\n"), Mode: 0o644},
+				{Path: "proofkit/b.json", Content: []byte("after-b\n"), Mode: 0o644},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			leaveInterruptedPrefix(t, rootPath, plan, test.prefix)
+			runtime := engine{fault: func(point failurePoint, index int) error {
+				if point == test.failurePoint && index == 1 {
+					return errors.New("injected directional interruption")
+				}
+				return nil
+			}}
+			result, err := runtime.recover(context.Background(), rootPath, plan.TransactionID, test.firstAction)
+			if err != nil || result.State != StateRecoveryRequired {
+				t.Fatalf("first Recover()=%#v, %v", result, err)
+			}
+			assertTestFile(t, rootPath, "proofkit/a.json", test.wantAAfter, 0o644)
+			assertTestFile(t, rootPath, "proofkit/b.json", test.wantBAfter, 0o644)
+
+			mismatch, err := Recover(context.Background(), rootPath, plan.TransactionID, test.opposite)
+			if err != nil || mismatch.State != StateRecoveryRequired || mismatch.FailureClass != "recovery_action_mismatch" {
+				t.Fatalf("opposite Recover()=%#v, %v", mismatch, err)
+			}
+			completed, err := Recover(context.Background(), rootPath, plan.TransactionID, test.firstAction)
+			if err != nil || completed.State != test.wantFinalState || completed.RecoveredBy != test.firstAction {
+				t.Fatalf("stable Recover()=%#v, %v", completed, err)
+			}
+		})
+	}
+}
+
+func TestMalformedRecoveryActionBlocksMutation(t *testing.T) {
+	rootPath := t.TempDir()
+	mustWriteTestFile(t, rootPath, "proofkit/target.json", "before\n", 0o644)
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/target.json", Content: []byte("after\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaveInterruptedPrefix(t, rootPath, plan, 0)
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeOwnedFile(root, recoveryActionPath, []byte(`{"action":"resume"}`), 0o600); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryResume)
+	if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "invalid_recovery_action" {
+		t.Fatalf("Recover()=%#v, %v", result, err)
+	}
+	assertTestFile(t, rootPath, "proofkit/target.json", "before\n", 0o644)
+	content, err := os.ReadFile(filepath.Join(rootPath, filepath.FromSlash(recoveryActionPath)))
+	if err != nil || string(content) != `{"action":"resume"}` {
+		t.Fatalf("rejected action record changed: content=%q err=%v", content, err)
+	}
+}
+
+func TestPreparingFailureCannotClaimRollbackAfterTargetDivergence(t *testing.T) {
+	root := t.TempDir()
+	mustWriteTestFile(t, root, "proofkit/state.json", "before\n", 0o644)
+	plan, err := BuildPlan(context.Background(), root, []Target{{Path: "proofkit/state.json", Content: []byte("desired\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := engine{fault: func(point failurePoint, _ int) error {
+		if point != faultAfterStaging {
+			return nil
+		}
+		mustWriteTestFile(t, root, "proofkit/state.json", "concurrent\n", 0o644)
+		return errors.New("injected preparation failure")
+	}}
+	result, err := runtime.apply(context.Background(), root, plan)
+	if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "preparing_state_mismatch" {
+		t.Fatalf("apply() result=%#v error=%v", result, err)
+	}
+	assertTestFile(t, root, "proofkit/state.json", "concurrent\n", 0o644)
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(journalPath))); err != nil {
+		t.Fatalf("preparing mismatch removed its recovery journal: %v", err)
+	}
+	recovery, err := Recover(context.Background(), root, plan.TransactionID, RecoveryRollback)
+	if err != nil || recovery.State != StateRecoveryRequired || recovery.FailureClass != "preparing_state_mismatch" {
+		t.Fatalf("Recover() result=%#v error=%v", recovery, err)
 	}
 }
 
@@ -224,7 +369,7 @@ func TestRejectedApplyPreservesPreviousTerminalReceipt(t *testing.T) {
 	}
 }
 
-func TestPreparingReplacementPreservesPreviousTerminalReceipt(t *testing.T) {
+func TestPreparingRollbackAtomicallyReplacesPreviousTerminalReceipt(t *testing.T) {
 	rootPath := t.TempDir()
 	first, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/first.json", Content: []byte("first\n"), Mode: 0o644}})
 	if err != nil {
@@ -265,9 +410,16 @@ func TestPreparingReplacementPreservesPreviousTerminalReceipt(t *testing.T) {
 	if err != nil || rolledBack.State != StateRolledBack {
 		t.Fatalf("Recover(second)=%#v, %v", rolledBack, err)
 	}
-	retained, err = ReadTerminalResult(context.Background(), rootPath, first.TransactionID)
-	if err != nil || retained.State != StateApplied {
-		t.Fatalf("ReadTerminalResult(first after rollback)=%#v, %v", retained, err)
+	if _, err := ReadTerminalResult(context.Background(), rootPath, first.TransactionID); err == nil {
+		t.Fatal("terminalized preparing rollback retained the superseded receipt")
+	}
+	retained, err = ReadTerminalResult(context.Background(), rootPath, second.TransactionID)
+	if err != nil || retained != rolledBack {
+		t.Fatalf("ReadTerminalResult(second)=%#v, %v, want %#v", retained, err, rolledBack)
+	}
+	replayed, err := Recover(context.Background(), rootPath, second.TransactionID, RecoveryRollback)
+	if err != nil || replayed != rolledBack {
+		t.Fatalf("Recover(second replay)=%#v, %v, want %#v", replayed, err, rolledBack)
 	}
 }
 

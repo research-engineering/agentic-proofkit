@@ -110,6 +110,10 @@ func removeCreatedDirectories(root *os.Root, plan Plan) error {
 }
 
 func admitRecoverableTargetDirectory(root *os.Root, relativePath string) (string, bool, error) {
+	exact, err := exactRouteExists(root, relativePath)
+	if err != nil || !exact {
+		return "", false, err
+	}
 	native := filepath.FromSlash(relativePath)
 	routeInfo, err := root.Lstat(native)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -166,6 +170,10 @@ func admitRecoverableTargetDirectory(root *os.Root, relativePath string) (string
 }
 
 func inspectOwnedTargetDirectory(root *os.Root, relativePath string) (string, bool, error) {
+	exact, err := exactRouteExists(root, relativePath)
+	if err != nil || !exact {
+		return "", false, err
+	}
 	native := filepath.FromSlash(relativePath)
 	routeInfo, err := root.Lstat(native)
 	if errors.Is(err, fs.ErrNotExist) {

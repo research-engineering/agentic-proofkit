@@ -12,14 +12,19 @@ import (
 )
 
 const (
-	journalPath      = activeDirectory + "/journal.json"
-	journalTemp      = activeDirectory + "/journal.tmp"
-	readyMarker      = activeDirectory + "/ready"
-	committedMarker  = activeDirectory + "/committed"
-	rolledBackMarker = activeDirectory + "/rolled-back"
+	journalPath        = activeDirectory + "/journal.json"
+	journalTemp        = activeDirectory + "/journal.tmp"
+	readyMarker        = activeDirectory + "/ready"
+	committedMarker    = activeDirectory + "/committed"
+	rolledBackMarker   = activeDirectory + "/rolled-back"
+	recoveryActionPath = activeDirectory + "/recovery-action.json"
+	recoveryActionTemp = activeDirectory + "/recovery-action.tmp"
 )
 
 func prepareJournal(root *os.Root, plan Plan) error {
+	if err := validateActivePlan(plan); err != nil {
+		return err
+	}
 	if err := ensureDirectory(root, activeDirectory, 0o700); err != nil {
 		return err
 	}
@@ -35,6 +40,13 @@ func prepareJournal(root *os.Root, plan Plan) error {
 	}
 	if err := root.Rename(filepath.FromSlash(journalTemp), filepath.FromSlash(journalPath)); err != nil {
 		return fmt.Errorf("publish repository transaction journal")
+	}
+	return syncDirectory(root, activeDirectory)
+}
+
+func publishPreparingJournal(root *os.Root) error {
+	if err := root.Rename(filepath.FromSlash(journalTemp), filepath.FromSlash(journalPath)); err != nil {
+		return fmt.Errorf("publish repository transaction preparing journal")
 	}
 	return syncDirectory(root, activeDirectory)
 }

@@ -38,6 +38,7 @@ const (
 )
 
 var boundaryNonClaims = []string{
+	"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.",
 	"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.",
 	"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.",
 	"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.",

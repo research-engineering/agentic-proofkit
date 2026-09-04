@@ -71,32 +71,36 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 	}
 	plan, err := loadJournal(root)
 	if err != nil {
-		observedTransactionID, identityKnown, discardable, inspectErr := incompleteJournalCanBeDiscarded(root)
-		if inspectErr != nil || !discardable {
-			return Result{FailureClass: "invalid_journal", State: StateRecoveryRequired, TransactionID: observedTransactionID}, nil
+		preparingPlan, identityKnown, inspectErr := loadPreparingJournal(root)
+		if inspectErr != nil || !identityKnown {
+			return Result{FailureClass: "invalid_journal", State: StateRecoveryRequired}, nil
 		}
-		if identityKnown && observedTransactionID != transactionID {
+		if preparingPlan.TransactionID != transactionID || preparingPlan.RootID != rootID {
 			return Result{}, fmt.Errorf("repository transaction recovery identity does not match preparing state")
 		}
+		if err := validateActivePlan(preparingPlan); err != nil {
+			return Result{FailureClass: "invalid_control_state", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
+		}
 		if action != RecoveryRollback {
-			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: observedTransactionID}, nil
+			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
 		}
-		if err := ctx.Err(); err != nil {
-			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
+		if err := publishPreparingJournal(root); err != nil {
+			return Result{FailureClass: "journal_publication_failed", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
 		}
-		if cleanupErr := cleanupActive(root, nil); cleanupErr != nil {
-			if errors.Is(cleanupErr, errCleanupDurabilityUnknown) {
-				return Result{AppliedCountKnown: true, FailureClass: "preparing_cleanup_durability_unknown", RecoveredBy: RecoveryRollback, State: StateDurabilityUnknown}, nil
-			}
-			return Result{FailureClass: "cleanup_failed", RecoveredBy: RecoveryRollback, State: StateCleanupRequired, TransactionID: observedTransactionID}, nil
-		}
-		return Result{AppliedCountKnown: true, RecoveredBy: RecoveryRollback, State: StateRolledBack, TransactionID: observedTransactionID}, nil
+		plan = preparingPlan
 	}
 	if plan.TransactionID != transactionID || plan.RootID != rootID {
 		return Result{}, fmt.Errorf("repository transaction recovery identity does not match active state")
 	}
 	if err := validateActiveState(root, plan); err != nil {
 		return Result{FailureClass: "invalid_control_state", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+	}
+	selectedAction, actionSelected, err := readRecoveryAction(root)
+	if err != nil {
+		return Result{FailureClass: "invalid_recovery_action", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+	}
+	if actionSelected && (selectedAction.TransactionID != transactionID || selectedAction.Action != action) {
+		return Result{FailureClass: "recovery_action_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 	}
 	committed, err := markerExists(root, committedMarker)
 	if err != nil {
@@ -126,10 +130,6 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		return runtime.cleanupRecovered(root, plan, StateApplied, action)
 	}
 	if rolledBack {
-		plan, err = loadObjects(root, plan)
-		if err != nil {
-			return Result{FailureClass: "invalid_staged_objects", State: StateRecoveryRequired, TransactionID: transactionID}, nil
-		}
 		if action != RecoveryRollback || verifyTargetVector(root, plan, 0) != nil {
 			return Result{FailureClass: "rolled_back_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
@@ -158,16 +158,19 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
 		}
+		if err := selectRecoveryAction(root, transactionID, action); err != nil {
+			return Result{FailureClass: "recovery_action_persistence_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
 		if err := removeCreatedDirectories(root, plan); err != nil {
 			return Result{FailureClass: "directory_cleanup_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
-		if err := cleanupActive(root, &plan); err != nil {
-			if errors.Is(err, errCleanupDurabilityUnknown) {
-				return Result{AppliedCountKnown: true, FailureClass: "rolled_back_cleanup_durability_unknown", RecoveredBy: RecoveryRollback, State: StateDurabilityUnknown, TransactionID: transactionID}, nil
-			}
-			return Result{AppliedCountKnown: true, FailureClass: "cleanup_failed", RecoveredBy: RecoveryRollback, State: StateCleanupRequired, TransactionID: transactionID}, nil
+		if err := writeMarker(root, rolledBackMarker); err != nil {
+			return Result{AppliedCountKnown: true, FailureClass: "terminal_marker_failed", RecoveredBy: RecoveryRollback, State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
-		return Result{AppliedCountKnown: true, RecoveredBy: RecoveryRollback, State: StateRolledBack, TransactionID: transactionID}, nil
+		if err := discardTerminalReceipt(root); err != nil {
+			return Result{FailureClass: "terminal_replacement_failed", RecoveredBy: RecoveryRollback, State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
+		return runtime.cleanupRecovered(root, plan, StateRolledBack, RecoveryRollback)
 	}
 	plan, err = loadObjects(root, plan)
 	if err != nil {
@@ -180,6 +183,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 	if action == RecoveryResume {
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
+		}
+		if err := selectRecoveryAction(root, transactionID, action); err != nil {
+			return Result{FailureClass: "recovery_action_persistence_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
 		if err := discardTerminalReceipt(root); err != nil {
 			return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
@@ -194,6 +200,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 	}
 	if err := ctx.Err(); err != nil {
 		return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
+	}
+	if err := selectRecoveryAction(root, transactionID, action); err != nil {
+		return Result{FailureClass: "recovery_action_persistence_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 	}
 	if err := discardTerminalReceipt(root); err != nil {
 		return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil

@@ -3,6 +3,7 @@ package repositorytransaction
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -60,6 +61,42 @@ func TestBuildPlanIsReadOnlyCanonicalAndContentBound(t *testing.T) {
 	}
 	if changed.TransactionID == plan.TransactionID {
 		t.Fatal("content change preserved transaction identity")
+	}
+}
+
+func TestBuildPlanRejectsFilesystemPortableAliases(t *testing.T) {
+	tests := []struct {
+		actualPath string
+		targetPath string
+	}{
+		{actualPath: "Proofkit/target.json", targetPath: "proofkit/target.json"},
+		{actualPath: "proofkit/Target.JSON", targetPath: "proofkit/target.json"},
+		{actualPath: "proofkit/caf\u00e9.json", targetPath: "proofkit/cafe\u0301.json"},
+	}
+	for index, test := range tests {
+		t.Run(fmt.Sprintf("alias-%d", index), func(t *testing.T) {
+			root := t.TempDir()
+			mustWriteTestFile(t, root, test.actualPath, "before\n", 0o644)
+			if _, err := BuildPlan(context.Background(), root, []Target{{Path: test.targetPath, Content: []byte("after\n"), Mode: 0o644}}); err == nil || !strings.Contains(err.Error(), "portable filesystem identity") {
+				t.Fatalf("BuildPlan() error=%v, want filesystem-alias rejection", err)
+			}
+		})
+	}
+}
+
+func TestBuildPlanRejectsPlanOutsideJournalBound(t *testing.T) {
+	root := t.TempDir()
+	targets := make([]Target, 0, MaximumOperations)
+	for targetIndex := 0; targetIndex < MaximumOperations; targetIndex++ {
+		components := make([]string, 0, 64)
+		for componentIndex := 0; componentIndex < 63; componentIndex++ {
+			components = append(components, fmt.Sprintf("d%02d-%02d-long", targetIndex, componentIndex))
+		}
+		components = append(components, "record.json")
+		targets = append(targets, Target{Path: strings.Join(components, "/"), Content: []byte("x\n"), Mode: 0o644})
+	}
+	if _, err := BuildPlan(context.Background(), root, targets); err == nil || !strings.Contains(err.Error(), "journal exceeds the byte limit") {
+		t.Fatalf("BuildPlan() error=%v, want journal-bound rejection", err)
 	}
 }
 
