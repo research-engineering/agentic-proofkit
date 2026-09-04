@@ -289,7 +289,10 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestSelfCheckOutputUsesExactRootShape",
 			"TestStandaloneMultiVariantCommandsUseExactRootShapes",
 		},
-		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}: {"TestExactTarballOnboardingTrace"},
+		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}: {
+			"TestExactTarballOnboardingTrace",
+			"TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift",
+		},
 		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.ci-receipt-anchor"}: {
 			"TestReceiptIDKeepsLocalAndCIIdentitiesDistinct",
 			"TestRunInvokesEveryRequiredSelfHostingAdmissionBoundary",
@@ -420,6 +423,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestInstalledREADMEFirstInputUsesBoundedLiteralShellWords",
 			"TestLiteralShellWordsConsumesLongBackslashRun",
 			"TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput",
+			"TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift",
 		},
 		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.release-closeout-npm-byte-admission"}: {
 			"TestBuildInputFailsClosedForEachBlockingEvidenceClass",

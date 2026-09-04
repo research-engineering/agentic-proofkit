@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5"
+	cliContractPublicABISHA256               = "7b36077db9c82ca005606f571e1f6c6e208ab5b35b95b4d9b885e6047f091b91"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -57,6 +57,9 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 		}
 		if string(descriptor.scopeClass) != command.ScopeClass {
 			t.Fatalf("%s descriptor scopeClass=%s contract=%s", command.Command, descriptor.scopeClass, command.ScopeClass)
+		}
+		if !slices.Equal(descriptor.routeTokens, effectiveContractRoute(command)) {
+			t.Fatalf("%s descriptor route=%v contract route=%v", command.Command, descriptor.routeTokens, effectiveContractRoute(command))
 		}
 		assertStringSet(t, descriptor.allowedFlags, command.AllowedFlags, command.Command+" descriptor flags")
 		assertStringSet(t, descriptor.outputModes, command.OutputModes, command.Command+" descriptor output modes")
@@ -106,7 +109,8 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 		if command.Command == "help" {
 			continue
 		}
-		line := helpLineForCommand(help, command.Command)
+		route := commandRouteText(effectiveContractRoute(command))
+		line := helpLineForCommand(help, route)
 		if line == "" {
 			t.Fatalf("help output does not route command %s", command.Command)
 		}
@@ -124,8 +128,10 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 		}
 	}
 	for command := range contractCommands {
-		if !strings.Contains(help, "agentic-proofkit "+command) && command != "help" {
-			t.Fatalf("help output does not route command %s", command)
+		contractCommand := commandByContractID(contract.Commands, command)
+		route := commandRouteText(effectiveContractRoute(contractCommand))
+		if !strings.Contains(help, "agentic-proofkit "+route) && command != "help" {
+			t.Fatalf("help output does not route command %s through %s", command, route)
 		}
 	}
 }
@@ -807,6 +813,7 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 			"input":                    command.Input,
 			"inputPointer":             command.InputPointer,
 			"outputModes":              stringsAsAny(command.OutputModes),
+			"route":                    stringsAsAny(effectiveContractRoute(command)),
 			"requiredFlags":            stringsAsAny(command.RequiredFlags),
 			"scopeClass":               command.ScopeClass,
 			"singleOccurrenceFlags":    stringsAsAny(command.SingleOccurrenceFlags),
@@ -1134,6 +1141,9 @@ func commandDescriptorContractParityProblems(descriptors []commandDescriptor, co
 		}
 		if string(descriptor.input) != command.Input {
 			problems = append(problems, "input drift "+name)
+		}
+		if !slices.Equal(descriptor.routeTokens, effectiveContractRoute(command)) {
+			problems = append(problems, "route drift "+name)
 		}
 		if !equalStringSets(descriptor.allowedFlags, command.AllowedFlags) {
 			problems = append(problems, "flag drift "+name)
@@ -1475,12 +1485,14 @@ func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
 
 func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 	expectedConstrainedUsage := map[string]string{
+		"adopt-plan":                     "agentic-proofkit adopt plan [--color <auto|never>] [--format <json|text>] --mode <audit-from-code|code-baseline|fresh> --repo-root <path> [--stack <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>]",
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
+		"repository-inventory":           "agentic-proofkit repository-inventory --repo-root <path>",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
 		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 	}
@@ -1639,6 +1651,7 @@ type cliContractCommand struct {
 	OutputContract           any                       `json:"outputContract,omitempty"`
 	OutputModes              []string                  `json:"outputModes"`
 	RequiredFlags            []string                  `json:"requiredFlags,omitempty"`
+	Route                    []string                  `json:"route,omitempty"`
 	ScopeClass               string                    `json:"scopeClass"`
 	SingleOccurrenceFlags    []string                  `json:"singleOccurrenceFlags,omitempty"`
 	Stdin                    bool                      `json:"stdin"`
@@ -1697,7 +1710,7 @@ func assertCLIContractSchema(t *testing.T) {
 	assertStringSet(t, stringsFromAny(helpGrammar["rootHelpFlags"].([]any)), []string{"--help", "-h"}, "root help flags")
 	assertStringSet(t, stringsFromAny(helpGrammar["commandHelpFlags"].([]any)), []string{"--help", "-h"}, "command help flags")
 	if helpGrammar["commandHelpExclusive"] != true ||
-		helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command" ||
+		helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command_route" ||
 		helpGrammar["helpCatalogFormsSource"] != "proofkit/command-families.v1.json" ||
 		helpGrammar["helpReadsCommandInput"] != false {
 		t.Fatalf("CLI help grammar does not describe runtime help routing: %#v", helpGrammar)
@@ -1730,6 +1743,7 @@ func assertCLIContractSchema(t *testing.T) {
 		"outputContract":           {},
 		"outputModes":              {},
 		"requiredFlags":            {},
+		"route":                    {},
 		"scopeClass":               {},
 		"singleOccurrenceFlags":    {},
 		"stdin":                    {},
@@ -1831,6 +1845,22 @@ func assertCLIContractSchema(t *testing.T) {
 			}
 		}
 	}
+}
+
+func effectiveContractRoute(command cliContractCommand) []string {
+	if len(command.Route) == 0 {
+		return []string{command.Command}
+	}
+	return append([]string(nil), command.Route...)
+}
+
+func commandByContractID(commands []cliContractCommand, commandID string) cliContractCommand {
+	for _, command := range commands {
+		if command.Command == commandID {
+			return command
+		}
+	}
+	panic("unknown CLI contract command: " + commandID)
 }
 
 func stringMatrixAsAny(values [][]string) []any {

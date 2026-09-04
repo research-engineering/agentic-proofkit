@@ -33,6 +33,48 @@ func TestExactDisplayedRouteOperandsRejectsWhitespaceAndExpansionMutants(t *test
 	}
 }
 
+func TestExactDisplayedCommandRoutesAdmitBoundedMultiTokenRoutes(t *testing.T) {
+	const prefix = "/venv/bin/python -m agentic_proofkit help "
+	routes, err := exactDisplayedCommandRoutes([]byte("Commands:\n    "+prefix+"adopt plan\n"), prefix, "test command routes")
+	if err != nil || len(routes) != 1 || routes[0] != "adopt plan" {
+		t.Fatalf("exact command routes=%v error=%v, want [adopt plan]", routes, err)
+	}
+	mutants := map[string]string{
+		"empty token":       "adopt  plan",
+		"too many tokens":   "one two three four five",
+		"shell punctuation": "adopt plan;touch-pwned",
+		"quoted token":      "adopt 'plan'",
+	}
+	for name, route := range mutants {
+		t.Run(name, func(t *testing.T) {
+			output := []byte("Commands:\n    " + prefix + route + "\n")
+			if _, err := exactDisplayedCommandRoutes(output, prefix, "test command routes"); err == nil {
+				t.Fatalf("mutant survived exact command-route admission: %q", route)
+			}
+		})
+	}
+}
+
+func TestInstalledPythonCommandRoutesRequireExactContractBijection(t *testing.T) {
+	expected := map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}
+	if err := requireInstalledPythonCommandRouteBijection(
+		map[string]string{"adopt plan": "adoption", "self-check": "quality"},
+		expected,
+	); err != nil {
+		t.Fatalf("exact route bijection rejected: %v", err)
+	}
+	mutants := []map[string]string{
+		{"adopt plan": "adoption"},
+		{"adopt plan": "adoption", "other": "quality"},
+		{"adopt plan": "adoption", "self-check": "quality", "other": "quality"},
+	}
+	for _, mutant := range mutants {
+		if err := requireInstalledPythonCommandRouteBijection(mutant, expected); err == nil {
+			t.Fatalf("route mutant survived exact bijection: %v", mutant)
+		}
+	}
+}
+
 func TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Fatal("Windows wheels are not supported")

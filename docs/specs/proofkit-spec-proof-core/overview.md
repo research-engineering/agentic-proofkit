@@ -116,7 +116,7 @@ execution receipts, and merge policy.
   caller-provided previous and next source snapshots so lifecycle changes are
   monotonic, evidence-backed, package-boundary-stable, and repository-neutral.
 - `REQ-PROOFKIT-SPEC-017`: capability map admission validates caller-owned
-  pre-spec observations under explicit code-baseline or code-audit trust modes
+  pre-spec observations under explicit code-baseline or audit-from-code trust modes
   and emits only bounded candidate requirements, bindings, or owner guidance.
 - `REQ-PROOFKIT-SPEC-018`: an authored command-family catalog covers every
   public CLI command exactly once, deterministically generates the private
@@ -173,6 +173,14 @@ execution receipts, and merge policy.
   omission accounting, stable source-report identity, one top-level detail
   access record, and explicit full-envelope retrieval without repeating policy
   prose or promoting route guidance to authority.
+- `REQ-PROOFKIT-SPEC-027`: the read-only `adopt plan` front door keeps explicit
+  source-trust intent separate from optional stack hints, composes a
+  candidate-only plan over a confined bounded root-catalog inventory and
+  content-bound child-owned evidence-guidance reference, validates arguments and
+  platform support before repository access, discards unknown names immediately
+  after batched catalog classification, and exposes owner-closed JSON plus a
+  bounded text projection with every authority non-claim without inferring
+  requirement meaning, writing files, or retaining the superseded `init` route.
 
 ## Non-Claims
 

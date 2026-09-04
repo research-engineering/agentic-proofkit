@@ -35,8 +35,9 @@ const (
 )
 
 var (
-	digestPattern   = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	testNamePattern = regexp.MustCompile(`^Test[A-Z0-9_][A-Za-z0-9_]*$`)
+	commandTokenPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+	digestPattern       = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+	testNamePattern     = regexp.MustCompile(`^Test[A-Z0-9_][A-Za-z0-9_]*$`)
 )
 
 type definitionRecord struct {
@@ -51,6 +52,7 @@ type generatedMetadata struct {
 	InputSummary         []string
 	OutputContractDigest string
 	FlagChoices          map[string][]string
+	RouteTokens          []string
 }
 
 func main() {
@@ -415,6 +417,7 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 	metadata := make(map[string]generatedMetadata, len(rawCommands))
 	contractIDs := map[string]string{}
 	activeTestFiles := map[string]map[string]struct{}{}
+	routes := map[string]string{}
 	var presets []string
 	previous := ""
 	for index, raw := range rawCommands {
@@ -430,7 +433,18 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 			return nil, nil, errors.New("CLI commands must be sorted and unique")
 		}
 		previous = name
-		item := generatedMetadata{FlagChoices: map[string][]string{}}
+		route := []string{name}
+		if rawRoute, present := command["route"]; present {
+			var err error
+			route, err = stringList(rawRoute, "command "+name+" route")
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		if err := admitCommandRoute(name, route, routes); err != nil {
+			return nil, nil, err
+		}
+		item := generatedMetadata{FlagChoices: map[string][]string{}, RouteTokens: route}
 		allowedFlags, err := stringList(command["allowedFlags"], "command "+name+" allowedFlags")
 		if err != nil || !sort.StringsAreSorted(allowedFlags) || hasDuplicate(allowedFlags) {
 			return nil, nil, fmt.Errorf("command %s allowedFlags must be sorted and unique", name)
@@ -494,7 +508,37 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 		}
 		metadata[name] = item
 	}
+	if adoption, ok := metadata["adopt-plan"]; ok && !slices.Equal(adoption.FlagChoices["--stack"], presets) {
+		return nil, nil, errors.New("adopt-plan --stack choices must equal stack-preset --preset choices")
+	}
 	return metadata, presets, nil
+}
+
+func admitCommandRoute(name string, route []string, existing map[string]string) error {
+	if len(route) == 0 || len(route) > 4 {
+		return fmt.Errorf("command %s route must contain between one and four tokens", name)
+	}
+	for _, token := range route {
+		if !commandTokenPattern.MatchString(token) {
+			return fmt.Errorf("command %s route contains invalid token", name)
+		}
+	}
+	for _, encoded := range sortedKeys(existing) {
+		owner := existing[encoded]
+		other := strings.Split(encoded, "\x00")
+		if slices.Equal(route, other) {
+			return fmt.Errorf("commands %s and %s have the same route", owner, name)
+		}
+		if routePrefix(route, other) || routePrefix(other, route) {
+			return fmt.Errorf("command routes for %s and %s have an ambiguous prefix", owner, name)
+		}
+	}
+	existing[strings.Join(route, "\x00")] = name
+	return nil
+}
+
+func routePrefix(prefix, value []string) bool {
+	return len(prefix) < len(value) && slices.Equal(prefix, value[:len(prefix)])
 }
 
 func admitUniqueContractID(command string, direction string, contract map[string]any, seen map[string]string) error {
@@ -850,12 +894,12 @@ func renderApp(sourceDigest string, metadata map[string]generatedMetadata) ([]by
 	output.WriteString("package app\n\n")
 	fmt.Fprintf(&output, "const commandContractSourceSHA256 = %q\n\n", sourceDigest)
 	output.WriteString("type generatedCommandContractMetadata struct {\n")
-	output.WriteString("\tInputContractSHA256 string\n\tInputSchemaSummary []string\n\tOutputContractSHA256 string\n\tFlagChoices map[string][]string\n}\n\n")
+	output.WriteString("\tInputContractSHA256 string\n\tInputSchemaSummary []string\n\tOutputContractSHA256 string\n\tFlagChoices map[string][]string\n\tRouteTokens []string\n}\n\n")
 	output.WriteString("var generatedCommandContractMetadataByName = map[string]generatedCommandContractMetadata{\n")
 	for _, name := range sortedKeys(metadata) {
 		item := metadata[name]
-		fmt.Fprintf(&output, "\t%q: {InputContractSHA256: %q, InputSchemaSummary: %#v, OutputContractSHA256: %q, FlagChoices: %#v},\n",
-			name, item.InputContractDigest, item.InputSummary, item.OutputContractDigest, item.FlagChoices)
+		fmt.Fprintf(&output, "\t%q: {InputContractSHA256: %q, InputSchemaSummary: %#v, OutputContractSHA256: %q, FlagChoices: %#v, RouteTokens: %#v},\n",
+			name, item.InputContractDigest, item.InputSummary, item.OutputContractDigest, item.FlagChoices, item.RouteTokens)
 	}
 	output.WriteString("}\n")
 	formatted, err := format.Source([]byte(output.String()))

@@ -25,10 +25,12 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
@@ -280,7 +282,7 @@ func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error
 
 func sourceOwnedPackageEntry(entry string) bool {
 	switch entry {
-	case "package/LICENSE", "package/package.json":
+	case "package/LICENSE", "package/dist/agentic-proofkit", "package/package.json":
 		return true
 	default:
 		return packageTextEntry(entry)
@@ -1677,7 +1679,7 @@ func verifyOutsideConsumer(artifact rootPackageArtifact) error {
 
 func verifyExactTarballConsumer(artifact rootPackageArtifact) error {
 	return withExactTarballConsumer(artifact, func(consumer string) error {
-		if err := verifyInstalledOnboardingTrace(consumer, runInstalledWithInput); err != nil {
+		if err := verifyInstalledOnboardingTraceWithExecutors(consumer, runInstalledWithInput, runInstalledBinaryWithInput); err != nil {
 			return err
 		}
 		if err := verifyInstalledJSONABI(consumer); err != nil {
@@ -1736,12 +1738,17 @@ func run(dir string, name string, args ...string) ([]byte, error) {
 type installedCommandOperation func(string, []byte, ...string) (installedCommandResult, error)
 
 type installedHelpRoute struct {
-	ID   string
-	Argv []string
+	ID    string
+	Route string
+	Argv  []string
 }
 
 func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOperation) error {
-	rootHelp, err := execute(consumer, nil, "help")
+	return verifyInstalledOnboardingTraceWithExecutors(consumer, execute, execute)
+}
+
+func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecute installedCommandOperation, binaryExecute installedCommandOperation) error {
+	rootHelp, err := transportExecute(consumer, nil, "help")
 	if err != nil {
 		return fmt.Errorf("outside consumer root help failed to run: %w", err)
 	}
@@ -1755,7 +1762,7 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 	if !bytes.Contains(rootHelp.Stdout, []byte("CLI/JSON is the public cross-language contract")) {
 		return fmt.Errorf("outside consumer root help did not expose the family discovery and CLI contract routes")
 	}
-	families, err := execute(consumer, nil, familyArgv...)
+	families, err := binaryExecute(consumer, nil, familyArgv...)
 	if err != nil {
 		return fmt.Errorf("outside consumer family help failed to run: %w", err)
 	}
@@ -1766,47 +1773,82 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 	if err != nil {
 		return err
 	}
+	contractPath := filepath.Join(consumer, "node_modules", "@research-engineering", "agentic-proofkit", "proofkit", "cli-contract.v2.json")
+	contractContent, err := os.ReadFile(contractPath)
+	if err != nil {
+		return fmt.Errorf("read installed CLI contract: %w", err)
+	}
+	contractCommandIDsByRoute, err := installedContractCommandIDsByRoute(contractContent)
+	if err != nil {
+		return err
+	}
+	multiTokenRoute, err := representativeMultiTokenHelpRoute(contractCommandIDsByRoute)
+	if err != nil {
+		return err
+	}
+	transportMultiTokenHelp, err := transportExecute(consumer, nil, multiTokenRoute.Argv...)
+	if err != nil {
+		return fmt.Errorf("outside consumer multi-token route transport failed to run: %w", err)
+	}
+	if err := requireInstalledTextSuccess(transportMultiTokenHelp, "multi-token route transport"); err != nil {
+		return err
+	}
 	var stackHelp installedCommandResult
 	var requirementSourceHelp installedCommandResult
 	stackHelpFound := false
 	requirementSourceHelpFound := false
+	allLeafRoutes := make([]installedHelpRoute, 0, len(contractCommandIDsByRoute))
+	familyByLeafRoute := make(map[string]string, len(contractCommandIDsByRoute))
 	for _, familyRoute := range familyRoutes {
-		family, err := execute(consumer, nil, familyRoute.Argv...)
+		family, err := binaryExecute(consumer, nil, familyRoute.Argv...)
 		if err != nil {
 			return fmt.Errorf("outside consumer family %s failed to run: %w", familyRoute.ID, err)
 		}
 		if err := requireInstalledTextSuccess(family, "family "+familyRoute.ID); err != nil {
 			return err
 		}
-		leafRoutes, err := parseInstalledLeafHelpRoutes(string(family.Stdout))
+		leafRoutes, err := parseInstalledLeafHelpRoutes(string(family.Stdout), contractCommandIDsByRoute)
 		if err != nil {
 			return fmt.Errorf("outside consumer family %s: %w", familyRoute.ID, err)
 		}
 		for _, leafRoute := range leafRoutes {
-			leafHelp, err := execute(consumer, nil, leafRoute.Argv...)
-			if err != nil {
-				return fmt.Errorf("outside consumer %s help failed to run: %w", leafRoute.ID, err)
+			if priorFamily, exists := familyByLeafRoute[leafRoute.Route]; exists {
+				return fmt.Errorf("outside consumer command route %q is exposed by both %s and %s", leafRoute.Route, priorFamily, familyRoute.ID)
 			}
-			if err := requireInstalledTextSuccess(leafHelp, leafRoute.ID+" help"); err != nil {
-				return err
+			familyByLeafRoute[leafRoute.Route] = familyRoute.ID
+			allLeafRoutes = append(allLeafRoutes, leafRoute)
+		}
+	}
+	if err := requireInstalledCommandRouteBijection(familyByLeafRoute, contractCommandIDsByRoute); err != nil {
+		return err
+	}
+	for _, leafRoute := range allLeafRoutes {
+		leafHelp, err := binaryExecute(consumer, nil, leafRoute.Argv...)
+		if err != nil {
+			return fmt.Errorf("outside consumer %s help failed to run: %w", leafRoute.ID, err)
+		}
+		if err := requireInstalledTextSuccess(leafHelp, leafRoute.ID+" help"); err != nil {
+			return err
+		}
+		if err := requireInstalledInvocationSyntax(leafHelp.Stdout, leafRoute.Route); err != nil {
+			return err
+		}
+		if leafRoute.Route == multiTokenRoute.Route && !bytes.Equal(leafHelp.Stdout, transportMultiTokenHelp.Stdout) {
+			return fmt.Errorf("outside consumer multi-token route differs between npm transport and direct installed binary")
+		}
+		switch leafRoute.ID {
+		case "stack-preset":
+			if stackHelpFound {
+				return fmt.Errorf("outside consumer family navigation exposed stack-preset more than once")
 			}
-			if err := requireInstalledInvocationSyntax(leafHelp.Stdout, leafRoute.ID); err != nil {
-				return err
+			stackHelp = leafHelp
+			stackHelpFound = true
+		case "requirement-source-admission":
+			if requirementSourceHelpFound {
+				return fmt.Errorf("outside consumer family navigation exposed requirement-source-admission more than once")
 			}
-			switch leafRoute.ID {
-			case "stack-preset":
-				if stackHelpFound {
-					return fmt.Errorf("outside consumer family navigation exposed stack-preset more than once")
-				}
-				stackHelp = leafHelp
-				stackHelpFound = true
-			case "requirement-source-admission":
-				if requirementSourceHelpFound {
-					return fmt.Errorf("outside consumer family navigation exposed requirement-source-admission more than once")
-				}
-				requirementSourceHelp = leafHelp
-				requirementSourceHelpFound = true
-			}
+			requirementSourceHelp = leafHelp
+			requirementSourceHelpFound = true
 		}
 	}
 	if !stackHelpFound {
@@ -1818,11 +1860,6 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 	presetRoutes, err := parseInstalledPresetRoutes(string(stackHelp.Stdout))
 	if err != nil {
 		return err
-	}
-	contractPath := filepath.Join(consumer, "node_modules", "@research-engineering", "agentic-proofkit", "proofkit", "cli-contract.v2.json")
-	contractContent, err := os.ReadFile(contractPath)
-	if err != nil {
-		return fmt.Errorf("read installed CLI contract: %w", err)
 	}
 	contractPresetIDs, err := installedContractPresetIDs(contractContent)
 	if err != nil {
@@ -1837,7 +1874,7 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 	}
 	var firstSelfContinuation []string
 	for _, presetRoute := range presetRoutes {
-		result, err := execute(consumer, nil, presetRoute.Argv...)
+		result, err := binaryExecute(consumer, nil, presetRoute.Argv...)
 		if err != nil {
 			return fmt.Errorf("outside consumer stack preset %s failed to run: %w", presetRoute.ID, err)
 		}
@@ -1855,7 +1892,7 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 	if len(firstSelfContinuation) == 0 {
 		return fmt.Errorf("outside consumer stack presets exposed no executable self-continuation")
 	}
-	continuation, err := execute(consumer, nil, firstSelfContinuation...)
+	continuation, err := binaryExecute(consumer, nil, firstSelfContinuation...)
 	if err != nil {
 		return fmt.Errorf("outside consumer stack preset self-continuation failed to run: %w", err)
 	}
@@ -1875,11 +1912,42 @@ func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOpe
 	if err != nil {
 		return err
 	}
-	result, err := execute(consumer, input, argv...)
+	result, err := binaryExecute(consumer, input, argv...)
 	if err != nil {
 		return fmt.Errorf("outside consumer README first-input command failed to run: %w", err)
 	}
 	return requirePassedJSON(result, "README first-input command")
+}
+
+func representativeMultiTokenHelpRoute(commandIDsByRoute map[string]string) (installedHelpRoute, error) {
+	routes := make([]string, 0, len(commandIDsByRoute))
+	for route := range commandIDsByRoute {
+		if strings.Contains(route, " ") {
+			routes = append(routes, route)
+		}
+	}
+	if len(routes) == 0 {
+		return installedHelpRoute{}, fmt.Errorf("installed CLI contract exposes no multi-token route for transport proof")
+	}
+	sort.Strings(routes)
+	route := routes[0]
+	return installedHelpRoute{
+		ID:    commandIDsByRoute[route],
+		Route: route,
+		Argv:  append([]string{"help"}, strings.Split(route, " ")...),
+	}, nil
+}
+
+func requireInstalledCommandRouteBijection(observed map[string]string, expected map[string]string) error {
+	if len(observed) != len(expected) {
+		return fmt.Errorf("outside consumer family command routes=%d installed contract routes=%d", len(observed), len(expected))
+	}
+	for route := range expected {
+		if _, exists := observed[route]; !exists {
+			return fmt.Errorf("outside consumer family navigation omitted installed contract route %q", route)
+		}
+	}
+	return nil
 }
 
 func installedRootHelpFamilyArgv(content []byte) ([]string, error) {
@@ -1949,9 +2017,9 @@ func parseInstalledFamilyRoutes(help string) ([]installedHelpRoute, error) {
 	return routes, nil
 }
 
-func parseInstalledLeafHelpRoutes(help string) ([]installedHelpRoute, error) {
-	commandIDs := []string{}
-	seenCommandIDs := map[string]struct{}{}
+func parseInstalledLeafHelpRoutes(help string, contractCommandIDsByRoute map[string]string) ([]installedHelpRoute, error) {
+	routeTexts := []string{}
+	seenRouteTexts := map[string]struct{}{}
 	inCommands := false
 	for _, line := range strings.Split(help, "\n") {
 		if line == "Commands:" {
@@ -1961,21 +2029,30 @@ func parseInstalledLeafHelpRoutes(help string) ([]installedHelpRoute, error) {
 		if !inCommands || !strings.HasPrefix(line, "  ") || strings.HasPrefix(line, "    ") {
 			continue
 		}
-		commandID := strings.TrimSpace(line)
-		if commandID == "" || strings.ContainsAny(commandID, " \t") {
-			return nil, fmt.Errorf("command family has an invalid command id %q", commandID)
+		routeText := strings.TrimSpace(line)
+		routeTokens, err := parseLiteralShellWords(routeText)
+		if err != nil || len(routeTokens) == 0 || len(routeTokens) > 4 || strings.Join(routeTokens, " ") != routeText {
+			return nil, fmt.Errorf("command family has an invalid command route %q", routeText)
 		}
-		if _, exists := seenCommandIDs[commandID]; exists {
-			return nil, fmt.Errorf("command family has duplicate command id %q", commandID)
+		for _, token := range routeTokens {
+			if token == "" || strings.HasPrefix(token, "-") {
+				return nil, fmt.Errorf("command family has an invalid command route %q", routeText)
+			}
 		}
-		seenCommandIDs[commandID] = struct{}{}
-		commandIDs = append(commandIDs, commandID)
+		if _, exists := seenRouteTexts[routeText]; exists {
+			return nil, fmt.Errorf("command family has duplicate command route %q", routeText)
+		}
+		if _, exists := contractCommandIDsByRoute[routeText]; !exists {
+			return nil, fmt.Errorf("command family route %q is absent from the installed CLI contract", routeText)
+		}
+		seenRouteTexts[routeText] = struct{}{}
+		routeTexts = append(routeTexts, routeText)
 	}
-	if len(commandIDs) == 0 {
-		return nil, fmt.Errorf("command family exposed no command ids")
+	if len(routeTexts) == 0 {
+		return nil, fmt.Errorf("command family exposed no command routes")
 	}
 
-	routeByID := map[string][]string{}
+	argvByRoute := map[string][]string{}
 	for _, line := range strings.Split(help, "\n") {
 		if !strings.Contains(line, "agentic-proofkit help ") {
 			continue
@@ -1984,24 +2061,32 @@ func parseInstalledLeafHelpRoutes(help string) ([]installedHelpRoute, error) {
 		if err != nil {
 			return nil, err
 		}
-		if len(argv) != 2 || argv[0] != "help" || argv[1] == "" {
-			return nil, fmt.Errorf("outside consumer leaf help route must resolve to help <command>")
+		if len(argv) < 2 || len(argv) > 5 || argv[0] != "help" {
+			return nil, fmt.Errorf("outside consumer leaf help route must resolve to help <command-route>")
 		}
-		if _, exists := routeByID[argv[1]]; exists {
-			return nil, fmt.Errorf("outside consumer command %q has duplicate copyable help routes", argv[1])
+		routeText := strings.Join(argv[1:], " ")
+		if _, exists := seenRouteTexts[routeText]; !exists {
+			return nil, fmt.Errorf("outside consumer copyable help route %q is not a displayed command route", routeText)
 		}
-		routeByID[argv[1]] = argv
+		if _, exists := argvByRoute[routeText]; exists {
+			return nil, fmt.Errorf("outside consumer command route %q has duplicate copyable help routes", routeText)
+		}
+		argvByRoute[routeText] = argv
 	}
-	if len(routeByID) != len(commandIDs) {
-		return nil, fmt.Errorf("outside consumer leaf help routes=%d command ids=%d", len(routeByID), len(commandIDs))
+	if len(argvByRoute) != len(routeTexts) {
+		return nil, fmt.Errorf("outside consumer leaf help routes=%d command routes=%d", len(argvByRoute), len(routeTexts))
 	}
-	routes := make([]installedHelpRoute, 0, len(commandIDs))
-	for _, commandID := range commandIDs {
-		argv, ok := routeByID[commandID]
+	routes := make([]installedHelpRoute, 0, len(routeTexts))
+	for _, routeText := range routeTexts {
+		argv, ok := argvByRoute[routeText]
 		if !ok {
-			return nil, fmt.Errorf("outside consumer command %q has no copyable help route", commandID)
+			return nil, fmt.Errorf("outside consumer command route %q has no copyable help route", routeText)
 		}
-		routes = append(routes, installedHelpRoute{ID: commandID, Argv: argv})
+		routes = append(routes, installedHelpRoute{
+			ID:    contractCommandIDsByRoute[routeText],
+			Route: routeText,
+			Argv:  argv,
+		})
 	}
 	return routes, nil
 }
@@ -2250,40 +2335,19 @@ func parseInstalledPresetIDs(help string) ([]string, error) {
 }
 
 func installedContractPresetIDs(content []byte) ([]string, error) {
-	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	contract, err := installedclicontract.Admit(content)
 	if err != nil {
-		return nil, fmt.Errorf("decode installed CLI contract: %w", err)
+		return nil, err
 	}
-	record, ok := value.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("installed CLI contract must be an object")
+	return contract.PresetIDs()
+}
+
+func installedContractCommandIDsByRoute(content []byte) (map[string]string, error) {
+	contract, err := installedclicontract.Admit(content)
+	if err != nil {
+		return nil, err
 	}
-	commands, ok := record["commands"].([]any)
-	if !ok {
-		return nil, fmt.Errorf("installed CLI contract commands must be an array")
-	}
-	for _, raw := range commands {
-		command, _ := raw.(map[string]any)
-		if command["command"] != "stack-preset" {
-			continue
-		}
-		output, _ := command["outputContract"].(map[string]any)
-		choices, _ := output["flagChoices"].(map[string]any)
-		rawIDs, _ := choices["--preset"].([]any)
-		ids := make([]string, 0, len(rawIDs))
-		for _, rawID := range rawIDs {
-			id, ok := rawID.(string)
-			if !ok || id == "" {
-				return nil, fmt.Errorf("installed CLI contract stack-preset choices must be non-empty strings")
-			}
-			ids = append(ids, id)
-		}
-		if len(ids) == 0 || !sort.StringsAreSorted(ids) {
-			return nil, fmt.Errorf("installed CLI contract stack-preset choices must be non-empty and sorted")
-		}
-		return ids, nil
-	}
-	return nil, fmt.Errorf("installed CLI contract omitted stack-preset")
+	return contract.CommandIDsByRoute(), nil
 }
 
 func installedREADMEFirstInput(content []byte) ([]string, []byte, error) {
@@ -2669,11 +2733,16 @@ func verifyJSONAdapterSourceSmokeReport(result installedCommandResult, expectedS
 }
 
 func runWithInput(dir string, name string, input []byte, args ...string) (installedCommandResult, error) {
+	return runWithInputEnvironment(dir, name, nil, input, args...)
+}
+
+func runWithInputEnvironment(dir string, name string, environment []string, input []byte, args ...string) (installedCommandResult, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), packageVerifyProcessTimeout)
 	defer cancel()
 	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
-		Directory:  dir,
-		Executable: name,
+		Directory:   dir,
+		Executable:  name,
+		Environment: environment,
 	}, workflowsmoke.Invocation{Args: args, Input: input, StdinClass: workflowsmoke.StdinBytes})
 	if err != nil {
 		return installedCommandResult{}, err
@@ -2684,6 +2753,31 @@ func runWithInput(dir string, name string, input []byte, args ...string) (instal
 func runInstalledWithInput(dir string, input []byte, args ...string) (installedCommandResult, error) {
 	npmArgs := append([]string{"--silent", "exec", "--offline", "--", "agentic-proofkit"}, args...)
 	return runWithInput(dir, "npm", input, npmArgs...)
+}
+
+func runInstalledBinaryWithInput(dir string, input []byte, args ...string) (installedCommandResult, error) {
+	target, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		return installedCommandResult{}, err
+	}
+	binaryPath := filepath.Join(dir, "node_modules", "@research-engineering", "agentic-proofkit", filepath.FromSlash(target.BinaryPath))
+	environment := installedNPMBinaryEnvironment(os.Environ())
+	return runWithInputEnvironment(dir, binaryPath, environment, input, args...)
+}
+
+func installedNPMBinaryEnvironment(environment []string) []string {
+	result := make([]string, 0, len(environment)+2)
+	for _, entry := range environment {
+		name, _, ok := strings.Cut(entry, "=")
+		if ok && (name == cliexec.LauncherProfileEnvironment || name == cliexec.PythonExecutableEnvironment) {
+			continue
+		}
+		result = append(result, entry)
+	}
+	return append(result,
+		cliexec.LauncherProfileEnvironment+"="+cliexec.ProfileNPMOffline,
+		cliexec.PythonExecutableEnvironment+"=",
+	)
 }
 
 func verifyTextPolicySmokeReport(result installedCommandResult, reportID string, state string, exitCode int, summary textPolicySmokeSummary) error {

@@ -1,54 +1,52 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.5.1",
-  "version": "0.6.0",
+  "previousVersion": "0.6.0",
+  "version": "0.7.0",
   "changeClass": "breaking",
   "breakingChanges": [
     {
-      "changeId": "proofkit.agent-route.brief-default",
-      "summary": "Change bare agent-route --agent-envelope output from the generic full envelope to the bounded proofkit.agent-route.brief packet."
-    },
-    {
-      "changeId": "proofkit.agent-route.materialized-artifact-refs",
-      "summary": "Reject the stdin transport sentinel as an available-input or observed-report artifact identity; route references must name materialized caller-owned artifacts."
-    },
-    {
-      "changeId": "proofkit.agent-route.report-schema-v3",
-      "summary": "Advance the bare agent-route report to schemaVersion 3 while preserving route-family semantics and adding exact launcher-profile and pre-suppression available-command context."
-    },
-    {
-      "changeId": "proofkit.platform.macos-13",
-      "summary": "Raise published Darwin package compatibility to macOS 13.0 so wheel tags remain truthful for binaries built with Go 1.27.1."
-    },
-    {
-      "changeId": "proofkit.toolchain.npm-12",
-      "summary": "Require npm 12.0.2 for repository-owned contributor and release scripts and consume npm view and pack evidence using npm 12 wire forms."
+      "changeId": "proofkit.adoption.init-retired",
+      "summary": "Remove the overloaded init command and its route presets in favor of the explicit read-only adopt plan trust-mode route and the existing bounded specialist commands."
     }
   ],
   "additions": [
     {
-      "changeId": "proofkit.agent-route.envelope-detail-mode",
-      "summary": "Add --agent-envelope-mode brief|full so agents can request bounded default guidance or the complete generic envelope explicitly."
+      "changeId": "proofkit.adoption.front-door",
+      "summary": "Add adopt plan as a read-only candidate-authoring front door with explicit fresh, code-baseline, and audit-from-code intent plus an optional orthogonal stack hint."
     },
     {
-      "changeId": "proofkit.toolchain.currentness",
-      "summary": "Update the verified build and CI baseline to Go 1.27.1 with Unicode 17.0.0, Node 26.8.1, npm 12.0.2, Python 3.14.7, and the current stable repository-owned dependency and action pins."
+      "changeId": "proofkit.adoption.repository-inventory",
+      "summary": "Add a bounded explicit repository-inventory command that observes only a fixed root-file catalog without stack or source-semantic inference."
+    },
+    {
+      "changeId": "proofkit.cli.generated-adapter-command-routes",
+      "summary": "Extend the generated TypeScript CLI adapter to admit one-to-four-token public command routes and pass each route token as a separate process argument while preserving one-token calls."
+    },
+    {
+      "changeId": "proofkit.cli.hierarchical-command-routes",
+      "summary": "Add owner-generated multi-token command routes while retaining stable internal command IDs for contract and implementation ownership."
+    },
+    {
+      "changeId": "proofkit.python-wheel.embedded-cli-contract",
+      "summary": "Embed the exact public CLI contract in every Python wheel and use the installed record to prove command-family route closure."
     }
   ],
   "migration": {
     "required": true,
     "steps": [
-      "Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
-      "Consumers of the bare agent-route report must admit schemaVersion 3; the prior route-family fields remain, and summary now binds launcherProfile and availableCommandCount.",
-      "Consumers that used the stdin transport sentinel as an agent-route availableInputs or observedReports ref must materialize that artifact and pass its safe repo-relative path instead.",
-      "Darwin consumers must use macOS 13.0 or later.",
-      "Contributors must use Go 1.27.1, Node 26.8.1, npm 12.0.2, and Python 3.14.7 for repository-owned build and release workflows."
+      "Replace explicit init --preset fresh with adopt plan --mode fresh --repo-root <caller-selected-root>.",
+      "Replace init --preset code-baseline with adopt plan --mode code-baseline --repo-root <caller-selected-root>, and replace init --preset code-audit with adopt plan --mode audit-from-code --repo-root <caller-selected-root>.",
+      "Replace init --preset legacy with migration-parity-admission followed by migration-plan over explicit caller-owned records; run requirement-source-transition when the migration changes requirement lifecycle state.",
+      "Replace init --preset change-set with changed-path-set followed by the explicit impact and selective-gate composition routes required by the consuming repository.",
+      "Replace bare init or init --preset all with help families, then select the smallest applicable bounded route rather than materializing every route family.",
+      "Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible."
     ]
   },
   "platformRequirements": [
     "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
   ],
   "knownLimitations": [
+    "Adopt plan inventories only a fixed root-file catalog; it does not infer stack identity, inspect arbitrary source semantics, generate requirements, write files, or execute native evidence.",
     "Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
     "Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
     "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",

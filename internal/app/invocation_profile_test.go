@@ -236,16 +236,16 @@ func invocationProfileAssertHelpRouteClosure(t *testing.T, renderer cliexec.Rend
 			t.Fatalf("family %s leaf route count=%d, want %d", family.ID, strings.Count(familyHelp, " help "), len(family.Commands))
 		}
 		for _, command := range family.Commands {
-			leafRoute := renderer.DisplayCommand("help", command)
-			leafRouteLine := "    " + leafRoute + "\n"
-			if strings.Count(familyHelp, leafRouteLine) != 1 {
-				t.Fatalf("family %s leaf route %q count=%d, want 1", family.ID, leafRoute, strings.Count(familyHelp, leafRouteLine))
-			}
 			descriptor, ok := commandDescriptorFor(command)
 			if !ok {
 				t.Fatalf("family %s command %s has no descriptor", family.ID, command)
 			}
-			leafHelp := invocationProfileRunText(t, renderer, []string{"help", command})
+			leafRoute := renderer.DisplayCommand(append([]string{"help"}, descriptor.routeTokens...)...)
+			leafRouteLine := "    " + leafRoute + "\n"
+			if strings.Count(familyHelp, leafRouteLine) != 1 {
+				t.Fatalf("family %s leaf route %q count=%d, want 1", family.ID, leafRoute, strings.Count(familyHelp, leafRouteLine))
+			}
+			leafHelp := invocationProfileRunText(t, renderer, append([]string{"help"}, descriptor.routeTokens...))
 			installedUsage := "Installed invocation:\n  " + installedCommandUsageLineWithRenderer(descriptor, renderer) + "\n"
 			if strings.Count(leafHelp, installedUsage) != 1 {
 				t.Fatalf("command %s installed usage %q count=%d, want 1", command, installedUsage, strings.Count(leafHelp, installedUsage))

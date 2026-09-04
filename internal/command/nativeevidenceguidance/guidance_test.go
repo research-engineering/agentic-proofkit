@@ -1,13 +1,17 @@
 package nativeevidenceguidance
 
 import (
+	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
@@ -163,6 +167,57 @@ func TestGuidanceJSONProjectionIsFreshAndComplete(t *testing.T) {
 	}
 	if got, want := len(secondSlots), SlotCount; got != want {
 		t.Fatalf("JSONValue slot count = %d, want %d", got, want)
+	}
+}
+
+func TestGuidanceReferenceIsCompactAndOwnerBound(t *testing.T) {
+	reference, err := GuidanceReference()
+	if err != nil {
+		t.Fatalf("GuidanceReference() error = %v", err)
+	}
+	want := map[string]any{
+		"commandId":     "native-evidence-guidance",
+		"contentSha256": reference.ContentSHA256,
+		"guidanceId":    GuidanceID,
+		"slotCount":     SlotCount,
+	}
+	if !maps.Equal(reference.JSONValue(), want) {
+		t.Fatalf("GuidanceReference().JSONValue() = %#v, want %#v", reference.JSONValue(), want)
+	}
+	guidance, err := Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	guidanceBytes, err := stablejson.Marshal(guidance.JSONValue())
+	if err != nil {
+		t.Fatalf("stablejson.Marshal(guidance) error = %v", err)
+	}
+	wantContentSHA256 := fmt.Sprintf("sha256:%x", sha256.Sum256(guidanceBytes))
+	if reference.ContentSHA256 != wantContentSHA256 {
+		t.Fatalf("GuidanceReference().ContentSHA256 = %q, want %q", reference.ContentSHA256, wantContentSHA256)
+	}
+	encoded, err := stablejson.Marshal(reference.JSONValue())
+	if err != nil {
+		t.Fatalf("stablejson.Marshal() error = %v", err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+	if err != nil {
+		t.Fatalf("DecodeJSON() error = %v", err)
+	}
+	if _, err := AdmitReference(decoded); err != nil {
+		t.Fatalf("AdmitReference() error = %v", err)
+	}
+	decoded.(map[string]any)["slotCount"] = json.Number("21")
+	if _, err := AdmitReference(decoded); err == nil {
+		t.Fatal("AdmitReference accepted owner drift")
+	}
+	decoded, err = admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+	if err != nil {
+		t.Fatalf("DecodeJSON() error = %v", err)
+	}
+	decoded.(map[string]any)["contentSha256"] = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+	if _, err := AdmitReference(decoded); err == nil {
+		t.Fatal("AdmitReference accepted content identity drift")
 	}
 }
 

@@ -138,6 +138,41 @@ func TestCLIFlagConditionModelRejectsAmbiguity(t *testing.T) {
 	})
 }
 
+func TestCommandRoutesAreBoundedSafeAndUnambiguous(t *testing.T) {
+	routes := map[string]string{}
+	if err := admitCommandRoute("adopt-plan", []string{"adopt", "plan"}, routes); err != nil {
+		t.Fatalf("admitCommandRoute(valid) error = %v", err)
+	}
+	if err := admitCommandRoute("change-plan", []string{"change", "plan"}, routes); err != nil {
+		t.Fatalf("admitCommandRoute(disjoint) error = %v", err)
+	}
+	if err := admitCommandRoute("three-token", []string{"three", "route", "tokens"}, routes); err != nil {
+		t.Fatalf("admitCommandRoute(max-1) error = %v", err)
+	}
+	if err := admitCommandRoute("four-token", []string{"four", "route", "tokens", "exactly"}, routes); err != nil {
+		t.Fatalf("admitCommandRoute(max) error = %v", err)
+	}
+	for _, test := range []struct {
+		name  string
+		route []string
+		want  string
+	}{
+		{name: "empty", route: nil, want: "between one and four"},
+		{name: "flag token", route: []string{"--adopt"}, want: "invalid token"},
+		{name: "duplicate", route: []string{"adopt", "plan"}, want: "same route"},
+		{name: "prefix", route: []string{"adopt"}, want: "ambiguous prefix"},
+		{name: "extended prefix", route: []string{"change", "plan", "now"}, want: "ambiguous prefix"},
+		{name: "five tokens", route: []string{"five", "route", "tokens", "are", "invalid"}, want: "between one and four"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			copyOfRoutes := maps.Clone(routes)
+			if err := admitCommandRoute("mutant", test.route, copyOfRoutes); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("admitCommandRoute(%v) error = %v, want %q", test.route, err, test.want)
+			}
+		})
+	}
+}
+
 func mustParseCLIFlagCondition(t *testing.T, condition string) map[string]string {
 	t.Helper()
 	dimensions, err := parseCLIFlagCondition(condition)

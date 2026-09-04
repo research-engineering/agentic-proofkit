@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -84,6 +85,7 @@ func TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift(t *testing.T)
 	withWorkingDirectory(t, root)
 	entries := []string{
 		"package/LICENSE",
+		"package/dist/agentic-proofkit",
 		"package/package.json",
 		"package/docs/specs/example/requirements.v1.json",
 		"package/proofkit/cli-contract.v2.json",
@@ -930,17 +932,31 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 	presetRoutePrefix := "npm exec --offline -- agentic-proofkit stack-preset --preset "
 	readmeContinuation := "Path: node_modules/@research-engineering/agentic-proofkit/README.md"
 	installedRoot := filepath.Join(consumer, "node_modules", "@research-engineering", "agentic-proofkit")
-	for _, source := range []string{"README.md", "proofkit/cli-contract.v2.json"} {
-		content, err := os.ReadFile(filepath.Join("..", "..", "..", filepath.FromSlash(source)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		writeFileBytes(t, filepath.Join(installedRoot, filepath.FromSlash(source)), content)
-	}
-	choices, err := installedContractPresetIDs(mustReadBytes(t, filepath.Join(installedRoot, "proofkit", "cli-contract.v2.json")))
+	readme, err := os.ReadFile(filepath.Join("..", "..", "..", "README.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	writeFileBytes(t, filepath.Join(installedRoot, "README.md"), readme)
+	ownerContract := mustReadBytes(t, filepath.Join("..", "..", "..", "proofkit", "cli-contract.v2.json"))
+	choices, err := installedContractPresetIDs(ownerContract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtureContract, err := json.Marshal(map[string]any{"commands": []any{
+		map[string]any{"command": "adopt-plan", "route": []string{"adopt", "plan"}},
+		map[string]any{"command": "requirement-source-admission"},
+		map[string]any{"command": "self-check"},
+		map[string]any{
+			"command": "stack-preset",
+			"outputContract": map[string]any{
+				"flagChoices": map[string]any{"--preset": choices},
+			},
+		},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFileBytes(t, filepath.Join(installedRoot, "proofkit", "cli-contract.v2.json"), fixtureContract)
 	stackInstalledInvocation = "npm exec --offline -- agentic-proofkit stack-preset --preset <" + strings.Join(choices, "|") + ">"
 	seenPresets := map[string]struct{}{}
 	presetExecutionCounts := map[string]int{}
@@ -957,6 +973,9 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 			stdout = rootHelpRoute + "\nCLI/JSON is the public cross-language contract.\n"
 		case slices.Equal(args, []string{"help", "families"}):
 			stdout = "Command families:\n" +
+				"  adoption\tAdoption\n" +
+				"    Plan adoption.\n" +
+				"    " + familyRoutePrefix + "adoption\n" +
 				"  scaffolding\tScaffolding\n" +
 				"    Scaffold projects.\n" +
 				"    " + familyRoutePrefix + "scaffolding\n" +
@@ -966,6 +985,8 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 				"  requirement-source-lifecycle\tRequirement source lifecycle\n" +
 				"    Admit requirement sources.\n" +
 				"    " + familyRoutePrefix + "requirement-source-lifecycle\n"
+		case slices.Equal(args, []string{"help", "family", "adoption"}):
+			stdout = "Commands:\n  adopt plan\n    " + installedNPMExecCommandPrefix + "help adopt plan\n"
 		case slices.Equal(args, []string{"help", "family", "scaffolding"}):
 			stdout = "Commands:\n  stack-preset\n    " + stackHelpRoute + "\n"
 		case slices.Equal(args, []string{"help", "family", "quality"}):
@@ -986,6 +1007,9 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 		case slices.Equal(args, []string{"help", "self-check"}):
 			stdout = "Usage:\n  agentic-proofkit self-check --input <path|->\n" +
 				"\nInstalled invocation:\n  " + selfCheckInstalledInvocation + "\n"
+		case slices.Equal(args, []string{"help", "adopt", "plan"}):
+			stdout = "Usage:\n  agentic-proofkit adopt plan --mode <audit-from-code|code-baseline|fresh> --repo-root <path>\n" +
+				"\nInstalled invocation:\n  " + installedNPMExecCommandPrefix + "adopt plan --mode <audit-from-code|code-baseline|fresh> --repo-root <path>\n"
 		case len(args) == 3 && args[0] == "stack-preset" && args[1] == "--preset":
 			seenPresets[args[2]] = struct{}{}
 			presetExecutionCounts[args[2]]++
@@ -1012,8 +1036,17 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 		}
 		return installedCommandResult{Stdout: []byte(stdout)}, nil
 	}
-	if err := verifyInstalledOnboardingTrace(consumer, execute); err != nil {
+	var transportCalls [][]string
+	transportExecute := func(consumer string, input []byte, args ...string) (installedCommandResult, error) {
+		transportCalls = append(transportCalls, append([]string(nil), args...))
+		return execute(consumer, input, args...)
+	}
+	if err := verifyInstalledOnboardingTraceWithExecutors(consumer, transportExecute, execute); err != nil {
 		t.Fatalf("verifyInstalledOnboardingTrace() error=%v", err)
+	}
+	wantTransportCalls := [][]string{{"help"}, {"help", "adopt", "plan"}}
+	if !reflect.DeepEqual(transportCalls, wantTransportCalls) {
+		t.Fatalf("transport calls = %v, want %v", transportCalls, wantTransportCalls)
 	}
 	if len(seenPresets) != len(choices) {
 		t.Fatalf("executed preset count=%d, want %d", len(seenPresets), len(choices))
@@ -1175,9 +1208,51 @@ func TestInstalledHelpRouteParsersRejectDuplicateOwnerIDs(t *testing.T) {
 		"    npm exec --offline -- agentic-proofkit help self-check\n" +
 		"  self-check\n" +
 		"    npm exec --offline -- agentic-proofkit help other\n"
-	if _, err := parseInstalledLeafHelpRoutes(leafHelp); err == nil ||
-		!strings.Contains(err.Error(), "duplicate command id") {
-		t.Fatalf("duplicate command id error=%v", err)
+	contractRoutes := map[string]string{"self-check": "self-check", "other": "other"}
+	if _, err := parseInstalledLeafHelpRoutes(leafHelp, contractRoutes); err == nil ||
+		!strings.Contains(err.Error(), "duplicate command route") {
+		t.Fatalf("duplicate command route error=%v", err)
+	}
+}
+
+func TestInstalledLeafHelpRoutesResolveMultiTokenContractRoute(t *testing.T) {
+	help := "Commands:\n" +
+		"  adopt plan\n" +
+		"    npm exec --offline -- agentic-proofkit help adopt plan\n"
+	routes, err := parseInstalledLeafHelpRoutes(help, map[string]string{"adopt plan": "adopt-plan"})
+	if err != nil {
+		t.Fatalf("parse multi-token command route: %v", err)
+	}
+	if len(routes) != 1 || routes[0].ID != "adopt-plan" || routes[0].Route != "adopt plan" ||
+		!slices.Equal(routes[0].Argv, []string{"help", "adopt", "plan"}) {
+		t.Fatalf("routes=%v", routes)
+	}
+}
+
+func TestInstalledContractCommandRoutesRejectAmbiguousIdentity(t *testing.T) {
+	valid := []byte(`{"commands":[{"command":"self-check"},{"command":"adopt-plan","route":["adopt","plan"]}]}`)
+	routes, err := installedContractCommandIDsByRoute(valid)
+	if err != nil {
+		t.Fatalf("installedContractCommandIDsByRoute() error=%v", err)
+	}
+	if len(routes) != 2 || routes["self-check"] != "self-check" || routes["adopt plan"] != "adopt-plan" {
+		t.Fatalf("installed contract routes=%v", routes)
+	}
+	mutants := map[string]string{
+		"empty commands":     `{"commands":[]}`,
+		"duplicate id":       `{"commands":[{"command":"same"},{"command":"same","route":["other"]}]}`,
+		"duplicate route":    `{"commands":[{"command":"one","route":["same"]},{"command":"two","route":["same"]}]}`,
+		"route prefix":       `{"commands":[{"command":"one","route":["adopt"]},{"command":"two","route":["adopt","plan"]}]}`,
+		"empty route":        `{"commands":[{"command":"one","route":[]}]}`,
+		"invalid route":      `{"commands":[{"command":"one","route":["bad token"]}]}`,
+		"duplicate JSON key": `{"commands":[{"command":"one","command":"two"}]}`,
+	}
+	for name, content := range mutants {
+		t.Run(name, func(t *testing.T) {
+			if _, err := installedContractCommandIDsByRoute([]byte(content)); err == nil {
+				t.Fatalf("ambiguous installed contract route was admitted: %s", content)
+			}
+		})
 	}
 }
 

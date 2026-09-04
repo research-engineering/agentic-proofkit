@@ -144,19 +144,22 @@ truth unless the consumer explicitly admits them.
 
 ### Invariant Authoring Loop
 
-For a repository with no specification, Proofkit can guide an agent through two
-different starting modes:
+For a repository with no specification, Proofkit can guide an agent through
+three explicit starting modes:
 
 ```mermaid
 flowchart TB
     Start["Code, docs, tests, issues, and maintainer intent"] --> Mode["Choose trust mode"]
+    Mode --> Fresh["Fresh authoring mode"]
     Mode --> Baseline["Code baseline mode"]
     Mode --> Audit["Code audit mode"]
+    Fresh --> Contract["Owner-authored product contract"]
     Baseline --> Observations["Caller-owned capability observations"]
     Audit --> Observations
     Observations --> Seeds["Candidate invariants and requirement seeds"]
     Seeds --> Review["Owner review and promotion"]
     Review --> Specs["Repo-owned requirements.v1.json"]
+    Contract --> Specs
     Specs --> Obligations["Proof obligations"]
     Obligations --> Evidence["Proof bindings and test inventory"]
     Evidence --> Admission["Proofkit admission and coverage"]
@@ -164,10 +167,11 @@ flowchart TB
 
 | Mode | Use when | Result |
 |---|---|---|
+| Fresh authoring | No existing code or specification is accepted as product truth | Owner-authored behavior statements that remain candidates until admitted as repository requirements |
 | Code baseline | Current behavior is accepted as the starting contract | Candidate requirements and bindings that preserve current behavior until owners review them |
 | Code audit | Current behavior may be wrong or incomplete | Untrusted observations and questions that must be promoted by a repository owner before becoming requirements |
 
-In both modes, generated records remain candidates until the consuming
+In all three modes, generated records remain candidates until the consuming
 repository admits them as repo-owned requirements, proof bindings, and witness
 plans. Proofkit can structure and validate candidate packets, but it does not
 extract complete behavior from arbitrary source code, invent product policy, or
@@ -179,7 +183,8 @@ Use the CLI help route before reading source:
 
 ```bash
 npm exec --offline -- agentic-proofkit help
-npm exec --offline -- agentic-proofkit init
+npm exec --offline -- agentic-proofkit adopt plan --mode fresh --repo-root .
+npm exec --offline -- agentic-proofkit help adopt plan
 npm exec --offline -- agentic-proofkit help repo-profile-admission
 npm exec --offline -- agentic-proofkit repo-profile-admission --help
 ```
@@ -189,12 +194,18 @@ does not read stdin. The full machine-readable command inventory remains
 `proofkit/cli-contract.v2.json`; the human route map is
 `docs/proofkit-contract-map.md`.
 
+`adopt plan` is the read-only front door. It inventories only a fixed catalog
+of recognized files at the explicit repository root, validates all arguments
+before filesystem access, and returns candidate-authoring tasks. It does not
+infer a stack, parse arbitrary source semantics, generate requirements, write
+files, or execute evidence. `--stack` is an optional caller-selected hint and
+cannot change the selected trust mode.
+
 | Repository state | Minimal first route | Stop condition |
 |---|---|---|
-| Unknown starting point | `init` | Stop before reading repository files, writing files, or treating route guidance as proof |
-| Fresh repository with no specs and no extracted observations | `init --preset fresh`, then `scaffold-project-structure` or `gradual-adoption-bootstrap` | Stop before writing files or inventing requirement meaning |
-| Current code is trusted as the initial contract | `capability-map-admission` with `trustMode: "code_baseline"` | Stop before treating generated seeds as admitted requirements |
-| Current code must be audited before it becomes a contract | `capability-map-admission` with `trustMode: "audit_from_code"` | Stop at owner questions and candidate-only records |
+| Fresh repository with no specification | `adopt plan --mode fresh --repo-root .` | Stop before writing files or inventing requirement meaning |
+| Current code is intentionally accepted as the initial baseline | `adopt plan --mode code-baseline --repo-root .` | The flag is a caller declaration, not evidence that the code is correct; stop before promoting candidate observations |
+| Current code must be audited before it becomes a contract | `adopt plan --mode audit-from-code --repo-root .` | Stop at explicit observations, owner questions, and candidate-only records |
 | Legacy repository has local proof infrastructure | `migration-parity-admission`, then `migration-plan` | Stop before deleting local proof owners without parity evidence |
 | A change set needs bounded checks | `changed-path-set`, optional `impact`, then `selective-gate-plan` and `selective-gate-evidence` | Stop on unknown scope, missing routes, or stale receipts |
 | An agent needs only one specification subtree | `requirement-context-compose --repo-root . --input context-catalog.json`, then `requirement-context-slice` | Stop before treating a bounded slice as complete repository truth |

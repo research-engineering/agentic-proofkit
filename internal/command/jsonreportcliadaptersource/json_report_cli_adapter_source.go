@@ -619,14 +619,14 @@ export function runProofkitJsonReportCliMain(input: {
 }
 
 export function runProofkitJsonCommand<T = unknown>(
-  command: string,
+  commandRoute: string,
   input: unknown,
   args: readonly string[],
   options: ProofkitCommandRunOptions,
 ): ProofkitJsonCommandResult<T> {
-  const {child, outputFile} = runProofkitCommand(command, input, args, options);
+  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);
   if (child.status !== 0 && child.stdout.trim().length === 0) {
-    throw new Error(formatProofkitCliError(child.stderr.trim() || command + " failed with exit code " + String(child.status)));
+    throw new Error(formatProofkitCliError(child.stderr.trim() || commandRoute + " failed with exit code " + String(child.status)));
   }
   const jsonText = child.stdout.trim().length === 0 && outputFile !== null ?
     readProofkitTextReportInput(requireRegularOutputTarget(outputFile)) :
@@ -639,20 +639,20 @@ export function runProofkitJsonCommand<T = unknown>(
       value: parseProofkitJsonStrict(jsonText) as T,
     };
   } catch (error) {
-    throw new Error(formatProofkitCliError(command + " produced invalid JSON: " + formatProofkitCliError(error)));
+    throw new Error(formatProofkitCliError(commandRoute + " produced invalid JSON: " + formatProofkitCliError(error)));
   }
 }
 
 export function runProofkitNoInputJsonCommand<T = unknown>(
-  command: string,
+  commandRoute: string,
   args: readonly string[],
   options: ProofkitCommandRunOptions,
 ): ProofkitJsonCommandResult<T> {
-  return runProofkitJsonCommand<T>(command, null, args, {...options, inputMode: "none"});
+  return runProofkitJsonCommand<T>(commandRoute, null, args, {...options, inputMode: "none"});
 }
 
 export function runProofkitTextCommand(
-  command: string,
+  commandRoute: string,
   input: unknown,
   args: readonly string[],
   options: ProofkitCommandRunOptions,
@@ -660,9 +660,9 @@ export function runProofkitTextCommand(
   if (options.jsonLayout !== undefined) {
     throw new Error("Proofkit jsonLayout is valid only for JSON command output");
   }
-  const {child, outputFile} = runProofkitCommand(command, input, args, options);
+  const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options);
   if (child.status !== 0 && child.stdout.length === 0) {
-    throw new Error(formatProofkitCliError(child.stderr.trim() || command + " failed with exit code " + String(child.status)));
+    throw new Error(formatProofkitCliError(child.stderr.trim() || commandRoute + " failed with exit code " + String(child.status)));
   }
   const text = child.status === 0 && child.stdout.length === 0 && outputFile !== null ?
     readProofkitTextReportInput(requireRegularOutputTarget(outputFile)) :
@@ -675,8 +675,8 @@ export function runProofkitTextCommand(
   };
 }
 
-function runProofkitCommand(command: string, input: unknown, args: readonly string[], options: ProofkitCommandRunOptions) {
-  admitCommand(command);
+function runProofkitCommand(commandRoute: string, input: unknown, args: readonly string[], options: ProofkitCommandRunOptions) {
+  const routeTokens = admitCommandRoute(commandRoute);
   admitRunOptions(options);
   let prepared: {readonly args: readonly string[]; readonly outputFile: string | null};
   try {
@@ -685,7 +685,7 @@ function runProofkitCommand(command: string, input: unknown, args: readonly stri
     throw new Error(formatProofkitCliError(error));
   }
   const processArgs = options.jsonLayout === undefined ? [] : ["--json-layout", options.jsonLayout];
-  const childArgs = options.inputMode === "none" ? [...processArgs, command, ...prepared.args] : [...processArgs, command, "--input", "-", ...prepared.args];
+  const childArgs = options.inputMode === "none" ? [...processArgs, ...routeTokens, ...prepared.args] : [...processArgs, ...routeTokens, "--input", "-", ...prepared.args];
   const childResult = spawnSync(options.binaryPath, childArgs, {
     cwd: options.cwd,
     env: options.env,
@@ -1109,10 +1109,12 @@ function nextCliValue<Key extends string>(
   return value;
 }
 
-function admitCommand(command: string): void {
-  if (command.length === 0 || command.startsWith("-") || command.includes("\0")) {
-    throw new Error("agentic-proofkit command must be a non-empty command id");
+function admitCommandRoute(commandRoute: string): readonly string[] {
+  const tokens = commandRoute.split(" ");
+  if (tokens.length === 0 || tokens.length > 4 || tokens.some((token) => !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(token))) {
+    throw new Error("agentic-proofkit command route must contain one to four canonical tokens");
   }
+  return tokens;
 }
 
 function admitRunOptions(options: ProofkitCommandRunOptions): void {

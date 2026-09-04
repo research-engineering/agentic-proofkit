@@ -102,26 +102,6 @@ func TestCLIABIGoldenCorpus(t *testing.T) {
 				"}\n",
 		},
 		{
-			name:           "init emits dry run route guidance without reading stdin",
-			args:           []string{"init", "--preset", "fresh"},
-			stdin:          `{"bad":`,
-			wantStatus:     0,
-			wantStdoutJSON: true,
-			wantStdoutHas: []string{
-				`"reportKind": "proofkit.init"`,
-				`"selectedPreset": "fresh"`,
-				`"dryRunOnly": true`,
-			},
-			wantStdoutNotHas: []string{"bad"},
-		},
-		{
-			name:          "init rejects unsupported input flags",
-			args:          []string{"init", "--input", "-"},
-			stdin:         `{}`,
-			wantStatus:    1,
-			wantStderrHas: []string{"unsupported argument for init: --input"},
-		},
-		{
 			name:           "secret scan emits failed report without leaking secret",
 			args:           []string{"secret-scan", "--input", "-"},
 			stdin:          cliSecretScanInput("api_key=abc123456789\n"),

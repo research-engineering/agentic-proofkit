@@ -19,6 +19,7 @@ type commandRunner string
 
 const (
 	commandRunnerGenericInput                commandRunner = "generic_input"
+	commandRunnerAdoptionFrontDoor           commandRunner = "adoption_front_door"
 	commandRunnerAdoptionContractEnvelope    commandRunner = "adoption_contract_envelope"
 	commandRunnerAdoptionDoctor              commandRunner = "adoption_doctor"
 	commandRunnerAdoptionWorkflow            commandRunner = "adoption_workflow"
@@ -29,7 +30,6 @@ const (
 	commandRunnerGradualAdoptionBootstrap    commandRunner = "gradual_adoption_bootstrap"
 	commandRunnerGradualAdoptionGuidance     commandRunner = "gradual_adoption_guidance"
 	commandRunnerHelp                        commandRunner = "help"
-	commandRunnerInit                        commandRunner = "init"
 	commandRunnerJSONReportCLIAdapterSource  commandRunner = "json_report_cli_adapter_source"
 	commandRunnerPilotAdmission              commandRunner = "pilot_admission"
 	commandRunnerPlanning                    commandRunner = "planning"
@@ -53,6 +53,7 @@ const (
 
 type commandDescriptor struct {
 	name                     string
+	routeTokens              []string
 	input                    commandInputMode
 	runner                   commandRunner
 	scopeClass               commandScopeClass
@@ -91,6 +92,7 @@ type requiredFlagValue struct {
 }
 
 var commandDescriptors = []commandDescriptor{
+	command("adopt-plan", commandInputNone, flags("--color", "--format", "--mode", "--repo-root", "--stack"), modes("json", "text"), ownerDirs("adoptionplan", "repositoryinventory"), withRunner(commandRunnerAdoptionFrontDoor), withSemanticAppTests("TestAdoptionFrontDoorCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--mode", "--repo-root"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--mode", "--repo-root", "--stack")),
 	command("adoption-checklist", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("adoptionchecklist")),
 	command("adoption-contract-envelope", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--guidance-mode", "--input", "--materialization-manifest", "--mode", "--pilot", "--touched-rule-id"), modes("json"), ownerDirs("adoptioncontract"), withRunner(commandRunnerAdoptionContractEnvelope), withAgentEnvelope(), withRequiredFlags("--mode")),
 	command("adoption-doctor", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("adoptiondoctor"), withRunner(commandRunnerAdoptionDoctor), withSemanticAppTests("TestAdoptionDoctorCLIABI"), withAgentEnvelope()),
@@ -113,7 +115,6 @@ var commandDescriptors = []commandDescriptor{
 	command("gradual-adoption-guidance", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--contract-envelope", "--guidance-mode", "--input", "--input-pointer", "--touched-rule-id"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerGradualAdoptionGuidance), withAgentEnvelope(), withContractEnvelope()),
 	command("help", commandInputNone, flags("--help", "-h"), modes("text"), ownerDirs("help"), withRunner(commandRunnerHelp), withSemanticAppTests("TestHelpCommandContractForms")),
 	command("impact", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("impact")),
-	command("init", commandInputNone, flags("--preset"), modes("json"), ownerDirs("initplan"), withRunner(commandRunnerInit), withSemanticAppTests("TestCLIABIGoldenCorpus")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource), withRequiredFlags("--language")),
 	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
@@ -134,6 +135,7 @@ var commandDescriptors = []commandDescriptor{
 	command("release-authority", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("releaseauthority")),
 	command("rendered-artifact-freshness", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("renderedartifactfreshness")),
 	command("repo-profile-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("repoprofileadmission")),
+	command("repository-inventory", commandInputNone, flags("--repo-root"), modes("json"), ownerDirs("repositoryinventory"), withRunner(commandRunnerAdoptionFrontDoor), withSemanticAppTests("TestAdoptionFrontDoorCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withSingleOccurrenceFlags("--repo-root")),
 	command("requirement-authoring-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementauthoringplan")),
 	command("requirement-bindings", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("requirementbinding")),
 	command("requirement-browser-server", commandInputRequired, flags("--empty-local-environment-policy", "--host", "--input", "--input-pointer", "--local-environment-class", "--open", "--port", "--scope", "--serve", "--session-mode", "--session-timeout-seconds", "--view"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerRequirementBrowserServer), withSemanticAppTests("TestRequirementBrowserServerSpecTreeCLIABI"), withRequiredFlags("--view"), withAtMostOneOfFlags("--empty-local-environment-policy", "--local-environment-class"), withFlagChoices("--host", requirementbrowser.HostChoices()...), withFlagChoices("--scope", requirementproofview.ScopeChoices()...), withFlagChoices("--session-mode", requirementbrowser.SessionModeChoices()...), withFlagChoices("--view", requirementbrowser.ViewChoices()...), withFlagPresenceAndRequiredValue("--empty-local-environment-policy", "--view", "proof"), withFlagPresenceAndRequiredValue("--local-environment-class", "--view", "proof"), withFlagPresenceRequirement("--open", "--serve"), withFlagPresenceAndRequiredValue("--scope", "--view", "proof"), withFlagPresenceAndRequiredValue("--session-timeout-seconds", "--session-mode", "one-shot-question"), withFlagValueAndRequiredValue("--session-mode", "browse", "--view", "workspace", "--serve"), withFlagValueAndRequiredValue("--session-mode", "one-shot-question", "--view", "workspace", "--open", "--serve"), withSingleOccurrenceFlags(requirementBrowserSingleOccurrenceFlags...)),
@@ -175,6 +177,7 @@ var commandDescriptors = []commandDescriptor{
 
 var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerGenericInput:                {},
+	commandRunnerAdoptionFrontDoor:           {},
 	commandRunnerAdoptionContractEnvelope:    {},
 	commandRunnerAdoptionDoctor:              {},
 	commandRunnerAdoptionWorkflow:            {},
@@ -185,7 +188,6 @@ var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerGradualAdoptionBootstrap:    {},
 	commandRunnerGradualAdoptionGuidance:     {},
 	commandRunnerHelp:                        {},
-	commandRunnerInit:                        {},
 	commandRunnerJSONReportCLIAdapterSource:  {},
 	commandRunnerPilotAdmission:              {},
 	commandRunnerPlanning:                    {},
@@ -213,6 +215,7 @@ type commandDescriptorOption func(*commandDescriptor)
 func command(name string, input commandInputMode, allowedFlags []string, outputModes []string, semanticOwnerDirs []string, options ...commandDescriptorOption) commandDescriptor {
 	descriptor := commandDescriptor{
 		name:              name,
+		routeTokens:       []string{name},
 		input:             input,
 		runner:            commandRunnerGenericInput,
 		scopeClass:        defaultCommandScopeClass(input),
@@ -228,6 +231,7 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 	}
 	explicitFlagChoices := cloneStringMap(descriptor.flagValueChoices)
 	if metadata, ok := generatedCommandContractMetadataByName[name]; ok {
+		descriptor.routeTokens = cloneStrings(metadata.RouteTokens)
 		descriptor.inputSchemaSummary = cloneStrings(metadata.InputSchemaSummary)
 		descriptor.flagValueChoices = cloneStringMap(metadata.FlagChoices)
 		for flag, choices := range explicitFlagChoices {
@@ -376,6 +380,9 @@ func buildCommandDescriptorIndex(descriptors []commandDescriptor) map[string]com
 	for _, descriptor := range descriptors {
 		if descriptor.name == "" {
 			panic("command descriptor name is empty")
+		}
+		if !validCommandRoute(descriptor.routeTokens) {
+			panic("invalid command descriptor route: " + descriptor.name)
 		}
 		if _, exists := index[descriptor.name]; exists {
 			panic("duplicate command descriptor: " + descriptor.name)
@@ -565,6 +572,7 @@ func isSortedUniqueFlagValueRequirements(values []flagValueRequirement) bool {
 }
 
 func (descriptor commandDescriptor) clone() commandDescriptor {
+	descriptor.routeTokens = cloneStrings(descriptor.routeTokens)
 	descriptor.allowedFlags = cloneStrings(descriptor.allowedFlags)
 	descriptor.requiredFlags = cloneStrings(descriptor.requiredFlags)
 	descriptor.exactlyOneOfFlagGroups = cloneStringMatrix(descriptor.exactlyOneOfFlagGroups)

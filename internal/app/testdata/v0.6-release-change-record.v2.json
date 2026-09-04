@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 2,
+  "previousVersion": "0.5.1",
+  "version": "0.6.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.agent-route.brief-default",
+      "summary": "Change bare agent-route --agent-envelope output from the generic full envelope to the bounded proofkit.agent-route.brief packet."
+    },
+    {
+      "changeId": "proofkit.agent-route.materialized-artifact-refs",
+      "summary": "Reject the stdin transport sentinel as an available-input or observed-report artifact identity; route references must name materialized caller-owned artifacts."
+    },
+    {
+      "changeId": "proofkit.agent-route.report-schema-v3",
+      "summary": "Advance the bare agent-route report to schemaVersion 3 while preserving route-family semantics and adding exact launcher-profile and pre-suppression available-command context."
+    },
+    {
+      "changeId": "proofkit.platform.macos-13",
+      "summary": "Raise published Darwin package compatibility to macOS 13.0 so wheel tags remain truthful for binaries built with Go 1.27.1."
+    },
+    {
+      "changeId": "proofkit.toolchain.npm-12",
+      "summary": "Require npm 12.0.2 for repository-owned contributor and release scripts and consume npm view and pack evidence using npm 12 wire forms."
+    }
+  ],
+  "additions": [
+    {
+      "changeId": "proofkit.agent-route.envelope-detail-mode",
+      "summary": "Add --agent-envelope-mode brief|full so agents can request bounded default guidance or the complete generic envelope explicitly."
+    },
+    {
+      "changeId": "proofkit.toolchain.currentness",
+      "summary": "Update the verified build and CI baseline to Go 1.27.1 with Unicode 17.0.0, Node 26.8.1, npm 12.0.2, Python 3.14.7, and the current stable repository-owned dependency and action pins."
+    }
+  ],
+  "migration": {
+    "required": true,
+    "steps": [
+      "Consumers that require the former generic agent-route envelope must add --agent-envelope-mode full after --agent-envelope; consumers that accept bounded route guidance may keep bare --agent-envelope.",
+      "Consumers of the bare agent-route report must admit schemaVersion 3; the prior route-family fields remain, and summary now binds launcherProfile and availableCommandCount.",
+      "Consumers that used the stdin transport sentinel as an agent-route availableInputs or observedReports ref must materialize that artifact and pass its safe repo-relative path instead.",
+      "Darwin consumers must use macOS 13.0 or later.",
+      "Contributors must use Go 1.27.1, Node 26.8.1, npm 12.0.2, and Python 3.14.7 for repository-owned build and release workflows."
+    ]
+  },
+  "platformRequirements": [
+    "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
+  ],
+  "knownLimitations": [
+    "Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
+    "Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
+    "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
+    "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
+    "TSX source parsing remains unsupported."
+  ],
+  "rollback": {
+    "strategy": "previous_admitted_version"
+  }
+}

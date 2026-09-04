@@ -136,7 +136,8 @@ func TestJSONLayoutRejectsNonJSONAndNonLeadingUseBeforeInput(t *testing.T) {
 func TestJSONLayoutRejectsEveryTextCommandHelpForm(t *testing.T) {
 	for _, descriptor := range commandDescriptors {
 		for _, helpFlag := range []string{"--help", "-h"} {
-			args := []string{"--json-layout", "compact", descriptor.name, helpFlag}
+			args := append([]string{"--json-layout", "compact"}, descriptor.routeTokens...)
+			args = append(args, helpFlag)
 			t.Run(descriptor.name+"/"+helpFlag, func(t *testing.T) {
 				var stdout bytes.Buffer
 				var stderr bytes.Buffer

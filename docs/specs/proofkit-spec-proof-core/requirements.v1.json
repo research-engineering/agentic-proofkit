@@ -594,6 +594,19 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-027",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "The public read-only adoption front door is routed only as adopt plan, requires one explicit repository root and one explicit fresh, code-baseline, or audit-from-code intent, keeps an optional stack preset orthogonal to source trust, and validates every argument before filesystem access. Its repository inventory owner scans only a fixed root-file catalog through a confined root handle, fails before filesystem access on platforms without its nonblocking no-follow open boundary, rejects recognized symlink or non-regular substitutions, preflights root cardinality and observed file sizes before content reads, enforces per-file, actual aggregate-read, and output byte bounds, hashes only recognized regular UTF-8 file bytes, and uses unrecognized root entry names only for immediate catalog membership and counting without sorting, retaining beyond the current read batch, or disclosing them. Inventory and adoption-plan outputs bind deterministic identities and re-admit unchanged through their child owners; the plan emits only candidate-authoring tasks and a child-owned native-evidence guidance reference whose digest binds the complete current guidance, never synthesizes requirement meaning or proof bindings, records code-baseline solely as an explicit caller declaration, and cannot change trust or task semantics through a stack hint. JSON and bounded text are projections of the same typed plan, every authority non-claim remains visible in text, terminal styling is capability-gated, and the superseded init route has no active descriptor, dispatcher, contract, family, or package owner.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-027"],
+      "nonClaims": ["The adoption front door does not infer repository stack identity, inspect arbitrary source semantics, decide product meaning, establish code correctness, write files, execute commands or native witnesses, promote candidates, authenticate freshness, approve merge or release, or establish rollout or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

@@ -2,8 +2,14 @@
 package nativeevidenceguidance
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 const (
@@ -39,6 +45,24 @@ type Guidance struct {
 	GuidanceID    string   `json:"guidanceId"`
 	Slots         []Slot   `json:"slots"`
 	NonClaims     []string `json:"nonClaims"`
+}
+
+// Reference is the bounded progressive-disclosure link used by other command
+// owners. The full guidance remains available from one canonical command.
+type Reference struct {
+	CommandID     string
+	ContentSHA256 string
+	GuidanceID    string
+	SlotCount     int
+}
+
+func (reference Reference) JSONValue() map[string]any {
+	return map[string]any{
+		"commandId":     reference.CommandID,
+		"contentSha256": reference.ContentSHA256,
+		"guidanceId":    reference.GuidanceID,
+		"slotCount":     reference.SlotCount,
+	}
 }
 
 // JSONValue returns a fresh stablejson-compatible projection.
@@ -114,6 +138,53 @@ func Build() (Guidance, error) {
 		Slots:         append([]Slot(nil), guidanceTable[:]...),
 		NonClaims:     append([]string(nil), guidanceNonClaims[:]...),
 	}, nil
+}
+
+// GuidanceReference validates the owner table before returning its compact
+// progressive-disclosure reference.
+func GuidanceReference() (Reference, error) {
+	guidance, err := Build()
+	if err != nil {
+		return Reference{}, err
+	}
+	contentSHA256, err := digest.StableJSONSHA256Ref(guidance.JSONValue())
+	if err != nil {
+		return Reference{}, fmt.Errorf("digest native evidence guidance")
+	}
+	return Reference{
+		CommandID:     "native-evidence-guidance",
+		ContentSHA256: contentSHA256,
+		GuidanceID:    GuidanceID,
+		SlotCount:     SlotCount,
+	}, nil
+}
+
+// AdmitReference validates a serialized compact reference against the sole
+// guidance owner.
+func AdmitReference(raw any) (Reference, error) {
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return Reference{}, fmt.Errorf("native evidence guidance reference must be an object")
+	}
+	if _, err := admit.NonEmptyText(record["guidanceId"], "native evidence guidance reference guidanceId"); err != nil {
+		return Reference{}, err
+	}
+	expected, err := GuidanceReference()
+	if err != nil {
+		return Reference{}, err
+	}
+	rawBytes, err := stablejson.Marshal(record)
+	if err != nil {
+		return Reference{}, fmt.Errorf("encode native evidence guidance reference")
+	}
+	expectedBytes, err := stablejson.Marshal(expected.JSONValue())
+	if err != nil {
+		return Reference{}, fmt.Errorf("encode expected native evidence guidance reference")
+	}
+	if !bytes.Equal(rawBytes, expectedBytes) {
+		return Reference{}, fmt.Errorf("native evidence guidance reference does not match its owner")
+	}
+	return expected, nil
 }
 
 // RenderPlainText renders the fixed guidance in at most two lines per slot.

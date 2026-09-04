@@ -28,6 +28,11 @@ type wheelEntry struct {
 
 const maxZip32Size = uint64(^uint32(0))
 
+const (
+	sourceCLIContractPath   = "proofkit/cli-contract.v2.json"
+	embeddedCLIContractPath = "agentic_proofkit/proofkit/cli-contract.v2.json"
+)
+
 func buildPythonPackages() error {
 	return buildPythonPackagesForTargets(releaseTargets())
 }
@@ -117,21 +122,25 @@ func buildWheel(outputDir string, manifest packageJSON, target target) (wheelRec
 
 func wheelEntries(manifest packageJSON, target target, binary []byte) ([]wheelEntry, error) {
 	distInfo := distInfoDir(manifest.Version)
-	sourceFiles := []string{
-		"python/agentic_proofkit/__init__.py",
-		"python/agentic_proofkit/__main__.py",
-		"python/agentic_proofkit/cli.py",
+	sourceFiles := []struct {
+		path      string
+		wheelPath string
+	}{
+		{path: "python/agentic_proofkit/__init__.py", wheelPath: "agentic_proofkit/__init__.py"},
+		{path: "python/agentic_proofkit/__main__.py", wheelPath: "agentic_proofkit/__main__.py"},
+		{path: "python/agentic_proofkit/cli.py", wheelPath: "agentic_proofkit/cli.py"},
+		{path: sourceCLIContractPath, wheelPath: embeddedCLIContractPath},
 	}
 	entries := make([]wheelEntry, 0, len(sourceFiles)+6)
 	for _, source := range sourceFiles {
-		content, err := os.ReadFile(source)
+		content, err := os.ReadFile(source.path)
 		if err != nil {
 			return nil, err
 		}
 		entries = append(entries, wheelEntry{
 			Content: content,
 			Mode:    0o644,
-			Path:    strings.TrimPrefix(source, "python/"),
+			Path:    source.wheelPath,
 		})
 	}
 	license, err := readLicenseFile()

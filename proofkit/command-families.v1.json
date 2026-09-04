@@ -7,13 +7,13 @@
       "label": "Adoption lifecycle",
       "purpose": "Select and assess repository adoption stages.",
       "commands": [
+        "adopt-plan",
         "adoption-checklist",
         "adoption-doctor",
         "adoption-workflow-plan",
         "gradual-adoption",
         "gradual-adoption-bootstrap",
         "gradual-adoption-guidance",
-        "init",
         "pilot-admission"
       ]
     },
@@ -113,6 +113,7 @@
       "purpose": "Admit explicit repository facts and bounded policy scans.",
       "commands": [
         "repo-profile-admission",
+        "repository-inventory",
         "secret-scan",
         "text-policy",
         "typescript-public-api-surfaces",

@@ -11,13 +11,18 @@ import (
 
 const reportKind = "proofkit.capability-map-admission"
 
+const (
+	TrustModeAuditFromCode = "audit_from_code"
+	TrustModeCodeBaseline  = "code_baseline"
+)
+
 var (
 	authorityValues = map[string]struct{}{
 		"caller_owned_observation": {},
 	}
 	modeValues = map[string]struct{}{
-		"audit_from_code": {},
-		"code_baseline":   {},
+		TrustModeAuditFromCode: {},
+		TrustModeCodeBaseline:  {},
 	}
 	requiredEvidenceWitnessKind = map[string]string{
 		"negative_test": "falsification",
@@ -172,7 +177,7 @@ func buildReport(input input) (report.Record, int) {
 				}
 			}
 
-			if input.TrustMode == "code_baseline" {
+			if input.TrustMode == TrustModeCodeBaseline {
 				if missingCandidateRequirement {
 					failures = append(failures, fmt.Sprintf("scenario %s must declare candidateRequirementId in code_baseline mode", shape.ScenarioID))
 				}
@@ -799,28 +804,28 @@ func candidateBinding(input input, requirementID string, requiredEvidence []stri
 }
 
 func evidenceAuthority(mode string) string {
-	if mode == "code_baseline" {
+	if mode == TrustModeCodeBaseline {
 		return "caller_owned_executable_anchor"
 	}
 	return "untrusted_code_observation"
 }
 
 func executableEvidenceState(mode string) string {
-	if mode == "code_baseline" {
+	if mode == TrustModeCodeBaseline {
 		return "candidate_executable_anchor"
 	}
 	return "not_executable_until_owner_materialized"
 }
 
 func promotionState(mode string) string {
-	if mode == "code_baseline" {
+	if mode == TrustModeCodeBaseline {
 		return "candidate_requires_admission"
 	}
 	return "owner_review_required"
 }
 
 func instructions(mode string) []any {
-	if mode == "code_baseline" {
+	if mode == TrustModeCodeBaseline {
 		return []any{
 			"Review candidateRequirementSeeds and materialize accepted records into requirements.v1.json.",
 			"Run requirement-source-admission after materialization.",
@@ -900,7 +905,7 @@ func modeRuleMessage(mode string, failures []string) string {
 	if len(failures) > 0 {
 		return "Capability map mode preconditions are not satisfied."
 	}
-	if mode == "code_baseline" {
+	if mode == TrustModeCodeBaseline {
 		return "Code baseline mode has candidate requirement ids and executable anchors for admitted scenarios."
 	}
 	return "Audit-from-code mode emitted candidate-only guidance without trusting code as stable requirement truth."
@@ -914,7 +919,7 @@ func statusForFailures(failures []string) string {
 }
 
 func severityForMode(mode string, condition string) string {
-	if mode == "code_baseline" && condition == "missing_anchor" {
+	if mode == TrustModeCodeBaseline && condition == "missing_anchor" {
 		return "blocking"
 	}
 	return "review"

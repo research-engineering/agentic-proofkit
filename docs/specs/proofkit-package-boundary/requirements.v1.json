@@ -62,7 +62,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-003",
       "ownerId": "proofkit.package-boundary",
-      "invariant": "The exact local root-package tarball remains installable and executable by an outside consumer on the current native platform through npm exec --offline, with a continuous root-help to family to stack-preset to every exact generated preset continuation and first-valid-input onboarding trace, including successful re-execution of one emitted self-continuation without network fallback, without claiming registry publication.",
+      "invariant": "The exact local root-package tarball remains installable and executable by an outside consumer on the current native platform. The proof byte-binds the packed package launcher and platform binary to their source-built bytes, verifies npm exec --offline resolution through root help and one contract-owned multi-token help route, then uses the exact admitted npm launcher profile to prove exhaustive root-help to family to leaf-help closure, stack-preset vocabulary, every generated preset continuation, one re-executed self-continuation, and the first valid README input without network fallback or a registry-publication claim.",
       "claimLevel": "blocking",
       "riskClass": "medium",
       "proofBindingRefs": [

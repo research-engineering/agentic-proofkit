@@ -15,7 +15,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
 
-const testLicenseContent = "MIT License\n"
+const (
+	testLicenseContent     = "MIT License\n"
+	testCLIContractContent = `{"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`
+)
 
 func TestPythonPackageReadersRejectAmbiguousJSON(t *testing.T) {
 	cases := []struct {
@@ -231,12 +234,17 @@ func TestWheelEntriesIncludeCanonicalLicense(t *testing.T) {
 		"python/agentic_proofkit/__init__.py",
 		"python/agentic_proofkit/__main__.py",
 		"python/agentic_proofkit/cli.py",
+		sourceCLIContractPath,
 	} {
 		path := filepath.Join(root, source)
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+		content := []byte(source)
+		if source == sourceCLIContractPath {
+			content = []byte(testCLIContractContent)
+		}
+		if err := os.WriteFile(path, content, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -253,15 +261,25 @@ func TestWheelEntriesIncludeCanonicalLicense(t *testing.T) {
 		}
 	})
 	wantPath := distInfoDir("1.2.3") + "/licenses/" + licenseFilename
+	foundLicense := false
+	foundContract := false
 	for _, entry := range entries {
 		if entry.Path == wantPath {
 			if string(entry.Content) != testLicenseContent {
 				t.Fatalf("wheel license = %q, want canonical source license", entry.Content)
 			}
-			return
+			foundLicense = true
+		}
+		if entry.Path == embeddedCLIContractPath {
+			if string(entry.Content) != testCLIContractContent {
+				t.Fatalf("wheel CLI contract = %q, want canonical source contract", entry.Content)
+			}
+			foundContract = true
 		}
 	}
-	t.Fatalf("wheelEntries() missing %s", wantPath)
+	if !foundLicense || !foundContract {
+		t.Fatalf("wheelEntries() found license=%t contract=%t", foundLicense, foundContract)
+	}
 }
 
 func TestVerifyWheelContentsRequiresExactWheelMetadata(t *testing.T) {
@@ -270,7 +288,7 @@ func TestVerifyWheelContentsRequiresExactWheelMetadata(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheel(t, path, version, wheelMetadata(target)+"Tag: py3-none-conflicting\n")
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "WHEEL metadata must match release platform target") {
 		t.Fatalf("verifyWheelContents() error=%v, want exact WHEEL metadata rejection", err)
 	}
@@ -300,7 +318,7 @@ func TestVerifyWheelContentsRejectsDataDescriptors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeDataDescriptorWheel(t, path, version, wheelMetadata(target))
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "ZIP data descriptor") {
 		t.Fatalf("verifyWheelContents() error=%v, want data descriptor rejection", err)
 	}
@@ -312,7 +330,7 @@ func TestVerifyWheelContentsRejectsEmbeddedBinaryDifferentFromSourceRecord(t *te
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheelWithBinary(t, path, version, wheelMetadata(target), []byte("corrupted-binary"))
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("source-binary")), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("source-binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "embedded binary sha256 mismatch") {
 		t.Fatalf("verifyWheelContents() error=%v, want embedded/source binary identity rejection", err)
 	}
@@ -327,7 +345,7 @@ func TestVerifyWheelContentsRejectsDarwinTagBelowMachOMinimum(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheelWithBinary(t, path, version, wheelMetadata(target), binaryContent)
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256(binaryContent), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256(binaryContent), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "embedded Mach-O requires macOS 12.0") {
 		t.Fatalf("verifyWheelContents() error=%v, want stale Darwin tag rejection", err)
 	}
@@ -344,7 +362,7 @@ func TestVerifyWheelContentsAcceptsDarwinTagAtOrAboveMachOMinimum(t *testing.T) 
 			path := filepath.Join(t.TempDir(), "wheel.whl")
 			writeMinimalWheelWithBinary(t, path, version, wheelMetadata(target), binaryContent)
 
-			if err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256(binaryContent), []byte(testLicenseContent)); err != nil {
+			if err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256(binaryContent), []byte(testLicenseContent), []byte(testCLIContractContent)); err != nil {
 				t.Fatalf("verifyWheelContents() error=%v, want truthful Darwin tag accepted", err)
 			}
 		})
@@ -396,7 +414,7 @@ func TestVerifyWheelContentsRejectsLegacyLicenseMetadata(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheelFixture(t, path, version, wheelMetadata(target), []byte("binary"), "Metadata-Version: 2.1\nLicense: MIT\n", true, []byte(testLicenseContent))
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "METADATA mismatch") {
 		t.Fatalf("verifyWheelContents() error=%v, want legacy METADATA rejection", err)
 	}
@@ -408,7 +426,7 @@ func TestVerifyWheelContentsRequiresLicenseFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheelFixture(t, path, version, wheelMetadata(target), []byte("binary"), metadata(testPackageManifest(version)), false, nil)
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "licenses/LICENSE") {
 		t.Fatalf("verifyWheelContents() error=%v, want missing license rejection", err)
 	}
@@ -420,9 +438,21 @@ func TestVerifyWheelContentsRejectsDifferentLicenseFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "wheel.whl")
 	writeMinimalWheelFixture(t, path, version, wheelMetadata(target), []byte("binary"), metadata(testPackageManifest(version)), true, []byte("different license\n"))
 
-	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent))
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "embedded LICENSE mismatch") {
 		t.Fatalf("verifyWheelContents() error=%v, want source/artifact license mismatch rejection", err)
+	}
+}
+
+func TestVerifyWheelContentsRejectsDifferentCLIContract(t *testing.T) {
+	target := releaseTargets()[2]
+	version := "1.2.3"
+	path := filepath.Join(t.TempDir(), "wheel.whl")
+	writeMinimalWheel(t, path, version, wheelMetadata(target))
+
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(`{"commands":[]}`))
+	if err == nil || !strings.Contains(err.Error(), "embedded CLI contract mismatch") {
+		t.Fatalf("verifyWheelContents() error=%v, want source/artifact contract mismatch rejection", err)
 	}
 }
 
@@ -442,6 +472,7 @@ func writeMinimalWheelFixture(t *testing.T, path string, version string, wheel s
 		{Path: "agentic_proofkit/__main__.py", Mode: 0o644},
 		{Path: "agentic_proofkit/cli.py", Mode: 0o644},
 		{Path: "agentic_proofkit/bin/agentic-proofkit", Content: binary, Mode: 0o755},
+		{Path: embeddedCLIContractPath, Content: []byte(testCLIContractContent), Mode: 0o644},
 		{Path: distInfo + "/METADATA", Content: []byte(metadataContent), Mode: 0o644},
 		{Path: distInfo + "/WHEEL", Content: []byte(wheel), Mode: 0o644},
 		{Path: distInfo + "/entry_points.txt", Content: []byte(entryPoints()), Mode: 0o644},

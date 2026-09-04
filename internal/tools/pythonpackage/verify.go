@@ -23,6 +23,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
@@ -118,10 +119,14 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 	if err != nil {
 		return err
 	}
-	return verifyWheelContents(wheelPath, manifest, target, record.BinarySha256, license)
+	contract, err := os.ReadFile(sourceCLIContractPath)
+	if err != nil {
+		return fmt.Errorf("read source CLI contract: %w", err)
+	}
+	return verifyWheelContents(wheelPath, manifest, target, record.BinarySha256, license, contract)
 }
 
-func verifyWheelContents(path string, manifest packageJSON, target target, expectedBinarySHA256 string, expectedLicense []byte) error {
+func verifyWheelContents(path string, manifest packageJSON, target target, expectedBinarySHA256 string, expectedLicense []byte, expectedCLIContract []byte) error {
 	reader, err := zip.OpenReader(path)
 	if err != nil {
 		return err
@@ -144,6 +149,7 @@ func verifyWheelContents(path string, manifest packageJSON, target target, expec
 		"agentic_proofkit/__main__.py",
 		"agentic_proofkit/cli.py",
 		"agentic_proofkit/bin/agentic-proofkit",
+		embeddedCLIContractPath,
 		distInfo + "/METADATA",
 		distInfo + "/WHEEL",
 		distInfo + "/entry_points.txt",
@@ -173,6 +179,16 @@ func verifyWheelContents(path string, manifest packageJSON, target target, expec
 	}
 	if !bytes.Equal(licenseContent, expectedLicense) {
 		return fmt.Errorf("%s embedded %s mismatch", path, licenseFilename)
+	}
+	contractContent, err := readZipFile(entries[embeddedCLIContractPath])
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(contractContent, expectedCLIContract) {
+		return fmt.Errorf("%s embedded CLI contract mismatch", path)
+	}
+	if _, err := installedclicontract.Admit(contractContent); err != nil {
+		return fmt.Errorf("%s embedded CLI contract is invalid: %w", path, err)
 	}
 	wheel, err := readZipFile(entries[distInfo+"/WHEEL"])
 	if err != nil {
@@ -517,6 +533,16 @@ func verifyInstalledPythonPresetContinuation(consumer string, venvPython string)
 }
 
 func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environment []string, renderer cliexec.Renderer) error {
+	contractContent, err := readInstalledPythonCLIContract(consumer, environment, renderer)
+	if err != nil {
+		return err
+	}
+	contract, err := installedclicontract.Admit(contractContent)
+	if err != nil {
+		return fmt.Errorf("admit installed Python wheel CLI contract: %w", err)
+	}
+	contractCommandIDsByRoute := contract.CommandIDsByRoute()
+
 	rootHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help"))
 	if err != nil {
 		return fmt.Errorf("installed Python wheel root help route failed: %w\n%s", err, rootHelp)
@@ -535,27 +561,35 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 		return err
 	}
 	leafPrefix := renderer.DisplayCommand() + " help "
-	leafRouteCount := 0
+	observedRoutes := make(map[string]string, len(contractCommandIDsByRoute))
 	for _, familyID := range familyIDs {
 		familyRoute := renderer.DisplayCommand("help", "family", familyID)
 		familyHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help", "family", familyID))
 		if err != nil {
 			return fmt.Errorf("installed Python wheel family route %q failed: %w\n%s", familyRoute, err, familyHelp)
 		}
-		leafCommands, err := exactDisplayedRouteOperands(familyHelp, leafPrefix, "installed Python wheel leaf routes")
+		leafRoutes, err := exactDisplayedCommandRoutes(familyHelp, leafPrefix, "installed Python wheel leaf routes")
 		if err != nil {
 			return err
 		}
-		leafRouteCount += len(leafCommands)
-		for _, leafCommand := range leafCommands {
-			leafRoute := renderer.DisplayCommand("help", leafCommand)
-			if _, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help", leafCommand)); err != nil {
-				return fmt.Errorf("installed Python wheel leaf help route %q failed: %w", leafRoute, err)
+		for _, leafRouteText := range leafRoutes {
+			commandID, exists := contractCommandIDsByRoute[leafRouteText]
+			if !exists {
+				return fmt.Errorf("installed Python wheel family %s exposes route %q absent from its embedded CLI contract", familyID, leafRouteText)
+			}
+			if priorFamily, exists := observedRoutes[leafRouteText]; exists {
+				return fmt.Errorf("installed Python wheel route %q is exposed by both %s and %s", leafRouteText, priorFamily, familyID)
+			}
+			observedRoutes[leafRouteText] = familyID
+			helpArgs := append([]string{"help"}, strings.Split(leafRouteText, " ")...)
+			leafRoute := renderer.DisplayCommand(helpArgs...)
+			if _, err := runArgvWithEnvironment(consumer, environment, renderer.Argv(helpArgs...)); err != nil {
+				return fmt.Errorf("installed Python wheel leaf help route %q for command %s failed: %w", leafRoute, commandID, err)
 			}
 		}
 	}
-	if leafRouteCount == 0 {
-		return fmt.Errorf("installed Python wheel help chain exposed no leaf routes")
+	if err := requireInstalledPythonCommandRouteBijection(observedRoutes, contractCommandIDsByRoute); err != nil {
+		return err
 	}
 
 	requirementSourceRef := "requirements.v1.json"
@@ -639,6 +673,34 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 	return requirePythonPassedJSON(commandOutput, "installed Python wheel emitted agent-route argv")
 }
 
+func readInstalledPythonCLIContract(consumer string, environment []string, renderer cliexec.Renderer) ([]byte, error) {
+	launcher := renderer.Argv()
+	if len(launcher) != 3 || launcher[1] != "-m" || launcher[2] != "agentic_proofkit" {
+		return nil, fmt.Errorf("installed Python wheel contract reader requires the Python module launcher")
+	}
+	const script = `from importlib.resources import files; print(files("agentic_proofkit").joinpath("proofkit", "cli-contract.v2.json").read_text(encoding="utf-8"), end="")`
+	content, err := runCommandWithEnvironment(consumer, environment, launcher[0], "-c", script)
+	if err != nil {
+		return nil, fmt.Errorf("read installed Python wheel CLI contract: %w\n%s", err, content)
+	}
+	if len(content) == 0 || len(content) > 1<<20 {
+		return nil, fmt.Errorf("installed Python wheel CLI contract size must be between 1 and %d bytes", 1<<20)
+	}
+	return content, nil
+}
+
+func requireInstalledPythonCommandRouteBijection(observed map[string]string, expected map[string]string) error {
+	if len(observed) != len(expected) {
+		return fmt.Errorf("installed Python wheel family routes=%d embedded contract routes=%d", len(observed), len(expected))
+	}
+	for route := range expected {
+		if _, exists := observed[route]; !exists {
+			return fmt.Errorf("installed Python wheel family navigation omitted embedded contract route %q", route)
+		}
+	}
+	return nil
+}
+
 func verifyInstalledPythonAgentRouteEnvelopeModes(consumer string, environment []string, renderer cliexec.Renderer, inputPath string) error {
 	bareBrief, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("agent-route", "--input", inputPath, "--agent-envelope"))
 	if err != nil {
@@ -703,6 +765,14 @@ func verifyInstalledPythonAgentRouteBrief(output []byte) error {
 }
 
 func exactDisplayedRouteOperands(output []byte, prefix string, context string) ([]string, error) {
+	return exactDisplayedRouteSuffixes(output, prefix, context, 1)
+}
+
+func exactDisplayedCommandRoutes(output []byte, prefix string, context string) ([]string, error) {
+	return exactDisplayedRouteSuffixes(output, prefix, context, 4)
+}
+
+func exactDisplayedRouteSuffixes(output []byte, prefix string, context string, maximumTokens int) ([]string, error) {
 	decoded, err := unicodepolicy.DecodeUTF8(output)
 	if err != nil {
 		return nil, fmt.Errorf("installed Python wheel route output is not valid UTF-8")
@@ -718,7 +788,7 @@ func exactDisplayedRouteOperands(output []byte, prefix string, context string) (
 			continue
 		}
 		operand := strings.TrimPrefix(route, prefix)
-		if !isCommandRouteOperand(operand) || route != prefix+operand {
+		if !isCommandRoute(operand, maximumTokens) || route != prefix+operand {
 			return nil, fmt.Errorf("%s contain non-canonical route %q", context, route)
 		}
 		if _, duplicate := seen[operand]; duplicate {
@@ -732,6 +802,19 @@ func exactDisplayedRouteOperands(output []byte, prefix string, context string) (
 	}
 	sort.Strings(operands)
 	return operands, nil
+}
+
+func isCommandRoute(value string, maximumTokens int) bool {
+	tokens := strings.Split(value, " ")
+	if len(tokens) == 0 || len(tokens) > maximumTokens {
+		return false
+	}
+	for _, token := range tokens {
+		if !isCommandRouteOperand(token) {
+			return false
+		}
+	}
+	return true
 }
 
 func isCommandRouteOperand(value string) bool {

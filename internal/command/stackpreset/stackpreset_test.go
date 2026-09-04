@@ -1,10 +1,13 @@
 package stackpreset
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
@@ -81,6 +84,35 @@ func TestPresetInventoryIsCompleteDeterministicAndDefensivelyCopied(t *testing.T
 		fresh.SuggestedCommands[0] == "mutated" {
 		t.Fatalf("ProfileFor leaked mutable preset slices: %#v", fresh)
 	}
+
+	hint, ok := PlanningHintFor("typescript_workspace")
+	if !ok {
+		t.Fatal("PlanningHintFor(typescript_workspace) missing")
+	}
+	if hint.PresetID != "typescript_workspace" || len(hint.PrimaryLanguages) == 0 || len(hint.StarterEnvironmentClasses) == 0 || len(hint.StarterWitnessKinds) == 0 {
+		t.Fatalf("PlanningHintFor(typescript_workspace) = %#v, want bounded complete hint", hint)
+	}
+	firstHint := hint.JSONValue()
+	firstHint["primaryLanguages"].([]any)[0] = "mutated"
+	secondHint, _ := PlanningHintFor("typescript_workspace")
+	if secondHint.JSONValue()["primaryLanguages"].([]any)[0] == "mutated" {
+		t.Fatal("PlanningHint JSON projection leaked mutable state")
+	}
+	encoded, err := stablejson.Marshal(secondHint.JSONValue())
+	if err != nil {
+		t.Fatalf("stablejson.Marshal() error = %v", err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+	if err != nil {
+		t.Fatalf("DecodeJSON() error = %v", err)
+	}
+	if _, err := AdmitPlanningHint(decoded); err != nil {
+		t.Fatalf("AdmitPlanningHint() error = %v", err)
+	}
+	decoded.(map[string]any)["starterWitnessKinds"] = []any{"mutated"}
+	if _, err := AdmitPlanningHint(decoded); err == nil {
+		t.Fatal("AdmitPlanningHint accepted owner drift")
+	}
 }
 
 func TestUnknownPresetIsRejected(t *testing.T) {
@@ -90,6 +122,9 @@ func TestUnknownPresetIsRejected(t *testing.T) {
 	}
 	if _, ok := ProfileFor("unknown"); ok {
 		t.Fatal("ProfileFor accepted unknown preset")
+	}
+	if _, ok := PlanningHintFor("unknown"); ok {
+		t.Fatal("PlanningHintFor accepted unknown preset")
 	}
 	if _, err := Build("unknown"); err == nil {
 		t.Fatal("Build accepted unknown preset")

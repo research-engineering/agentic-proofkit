@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "edgeId": "proofkit.public-wire.0.6.0-to-0.7.0",
+  "previousVersion": "0.6.0",
+  "version": "0.7.0",
+  "evidenceClass": "owner_authored_frozen_version_edge_observation",
+  "changeRecordRef": "release/change-record.v2.json",
+  "changeRecordSha256": "sha256:acff7afef6ac42624f4e0ce185ec3816ea155e5fc2608de003376b3c635bacf3",
+  "changedGeneratedArtifacts": [
+    {
+      "artifactKind": "proofkit.json-report-cli-adapter-source",
+      "currentSourceSha256": "sha256:329b88b6b134dc30fb3704d32ac9708fc01608b9df68815bc9585108971be37d",
+      "generatorId": "proofkit.json-report-cli-adapter-source.typescript.v2",
+      "previousSourceSha256": "sha256:a171cc1b95c6078b7190ac50fc9fd298db8f42bfc9b65bbb67fa77d63dc04a93"
+    }
+  ],
+  "previousPublicAbiSha256": "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5",
+  "currentPublicAbiSha256": "sha256:7b36077db9c82ca005606f571e1f6c6e208ab5b35b95b4d9b885e6047f091b91",
+  "removedCommandContract": {
+    "command": "init",
+    "defaultInvocationPreset": "all",
+    "outputContractSha256": "sha256:3e59a3002327c759e5e747f8baacaa63a4d6784e1a1c520f0a54e01af3f2faa0"
+  },
+  "addedCommandContracts": [
+    {
+      "command": "adopt-plan",
+      "route": ["adopt", "plan"],
+      "outputContractSha256": "sha256:55f0852120ca978b9557553b1af8923a4d0b08c4dc794ba7751cb28d2414b7ec"
+    },
+    {
+      "command": "repository-inventory",
+      "route": ["repository-inventory"],
+      "outputContractSha256": "sha256:5b0967fefb4abbfbc91027ff30ed6579c12e1f27d8310466cd4fd4d1f865552e"
+    }
+  ],
+  "breakingChangeIds": [
+    "proofkit.adoption.init-retired"
+  ],
+  "additionChangeIds": [
+    "proofkit.adoption.front-door",
+    "proofkit.adoption.repository-inventory",
+    "proofkit.cli.generated-adapter-command-routes",
+    "proofkit.cli.hierarchical-command-routes",
+    "proofkit.python-wheel.embedded-cli-contract"
+  ],
+  "nonClaims": [
+    "This owner-authored version-edge observation binds reviewed public contract identities; it does not authenticate Git history, registry publication, provider ingestion, native witness truth, rollout, or production readiness."
+  ]
+}
