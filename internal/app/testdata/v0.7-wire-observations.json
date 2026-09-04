@@ -4,7 +4,7 @@
   "previousVersion": "0.6.0",
   "version": "0.7.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
-  "commandContractSelection": "declared_semantic_identity_or_wire_schema_change",
+  "commandContractSelection": "declared_input_contract_id_change",
   "changeRecordRef": "release/change-record.v2.json",
   "changeRecordSha256": "sha256:25dfeccb631449f0c1eb0d1bc6d42d483c3100b34d7ede7a0d16390f3bef3d49",
   "changedGeneratedArtifacts": [

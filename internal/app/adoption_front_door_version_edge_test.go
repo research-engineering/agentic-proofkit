@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
@@ -227,7 +228,7 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if record.PreviousVersion != "0.6.0" || record.Version != "0.7.0" {
 		return fmt.Errorf("adoption front-door version-edge release identity is stale")
 	}
-	if record.CommandContractSelection != "declared_semantic_identity_or_wire_schema_change" {
+	if record.CommandContractSelection != "declared_input_contract_id_change" {
 		return fmt.Errorf("adoption front-door command-contract selection policy is invalid")
 	}
 	if record.PreviousPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.CurrentPublicABISHA256 != currentPublicABI || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
@@ -253,20 +254,29 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if !slices.Equal(record.ChangedGeneratedArtifacts, wantGeneratedArtifacts) {
 		return fmt.Errorf("adoption front-door changed generated artifacts are not exact")
 	}
+	currentAgentRouteInputContract := agentroute.InputContract()
+	currentAgentRouteInputContractID, contractIDOK := currentAgentRouteInputContract["contractId"].(string)
+	currentAgentRouteWireSchemaVersion, schemaVersionOK := currentAgentRouteInputContract["schemaVersion"].(int)
+	if !contractIDOK || currentAgentRouteInputContractID == "" || !schemaVersionOK || currentAgentRouteWireSchemaVersion < 1 {
+		return fmt.Errorf("current agent-route input contract identity is invalid")
+	}
 	wantChangedContracts := []adoptionChangedCommandContract{{
 		Command:                      "agent-route",
-		CurrentInputContractID:       "proofkit.agent-route.input.v2",
+		CurrentInputContractID:       currentAgentRouteInputContractID,
 		CurrentInputContractSHA256:   generatedCommandContractMetadataByName["agent-route"].InputContractSHA256,
 		CurrentOutputContractSHA256:  generatedCommandContractMetadataByName["agent-route"].OutputContractSHA256,
 		PreviousInputContractID:      "proofkit.agent-route.input.v1",
 		PreviousInputContractSHA256:  "sha256:4fc7b2e5ffe3ed632e5e84d20e5ae26f9ace11df614bc9aec680853e60809ebd",
 		PreviousOutputContractSHA256: "sha256:485d62afc2e5ed07c28f557b0d1069f167b3838abe0aed248e9ff94f3e25c0ad",
-		WireSchemaVersion:            1,
+		WireSchemaVersion:            currentAgentRouteWireSchemaVersion,
 	}}
-	if !slices.Equal(record.ChangedCommandContracts, wantChangedContracts) ||
-		record.ChangedCommandContracts[0].CurrentInputContractID == record.ChangedCommandContracts[0].PreviousInputContractID ||
-		record.ChangedCommandContracts[0].CurrentOutputContractSHA256 == record.ChangedCommandContracts[0].PreviousOutputContractSHA256 {
+	if !slices.Equal(record.ChangedCommandContracts, wantChangedContracts) {
 		return fmt.Errorf("adoption front-door changed command contracts are not exact")
+	}
+	for _, contract := range record.ChangedCommandContracts {
+		if contract.CurrentInputContractID == contract.PreviousInputContractID {
+			return fmt.Errorf("adoption front-door changed command contract %s did not change input identity", contract.Command)
+		}
 	}
 	currentSourceDigest := sha256.Sum256([]byte(jsonreportcliadaptersource.TypeScriptSource()))
 	if record.ChangedGeneratedArtifacts[0].CurrentSourceSHA256 != fmt.Sprintf("sha256:%x", currentSourceDigest) {

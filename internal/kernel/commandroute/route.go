@@ -34,7 +34,7 @@ func ValidToken(token string) bool {
 
 func Parse(text string) ([]string, bool) {
 	tokens := strings.Split(text, Separator)
-	if !Valid(tokens) || strings.Join(tokens, Separator) != text {
+	if !Valid(tokens) {
 		return nil, false
 	}
 	return tokens, true

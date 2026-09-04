@@ -829,18 +829,28 @@ resource = files("agentic_proofkit")
 for component in relative_path.split("/"):
     resource = resource.joinpath(component)
 path = os.path.abspath(os.fspath(resource))
-prefix = os.path.realpath(sys.prefix)
-if os.path.commonpath((prefix, path)) != prefix:
+prefix_path = os.path.abspath(sys.prefix)
+prefix = os.path.realpath(prefix_path)
+if os.path.commonpath((prefix_path, path)) == prefix_path:
+    relative = os.path.relpath(path, prefix_path)
+elif os.path.commonpath((prefix, path)) == prefix:
+    relative = os.path.relpath(path, prefix)
+else:
     raise SystemExit("installed package resource is outside the active environment")
-cursor = os.path.sep if os.path.isabs(path) else ""
-for component in path.split(os.path.sep):
-    if not component:
-        continue
-    cursor = os.path.join(cursor, component)
-    if stat.S_ISLNK(os.lstat(cursor).st_mode):
-        raise SystemExit("installed package resource contains a symlink")
+components = relative.split(os.path.sep)
+if not components or any(component in ("", ".", "..") for component in components):
+    raise SystemExit("installed package resource path is invalid")
+directory_flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
 flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-fd = os.open(path, flags)
+directory_fd = os.open(prefix, directory_flags)
+try:
+    for component in components[:-1]:
+        next_fd = os.open(component, directory_flags, dir_fd=directory_fd)
+        os.close(directory_fd)
+        directory_fd = next_fd
+    fd = os.open(components[-1], flags, dir_fd=directory_fd)
+finally:
+    os.close(directory_fd)
 with os.fdopen(fd, "rb", closefd=True) as stream:
     before = os.fstat(stream.fileno())
     if not stat.S_ISREG(before.st_mode) or before.st_size < 1 or before.st_size > limit:

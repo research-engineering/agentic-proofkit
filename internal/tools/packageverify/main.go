@@ -39,6 +39,7 @@ import (
 const rootPackageName = "@research-engineering/agentic-proofkit"
 const rootBinaryName = "agentic-proofkit"
 const installedNPMPackageRelativeRoot = "node_modules/@research-engineering/agentic-proofkit"
+const installedNPMReadmeRelativePath = "README.md"
 const installedNPMExecCommandPrefix = "npm exec --offline -- agentic-proofkit "
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
@@ -1714,7 +1715,7 @@ func installedNPMCarrierSnapshotFromTarball(artifact rootPackageArtifact) (insta
 	}{
 		{maximumBytes: 1 << 20, relativePath: "dist/agentic-proofkit", tarEntry: "package/dist/agentic-proofkit"},
 		{maximumBytes: maxEmbeddedBinaryBytes, relativePath: strings.TrimPrefix(target.PackageTarEntry, "package/"), tarEntry: target.PackageTarEntry},
-		{maximumBytes: 4 << 20, relativePath: "README.md", tarEntry: "package/README.md"},
+		{maximumBytes: 4 << 20, relativePath: installedNPMReadmeRelativePath, tarEntry: pathpkg.Join("package", installedNPMReadmeRelativePath)},
 		{maximumBytes: installedclicontract.MaximumContractBytes, relativePath: "proofkit/cli-contract.v2.json", tarEntry: "package/proofkit/cli-contract.v2.json"},
 	}
 	snapshot := installedNPMCarrierSnapshot{Files: make([]installedNPMCarrierFile, 0, len(entries))}
@@ -1735,7 +1736,7 @@ func installedNPMCarrierSnapshotFromTarball(artifact rootPackageArtifact) (insta
 		if entry.relativePath == "proofkit/cli-contract.v2.json" {
 			snapshot.Contract = append([]byte(nil), ownedContent...)
 		}
-		if entry.relativePath == "README.md" {
+		if entry.relativePath == installedNPMReadmeRelativePath {
 			snapshot.Readme = append([]byte(nil), ownedContent...)
 		}
 	}
@@ -2256,7 +2257,7 @@ func parseInstalledPresetRoutes(help string) ([]installedHelpRoute, error) {
 
 func installedREADMEPath(content []byte) (string, error) {
 	const prefix = "Path: "
-	const expected = "node_modules/@research-engineering/agentic-proofkit/README.md"
+	expected := pathpkg.Join(installedNPMPackageRelativeRoot, installedNPMReadmeRelativePath)
 	var discovered string
 	matchCount := 0
 	decoded, err := unicodepolicy.DecodeUTF8(content)
