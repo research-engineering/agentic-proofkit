@@ -20,6 +20,7 @@ type commandRunner string
 const (
 	commandRunnerGenericInput                commandRunner = "generic_input"
 	commandRunnerAdoptionFrontDoor           commandRunner = "adoption_front_door"
+	commandRunnerAdoptionMaterialization     commandRunner = "adoption_materialization"
 	commandRunnerAdoptionContractEnvelope    commandRunner = "adoption_contract_envelope"
 	commandRunnerAdoptionDoctor              commandRunner = "adoption_doctor"
 	commandRunnerAdoptionWorkflow            commandRunner = "adoption_workflow"
@@ -46,9 +47,10 @@ const (
 type commandScopeClass string
 
 const (
-	commandScopeBuiltInPackageCatalog  commandScopeClass = "built_in_package_catalog"
-	commandScopeExplicitCallerInput    commandScopeClass = "explicit_caller_input"
-	commandScopeExplicitFileSystemScan commandScopeClass = "explicit_filesystem_scan"
+	commandScopeBuiltInPackageCatalog      commandScopeClass = "built_in_package_catalog"
+	commandScopeExplicitCallerInput        commandScopeClass = "explicit_caller_input"
+	commandScopeExplicitFileSystemScan     commandScopeClass = "explicit_filesystem_scan"
+	commandScopeExplicitFileSystemMutation commandScopeClass = "explicit_filesystem_mutation"
 )
 
 type commandDescriptor struct {
@@ -92,6 +94,9 @@ type requiredFlagValue struct {
 }
 
 var commandDescriptors = []commandDescriptor{
+	command("adopt-materialize-apply", commandInputRequired, flags("--color", "--expect-desired-state", "--expect-transaction", "--format", "--input", "--input-pointer", "--repo-root"), modes("json", "text"), ownerDirs("adoptionmaterialization"), withRunner(commandRunnerAdoptionMaterialization), withSemanticAppTests("TestAdoptionMaterializationCLI"), withScopeClass(commandScopeExplicitFileSystemMutation), withRequiredFlags("--expect-desired-state", "--expect-transaction", "--repo-root"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--expect-desired-state", "--expect-transaction", "--input", "--input-pointer", "--repo-root")),
+	command("adopt-materialize-plan", commandInputRequired, flags("--color", "--format", "--input", "--input-pointer", "--repo-root"), modes("json", "text"), ownerDirs("adoptionmaterialization"), withRunner(commandRunnerAdoptionMaterialization), withSemanticAppTests("TestAdoptionMaterializationCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--input", "--input-pointer", "--repo-root")),
+	command("adopt-materialize-recover", commandInputNone, flags("--action", "--color", "--format", "--repo-root", "--transaction"), modes("json", "text"), ownerDirs("adoptionmaterialization"), withRunner(commandRunnerAdoptionMaterialization), withSemanticAppTests("TestAdoptionMaterializationCLI"), withScopeClass(commandScopeExplicitFileSystemMutation), withRequiredFlags("--action", "--repo-root", "--transaction"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--action", "--color", "--repo-root", "--transaction")),
 	command("adopt-plan", commandInputNone, flags("--color", "--format", "--mode", "--repo-root", "--stack"), modes("json", "text"), ownerDirs("adoptionplan", "repositoryinventory"), withRunner(commandRunnerAdoptionFrontDoor), withSemanticAppTests("TestAdoptionFrontDoorCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--mode", "--repo-root"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--mode", "--repo-root", "--stack")),
 	command("adoption-checklist", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("adoptionchecklist")),
 	command("adoption-contract-envelope", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--guidance-mode", "--input", "--materialization-manifest", "--mode", "--pilot", "--touched-rule-id"), modes("json"), ownerDirs("adoptioncontract"), withRunner(commandRunnerAdoptionContractEnvelope), withAgentEnvelope(), withRequiredFlags("--mode")),
@@ -178,6 +183,7 @@ var commandDescriptors = []commandDescriptor{
 var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerGenericInput:                {},
 	commandRunnerAdoptionFrontDoor:           {},
+	commandRunnerAdoptionMaterialization:     {},
 	commandRunnerAdoptionContractEnvelope:    {},
 	commandRunnerAdoptionDoctor:              {},
 	commandRunnerAdoptionWorkflow:            {},
@@ -202,9 +208,10 @@ var knownCommandRunners = map[commandRunner]struct{}{
 }
 
 var knownCommandScopeClasses = map[commandScopeClass]struct{}{
-	commandScopeBuiltInPackageCatalog:  {},
-	commandScopeExplicitCallerInput:    {},
-	commandScopeExplicitFileSystemScan: {},
+	commandScopeBuiltInPackageCatalog:      {},
+	commandScopeExplicitCallerInput:        {},
+	commandScopeExplicitFileSystemScan:     {},
+	commandScopeExplicitFileSystemMutation: {},
 }
 
 var commandDescriptorByName = buildCommandDescriptorIndex(commandDescriptors)

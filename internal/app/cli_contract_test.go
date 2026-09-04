@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7"
+	cliContractPublicABISHA256               = "47311b441bb2f68f7485c54c15daad275340c27f8f7a68cfcd3fb4d92e9b976e"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1518,6 +1518,9 @@ func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
 
 func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 	expectedConstrainedUsage := map[string]string{
+		"adopt-materialize-apply":        "agentic-proofkit adopt materialize apply --input <path|-> [--color <auto|never>] --expect-desired-state <sha256-ref> --expect-transaction <sha256-ref> [--format <json|text>] [--input-pointer <pointer>] --repo-root <path>",
+		"adopt-materialize-plan":         "agentic-proofkit adopt materialize plan --input <path|-> [--color <auto|never>] [--format <json|text>] [--input-pointer <pointer>] --repo-root <path>",
+		"adopt-materialize-recover":      "agentic-proofkit adopt materialize recover --action <resume|rollback> [--color <auto|never>] [--format <json|text>] --repo-root <path> --transaction <sha256-ref>",
 		"adopt-plan":                     "agentic-proofkit adopt plan [--color <auto|never>] [--format <json|text>] --mode <audit-from-code|code-baseline|fresh> --repo-root <path> [--stack <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>]",
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",

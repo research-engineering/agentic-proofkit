@@ -616,6 +616,37 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction",
 			"TestRetiredInitRouteHasNoPublicDispatcher",
 		},
+		{"REQ-PROOFKIT-SPEC-032", "proofkit.spec-proof-core.adoption-materialization-owner-closure"}: {
+			"TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry",
+			"TestMaterializationRejectsCrossRecordDriftAndManifestMutation",
+			"TestMaterializationWholeChainIsCanonicalAndOwnerClosed",
+		},
+		{"REQ-PROOFKIT-SPEC-032", "proofkit.spec-proof-core.adoption-materialization-reference-closure"}: {
+			"TestInventoryReferencesMustResolveThroughBindingEdges",
+			"TestManifestAdmissionEqualsProducerImage",
+			"TestPathRoleLedgerRejectsWriteReferenceCollisions",
+		},
+		{"REQ-PROOFKIT-SPEC-032", "proofkit.spec-proof-core.adoption-materialization-whole-cli"}: {
+			"TestAdoptionMaterializationCLI",
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-fault-recovery"}: {
+			"TestApplyFaultAfterFirstPublishRestoresExactBeforeState",
+			"TestApplyRejectsConcurrentCooperativeWriter",
+			"TestProcessDeathAfterRenameIsRecoverable",
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-portable-path-identity"}: {
+			"TestPortableEquivalenceAndContainment",
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-terminal-state"}: {
+			"TestAppliedTerminalReceiptReplaysCompleteResult",
+			"TestApplyExecutesFrozenPlan",
+			"TestRecoveryActionAndTerminalReceiptAreStable",
+			"TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity",
+		},
+		{"REQ-PROOFKIT-SPEC-034", "proofkit.spec-proof-core.adoption-materialization-version-edge"}: {
+			"TestAdoptionMaterializationVersionEdgeClosesPublicCommands",
+			"TestAdoptionMaterializationVersionEdgeRejectsCoordinatedChangeRecordDrift",
+		},
 		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}: {
 			"TestBuildProjectsEveryCallerDeclaredStatusAndSummaryField",
 		},
@@ -713,6 +744,13 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-installed-contract"}:                    "internal/tools/installedclicontract/contract_test.go",
 		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-kernel-owner"}:                          "internal/kernel/commandroute/route_test.go",
 		{"REQ-PROOFKIT-SPEC-031", "proofkit.spec-proof-core.adoption-version-edge-closure"}:                       "internal/app/adoption_front_door_version_edge_test.go",
+		{"REQ-PROOFKIT-SPEC-032", "proofkit.spec-proof-core.adoption-materialization-owner-closure"}:              "internal/command/adoptionmaterialization/adoptionmaterialization_test.go",
+		{"REQ-PROOFKIT-SPEC-032", "proofkit.spec-proof-core.adoption-materialization-reference-closure"}:          "internal/command/adoptionmaterialization/closure_test.go",
+		{"REQ-PROOFKIT-SPEC-032", "proofkit.spec-proof-core.adoption-materialization-whole-cli"}:                  "internal/app/adoption_materialization_command_test.go",
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-fault-recovery"}:               "internal/kernel/repositorytransaction/transaction_test.go",
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-portable-path-identity"}:       "internal/kernel/pathidentity/pathidentity_test.go",
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-terminal-state"}:               "internal/kernel/repositorytransaction/invariant_test.go",
+		{"REQ-PROOFKIT-SPEC-034", "proofkit.spec-proof-core.adoption-materialization-version-edge"}:               "internal/app/adoption_materialization_version_edge_test.go",
 	}
 	if len(requiredPaths) != len(required) {
 		return fmt.Errorf("required selector path inventory=%d, selector inventory=%d", len(requiredPaths), len(required))

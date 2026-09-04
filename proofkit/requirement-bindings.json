@@ -753,6 +753,30 @@
       "nonClaims": ["A source-bound version edge does not authenticate Git history, registry publication, provider ingestion, consumer migration, rollout, or production readiness."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-032",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Materialization does not infer requirement meaning, authenticate witness truth or freshness, execute native witnesses, approve merge or release, establish rollout or production readiness, or make its routing manifest a second semantic owner."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Repository transactions do not provide multi-file atomic visibility to concurrent arbitrary readers, distributed transactions, protection from a hostile same-user process, or stronger power-loss durability than the admitted filesystem synchronization operations."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-034",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer adoption, native witness truth, rollout, or production readiness."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
@@ -5805,6 +5829,151 @@
         {
           "selector": "TestRetiredInitRouteHasNoPublicDispatcher",
           "command": "go test ./internal/app -run '^TestRetiredInitRouteHasNoPublicDispatcher$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-032",
+      "scenarioId": "proofkit.spec-proof-core.adoption-materialization-owner-closure",
+      "witnessId": "proofkit.adoption-materialization.owner-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptionmaterialization/adoptionmaterialization_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestMaterializationWholeChainIsCanonicalAndOwnerClosed",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationWholeChainIsCanonicalAndOwnerClosed$'"
+        },
+        {
+          "selector": "TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry$'"
+        },
+        {
+          "selector": "TestMaterializationRejectsCrossRecordDriftAndManifestMutation",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationRejectsCrossRecordDriftAndManifestMutation$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-032",
+      "scenarioId": "proofkit.spec-proof-core.adoption-materialization-reference-closure",
+      "witnessId": "proofkit.adoption-materialization.reference-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptionmaterialization/closure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPathRoleLedgerRejectsWriteReferenceCollisions",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestPathRoleLedgerRejectsWriteReferenceCollisions$'"
+        },
+        {
+          "selector": "TestInventoryReferencesMustResolveThroughBindingEdges",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestInventoryReferencesMustResolveThroughBindingEdges$'"
+        },
+        {
+          "selector": "TestManifestAdmissionEqualsProducerImage",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestManifestAdmissionEqualsProducerImage$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-032",
+      "scenarioId": "proofkit.spec-proof-core.adoption-materialization-whole-cli",
+      "witnessId": "proofkit.adoption-materialization.whole-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/adoption_materialization_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdoptionMaterializationCLI",
+          "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-terminal-state",
+      "witnessId": "proofkit.repository-transaction.terminal-state-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/invariant_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestApplyExecutesFrozenPlan",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyExecutesFrozenPlan$'"
+        },
+        {
+          "selector": "TestRecoveryActionAndTerminalReceiptAreStable",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestRecoveryActionAndTerminalReceiptAreStable$'"
+        },
+        {
+          "selector": "TestAppliedTerminalReceiptReplaysCompleteResult",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestAppliedTerminalReceiptReplaysCompleteResult$'"
+        },
+        {
+          "selector": "TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-fault-recovery",
+      "witnessId": "proofkit.repository-transaction.fault-recovery-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/transaction_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestApplyFaultAfterFirstPublishRestoresExactBeforeState",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyFaultAfterFirstPublishRestoresExactBeforeState$'"
+        },
+        {
+          "selector": "TestProcessDeathAfterRenameIsRecoverable",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestProcessDeathAfterRenameIsRecoverable$'"
+        },
+        {
+          "selector": "TestApplyRejectsConcurrentCooperativeWriter",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyRejectsConcurrentCooperativeWriter$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-portable-path-identity",
+      "witnessId": "proofkit.repository-transaction.portable-path-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/pathidentity/pathidentity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPortableEquivalenceAndContainment",
+          "command": "go test ./internal/kernel/pathidentity -run '^TestPortableEquivalenceAndContainment$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-034",
+      "scenarioId": "proofkit.spec-proof-core.adoption-materialization-version-edge",
+      "witnessId": "proofkit.adoption-materialization.version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/adoption_materialization_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdoptionMaterializationVersionEdgeClosesPublicCommands",
+          "command": "go test ./internal/app -run '^TestAdoptionMaterializationVersionEdgeClosesPublicCommands$'"
+        },
+        {
+          "selector": "TestAdoptionMaterializationVersionEdgeRejectsCoordinatedChangeRecordDrift",
+          "command": "go test ./internal/app -run '^TestAdoptionMaterializationVersionEdgeRejectsCoordinatedChangeRecordDrift$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

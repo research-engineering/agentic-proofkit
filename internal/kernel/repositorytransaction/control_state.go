@@ -1,0 +1,249 @@
+package repositorytransaction
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
+)
+
+func validateActiveState(root *os.Root, plan Plan) error {
+	entries, err := activeEntries(root)
+	if err != nil {
+		return err
+	}
+	return validateTransactionEntries(entries, &plan, false)
+}
+
+func validateTransactionEntries(entries []fs.DirEntry, plan *Plan, allowPartialTerminal bool) error {
+	allowed := map[string]struct{}{
+		"journal.json":      {},
+		"journal.tmp":       {},
+		"ready":             {},
+		"committed":         {},
+		"rolled-back":       {},
+		terminalReceiptName: {},
+	}
+	if plan != nil {
+		for index, operation := range plan.Operations {
+			if operation.Action == ActionUnchanged {
+				continue
+			}
+			allowed[strings.TrimPrefix(afterObjectPath(index), activeDirectory+"/")] = struct{}{}
+			allowed[strings.TrimPrefix(transactionTemporaryPath(plan.TransactionID, index, operation.Path), activeDirectory+"/")] = struct{}{}
+			if operation.Before.Exists {
+				allowed[strings.TrimPrefix(beforeObjectPath(index), activeDirectory+"/")] = struct{}{}
+			}
+		}
+		for index := range plan.CreatedDirectories {
+			allowed[strings.TrimPrefix(directoryOwnershipPath(index), activeDirectory+"/")] = struct{}{}
+		}
+	}
+	for _, entry := range entries {
+		_, explicitlyAllowed := allowed[entry.Name()]
+		if allowPartialTerminal && plan == nil {
+			explicitlyAllowed = explicitlyAllowed || isBoundedTransactionEntryName(entry.Name())
+		}
+		if !explicitlyAllowed || entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			return fmt.Errorf("repository transaction control directory contains an unknown entry")
+		}
+	}
+	return nil
+}
+
+func activeEntries(root *os.Root) ([]fs.DirEntry, error) {
+	return transactionEntries(root, activeDirectory)
+}
+
+func transactionEntries(root *os.Root, relativePath string) ([]fs.DirEntry, error) {
+	if err := validatePrivateDirectory(root, relativePath, 0o700); err != nil {
+		return nil, err
+	}
+	directory, err := root.Open(filepath.FromSlash(relativePath))
+	if err != nil {
+		return nil, fmt.Errorf("open repository transaction state")
+	}
+	defer directory.Close()
+	entryLimit := MaximumOperations*2 + MaximumOperations*pathidentity.MaximumComponents + 10
+	entries, err := directory.ReadDir(entryLimit + 1)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("read repository transaction state")
+	}
+	if len(entries) > entryLimit {
+		return nil, fmt.Errorf("repository transaction state exceeds its entry limit")
+	}
+	sort.Slice(entries, func(left, right int) bool { return entries[left].Name() < entries[right].Name() })
+	return entries, nil
+}
+
+func hasPendingTransactionState(root *os.Root) (bool, error) {
+	pending, err := pendingTransactionState(root)
+	return pending.Exists, err
+}
+
+func pendingTransactionState(root *os.Root) (pendingState, error) {
+	exists, err := controlNamespaceExists(root)
+	if err != nil || !exists {
+		return pendingState{}, err
+	}
+	entries, err := controlEntries(root)
+	if err != nil {
+		return pendingState{}, err
+	}
+	if len(entries) == 0 {
+		return pendingState{}, nil
+	}
+	pending := pendingState{Exists: true}
+	if len(entries) != 1 {
+		return pending, nil
+	}
+	entry := entries[0]
+	if entry.Name() == "active" && entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+		if err := validatePrivateDirectory(root, activeDirectory, 0o700); err != nil {
+			return pendingState{}, err
+		}
+		if plan, loadErr := loadJournal(root); loadErr == nil {
+			pending.TransactionID = plan.TransactionID
+			return pending, nil
+		}
+		if transactionID, identityKnown, _, inspectErr := incompleteJournalCanBeDiscarded(root); inspectErr == nil && identityKnown {
+			pending.TransactionID = transactionID
+		}
+		return pending, nil
+	}
+	if transactionID, ok := terminalEntryTransactionID(entry.Name()); ok && entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+		children, inspectErr := transactionEntries(root, ControlDirectory+"/"+entry.Name())
+		if inspectErr != nil {
+			return pendingState{}, inspectErr
+		}
+		if len(children) == 1 && children[0].Name() == terminalReceiptName {
+			receipt, receiptErr := loadTerminalReceipt(root, ControlDirectory+"/"+entry.Name())
+			_, state, identityOK := terminalEntryIdentity(entry.Name())
+			if receiptErr == nil && identityOK && receipt.TransactionID == transactionID && receipt.State == state {
+				return pendingState{}, nil
+			}
+		}
+		pending.TransactionID = transactionID
+	}
+	return pending, nil
+}
+
+func controlEntries(root *os.Root) ([]fs.DirEntry, error) {
+	exists, err := controlNamespaceExists(root)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return []fs.DirEntry{}, nil
+	}
+	directory, err := root.Open(filepath.FromSlash(ControlDirectory))
+	if err != nil {
+		return nil, fmt.Errorf("open repository transaction control directory")
+	}
+	defer directory.Close()
+	entries, err := directory.ReadDir(4)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return nil, fmt.Errorf("read repository transaction control directory")
+	}
+	if len(entries) > 3 {
+		return nil, fmt.Errorf("repository transaction control directory contains conflicting state")
+	}
+	sort.Slice(entries, func(left, right int) bool { return entries[left].Name() < entries[right].Name() })
+	return entries, nil
+}
+
+func terminalEntryTransactionID(name string) (string, bool) {
+	transactionID, _, ok := terminalEntryIdentity(name)
+	return transactionID, ok
+}
+
+func terminalEntryIdentity(name string) (string, string, bool) {
+	for _, state := range []string{StateApplied, StateRolledBack} {
+		prefix := "gc-"
+		suffix := "-" + state
+		if !strings.HasPrefix(name, prefix) || !strings.HasSuffix(name, suffix) {
+			continue
+		}
+		hexDigest := strings.TrimSuffix(strings.TrimPrefix(name, prefix), suffix)
+		transactionID, err := admit.SHA256Ref("sha256:"+hexDigest, "repository transaction terminal identity")
+		if err == nil {
+			return transactionID, state, true
+		}
+	}
+	return "", "", false
+}
+
+func terminalTombstonePath(transactionID, state string) string {
+	return ControlDirectory + "/gc-" + strings.TrimPrefix(transactionID, "sha256:") + "-" + state
+}
+
+func isBoundedTransactionEntryName(name string) bool {
+	for _, prefix := range []string{"after-", "before-"} {
+		if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ".bin") {
+			indexText := strings.TrimSuffix(strings.TrimPrefix(name, prefix), ".bin")
+			index, err := strconv.Atoi(indexText)
+			return err == nil && len(indexText) == 3 && index >= 0 && index < MaximumOperations
+		}
+	}
+	if strings.HasPrefix(name, "directory-") && strings.HasSuffix(name, ".json") {
+		indexText := strings.TrimSuffix(strings.TrimPrefix(name, "directory-"), ".json")
+		index, err := strconv.Atoi(indexText)
+		return err == nil && len(indexText) == 4 && index >= 0 && index < MaximumOperations*pathidentity.MaximumComponents
+	}
+	if strings.HasPrefix(name, "publish-") && strings.HasSuffix(name, ".tmp") {
+		indexText := strings.TrimSuffix(strings.TrimPrefix(name, "publish-"), ".tmp")
+		index, err := strconv.Atoi(indexText)
+		return err == nil && len(indexText) == 3 && index >= 0 && index < MaximumOperations
+	}
+	return false
+}
+
+func incompleteJournalCanBeDiscarded(root *os.Root) (string, bool, bool, error) {
+	ready, err := markerExists(root, readyMarker)
+	if err == nil && ready {
+		return "", false, false, nil
+	}
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return "", false, false, err
+	}
+	entries, err := activeEntries(root)
+	if err != nil {
+		return "", false, false, err
+	}
+	for _, entry := range entries {
+		if entry.Name() != "journal.tmp" || entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			return "", false, false, nil
+		}
+	}
+	if len(entries) == 0 {
+		return "", false, true, nil
+	}
+	content, err := readOwnedFile(root, journalTemp, MaximumJournalBytes)
+	if err != nil {
+		return "", false, false, err
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(content), MaximumJournalBytes)
+	if err != nil {
+		return "", false, true, nil
+	}
+	plan, err := admitJournal(value)
+	if err != nil {
+		return "", false, true, nil
+	}
+	canonical, err := stablejson.Marshal(journalValue(plan))
+	if err != nil || !bytes.Equal(content, canonical) {
+		return "", false, true, nil
+	}
+	return plan.TransactionID, true, true, nil
+}

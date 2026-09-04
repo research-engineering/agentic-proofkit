@@ -190,6 +190,16 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-031`: the adoption version edge binds exact ABI, command,
   contract, generated-artifact, and release-change inventories while proving
   that the retired `init` route has no remaining public owner.
+- `REQ-PROOFKIT-SPEC-032`: adoption materialization admits candidate artifacts
+  through their existing owners, proves cross-record closure, and binds a
+  read-only plan plus apply and recovery receipts to complete state identities.
+- `REQ-PROOFKIT-SPEC-033`: repository transactions confine bounded immutable
+  plans, private journals, atomic target replacement, exact rollback, and
+  action-stable replay recovery without claiming repository-wide atomicity.
+- `REQ-PROOFKIT-SPEC-034`: the pre-materialization-to-transactional-
+  materialization public version edge binds all three transactional
+  materialization routes and their exact public contracts to a compatible
+  release record without reinterpreting the frozen prior edge.
 
 ## Non-Claims
 

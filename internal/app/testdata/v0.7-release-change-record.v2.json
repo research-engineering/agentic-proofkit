@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 2,
+  "previousVersion": "0.6.0",
+  "version": "0.7.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.adoption.init-retired",
+      "summary": "Remove the overloaded init command and its route presets in favor of the explicit read-only adopt plan trust-mode route and the existing bounded specialist commands."
+    },
+    {
+      "changeId": "proofkit.agent-route.input-contract-v2",
+      "summary": "Replace the agent-route input contract identity with proofkit.agent-route.input.v2 so the materialized-reference rule that rejects the stdin sentinel is machine-distinguishable from earlier v1 semantics; the wire schema remains version 1."
+    }
+  ],
+  "additions": [
+    {
+      "changeId": "proofkit.adoption.front-door",
+      "summary": "Add adopt plan as a read-only candidate-authoring front door with explicit fresh, code-baseline, and audit-from-code intent plus an optional orthogonal stack hint."
+    },
+    {
+      "changeId": "proofkit.adoption.repository-inventory",
+      "summary": "Add a bounded explicit repository-inventory command that observes only a fixed root-file catalog without stack or source-semantic inference."
+    },
+    {
+      "changeId": "proofkit.cli.generated-adapter-command-routes",
+      "summary": "Extend the generated TypeScript CLI adapter to consume the exact public contract-projected one-to-four-token command-route grammar and pass each admitted route token as a separate process argument while preserving one-token calls."
+    },
+    {
+      "changeId": "proofkit.cli.hierarchical-command-routes",
+      "summary": "Publish one exact bounded command-route grammar in the CLI process contract and add owner-generated multi-token routes while retaining stable internal command IDs for contract and implementation ownership."
+    },
+    {
+      "changeId": "proofkit.python-wheel.embedded-cli-contract",
+      "summary": "Embed the exact public CLI contract in every Python wheel and use the installed record to prove command-family route closure."
+    }
+  ],
+  "migration": {
+    "required": true,
+    "steps": [
+      "Replace explicit init --preset fresh with adopt plan --mode fresh --repo-root <caller-selected-root>.",
+      "Replace init --preset code-baseline with adopt plan --mode code-baseline --repo-root <caller-selected-root>, and replace init --preset code-audit with adopt plan --mode audit-from-code --repo-root <caller-selected-root>.",
+      "Replace init --preset legacy with migration-parity-admission followed by migration-plan over explicit caller-owned records; run requirement-source-transition when the migration changes requirement lifecycle state.",
+      "Replace init --preset change-set with changed-path-set followed by the explicit impact and selective-gate composition routes required by the consuming repository.",
+      "Replace bare init or init --preset all with help families, then select the smallest applicable bounded route rather than materializing every route family.",
+      "Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible.",
+      "Replace persisted proofkit.agent-route.input.v1 contract identity with proofkit.agent-route.input.v2; the admitted wire schemaVersion remains 1."
+    ]
+  },
+  "platformRequirements": [
+    "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
+  ],
+  "knownLimitations": [
+    "Adopt plan inventories only a fixed root-file catalog; it does not infer stack identity, inspect arbitrary source semantics, generate requirements, write files, or execute native evidence.",
+    "Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
+    "Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
+    "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
+    "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
+    "TSX source parsing remains unsupported."
+  ],
+  "rollback": {
+    "strategy": "previous_admitted_version"
+  }
+}
