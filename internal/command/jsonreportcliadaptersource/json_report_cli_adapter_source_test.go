@@ -2,20 +2,23 @@ package jsonreportcliadaptersource
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:a171cc1b95c6078b7190ac50fc9fd298db8f42bfc9b65bbb67fa77d63dc04a93"
+const expectedTypeScriptSourceSha256 = "sha256:62c34f1b920466f157d32d982fd5dd8355cbfb023eeda342e8cdbe5c15d731a0"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -130,7 +133,7 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 		"stdout: child.stdout",
 		"stderr: child.stderr",
 		"value: parseProofkitJsonStrict(jsonText)",
-		"const {child, outputFile} = runProofkitCommand(command, input, args, options)",
+		"const {child, outputFile} = runProofkitCommand(commandRoute, input, args, options)",
 		"function outputPathFromArgs(args: readonly string[])",
 		"function admitWritableOutputTarget",
 		"prepared = prepareOutputArgs(options.cwd, args)",
@@ -138,6 +141,22 @@ func TestGeneratedSourcePreservesCLIExitCodeAsPublicContract(t *testing.T) {
 	} {
 		if !strings.Contains(source, required) {
 			t.Fatalf("generated source does not preserve CLI process contract token %q", required)
+		}
+	}
+}
+
+func TestGeneratedSourceAdmitsBoundedCanonicalCommandRoutes(t *testing.T) {
+	source := TypeScriptSource()
+	for _, required := range []string{
+		"function admitCommandRoute(commandRoute: string): readonly string[]",
+		"commandRoute.split(" + strconv.Quote(commandroute.Separator) + ")",
+		fmt.Sprintf("tokens.length < %d", commandroute.MinimumTokens),
+		fmt.Sprintf("tokens.length > %d", commandroute.MaximumTokens),
+		strconv.Quote(fmt.Sprintf("agentic-proofkit command route must contain %d to %d canonical tokens", commandroute.MinimumTokens, commandroute.MaximumTokens)),
+		"...routeTokens, \"--input\", \"-\"",
+	} {
+		if !strings.Contains(source, required) {
+			t.Fatalf("generated source missing command-route guard %q", required)
 		}
 	}
 }
@@ -208,12 +227,32 @@ import { writeFileSync } from "node:fs";
 
 const commandIndex = process.argv[2] === "--json-layout" ? 4 : 2;
 const command = process.argv[commandIndex];
+let commandRoute = command;
+let commandRouteLength = 1;
+if (command === "adopt" && process.argv[commandIndex + 1] === "plan") {
+  commandRoute = "adopt plan";
+  commandRouteLength = 2;
+} else if (command === "three" && process.argv.slice(commandIndex, commandIndex + 3).join(" ") === "three route tokens") {
+  commandRoute = "three route tokens";
+  commandRouteLength = 3;
+} else if (command === "four" && process.argv.slice(commandIndex, commandIndex + 4).join(" ") === "four route tokens exactly") {
+  commandRoute = "four route tokens exactly";
+  commandRouteLength = 4;
+}
 let input = "";
 process.stdin.on("data", (chunk) => {
   input += chunk;
 });
 process.stdin.on("end", () => {
-  if (command === "json-pass") {
+  if (["adopt plan", "three route tokens", "four route tokens exactly"].includes(commandRoute)) {
+    if (process.argv.includes("--input")) {
+      process.stderr.write("unexpected input flag");
+      process.exit(2);
+    }
+    process.stdout.write(JSON.stringify({schemaVersion: 1, state: "passed", route: process.argv.slice(commandIndex, commandIndex + commandRouteLength), args: process.argv.slice(commandIndex + commandRouteLength)}) + "\n");
+    process.exit(0);
+  }
+  if (commandRoute === "json-pass") {
     const parsed = JSON.parse(input);
     process.stdout.write(JSON.stringify({schemaVersion: 1, state: "passed", received: parsed}) + "\n");
     process.exit(0);
@@ -506,6 +545,20 @@ const pass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPat
 assert.equal(pass.status, 0);
 assert.equal(pass.value.state, "passed");
 assert.deepEqual(pass.value.received, {a: true, z: 1});
+const routedPass = runProofkitNoInputJsonCommand("adopt plan", ["--mode", "fresh", "--repo-root", "."], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+assert.equal(routedPass.status, 0);
+assert.deepEqual(routedPass.value.route, ["adopt", "plan"]);
+assert.deepEqual(routedPass.value.args, ["--mode", "fresh", "--repo-root", "."]);
+const maxMinusOneRoute = runProofkitNoInputJsonCommand("three route tokens", [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+assert.deepEqual(maxMinusOneRoute.value.route, ["three", "route", "tokens"]);
+const maximumRoute = runProofkitNoInputJsonCommand("four route tokens exactly", [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot});
+assert.deepEqual(maximumRoute.value.route, ["four", "route", "tokens", "exactly"]);
+for (const invalidRoute of ["", "adopt  plan", "adopt plan now extra later", "Adopt plan", "--help"]) {
+  assert.throws(
+    () => runProofkitJsonCommand(invalidRoute, {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
+		/1 to 4 canonical tokens/,
+  );
+}
 const compactPass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, jsonLayout: "compact"});
 assert.equal(compactPass.status, 0);
 assert.deepEqual(compactPass.value.received, {a: true, z: 1});

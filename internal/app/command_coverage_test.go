@@ -497,7 +497,7 @@ func TestNoInputCommandDescriptorsHaveRuntimeSmoke(t *testing.T) {
 			continue
 		}
 		t.Run(descriptor.name, func(t *testing.T) {
-			args, wantJSON := noInputRuntimeSmokeArgs(descriptor.name)
+			args, wantJSON := noInputRuntimeSmokeArgs(t, descriptor)
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 			status := Run(t.Context(), args, strings.NewReader(""), &stdout, &stderr)
@@ -518,20 +518,23 @@ func TestNoInputCommandDescriptorsHaveRuntimeSmoke(t *testing.T) {
 	}
 }
 
-func noInputRuntimeSmokeArgs(command string) ([]string, bool) {
-	switch command {
+func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]string, bool) {
+	t.Helper()
+	switch descriptor.name {
+	case "adopt-plan":
+		return append(cloneStrings(descriptor.routeTokens), "--mode", "fresh", "--repo-root", t.TempDir()), true
 	case "help":
 		return []string{"help"}, false
-	case "init":
-		return []string{"init", "--preset", "fresh"}, true
 	case "json-report-cli-adapter-source":
 		return []string{"json-report-cli-adapter-source", "--language", "typescript"}, true
 	case "native-evidence-guidance":
 		return []string{"native-evidence-guidance"}, true
+	case "repository-inventory":
+		return append(cloneStrings(descriptor.routeTokens), "--repo-root", t.TempDir()), true
 	case "stack-preset":
 		return []string{"stack-preset", "--preset", "typescript_workspace"}, true
 	default:
-		panic("missing no-input command smoke args for " + command)
+		panic("missing no-input command smoke args for " + descriptor.name)
 	}
 }
 

@@ -4,7 +4,7 @@
   "previousVersion": "0.5.1",
   "version": "0.6.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
-  "changeRecordRef": "release/change-record.v2.json",
+  "changeRecordRef": "internal/app/testdata/v0.6-release-change-record.v2.json",
   "changeRecordSha256": "sha256:053f459a5d9d8d1568da531d566adb185541bb85167a5867c7c4074f99f8f5ec",
   "previousPublicAbiSha256": "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623",
   "currentPublicAbiSha256": "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5",

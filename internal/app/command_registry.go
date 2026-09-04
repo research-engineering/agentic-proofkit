@@ -13,7 +13,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/externalconsumer"
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
-	"github.com/research-engineering/agentic-proofkit/internal/command/initplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationparityadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/migrationplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
@@ -162,8 +161,4 @@ func mustGenericCommandBuilders(builders map[string]genericCommandBuilder) map[s
 		}
 	}
 	return builders
-}
-
-func buildInitReport(preset string) (report.Record, error) {
-	return initplan.Build(preset)
 }

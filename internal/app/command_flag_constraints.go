@@ -37,6 +37,7 @@ func classifyDescriptorArguments(descriptor commandDescriptor, args []string) de
 }
 
 func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArguments) error {
+	commandRoute := commandRouteText(descriptor.routeTokens)
 	for _, flag := range descriptor.singleOccurrenceFlags {
 		if parsed.counts[flag] > 1 {
 			return fmt.Errorf("%s may be specified only once", flag)
@@ -50,11 +51,11 @@ func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArgu
 		}
 	}
 	if descriptor.input == commandInputRequired && !parsed.present["--input"] {
-		return fmt.Errorf("%s requires --input <path|->", descriptor.name)
+		return fmt.Errorf("%s requires --input <path|->", commandRoute)
 	}
 	for _, flag := range descriptor.requiredFlags {
 		if !parsed.present[flag] {
-			return fmt.Errorf("%s requires %s", descriptor.name, flag)
+			return fmt.Errorf("%s requires %s", commandRoute, flag)
 		}
 	}
 	for _, group := range descriptor.exactlyOneOfFlagGroups {
@@ -65,7 +66,7 @@ func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArgu
 			}
 		}
 		if count != 1 {
-			return fmt.Errorf("%s requires exactly one of %v", descriptor.name, group)
+			return fmt.Errorf("%s requires exactly one of %v", commandRoute, group)
 		}
 	}
 	for _, group := range descriptor.atMostOneOfFlagGroups {
@@ -76,7 +77,7 @@ func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArgu
 			}
 		}
 		if count > 1 {
-			return fmt.Errorf("%s permits at most one of %v", descriptor.name, group)
+			return fmt.Errorf("%s permits at most one of %v", commandRoute, group)
 		}
 	}
 	for _, requirement := range descriptor.flagPresenceRequirements {
@@ -85,12 +86,12 @@ func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArgu
 		}
 		for _, flag := range requirement.RequiredFlags {
 			if !parsed.present[flag] {
-				return fmt.Errorf("%s %s requires %s", descriptor.name, requirement.Flag, flag)
+				return fmt.Errorf("%s %s requires %s", commandRoute, requirement.Flag, flag)
 			}
 		}
 		for _, required := range requirement.RequiredFlagValues {
 			if !slices.Contains(parsed.values[required.Flag], required.Value) {
-				return fmt.Errorf("%s %s requires %s %s", descriptor.name, requirement.Flag, required.Flag, required.Value)
+				return fmt.Errorf("%s %s requires %s %s", commandRoute, requirement.Flag, required.Flag, required.Value)
 			}
 		}
 	}
@@ -100,12 +101,12 @@ func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArgu
 		}
 		for _, flag := range requirement.RequiredFlags {
 			if !parsed.present[flag] {
-				return fmt.Errorf("%s %s %s requires %s", descriptor.name, requirement.Flag, requirement.Value, flag)
+				return fmt.Errorf("%s %s %s requires %s", commandRoute, requirement.Flag, requirement.Value, flag)
 			}
 		}
 		for _, required := range requirement.RequiredFlagValues {
 			if !slices.Contains(parsed.values[required.Flag], required.Value) {
-				return fmt.Errorf("%s %s %s requires %s %s", descriptor.name, requirement.Flag, requirement.Value, required.Flag, required.Value)
+				return fmt.Errorf("%s %s %s requires %s %s", commandRoute, requirement.Flag, requirement.Value, required.Flag, required.Value)
 			}
 		}
 	}

@@ -107,24 +107,20 @@ func validateAgentRouteVersionEdge(record agentRouteVersionEdge, root string) er
 	if record.PreviousVersion != "0.5.1" || record.Version != "0.6.0" {
 		return fmt.Errorf("agent-route version-edge release identity is stale")
 	}
-	if record.PreviousPublicABISHA256 != "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623" || record.CurrentPublicABISHA256 != "sha256:"+cliContractPublicABISHA256 || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
+	if record.PreviousPublicABISHA256 != "sha256:9ecd2c3d2f3f360088409f7e91cce406fc1d1d6edda1b404fce119985c4fb623" || record.CurrentPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("agent-route version-edge ABI identity is invalid")
-	}
-	currentMetadata, ok := generatedCommandContractMetadataByName["agent-route"]
-	if !ok {
-		return fmt.Errorf("agent-route version-edge current command metadata is missing")
 	}
 	wantContract := agentRouteChangedCommandContract{
 		Command:                      "agent-route",
 		PreviousInputContractSHA256:  "sha256:6b5af8287f2972bbef4c68c247f43fb16d0f0d8739e5e6d3a66543af20d2644d",
-		CurrentInputContractSHA256:   currentMetadata.InputContractSHA256,
+		CurrentInputContractSHA256:   "sha256:4fc7b2e5ffe3ed632e5e84d20e5ae26f9ace11df614bc9aec680853e60809ebd",
 		PreviousOutputContractSHA256: "sha256:44ec313a43360b6138ad6c3ae5de4abd51bbf312060880c108a6351606695915",
-		CurrentOutputContractSHA256:  currentMetadata.OutputContractSHA256,
+		CurrentOutputContractSHA256:  "sha256:485d62afc2e5ed07c28f557b0d1069f167b3838abe0aed248e9ff94f3e25c0ad",
 	}
 	if record.ChangedCommandContract != wantContract {
 		return fmt.Errorf("agent-route version-edge changed command contract is not exact")
 	}
-	if record.ChangeRecordRef != "release/change-record.v2.json" {
+	if record.ChangeRecordRef != "internal/app/testdata/v0.6-release-change-record.v2.json" {
 		return fmt.Errorf("agent-route version-edge change record reference is not exact")
 	}
 	changeRecordPath := filepath.Join(root, filepath.FromSlash(record.ChangeRecordRef))

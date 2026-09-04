@@ -1,12 +1,14 @@
 package stackpreset
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 var presetNonClaims = []string{
@@ -34,6 +36,25 @@ type Profile struct {
 	StarterProofLikePaths     []string
 	StarterWitnessKinds       []string
 	SuggestedCommands         []string
+}
+
+// PlanningHint is the compact, child-owned stack projection used by
+// repository-neutral planners. It intentionally omits path suggestions and
+// rendered commands; callers can request the complete preset report when needed.
+type PlanningHint struct {
+	PresetID                  string
+	PrimaryLanguages          []string
+	StarterEnvironmentClasses []string
+	StarterWitnessKinds       []string
+}
+
+func (hint PlanningHint) JSONValue() map[string]any {
+	return map[string]any{
+		"presetId":                  hint.PresetID,
+		"primaryLanguages":          stringsToAny(hint.PrimaryLanguages),
+		"starterEnvironmentClasses": stringsToAny(hint.StarterEnvironmentClasses),
+		"starterWitnessKinds":       stringsToAny(hint.StarterWitnessKinds),
+	}
 }
 
 var presets = map[string]preset{
@@ -164,6 +185,50 @@ func IDs() []string {
 
 func ProfileFor(presetID string) (Profile, bool) {
 	return ProfileForWithRenderer(presetID, cliexec.PathRenderer())
+}
+
+// PlanningHintFor returns the bounded stack facts that are useful during
+// adoption planning without duplicating the complete preset contract.
+func PlanningHintFor(presetID string) (PlanningHint, bool) {
+	profile, ok := ProfileFor(presetID)
+	if !ok {
+		return PlanningHint{}, false
+	}
+	return PlanningHint{
+		PresetID:                  presetID,
+		PrimaryLanguages:          append([]string{}, profile.PrimaryLanguages...),
+		StarterEnvironmentClasses: append([]string{}, profile.StarterEnvironmentClasses...),
+		StarterWitnessKinds:       append([]string{}, profile.StarterWitnessKinds...),
+	}, true
+}
+
+// AdmitPlanningHint validates a serialized planning hint against the preset
+// owner instead of asking a parent command to duplicate its fields.
+func AdmitPlanningHint(raw any) (PlanningHint, error) {
+	record, ok := raw.(map[string]any)
+	if !ok {
+		return PlanningHint{}, fmt.Errorf("stack planning hint must be an object")
+	}
+	presetID, err := admit.NonEmptyText(record["presetId"], "stack planning hint presetId")
+	if err != nil {
+		return PlanningHint{}, err
+	}
+	expected, ok := PlanningHintFor(presetID)
+	if !ok {
+		return PlanningHint{}, fmt.Errorf("stack planning hint presetId is unknown")
+	}
+	rawBytes, err := stablejson.Marshal(record)
+	if err != nil {
+		return PlanningHint{}, fmt.Errorf("encode stack planning hint")
+	}
+	expectedBytes, err := stablejson.Marshal(expected.JSONValue())
+	if err != nil {
+		return PlanningHint{}, fmt.Errorf("encode expected stack planning hint")
+	}
+	if !bytes.Equal(rawBytes, expectedBytes) {
+		return PlanningHint{}, fmt.Errorf("stack planning hint does not match its preset owner")
+	}
+	return expected, nil
 }
 
 func ProfileForWithRenderer(presetID string, renderer cliexec.Renderer) (Profile, bool) {

@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -51,6 +52,7 @@ type generatedMetadata struct {
 	InputSummary         []string
 	OutputContractDigest string
 	FlagChoices          map[string][]string
+	RouteTokens          []string
 }
 
 func main() {
@@ -152,7 +154,33 @@ func readContract(path string) ([]byte, map[string]any, error) {
 	if err := rejectUnknownKeys(record, []string{"commands", "contractDefinitions", "contractId", "packageName", "processContract", "schemaVersion"}, "CLI contract"); err != nil {
 		return nil, nil, err
 	}
+	if err := admitCommandRouteGrammar(record["processContract"]); err != nil {
+		return nil, nil, err
+	}
 	return content, record, nil
+}
+
+func admitCommandRouteGrammar(raw any) error {
+	processContract, ok := raw.(map[string]any)
+	if !ok {
+		return errors.New("CLI processContract must be an object")
+	}
+	grammar, ok := processContract["commandRouteGrammar"].(map[string]any)
+	if !ok {
+		return errors.New("CLI processContract commandRouteGrammar must be an object")
+	}
+	if err := rejectUnknownKeys(grammar, []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"}, "CLI command route grammar"); err != nil {
+		return err
+	}
+	minimum, minimumOK := positiveJSONInteger(grammar["minimumTokens"])
+	maximum, maximumOK := positiveJSONInteger(grammar["maximumTokens"])
+	if !minimumOK || !maximumOK || minimum != commandroute.MinimumTokens || maximum != commandroute.MaximumTokens {
+		return fmt.Errorf("CLI command route grammar token bounds must be %d through %d", commandroute.MinimumTokens, commandroute.MaximumTokens)
+	}
+	if grammar["separator"] != commandroute.Separator || grammar["tokenPattern"] != commandroute.TokenPattern || grammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+		return errors.New("CLI command route grammar does not match the native route owner")
+	}
+	return nil
 }
 
 func admitDefinitions(contract map[string]any) (map[string]definitionRecord, error) {
@@ -415,6 +443,7 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 	metadata := make(map[string]generatedMetadata, len(rawCommands))
 	contractIDs := map[string]string{}
 	activeTestFiles := map[string]map[string]struct{}{}
+	routes := map[string]string{}
 	var presets []string
 	previous := ""
 	for index, raw := range rawCommands {
@@ -430,7 +459,18 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 			return nil, nil, errors.New("CLI commands must be sorted and unique")
 		}
 		previous = name
-		item := generatedMetadata{FlagChoices: map[string][]string{}}
+		route := []string{name}
+		if rawRoute, present := command["route"]; present {
+			var err error
+			route, err = stringList(rawRoute, "command "+name+" route")
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+		if err := admitCommandRoute(name, route, routes); err != nil {
+			return nil, nil, err
+		}
+		item := generatedMetadata{FlagChoices: map[string][]string{}, RouteTokens: route}
 		allowedFlags, err := stringList(command["allowedFlags"], "command "+name+" allowedFlags")
 		if err != nil || !sort.StringsAreSorted(allowedFlags) || hasDuplicate(allowedFlags) {
 			return nil, nil, fmt.Errorf("command %s allowedFlags must be sorted and unique", name)
@@ -494,7 +534,33 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 		}
 		metadata[name] = item
 	}
+	if adoption, ok := metadata["adopt-plan"]; ok && !slices.Equal(adoption.FlagChoices["--stack"], presets) {
+		return nil, nil, errors.New("adopt-plan --stack choices must equal stack-preset --preset choices")
+	}
 	return metadata, presets, nil
+}
+
+func admitCommandRoute(name string, route []string, existing map[string]string) error {
+	if len(route) < commandroute.MinimumTokens || len(route) > commandroute.MaximumTokens {
+		return fmt.Errorf("command %s route must contain between one and four tokens", name)
+	}
+	for _, token := range route {
+		if !commandroute.ValidToken(token) {
+			return fmt.Errorf("command %s route contains invalid token", name)
+		}
+	}
+	for _, encoded := range sortedKeys(existing) {
+		owner := existing[encoded]
+		other := strings.Split(encoded, "\x00")
+		if slices.Equal(route, other) {
+			return fmt.Errorf("commands %s and %s have the same route", owner, name)
+		}
+		if commandroute.Prefix(route, other) || commandroute.Prefix(other, route) {
+			return fmt.Errorf("command routes for %s and %s have an ambiguous prefix", owner, name)
+		}
+	}
+	existing[commandroute.Key(route)] = name
+	return nil
 }
 
 func admitUniqueContractID(command string, direction string, contract map[string]any, seen map[string]string) error {
@@ -850,12 +916,12 @@ func renderApp(sourceDigest string, metadata map[string]generatedMetadata) ([]by
 	output.WriteString("package app\n\n")
 	fmt.Fprintf(&output, "const commandContractSourceSHA256 = %q\n\n", sourceDigest)
 	output.WriteString("type generatedCommandContractMetadata struct {\n")
-	output.WriteString("\tInputContractSHA256 string\n\tInputSchemaSummary []string\n\tOutputContractSHA256 string\n\tFlagChoices map[string][]string\n}\n\n")
+	output.WriteString("\tInputContractSHA256 string\n\tInputSchemaSummary []string\n\tOutputContractSHA256 string\n\tFlagChoices map[string][]string\n\tRouteTokens []string\n}\n\n")
 	output.WriteString("var generatedCommandContractMetadataByName = map[string]generatedCommandContractMetadata{\n")
 	for _, name := range sortedKeys(metadata) {
 		item := metadata[name]
-		fmt.Fprintf(&output, "\t%q: {InputContractSHA256: %q, InputSchemaSummary: %#v, OutputContractSHA256: %q, FlagChoices: %#v},\n",
-			name, item.InputContractDigest, item.InputSummary, item.OutputContractDigest, item.FlagChoices)
+		fmt.Fprintf(&output, "\t%q: {InputContractSHA256: %q, InputSchemaSummary: %#v, OutputContractSHA256: %q, FlagChoices: %#v, RouteTokens: %#v},\n",
+			name, item.InputContractDigest, item.InputSummary, item.OutputContractDigest, item.FlagChoices, item.RouteTokens)
 	}
 	output.WriteString("}\n")
 	formatted, err := format.Source([]byte(output.String()))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptiondoctor"
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionworkflow"
@@ -40,11 +41,12 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 		}
 		return writeText(usageWithRenderer(renderer), 0, nil, stdout, stderr)
 	}
-	descriptor, ok := commandDescriptorFor(args[0])
+	descriptor, consumed, ok := commandDescriptorForRoute(args)
 	if !ok {
 		writeDiagnosticf(stderr, "unsupported command: %s", args[0])
 		return 1
 	}
+	args = append([]string{descriptor.name}, args[consumed:]...)
 	if isCommandHelpRequest(args) {
 		if layoutExplicit {
 			writeDiagnosticf(stderr, "--json-layout is valid only for JSON command output")
@@ -54,7 +56,7 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 	}
 	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
 	if descriptor.runner != commandRunnerHelp && (parsedArguments.present["--help"] || parsedArguments.present["-h"]) {
-		writeDiagnosticf(stderr, "%s help accepts no additional arguments", descriptor.name)
+		writeDiagnosticf(stderr, "%s help accepts no additional arguments", commandRouteText(descriptor.routeTokens))
 		return 1
 	}
 	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {
@@ -91,10 +93,14 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 			}
 			return writeText(output, 0, nil, stdout, stderr)
 		}
-		if len(args) == 2 && args[1] != "--help" && args[1] != "-h" {
-			target, targetOK := commandDescriptorFor(args[1])
+		if len(args) >= 2 && strings.HasPrefix(args[1], "-") && args[1] != "--help" && args[1] != "-h" {
+			writeDiagnosticf(stderr, "help supports only --help or -h")
+			return 1
+		}
+		if len(args) >= 2 && args[1] != "--help" && args[1] != "-h" {
+			target, targetOK := commandDescriptorForHelpTarget(args[1:])
 			if !targetOK {
-				writeDiagnosticf(stderr, "unsupported help target: %s", args[1])
+				writeDiagnosticf(stderr, "unsupported help target: %s", commandRouteText(args[1:]))
 				return 1
 			}
 			return writeText(commandUsageWithRenderer(target, renderer), 0, nil, stdout, stderr)
@@ -104,14 +110,8 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 			return 1
 		}
 		return writeText(usageWithRenderer(renderer), 0, nil, stdout, stderr)
-	case commandRunnerInit:
-		preset, err := parseInitArgs(args[1:])
-		if err != nil {
-			writeDiagnostic(stderr, err)
-			return 1
-		}
-		record, err := buildInitReport(preset)
-		return writeJSON(record.JSONValue(), 0, err, stdout, stderr)
+	case commandRunnerAdoptionFrontDoor:
+		return runAdoptionFrontDoor(ctx, descriptor.name, args[1:], stdout, stderr, capabilities)
 	case commandRunnerAdoptionDoctor:
 		return runAgentEnvelopeCommand(args[0], args[1:], stdin, stdout, stderr, agentEnvelopeBuilders{
 			build:         adoptiondoctor.Build,

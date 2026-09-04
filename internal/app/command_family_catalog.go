@@ -47,8 +47,13 @@ func commandFamilyUsageWithRenderer(familyID string, renderer cliexec.Renderer) 
 			"Commands:",
 		}
 		for _, command := range family.Commands {
-			lines = append(lines, "  "+command)
-			lines = append(lines, "    "+renderer.DisplayCommand("help", command))
+			descriptor, ok := commandDescriptorFor(command)
+			if !ok {
+				return "", fmt.Errorf("command family contains an unsupported command")
+			}
+			route := commandRouteText(descriptor.routeTokens)
+			lines = append(lines, "  "+route)
+			lines = append(lines, "    "+renderer.DisplayCommand(append([]string{"help"}, descriptor.routeTokens...)...))
 		}
 		return strings.Join(lines, "\n") + "\n", nil
 	}

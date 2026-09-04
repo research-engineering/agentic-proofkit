@@ -110,6 +110,19 @@ func TestBuildRejectsStdinTransportSentinelAsArtifactReference(t *testing.T) {
 			}
 		})
 	}
+
+	_, exitCode, err := Build(map[string]any{
+		"schemaVersion": jsonNumber("1"),
+		"routeId":       "consumer.route.materialized-reference",
+		"goal":          "validate_requirement_source",
+		"mode":          "observe",
+		"availableInputs": []any{
+			map[string]any{"kind": "requirement_source", "ref": "proofkit/requirements.v1.json"},
+		},
+	})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("materialized repository-relative reference exit=%d error=%v, want success", exitCode, err)
+	}
 }
 
 func TestBuildRejectsUnknownAdoptionMode(t *testing.T) {
@@ -884,6 +897,9 @@ func TestInputContractMatchesAdmissionVocabulary(t *testing.T) {
 	t.Parallel()
 
 	contract := InputContract()
+	if contract["contractId"] != "proofkit.agent-route.input.v2" || contract["schemaVersion"] != 1 {
+		t.Fatalf("input contract identity = %v schemaVersion=%v, want v2 identity over wire schema 1", contract["contractId"], contract["schemaVersion"])
+	}
 	fields := contract["fields"].(map[string]any)
 	assertContractEnum(t, fields, "goal", goalValues)
 	assertContractEnum(t, fields, "mode", modeValues)

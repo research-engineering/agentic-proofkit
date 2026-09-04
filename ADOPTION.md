@@ -151,7 +151,23 @@ check. Durable truth still starts only after the consumer commits and admits
 ## First Adoption Loop
 
 Proofkit can reduce initial adoption glue, but it must not turn observation into
-truth. The first loop is:
+truth. Start with one explicit trust intent:
+
+```bash
+npm exec --offline -- agentic-proofkit adopt plan --mode fresh --repo-root .
+npm exec --offline -- agentic-proofkit adopt plan --mode code-baseline --repo-root .
+npm exec --offline -- agentic-proofkit adopt plan --mode audit-from-code --repo-root .
+```
+
+The command validates its arguments before filesystem access, scans only a
+fixed catalog of recognized files at the selected root, and emits a
+candidate-only task sequence plus a compact reference to the native-evidence
+guidance owner. It does not parse those files, infer a stack, inspect arbitrary
+source code, generate product requirements, write files, or run witnesses.
+An optional `--stack <preset-id>` records a caller-selected suggestion and
+cannot alter source trust or task semantics.
+
+Continue the first loop as follows:
 
 ```text
 caller-owned capability or test observations

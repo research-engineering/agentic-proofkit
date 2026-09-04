@@ -32,8 +32,11 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	}
 	lines = append(lines,
 		"",
-		"Command:",
+		"Command ID:",
 		"  "+descriptor.name,
+		"",
+		"Route:",
+		"  "+commandRouteText(descriptor.routeTokens),
 		"",
 		"Input:",
 		"  "+commandInputHelp(descriptor),
@@ -119,9 +122,9 @@ func installedCommandUsageLineWithRenderer(descriptor commandDescriptor, rendere
 
 func commandUsageLine(descriptor commandDescriptor) string {
 	if descriptor.name == "help" {
-		return "agentic-proofkit help [<command>|-h|--help]"
+		return "agentic-proofkit help [<command route>|-h|--help]"
 	}
-	segments := []string{"agentic-proofkit", descriptor.name}
+	segments := append([]string{"agentic-proofkit"}, descriptor.routeTokens...)
 	if descriptor.input == commandInputRequired {
 		segments = append(segments, "--input <path|->")
 	}
@@ -213,21 +216,4 @@ func commandInputHelp(descriptor commandDescriptor) string {
 		return "Requires explicit caller-owned JSON input through --input <path|->; stdin is only read when --input - is selected."
 	}
 	return "Does not accept caller JSON input and never reads stdin."
-}
-
-func parseInitArgs(args []string) (string, error) {
-	preset := ""
-	for index := 0; index < len(args); index++ {
-		switch args[index] {
-		case "--preset":
-			if index+1 >= len(args) {
-				return "", fmt.Errorf("init --preset requires all, fresh, code-baseline, code-audit, legacy, or change-set")
-			}
-			preset = args[index+1]
-			index++
-		default:
-			return "", fmt.Errorf("unsupported argument for init: %s", args[index])
-		}
-	}
-	return preset, nil
 }

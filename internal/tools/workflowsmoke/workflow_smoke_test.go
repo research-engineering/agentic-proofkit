@@ -106,6 +106,60 @@ func TestRunProcessAcceptsExactOutputBounds(t *testing.T) {
 	}
 }
 
+func TestRunProcessCustomOutputLimitsAreExact(t *testing.T) {
+	const stdoutBytes = 1024
+	const stderrBytes = 128
+	invocation := workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinBytes}
+	tests := []struct {
+		name   string
+		limits workflowsmoke.ProcessOutputLimits
+		want   string
+	}{
+		{name: "exact", limits: workflowsmoke.ProcessOutputLimits{MaximumStdoutBytes: stdoutBytes, MaximumStderrBytes: stderrBytes}},
+		{name: "stdout one over", limits: workflowsmoke.ProcessOutputLimits{MaximumStdoutBytes: stdoutBytes - 1, MaximumStderrBytes: stderrBytes}, want: "stdout exceeds"},
+		{name: "stderr one over", limits: workflowsmoke.ProcessOutputLimits{MaximumStdoutBytes: stdoutBytes, MaximumStderrBytes: stderrBytes - 1}, want: "stderr exceeds"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			result, err := workflowsmoke.RunProcessWithOutputLimits(ctx, helperCarrier("custom-output-boundary"), invocation, test.limits)
+			if test.want != "" {
+				if err == nil || !strings.Contains(err.Error(), test.want) {
+					t.Fatalf("one-over custom output error=%v, want %s", err, test.want)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(result.Stdout) != stdoutBytes || len(result.Stderr) != stderrBytes {
+				t.Fatalf("output lengths=(%d,%d), want (%d,%d)", len(result.Stdout), len(result.Stderr), stdoutBytes, stderrBytes)
+			}
+		})
+	}
+}
+
+func TestRunProcessRejectsInvalidCustomOutputLimitsBeforeStart(t *testing.T) {
+	for _, limits := range []workflowsmoke.ProcessOutputLimits{
+		{},
+		{MaximumStdoutBytes: 0, MaximumStderrBytes: 1},
+		{MaximumStdoutBytes: 1, MaximumStderrBytes: 0},
+		{MaximumStdoutBytes: (8 << 20) + 1, MaximumStderrBytes: 1},
+		{MaximumStdoutBytes: 1, MaximumStderrBytes: 9 << 20},
+	} {
+		if _, err := workflowsmoke.RunProcessWithOutputLimits(t.Context(), helperCarrier("hang"), workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinBytes}, limits); err == nil {
+			t.Fatalf("invalid limits %#v were accepted", limits)
+		}
+	}
+	if _, err := workflowsmoke.RunProcessWithOutputLimits(t.Context(), helperCarrier("no-read"), workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinBytes}, workflowsmoke.ProcessOutputLimits{
+		MaximumStdoutBytes: 8 << 20,
+		MaximumStderrBytes: 8 << 20,
+	}); err != nil {
+		t.Fatalf("exact package hard limits were rejected: %v", err)
+	}
+}
+
 func TestRunProcessProvesUnreadStdin(t *testing.T) {
 	t.Run("non-reader exits", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -143,6 +197,9 @@ func TestWorkflowSmokeProcessHelper(t *testing.T) {
 	case "output-boundary":
 		_, _ = os.Stdout.Write(bytes.Repeat([]byte{'x'}, 256*1024))
 		_, _ = os.Stderr.Write(bytes.Repeat([]byte{'x'}, 64*1024))
+	case "custom-output-boundary":
+		_, _ = os.Stdout.Write(bytes.Repeat([]byte{'x'}, 1024))
+		_, _ = os.Stderr.Write(bytes.Repeat([]byte{'x'}, 128))
 	case "read-stdin":
 		_, _ = io.Copy(io.Discard, os.Stdin)
 	case "no-read":

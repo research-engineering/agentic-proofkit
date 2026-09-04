@@ -124,14 +124,15 @@ vulnerability absence, or consumer rollout safety by itself.
   identity tuple with the exact version-tag workflow ref for workflow-published
   npm and PyPI channels and release closeout rejects publication claims without
   that tuple.
-- `REQ-PROOFKIT-QUALITY-019`: installed package smoke proof verifies one
-  continuous offline route through every displayed family and leaf-help
-  transition, binds each installed invocation to its ordered exact bare Usage
-  command token, requires every exact generated preset command to retain the
-  offline npm prefix, re-executes one emitted continuation, reaches the first
-  valid README input, executes one successful JSON report command and one
-  failed-report command, applies bounded expansion-free literal parsing to
-  emitted and README argv, and verifies the current
+- `REQ-PROOFKIT-QUALITY-019`: installed package smoke proof byte-binds the
+  launcher and platform binary, proves npm offline package resolution plus one
+  contract-owned multi-token argv route, then uses the exact admitted npm
+  launcher profile to exhaustively traverse displayed family and leaf-help routes,
+  bind installed invocations to ordered bare Usage tokens, require every exact
+  generated preset command to retain the offline npm prefix, re-execute one
+  emitted continuation, reach the first valid README input, execute one
+  successful JSON report command and one failed-report command, apply bounded
+  expansion-free literal parsing to emitted and README argv, and verify the current
   `json-report-cli-adapter-source` generated source artifact from the
   package-managed binary, including report identity, state, exit code, stdout,
   stderr discipline, generated-source hash, owner-source parity, and exact

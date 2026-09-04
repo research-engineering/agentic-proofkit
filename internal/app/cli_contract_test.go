@@ -18,12 +18,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 const (
-	cliContractPublicABISHA256               = "163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5"
+	cliContractPublicABISHA256               = "c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -57,6 +58,9 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 		}
 		if string(descriptor.scopeClass) != command.ScopeClass {
 			t.Fatalf("%s descriptor scopeClass=%s contract=%s", command.Command, descriptor.scopeClass, command.ScopeClass)
+		}
+		if !slices.Equal(descriptor.routeTokens, effectiveContractRoute(command)) {
+			t.Fatalf("%s descriptor route=%v contract route=%v", command.Command, descriptor.routeTokens, effectiveContractRoute(command))
 		}
 		assertStringSet(t, descriptor.allowedFlags, command.AllowedFlags, command.Command+" descriptor flags")
 		assertStringSet(t, descriptor.outputModes, command.OutputModes, command.Command+" descriptor output modes")
@@ -106,7 +110,8 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 		if command.Command == "help" {
 			continue
 		}
-		line := helpLineForCommand(help, command.Command)
+		route := commandRouteText(effectiveContractRoute(command))
+		line := helpLineForCommand(help, route)
 		if line == "" {
 			t.Fatalf("help output does not route command %s", command.Command)
 		}
@@ -124,8 +129,10 @@ func TestCLIContractMatchesDispatcherAndHelp(t *testing.T) {
 		}
 	}
 	for command := range contractCommands {
-		if !strings.Contains(help, "agentic-proofkit "+command) && command != "help" {
-			t.Fatalf("help output does not route command %s", command)
+		contractCommand := commandByContractID(contract.Commands, command)
+		route := commandRouteText(effectiveContractRoute(contractCommand))
+		if !strings.Contains(help, "agentic-proofkit "+route) && command != "help" {
+			t.Fatalf("help output does not route command %s through %s", command, route)
 		}
 	}
 }
@@ -792,6 +799,14 @@ func TestProofkitContractMapRoutesRequiredInputCommands(t *testing.T) {
 }
 
 func TestCLIContractPublicABIGoldenStable(t *testing.T) {
+	got := currentCLIContractPublicABISHA256(t)
+	if got != cliContractPublicABISHA256 {
+		t.Fatalf("public CLI ABI hash drifted: got %s want %s", got, cliContractPublicABISHA256)
+	}
+}
+
+func currentCLIContractPublicABISHA256(t *testing.T) string {
+	t.Helper()
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
 	commands := []any{}
@@ -807,6 +822,7 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 			"input":                    command.Input,
 			"inputPointer":             command.InputPointer,
 			"outputModes":              stringsAsAny(command.OutputModes),
+			"route":                    stringsAsAny(effectiveContractRoute(command)),
 			"requiredFlags":            stringsAsAny(command.RequiredFlags),
 			"scopeClass":               command.ScopeClass,
 			"singleOccurrenceFlags":    stringsAsAny(command.SingleOccurrenceFlags),
@@ -842,10 +858,7 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 		t.Fatalf("marshal CLI ABI projection: %v", err)
 	}
 	sum := sha256.Sum256(encoded)
-	got := fmt.Sprintf("%x", sum[:])
-	if got != cliContractPublicABISHA256 {
-		t.Fatalf("public CLI ABI hash drifted: got %s want %s", got, cliContractPublicABISHA256)
-	}
+	return fmt.Sprintf("%x", sum[:])
 }
 
 func cliContractDefinitionMap(t *testing.T, raw []any) map[string]map[string]any {
@@ -893,6 +906,15 @@ func resolveCLIContractDefinition(t *testing.T, id string, definitions map[strin
 }
 
 func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
+	t.Run("missing generated metadata", func(t *testing.T) {
+		defer func() {
+			if recovered := recover(); recovered == nil || !strings.Contains(fmt.Sprint(recovered), "missing generated contract metadata") {
+				t.Fatalf("descriptor panic = %v, want generated metadata failure", recovered)
+			}
+		}()
+		_ = command("missing-generated-command", commandInputNone, nil, modes("text"), nil)
+	})
+
 	contract := readCLIContract(t)
 	cases := []struct {
 		name        string
@@ -900,9 +922,18 @@ func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
 		commands    []cliContractCommand
 	}{
 		{
-			name:        "descriptor only command",
-			descriptors: append(cloneCommandDescriptors(commandDescriptors), command("descriptor-only", commandInputNone, flags("--help"), modes("text"), ownerDirs("descriptoronly"), withRunner(commandRunnerHelp))),
-			commands:    contract.Commands,
+			name: "descriptor only command",
+			descriptors: append(cloneCommandDescriptors(commandDescriptors), commandDescriptor{
+				name:              "descriptor-only",
+				routeTokens:       []string{"descriptor-only"},
+				input:             commandInputNone,
+				runner:            commandRunnerHelp,
+				scopeClass:        commandScopeBuiltInPackageCatalog,
+				allowedFlags:      flags("--help"),
+				outputModes:       modes("text"),
+				semanticOwnerDirs: ownerDirs("descriptoronly"),
+			}),
+			commands: contract.Commands,
 		},
 		{
 			name:        "contract only command",
@@ -1020,7 +1051,16 @@ func TestCommandDescriptorTopologyRejectsInvalidScopeClass(t *testing.T) {
 }
 
 func TestCommandDescriptorTopologyRejectsImplicitPlanningRoute(t *testing.T) {
-	descriptors := append(cloneCommandDescriptors(commandDescriptors), command("new-planning-command", commandInputRequired, flags("--input"), modes("json"), ownerDirs("newplanning"), withRunner(commandRunnerPlanning)))
+	descriptors := append(cloneCommandDescriptors(commandDescriptors), commandDescriptor{
+		name:              "new-planning-command",
+		routeTokens:       []string{"new-planning-command"},
+		input:             commandInputRequired,
+		runner:            commandRunnerPlanning,
+		scopeClass:        commandScopeExplicitCallerInput,
+		allowedFlags:      flags("--input"),
+		outputModes:       modes("json"),
+		semanticOwnerDirs: ownerDirs("newplanning"),
+	})
 	if problems := commandDescriptorTopologyProblems(descriptors); len(problems) == 0 {
 		t.Fatal("planning runner descriptor without explicit route was admitted")
 	}
@@ -1134,6 +1174,9 @@ func commandDescriptorContractParityProblems(descriptors []commandDescriptor, co
 		}
 		if string(descriptor.input) != command.Input {
 			problems = append(problems, "input drift "+name)
+		}
+		if !slices.Equal(descriptor.routeTokens, effectiveContractRoute(command)) {
+			problems = append(problems, "route drift "+name)
 		}
 		if !equalStringSets(descriptor.allowedFlags, command.AllowedFlags) {
 			problems = append(problems, "flag drift "+name)
@@ -1475,12 +1518,14 @@ func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
 
 func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 	expectedConstrainedUsage := map[string]string{
+		"adopt-plan":                     "agentic-proofkit adopt plan [--color <auto|never>] [--format <json|text>] --mode <audit-from-code|code-baseline|fresh> --repo-root <path> [--stack <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>]",
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
+		"repository-inventory":           "agentic-proofkit repository-inventory --repo-root <path>",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
 		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 	}
@@ -1639,6 +1684,7 @@ type cliContractCommand struct {
 	OutputContract           any                       `json:"outputContract,omitempty"`
 	OutputModes              []string                  `json:"outputModes"`
 	RequiredFlags            []string                  `json:"requiredFlags,omitempty"`
+	Route                    []string                  `json:"route,omitempty"`
 	ScopeClass               string                    `json:"scopeClass"`
 	SingleOccurrenceFlags    []string                  `json:"singleOccurrenceFlags,omitempty"`
 	Stdin                    bool                      `json:"stdin"`
@@ -1674,7 +1720,19 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(record["processContract"], &processContract); err != nil {
 		t.Fatalf("decode process contract: %v", err)
 	}
-	assertKeys(t, "CLI process contract", keys(processContract), []string{"failureExitCode", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	assertKeys(t, "CLI process contract", keys(processContract), []string{"commandRouteGrammar", "failureExitCode", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	var routeGrammar map[string]any
+	if err := json.Unmarshal(processContract["commandRouteGrammar"], &routeGrammar); err != nil {
+		t.Fatalf("decode command route grammar: %v", err)
+	}
+	assertKeys(t, "CLI command route grammar", keysAny(routeGrammar), []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"})
+	if routeGrammar["minimumTokens"] != float64(commandroute.MinimumTokens) ||
+		routeGrammar["maximumTokens"] != float64(commandroute.MaximumTokens) ||
+		routeGrammar["separator"] != commandroute.Separator ||
+		routeGrammar["tokenPattern"] != commandroute.TokenPattern ||
+		routeGrammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+		t.Fatalf("CLI command route grammar does not match runtime owner: %#v", routeGrammar)
+	}
 	var globalOptions map[string]any
 	if err := json.Unmarshal(processContract["globalOptions"], &globalOptions); err != nil {
 		t.Fatalf("decode global options: %v", err)
@@ -1697,7 +1755,7 @@ func assertCLIContractSchema(t *testing.T) {
 	assertStringSet(t, stringsFromAny(helpGrammar["rootHelpFlags"].([]any)), []string{"--help", "-h"}, "root help flags")
 	assertStringSet(t, stringsFromAny(helpGrammar["commandHelpFlags"].([]any)), []string{"--help", "-h"}, "command help flags")
 	if helpGrammar["commandHelpExclusive"] != true ||
-		helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command" ||
+		helpGrammar["helpCommandPositionalTarget"] != "optional_supported_command_route" ||
 		helpGrammar["helpCatalogFormsSource"] != "proofkit/command-families.v1.json" ||
 		helpGrammar["helpReadsCommandInput"] != false {
 		t.Fatalf("CLI help grammar does not describe runtime help routing: %#v", helpGrammar)
@@ -1730,6 +1788,7 @@ func assertCLIContractSchema(t *testing.T) {
 		"outputContract":           {},
 		"outputModes":              {},
 		"requiredFlags":            {},
+		"route":                    {},
 		"scopeClass":               {},
 		"singleOccurrenceFlags":    {},
 		"stdin":                    {},
@@ -1831,6 +1890,22 @@ func assertCLIContractSchema(t *testing.T) {
 			}
 		}
 	}
+}
+
+func effectiveContractRoute(command cliContractCommand) []string {
+	if len(command.Route) == 0 {
+		return []string{command.Command}
+	}
+	return append([]string(nil), command.Route...)
+}
+
+func commandByContractID(commands []cliContractCommand, commandID string) cliContractCommand {
+	for _, command := range commands {
+		if command.Command == commandID {
+			return command
+		}
+	}
+	panic("unknown CLI contract command: " + commandID)
 }
 
 func stringMatrixAsAny(values [][]string) []any {

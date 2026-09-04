@@ -39,10 +39,11 @@ denial, and package artifact behavior only.
   strict-character-reference-encoded broad caller-supplied phrase suppressors
   that can hide readiness overclaims.
 - `REQ-PROOFKIT-PACKAGE-003`: the root package remains installable and
-  executable by an outside consumer through the exact offline onboarding trace
-  on the current native platform; every generated preset command retains the
-  offline npm resolver and one exact emitted continuation is re-executed
-  without claiming registry publication.
+  executable by an outside consumer; packed launcher and platform-binary bytes
+  match source-built artifacts, npm offline transport proves package resolution
+  plus one multi-token route, and direct execution under the exact admitted npm
+  launcher profile proves exhaustive family, leaf, preset, continuation, and README
+  onboarding closure without claiming registry publication.
 - `REQ-PROOFKIT-PACKAGE-004`: CI package-gate receipts used as merge evidence
   are admitted through a declared producer policy and proof-receipt shape
   validator instead of current-build output alone, and each fixed subprocess

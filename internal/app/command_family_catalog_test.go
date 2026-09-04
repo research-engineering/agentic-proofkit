@@ -57,16 +57,17 @@ func TestCommandFamilyHelpFormsAreOptInAndLeafDispatchIsUnchanged(t *testing.T) 
 		}
 		familyHelp := runTextCommand(t, []string{"help", "family", family.ID})
 		for _, command := range family.Commands {
-			if !strings.Contains(familyHelp, "  "+command+"\n") {
-				t.Fatalf("family %s help does not route command %s", family.ID, command)
+			descriptor, _ := commandDescriptorFor(command)
+			route := commandRouteText(descriptor.routeTokens)
+			if !strings.Contains(familyHelp, "  "+route+"\n") {
+				t.Fatalf("family %s help does not route command %s through %s", family.ID, command, route)
 			}
-			copyableRoute := "agentic-proofkit help " + command
+			copyableRoute := "agentic-proofkit help " + route
 			copyableLine := "    " + copyableRoute + "\n"
 			if strings.Count(familyHelp, copyableLine) != 1 {
 				t.Fatalf("family %s copyable route %q count=%d, want 1", family.ID, copyableRoute, strings.Count(familyHelp, copyableLine))
 			}
-			direct := runTextCommand(t, []string{"help", command})
-			descriptor, _ := commandDescriptorFor(command)
+			direct := runTextCommand(t, append([]string{"help"}, descriptor.routeTokens...))
 			if direct != commandUsage(descriptor) {
 				t.Fatalf("direct help for %s changed through family navigation", command)
 			}
@@ -138,7 +139,7 @@ func TestStackPresetVocabularyProjectsFromOneOwner(t *testing.T) {
 
 func TestExistingHelpEntrypointsRemainCompatible(t *testing.T) {
 	rootHelp := usage()
-	if !strings.Contains(rootHelp, "agentic-proofkit help [<command>|-h|--help]") {
+	if !strings.Contains(rootHelp, "agentic-proofkit help [<command route>|-h|--help]") {
 		t.Fatal("root help omits the admitted positional command target")
 	}
 	rootForms := [][]string{nil, {"help"}, {"--help"}, {"-h"}, {"help", "--help"}, {"help", "-h"}}
@@ -153,9 +154,9 @@ func TestExistingHelpEntrypointsRemainCompatible(t *testing.T) {
 		if strings.Count(expected, installedLine) != 1 {
 			t.Fatalf("command %s installed invocation %q count=%d, want 1", descriptor.name, installedCommandUsageLine(descriptor), strings.Count(expected, installedLine))
 		}
-		aliases := [][]string{{"help", descriptor.name}}
+		aliases := [][]string{append([]string{"help"}, descriptor.routeTokens...)}
 		if descriptor.name != "help" {
-			aliases = append(aliases, []string{descriptor.name, "--help"}, []string{descriptor.name, "-h"})
+			aliases = append(aliases, append(cloneStrings(descriptor.routeTokens), "--help"), append(cloneStrings(descriptor.routeTokens), "-h"))
 		}
 		for _, args := range aliases {
 			if got := runTextCommand(t, args); got != expected {
