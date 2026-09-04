@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
@@ -34,6 +35,7 @@ const (
 	machoMinimumVersionCommand     = 0x24
 	machoMinimumVersionCommandSize = 16
 	machoPlatformMacOS             = 1
+	installedContractReadTimeout   = 10 * time.Second
 )
 
 func verifyPythonPackages() error {
@@ -562,6 +564,7 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 	}
 	leafPrefix := renderer.DisplayCommand() + " help "
 	observedRoutes := make(map[string]string, len(contractCommandIDsByRoute))
+	familyByRoute := make(map[string]string, len(contractCommandIDsByRoute))
 	for _, familyID := range familyIDs {
 		familyRoute := renderer.DisplayCommand("help", "family", familyID)
 		familyHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv("help", "family", familyID))
@@ -577,15 +580,24 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 			if !exists {
 				return fmt.Errorf("installed Python wheel family %s exposes route %q absent from its embedded CLI contract", familyID, leafRouteText)
 			}
-			if priorFamily, exists := observedRoutes[leafRouteText]; exists {
+			if priorFamily, exists := familyByRoute[leafRouteText]; exists {
 				return fmt.Errorf("installed Python wheel route %q is exposed by both %s and %s", leafRouteText, priorFamily, familyID)
 			}
-			observedRoutes[leafRouteText] = familyID
+			familyByRoute[leafRouteText] = familyID
 			helpArgs := append([]string{"help"}, strings.Split(leafRouteText, " ")...)
 			leafRoute := renderer.DisplayCommand(helpArgs...)
-			if _, err := runArgvWithEnvironment(consumer, environment, renderer.Argv(helpArgs...)); err != nil {
+			leafHelp, err := runArgvWithEnvironment(consumer, environment, renderer.Argv(helpArgs...))
+			if err != nil {
 				return fmt.Errorf("installed Python wheel leaf help route %q for command %s failed: %w", leafRoute, commandID, err)
 			}
+			helpIdentity, err := installedclicontract.AdmitHelpIdentity(leafHelp)
+			if err != nil {
+				return fmt.Errorf("installed Python wheel leaf help route %q has invalid identity: %w", leafRoute, err)
+			}
+			if helpIdentity.Route != leafRouteText {
+				return fmt.Errorf("installed Python wheel leaf help route=%q, want %q", helpIdentity.Route, leafRouteText)
+			}
+			observedRoutes[helpIdentity.Route] = helpIdentity.CommandID
 		}
 	}
 	if err := requireInstalledPythonCommandRouteBijection(observedRoutes, contractCommandIDsByRoute); err != nil {
@@ -678,24 +690,65 @@ func readInstalledPythonCLIContract(consumer string, environment []string, rende
 	if len(launcher) != 3 || launcher[1] != "-m" || launcher[2] != "agentic_proofkit" {
 		return nil, fmt.Errorf("installed Python wheel contract reader requires the Python module launcher")
 	}
-	const script = `from importlib.resources import files; print(files("agentic_proofkit").joinpath("proofkit", "cli-contract.v2.json").read_text(encoding="utf-8"), end="")`
-	content, err := runCommandWithEnvironment(consumer, environment, launcher[0], "-c", script)
+	script := fmt.Sprintf(`
+import os
+import stat
+import sys
+from importlib.resources import files
+
+limit = %d
+path = files("agentic_proofkit").joinpath("proofkit", "cli-contract.v2.json")
+with path.open("rb") as stream:
+    before = os.fstat(stream.fileno())
+    if not stat.S_ISREG(before.st_mode) or before.st_size < 1 or before.st_size > limit:
+        raise SystemExit("installed CLI contract resource is not a bounded regular file")
+    total = 0
+    while True:
+        chunk = stream.read(min(65536, limit + 1 - total))
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > limit:
+            raise SystemExit("installed CLI contract resource exceeds its byte limit")
+        sys.stdout.buffer.write(chunk)
+    after = os.fstat(stream.fileno())
+    if total != before.st_size or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
+        raise SystemExit("installed CLI contract resource changed during the read")
+`, installedclicontract.MaximumContractBytes)
+	ctx, cancel := context.WithTimeout(context.Background(), installedContractReadTimeout)
+	defer cancel()
+	result, err := workflowsmoke.RunProcessWithOutputLimits(ctx, workflowsmoke.ProcessCarrier{
+		Directory:   consumer,
+		Executable:  launcher[0],
+		Prefix:      []string{"-c", script},
+		Environment: environment,
+	}, workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinMustRemainUnread}, workflowsmoke.ProcessOutputLimits{
+		MaximumStdoutBytes: installedclicontract.MaximumContractBytes,
+		MaximumStderrBytes: 64 << 10,
+	})
 	if err != nil {
-		return nil, fmt.Errorf("read installed Python wheel CLI contract: %w\n%s", err, content)
+		return nil, fmt.Errorf("read installed Python wheel CLI contract: %w", err)
 	}
-	if len(content) == 0 || len(content) > 1<<20 {
-		return nil, fmt.Errorf("installed Python wheel CLI contract size must be between 1 and %d bytes", 1<<20)
+	if result.ExitCode != 0 {
+		return nil, fmt.Errorf("read installed Python wheel CLI contract exited with code %d", result.ExitCode)
 	}
-	return content, nil
+	if _, err := installedclicontract.Admit(result.Stdout); err != nil {
+		return nil, fmt.Errorf("admit installed Python wheel CLI contract resource: %w", err)
+	}
+	return result.Stdout, nil
 }
 
 func requireInstalledPythonCommandRouteBijection(observed map[string]string, expected map[string]string) error {
 	if len(observed) != len(expected) {
 		return fmt.Errorf("installed Python wheel family routes=%d embedded contract routes=%d", len(observed), len(expected))
 	}
-	for route := range expected {
-		if _, exists := observed[route]; !exists {
+	for route, commandID := range expected {
+		observedCommandID, exists := observed[route]
+		if !exists {
 			return fmt.Errorf("installed Python wheel family navigation omitted embedded contract route %q", route)
+		}
+		if observedCommandID != commandID {
+			return fmt.Errorf("installed Python wheel route %q command id=%q, want %q", route, observedCommandID, commandID)
 		}
 	}
 	return nil

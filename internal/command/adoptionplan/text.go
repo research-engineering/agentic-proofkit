@@ -3,6 +3,8 @@ package adoptionplan
 import (
 	"fmt"
 	"strings"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
 )
 
 // TextProjection derives bounded human coordinates from the same typed plan as
@@ -30,6 +32,9 @@ func TextProjection(plan Plan) ([]TextLine, error) {
 	for _, nonClaim := range boundaryNonClaims {
 		lines = append(lines, TextLine{Label: "Non-claim", Value: nonClaim})
 	}
+	for _, nonClaim := range repositoryinventory.NonClaims() {
+		lines = append(lines, TextLine{Label: "Inventory non-claim", Value: nonClaim})
+	}
 	if len(lines) > MaximumTextLines {
 		return nil, fmt.Errorf("adoption plan text exceeds line limit")
 	}
@@ -37,7 +42,11 @@ func TextProjection(plan Plan) ([]TextLine, error) {
 }
 
 func RenderText(lines []TextLine) (string, error) {
-	if len(lines) > MaximumTextLines {
+	return renderTextWithinLimits(lines, MaximumTextBytes, MaximumTextLines)
+}
+
+func renderTextWithinLimits(lines []TextLine, maximumBytes, maximumLines int) (string, error) {
+	if len(lines) > maximumLines {
 		return "", fmt.Errorf("adoption plan text exceeds line limit")
 	}
 	plain := make([]string, len(lines))
@@ -51,7 +60,7 @@ func RenderText(lines []TextLine) (string, error) {
 		}
 	}
 	text := strings.Join(plain, "\n") + "\n"
-	if len(text) > MaximumTextBytes {
+	if len(text) > maximumBytes {
 		return "", fmt.Errorf("adoption plan text exceeds byte limit")
 	}
 	return text, nil

@@ -15,7 +15,7 @@
     }
   ],
   "previousPublicAbiSha256": "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5",
-  "currentPublicAbiSha256": "sha256:7b36077db9c82ca005606f571e1f6c6e208ab5b35b95b4d9b885e6047f091b91",
+  "currentPublicAbiSha256": "sha256:5a238b80bfdbe22f0e1b76850dab9568c89faf303e4653bf017cdf9535f3d7ae",
   "removedCommandContract": {
     "command": "init",
     "defaultInvocationPreset": "all",
@@ -25,12 +25,12 @@
     {
       "command": "adopt-plan",
       "route": ["adopt", "plan"],
-      "outputContractSha256": "sha256:55f0852120ca978b9557553b1af8923a4d0b08c4dc794ba7751cb28d2414b7ec"
+      "outputContractSha256": "sha256:16583d956455cc360a13382e0d783e5590a2a19adedbb4bf9fc7b6dd10ee35b8"
     },
     {
       "command": "repository-inventory",
       "route": ["repository-inventory"],
-      "outputContractSha256": "sha256:5b0967fefb4abbfbc91027ff30ed6579c12e1f27d8310466cd4fd4d1f865552e"
+      "outputContractSha256": "sha256:474ac75c2ccaf66d248f4e96df51404d9a0e6c2341aa8278e91207f76b4c12d6"
     }
   ],
   "breakingChangeIds": [

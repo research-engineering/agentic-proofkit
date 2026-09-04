@@ -5,11 +5,18 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
-const maximumCommandRouteTokens = 4
+const (
+	MaximumContractBytes      = 1 << 20
+	MaximumCommands           = 512
+	MaximumPresetIDs          = 128
+	maximumCommandRouteTokens = 4
+	maximumHelpBytes          = 256 << 10
+)
 
 // Contract is the admitted package-artifact projection needed by installed
 // consumer witnesses. Its accessors return copies so callers cannot mutate it.
@@ -18,7 +25,15 @@ type Contract struct {
 	presetIDs         []string
 }
 
+type HelpIdentity struct {
+	CommandID string
+	Route     string
+}
+
 func Admit(content []byte) (Contract, error) {
+	if len(content) == 0 || len(content) > MaximumContractBytes {
+		return Contract{}, fmt.Errorf("installed CLI contract size must be between 1 and %d bytes", MaximumContractBytes)
+	}
 	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
 	if err != nil {
 		return Contract{}, fmt.Errorf("decode installed CLI contract: %w", err)
@@ -28,8 +43,8 @@ func Admit(content []byte) (Contract, error) {
 		return Contract{}, fmt.Errorf("installed CLI contract must be an object")
 	}
 	commands, ok := record["commands"].([]any)
-	if !ok || len(commands) == 0 {
-		return Contract{}, fmt.Errorf("installed CLI contract commands must be a non-empty array")
+	if !ok || len(commands) == 0 || len(commands) > MaximumCommands {
+		return Contract{}, fmt.Errorf("installed CLI contract commands must contain between 1 and %d entries", MaximumCommands)
 	}
 
 	commandIDsByRoute := make(map[string]string, len(commands))
@@ -69,11 +84,6 @@ func Admit(content []byte) (Contract, error) {
 		if _, exists := commandIDsByRoute[routeText]; exists {
 			return Contract{}, fmt.Errorf("installed CLI contract duplicates a command route")
 		}
-		for _, priorRoute := range admittedRoutes {
-			if strings.HasPrefix(routeText, priorRoute+" ") || strings.HasPrefix(priorRoute, routeText+" ") {
-				return Contract{}, fmt.Errorf("installed CLI contract has ambiguous command route prefixes")
-			}
-		}
 		commandIDsByRoute[routeText] = commandID
 		admittedRoutes = append(admittedRoutes, routeText)
 
@@ -88,7 +98,53 @@ func Admit(content []byte) (Contract, error) {
 			}
 		}
 	}
+	sort.Strings(admittedRoutes)
+	for index := 1; index < len(admittedRoutes); index++ {
+		if strings.HasPrefix(admittedRoutes[index], admittedRoutes[index-1]+" ") {
+			return Contract{}, fmt.Errorf("installed CLI contract has ambiguous command route prefixes")
+		}
+	}
 	return Contract{commandIDsByRoute: commandIDsByRoute, presetIDs: presetIDs}, nil
+}
+
+// AdmitHelpIdentity extracts the exact public command identity from one leaf
+// help response. Package verifiers use it to prove route-to-command ownership,
+// not merely route-set equality.
+func AdmitHelpIdentity(content []byte) (HelpIdentity, error) {
+	if len(content) == 0 || len(content) > maximumHelpBytes || !utf8.Valid(content) || bytes.IndexByte(content, 0) >= 0 {
+		return HelpIdentity{}, fmt.Errorf("installed CLI leaf help is not bounded UTF-8 text")
+	}
+	lines := strings.Split(string(content), "\n")
+	commandID, commandCount := helpField(lines, "Command ID:")
+	route, routeCount := helpField(lines, "Route:")
+	if commandCount != 1 || routeCount != 1 || !ValidRouteToken(commandID) {
+		return HelpIdentity{}, fmt.Errorf("installed CLI leaf help identity is invalid")
+	}
+	routeTokens := strings.Split(route, " ")
+	if len(routeTokens) == 0 || len(routeTokens) > maximumCommandRouteTokens {
+		return HelpIdentity{}, fmt.Errorf("installed CLI leaf help route is invalid")
+	}
+	for _, token := range routeTokens {
+		if !ValidRouteToken(token) {
+			return HelpIdentity{}, fmt.Errorf("installed CLI leaf help route is invalid")
+		}
+	}
+	return HelpIdentity{CommandID: commandID, Route: route}, nil
+}
+
+func helpField(lines []string, label string) (string, int) {
+	value := ""
+	count := 0
+	for index, line := range lines {
+		if line != label {
+			continue
+		}
+		count++
+		if index+1 < len(lines) && strings.HasPrefix(lines[index+1], "  ") && !strings.HasPrefix(lines[index+1], "   ") {
+			value = strings.TrimPrefix(lines[index+1], "  ")
+		}
+	}
+	return value, count
 }
 
 func (contract Contract) CommandIDsByRoute() map[string]string {
@@ -137,8 +193,8 @@ func admitPresetIDs(command map[string]any) ([]string, error) {
 		return nil, fmt.Errorf("installed CLI contract stack-preset flagChoices must be an object")
 	}
 	rawIDs, ok := choices["--preset"].([]any)
-	if !ok || len(rawIDs) == 0 {
-		return nil, fmt.Errorf("installed CLI contract stack-preset choices must be a non-empty array")
+	if !ok || len(rawIDs) == 0 || len(rawIDs) > MaximumPresetIDs {
+		return nil, fmt.Errorf("installed CLI contract stack-preset choices must contain between 1 and %d entries", MaximumPresetIDs)
 	}
 	ids := make([]string, 0, len(rawIDs))
 	seen := make(map[string]struct{}, len(rawIDs))

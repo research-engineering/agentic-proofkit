@@ -35,6 +35,23 @@ var boundaryNonClaims = []string{
 	"Stack hints are optional non-authoritative suggestions and cannot change the selected source-trust intent.",
 }
 
+var intentValues = []string{IntentAuditFromCode, IntentCodeBaseline, IntentFresh}
+
+// IntentValues returns the closed public source-trust vocabulary in canonical
+// order. CLI adapters consume this owner rather than repeating mode literals.
+func IntentValues() []string {
+	return append([]string(nil), intentValues...)
+}
+
+func IsIntent(value string) bool {
+	for _, intent := range intentValues {
+		if value == intent {
+			return true
+		}
+	}
+	return false
+}
+
 type TrustDeclaration struct {
 	CapabilityMapTrustMode *string
 	Class                  string
@@ -148,12 +165,19 @@ func finalize(plan Plan) (Plan, error) {
 		return Plan{}, err
 	}
 	plan.PlanID = planID
-	encoded, err := stablejson.Marshal(plan.JSONValue())
-	if err != nil {
+	if err := validateOutputByteLimit(plan, MaximumOutputBytes); err != nil {
 		return Plan{}, err
 	}
-	if len(encoded) > MaximumOutputBytes {
-		return Plan{}, fmt.Errorf("adoption plan exceeds output byte limit")
-	}
 	return plan, nil
+}
+
+func validateOutputByteLimit(plan Plan, maximum int) error {
+	encoded, err := stablejson.Marshal(plan.JSONValue())
+	if err != nil {
+		return err
+	}
+	if len(encoded) > maximum {
+		return fmt.Errorf("adoption plan exceeds output byte limit")
+	}
+	return nil
 }

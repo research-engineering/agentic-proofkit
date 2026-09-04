@@ -996,6 +996,7 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 		case slices.Equal(args, []string{"help", "stack-preset"}):
 			stdout = "Usage:\n  agentic-proofkit stack-preset --preset <" + strings.Join(choices, "|") + ">\n" +
 				"\nInstalled invocation:\n  " + stackInstalledInvocation + "\n" +
+				"\nCommand ID:\n  stack-preset\n\nRoute:\n  stack-preset\n" +
 				"Copyable preset commands:\n"
 			for _, choice := range choices {
 				stdout += "  " + presetRoutePrefix + choice + "\n"
@@ -1003,13 +1004,16 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 		case slices.Equal(args, []string{"help", "requirement-source-admission"}):
 			stdout = "Usage:\n  agentic-proofkit requirement-source-admission --input <path|-> [--input-pointer <pointer>]\n" +
 				"\nInstalled invocation:\n  " + requirementSourceInstalledInvocation + "\n" +
+				"\nCommand ID:\n  requirement-source-admission\n\nRoute:\n  requirement-source-admission\n" +
 				"Continue with the installed README first-valid-input example:\n  " + readmeContinuation + "\n"
 		case slices.Equal(args, []string{"help", "self-check"}):
 			stdout = "Usage:\n  agentic-proofkit self-check --input <path|->\n" +
-				"\nInstalled invocation:\n  " + selfCheckInstalledInvocation + "\n"
+				"\nInstalled invocation:\n  " + selfCheckInstalledInvocation + "\n" +
+				"\nCommand ID:\n  self-check\n\nRoute:\n  self-check\n"
 		case slices.Equal(args, []string{"help", "adopt", "plan"}):
 			stdout = "Usage:\n  agentic-proofkit adopt plan --mode <audit-from-code|code-baseline|fresh> --repo-root <path>\n" +
-				"\nInstalled invocation:\n  " + installedNPMExecCommandPrefix + "adopt plan --mode <audit-from-code|code-baseline|fresh> --repo-root <path>\n"
+				"\nInstalled invocation:\n  " + installedNPMExecCommandPrefix + "adopt plan --mode <audit-from-code|code-baseline|fresh> --repo-root <path>\n" +
+				"\nCommand ID:\n  adopt-plan\n\nRoute:\n  adopt plan\n"
 		case len(args) == 3 && args[0] == "stack-preset" && args[1] == "--preset":
 			seenPresets[args[2]] = struct{}{}
 			presetExecutionCounts[args[2]]++
@@ -1253,6 +1257,23 @@ func TestInstalledContractCommandRoutesRejectAmbiguousIdentity(t *testing.T) {
 				t.Fatalf("ambiguous installed contract route was admitted: %s", content)
 			}
 		})
+	}
+}
+
+func TestInstalledCommandRouteBijectionBindsCommandIdentity(t *testing.T) {
+	expected := map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}
+	if err := requireInstalledCommandRouteBijection(map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}, expected); err != nil {
+		t.Fatalf("exact route-to-command bijection rejected: %v", err)
+	}
+	mutants := []map[string]string{
+		{"adopt plan": "wrong-command", "self-check": "self-check"},
+		{"adopt plan": "adopt-plan"},
+		{"adopt plan": "adopt-plan", "self-check": "self-check", "extra": "extra"},
+	}
+	for index, mutant := range mutants {
+		if err := requireInstalledCommandRouteBijection(mutant, expected); err == nil {
+			t.Fatalf("route-to-command mutant %d was accepted", index)
+		}
 	}
 }
 

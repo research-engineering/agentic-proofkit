@@ -10,11 +10,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-var intentValues = map[string]struct{}{
-	IntentAuditFromCode: {},
-	IntentCodeBaseline:  {},
-	IntentFresh:         {},
-}
+var intentValueSet = func() map[string]struct{} {
+	values := make(map[string]struct{}, len(intentValues))
+	for _, value := range intentValues {
+		values[value] = struct{}{}
+	}
+	return values
+}()
 
 // AdmitOutput replays the plan's semantic owners and requires byte-canonical
 // equality with their deterministic projection.
@@ -23,7 +25,7 @@ func AdmitOutput(raw any) (Plan, error) {
 	if !ok {
 		return Plan{}, fmt.Errorf("adoption plan must be an object")
 	}
-	intent, err := admit.Enum(record["intent"], intentValues, "adoption plan intent")
+	intent, err := admit.Enum(record["intent"], intentValueSet, "adoption plan intent")
 	if err != nil {
 		return Plan{}, err
 	}

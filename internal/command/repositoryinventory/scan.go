@@ -115,6 +115,9 @@ func scanRoot(ctx context.Context, root *os.Root, policy scanPolicy) (Snapshot, 
 		if err != nil {
 			return Snapshot{}, err
 		}
+		if err := ctx.Err(); err != nil {
+			return Snapshot{}, err
+		}
 		actualAggregateBytes += int64(len(content))
 		if !utf8.Valid(content) || bytes.IndexByte(content, 0) >= 0 {
 			omissions.OmittedRecognized = append(omissions.OmittedRecognized, OmittedRecognizedEntry{Path: item.item.Path, Reason: OmissionNonText})
@@ -131,6 +134,9 @@ func scanRoot(ctx context.Context, root *os.Root, policy scanPolicy) (Snapshot, 
 	sort.Slice(omissions.OmittedRecognized, func(left, right int) bool {
 		return omissions.OmittedRecognized[left].Path < omissions.OmittedRecognized[right].Path
 	})
+	if err := ctx.Err(); err != nil {
+		return Snapshot{}, err
+	}
 	return finalize(Snapshot{Entries: observed, Omissions: omissions})
 }
 

@@ -106,6 +106,35 @@ func TestRunProcessAcceptsExactOutputBounds(t *testing.T) {
 	}
 }
 
+func TestRunProcessCustomOutputLimitsAreExact(t *testing.T) {
+	limits := workflowsmoke.ProcessOutputLimits{MaximumStdoutBytes: 1024, MaximumStderrBytes: 128}
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	result, err := workflowsmoke.RunProcessWithOutputLimits(ctx, helperCarrier("custom-output-boundary"), workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinBytes}, limits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(result.Stdout) != limits.MaximumStdoutBytes || len(result.Stderr) != limits.MaximumStderrBytes {
+		t.Fatalf("output lengths=(%d,%d), want (%d,%d)", len(result.Stdout), len(result.Stderr), limits.MaximumStdoutBytes, limits.MaximumStderrBytes)
+	}
+
+	limits.MaximumStdoutBytes--
+	if _, err := workflowsmoke.RunProcessWithOutputLimits(ctx, helperCarrier("custom-output-boundary"), workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinBytes}, limits); err == nil || !strings.Contains(err.Error(), "stdout exceeds") {
+		t.Fatalf("one-over custom stdout error=%v, want overflow", err)
+	}
+}
+
+func TestRunProcessRejectsInvalidCustomOutputLimitsBeforeStart(t *testing.T) {
+	for _, limits := range []workflowsmoke.ProcessOutputLimits{
+		{},
+		{MaximumStdoutBytes: 1, MaximumStderrBytes: 9 << 20},
+	} {
+		if _, err := workflowsmoke.RunProcessWithOutputLimits(t.Context(), helperCarrier("hang"), workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinBytes}, limits); err == nil {
+			t.Fatalf("invalid limits %#v were accepted", limits)
+		}
+	}
+}
+
 func TestRunProcessProvesUnreadStdin(t *testing.T) {
 	t.Run("non-reader exits", func(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
@@ -143,6 +172,9 @@ func TestWorkflowSmokeProcessHelper(t *testing.T) {
 	case "output-boundary":
 		_, _ = os.Stdout.Write(bytes.Repeat([]byte{'x'}, 256*1024))
 		_, _ = os.Stderr.Write(bytes.Repeat([]byte{'x'}, 64*1024))
+	case "custom-output-boundary":
+		_, _ = os.Stdout.Write(bytes.Repeat([]byte{'x'}, 1024))
+		_, _ = os.Stderr.Write(bytes.Repeat([]byte{'x'}, 128))
 	case "read-stdin":
 		_, _ = io.Copy(io.Discard, os.Stdin)
 	case "no-read":

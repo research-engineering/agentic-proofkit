@@ -1,7 +1,10 @@
 package installedclicontract
 
 import (
+	"bytes"
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -74,5 +77,66 @@ func TestAdmitCommandRouteTokenBoundariesAreExact(t *testing.T) {
 				t.Fatalf("Admit() error = %v", err)
 			}
 		})
+	}
+}
+
+func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
+	base := []byte(`{"commands":[{"command":"one"}]}`)
+	exactBytes := append(append([]byte(nil), base...), bytes.Repeat([]byte(" "), MaximumContractBytes-len(base))...)
+	if _, err := Admit(exactBytes); err != nil {
+		t.Fatalf("exact byte limit rejected: %v", err)
+	}
+	if _, err := Admit(append(exactBytes, ' ')); err == nil {
+		t.Fatal("one-over contract byte limit was accepted")
+	}
+
+	commands := make([]string, MaximumCommands+1)
+	for index := range commands {
+		commands[index] = fmt.Sprintf(`{"command":"command-%d"}`, index)
+	}
+	contract := func(count int) []byte {
+		return []byte(`{"commands":[` + strings.Join(commands[:count], ",") + `]}`)
+	}
+	if _, err := Admit(contract(MaximumCommands)); err != nil {
+		t.Fatalf("exact command cardinality rejected: %v", err)
+	}
+	if _, err := Admit(contract(MaximumCommands + 1)); err == nil {
+		t.Fatal("one-over command cardinality was accepted")
+	}
+
+	presets := make([]string, MaximumPresetIDs+1)
+	for index := range presets {
+		presets[index] = fmt.Sprintf(`"preset-%03d"`, index)
+	}
+	presetContract := func(count int) []byte {
+		return []byte(`{"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":[` + strings.Join(presets[:count], ",") + `]}}}]}`)
+	}
+	if _, err := Admit(presetContract(MaximumPresetIDs)); err != nil {
+		t.Fatalf("exact preset cardinality rejected: %v", err)
+	}
+	if _, err := Admit(presetContract(MaximumPresetIDs + 1)); err == nil {
+		t.Fatal("one-over preset cardinality was accepted")
+	}
+}
+
+func TestAdmitHelpIdentityRequiresExactCommandAndRoute(t *testing.T) {
+	help := []byte("Usage:\n  agentic-proofkit adopt plan\n\nCommand ID:\n  adopt-plan\n\nRoute:\n  adopt plan\n")
+	identity, err := AdmitHelpIdentity(help)
+	if err != nil {
+		t.Fatalf("AdmitHelpIdentity() error = %v", err)
+	}
+	if identity.CommandID != "adopt-plan" || identity.Route != "adopt plan" {
+		t.Fatalf("help identity = %#v", identity)
+	}
+	mutants := [][]byte{
+		bytes.Replace(help, []byte("adopt-plan"), []byte("Wrong_ID"), 1),
+		append(append([]byte(nil), help...), []byte("Command ID:\n  adopt-plan\n")...),
+		bytes.Replace(help, []byte("  adopt plan\n"), []byte("  adopt  plan\n"), 1),
+		append([]byte(nil), bytes.Repeat([]byte("x"), maximumHelpBytes+1)...),
+	}
+	for index, mutant := range mutants {
+		if _, err := AdmitHelpIdentity(mutant); err == nil {
+			t.Fatalf("help identity mutant %d was accepted", index)
+		}
 	}
 }

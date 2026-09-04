@@ -436,6 +436,33 @@ func TestInventoryIdentityBindsEverySemanticOperand(t *testing.T) {
 			}
 		})
 	}
+	identity := identityValue(base)
+	assertExactKeys(t, identity, []string{"entries", "inventoryKind", "nonClaims", "omissions", "policyId", "schemaVersion", "scope"})
+	identityBytes, err := stablejson.Marshal(identity)
+	if err != nil {
+		t.Fatalf("marshal identity value: %v", err)
+	}
+	wantID := digest.SHA256BytesRef(identityBytes)
+	if base.InventoryID != wantID {
+		t.Fatalf("inventory identity = %q, want full-record identity %q", base.InventoryID, wantID)
+	}
+}
+
+func TestInventoryOutputByteLimitIsExact(t *testing.T) {
+	snapshot, err := finalize(Snapshot{})
+	if err != nil {
+		t.Fatalf("finalize() error = %v", err)
+	}
+	encoded, err := stablejson.Marshal(snapshot.JSONValue())
+	if err != nil {
+		t.Fatalf("stablejson.Marshal() error = %v", err)
+	}
+	if err := validateOutputByteLimit(snapshot, len(encoded)); err != nil {
+		t.Fatalf("exact output byte limit rejected: %v", err)
+	}
+	if err := validateOutputByteLimit(snapshot, len(encoded)-1); err == nil {
+		t.Fatal("one-over output survived the byte limit")
+	}
 }
 
 func TestScanHonorsCancellationBeforeFilesystemAccess(t *testing.T) {
@@ -503,6 +530,18 @@ func TestAdmitOutputRejectsIdentityAndPartitionDrift(t *testing.T) {
 			t.Fatalf("AdmitOutput() error = %v, want overlap rejection", err)
 		}
 	})
+}
+
+func assertExactKeys(t *testing.T, record map[string]any, want []string) {
+	t.Helper()
+	got := make([]string, 0, len(record))
+	for key := range record {
+		got = append(got, key)
+	}
+	slices.Sort(got)
+	if !slices.Equal(got, want) {
+		t.Fatalf("record keys = %v, want %v", got, want)
+	}
 }
 
 func writeInventoryFixture(t *testing.T, root, name string, content []byte) {

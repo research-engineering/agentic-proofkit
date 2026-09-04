@@ -90,8 +90,8 @@ func parseAdoptionFrontDoorArgs(command string, args []string) (adoptionFrontDoo
 			}
 			options.format = value
 		case "--mode":
-			if value != adoptionplan.IntentFresh && value != adoptionplan.IntentCodeBaseline && value != adoptionplan.IntentAuditFromCode {
-				return adoptionFrontDoorArgs{}, fmt.Errorf("--mode requires one of: audit-from-code, code-baseline, fresh")
+			if !adoptionplan.IsIntent(value) {
+				return adoptionFrontDoorArgs{}, fmt.Errorf("--mode requires one of: %s", strings.Join(adoptionplan.IntentValues(), ", "))
 			}
 			options.mode = value
 		case "--stack":
@@ -135,7 +135,7 @@ func missingAdoptionFrontDoorValue(flag string) error {
 	case "--format":
 		return fmt.Errorf("--format requires one of: json, text")
 	case "--mode":
-		return fmt.Errorf("--mode requires one of: audit-from-code, code-baseline, fresh")
+		return fmt.Errorf("--mode requires one of: %s", strings.Join(adoptionplan.IntentValues(), ", "))
 	case "--repo-root":
 		return fmt.Errorf("--repo-root requires a path")
 	case "--stack":

@@ -58,15 +58,16 @@ func TestExactDisplayedCommandRoutesAdmitBoundedMultiTokenRoutes(t *testing.T) {
 func TestInstalledPythonCommandRoutesRequireExactContractBijection(t *testing.T) {
 	expected := map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}
 	if err := requireInstalledPythonCommandRouteBijection(
-		map[string]string{"adopt plan": "adoption", "self-check": "quality"},
+		map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"},
 		expected,
 	); err != nil {
 		t.Fatalf("exact route bijection rejected: %v", err)
 	}
 	mutants := []map[string]string{
-		{"adopt plan": "adoption"},
-		{"adopt plan": "adoption", "other": "quality"},
-		{"adopt plan": "adoption", "self-check": "quality", "other": "quality"},
+		{"adopt plan": "adopt-plan"},
+		{"adopt plan": "wrong-command", "self-check": "self-check"},
+		{"adopt plan": "adopt-plan", "other": "self-check"},
+		{"adopt plan": "adopt-plan", "self-check": "self-check", "other": "other"},
 	}
 	for _, mutant := range mutants {
 		if err := requireInstalledPythonCommandRouteBijection(mutant, expected); err == nil {

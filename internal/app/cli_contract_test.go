@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "7b36077db9c82ca005606f571e1f6c6e208ab5b35b95b4d9b885e6047f091b91"
+	cliContractPublicABISHA256               = "5a238b80bfdbe22f0e1b76850dab9568c89faf303e4653bf017cdf9535f3d7ae"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -798,6 +798,14 @@ func TestProofkitContractMapRoutesRequiredInputCommands(t *testing.T) {
 }
 
 func TestCLIContractPublicABIGoldenStable(t *testing.T) {
+	got := currentCLIContractPublicABISHA256(t)
+	if got != cliContractPublicABISHA256 {
+		t.Fatalf("public CLI ABI hash drifted: got %s want %s", got, cliContractPublicABISHA256)
+	}
+}
+
+func currentCLIContractPublicABISHA256(t *testing.T) string {
+	t.Helper()
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
 	commands := []any{}
@@ -849,10 +857,7 @@ func TestCLIContractPublicABIGoldenStable(t *testing.T) {
 		t.Fatalf("marshal CLI ABI projection: %v", err)
 	}
 	sum := sha256.Sum256(encoded)
-	got := fmt.Sprintf("%x", sum[:])
-	if got != cliContractPublicABISHA256 {
-		t.Fatalf("public CLI ABI hash drifted: got %s want %s", got, cliContractPublicABISHA256)
-	}
+	return fmt.Sprintf("%x", sum[:])
 }
 
 func cliContractDefinitionMap(t *testing.T, raw []any) map[string]map[string]any {

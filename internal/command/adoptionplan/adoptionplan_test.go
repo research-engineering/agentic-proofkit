@@ -6,11 +6,13 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/repositoryinventory"
+	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
@@ -65,21 +67,56 @@ func TestBuildStackHintCannotChangeIntentTrustOrTasks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build(without stack) error = %v", err)
 	}
-	withStack, err := Build(IntentAuditFromCode, inventory, "python_typescript_service")
+	seenPlanIDs := map[string]string{withoutStack.PlanID: "none"}
+	for _, presetID := range stackpreset.IDs() {
+		withStack, err := Build(IntentAuditFromCode, inventory, presetID)
+		if err != nil {
+			t.Fatalf("Build(%s) error = %v", presetID, err)
+		}
+		if withStack.StackHint == nil || withStack.StackHint.PresetID != presetID {
+			t.Fatalf("stack hint = %#v, want %s", withStack.StackHint, presetID)
+		}
+		if withoutStack.Intent != withStack.Intent || !reflect.DeepEqual(withoutStack.TrustDeclaration, withStack.TrustDeclaration) || !reflect.DeepEqual(withoutStack.Packet.Tasks, withStack.Packet.Tasks) {
+			t.Fatalf("stack %s changed authority semantics:\nwithout=%#v\nwith=%#v", presetID, withoutStack, withStack)
+		}
+		if prior, duplicate := seenPlanIDs[withStack.PlanID]; duplicate {
+			t.Fatalf("stack %s shares plan identity with %s", presetID, prior)
+		}
+		seenPlanIDs[withStack.PlanID] = presetID
+		if withoutStack.Inventory.InventoryID != withStack.Inventory.InventoryID {
+			t.Fatalf("stack %s changed repository inventory", presetID)
+		}
+	}
+}
+
+func TestPlanIdentityBindsIntentAndInventory(t *testing.T) {
+	inventory := adoptionInventory(t)
+	fresh, err := Build(IntentFresh, inventory, "")
 	if err != nil {
-		t.Fatalf("Build(with stack) error = %v", err)
+		t.Fatalf("Build(fresh) error = %v", err)
 	}
-	if withStack.StackHint == nil || withStack.StackHint.PresetID != "python_typescript_service" {
-		t.Fatalf("stack hint = %#v, want selected preset", withStack.StackHint)
+	baseline, err := Build(IntentCodeBaseline, inventory, "")
+	if err != nil {
+		t.Fatalf("Build(baseline) error = %v", err)
 	}
-	if withoutStack.Intent != withStack.Intent || !reflect.DeepEqual(withoutStack.TrustDeclaration, withStack.TrustDeclaration) || !reflect.DeepEqual(withoutStack.Packet.Tasks, withStack.Packet.Tasks) {
-		t.Fatalf("stack selection changed authority semantics:\nwithout=%#v\nwith=%#v", withoutStack, withStack)
+	if fresh.PlanID == baseline.PlanID {
+		t.Fatal("plan identity did not bind source-trust intent")
 	}
-	if withoutStack.PlanID == withStack.PlanID {
-		t.Fatal("plan identity did not bind stack selection")
+
+	changedRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(changedRoot, "README.md"), []byte("# Changed\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
 	}
-	if withoutStack.Inventory.InventoryID != withStack.Inventory.InventoryID {
-		t.Fatal("stack selection changed repository inventory")
+	changedInventory, err := repositoryinventory.Scan(context.Background(), changedRoot)
+	if err != nil {
+		t.Fatalf("repositoryinventory.Scan() error = %v", err)
+	}
+	changed, err := Build(IntentFresh, changedInventory, "")
+	if err != nil {
+		t.Fatalf("Build(changed inventory) error = %v", err)
+	}
+	if fresh.PlanID == changed.PlanID {
+		t.Fatal("plan identity did not bind repository inventory")
 	}
 }
 
@@ -157,14 +194,76 @@ func TestTextProjectionPreservesJSONPlanSemantics(t *testing.T) {
 			t.Fatalf("text projection omits task %q", task.TaskID)
 		}
 	}
-	for _, nonClaim := range boundaryNonClaims {
-		if !strings.Contains(text, nonClaim) {
-			t.Fatalf("text projection omits non-claim %q", nonClaim)
+	for _, nonClaim := range collectAuthorityNonClaims(plan.JSONValue()) {
+		if strings.Count(text, nonClaim) != 1 {
+			t.Fatalf("text projection must contain non-claim exactly once %q", nonClaim)
 		}
 	}
 	if len(text) > MaximumTextBytes || strings.Count(text, "\n") > MaximumTextLines {
 		t.Fatalf("text projection exceeds bounds: bytes=%d lines=%d", len(text), strings.Count(text, "\n"))
 	}
+}
+
+func TestAdoptionPlanOutputAndTextBoundsAreExact(t *testing.T) {
+	plan, err := Build(IntentFresh, adoptionInventory(t), "")
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	encoded, err := stablejson.Marshal(plan.JSONValue())
+	if err != nil {
+		t.Fatalf("stablejson.Marshal() error = %v", err)
+	}
+	if err := validateOutputByteLimit(plan, len(encoded)); err != nil {
+		t.Fatalf("exact plan output byte limit rejected: %v", err)
+	}
+	if err := validateOutputByteLimit(plan, len(encoded)-1); err == nil {
+		t.Fatal("one-over plan output survived the byte limit")
+	}
+
+	exactByteLines := []TextLine{{Label: "L", Value: strings.Repeat("x", MaximumTextBytes-4)}}
+	if text, err := renderTextWithinLimits(exactByteLines, MaximumTextBytes, MaximumTextLines); err != nil || len(text) != MaximumTextBytes {
+		t.Fatalf("exact text byte limit: bytes=%d error=%v", len(text), err)
+	}
+	overByteLines := []TextLine{{Label: "L", Value: strings.Repeat("x", MaximumTextBytes-3)}}
+	if _, err := renderTextWithinLimits(overByteLines, MaximumTextBytes, MaximumTextLines); err == nil {
+		t.Fatal("one-over text survived the byte limit")
+	}
+	exactLineCount := make([]TextLine, MaximumTextLines)
+	for index := range exactLineCount {
+		exactLineCount[index] = TextLine{Label: "L"}
+	}
+	if _, err := renderTextWithinLimits(exactLineCount, MaximumTextBytes, MaximumTextLines); err != nil {
+		t.Fatalf("exact text line limit rejected: %v", err)
+	}
+	if _, err := renderTextWithinLimits(append(exactLineCount, TextLine{Label: "L"}), MaximumTextBytes, MaximumTextLines); err == nil {
+		t.Fatal("one-over text survived the line limit")
+	}
+}
+
+func collectAuthorityNonClaims(value any) []string {
+	result := []string{}
+	var visit func(any)
+	visit = func(current any) {
+		switch typed := current.(type) {
+		case map[string]any:
+			for key, child := range typed {
+				if key == "nonClaims" {
+					for _, raw := range child.([]any) {
+						result = append(result, raw.(string))
+					}
+					continue
+				}
+				visit(child)
+			}
+		case []any:
+			for _, child := range typed {
+				visit(child)
+			}
+		}
+	}
+	visit(value)
+	slices.Sort(result)
+	return result
 }
 
 func adoptionInventory(t *testing.T) repositoryinventory.Snapshot {

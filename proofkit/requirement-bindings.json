@@ -1162,6 +1162,10 @@
         {
           "selector": "TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift",
           "command": "go test ./internal/tools/packageverify -run '^TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift$'"
+        },
+        {
+          "selector": "TestInstalledCommandRouteBijectionBindsCommandIdentity",
+          "command": "go test ./internal/tools/packageverify -run '^TestInstalledCommandRouteBijectionBindsCommandIdentity$'"
         }
       ],
       "commandIds": [
@@ -1366,6 +1370,10 @@
         {
           "selector": "TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM",
           "command": "go test ./internal/tools/pythonpackage -run '^TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM$'"
+        },
+        {
+          "selector": "TestInstalledPythonCommandRoutesRequireExactContractBijection",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestInstalledPythonCommandRoutesRequireExactContractBijection$'"
         }
       ],
       "commandIds": [
@@ -5251,6 +5259,10 @@
         {
           "selector": "TestGuidanceSlotPredicates",
           "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidanceSlotPredicates$'"
+        },
+        {
+          "selector": "TestGuidanceReferenceIsCompactAndOwnerBound",
+          "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidanceReferenceIsCompactAndOwnerBound$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5413,6 +5425,14 @@
         {
           "selector": "TestVerifyRejectsCarrierContractMutations",
           "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyRejectsCarrierContractMutations$'"
+        },
+        {
+          "selector": "TestRunProcessCustomOutputLimitsAreExact",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessCustomOutputLimitsAreExact$'"
+        },
+        {
+          "selector": "TestRunProcessRejectsInvalidCustomOutputLimitsBeforeStart",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestRunProcessRejectsInvalidCustomOutputLimitsBeforeStart$'"
         }
       ],
       "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
@@ -5449,6 +5469,10 @@
           "command": "go test ./internal/command/repositoryinventory -run '^TestScanRejectsRecognizedSymlinkWithoutReadingTarget$'"
         },
         {
+          "selector": "TestScanDoesNotFollowUnknownSymlink",
+          "command": "go test ./internal/command/repositoryinventory -run '^TestScanDoesNotFollowUnknownSymlink$'"
+        },
+        {
           "selector": "TestScanEnforcesPreflightBoundsAndExplicitOmissions",
           "command": "go test ./internal/command/repositoryinventory -run '^TestScanEnforcesPreflightBoundsAndExplicitOmissions$'"
         },
@@ -5461,12 +5485,31 @@
           "command": "go test ./internal/command/repositoryinventory -run '^TestInventoryIdentityBindsEverySemanticOperand$'"
         },
         {
+          "selector": "TestInventoryOutputByteLimitIsExact",
+          "command": "go test ./internal/command/repositoryinventory -run '^TestInventoryOutputByteLimitIsExact$'"
+        },
+        {
           "selector": "TestCatalogRolePolicyIsExact",
           "command": "go test ./internal/command/repositoryinventory -run '^TestCatalogRolePolicyIsExact$'"
         },
         {
           "selector": "TestReadRootInventoryClassifiesPartialBatchesWithoutRetainingUnknownNames",
           "command": "go test ./internal/command/repositoryinventory -run '^TestReadRootInventoryClassifiesPartialBatchesWithoutRetainingUnknownNames$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-027",
+      "scenarioId": "proofkit.spec-proof-core.adoption-inventory-nonblocking-open",
+      "witnessId": "proofkit.repository-inventory.nonblocking-open-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/repositoryinventory/fifo_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestScanRejectsFIFOReplacementWithoutBlocking",
+          "command": "go test ./internal/command/repositoryinventory -run '^TestScanRejectsFIFOReplacementWithoutBlocking$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5488,8 +5531,54 @@
           "command": "go test ./internal/command/adoptionplan -run '^TestBuildStackHintCannotChangeIntentTrustOrTasks$'"
         },
         {
+          "selector": "TestPlanIdentityBindsIntentAndInventory",
+          "command": "go test ./internal/command/adoptionplan -run '^TestPlanIdentityBindsIntentAndInventory$'"
+        },
+        {
+          "selector": "TestBuildRejectsUnknownIntentPresetAndForgedInventory",
+          "command": "go test ./internal/command/adoptionplan -run '^TestBuildRejectsUnknownIntentPresetAndForgedInventory$'"
+        },
+        {
           "selector": "TestPlanWireAdmissionIsDeterministicAndOwnerClosed",
           "command": "go test ./internal/command/adoptionplan -run '^TestPlanWireAdmissionIsDeterministicAndOwnerClosed$'"
+        },
+        {
+          "selector": "TestTextProjectionPreservesJSONPlanSemantics",
+          "command": "go test ./internal/command/adoptionplan -run '^TestTextProjectionPreservesJSONPlanSemantics$'"
+        },
+        {
+          "selector": "TestAdoptionPlanOutputAndTextBoundsAreExact",
+          "command": "go test ./internal/command/adoptionplan -run '^TestAdoptionPlanOutputAndTextBoundsAreExact$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-027",
+      "scenarioId": "proofkit.spec-proof-core.adoption-plan-observational-stack",
+      "witnessId": "proofkit.adoption-plan.observational-stack-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "internal/command/adoptionplan/repository_classes_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPlanKeepsRepositoryClassesObservationalAndStackNeutral",
+          "command": "go test ./internal/command/adoptionplan -run '^TestPlanKeepsRepositoryClassesObservationalAndStackNeutral$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-027",
+      "scenarioId": "proofkit.spec-proof-core.adoption-guidance-reference-closure",
+      "witnessId": "proofkit.adoption-plan.guidance-reference-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/nativeevidenceguidance/guidance_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGuidanceReferenceIsCompactAndOwnerBound",
+          "command": "go test ./internal/command/nativeevidenceguidance -run '^TestGuidanceReferenceIsCompactAndOwnerBound$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

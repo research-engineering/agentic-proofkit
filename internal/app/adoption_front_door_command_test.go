@@ -3,6 +3,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -19,6 +20,13 @@ func TestAdoptionFrontDoorCLI(t *testing.T) {
 	writeAdoptionFixture(t, repositoryRoot, "README.md", "# Pilot\n")
 	writeAdoptionFixture(t, repositoryRoot, "pyproject.toml", "[project]\nname = \"pilot\"\n")
 	writeAdoptionFixture(t, repositoryRoot, "private-notes.txt", "opaque\n")
+	descriptor, ok := commandDescriptorFor("adopt-plan")
+	if !ok {
+		t.Fatal("adopt-plan descriptor missing")
+	}
+	if !slices.Equal(descriptor.flagValueChoices["--mode"], adoptionplan.IntentValues()) {
+		t.Fatalf("adopt-plan mode choices = %v, want owner values %v", descriptor.flagValueChoices["--mode"], adoptionplan.IntentValues())
+	}
 
 	t.Run("public route and owner-closed JSON", func(t *testing.T) {
 		for _, item := range []struct {
@@ -121,8 +129,18 @@ func TestAdoptionFrontDoorCLI(t *testing.T) {
 			args []string
 			want string
 		}{
+			{args: []string{"adopt", "plan"}, want: "requires --mode"},
+			{args: []string{"adopt", "plan", "--mode", "fresh"}, want: "requires --repo-root"},
+			{args: []string{"adopt", "plan", "--repo-root", missingRoot}, want: "requires --mode"},
+			{args: []string{"adopt", "plan", "--repo-root", missingRoot, "--mode"}, want: "--mode requires one of"},
+			{args: []string{"adopt", "plan", "--mode", "fresh", "--repo-root"}, want: "--repo-root requires a path"},
 			{args: []string{"adopt", "plan", "--mode", "unknown", "--repo-root", missingRoot}, want: "--mode requires one of"},
 			{args: []string{"adopt", "plan", "--mode", "fresh", "--repo-root", missingRoot, "--stack", "unknown"}, want: "--stack requires one of"},
+			{args: []string{"adopt", "plan", "--mode", "fresh", "--mode", "fresh", "--repo-root", missingRoot}, want: "--mode may be specified only once"},
+			{args: []string{"adopt", "plan", "--mode", "fresh", "--repo-root", missingRoot, "--format", "yaml"}, want: "--format requires one of"},
+			{args: []string{"adopt", "plan", "--mode", "fresh", "--repo-root", missingRoot, "--format", "text", "--color", "always"}, want: "--color requires one of"},
+			{args: []string{"adopt", "plan", "--mode", "fresh", "--repo-root", missingRoot, "--unknown", "value"}, want: "unsupported argument"},
+			{args: []string{"repository-inventory", "--repo-root", missingRoot, "--mode", "fresh"}, want: "unsupported argument"},
 			{args: []string{"adopt", "plan", "--mode", "fresh", "--repo-root", missingRoot, "--color", "never"}, want: "adopt plan --color requires --format text"},
 			{args: []string{"adopt-plan", "--mode", "fresh", "--repo-root", repositoryRoot}, want: "unsupported command: adopt-plan"},
 		} {

@@ -197,7 +197,7 @@ func verifyFailure(ctx context.Context, run Runner, label string, invocation Inv
 }
 
 func verifyExactJSONObject(result Result, expected map[string]any, label string) error {
-	actual, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), maximumStdoutBytes)
+	actual, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), defaultMaximumStdoutBytes)
 	if err != nil {
 		return fmt.Errorf("%s stdout must contain exactly one strict JSON value: %w", label, err)
 	}

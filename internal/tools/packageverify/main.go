@@ -1799,6 +1799,7 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 	requirementSourceHelpFound := false
 	allLeafRoutes := make([]installedHelpRoute, 0, len(contractCommandIDsByRoute))
 	familyByLeafRoute := make(map[string]string, len(contractCommandIDsByRoute))
+	observedCommandIDsByRoute := make(map[string]string, len(contractCommandIDsByRoute))
 	for _, familyRoute := range familyRoutes {
 		family, err := binaryExecute(consumer, nil, familyRoute.Argv...)
 		if err != nil {
@@ -1819,9 +1820,6 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 			allLeafRoutes = append(allLeafRoutes, leafRoute)
 		}
 	}
-	if err := requireInstalledCommandRouteBijection(familyByLeafRoute, contractCommandIDsByRoute); err != nil {
-		return err
-	}
 	for _, leafRoute := range allLeafRoutes {
 		leafHelp, err := binaryExecute(consumer, nil, leafRoute.Argv...)
 		if err != nil {
@@ -1833,6 +1831,14 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 		if err := requireInstalledInvocationSyntax(leafHelp.Stdout, leafRoute.Route); err != nil {
 			return err
 		}
+		helpIdentity, err := installedclicontract.AdmitHelpIdentity(leafHelp.Stdout)
+		if err != nil {
+			return fmt.Errorf("outside consumer %s help identity is invalid: %w", leafRoute.ID, err)
+		}
+		if helpIdentity.Route != leafRoute.Route {
+			return fmt.Errorf("outside consumer help route=%q, want %q", helpIdentity.Route, leafRoute.Route)
+		}
+		observedCommandIDsByRoute[helpIdentity.Route] = helpIdentity.CommandID
 		if leafRoute.Route == multiTokenRoute.Route && !bytes.Equal(leafHelp.Stdout, transportMultiTokenHelp.Stdout) {
 			return fmt.Errorf("outside consumer multi-token route differs between npm transport and direct installed binary")
 		}
@@ -1850,6 +1856,9 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 			requirementSourceHelp = leafHelp
 			requirementSourceHelpFound = true
 		}
+	}
+	if err := requireInstalledCommandRouteBijection(observedCommandIDsByRoute, contractCommandIDsByRoute); err != nil {
+		return err
 	}
 	if !stackHelpFound {
 		return fmt.Errorf("outside consumer family navigation did not expose stack-preset")
@@ -1942,9 +1951,13 @@ func requireInstalledCommandRouteBijection(observed map[string]string, expected 
 	if len(observed) != len(expected) {
 		return fmt.Errorf("outside consumer family command routes=%d installed contract routes=%d", len(observed), len(expected))
 	}
-	for route := range expected {
-		if _, exists := observed[route]; !exists {
+	for route, commandID := range expected {
+		observedCommandID, exists := observed[route]
+		if !exists {
 			return fmt.Errorf("outside consumer family navigation omitted installed contract route %q", route)
+		}
+		if observedCommandID != commandID {
+			return fmt.Errorf("outside consumer route %q command id=%q, want %q", route, observedCommandID, commandID)
 		}
 	}
 	return nil

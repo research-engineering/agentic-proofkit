@@ -14,10 +14,18 @@ import (
 )
 
 const (
-	processWaitDelay   = 2 * time.Second
-	maximumStdoutBytes = 256 * 1024
-	maximumStderrBytes = 64 * 1024
+	processWaitDelay          = 2 * time.Second
+	maximumProcessOutputBytes = 8 << 20
+	defaultMaximumStdoutBytes = 256 << 10
+	defaultMaximumStderrBytes = 64 << 10
 )
+
+// ProcessOutputLimits bounds the memory retained from one process invocation.
+// Both values must be positive and no greater than the package hard limit.
+type ProcessOutputLimits struct {
+	MaximumStdoutBytes int
+	MaximumStderrBytes int
+}
 
 // ProcessCarrier identifies one installed executable and any fixed argv prefix.
 type ProcessCarrier struct {
@@ -37,8 +45,20 @@ func VerifyProcess(ctx context.Context, carrier ProcessCarrier) error {
 // RunProcess executes one bounded carrier invocation and terminates its whole
 // process group before returning on every post-start path.
 func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocation) (Result, error) {
+	return RunProcessWithOutputLimits(ctx, carrier, invocation, ProcessOutputLimits{
+		MaximumStdoutBytes: defaultMaximumStdoutBytes,
+		MaximumStderrBytes: defaultMaximumStderrBytes,
+	})
+}
+
+// RunProcessWithOutputLimits executes one invocation with caller-selected,
+// package-bounded stdout and stderr limits.
+func RunProcessWithOutputLimits(ctx context.Context, carrier ProcessCarrier, invocation Invocation, limits ProcessOutputLimits) (Result, error) {
 	if ctx == nil || carrier.Executable == "" {
 		return Result{}, fmt.Errorf("process carrier requires a context and executable")
+	}
+	if err := admitProcessOutputLimits(limits); err != nil {
+		return Result{}, err
 	}
 	if invocation.StdinClass != StdinBytes && invocation.StdinClass != StdinMustRemainUnread {
 		return Result{}, fmt.Errorf("process carrier received an unsupported stdin class")
@@ -53,8 +73,8 @@ func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocati
 		command.Env = append([]string(nil), carrier.Environment...)
 	}
 	processgroup.Configure(command)
-	stdout := newBoundedBuffer(maximumStdoutBytes, cancel)
-	stderr := newBoundedBuffer(maximumStderrBytes, cancel)
+	stdout := newBoundedBuffer(limits.MaximumStdoutBytes, cancel)
+	stderr := newBoundedBuffer(limits.MaximumStderrBytes, cancel)
 	command.Stdout = stdout
 	command.Stderr = stderr
 	var stdinRead *os.File
@@ -78,10 +98,10 @@ func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocati
 		return Result{}, fmt.Errorf("terminate process carrier group: %w", cleanupErr)
 	}
 	if stdout.Overflowed() {
-		return Result{}, fmt.Errorf("process carrier stdout exceeds %d bytes", maximumStdoutBytes)
+		return Result{}, fmt.Errorf("process carrier stdout exceeds %d bytes", limits.MaximumStdoutBytes)
 	}
 	if stderr.Overflowed() {
-		return Result{}, fmt.Errorf("process carrier stderr exceeds %d bytes", maximumStderrBytes)
+		return Result{}, fmt.Errorf("process carrier stderr exceeds %d bytes", limits.MaximumStderrBytes)
 	}
 	if ctx.Err() != nil {
 		return Result{}, fmt.Errorf("process carrier invocation canceled: %w", ctx.Err())
@@ -95,6 +115,16 @@ func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocati
 		return result, nil
 	}
 	return Result{}, fmt.Errorf("process carrier invocation failed: %w", runErr)
+}
+
+func admitProcessOutputLimits(limits ProcessOutputLimits) error {
+	if limits.MaximumStdoutBytes <= 0 || limits.MaximumStdoutBytes > maximumProcessOutputBytes {
+		return fmt.Errorf("process carrier stdout limit must be between 1 and %d bytes", maximumProcessOutputBytes)
+	}
+	if limits.MaximumStderrBytes <= 0 || limits.MaximumStderrBytes > maximumProcessOutputBytes {
+		return fmt.Errorf("process carrier stderr limit must be between 1 and %d bytes", maximumProcessOutputBytes)
+	}
+	return nil
 }
 
 type boundedBuffer struct {

@@ -101,6 +101,13 @@ func CatalogPaths() []string {
 	return paths
 }
 
+// NonClaims returns a copy of the inventory authority boundary for parent
+// presentation projections. The repository inventory remains the sole owner
+// of these statements.
+func NonClaims() []string {
+	return append([]string(nil), boundaryNonClaims...)
+}
+
 func CatalogRole(path string) (string, bool) {
 	index, found := slices.BinarySearchFunc(rootCatalog[:], path, func(item catalogItem, target string) int {
 		switch {
@@ -158,23 +165,9 @@ func entryValue(entry Entry) map[string]any {
 }
 
 func identityValue(snapshot Snapshot) map[string]any {
-	entries := make([]any, 0, len(snapshot.Entries))
-	for _, entry := range snapshot.Entries {
-		entries = append(entries, entryValue(entry))
-	}
-	omitted := make([]any, 0, len(snapshot.Omissions.OmittedRecognized))
-	for _, entry := range snapshot.Omissions.OmittedRecognized {
-		omitted = append(omitted, map[string]any{"path": entry.Path, "reason": entry.Reason})
-	}
-	return map[string]any{
-		"entries": entries,
-		"omissions": map[string]any{
-			"omittedRecognized": omitted,
-			"rootEntryCount":    json.Number(fmt.Sprintf("%d", snapshot.Omissions.RootEntryCount)),
-			"unrecognizedCount": json.Number(fmt.Sprintf("%d", snapshot.Omissions.UnrecognizedCount)),
-		},
-		"policyId": PolicyID,
-	}
+	identity := snapshot.JSONValue()
+	delete(identity, "inventoryId")
+	return identity
 }
 
 func finalize(snapshot Snapshot) (Snapshot, error) {
@@ -183,12 +176,19 @@ func finalize(snapshot Snapshot) (Snapshot, error) {
 		return Snapshot{}, err
 	}
 	snapshot.InventoryID = id
-	encoded, err := stablejson.Marshal(snapshot.JSONValue())
-	if err != nil {
+	if err := validateOutputByteLimit(snapshot, MaximumOutputBytes); err != nil {
 		return Snapshot{}, err
 	}
-	if len(encoded) > MaximumOutputBytes {
-		return Snapshot{}, fmt.Errorf("repository inventory exceeds output byte limit")
-	}
 	return snapshot, nil
+}
+
+func validateOutputByteLimit(snapshot Snapshot, maximum int) error {
+	encoded, err := stablejson.Marshal(snapshot.JSONValue())
+	if err != nil {
+		return err
+	}
+	if len(encoded) > maximum {
+		return fmt.Errorf("repository inventory exceeds output byte limit")
+	}
+	return nil
 }

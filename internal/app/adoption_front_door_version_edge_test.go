@@ -57,7 +57,8 @@ type adoptionChangedGeneratedArtifact struct {
 
 func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
-	if err := validateAdoptionFrontDoorVersionEdge(record, repoRoot(t)); err != nil {
+	currentPublicABI := "sha256:" + currentCLIContractPublicABISHA256(t)
+	if err := validateAdoptionFrontDoorVersionEdge(record, repoRoot(t), currentPublicABI); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,7 +88,7 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 		t.Run(fmt.Sprintf("mutant-%d", index), func(t *testing.T) {
 			value := cloneAdoptionFrontDoorVersionEdge(record)
 			mutate(&value)
-			if err := validateAdoptionFrontDoorVersionEdge(value, repoRoot(t)); err == nil {
+			if err := validateAdoptionFrontDoorVersionEdge(value, repoRoot(t), currentPublicABI); err == nil {
 				t.Fatal("version-edge mutant was admitted")
 			}
 		})
@@ -153,14 +154,14 @@ func readAdoptionFrontDoorVersionEdge(t *testing.T) adoptionFrontDoorVersionEdge
 	return record
 }
 
-func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, root string) error {
+func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, root string, currentPublicABI string) error {
 	if record.SchemaVersion != 1 || record.EdgeID != "proofkit.public-wire.0.6.0-to-0.7.0" || record.EvidenceClass != "owner_authored_frozen_version_edge_observation" {
 		return fmt.Errorf("adoption front-door version-edge identity is invalid")
 	}
 	if record.PreviousVersion != "0.6.0" || record.Version != "0.7.0" {
 		return fmt.Errorf("adoption front-door version-edge release identity is stale")
 	}
-	if record.PreviousPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.CurrentPublicABISHA256 != "sha256:7b36077db9c82ca005606f571e1f6c6e208ab5b35b95b4d9b885e6047f091b91" || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
+	if record.PreviousPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.CurrentPublicABISHA256 != currentPublicABI || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("adoption front-door version-edge ABI identity is invalid")
 	}
 	wantRemoved := adoptionRemovedCommandContract{Command: "init", DefaultInvocationPreset: "all", OutputContractSHA256: "sha256:3e59a3002327c759e5e747f8baacaa63a4d6784e1a1c520f0a54e01af3f2faa0"}
@@ -168,8 +169,8 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 		return fmt.Errorf("adoption front-door removed command contract is not exact")
 	}
 	wantAdded := []adoptionFrontDoorCommandContract{
-		{Command: "adopt-plan", Route: []string{"adopt", "plan"}, OutputContractSHA256: "sha256:55f0852120ca978b9557553b1af8923a4d0b08c4dc794ba7751cb28d2414b7ec"},
-		{Command: "repository-inventory", Route: []string{"repository-inventory"}, OutputContractSHA256: "sha256:5b0967fefb4abbfbc91027ff30ed6579c12e1f27d8310466cd4fd4d1f865552e"},
+		{Command: "adopt-plan", Route: []string{"adopt", "plan"}, OutputContractSHA256: generatedCommandContractMetadataByName["adopt-plan"].OutputContractSHA256},
+		{Command: "repository-inventory", Route: []string{"repository-inventory"}, OutputContractSHA256: generatedCommandContractMetadataByName["repository-inventory"].OutputContractSHA256},
 	}
 	if !slices.EqualFunc(record.AddedCommandContracts, wantAdded, equalAdoptionCommandContract) {
 		return fmt.Errorf("adoption front-door added command contracts are not exact")
