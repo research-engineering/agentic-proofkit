@@ -17,6 +17,9 @@ import (
 
 const adoptionMaterializationVersionEdgePath = "internal/app/testdata/v0.8-wire-observations.json"
 
+const frozenAdoptionFrontDoorVersionEdgePath = "internal/app/testdata/v0.7-wire-observations.json"
+const frozenAdoptionFrontDoorVersionEdgeSHA256 = "3f3916ff3413aed42539cfd122d0796b636f6819512459a13f4143443bd2a14e"
+
 type adoptionMaterializationVersionEdge struct {
 	AddedCommandContracts    []materializationCommandContract `json:"addedCommandContracts"`
 	AdditionChangeIDs        []string                         `json:"additionChangeIds"`
@@ -94,6 +97,17 @@ func TestAdoptionMaterializationVersionEdgeClosesPublicCommands(t *testing.T) {
 				t.Fatal("materialization version-edge mutant was admitted")
 			}
 		})
+	}
+}
+
+func TestAdoptionMaterializationVersionEdgePreservesFrozenPredecessor(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), frozenAdoptionFrontDoorVersionEdgePath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	digest := sha256.Sum256(content)
+	if got := fmt.Sprintf("%x", digest); got != frozenAdoptionFrontDoorVersionEdgeSHA256 {
+		t.Fatalf("frozen predecessor digest=%s, want %s", got, frozenAdoptionFrontDoorVersionEdgeSHA256)
 	}
 }
 

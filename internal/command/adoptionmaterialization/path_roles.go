@@ -27,7 +27,9 @@ type pathUse struct {
 }
 
 func validatePathRoles(uses []pathUse) error {
-	for index, use := range uses {
+	targets := make([]pathUse, 0, repositorytransaction.MaximumOperations)
+	references := make([]pathUse, 0, len(uses))
+	for _, use := range uses {
 		if _, err := pathidentity.Key(use.Path); err != nil {
 			return fmt.Errorf("adoption materialization %s path identity is invalid", use.Role)
 		}
@@ -35,15 +37,34 @@ func validatePathRoles(uses []pathUse) error {
 		if err != nil || overlapsControl {
 			return fmt.Errorf("adoption materialization %s path overlaps the transaction control namespace", use.Role)
 		}
+		if use.Target {
+			targets = append(targets, use)
+		} else {
+			references = append(references, use)
+		}
+	}
+	for index, target := range targets {
 		for prior := 0; prior < index; prior++ {
-			overlaps, err := pathidentity.Overlaps(use.Path, uses[prior].Path)
-			if err != nil {
-				return fmt.Errorf("adoption materialization path identity is invalid")
-			}
-			if overlaps && !compatiblePathUses(use, uses[prior]) {
-				return fmt.Errorf("adoption materialization path roles conflict: %s and %s", uses[prior].Role, use.Role)
+			if err := validatePathRolePair(targets[prior], target); err != nil {
+				return err
 			}
 		}
+		for _, reference := range references {
+			if err := validatePathRolePair(target, reference); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func validatePathRolePair(left, right pathUse) error {
+	overlaps, err := pathidentity.Overlaps(left.Path, right.Path)
+	if err != nil {
+		return fmt.Errorf("adoption materialization path identity is invalid")
+	}
+	if overlaps && !compatiblePathUses(left, right) {
+		return fmt.Errorf("adoption materialization path roles conflict: %s and %s", left.Role, right.Role)
 	}
 	return nil
 }

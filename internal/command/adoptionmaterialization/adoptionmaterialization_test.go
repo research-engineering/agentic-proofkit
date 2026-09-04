@@ -25,15 +25,15 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 	root := t.TempDir()
 	request := validRequest(t, root)
 
-	materialization, err := BuildPlan(context.Background(), request, root)
+	plan, err := BuildPlan(context.Background(), request, root)
 	if err != nil {
 		t.Fatalf("BuildPlan() error = %v", err)
 	}
-	planRaw := jsonRoundTripValue(t, materialization.Plan.JSONValue())
-	if admitted, err := AdmitPlanOutput(planRaw); err != nil || admitted.Transaction.TransactionID != materialization.Transaction.TransactionID {
+	planRaw := jsonRoundTripValue(t, plan.JSONValue())
+	if admitted, err := AdmitPlanOutput(planRaw); err != nil || admitted.Transaction.TransactionID != plan.Transaction.TransactionID {
 		t.Fatalf("AdmitPlanOutput() plan=%#v error=%v", admitted, err)
 	}
-	planBytes, err := stablejson.Marshal(materialization.Plan.JSONValue())
+	planBytes, err := stablejson.Marshal(plan.JSONValue())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 		t.Fatalf("read-only plan created transaction state: %v", err)
 	}
 
-	receipt, exitCode, err := Apply(context.Background(), request, root, materialization.Transaction.TransactionID, materialization.Transaction.DesiredStateID)
+	receipt, exitCode, err := Apply(context.Background(), request, root, plan.Transaction.TransactionID, plan.Transaction.DesiredStateID)
 	if err != nil || exitCode != 0 || receipt.State != ReceiptStatePassed || receipt.TransactionResult == nil || receipt.TransactionResult.State != repositorytransaction.StateApplied {
 		t.Fatalf("Apply() receipt=%#v exit=%d err=%v", receipt, exitCode, err)
 	}
@@ -79,11 +79,11 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 func TestMaterializationOutputAdmissionRejectsCrossOwnerMutants(t *testing.T) {
 	root := t.TempDir()
 	request := validRequest(t, root)
-	materialization, err := BuildPlan(context.Background(), request, root)
+	plan, err := BuildPlan(context.Background(), request, root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	planMutant := jsonRoundTripValue(t, materialization.Plan.JSONValue()).(map[string]any)
+	planMutant := jsonRoundTripValue(t, plan.JSONValue()).(map[string]any)
 	transaction := planMutant["transaction"].(map[string]any)
 	operations := transaction["operations"].([]any)
 	transaction["operations"] = operations[1:]
@@ -91,7 +91,7 @@ func TestMaterializationOutputAdmissionRejectsCrossOwnerMutants(t *testing.T) {
 		t.Fatal("AdmitPlanOutput() admitted a transaction that omitted a manifest route")
 	}
 
-	receipt, exitCode, err := Apply(context.Background(), request, root, materialization.Transaction.TransactionID, materialization.Transaction.DesiredStateID)
+	receipt, exitCode, err := Apply(context.Background(), request, root, plan.Transaction.TransactionID, plan.Transaction.DesiredStateID)
 	if err != nil || exitCode != 0 {
 		t.Fatalf("Apply() receipt=%#v exit=%d error=%v", receipt, exitCode, err)
 	}
@@ -130,6 +130,27 @@ func TestReceiptAdmissionRejectsOperationAttributionMutants(t *testing.T) {
 			State:                 ReceiptStatePassed,
 			TransactionResult: &repositorytransaction.Result{
 				AppliedCount: 1, AppliedCountKnown: true, State: repositorytransaction.StateApplied, TransactionID: transactionID,
+			},
+		},
+		{
+			ExpectedTransactionID: transactionID,
+			FailureClass:          "cleanup_failed",
+			NonClaims:             mergedNonClaims(nil),
+			Operation:             OperationRecover,
+			State:                 ReceiptStateCleanupRequired,
+			TransactionResult: &repositorytransaction.Result{
+				FailureClass: "cleanup_failed", State: repositorytransaction.StateCleanupRequired, TransactionID: transactionID,
+			},
+		},
+		{
+			ExpectedTransactionID: transactionID,
+			FailureClass:          "ambiguous_target_state",
+			NonClaims:             mergedNonClaims(nil),
+			Operation:             OperationRecover,
+			State:                 ReceiptStateRecoveryRequired,
+			TransactionResult: &repositorytransaction.Result{
+				FailureClass: "ambiguous_target_state", State: repositorytransaction.StateRecoveryRequired,
+				TransactionID: "sha256:" + strings.Repeat("c", 64),
 			},
 		},
 	}
@@ -350,11 +371,11 @@ func TestMaterializationRejectsCrossRecordDriftAndManifestMutation(t *testing.T)
 		t.Fatalf("BuildPlan(drifted owner) error=%v", err)
 	}
 
-	materialization, err := BuildPlan(context.Background(), request, root)
+	plan, err := BuildPlan(context.Background(), request, root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	manifest := cloneValue(t, materialization.Plan.Manifest.JSONValue()).(map[string]any)
+	manifest := cloneValue(t, plan.Manifest.JSONValue()).(map[string]any)
 	manifest["routes"].([]any)[0].(map[string]any)["path"] = "../outside.json"
 	if _, err := AdmitManifest(manifest); err == nil {
 		t.Fatal("AdmitManifest() accepted root-escaping route")

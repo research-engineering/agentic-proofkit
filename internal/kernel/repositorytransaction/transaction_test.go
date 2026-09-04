@@ -1,6 +1,7 @@
 package repositorytransaction
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -472,36 +473,74 @@ func TestRecoverRejectsUnknownActiveEntryBeforeMutation(t *testing.T) {
 	assertTestFile(t, rootPath, "proofkit/b.json", "before-b\n", 0o644)
 }
 
-func TestProcessDeathAfterRenameIsRecoverable(t *testing.T) {
-	if os.Getenv("PROOFKIT_TRANSACTION_CRASH_HELPER") == "1" {
-		runTransactionCrashHelper(t)
+func TestProcessInterruptionAtEveryMutationBoundaryIsRecoverable(t *testing.T) {
+	if point := os.Getenv("PROOFKIT_TRANSACTION_BOUNDARY_POINT"); point != "" {
+		runMutationBoundaryCrashHelper(t, failurePoint(point))
 		return
 	}
-	rootPath := t.TempDir()
-	mustWriteTestFile(t, rootPath, "proofkit/a.json", "before-a\n", 0o644)
-	mustWriteTestFile(t, rootPath, "proofkit/b.json", "before-b\n", 0o644)
-	targets := crashHelperTargets()
-	plan, err := BuildPlan(context.Background(), rootPath, targets)
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		point      failurePoint
+		action     string
+		finalState string
+	}{
+		{point: faultAfterJournal, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultAfterStaging, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultAfterReady, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultAfterDirectory, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultBeforePublish, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultAfterPublish, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultAfterRollback, action: RecoveryRollback, finalState: StateRolledBack},
+		{point: faultAfterTerminal, action: RecoveryResume, finalState: StateApplied},
+		{point: faultBeforeCleanup, action: RecoveryResume, finalState: StateApplied},
+		{point: faultAfterStateRemoval, action: RecoveryResume, finalState: StateApplied},
 	}
-	command := exec.Command(os.Args[0], "-test.run=^TestProcessDeathAfterRenameIsRecoverable$")
-	command.Env = append(os.Environ(), "PROOFKIT_TRANSACTION_CRASH_HELPER=1", "PROOFKIT_TRANSACTION_CRASH_ROOT="+rootPath)
-	err = command.Run()
-	var exitError *exec.ExitError
-	if !errors.As(err, &exitError) || exitError.ExitCode() != 73 {
-		t.Fatalf("crash helper error = %v", err)
+	for _, test := range tests {
+		t.Run(string(test.point), func(t *testing.T) {
+			rootPath := t.TempDir()
+			mustWriteTestFile(t, rootPath, "proofkit/a.json", "before-a\n", 0o644)
+			mustWriteTestFile(t, rootPath, "proofkit/b.json", "before-b\n", 0o644)
+			plan, err := BuildPlan(context.Background(), rootPath, mutationBoundaryTargets())
+			if err != nil {
+				t.Fatal(err)
+			}
+			command := exec.Command(os.Args[0], "-test.run=^TestProcessInterruptionAtEveryMutationBoundaryIsRecoverable$")
+			command.Env = append(os.Environ(), "PROOFKIT_TRANSACTION_BOUNDARY_POINT="+string(test.point), "PROOFKIT_TRANSACTION_CRASH_ROOT="+rootPath)
+			err = command.Run()
+			var exitError *exec.ExitError
+			if !errors.As(err, &exitError) || exitError.ExitCode() != 73 {
+				t.Fatalf("crash helper error = %v", err)
+			}
+
+			result, err := Recover(context.Background(), rootPath, plan.TransactionID, test.action)
+			if err != nil || result.State != test.finalState || result.RecoveredBy != test.action || result.TransactionID != plan.TransactionID {
+				t.Fatalf("Recover(%s) result=%#v error=%v", test.action, result, err)
+			}
+			replay, err := Recover(context.Background(), rootPath, plan.TransactionID, test.action)
+			if err != nil || replay.State != test.finalState || replay.RecoveredBy != test.action || replay.TransactionID != plan.TransactionID {
+				t.Fatalf("replayed Recover(%s) result=%#v error=%v", test.action, replay, err)
+			}
+			opposite := RecoveryResume
+			if test.action == RecoveryResume {
+				opposite = RecoveryRollback
+			}
+			mismatch, err := Recover(context.Background(), rootPath, plan.TransactionID, opposite)
+			if err != nil || mismatch.State != StateRecoveryRequired {
+				t.Fatalf("opposite Recover(%s) result=%#v error=%v", opposite, mismatch, err)
+			}
+			if test.finalState == StateApplied {
+				assertTestFile(t, rootPath, "proofkit/a.json", "after-a\n", 0o644)
+				assertTestFile(t, rootPath, "proofkit/b.json", "after-b\n", 0o644)
+				assertTestFile(t, rootPath, "generated/nested/c.json", "after-c\n", 0o644)
+			} else {
+				assertTestFile(t, rootPath, "proofkit/a.json", "before-a\n", 0o644)
+				assertTestFile(t, rootPath, "proofkit/b.json", "before-b\n", 0o644)
+				if _, err := os.Stat(filepath.Join(rootPath, "generated")); !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("rollback retained generated directory: %v", err)
+				}
+			}
+			assertNoPendingTransaction(t, rootPath)
+		})
 	}
-	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryResume)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if result.State != StateApplied || !result.AppliedCountKnown || result.AppliedCount != 2 {
-		t.Fatalf("Recover() result = %#v", result)
-	}
-	assertTestFile(t, rootPath, "proofkit/a.json", "after-a\n", 0o644)
-	assertTestFile(t, rootPath, "proofkit/b.json", "after-b\n", 0o644)
-	assertNoPendingTransaction(t, rootPath)
 }
 
 func TestRecoverClosesDirectoryCreationCrashGap(t *testing.T) {
@@ -658,14 +697,17 @@ func TestRecoverClosesMarkerPublicationCrashGaps(t *testing.T) {
 	}
 }
 
-func runTransactionCrashHelper(t *testing.T) {
+func runMutationBoundaryCrashHelper(t *testing.T, target failurePoint) {
 	rootPath := os.Getenv("PROOFKIT_TRANSACTION_CRASH_ROOT")
-	plan, err := BuildPlan(context.Background(), rootPath, crashHelperTargets())
+	plan, err := BuildPlan(context.Background(), rootPath, mutationBoundaryTargets())
 	if err != nil {
 		t.Fatal(err)
 	}
 	runtime := engine{fault: func(point failurePoint, index int) error {
-		if point == faultAfterPublish && index == 1 {
+		if target == faultAfterRollback && point == faultBeforePublish && index == 2 {
+			return errors.New("enter rollback")
+		}
+		if point == target {
 			os.Exit(73)
 		}
 		return nil
@@ -676,8 +718,9 @@ func runTransactionCrashHelper(t *testing.T) {
 	t.Fatal("crash helper did not terminate")
 }
 
-func crashHelperTargets() []Target {
+func mutationBoundaryTargets() []Target {
 	return []Target{
+		{Path: "generated/nested/c.json", Content: []byte("after-c\n"), Mode: 0o644},
 		{Path: "proofkit/a.json", Content: []byte("after-a\n"), Mode: 0o644},
 		{Path: "proofkit/b.json", Content: []byte("after-b\n"), Mode: 0o644},
 	}
@@ -714,6 +757,93 @@ func TestApplyRejectsConcurrentCooperativeWriter(t *testing.T) {
 	defer lock.release()
 	if _, err := Apply(context.Background(), rootPath, plan); !errors.Is(err, ErrBusy) {
 		t.Fatalf("Apply() error = %v, want ErrBusy", err)
+	}
+}
+
+func TestApplyAlreadySatisfiedRejectsConcurrentCooperativeWriter(t *testing.T) {
+	rootPath := t.TempDir()
+	mustWriteTestFile(t, rootPath, "proofkit/a.json", "a\n", 0o644)
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/a.json", Content: []byte("a\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	lock, err := acquireTransactionLock(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.release()
+	if _, err := Apply(context.Background(), rootPath, plan); !errors.Is(err, ErrBusy) {
+		t.Fatalf("Apply() error = %v, want ErrBusy", err)
+	}
+}
+
+func TestTransactionLockIsInterprocess(t *testing.T) {
+	if os.Getenv("PROOFKIT_TRANSACTION_LOCK_HELPER") == "1" {
+		runTransactionLockHelper(t)
+		return
+	}
+	rootPath := t.TempDir()
+	mustWriteTestFile(t, rootPath, "proofkit/a.json", "a\n", 0o644)
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/a.json", Content: []byte("a\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command(os.Args[0], "-test.run=^TestTransactionLockIsInterprocess$")
+	command.Env = append(os.Environ(), "PROOFKIT_TRANSACTION_LOCK_HELPER=1", "PROOFKIT_TRANSACTION_LOCK_ROOT="+rootPath)
+	stdin, err := command.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	if line, err := bufio.NewReader(stdout).ReadString('\n'); err != nil || line != "locked\n" {
+		_ = command.Process.Kill()
+		t.Fatalf("lock helper readiness=%q error=%v", line, err)
+	}
+	if _, err := Apply(context.Background(), rootPath, plan); !errors.Is(err, ErrBusy) {
+		_ = command.Process.Kill()
+		t.Fatalf("Apply() error = %v, want interprocess ErrBusy", err)
+	}
+	if _, err := fmt.Fprintln(stdin, "release"); err != nil {
+		_ = command.Process.Kill()
+		t.Fatal(err)
+	}
+	if err := stdin.Close(); err != nil {
+		_ = command.Process.Kill()
+		t.Fatal(err)
+	}
+	if err := command.Wait(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func runTransactionLockHelper(t *testing.T) {
+	root, _, err := openRepository(os.Getenv("PROOFKIT_TRANSACTION_LOCK_ROOT"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	lock, err := acquireTransactionLock(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.release()
+	if _, err := fmt.Fprintln(os.Stdout, "locked"); err != nil {
+		t.Fatal(err)
+	}
+	var release string
+	if _, err := fmt.Fscanln(os.Stdin, &release); err != nil || release != "release" {
+		t.Fatalf("lock helper release=%q error=%v", release, err)
 	}
 }
 

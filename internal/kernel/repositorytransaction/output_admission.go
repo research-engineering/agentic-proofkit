@@ -138,7 +138,11 @@ func validateResultRelation(result Result) error {
 		if !result.AppliedCountKnown || result.AppliedCount != 0 || result.TransactionID == "" || result.RecoveredBy == RecoveryResume || result.RecoveredBy == "" && result.FailureClass == "" {
 			return fmt.Errorf("rolled-back repository transaction result is inconsistent")
 		}
-	case StateCleanupRequired, StateDurabilityUnknown, StateRecoveryRequired:
+	case StateCleanupRequired, StateDurabilityUnknown:
+		if result.FailureClass == "" || result.TransactionID == "" {
+			return fmt.Errorf("cleanup-pending repository transaction result is inconsistent")
+		}
+	case StateRecoveryRequired:
 		if result.FailureClass == "" {
 			return fmt.Errorf("non-terminal repository transaction result requires a failure class")
 		}

@@ -1171,6 +1171,33 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.adoption-materialization-output-root-witnesses",
+      "witnessId": "proofkit.adoption-materialization.cli-output-root.exact-witnesses",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/adoption_materialization_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeApplyOutputUsesExactRootShape$'"
+        },
+        {
+          "selector": "TestAdoptMaterializePlanOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializePlanOutputUsesExactRootShape$'"
+        },
+        {
+          "selector": "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeRecoverOutputUsesExactRootShape$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
       "scenarioId": "proofkit.package-boundary.cli-output-root-witnesses",
       "witnessId": "proofkit.cli-output-root.exact-witnesses",
       "witnessKind": "contract",
@@ -2425,6 +2452,33 @@
       "witnessPath": "internal/kernel/admission/json_fuzz_test.go",
       "commandIds": [
         "proofkit.go-bench",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.adoption-materialization-cli-abi",
+      "witnessId": "proofkit.adoption-materialization.cli-abi.exact-output",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/adoption_materialization_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeApplyOutputUsesExactRootShape$'"
+        },
+        {
+          "selector": "TestAdoptMaterializePlanOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializePlanOutputUsesExactRootShape$'"
+        },
+        {
+          "selector": "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeRecoverOutputUsesExactRootShape$'"
+        }
+      ],
+      "commandIds": [
         "proofkit.go-test"
       ],
       "environmentClasses": [
@@ -5846,6 +5900,14 @@
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationWholeChainIsCanonicalAndOwnerClosed$'"
         },
         {
+          "selector": "TestMaterializationOutputAdmissionRejectsCrossOwnerMutants",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationOutputAdmissionRejectsCrossOwnerMutants$'"
+        },
+        {
+          "selector": "TestReceiptAdmissionRejectsOperationAttributionMutants",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestReceiptAdmissionRejectsOperationAttributionMutants$'"
+        },
+        {
           "selector": "TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry",
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry$'"
         },
@@ -5867,6 +5929,10 @@
         {
           "selector": "TestPathRoleLedgerRejectsWriteReferenceCollisions",
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestPathRoleLedgerRejectsWriteReferenceCollisions$'"
+        },
+        {
+          "selector": "TestRequirementProjectionRequiresClaimLevelParity",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestRequirementProjectionRequiresClaimLevelParity$'"
         },
         {
           "selector": "TestInventoryReferencesMustResolveThroughBindingEdges",
@@ -5937,6 +6003,14 @@
         {
           "selector": "TestPreparingFailureCannotClaimRollbackAfterTargetDivergence",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparingFailureCannotClaimRollbackAfterTargetDivergence$'"
+        },
+        {
+          "selector": "TestCommittedRecoveryRejectsRollback",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestCommittedRecoveryRejectsRollback$'"
+        },
+        {
+          "selector": "TestPreparingRecoveryRejectsResumeBeforeActionSelection",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparingRecoveryRejectsResumeBeforeActionSelection$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5954,12 +6028,20 @@
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyFaultAfterFirstPublishRestoresExactBeforeState$'"
         },
         {
-          "selector": "TestProcessDeathAfterRenameIsRecoverable",
-          "command": "go test ./internal/kernel/repositorytransaction -run '^TestProcessDeathAfterRenameIsRecoverable$'"
+          "selector": "TestProcessInterruptionAtEveryMutationBoundaryIsRecoverable",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestProcessInterruptionAtEveryMutationBoundaryIsRecoverable$'"
         },
         {
           "selector": "TestApplyRejectsConcurrentCooperativeWriter",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyRejectsConcurrentCooperativeWriter$'"
+        },
+        {
+          "selector": "TestApplyAlreadySatisfiedRejectsConcurrentCooperativeWriter",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestApplyAlreadySatisfiedRejectsConcurrentCooperativeWriter$'"
+        },
+        {
+          "selector": "TestTransactionLockIsInterprocess",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestTransactionLockIsInterprocess$'"
         },
         {
           "selector": "TestRecoverDoesNotInventIdentityForPartialPreparingJournal",
@@ -5968,6 +6050,63 @@
       ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-output-relations",
+      "witnessId": "proofkit.repository-transaction.output-relation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/output_admission_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPlanAndResultOutputAdmissionRejectSemanticMutants",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPlanAndResultOutputAdmissionRejectSemanticMutants$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-cleanup-state-matrix",
+      "witnessId": "proofkit.repository-transaction.cleanup-state-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/state_machine_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCleanupDurabilityFailureDoesNotClaimRecoverableState",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestCleanupDurabilityFailureDoesNotClaimRecoverableState$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-filesystem-portable-path-identity",
+      "witnessId": "proofkit.repository-transaction.filesystem-portable-path-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/plan_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBuildPlanRejectsFilesystemPortableAliases",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestBuildPlanRejectsFilesystemPortableAliases$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-033",
@@ -5998,6 +6137,10 @@
         {
           "selector": "TestAdoptionMaterializationVersionEdgeRejectsCoordinatedChangeRecordDrift",
           "command": "go test ./internal/app -run '^TestAdoptionMaterializationVersionEdgeRejectsCoordinatedChangeRecordDrift$'"
+        },
+        {
+          "selector": "TestAdoptionMaterializationVersionEdgePreservesFrozenPredecessor",
+          "command": "go test ./internal/app -run '^TestAdoptionMaterializationVersionEdgePreservesFrozenPredecessor$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

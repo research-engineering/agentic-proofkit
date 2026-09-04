@@ -11,6 +11,7 @@ func RenderPlanText(plan Plan) (string, error) {
 		"State: ready",
 		"Project: " + plan.ProjectID,
 		"Transaction: " + plan.Transaction.TransactionID,
+		"Desired state: " + plan.Transaction.DesiredStateID,
 		fmt.Sprintf("Operations: %d", len(plan.Transaction.Operations)),
 	}
 	for _, operation := range plan.Transaction.Operations {

@@ -16,6 +16,7 @@ import (
 )
 
 const adoptionFrontDoorVersionEdgePath = "internal/app/testdata/v0.7-wire-observations.json"
+const archivedAdoptionFrontDoorChangeRecordPath = "internal/app/testdata/v0.7-release-change-record.v2.json"
 
 type adoptionFrontDoorVersionEdge struct {
 	AddedCommandContracts     []adoptionFrontDoorCommandContract `json:"addedCommandContracts"`
@@ -115,7 +116,7 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 
 func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), record.ChangeRecordRef))
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), archivedAdoptionFrontDoorChangeRecordPath))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +133,7 @@ func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t 
 	}
 	mutantContent = append(mutantContent, '\n')
 	mutantRoot := t.TempDir()
-	path := filepath.Join(mutantRoot, filepath.FromSlash(record.ChangeRecordRef))
+	path := filepath.Join(mutantRoot, filepath.FromSlash(archivedAdoptionFrontDoorChangeRecordPath))
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -271,10 +272,11 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.adoption.init-retired", "proofkit.agent-route.input-contract-v2"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.adoption.front-door", "proofkit.adoption.repository-inventory", "proofkit.cli.generated-adapter-command-routes", "proofkit.cli.hierarchical-command-routes", "proofkit.python-wheel.embedded-cli-contract"}) {
 		return fmt.Errorf("adoption front-door change inventory is not exact")
 	}
-	if record.ChangeRecordRef != "internal/app/testdata/v0.7-release-change-record.v2.json" {
+	if record.ChangeRecordRef != "release/change-record.v2.json" {
 		return fmt.Errorf("adoption front-door change record reference is not exact")
 	}
-	changeRecordContent, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(record.ChangeRecordRef)))
+	archivedChangeRecordPath := filepath.Join(root, archivedAdoptionFrontDoorChangeRecordPath)
+	changeRecordContent, err := os.ReadFile(archivedChangeRecordPath)
 	if err != nil {
 		return fmt.Errorf("read adoption front-door change record: %w", err)
 	}
@@ -282,7 +284,7 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if record.ChangeRecordSHA256 != fmt.Sprintf("sha256:%x", digest) {
 		return fmt.Errorf("adoption front-door change record digest is not exact")
 	}
-	changeRecord, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(record.ChangeRecordRef)))
+	changeRecord, err := releasechange.Read(archivedChangeRecordPath)
 	if err != nil {
 		return fmt.Errorf("admit adoption front-door change record: %w", err)
 	}

@@ -111,7 +111,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d347606bfd64457b6eeb50b35b64b432ec096d1f22710f4d3a70eea4bce9a3e9",
+          "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -139,15 +139,27 @@
         "closed": true,
         "rootDefinitionRef": "proofkit.adoption-materialization.apply-output.v1.root-shape",
         "rootDefinitionDigest": "sha256:4b58bd4e89da98ad79c5e6faf32fe58766313117ad2558b602bfed853de0cf7e",
-        "nativeSource": {
-          "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d347606bfd64457b6eeb50b35b64b432ec096d1f22710f4d3a70eea4bce9a3e9",
-          "evidenceClass": "source_checkout"
-        },
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/adoptionmaterialization",
+            "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:534ea025b0bf51ec99a1b44d755abb433ab687b572c4f5a0737440176d334db8",
+            "evidenceClass": "source_checkout"
+          }
+        ],
         "nativeOutputWitnessSelector": {
           "path": "internal/app/adoption_materialization_command_test.go",
-          "test": "TestAdoptionMaterializationCLI",
-          "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'",
+          "test": "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeApplyOutputUsesExactRootShape$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -237,7 +249,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d347606bfd64457b6eeb50b35b64b432ec096d1f22710f4d3a70eea4bce9a3e9",
+          "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -265,15 +277,27 @@
         "closed": true,
         "rootDefinitionRef": "proofkit.adoption-materialization.plan-output.v1.root-shape",
         "rootDefinitionDigest": "sha256:fc0e2d547a5fd54ebebe9d237a48ae15418b32d3d28fa5185aae64a0fba9b255",
-        "nativeSource": {
-          "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d347606bfd64457b6eeb50b35b64b432ec096d1f22710f4d3a70eea4bce9a3e9",
-          "evidenceClass": "source_checkout"
-        },
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/adoptionmaterialization",
+            "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:534ea025b0bf51ec99a1b44d755abb433ab687b572c4f5a0737440176d334db8",
+            "evidenceClass": "source_checkout"
+          }
+        ],
         "nativeOutputWitnessSelector": {
           "path": "internal/app/adoption_materialization_command_test.go",
-          "test": "TestAdoptionMaterializationCLI",
-          "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'",
+          "test": "TestAdoptMaterializePlanOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializePlanOutputUsesExactRootShape$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -367,15 +391,27 @@
         "closed": true,
         "rootDefinitionRef": "proofkit.adoption-materialization.recover-output.v1.root-shape",
         "rootDefinitionDigest": "sha256:06129ef857ffb11351535c769f9ca207522a08f3c5bf2da52c6f5fff0b1ac757",
-        "nativeSource": {
-          "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d347606bfd64457b6eeb50b35b64b432ec096d1f22710f4d3a70eea4bce9a3e9",
-          "evidenceClass": "source_checkout"
-        },
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/adoptionmaterialization",
+            "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:534ea025b0bf51ec99a1b44d755abb433ab687b572c4f5a0737440176d334db8",
+            "evidenceClass": "source_checkout"
+          }
+        ],
         "nativeOutputWitnessSelector": {
           "path": "internal/app/adoption_materialization_command_test.go",
-          "test": "TestAdoptionMaterializationCLI",
-          "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'",
+          "test": "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeRecoverOutputUsesExactRootShape$'",
           "evidenceClass": "source_checkout"
         },
         "compatibilitySummary": [
@@ -1149,7 +1185,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:e14fcf184779e35040645a0b8b9036beda6c9855b45b4ea733c343d4b852166d",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2927,7 +2963,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:e14fcf184779e35040645a0b8b9036beda6c9855b45b4ea733c343d4b852166d",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
             "evidenceClass": "source_checkout"
           },
           {
@@ -6217,7 +6253,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:e14fcf184779e35040645a0b8b9036beda6c9855b45b4ea733c343d4b852166d",
+          "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6246,7 +6282,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:e14fcf184779e35040645a0b8b9036beda6c9855b45b4ea733c343d4b852166d",
+          "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

@@ -49,14 +49,14 @@ func runAdoptionMaterialization(ctx context.Context, command string, args []stri
 		}
 	}
 	if command == "adopt-materialize-plan" {
-		materialization, err := adoptionmaterialization.BuildPlan(ctx, input, options.repositoryRoot)
+		plan, err := adoptionmaterialization.BuildPlan(ctx, input, options.repositoryRoot)
 		if options.format == "json" {
-			return writeJSON(materialization.Plan.JSONValue(), 0, err, stdout, stderr)
+			return writeJSON(plan.JSONValue(), 0, err, stdout, stderr)
 		}
 		if err != nil {
 			return writeText("", 1, err, stdout, stderr)
 		}
-		plain, err := adoptionmaterialization.RenderPlanText(materialization.Plan)
+		plain, err := adoptionmaterialization.RenderPlanText(plan)
 		return writeAdoptionMaterializationText(plain, 0, err, options, stdout, stderr, capabilities)
 	}
 	receipt, exitCode, err := adoptionmaterialization.Apply(

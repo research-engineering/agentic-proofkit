@@ -48,30 +48,21 @@ func (runtime engine) apply(ctx context.Context, rootPath string, plan Plan) (Re
 		return Result{}, err
 	}
 	defer root.Close()
-	if pending, err := pendingTransactionState(root); err != nil {
-		return Result{}, err
-	} else if pending.Exists {
-		return Result{}, &RecoveryRequiredError{TransactionID: pending.TransactionID}
-	}
 	if err := validateExecutablePlan(plan, rootID); err != nil {
 		return Result{}, err
 	}
+	changed := changedCount(plan)
 	prefix, err := classifyPrefix(root, plan)
 	if err != nil {
 		return Result{}, fmt.Errorf("repository transaction target snapshot changed")
 	}
-	changed := changedCount(plan)
-	if prefix == changed {
-		return Result{AppliedCountKnown: true, State: StateAlreadySatisfied, TransactionID: plan.TransactionID}, nil
-	}
-	if prefix != 0 {
+	if prefix != 0 && prefix != changed {
 		return Result{}, fmt.Errorf("repository transaction target snapshot is a partial prefix without recovery state")
 	}
-	if err := verifyCreatedDirectories(root, plan); err != nil {
-		return Result{}, err
-	}
-	if changed == 0 {
-		return Result{AppliedCountKnown: true, State: StateAlreadySatisfied, TransactionID: plan.TransactionID}, nil
+	if prefix != changed {
+		if err := verifyCreatedDirectories(root, plan); err != nil {
+			return Result{}, err
+		}
 	}
 	if err := ctx.Err(); err != nil {
 		return Result{}, fmt.Errorf("repository transaction apply cancelled: %w", err)

@@ -32,6 +32,7 @@ func TestAdoptionMaterializationCLI(t *testing.T) {
 		t.Fatalf("plan status=%d stderr=%q stdout=%q", status, stderr, stdout)
 	}
 	plan := decodeCLIJSON(t, stdout).(map[string]any)
+	assertAdoptionMaterializationPlanRoot(t, plan)
 	if plan["planKind"] != adoptionmaterialization.PlanKind || plan["state"] != "ready" {
 		t.Fatalf("unexpected plan identity: %#v", plan)
 	}
@@ -54,6 +55,7 @@ func TestAdoptionMaterializationCLI(t *testing.T) {
 		t.Fatalf("apply status=%d stderr=%q stdout=%q", status, stderr, stdout)
 	}
 	receipt := decodeCLIJSON(t, stdout).(map[string]any)
+	assertAdoptionMaterializationReceiptRoot(t, receipt)
 	if receipt["receiptKind"] != adoptionmaterialization.ReceiptKind || receipt["state"] != adoptionmaterialization.ReceiptStatePassed {
 		t.Fatalf("unexpected apply receipt: %#v", receipt)
 	}
@@ -90,6 +92,7 @@ func TestAdoptionMaterializationCLI(t *testing.T) {
 		t.Fatalf("recover status=%d stderr=%q stdout=%q", status, stderr, stdout)
 	}
 	recovered := decodeCLIJSON(t, stdout).(map[string]any)
+	assertAdoptionMaterializationReceiptRoot(t, recovered)
 	if recovered["operation"] != adoptionmaterialization.OperationRecover || recovered["state"] != adoptionmaterialization.ReceiptStatePassed {
 		t.Fatalf("unexpected recovery receipt: %#v", recovered)
 	}
@@ -148,6 +151,72 @@ func TestAdoptionMaterializationCLI(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestAdoptMaterializePlanOutputUsesExactRootShape(t *testing.T) {
+	repositoryRoot := t.TempDir()
+	input := adoptionMaterializationCLIInput(t, repositoryRoot)
+	payload, err := stablejson.Marshal(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"adopt", "materialize", "plan", "--input", "-", "--repo-root", repositoryRoot}, bytes.NewReader(payload), PresentationCapabilities{})
+	if status != 0 || stderr != "" {
+		t.Fatalf("plan status=%d stderr=%q stdout=%q", status, stderr, stdout)
+	}
+	assertAdoptionMaterializationPlanRoot(t, decodeCLIJSON(t, stdout).(map[string]any))
+}
+
+func TestAdoptMaterializeApplyOutputUsesExactRootShape(t *testing.T) {
+	repositoryRoot := t.TempDir()
+	payload, transactionID, desiredStateID := adoptionMaterializationPlanFixture(t, repositoryRoot)
+	args := []string{"adopt", "materialize", "apply", "--input", "-", "--repo-root", repositoryRoot, "--expect-transaction", transactionID, "--expect-desired-state", desiredStateID}
+	status, stdout, stderr := executeAgentWorkflowCLI(t, args, bytes.NewReader(payload), PresentationCapabilities{})
+	if status != 0 || stderr != "" {
+		t.Fatalf("apply status=%d stderr=%q stdout=%q", status, stderr, stdout)
+	}
+	assertAdoptionMaterializationReceiptRoot(t, decodeCLIJSON(t, stdout).(map[string]any))
+}
+
+func TestAdoptMaterializeRecoverOutputUsesExactRootShape(t *testing.T) {
+	repositoryRoot := t.TempDir()
+	payload, transactionID, desiredStateID := adoptionMaterializationPlanFixture(t, repositoryRoot)
+	applyArgs := []string{"adopt", "materialize", "apply", "--input", "-", "--repo-root", repositoryRoot, "--expect-transaction", transactionID, "--expect-desired-state", desiredStateID}
+	if status, stdout, stderr := executeAgentWorkflowCLI(t, applyArgs, bytes.NewReader(payload), PresentationCapabilities{}); status != 0 || stderr != "" {
+		t.Fatalf("apply status=%d stderr=%q stdout=%q", status, stderr, stdout)
+	}
+	recoverArgs := []string{"adopt", "materialize", "recover", "--repo-root", repositoryRoot, "--transaction", transactionID, "--action", "resume"}
+	status, stdout, stderr := executeAgentWorkflowCLI(t, recoverArgs, strings.NewReader(""), PresentationCapabilities{})
+	if status != 0 || stderr != "" {
+		t.Fatalf("recover status=%d stderr=%q stdout=%q", status, stderr, stdout)
+	}
+	assertAdoptionMaterializationReceiptRoot(t, decodeCLIJSON(t, stdout).(map[string]any))
+}
+
+func adoptionMaterializationPlanFixture(t *testing.T, repositoryRoot string) ([]byte, string, string) {
+	t.Helper()
+	payload, err := stablejson.Marshal(adoptionMaterializationCLIInput(t, repositoryRoot))
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := []string{"adopt", "materialize", "plan", "--input", "-", "--repo-root", repositoryRoot}
+	status, stdout, stderr := executeAgentWorkflowCLI(t, args, bytes.NewReader(payload), PresentationCapabilities{})
+	if status != 0 || stderr != "" {
+		t.Fatalf("plan status=%d stderr=%q stdout=%q", status, stderr, stdout)
+	}
+	plan := decodeCLIJSON(t, stdout).(map[string]any)
+	transaction := plan["transaction"].(map[string]any)
+	return payload, transaction["transactionId"].(string), transaction["desiredStateId"].(string)
+}
+
+func assertAdoptionMaterializationPlanRoot(t *testing.T, plan map[string]any) {
+	t.Helper()
+	assertExactObjectKeys(t, plan, []string{"manifest", "nonClaims", "planKind", "projectId", "requestId", "schemaVersion", "sourceIntent", "sourcePlanId", "state", "transaction"}, "adoption materialization plan")
+}
+
+func assertAdoptionMaterializationReceiptRoot(t *testing.T, receipt map[string]any) {
+	t.Helper()
+	assertExactObjectKeys(t, receipt, []string{"expectedDesiredStateId", "expectedTransactionId", "failureClass", "nonClaims", "operation", "receiptId", "receiptKind", "schemaVersion", "state", "transactionResult"}, "adoption materialization receipt")
 }
 
 func adoptionMaterializationCLIInput(t *testing.T, root string) map[string]any {

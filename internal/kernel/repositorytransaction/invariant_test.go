@@ -327,6 +327,34 @@ func TestCommittedRecoveryRejectsRollback(t *testing.T) {
 	}
 }
 
+func TestPreparingRecoveryRejectsResumeBeforeActionSelection(t *testing.T) {
+	rootPath := t.TempDir()
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/target.json", Content: []byte("desired\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareJournal(root, plan); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryResume)
+	if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "preparing_state_mismatch" || result.RecoveredBy != "" {
+		t.Fatalf("Recover(resume preparing)=%#v, %v", result, err)
+	}
+	rolledBack, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryRollback)
+	if err != nil || rolledBack.State != StateRolledBack || rolledBack.RecoveredBy != RecoveryRollback {
+		t.Fatalf("Recover(rollback preparing)=%#v, %v", rolledBack, err)
+	}
+}
+
 func TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity(t *testing.T) {
 	root := t.TempDir()
 	unknown := filepath.Join(root, ControlDirectory, "unknown")

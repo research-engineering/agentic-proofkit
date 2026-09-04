@@ -1,6 +1,7 @@
 package adoptionmaterialization
 
 import (
+	"context"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
@@ -47,6 +48,16 @@ func TestPathRoleLedgerRejectsWriteReferenceCollisions(t *testing.T) {
 		{Path: "internal/core/core_test.go", Role: roleTestSourceReference},
 	}); err != nil {
 		t.Fatalf("validatePathRoles() rejected compatible owner paths: %v", err)
+	}
+}
+
+func TestRequirementProjectionRequiresClaimLevelParity(t *testing.T) {
+	root := t.TempDir()
+	request := validRequest(t, root)
+	binding := request["requirementProofBinding"].(map[string]any)["record"].(map[string]any)
+	binding["requirements"].([]any)[0].(map[string]any)["claimLevel"] = "advisory"
+	if _, err := BuildPlan(context.Background(), request, root); err == nil {
+		t.Fatal("BuildPlan() admitted claim-level drift between requirement owners")
 	}
 }
 

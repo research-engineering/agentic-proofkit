@@ -100,12 +100,6 @@ type Receipt struct {
 	TransactionResult      *repositorytransaction.Result
 }
 
-type Materialization struct {
-	Artifacts   []artifact
-	Plan        Plan
-	Transaction repositorytransaction.Plan
-}
-
 func (plan Plan) JSONValue() map[string]any {
 	return map[string]any{
 		"manifest":      plan.Manifest.JSONValue(),

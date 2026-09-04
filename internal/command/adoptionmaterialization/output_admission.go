@@ -200,8 +200,11 @@ func validateReceiptRelation(receipt Receipt) error {
 	if receipt.State != wantState || receipt.FailureClass != receipt.TransactionResult.FailureClass {
 		return fmt.Errorf("adoption materialization receipt outcome contradicts its transaction result")
 	}
-	if receipt.State == ReceiptStatePassed && receipt.TransactionResult.TransactionID != "" && receipt.TransactionResult.TransactionID != receipt.ExpectedTransactionID {
-		return fmt.Errorf("adoption materialization passed receipt transaction identity is inconsistent")
+	observedPendingTransaction := receipt.Operation == OperationApply &&
+		receipt.TransactionResult.State == repositorytransaction.StateRecoveryRequired &&
+		receipt.TransactionResult.FailureClass == "pending_transaction_state"
+	if receipt.TransactionResult.TransactionID != "" && receipt.TransactionResult.TransactionID != receipt.ExpectedTransactionID && !observedPendingTransaction {
+		return fmt.Errorf("adoption materialization receipt transaction identity is inconsistent")
 	}
 	if receipt.State == ReceiptStatePassed && receipt.TransactionResult.TransactionID == "" {
 		return fmt.Errorf("adoption materialization passed receipt requires an observed transaction identity")
@@ -211,6 +214,9 @@ func validateReceiptRelation(receipt Receipt) error {
 	}
 	if receipt.Operation == OperationRecover && receipt.State == ReceiptStatePassed && receipt.TransactionResult.RecoveredBy == "" {
 		return fmt.Errorf("adoption materialization recovery receipt requires recovery attribution")
+	}
+	if receipt.Operation == OperationRecover && (receipt.TransactionResult.State == repositorytransaction.StateCleanupRequired || receipt.TransactionResult.State == repositorytransaction.StateDurabilityUnknown) && receipt.TransactionResult.RecoveredBy == "" {
+		return fmt.Errorf("adoption materialization recovery cleanup receipt requires recovery attribution")
 	}
 	return nil
 }

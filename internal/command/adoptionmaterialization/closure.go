@@ -70,6 +70,7 @@ func sameRequirementProjection(source requirementsourceadmission.Requirement, bi
 }
 
 func validateInventoryReferences(request Request, requirements map[string]requirementsourceadmission.Requirement) error {
+	routes := newBindingRouteIndex(request.Binding.Bindings)
 	for _, entry := range request.Inventory.Entries {
 		requirementRefs := stringSet(entry.RequirementRefs)
 		witnessRefs := stringSet(entry.WitnessRefs)
@@ -78,17 +79,17 @@ func validateInventoryReferences(request Request, requirements map[string]requir
 			if _, ok := requirements[requirementID]; !ok {
 				return fmt.Errorf("adoption materialization test inventory references an unknown requirement")
 			}
-			if !hasBindingRoute(request.Binding.Bindings, stringSet([]string{requirementID}), witnessRefs, commandRefs, entry.SourcePath) {
+			if !routes.hasRequirementRoute(requirementID, witnessRefs, commandRefs, entry.SourcePath) {
 				return fmt.Errorf("adoption materialization test inventory requirement reference is not connected to its witness route")
 			}
 		}
 		for _, witnessID := range entry.WitnessRefs {
-			if !hasBindingRoute(request.Binding.Bindings, requirementRefs, stringSet([]string{witnessID}), commandRefs, entry.SourcePath) {
+			if !routes.hasWitnessRoute(witnessID, requirementRefs, commandRefs, entry.SourcePath) {
 				return fmt.Errorf("adoption materialization test inventory witness reference is not connected to its requirement route")
 			}
 		}
 		for _, commandID := range entry.CommandRefs {
-			if !hasBindingRoute(request.Binding.Bindings, requirementRefs, witnessRefs, stringSet([]string{commandID}), entry.SourcePath) {
+			if !routes.hasCommandRoute(commandID, requirementRefs, witnessRefs, entry.SourcePath) {
 				return fmt.Errorf("adoption materialization test inventory command reference is not connected to its requirement route")
 			}
 		}
@@ -104,7 +105,41 @@ func stringSet(values []string) map[string]struct{} {
 	return result
 }
 
-func hasBindingRoute(bindings []requirementbinding.Binding, requirementRefs, witnessRefs, commandRefs map[string]struct{}, sourcePath string) bool {
+type bindingRouteIndex struct {
+	byCommand     map[string][]requirementbinding.Binding
+	byRequirement map[string][]requirementbinding.Binding
+	byWitness     map[string][]requirementbinding.Binding
+}
+
+func newBindingRouteIndex(bindings []requirementbinding.Binding) bindingRouteIndex {
+	index := bindingRouteIndex{
+		byCommand:     map[string][]requirementbinding.Binding{},
+		byRequirement: map[string][]requirementbinding.Binding{},
+		byWitness:     map[string][]requirementbinding.Binding{},
+	}
+	for _, binding := range bindings {
+		index.byRequirement[binding.RequirementID] = append(index.byRequirement[binding.RequirementID], binding)
+		index.byWitness[binding.WitnessID] = append(index.byWitness[binding.WitnessID], binding)
+		for _, commandID := range binding.CommandIDs {
+			index.byCommand[commandID] = append(index.byCommand[commandID], binding)
+		}
+	}
+	return index
+}
+
+func (index bindingRouteIndex) hasRequirementRoute(requirementID string, witnessRefs, commandRefs map[string]struct{}, sourcePath string) bool {
+	return bindingsContainRoute(index.byRequirement[requirementID], nil, witnessRefs, commandRefs, sourcePath)
+}
+
+func (index bindingRouteIndex) hasWitnessRoute(witnessID string, requirementRefs, commandRefs map[string]struct{}, sourcePath string) bool {
+	return bindingsContainRoute(index.byWitness[witnessID], requirementRefs, stringSet([]string{witnessID}), commandRefs, sourcePath)
+}
+
+func (index bindingRouteIndex) hasCommandRoute(commandID string, requirementRefs, witnessRefs map[string]struct{}, sourcePath string) bool {
+	return bindingsContainRoute(index.byCommand[commandID], requirementRefs, witnessRefs, nil, sourcePath)
+}
+
+func bindingsContainRoute(bindings []requirementbinding.Binding, requirementRefs, witnessRefs, commandRefs map[string]struct{}, sourcePath string) bool {
 	for _, binding := range bindings {
 		if len(requirementRefs) > 0 {
 			if _, ok := requirementRefs[binding.RequirementID]; !ok {
