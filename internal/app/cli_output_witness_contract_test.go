@@ -363,6 +363,30 @@ func expectedRootDistinctOutputWitnessTuples() []rootDistinctOutputWitnessTuple 
 func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpectation {
 	return []rootDistinctOutputContractExpectation{
 		{
+			Command:           "adopt-materialize-apply",
+			NativeSourceForm:  "nativeSources",
+			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/repositorytransaction"},
+			SelectorPath:      "internal/app/adoption_materialization_command_test.go",
+			SelectorTest:      "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+			ExecutableCommand: "go test ./internal/app -run '^TestAdoptMaterializeApplyOutputUsesExactRootShape$'",
+		},
+		{
+			Command:           "adopt-materialize-plan",
+			NativeSourceForm:  "nativeSources",
+			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/repositorytransaction"},
+			SelectorPath:      "internal/app/adoption_materialization_command_test.go",
+			SelectorTest:      "TestAdoptMaterializePlanOutputUsesExactRootShape",
+			ExecutableCommand: "go test ./internal/app -run '^TestAdoptMaterializePlanOutputUsesExactRootShape$'",
+		},
+		{
+			Command:           "adopt-materialize-recover",
+			NativeSourceForm:  "nativeSources",
+			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/repositorytransaction"},
+			SelectorPath:      "internal/app/adoption_materialization_command_test.go",
+			SelectorTest:      "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
+			ExecutableCommand: "go test ./internal/app -run '^TestAdoptMaterializeRecoverOutputUsesExactRootShape$'",
+		},
+		{
 			Command:           "adoption-contract-envelope",
 			NativeSourceForm:  "nativeSource",
 			NativeSourcePaths: []string{"internal/command/adoptioncontract"},
@@ -409,6 +433,21 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 	return []rootDistinctOutputBindingMapping{
 		{
 			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.adoption-materialization-output-root-witnesses",
+			SelectorTest:  "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.adoption-materialization-output-root-witnesses",
+			SelectorTest:  "TestAdoptMaterializePlanOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.adoption-materialization-output-root-witnesses",
+			SelectorTest:  "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
 			ScenarioID:    "proofkit.package-boundary.cli-output-root-witnesses",
 			SelectorTest:  "TestAdoptionContractEnvelopeCLIABI",
 		},
@@ -431,6 +470,21 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
 			ScenarioID:    "proofkit.package-boundary.cli-output-root-witnesses",
 			SelectorTest:  "TestStandaloneMultiVariantCommandsUseExactRootShapes",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.adoption-materialization-cli-abi",
+			SelectorTest:  "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.adoption-materialization-cli-abi",
+			SelectorTest:  "TestAdoptMaterializePlanOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.adoption-materialization-cli-abi",
+			SelectorTest:  "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
 		},
 		{
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",

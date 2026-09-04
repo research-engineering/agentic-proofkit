@@ -146,6 +146,8 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			segments = append(segments, "[--format <mode>]")
 		case "--repo-root":
 			segments = append(segments, optionalUsageSegment(flag+" <path>", required))
+		case "--expect-desired-state", "--expect-transaction", "--transaction":
+			segments = append(segments, optionalUsageSegment(flag+" <sha256-ref>", required))
 		case "--host":
 			segments = append(segments, "[--host 127.0.0.1|::1]")
 		case "--port":

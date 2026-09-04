@@ -2,6 +2,7 @@ package testevidenceinventory
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -15,6 +16,8 @@ const NormalizedInventoryKind = "proofkit.test-evidence-inventory.normalized"
 const directAuthority = "caller_owned_inventory"
 const sourceSetAuthority = "caller_owned_inventory_source_set"
 const wrappedInventorySchema = "proofkit.requirement-test-inventory.v1"
+
+var ErrDirectAuthorityRequired = errors.New("test evidence inventory must use direct caller-owned authority")
 
 const (
 	EvidenceClassDeclaredContractAdmissionRoute = "declared_contract_admission_route"
@@ -216,7 +219,6 @@ func InventoryValue(inventory Inventory) map[string]any {
 	}
 	return record
 }
-
 func Evaluate(raw any) (Result, error) {
 	inventory, err := admitInventory(raw)
 	if err != nil {
@@ -264,6 +266,20 @@ func Evaluate(raw any) (Result, error) {
 		NonClaims:   admit.StringSliceToAny(nonClaims),
 	}
 	return Result{ExitCode: exitCode, Failures: failures, Inventory: inventory, Report: record, Warnings: warnings}, nil
+}
+
+// EvaluateDirect admits and classifies an inventory whose evidence records are
+// supplied directly by the caller. Source-set inventories must first cross
+// their owning normalization boundary.
+func EvaluateDirect(raw any) (Result, error) {
+	result, err := Evaluate(raw)
+	if err != nil {
+		return Result{}, err
+	}
+	if result.Inventory.Authority != directAuthority {
+		return Result{}, ErrDirectAuthorityRequired
+	}
+	return result, nil
 }
 
 func normalizedInventoryValue(inventory Inventory) map[string]any {
@@ -437,6 +453,7 @@ func admitDirectInventory(record map[string]any, context string) (Inventory, err
 	if err != nil {
 		return Inventory{}, err
 	}
+	nonClaims = withoutOwnerDefaultNonClaims(nonClaims)
 	ownerID, err := optionalRuleID(record["ownerId"], context+" ownerId")
 	if err != nil {
 		return Inventory{}, err
@@ -446,6 +463,20 @@ func admitDirectInventory(record map[string]any, context string) (Inventory, err
 		return Inventory{}, err
 	}
 	return Inventory{Authority: authority, Entries: entries, InventoryID: inventoryID, NonClaims: nonClaims, OwnerID: ownerID, SourceID: sourceID}, nil
+}
+
+func withoutOwnerDefaultNonClaims(values []string) []string {
+	defaults := make(map[string]struct{}, len(defaultNonClaims))
+	for _, value := range defaultNonClaims {
+		defaults[value] = struct{}{}
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if _, ownerDefault := defaults[value]; !ownerDefault {
+			result = append(result, value)
+		}
+	}
+	return result
 }
 
 func entries(raw any) ([]Entry, error) {

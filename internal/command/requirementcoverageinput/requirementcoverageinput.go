@@ -3,6 +3,7 @@ package requirementcoverageinput
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -156,15 +157,15 @@ func admitProofAndInventory(record map[string]any) (any, any, testevidenceinvent
 	if proofResult.Record.State != "passed" {
 		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose requires passed requirement proof binding admission")
 	}
-	inventoryResult, err := testevidenceinventory.Evaluate(directRaw)
+	inventoryResult, err := testevidenceinventory.EvaluateDirect(directRaw)
 	if err != nil {
+		if errors.Is(err, testevidenceinventory.ErrDirectAuthorityRequired) {
+			return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose direct mode requires caller_owned_inventory; use normalizedTestEvidenceInventory for source-set inventory")
+		}
 		return nil, nil, testevidenceinventory.NormalizedProjection{}, err
 	}
 	if inventoryResult.ExitCode != 0 {
 		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose requires passed test evidence inventory admission")
-	}
-	if inventoryResult.Inventory.Authority != "caller_owned_inventory" {
-		return nil, nil, testevidenceinventory.NormalizedProjection{}, fmt.Errorf("requirement coverage input compose direct mode requires caller_owned_inventory; use normalizedTestEvidenceInventory for source-set inventory")
 	}
 	return requirementbinding.InputValue(proofResult.Input), nil, testevidenceinventory.NormalizedProjection{Inventory: testevidenceinventory.InventoryValue(inventoryResult.Inventory), Result: inventoryResult}, nil
 }

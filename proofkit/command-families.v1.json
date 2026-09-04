@@ -18,6 +18,16 @@
       ]
     },
     {
+      "familyId": "adoption-materialization",
+      "label": "Adoption materialization",
+      "purpose": "Plan, apply, and recover confined candidate adoption artifacts.",
+      "commands": [
+        "adopt-materialize-apply",
+        "adopt-materialize-plan",
+        "adopt-materialize-recover"
+      ]
+    },
+    {
       "familyId": "agent-workflow-planning",
       "label": "Agent workflow planning",
       "purpose": "Plan bounded engineering-change stages and expose repository-neutral native-evidence guidance.",

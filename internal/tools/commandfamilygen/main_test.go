@@ -49,7 +49,8 @@ func TestCommandFamilyCatalogRejectsParityAndCardinalityMutations(t *testing.T) 
 		{
 			name: "duplicate command",
 			mutate: func(value *catalog, _ *[]string) {
-				value.Families[1].Commands = append(value.Families[1].Commands, value.Families[0].Commands[0])
+				commands := value.Families[1].Commands
+				value.Families[1].Commands = append(commands, commands[len(commands)-1])
 			},
 			want: "sorted unique",
 		},

@@ -445,7 +445,8 @@ func TestRequiredInputCommandsRejectMalformedCallerRecords(t *testing.T) {
 			continue
 		}
 		t.Run(command.Command, func(t *testing.T) {
-			args := append([]string{command.Command, "--input", "-"}, malformedInputExtraArgs(command.Command)...)
+			args := append(effectiveContractRoute(command), "--input", "-")
+			args = append(args, malformedInputExtraArgs(command.Command)...)
 			var stdout bytes.Buffer
 			var stderr bytes.Buffer
 			status := Run(t.Context(), args, strings.NewReader(`{"schemaVersion":1,"unexpected":true}`), &stdout, &stderr)
@@ -521,6 +522,8 @@ func TestNoInputCommandDescriptorsHaveRuntimeSmoke(t *testing.T) {
 func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]string, bool) {
 	t.Helper()
 	switch descriptor.name {
+	case "adopt-materialize-recover":
+		return append(cloneStrings(descriptor.routeTokens), "--help"), false
 	case "adopt-plan":
 		return append(cloneStrings(descriptor.routeTokens), "--mode", "fresh", "--repo-root", t.TempDir()), true
 	case "help":
@@ -599,6 +602,14 @@ func writeGoTestFixture(t *testing.T, source string) string {
 
 func malformedInputExtraArgs(command string) []string {
 	switch command {
+	case "adopt-materialize-apply":
+		return []string{
+			"--expect-desired-state", "sha256:" + strings.Repeat("0", 64),
+			"--expect-transaction", "sha256:" + strings.Repeat("1", 64),
+			"--repo-root", ".",
+		}
+	case "adopt-materialize-plan":
+		return []string{"--repo-root", "."}
 	case "adoption-contract-envelope":
 		return []string{"--mode", "workflow"}
 	case "conformance-profile":

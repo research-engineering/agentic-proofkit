@@ -43,6 +43,406 @@
   },
   "commands": [
     {
+      "command": "adopt-materialize-apply",
+      "route": [
+        "adopt",
+        "materialize",
+        "apply"
+      ],
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_filesystem_mutation",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--expect-desired-state",
+        "--expect-transaction",
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--repo-root"
+      ],
+      "requiredFlags": [
+        "--expect-desired-state",
+        "--expect-transaction",
+        "--repo-root"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--expect-desired-state",
+        "--expect-transaction",
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--repo-root"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "inputContract": {
+        "contractId": "proofkit.adopt-materialize-apply.input.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.adoption-materialization.apply-input.v1.root-shape",
+        "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
+        "nativeSource": {
+          "path": "internal/command/adoptionmaterialization",
+          "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeAdmissionWitnessSelector": {
+          "path": "internal/app/adoption_materialization_command_test.go",
+          "test": "TestAdoptionMaterializationCLI",
+          "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "owner-admitted adoption plan, requirement sources, proof bindings, and direct test inventory",
+          "root-shape-only definition proofkit.adoption-materialization.apply-input.v1.root-shape; nested fields, types, cardinalities, and cross-record closure remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-032",
+          "REQ-PROOFKIT-SPEC-033"
+        ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.adopt-materialize-apply.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.adoption-materialization.apply-output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:4b58bd4e89da98ad79c5e6faf32fe58766313117ad2558b602bfed853de0cf7e",
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/adoptionmaterialization",
+            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
+            "evidenceClass": "source_checkout"
+          }
+        ],
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/adoption_materialization_command_test.go",
+          "test": "TestAdoptMaterializeApplyOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeApplyOutputUsesExactRootShape$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "apply receipt binds expected transaction and desired-state identities to the transaction result",
+          "JSON receipt and bounded text projection preserve the same operation outcome",
+          "root-shape-only definition proofkit.adoption-materialization.apply-output.v1.root-shape; nested fields, types, and cardinalities remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-032",
+          "REQ-PROOFKIT-SPEC-033"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
+      }
+    },
+    {
+      "command": "adopt-materialize-plan",
+      "route": [
+        "adopt",
+        "materialize",
+        "plan"
+      ],
+      "input": "required",
+      "stdin": true,
+      "inputPointer": true,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--repo-root"
+      ],
+      "requiredFlags": [
+        "--repo-root"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--format",
+        "--input",
+        "--input-pointer",
+        "--repo-root"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "inputContract": {
+        "contractId": "proofkit.adopt-materialize-plan.input.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.adoption-materialization.plan-input.v1.root-shape",
+        "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
+        "nativeSource": {
+          "path": "internal/command/adoptionmaterialization",
+          "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeAdmissionWitnessSelector": {
+          "path": "internal/app/adoption_materialization_command_test.go",
+          "test": "TestAdoptionMaterializationCLI",
+          "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "owner-admitted adoption plan, requirement sources, proof bindings, and direct test inventory",
+          "root-shape-only definition proofkit.adoption-materialization.plan-input.v1.root-shape; nested fields, types, cardinalities, and cross-record closure remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-032",
+          "REQ-PROOFKIT-SPEC-033"
+        ]
+      },
+      "outputContract": {
+        "contractId": "proofkit.adopt-materialize-plan.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.adoption-materialization.plan-output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:fc0e2d547a5fd54ebebe9d237a48ae15418b32d3d28fa5185aae64a0fba9b255",
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/adoptionmaterialization",
+            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
+            "evidenceClass": "source_checkout"
+          }
+        ],
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/adoption_materialization_command_test.go",
+          "test": "TestAdoptMaterializePlanOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializePlanOutputUsesExactRootShape$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "read-only content-bound plan with transaction and desired-state identities",
+          "JSON plan and bounded text are derived from one admitted typed plan",
+          "root-shape-only definition proofkit.adoption-materialization.plan-output.v1.root-shape; nested fields, types, and cardinalities remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-032",
+          "REQ-PROOFKIT-SPEC-033"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
+      }
+    },
+    {
+      "command": "adopt-materialize-recover",
+      "route": [
+        "adopt",
+        "materialize",
+        "recover"
+      ],
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_mutation",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--action",
+        "--color",
+        "--format",
+        "--repo-root",
+        "--transaction"
+      ],
+      "requiredFlags": [
+        "--action",
+        "--repo-root",
+        "--transaction"
+      ],
+      "singleOccurrenceFlags": [
+        "--action",
+        "--color",
+        "--format",
+        "--repo-root",
+        "--transaction"
+      ],
+      "flagChoices": {
+        "--action": [
+          "resume",
+          "rollback"
+        ],
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.adopt-materialize-recover.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.adoption-materialization.recover-output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:06129ef857ffb11351535c769f9ca207522a08f3c5bf2da52c6f5fff0b1ac757",
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/adoptionmaterialization",
+            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
+            "evidenceClass": "source_checkout"
+          }
+        ],
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/adoption_materialization_command_test.go",
+          "test": "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestAdoptMaterializeRecoverOutputUsesExactRootShape$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "resume or rollback receipt binds one exact pending transaction identity to its terminal or retained recovery state",
+          "JSON receipt and bounded text projection preserve the same operation outcome",
+          "root-shape-only definition proofkit.adoption-materialization.recover-output.v1.root-shape; nested fields, types, and cardinalities remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-032",
+          "REQ-PROOFKIT-SPEC-033"
+        ],
+        "flagChoices": {
+          "--action": [
+            "resume",
+            "rollback"
+          ],
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
+      }
+    },
+    {
       "command": "adopt-plan",
       "route": [
         "adopt",
@@ -785,7 +1185,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2563,7 +2963,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
+            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
             "evidenceClass": "source_checkout"
           },
           {
@@ -4159,7 +4559,7 @@
         "rootDefinitionDigest": "sha256:f6300d6d0f80f5066fe4079433978132ee2bb1df75e602e59cf3dc37a385d3ce",
         "nativeSource": {
           "path": "internal/command/requirementcoverageinput",
-          "canonicalDigest": "sha256:4c10b1cd675af7d7753bb72a44fca1bb9a568bcd4d3733ee1907e6c4e22757f8",
+          "canonicalDigest": "sha256:ca685e4dd96bcd3981443471bcb9ef6f2a74ca2d8c2f9926aba2662bf7876ab4",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4207,7 +4607,7 @@
         "rootDefinitionDigest": "sha256:0f264c996a058fb8aff102e42b95a4610d3a584b35687cc870b3d16c9589cfed",
         "nativeSource": {
           "path": "internal/command/requirementcoverageinput",
-          "canonicalDigest": "sha256:4c10b1cd675af7d7753bb72a44fca1bb9a568bcd4d3733ee1907e6c4e22757f8",
+          "canonicalDigest": "sha256:ca685e4dd96bcd3981443471bcb9ef6f2a74ca2d8c2f9926aba2662bf7876ab4",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5853,7 +6253,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
+          "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5882,7 +6282,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
+          "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -6233,7 +6633,7 @@
           },
           {
             "path": "internal/command/testevidenceinventory",
-            "canonicalDigest": "sha256:60983b8f25544c7b85e818f202de053fa15557b0de37a7df35aa0d58b58c3888",
+            "canonicalDigest": "sha256:5b0a149b1875f3844459420645c9b2fa86a9d7c933c5edd90292192220fcdc33",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -6330,7 +6730,7 @@
           },
           {
             "path": "internal/command/testevidenceinventory",
-            "canonicalDigest": "sha256:60983b8f25544c7b85e818f202de053fa15557b0de37a7df35aa0d58b58c3888",
+            "canonicalDigest": "sha256:5b0a149b1875f3844459420645c9b2fa86a9d7c933c5edd90292192220fcdc33",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -7764,6 +8164,126 @@
         ]
       },
       "canonicalDigest": "sha256:90583a47b9bdd605b2d3f24dcb1a5dbb2b4d9da20d7be097da381c9c77229e62"
+    },
+    {
+      "definitionId": "proofkit.adoption-materialization.apply-input.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": ["nonClaims", "projectId", "requestId", "requestKind", "requirementProofBinding", "requirementSources", "schemaVersion", "sourcePlan", "testEvidenceInventory"],
+            "requiredFields": ["nonClaims", "projectId", "requestId", "requestKind", "requirementProofBinding", "requirementSources", "schemaVersion", "sourcePlan", "testEvidenceInventory"],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": ["default JSON input"]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad"
+    },
+    {
+      "definitionId": "proofkit.adoption-materialization.apply-output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": ["expectedDesiredStateId", "expectedTransactionId", "failureClass", "nonClaims", "operation", "receiptId", "receiptKind", "schemaVersion", "state", "transactionResult"],
+            "requiredFields": ["expectedDesiredStateId", "expectedTransactionId", "failureClass", "nonClaims", "operation", "receiptId", "receiptKind", "schemaVersion", "state", "transactionResult"],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": ["default JSON mode"]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:4b58bd4e89da98ad79c5e6faf32fe58766313117ad2558b602bfed853de0cf7e"
+    },
+    {
+      "definitionId": "proofkit.adoption-materialization.plan-input.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": ["nonClaims", "projectId", "requestId", "requestKind", "requirementProofBinding", "requirementSources", "schemaVersion", "sourcePlan", "testEvidenceInventory"],
+            "requiredFields": ["nonClaims", "projectId", "requestId", "requestKind", "requirementProofBinding", "requirementSources", "schemaVersion", "sourcePlan", "testEvidenceInventory"],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": ["default JSON input"]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e"
+    },
+    {
+      "definitionId": "proofkit.adoption-materialization.plan-output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": ["manifest", "nonClaims", "planKind", "projectId", "requestId", "schemaVersion", "sourceIntent", "sourcePlanId", "state", "transaction"],
+            "requiredFields": ["manifest", "nonClaims", "planKind", "projectId", "requestId", "schemaVersion", "sourceIntent", "sourcePlanId", "state", "transaction"],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": ["default JSON mode"]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:fc0e2d547a5fd54ebebe9d237a48ae15418b32d3d28fa5185aae64a0fba9b255"
+    },
+    {
+      "definitionId": "proofkit.adoption-materialization.recover-output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": ["expectedDesiredStateId", "expectedTransactionId", "failureClass", "nonClaims", "operation", "receiptId", "receiptKind", "schemaVersion", "state", "transactionResult"],
+            "requiredFields": ["expectedDesiredStateId", "expectedTransactionId", "failureClass", "nonClaims", "operation", "receiptId", "receiptKind", "schemaVersion", "state", "transactionResult"],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": ["default JSON mode"]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:06129ef857ffb11351535c769f9ca207522a08f3c5bf2da52c6f5fff0b1ac757"
     },
     {
       "definitionId": "proofkit.adoption-workflow-plan.input.v1.root-shape",

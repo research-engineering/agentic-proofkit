@@ -112,6 +112,8 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 		return writeText(usageWithRenderer(renderer), 0, nil, stdout, stderr)
 	case commandRunnerAdoptionFrontDoor:
 		return runAdoptionFrontDoor(ctx, descriptor.name, args[1:], stdout, stderr, capabilities)
+	case commandRunnerAdoptionMaterialization:
+		return runAdoptionMaterialization(ctx, descriptor.name, args[1:], stdin, stdout, stderr, capabilities)
 	case commandRunnerAdoptionDoctor:
 		return runAgentEnvelopeCommand(args[0], args[1:], stdin, stdout, stderr, agentEnvelopeBuilders{
 			build:         adoptiondoctor.Build,

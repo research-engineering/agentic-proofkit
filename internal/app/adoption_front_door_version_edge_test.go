@@ -11,13 +11,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
-	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
 const adoptionFrontDoorVersionEdgePath = "internal/app/testdata/v0.7-wire-observations.json"
+const archivedAdoptionFrontDoorReleaseRoot = "internal/app/testdata/releases/v0.7.0"
 
 type adoptionFrontDoorVersionEdge struct {
 	AddedCommandContracts     []adoptionFrontDoorCommandContract `json:"addedCommandContracts"`
@@ -71,8 +70,7 @@ type adoptionChangedCommandContract struct {
 
 func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
-	currentPublicABI := "sha256:" + currentCLIContractPublicABISHA256(t)
-	if err := validateAdoptionFrontDoorVersionEdge(record, repoRoot(t), currentPublicABI); err != nil {
+	if err := validateAdoptionFrontDoorVersionEdge(record, archivedAdoptionFrontDoorRoot(t)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +107,7 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 		t.Run(fmt.Sprintf("mutant-%d", index), func(t *testing.T) {
 			value := cloneAdoptionFrontDoorVersionEdge(record)
 			mutate(&value)
-			if err := validateAdoptionFrontDoorVersionEdge(value, repoRoot(t), currentPublicABI); err == nil {
+			if err := validateAdoptionFrontDoorVersionEdge(value, archivedAdoptionFrontDoorRoot(t)); err == nil {
 				t.Fatal("version-edge mutant was admitted")
 			}
 		})
@@ -118,7 +116,7 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 
 func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), record.ChangeRecordRef))
+	content, err := os.ReadFile(filepath.Join(archivedAdoptionFrontDoorRoot(t), filepath.FromSlash(record.ChangeRecordRef)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,9 +143,27 @@ func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t 
 	mutant := cloneAdoptionFrontDoorVersionEdge(record)
 	digest := sha256.Sum256(mutantContent)
 	mutant.ChangeRecordSHA256 = fmt.Sprintf("sha256:%x", digest)
-	currentPublicABI := "sha256:" + currentCLIContractPublicABISHA256(t)
-	if err := validateAdoptionFrontDoorVersionEdge(mutant, mutantRoot, currentPublicABI); err == nil || !strings.Contains(err.Error(), "contradicts") {
+	if err := validateAdoptionFrontDoorVersionEdge(mutant, mutantRoot); err == nil || !strings.Contains(err.Error(), "contradicts") {
 		t.Fatalf("coordinated change-record mutant error=%v, want inventory contradiction", err)
+	}
+}
+
+func TestAdoptionFrontDoorVersionEdgeResolvesDeclaredReferenceWithinFrozenReleaseRoot(t *testing.T) {
+	record := readAdoptionFrontDoorVersionEdge(t)
+	content, err := os.ReadFile(filepath.Join(archivedAdoptionFrontDoorRoot(t), filepath.FromSlash(record.ChangeRecordRef)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	frozenRoot := t.TempDir()
+	path := filepath.Join(frozenRoot, filepath.FromSlash(record.ChangeRecordRef))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateAdoptionFrontDoorVersionEdge(record, frozenRoot); err != nil {
+		t.Fatalf("validateAdoptionFrontDoorVersionEdge() failed to resolve declared reference: %v", err)
 	}
 }
 
@@ -221,7 +237,7 @@ func readAdoptionFrontDoorVersionEdge(t *testing.T) adoptionFrontDoorVersionEdge
 	return record
 }
 
-func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, root string, currentPublicABI string) error {
+func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, releaseSnapshotRoot string) error {
 	if record.SchemaVersion != 1 || record.EdgeID != "proofkit.public-wire.0.6.0-to-0.7.0" || record.EvidenceClass != "owner_authored_frozen_version_edge_observation" {
 		return fmt.Errorf("adoption front-door version-edge identity is invalid")
 	}
@@ -231,7 +247,7 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if record.CommandContractSelection != "declared_input_contract_id_change" {
 		return fmt.Errorf("adoption front-door command-contract selection policy is invalid")
 	}
-	if record.PreviousPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.CurrentPublicABISHA256 != currentPublicABI || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
+	if record.PreviousPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.CurrentPublicABISHA256 != "sha256:c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7" || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("adoption front-door version-edge ABI identity is invalid")
 	}
 	wantRemoved := adoptionRemovedCommandContract{Command: "init", DefaultInvocationPreset: "all", OutputContractSHA256: "sha256:3e59a3002327c759e5e747f8baacaa63a4d6784e1a1c520f0a54e01af3f2faa0"}
@@ -239,8 +255,8 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 		return fmt.Errorf("adoption front-door removed command contract is not exact")
 	}
 	wantAdded := []adoptionFrontDoorCommandContract{
-		{Command: "adopt-plan", Route: []string{"adopt", "plan"}, OutputContractSHA256: generatedCommandContractMetadataByName["adopt-plan"].OutputContractSHA256},
-		{Command: "repository-inventory", Route: []string{"repository-inventory"}, OutputContractSHA256: generatedCommandContractMetadataByName["repository-inventory"].OutputContractSHA256},
+		{Command: "adopt-plan", Route: []string{"adopt", "plan"}, OutputContractSHA256: "sha256:13e3392d9005c27fed3003a1d036123fe12a341dbe16a97c0cd9f8272fb83320"},
+		{Command: "repository-inventory", Route: []string{"repository-inventory"}, OutputContractSHA256: "sha256:4a6fc5b5ef55090854e70927494d220afdee0ae234de4f61a720a6018865f02f"},
 	}
 	if !slices.EqualFunc(record.AddedCommandContracts, wantAdded, equalAdoptionCommandContract) {
 		return fmt.Errorf("adoption front-door added command contracts are not exact")
@@ -248,27 +264,21 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	wantGeneratedArtifacts := []adoptionChangedGeneratedArtifact{{
 		ArtifactKind:         "proofkit.json-report-cli-adapter-source",
 		CurrentSourceSHA256:  "sha256:62c34f1b920466f157d32d982fd5dd8355cbfb023eeda342e8cdbe5c15d731a0",
-		GeneratorID:          jsonreportcliadaptersource.TypeScriptGeneratorID,
+		GeneratorID:          "proofkit.json-report-cli-adapter-source.typescript.v2",
 		PreviousSourceSHA256: "sha256:a171cc1b95c6078b7190ac50fc9fd298db8f42bfc9b65bbb67fa77d63dc04a93",
 	}}
 	if !slices.Equal(record.ChangedGeneratedArtifacts, wantGeneratedArtifacts) {
 		return fmt.Errorf("adoption front-door changed generated artifacts are not exact")
 	}
-	currentAgentRouteInputContract := agentroute.InputContract()
-	currentAgentRouteInputContractID, contractIDOK := currentAgentRouteInputContract["contractId"].(string)
-	currentAgentRouteWireSchemaVersion, schemaVersionOK := currentAgentRouteInputContract["schemaVersion"].(int)
-	if !contractIDOK || currentAgentRouteInputContractID == "" || !schemaVersionOK || currentAgentRouteWireSchemaVersion < 1 {
-		return fmt.Errorf("current agent-route input contract identity is invalid")
-	}
 	wantChangedContracts := []adoptionChangedCommandContract{{
 		Command:                      "agent-route",
-		CurrentInputContractID:       currentAgentRouteInputContractID,
-		CurrentInputContractSHA256:   generatedCommandContractMetadataByName["agent-route"].InputContractSHA256,
-		CurrentOutputContractSHA256:  generatedCommandContractMetadataByName["agent-route"].OutputContractSHA256,
+		CurrentInputContractID:       "proofkit.agent-route.input.v2",
+		CurrentInputContractSHA256:   "sha256:c00e832b4e9eac6b858eec46e810431c0a5c9f56c5c50f055f39ee024f50014c",
+		CurrentOutputContractSHA256:  "sha256:a972f7178986b89334262db8047aabbb5a7b67025b30a009a96af47722b707c6",
 		PreviousInputContractID:      "proofkit.agent-route.input.v1",
 		PreviousInputContractSHA256:  "sha256:4fc7b2e5ffe3ed632e5e84d20e5ae26f9ace11df614bc9aec680853e60809ebd",
 		PreviousOutputContractSHA256: "sha256:485d62afc2e5ed07c28f557b0d1069f167b3838abe0aed248e9ff94f3e25c0ad",
-		WireSchemaVersion:            currentAgentRouteWireSchemaVersion,
+		WireSchemaVersion:            1,
 	}}
 	if !slices.Equal(record.ChangedCommandContracts, wantChangedContracts) {
 		return fmt.Errorf("adoption front-door changed command contracts are not exact")
@@ -278,17 +288,14 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 			return fmt.Errorf("adoption front-door changed command contract %s did not change input identity", contract.Command)
 		}
 	}
-	currentSourceDigest := sha256.Sum256([]byte(jsonreportcliadaptersource.TypeScriptSource()))
-	if record.ChangedGeneratedArtifacts[0].CurrentSourceSHA256 != fmt.Sprintf("sha256:%x", currentSourceDigest) {
-		return fmt.Errorf("adoption front-door generated adapter source identity is stale")
-	}
 	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.adoption.init-retired", "proofkit.agent-route.input-contract-v2"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.adoption.front-door", "proofkit.adoption.repository-inventory", "proofkit.cli.generated-adapter-command-routes", "proofkit.cli.hierarchical-command-routes", "proofkit.python-wheel.embedded-cli-contract"}) {
 		return fmt.Errorf("adoption front-door change inventory is not exact")
 	}
 	if record.ChangeRecordRef != "release/change-record.v2.json" {
 		return fmt.Errorf("adoption front-door change record reference is not exact")
 	}
-	changeRecordContent, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(record.ChangeRecordRef)))
+	archivedChangeRecordPath := filepath.Join(releaseSnapshotRoot, filepath.FromSlash(record.ChangeRecordRef))
+	changeRecordContent, err := os.ReadFile(archivedChangeRecordPath)
 	if err != nil {
 		return fmt.Errorf("read adoption front-door change record: %w", err)
 	}
@@ -296,7 +303,7 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if record.ChangeRecordSHA256 != fmt.Sprintf("sha256:%x", digest) {
 		return fmt.Errorf("adoption front-door change record digest is not exact")
 	}
-	changeRecord, err := releasechange.Read(filepath.Join(root, filepath.FromSlash(record.ChangeRecordRef)))
+	changeRecord, err := releasechange.Read(archivedChangeRecordPath)
 	if err != nil {
 		return fmt.Errorf("admit adoption front-door change record: %w", err)
 	}
@@ -347,4 +354,9 @@ func cloneAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge) adop
 	record.ChangedGeneratedArtifacts = append([]adoptionChangedGeneratedArtifact(nil), record.ChangedGeneratedArtifacts...)
 	record.NonClaims = append([]string(nil), record.NonClaims...)
 	return record
+}
+
+func archivedAdoptionFrontDoorRoot(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(repoRoot(t), filepath.FromSlash(archivedAdoptionFrontDoorReleaseRoot))
 }

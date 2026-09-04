@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -31,6 +32,47 @@ func TestBuildAdmitsDeclaredSemanticFalsifierRouteInventory(t *testing.T) {
 	}
 	if actions := agentActions(record.JSONValue()); len(actions) != 0 {
 		t.Fatalf("clean inventory agent actions=%#v, want none", actions)
+	}
+}
+
+func TestEvaluateDirectOwnsDirectAuthorityBoundary(t *testing.T) {
+	result, err := EvaluateDirect(validInventory(t))
+	if err != nil {
+		t.Fatalf("EvaluateDirect() error = %v", err)
+	}
+	if result.ExitCode != 0 || result.Inventory.Authority != directAuthority {
+		t.Fatalf("EvaluateDirect() result = %#v", result)
+	}
+	if _, err := EvaluateDirect(validSourceSetInventory(t)); err == nil || !strings.Contains(err.Error(), "direct caller-owned authority") {
+		t.Fatalf("EvaluateDirect(source set) error = %v", err)
+	}
+}
+
+func TestDirectInventoryProjectionPreservesAdmittedMeaning(t *testing.T) {
+	input := validInventory(t).(map[string]any)
+	input["nonClaims"] = append(input["nonClaims"].([]any), defaultNonClaims[0])
+	first, err := EvaluateDirect(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := EvaluateDirect(InventoryValue(first.Inventory))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(first.Inventory.NonClaims, second.Inventory.NonClaims) || !reflect.DeepEqual(InventoryValue(first.Inventory), InventoryValue(second.Inventory)) {
+		t.Fatalf("Admit(Project(Admit(x))) changed inventory meaning:\nfirst=%#v\nsecond=%#v", first.Inventory, second.Inventory)
+	}
+	projected := InventoryValue(first.Inventory)["nonClaims"].([]any)
+	for _, ownerDefault := range defaultNonClaims {
+		count := 0
+		for _, value := range projected {
+			if value == ownerDefault {
+				count++
+			}
+		}
+		if count != 1 {
+			t.Fatalf("owner projection contains default non-claim %q %d times, want exactly once", ownerDefault, count)
+		}
 	}
 }
 

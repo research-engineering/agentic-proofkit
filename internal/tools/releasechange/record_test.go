@@ -194,28 +194,14 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.adoption.init-retired", Summary: "Remove the overloaded init command and its route presets in favor of the explicit read-only adopt plan trust-mode route and the existing bounded specialist commands."},
-	{ChangeID: "proofkit.agent-route.input-contract-v2", Summary: "Replace the agent-route input contract identity with proofkit.agent-route.input.v2 so the materialized-reference rule that rejects the stdin sentinel is machine-distinguishable from earlier v1 semantics; the wire schema remains version 1."},
-}
+var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.adoption.front-door", Summary: "Add adopt plan as a read-only candidate-authoring front door with explicit fresh, code-baseline, and audit-from-code intent plus an optional orthogonal stack hint."},
-	{ChangeID: "proofkit.adoption.repository-inventory", Summary: "Add a bounded explicit repository-inventory command that observes only a fixed root-file catalog without stack or source-semantic inference."},
-	{ChangeID: "proofkit.cli.generated-adapter-command-routes", Summary: "Extend the generated TypeScript CLI adapter to consume the exact public contract-projected one-to-four-token command-route grammar and pass each admitted route token as a separate process argument while preserving one-token calls."},
-	{ChangeID: "proofkit.cli.hierarchical-command-routes", Summary: "Publish one exact bounded command-route grammar in the CLI process contract and add owner-generated multi-token routes while retaining stable internal command IDs for contract and implementation ownership."},
-	{ChangeID: "proofkit.python-wheel.embedded-cli-contract", Summary: "Embed the exact public CLI contract in every Python wheel and use the installed record to prove command-family route closure."},
+	{ChangeID: "proofkit.adoption.transactional-materialization", Summary: "Add separate read-only plan, compare-and-swap apply, and state-bound recovery routes that compile owner-admitted adoption candidates into canonical repository artifacts."},
+	{ChangeID: "proofkit.repository.transaction-protocol", Summary: "Add a bounded repository-confined transaction owner with immutable journals, exact before-state checks, deterministic resume, and byte-identical rollback for cooperative writers."},
 }
 
-var currentMigrationSteps = []string{
-	"Replace explicit init --preset fresh with adopt plan --mode fresh --repo-root <caller-selected-root>.",
-	"Replace init --preset code-baseline with adopt plan --mode code-baseline --repo-root <caller-selected-root>, and replace init --preset code-audit with adopt plan --mode audit-from-code --repo-root <caller-selected-root>.",
-	"Replace init --preset legacy with migration-parity-admission followed by migration-plan over explicit caller-owned records; run requirement-source-transition when the migration changes requirement lifecycle state.",
-	"Replace init --preset change-set with changed-path-set followed by the explicit impact and selective-gate composition routes required by the consuming repository.",
-	"Replace bare init or init --preset all with help families, then select the smallest applicable bounded route rather than materializing every route family.",
-	"Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible.",
-	"Replace persisted proofkit.agent-route.input.v1 contract identity with proofkit.agent-route.input.v2; the admitted wire schemaVersion remains 1.",
-}
+var currentMigrationSteps = []string{}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -235,13 +221,16 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.7.0",
+		"# @research-engineering/agentic-proofkit 0.8.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
 	}
 	for _, change := range currentBreakingChanges {
 		lines = append(lines, currentChangeBullet(change))
+	}
+	if len(currentBreakingChanges) == 0 {
+		lines = append(lines, "- None.")
 	}
 	lines = append(lines, "", "## Additions", "")
 	for _, change := range currentAdditions {
@@ -254,14 +243,10 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"Migration is required:",
+		"No consumer migration is required.",
 		"",
 	)
-	for _, step := range currentMigrationSteps {
-		lines = append(lines, "- "+step)
-	}
 	lines = append(lines,
-		"",
 		"## Platform Requirements",
 		"",
 		"- Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64.",
@@ -269,6 +254,7 @@ func currentExpectedReleaseNotes() string {
 		"## Known Limitations",
 		"",
 		"- Adopt plan inventories only a fixed root-file catalog; it does not infer stack identity, inspect arbitrary source semantics, generate requirements, write files, or execute native evidence.",
+		"- Transactional materialization writes only owner-admitted candidate artifacts under one explicit repository root; it does not infer requirement meaning, execute native evidence, approve merge or release, provide filesystem-wide atomic visibility to concurrent readers, or protect its private namespace from a hostile same-user process.",
 		"- Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
 		"- Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
 		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
@@ -280,7 +266,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.7.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.8.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -291,7 +277,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Rollback",
 		"",
-		"- Pin npm consumers to the previous admitted version 0.6.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.6.0`.",
+		"- Pin npm consumers to the previous admitted version 0.7.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.7.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"
