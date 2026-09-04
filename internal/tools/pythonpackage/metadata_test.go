@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
@@ -17,7 +18,7 @@ import (
 
 const (
 	testLicenseContent     = "MIT License\n"
-	testCLIContractContent = `{"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`
+	testCLIContractContent = `{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another"}},"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`
 )
 
 func TestPythonPackageReadersRejectAmbiguousJSON(t *testing.T) {
@@ -333,6 +334,51 @@ func TestVerifyWheelContentsRejectsEmbeddedBinaryDifferentFromSourceRecord(t *te
 	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("source-binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
 	if err == nil || !strings.Contains(err.Error(), "embedded binary sha256 mismatch") {
 		t.Fatalf("verifyWheelContents() error=%v, want embedded/source binary identity rejection", err)
+	}
+}
+
+func TestVerifyWheelContentsRejectsOversizedEntryBeforeDecompression(t *testing.T) {
+	target := releaseTargets()[2]
+	version := "1.2.3"
+	path := filepath.Join(t.TempDir(), "wheel.whl")
+	writeMinimalWheelFixture(
+		t,
+		path,
+		version,
+		wheelMetadata(target),
+		[]byte("binary"),
+		strings.Repeat("x", maximumWheelTextEntryBytes+1),
+		true,
+		[]byte(testLicenseContent),
+	)
+
+	err := verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
+	if err == nil || !strings.Contains(err.Error(), "exceeds resource limit") {
+		t.Fatalf("verifyWheelContents() error=%v, want pre-decompression resource rejection", err)
+	}
+}
+
+func TestVerifyWheelContentsRejectsOversizedCompressedEntryBeforeDecompression(t *testing.T) {
+	target := releaseTargets()[2]
+	version := "1.2.3"
+	path := filepath.Join(t.TempDir(), "wheel.whl")
+	writeMinimalWheel(t, path, version, wheelMetadata(target))
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	centralHeader := bytes.Index(content, []byte{0x50, 0x4b, 0x01, 0x02})
+	if centralHeader < 0 {
+		t.Fatal("wheel fixture has no central directory entry")
+	}
+	binary.LittleEndian.PutUint32(content[centralHeader+20:centralHeader+24], uint32(maximumWheelArchiveBytes+1))
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err = verifyWheelContents(path, testPackageManifest(version), target, binarySHA256([]byte("binary")), []byte(testLicenseContent), []byte(testCLIContractContent))
+	if err == nil || !strings.Contains(err.Error(), "compressed resource limit") {
+		t.Fatalf("verifyWheelContents() error=%v, want compressed pre-decompression resource rejection", err)
 	}
 }
 

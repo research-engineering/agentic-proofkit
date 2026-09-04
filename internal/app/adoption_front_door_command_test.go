@@ -162,6 +162,10 @@ func TestAdoptionFrontDoorCLI(t *testing.T) {
 		if status != 1 || stdout != "" || stderr != "unsupported help target: adopt\n" {
 			t.Fatalf("abbreviated help status=%d stderr=%q stdout=%q", status, stderr, stdout)
 		}
+		status, stdout, stderr = executeAgentWorkflowCLI(t, []string{"adopt", "plan", "--mode", "fresh", "--help"}, panicReader{}, PresentationCapabilities{})
+		if status != 1 || stdout != "" || stderr != "adopt plan help accepts no additional arguments\n" {
+			t.Fatalf("exclusive help status=%d stderr=%q stdout=%q", status, stderr, stdout)
+		}
 	})
 }
 

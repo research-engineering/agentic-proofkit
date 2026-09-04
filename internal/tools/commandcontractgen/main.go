@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -35,9 +36,8 @@ const (
 )
 
 var (
-	commandTokenPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
-	digestPattern       = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
-	testNamePattern     = regexp.MustCompile(`^Test[A-Z0-9_][A-Za-z0-9_]*$`)
+	digestPattern   = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
+	testNamePattern = regexp.MustCompile(`^Test[A-Z0-9_][A-Za-z0-9_]*$`)
 )
 
 type definitionRecord struct {
@@ -154,7 +154,33 @@ func readContract(path string) ([]byte, map[string]any, error) {
 	if err := rejectUnknownKeys(record, []string{"commands", "contractDefinitions", "contractId", "packageName", "processContract", "schemaVersion"}, "CLI contract"); err != nil {
 		return nil, nil, err
 	}
+	if err := admitCommandRouteGrammar(record["processContract"]); err != nil {
+		return nil, nil, err
+	}
 	return content, record, nil
+}
+
+func admitCommandRouteGrammar(raw any) error {
+	processContract, ok := raw.(map[string]any)
+	if !ok {
+		return errors.New("CLI processContract must be an object")
+	}
+	grammar, ok := processContract["commandRouteGrammar"].(map[string]any)
+	if !ok {
+		return errors.New("CLI processContract commandRouteGrammar must be an object")
+	}
+	if err := rejectUnknownKeys(grammar, []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"}, "CLI command route grammar"); err != nil {
+		return err
+	}
+	minimum, minimumOK := positiveJSONInteger(grammar["minimumTokens"])
+	maximum, maximumOK := positiveJSONInteger(grammar["maximumTokens"])
+	if !minimumOK || !maximumOK || minimum != commandroute.MinimumTokens || maximum != commandroute.MaximumTokens {
+		return fmt.Errorf("CLI command route grammar token bounds must be %d through %d", commandroute.MinimumTokens, commandroute.MaximumTokens)
+	}
+	if grammar["separator"] != commandroute.Separator || grammar["tokenPattern"] != commandroute.TokenPattern || grammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+		return errors.New("CLI command route grammar does not match the native route owner")
+	}
+	return nil
 }
 
 func admitDefinitions(contract map[string]any) (map[string]definitionRecord, error) {
@@ -515,11 +541,11 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 }
 
 func admitCommandRoute(name string, route []string, existing map[string]string) error {
-	if len(route) == 0 || len(route) > 4 {
+	if len(route) < commandroute.MinimumTokens || len(route) > commandroute.MaximumTokens {
 		return fmt.Errorf("command %s route must contain between one and four tokens", name)
 	}
 	for _, token := range route {
-		if !commandTokenPattern.MatchString(token) {
+		if !commandroute.ValidToken(token) {
 			return fmt.Errorf("command %s route contains invalid token", name)
 		}
 	}
@@ -529,16 +555,12 @@ func admitCommandRoute(name string, route []string, existing map[string]string) 
 		if slices.Equal(route, other) {
 			return fmt.Errorf("commands %s and %s have the same route", owner, name)
 		}
-		if routePrefix(route, other) || routePrefix(other, route) {
+		if commandroute.Prefix(route, other) || commandroute.Prefix(other, route) {
 			return fmt.Errorf("command routes for %s and %s have an ambiguous prefix", owner, name)
 		}
 	}
-	existing[strings.Join(route, "\x00")] = name
+	existing[commandroute.Key(route)] = name
 	return nil
-}
-
-func routePrefix(prefix, value []string) bool {
-	return len(prefix) < len(value) && slices.Equal(prefix, value[:len(prefix)])
 }
 
 func admitUniqueContractID(command string, direction string, contract map[string]any, seen map[string]string) error {

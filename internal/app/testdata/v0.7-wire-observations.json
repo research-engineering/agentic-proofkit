@@ -4,18 +4,31 @@
   "previousVersion": "0.6.0",
   "version": "0.7.0",
   "evidenceClass": "owner_authored_frozen_version_edge_observation",
+  "commandContractSelection": "declared_semantic_identity_or_wire_schema_change",
   "changeRecordRef": "release/change-record.v2.json",
-  "changeRecordSha256": "sha256:acff7afef6ac42624f4e0ce185ec3816ea155e5fc2608de003376b3c635bacf3",
+  "changeRecordSha256": "sha256:25dfeccb631449f0c1eb0d1bc6d42d483c3100b34d7ede7a0d16390f3bef3d49",
   "changedGeneratedArtifacts": [
     {
       "artifactKind": "proofkit.json-report-cli-adapter-source",
-      "currentSourceSha256": "sha256:329b88b6b134dc30fb3704d32ac9708fc01608b9df68815bc9585108971be37d",
+      "currentSourceSha256": "sha256:62c34f1b920466f157d32d982fd5dd8355cbfb023eeda342e8cdbe5c15d731a0",
       "generatorId": "proofkit.json-report-cli-adapter-source.typescript.v2",
       "previousSourceSha256": "sha256:a171cc1b95c6078b7190ac50fc9fd298db8f42bfc9b65bbb67fa77d63dc04a93"
     }
   ],
+  "changedCommandContracts": [
+    {
+      "command": "agent-route",
+      "currentInputContractId": "proofkit.agent-route.input.v2",
+      "currentInputContractSha256": "sha256:c00e832b4e9eac6b858eec46e810431c0a5c9f56c5c50f055f39ee024f50014c",
+      "currentOutputContractSha256": "sha256:a972f7178986b89334262db8047aabbb5a7b67025b30a009a96af47722b707c6",
+      "previousInputContractId": "proofkit.agent-route.input.v1",
+      "previousInputContractSha256": "sha256:4fc7b2e5ffe3ed632e5e84d20e5ae26f9ace11df614bc9aec680853e60809ebd",
+      "previousOutputContractSha256": "sha256:485d62afc2e5ed07c28f557b0d1069f167b3838abe0aed248e9ff94f3e25c0ad",
+      "wireSchemaVersion": 1
+    }
+  ],
   "previousPublicAbiSha256": "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5",
-  "currentPublicAbiSha256": "sha256:5a238b80bfdbe22f0e1b76850dab9568c89faf303e4653bf017cdf9535f3d7ae",
+  "currentPublicAbiSha256": "sha256:c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7",
   "removedCommandContract": {
     "command": "init",
     "defaultInvocationPreset": "all",
@@ -25,16 +38,17 @@
     {
       "command": "adopt-plan",
       "route": ["adopt", "plan"],
-      "outputContractSha256": "sha256:16583d956455cc360a13382e0d783e5590a2a19adedbb4bf9fc7b6dd10ee35b8"
+      "outputContractSha256": "sha256:13e3392d9005c27fed3003a1d036123fe12a341dbe16a97c0cd9f8272fb83320"
     },
     {
       "command": "repository-inventory",
       "route": ["repository-inventory"],
-      "outputContractSha256": "sha256:474ac75c2ccaf66d248f4e96df51404d9a0e6c2341aa8278e91207f76b4c12d6"
+      "outputContractSha256": "sha256:4a6fc5b5ef55090854e70927494d220afdee0ae234de4f61a720a6018865f02f"
     }
   ],
   "breakingChangeIds": [
-    "proofkit.adoption.init-retired"
+    "proofkit.adoption.init-retired",
+    "proofkit.agent-route.input-contract-v2"
   ],
   "additionChangeIds": [
     "proofkit.adoption.front-door",

@@ -18,12 +18,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/agentroute"
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
 const (
-	cliContractPublicABISHA256               = "5a238b80bfdbe22f0e1b76850dab9568c89faf303e4653bf017cdf9535f3d7ae"
+	cliContractPublicABISHA256               = "c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -905,6 +906,15 @@ func resolveCLIContractDefinition(t *testing.T, id string, definitions map[strin
 }
 
 func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
+	t.Run("missing generated metadata", func(t *testing.T) {
+		defer func() {
+			if recovered := recover(); recovered == nil || !strings.Contains(fmt.Sprint(recovered), "missing generated contract metadata") {
+				t.Fatalf("descriptor panic = %v, want generated metadata failure", recovered)
+			}
+		}()
+		_ = command("missing-generated-command", commandInputNone, nil, modes("text"), nil)
+	})
+
 	contract := readCLIContract(t)
 	cases := []struct {
 		name        string
@@ -912,9 +922,18 @@ func TestCommandDescriptorContractParityRejectsMutations(t *testing.T) {
 		commands    []cliContractCommand
 	}{
 		{
-			name:        "descriptor only command",
-			descriptors: append(cloneCommandDescriptors(commandDescriptors), command("descriptor-only", commandInputNone, flags("--help"), modes("text"), ownerDirs("descriptoronly"), withRunner(commandRunnerHelp))),
-			commands:    contract.Commands,
+			name: "descriptor only command",
+			descriptors: append(cloneCommandDescriptors(commandDescriptors), commandDescriptor{
+				name:              "descriptor-only",
+				routeTokens:       []string{"descriptor-only"},
+				input:             commandInputNone,
+				runner:            commandRunnerHelp,
+				scopeClass:        commandScopeBuiltInPackageCatalog,
+				allowedFlags:      flags("--help"),
+				outputModes:       modes("text"),
+				semanticOwnerDirs: ownerDirs("descriptoronly"),
+			}),
+			commands: contract.Commands,
 		},
 		{
 			name:        "contract only command",
@@ -1032,7 +1051,16 @@ func TestCommandDescriptorTopologyRejectsInvalidScopeClass(t *testing.T) {
 }
 
 func TestCommandDescriptorTopologyRejectsImplicitPlanningRoute(t *testing.T) {
-	descriptors := append(cloneCommandDescriptors(commandDescriptors), command("new-planning-command", commandInputRequired, flags("--input"), modes("json"), ownerDirs("newplanning"), withRunner(commandRunnerPlanning)))
+	descriptors := append(cloneCommandDescriptors(commandDescriptors), commandDescriptor{
+		name:              "new-planning-command",
+		routeTokens:       []string{"new-planning-command"},
+		input:             commandInputRequired,
+		runner:            commandRunnerPlanning,
+		scopeClass:        commandScopeExplicitCallerInput,
+		allowedFlags:      flags("--input"),
+		outputModes:       modes("json"),
+		semanticOwnerDirs: ownerDirs("newplanning"),
+	})
 	if problems := commandDescriptorTopologyProblems(descriptors); len(problems) == 0 {
 		t.Fatal("planning runner descriptor without explicit route was admitted")
 	}
@@ -1692,7 +1720,19 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(record["processContract"], &processContract); err != nil {
 		t.Fatalf("decode process contract: %v", err)
 	}
-	assertKeys(t, "CLI process contract", keys(processContract), []string{"failureExitCode", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	assertKeys(t, "CLI process contract", keys(processContract), []string{"commandRouteGrammar", "failureExitCode", "globalOptions", "helpGrammar", "stderr", "stdout", "successExitCode"})
+	var routeGrammar map[string]any
+	if err := json.Unmarshal(processContract["commandRouteGrammar"], &routeGrammar); err != nil {
+		t.Fatalf("decode command route grammar: %v", err)
+	}
+	assertKeys(t, "CLI command route grammar", keysAny(routeGrammar), []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"})
+	if routeGrammar["minimumTokens"] != float64(commandroute.MinimumTokens) ||
+		routeGrammar["maximumTokens"] != float64(commandroute.MaximumTokens) ||
+		routeGrammar["separator"] != commandroute.Separator ||
+		routeGrammar["tokenPattern"] != commandroute.TokenPattern ||
+		routeGrammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+		t.Fatalf("CLI command route grammar does not match runtime owner: %#v", routeGrammar)
+	}
 	var globalOptions map[string]any
 	if err := json.Unmarshal(processContract["globalOptions"], &globalOptions); err != nil {
 		t.Fatalf("decode global options: %v", err)

@@ -2,20 +2,23 @@ package jsonreportcliadaptersource
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:329b88b6b134dc30fb3704d32ac9708fc01608b9df68815bc9585108971be37d"
+const expectedTypeScriptSourceSha256 = "sha256:62c34f1b920466f157d32d982fd5dd8355cbfb023eeda342e8cdbe5c15d731a0"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -146,7 +149,10 @@ func TestGeneratedSourceAdmitsBoundedCanonicalCommandRoutes(t *testing.T) {
 	source := TypeScriptSource()
 	for _, required := range []string{
 		"function admitCommandRoute(commandRoute: string): readonly string[]",
-		"tokens.length > 4",
+		"commandRoute.split(" + strconv.Quote(commandroute.Separator) + ")",
+		fmt.Sprintf("tokens.length < %d", commandroute.MinimumTokens),
+		fmt.Sprintf("tokens.length > %d", commandroute.MaximumTokens),
+		strconv.Quote(fmt.Sprintf("agentic-proofkit command route must contain %d to %d canonical tokens", commandroute.MinimumTokens, commandroute.MaximumTokens)),
 		"...routeTokens, \"--input\", \"-\"",
 	} {
 		if !strings.Contains(source, required) {
@@ -550,7 +556,7 @@ assert.deepEqual(maximumRoute.value.route, ["four", "route", "tokens", "exactly"
 for (const invalidRoute of ["", "adopt  plan", "adopt plan now extra later", "Adopt plan", "--help"]) {
   assert.throws(
     () => runProofkitJsonCommand(invalidRoute, {}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot}),
-    /one to four canonical tokens/,
+		/1 to 4 canonical tokens/,
   );
 }
 const compactPass = runProofkitJsonCommand("json-pass", {z: 1, a: true}, [], {binaryPath: fakeProofkitPath, cwd: repositoryRoot, jsonLayout: "compact"});

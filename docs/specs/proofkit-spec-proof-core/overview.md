@@ -120,9 +120,11 @@ execution receipts, and merge policy.
   and emits only bounded candidate requirements, bindings, or owner guidance.
 - `REQ-PROOFKIT-SPEC-018`: an authored command-family catalog covers every
   public CLI command exactly once, deterministically generates the private
-  runtime navigation projection, adds token-bounded root discovery, and projects
-  exact stack-preset IDs into help and diagnostics while preserving existing
-  help invocation forms, process channels, no-input behavior, and leaf dispatch;
+  runtime navigation projection, while one reusable bounded token grammar owns
+  native routing, the public machine contract, generated adapters, and installed
+  npm and wheel route admission. It adds root discovery and projects exact
+  stack-preset IDs into help and diagnostics while preserving existing help
+  invocation forms, process channels, no-input behavior, and leaf dispatch;
   descriptor and help truth remains owned by `REQ-PROOFKIT-QUALITY-004`.
 - `REQ-PROOFKIT-SPEC-019`: explicit catalogs compose content-bound semantic
   schema-v2 context snapshots with exact expected-digest coverage through
@@ -173,14 +175,21 @@ execution receipts, and merge policy.
   omission accounting, stable source-report identity, one top-level detail
   access record, and explicit full-envelope retrieval without repeating policy
   prose or promoting route guidance to authority.
-- `REQ-PROOFKIT-SPEC-027`: the read-only `adopt plan` front door keeps explicit
-  source-trust intent separate from optional stack hints, composes a
-  candidate-only plan over a confined bounded root-catalog inventory and
-  content-bound child-owned evidence-guidance reference, validates arguments and
-  platform support before repository access, discards unknown names immediately
-  after batched catalog classification, and exposes owner-closed JSON plus a
-  bounded text projection with every authority non-claim without inferring
-  requirement meaning, writing files, or retaining the superseded `init` route.
+- `REQ-PROOFKIT-SPEC-027`: the read-only `adopt plan` front door validates its
+  explicit trust intent, optional stack hint, repository root, and platform
+  before access, then composes only owner-admitted inventory and plan records.
+- `REQ-PROOFKIT-SPEC-028`: repository inventory confines a fixed root catalog,
+  rejects unsafe file identities, enforces exact resource bounds, discards
+  unknown names, and emits one deterministic owner-re-admissible record.
+- `REQ-PROOFKIT-SPEC-029`: adoption planning keeps stack observations separate
+  from trust, emits candidate-authoring tasks plus a digest-bound child guidance
+  reference, and never promotes inferred requirements or proof bindings.
+- `REQ-PROOFKIT-SPEC-030`: adoption JSON and bounded text are deterministic
+  projections of one admitted plan, preserve authority non-claims, and apply
+  terminal styling only through an explicit presentation capability.
+- `REQ-PROOFKIT-SPEC-031`: the adoption version edge binds exact ABI, command,
+  contract, generated-artifact, and release-change inventories while proving
+  that the retired `init` route has no remaining public owner.
 
 ## Non-Claims
 

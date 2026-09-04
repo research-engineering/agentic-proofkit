@@ -38,18 +38,25 @@ func TestWrapperScriptRoutesEveryReleasePlatformTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("wrapperScript() error = %v", err)
 	}
-	for _, target := range releaseplatform.Targets() {
-		if !strings.Contains(wrapper, `platform="`+target.PlatformSuffix+`"`) {
-			t.Fatalf("wrapperScript() missing platform route for %s:\n%s", target.PlatformSuffix, wrapper)
-		}
-		for _, osName := range wrapperOSAliases(target.GOOS) {
-			for _, arch := range wrapperArchAliases(target.GOARCH) {
-				pattern := osName + "/" + arch
-				if !strings.Contains(wrapper, pattern+")") {
-					t.Fatalf("wrapperScript() missing uname pattern %s for %s:\n%s", pattern, target.PlatformSuffix, wrapper)
-				}
-			}
-		}
+	wantCases := strings.Join([]string{
+		`  Darwin/aarch64) platform="darwin-arm64" ;;`,
+		`  Darwin/amd64) platform="darwin-x64" ;;`,
+		`  Darwin/arm64) platform="darwin-arm64" ;;`,
+		`  Darwin/x86_64) platform="darwin-x64" ;;`,
+		`  Linux/aarch64) platform="linux-arm64" ;;`,
+		`  Linux/amd64) platform="linux-x64" ;;`,
+		`  Linux/arm64) platform="linux-arm64" ;;`,
+		`  Linux/x86_64) platform="linux-x64" ;;`,
+	}, "\n")
+	gotCases, err := wrapperPlatformCases(releaseplatform.Targets())
+	if err != nil {
+		t.Fatalf("wrapperPlatformCases() error = %v", err)
+	}
+	if gotCases != wantCases {
+		t.Fatalf("wrapperPlatformCases() =\n%s\nwant exact OS/architecture mapping\n%s", gotCases, wantCases)
+	}
+	if strings.Count(wrapper, wantCases) != 1 {
+		t.Fatalf("wrapperScript() must embed the exact platform mapping once:\n%s", wrapper)
 	}
 	for _, required := range []string{
 		"AGENTIC_PROOFKIT_LAUNCHER_PROFILE=npm_offline\n",

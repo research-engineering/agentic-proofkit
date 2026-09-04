@@ -9,7 +9,7 @@ import (
 )
 
 func TestAdmitPreservesExactRoutesAndPresetChoices(t *testing.T) {
-	content := []byte(`{"commands":[{"command":"adopt-plan","route":["adopt","plan"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo","python_service"]}}}]}`)
+	content := contractFixture(`{"command":"adopt-plan","route":["adopt","plan"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo","python_service"]}}}`)
 	contract, err := Admit(content)
 	if err != nil {
 		t.Fatalf("Admit() error = %v", err)
@@ -34,21 +34,21 @@ func TestAdmitPreservesExactRoutesAndPresetChoices(t *testing.T) {
 
 func TestAdmitRejectsAmbiguousOrIncompleteContracts(t *testing.T) {
 	mutants := map[string]string{
-		"duplicate key":    `{"commands":[{"command":"one","command":"two"},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`,
-		"duplicate id":     `{"commands":[{"command":"same"},{"command":"same","route":["other"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`,
-		"duplicate route":  `{"commands":[{"command":"one","route":["same"]},{"command":"two","route":["same"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`,
-		"route prefix":     `{"commands":[{"command":"one","route":["adopt"]},{"command":"two","route":["adopt","plan"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`,
-		"duplicate preset": `{"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["same","same"]}}}]}`,
-		"unsorted presets": `{"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["z","a"]}}}]}`,
+		"duplicate key":    `{"command":"one","command":"two"},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}`,
+		"duplicate id":     `{"command":"same"},{"command":"same","route":["other"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}`,
+		"duplicate route":  `{"command":"one","route":["same"]},{"command":"two","route":["same"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}`,
+		"route prefix":     `{"command":"one","route":["adopt"]},{"command":"two","route":["adopt","plan"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}`,
+		"duplicate preset": `{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["same","same"]}}}`,
+		"unsorted presets": `{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["z","a"]}}}`,
 	}
-	for name, content := range mutants {
+	for name, commands := range mutants {
 		t.Run(name, func(t *testing.T) {
-			if _, err := Admit([]byte(content)); err == nil {
-				t.Fatalf("Admit() accepted mutant: %s", content)
+			if _, err := Admit(contractFixture(commands)); err == nil {
+				t.Fatalf("Admit() accepted mutant: %s", commands)
 			}
 		})
 	}
-	contract, err := Admit([]byte(`{"commands":[{"command":"one"}]}`))
+	contract, err := Admit(contractFixture(`{"command":"one"}`))
 	if err != nil {
 		t.Fatalf("route-only contract rejected: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestAdmitCommandRouteTokenBoundariesAreExact(t *testing.T) {
 		{name: "max+1", route: `["five","route","tokens","are","invalid"]`, wantErr: true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			content := []byte(`{"commands":[{"command":"sample","route":` + test.route + `}]}`)
+			content := contractFixture(`{"command":"sample","route":` + test.route + `}`)
 			_, err := Admit(content)
 			if test.wantErr && err == nil {
 				t.Fatal("Admit() accepted route above token limit")
@@ -81,7 +81,7 @@ func TestAdmitCommandRouteTokenBoundariesAreExact(t *testing.T) {
 }
 
 func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
-	base := []byte(`{"commands":[{"command":"one"}]}`)
+	base := contractFixture(`{"command":"one"}`)
 	exactBytes := append(append([]byte(nil), base...), bytes.Repeat([]byte(" "), MaximumContractBytes-len(base))...)
 	if _, err := Admit(exactBytes); err != nil {
 		t.Fatalf("exact byte limit rejected: %v", err)
@@ -95,7 +95,7 @@ func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
 		commands[index] = fmt.Sprintf(`{"command":"command-%d"}`, index)
 	}
 	contract := func(count int) []byte {
-		return []byte(`{"commands":[` + strings.Join(commands[:count], ",") + `]}`)
+		return contractFixture(strings.Join(commands[:count], ","))
 	}
 	if _, err := Admit(contract(MaximumCommands)); err != nil {
 		t.Fatalf("exact command cardinality rejected: %v", err)
@@ -109,7 +109,7 @@ func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
 		presets[index] = fmt.Sprintf(`"preset-%03d"`, index)
 	}
 	presetContract := func(count int) []byte {
-		return []byte(`{"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":[` + strings.Join(presets[:count], ",") + `]}}}]}`)
+		return contractFixture(`{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":[` + strings.Join(presets[:count], ",") + `]}}}`)
 	}
 	if _, err := Admit(presetContract(MaximumPresetIDs)); err != nil {
 		t.Fatalf("exact preset cardinality rejected: %v", err)
@@ -120,8 +120,12 @@ func TestAdmitContractResourceBoundsAreExact(t *testing.T) {
 }
 
 func TestAdmitHelpIdentityRequiresExactCommandAndRoute(t *testing.T) {
+	contract, err := Admit(contractFixture(`{"command":"adopt-plan","route":["adopt","plan"]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
 	help := []byte("Usage:\n  agentic-proofkit adopt plan\n\nCommand ID:\n  adopt-plan\n\nRoute:\n  adopt plan\n")
-	identity, err := AdmitHelpIdentity(help)
+	identity, err := contract.AdmitHelpIdentity(help)
 	if err != nil {
 		t.Fatalf("AdmitHelpIdentity() error = %v", err)
 	}
@@ -135,8 +139,28 @@ func TestAdmitHelpIdentityRequiresExactCommandAndRoute(t *testing.T) {
 		append([]byte(nil), bytes.Repeat([]byte("x"), maximumHelpBytes+1)...),
 	}
 	for index, mutant := range mutants {
-		if _, err := AdmitHelpIdentity(mutant); err == nil {
+		if _, err := contract.AdmitHelpIdentity(mutant); err == nil {
 			t.Fatalf("help identity mutant %d was accepted", index)
 		}
 	}
+}
+
+func TestAdmitRequiresExactCommandRouteGrammarProjection(t *testing.T) {
+	base := string(contractFixture(`{"command":"one"}`))
+	mutants := []string{
+		strings.Replace(base, `"maximumTokens":4`, `"maximumTokens":5`, 1),
+		strings.Replace(base, `"maximumTokens":4`, `"maximumTokens":18446744073709551620`, 1),
+		strings.Replace(base, `"separator":" "`, `"separator":"/"`, 1),
+		strings.Replace(base, `"tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$"`, `"tokenPattern":"^[a-z]+$"`, 1),
+		strings.Replace(base, `"ambiguityPolicy":"no_route_is_prefix_of_another"`, `"ambiguityPolicy":"allow_prefixes"`, 1),
+	}
+	for index, mutant := range mutants {
+		if _, err := Admit([]byte(mutant)); err == nil {
+			t.Fatalf("command route grammar mutant %d was accepted", index)
+		}
+	}
+}
+
+func contractFixture(commands string) []byte {
+	return []byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another"}},"commands":[` + commands + `]}`)
 }

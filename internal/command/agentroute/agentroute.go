@@ -432,7 +432,7 @@ func BuildWithRenderer(raw any, renderer cliexec.Renderer) (map[string]any, int,
 
 func InputContract() map[string]any {
 	return map[string]any{
-		"contractId":    "proofkit.agent-route.input.v1",
+		"contractId":    "proofkit.agent-route.input.v2",
 		"schemaVersion": 1,
 		"authority":     "agent-route input admission",
 		"fields": map[string]any{

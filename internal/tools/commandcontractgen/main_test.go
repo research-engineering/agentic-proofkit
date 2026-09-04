@@ -189,6 +189,27 @@ func TestRenderRejectsIncompleteAndStaleCommandContracts(t *testing.T) {
 		want   string
 	}{
 		{
+			name: "command route grammar missing",
+			mutate: func(contract map[string]any) {
+				delete(contract["processContract"].(map[string]any), "commandRouteGrammar")
+			},
+			want: "commandRouteGrammar must be an object",
+		},
+		{
+			name: "command route maximum drift",
+			mutate: func(contract map[string]any) {
+				contract["processContract"].(map[string]any)["commandRouteGrammar"].(map[string]any)["maximumTokens"] = 5
+			},
+			want: "token bounds must be 1 through 4",
+		},
+		{
+			name: "command route token grammar drift",
+			mutate: func(contract map[string]any) {
+				contract["processContract"].(map[string]any)["commandRouteGrammar"].(map[string]any)["tokenPattern"] = `^[a-z]+$`
+			},
+			want: "does not match the native route owner",
+		},
+		{
 			name: "required input contract missing",
 			mutate: func(contract map[string]any) {
 				commandAt(contract, "sample")["inputContract"] = nil
@@ -619,10 +640,18 @@ func writeFixture(t *testing.T) string {
 		structuralFixtureDefinition("proofkit.output.v1"),
 	}
 	contract := map[string]any{
-		"schemaVersion":       2,
-		"contractId":          "proofkit.cli-contract.v2",
-		"packageName":         "@research-engineering/agentic-proofkit",
-		"processContract":     map[string]any{},
+		"schemaVersion": 2,
+		"contractId":    "proofkit.cli-contract.v2",
+		"packageName":   "@research-engineering/agentic-proofkit",
+		"processContract": map[string]any{
+			"commandRouteGrammar": map[string]any{
+				"minimumTokens":   1,
+				"maximumTokens":   4,
+				"separator":       " ",
+				"tokenPattern":    `^[a-z0-9]+(?:-[a-z0-9]+)*$`,
+				"ambiguityPolicy": "no_route_is_prefix_of_another",
+			},
+		},
 		"contractDefinitions": definitions,
 		"commands": []any{
 			map[string]any{

@@ -17,9 +17,16 @@ func TextProjection(plan Plan) ([]TextLine, error) {
 	if plan.StackHint != nil {
 		stack = plan.StackHint.PresetID
 	}
+	capabilityMapTrustMode := "not-applicable"
+	if plan.TrustDeclaration.CapabilityMapTrustMode != nil {
+		capabilityMapTrustMode = *plan.TrustDeclaration.CapabilityMapTrustMode
+	}
 	lines := []TextLine{
 		{Label: "Adoption plan"},
+		{Label: "Plan ID", Value: plan.PlanID},
+		{Label: "Inventory ID", Value: plan.Inventory.InventoryID},
 		{Label: "Mode", Value: plan.Intent},
+		{Label: "Capability map trust mode", Value: capabilityMapTrustMode},
 		{Label: "State", Value: PlanState},
 		{Label: "Inventory", Value: fmt.Sprintf("%d recognized, %d omitted, %d opaque", len(plan.Inventory.Entries), len(plan.Inventory.Omissions.OmittedRecognized), plan.Inventory.Omissions.UnrecognizedCount)},
 		{Label: "Stack hint", Value: stack},

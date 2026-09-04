@@ -99,23 +99,23 @@ func ReadBounded(rootPath, relativePath string, maxBytes int64) ([]byte, error) 
 	if _, err := admitDirectories(root, filepath.Dir(path), false); err != nil {
 		return nil, err
 	}
-	before, err := root.Lstat(path)
+	file, err := openSource(root, path)
 	if err != nil {
-		return nil, fmt.Errorf("inspect artifact file failed")
-	}
-	if before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() {
-		return nil, fmt.Errorf("artifact source must be a regular non-symlink file")
-	}
-	if before.Size() > maxBytes {
-		return nil, fmt.Errorf("artifact file exceeds resource limit")
-	}
-	file, err := root.Open(path)
-	if err != nil {
+		if info, inspectErr := root.Lstat(path); inspectErr == nil && (info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular()) {
+			return nil, fmt.Errorf("artifact source must be a regular non-symlink file")
+		}
 		return nil, fmt.Errorf("open artifact file failed")
 	}
 	defer file.Close()
 	opened, err := file.Stat()
-	if err != nil || !os.SameFile(before, opened) || !opened.Mode().IsRegular() {
+	if err != nil || !opened.Mode().IsRegular() {
+		return nil, fmt.Errorf("artifact source must be a regular non-symlink file")
+	}
+	if opened.Size() > maxBytes {
+		return nil, fmt.Errorf("artifact file exceeds resource limit")
+	}
+	current, err := root.Lstat(path)
+	if err != nil || current.Mode()&os.ModeSymlink != 0 || !os.SameFile(opened, current) {
 		return nil, fmt.Errorf("artifact source changed during admission")
 	}
 	content, err := io.ReadAll(io.LimitReader(file, maxBytes+1))
@@ -126,8 +126,12 @@ func ReadBounded(rootPath, relativePath string, maxBytes int64) ([]byte, error) 
 		return nil, fmt.Errorf("artifact file exceeds resource limit")
 	}
 	after, err := file.Stat()
-	if err != nil || !os.SameFile(opened, after) || opened.Size() != after.Size() || after.Size() != int64(len(content)) {
+	if err != nil || !os.SameFile(opened, after) || opened.Size() != after.Size() || !opened.ModTime().Equal(after.ModTime()) || after.Size() != int64(len(content)) {
 		return nil, fmt.Errorf("artifact source changed during read")
+	}
+	current, err = root.Lstat(path)
+	if err != nil || current.Mode()&os.ModeSymlink != 0 || !os.SameFile(opened, current) {
+		return nil, fmt.Errorf("artifact source path changed during read")
 	}
 	return content, nil
 }

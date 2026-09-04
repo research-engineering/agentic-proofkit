@@ -24,6 +24,8 @@ type adoptionFrontDoorVersionEdge struct {
 	BreakingChangeIDs         []string                           `json:"breakingChangeIds"`
 	ChangeRecordRef           string                             `json:"changeRecordRef"`
 	ChangeRecordSHA256        string                             `json:"changeRecordSha256"`
+	CommandContractSelection  string                             `json:"commandContractSelection"`
+	ChangedCommandContracts   []adoptionChangedCommandContract   `json:"changedCommandContracts"`
 	ChangedGeneratedArtifacts []adoptionChangedGeneratedArtifact `json:"changedGeneratedArtifacts"`
 	CurrentPublicABISHA256    string                             `json:"currentPublicAbiSha256"`
 	EdgeID                    string                             `json:"edgeId"`
@@ -55,6 +57,17 @@ type adoptionChangedGeneratedArtifact struct {
 	PreviousSourceSHA256 string `json:"previousSourceSha256"`
 }
 
+type adoptionChangedCommandContract struct {
+	Command                      string `json:"command"`
+	CurrentInputContractID       string `json:"currentInputContractId"`
+	CurrentInputContractSHA256   string `json:"currentInputContractSha256"`
+	CurrentOutputContractSHA256  string `json:"currentOutputContractSha256"`
+	PreviousInputContractID      string `json:"previousInputContractId"`
+	PreviousInputContractSHA256  string `json:"previousInputContractSha256"`
+	PreviousOutputContractSHA256 string `json:"previousOutputContractSha256"`
+	WireSchemaVersion            int    `json:"wireSchemaVersion"`
+}
+
 func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
 	currentPublicABI := "sha256:" + currentCLIContractPublicABISHA256(t)
@@ -77,6 +90,13 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 		func(value *adoptionFrontDoorVersionEdge) { value.BreakingChangeIDs[0] += ".drift" },
 		func(value *adoptionFrontDoorVersionEdge) { value.AdditionChangeIDs = value.AdditionChangeIDs[1:] },
 		func(value *adoptionFrontDoorVersionEdge) { value.ChangeRecordSHA256 += "0" },
+		func(value *adoptionFrontDoorVersionEdge) { value.CommandContractSelection = "all_digest_changes" },
+		func(value *adoptionFrontDoorVersionEdge) {
+			value.ChangedCommandContracts[0].CurrentInputContractID = value.ChangedCommandContracts[0].PreviousInputContractID
+		},
+		func(value *adoptionFrontDoorVersionEdge) {
+			value.ChangedCommandContracts[0].CurrentOutputContractSHA256 = value.ChangedCommandContracts[0].PreviousOutputContractSHA256
+		},
 		func(value *adoptionFrontDoorVersionEdge) {
 			value.ChangedGeneratedArtifacts[0].PreviousSourceSHA256 = value.ChangedGeneratedArtifacts[0].CurrentSourceSHA256
 		},
@@ -92,6 +112,41 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 				t.Fatal("version-edge mutant was admitted")
 			}
 		})
+	}
+}
+
+func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t *testing.T) {
+	record := readAdoptionFrontDoorVersionEdge(t)
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), record.ChangeRecordRef))
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := value.(map[string]any)
+	breaking := root["breakingChanges"].([]any)
+	breaking[0].(map[string]any)["changeId"] = "proofkit.adoption.init-retired.drift"
+	mutantContent, err := json.MarshalIndent(root, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutantContent = append(mutantContent, '\n')
+	mutantRoot := t.TempDir()
+	path := filepath.Join(mutantRoot, filepath.FromSlash(record.ChangeRecordRef))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, mutantContent, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mutant := cloneAdoptionFrontDoorVersionEdge(record)
+	digest := sha256.Sum256(mutantContent)
+	mutant.ChangeRecordSHA256 = fmt.Sprintf("sha256:%x", digest)
+	currentPublicABI := "sha256:" + currentCLIContractPublicABISHA256(t)
+	if err := validateAdoptionFrontDoorVersionEdge(mutant, mutantRoot, currentPublicABI); err == nil || !strings.Contains(err.Error(), "contradicts") {
+		t.Fatalf("coordinated change-record mutant error=%v, want inventory contradiction", err)
 	}
 }
 
@@ -119,7 +174,7 @@ func readAdoptionFrontDoorVersionEdge(t *testing.T) adoptionFrontDoorVersionEdge
 	if !ok {
 		t.Fatal("adoption front-door version edge must be an object")
 	}
-	assertExactObjectKeys(t, root, []string{"addedCommandContracts", "additionChangeIds", "breakingChangeIds", "changeRecordRef", "changeRecordSha256", "changedGeneratedArtifacts", "currentPublicAbiSha256", "edgeId", "evidenceClass", "nonClaims", "previousPublicAbiSha256", "previousVersion", "removedCommandContract", "schemaVersion", "version"}, "adoption front-door version edge")
+	assertExactObjectKeys(t, root, []string{"addedCommandContracts", "additionChangeIds", "breakingChangeIds", "changeRecordRef", "changeRecordSha256", "changedCommandContracts", "changedGeneratedArtifacts", "commandContractSelection", "currentPublicAbiSha256", "edgeId", "evidenceClass", "nonClaims", "previousPublicAbiSha256", "previousVersion", "removedCommandContract", "schemaVersion", "version"}, "adoption front-door version edge")
 	removed, ok := root["removedCommandContract"].(map[string]any)
 	if !ok {
 		t.Fatal("removed command contract must be an object")
@@ -147,6 +202,17 @@ func readAdoptionFrontDoorVersionEdge(t *testing.T) adoptionFrontDoorVersionEdge
 		}
 		assertExactObjectKeys(t, item, []string{"artifactKind", "currentSourceSha256", "generatorId", "previousSourceSha256"}, fmt.Sprintf("changed generated artifact %d", index))
 	}
+	changedContracts, ok := root["changedCommandContracts"].([]any)
+	if !ok {
+		t.Fatal("changed command contracts must be an array")
+	}
+	for index, raw := range changedContracts {
+		item, ok := raw.(map[string]any)
+		if !ok {
+			t.Fatalf("changed command contract %d must be an object", index)
+		}
+		assertExactObjectKeys(t, item, []string{"command", "currentInputContractId", "currentInputContractSha256", "currentOutputContractSha256", "previousInputContractId", "previousInputContractSha256", "previousOutputContractSha256", "wireSchemaVersion"}, fmt.Sprintf("changed command contract %d", index))
+	}
 	var record adoptionFrontDoorVersionEdge
 	if err := json.Unmarshal(content, &record); err != nil {
 		t.Fatal(err)
@@ -160,6 +226,9 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	}
 	if record.PreviousVersion != "0.6.0" || record.Version != "0.7.0" {
 		return fmt.Errorf("adoption front-door version-edge release identity is stale")
+	}
+	if record.CommandContractSelection != "declared_semantic_identity_or_wire_schema_change" {
+		return fmt.Errorf("adoption front-door command-contract selection policy is invalid")
 	}
 	if record.PreviousPublicABISHA256 != "sha256:163f06bf6fc94f15040fecf3e352d4600a8611a227e26f35369b7fe97e90bde5" || record.CurrentPublicABISHA256 != currentPublicABI || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("adoption front-door version-edge ABI identity is invalid")
@@ -177,18 +246,33 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	}
 	wantGeneratedArtifacts := []adoptionChangedGeneratedArtifact{{
 		ArtifactKind:         "proofkit.json-report-cli-adapter-source",
-		CurrentSourceSHA256:  "sha256:329b88b6b134dc30fb3704d32ac9708fc01608b9df68815bc9585108971be37d",
+		CurrentSourceSHA256:  "sha256:62c34f1b920466f157d32d982fd5dd8355cbfb023eeda342e8cdbe5c15d731a0",
 		GeneratorID:          jsonreportcliadaptersource.TypeScriptGeneratorID,
 		PreviousSourceSHA256: "sha256:a171cc1b95c6078b7190ac50fc9fd298db8f42bfc9b65bbb67fa77d63dc04a93",
 	}}
 	if !slices.Equal(record.ChangedGeneratedArtifacts, wantGeneratedArtifacts) {
 		return fmt.Errorf("adoption front-door changed generated artifacts are not exact")
 	}
+	wantChangedContracts := []adoptionChangedCommandContract{{
+		Command:                      "agent-route",
+		CurrentInputContractID:       "proofkit.agent-route.input.v2",
+		CurrentInputContractSHA256:   generatedCommandContractMetadataByName["agent-route"].InputContractSHA256,
+		CurrentOutputContractSHA256:  generatedCommandContractMetadataByName["agent-route"].OutputContractSHA256,
+		PreviousInputContractID:      "proofkit.agent-route.input.v1",
+		PreviousInputContractSHA256:  "sha256:4fc7b2e5ffe3ed632e5e84d20e5ae26f9ace11df614bc9aec680853e60809ebd",
+		PreviousOutputContractSHA256: "sha256:485d62afc2e5ed07c28f557b0d1069f167b3838abe0aed248e9ff94f3e25c0ad",
+		WireSchemaVersion:            1,
+	}}
+	if !slices.Equal(record.ChangedCommandContracts, wantChangedContracts) ||
+		record.ChangedCommandContracts[0].CurrentInputContractID == record.ChangedCommandContracts[0].PreviousInputContractID ||
+		record.ChangedCommandContracts[0].CurrentOutputContractSHA256 == record.ChangedCommandContracts[0].PreviousOutputContractSHA256 {
+		return fmt.Errorf("adoption front-door changed command contracts are not exact")
+	}
 	currentSourceDigest := sha256.Sum256([]byte(jsonreportcliadaptersource.TypeScriptSource()))
 	if record.ChangedGeneratedArtifacts[0].CurrentSourceSHA256 != fmt.Sprintf("sha256:%x", currentSourceDigest) {
 		return fmt.Errorf("adoption front-door generated adapter source identity is stale")
 	}
-	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.adoption.init-retired"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.adoption.front-door", "proofkit.adoption.repository-inventory", "proofkit.cli.generated-adapter-command-routes", "proofkit.cli.hierarchical-command-routes", "proofkit.python-wheel.embedded-cli-contract"}) {
+	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.adoption.init-retired", "proofkit.agent-route.input-contract-v2"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.adoption.front-door", "proofkit.adoption.repository-inventory", "proofkit.cli.generated-adapter-command-routes", "proofkit.cli.hierarchical-command-routes", "proofkit.python-wheel.embedded-cli-contract"}) {
 		return fmt.Errorf("adoption front-door change inventory is not exact")
 	}
 	if record.ChangeRecordRef != "release/change-record.v2.json" {
@@ -209,6 +293,9 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if changeRecord.PreviousVersion != record.PreviousVersion || changeRecord.Version != record.Version || !changeRecord.Migration.Required {
 		return fmt.Errorf("adoption front-door change record identity is inconsistent")
 	}
+	if !slices.Equal(record.BreakingChangeIDs, releaseChangeIDs(changeRecord.BreakingChanges)) || !slices.Equal(record.AdditionChangeIDs, releaseChangeIDs(changeRecord.Additions)) {
+		return fmt.Errorf("adoption front-door change inventory contradicts the bound change record")
+	}
 	wantMigrationSteps := []string{
 		"Replace explicit init --preset fresh with adopt plan --mode fresh --repo-root <caller-selected-root>.",
 		"Replace init --preset code-baseline with adopt plan --mode code-baseline --repo-root <caller-selected-root>, and replace init --preset code-audit with adopt plan --mode audit-from-code --repo-root <caller-selected-root>.",
@@ -216,6 +303,7 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 		"Replace init --preset change-set with changed-path-set followed by the explicit impact and selective-gate composition routes required by the consuming repository.",
 		"Replace bare init or init --preset all with help families, then select the smallest applicable bounded route rather than materializing every route family.",
 		"Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible.",
+		"Replace persisted proofkit.agent-route.input.v1 contract identity with proofkit.agent-route.input.v2; the admitted wire schemaVersion remains 1.",
 	}
 	if !slices.Equal(changeRecord.Migration.Steps, wantMigrationSteps) {
 		return fmt.Errorf("adoption front-door migration semantics are not exact")
@@ -224,6 +312,14 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 		return fmt.Errorf("adoption front-door version-edge non-claims are not exact")
 	}
 	return nil
+}
+
+func releaseChangeIDs(changes []releasechange.Change) []string {
+	ids := make([]string, len(changes))
+	for index, change := range changes {
+		ids[index] = change.ChangeID
+	}
+	return ids
 }
 
 func equalAdoptionCommandContract(left, right adoptionFrontDoorCommandContract) bool {
@@ -237,6 +333,7 @@ func cloneAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge) adop
 	}
 	record.AdditionChangeIDs = append([]string(nil), record.AdditionChangeIDs...)
 	record.BreakingChangeIDs = append([]string(nil), record.BreakingChangeIDs...)
+	record.ChangedCommandContracts = append([]adoptionChangedCommandContract(nil), record.ChangedCommandContracts...)
 	record.ChangedGeneratedArtifacts = append([]adoptionChangedGeneratedArtifact(nil), record.ChangedGeneratedArtifacts...)
 	record.NonClaims = append([]string(nil), record.NonClaims...)
 	return record

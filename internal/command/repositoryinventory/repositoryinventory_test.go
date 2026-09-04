@@ -18,13 +18,13 @@ import (
 )
 
 func TestCatalogPathsAreSortedAndUnique(t *testing.T) {
-	paths := CatalogPaths()
+	paths := catalogPaths()
 	if !slices.IsSorted(paths) {
-		t.Fatalf("CatalogPaths() = %v, want sorted paths", paths)
+		t.Fatalf("catalogPaths() = %v, want sorted paths", paths)
 	}
 	for index := 1; index < len(paths); index++ {
 		if paths[index-1] == paths[index] {
-			t.Fatalf("CatalogPaths() contains duplicate %q", paths[index])
+			t.Fatalf("catalogPaths() contains duplicate %q", paths[index])
 		}
 	}
 }
@@ -57,17 +57,17 @@ func TestCatalogRolePolicyIsExact(t *testing.T) {
 		"uv.lock":           "dependency_lock",
 		"yarn.lock":         "dependency_lock",
 	}
-	if got := CatalogPaths(); len(got) != len(want) {
+	if got := catalogPaths(); len(got) != len(want) {
 		t.Fatalf("catalog path count = %d, want %d", len(got), len(want))
 	}
 	for path, wantRole := range want {
-		gotRole, ok := CatalogRole(path)
+		gotRole, ok := catalogRole(path)
 		if !ok || gotRole != wantRole {
-			t.Fatalf("CatalogRole(%q) = %q/%t, want %q/true", path, gotRole, ok, wantRole)
+			t.Fatalf("catalogRole(%q) = %q/%t, want %q/true", path, gotRole, ok, wantRole)
 		}
 	}
-	if role, ok := CatalogRole("unknown"); ok || role != "" {
-		t.Fatalf("CatalogRole(unknown) = %q/%t, want empty/false", role, ok)
+	if role, ok := catalogRole("unknown"); ok || role != "" {
+		t.Fatalf("catalogRole(unknown) = %q/%t, want empty/false", role, ok)
 	}
 }
 
@@ -227,8 +227,16 @@ func TestScanEnforcesPreflightBoundsAndExplicitOmissions(t *testing.T) {
 		defer root.Close()
 		policy := defaultScanPolicy
 		policy.maximumAggregateBytes = 3
-		if _, err := scanRoot(context.Background(), root, policy); err == nil || !strings.Contains(err.Error(), "aggregate byte limit") {
+		readCount := 0
+		reader := func(*os.Root, candidate, int64, int64) ([]byte, error) {
+			readCount++
+			return nil, nil
+		}
+		if _, err := scanRootWithCandidateReader(context.Background(), root, policy, reader); err == nil || !strings.Contains(err.Error(), "aggregate byte limit") {
 			t.Fatalf("scanRoot() error = %v, want aggregate preflight rejection", err)
+		}
+		if readCount != 0 {
+			t.Fatalf("aggregate preflight performed %d content reads, want zero", readCount)
 		}
 	})
 
@@ -274,6 +282,20 @@ func TestScanEnforcesPreflightBoundsAndExplicitOmissions(t *testing.T) {
 			t.Fatalf("OmittedRecognized = %#v, want %#v", snapshot.Omissions.OmittedRecognized, want)
 		}
 	})
+}
+
+func TestUnsupportedPlatformFailsBeforeOpeningRepositoryRoot(t *testing.T) {
+	openCount := 0
+	opener := func(string) (*os.Root, error) {
+		openCount++
+		return nil, nil
+	}
+	if _, err := scanForPlatform(context.Background(), "caller-root", "windows", opener); err == nil || !strings.Contains(err.Error(), "unsupported") {
+		t.Fatalf("scanForPlatform() error = %v, want unsupported-platform rejection", err)
+	}
+	if openCount != 0 {
+		t.Fatalf("unsupported platform opened repository root %d time(s)", openCount)
+	}
 }
 
 func TestScanPolicyBoundariesAreExact(t *testing.T) {

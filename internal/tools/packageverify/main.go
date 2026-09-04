@@ -26,16 +26,19 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/jsonreportcliadaptersource"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 const rootPackageName = "@research-engineering/agentic-proofkit"
 const rootBinaryName = "agentic-proofkit"
+const installedNPMPackageRelativeRoot = "node_modules/@research-engineering/agentic-proofkit"
 const installedNPMExecCommandPrefix = "npm exec --offline -- agentic-proofkit "
 const maxTarEntryBytes = 128 << 20
 const maxEmbeddedBinaryBytes = 64 << 20
@@ -1678,15 +1681,82 @@ func verifyOutsideConsumer(artifact rootPackageArtifact) error {
 }
 
 func verifyExactTarballConsumer(artifact rootPackageArtifact) error {
+	snapshot, err := installedNPMCarrierSnapshotFromTarball(artifact)
+	if err != nil {
+		return err
+	}
 	return withExactTarballConsumer(artifact, func(consumer string) error {
-		if err := verifyInstalledOnboardingTraceWithExecutors(consumer, runInstalledWithInput, runInstalledBinaryWithInput); err != nil {
+		if err := snapshot.Verify(consumer); err != nil {
+			return err
+		}
+		if err := verifyInstalledOnboardingTraceWithCarrier(consumer, snapshot.Contract, snapshot.Readme, runInstalledWithInput, runInstalledBinaryWithInput); err != nil {
 			return err
 		}
 		if err := verifyInstalledJSONABI(consumer); err != nil {
 			return err
 		}
-		return verifyOutsideConsumerImports(consumer)
+		if err := verifyOutsideConsumerImports(consumer); err != nil {
+			return err
+		}
+		return snapshot.Verify(consumer)
 	})
+}
+
+func installedNPMCarrierSnapshotFromTarball(artifact rootPackageArtifact) (installedNPMCarrierSnapshot, error) {
+	target, err := releaseplatform.CurrentTarget()
+	if err != nil {
+		return installedNPMCarrierSnapshot{}, err
+	}
+	entries := []struct {
+		maximumBytes int64
+		relativePath string
+		tarEntry     string
+	}{
+		{maximumBytes: 1 << 20, relativePath: "dist/agentic-proofkit", tarEntry: "package/dist/agentic-proofkit"},
+		{maximumBytes: maxEmbeddedBinaryBytes, relativePath: strings.TrimPrefix(target.PackageTarEntry, "package/"), tarEntry: target.PackageTarEntry},
+		{maximumBytes: 4 << 20, relativePath: "README.md", tarEntry: "package/README.md"},
+		{maximumBytes: installedclicontract.MaximumContractBytes, relativePath: "proofkit/cli-contract.v2.json", tarEntry: "package/proofkit/cli-contract.v2.json"},
+	}
+	snapshot := installedNPMCarrierSnapshot{Files: make([]installedNPMCarrierFile, 0, len(entries))}
+	for _, entry := range entries {
+		content, err := readTarFileFromBytes(artifact.Content, entry.tarEntry)
+		if err != nil {
+			return installedNPMCarrierSnapshot{}, fmt.Errorf("read package carrier entry %s: %w", entry.tarEntry, err)
+		}
+		if len(content) == 0 || int64(len(content)) > entry.maximumBytes {
+			return installedNPMCarrierSnapshot{}, fmt.Errorf("package carrier entry %s is outside its byte bounds", entry.tarEntry)
+		}
+		ownedContent := append([]byte(nil), content...)
+		snapshot.Files = append(snapshot.Files, installedNPMCarrierFile{
+			Content:      ownedContent,
+			MaximumBytes: entry.maximumBytes,
+			RelativePath: entry.relativePath,
+		})
+		if entry.relativePath == "proofkit/cli-contract.v2.json" {
+			snapshot.Contract = append([]byte(nil), ownedContent...)
+		}
+		if entry.relativePath == "README.md" {
+			snapshot.Readme = append([]byte(nil), ownedContent...)
+		}
+	}
+	if _, err := installedclicontract.Admit(snapshot.Contract); err != nil {
+		return installedNPMCarrierSnapshot{}, fmt.Errorf("admit package carrier CLI contract: %w", err)
+	}
+	return snapshot, nil
+}
+
+func (snapshot installedNPMCarrierSnapshot) Verify(consumer string) error {
+	for _, file := range snapshot.Files {
+		installedPath := pathpkg.Join(installedNPMPackageRelativeRoot, file.RelativePath)
+		content, err := artifactfile.ReadBounded(consumer, installedPath, file.MaximumBytes)
+		if err != nil {
+			return fmt.Errorf("read installed npm carrier %s: %w", file.RelativePath, err)
+		}
+		if !bytes.Equal(content, file.Content) {
+			return fmt.Errorf("installed npm carrier %s differs from the exact package tarball", file.RelativePath)
+		}
+	}
+	return nil
 }
 
 func withExactTarballConsumer(artifact rootPackageArtifact, verify func(string) error) error {
@@ -1743,11 +1813,23 @@ type installedHelpRoute struct {
 	Argv  []string
 }
 
-func verifyInstalledOnboardingTrace(consumer string, execute installedCommandOperation) error {
-	return verifyInstalledOnboardingTraceWithExecutors(consumer, execute, execute)
+type installedNPMCarrierFile struct {
+	Content      []byte
+	MaximumBytes int64
+	RelativePath string
 }
 
-func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecute installedCommandOperation, binaryExecute installedCommandOperation) error {
+type installedNPMCarrierSnapshot struct {
+	Contract []byte
+	Files    []installedNPMCarrierFile
+	Readme   []byte
+}
+
+func verifyInstalledOnboardingTraceWithCarrier(consumer string, contractContent []byte, readme []byte, transportExecute installedCommandOperation, binaryExecute installedCommandOperation) error {
+	installedContract, err := installedclicontract.Admit(contractContent)
+	if err != nil {
+		return fmt.Errorf("admit outside consumer CLI contract: %w", err)
+	}
 	rootHelp, err := transportExecute(consumer, nil, "help")
 	if err != nil {
 		return fmt.Errorf("outside consumer root help failed to run: %w", err)
@@ -1773,15 +1855,7 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 	if err != nil {
 		return err
 	}
-	contractPath := filepath.Join(consumer, "node_modules", "@research-engineering", "agentic-proofkit", "proofkit", "cli-contract.v2.json")
-	contractContent, err := os.ReadFile(contractPath)
-	if err != nil {
-		return fmt.Errorf("read installed CLI contract: %w", err)
-	}
-	contractCommandIDsByRoute, err := installedContractCommandIDsByRoute(contractContent)
-	if err != nil {
-		return err
-	}
+	contractCommandIDsByRoute := installedContract.CommandIDsByRoute()
 	multiTokenRoute, err := representativeMultiTokenHelpRoute(contractCommandIDsByRoute)
 	if err != nil {
 		return err
@@ -1831,7 +1905,7 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 		if err := requireInstalledInvocationSyntax(leafHelp.Stdout, leafRoute.Route); err != nil {
 			return err
 		}
-		helpIdentity, err := installedclicontract.AdmitHelpIdentity(leafHelp.Stdout)
+		helpIdentity, err := installedContract.AdmitHelpIdentity(leafHelp.Stdout)
 		if err != nil {
 			return fmt.Errorf("outside consumer %s help identity is invalid: %w", leafRoute.ID, err)
 		}
@@ -1870,7 +1944,7 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 	if err != nil {
 		return err
 	}
-	contractPresetIDs, err := installedContractPresetIDs(contractContent)
+	contractPresetIDs, err := installedContract.PresetIDs()
 	if err != nil {
 		return err
 	}
@@ -1908,14 +1982,8 @@ func verifyInstalledOnboardingTraceWithExecutors(consumer string, transportExecu
 	if err := requirePassedJSON(continuation, "stack preset self-continuation"); err != nil {
 		return err
 	}
-	readmeRelativePath, err := installedREADMEPath(requirementSourceHelp.Stdout)
-	if err != nil {
+	if _, err := installedREADMEPath(requirementSourceHelp.Stdout); err != nil {
 		return err
-	}
-	readmePath := filepath.Join(consumer, filepath.FromSlash(readmeRelativePath))
-	readme, err := os.ReadFile(readmePath)
-	if err != nil {
-		return fmt.Errorf("read installed README: %w", err)
 	}
 	argv, input, err := installedREADMEFirstInput(readme)
 	if err != nil {
@@ -2044,7 +2112,8 @@ func parseInstalledLeafHelpRoutes(help string, contractCommandIDsByRoute map[str
 		}
 		routeText := strings.TrimSpace(line)
 		routeTokens, err := parseLiteralShellWords(routeText)
-		if err != nil || len(routeTokens) == 0 || len(routeTokens) > 4 || strings.Join(routeTokens, " ") != routeText {
+		admittedTokens, admitted := commandroute.Parse(routeText)
+		if err != nil || !admitted || !slices.Equal(routeTokens, admittedTokens) {
 			return nil, fmt.Errorf("command family has an invalid command route %q", routeText)
 		}
 		for _, token := range routeTokens {
@@ -2074,7 +2143,7 @@ func parseInstalledLeafHelpRoutes(help string, contractCommandIDsByRoute map[str
 		if err != nil {
 			return nil, err
 		}
-		if len(argv) < 2 || len(argv) > 5 || argv[0] != "help" {
+		if len(argv) < 1+commandroute.MinimumTokens || len(argv) > 1+commandroute.MaximumTokens || argv[0] != "help" {
 			return nil, fmt.Errorf("outside consumer leaf help route must resolve to help <command-route>")
 		}
 		routeText := strings.Join(argv[1:], " ")
@@ -2345,22 +2414,6 @@ func parseInstalledPresetIDs(help string) ([]string, error) {
 		return nil, fmt.Errorf("outside consumer stack-preset help ids must be non-empty and sorted")
 	}
 	return ids, nil
-}
-
-func installedContractPresetIDs(content []byte) ([]string, error) {
-	contract, err := installedclicontract.Admit(content)
-	if err != nil {
-		return nil, err
-	}
-	return contract.PresetIDs()
-}
-
-func installedContractCommandIDsByRoute(content []byte) (map[string]string, error) {
-	contract, err := installedclicontract.Admit(content)
-	if err != nil {
-		return nil, err
-	}
-	return contract.CommandIDsByRoute(), nil
 }
 
 func installedREADMEFirstInput(content []byte) ([]string, []byte, error) {

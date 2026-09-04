@@ -94,7 +94,7 @@ func admitEntries(raw any) ([]Entry, error) {
 		if err != nil {
 			return nil, err
 		}
-		role, recognized := CatalogRole(path)
+		role, recognized := catalogRole(path)
 		if !recognized || record["role"] != role || record["syntaxState"] != "not_evaluated" {
 			return nil, fmt.Errorf("repository inventory entry does not match the catalog")
 		}
@@ -153,7 +153,7 @@ func admitOmissions(raw any) (Omissions, error) {
 		if err != nil {
 			return Omissions{}, err
 		}
-		if _, recognized := CatalogRole(path); !recognized || previousPath != "" && previousPath >= path {
+		if _, recognized := catalogRole(path); !recognized || previousPath != "" && previousPath >= path {
 			return Omissions{}, fmt.Errorf("repository inventory omittedRecognized entries must be sorted unique catalog paths")
 		}
 		previousPath = path

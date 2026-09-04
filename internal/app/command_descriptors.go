@@ -230,16 +230,18 @@ func command(name string, input commandInputMode, allowedFlags []string, outputM
 		descriptor.singleOccurrenceFlags = sortedUniqueStrings(append(descriptor.singleOccurrenceFlags, "--format"))
 	}
 	explicitFlagChoices := cloneStringMap(descriptor.flagValueChoices)
-	if metadata, ok := generatedCommandContractMetadataByName[name]; ok {
-		descriptor.routeTokens = cloneStrings(metadata.RouteTokens)
-		descriptor.inputSchemaSummary = cloneStrings(metadata.InputSchemaSummary)
-		descriptor.flagValueChoices = cloneStringMap(metadata.FlagChoices)
-		for flag, choices := range explicitFlagChoices {
-			if generated, exists := descriptor.flagValueChoices[flag]; exists && !slices.Equal(generated, choices) {
-				panic("explicit and generated flag choices disagree: " + name + " " + flag)
-			}
-			descriptor.flagValueChoices[flag] = cloneStrings(choices)
+	metadata, ok := generatedCommandContractMetadataByName[name]
+	if !ok {
+		panic("command descriptor is missing generated contract metadata: " + name)
+	}
+	descriptor.routeTokens = cloneStrings(metadata.RouteTokens)
+	descriptor.inputSchemaSummary = cloneStrings(metadata.InputSchemaSummary)
+	descriptor.flagValueChoices = cloneStringMap(metadata.FlagChoices)
+	for flag, choices := range explicitFlagChoices {
+		if generated, exists := descriptor.flagValueChoices[flag]; exists && !slices.Equal(generated, choices) {
+			panic("explicit and generated flag choices disagree: " + name + " " + flag)
 		}
+		descriptor.flagValueChoices[flag] = cloneStrings(choices)
 	}
 	return descriptor
 }

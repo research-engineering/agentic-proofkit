@@ -56,7 +56,7 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 	}
 	parsedArguments := classifyDescriptorArguments(descriptor, args[1:])
 	if descriptor.runner != commandRunnerHelp && (parsedArguments.present["--help"] || parsedArguments.present["-h"]) {
-		writeDiagnosticf(stderr, "%s help accepts no additional arguments", descriptor.name)
+		writeDiagnosticf(stderr, "%s help accepts no additional arguments", commandRouteText(descriptor.routeTokens))
 		return 1
 	}
 	if err := validateFlagConstraints(descriptor, parsedArguments); err != nil {

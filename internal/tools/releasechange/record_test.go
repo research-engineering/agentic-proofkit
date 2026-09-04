@@ -196,13 +196,14 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 
 var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.adoption.init-retired", Summary: "Remove the overloaded init command and its route presets in favor of the explicit read-only adopt plan trust-mode route and the existing bounded specialist commands."},
+	{ChangeID: "proofkit.agent-route.input-contract-v2", Summary: "Replace the agent-route input contract identity with proofkit.agent-route.input.v2 so the materialized-reference rule that rejects the stdin sentinel is machine-distinguishable from earlier v1 semantics; the wire schema remains version 1."},
 }
 
 var currentAdditions = []Change{
 	{ChangeID: "proofkit.adoption.front-door", Summary: "Add adopt plan as a read-only candidate-authoring front door with explicit fresh, code-baseline, and audit-from-code intent plus an optional orthogonal stack hint."},
 	{ChangeID: "proofkit.adoption.repository-inventory", Summary: "Add a bounded explicit repository-inventory command that observes only a fixed root-file catalog without stack or source-semantic inference."},
-	{ChangeID: "proofkit.cli.generated-adapter-command-routes", Summary: "Extend the generated TypeScript CLI adapter to admit one-to-four-token public command routes and pass each route token as a separate process argument while preserving one-token calls."},
-	{ChangeID: "proofkit.cli.hierarchical-command-routes", Summary: "Add owner-generated multi-token command routes while retaining stable internal command IDs for contract and implementation ownership."},
+	{ChangeID: "proofkit.cli.generated-adapter-command-routes", Summary: "Extend the generated TypeScript CLI adapter to consume the exact public contract-projected one-to-four-token command-route grammar and pass each admitted route token as a separate process argument while preserving one-token calls."},
+	{ChangeID: "proofkit.cli.hierarchical-command-routes", Summary: "Publish one exact bounded command-route grammar in the CLI process contract and add owner-generated multi-token routes while retaining stable internal command IDs for contract and implementation ownership."},
 	{ChangeID: "proofkit.python-wheel.embedded-cli-contract", Summary: "Embed the exact public CLI contract in every Python wheel and use the installed record to prove command-family route closure."},
 }
 
@@ -213,6 +214,7 @@ var currentMigrationSteps = []string{
 	"Replace init --preset change-set with changed-path-set followed by the explicit impact and selective-gate composition routes required by the consuming repository.",
 	"Replace bare init or init --preset all with help families, then select the smallest applicable bounded route rather than materializing every route family.",
 	"Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible.",
+	"Replace persisted proofkit.agent-route.input.v1 contract identity with proofkit.agent-route.input.v2; the admitted wire schemaVersion remains 1.",
 }
 
 func validateCurrentChangeRecord(record Record, notes string) error {

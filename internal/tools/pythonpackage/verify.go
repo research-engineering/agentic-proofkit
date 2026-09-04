@@ -23,19 +23,26 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 const (
 	zipDataDescriptorFlag          = 0x8
+	maximumWheelArchiveBytes       = 96 << 20
+	maximumWheelBinaryBytes        = 64 << 20
+	maximumWheelEntryCount         = 16
+	maximumWheelTextEntryBytes     = 1 << 20
 	machoBuildVersionCommand       = 0x32
 	machoBuildVersionCommandSize   = 24
 	machoMinimumVersionCommand     = 0x24
 	machoMinimumVersionCommandSize = 16
 	machoPlatformMacOS             = 1
-	installedContractReadTimeout   = 10 * time.Second
+	installedResourceReadTimeout   = 10 * time.Second
+	pythonPackageProcessTimeout    = 2 * time.Minute
 )
 
 func verifyPythonPackages() error {
@@ -129,18 +136,33 @@ func verifyWheelRecord(manifest packageJSON, target target, record wheelRecord) 
 }
 
 func verifyWheelContents(path string, manifest packageJSON, target target, expectedBinarySHA256 string, expectedLicense []byte, expectedCLIContract []byte) error {
-	reader, err := zip.OpenReader(path)
+	content, err := artifactfile.ReadBounded(filepath.Dir(path), filepath.Base(path), maximumWheelArchiveBytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("read bounded wheel %s: %w", path, err)
 	}
-	defer reader.Close()
+	reader, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		return fmt.Errorf("decode wheel %s: %w", path, err)
+	}
+	if len(reader.File) > maximumWheelEntryCount {
+		return fmt.Errorf("%s exceeds wheel entry count limit", path)
+	}
 	entries := map[string]*zip.File{}
 	for _, file := range reader.File {
 		if file.Flags&zipDataDescriptorFlag != 0 {
 			return fmt.Errorf("%s entry %s uses a ZIP data descriptor", path, file.Name)
 		}
+		if file.CompressedSize64 > uint64(maximumWheelArchiveBytes) {
+			return fmt.Errorf("%s entry %s exceeds compressed resource limit", path, file.Name)
+		}
 		if _, exists := entries[file.Name]; exists {
 			return fmt.Errorf("%s contains duplicate entry %s", path, file.Name)
+		}
+		if !file.Mode().IsRegular() {
+			return fmt.Errorf("%s entry %s must be a regular file", path, file.Name)
+		}
+		if file.UncompressedSize64 > uint64(maximumWheelEntryBytes(file.Name)) {
+			return fmt.Errorf("%s entry %s exceeds resource limit", path, file.Name)
 		}
 		entries[file.Name] = file
 	}
@@ -430,7 +452,8 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 		return err
 	}
 	defer os.RemoveAll(consumer)
-	if output, err := runCommand("", python, "-m", "venv", consumer); err != nil {
+	environment := pythonVerificationEnvironment(os.Environ(), nil)
+	if output, err := runCommandWithEnvironment("", environment, python, "-m", "venv", consumer); err != nil {
 		return fmt.Errorf("create Python consumer venv: %w\n%s", err, output)
 	}
 	venvPython := filepath.Join(consumer, "bin", "python")
@@ -441,14 +464,30 @@ func verifyLocalPythonConsumer(recordsBySuffix map[string]wheelRecord) error {
 	if err != nil {
 		return err
 	}
-	return verifyInstalledPythonWheel(consumer, venvPython, wheelPath)
+	expectedContract, err := artifactfile.ReadBounded(".", sourceCLIContractPath, installedclicontract.MaximumContractBytes)
+	if err != nil {
+		return fmt.Errorf("read source CLI contract for installed wheel proof: %w", err)
+	}
+	expectedBinary, err := artifactfile.ReadBounded(".", filepath.ToSlash(target.BinaryPath), maximumWheelBinaryBytes)
+	if err != nil {
+		return fmt.Errorf("read source binary for installed wheel proof: %w", err)
+	}
+	return verifyInstalledPythonWheel(consumer, venvPython, wheelPath, expectedContract, expectedBinary, environment)
 }
 
-func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath string) error {
-	if output, err := runCommand("", venvPython, "-m", "pip", "install", "--no-index", wheelPath); err != nil {
-		return fmt.Errorf("install local Python wheel: %w\n%s", err, output)
+func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath string, expectedContract []byte, expectedBinary []byte, environment []string) error {
+	environment = pythonVerificationEnvironment(environment, nil)
+	if err := installPythonWheel(venvPython, wheelPath, environment); err != nil {
+		return err
 	}
-	output, err := runCommand("", venvPython, "-m", "agentic_proofkit", "--help")
+	renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, venvPython)
+	if err != nil {
+		return fmt.Errorf("construct installed Python module renderer: %w", err)
+	}
+	if _, err := verifyInstalledPythonCarrier(consumer, environment, renderer, expectedContract, expectedBinary); err != nil {
+		return err
+	}
+	output, err := runCommandWithEnvironment("", environment, venvPython, "-m", "agentic_proofkit", "--help")
 	if err != nil {
 		return fmt.Errorf("python module CLI smoke failed: %w\n%s", err, output)
 	}
@@ -459,36 +498,53 @@ func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath st
 	if runtime.GOOS == "windows" {
 		binPath = filepath.Join(consumer, "Scripts", "agentic-proofkit.exe")
 	}
-	output, err = runCommand("", binPath, "--help")
+	output, err = runCommandWithEnvironment("", environment, binPath, "--help")
 	if err != nil {
 		return fmt.Errorf("python console script smoke failed: %w\n%s", err, output)
 	}
 	if !bytes.Contains(output, []byte("CLI/JSON is the public cross-language contract")) {
 		return fmt.Errorf("python console script smoke did not expose CLI contract")
 	}
-	if err := verifyInstalledWorkflowSmoke(consumer, venvPython, "-m", "agentic_proofkit"); err != nil {
+	if err := verifyInstalledWorkflowSmoke(consumer, environment, venvPython, "-m", "agentic_proofkit"); err != nil {
 		return fmt.Errorf("python module agent-workflow smoke failed: %w", err)
 	}
-	if err := verifyInstalledWorkflowSmoke(consumer, binPath); err != nil {
+	if err := verifyInstalledWorkflowSmoke(consumer, environment, binPath); err != nil {
 		return fmt.Errorf("python console script agent-workflow smoke failed: %w", err)
 	}
-	return verifyInstalledPythonPresetContinuation(consumer, venvPython)
+	if err := verifyInstalledPythonPresetContinuation(consumer, venvPython, expectedContract, environment); err != nil {
+		return err
+	}
+	_, err = verifyInstalledPythonCarrier(consumer, environment, renderer, expectedContract, expectedBinary)
+	return err
 }
 
-func verifyInstalledWorkflowSmoke(dir string, executable string, prefix ...string) error {
+func pipInstallArguments(wheelPath string) []string {
+	return []string{"-m", "pip", "--isolated", "install", "--no-index", "--no-deps", "--no-input", wheelPath}
+}
+
+func installPythonWheel(venvPython string, wheelPath string, environment []string) error {
+	output, err := runCommandWithEnvironment("", pythonVerificationEnvironment(environment, nil), venvPython, pipInstallArguments(wheelPath)...)
+	if err != nil {
+		return fmt.Errorf("install local Python wheel: %w\n%s", err, output)
+	}
+	return nil
+}
+
+func verifyInstalledWorkflowSmoke(dir string, environment []string, executable string, prefix ...string) error {
 	return workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
-		Directory:  dir,
-		Executable: executable,
-		Prefix:     append([]string(nil), prefix...),
+		Directory:   dir,
+		Executable:  executable,
+		Environment: environment,
+		Prefix:      append([]string(nil), prefix...),
 	})
 }
 
-func verifyInstalledPythonPresetContinuation(consumer string, venvPython string) error {
+func verifyInstalledPythonPresetContinuation(consumer string, venvPython string, expectedContract []byte, baseEnvironment []string) error {
 	emptyPath := filepath.Join(consumer, "empty-path")
 	if err := os.Mkdir(emptyPath, 0o700); err != nil && !os.IsExist(err) {
 		return fmt.Errorf("create npm-free PATH: %w", err)
 	}
-	environment := environmentWithOverrides(os.Environ(), map[string]string{
+	environment := pythonVerificationEnvironment(baseEnvironment, map[string]string{
 		"PATH":                              emptyPath,
 		cliexec.LauncherProfileEnvironment:  cliexec.ProfilePath,
 		cliexec.PythonExecutableEnvironment: filepath.Join(consumer, "wrong-python"),
@@ -531,11 +587,11 @@ func verifyInstalledPythonPresetContinuation(consumer string, venvPython string)
 	if err := requirePythonPassedJSON(output, "installed Python wheel self-continuation"); err != nil {
 		return err
 	}
-	return verifyInstalledPythonHelpAndAgentRouteContinuity(consumer, environment, renderer)
+	return verifyInstalledPythonHelpAndAgentRouteContinuity(consumer, environment, renderer, expectedContract)
 }
 
-func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environment []string, renderer cliexec.Renderer) error {
-	contractContent, err := readInstalledPythonCLIContract(consumer, environment, renderer)
+func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environment []string, renderer cliexec.Renderer, expectedContract []byte) error {
+	contractContent, err := readInstalledPythonCLIContract(consumer, environment, renderer, expectedContract)
 	if err != nil {
 		return err
 	}
@@ -571,7 +627,7 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 		if err != nil {
 			return fmt.Errorf("installed Python wheel family route %q failed: %w\n%s", familyRoute, err, familyHelp)
 		}
-		leafRoutes, err := exactDisplayedCommandRoutes(familyHelp, leafPrefix, "installed Python wheel leaf routes")
+		leafRoutes, err := exactDisplayedCommandRoutes(familyHelp, leafPrefix, "installed Python wheel leaf routes", contract)
 		if err != nil {
 			return err
 		}
@@ -590,7 +646,7 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 			if err != nil {
 				return fmt.Errorf("installed Python wheel leaf help route %q for command %s failed: %w", leafRoute, commandID, err)
 			}
-			helpIdentity, err := installedclicontract.AdmitHelpIdentity(leafHelp)
+			helpIdentity, err := contract.AdmitHelpIdentity(leafHelp)
 			if err != nil {
 				return fmt.Errorf("installed Python wheel leaf help route %q has invalid identity: %w", leafRoute, err)
 			}
@@ -685,55 +741,149 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 	return requirePythonPassedJSON(commandOutput, "installed Python wheel emitted agent-route argv")
 }
 
-func readInstalledPythonCLIContract(consumer string, environment []string, renderer cliexec.Renderer) ([]byte, error) {
+func readInstalledPythonCLIContract(consumer string, environment []string, renderer cliexec.Renderer, expectedContract []byte) ([]byte, error) {
 	launcher := renderer.Argv()
 	if len(launcher) != 3 || launcher[1] != "-m" || launcher[2] != "agentic_proofkit" {
 		return nil, fmt.Errorf("installed Python wheel contract reader requires the Python module launcher")
 	}
-	script := fmt.Sprintf(`
+	content, err := readInstalledPythonPackageResource(
+		consumer,
+		environment,
+		launcher[0],
+		"proofkit/cli-contract.v2.json",
+		installedclicontract.MaximumContractBytes,
+		"bytes",
+	)
+	if err != nil {
+		return nil, fmt.Errorf("read installed Python wheel CLI contract: %w", err)
+	}
+	if !bytes.Equal(content, expectedContract) {
+		return nil, fmt.Errorf("installed Python wheel CLI contract differs from the exact source contract")
+	}
+	if _, err := installedclicontract.Admit(content); err != nil {
+		return nil, fmt.Errorf("admit installed Python wheel CLI contract resource: %w", err)
+	}
+	return content, nil
+}
+
+func verifyInstalledPythonCarrier(consumer string, environment []string, renderer cliexec.Renderer, expectedContract []byte, expectedBinary []byte) ([]byte, error) {
+	contract, err := readInstalledPythonCLIContract(consumer, environment, renderer, expectedContract)
+	if err != nil {
+		return nil, err
+	}
+	launcher := renderer.Argv()
+	if len(launcher) != 3 {
+		return nil, fmt.Errorf("installed Python carrier requires the Python module launcher")
+	}
+	if err := verifyInstalledPythonBinary(consumer, environment, launcher[0], expectedBinary); err != nil {
+		return nil, err
+	}
+	return contract, nil
+}
+
+func verifyInstalledPythonBinary(consumer string, environment []string, pythonExecutable string, expectedBinary []byte) error {
+	digestText, err := readInstalledPythonPackageResource(
+		consumer,
+		environment,
+		pythonExecutable,
+		"bin/agentic-proofkit",
+		maximumWheelBinaryBytes,
+		"sha256",
+	)
+	if err != nil {
+		return fmt.Errorf("read installed Python wheel binary: %w", err)
+	}
+	expectedDigest := sha256.Sum256(expectedBinary)
+	if string(digestText) != fmt.Sprintf("%x\n", expectedDigest) {
+		return fmt.Errorf("installed Python wheel binary differs from the exact wheel source binary")
+	}
+	return nil
+}
+
+func readInstalledPythonPackageResource(consumer string, environment []string, pythonExecutable string, relativePath string, maximumBytes int64, outputMode string) ([]byte, error) {
+	if relativePath == "" || strings.HasPrefix(relativePath, "/") || strings.Contains(relativePath, "\\") {
+		return nil, fmt.Errorf("installed Python package resource path is invalid")
+	}
+	for _, component := range strings.Split(relativePath, "/") {
+		if component == "" || component == "." || component == ".." {
+			return nil, fmt.Errorf("installed Python package resource path is invalid")
+		}
+	}
+	if maximumBytes <= 0 {
+		return nil, fmt.Errorf("installed Python package resource limit is invalid")
+	}
+	if outputMode != "bytes" && outputMode != "sha256" {
+		return nil, fmt.Errorf("installed Python package resource output mode is invalid")
+	}
+	script := `
+import hashlib
 import os
 import stat
 import sys
 from importlib.resources import files
 
-limit = %d
-path = files("agentic_proofkit").joinpath("proofkit", "cli-contract.v2.json")
-with path.open("rb") as stream:
+relative_path = sys.argv[1]
+limit = int(sys.argv[2])
+output_mode = sys.argv[3]
+resource = files("agentic_proofkit")
+for component in relative_path.split("/"):
+    resource = resource.joinpath(component)
+path = os.path.abspath(os.fspath(resource))
+prefix = os.path.realpath(sys.prefix)
+if os.path.commonpath((prefix, path)) != prefix:
+    raise SystemExit("installed package resource is outside the active environment")
+cursor = os.path.sep if os.path.isabs(path) else ""
+for component in path.split(os.path.sep):
+    if not component:
+        continue
+    cursor = os.path.join(cursor, component)
+    if stat.S_ISLNK(os.lstat(cursor).st_mode):
+        raise SystemExit("installed package resource contains a symlink")
+flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+fd = os.open(path, flags)
+with os.fdopen(fd, "rb", closefd=True) as stream:
     before = os.fstat(stream.fileno())
     if not stat.S_ISREG(before.st_mode) or before.st_size < 1 or before.st_size > limit:
-        raise SystemExit("installed CLI contract resource is not a bounded regular file")
+        raise SystemExit("installed package resource is not a bounded regular file")
     total = 0
+    digest = hashlib.sha256()
     while True:
         chunk = stream.read(min(65536, limit + 1 - total))
         if not chunk:
             break
         total += len(chunk)
         if total > limit:
-            raise SystemExit("installed CLI contract resource exceeds its byte limit")
-        sys.stdout.buffer.write(chunk)
+            raise SystemExit("installed package resource exceeds its byte limit")
+        if output_mode == "bytes":
+            sys.stdout.buffer.write(chunk)
+        else:
+            digest.update(chunk)
     after = os.fstat(stream.fileno())
     if total != before.st_size or (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) != (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns):
-        raise SystemExit("installed CLI contract resource changed during the read")
-`, installedclicontract.MaximumContractBytes)
-	ctx, cancel := context.WithTimeout(context.Background(), installedContractReadTimeout)
+        raise SystemExit("installed package resource changed during the read")
+    if output_mode == "sha256":
+        sys.stdout.write(digest.hexdigest() + "\n")
+`
+	maximumOutputBytes := int(maximumBytes)
+	if outputMode == "sha256" {
+		maximumOutputBytes = sha256.Size*2 + 1
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), installedResourceReadTimeout)
 	defer cancel()
 	result, err := workflowsmoke.RunProcessWithOutputLimits(ctx, workflowsmoke.ProcessCarrier{
 		Directory:   consumer,
-		Executable:  launcher[0],
-		Prefix:      []string{"-c", script},
-		Environment: environment,
+		Executable:  pythonExecutable,
+		Prefix:      []string{"-I", "-c", script, relativePath, strconv.FormatInt(maximumBytes, 10), outputMode},
+		Environment: pythonVerificationEnvironment(environment, nil),
 	}, workflowsmoke.Invocation{StdinClass: workflowsmoke.StdinMustRemainUnread}, workflowsmoke.ProcessOutputLimits{
-		MaximumStdoutBytes: installedclicontract.MaximumContractBytes,
+		MaximumStdoutBytes: maximumOutputBytes,
 		MaximumStderrBytes: 64 << 10,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("read installed Python wheel CLI contract: %w", err)
+		return nil, err
 	}
 	if result.ExitCode != 0 {
-		return nil, fmt.Errorf("read installed Python wheel CLI contract exited with code %d", result.ExitCode)
-	}
-	if _, err := installedclicontract.Admit(result.Stdout); err != nil {
-		return nil, fmt.Errorf("admit installed Python wheel CLI contract resource: %w", err)
+		return nil, fmt.Errorf("installed Python package resource reader exited with code %d: %s", result.ExitCode, result.Stderr)
 	}
 	return result.Stdout, nil
 }
@@ -818,14 +968,20 @@ func verifyInstalledPythonAgentRouteBrief(output []byte) error {
 }
 
 func exactDisplayedRouteOperands(output []byte, prefix string, context string) ([]string, error) {
-	return exactDisplayedRouteSuffixes(output, prefix, context, 1)
+	return exactDisplayedRouteSuffixes(output, prefix, context, func(value string) bool {
+		tokens, ok := commandroute.Parse(value)
+		return ok && len(tokens) == 1
+	})
 }
 
-func exactDisplayedCommandRoutes(output []byte, prefix string, context string) ([]string, error) {
-	return exactDisplayedRouteSuffixes(output, prefix, context, 4)
+func exactDisplayedCommandRoutes(output []byte, prefix string, context string, contract installedclicontract.Contract) ([]string, error) {
+	return exactDisplayedRouteSuffixes(output, prefix, context, func(value string) bool {
+		_, err := contract.AdmitRouteText(value)
+		return err == nil
+	})
 }
 
-func exactDisplayedRouteSuffixes(output []byte, prefix string, context string, maximumTokens int) ([]string, error) {
+func exactDisplayedRouteSuffixes(output []byte, prefix string, context string, admit func(string) bool) ([]string, error) {
 	decoded, err := unicodepolicy.DecodeUTF8(output)
 	if err != nil {
 		return nil, fmt.Errorf("installed Python wheel route output is not valid UTF-8")
@@ -841,7 +997,7 @@ func exactDisplayedRouteSuffixes(output []byte, prefix string, context string, m
 			continue
 		}
 		operand := strings.TrimPrefix(route, prefix)
-		if !isCommandRoute(operand, maximumTokens) || route != prefix+operand {
+		if !admit(operand) || route != prefix+operand {
 			return nil, fmt.Errorf("%s contain non-canonical route %q", context, route)
 		}
 		if _, duplicate := seen[operand]; duplicate {
@@ -855,31 +1011,6 @@ func exactDisplayedRouteSuffixes(output []byte, prefix string, context string, m
 	}
 	sort.Strings(operands)
 	return operands, nil
-}
-
-func isCommandRoute(value string, maximumTokens int) bool {
-	tokens := strings.Split(value, " ")
-	if len(tokens) == 0 || len(tokens) > maximumTokens {
-		return false
-	}
-	for _, token := range tokens {
-		if !isCommandRouteOperand(token) {
-			return false
-		}
-	}
-	return true
-}
-
-func isCommandRouteOperand(value string) bool {
-	if value == "" {
-		return false
-	}
-	for _, character := range value {
-		if (character < 'a' || character > 'z') && (character < '0' || character > '9') && character != '-' {
-			return false
-		}
-	}
-	return true
 }
 
 func writeJSONFixture(path string, value any) error {
@@ -1000,30 +1131,69 @@ func environmentWithOverrides(environment []string, overrides map[string]string)
 	return result
 }
 
+func pythonVerificationEnvironment(environment []string, overrides map[string]string) []string {
+	filtered := make([]string, 0, len(environment)+len(overrides)+2)
+	for _, item := range environment {
+		name, _, ok := strings.Cut(item, "=")
+		if ok && strings.HasPrefix(strings.ToUpper(name), "PYTHON") {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	safeOverrides := make(map[string]string, len(overrides)+2)
+	for name, value := range overrides {
+		if !strings.HasPrefix(strings.ToUpper(name), "PYTHON") {
+			safeOverrides[name] = value
+		}
+	}
+	safeOverrides["PYTHONNOUSERSITE"] = "1"
+	safeOverrides["PYTHONSAFEPATH"] = "1"
+	return environmentWithOverrides(filtered, safeOverrides)
+}
+
 func readZipFile(file *zip.File) ([]byte, error) {
+	maximumBytes := maximumWheelEntryBytes(file.Name)
+	if file.UncompressedSize64 > uint64(maximumBytes) {
+		return nil, fmt.Errorf("wheel entry %s exceeds resource limit", file.Name)
+	}
 	reader, err := file.Open()
 	if err != nil {
 		return nil, err
 	}
 	defer reader.Close()
-	return io.ReadAll(reader)
+	content, err := io.ReadAll(io.LimitReader(reader, maximumBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(content)) > maximumBytes || uint64(len(content)) != file.UncompressedSize64 {
+		return nil, fmt.Errorf("wheel entry %s exceeds or contradicts its admitted size", file.Name)
+	}
+	return content, nil
 }
 
-func runCommand(dir string, name string, args ...string) ([]byte, error) {
-	command := exec.Command(name, args...)
-	if dir != "" {
-		command.Dir = dir
+func maximumWheelEntryBytes(name string) int64 {
+	if name == "agentic_proofkit/bin/agentic-proofkit" {
+		return maximumWheelBinaryBytes
 	}
-	return command.CombinedOutput()
+	return maximumWheelTextEntryBytes
 }
 
 func runCommandWithEnvironment(dir string, environment []string, name string, args ...string) ([]byte, error) {
-	command := exec.Command(name, args...)
-	command.Env = environment
-	if dir != "" {
-		command.Dir = dir
+	ctx, cancel := context.WithTimeout(context.Background(), pythonPackageProcessTimeout)
+	defer cancel()
+	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory:   dir,
+		Environment: environment,
+		Executable:  name,
+	}, workflowsmoke.Invocation{Args: args, StdinClass: workflowsmoke.StdinBytes})
+	if err != nil {
+		return nil, err
 	}
-	return command.CombinedOutput()
+	output := append(append([]byte(nil), result.Stdout...), result.Stderr...)
+	if result.ExitCode != 0 {
+		return output, fmt.Errorf("process exited with code %d", result.ExitCode)
+	}
+	return output, nil
 }
 
 func runArgvWithEnvironment(dir string, environment []string, argv []string) ([]byte, error) {

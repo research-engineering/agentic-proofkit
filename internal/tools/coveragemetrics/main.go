@@ -297,6 +297,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-PACKAGE-003", "proofkit.package-boundary.outside-consumer-artifact"}: {
 			"TestExactTarballOnboardingTrace",
 			"TestInstalledCommandRouteBijectionBindsCommandIdentity",
+			"TestInstalledNPMCarrierIsExactRegularTarballProjection",
 			"TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift",
 		},
 		{"REQ-PROOFKIT-PACKAGE-004", "proofkit.package-boundary.ci-receipt-anchor"}: {
@@ -308,8 +309,11 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-candidate"}:               {"TestPythonArtifactRefsRejectEachWheelIdentityDefect"},
 		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-generated-continuation"}: {
 			"TestExactDisplayedRouteOperandsRejectsWhitespaceAndExpansionMutants",
+			"TestInstalledPythonCarrierRejectsContractReplacementRemovalAndSymlink",
 			"TestInstalledPythonCommandRoutesRequireExactContractBijection",
 			"TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM",
+			"TestPipInstallArgumentsAreIsolatedAndOffline",
+			"TestPythonVerificationEnvironmentRemovesAmbientImportControls",
 		},
 		{"REQ-PROOFKIT-PACKAGE-007", "proofkit.package-boundary.package-public-docs-no-mutable-release-facts"}: {
 			"TestVerifyNoStalePackageDocsRejectsMutableReleaseFactsInMarkdown",
@@ -356,6 +360,9 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestOperationsRejectSymlinkComponentsWithoutOutsideMutation",
 			"TestReadBoundedRejectsUnrepresentableLimit",
 			"TestWriteReadAndRemoveRoundTrip",
+		},
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.artifact-file-nonblocking-open"}: {
+			"TestReadBoundedRejectsFIFOWithoutBlocking",
 		},
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}: {
 			"TestEachCommandRouteClosureConjunctHasIndependentFalsifier",
@@ -426,6 +433,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-019", "proofkit.supply-chain-quality.installed-package-json-abi-smoke"}: {
 			"TestExactTarballOnboardingTrace",
 			"TestInstalledInvocationRequiresAuthoredOrderAndExactCommandToken",
+			"TestInstalledNPMCarrierIsExactRegularTarballProjection",
 			"TestInstalledREADMEFirstInputPreservesJSONExampleBytes",
 			"TestInstalledREADMEFirstInputUsesBoundedLiteralShellWords",
 			"TestLiteralShellWordsConsumesLongBackslashRun",
@@ -455,6 +463,13 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestMachOMinimumMacOSRejectsTruncatedBuildVersion",
 			"TestVerifyWheelContentsAcceptsDarwinTagAtOrAboveMachOMinimum",
 			"TestVerifyWheelContentsRejectsDarwinTagBelowMachOMinimum",
+		},
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-resource-bounds"}: {
+			"TestVerifyWheelContentsRejectsOversizedCompressedEntryBeforeDecompression",
+			"TestVerifyWheelContentsRejectsOversizedEntryBeforeDecompression",
+		},
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.wrapper-platform-bijection"}: {
+			"TestWrapperScriptRoutesEveryReleasePlatformTarget",
 		},
 		{"REQ-PROOFKIT-QUALITY-015", "proofkit.supply-chain-quality.release-closeout-completion-criteria"}: {
 			"TestBuildInputFailsClosedForEachBlockingEvidenceClass",
@@ -546,7 +561,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-materialized-ref-admission"}: {
 			"TestBuildRejectsStdinTransportSentinelAsArtifactReference",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-inventory-boundary"}: {
+		{"REQ-PROOFKIT-SPEC-028", "proofkit.spec-proof-core.adoption-inventory-boundary"}: {
 			"TestCatalogRolePolicyIsExact",
 			"TestInventoryIdentityBindsEverySemanticOperand",
 			"TestInventoryOutputByteLimitIsExact",
@@ -556,33 +571,49 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 			"TestScanPolicyBoundariesAreExact",
 			"TestScanProducesBoundedClosedInventory",
 			"TestScanRejectsRecognizedSymlinkWithoutReadingTarget",
+			"TestUnsupportedPlatformFailsBeforeOpeningRepositoryRoot",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-inventory-nonblocking-open"}: {
+		{"REQ-PROOFKIT-SPEC-028", "proofkit.spec-proof-core.adoption-inventory-nonblocking-open"}: {
 			"TestScanRejectsFIFOReplacementWithoutBlocking",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-plan-authority-closure"}: {
-			"TestAdoptionPlanOutputAndTextBoundsAreExact",
+		{"REQ-PROOFKIT-SPEC-029", "proofkit.spec-proof-core.adoption-plan-authority-closure"}: {
 			"TestBuildRejectsUnknownIntentPresetAndForgedInventory",
 			"TestBuildSeparatesAdoptionIntentFromCandidateAuthority",
 			"TestBuildStackHintCannotChangeIntentTrustOrTasks",
 			"TestPlanIdentityBindsIntentAndInventory",
 			"TestPlanWireAdmissionIsDeterministicAndOwnerClosed",
-			"TestTextProjectionPreservesJSONPlanSemantics",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-plan-observational-stack"}: {
+		{"REQ-PROOFKIT-SPEC-029", "proofkit.spec-proof-core.adoption-plan-observational-stack"}: {
 			"TestPlanKeepsRepositoryClassesObservationalAndStackNeutral",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-guidance-reference-closure"}: {
+		{"REQ-PROOFKIT-SPEC-029", "proofkit.spec-proof-core.adoption-guidance-reference-closure"}: {
 			"TestGuidanceReferenceIsCompactAndOwnerBound",
+		},
+		{"REQ-PROOFKIT-SPEC-030", "proofkit.spec-proof-core.adoption-plan-presentation-closure"}: {
+			"TestAdoptionPlanOutputAndTextBoundsAreExact",
+			"TestTextProjectionPreservesJSONPlanSemantics",
 		},
 		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-front-door-whole-cli"}: {
 			"TestAdoptionFrontDoorCLI",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-route-contract-closure"}: {
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-contract-closure"}: {
 			"TestCommandRoutesAreBoundedSafeAndUnambiguous",
+			"TestRenderRejectsIncompleteAndStaleCommandContracts",
 		},
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-version-edge-closure"}: {
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-generated-adapter"}: {
+			"TestGeneratedSourceAdmitsBoundedCanonicalCommandRoutes",
+		},
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-installed-contract"}: {
+			"TestAdmitCommandRouteTokenBoundariesAreExact",
+			"TestAdmitRequiresExactCommandRouteGrammarProjection",
+		},
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-kernel-owner"}: {
+			"TestGrammarBoundariesAreExact",
+			"TestParseRequiresCanonicalSeparatorAndRoundTrip",
+		},
+		{"REQ-PROOFKIT-SPEC-031", "proofkit.spec-proof-core.adoption-version-edge-closure"}: {
 			"TestAdoptionFrontDoorVersionEdgeClosesInitRetirement",
+			"TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction",
 			"TestRetiredInitRouteHasNoPublicDispatcher",
 		},
 		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}: {
@@ -630,6 +661,7 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-006", "proofkit.supply-chain-quality.osv-permission-separation"}:                   "scripts/workflow_security_scanner_oracles_test.go",
 		{"REQ-PROOFKIT-QUALITY-007", "proofkit.supply-chain-quality.scorecard-permission-and-publication-inputs"}: "scripts/workflow_security_scanner_oracles_test.go",
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.artifact-file-boundary"}:                      "internal/tools/artifactfile/file_test.go",
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.artifact-file-nonblocking-open"}:              "internal/tools/artifactfile/file_unix_test.go",
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-executability"}:              "internal/tools/coveragemetrics/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.coverage-metrics"}:                            "internal/tools/coveragemetrics/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-execution-ledger"}:             "internal/tools/commandoracle/execute_test.go",
@@ -645,6 +677,8 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-workflow-delegation"}:            "scripts/validate-self-hosting-receipts_test.go",
 		{"REQ-PROOFKIT-QUALITY-022", "proofkit.supply-chain-quality.browser-failure-diagnostics-retention"}:       "scripts/workflow_browser_runtime_oracle_test.go",
 		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility"}:    "internal/tools/pythonpackage/metadata_test.go",
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.python-wheel-resource-bounds"}:                "internal/tools/pythonpackage/metadata_test.go",
+		{"REQ-PROOFKIT-QUALITY-023", "proofkit.supply-chain-quality.wrapper-platform-bijection"}:                  "internal/tools/packagebuild/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-015", "proofkit.supply-chain-quality.release-closeout-completion-criteria"}:        "internal/tools/releasecloseoutinput/main_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-change-record-projection"}:            "internal/tools/releasechange/record_test.go",
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.retained-evidence-artifact-topology"}:         "internal/tools/retainedevidence/manifest_test.go",
@@ -667,14 +701,18 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-flag-pre-read-admission"}:                 "internal/app/app_test.go",
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-materialized-ref-admission"}:              "internal/command/agentroute/agentroute_test.go",
 		{"REQ-PROOFKIT-SPEC-026", "proofkit.spec-proof-core.agent-route-report-contract-closure"}:                 "internal/app/cli_contract_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-inventory-boundary"}:                         "internal/command/repositoryinventory/repositoryinventory_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-inventory-nonblocking-open"}:                 "internal/command/repositoryinventory/fifo_unix_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-plan-authority-closure"}:                     "internal/command/adoptionplan/adoptionplan_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-plan-observational-stack"}:                   "internal/command/adoptionplan/repository_classes_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-guidance-reference-closure"}:                 "internal/command/nativeevidenceguidance/guidance_test.go",
+		{"REQ-PROOFKIT-SPEC-028", "proofkit.spec-proof-core.adoption-inventory-boundary"}:                         "internal/command/repositoryinventory/repositoryinventory_test.go",
+		{"REQ-PROOFKIT-SPEC-028", "proofkit.spec-proof-core.adoption-inventory-nonblocking-open"}:                 "internal/command/repositoryinventory/fifo_unix_test.go",
+		{"REQ-PROOFKIT-SPEC-029", "proofkit.spec-proof-core.adoption-plan-authority-closure"}:                     "internal/command/adoptionplan/adoptionplan_test.go",
+		{"REQ-PROOFKIT-SPEC-029", "proofkit.spec-proof-core.adoption-plan-observational-stack"}:                   "internal/command/adoptionplan/repository_classes_test.go",
+		{"REQ-PROOFKIT-SPEC-029", "proofkit.spec-proof-core.adoption-guidance-reference-closure"}:                 "internal/command/nativeevidenceguidance/guidance_test.go",
+		{"REQ-PROOFKIT-SPEC-030", "proofkit.spec-proof-core.adoption-plan-presentation-closure"}:                  "internal/command/adoptionplan/adoptionplan_test.go",
 		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-front-door-whole-cli"}:                       "internal/app/adoption_front_door_command_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-route-contract-closure"}:                     "internal/tools/commandcontractgen/main_test.go",
-		{"REQ-PROOFKIT-SPEC-027", "proofkit.spec-proof-core.adoption-version-edge-closure"}:                       "internal/app/adoption_front_door_version_edge_test.go",
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-contract-closure"}:                      "internal/tools/commandcontractgen/main_test.go",
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-generated-adapter"}:                     "internal/command/jsonreportcliadaptersource/json_report_cli_adapter_source_test.go",
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-installed-contract"}:                    "internal/tools/installedclicontract/contract_test.go",
+		{"REQ-PROOFKIT-SPEC-018", "proofkit.spec-proof-core.command-route-kernel-owner"}:                          "internal/kernel/commandroute/route_test.go",
+		{"REQ-PROOFKIT-SPEC-031", "proofkit.spec-proof-core.adoption-version-edge-closure"}:                       "internal/app/adoption_front_door_version_edge_test.go",
 	}
 	if len(requiredPaths) != len(required) {
 		return fmt.Errorf("required selector path inventory=%d, selector inventory=%d", len(requiredPaths), len(required))

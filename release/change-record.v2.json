@@ -7,6 +7,10 @@
     {
       "changeId": "proofkit.adoption.init-retired",
       "summary": "Remove the overloaded init command and its route presets in favor of the explicit read-only adopt plan trust-mode route and the existing bounded specialist commands."
+    },
+    {
+      "changeId": "proofkit.agent-route.input-contract-v2",
+      "summary": "Replace the agent-route input contract identity with proofkit.agent-route.input.v2 so the materialized-reference rule that rejects the stdin sentinel is machine-distinguishable from earlier v1 semantics; the wire schema remains version 1."
     }
   ],
   "additions": [
@@ -20,11 +24,11 @@
     },
     {
       "changeId": "proofkit.cli.generated-adapter-command-routes",
-      "summary": "Extend the generated TypeScript CLI adapter to admit one-to-four-token public command routes and pass each route token as a separate process argument while preserving one-token calls."
+      "summary": "Extend the generated TypeScript CLI adapter to consume the exact public contract-projected one-to-four-token command-route grammar and pass each admitted route token as a separate process argument while preserving one-token calls."
     },
     {
       "changeId": "proofkit.cli.hierarchical-command-routes",
-      "summary": "Add owner-generated multi-token command routes while retaining stable internal command IDs for contract and implementation ownership."
+      "summary": "Publish one exact bounded command-route grammar in the CLI process contract and add owner-generated multi-token routes while retaining stable internal command IDs for contract and implementation ownership."
     },
     {
       "changeId": "proofkit.python-wheel.embedded-cli-contract",
@@ -39,7 +43,8 @@
       "Replace init --preset legacy with migration-parity-admission followed by migration-plan over explicit caller-owned records; run requirement-source-transition when the migration changes requirement lifecycle state.",
       "Replace init --preset change-set with changed-path-set followed by the explicit impact and selective-gate composition routes required by the consuming repository.",
       "Replace bare init or init --preset all with help families, then select the smallest applicable bounded route rather than materializing every route family.",
-      "Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible."
+      "Regenerate any materialized TypeScript CLI adapter source before invoking a multi-token route such as adopt plan; one-token adapter calls remain compatible.",
+      "Replace persisted proofkit.agent-route.input.v1 contract identity with proofkit.agent-route.input.v2; the admitted wire schemaVersion remains 1."
     ]
   },
   "platformRequirements": [

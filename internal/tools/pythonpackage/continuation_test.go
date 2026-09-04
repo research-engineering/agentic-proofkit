@@ -4,10 +4,21 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
+
+func TestPipInstallArgumentsAreIsolatedAndOffline(t *testing.T) {
+	want := []string{"-m", "pip", "--isolated", "install", "--no-index", "--no-deps", "--no-input", "/tmp/package.whl"}
+	if got := pipInstallArguments("/tmp/package.whl"); !reflect.DeepEqual(got, want) {
+		t.Fatalf("pipInstallArguments()=%v, want %v", got, want)
+	}
+}
 
 func TestExactDisplayedRouteOperandsRejectsWhitespaceAndExpansionMutants(t *testing.T) {
 	const prefix = "/venv/bin/python -m agentic_proofkit help "
@@ -35,7 +46,8 @@ func TestExactDisplayedRouteOperandsRejectsWhitespaceAndExpansionMutants(t *test
 
 func TestExactDisplayedCommandRoutesAdmitBoundedMultiTokenRoutes(t *testing.T) {
 	const prefix = "/venv/bin/python -m agentic_proofkit help "
-	routes, err := exactDisplayedCommandRoutes([]byte("Commands:\n    "+prefix+"adopt plan\n"), prefix, "test command routes")
+	contract := testInstalledCLIContract(t)
+	routes, err := exactDisplayedCommandRoutes([]byte("Commands:\n    "+prefix+"adopt plan\n"), prefix, "test command routes", contract)
 	if err != nil || len(routes) != 1 || routes[0] != "adopt plan" {
 		t.Fatalf("exact command routes=%v error=%v, want [adopt plan]", routes, err)
 	}
@@ -48,11 +60,20 @@ func TestExactDisplayedCommandRoutesAdmitBoundedMultiTokenRoutes(t *testing.T) {
 	for name, route := range mutants {
 		t.Run(name, func(t *testing.T) {
 			output := []byte("Commands:\n    " + prefix + route + "\n")
-			if _, err := exactDisplayedCommandRoutes(output, prefix, "test command routes"); err == nil {
+			if _, err := exactDisplayedCommandRoutes(output, prefix, "test command routes", contract); err == nil {
 				t.Fatalf("mutant survived exact command-route admission: %q", route)
 			}
 		})
 	}
+}
+
+func testInstalledCLIContract(t *testing.T) installedclicontract.Contract {
+	t.Helper()
+	contract, err := installedclicontract.Admit([]byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another"}},"commands":[{"command":"sample","route":["adopt","plan"]}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return contract
 }
 
 func TestInstalledPythonCommandRoutesRequireExactContractBijection(t *testing.T) {
@@ -89,7 +110,128 @@ func TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM(t *tes
 	})
 }
 
+func TestInstalledPythonCarrierRejectsContractReplacementRemovalAndSymlink(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Fatal("Windows wheels are not supported")
+	}
+	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	withWorkingDirectory(t, repositoryRoot, func() {
+		fixture := prepareInstalledWheelFixture(t, repositoryRoot)
+		if err := installPythonWheel(fixture.venvPython, fixture.wheelPath, fixture.environment); err != nil {
+			t.Fatal(err)
+		}
+		renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, fixture.venvPython)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := verifyInstalledPythonCarrier(fixture.consumer, fixture.environment, renderer, fixture.contract, fixture.binary); err != nil {
+			t.Fatalf("exact installed carrier was rejected: %v", err)
+		}
+		contractPath := installedPythonContractPath(t, fixture)
+		externalContractPath := filepath.Join(t.TempDir(), "cli-contract.v2.json")
+		if err := os.WriteFile(externalContractPath, fixture.contract, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		restore := func(t *testing.T) {
+			t.Helper()
+			if err := os.Remove(contractPath); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(contractPath, fixture.contract, 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		mutations := []struct {
+			name  string
+			apply func(*testing.T)
+		}{
+			{name: "replacement", apply: func(t *testing.T) {
+				if err := os.WriteFile(contractPath, append(append([]byte(nil), fixture.contract...), '\n'), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}},
+			{name: "removal", apply: func(t *testing.T) {
+				if err := os.Remove(contractPath); err != nil {
+					t.Fatal(err)
+				}
+			}},
+			{name: "symlink", apply: func(t *testing.T) {
+				if err := os.Remove(contractPath); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(externalContractPath, contractPath); err != nil {
+					t.Fatal(err)
+				}
+			}},
+		}
+		for _, mutation := range mutations {
+			t.Run(mutation.name, func(t *testing.T) {
+				restore(t)
+				mutation.apply(t)
+				if _, err := verifyInstalledPythonCarrier(fixture.consumer, fixture.environment, renderer, fixture.contract, fixture.binary); err == nil {
+					t.Fatal("mutated installed contract was accepted")
+				}
+			})
+		}
+	})
+}
+
+func TestPythonVerificationEnvironmentRemovesAmbientImportControls(t *testing.T) {
+	environment := pythonVerificationEnvironment([]string{
+		"PATH=/usr/bin",
+		"PYTHONHOME=/tmp/home",
+		"PYTHONPATH=/tmp/path",
+		"PYTHONNOUSERSITE=0",
+		"proofkit_fixture=retained",
+	}, map[string]string{
+		"PATH":       "/empty",
+		"PYTHONPATH": "/attacker",
+	})
+	values := map[string]string{}
+	for _, entry := range environment {
+		name, value, ok := strings.Cut(entry, "=")
+		if !ok {
+			t.Fatalf("environment entry is malformed: %q", entry)
+		}
+		if _, duplicate := values[name]; duplicate {
+			t.Fatalf("environment contains duplicate key %q", name)
+		}
+		values[name] = value
+	}
+	if values["PATH"] != "/empty" || values["proofkit_fixture"] != "retained" {
+		t.Fatalf("non-Python environment was not preserved exactly: %v", values)
+	}
+	if values["PYTHONNOUSERSITE"] != "1" || values["PYTHONSAFEPATH"] != "1" {
+		t.Fatalf("Python isolation controls = %v, want enabled", values)
+	}
+	for name := range values {
+		if strings.HasPrefix(strings.ToUpper(name), "PYTHON") && name != "PYTHONNOUSERSITE" && name != "PYTHONSAFEPATH" {
+			t.Fatalf("ambient Python import control survived: %s", name)
+		}
+	}
+}
+
 func runInstalledWheelContinuationWitness(t *testing.T, repositoryRoot string) {
+	t.Helper()
+	fixture := prepareInstalledWheelFixture(t, repositoryRoot)
+	if err := verifyInstalledPythonWheel(fixture.consumer, fixture.venvPython, fixture.wheelPath, fixture.contract, fixture.binary, fixture.environment); err != nil {
+		t.Fatal(err)
+	}
+}
+
+type installedWheelFixture struct {
+	binary      []byte
+	consumer    string
+	contract    []byte
+	environment []string
+	venvPython  string
+	wheelPath   string
+}
+
+func prepareInstalledWheelFixture(t *testing.T, repositoryRoot string) installedWheelFixture {
 	t.Helper()
 	target, err := currentTarget()
 	if err != nil {
@@ -122,11 +264,49 @@ func runInstalledWheelContinuationWitness(t *testing.T, repositoryRoot string) {
 		t.Fatalf("python3 is required for the installed wheel continuation witness: %v", err)
 	}
 	consumer := t.TempDir()
-	if output, err := runCommand("", python, "-m", "venv", consumer); err != nil {
+	environment := pythonVerificationEnvironment(os.Environ(), nil)
+	if output, err := runCommandWithEnvironment("", environment, python, "-m", "venv", consumer); err != nil {
 		t.Fatalf("create Python consumer venv: %v\n%s", err, output)
 	}
 	venvPython := filepath.Join(consumer, "bin", "python")
-	if err := verifyInstalledPythonWheel(consumer, venvPython, wheelPath); err != nil {
+	expectedContract, err := os.ReadFile(filepath.Join(repositoryRoot, sourceCLIContractPath))
+	if err != nil {
 		t.Fatal(err)
 	}
+	return installedWheelFixture{
+		binary:      binaryContent,
+		consumer:    consumer,
+		contract:    expectedContract,
+		environment: environment,
+		venvPython:  venvPython,
+		wheelPath:   wheelPath,
+	}
+}
+
+func installedPythonContractPath(t *testing.T, fixture installedWheelFixture) string {
+	t.Helper()
+	const script = `
+import os
+from importlib.resources import files
+
+print(os.fspath(files("agentic_proofkit").joinpath("proofkit", "cli-contract.v2.json")))
+`
+	output, err := runCommandWithEnvironment("", fixture.environment, fixture.venvPython, "-I", "-c", script)
+	if err != nil {
+		t.Fatalf("resolve installed contract path: %v\n%s", err, output)
+	}
+	path := strings.TrimSuffix(string(output), "\n")
+	resolvedConsumer, err := filepath.EvalSymlinks(fixture.consumer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := filepath.Rel(resolvedConsumer, resolvedPath)
+	if err != nil || !filepath.IsLocal(relative) || filepath.IsAbs(relative) {
+		t.Fatalf("installed contract path %q is outside consumer root %q", path, fixture.consumer)
+	}
+	return path
 }

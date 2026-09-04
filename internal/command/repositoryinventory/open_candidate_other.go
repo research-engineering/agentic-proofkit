@@ -7,10 +7,6 @@ import (
 	"os"
 )
 
-func requireScannerPlatform() error {
-	return fmt.Errorf("repository inventory scanning is unsupported on this platform")
-}
-
 func openCandidateFile(root *os.Root, path string) (*os.File, error) {
 	return nil, fmt.Errorf("repository inventory scanning is unsupported on this platform")
 }

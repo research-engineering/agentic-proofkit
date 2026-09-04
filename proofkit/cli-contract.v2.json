@@ -7,6 +7,13 @@
     "failureExitCode": 1,
     "stdout": "Successful JSON commands write exactly one JSON value to stdout unless an admitted explicit output-file flag writes that JSON value to the selected path and leaves stdout empty. Successful text or help commands write text to stdout unless an admitted explicit output-file flag writes the selected representation to the selected path and leaves stdout empty. Commands do not write stderr on success.",
     "stderr": "Argument parsing, unsupported command, input admission, and output serialization failures write human diagnostics to stderr. Failed report commands may still write a machine-readable failed report to stdout when admission succeeds. Opt-in agent-envelope repair packets may write deterministic invalid-input JSON to stdout with exit code 1 and empty stderr.",
+    "commandRouteGrammar": {
+      "minimumTokens": 1,
+      "maximumTokens": 4,
+      "separator": " ",
+      "tokenPattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "ambiguityPolicy": "no_route_is_prefix_of_another"
+    },
     "globalOptions": {
       "jsonLayout": {
         "flag": "--json-layout",
@@ -111,7 +118,7 @@
         "rootDefinitionDigest": "sha256:c7bc9d7b70231d57a3066cad755d30aacfbc92fe57ac54d2df5d2ec7ed175a32",
         "nativeSource": {
           "path": "internal/command/adoptionplan",
-          "canonicalDigest": "sha256:f181c815ee62728a7bc6e476c05ec1a29fb2832299e300e91fbcc1794994256c",
+          "canonicalDigest": "sha256:c34b3405ed178abf711ab3f43562dccb03c1c8d16dcdc00a0462c5197b65dc67",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -128,7 +135,8 @@
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
           "REQ-PROOFKIT-QUALITY-004",
-          "REQ-PROOFKIT-SPEC-027"
+          "REQ-PROOFKIT-SPEC-029",
+          "REQ-PROOFKIT-SPEC-030"
         ],
         "flagChoices": {
           "--color": [
@@ -492,7 +500,7 @@
         }
       ],
       "inputContract": {
-        "contractId": "proofkit.agent-route.input.v1",
+        "contractId": "proofkit.agent-route.input.v2",
         "schemaVersion": 1,
         "authority": "agent-route input admission",
         "fields": {
@@ -648,11 +656,11 @@
         ],
         "rootType": "object",
         "closed": true,
-        "rootDefinitionRef": "proofkit.agent-route.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:fd1121285d1b357ed848febc248700a75417d06619e22ed36991631d7526375b",
+        "rootDefinitionRef": "proofkit.agent-route.input.v2.root-shape",
+        "rootDefinitionDigest": "sha256:7151fa0ac2e070079c0a584b8a04757639d0b6955314a100044a8b471a7602d6",
         "nativeSource": {
           "path": "internal/command/agentroute",
-          "canonicalDigest": "sha256:3256eac5777824ad0b7b9bce6537efdb42b75430579a1a3f160577cf8cdce379",
+          "canonicalDigest": "sha256:9fdb6a0fcb98b32fc58f6a1abb95946f1b433cc3022d6f731ae6701462b0d6f2",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -672,7 +680,7 @@
           "openBrowser",
           "routeId",
           "schemaVersion",
-          "root-shape-only definition proofkit.agent-route.input.v1.root-shape; nested fields, types, and cardinalities are non-claims"
+          "root-shape-only definition proofkit.agent-route.input.v2.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -777,12 +785,12 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:573c70cd1937ab3284daf86b5fd1b67ef72baca38c206194faa8e7b9140f030c",
+            "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/agentroute",
-            "canonicalDigest": "sha256:3256eac5777824ad0b7b9bce6537efdb42b75430579a1a3f160577cf8cdce379",
+            "canonicalDigest": "sha256:9fdb6a0fcb98b32fc58f6a1abb95946f1b433cc3022d6f731ae6701462b0d6f2",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2057,7 +2065,7 @@
         "rootDefinitionDigest": "sha256:9378c7663485f39089cf6c39a3d2f778e28b5801637229fe9524a9652a7b0737",
         "nativeSource": {
           "path": "internal/command/jsonreportcliadaptersource",
-          "canonicalDigest": "sha256:2ecc34739665b8b268c361c62001f05d22e5264c8ff6950c65024b01a39922d0",
+          "canonicalDigest": "sha256:e2d464fd22ab51809883622acfe23b35ffe7615701bc8f8672a097fc3b202462",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -2555,7 +2563,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:573c70cd1937ab3284daf86b5fd1b67ef72baca38c206194faa8e7b9140f030c",
+            "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
             "evidenceClass": "source_checkout"
           },
           {
@@ -3525,7 +3533,7 @@
         "rootDefinitionDigest": "sha256:cc91b8e1a3fb25180165204979ccbc07c378679e2ffe7f85348b3fd38ecbdc8e",
         "nativeSource": {
           "path": "internal/command/repositoryinventory",
-          "canonicalDigest": "sha256:16e1e37a0face206a6a8cfd47cd867811f7f8e7ac85777b400d355d0a2752d68",
+          "canonicalDigest": "sha256:4fb3ddaf49f9db46192a5ee2c88552cb60f2eca94197c4046045f48728a99d29",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3542,7 +3550,7 @@
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
           "REQ-PROOFKIT-QUALITY-004",
-          "REQ-PROOFKIT-SPEC-027"
+          "REQ-PROOFKIT-SPEC-028"
         ]
       }
     },
@@ -5845,7 +5853,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:573c70cd1937ab3284daf86b5fd1b67ef72baca38c206194faa8e7b9140f030c",
+          "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5874,7 +5882,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:573c70cd1937ab3284daf86b5fd1b67ef72baca38c206194faa8e7b9140f030c",
+          "canonicalDigest": "sha256:7f8837c629226c740c41b14ea0c1fc9c03337faeeec5453bd4d2899a8f7b0bf8",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -7898,7 +7906,7 @@
       "canonicalDigest": "sha256:c06f7bfa9c10f73575aa5f927696d41db818697c9a3d320074b7c254011830d5"
     },
     {
-      "definitionId": "proofkit.agent-route.input.v1.root-shape",
+      "definitionId": "proofkit.agent-route.input.v2.root-shape",
       "schemaVersion": 1,
       "rootType": "object",
       "closed": true,
@@ -7937,7 +7945,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:fd1121285d1b357ed848febc248700a75417d06619e22ed36991631d7526375b"
+      "canonicalDigest": "sha256:7151fa0ac2e070079c0a584b8a04757639d0b6955314a100044a8b471a7602d6"
     },
     {
       "definitionId": "proofkit.agent-route.output.v3.root-shape",

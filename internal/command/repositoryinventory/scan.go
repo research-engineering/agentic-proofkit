@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"sort"
 	"unicode/utf8"
 
@@ -27,6 +28,9 @@ type directoryEntryReader interface {
 	ReadDir(int) ([]os.DirEntry, error)
 }
 
+type repositoryRootOpener func(string) (*os.Root, error)
+type candidateContentReader func(*os.Root, candidate, int64, int64) ([]byte, error)
+
 type rootInventory struct {
 	catalogItems      []catalogItem
 	rootEntryCount    int
@@ -40,13 +44,17 @@ var defaultScanPolicy = scanPolicy{
 }
 
 func Scan(ctx context.Context, repositoryRoot string) (Snapshot, error) {
+	return scanForPlatform(ctx, repositoryRoot, runtime.GOOS, os.OpenRoot)
+}
+
+func scanForPlatform(ctx context.Context, repositoryRoot, goos string, openRoot repositoryRootOpener) (Snapshot, error) {
 	if err := ctx.Err(); err != nil {
 		return Snapshot{}, err
 	}
-	if err := requireScannerPlatform(); err != nil {
+	if err := requireScannerPlatform(goos); err != nil {
 		return Snapshot{}, err
 	}
-	root, err := os.OpenRoot(repositoryRoot)
+	root, err := openRoot(repositoryRoot)
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("open repository root")
 	}
@@ -57,7 +65,18 @@ func Scan(ctx context.Context, repositoryRoot string) (Snapshot, error) {
 	return snapshot, scanErr
 }
 
+func requireScannerPlatform(goos string) error {
+	if goos != "darwin" && goos != "linux" {
+		return fmt.Errorf("repository inventory scanning is unsupported on this platform")
+	}
+	return nil
+}
+
 func scanRoot(ctx context.Context, root *os.Root, policy scanPolicy) (Snapshot, error) {
+	return scanRootWithCandidateReader(ctx, root, policy, readCandidate)
+}
+
+func scanRootWithCandidateReader(ctx context.Context, root *os.Root, policy scanPolicy, readContent candidateContentReader) (Snapshot, error) {
 	directory, err := root.Open(".")
 	if err != nil {
 		return Snapshot{}, fmt.Errorf("open repository root directory")
@@ -111,7 +130,7 @@ func scanRoot(ctx context.Context, root *os.Root, policy scanPolicy) (Snapshot, 
 		if err := ctx.Err(); err != nil {
 			return Snapshot{}, err
 		}
-		content, err := readCandidate(root, item, policy.maximumFileBytes, policy.maximumAggregateBytes-actualAggregateBytes)
+		content, err := readContent(root, item, policy.maximumFileBytes, policy.maximumAggregateBytes-actualAggregateBytes)
 		if err != nil {
 			return Snapshot{}, err
 		}
@@ -158,7 +177,7 @@ func readRootInventory(ctx context.Context, directory directoryEntryReader, maxi
 			if result.rootEntryCount > maximum {
 				return rootInventory{}, fmt.Errorf("repository root exceeds entry limit")
 			}
-			role, recognized := CatalogRole(entry.Name())
+			role, recognized := catalogRole(entry.Name())
 			if !recognized {
 				result.unrecognizedCount++
 				continue

@@ -63,28 +63,30 @@ func TestBuildSeparatesAdoptionIntentFromCandidateAuthority(t *testing.T) {
 
 func TestBuildStackHintCannotChangeIntentTrustOrTasks(t *testing.T) {
 	inventory := adoptionInventory(t)
-	withoutStack, err := Build(IntentAuditFromCode, inventory, "")
-	if err != nil {
-		t.Fatalf("Build(without stack) error = %v", err)
-	}
-	seenPlanIDs := map[string]string{withoutStack.PlanID: "none"}
-	for _, presetID := range stackpreset.IDs() {
-		withStack, err := Build(IntentAuditFromCode, inventory, presetID)
+	for _, intent := range IntentValues() {
+		withoutStack, err := Build(intent, inventory, "")
 		if err != nil {
-			t.Fatalf("Build(%s) error = %v", presetID, err)
+			t.Fatalf("Build(%s, without stack) error = %v", intent, err)
 		}
-		if withStack.StackHint == nil || withStack.StackHint.PresetID != presetID {
-			t.Fatalf("stack hint = %#v, want %s", withStack.StackHint, presetID)
-		}
-		if withoutStack.Intent != withStack.Intent || !reflect.DeepEqual(withoutStack.TrustDeclaration, withStack.TrustDeclaration) || !reflect.DeepEqual(withoutStack.Packet.Tasks, withStack.Packet.Tasks) {
-			t.Fatalf("stack %s changed authority semantics:\nwithout=%#v\nwith=%#v", presetID, withoutStack, withStack)
-		}
-		if prior, duplicate := seenPlanIDs[withStack.PlanID]; duplicate {
-			t.Fatalf("stack %s shares plan identity with %s", presetID, prior)
-		}
-		seenPlanIDs[withStack.PlanID] = presetID
-		if withoutStack.Inventory.InventoryID != withStack.Inventory.InventoryID {
-			t.Fatalf("stack %s changed repository inventory", presetID)
+		seenPlanIDs := map[string]string{withoutStack.PlanID: "none"}
+		for _, presetID := range stackpreset.IDs() {
+			withStack, err := Build(intent, inventory, presetID)
+			if err != nil {
+				t.Fatalf("Build(%s, %s) error = %v", intent, presetID, err)
+			}
+			if withStack.StackHint == nil || withStack.StackHint.PresetID != presetID {
+				t.Fatalf("stack hint = %#v, want %s", withStack.StackHint, presetID)
+			}
+			if withoutStack.Intent != withStack.Intent || !reflect.DeepEqual(withoutStack.TrustDeclaration, withStack.TrustDeclaration) || !reflect.DeepEqual(withoutStack.Packet.Tasks, withStack.Packet.Tasks) {
+				t.Fatalf("intent %s stack %s changed authority semantics:\nwithout=%#v\nwith=%#v", intent, presetID, withoutStack, withStack)
+			}
+			if prior, duplicate := seenPlanIDs[withStack.PlanID]; duplicate {
+				t.Fatalf("intent %s stack %s shares plan identity with %s", intent, presetID, prior)
+			}
+			seenPlanIDs[withStack.PlanID] = presetID
+			if withoutStack.Inventory.InventoryID != withStack.Inventory.InventoryID {
+				t.Fatalf("intent %s stack %s changed repository inventory", intent, presetID)
+			}
 		}
 	}
 }
@@ -184,7 +186,15 @@ func TestTextProjectionPreservesJSONPlanSemantics(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RenderText() error = %v", err)
 	}
-	for _, required := range []string{IntentAuditFromCode, "typescript_workspace", PlanState, plan.Packet.GuidanceReference.CommandID} {
+	for _, required := range []string{
+		IntentAuditFromCode,
+		capabilitymapadmission.TrustModeAuditFromCode,
+		"typescript_workspace",
+		PlanState,
+		plan.PlanID,
+		plan.Inventory.InventoryID,
+		plan.Packet.GuidanceReference.CommandID,
+	} {
 		if !strings.Contains(text, required) {
 			t.Fatalf("text projection omits %q:\n%s", required, text)
 		}

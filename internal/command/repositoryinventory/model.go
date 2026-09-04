@@ -93,7 +93,7 @@ type Snapshot struct {
 	Omissions   Omissions
 }
 
-func CatalogPaths() []string {
+func catalogPaths() []string {
 	paths := make([]string, 0, len(rootCatalog))
 	for _, item := range rootCatalog {
 		paths = append(paths, item.Path)
@@ -108,7 +108,7 @@ func NonClaims() []string {
 	return append([]string(nil), boundaryNonClaims...)
 }
 
-func CatalogRole(path string) (string, bool) {
+func catalogRole(path string) (string, bool) {
 	index, found := slices.BinarySearchFunc(rootCatalog[:], path, func(item catalogItem, target string) int {
 		switch {
 		case item.Path < target:
