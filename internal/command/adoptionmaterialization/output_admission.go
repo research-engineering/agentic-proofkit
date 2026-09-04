@@ -157,8 +157,10 @@ func AdmitReceiptOutput(raw any) (Receipt, error) {
 func validatePlanRouteClosure(manifest Manifest, transaction repositorytransaction.Plan) error {
 	wantPaths := make([]string, 0, len(manifest.Routes)+1)
 	wantPaths = append(wantPaths, ProjectManifestPath)
+	routesByPath := make(map[string]Route, len(manifest.Routes))
 	for _, route := range manifest.Routes {
 		wantPaths = append(wantPaths, route.Path)
+		routesByPath[route.Path] = route
 	}
 	slices.Sort(wantPaths)
 	gotPaths := make([]string, 0, len(transaction.Operations))
@@ -172,6 +174,8 @@ func validatePlanRouteClosure(manifest Manifest, transaction repositorytransacti
 			if err != nil || operation.After.ByteCount != int64(len(content)) || operation.After.SHA256 != digest.SHA256BytesRef(content) {
 				return fmt.Errorf("adoption materialization manifest transaction target is inconsistent")
 			}
+		} else if route, ok := routesByPath[operation.Path]; !ok || route.ArtifactID != operation.After.SHA256 {
+			return fmt.Errorf("adoption materialization route identity does not match its transaction target")
 		}
 	}
 	if !slices.Equal(gotPaths, wantPaths) {

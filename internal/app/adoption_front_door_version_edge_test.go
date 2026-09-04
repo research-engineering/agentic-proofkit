@@ -16,7 +16,7 @@ import (
 )
 
 const adoptionFrontDoorVersionEdgePath = "internal/app/testdata/v0.7-wire-observations.json"
-const archivedAdoptionFrontDoorChangeRecordPath = "internal/app/testdata/v0.7-release-change-record.v2.json"
+const archivedAdoptionFrontDoorReleaseRoot = "internal/app/testdata/releases/v0.7.0"
 
 type adoptionFrontDoorVersionEdge struct {
 	AddedCommandContracts     []adoptionFrontDoorCommandContract `json:"addedCommandContracts"`
@@ -70,7 +70,7 @@ type adoptionChangedCommandContract struct {
 
 func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
-	if err := validateAdoptionFrontDoorVersionEdge(record, repoRoot(t)); err != nil {
+	if err := validateAdoptionFrontDoorVersionEdge(record, archivedAdoptionFrontDoorRoot(t)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -107,7 +107,7 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 		t.Run(fmt.Sprintf("mutant-%d", index), func(t *testing.T) {
 			value := cloneAdoptionFrontDoorVersionEdge(record)
 			mutate(&value)
-			if err := validateAdoptionFrontDoorVersionEdge(value, repoRoot(t)); err == nil {
+			if err := validateAdoptionFrontDoorVersionEdge(value, archivedAdoptionFrontDoorRoot(t)); err == nil {
 				t.Fatal("version-edge mutant was admitted")
 			}
 		})
@@ -116,7 +116,7 @@ func TestAdoptionFrontDoorVersionEdgeClosesInitRetirement(t *testing.T) {
 
 func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t *testing.T) {
 	record := readAdoptionFrontDoorVersionEdge(t)
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), archivedAdoptionFrontDoorChangeRecordPath))
+	content, err := os.ReadFile(filepath.Join(archivedAdoptionFrontDoorRoot(t), filepath.FromSlash(record.ChangeRecordRef)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +133,7 @@ func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t 
 	}
 	mutantContent = append(mutantContent, '\n')
 	mutantRoot := t.TempDir()
-	path := filepath.Join(mutantRoot, filepath.FromSlash(archivedAdoptionFrontDoorChangeRecordPath))
+	path := filepath.Join(mutantRoot, filepath.FromSlash(record.ChangeRecordRef))
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -145,6 +145,25 @@ func TestAdoptionFrontDoorVersionEdgeRejectsDigestBoundInventoryContradiction(t 
 	mutant.ChangeRecordSHA256 = fmt.Sprintf("sha256:%x", digest)
 	if err := validateAdoptionFrontDoorVersionEdge(mutant, mutantRoot); err == nil || !strings.Contains(err.Error(), "contradicts") {
 		t.Fatalf("coordinated change-record mutant error=%v, want inventory contradiction", err)
+	}
+}
+
+func TestAdoptionFrontDoorVersionEdgeResolvesDeclaredReferenceWithinFrozenReleaseRoot(t *testing.T) {
+	record := readAdoptionFrontDoorVersionEdge(t)
+	content, err := os.ReadFile(filepath.Join(archivedAdoptionFrontDoorRoot(t), filepath.FromSlash(record.ChangeRecordRef)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	frozenRoot := t.TempDir()
+	path := filepath.Join(frozenRoot, filepath.FromSlash(record.ChangeRecordRef))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateAdoptionFrontDoorVersionEdge(record, frozenRoot); err != nil {
+		t.Fatalf("validateAdoptionFrontDoorVersionEdge() failed to resolve declared reference: %v", err)
 	}
 }
 
@@ -218,7 +237,7 @@ func readAdoptionFrontDoorVersionEdge(t *testing.T) adoptionFrontDoorVersionEdge
 	return record
 }
 
-func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, root string) error {
+func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, releaseSnapshotRoot string) error {
 	if record.SchemaVersion != 1 || record.EdgeID != "proofkit.public-wire.0.6.0-to-0.7.0" || record.EvidenceClass != "owner_authored_frozen_version_edge_observation" {
 		return fmt.Errorf("adoption front-door version-edge identity is invalid")
 	}
@@ -275,7 +294,7 @@ func validateAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge, r
 	if record.ChangeRecordRef != "release/change-record.v2.json" {
 		return fmt.Errorf("adoption front-door change record reference is not exact")
 	}
-	archivedChangeRecordPath := filepath.Join(root, archivedAdoptionFrontDoorChangeRecordPath)
+	archivedChangeRecordPath := filepath.Join(releaseSnapshotRoot, filepath.FromSlash(record.ChangeRecordRef))
 	changeRecordContent, err := os.ReadFile(archivedChangeRecordPath)
 	if err != nil {
 		return fmt.Errorf("read adoption front-door change record: %w", err)
@@ -335,4 +354,9 @@ func cloneAdoptionFrontDoorVersionEdge(record adoptionFrontDoorVersionEdge) adop
 	record.ChangedGeneratedArtifacts = append([]adoptionChangedGeneratedArtifact(nil), record.ChangedGeneratedArtifacts...)
 	record.NonClaims = append([]string(nil), record.NonClaims...)
 	return record
+}
+
+func archivedAdoptionFrontDoorRoot(t *testing.T) string {
+	t.Helper()
+	return filepath.Join(repoRoot(t), filepath.FromSlash(archivedAdoptionFrontDoorReleaseRoot))
 }

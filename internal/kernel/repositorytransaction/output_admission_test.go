@@ -47,6 +47,8 @@ func TestPlanAndResultOutputAdmissionRejectSemanticMutants(t *testing.T) {
 		{AppliedCountKnown: true, State: StateRolledBack, TransactionID: transactionID},
 		{FailureClass: "cleanup_failed", State: StateCleanupRequired},
 		{FailureClass: "applied_cleanup_durability_unknown", State: StateDurabilityUnknown},
+		{AppliedCount: 1, AppliedCountKnown: true, FailureClass: "ambiguous_target_state", State: StateRecoveryRequired},
+		{FailureClass: "ambiguous_target_state", RecoveredBy: RecoveryResume, State: StateRecoveryRequired},
 	} {
 		if _, err := AdmitResultOutput(impossible.JSONValue()); err == nil {
 			t.Fatalf("AdmitResultOutput() admitted unreachable result %#v", impossible)

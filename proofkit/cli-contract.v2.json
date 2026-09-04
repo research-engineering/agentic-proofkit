@@ -111,7 +111,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+          "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -147,12 +147,12 @@
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:534ea025b0bf51ec99a1b44d755abb433ab687b572c4f5a0737440176d334db8",
+            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -249,7 +249,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+          "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -285,12 +285,12 @@
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:534ea025b0bf51ec99a1b44d755abb433ab687b572c4f5a0737440176d334db8",
+            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -399,12 +399,12 @@
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:d23fbb07608afc3b9e5c1f83b0f7d374cec5ffacc1ae4d9351d011b30fe306b4",
+            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:534ea025b0bf51ec99a1b44d755abb433ab687b572c4f5a0737440176d334db8",
+            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
             "evidenceClass": "source_checkout"
           }
         ],

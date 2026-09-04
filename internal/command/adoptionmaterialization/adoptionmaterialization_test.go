@@ -91,6 +91,43 @@ func TestMaterializationOutputAdmissionRejectsCrossOwnerMutants(t *testing.T) {
 		t.Fatal("AdmitPlanOutput() admitted a transaction that omitted a manifest route")
 	}
 
+	requestRecord, err := admitRequest(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	children, err := childArtifacts(requestRecord)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forgedManifest := plan.Manifest
+	forgedManifest.Routes = append([]Route(nil), plan.Manifest.Routes...)
+	forgedManifest.Routes[0].ArtifactID = digest.SHA256BytesRef([]byte("forged artifact identity"))
+	forgedManifest.ManifestID, err = digest.StableJSONSHA256Ref(forgedManifest.identityValue())
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifestContent, err := stablejson.Marshal(forgedManifest.JSONValue())
+	if err != nil {
+		t.Fatal(err)
+	}
+	artifacts := append(append([]artifact(nil), children...), artifact{
+		Content: manifestContent, ID: forgedManifest.ManifestID, Kind: ArtifactProjectManifest, Path: ProjectManifestPath,
+	})
+	targets := make([]repositorytransaction.Target, 0, len(artifacts))
+	for _, item := range artifacts {
+		targets = append(targets, repositorytransaction.Target{Content: item.Content, Mode: 0o644, Path: item.Path})
+	}
+	forgedTransaction, err := repositorytransaction.BuildPlan(context.Background(), root, targets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	forgedPlan := plan
+	forgedPlan.Manifest = forgedManifest
+	forgedPlan.Transaction = forgedTransaction
+	if _, err := AdmitPlanOutput(forgedPlan.JSONValue()); err == nil {
+		t.Fatal("AdmitPlanOutput() admitted a route identity that did not match its target bytes")
+	}
+
 	receipt, exitCode, err := Apply(context.Background(), request, root, plan.Transaction.TransactionID, plan.Transaction.DesiredStateID)
 	if err != nil || exitCode != 0 {
 		t.Fatalf("Apply() receipt=%#v exit=%d error=%v", receipt, exitCode, err)
@@ -151,6 +188,17 @@ func TestReceiptAdmissionRejectsOperationAttributionMutants(t *testing.T) {
 			TransactionResult: &repositorytransaction.Result{
 				FailureClass: "ambiguous_target_state", State: repositorytransaction.StateRecoveryRequired,
 				TransactionID: "sha256:" + strings.Repeat("c", 64),
+			},
+		},
+		{
+			ExpectedTransactionID: transactionID,
+			FailureClass:          "ambiguous_target_state",
+			NonClaims:             mergedNonClaims(nil),
+			Operation:             OperationRecover,
+			State:                 ReceiptStateRecoveryRequired,
+			TransactionResult: &repositorytransaction.Result{
+				AppliedCount: 1, AppliedCountKnown: true, FailureClass: "ambiguous_target_state",
+				State: repositorytransaction.StateRecoveryRequired,
 			},
 		},
 	}
@@ -381,10 +429,14 @@ func TestMaterializationRejectsCrossRecordDriftAndManifestMutation(t *testing.T)
 		t.Fatal("AdmitManifest() accepted root-escaping route")
 	}
 
-	colliding := cloneRequest(t, request)
-	colliding["requirementSources"].([]any)[0].(map[string]any)["sourceId"] = "pilot.bindings"
-	if _, err := BuildPlan(context.Background(), colliding, root); err == nil || !strings.Contains(err.Error(), "artifactIds must be unique") {
-		t.Fatalf("BuildPlan(colliding artifact IDs) error=%v", err)
+}
+
+func TestMaterializationIdentifiersAreScopedByChildOwner(t *testing.T) {
+	root := t.TempDir()
+	request := validRequest(t, root)
+	request["requirementSources"].([]any)[0].(map[string]any)["sourceId"] = "pilot.bindings"
+	if _, err := BuildPlan(context.Background(), request, root); err != nil {
+		t.Fatalf("BuildPlan(cross-owner identifier reuse) error=%v", err)
 	}
 }
 

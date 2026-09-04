@@ -107,25 +107,25 @@ func TestManifestAdmissionEqualsProducerImage(t *testing.T) {
 		{
 			name: "missing inventory",
 			routes: []Route{
-				{ArtifactID: "source.a", ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v1.json"},
-				{ArtifactID: "source.b", ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/b/requirements.v1.json"},
-				{ArtifactID: "binding", ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("source-a")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v1.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("source-b")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/b/requirements.v1.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("binding")), ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
 			},
 		},
 		{
 			name: "duplicate artifact identity",
 			routes: []Route{
-				{ArtifactID: "duplicate", ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v1.json"},
-				{ArtifactID: "duplicate", ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
-				{ArtifactID: "inventory", ArtifactKind: ArtifactTestInventory, Path: "proofkit/inventory.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("duplicate")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v1.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("duplicate")), ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("inventory")), ArtifactKind: ArtifactTestInventory, Path: "proofkit/inventory.json"},
 			},
 		},
 		{
 			name: "requirement source outside producer route language",
 			routes: []Route{
-				{ArtifactID: "source", ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/arbitrary.json"},
-				{ArtifactID: "binding", ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
-				{ArtifactID: "inventory", ArtifactKind: ArtifactTestInventory, Path: "proofkit/inventory.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("source")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/arbitrary.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("binding")), ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("inventory")), ArtifactKind: ArtifactTestInventory, Path: "proofkit/inventory.json"},
 			},
 		},
 	}

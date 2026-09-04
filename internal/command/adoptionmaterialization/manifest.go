@@ -19,7 +19,7 @@ var manifestNonClaims = []string{
 }
 
 type Route struct {
-	ArtifactID   string
+	ArtifactID   string // SHA-256 identity of the canonical child bytes.
 	ArtifactKind string
 	Path         string
 }
@@ -35,7 +35,7 @@ type Manifest struct {
 func buildManifest(request Request, childArtifacts []artifact) (Manifest, error) {
 	routes := make([]Route, 0, len(childArtifacts))
 	for _, child := range childArtifacts {
-		routes = append(routes, Route{ArtifactID: child.ID, ArtifactKind: child.Kind, Path: child.Path})
+		routes = append(routes, Route{ArtifactID: digest.SHA256BytesRef(child.Content), ArtifactKind: child.Kind, Path: child.Path})
 	}
 	sort.Slice(routes, func(left, right int) bool { return routes[left].Path < routes[right].Path })
 	manifest := Manifest{
@@ -152,7 +152,7 @@ func admitRoutes(raw any) ([]Route, error) {
 		if err := admit.KnownKeys(record, []string{"artifactId", "artifactKind", "path"}, "project routing manifest route"); err != nil {
 			return nil, err
 		}
-		artifactID, err := admit.RuleID(record["artifactId"], "project routing manifest artifactId")
+		artifactID, err := admit.SHA256Ref(record["artifactId"], "project routing manifest artifactId")
 		if err != nil {
 			return nil, err
 		}

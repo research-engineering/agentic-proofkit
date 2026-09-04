@@ -125,6 +125,9 @@ func AdmitResultOutput(raw any) (Result, error) {
 }
 
 func validateResultRelation(result Result) error {
+	if result.TransactionID == "" && (result.AppliedCountKnown || result.RecoveredBy != "") {
+		return fmt.Errorf("repository transaction progress requires a transaction identity")
+	}
 	switch result.State {
 	case StateApplied:
 		if !result.AppliedCountKnown || result.AppliedCount == 0 || result.TransactionID == "" || result.FailureClass != "" || result.RecoveredBy == RecoveryRollback {
