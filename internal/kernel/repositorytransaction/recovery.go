@@ -60,7 +60,10 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		}
 		return Result{}, fmt.Errorf("repository transaction recovery state is absent")
 	}
-	if len(entries) != 1 {
+	if len(entries) > 2 {
+		return Result{FailureClass: "conflicting_control_state", State: StateRecoveryRequired}, nil
+	}
+	if _, _, err := findTerminalControlEntry(entries); err != nil {
 		return Result{FailureClass: "conflicting_control_state", State: StateRecoveryRequired}, nil
 	}
 	if err := validatePrivateDirectory(root, activeDirectory, 0o700); err != nil {
@@ -117,6 +120,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
 		}
+		if err := discardTerminalReceipt(root); err != nil {
+			return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
 		return runtime.cleanupRecovered(root, plan, StateApplied, action)
 	}
 	if rolledBack {
@@ -129,6 +135,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
+		}
+		if err := discardTerminalReceipt(root); err != nil {
+			return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
 		if removeCreatedDirectories(root, plan) != nil {
 			return Result{FailureClass: "rolled_back_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
@@ -172,6 +181,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
 		}
+		if err := discardTerminalReceipt(root); err != nil {
+			return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
 		if err := runtime.applyForward(context.WithoutCancel(ctx), root, plan, prefix); err != nil {
 			return resultWithObservedPrefix(root, plan, Result{FailureClass: "resume_failed", RecoveredBy: action, State: StateRecoveryRequired, TransactionID: transactionID}), nil
 		}
@@ -182,6 +194,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 	}
 	if err := ctx.Err(); err != nil {
 		return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
+	}
+	if err := discardTerminalReceipt(root); err != nil {
+		return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 	}
 	if err := runtime.rollbackPrefix(context.WithoutCancel(ctx), root, plan, prefix); err != nil {
 		return resultWithObservedPrefix(root, plan, Result{FailureClass: "rollback_failed", RecoveredBy: action, State: StateRecoveryRequired, TransactionID: transactionID}), nil
@@ -202,38 +217,35 @@ func (runtime engine) cleanupRecovered(root *os.Root, plan Plan, state, action s
 	if err := removeInterruptedTemporary(root, plan); err != nil {
 		return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: "temporary_cleanup_failed", RecoveredBy: action, State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
 	}
-	if err := runtime.archiveAndCleanupTerminal(root, plan, state); err != nil {
+	terminal := Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, RecoveredBy: action, State: state, TransactionID: plan.TransactionID}
+	if err := runtime.archiveAndCleanupTerminal(root, plan, terminal); err != nil {
 		if errors.Is(err, errCleanupDurabilityUnknown) {
 			return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: state + "_cleanup_durability_unknown", RecoveredBy: action, State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
 		}
 		return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: "cleanup_failed", RecoveredBy: action, State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
-	return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, RecoveredBy: action, State: state, TransactionID: plan.TransactionID}, nil
+	return terminal, nil
 }
 
 func (runtime engine) recoverTerminalTombstone(root *os.Root, entries []fs.DirEntry, transactionID, action string) (Result, bool, error) {
 	if len(entries) != 1 {
 		return Result{}, false, nil
 	}
-	entry := entries[0]
-	if !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+	terminal, found, err := findTerminalControlEntry(entries)
+	if err != nil || !found || terminal.TransactionID != transactionID {
 		return Result{}, false, nil
 	}
-	appliedPath := terminalTombstonePath(transactionID, StateApplied)
-	rolledBackPath := terminalTombstonePath(transactionID, StateRolledBack)
-	path := ControlDirectory + "/" + entry.Name()
-	state := ""
-	switch path {
-	case appliedPath:
+	path := ControlDirectory + "/" + terminal.Entry.Name()
+	state := terminal.State
+	switch state {
+	case StateApplied:
 		if action != RecoveryResume {
 			return Result{FailureClass: "committed_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, true, nil
 		}
-		state = StateApplied
-	case rolledBackPath:
+	case StateRolledBack:
 		if action != RecoveryRollback {
 			return Result{FailureClass: "rolled_back_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, true, nil
 		}
-		state = StateRolledBack
 	default:
 		return Result{}, false, nil
 	}
@@ -247,5 +259,5 @@ func (runtime engine) recoverTerminalTombstone(root *os.Root, entries []fs.DirEn
 		}
 		return Result{FailureClass: "cleanup_failed", RecoveredBy: action, State: StateCleanupRequired, TransactionID: transactionID}, true, nil
 	}
-	return Result{AppliedCount: receipt.AppliedCount, AppliedCountKnown: true, RecoveredBy: action, State: state, TransactionID: transactionID}, true, nil
+	return Result{AppliedCount: receipt.AppliedCount, AppliedCountKnown: true, FailureClass: receipt.FailureClass, RecoveredBy: action, State: state, TransactionID: transactionID}, true, nil
 }

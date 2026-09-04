@@ -5915,6 +5915,14 @@
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestAppliedTerminalReceiptReplaysCompleteResult$'"
         },
         {
+          "selector": "TestPreparingReplacementPreservesPreviousTerminalReceipt",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparingReplacementPreservesPreviousTerminalReceipt$'"
+        },
+        {
+          "selector": "TestReadyReplacementRetiresPreviousReceiptAndPreservesCompleteResult",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestReadyReplacementRetiresPreviousReceiptAndPreservesCompleteResult$'"
+        },
+        {
           "selector": "TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity$'"
         }

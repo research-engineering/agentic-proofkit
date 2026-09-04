@@ -159,6 +159,9 @@ func newReceipt(operation, state, failureClass, expectedTransactionID, expectedD
 		return Receipt{}, fmt.Errorf("derive adoption materialization receipt identity")
 	}
 	receipt.ReceiptID = id
+	if _, err := AdmitReceiptOutput(receipt.JSONValue()); err != nil {
+		return Receipt{}, fmt.Errorf("admit adoption materialization receipt output: %w", err)
+	}
 	return receipt, nil
 }
 

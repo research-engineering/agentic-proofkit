@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"path"
 	"sort"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
@@ -142,6 +143,9 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 		return Plan{}, fmt.Errorf("derive repository transaction identity: %w", err)
 	}
 	plan.TransactionID = transactionID
+	if _, err := AdmitPlanOutput(plan.JSONValue()); err != nil {
+		return Plan{}, fmt.Errorf("admit repository transaction plan output: %w", err)
+	}
 	return plan, nil
 }
 
@@ -206,12 +210,11 @@ func equalSnapshot(left, right Snapshot) bool {
 	return left.Exists == right.Exists && left.ByteCount == right.ByteCount && left.Mode == right.Mode && left.SHA256 == right.SHA256
 }
 
-func pathWithin(candidate, directory string) bool {
-	within, err := pathidentity.Within(candidate, directory)
-	return err == nil && within
-}
-
 func pathsOverlap(left, right string) bool {
 	overlaps, err := pathidentity.Overlaps(left, right)
 	return err != nil || overlaps
+}
+
+func isLexicalDescendant(candidate, directory string) bool {
+	return strings.HasPrefix(candidate, directory+"/")
 }

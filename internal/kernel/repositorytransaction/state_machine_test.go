@@ -53,6 +53,14 @@ func TestApplyAcceptsOriginalPlanAfterLostAcknowledgement(t *testing.T) {
 	if err != nil || result.State != StateAlreadySatisfied || result.TransactionID != plan.TransactionID {
 		t.Fatalf("retry Apply() result=%#v error=%v", result, err)
 	}
+	retained, err := ReadTerminalResult(context.Background(), root, plan.TransactionID)
+	if err != nil || retained.State != StateApplied || retained.TransactionID != plan.TransactionID || !retained.AppliedCountKnown || retained.AppliedCount != 1 {
+		t.Fatalf("ReadTerminalResult() result=%#v error=%v", retained, err)
+	}
+	wrongTransaction := "sha256:" + strings.Repeat("f", 64)
+	if _, err := ReadTerminalResult(context.Background(), root, wrongTransaction); err == nil {
+		t.Fatal("ReadTerminalResult() admitted an unrelated transaction identity")
+	}
 }
 
 func TestApplyCancellationRespectsMutationBoundary(t *testing.T) {

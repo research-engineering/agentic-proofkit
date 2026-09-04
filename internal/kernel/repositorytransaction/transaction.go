@@ -104,9 +104,6 @@ func (runtime engine) apply(ctx context.Context, rootPath string, plan Plan) (Re
 	if err := ctx.Err(); err != nil {
 		return Result{}, fmt.Errorf("repository transaction apply cancelled: %w", err)
 	}
-	if err := discardTerminalReceipt(root); err != nil {
-		return Result{}, err
-	}
 	if err := prepareJournal(root, plan); err != nil {
 		return runtime.finishPreparingFailure(root, plan, "journal_prepare_failed")
 	}
@@ -131,6 +128,9 @@ func (runtime engine) apply(ctx context.Context, rootPath string, plan Plan) (Re
 	if err := writeMarker(root, readyMarker); err != nil {
 		return runtime.finishPreparingFailure(root, plan, "ready_marker_failed")
 	}
+	if err := discardTerminalReceipt(root); err != nil {
+		return Result{FailureClass: "terminal_replacement_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	}
 	if err := runtime.callFault(faultAfterReady, -1); err != nil {
 		return runtime.rollbackAfterFailure(context.WithoutCancel(ctx), root, plan, "injected_apply_failure")
 	}
@@ -150,13 +150,14 @@ func (runtime engine) apply(ctx context.Context, rootPath string, plan Plan) (Re
 	if err := runtime.callFault(faultBeforeCleanup, -1); err != nil {
 		return Result{AppliedCount: changed, AppliedCountKnown: true, FailureClass: "injected_cleanup_failure", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
-	if err := runtime.archiveAndCleanupTerminal(root, plan, StateApplied); err != nil {
+	terminal := Result{AppliedCount: changed, AppliedCountKnown: true, State: StateApplied, TransactionID: plan.TransactionID}
+	if err := runtime.archiveAndCleanupTerminal(root, plan, terminal); err != nil {
 		if errors.Is(err, errCleanupDurabilityUnknown) {
 			return Result{AppliedCount: changed, AppliedCountKnown: true, FailureClass: "applied_cleanup_durability_unknown", State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
 		}
 		return Result{AppliedCount: changed, AppliedCountKnown: true, FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
-	return Result{AppliedCount: changed, AppliedCountKnown: true, State: StateApplied, TransactionID: plan.TransactionID}, nil
+	return terminal, nil
 }
 
 func (runtime engine) callFault(point failurePoint, index int) error {

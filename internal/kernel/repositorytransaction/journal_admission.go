@@ -185,7 +185,8 @@ func validatePlanShape(plan Plan) error {
 			return fmt.Errorf("repository transaction exceeds the aggregate byte limit")
 		}
 	}
-	if err := validatePortablePathSet(paths); err != nil {
+	portablePaths := append(append([]string(nil), paths...), plan.CreatedDirectories...)
+	if err := validatePortablePathSet(portablePaths); err != nil {
 		return fmt.Errorf("repository transaction paths have conflicting portable identities: %w", err)
 	}
 	for _, directory := range plan.CreatedDirectories {
@@ -194,7 +195,7 @@ func validatePlanShape(plan Plan) error {
 		}
 		ownsTarget := false
 		for _, operation := range plan.Operations {
-			if pathWithin(operation.Path, directory) {
+			if isLexicalDescendant(operation.Path, directory) {
 				ownsTarget = true
 				break
 			}

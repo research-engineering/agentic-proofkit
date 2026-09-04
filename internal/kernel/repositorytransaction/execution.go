@@ -61,13 +61,14 @@ func (runtime engine) rollbackAfterFailure(ctx context.Context, root *os.Root, p
 	if err := writeMarker(root, rolledBackMarker); err != nil {
 		return Result{AppliedCountKnown: true, FailureClass: "terminal_marker_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
 	}
-	if err := runtime.archiveAndCleanupTerminal(root, plan, StateRolledBack); err != nil {
+	terminal := Result{AppliedCountKnown: true, FailureClass: failureClass, State: StateRolledBack, TransactionID: plan.TransactionID}
+	if err := runtime.archiveAndCleanupTerminal(root, plan, terminal); err != nil {
 		if errors.Is(err, errCleanupDurabilityUnknown) {
 			return Result{AppliedCountKnown: true, FailureClass: "rolled_back_cleanup_durability_unknown", State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
 		}
 		return Result{AppliedCountKnown: true, FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
-	return Result{AppliedCountKnown: true, FailureClass: failureClass, State: StateRolledBack, TransactionID: plan.TransactionID}, nil
+	return terminal, nil
 }
 
 func (runtime engine) rollbackPrefix(ctx context.Context, root *os.Root, plan Plan, prefix int) error {

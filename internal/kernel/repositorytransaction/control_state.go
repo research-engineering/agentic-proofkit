@@ -18,6 +18,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
+type terminalControlIdentity struct {
+	Entry         fs.DirEntry
+	Retired       bool
+	State         string
+	TransactionID string
+}
+
 func validateActiveState(root *os.Root, plan Plan) error {
 	entries, err := activeEntries(root)
 	if err != nil {
@@ -28,12 +35,16 @@ func validateActiveState(root *os.Root, plan Plan) error {
 
 func validateTransactionEntries(entries []fs.DirEntry, plan *Plan, allowPartialTerminal bool) error {
 	allowed := map[string]struct{}{
-		"journal.json":      {},
-		"journal.tmp":       {},
-		"ready":             {},
-		"committed":         {},
-		"rolled-back":       {},
-		terminalReceiptName: {},
+		"journal.json":          {},
+		"journal.tmp":           {},
+		"ready":                 {},
+		"ready.tmp":             {},
+		"committed":             {},
+		"committed.tmp":         {},
+		"rolled-back":           {},
+		"rolled-back.tmp":       {},
+		terminalReceiptName:     {},
+		terminalReceiptTempName: {},
 	}
 	if plan != nil {
 		for index, operation := range plan.Operations {
@@ -48,6 +59,7 @@ func validateTransactionEntries(entries []fs.DirEntry, plan *Plan, allowPartialT
 		}
 		for index := range plan.CreatedDirectories {
 			allowed[strings.TrimPrefix(directoryOwnershipPath(index), activeDirectory+"/")] = struct{}{}
+			allowed[strings.TrimPrefix(directoryOwnershipTempPath(index), activeDirectory+"/")] = struct{}{}
 		}
 	}
 	for _, entry := range entries {
@@ -105,11 +117,19 @@ func pendingTransactionState(root *os.Root) (pendingState, error) {
 		return pendingState{}, nil
 	}
 	pending := pendingState{Exists: true}
-	if len(entries) != 1 {
-		return pending, nil
+	active := false
+	for _, entry := range entries {
+		if entry.Name() == "active" && entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+			if active {
+				return pending, nil
+			}
+			active = true
+		}
 	}
-	entry := entries[0]
-	if entry.Name() == "active" && entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+	if active {
+		if _, _, err := findTerminalControlEntry(entries); err != nil {
+			return pending, nil
+		}
 		if err := validatePrivateDirectory(root, activeDirectory, 0o700); err != nil {
 			return pendingState{}, err
 		}
@@ -122,15 +142,21 @@ func pendingTransactionState(root *os.Root) (pendingState, error) {
 		}
 		return pending, nil
 	}
-	if transactionID, ok := terminalEntryTransactionID(entry.Name()); ok && entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
+	if len(entries) != 1 {
+		return pending, nil
+	}
+	entry := entries[0]
+	if transactionID, state, retired, ok := controlTerminalEntryIdentity(entry.Name()); ok && entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
 		children, inspectErr := transactionEntries(root, ControlDirectory+"/"+entry.Name())
 		if inspectErr != nil {
 			return pendingState{}, inspectErr
 		}
+		if retired && len(children) == 0 {
+			return pendingState{}, nil
+		}
 		if len(children) == 1 && children[0].Name() == terminalReceiptName {
 			receipt, receiptErr := loadTerminalReceipt(root, ControlDirectory+"/"+entry.Name())
-			_, state, identityOK := terminalEntryIdentity(entry.Name())
-			if receiptErr == nil && identityOK && receipt.TransactionID == transactionID && receipt.State == state {
+			if receiptErr == nil && receipt.TransactionID == transactionID && receipt.State == state {
 				return pendingState{}, nil
 			}
 		}
@@ -163,9 +189,36 @@ func controlEntries(root *os.Root) ([]fs.DirEntry, error) {
 	return entries, nil
 }
 
-func terminalEntryTransactionID(name string) (string, bool) {
-	transactionID, _, ok := terminalEntryIdentity(name)
-	return transactionID, ok
+func controlTerminalEntryIdentity(name string) (string, string, bool, bool) {
+	if transactionID, state, ok := terminalEntryIdentity(name); ok {
+		return transactionID, state, false, true
+	}
+	if transactionID, state, ok := terminalEntryIdentity(strings.TrimPrefix(name, "retired-")); strings.HasPrefix(name, "retired-") && ok {
+		return transactionID, state, true, true
+	}
+	return "", "", false, false
+}
+
+func findTerminalControlEntry(entries []fs.DirEntry) (terminalControlIdentity, bool, error) {
+	activeSeen := false
+	var terminal terminalControlIdentity
+	terminalSeen := false
+	for _, entry := range entries {
+		if entry.Name() == "active" {
+			if activeSeen || !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+				return terminalControlIdentity{}, false, fmt.Errorf("repository transaction active control route is invalid")
+			}
+			activeSeen = true
+			continue
+		}
+		transactionID, state, retired, ok := controlTerminalEntryIdentity(entry.Name())
+		if !ok || terminalSeen || !entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			return terminalControlIdentity{}, false, fmt.Errorf("repository transaction terminal control route is invalid")
+		}
+		terminal = terminalControlIdentity{Entry: entry, Retired: retired, State: state, TransactionID: transactionID}
+		terminalSeen = true
+	}
+	return terminal, terminalSeen, nil
 }
 
 func terminalEntryIdentity(name string) (string, string, bool) {
@@ -188,6 +241,10 @@ func terminalTombstonePath(transactionID, state string) string {
 	return ControlDirectory + "/gc-" + strings.TrimPrefix(transactionID, "sha256:") + "-" + state
 }
 
+func retiredTerminalTombstonePath(transactionID, state string) string {
+	return ControlDirectory + "/retired-gc-" + strings.TrimPrefix(transactionID, "sha256:") + "-" + state
+}
+
 func isBoundedTransactionEntryName(name string) bool {
 	for _, prefix := range []string{"after-", "before-"} {
 		if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ".bin") {
@@ -198,6 +255,11 @@ func isBoundedTransactionEntryName(name string) bool {
 	}
 	if strings.HasPrefix(name, "directory-") && strings.HasSuffix(name, ".json") {
 		indexText := strings.TrimSuffix(strings.TrimPrefix(name, "directory-"), ".json")
+		index, err := strconv.Atoi(indexText)
+		return err == nil && len(indexText) == 4 && index >= 0 && index < MaximumOperations*pathidentity.MaximumComponents
+	}
+	if strings.HasPrefix(name, "directory-") && strings.HasSuffix(name, ".tmp") {
+		indexText := strings.TrimSuffix(strings.TrimPrefix(name, "directory-"), ".tmp")
 		index, err := strconv.Atoi(indexText)
 		return err == nil && len(indexText) == 4 && index >= 0 && index < MaximumOperations*pathidentity.MaximumComponents
 	}

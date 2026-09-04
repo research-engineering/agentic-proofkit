@@ -16,6 +16,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -27,6 +28,10 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 	materialization, err := BuildPlan(context.Background(), request, root)
 	if err != nil {
 		t.Fatalf("BuildPlan() error = %v", err)
+	}
+	planRaw := jsonRoundTripValue(t, materialization.Plan.JSONValue())
+	if admitted, err := AdmitPlanOutput(planRaw); err != nil || admitted.Transaction.TransactionID != materialization.Transaction.TransactionID {
+		t.Fatalf("AdmitPlanOutput() plan=%#v error=%v", admitted, err)
 	}
 	planBytes, err := stablejson.Marshal(materialization.Plan.JSONValue())
 	if err != nil {
@@ -44,6 +49,9 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 	receipt, exitCode, err := Apply(context.Background(), request, root, materialization.Transaction.TransactionID, materialization.Transaction.DesiredStateID)
 	if err != nil || exitCode != 0 || receipt.State != ReceiptStatePassed || receipt.TransactionResult == nil || receipt.TransactionResult.State != repositorytransaction.StateApplied {
 		t.Fatalf("Apply() receipt=%#v exit=%d err=%v", receipt, exitCode, err)
+	}
+	if admitted, err := AdmitReceiptOutput(jsonRoundTripValue(t, receipt.JSONValue())); err != nil || admitted.ReceiptID != receipt.ReceiptID {
+		t.Fatalf("AdmitReceiptOutput() receipt=%#v error=%v", admitted, err)
 	}
 
 	sourceRaw := readJSON(t, filepath.Join(root, "docs/specs/pilot/requirements.v1.json"))
@@ -66,6 +74,51 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 	if err != nil || manifest.ProjectID != "pilot.project" || len(manifest.Routes) != 3 {
 		t.Fatalf("materialized manifest=%#v err=%v", manifest, err)
 	}
+}
+
+func TestMaterializationOutputAdmissionRejectsCrossOwnerMutants(t *testing.T) {
+	root := t.TempDir()
+	request := validRequest(t, root)
+	materialization, err := BuildPlan(context.Background(), request, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	planMutant := jsonRoundTripValue(t, materialization.Plan.JSONValue()).(map[string]any)
+	transaction := planMutant["transaction"].(map[string]any)
+	operations := transaction["operations"].([]any)
+	transaction["operations"] = operations[1:]
+	if _, err := AdmitPlanOutput(planMutant); err == nil {
+		t.Fatal("AdmitPlanOutput() admitted a transaction that omitted a manifest route")
+	}
+
+	receipt, exitCode, err := Apply(context.Background(), request, root, materialization.Transaction.TransactionID, materialization.Transaction.DesiredStateID)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Apply() receipt=%#v exit=%d error=%v", receipt, exitCode, err)
+	}
+	receiptMutant := jsonRoundTripValue(t, receipt.JSONValue()).(map[string]any)
+	receiptMutant["state"] = ReceiptStateBlocked
+	identity := cloneValue(t, receiptMutant).(map[string]any)
+	delete(identity, "receiptId")
+	receiptMutant["receiptId"], err = digest.StableJSONSHA256Ref(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AdmitReceiptOutput(receiptMutant); err == nil {
+		t.Fatal("AdmitReceiptOutput() admitted a state that contradicted its transaction result")
+	}
+}
+
+func jsonRoundTripValue(t *testing.T, value any) any {
+	t.Helper()
+	content, err := stablejson.Marshal(value)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded
 }
 
 func TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry(t *testing.T) {
@@ -96,13 +149,48 @@ func TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry(t *testing.T
 	if err != nil || exitCode != 0 || retry.State != ReceiptStatePassed || retry.TransactionResult == nil || retry.TransactionResult.State != repositorytransaction.StateAlreadySatisfied {
 		t.Fatalf("retry Apply() receipt=%#v exit=%d err=%v", retry, exitCode, err)
 	}
-	if retry.ExpectedTransactionID != initial.Transaction.TransactionID || retry.ExpectedDesiredStateID != initial.Transaction.DesiredStateID || retry.TransactionResult.TransactionID == initial.Transaction.TransactionID {
-		t.Fatalf("retry did not distinguish expected and observed transactions: %#v", retry)
+	if retry.ExpectedTransactionID != initial.Transaction.TransactionID || retry.ExpectedDesiredStateID != initial.Transaction.DesiredStateID || retry.TransactionResult.TransactionID != initial.Transaction.TransactionID {
+		t.Fatalf("retry was not bound to the retained terminal transaction: %#v", retry)
+	}
+	wrongTransaction := "sha256:" + strings.Repeat("1", 64)
+	blocked, exitCode, err = Apply(context.Background(), request, root, wrongTransaction, initial.Transaction.DesiredStateID)
+	if err != nil || exitCode != 1 || blocked.FailureClass != "transaction_identity_mismatch" {
+		t.Fatalf("wrong-transaction retry receipt=%#v exit=%d err=%v", blocked, exitCode, err)
 	}
 	wrongDesired := "sha256:" + strings.Repeat("0", 64)
 	blocked, exitCode, err = Apply(context.Background(), request, root, initial.Transaction.TransactionID, wrongDesired)
 	if err != nil || exitCode != 1 || blocked.FailureClass != "desired_state_identity_mismatch" {
 		t.Fatalf("wrong desired-state Apply() receipt=%#v exit=%d err=%v", blocked, exitCode, err)
+	}
+}
+
+func TestTerminalReplayClassificationPreservesDistinctOutcomes(t *testing.T) {
+	transactionID := "sha256:" + strings.Repeat("a", 64)
+	tests := []struct {
+		name             string
+		result           repositorytransaction.Result
+		err              error
+		wantFailureClass string
+		wantError        error
+		wantState        string
+	}{
+		{name: "lost acknowledgement", result: repositorytransaction.Result{AppliedCount: 3, AppliedCountKnown: true, RecoveredBy: repositorytransaction.RecoveryResume, State: repositorytransaction.StateApplied, TransactionID: transactionID}, wantState: repositorytransaction.StateAlreadySatisfied},
+		{name: "busy", err: repositorytransaction.ErrBusy, wantFailureClass: "transaction_busy"},
+		{name: "cancelled", err: context.Canceled, wantError: context.Canceled},
+		{name: "deadline", err: context.DeadlineExceeded, wantError: context.DeadlineExceeded},
+		{name: "absent", err: errors.New("absent"), wantFailureClass: "transaction_identity_mismatch"},
+		{name: "wrong terminal state", result: repositorytransaction.Result{AppliedCountKnown: true, State: repositorytransaction.StateRolledBack, TransactionID: transactionID}, wantFailureClass: "transaction_identity_mismatch"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, failureClass, err := classifyTerminalReplay(test.result, test.err)
+			if !errors.Is(err, test.wantError) || failureClass != test.wantFailureClass || result.State != test.wantState {
+				t.Fatalf("classifyTerminalReplay() result=%#v failure=%q error=%v", result, failureClass, err)
+			}
+			if test.wantState == repositorytransaction.StateAlreadySatisfied && (result.AppliedCount != 0 || !result.AppliedCountKnown || result.RecoveredBy != "" || result.TransactionID != transactionID) {
+				t.Fatalf("lost-ack replay result=%#v", result)
+			}
+		})
 	}
 }
 

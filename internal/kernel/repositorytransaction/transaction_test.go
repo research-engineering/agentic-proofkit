@@ -333,7 +333,7 @@ func TestRecoverCompletesPartiallyDeletedTerminalTombstone(t *testing.T) {
 		root.Close()
 		t.Fatal(err)
 	}
-	tombstone, err := archiveTerminal(root, plan, StateApplied)
+	tombstone, err := archiveTerminal(root, plan, Result{AppliedCount: 1, AppliedCountKnown: true, State: StateApplied, TransactionID: plan.TransactionID})
 	if err != nil {
 		root.Close()
 		t.Fatal(err)
@@ -454,6 +454,160 @@ func TestProcessDeathAfterRenameIsRecoverable(t *testing.T) {
 	assertTestFile(t, rootPath, "proofkit/a.json", "after-a\n", 0o644)
 	assertTestFile(t, rootPath, "proofkit/b.json", "after-b\n", 0o644)
 	assertNoPendingTransaction(t, rootPath)
+}
+
+func TestRecoverClosesDirectoryCreationCrashGap(t *testing.T) {
+	for _, action := range []string{RecoveryResume, RecoveryRollback} {
+		t.Run(action, func(t *testing.T) {
+			rootPath := t.TempDir()
+			plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "new/target.json", Content: []byte("desired\n"), Mode: 0o644}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			root, _, err := openRepository(rootPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := prepareJournal(root, plan); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := stageObjects(root, plan); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := writeMarker(root, readyMarker); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := root.Mkdir("new", 0o700); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := writeOwnedFile(root, directoryOwnershipTempPath(0), []byte("{"), 0o600); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := root.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := Recover(context.Background(), rootPath, plan.TransactionID, action)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wantState := StateApplied
+			if action == RecoveryRollback {
+				wantState = StateRolledBack
+			}
+			if result.State != wantState || result.RecoveredBy != action {
+				t.Fatalf("Recover() result=%#v", result)
+			}
+			if action == RecoveryResume {
+				assertTestFile(t, rootPath, "new/target.json", "desired\n", 0o644)
+			} else if _, err := os.Stat(filepath.Join(rootPath, "new")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("rollback retained crash-created directory: %v", err)
+			}
+			assertNoPendingTransaction(t, rootPath)
+		})
+	}
+}
+
+func TestRecoverClosesTerminalReceiptPublicationCrashGap(t *testing.T) {
+	rootPath := t.TempDir()
+	if err := os.Mkdir(filepath.Join(rootPath, "proofkit"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/target.json", Content: []byte("desired\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	leaveInterruptedPrefix(t, rootPath, plan, 1)
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeMarker(root, committedMarker); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := writeOwnedFile(root, activeDirectory+"/"+terminalReceiptTempName, []byte("{"), 0o600); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryResume)
+	if err != nil || result.State != StateApplied || result.TransactionID != plan.TransactionID {
+		t.Fatalf("Recover() result=%#v error=%v", result, err)
+	}
+	assertTestFile(t, rootPath, "proofkit/target.json", "desired\n", 0o644)
+	assertNoPendingTransaction(t, rootPath)
+}
+
+func TestRecoverClosesMarkerPublicationCrashGaps(t *testing.T) {
+	tests := []struct {
+		action      string
+		marker      string
+		published   bool
+		wantContent string
+		wantState   string
+	}{
+		{action: RecoveryRollback, marker: readyMarker, wantContent: "before\n", wantState: StateRolledBack},
+		{action: RecoveryResume, marker: committedMarker, published: true, wantContent: "after\n", wantState: StateApplied},
+		{action: RecoveryRollback, marker: rolledBackMarker, wantContent: "before\n", wantState: StateRolledBack},
+	}
+	for _, test := range tests {
+		t.Run(test.marker, func(t *testing.T) {
+			rootPath := t.TempDir()
+			mustWriteTestFile(t, rootPath, "proofkit/target.json", "before\n", 0o644)
+			plan, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/target.json", Content: []byte("after\n"), Mode: 0o644}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			root, _, err := openRepository(rootPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := prepareJournal(root, plan); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := stageObjects(root, plan); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if test.marker != readyMarker {
+				if err := writeMarker(root, readyMarker); err != nil {
+					root.Close()
+					t.Fatal(err)
+				}
+			}
+			if test.published {
+				operation := plan.Operations[0]
+				if err := publishContent(root, plan, 0, operation.Before, operation.afterContent, operation.After.Mode); err != nil {
+					root.Close()
+					t.Fatal(err)
+				}
+			}
+			if err := writeOwnedFile(root, test.marker+".tmp", nil, 0o600); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if err := root.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := Recover(context.Background(), rootPath, plan.TransactionID, test.action)
+			if err != nil || result.State != test.wantState {
+				t.Fatalf("Recover() result=%#v error=%v", result, err)
+			}
+			assertTestFile(t, rootPath, "proofkit/target.json", test.wantContent, 0o644)
+			assertNoPendingTransaction(t, rootPath)
+		})
+	}
 }
 
 func runTransactionCrashHelper(t *testing.T) {

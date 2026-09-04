@@ -640,6 +640,8 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-terminal-state"}: {
 			"TestAppliedTerminalReceiptReplaysCompleteResult",
 			"TestApplyExecutesFrozenPlan",
+			"TestPreparingReplacementPreservesPreviousTerminalReceipt",
+			"TestReadyReplacementRetiresPreviousReceiptAndPreservesCompleteResult",
 			"TestRecoveryActionAndTerminalReceiptAreStable",
 			"TestUnknownRecoveryStateDoesNotAdoptExpectedIdentity",
 		},

@@ -262,6 +262,42 @@ func writeOwnedFile(root *os.Root, relativePath string, content []byte, mode fs.
 	return syncDirectory(root, path.Dir(relativePath))
 }
 
+func writeAtomicOwnedFile(root *os.Root, relativePath, temporaryPath string, content []byte, mode fs.FileMode) error {
+	if exists, err := pathExists(root, relativePath); err != nil {
+		return err
+	} else if exists {
+		return fmt.Errorf("repository transaction file already exists")
+	}
+	if err := discardOwnedTemporaryFile(root, temporaryPath); err != nil {
+		return err
+	}
+	if err := writeOwnedFile(root, temporaryPath, content, mode); err != nil {
+		return err
+	}
+	if err := root.Rename(filepath.FromSlash(temporaryPath), filepath.FromSlash(relativePath)); err != nil {
+		return fmt.Errorf("publish repository transaction file")
+	}
+	return syncDirectory(root, path.Dir(relativePath))
+}
+
+func discardOwnedTemporaryFile(root *os.Root, relativePath string) error {
+	info, err := root.Lstat(filepath.FromSlash(relativePath))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil
+	}
+	if err != nil || info.Mode()&os.ModeSymlink != 0 || !info.Mode().IsRegular() || info.Mode()&^fs.ModePerm != 0 {
+		return fmt.Errorf("repository transaction temporary file is unsafe")
+	}
+	owned, ownershipErr := platformOwnedByCurrentUser(info)
+	if ownershipErr != nil || !owned {
+		return fmt.Errorf("repository transaction temporary file is not owned")
+	}
+	if err := root.Remove(filepath.FromSlash(relativePath)); err != nil {
+		return fmt.Errorf("remove interrupted repository transaction temporary file")
+	}
+	return syncDirectory(root, path.Dir(relativePath))
+}
+
 func readOwnedFile(root *os.Root, relativePath string, maximum int64) ([]byte, error) {
 	file, err := openNoFollow(root, filepath.FromSlash(relativePath))
 	if err != nil {

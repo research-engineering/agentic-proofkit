@@ -111,7 +111,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:ee1adf4ad0060354205eb200e6fd8449b32b4d9257a6c06586b5d014124eda30",
+          "canonicalDigest": "sha256:461e9460ac8b7bcbfd6c5c594d3234f8411e6b18d280eb8d4205521d416c1980",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -141,7 +141,7 @@
         "rootDefinitionDigest": "sha256:4b58bd4e89da98ad79c5e6faf32fe58766313117ad2558b602bfed853de0cf7e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:ee1adf4ad0060354205eb200e6fd8449b32b4d9257a6c06586b5d014124eda30",
+          "canonicalDigest": "sha256:461e9460ac8b7bcbfd6c5c594d3234f8411e6b18d280eb8d4205521d416c1980",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -237,7 +237,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:ee1adf4ad0060354205eb200e6fd8449b32b4d9257a6c06586b5d014124eda30",
+          "canonicalDigest": "sha256:461e9460ac8b7bcbfd6c5c594d3234f8411e6b18d280eb8d4205521d416c1980",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -267,7 +267,7 @@
         "rootDefinitionDigest": "sha256:fc0e2d547a5fd54ebebe9d237a48ae15418b32d3d28fa5185aae64a0fba9b255",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:ee1adf4ad0060354205eb200e6fd8449b32b4d9257a6c06586b5d014124eda30",
+          "canonicalDigest": "sha256:461e9460ac8b7bcbfd6c5c594d3234f8411e6b18d280eb8d4205521d416c1980",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -369,7 +369,7 @@
         "rootDefinitionDigest": "sha256:06129ef857ffb11351535c769f9ca207522a08f3c5bf2da52c6f5fff0b1ac757",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:ee1adf4ad0060354205eb200e6fd8449b32b4d9257a6c06586b5d014124eda30",
+          "canonicalDigest": "sha256:461e9460ac8b7bcbfd6c5c594d3234f8411e6b18d280eb8d4205521d416c1980",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

@@ -195,7 +195,7 @@ func validateAdoptionMaterializationVersionEdge(record adoptionMaterializationVe
 		return fmt.Errorf("adoption materialization command-contract selection policy is invalid")
 	}
 	if record.PreviousPublicABISHA256 != "sha256:c3b7219fccd7d400b182beb53715f69758e02a4fef6f9465ba0c80a866abd1c7" || record.CurrentPublicABISHA256 != currentPublicABI || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
-		return fmt.Errorf("adoption materialization version-edge ABI identity is invalid")
+		return fmt.Errorf("adoption materialization version-edge ABI identity is invalid: previous=%s current=%s wantCurrent=%s", record.PreviousPublicABISHA256, record.CurrentPublicABISHA256, currentPublicABI)
 	}
 	if !slices.EqualFunc(record.AddedCommandContracts, currentCommands, equalMaterializationCommandContract) {
 		return fmt.Errorf("adoption materialization added command contracts are not exact")

@@ -3,6 +3,7 @@ package repositorytransaction
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,7 +59,7 @@ func TestApplyDoesNotRemoveUnownedNeighbourTemporary(t *testing.T) {
 	}
 }
 
-func TestLateDirectoryIsNeverClaimedOrRemoved(t *testing.T) {
+func TestNonEmptyLateDirectoryIsNeverClaimedOrRemoved(t *testing.T) {
 	root := t.TempDir()
 	plan, err := BuildPlan(context.Background(), root, []Target{{Path: "new/target.json", Content: []byte("desired\n"), Mode: 0o644}})
 	if err != nil {
@@ -66,7 +67,7 @@ func TestLateDirectoryIsNeverClaimedOrRemoved(t *testing.T) {
 	}
 	runtime := engine{fault: func(point failurePoint, _ int) error {
 		if point == faultAfterReady {
-			if err := os.Mkdir(filepath.Join(root, "new"), 0o755); err != nil {
+			if err := os.Mkdir(filepath.Join(root, "new"), 0o700); err != nil {
 				return err
 			}
 			return os.WriteFile(filepath.Join(root, "new", "foreign.txt"), []byte("foreign\n"), 0o644)
@@ -78,6 +79,9 @@ func TestLateDirectoryIsNeverClaimedOrRemoved(t *testing.T) {
 		t.Fatalf("apply() result=%#v error=%v", result, err)
 	}
 	assertTestFile(t, root, "new/foreign.txt", "foreign\n", 0o644)
+	if info, err := os.Stat(filepath.Join(root, "new")); err != nil || info.Mode().Perm() != 0o700 {
+		t.Fatalf("rejected late directory mode=%v error=%v, want 0700", infoMode(info), err)
+	}
 }
 
 func TestDirectoryOwnershipRejectsInodeSubstitution(t *testing.T) {
@@ -217,5 +221,179 @@ func TestRejectedApplyPreservesPreviousTerminalReceipt(t *testing.T) {
 	replayed, err := Recover(context.Background(), root, first.TransactionID, RecoveryResume)
 	if err != nil || replayed.State != StateApplied {
 		t.Fatalf("Recover(first)=%#v, %v", replayed, err)
+	}
+}
+
+func TestPreparingReplacementPreservesPreviousTerminalReceipt(t *testing.T) {
+	rootPath := t.TempDir()
+	first, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/first.json", Content: []byte("first\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result, err := Apply(context.Background(), rootPath, first); err != nil || result.State != StateApplied {
+		t.Fatalf("Apply(first)=%#v, %v", result, err)
+	}
+	second, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/second.json", Content: []byte("second\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareJournal(root, second); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := stageObjects(root, second); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/third.json", Content: []byte("third\n"), Mode: 0o644}}); !errors.Is(err, ErrRecoveryRequired) {
+		t.Fatalf("BuildPlan() error=%v, want recovery required", err)
+	} else if transactionID, ok := RecoveryTransactionID(err); !ok || transactionID != second.TransactionID {
+		t.Fatalf("RecoveryTransactionID()=%q,%t, want %q,true", transactionID, ok, second.TransactionID)
+	}
+	retained, err := ReadTerminalResult(context.Background(), rootPath, first.TransactionID)
+	if err != nil || retained.State != StateApplied {
+		t.Fatalf("ReadTerminalResult(first)=%#v, %v", retained, err)
+	}
+	rolledBack, err := Recover(context.Background(), rootPath, second.TransactionID, RecoveryRollback)
+	if err != nil || rolledBack.State != StateRolledBack {
+		t.Fatalf("Recover(second)=%#v, %v", rolledBack, err)
+	}
+	retained, err = ReadTerminalResult(context.Background(), rootPath, first.TransactionID)
+	if err != nil || retained.State != StateApplied {
+		t.Fatalf("ReadTerminalResult(first after rollback)=%#v, %v", retained, err)
+	}
+}
+
+func TestReadyReplacementRetiresPreviousReceiptAndPreservesCompleteResult(t *testing.T) {
+	rootPath := t.TempDir()
+	first, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/first.json", Content: []byte("first\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result, err := Apply(context.Background(), rootPath, first); err != nil || result.State != StateApplied {
+		t.Fatalf("Apply(first)=%#v, %v", result, err)
+	}
+	second, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/second.json", Content: []byte("second\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtime := engine{fault: func(point failurePoint, _ int) error {
+		if point == faultAfterReady {
+			return errors.New("injected")
+		}
+		return nil
+	}}
+	result, err := runtime.apply(context.Background(), rootPath, second)
+	if err != nil || result.State != StateRolledBack || result.FailureClass != "injected_apply_failure" {
+		t.Fatalf("Apply(second)=%#v, %v", result, err)
+	}
+	if _, err := ReadTerminalResult(context.Background(), rootPath, first.TransactionID); err == nil {
+		t.Fatal("ready replacement retained the superseded terminal receipt")
+	}
+	retained, err := ReadTerminalResult(context.Background(), rootPath, second.TransactionID)
+	if err != nil || retained != result {
+		t.Fatalf("ReadTerminalResult(second)=%#v, %v, want %#v", retained, err, result)
+	}
+}
+
+func TestRecoveryCompletesReadyReplacementWithPreviousReceipt(t *testing.T) {
+	rootPath := t.TempDir()
+	first, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/first.json", Content: []byte("first\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result, err := Apply(context.Background(), rootPath, first); err != nil || result.State != StateApplied {
+		t.Fatalf("Apply(first)=%#v, %v", result, err)
+	}
+	second, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/second.json", Content: []byte("second\n"), Mode: 0o644}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	root, _, err := openRepository(rootPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := prepareJournal(root, second); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := stageObjects(root, second); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := writeMarker(root, readyMarker); err != nil {
+		root.Close()
+		t.Fatal(err)
+	}
+	if err := root.Close(); err != nil {
+		t.Fatal(err)
+	}
+	result, err := Recover(context.Background(), rootPath, second.TransactionID, RecoveryRollback)
+	if err != nil || result.State != StateRolledBack || result.RecoveredBy != RecoveryRollback {
+		t.Fatalf("Recover(second)=%#v, %v", result, err)
+	}
+	if _, err := ReadTerminalResult(context.Background(), rootPath, first.TransactionID); err == nil {
+		t.Fatal("ready recovery retained the superseded terminal receipt")
+	}
+	retained, err := ReadTerminalResult(context.Background(), rootPath, second.TransactionID)
+	if err != nil || retained != result {
+		t.Fatalf("ReadTerminalResult(second)=%#v, %v, want %#v", retained, err, result)
+	}
+}
+
+func TestApplyCompletesInterruptedTerminalRetirement(t *testing.T) {
+	for _, receiptPresent := range []bool{true, false} {
+		t.Run(fmt.Sprintf("receipt-present=%t", receiptPresent), func(t *testing.T) {
+			rootPath := t.TempDir()
+			first, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/first.json", Content: []byte("first\n"), Mode: 0o644}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result, err := Apply(context.Background(), rootPath, first); err != nil || result.State != StateApplied {
+				t.Fatalf("Apply(first)=%#v, %v", result, err)
+			}
+			root, _, err := openRepository(rootPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			terminalPath := terminalTombstonePath(first.TransactionID, StateApplied)
+			retiredPath := retiredTerminalTombstonePath(first.TransactionID, StateApplied)
+			if err := root.Rename(filepath.FromSlash(terminalPath), filepath.FromSlash(retiredPath)); err != nil {
+				root.Close()
+				t.Fatal(err)
+			}
+			if !receiptPresent {
+				if err := root.Remove(filepath.FromSlash(retiredPath + "/" + terminalReceiptName)); err != nil {
+					root.Close()
+					t.Fatal(err)
+				}
+			}
+			if err := root.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			if receiptPresent {
+				retained, err := ReadTerminalResult(context.Background(), rootPath, first.TransactionID)
+				if err != nil || retained.State != StateApplied {
+					t.Fatalf("ReadTerminalResult()=%#v, %v", retained, err)
+				}
+			}
+			second, err := BuildPlan(context.Background(), rootPath, []Target{{Path: "proofkit/second.json", Content: []byte("second\n"), Mode: 0o644}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result, err := Apply(context.Background(), rootPath, second); err != nil || result.State != StateApplied {
+				t.Fatalf("Apply(second)=%#v, %v", result, err)
+			}
+			assertTestFile(t, rootPath, "proofkit/second.json", "second\n", 0o644)
+			assertNoPendingTransaction(t, rootPath)
+		})
 	}
 }

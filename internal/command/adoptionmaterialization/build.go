@@ -49,6 +49,9 @@ func BuildPlan(ctx context.Context, raw any, repositoryRoot string) (Materializa
 		RequestID: request.RequestID, SourceIntent: request.SourceIntent, SourcePlanID: request.SourcePlanID,
 		Transaction: transaction,
 	}
+	if _, err := AdmitPlanOutput(plan.JSONValue()); err != nil {
+		return Materialization{}, fmt.Errorf("admit adoption materialization plan output: %w", err)
+	}
 	encoded, err := stablejson.Marshal(plan.JSONValue())
 	if err != nil || len(encoded) > MaximumOutputBytes {
 		return Materialization{}, fmt.Errorf("adoption materialization plan exceeds its output byte limit")
@@ -75,8 +78,19 @@ func Apply(ctx context.Context, raw any, repositoryRoot, expectedTransactionID, 
 	if materialization.Transaction.DesiredStateID != expectedDesired {
 		return blockedReceipt(OperationApply, expected, expectedDesired, "desired_state_identity_mismatch", materialization.Plan.NonClaims)
 	}
-	if materialization.Transaction.TransactionID != expected && transactionHasChanges(materialization.Transaction) {
-		return blockedReceipt(OperationApply, expected, expectedDesired, "transaction_identity_mismatch", materialization.Plan.NonClaims)
+	if materialization.Transaction.TransactionID != expected {
+		if transactionHasChanges(materialization.Transaction) {
+			return blockedReceipt(OperationApply, expected, expectedDesired, "transaction_identity_mismatch", materialization.Plan.NonClaims)
+		}
+		terminal, terminalErr := repositorytransaction.ReadTerminalResult(ctx, repositoryRoot, expected)
+		replay, failureClass, replayErr := classifyTerminalReplay(terminal, terminalErr)
+		if replayErr != nil {
+			return Receipt{}, 1, replayErr
+		}
+		if failureClass != "" {
+			return blockedReceipt(OperationApply, expected, expectedDesired, failureClass, materialization.Plan.NonClaims)
+		}
+		return resultReceipt(OperationApply, expected, expectedDesired, replay, materialization.Plan.NonClaims)
 	}
 	result, err := repositorytransaction.Apply(ctx, repositoryRoot, materialization.Transaction)
 	if err != nil {
@@ -89,6 +103,27 @@ func Apply(ctx context.Context, raw any, repositoryRoot, expectedTransactionID, 
 		return Receipt{}, 1, err
 	}
 	return resultReceipt(OperationApply, expected, expectedDesired, result, materialization.Plan.NonClaims)
+}
+
+func classifyTerminalReplay(result repositorytransaction.Result, err error) (repositorytransaction.Result, string, error) {
+	if err != nil {
+		switch {
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+			return repositorytransaction.Result{}, "", err
+		case errors.Is(err, repositorytransaction.ErrBusy):
+			return repositorytransaction.Result{}, "transaction_busy", nil
+		default:
+			return repositorytransaction.Result{}, "transaction_identity_mismatch", nil
+		}
+	}
+	if result.State != repositorytransaction.StateApplied {
+		return repositorytransaction.Result{}, "transaction_identity_mismatch", nil
+	}
+	result.AppliedCount = 0
+	result.AppliedCountKnown = true
+	result.RecoveredBy = ""
+	result.State = repositorytransaction.StateAlreadySatisfied
+	return result, "", nil
 }
 
 func Recover(ctx context.Context, repositoryRoot, transactionID, action string) (Receipt, int, error) {

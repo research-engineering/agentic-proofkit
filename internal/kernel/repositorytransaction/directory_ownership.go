@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path"
@@ -36,23 +37,21 @@ func ensureTargetDirectories(root *os.Root, plan Plan) error {
 			}
 			continue
 		}
-		if _, exists, err := inspectOwnedTargetDirectory(root, directory); err != nil {
+		if err := discardOwnedTemporaryFile(root, directoryOwnershipTempPath(index)); err != nil {
 			return err
-		} else if exists {
-			return fmt.Errorf("repository target directory appeared without transaction ownership")
 		}
-		if err := root.Mkdir(filepath.FromSlash(directory), 0o755); err != nil {
-			return fmt.Errorf("create repository target directory")
-		}
-		if err := root.Chmod(filepath.FromSlash(directory), 0o755); err != nil {
-			return fmt.Errorf("set repository target directory mode")
-		}
-		identity, exists, err := inspectOwnedTargetDirectory(root, directory)
-		if err != nil || !exists {
-			return fmt.Errorf("admit created repository target directory")
-		}
-		if err := syncDirectory(root, path.Dir(directory)); err != nil {
+		identity, exists, err := admitRecoverableTargetDirectory(root, directory)
+		if err != nil {
 			return err
+		}
+		if !exists {
+			if err := root.Mkdir(filepath.FromSlash(directory), 0o755); err != nil {
+				return fmt.Errorf("create repository target directory")
+			}
+			identity, exists, err = admitRecoverableTargetDirectory(root, directory)
+			if err != nil || !exists {
+				return fmt.Errorf("admit created repository target directory")
+			}
 		}
 		record = directoryOwnership{Identity: identity, Path: directory, TransactionID: plan.TransactionID}
 		if err := writeDirectoryOwnership(root, index, record); err != nil {
@@ -69,6 +68,23 @@ func removeCreatedDirectories(root *os.Root, plan Plan) error {
 		record, recorded, err := loadDirectoryOwnership(root, plan, index)
 		if err != nil {
 			return err
+		}
+		if !recorded {
+			if err := discardOwnedTemporaryFile(root, directoryOwnershipTempPath(index)); err != nil {
+				return err
+			}
+			identity, exists, err := admitRecoverableTargetDirectory(root, directory)
+			if err != nil {
+				return err
+			}
+			if !exists {
+				continue
+			}
+			record = directoryOwnership{Identity: identity, Path: directory, TransactionID: plan.TransactionID}
+			if err := writeDirectoryOwnership(root, index, record); err != nil {
+				return err
+			}
+			recorded = true
 		}
 		identity, exists, err := inspectOwnedTargetDirectory(root, directory)
 		if err != nil {
@@ -91,6 +107,62 @@ func removeCreatedDirectories(root *os.Root, plan Plan) error {
 		}
 	}
 	return nil
+}
+
+func admitRecoverableTargetDirectory(root *os.Root, relativePath string) (string, bool, error) {
+	native := filepath.FromSlash(relativePath)
+	routeInfo, err := root.Lstat(native)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", false, nil
+	}
+	if err != nil || routeInfo.Mode()&os.ModeSymlink != 0 || !routeInfo.IsDir() || routeInfo.Mode()&(fs.ModeSetuid|fs.ModeSetgid|fs.ModeSticky) != 0 || routeInfo.Mode().Perm()&^0o755 != 0 {
+		return "", false, fmt.Errorf("repository target directory is unsafe")
+	}
+	owned, err := platformOwnedByCurrentUser(routeInfo)
+	if err != nil || !owned {
+		return "", false, fmt.Errorf("repository target directory is not owned by the current user")
+	}
+	directory, err := root.Open(native)
+	if err != nil {
+		return "", false, fmt.Errorf("open recoverable repository target directory")
+	}
+	defer directory.Close()
+	handleInfo, err := directory.Stat()
+	if err != nil || !os.SameFile(routeInfo, handleInfo) || handleInfo.Mode().Perm() != routeInfo.Mode().Perm() {
+		return "", false, fmt.Errorf("inspect recoverable repository target directory")
+	}
+	owned, err = platformOwnedByCurrentUser(handleInfo)
+	if err != nil || !owned {
+		return "", false, fmt.Errorf("repository target directory ownership changed during recovery admission")
+	}
+	identity, err := platformFileIdentity(handleInfo)
+	if err != nil {
+		return "", false, fmt.Errorf("repository target directory changed during recovery admission")
+	}
+	entries, err := directory.ReadDir(1)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return "", false, fmt.Errorf("inspect recoverable repository target directory content")
+	}
+	if len(entries) != 0 {
+		return "", false, fmt.Errorf("unrecorded repository target directory is not empty")
+	}
+	current, err := root.Lstat(native)
+	if err != nil || !os.SameFile(handleInfo, current) {
+		return "", false, fmt.Errorf("repository target directory route changed during recovery admission")
+	}
+	if handleInfo.Mode().Perm() != 0o755 {
+		if err := directory.Chmod(0o755); err != nil {
+			return "", false, fmt.Errorf("set repository target directory mode")
+		}
+		if err := syncDirectory(root, path.Dir(relativePath)); err != nil {
+			return "", false, err
+		}
+	}
+	verifiedIdentity, exists, err := inspectOwnedTargetDirectory(root, relativePath)
+	if err != nil || !exists || verifiedIdentity != identity {
+		return "", false, fmt.Errorf("repository target directory changed after recovery admission")
+	}
+	return identity, true, nil
 }
 
 func inspectOwnedTargetDirectory(root *os.Root, relativePath string) (string, bool, error) {
@@ -142,7 +214,7 @@ func writeDirectoryOwnership(root *os.Root, index int, record directoryOwnership
 	if err != nil || len(content) > maximumDirectoryOwnershipBytes {
 		return fmt.Errorf("encode repository target directory ownership")
 	}
-	return writeOwnedFile(root, directoryOwnershipPath(index), content, 0o600)
+	return writeAtomicOwnedFile(root, directoryOwnershipPath(index), directoryOwnershipTempPath(index), content, 0o600)
 }
 
 func loadDirectoryOwnership(root *os.Root, plan Plan, index int) (directoryOwnership, bool, error) {
@@ -208,4 +280,8 @@ func directoryOwnershipValue(record directoryOwnership) map[string]any {
 
 func directoryOwnershipPath(index int) string {
 	return fmt.Sprintf("%s/directory-%04d.json", activeDirectory, index)
+}
+
+func directoryOwnershipTempPath(index int) string {
+	return fmt.Sprintf("%s/directory-%04d.tmp", activeDirectory, index)
 }

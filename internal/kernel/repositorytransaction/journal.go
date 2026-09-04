@@ -127,5 +127,5 @@ func markerExists(root *os.Root, marker string) (bool, error) {
 }
 
 func writeMarker(root *os.Root, marker string) error {
-	return writeOwnedFile(root, marker, nil, 0o600)
+	return writeAtomicOwnedFile(root, marker, marker+".tmp", nil, 0o600)
 }

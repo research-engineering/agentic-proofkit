@@ -57,18 +57,6 @@ func Overlaps(left, right string) (bool, error) {
 	return leftKey == rightKey || withinKey(leftKey, rightKey) || withinKey(rightKey, leftKey), nil
 }
 
-func Within(candidate, ancestor string) (bool, error) {
-	candidateKey, err := Key(candidate)
-	if err != nil {
-		return false, err
-	}
-	ancestorKey, err := Key(ancestor)
-	if err != nil {
-		return false, err
-	}
-	return withinKey(candidateKey, ancestorKey), nil
-}
-
 func withinKey(candidate, ancestor string) bool {
 	return len(candidate) > len(ancestor) && candidate[:len(ancestor)] == ancestor && candidate[len(ancestor)] == '/'
 }
