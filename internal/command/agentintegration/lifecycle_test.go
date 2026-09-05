@@ -227,6 +227,7 @@ func TestLifecycleAppliesReplaysAndPreservesNeighbors(t *testing.T) {
 }
 
 func TestLifecycleRejectsChangedIdentityAndLocalEdits(t *testing.T) {
+	t.Run("terminal result projection", testLifecycleTerminalResultProjection)
 	t.Run("native outcome projection", func(t *testing.T) {
 		id := "sha256:" + strings.Repeat("a", 64)
 		seed := LifecycleReceipt{tool: "codex", operation: OperationInstall, expectedTransactionID: id, expectedDesiredStateID: id}

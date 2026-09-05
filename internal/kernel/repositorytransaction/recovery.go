@@ -84,6 +84,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if action != RecoveryRollback {
 			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
 		}
+		if err := verifyTargetVector(root, preparingPlan, 0); err != nil {
+			return recoveryObservationFailure(preparingPlan.TransactionID, "preparing_state_mismatch", err)
+		}
 		if err := publishPreparingJournal(root); err != nil {
 			return Result{FailureClass: "journal_publication_failed", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
 		}
@@ -118,8 +121,11 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if err != nil {
 			return Result{FailureClass: "invalid_staged_objects", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
-		if action != RecoveryResume || verifyTargetVector(root, plan, changedCount(plan)) != nil {
+		if action != RecoveryResume {
 			return Result{FailureClass: "committed_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
+		if err := verifyTargetVector(root, plan, changedCount(plan)); err != nil {
+			return recoveryObservationFailure(transactionID, "committed_state_mismatch", err)
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
@@ -130,8 +136,11 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		return runtime.cleanupRecovered(root, plan, StateApplied, action)
 	}
 	if rolledBack {
-		if action != RecoveryRollback || verifyTargetVector(root, plan, 0) != nil {
+		if action != RecoveryRollback {
 			return Result{FailureClass: "rolled_back_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
+		if err := verifyTargetVector(root, plan, 0); err != nil {
+			return recoveryObservationFailure(transactionID, "rolled_back_state_mismatch", err)
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
@@ -152,8 +161,8 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if action != RecoveryRollback {
 			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
-		if verifyTargetVector(root, plan, 0) != nil {
-			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		if err := verifyTargetVector(root, plan, 0); err != nil {
+			return recoveryObservationFailure(transactionID, "preparing_state_mismatch", err)
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
@@ -178,7 +187,7 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 	}
 	prefix, err := classifyPrefix(root, plan)
 	if err != nil {
-		return Result{FailureClass: "ambiguous_target_state", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		return recoveryObservationFailure(transactionID, "ambiguous_target_state", err)
 	}
 	if action == RecoveryResume {
 		if err := ctx.Err(); err != nil {

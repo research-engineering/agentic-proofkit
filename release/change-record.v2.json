@@ -17,6 +17,10 @@
     {
       "changeId": "proofkit.repository-transaction.desired-absence",
       "summary": "Support exact desired absence, guarded deletion and recovery through versioned native journals while preserving present-only v1 bytes and identities. Bind idempotent current-state replay to the pending-state and retained-result checks under one native lock."
+    },
+    {
+      "changeId": "proofkit.repository-transaction.recovery-observation",
+      "summary": "Preserve operational target-observation failures through recovery and both CLI consumers instead of presenting them as observed state mismatches. Keep target and control state unchanged on pre-effect refusal, including temporary-journal publication, and retain cleanup outcomes after the final committed effect."
     }
   ],
   "migration": {

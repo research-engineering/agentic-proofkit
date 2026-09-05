@@ -174,6 +174,7 @@ func TestIntegrationApplyCLI(t *testing.T) {
 
 func TestIntegrationRecoverCLI(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.048616201957844566215569600371534815430881597384694966035981327906285948266263")
+	t.Run("pending observation streams", testIntegrationRecoveryObservationStreams)
 	root := t.TempDir()
 	plan := integrationLifecycleCLI(t, integrationLifecyclePlanArgs(root, "codex", "install"), 0)
 	integrationLifecycleCLI(t, integrationLifecycleApplyArgs(root, "codex", "install", plan), 0)

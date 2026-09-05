@@ -11,6 +11,13 @@ import (
 
 var errTargetSnapshotChanged = errors.New("repository transaction target snapshot changed")
 
+func recoveryObservationFailure(transactionID, failureClass string, err error) (Result, error) {
+	if !errors.Is(err, errTargetSnapshotChanged) {
+		return Result{}, err
+	}
+	return Result{FailureClass: failureClass, State: StateRecoveryRequired, TransactionID: transactionID}, nil
+}
+
 func resultWithObservedPrefix(root *os.Root, plan Plan, result Result) Result {
 	prefix, err := classifyPrefix(root, plan)
 	if err == nil {

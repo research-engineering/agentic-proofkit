@@ -49,6 +49,8 @@ func assertDeletionRecoveryFiles(t *testing.T, root, state string) {
 }
 
 func TestDeletionRecoversEveryMixedPrefixAndHistoricalResult(t *testing.T) {
+	t.Run("observation-partition", testRecoveryObservationPartition)
+	t.Run("cancellation-commit-boundary", testDeletionCancellationCommitBoundary)
 	for _, action := range []string{RecoveryResume, RecoveryRollback} {
 		for prefix := 0; prefix <= 3; prefix++ {
 			t.Run(fmt.Sprintf("%s-%d", action, prefix), func(t *testing.T) {
