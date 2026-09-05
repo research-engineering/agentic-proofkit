@@ -153,7 +153,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -292,7 +292,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -406,7 +406,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2516,7 +2516,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2622,7 +2622,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2750,7 +2750,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2877,7 +2877,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "canonicalDigest": "sha256:005381c2fc6760a2a225a4853a2d75c3fc044286c2819cfd09908301d15b3b1b",
             "evidenceClass": "source_checkout"
           }
         ],
