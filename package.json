@@ -1,7 +1,7 @@
 {
   "name": "@research-engineering/agentic-proofkit",
   "description": "Reusable proof profile, report, graph, and witness-planning primitives.",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "type": "module",
   "license": "MIT",
   "sideEffects": false,

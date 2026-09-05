@@ -1,13 +1,17 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.10.0",
-  "version": "0.10.1",
+  "previousVersion": "0.9.0",
+  "version": "0.10.0",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.repository-transaction.native-construction",
-      "summary": "Keep re-admitted transaction reports non-executable for empty and nonempty payloads by binding Apply to native construction of the complete transaction identity. Preserve public JSON, valid native operations, and journal recovery."
+      "changeId": "proofkit.agent-integration.freshness",
+      "summary": "Add integration check for explicit Codex or Claude repository paths; compare bounded current template bytes through confined read-only inspection without granting installation or host-activation authority."
+    },
+    {
+      "changeId": "proofkit.agent-integration.source",
+      "summary": "Add integration source to generate one bounded portable skill body and descriptor-owned path, with an identity bound to consumed registered CLI invocation contracts rather than package version or a host-specific executable."
     }
   ],
   "migration": {

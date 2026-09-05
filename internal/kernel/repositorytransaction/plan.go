@@ -146,6 +146,7 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 	if _, err := AdmitPlanOutput(plan.JSONValue()); err != nil {
 		return Plan{}, fmt.Errorf("admit repository transaction plan output: %w", err)
 	}
+	plan.constructedTransactionID = plan.TransactionID
 	return plan, nil
 }
 

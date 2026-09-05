@@ -839,6 +839,15 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/kernel/repositorytransaction/output_admission_test.go",
 			selectors:   []string{"TestPlanAndResultOutputAdmissionRejectSemanticMutants"},
 		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-native-construction"}: {
+			witnessPath: "internal/kernel/repositorytransaction/construction_test.go",
+			selectors: []string{
+				"TestPlanConstructionRejectsPublicFieldTransplant",
+				"TestPlanConstructionRetainsIndependentExecutionChecks",
+				"TestPlanConstructionSurvivesOnlyNativeCopies",
+				"TestRecoveryDoesNotRequirePublicPlanConstruction",
+			},
+		},
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-cleanup-state-matrix"}: {
 			witnessPath: "internal/kernel/repositorytransaction/state_machine_test.go",
 			selectors:   []string{"TestCleanupDurabilityFailureDoesNotClaimRecoverableState"},

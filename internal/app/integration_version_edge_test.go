@@ -1,12 +1,13 @@
 package app
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
 
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
@@ -37,26 +38,17 @@ func TestIntegrationVersionEdgeClosesCompletePublicABIDiff(t *testing.T) {
 		t.Fatal("new public commands retained the previous complete ABI identity")
 	}
 
-	change, err := releasechange.Read(filepath.Join(repoRoot(t), releasechange.RecordPath))
+	changePath := filepath.Join(repoRoot(t), "internal/app/testdata/releases/v0.10.0", releasechange.RecordPath)
+	content, err := os.ReadFile(changePath)
+	if err != nil || fmt.Sprintf("%x", sha256.Sum256(content)) != "9240098569e1fcc1d9cd8137e1184a97a9ad31f10649dfff901f2d66d7f2b81b" {
+		t.Fatalf("archived integration release bytes changed: %v", err)
+	}
+	change, err := releasechange.Read(changePath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if change.PreviousVersion != frozen.ReleaseVersion || change.Version != "0.10.0" || change.ChangeClass != "compatible" || len(change.BreakingChanges) != 0 || change.Migration.Required || len(change.Migration.Steps) != 0 || !slices.Equal(releaseChangeIDs(change.Additions), []string{"proofkit.agent-integration.freshness", "proofkit.agent-integration.source"}) {
 		t.Fatal("integration release record does not describe the exact compatible addition")
-	}
-	file, err := os.Open(filepath.Join(repoRoot(t), "package.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer file.Close()
-	manifest, err := admission.DecodeTypedJSON[struct {
-		Version string `json:"version"`
-	}](file, 64<<10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if manifest.Version != change.Version {
-		t.Fatal("integration package version differs from its release record")
 	}
 	contracts, err := currentVersionEdgeCommandContracts(repoRoot(t), []string{"integration-check", "integration-source"})
 	if err != nil {

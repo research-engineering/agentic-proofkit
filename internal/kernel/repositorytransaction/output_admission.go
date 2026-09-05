@@ -20,7 +20,7 @@ var resultStateSet = map[string]struct{}{
 
 // AdmitPlanOutput validates the complete public projection of a repository
 // transaction plan. The admitted result is descriptive and intentionally
-// lacks the private payload bytes required for execution.
+// lacks native construction identity and private execution payloads.
 func AdmitPlanOutput(raw any) (Plan, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {

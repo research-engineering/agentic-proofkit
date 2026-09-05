@@ -66,6 +66,11 @@ func validateExecutablePlan(plan Plan, rootID string) error {
 	if plan.RootID != rootID || plan.DesiredStateID == "" || plan.TransactionID == "" || len(plan.Operations) == 0 || len(plan.Operations) > MaximumOperations {
 		return fmt.Errorf("repository transaction plan is not executable for this root")
 	}
+	// Empty payloads survive wire projection; only native construction binds
+	// execution to the complete immutable transaction identity.
+	if plan.constructedTransactionID != plan.TransactionID {
+		return fmt.Errorf("repository transaction plan lacks native construction for this identity")
+	}
 	if _, err := admitJournal(journalValue(plan)); err != nil {
 		return fmt.Errorf("repository transaction plan semantic admission failed")
 	}
