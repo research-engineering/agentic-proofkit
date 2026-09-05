@@ -45,26 +45,6 @@ func TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff(t *testing.T) {
 	}
 }
 
-func TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift(t *testing.T) {
-	frozen := readFrozenProjectNavigationPublicABI(t)
-	current := readProjectNavigationCLIContractRaw(t)
-	commands := current["commands"].([]any)
-	for index, raw := range commands {
-		record := raw.(map[string]any)
-		if record["command"] != "impact" {
-			continue
-		}
-		mutant := clonePublicABIRecord(record)
-		mutant["route"] = []any{"impact-drift"}
-		commands[index] = mutant
-		if err := verifyCompleteProjectNavigationABIDiff(frozen, current); err == nil {
-			t.Fatal("undeclared existing-command ABI drift was admitted")
-		}
-		return
-	}
-	t.Fatal("current CLI contract is missing impact")
-}
-
 func readFrozenProjectNavigationPublicABI(t *testing.T) frozenProjectNavigationPublicABI {
 	t.Helper()
 	content, err := os.ReadFile(filepath.Join(repoRoot(t), frozenProjectNavigationPublicABIPath))

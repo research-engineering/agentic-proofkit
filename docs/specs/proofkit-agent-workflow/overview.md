@@ -88,8 +88,9 @@ projections remain independently owned by the spec-proof-core package.
 - `REQ-PROOFKIT-WORKFLOW-014`: one total state-to-action table, one bounded
   next action, explicit owner decisions, and no embedded route universe.
 - `REQ-PROOFKIT-WORKFLOW-015`: status/next CLI channel and exit semantics,
-  pre-emission failure discipline, one bounded stdout write without claiming
-  atomicity from a failing external sink, and a versioned breaking replacement
+  checkpointed pre-emission failure discipline, one bounded stdout write
+  without claiming cancellation rollback or atomicity from an external sink,
+  and a versioned breaking replacement
   of the flat change route by `change plan` across source and installed carriers.
 
 Shared stable-JSON/diagnostic hardening is owned by the supply-chain-quality

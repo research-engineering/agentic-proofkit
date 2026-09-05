@@ -63,7 +63,7 @@ func TestProjectStatusOutputMatrix(t *testing.T) {
 			t.Run(string(state)+"/"+command, func(t *testing.T) {
 				var stdout bytes.Buffer
 				var stderr bytes.Buffer
-				code := projectStatusResult(command, projectStatusArgs{color: "never", format: "json", repositoryRoot: "unused"}, status, &stdout, &stderr, PresentationCapabilities{})
+				code := projectStatusResult(context.Background(), command, projectStatusArgs{color: "never", format: "json", repositoryRoot: "unused"}, status, &stdout, &stderr, PresentationCapabilities{})
 				if code != 0 || stderr.Len() != 0 {
 					t.Fatalf("JSON exit=%d stderr=%q stdout=%q", code, stderr.String(), stdout.String())
 				}
@@ -81,7 +81,7 @@ func TestProjectStatusOutputMatrix(t *testing.T) {
 				}
 
 				stdout.Reset()
-				code = projectStatusResult(command, projectStatusArgs{color: "never", format: "text", repositoryRoot: "unused"}, status, &stdout, &stderr, PresentationCapabilities{})
+				code = projectStatusResult(context.Background(), command, projectStatusArgs{color: "never", format: "text", repositoryRoot: "unused"}, status, &stdout, &stderr, PresentationCapabilities{})
 				if code != 0 || stderr.Len() != 0 || stdout.Len() == 0 || strings.Contains(stdout.String(), "\x1b[") || !strings.Contains(stdout.String(), string(state)) {
 					t.Fatalf("text exit=%d stderr=%q stdout=%q", code, stderr.String(), stdout.String())
 				}
@@ -90,9 +90,59 @@ func TestProjectStatusOutputMatrix(t *testing.T) {
 	}
 }
 
+func TestStatusCLI(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.031193726938621836740724170288022222122010000090102720212406989617137099281165")
+	repositoryRoot := t.TempDir()
+	code, output, diagnostic := executeAgentWorkflowCLI(t, []string{"status", "--repo-root", repositoryRoot}, panicReader{}, PresentationCapabilities{})
+	if code != 0 || diagnostic != "" {
+		t.Fatalf("status exit=%d stderr=%q stdout=%q", code, diagnostic, output)
+	}
+	status, err := projectstatus.AdmitStatusOutput(decodeCLIJSON(t, output))
+	if err != nil || status.ProjectState != projectstatus.StateUninitialized || strings.Contains(output, repositoryRoot) {
+		t.Fatalf("status admission=%v state=%s output=%q", err, status.ProjectState, output)
+	}
+	code, output, diagnostic = executeAgentWorkflowCLI(t, []string{"status", "--repo-root", repositoryRoot, "--format", "text", "--color", "auto"}, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+	if code != 0 || diagnostic != "" || !strings.Contains(output, string(projectstatus.StateUninitialized)) || !strings.Contains(output, "\x1b[") || strings.Contains(output, repositoryRoot) {
+		t.Fatalf("status text exit=%d stderr=%q stdout=%q", code, diagnostic, output)
+	}
+	missingRoot := filepath.Join(t.TempDir(), "missing")
+	code, output, diagnostic = executeAgentWorkflowCLI(t, []string{"status", "--repo-root", missingRoot, "--format", "yaml"}, panicReader{}, PresentationCapabilities{})
+	if code != 1 || output != "" || !strings.Contains(diagnostic, "--format") || strings.Contains(diagnostic, missingRoot) {
+		t.Fatalf("status pre-I/O admission exit=%d stderr=%q stdout=%q", code, diagnostic, output)
+	}
+}
+
+func TestNextCLI(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.039475651267823643074585805569841885668429584666474166773786344007852047031918")
+	repositoryRoot := t.TempDir()
+	statusCode, statusOutput, statusDiagnostic := executeAgentWorkflowCLI(t, []string{"status", "--repo-root", repositoryRoot}, panicReader{}, PresentationCapabilities{})
+	if statusCode != 0 || statusDiagnostic != "" {
+		t.Fatalf("status exit=%d stderr=%q stdout=%q", statusCode, statusDiagnostic, statusOutput)
+	}
+	status, err := projectstatus.AdmitStatusOutput(decodeCLIJSON(t, statusOutput))
+	if err != nil {
+		t.Fatal(err)
+	}
+	code, output, diagnostic := executeAgentWorkflowCLI(t, []string{"next", "--repo-root", repositoryRoot}, panicReader{}, PresentationCapabilities{})
+	if code != 0 || diagnostic != "" {
+		t.Fatalf("next exit=%d stderr=%q stdout=%q", code, diagnostic, output)
+	}
+	next, err := projectstatus.AdmitNextOutput(decodeCLIJSON(t, output))
+	if err != nil || next.StatusRef != status.StatusID || next.Action.ActionClass != projectstatus.ActionChooseAdoptionMode || strings.Contains(output, repositoryRoot) {
+		t.Fatalf("next admission=%v packet=%#v output=%q", err, next, output)
+	}
+	code, output, diagnostic = executeAgentWorkflowCLI(t, []string{"next", "--repo-root", repositoryRoot, "--format", "text", "--color", "auto"}, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+	if code != 0 || diagnostic != "" || !strings.Contains(output, string(projectstatus.ActionChooseAdoptionMode)) || !strings.Contains(output, "\x1b[") || strings.Contains(output, repositoryRoot) {
+		t.Fatalf("next text exit=%d stderr=%q stdout=%q", code, diagnostic, output)
+	}
+	missingRoot := filepath.Join(t.TempDir(), "missing")
+	code, output, diagnostic = executeAgentWorkflowCLI(t, []string{"next", "--repo-root", missingRoot, "--format", "json", "--color", "auto"}, panicReader{}, PresentationCapabilities{})
+	if code != 1 || output != "" || !strings.Contains(diagnostic, "--color") || strings.Contains(diagnostic, missingRoot) {
+		t.Fatalf("next pre-I/O admission exit=%d stderr=%q stdout=%q", code, diagnostic, output)
+	}
+}
+
 func TestProjectStatusCLI(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.082990774938213415032196768034286988848197095097772338307445528941413312751637")
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.016575929375243753473232212796372621717203348455914493779019079597618731316529")
 	repositoryRoot := t.TempDir()
 
 	t.Run("status and next preserve owner output", func(t *testing.T) {
@@ -233,7 +283,7 @@ func TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim(
 	status := admittedProjectStatusFixture(t, projectstatus.StateUninitialized)
 	stdout := &prefixThenErrorWriter{maximum: 7}
 	var stderr bytes.Buffer
-	code := projectStatusResult("status", projectStatusArgs{color: "never", format: "json", repositoryRoot: "unused"}, status, stdout, &stderr, PresentationCapabilities{})
+	code := projectStatusResult(context.Background(), "status", projectStatusArgs{color: "never", format: "json", repositoryRoot: "unused"}, status, stdout, &stderr, PresentationCapabilities{})
 	if code != 1 || stdout.calls != 1 || stdout.Len() != stdout.maximum || !strings.Contains(stderr.String(), "write output") {
 		t.Fatalf("transport failure exit=%d calls=%d stdout=%q stderr=%q", code, stdout.calls, stdout.String(), stderr.String())
 	}
@@ -252,6 +302,22 @@ func TestProjectStatusCLIHonorsCanceledContextBeforeOutput(t *testing.T) {
 				t.Fatalf("%s cancellation exit=%d stdout=%q stderr=%q", command, code, stdout.String(), stderr.String())
 			}
 		})
+	}
+
+	status := admittedProjectStatusFixture(t, projectstatus.StateUninitialized)
+	for _, command := range []string{"next", "status"} {
+		for _, format := range []string{"json", "text"} {
+			t.Run(command+"/pre-emission/"+format, func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				cancel()
+				var stdout bytes.Buffer
+				var stderr bytes.Buffer
+				code := projectStatusResult(ctx, command, projectStatusArgs{color: "never", format: format, repositoryRoot: "unused"}, status, &stdout, &stderr, PresentationCapabilities{})
+				if code != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "cancel") {
+					t.Fatalf("%s/%s cancellation exit=%d stdout=%q stderr=%q", command, format, code, stdout.String(), stderr.String())
+				}
+			})
+		}
 	}
 }
 

@@ -2643,11 +2643,7 @@ func verifyInstalledJSONABI(consumer string) error {
 	if err := verifyInstalledAgentRouteEnvelopeModes(consumer); err != nil {
 		return err
 	}
-	if err := workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
-		Directory:  consumer,
-		Executable: "npm",
-		Prefix:     []string{"--silent", "exec", "--offline", "--", "agentic-proofkit"},
-	}); err != nil {
+	if err := verifyInstalledNPMWorkflowSmoke(consumer); err != nil {
 		return fmt.Errorf("outside consumer agent-workflow smoke failed: %w", err)
 	}
 	return nil

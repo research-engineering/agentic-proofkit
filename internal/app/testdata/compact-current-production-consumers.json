@@ -53,8 +53,10 @@
     "internal/tools/browsertestserver/main.go",
     "internal/tools/coveragemetrics/main.go",
     "internal/tools/packageverify/main.go",
+    "internal/tools/packageverify/workflow_carrier.go",
     "internal/tools/pythonpackage/main.go",
     "internal/tools/pythonpackage/verify.go",
+    "internal/tools/pythonpackage/workflow_carrier.go",
     "internal/tools/workflowsmoke/process.go",
     "internal/tools/workflowsmoke/project_navigation_smoke.go",
     "internal/tools/workflowsmoke/workflow_smoke.go"

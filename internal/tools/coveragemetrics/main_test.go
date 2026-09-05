@@ -598,9 +598,12 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.agent-workflow.no-ambient-authority",
 		"proofkit.agent-workflow.prompt-coordinate-and-escalation-closure",
 		"proofkit.agent-workflow.project-navigation-installed-carriers",
+		"proofkit.agent-workflow.project-navigation-installed-npm-carrier-closure",
+		"proofkit.agent-workflow.project-navigation-installed-wheel-carrier-closure",
 		"proofkit.agent-workflow.project-navigation-public-cli",
 		"proofkit.agent-workflow.project-navigation-version-edge",
 		"proofkit.agent-workflow.project-next-action-output-closure",
+		"proofkit.agent-workflow.project-state-application-write-free-topology",
 		"proofkit.agent-workflow.project-state-bounded-inspection",
 		"proofkit.agent-workflow.project-state-child-owner-delegation",
 		"proofkit.agent-workflow.project-state-control-file-coherence",
@@ -652,6 +655,9 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.spec-proof-core.declared-route-mapping-without-assurance",
 		"proofkit.spec-proof-core.requirement-authoring-ref-provenance",
 		"proofkit.spec-proof-core.requirement-browser-one-shot-cleanup",
+		"proofkit.spec-proof-core.project-navigation-public-abi-diff",
+		"proofkit.spec-proof-core.project-navigation-public-abi-diff-mutations",
+		"proofkit.spec-proof-core.project-navigation-version-edge",
 		"proofkit.spec-proof-core.test-inventory-and-coverage-view",
 	} {
 		index := -1

@@ -505,11 +505,8 @@ func verifyInstalledPythonWheel(consumer string, venvPython string, wheelPath st
 	if !bytes.Contains(output, []byte("CLI/JSON is the public cross-language contract")) {
 		return fmt.Errorf("python console script smoke did not expose CLI contract")
 	}
-	if err := verifyInstalledWorkflowSmoke(consumer, environment, venvPython, "-m", "agentic_proofkit"); err != nil {
-		return fmt.Errorf("python module agent-workflow smoke failed: %w", err)
-	}
-	if err := verifyInstalledWorkflowSmoke(consumer, environment, binPath); err != nil {
-		return fmt.Errorf("python console script agent-workflow smoke failed: %w", err)
+	if err := verifyInstalledPythonWorkflowSmokes(consumer, environment, venvPython, binPath); err != nil {
+		return err
 	}
 	if err := verifyInstalledPythonPresetContinuation(consumer, venvPython, expectedContract, environment); err != nil {
 		return err
@@ -528,15 +525,6 @@ func installPythonWheel(venvPython string, wheelPath string, environment []strin
 		return fmt.Errorf("install local Python wheel: %w\n%s", err, output)
 	}
 	return nil
-}
-
-func verifyInstalledWorkflowSmoke(dir string, environment []string, executable string, prefix ...string) error {
-	return workflowsmoke.VerifyProcess(context.Background(), workflowsmoke.ProcessCarrier{
-		Directory:   dir,
-		Executable:  executable,
-		Environment: environment,
-		Prefix:      append([]string(nil), prefix...),
-	})
 }
 
 func verifyInstalledPythonPresetContinuation(consumer string, venvPython string, expectedContract []byte, baseEnvironment []string) error {

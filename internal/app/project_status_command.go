@@ -25,16 +25,24 @@ func runProjectStatus(ctx context.Context, command string, args []string, stdout
 		writeDiagnostic(stderr, err)
 		return 1
 	}
-	return projectStatusResult(command, options, status, stdout, stderr, capabilities)
+	return projectStatusResult(ctx, command, options, status, stdout, stderr, capabilities)
 }
 
-func projectStatusResult(command string, options projectStatusArgs, status projectstatus.Status, stdout io.Writer, stderr io.Writer, capabilities PresentationCapabilities) int {
+func projectStatusResult(ctx context.Context, command string, options projectStatusArgs, status projectstatus.Status, stdout io.Writer, stderr io.Writer, capabilities PresentationCapabilities) int {
+	if err := projectStatusCancellation(ctx); err != nil {
+		writeDiagnostic(stderr, err)
+		return 1
+	}
 	if command == "status" {
 		if options.format == "json" {
+			if err := projectStatusCancellation(ctx); err != nil {
+				writeDiagnostic(stderr, err)
+				return 1
+			}
 			return writeJSON(status.JSONValue(), 0, nil, stdout, stderr)
 		}
 		lines, err := projectstatus.StatusText(status)
-		return writeProjectStatusText(lines, options.color, capabilities, stdout, stderr, err)
+		return writeProjectStatusText(ctx, lines, options.color, capabilities, stdout, stderr, err)
 	}
 	if command != "next" {
 		writeDiagnosticf(stderr, "unsupported project status command")
@@ -46,10 +54,14 @@ func projectStatusResult(command string, options projectStatusArgs, status proje
 		return 1
 	}
 	if options.format == "json" {
+		if err := projectStatusCancellation(ctx); err != nil {
+			writeDiagnostic(stderr, err)
+			return 1
+		}
 		return writeJSON(next.JSONValue(), 0, nil, stdout, stderr)
 	}
 	lines, err := projectstatus.NextText(next)
-	return writeProjectStatusText(lines, options.color, capabilities, stdout, stderr, err)
+	return writeProjectStatusText(ctx, lines, options.color, capabilities, stdout, stderr, err)
 }
 
 func parseProjectStatusArgs(command string, args []string) (projectStatusArgs, error) {
@@ -106,7 +118,7 @@ func missingProjectStatusValue(flag string) error {
 	}
 }
 
-func writeProjectStatusText(lines []projectstatus.TextLine, color string, capabilities PresentationCapabilities, stdout io.Writer, stderr io.Writer, lineErr error) int {
+func writeProjectStatusText(ctx context.Context, lines []projectstatus.TextLine, color string, capabilities PresentationCapabilities, stdout io.Writer, stderr io.Writer, lineErr error) int {
 	if lineErr != nil {
 		return writeText("", 1, lineErr, stdout, stderr)
 	}
@@ -119,7 +131,17 @@ func writeProjectStatusText(lines []projectstatus.TextLine, color string, capabi
 	if err == nil && color == "never" && output != plain {
 		err = fmt.Errorf("project status text projection drifted")
 	}
+	if err == nil {
+		err = projectStatusCancellation(ctx)
+	}
 	return writeText(output, 0, err, stdout, stderr)
+}
+
+func projectStatusCancellation(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("project status cancelled before output: %w", err)
+	}
+	return nil
 }
 
 func projectStatusTerminalText(lines []projectstatus.TextLine) terminalText {

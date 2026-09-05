@@ -190,14 +190,15 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
       "ownerId": "proofkit.agent-workflow",
-      "invariant": "The public status and next commands require exactly one explicit --repo-root, default to stable ANSI-free JSON, admit text and terminal-only color through the shared presentation contract, return exit zero for every successfully classified project state, including bounded project-record decoding or admission failure, and return exit one without beginning output emission for invocation, confinement, cancellation, inspection-bound, concurrent-change, cleanup, or serialization failure; successful serialization reaches stdout through one bounded write, and a transport failure returns exit one without claiming atomic behavior from a writer that accepted a prefix before failing; the same versioned breaking public edge adds both commands, replaces the flat change-workflow-plan route with change plan without adding a route-alias registry or second implementation, rejects the retired route, admits the hierarchical route, and closes descriptor, help, CLI contract, command family, contract map, ABI, source witness, installed npm, and installed wheel surfaces.",
+      "invariant": "The public status and next commands require exactly one explicit --repo-root, default to stable ANSI-free JSON, admit text and terminal-only color through the shared presentation contract, return exit zero for every successfully classified project state, including bounded project-record decoding or admission failure, and return exit one without beginning output emission for invocation, confinement, inspection-bound, concurrent-change, cleanup, serialization, or cancellation observed at bounded operation checkpoints and the final pre-emission checkpoint; successful serialization reaches stdout through one bounded write, and a transport failure returns exit one without claiming atomic behavior from a writer that accepted a prefix before failing; the same versioned breaking public edge adds both commands, replaces the flat change-workflow-plan route with change plan without adding a route-alias registry or second implementation, rejects the retired route, admits the hierarchical route, and closes descriptor, help, CLI contract, command family, contract map, ABI, source witness, installed npm, and installed wheel surfaces.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
       "nonClaimRefs": ["NC-PROOFKIT-WORKFLOW-015"],
       "nonClaims": [
         "A caller-provided stdout writer that accepts a prefix and then fails does not provide an atomic sink, so Proofkit does not claim that such a transport leaves stdout empty.",
-        "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."
+        "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness.",
+        "Cancellation racing after the final pre-emission checkpoint cannot retract bytes subsequently accepted by an external writer."
       ],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,

@@ -118,6 +118,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestInspectCohortValidationClosesCleanEpochABA",
 				"TestInspectDeduplicatesRepeatedIssueCodes",
 				"TestInspectFailsClosedOnSymlinksAndBoundsWithoutDisclosure",
+				"TestInspectHonorsCancellationAfterFinalControlObservation",
 				"TestInspectHonorsCancellationBetweenBoundedReads",
 				"TestInspectMapsInvalidControlState",
 				"TestInspectMapsRecoverableControlState",
@@ -145,6 +146,10 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestInspectionLeaseRejectsControlNamespaceCreatedAfterOpen",
 			},
 		},
+		{"REQ-PROOFKIT-WORKFLOW-013", "proofkit.agent-workflow.project-state-application-write-free-topology"}: {
+			witnessPath: "internal/command/projectstatus/dependency_test.go",
+			selectors:   []string{"TestProjectStatusProductionTopologyForbidsRepositoryMutationCalls"},
+		},
 		{"REQ-PROOFKIT-WORKFLOW-013", "proofkit.agent-workflow.project-state-exact-route-traversal"}: {
 			witnessPath: "internal/kernel/rootpath/exact_test.go",
 			selectors:   []string{"TestOpenExactRegularFileRejectsFinalComponentABA", "TestOpenExactRegularFileRejectsParentSymlinkABA"},
@@ -163,13 +168,23 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath:        "internal/tools/workflowsmoke/workflow_smoke_test.go",
 			selectors:          []string{"TestVerifyAcceptsApplicationCLI", "TestVerifyRejectsCarrierContractMutations"},
 		},
+		{"REQ-PROOFKIT-WORKFLOW-015", "proofkit.agent-workflow.project-navigation-installed-npm-carrier-closure"}: {
+			witnessPath: "internal/tools/packageverify/workflow_carrier_test.go",
+			selectors:   []string{"TestInstalledNPMWorkflowCarrierClosure"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-015", "proofkit.agent-workflow.project-navigation-installed-wheel-carrier-closure"}: {
+			witnessPath: "internal/tools/pythonpackage/workflow_carrier_test.go",
+			selectors:   []string{"TestInstalledPythonWorkflowCarrierClosure"},
+		},
 		{"REQ-PROOFKIT-WORKFLOW-015", "proofkit.agent-workflow.project-navigation-public-cli"}: {
 			witnessPath: "internal/app/project_status_command_test.go",
 			selectors: []string{
+				"TestNextCLI",
 				"TestProjectStatusCLI",
 				"TestProjectStatusCLIHonorsCanceledContextBeforeOutput",
 				"TestProjectStatusOutputMatrix",
 				"TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim",
+				"TestStatusCLI",
 			},
 		},
 		{"REQ-PROOFKIT-WORKFLOW-015", "proofkit.agent-workflow.project-navigation-version-edge"}: {
@@ -790,10 +805,11 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		},
 		{"REQ-PROOFKIT-SPEC-035", "proofkit.spec-proof-core.project-navigation-public-abi-diff"}: {
 			witnessPath: "internal/app/project_navigation_abi_closure_test.go",
-			selectors: []string{
-				"TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff",
-				"TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift",
-			},
+			selectors:   []string{"TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff"},
+		},
+		{"REQ-PROOFKIT-SPEC-035", "proofkit.spec-proof-core.project-navigation-public-abi-diff-mutations"}: {
+			witnessPath: "internal/app/project_navigation_abi_mutation_test.go",
+			selectors:   []string{"TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift"},
 		},
 		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}: {
 			witnessPath: "internal/command/migrationparityadmission/migrationparityadmission_test.go",

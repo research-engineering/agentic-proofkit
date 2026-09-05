@@ -9,14 +9,14 @@
   "changeRecordRef": "release/change-record.v2.json",
   "changeRecordSha256": "sha256:6aaa914c454d6f135ece86b632b8618911b71d6b5da08bc2c25657c09228f4f3",
   "previousPublicAbiSha256": "sha256:b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463",
-  "currentPublicAbiSha256": "sha256:a331f29499c3dbfd7e03ac4c0d56ce4d71910f735297af79ba0092b543e171f0",
+  "currentPublicAbiSha256": "sha256:06bc3a98cb26f50e988b2bab88ee5d0aee9ebdab10a8fe116d8933364e7cd2f4",
   "addedCommandContracts": [
     {
       "command": "next",
       "route": ["next"],
       "outputContract": {
         "contractId": "proofkit.next.output.v1",
-        "contractSha256": "sha256:9dfa71617f9d727949a988bf726bcf0070460faa59565a8adc468994a36594c6"
+        "contractSha256": "sha256:92f6d3dc427a795ec97112e6c3ce55ebd4ab670e4323b4faa8215310a8492747"
       }
     },
     {
@@ -24,7 +24,7 @@
       "route": ["status"],
       "outputContract": {
         "contractId": "proofkit.status.output.v1",
-        "contractSha256": "sha256:29cf593bf349fd5ec7276f28ce75817a44a8b12fc7aea5b4c055cfaf4188924c"
+        "contractSha256": "sha256:3ac87fa98c4650fc3b758ab4a43dee1beeb12f9aee3631a35a2ddf5d0fc5f899"
       }
     }
   ],

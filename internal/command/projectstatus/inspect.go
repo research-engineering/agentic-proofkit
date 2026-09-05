@@ -107,7 +107,17 @@ func inspectAttempt(ctx context.Context, repositoryRoot string, dependencies ins
 	if err := lease.VerifyRootIdentity(); err != nil {
 		return Status{}, err
 	}
-	return evaluate(snapshot)
+	if err := ctx.Err(); err != nil {
+		return Status{}, fmt.Errorf("project status inspection cancelled before evaluation: %w", err)
+	}
+	status, err = evaluate(snapshot)
+	if err != nil {
+		return Status{}, err
+	}
+	if err := ctx.Err(); err != nil {
+		return Status{}, fmt.Errorf("project status inspection cancelled before completion: %w", err)
+	}
+	return status, nil
 }
 
 func observeTransaction(value repositorytransaction.ControlInspection) (transactionObservation, error) {

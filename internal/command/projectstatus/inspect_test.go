@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -24,10 +26,12 @@ import (
 func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.068153284639677751912209073851318961044240216422390589277786880896123148215480")
 	root := t.TempDir()
+	before := snapshotProjectTree(t, root)
 	status, err := Inspect(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertProjectTreeUnchanged(t, root, before)
 	if status.ProjectState != StateUninitialized || status.NextAction.ActionClass != ActionChooseAdoptionMode {
 		t.Fatalf("Inspect() = %#v", status)
 	}
@@ -36,10 +40,12 @@ func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing
 	}
 
 	materializeTestProject(t, root)
+	before = snapshotProjectTree(t, root)
 	status, err = Inspect(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertProjectTreeUnchanged(t, root, before)
 	if status.ProjectState != StateVerificationRequired || status.ProjectID != "pilot.project" || status.ManifestID == "" {
 		t.Fatalf("Inspect() = %#v", status)
 	}
@@ -48,12 +54,63 @@ func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing
 	if err := os.WriteFile(sourcePath, []byte("{}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	before = snapshotProjectTree(t, root)
 	status, err = Inspect(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertProjectTreeUnchanged(t, root, before)
 	if status.ProjectState != StateStale || !reflectIssue(status.IssueCodes, IssueChildDigestMismatch) {
 		t.Fatalf("Inspect() after drift = %#v", status)
+	}
+}
+
+type projectTreeEntry struct {
+	content    []byte
+	mode       fs.FileMode
+	route      string
+	symlinkRef string
+}
+
+func snapshotProjectTree(t *testing.T, root string) []projectTreeEntry {
+	t.Helper()
+	entries := []projectTreeEntry{}
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		route, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		info, err := os.Lstat(path)
+		if err != nil {
+			return err
+		}
+		snapshot := projectTreeEntry{mode: info.Mode(), route: filepath.ToSlash(route)}
+		switch {
+		case info.Mode().IsRegular():
+			snapshot.content, err = os.ReadFile(path)
+		case info.Mode()&fs.ModeSymlink != 0:
+			snapshot.symlinkRef, err = os.Readlink(path)
+		}
+		if err != nil {
+			return err
+		}
+		entries = append(entries, snapshot)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("snapshot project tree: %v", err)
+	}
+	return entries
+}
+
+func assertProjectTreeUnchanged(t *testing.T, root string, before []projectTreeEntry) {
+	t.Helper()
+	after := snapshotProjectTree(t, root)
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("project tree changed during inspection:\nbefore=%#v\nafter=%#v", before, after)
 	}
 }
 
@@ -453,6 +510,25 @@ func TestInspectHonorsCancellationBetweenBoundedReads(t *testing.T) {
 	}
 	if readCount != 1 {
 		t.Fatalf("read count=%d, want cancellation before the second bounded read", readCount)
+	}
+}
+
+func TestInspectHonorsCancellationAfterFinalControlObservation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	controlReads := 0
+	dependencies := defaultInspectionDependencies
+	dependencies.inspectControl = func(context.Context, *repositorytransaction.InspectionLease) (repositorytransaction.ControlInspection, error) {
+		controlReads++
+		if controlReads == 2 {
+			cancel()
+		}
+		return repositorytransaction.ControlInspection{
+			EpochID: digest.SHA256TextRef("stable control epoch"),
+			State:   repositorytransaction.ControlStateClean,
+		}, nil
+	}
+	if _, err := inspectWithDependencies(ctx, t.TempDir(), dependencies); !errors.Is(err, context.Canceled) {
+		t.Fatalf("inspectWithDependencies() error = %v, want context cancellation", err)
 	}
 }
 

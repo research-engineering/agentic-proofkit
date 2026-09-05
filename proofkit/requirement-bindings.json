@@ -904,7 +904,8 @@
       "proofState": "witness_backed",
       "nonClaims": [
         "A caller-provided stdout writer that accepts a prefix and then fails does not provide an atomic sink, so Proofkit does not claim that such a transport leaves stdout empty.",
-        "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."
+        "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness.",
+        "Cancellation racing after the final pre-emission checkpoint cannot retract bytes subsequently accepted by an external writer."
       ]
     }
   ],
@@ -6272,7 +6273,18 @@
         {
           "selector": "TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff",
           "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff$'"
-        },
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "scenarioId": "proofkit.spec-proof-core.project-navigation-public-abi-diff-mutations",
+      "witnessId": "proofkit.project-navigation.public-abi-diff-mutation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_navigation_abi_mutation_test.go",
+      "witnessSelectors": [
         {
           "selector": "TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift",
           "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift$'"
@@ -6398,8 +6410,27 @@
           "command": "go test ./internal/command/projectstatus -run '^TestInspectHonorsCancellationBetweenBoundedReads$'"
         },
         {
+          "selector": "TestInspectHonorsCancellationAfterFinalControlObservation",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectHonorsCancellationAfterFinalControlObservation$'"
+        },
+        {
           "selector": "TestOutOfBoundManifestIdentityIsAClassificationNotByteIdentity",
           "command": "go test ./internal/command/projectstatus -run '^TestOutOfBoundManifestIdentityIsAClassificationNotByteIdentity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "scenarioId": "proofkit.agent-workflow.project-state-application-write-free-topology",
+      "witnessId": "proofkit.project-state.application-write-free-topology-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/dependency_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectStatusProductionTopologyForbidsRepositoryMutationCalls",
+          "command": "go test ./internal/command/projectstatus -run '^TestProjectStatusProductionTopologyForbidsRepositoryMutationCalls$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -6510,6 +6541,10 @@
       "witnessPath": "internal/app/project_status_command_test.go",
       "witnessSelectors": [
         {
+          "selector": "TestNextCLI",
+          "command": "go test ./internal/app -run '^TestNextCLI$'"
+        },
+        {
           "selector": "TestProjectStatusCLI",
           "command": "go test ./internal/app -run '^TestProjectStatusCLI$'"
         },
@@ -6524,6 +6559,10 @@
         {
           "selector": "TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim",
           "command": "go test ./internal/app -run '^TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim$'"
+        },
+        {
+          "selector": "TestStatusCLI",
+          "command": "go test ./internal/app -run '^TestStatusCLI$'"
         }
       ],
       "commandIds": ["proofkit.command-contract-check", "proofkit.go-test"],
@@ -6547,6 +6586,36 @@
       ],
       "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
       "environmentClasses": ["local-go", "local-go-python"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-installed-npm-carrier-closure",
+      "witnessId": "proofkit.project-navigation.installed-npm-carrier-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledNPMWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/packageverify -run '^TestInstalledNPMWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-installed-wheel-carrier-closure",
+      "witnessId": "proofkit.project-navigation.installed-wheel-carrier-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledPythonWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestInstalledPythonWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
     },
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
