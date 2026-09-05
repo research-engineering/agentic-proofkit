@@ -943,6 +943,18 @@
         "Cancellation after the final pre-emission checkpoint cannot retract accepted output, and a caller-provided writer that accepts a prefix before failure is not an atomic sink.",
         "Phase5A is generation/check only, not managed installation, update, removal, host activation, permission grant, semantic full proof, merge approval, or production readiness."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "A completed file lifecycle does not prove host discovery, instruction loading, approved-launcher invocation, permission grants, native verification, or production readiness.",
+        "Recovery reports a historical transaction, not current installed/removed state or post-return stability; cancellation after the final effect cannot retract a committed operation.",
+        "The baseline is cooperative bookkeeping, not authenticated origin, owner approval, or protection from coordinated same-user edits or rollback."
+      ]
     }
   ],
   "bindings": [
@@ -7105,6 +7117,324 @@
         {
           "selector": "TestRouteObservationEqualityBindsEveryOperand",
           "command": "go test ./internal/kernel/rootpath -run '^TestRouteObservationEqualityBindsEveryOperand$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-pair-recognition",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-pair-recognition-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/lifecycle_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestLifecycleBaselineCanonicalAdmission",
+          "command": "go test ./internal/command/agentintegration -run '^TestLifecycleBaselineCanonicalAdmission$'"
+        },
+        {
+          "selector": "TestLifecyclePairRecognition",
+          "command": "go test ./internal/command/agentintegration -run '^TestLifecyclePairRecognition$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-whole-operation",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-whole-operation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/lifecycle_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestLifecycleAppliesReplaysAndPreservesNeighbors",
+          "command": "go test ./internal/command/agentintegration -run '^TestLifecycleAppliesReplaysAndPreservesNeighbors$'"
+        },
+        {
+          "selector": "TestLifecycleRejectsChangedIdentityAndLocalEdits",
+          "command": "go test ./internal/command/agentintegration -run '^TestLifecycleRejectsChangedIdentityAndLocalEdits$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-cli",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_integration_lifecycle_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationApplyCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationApplyCLI$'"
+        },
+        {
+          "selector": "TestIntegrationLifecycleInvocationAndPresentation",
+          "command": "go test ./internal/app -run '^TestIntegrationLifecycleInvocationAndPresentation$'"
+        },
+        {
+          "selector": "TestIntegrationPlanCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationPlanCLI$'"
+        },
+        {
+          "selector": "TestIntegrationRecoverCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationRecoverCLI$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-version-edge",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/integration_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestManagedIntegrationVersionEdgeClosesDeclaredPublicABIDelta",
+          "command": "go test ./internal/app -run '^TestManagedIntegrationVersionEdgeClosesDeclaredPublicABIDelta$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-version-edge-mutants",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-version-edge-mutants-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/public_abi_mutation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestManagedIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift",
+          "command": "go test ./internal/app -run '^TestManagedIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-npm-carrier",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-npm-carrier-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledNPMWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/packageverify -run '^TestInstalledNPMWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-lifecycle-wheel-carrier",
+      "witnessId": "proofkit.agent-integration.integration-lifecycle-wheel-carrier-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledPythonWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestInstalledPythonWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.repository-transaction.desired-absence-action-and-admission",
+      "witnessId": "proofkit.repository-transaction.desired-absence-action-and-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/delete_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAbsentTargetRejectsPayloadAndNoncanonicalVersionWithoutMutation",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestAbsentTargetRejectsPayloadAndNoncanonicalVersionWithoutMutation$'"
+        },
+        {
+          "selector": "TestAbsentTargetsDistinguishDeletionEmptyAndUnchanged",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestAbsentTargetsDistinguishDeletionEmptyAndUnchanged$'"
+        },
+        {
+          "selector": "TestDeleteChecksLastBeforeImageAndPreservesForeignRecreation",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestDeleteChecksLastBeforeImageAndPreservesForeignRecreation$'"
+        },
+        {
+          "selector": "TestMixedAbsentTargetDoesNotRequireOrCreateItsParents",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestMixedAbsentTargetDoesNotRequireOrCreateItsParents$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.repository-transaction.desired-absence-recovery-and-interruption",
+      "witnessId": "proofkit.repository-transaction.desired-absence-recovery-and-interruption-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/delete_recovery_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestDeletionProcessInterruptionAtMutationBoundaries",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestDeletionProcessInterruptionAtMutationBoundaries$'"
+        },
+        {
+          "selector": "TestDeletionRecoversEveryMixedPrefixAndHistoricalResult",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestDeletionRecoversEveryMixedPrefixAndHistoricalResult$'"
+        },
+        {
+          "selector": "TestDeletionRejectsMissingCorruptAndUnexpectedStagedObjects",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestDeletionRejectsMissingCorruptAndUnexpectedStagedObjects$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.repository-transaction.current-state-locked-replay",
+      "witnessId": "proofkit.repository-transaction.current-state-locked-replay-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/replay_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReplayAppliedRequiresCurrentNativePlanAndExactRetainedResult",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestReplayAppliedRequiresCurrentNativePlanAndExactRetainedResult$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.repository-transaction.predecessor-v1-compatibility",
+      "witnessId": "proofkit.repository-transaction.predecessor-v1-compatibility-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/v1_compatibility_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPresentOnlyPlansPreserveIndependentPredecessorBytes",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPresentOnlyPlansPreserveIndependentPredecessorBytes$'"
+        },
+        {
+          "selector": "TestRecoverIndependentPredecessorJournalAndStagedBytes",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestRecoverIndependentPredecessorJournalAndStagedBytes$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.repository-transaction.bound-terminal-identity",
+      "witnessId": "proofkit.repository-transaction.bound-terminal-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/terminal_identity_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBoundTerminalRecoveryCompletesInterruptedArchive",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestBoundTerminalRecoveryCompletesInterruptedArchive$'"
+        },
+        {
+          "selector": "TestLegacyTerminalRecoveryPreservesHistoricalIdentity",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestLegacyTerminalRecoveryPreservesHistoricalIdentity$'"
+        },
+        {
+          "selector": "TestTerminalReceiptDesiredIdentityAdmission",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestTerminalReceiptDesiredIdentityAdmission$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-recover-busy-stream",
+      "witnessId": "proofkit.agent-workflow.integration-recover-busy-stream-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_integration_lifecycle_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationRecoverBusyCLIIsClassified",
+          "command": "go test ./internal/app -run '^TestIntegrationRecoverBusyCLIIsClassified$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
+      "scenarioId": "proofkit.agent-workflow.integration-update-effect-oracle",
+      "witnessId": "proofkit.agent-workflow.integration-update-effect-oracle-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/integration_lifecycle_mutation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledLifecycleWitnessRejectsUpdateWithoutEffects",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestInstalledLifecycleWitnessRejectsUpdateWithoutEffects$'"
         }
       ],
       "commandIds": [

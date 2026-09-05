@@ -30,9 +30,12 @@
     {
       "familyId": "agent-integrations",
       "label": "Agent integrations",
-      "purpose": "Generate portable bootstrap source and check generated-byte freshness without installation or host activation.",
+      "purpose": "Generate and check portable bootstrap source, then explicitly plan, apply or recover its managed file lifecycle without claiming native host activation.",
       "commands": [
+        "integration-apply",
         "integration-check",
+        "integration-plan",
+        "integration-recover",
         "integration-source"
       ]
     },

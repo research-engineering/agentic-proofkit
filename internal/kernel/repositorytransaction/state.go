@@ -1,12 +1,22 @@
 package repositorytransaction
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
 	"slices"
 	"sort"
 )
+
+var errTargetSnapshotChanged = errors.New("repository transaction target snapshot changed")
+
+func recoveryObservationFailure(transactionID, failureClass string, err error) (Result, error) {
+	if !errors.Is(err, errTargetSnapshotChanged) {
+		return Result{}, err
+	}
+	return Result{FailureClass: failureClass, State: StateRecoveryRequired, TransactionID: transactionID}, nil
+}
 
 func resultWithObservedPrefix(root *os.Root, plan Plan, result Result) Result {
 	prefix, err := classifyPrefix(root, plan)
@@ -28,27 +38,26 @@ func classifyPrefix(root *os.Root, plan Plan) (int, error) {
 	prefix := 0
 	seenBefore := false
 	for _, operation := range plan.Operations {
-		if operation.Action == ActionUnchanged {
-			observed, _, err := inspectTarget(root, operation.Path, MaximumFileBytes)
-			if err != nil || !equalSnapshot(observed, operation.After) {
-				return 0, fmt.Errorf("repository transaction unchanged target state changed")
-			}
-			continue
-		}
 		observed, _, err := inspectTarget(root, operation.Path, MaximumFileBytes)
 		if err != nil {
 			return 0, err
 		}
+		if operation.Action == ActionUnchanged {
+			if !equalSnapshot(observed, operation.After) {
+				return 0, errTargetSnapshotChanged
+			}
+			continue
+		}
 		switch {
 		case equalSnapshot(observed, operation.After):
 			if seenBefore {
-				return 0, fmt.Errorf("repository transaction target vector is not a legal prefix")
+				return 0, errTargetSnapshotChanged
 			}
 			prefix++
 		case equalSnapshot(observed, operation.Before):
 			seenBefore = true
 		default:
-			return 0, fmt.Errorf("repository transaction target state is unknown")
+			return 0, errTargetSnapshotChanged
 		}
 	}
 	return prefix, nil
@@ -56,8 +65,11 @@ func classifyPrefix(root *os.Root, plan Plan) (int, error) {
 
 func verifyTargetVector(root *os.Root, plan Plan, expectedPrefix int) error {
 	prefix, err := classifyPrefix(root, plan)
-	if err != nil || prefix != expectedPrefix {
-		return fmt.Errorf("repository transaction target snapshot changed")
+	if err != nil {
+		return err
+	}
+	if prefix != expectedPrefix {
+		return errTargetSnapshotChanged
 	}
 	return nil
 }
@@ -78,7 +90,7 @@ func validateExecutablePlan(plan Plan, rootID string) error {
 		if operation.After.Mode != operation.After.Mode.Perm() || operation.Before.Mode != operation.Before.Mode.Perm() {
 			return fmt.Errorf("repository transaction plan mode contains non-permission bits")
 		}
-		if !contentMatches(operation.afterContent, operation.After) {
+		if operation.After.Exists && !contentMatches(operation.afterContent, operation.After) || !operation.After.Exists && len(operation.afterContent) != 0 {
 			return fmt.Errorf("repository transaction plan after content is invalid")
 		}
 		if operation.Before.Exists && !contentMatches(operation.beforeContent, operation.Before) {
@@ -108,8 +120,10 @@ func verifyCreatedDirectories(root *os.Root, plan Plan) error {
 		if err != nil {
 			return err
 		}
-		for _, directory := range missing {
-			directorySet[directory] = struct{}{}
+		if operation.After.Exists {
+			for _, directory := range missing {
+				directorySet[directory] = struct{}{}
+			}
 		}
 	}
 	want := make([]string, 0, len(directorySet))

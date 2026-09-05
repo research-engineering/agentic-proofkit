@@ -90,6 +90,15 @@ jobs:
       - name: Run all Go tests
         run: npm run go:test
 
+      - name: Verify deletion across filesystem boundaries
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d "${RUNNER_TEMP}/proofkit-cross-filesystem.XXXXXX")"
+          mkdir "${root}/other"
+          sudo mount -t tmpfs -o "size=16m,mode=0700,uid=$(id -u),gid=$(id -g)" tmpfs "${root}/other"
+          trap 'sudo umount "${root}/other" && rmdir "${root}/other" "${root}"' EXIT
+          PROOFKIT_CROSS_FILESYSTEM_ROOT="${root}" go test ./internal/kernel/repositorytransaction -run '^TestDeletionRejectsDifferentFilesystemBeforeControlMutation$' -count=1 -v
+
       - name: Run Go vet
         run: npm run go:vet
 

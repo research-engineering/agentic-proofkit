@@ -190,6 +190,7 @@ func RenderMarkdown(record Record, npmPackage, pythonPackage string, pypiPublish
 	lines = append(lines,
 		"", "GitHub Release assets and checksums are archive and provenance evidence, not package-manager dependency authority.",
 		"", "## Rollback", "",
+		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
 		fmt.Sprintf("- Pin npm consumers to the previous admitted version %s with `npm install --save-dev --save-exact %s@%s`.", record.PreviousVersion, npmPackage, record.PreviousVersion),
 	)
 	if pypiPublished {

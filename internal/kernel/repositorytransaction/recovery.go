@@ -84,6 +84,9 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if action != RecoveryRollback {
 			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
 		}
+		if err := verifyTargetVector(root, preparingPlan, 0); err != nil {
+			return recoveryObservationFailure(preparingPlan.TransactionID, "preparing_state_mismatch", err)
+		}
 		if err := publishPreparingJournal(root); err != nil {
 			return Result{FailureClass: "journal_publication_failed", State: StateRecoveryRequired, TransactionID: preparingPlan.TransactionID}, nil
 		}
@@ -118,8 +121,11 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if err != nil {
 			return Result{FailureClass: "invalid_staged_objects", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
-		if action != RecoveryResume || verifyTargetVector(root, plan, changedCount(plan)) != nil {
+		if action != RecoveryResume {
 			return Result{FailureClass: "committed_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
+		if err := verifyTargetVector(root, plan, changedCount(plan)); err != nil {
+			return recoveryObservationFailure(transactionID, "committed_state_mismatch", err)
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
@@ -130,8 +136,11 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		return runtime.cleanupRecovered(root, plan, StateApplied, action)
 	}
 	if rolledBack {
-		if action != RecoveryRollback || verifyTargetVector(root, plan, 0) != nil {
+		if action != RecoveryRollback {
 			return Result{FailureClass: "rolled_back_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		}
+		if err := verifyTargetVector(root, plan, 0); err != nil {
+			return recoveryObservationFailure(transactionID, "rolled_back_state_mismatch", err)
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
@@ -152,8 +161,8 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 		if action != RecoveryRollback {
 			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
 		}
-		if verifyTargetVector(root, plan, 0) != nil {
-			return Result{FailureClass: "preparing_state_mismatch", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		if err := verifyTargetVector(root, plan, 0); err != nil {
+			return recoveryObservationFailure(transactionID, "preparing_state_mismatch", err)
 		}
 		if err := ctx.Err(); err != nil {
 			return Result{}, fmt.Errorf("repository transaction recovery cancelled: %w", err)
@@ -178,7 +187,7 @@ func (runtime engine) recover(ctx context.Context, rootPath, transactionID, acti
 	}
 	prefix, err := classifyPrefix(root, plan)
 	if err != nil {
-		return Result{FailureClass: "ambiguous_target_state", State: StateRecoveryRequired, TransactionID: transactionID}, nil
+		return recoveryObservationFailure(transactionID, "ambiguous_target_state", err)
 	}
 	if action == RecoveryResume {
 		if err := ctx.Err(); err != nil {
@@ -227,12 +236,23 @@ func (runtime engine) cleanupRecovered(root *os.Root, plan Plan, state, action s
 		return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: "temporary_cleanup_failed", RecoveredBy: action, State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
 	}
 	terminal := Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, RecoveredBy: action, State: state, TransactionID: plan.TransactionID}
+	if exists, err := pathExists(root, activeDirectory+"/"+terminalReceiptName); err != nil {
+		return Result{FailureClass: "invalid_terminal_receipt", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	} else if exists {
+		receipt, err := loadTerminalReceipt(root, activeDirectory)
+		expected, relationErr := terminalReceiptFromResult(plan, receipt.result())
+		if err != nil || relationErr != nil || receipt.State != state || !terminalReceiptMatchesPlan(receipt, expected) {
+			return Result{FailureClass: "invalid_terminal_receipt", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+		}
+		terminal = receipt.result()
+	}
 	if err := runtime.archiveAndCleanupTerminal(root, plan, terminal); err != nil {
 		if errors.Is(err, errCleanupDurabilityUnknown) {
 			return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: state + "_cleanup_durability_unknown", RecoveredBy: action, State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
 		}
 		return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: "cleanup_failed", RecoveredBy: action, State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
+	terminal.RecoveredBy = action
 	return terminal, nil
 }
 

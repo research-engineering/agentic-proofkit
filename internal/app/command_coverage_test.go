@@ -522,7 +522,7 @@ func TestNoInputCommandDescriptorsHaveRuntimeSmoke(t *testing.T) {
 func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]string, bool) {
 	t.Helper()
 	switch descriptor.name {
-	case "adopt-materialize-recover":
+	case "adopt-materialize-recover", "integration-recover":
 		return append(cloneStrings(descriptor.routeTokens), "--help"), false
 	case "adopt-plan":
 		return append(cloneStrings(descriptor.routeTokens), "--mode", "fresh", "--repo-root", t.TempDir()), true
@@ -530,6 +530,12 @@ func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]stri
 		return []string{"help"}, false
 	case "integration-source":
 		return []string{"integration", "source", "--tool", "codex"}, true
+	case "integration-plan":
+		return integrationLifecyclePlanArgs(t.TempDir(), "codex", "install"), true
+	case "integration-apply":
+		root := t.TempDir()
+		plan := integrationLifecycleCLI(t, integrationLifecyclePlanArgs(root, "codex", "install"), 0)
+		return integrationLifecycleApplyArgs(root, "codex", "install", plan), true
 	case "integration-check":
 		root := t.TempDir()
 		document := integrationDocument(t, "codex")

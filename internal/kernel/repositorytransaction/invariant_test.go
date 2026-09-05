@@ -132,7 +132,7 @@ func TestDirectoryOwnershipRejectsPortableRouteAlias(t *testing.T) {
 		t.Fatal(err)
 	}
 	result, err := Recover(context.Background(), rootPath, plan.TransactionID, RecoveryRollback)
-	if err != nil || result.State != StateRecoveryRequired || result.FailureClass != "ambiguous_target_state" {
+	if err == nil || result != (Result{}) || !strings.Contains(err.Error(), "portable filesystem identity") {
 		t.Fatalf("Recover() result=%#v error=%v", result, err)
 	}
 	if info, err := os.Stat(filepath.Join(rootPath, "New")); err != nil || !info.IsDir() {

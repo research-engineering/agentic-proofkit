@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "cc1fc5a55e00ea13e92d82edc3a3e3115cd9e69a00d08618fe2b1cefd25216d2"
+	cliContractPublicABISHA256               = "527ffbc7e261d4ac0f91cc81db0a390ec5aa2c4f18593671bbc1f92f3ed83c70"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1526,6 +1526,9 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"integration-check":              "agentic-proofkit integration check [--format <json|text>] --repo-root <path> --tool <claude|codex>",
+		"integration-apply":              "agentic-proofkit integration apply [--color <auto|never>] --expect-desired-state <sha256-ref> --expect-transaction <sha256-ref> [--format <json|text>] --operation <install|remove|update> --repo-root <path> --tool <claude|codex>",
+		"integration-plan":               "agentic-proofkit integration plan [--color <auto|never>] [--format <json|text>] --operation <install|remove|update> --repo-root <path> --tool <claude|codex>",
+		"integration-recover":            "agentic-proofkit integration recover --action <resume|rollback> [--color <auto|never>] [--format <json|text>] --repo-root <path> --transaction <sha256-ref>",
 		"integration-source":             "agentic-proofkit integration source [--format <json|text>] --tool <claude|codex>",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
 		"next":                           "agentic-proofkit next [--color <auto|never>] [--format <json|text>] --repo-root <path>",

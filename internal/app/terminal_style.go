@@ -37,6 +37,35 @@ func newTerminalText(tokens ...terminalTextToken) terminalText {
 	return terminalText{tokens: append([]terminalTextToken(nil), tokens...)}
 }
 
+func labeledTerminalText(plain string) terminalText {
+	lines := strings.SplitAfter(plain, "\n")
+	tokens := make([]terminalTextToken, 0, len(lines)*2)
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+		content := strings.TrimSuffix(line, "\n")
+		newline := strings.TrimPrefix(line, content)
+		if strings.HasPrefix(content, "- ") {
+			tokens = append(tokens, terminalTextToken{kind: terminalTokenPlain, text: line})
+			continue
+		}
+		separator := strings.IndexByte(content, ':')
+		if separator < 0 {
+			tokens = append(tokens,
+				terminalTextToken{kind: terminalTokenLabel, text: content},
+				terminalTextToken{kind: terminalTokenPlain, text: newline},
+			)
+			continue
+		}
+		tokens = append(tokens,
+			terminalTextToken{kind: terminalTokenLabel, text: content[:separator]},
+			terminalTextToken{kind: terminalTokenPlain, text: content[separator:] + newline},
+		)
+	}
+	return newTerminalText(tokens...)
+}
+
 func renderTerminalText(value terminalText, colorMode string, capabilities PresentationCapabilities) (string, error) {
 	useANSI := colorMode == "auto" && capabilities.StdoutIsTTY && !capabilities.NoColorPresent
 	if colorMode != "never" && colorMode != "auto" {

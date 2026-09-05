@@ -35,6 +35,9 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		apply            func(workflowsmoke.Result) workflowsmoke.Result
 	}{
 		{name: "integration source identity", match: "integration source --tool codex --format json", apply: replaceStdout(`{"kind":"wrong"}`)},
+		{name: "managed plan missing transaction", match: "integration plan --tool codex --operation install --repo-root ", matchPrefix: true, apply: replaceStdout(`{"kind":"proofkit.integration-plan.v1","state":"ready","transaction":null}`)},
+		{name: "managed apply identity", match: "integration apply --tool codex --operation install --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"kind": "proofkit.integration-receipt.v1"`, `"kind": "wrong"`)},
+		{name: "managed recovery tool authority", match: "integration recover --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"tool": null`, `"tool": "codex"`)},
 		{name: "integration source text suffix", match: "integration source --tool claude --format text", apply: appendStdout("surplus\n")},
 		{name: "integration missing promoted", match: "integration check --tool codex --repo-root ", matchPrefix: true, apply: func(result workflowsmoke.Result) workflowsmoke.Result {
 			result.ExitCode = 0

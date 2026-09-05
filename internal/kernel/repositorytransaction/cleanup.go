@@ -65,7 +65,7 @@ func (runtime engine) compactTerminalTombstone(root *os.Root, tombstone string, 
 	}
 	if plan != nil {
 		want, relationErr := terminalReceiptFromResult(*plan, receipt.result())
-		if relationErr != nil || want != receipt {
+		if relationErr != nil || !terminalReceiptMatchesPlan(receipt, want) {
 			return fmt.Errorf("repository transaction terminal receipt does not match its plan")
 		}
 	}

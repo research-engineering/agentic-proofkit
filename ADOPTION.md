@@ -217,23 +217,46 @@ Resolve the approved installed launcher for each session. An absent or
 ambiguous binding needs an owner decision, not an install, network fallback,
 package-manager default, or persisted machine-local executable path.
 
-For one manual export, first inspect the explicit repository root and every
-component of the selected path. Stop on symlinks, aliases, unknown ownership,
-local edits, or an existing target; do not overwrite it. The example below
-assumes the owner has approved the npm launcher, inspected and prepared the
-ordinary parent directories, and ensured no concurrent writer can replace
-them. Replace the example absolute root with that inspected root. The shell,
-not Proofkit, creates the file; noclobber protects an existing final file but
-does not establish race-free parent traversal or transactional installation.
+For managed installation, select the tool and root explicitly, inspect the
+plan, then apply its exact transaction and desired-state identities. The
+following example assumes a repository-approved, already installed npm
+launcher; other approved carriers expose the same logical routes. Replace the
+root and identity placeholders with the reviewed plan's values.
 
 ```bash
-(set -o noclobber; npm exec --offline -- agentic-proofkit integration source --tool codex --format text > /absolute/inspected/repository/.agents/skills/agentic-proofkit/SKILL.md)
+npm exec --offline -- agentic-proofkit integration plan --tool codex --operation install --repo-root /absolute/inspected/repository --format text
+npm exec --offline -- agentic-proofkit integration apply --tool codex --operation install --repo-root /absolute/inspected/repository --expect-transaction <reviewed-transaction-sha256-ref> --expect-desired-state <reviewed-desired-state-sha256-ref>
 npm exec --offline -- agentic-proofkit integration check --tool codex --repo-root /absolute/inspected/repository
 ```
 
-Check a failed export before treating its output as usable: shell redirection
-may leave an empty or partial new file if generation or transport fails.
-Resolve such a file manually under repository ownership; check never repairs it.
+`REQ-PROOFKIT-WORKFLOW-019` owns managed file lifecycle. Use `--operation
+update` or `--operation remove` with a fresh reviewed plan for those operations.
+The fixed bootstrap and `proofkit/integrations/<tool>.v1.json` baseline share
+one native transaction. Local byte or mode edits are conflicts, not overwrite
+permission. An exact current manually exported bootstrap can be enrolled by
+install; an unknown or stale unbaselined file requires an owner decision.
+The baseline records exact cooperative before-state, not authenticated origin.
+Removal deletes selected managed files only, leaving their directories and
+adjacent instructions. It does not archive or replace instructions with an
+empty file. Baseline-only removal can clean a valid orphan baseline.
+
+After interruption, use `integration recover --repo-root <root> --transaction
+<pending-sha256-ref> --action <resume|rollback>`. It uses the existing native
+journal, not the current bootstrap source. A completed recovery is historical
+evidence; inspect current files separately. Desired-absence journals and new
+identity-bound terminal receipts use schema v2 and require this or a later
+supporting binary. Finishing recovery alone does not establish downgrade
+compatibility; no automatic downgrade or control-state deletion is supported.
+Present-only v1 journals and historical v1 receipts remain readable. A legacy
+receipt does not bind its missing desired identity: replan before applying.
+Repeated apply checks that the retained applied transaction binds the exact
+current desired state under one native lock; pending work blocks replay.
+
+Plan and apply default to JSON. Ready plans and passed receipts exit 0;
+classified conflicts, recovery, cleanup or durability outcomes exit 1 with a
+report and empty stderr. Invocation and operational failures use stderr.
+`--format text --color auto` colors labels only on a capable TTY without
+`NO_COLOR`; the default is uncolored. Check never repairs files.
 The checker admits flags before I/O and reads only the selected fixed path
 through an application-write-free confined lease with bounded reobservation.
 Exit 0 and `current` mean exact generated-byte equality; exit 2 reports
@@ -249,8 +272,7 @@ identity when consumed projections remain unchanged. Shared native source
 digests may conservatively invalidate freshness. This is materialization
 freshness, not proof of every transitive runtime behavior.
 
-Phase5B managed install/update/remove remains open. Manual export is not an
-installer, rollback protocol, or proof of host activation. Installed npm/Python
+Managed file lifecycle is not proof of host activation. Installed npm/Python
 integration proof requires actual carrier execution; source-only tests do not
 discharge it. Native-host file discovery, body loading, and approved-launcher calls
 are separate observations requiring isolated sessions and absent/altered-file

@@ -29,7 +29,7 @@ func AdmitPlanOutput(raw any) (Plan, error) {
 	if err := admit.KnownKeys(record, []string{"createdDirectories", "desiredStateId", "nonClaims", "operations", "rootId", "schemaVersion", "transactionId", "transactionKind"}, "repository transaction plan"); err != nil {
 		return Plan{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) || record["transactionKind"] != "proofkit.repository-write-plan" {
+	if (!admit.JSONNumberEquals(record["schemaVersion"], 1) && !admit.JSONNumberEquals(record["schemaVersion"], 2)) || record["transactionKind"] != "proofkit.repository-write-plan" {
 		return Plan{}, fmt.Errorf("repository transaction plan identity is invalid")
 	}
 	nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "repository transaction plan nonClaims", false)

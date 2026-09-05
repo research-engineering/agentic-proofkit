@@ -56,8 +56,10 @@ func stageObjects(root *os.Root, plan Plan) error {
 		if operation.Action == ActionUnchanged {
 			continue
 		}
-		if err := writeOwnedFile(root, afterObjectPath(index), operation.afterContent, 0o600); err != nil {
-			return err
+		if operation.After.Exists {
+			if err := writeOwnedFile(root, afterObjectPath(index), operation.afterContent, 0o600); err != nil {
+				return err
+			}
 		}
 		if operation.Before.Exists {
 			if err := writeOwnedFile(root, beforeObjectPath(index), operation.beforeContent, 0o600); err != nil {
@@ -94,11 +96,13 @@ func loadObjects(root *os.Root, plan Plan) (Plan, error) {
 		if operation.Action == ActionUnchanged {
 			continue
 		}
-		after, err := readOwnedFile(root, afterObjectPath(index), MaximumFileBytes)
-		if err != nil || !contentMatches(after, operation.After) {
-			return Plan{}, fmt.Errorf("repository transaction after object is invalid")
+		if operation.After.Exists {
+			after, err := readOwnedFile(root, afterObjectPath(index), MaximumFileBytes)
+			if err != nil || !contentMatches(after, operation.After) {
+				return Plan{}, fmt.Errorf("repository transaction after object is invalid")
+			}
+			operation.afterContent = after
 		}
-		operation.afterContent = after
 		if operation.Before.Exists {
 			before, err := readOwnedFile(root, beforeObjectPath(index), MaximumFileBytes)
 			if err != nil || !contentMatches(before, operation.Before) {

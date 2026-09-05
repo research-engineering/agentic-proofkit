@@ -20,6 +20,7 @@ const (
 const (
 	ActionCreate    = "create"
 	ActionReplace   = "replace"
+	ActionDelete    = "delete"
 	ActionUnchanged = "unchanged"
 )
 
@@ -45,6 +46,7 @@ var boundaryNonClaims = []string{
 }
 
 type Target struct {
+	Absent  bool
 	Content []byte
 	Mode    fs.FileMode
 	Path    string
@@ -122,10 +124,19 @@ func (plan Plan) JSONValue() map[string]any {
 		"nonClaims":          admit.StringSliceToAny(boundaryNonClaims),
 		"operations":         operations,
 		"rootId":             plan.RootID,
-		"schemaVersion":      json.Number("1"),
+		"schemaVersion":      plan.schemaVersion(),
 		"transactionId":      plan.TransactionID,
 		"transactionKind":    "proofkit.repository-write-plan",
 	}
+}
+
+func (plan Plan) schemaVersion() json.Number {
+	for _, operation := range plan.Operations {
+		if !operation.After.Exists {
+			return json.Number("2")
+		}
+	}
+	return json.Number("1")
 }
 
 func (result Result) JSONValue() map[string]any {

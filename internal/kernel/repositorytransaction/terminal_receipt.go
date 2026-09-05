@@ -19,16 +19,17 @@ const (
 )
 
 type terminalReceipt struct {
-	AppliedCount  int
-	FailureClass  string
-	RecoveredBy   string
-	State         string
-	TransactionID string
+	AppliedCount   int
+	DesiredStateID string
+	FailureClass   string
+	RecoveredBy    string
+	State          string
+	TransactionID  string
 }
 
 // ReadTerminalResult returns the retained terminal result for one exact
-// transaction without consuming it. Callers use this to distinguish a lost
-// acknowledgement from an unrelated already-satisfied desired state.
+// transaction without consuming it. Historical inspection does not establish
+// current target state or authorize acknowledgement replay; use ReplayApplied.
 func ReadTerminalResult(ctx context.Context, rootPath, transactionID string) (Result, error) {
 	admittedID, err := admit.SHA256Ref(transactionID, "repository transaction terminal transactionId")
 	if err != nil {
@@ -53,24 +54,32 @@ func ReadTerminalResult(ctx context.Context, rootPath, transactionID string) (Re
 	if err := ctx.Err(); err != nil {
 		return Result{}, fmt.Errorf("read repository transaction terminal result cancelled: %w", err)
 	}
+	receipt, err := readRetainedTerminalReceipt(root, admittedID)
+	return receipt.result(), err
+}
+
+func readRetainedTerminalReceipt(root *os.Root, admittedID string) (terminalReceipt, error) {
 	entries, err := controlEntries(root)
 	if err != nil {
-		return Result{}, err
+		return terminalReceipt{}, err
 	}
 	terminal, found, err := findTerminalControlEntry(entries)
-	if err != nil || !found || terminal.TransactionID != admittedID {
-		return Result{}, fmt.Errorf("repository transaction terminal identity does not match retained state")
+	if err != nil {
+		return terminalReceipt{}, err
+	}
+	if !found || terminal.TransactionID != admittedID {
+		return terminalReceipt{}, ErrReplayMismatch
 	}
 	path := ControlDirectory + "/" + terminal.Entry.Name()
 	children, err := transactionEntries(root, path)
 	if err != nil || len(children) != 1 || children[0].Name() != terminalReceiptName {
-		return Result{}, fmt.Errorf("repository transaction terminal result is invalid")
+		return terminalReceipt{}, fmt.Errorf("repository transaction terminal result is invalid")
 	}
 	receipt, err := loadTerminalReceipt(root, path)
 	if err != nil || receipt.TransactionID != admittedID || receipt.State != terminal.State {
-		return Result{}, fmt.Errorf("repository transaction terminal result is invalid")
+		return terminalReceipt{}, fmt.Errorf("repository transaction terminal result is invalid")
 	}
-	return receipt.result(), nil
+	return receipt, nil
 }
 
 func (receipt terminalReceipt) result() Result {
@@ -94,7 +103,7 @@ func ensureTerminalReceipt(root *os.Root, plan Plan, result Result) error {
 		return err
 	} else if exists {
 		got, err := loadTerminalReceipt(root, activeDirectory)
-		if err != nil || got != want {
+		if err != nil || !terminalReceiptMatchesPlan(got, want) {
 			return fmt.Errorf("repository transaction terminal receipt contradicts terminal state")
 		}
 		return discardOwnedTemporaryFile(root, activeDirectory+"/"+terminalReceiptTempName)
@@ -114,11 +123,12 @@ func terminalReceiptFromResult(plan Plan, result Result) (terminalReceipt, error
 		return terminalReceipt{}, fmt.Errorf("repository transaction terminal result does not match its plan")
 	}
 	return terminalReceipt{
-		AppliedCount:  result.AppliedCount,
-		FailureClass:  result.FailureClass,
-		RecoveredBy:   result.RecoveredBy,
-		State:         result.State,
-		TransactionID: result.TransactionID,
+		AppliedCount:   result.AppliedCount,
+		DesiredStateID: plan.DesiredStateID,
+		FailureClass:   result.FailureClass,
+		RecoveredBy:    result.RecoveredBy,
+		State:          result.State,
+		TransactionID:  result.TransactionID,
 	}, nil
 }
 
@@ -147,11 +157,24 @@ func admitTerminalReceipt(raw any) (terminalReceipt, error) {
 	if !ok {
 		return terminalReceipt{}, fmt.Errorf("repository transaction terminal receipt must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"appliedCount", "failureClass", "recoveredBy", "schemaVersion", "state", "terminalKind", "transactionId"}, "repository transaction terminal receipt"); err != nil {
+	bound := admit.JSONNumberEquals(record["schemaVersion"], 2)
+	keys := []string{"appliedCount", "failureClass", "recoveredBy", "schemaVersion", "state", "terminalKind", "transactionId"}
+	if bound {
+		keys = append(keys, "desiredStateId")
+	}
+	if err := admit.KnownKeys(record, keys, "repository transaction terminal receipt"); err != nil {
 		return terminalReceipt{}, err
 	}
-	if record["terminalKind"] != "proofkit.repository-terminal-receipt" || !admit.JSONNumberEquals(record["schemaVersion"], 1) {
+	if record["terminalKind"] != "proofkit.repository-terminal-receipt" || !bound && !admit.JSONNumberEquals(record["schemaVersion"], 1) {
 		return terminalReceipt{}, fmt.Errorf("repository transaction terminal receipt identity is invalid")
+	}
+	desiredStateID := ""
+	if bound {
+		var err error
+		desiredStateID, err = admit.SHA256Ref(record["desiredStateId"], "repository transaction terminal receipt desiredStateId")
+		if err != nil {
+			return terminalReceipt{}, err
+		}
 	}
 	appliedCount, err := admit.CanonicalInteger(record["appliedCount"], "repository transaction terminal receipt appliedCount")
 	if err != nil || appliedCount < 0 || appliedCount > MaximumOperations {
@@ -193,11 +216,11 @@ func admitTerminalReceipt(raw any) (terminalReceipt, error) {
 	if err := validateResultRelation(result); err != nil {
 		return terminalReceipt{}, fmt.Errorf("repository transaction terminal receipt result is invalid")
 	}
-	return terminalReceipt{AppliedCount: int(appliedCount), FailureClass: failureClass, RecoveredBy: recoveredBy, State: state, TransactionID: transactionID}, nil
+	return terminalReceipt{AppliedCount: int(appliedCount), DesiredStateID: desiredStateID, FailureClass: failureClass, RecoveredBy: recoveredBy, State: state, TransactionID: transactionID}, nil
 }
 
 func terminalReceiptValue(receipt terminalReceipt) map[string]any {
-	return map[string]any{
+	value := map[string]any{
 		"appliedCount":  json.Number(intString(receipt.AppliedCount)),
 		"failureClass":  nullableText(receipt.FailureClass),
 		"recoveredBy":   nullableText(receipt.RecoveredBy),
@@ -206,4 +229,18 @@ func terminalReceiptValue(receipt terminalReceipt) map[string]any {
 		"terminalKind":  "proofkit.repository-terminal-receipt",
 		"transactionId": receipt.TransactionID,
 	}
+	if receipt.DesiredStateID != "" {
+		value["schemaVersion"] = json.Number("2")
+		value["desiredStateId"] = receipt.DesiredStateID
+	}
+	return value
+}
+
+// Legacy receipts retain their historical fields during recovery; only a bound
+// generation-2 receipt can subsequently establish the desired-state relation.
+func terminalReceiptMatchesPlan(receipt, expected terminalReceipt) bool {
+	if receipt.DesiredStateID == "" {
+		expected.DesiredStateID = ""
+	}
+	return receipt == expected
 }

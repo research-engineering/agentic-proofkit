@@ -1,0 +1,199 @@
+{
+  "sourceCommit": "4401e966746b4170d904cfaf23e02dd0514dd536",
+  "referenceRootId": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "cases": [
+    {
+      "name": "create-empty",
+      "initial": null,
+      "targets": [
+        {
+          "path": "a",
+          "content": "",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:306937591b1b170bed7de45796481a38664ffdff5466b200fe4020d3a888ddae\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"create\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": false,\n        \"mode\": \"0000\",\n        \"sha256\": null\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:9ae4c69258cad6218829999aa4393988145f6a54adcfa842c0f31c80e469c831\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:306937591b1b170bed7de45796481a38664ffdff5466b200fe4020d3a888ddae\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"create\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": false,\n        \"mode\": \"0000\",\n        \"sha256\": null\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:9ae4c69258cad6218829999aa4393988145f6a54adcfa842c0f31c80e469c831\"\n}\n"
+    },
+    {
+      "name": "create-text",
+      "initial": null,
+      "targets": [
+        {
+          "path": "nested/a",
+          "content": "new\n",
+          "mode": 432
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [\n    \"nested\"\n  ],\n  \"desiredStateId\": \"sha256:0e2165c73d2e97800f3a9c806b16e63a247550d7f02646cf8e7f4b8a6058ebbf\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"create\",\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0660\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": false,\n        \"mode\": \"0000\",\n        \"sha256\": null\n      },\n      \"path\": \"nested/a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:9370392d9c6438be58b8337ed540f4b5a3caa5f287f1d6093dd1296d45cdce94\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0660\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"path\": \"nested/a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [\n    \"nested\"\n  ],\n  \"desiredStateId\": \"sha256:0e2165c73d2e97800f3a9c806b16e63a247550d7f02646cf8e7f4b8a6058ebbf\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"create\",\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0660\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": false,\n        \"mode\": \"0000\",\n        \"sha256\": null\n      },\n      \"path\": \"nested/a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:9370392d9c6438be58b8337ed540f4b5a3caa5f287f1d6093dd1296d45cdce94\"\n}\n"
+    },
+    {
+      "name": "replace-empty",
+      "initial": [
+        {
+          "path": "a",
+          "content": "old\n",
+          "mode": 420
+        }
+      ],
+      "targets": [
+        {
+          "path": "a",
+          "content": "",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:306937591b1b170bed7de45796481a38664ffdff5466b200fe4020d3a888ddae\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:01d09d19c2139a46aebfb577780d123d7396e97201bc7ead210a2ebff8239dee\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:44368e67f4dcff5ea06591b45f8f7a0474c2efa30232445f218e1863592b751c\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:306937591b1b170bed7de45796481a38664ffdff5466b200fe4020d3a888ddae\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:01d09d19c2139a46aebfb577780d123d7396e97201bc7ead210a2ebff8239dee\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:44368e67f4dcff5ea06591b45f8f7a0474c2efa30232445f218e1863592b751c\"\n}\n"
+    },
+    {
+      "name": "replace-text",
+      "initial": [
+        {
+          "path": "a",
+          "content": "",
+          "mode": 384
+        }
+      ],
+      "targets": [
+        {
+          "path": "a",
+          "content": "new\n",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:1c25f35d42e166ee4f0ee0f74fbad463f7d269036ab4ad13e17038d873a26ccc\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:25b3ff3803d822c645503cce7ce58826a0826098f9def39ef3d52501a8bdec7d\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"path\": \"a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:1c25f35d42e166ee4f0ee0f74fbad463f7d269036ab4ad13e17038d873a26ccc\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:25b3ff3803d822c645503cce7ce58826a0826098f9def39ef3d52501a8bdec7d\"\n}\n"
+    },
+    {
+      "name": "mode-only",
+      "initial": [
+        {
+          "path": "a",
+          "content": "same\n",
+          "mode": 384
+        }
+      ],
+      "targets": [
+        {
+          "path": "a",
+          "content": "same\n",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:37cbbdd80eafc28781b0a12bef71002a0f829a1295234f91f5b45c55a44a689c\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"before\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:8152e5b62c731b06044ec2c1ddb23c9216583c7417c5dba454ddba6d8336eba7\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:37cbbdd80eafc28781b0a12bef71002a0f829a1295234f91f5b45c55a44a689c\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"before\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:8152e5b62c731b06044ec2c1ddb23c9216583c7417c5dba454ddba6d8336eba7\"\n}\n"
+    },
+    {
+      "name": "unchanged-empty",
+      "initial": [
+        {
+          "path": "a",
+          "content": "",
+          "mode": 420
+        }
+      ],
+      "targets": [
+        {
+          "path": "a",
+          "content": "",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:306937591b1b170bed7de45796481a38664ffdff5466b200fe4020d3a888ddae\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"unchanged\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:2ea429ae5ce3a82a958bfba6387f070d83ff7479d4a1a7fa7f3d9205cc3daf87\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:306937591b1b170bed7de45796481a38664ffdff5466b200fe4020d3a888ddae\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"unchanged\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:2ea429ae5ce3a82a958bfba6387f070d83ff7479d4a1a7fa7f3d9205cc3daf87\"\n}\n"
+    },
+    {
+      "name": "unchanged-text",
+      "initial": [
+        {
+          "path": "a",
+          "content": "same\n",
+          "mode": 420
+        }
+      ],
+      "targets": [
+        {
+          "path": "a",
+          "content": "same\n",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:37cbbdd80eafc28781b0a12bef71002a0f829a1295234f91f5b45c55a44a689c\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"unchanged\",\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"before\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:3908cbffca16d257f4ea11826c36c2fc3d5ec0a594d771382efcbbfb70ea7950\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:37cbbdd80eafc28781b0a12bef71002a0f829a1295234f91f5b45c55a44a689c\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"unchanged\",\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"before\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:3908cbffca16d257f4ea11826c36c2fc3d5ec0a594d771382efcbbfb70ea7950\"\n}\n"
+    },
+    {
+      "name": "mixed",
+      "initial": [
+        {
+          "path": "a",
+          "content": "same\n",
+          "mode": 420
+        },
+        {
+          "path": "old/b",
+          "content": "old\n",
+          "mode": 384
+        }
+      ],
+      "targets": [
+        {
+          "path": "old/b",
+          "content": "new\n",
+          "mode": 420
+        },
+        {
+          "path": "created/deep/c",
+          "content": "",
+          "mode": 420
+        },
+        {
+          "path": "a",
+          "content": "same\n",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [\n    \"created\",\n    \"created/deep\"\n  ],\n  \"desiredStateId\": \"sha256:e27b871502216044504a6c95caff9c1e7d992786abbe6ad7def45e2c45a62a2f\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"unchanged\",\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"before\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    },\n    {\n      \"action\": \"create\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": false,\n        \"mode\": \"0000\",\n        \"sha256\": null\n      },\n      \"path\": \"created/deep/c\"\n    },\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"before\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:01d09d19c2139a46aebfb577780d123d7396e97201bc7ead210a2ebff8239dee\"\n      },\n      \"path\": \"old/b\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:1471a1831e368f5bb9d33a38912a066bc01710f92caed70de5fd6b0be8bcf154\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    },\n    {\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"path\": \"created/deep/c\"\n    },\n    {\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"path\": \"old/b\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [\n    \"created\",\n    \"created/deep\"\n  ],\n  \"desiredStateId\": \"sha256:e27b871502216044504a6c95caff9c1e7d992786abbe6ad7def45e2c45a62a2f\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"unchanged\",\n      \"after\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"before\": {\n        \"byteCount\": 5,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:a6328afc76e9db71da297ebff4b0d3e7a7eb3b01d917c05a6573fef121b6ecb6\"\n      },\n      \"path\": \"a\"\n    },\n    {\n      \"action\": \"create\",\n      \"after\": {\n        \"byteCount\": 0,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\"\n      },\n      \"before\": {\n        \"byteCount\": 0,\n        \"exists\": false,\n        \"mode\": \"0000\",\n        \"sha256\": null\n      },\n      \"path\": \"created/deep/c\"\n    },\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:7aa7a5359173d05b63cfd682e3c38487f3cb4f7f1d60659fe59fab1505977d4c\"\n      },\n      \"before\": {\n        \"byteCount\": 4,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:01d09d19c2139a46aebfb577780d123d7396e97201bc7ead210a2ebff8239dee\"\n      },\n      \"path\": \"old/b\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:1471a1831e368f5bb9d33a38912a066bc01710f92caed70de5fd6b0be8bcf154\"\n}\n"
+    },
+    {
+      "name": "recovery-pair",
+      "initial": [
+        {
+          "path": "a",
+          "content": "old-a\n",
+          "mode": 420
+        },
+        {
+          "path": "b",
+          "content": "old-b\n",
+          "mode": 384
+        }
+      ],
+      "targets": [
+        {
+          "path": "a",
+          "content": "new-a\n",
+          "mode": 420
+        },
+        {
+          "path": "b",
+          "content": "new-b\n",
+          "mode": 420
+        }
+      ],
+      "plan": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:a8b2d1b510c8c228e17e9c708038652aed4eb4d23d4ee62fe47d0840ca6572b5\",\n  \"nonClaims\": [\n    \"Public transaction plan re-admission proves canonical paths and byte identities, not executable payload bytes; re-admitted plans cannot be applied.\",\n    \"Repository transactions do not establish semantic correctness, owner approval, Git cleanliness, merge authority, release authority, rollout, or production readiness.\",\n    \"Repository transactions do not prove power-loss durability or protection from non-cooperative same-user writers.\",\n    \"Repository transactions do not provide simultaneous multi-file visibility to arbitrary readers.\"\n  ],\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:54578a36036ade573160b2eb3ba5d8557897aa8c6b4ce4742e556d37eb81c680\"\n      },\n      \"before\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:96cdfb91ba2c74be3baa1902d9b100039a4d67decdef72a3ee1e67c886cbb875\"\n      },\n      \"path\": \"a\"\n    },\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:550d594f5d87bd540b72a207fd32c27894f378088bd355d4f0b2bb7d43e58df9\"\n      },\n      \"before\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:28434c80688e88d8f2955a9d77b92594343aa1cd8b168b9001fe5096c97c8022\"\n      },\n      \"path\": \"b\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:4d125f2814e6dea3fa0cde050e40486e60473e6cadfc05bff71a413dc42ad0a6\",\n  \"transactionKind\": \"proofkit.repository-write-plan\"\n}\n",
+      "desired": "{\n  \"desiredStateKind\": \"proofkit.repository-desired-state\",\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"targets\": [\n    {\n      \"after\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:54578a36036ade573160b2eb3ba5d8557897aa8c6b4ce4742e556d37eb81c680\"\n      },\n      \"path\": \"a\"\n    },\n    {\n      \"after\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:550d594f5d87bd540b72a207fd32c27894f378088bd355d4f0b2bb7d43e58df9\"\n      },\n      \"path\": \"b\"\n    }\n  ]\n}\n",
+      "journal": "{\n  \"createdDirectories\": [],\n  \"desiredStateId\": \"sha256:a8b2d1b510c8c228e17e9c708038652aed4eb4d23d4ee62fe47d0840ca6572b5\",\n  \"journalKind\": \"proofkit.repository-write-journal\",\n  \"operations\": [\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:54578a36036ade573160b2eb3ba5d8557897aa8c6b4ce4742e556d37eb81c680\"\n      },\n      \"before\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:96cdfb91ba2c74be3baa1902d9b100039a4d67decdef72a3ee1e67c886cbb875\"\n      },\n      \"path\": \"a\"\n    },\n    {\n      \"action\": \"replace\",\n      \"after\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0644\",\n        \"sha256\": \"sha256:550d594f5d87bd540b72a207fd32c27894f378088bd355d4f0b2bb7d43e58df9\"\n      },\n      \"before\": {\n        \"byteCount\": 6,\n        \"exists\": true,\n        \"mode\": \"0600\",\n        \"sha256\": \"sha256:28434c80688e88d8f2955a9d77b92594343aa1cd8b168b9001fe5096c97c8022\"\n      },\n      \"path\": \"b\"\n    }\n  ],\n  \"rootId\": \"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\n  \"schemaVersion\": 1,\n  \"transactionId\": \"sha256:4d125f2814e6dea3fa0cde050e40486e60473e6cadfc05bff71a413dc42ad0a6\"\n}\n"
+    }
+  ]
+}

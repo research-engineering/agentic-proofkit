@@ -440,14 +440,52 @@ func publishContent(root *os.Root, plan Plan, operationIndex int, expected Snaps
 }
 
 func removeCreatedTarget(root *os.Root, operation Operation) error {
-	observed, _, err := inspectTarget(root, operation.Path, MaximumFileBytes)
-	if err != nil || !equalSnapshot(observed, operation.After) {
+	return removeExactTarget(root, operation.Path, operation.After)
+}
+
+func removeExactTarget(root *os.Root, targetPath string, expected Snapshot) error {
+	observed, _, err := inspectTarget(root, targetPath, MaximumFileBytes)
+	if err != nil || !expected.Exists || !equalSnapshot(observed, expected) {
 		return fmt.Errorf("repository transaction target cannot be restored")
 	}
-	if err := root.Remove(filepath.FromSlash(operation.Path)); err != nil {
-		return fmt.Errorf("remove created repository transaction target")
+	if err := root.Remove(filepath.FromSlash(targetPath)); err != nil {
+		return fmt.Errorf("remove repository transaction target")
 	}
-	return syncDirectory(root, path.Dir(operation.Path))
+	if err := syncDirectory(root, path.Dir(targetPath)); err != nil {
+		return err
+	}
+	observed, _, err = inspectTarget(root, targetPath, MaximumFileBytes)
+	if err != nil || observed.Exists {
+		return fmt.Errorf("repository transaction target is not absent after removal")
+	}
+	return nil
+}
+
+func verifyDeletionFilesystem(root *os.Root, targetPath string) error {
+	if _, err := inspectParentDirectories(root, path.Dir(targetPath)); err != nil {
+		return err
+	}
+	missing, err := inspectParentDirectories(root, activeDirectory)
+	if err != nil {
+		return err
+	}
+	stagingAncestor := activeDirectory
+	if len(missing) > 0 {
+		stagingAncestor = path.Dir(missing[0])
+	}
+	staging, err := root.Lstat(filepath.FromSlash(stagingAncestor))
+	if err != nil || !staging.IsDir() {
+		return fmt.Errorf("repository transaction staging filesystem is unavailable")
+	}
+	parent, err := root.Lstat(filepath.FromSlash(path.Dir(targetPath)))
+	if err != nil || !parent.IsDir() {
+		return fmt.Errorf("repository transaction deletion parent is unavailable")
+	}
+	same, err := platformSameFilesystem(staging, parent)
+	if err != nil || !same {
+		return fmt.Errorf("repository transaction deletion requires same-filesystem rollback")
+	}
+	return nil
 }
 
 func transactionTemporaryPath(transactionID string, index int, targetPath string) string {

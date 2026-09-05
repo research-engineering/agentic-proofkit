@@ -10,6 +10,13 @@ import (
 )
 
 func (runtime engine) applyForward(ctx context.Context, root *os.Root, plan Plan, prefix int) error {
+	for _, operation := range plan.Operations {
+		if operation.Action == ActionDelete {
+			if err := verifyDeletionFilesystem(root, operation.Path); err != nil {
+				return err
+			}
+		}
+	}
 	if err := ensureTargetDirectories(root, plan); err != nil {
 		return err
 	}
@@ -33,7 +40,14 @@ func (runtime engine) applyForward(ctx context.Context, root *os.Root, plan Plan
 		if err := runtime.callFault(faultBeforePublish, changedIndex); err != nil {
 			return err
 		}
-		if err := publishContent(root, plan, operationIndex, operation.Before, operation.afterContent, operation.After.Mode); err != nil {
+		if operation.Action == ActionDelete {
+			if err := verifyDeletionFilesystem(root, operation.Path); err != nil {
+				return err
+			}
+			if err := removeExactTarget(root, operation.Path, operation.Before); err != nil {
+				return err
+			}
+		} else if err := publishContent(root, plan, operationIndex, operation.Before, operation.afterContent, operation.After.Mode); err != nil {
 			return err
 		}
 		changedIndex++

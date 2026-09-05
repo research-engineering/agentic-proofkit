@@ -1,7 +1,6 @@
 package repositorytransaction
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 
@@ -22,7 +21,7 @@ func journalValue(plan Plan) map[string]any {
 		"journalKind":        "proofkit.repository-write-journal",
 		"operations":         operations,
 		"rootId":             plan.RootID,
-		"schemaVersion":      json.Number("1"),
+		"schemaVersion":      plan.schemaVersion(),
 		"transactionId":      plan.TransactionID,
 	}
 }
@@ -35,7 +34,7 @@ func admitJournal(raw any) (Plan, error) {
 	if err := admit.KnownKeys(record, []string{"createdDirectories", "desiredStateId", "journalKind", "operations", "rootId", "schemaVersion", "transactionId"}, "repository transaction journal"); err != nil {
 		return Plan{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) || record["journalKind"] != "proofkit.repository-write-journal" {
+	if (!admit.JSONNumberEquals(record["schemaVersion"], 1) && !admit.JSONNumberEquals(record["schemaVersion"], 2)) || record["journalKind"] != "proofkit.repository-write-journal" {
 		return Plan{}, fmt.Errorf("repository transaction journal identity is invalid")
 	}
 	rootID, err := admit.SHA256Ref(record["rootId"], "repository transaction rootId")
@@ -77,6 +76,9 @@ func admitJournal(raw any) (Plan, error) {
 		operations = append(operations, operation)
 	}
 	plan := Plan{CreatedDirectories: directories, DesiredStateID: desiredStateID, Operations: operations, RootID: rootID, TransactionID: transactionID}
+	if record["schemaVersion"] != plan.schemaVersion() {
+		return Plan{}, fmt.Errorf("repository transaction journal schema does not match its target semantics")
+	}
 	if err := validatePlanShape(plan); err != nil {
 		return Plan{}, err
 	}
@@ -110,7 +112,7 @@ func admitOperation(raw any, index int) (Operation, error) {
 		return Operation{}, fmt.Errorf("repository transaction operation overlaps its control directory")
 	}
 	action, ok := record["action"].(string)
-	if !ok || (action != ActionCreate && action != ActionReplace && action != ActionUnchanged) {
+	if !ok || (action != ActionCreate && action != ActionReplace && action != ActionDelete && action != ActionUnchanged) {
 		return Operation{}, fmt.Errorf("repository transaction operation %d action is invalid", index)
 	}
 	before, err := admitSnapshot(record["before"], fmt.Sprintf("repository transaction operation %d before", index))
@@ -118,17 +120,10 @@ func admitOperation(raw any, index int) (Operation, error) {
 		return Operation{}, err
 	}
 	after, err := admitSnapshot(record["after"], fmt.Sprintf("repository transaction operation %d after", index))
-	if err != nil || !after.Exists {
+	if err != nil {
 		return Operation{}, fmt.Errorf("repository transaction operation %d after snapshot is invalid", index)
 	}
-	wantAction := ActionCreate
-	if before.Exists {
-		wantAction = ActionReplace
-		if equalSnapshot(before, after) {
-			wantAction = ActionUnchanged
-		}
-	}
-	if action != wantAction {
+	if action != snapshotAction(before, after) {
 		return Operation{}, fmt.Errorf("repository transaction operation %d action contradicts its snapshots", index)
 	}
 	return Operation{Action: action, After: after, Before: before, Path: targetPath}, nil
@@ -201,7 +196,7 @@ func validatePlanShape(plan Plan) error {
 		}
 		ownsTarget := false
 		for _, operation := range plan.Operations {
-			if isLexicalDescendant(operation.Path, directory) {
+			if operation.After.Exists && isLexicalDescendant(operation.Path, directory) {
 				ownsTarget = true
 				break
 			}
@@ -233,7 +228,7 @@ func validatePlanShape(plan Plan) error {
 				}
 				continue
 			}
-			if createdAncestor {
+			if createdAncestor && operation.After.Exists {
 				return fmt.Errorf("repository transaction created directory chain is incomplete")
 			}
 		}
