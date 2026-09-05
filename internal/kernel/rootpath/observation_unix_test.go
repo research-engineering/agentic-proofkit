@@ -118,15 +118,19 @@ func TestObservedOpenPreservesLegacyResultsAndPrivateWitness(t *testing.T) {
 					t.Fatal("legacy content or cleanup changed")
 				}
 			}
-			encoded, err := json.Marshal(before)
-			if err != nil || string(encoded) != "{}" {
+			// A public envelope must neither disclose nor re-admit its opaque child.
+			type observationEnvelope struct {
+				Route RouteObservation `json:"route"`
+			}
+			encoded, err := json.Marshal(observationEnvelope{Route: before})
+			if err != nil || string(encoded) != `{"route":{}}` {
 				t.Fatal("route witness exposed wire data")
 			}
-			var decoded RouteObservation
+			var decoded observationEnvelope
 			if err := json.Unmarshal(encoded, &decoded); err != nil {
 				t.Fatal(err)
 			}
-			if decoded.Equal(before) || decoded.Equal(decoded) {
+			if decoded.Route.Equal(before) || decoded.Route.Equal(decoded.Route) {
 				t.Fatal("wire roundtrip admitted a witness")
 			}
 		})
