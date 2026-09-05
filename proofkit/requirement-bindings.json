@@ -777,6 +777,14 @@
       "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer adoption, native witness truth, rollout, or production readiness."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
@@ -863,6 +871,42 @@
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Public-surface closure does not claim wheel documentation parity and does not prove registry publication, provider ingestion, compatibility on untested platforms, native witness truth, merge approval, rollout, or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Project status classifies the observed materialized-project snapshot and can become stale immediately after emission; it does not prove native witness execution or complete any declared proof scope."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["A coherent read snapshot does not prevent later filesystem mutation, authenticate repository ownership, provide power-loss or multi-reader atomicity, exclude a same-user writer that bypasses the repository transaction owner, identify unread out-of-bound record bytes beyond their normalized invalid class, or prevent the filesystem from updating read-side metadata such as access time."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-014",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["A next-action packet is derived guidance; it does not execute, authorize, or prove the proposed action."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "A caller-provided stdout writer that accepts a prefix and then fails does not provide an atomic sink, so Proofkit does not claim that such a transport leaves stdout empty.",
+        "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness.",
+        "Cancellation racing after the final pre-emission checkpoint cannot retract bytes subsequently accepted by an external writer."
+      ]
     }
   ],
   "bindings": [
@@ -1222,6 +1266,29 @@
         {
           "selector": "TestStandaloneMultiVariantCommandsUseExactRootShapes",
           "command": "go test ./internal/app -run '^TestStandaloneMultiVariantCommandsUseExactRootShapes$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.project-status-output-root-witnesses",
+      "witnessId": "proofkit.project-status.cli-output-root.exact-witnesses",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_status_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNextOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestNextOutputUsesExactRootShape$'"
+        },
+        {
+          "selector": "TestStatusOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestStatusOutputUsesExactRootShape$'"
         }
       ],
       "commandIds": [
@@ -2519,6 +2586,29 @@
         {
           "selector": "TestStandaloneMultiVariantCommandsUseExactRootShapes",
           "command": "go test ./internal/app -run '^TestStandaloneMultiVariantCommandsUseExactRootShapes$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.project-status-cli-abi",
+      "witnessId": "proofkit.project-status.cli-abi.exact-output",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_status_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNextOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestNextOutputUsesExactRootShape$'"
+        },
+        {
+          "selector": "TestStatusOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestStatusOutputUsesExactRootShape$'"
         }
       ],
       "commandIds": [
@@ -5858,6 +5948,10 @@
           "command": "go test ./internal/kernel/commandroute -run '^TestGrammarBoundariesAreExact$'"
         },
         {
+          "selector": "TestOmittedRoutePolicyUsesStableCommandIdentity",
+          "command": "go test ./internal/kernel/commandroute -run '^TestOmittedRoutePolicyUsesStableCommandIdentity$'"
+        },
+        {
           "selector": "TestParseRequiresCanonicalSeparatorAndRoundTrip",
           "command": "go test ./internal/kernel/commandroute -run '^TestParseRequiresCanonicalSeparatorAndRoundTrip$'"
         }
@@ -6141,6 +6235,398 @@
         {
           "selector": "TestAdoptionMaterializationVersionEdgePreservesFrozenPredecessor",
           "command": "go test ./internal/app -run '^TestAdoptionMaterializationVersionEdgePreservesFrozenPredecessor$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "scenarioId": "proofkit.spec-proof-core.project-navigation-version-edge",
+      "witnessId": "proofkit.project-navigation.version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_navigation_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectNavigationVersionEdgeClosesPublicRoutes",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeClosesPublicRoutes$'"
+        },
+        {
+          "selector": "TestProjectNavigationVersionEdgeRejectsCoordinatedChangeRecordDrift",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeRejectsCoordinatedChangeRecordDrift$'"
+        },
+        {
+          "selector": "TestProjectNavigationVersionEdgePreservesFrozenPredecessor",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgePreservesFrozenPredecessor$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "scenarioId": "proofkit.spec-proof-core.project-navigation-public-abi-diff",
+      "witnessId": "proofkit.project-navigation.public-abi-diff-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_navigation_abi_closure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "scenarioId": "proofkit.spec-proof-core.project-navigation-public-abi-diff-mutations",
+      "witnessId": "proofkit.project-navigation.public-abi-diff-mutation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_navigation_abi_mutation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
+      "scenarioId": "proofkit.agent-workflow.project-state-total-classification",
+      "witnessId": "proofkit.project-state.total-classification-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/projectstatus_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestEvaluateTotalStateActionTable",
+          "command": "go test ./internal/command/projectstatus -run '^TestEvaluateTotalStateActionTable$'"
+        },
+        {
+          "selector": "TestOutputAdmissionRejectsUnreachableClosureCombination",
+          "command": "go test ./internal/command/projectstatus -run '^TestOutputAdmissionRejectsUnreachableClosureCombination$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
+      "scenarioId": "proofkit.agent-workflow.project-state-child-admission-owner",
+      "witnessId": "proofkit.project-state.child-admission-owner-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/dependency_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectStatusDelegatesChildAdmissionToMaterializationOwner",
+          "command": "go test ./internal/command/projectstatus -run '^TestProjectStatusDelegatesChildAdmissionToMaterializationOwner$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
+      "scenarioId": "proofkit.agent-workflow.project-state-child-owner-delegation",
+      "witnessId": "proofkit.project-state.child-owner-delegation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptionmaterialization/project_closure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdmitMaterializedProjectRoutesEveryManifestArtifactKindThroughItsOwner",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestAdmitMaterializedProjectRoutesEveryManifestArtifactKindThroughItsOwner$'"
+        },
+        {
+          "selector": "TestMaterializedProjectRecordSnapshotDoesNotAliasCallerInput",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializedProjectRecordSnapshotDoesNotAliasCallerInput$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "scenarioId": "proofkit.agent-workflow.project-state-bounded-inspection",
+      "witnessId": "proofkit.project-state.bounded-inspection-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/inspect_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInspectClassifiesMaterializedProjectWithoutApplicationWrites",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectClassifiesMaterializedProjectWithoutApplicationWrites$'"
+        },
+        {
+          "selector": "TestInspectFailsClosedOnSymlinksAndBoundsWithoutDisclosure",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectFailsClosedOnSymlinksAndBoundsWithoutDisclosure$'"
+        },
+        {
+          "selector": "TestInspectRejectsCaseAliasedCanonicalRoute",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectRejectsCaseAliasedCanonicalRoute$'"
+        },
+        {
+          "selector": "TestInspectCohortValidationClosesCleanEpochABA",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectCohortValidationClosesCleanEpochABA$'"
+        },
+        {
+          "selector": "TestInspectCleanupFailureDominatesRetryableSnapshotChange",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectCleanupFailureDominatesRetryableSnapshotChange$'"
+        },
+        {
+          "selector": "TestInspectMapsRecoverableControlState",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectMapsRecoverableControlState$'"
+        },
+        {
+          "selector": "TestInspectMapsInvalidControlState",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectMapsInvalidControlState$'"
+        },
+        {
+          "selector": "TestInspectAttemptRejectsFinalRepositoryRootReplacement",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectAttemptRejectsFinalRepositoryRootReplacement$'"
+        },
+        {
+          "selector": "TestInspectRejectsAdmittedChildrenWithInvalidCrossRecordClosure",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectRejectsAdmittedChildrenWithInvalidCrossRecordClosure$'"
+        },
+        {
+          "selector": "TestInspectRejectsChangingControlEpochAcrossBothAttempts",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectRejectsChangingControlEpochAcrossBothAttempts$'"
+        },
+        {
+          "selector": "TestReadProjectFileEnforcesAggregateBoundBeforeRead",
+          "command": "go test ./internal/command/projectstatus -run '^TestReadProjectFileEnforcesAggregateBoundBeforeRead$'"
+        },
+        {
+          "selector": "TestReadProjectFileRejectsSameByteRouteReplacement",
+          "command": "go test ./internal/command/projectstatus -run '^TestReadProjectFileRejectsSameByteRouteReplacement$'"
+        },
+        {
+          "selector": "TestInspectDeduplicatesRepeatedIssueCodes",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectDeduplicatesRepeatedIssueCodes$'"
+        },
+        {
+          "selector": "TestInspectHonorsCancellationBetweenBoundedReads",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectHonorsCancellationBetweenBoundedReads$'"
+        },
+        {
+          "selector": "TestInspectHonorsCancellationAfterFinalControlObservation",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectHonorsCancellationAfterFinalControlObservation$'"
+        },
+        {
+          "selector": "TestOutOfBoundManifestIdentityIsAClassificationNotByteIdentity",
+          "command": "go test ./internal/command/projectstatus -run '^TestOutOfBoundManifestIdentityIsAClassificationNotByteIdentity$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "scenarioId": "proofkit.agent-workflow.project-state-application-write-free-topology",
+      "witnessId": "proofkit.project-state.application-write-free-topology-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/dependency_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectStatusProductionTopologyForbidsRepositoryMutationCalls",
+          "command": "go test ./internal/command/projectstatus -run '^TestProjectStatusProductionTopologyForbidsRepositoryMutationCalls$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "scenarioId": "proofkit.agent-workflow.project-state-control-file-coherence",
+      "witnessId": "proofkit.project-state.control-file-coherence-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/control_inspection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInspectControlFileRejectsGrowthAfterRoutePreflight",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectControlFileRejectsGrowthAfterRoutePreflight$'"
+        },
+        {
+          "selector": "TestInspectControlFileRejectsSameByteRouteReplacement",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectControlFileRejectsSameByteRouteReplacement$'"
+        },
+        {
+          "selector": "TestInspectionLeaseDoesNotResolveAReplacementRoot",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeaseDoesNotResolveAReplacementRoot$'"
+        },
+        {
+          "selector": "TestInspectionLeaseRejectsControlNamespaceCreatedAfterOpen",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeaseRejectsControlNamespaceCreatedAfterOpen$'"
+        },
+        {
+          "selector": "TestInspectionLeasePinsRootAndExcludesCooperativeWriter",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeasePinsRootAndExcludesCooperativeWriter$'"
+        },
+        {
+          "selector": "TestInspectionLeaseExportsOnlyReadOnlyFileCapability",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeaseExportsOnlyReadOnlyFileCapability$'"
+        },
+        {
+          "selector": "TestInspectionLeaseFileCannotBeReassertedAsMutable",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeaseFileCannotBeReassertedAsMutable$'"
+        },
+        {
+          "selector": "TestInspectControlStateRejectsPartialControlObservations",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectControlStateRejectsPartialControlObservations$'"
+        },
+        {
+          "selector": "TestInspectControlStateHashesSymlinkTargetsWithoutDisclosingThem",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectControlStateHashesSymlinkTargetsWithoutDisclosingThem$'"
+        },
+        {
+          "selector": "TestInspectControlStateRejectsClassificationChangeHiddenByPortableNameIdentity",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectControlStateRejectsClassificationChangeHiddenByPortableNameIdentity$'"
+        },
+        {
+          "selector": "TestInspectControlStateUsesPortableObservationFields",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectControlStateUsesPortableObservationFields$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "scenarioId": "proofkit.agent-workflow.project-state-exact-route-traversal",
+      "witnessId": "proofkit.project-state.exact-route-traversal-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/rootpath/exact_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestOpenExactRegularFileRejectsParentSymlinkABA",
+          "command": "go test ./internal/kernel/rootpath -run '^TestOpenExactRegularFileRejectsParentSymlinkABA$'"
+        },
+        {
+          "selector": "TestOpenExactRegularFileRejectsFinalComponentABA",
+          "command": "go test ./internal/kernel/rootpath -run '^TestOpenExactRegularFileRejectsFinalComponentABA$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-014",
+      "scenarioId": "proofkit.agent-workflow.project-next-action-output-closure",
+      "witnessId": "proofkit.project-next-action.output-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/projectstatus_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestEvaluateTotalStateActionTable",
+          "command": "go test ./internal/command/projectstatus -run '^TestEvaluateTotalStateActionTable$'"
+        },
+        {
+          "selector": "TestOutputAdmissionRejectsReidentifiedStateActionMismatch",
+          "command": "go test ./internal/command/projectstatus -run '^TestOutputAdmissionRejectsReidentifiedStateActionMismatch$'"
+        },
+        {
+          "selector": "TestTextProjectionIsBoundedAndSemanticallyDerived",
+          "command": "go test ./internal/command/projectstatus -run '^TestTextProjectionIsBoundedAndSemanticallyDerived$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-public-cli",
+      "witnessId": "proofkit.project-navigation.public-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_status_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNextCLI",
+          "command": "go test ./internal/app -run '^TestNextCLI$'"
+        },
+        {
+          "selector": "TestProjectStatusCLI",
+          "command": "go test ./internal/app -run '^TestProjectStatusCLI$'"
+        },
+        {
+          "selector": "TestProjectStatusCLIHonorsCanceledContextBeforeOutput",
+          "command": "go test ./internal/app -run '^TestProjectStatusCLIHonorsCanceledContextBeforeOutput$'"
+        },
+        {
+          "selector": "TestProjectStatusOutputMatrix",
+          "command": "go test ./internal/app -run '^TestProjectStatusOutputMatrix$'"
+        },
+        {
+          "selector": "TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim",
+          "command": "go test ./internal/app -run '^TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim$'"
+        },
+        {
+          "selector": "TestStatusCLI",
+          "command": "go test ./internal/app -run '^TestStatusCLI$'"
+        }
+      ],
+      "commandIds": ["proofkit.command-contract-check", "proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-installed-carriers",
+      "witnessId": "proofkit.project-navigation.installed-carrier-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyAcceptsApplicationCLI",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyAcceptsApplicationCLI$'"
+        },
+        {
+          "selector": "TestVerifyRejectsCarrierContractMutations",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyRejectsCarrierContractMutations$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test", "proofkit.package-artifact"],
+      "environmentClasses": ["local-go", "local-go-python"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-installed-npm-carrier-closure",
+      "witnessId": "proofkit.project-navigation.installed-npm-carrier-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledNPMWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/packageverify -run '^TestInstalledNPMWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-installed-wheel-carrier-closure",
+      "witnessId": "proofkit.project-navigation.installed-wheel-carrier-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledPythonWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestInstalledPythonWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "scenarioId": "proofkit.agent-workflow.project-navigation-version-edge",
+      "witnessId": "proofkit.project-navigation.public-version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_navigation_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectNavigationVersionEdgeClosesPublicRoutes",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeClosesPublicRoutes$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

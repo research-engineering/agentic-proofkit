@@ -9,6 +9,7 @@
     "internal/app/app.go",
     "internal/app/command_registry.go",
     "internal/app/conformance_command.go",
+    "internal/app/project_status_command.go",
     "internal/app/requirement_browser_command.go",
     "internal/app/requirement_commands.go",
     "internal/app/requirement_context_command.go",
@@ -17,9 +18,11 @@
     "internal/command/adoptioncontract/adoptioncontract.go",
     "internal/command/adoptionmaterialization/admission.go",
     "internal/command/adoptionmaterialization/build.go",
+    "internal/command/adoptionmaterialization/project_closure.go",
     "internal/command/conformanceprofile/conformanceprofile.go",
     "internal/command/impact/impact.go",
     "internal/command/pilotadmission/pilotadmission.go",
+    "internal/command/projectstatus/inspect.go",
     "internal/command/proofbindingtestinventory/proofbindingtestinventory.go",
     "internal/command/requirementbinding/requirementbinding.go",
     "internal/command/requirementbrowser/requirementbrowser.go",
@@ -48,7 +51,15 @@
     "internal/command/testevidenceinventory/source_set.go",
     "internal/command/testevidenceinventory/testevidenceinventory.go",
     "internal/tools/browsertestserver/main.go",
-    "internal/tools/coveragemetrics/main.go"
+    "internal/tools/coveragemetrics/main.go",
+    "internal/tools/packageverify/main.go",
+    "internal/tools/packageverify/workflow_carrier.go",
+    "internal/tools/pythonpackage/main.go",
+    "internal/tools/pythonpackage/verify.go",
+    "internal/tools/pythonpackage/workflow_carrier.go",
+    "internal/tools/workflowsmoke/process.go",
+    "internal/tools/workflowsmoke/project_navigation_smoke.go",
+    "internal/tools/workflowsmoke/workflow_smoke.go"
   ],
   "nonClaims": [
     "Candidate inclusion proves a bounded static dependency or schema signal only; it does not prove runtime invocation, semantic ownership, or an absence of consumers that violate the declared static signal policy."

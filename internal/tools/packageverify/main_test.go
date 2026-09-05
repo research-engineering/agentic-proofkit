@@ -1371,11 +1371,12 @@ func installedContractFixture(commands string) []byte {
 
 func testCommandRouteGrammar() map[string]any {
 	return map[string]any{
-		"ambiguityPolicy": commandroute.AmbiguityPolicy,
-		"maximumTokens":   commandroute.MaximumTokens,
-		"minimumTokens":   commandroute.MinimumTokens,
-		"separator":       commandroute.Separator,
-		"tokenPattern":    commandroute.TokenPattern,
+		"ambiguityPolicy":    commandroute.AmbiguityPolicy,
+		"maximumTokens":      commandroute.MaximumTokens,
+		"minimumTokens":      commandroute.MinimumTokens,
+		"omittedRoutePolicy": commandroute.OmittedRoutePolicy,
+		"separator":          commandroute.Separator,
+		"tokenPattern":       commandroute.TokenPattern,
 	}
 }
 

@@ -199,6 +199,12 @@ execution receipts, and merge policy.
 - `REQ-PROOFKIT-SPEC-034`: the pre-materialization-to-transactional-
   materialization public version edge binds all three transactional
   materialization routes and their exact public contracts to a compatible
+  byte-frozen predecessor release record without coupling the historical edge
+  to the live release record or reinterpreting the frozen prior edge.
+- `REQ-PROOFKIT-SPEC-035`: the project-state public version edge binds the exact
+  raw ABI identities, proves the complete semantic ABI difference after
+  normalizing only native-source digests, and binds status, next, the
+  change-plan route replacement, and omitted-route policy to one breaking
   release record without reinterpreting the frozen prior edge.
 
 ## Non-Claims

@@ -69,6 +69,15 @@
       ]
     },
     {
+      "familyId": "project-state-navigation",
+      "label": "Project state navigation",
+      "purpose": "Classify a materialized project and expose one bounded next action.",
+      "commands": [
+        "next",
+        "status"
+      ]
+    },
+    {
       "familyId": "proof-artifact-governance",
       "label": "Proof artifact governance",
       "purpose": "Govern custom rules, document lifecycle, freshness, and witness plans.",

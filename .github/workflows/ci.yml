@@ -151,6 +151,9 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Run Darwin filesystem invariants
+        run: go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/command/projectstatus -count=1
+
       - name: Run platform smoke
         run: |
           set -euo pipefail

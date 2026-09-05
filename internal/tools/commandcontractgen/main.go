@@ -169,7 +169,7 @@ func admitCommandRouteGrammar(raw any) error {
 	if !ok {
 		return errors.New("CLI processContract commandRouteGrammar must be an object")
 	}
-	if err := rejectUnknownKeys(grammar, []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"}, "CLI command route grammar"); err != nil {
+	if err := rejectUnknownKeys(grammar, []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "omittedRoutePolicy", "separator", "tokenPattern"}, "CLI command route grammar"); err != nil {
 		return err
 	}
 	minimum, minimumOK := positiveJSONInteger(grammar["minimumTokens"])
@@ -177,7 +177,7 @@ func admitCommandRouteGrammar(raw any) error {
 	if !minimumOK || !maximumOK || minimum != commandroute.MinimumTokens || maximum != commandroute.MaximumTokens {
 		return fmt.Errorf("CLI command route grammar token bounds must be %d through %d", commandroute.MinimumTokens, commandroute.MaximumTokens)
 	}
-	if grammar["separator"] != commandroute.Separator || grammar["tokenPattern"] != commandroute.TokenPattern || grammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+	if grammar["separator"] != commandroute.Separator || grammar["tokenPattern"] != commandroute.TokenPattern || grammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy || grammar["omittedRoutePolicy"] != commandroute.OmittedRoutePolicy {
 		return errors.New("CLI command route grammar does not match the native route owner")
 	}
 	return nil
@@ -459,13 +459,18 @@ func admitCommands(root string, contract map[string]any, definitions map[string]
 			return nil, nil, errors.New("CLI commands must be sorted and unique")
 		}
 		previous = name
-		route := []string{name}
+		var route []string
 		if rawRoute, present := command["route"]; present {
 			var err error
 			route, err = stringList(rawRoute, "command "+name+" route")
 			if err != nil {
 				return nil, nil, err
 			}
+		}
+		var routeOK bool
+		route, routeOK = commandroute.Resolve(name, route)
+		if !routeOK {
+			return nil, nil, fmt.Errorf("command %s has an invalid route", name)
 		}
 		if err := admitCommandRoute(name, route, routes); err != nil {
 			return nil, nil, err

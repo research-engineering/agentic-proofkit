@@ -75,8 +75,11 @@ func Verify(ctx context.Context, run Runner) error {
 	if err != nil {
 		return fmt.Errorf("build expected native evidence guidance text: %w", err)
 	}
+	if err := verifyFailure(ctx, run, "retired flat planner route", unreadInvocation("change-workflow-plan", "--input", "-"), "unsupported command"); err != nil {
+		return err
+	}
 
-	plan, err := invoke(ctx, run, "planner JSON", bytesInvocation(input, "change-workflow-plan", "--input", "-"))
+	plan, err := invoke(ctx, run, "planner JSON", bytesInvocation(input, "change", "plan", "--input", "-"))
 	if err != nil {
 		return err
 	}
@@ -84,7 +87,7 @@ func Verify(ctx context.Context, run Runner) error {
 		return err
 	}
 
-	compact, err := invoke(ctx, run, "planner compact JSON", bytesInvocation(input, "--json-layout", "compact", "change-workflow-plan", "--input", "-"))
+	compact, err := invoke(ctx, run, "planner compact JSON", bytesInvocation(input, "--json-layout", "compact", "change", "plan", "--input", "-"))
 	if err != nil {
 		return err
 	}
@@ -95,7 +98,7 @@ func Verify(ctx context.Context, run Runner) error {
 		return fmt.Errorf("planner compact JSON: %w", err)
 	}
 
-	envelope, err := invoke(ctx, run, "planner agent envelope", bytesInvocation(input, "change-workflow-plan", "--input", "-", "--agent-envelope"))
+	envelope, err := invoke(ctx, run, "planner agent envelope", bytesInvocation(input, "change", "plan", "--input", "-", "--agent-envelope"))
 	if err != nil {
 		return err
 	}
@@ -103,7 +106,7 @@ func Verify(ctx context.Context, run Runner) error {
 		return err
 	}
 
-	text, err := invoke(ctx, run, "planner text", bytesInvocation(input, "change-workflow-plan", "--input", "-", "--format", "text", "--color", "never"))
+	text, err := invoke(ctx, run, "planner text", bytesInvocation(input, "change", "plan", "--input", "-", "--format", "text", "--color", "never"))
 	if err != nil {
 		return err
 	}
@@ -111,23 +114,23 @@ func Verify(ctx context.Context, run Runner) error {
 		return fmt.Errorf("planner text does not equal the command-owned plain-text projection")
 	}
 
-	if err := verifyFailure(ctx, run, "required input", bytesInvocation(nil, "change-workflow-plan"), "requires --input <path|->"); err != nil {
+	if err := verifyFailure(ctx, run, "required input", bytesInvocation(nil, "change", "plan"), "requires --input <path|->"); err != nil {
 		return err
 	}
-	if err := verifyFailure(ctx, run, "pre-read input pointer", bytesInvocation(nil, "change-workflow-plan", "--input", "proofkit-smoke-missing-input.json", "--input-pointer", "invalid"), "JSON pointer"); err != nil {
+	if err := verifyFailure(ctx, run, "pre-read input pointer", bytesInvocation(nil, "change", "plan", "--input", "proofkit-smoke-missing-input.json", "--input-pointer", "invalid"), "JSON pointer"); err != nil {
 		return err
 	}
-	if err := verifyFailure(ctx, run, "JSON color denial", bytesInvocation(input, "change-workflow-plan", "--input", "-", "--color", "never"), "--color is valid only with --format text"); err != nil {
+	if err := verifyFailure(ctx, run, "JSON color denial", bytesInvocation(input, "change", "plan", "--input", "-", "--color", "never"), "--color is valid only with --format text"); err != nil {
 		return err
 	}
-	if err := verifyFailure(ctx, run, "exclusive help", bytesInvocation(input, "change-workflow-plan", "--help", "--format", "text"), "help accepts no additional arguments"); err != nil {
+	if err := verifyFailure(ctx, run, "exclusive help", bytesInvocation(input, "change", "plan", "--help", "--format", "text"), "help accepts no additional arguments"); err != nil {
 		return err
 	}
-	if err := verifyFailure(ctx, run, "surplus positional operand", bytesInvocation(input, "change-workflow-plan", "--input", "-", "surplus"), "unsupported argument"); err != nil {
+	if err := verifyFailure(ctx, run, "surplus positional operand", bytesInvocation(input, "change", "plan", "--input", "-", "surplus"), "unsupported argument"); err != nil {
 		return err
 	}
 
-	help, err := invoke(ctx, run, "exclusive help success", unreadInvocation("change-workflow-plan", "--help"))
+	help, err := invoke(ctx, run, "exclusive help success", unreadInvocation("change", "plan", "--help"))
 	if err != nil {
 		return err
 	}
@@ -150,7 +153,8 @@ func Verify(ctx context.Context, run Runner) error {
 	if !bytes.Equal(guidanceText.Stdout, []byte(expectedGuidanceText)) || bytes.Contains(guidanceText.Stdout, []byte("\x1b[")) {
 		return fmt.Errorf("no-input guidance text does not equal the command-owned plain-text projection")
 	}
-	return nil
+
+	return verifyProjectNavigation(ctx, run)
 }
 
 func bytesInvocation(input []byte, args ...string) Invocation {

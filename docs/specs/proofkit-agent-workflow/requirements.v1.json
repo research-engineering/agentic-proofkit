@@ -147,6 +147,62 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.agent-workflow", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
+      "ownerId": "proofkit.agent-workflow",
+      "invariant": "Project status consumes only one explicit repository root, the conventional digest-routed project manifest, its exact manifest-declared canonical children, and one repository-transaction control projection; it delegates child admission and cross-record closure to the adoption-materialization owner, publishes exactly one state from uninitialized, recovery_required, blocked, stale, and verification_required through one exhaustive precedence table, and never promotes source declarations, binding commands, caller-owned passed labels, or caller-declared workflow completion into native execution, receipt currentness, trust, merge, release, rollout, deployment, or production-readiness evidence.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-WORKFLOW-012"],
+      "nonClaims": ["Project status classifies the observed materialized-project snapshot and can become stale immediately after emission; it does not prove native witness execution or complete any declared proof scope."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.agent-workflow", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
+      "ownerId": "proofkit.agent-workflow",
+      "invariant": "Project inspection is explicit, root-confined, application-write-free, symlink-denying, byte-bounded, and normalized-observation-bound: Proofkit performs no repository mutation operation; one inspection lease pins one repository root for the whole attempt, exports only exact read-only file capabilities, and, when the transaction control namespace exists, holds its native cooperative writer lock; transaction control is projected by its native owner as clean, recoverable with an exact transaction identity, or invalid with a portable content-bound observation epoch only after the entire namespace is observed within canonical entry, file, aggregate, depth, and file-type bounds, while overflow or unsupported shape fails without a partial packet; every manifest and child route is traversed component by component from the pinned root with exact-name admission, no symlink following, descriptor identity checks, regular-file admission, per-file one-MiB and per-pass aggregate eight-MiB limits before semantic decoding; the root identity and transaction observation are equal before and after the read and a second bounded digest pass over the manifest and every routed child equals the admitted first-pass cohort, or the operation performs at most one complete retry and then fails as concurrent change; every public state receives a snapshot identity over one total tagged observation whose admitted in-bound records bind exact content digests, whose unread out-of-bound records intentionally bind only their invalid class, whose project is unknown or admitted, whose manifest is absent, invalid with an optional bounded content digest, or admitted with identity and content digest, whose transaction carries its tagged state and epoch, whose children are ordered kind/state/expected/observed digest records, and whose cross-record closure state is explicit, without exposing raw bytes, repository paths, or caller text.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-WORKFLOW-013"],
+      "nonClaims": ["A coherent read snapshot does not prevent later filesystem mutation, authenticate repository ownership, provide power-loss or multi-reader atomicity, exclude a same-user writer that bypasses the repository transaction owner, identify unread out-of-bound record bytes beyond their normalized invalid class, or prevent the filesystem from updating read-side metadata such as access time."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.agent-workflow", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-014",
+      "ownerId": "proofkit.agent-workflow",
+      "invariant": "Project next-action output is a deterministic bounded projection of the admitted project status through one total state-to-action table: blocked maps to non-executable repair, recovery_required maps to a non-executable recovery-direction decision bound to the transaction identity, uninitialized maps to a non-executable source-trust-mode decision, stale maps to rematerialization, and verification_required maps to repository-owned native verification; it emits exactly one action, at most sixteen stable non-disclosing issue codes, no route universe, no inferred trust mode, recovery direction, command success, or owner decision, and stable JSON within 32768 bytes plus text within 4096 UTF-8 bytes and sixteen lines that preserves exactly projectState, actionClass, executable, commandRoute, contextRef, requiredDecision, and issueCodes while intentionally omitting JSON-only packetId, snapshotId, statusRef, and nonClaims.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-WORKFLOW-014"],
+      "nonClaims": ["A next-action packet is derived guidance; it does not execute, authorize, or prove the proposed action."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.agent-workflow", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
+      "ownerId": "proofkit.agent-workflow",
+      "invariant": "The public status and next commands require exactly one explicit --repo-root, default to stable ANSI-free JSON, admit text and terminal-only color through the shared presentation contract, return exit zero for every successfully classified project state, including bounded project-record decoding or admission failure, and return exit one without beginning output emission for invocation, confinement, inspection-bound, concurrent-change, cleanup, serialization, or cancellation observed at bounded operation checkpoints and the final pre-emission checkpoint; successful serialization reaches stdout through one bounded write, and a transport failure returns exit one without claiming atomic behavior from a writer that accepted a prefix before failing; the same versioned breaking public edge adds both commands, replaces the flat change-workflow-plan route with change plan without adding a route-alias registry or second implementation, rejects the retired route, admits the hierarchical route, and closes descriptor, help, CLI contract, command family, contract map, ABI, source witness, installed npm, and installed wheel surfaces.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-WORKFLOW-015"],
+      "nonClaims": [
+        "A caller-provided stdout writer that accepts a prefix and then fails does not provide an atomic sink, so Proofkit does not claim that such a transport leaves stdout empty.",
+        "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness.",
+        "Cancellation racing after the final pre-emission checkpoint cannot retract bytes subsequently accepted by an external writer."
+      ],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.agent-workflow", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

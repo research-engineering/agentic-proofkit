@@ -9,11 +9,12 @@ import (
 var tokenPattern = regexp.MustCompile(TokenPattern)
 
 const (
-	MinimumTokens   = 1
-	MaximumTokens   = 4
-	Separator       = " "
-	TokenPattern    = `^[a-z0-9]+(?:-[a-z0-9]+)*$`
-	AmbiguityPolicy = "no_route_is_prefix_of_another"
+	MinimumTokens      = 1
+	MaximumTokens      = 4
+	Separator          = " "
+	TokenPattern       = `^[a-z0-9]+(?:-[a-z0-9]+)*$`
+	AmbiguityPolicy    = "no_route_is_prefix_of_another"
+	OmittedRoutePolicy = "command_id"
 )
 
 func Valid(tokens []string) bool {
@@ -30,6 +31,21 @@ func Valid(tokens []string) bool {
 
 func ValidToken(token string) bool {
 	return tokenPattern.MatchString(token)
+}
+
+// Resolve returns the effective route. A nil route is omitted and therefore
+// resolves to the stable command identity; an explicitly empty route is invalid.
+func Resolve(commandID string, route []string) ([]string, bool) {
+	if !ValidToken(commandID) {
+		return nil, false
+	}
+	if route == nil {
+		return []string{commandID}, true
+	}
+	if !Valid(route) {
+		return nil, false
+	}
+	return slices.Clone(route), true
 }
 
 func Parse(text string) ([]string, bool) {

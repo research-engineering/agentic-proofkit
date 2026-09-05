@@ -210,6 +210,13 @@ func TestRenderRejectsIncompleteAndStaleCommandContracts(t *testing.T) {
 			want: "does not match the native route owner",
 		},
 		{
+			name: "command route omission policy drift",
+			mutate: func(contract map[string]any) {
+				contract["processContract"].(map[string]any)["commandRouteGrammar"].(map[string]any)["omittedRoutePolicy"] = "unknown"
+			},
+			want: "does not match the native route owner",
+		},
+		{
 			name: "required input contract missing",
 			mutate: func(contract map[string]any) {
 				commandAt(contract, "sample")["inputContract"] = nil
@@ -645,11 +652,12 @@ func writeFixture(t *testing.T) string {
 		"packageName":   "@research-engineering/agentic-proofkit",
 		"processContract": map[string]any{
 			"commandRouteGrammar": map[string]any{
-				"minimumTokens":   1,
-				"maximumTokens":   4,
-				"separator":       " ",
-				"tokenPattern":    `^[a-z0-9]+(?:-[a-z0-9]+)*$`,
-				"ambiguityPolicy": "no_route_is_prefix_of_another",
+				"minimumTokens":      1,
+				"maximumTokens":      4,
+				"separator":          " ",
+				"tokenPattern":       `^[a-z0-9]+(?:-[a-z0-9]+)*$`,
+				"ambiguityPolicy":    "no_route_is_prefix_of_another",
+				"omittedRoutePolicy": "command_id",
 			},
 		},
 		"contractDefinitions": definitions,

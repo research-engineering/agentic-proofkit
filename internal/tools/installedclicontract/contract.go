@@ -70,20 +70,24 @@ func Admit(content []byte) (Contract, error) {
 		}
 		seenCommandIDs[commandID] = struct{}{}
 
-		routeTokens := []string{commandID}
+		var explicitRoute []string
 		if rawRoute, exists := command["route"]; exists {
 			route, ok := rawRoute.([]any)
-			if !ok || len(route) < commandroute.MinimumTokens || len(route) > commandroute.MaximumTokens {
+			if !ok {
 				return Contract{}, fmt.Errorf("installed CLI contract command %d has an invalid route", index)
 			}
-			routeTokens = make([]string, 0, len(route))
+			explicitRoute = make([]string, 0, len(route))
 			for _, rawToken := range route {
 				token, ok := rawToken.(string)
-				if !ok || !commandroute.ValidToken(token) {
+				if !ok {
 					return Contract{}, fmt.Errorf("installed CLI contract command %d has an invalid route token", index)
 				}
-				routeTokens = append(routeTokens, token)
+				explicitRoute = append(explicitRoute, token)
 			}
+		}
+		routeTokens, ok := commandroute.Resolve(commandID, explicitRoute)
+		if !ok {
+			return Contract{}, fmt.Errorf("installed CLI contract command %d has an invalid route", index)
 		}
 		routeText := commandroute.Text(routeTokens)
 		if _, exists := commandIDsByRoute[routeText]; exists {
@@ -118,10 +122,10 @@ func admitCommandRouteGrammar(contract map[string]any) error {
 		return fmt.Errorf("installed CLI contract processContract must be an object")
 	}
 	grammar, ok := processContract["commandRouteGrammar"].(map[string]any)
-	if !ok || len(grammar) != 5 {
-		return fmt.Errorf("installed CLI contract commandRouteGrammar must contain exactly five fields")
+	if !ok || len(grammar) != 6 {
+		return fmt.Errorf("installed CLI contract commandRouteGrammar must contain exactly six fields")
 	}
-	for _, key := range []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"} {
+	for _, key := range []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "omittedRoutePolicy", "separator", "tokenPattern"} {
 		if _, exists := grammar[key]; !exists {
 			return fmt.Errorf("installed CLI contract commandRouteGrammar is missing %s", key)
 		}
@@ -130,7 +134,7 @@ func admitCommandRouteGrammar(contract map[string]any) error {
 	maximum, maximumOK := exactPositiveInteger(grammar["maximumTokens"])
 	if !minimumOK || !maximumOK || minimum != commandroute.MinimumTokens || maximum != commandroute.MaximumTokens ||
 		grammar["separator"] != commandroute.Separator || grammar["tokenPattern"] != commandroute.TokenPattern ||
-		grammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+		grammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy || grammar["omittedRoutePolicy"] != commandroute.OmittedRoutePolicy {
 		return fmt.Errorf("installed CLI contract commandRouteGrammar differs from the supported process grammar")
 	}
 	return nil

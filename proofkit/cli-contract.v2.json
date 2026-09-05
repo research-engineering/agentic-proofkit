@@ -12,7 +12,8 @@
       "maximumTokens": 4,
       "separator": " ",
       "tokenPattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "ambiguityPolicy": "no_route_is_prefix_of_another"
+      "ambiguityPolicy": "no_route_is_prefix_of_another",
+      "omittedRoutePolicy": "command_id"
     },
     "globalOptions": {
       "jsonLayout": {
@@ -111,7 +112,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+          "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -142,17 +143,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+            "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
+            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -249,7 +250,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+          "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -280,17 +281,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+            "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
+            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -394,17 +395,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:25fde227d9a26bc6fac85be5963b4f227e5cac06b876b14565a863ff45b40f11",
+            "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:a0c1d96df99382bd334cd7ddaa3de2d191c5c7f166ece0c720e3791fec87350f",
+            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -1185,7 +1186,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
             "evidenceClass": "source_checkout"
           },
           {
@@ -1423,6 +1424,10 @@
     },
     {
       "command": "change-workflow-plan",
+      "route": [
+        "change",
+        "plan"
+      ],
       "input": "required",
       "stdin": true,
       "inputPointer": true,
@@ -2729,6 +2734,95 @@
       }
     },
     {
+      "command": "next",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--format",
+        "--repo-root"
+      ],
+      "requiredFlags": [
+        "--repo-root"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--format",
+        "--repo-root"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.next.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.next.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:b046def1ec1d608e3c76efd84127df7cd8b0a10a920e7ad9b8b850826432d3af",
+        "nativeSource": {
+          "path": "internal/command/projectstatus",
+          "canonicalDigest": "sha256:050ff57dee13ac2cc7c71ab4f2ed94c8d9a73f945544ecb57c18c07da4ed5c13",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/project_status_command_test.go",
+          "test": "TestNextOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestNextOutputUsesExactRootShape$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "one non-executable next-action projection derived from the same bounded project snapshot as status",
+          "bounded text preserves exactly projectState, actionClass, executable, commandRoute, contextRef, requiredDecision, and issueCodes; packetId, snapshotId, statusRef, and nonClaims remain JSON-only",
+          "root-shape-only definition proofkit.next.output.v1.root-shape; nested fields, types, cardinalities, and native witness execution remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-WORKFLOW-012",
+          "REQ-PROOFKIT-WORKFLOW-013",
+          "REQ-PROOFKIT-WORKFLOW-014",
+          "REQ-PROOFKIT-WORKFLOW-015"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
+      }
+    },
+    {
       "command": "obligation-decision",
       "input": "required",
       "stdin": true,
@@ -2963,7 +3057,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+            "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
             "evidenceClass": "source_checkout"
           },
           {
@@ -6253,7 +6347,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+          "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6282,7 +6376,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:0195a152392ad4cecd99a2d0c147ee8e25a034a32e4f730033766399a030c5c3",
+          "canonicalDigest": "sha256:7fa037cfe6147827468954667d103b27796ff43c1d1f74d81be1f545d7534a8e",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -6503,6 +6597,96 @@
           "REQ-PROOFKIT-QUALITY-004",
           "REQ-PROOFKIT-QUALITY-010"
         ]
+      }
+    },
+    {
+      "command": "status",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--format",
+        "--repo-root"
+      ],
+      "requiredFlags": [
+        "--repo-root"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--format",
+        "--repo-root"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.status.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.status.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:4d26ca7b7f6be8120fbac40519db02d8e5ae8ba7264208c714fbb9f1cb88ef15",
+        "nativeSource": {
+          "path": "internal/command/projectstatus",
+          "canonicalDigest": "sha256:050ff57dee13ac2cc7c71ab4f2ed94c8d9a73f945544ecb57c18c07da4ed5c13",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/project_status_command_test.go",
+          "test": "TestStatusOutputUsesExactRootShape",
+          "command": "go test ./internal/app -run '^TestStatusOutputUsesExactRootShape$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "bounded read-only classification over a normalized transaction, manifest, child-currentness, child-admission, and cross-record-closure observation; admitted in-bound records bind exact content digests and unread out-of-bound records bind only their invalid class",
+          "verification_required means structurally admitted and never means complete, merge-ready, release-ready, or production-ready",
+          "bounded text preserves exactly projectState, snapshotId, nextAction.actionClass, and issueCodes; project, manifest, transaction, child, closure, action-identity, and nonClaims coordinates remain JSON-only",
+          "root-shape-only definition proofkit.status.output.v1.root-shape; nested fields, types, cardinalities, and native witness execution remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-WORKFLOW-012",
+          "REQ-PROOFKIT-WORKFLOW-013",
+          "REQ-PROOFKIT-WORKFLOW-014",
+          "REQ-PROOFKIT-WORKFLOW-015"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ]
+        }
       }
     },
     {
@@ -10757,6 +10941,52 @@
         ]
       },
       "canonicalDigest": "sha256:218011a133540f57ef74f8748747e00d33b6757c9f77725ecef39f45fb19423f"
+    },
+    {
+      "definitionId": "proofkit.next.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "action",
+              "issueCodes",
+              "nonClaims",
+              "packetId",
+              "packetKind",
+              "projectState",
+              "schemaVersion",
+              "snapshotId",
+              "statusRef"
+            ],
+            "requiredFields": [
+              "action",
+              "issueCodes",
+              "nonClaims",
+              "packetId",
+              "packetKind",
+              "projectState",
+              "schemaVersion",
+              "snapshotId",
+              "statusRef"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON mode"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:b046def1ec1d608e3c76efd84127df7cd8b0a10a920e7ad9b8b850826432d3af"
     },
     {
       "definitionId": "proofkit.obligation-decision.input.v1.root-shape",
@@ -15372,6 +15602,54 @@
         ]
       },
       "canonicalDigest": "sha256:338f720a24bd36f4ab34cad9b14d3bd26389119e5c713146f1c4eb019f4a0637"
+    },
+    {
+      "definitionId": "proofkit.status.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "issueCodes",
+              "manifestId",
+              "nextAction",
+              "nonClaims",
+              "projectId",
+              "projectState",
+              "reportKind",
+              "schemaVersion",
+              "snapshotId",
+              "statusId"
+            ],
+            "requiredFields": [
+              "issueCodes",
+              "manifestId",
+              "nextAction",
+              "nonClaims",
+              "projectId",
+              "projectState",
+              "reportKind",
+              "schemaVersion",
+              "snapshotId",
+              "statusId"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON mode"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:4d26ca7b7f6be8120fbac40519db02d8e5ae8ba7264208c714fbb9f1cb88ef15"
     },
     {
       "definitionId": "proofkit.test-evidence-inventory.input.v2.root-shape",

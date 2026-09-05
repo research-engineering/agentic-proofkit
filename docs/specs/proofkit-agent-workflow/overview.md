@@ -7,7 +7,7 @@ witnesses, merge, release, rollout, or production-readiness decisions.
 
 The public capability is deliberately small:
 
-1. `change-workflow-plan` admits explicit JSON and projects one next action for
+1. `change plan` admits explicit JSON and projects one next action for
    the optional built-in profile `proofkit.reviewed-change.v1`, whose ordered
    stages are `architecture`, `design`, `implementation_plan`,
    `implementation`, `verification`, `pull_request`, and `closeout`.
@@ -19,12 +19,19 @@ The public capability is deliberately small:
    the consuming witness declares the named mechanism.
 3. Existing descriptors, dispatch, command families, root-shape CLI contracts,
    agent envelopes, and package gates provide public-surface closure.
+4. `status --repo-root` classifies only a bounded normalized
+   materialized-project observation, and `next --repo-root` projects one
+   bounded action. Admitted in-bound records bind exact content digests;
+   unread out-of-bound records bind only their invalid class. Neither command
+   claims native execution or proof completion.
 
-Neither workflow command scans a repository. Both command cores are stateless
-pure projections with no filesystem, Git, process, environment, clock, random,
-network, container, or provider dependency. Neither workflow command adds a
-setup facade, hidden route policy, external prompt resource, persisted
-experiment state, or second source codec. Agent-route brief and full
+The change planner and evidence-guidance cores are stateless pure projections.
+Project status reads only an explicit repository root, the conventional routing
+manifest, its declared children, and transaction control state through bounded
+owner-admitted transport. No workflow command executes Git, native witnesses,
+network, containers, or providers. No workflow command adds a setup facade,
+hidden route policy, external prompt resource, persisted experiment state,
+generic report interpreter, or second source codec. Agent-route brief and full
 projections remain independently owned by the spec-proof-core package.
 
 ## Requirements
@@ -69,6 +76,22 @@ projections remain independently owned by the spec-proof-core package.
   descriptor/dispatcher/family/help/root-contract/witness/generated/package
   surfaces, with npm-only non-runtime specification docs and cross-channel
   runtime behavior proof.
+- `REQ-PROOFKIT-WORKFLOW-012`: one truthful project-state owner, exhaustive
+  precedence, existing child and cross-record closure owners, and no promotion
+  of source declarations or caller status into execution evidence.
+- `REQ-PROOFKIT-WORKFLOW-013`: one application-write-free root-bound inspection
+  lease, cooperative writer exclusion, descriptor-relative exact-path
+  traversal, bounded content-cohort validation, fail-closed partial control
+  observations, one bounded retry, and a portable non-disclosing
+  normalized-observation identity.
+  Filesystem-owned read metadata such as access time is outside that guarantee.
+- `REQ-PROOFKIT-WORKFLOW-014`: one total state-to-action table, one bounded
+  next action, explicit owner decisions, and no embedded route universe.
+- `REQ-PROOFKIT-WORKFLOW-015`: status/next CLI channel and exit semantics,
+  checkpointed pre-emission failure discipline, one bounded stdout write
+  without claiming cancellation rollback or atomicity from an external sink,
+  and a versioned breaking replacement
+  of the flat change route by `change plan` across source and installed carriers.
 
 Shared stable-JSON/diagnostic hardening is owned by the supply-chain-quality
 spec. Typed local-reference closure is owned by the existing agent-envelope

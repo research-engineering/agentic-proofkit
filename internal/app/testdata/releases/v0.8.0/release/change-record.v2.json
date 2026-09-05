@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "previousVersion": "0.7.0",
+  "version": "0.8.0",
+  "changeClass": "compatible",
+  "breakingChanges": [],
+  "additions": [
+    {
+      "changeId": "proofkit.adoption.transactional-materialization",
+      "summary": "Add separate read-only plan, compare-and-swap apply, and state-bound recovery routes that compile owner-admitted adoption candidates into canonical repository artifacts."
+    },
+    {
+      "changeId": "proofkit.repository.transaction-protocol",
+      "summary": "Add a bounded repository-confined transaction owner with immutable journals, exact before-state checks, deterministic resume, and byte-identical rollback for cooperative writers."
+    }
+  ],
+  "migration": {
+    "required": false,
+    "steps": []
+  },
+  "platformRequirements": [
+    "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
+  ],
+  "knownLimitations": [
+    "Adopt plan inventories only a fixed root-file catalog; it does not infer stack identity, inspect arbitrary source semantics, generate requirements, write files, or execute native evidence.",
+    "Transactional materialization writes only owner-admitted candidate artifacts under one explicit repository root; it does not infer requirement meaning, execute native evidence, approve merge or release, provide filesystem-wide atomic visibility to concurrent readers, or protect its private namespace from a hostile same-user process.",
+    "Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
+    "Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
+    "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
+    "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
+    "TSX source parsing remains unsupported."
+  ],
+  "rollback": {
+    "strategy": "previous_admitted_version"
+  }
+}

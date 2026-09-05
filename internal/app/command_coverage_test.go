@@ -532,6 +532,8 @@ func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]stri
 		return []string{"json-report-cli-adapter-source", "--language", "typescript"}, true
 	case "native-evidence-guidance":
 		return []string{"native-evidence-guidance"}, true
+	case "next", "status":
+		return append(cloneStrings(descriptor.routeTokens), "--repo-root", t.TempDir()), true
 	case "repository-inventory":
 		return append(cloneStrings(descriptor.routeTokens), "--repo-root", t.TempDir()), true
 	case "stack-preset":

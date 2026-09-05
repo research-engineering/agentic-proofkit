@@ -8,11 +8,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
@@ -26,17 +28,22 @@ func TestVerifyAcceptsApplicationCLI(t *testing.T) {
 
 func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 	mutations := []struct {
-		name  string
-		match string
-		apply func(workflowsmoke.Result) workflowsmoke.Result
+		name             string
+		match            string
+		matchPrefix      bool
+		materializedOnly bool
+		apply            func(workflowsmoke.Result) workflowsmoke.Result
 	}{
-		{name: "planner identity", match: "change-workflow-plan --input -", apply: replaceStdout(`{"reportKind":"wrong"}\n`)},
-		{name: "workflow profile identity", match: "change-workflow-plan --input -", apply: replaceStdoutFragment(`"workflowProfileId": "proofkit.reviewed-change.v1"`, `"workflowProfileId": "wrong"`)},
-		{name: "compact layout", match: "--json-layout compact change-workflow-plan --input -", apply: replaceStdout("{\n  \"reportKind\": \"proofkit.change-workflow-plan\"\n}\n")},
-		{name: "envelope identity", match: "change-workflow-plan --input - --agent-envelope", apply: replaceStdout(`{"envelopeId":"wrong"}\n`)},
-		{name: "planner text styling", match: "change-workflow-plan --input - --format text --color never", apply: replaceStdout("\x1b[31mChange workflow plan\x1b[0m\n")},
-		{name: "planner text suffix", match: "change-workflow-plan --input - --format text --color never", apply: appendStdout("surplus\n")},
-		{name: "failure stdout", match: "change-workflow-plan", apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+		{name: "retired planner route", match: "change-workflow-plan --input -", apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+			return workflowsmoke.Result{ExitCode: 0, Stdout: []byte("{}\n")}
+		}},
+		{name: "planner identity", match: "change plan --input -", apply: replaceStdout(`{"reportKind":"wrong"}\n`)},
+		{name: "workflow profile identity", match: "change plan --input -", apply: replaceStdoutFragment(`"workflowProfileId": "proofkit.reviewed-change.v1"`, `"workflowProfileId": "wrong"`)},
+		{name: "compact layout", match: "--json-layout compact change plan --input -", apply: replaceStdout("{\n  \"reportKind\": \"proofkit.change-workflow-plan\"\n}\n")},
+		{name: "envelope identity", match: "change plan --input - --agent-envelope", apply: replaceStdout(`{"envelopeId":"wrong"}\n`)},
+		{name: "planner text styling", match: "change plan --input - --format text --color never", apply: replaceStdout("\x1b[31mChange workflow plan\x1b[0m\n")},
+		{name: "planner text suffix", match: "change plan --input - --format text --color never", apply: appendStdout("surplus\n")},
+		{name: "failure stdout", match: "change plan", apply: func(result workflowsmoke.Result) workflowsmoke.Result {
 			result.Stdout = []byte("unexpected")
 			return result
 		}},
@@ -44,13 +51,23 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		{name: "guidance applicability", match: "native-evidence-guidance", apply: replaceStdoutFragment(`"applicabilityClass": "always"`, `"applicabilityClass": "external_process"`)},
 		{name: "guidance middle slot", match: "native-evidence-guidance", apply: replaceStdoutFragment(`"slotId": "output_bounds"`, `"slotId": "wrong"`)},
 		{name: "guidance text suffix", match: "native-evidence-guidance --format text --color never", apply: appendStdout("surplus\n")},
+		{name: "project status identity", match: "status --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"reportKind": "proofkit.project-status"`, `"reportKind": "wrong"`)},
+		{name: "project next identity", match: "next --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"packetKind": "proofkit.project-next-action"`, `"packetKind": "wrong"`)},
+		{name: "materialized project status failure", match: "status --repo-root ", matchPrefix: true, materializedOnly: true, apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+			return workflowsmoke.Result{ExitCode: 1, Stderr: []byte("injected materialized-only failure\n")}
+		}},
 	}
 	for _, mutation := range mutations {
 		t.Run(mutation.name, func(t *testing.T) {
 			applied := false
 			runner := func(ctx context.Context, invocation workflowsmoke.Invocation) (workflowsmoke.Result, error) {
 				result, err := applicationRunner(ctx, invocation)
-				if err == nil && !applied && strings.Join(invocation.Args, " ") == mutation.match {
+				joined := strings.Join(invocation.Args, " ")
+				matches := joined == mutation.match || (mutation.matchPrefix && strings.HasPrefix(joined, mutation.match))
+				if matches && mutation.materializedOnly && !hasMaterializedProject(invocation) {
+					matches = false
+				}
+				if err == nil && !applied && matches {
 					result = mutation.apply(result)
 					applied = true
 				}
@@ -64,6 +81,17 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func hasMaterializedProject(invocation workflowsmoke.Invocation) bool {
+	for index := 0; index+1 < len(invocation.Args); index++ {
+		if invocation.Args[index] != "--repo-root" {
+			continue
+		}
+		_, err := os.Stat(filepath.Join(invocation.Args[index+1], filepath.FromSlash(adoptionmaterialization.ProjectManifestPath)))
+		return err == nil
+	}
+	return false
 }
 
 func TestRunProcessRejectsTimeout(t *testing.T) {

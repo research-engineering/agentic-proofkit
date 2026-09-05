@@ -1552,6 +1552,10 @@ func validateExactPlatformSmokeSteps(job githubJob) error {
 			},
 		},
 		{
+			Name: "Run Darwin filesystem invariants",
+			Run:  "go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/command/projectstatus -count=1",
+		},
+		{
 			Name: "Run platform smoke",
 			Run:  requiredPlatformSmokeShell,
 		},

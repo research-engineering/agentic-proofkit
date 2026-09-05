@@ -153,6 +153,7 @@ func TestAdmitRequiresExactCommandRouteGrammarProjection(t *testing.T) {
 		strings.Replace(base, `"separator":" "`, `"separator":"/"`, 1),
 		strings.Replace(base, `"tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$"`, `"tokenPattern":"^[a-z]+$"`, 1),
 		strings.Replace(base, `"ambiguityPolicy":"no_route_is_prefix_of_another"`, `"ambiguityPolicy":"allow_prefixes"`, 1),
+		strings.Replace(base, `"omittedRoutePolicy":"command_id"`, `"omittedRoutePolicy":"unknown"`, 1),
 	}
 	for index, mutant := range mutants {
 		if _, err := Admit([]byte(mutant)); err == nil {
@@ -162,5 +163,5 @@ func TestAdmitRequiresExactCommandRouteGrammarProjection(t *testing.T) {
 }
 
 func contractFixture(commands string) []byte {
-	return []byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another"}},"commands":[` + commands + `]}`)
+	return []byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another","omittedRoutePolicy":"command_id"}},"commands":[` + commands + `]}`)
 }

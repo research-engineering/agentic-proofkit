@@ -83,7 +83,7 @@ func activeEntries(root *os.Root) ([]fs.DirEntry, error) {
 	return transactionEntries(root, activeDirectory)
 }
 
-func transactionEntries(root *os.Root, relativePath string) ([]fs.DirEntry, error) {
+func transactionEntries(root *os.Root, relativePath string) (entries []fs.DirEntry, returnErr error) {
 	if err := validatePrivateDirectory(root, relativePath, 0o700); err != nil {
 		return nil, err
 	}
@@ -91,9 +91,14 @@ func transactionEntries(root *os.Root, relativePath string) ([]fs.DirEntry, erro
 	if err != nil {
 		return nil, fmt.Errorf("open repository transaction state")
 	}
-	defer directory.Close()
+	defer func() {
+		if closeErr := closeReadResource(directory, "transaction state directory"); closeErr != nil {
+			entries = nil
+			returnErr = closeErr
+		}
+	}()
 	entryLimit := MaximumOperations*2 + MaximumOperations*pathidentity.MaximumComponents + 10
-	entries, err := directory.ReadDir(entryLimit + 1)
+	entries, err = directory.ReadDir(entryLimit + 1)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("read repository transaction state")
 	}

@@ -158,6 +158,8 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 		return writeJSON(output, 0, err, stdout, stderr)
 	case commandRunnerPilotAdmission:
 		return runPilotAdmission(args[1:], stdin, stdout, stderr)
+	case commandRunnerProjectStatus:
+		return runProjectStatus(ctx, args[0], args[1:], stdout, stderr, capabilities)
 	case commandRunnerProjectStructure:
 		return runProjectStructure(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerTypeScriptPublicAPISurfaces:
