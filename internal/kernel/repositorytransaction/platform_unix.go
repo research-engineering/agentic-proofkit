@@ -27,6 +27,15 @@ func platformOwnedByCurrentUser(info os.FileInfo) (bool, error) {
 	return stat.Uid == uint32(os.Geteuid()), nil
 }
 
+func platformSameFilesystem(left, right os.FileInfo) (bool, error) {
+	l, leftOK := left.Sys().(*syscall.Stat_t)
+	r, rightOK := right.Sys().(*syscall.Stat_t)
+	if !leftOK || !rightOK {
+		return false, fmt.Errorf("repository filesystem identity is unavailable")
+	}
+	return l.Dev == r.Dev, nil
+}
+
 func openNoFollow(root *os.Root, name string) (*os.File, error) {
 	return root.OpenFile(name, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 }

@@ -9,9 +9,30 @@ import (
 )
 
 func TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift(t *testing.T) {
-	assertRejectsUndeclaredPublicABIDrift(t, readFrozenIntegrationPublicABI(t), readCLIContractRaw, func(frozen frozenPublicABI, current map[string]any) error {
+	assertRejectsUndeclaredPublicABIDrift(t, readFrozenIntegrationPublicABI(t), readArchivedIntegrationContract, func(frozen frozenPublicABI, current map[string]any) error {
 		return verifyAdditivePublicABIDiff(frozen, current, []string{"integration-check", "integration-source"}, integrationProcessAppendices())
 	})
+}
+
+func TestManagedIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift(t *testing.T) {
+	assertRejectsUndeclaredPublicABIDrift(t, readFrozenManagedIntegrationPredecessor(t), readCLIContractRaw, func(frozen frozenPublicABI, current map[string]any) error {
+		return verifyManagedIntegrationPublicABIDiff(frozen, current)
+	})
+	for _, replacement := range []any{nil, "weaker replay", managedReplayPolicy + " Drift."} {
+		current := readCLIContractRaw(t)
+		mutatePublicABIRecord(t, current, "commands", "command", "adopt-materialize-apply", func(record map[string]any) {
+			output := record["outputContract"].(map[string]any)
+			summary := output["compatibilitySummary"].([]any)
+			if replacement == nil {
+				output["compatibilitySummary"] = summary[:len(summary)-1]
+			} else {
+				summary[len(summary)-1] = replacement
+			}
+		})
+		if verifyManagedIntegrationPublicABIDiff(readFrozenManagedIntegrationPredecessor(t), current) == nil {
+			t.Fatal("undeclared replay semantics were admitted")
+		}
+	}
 }
 
 func assertRejectsUndeclaredPublicABIDrift(t *testing.T, frozen frozenPublicABI, read func(*testing.T) map[string]any, verify func(frozenPublicABI, map[string]any) error) {

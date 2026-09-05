@@ -28,7 +28,7 @@ The public capability is deliberately small:
    bootstrap without reading repositories or writing files;
    `integration check --tool <claude|codex> --repo-root <path>` compares only
    the selected descriptor-owned file through confined read-only inspection.
-   These are generation/check targets, not managed integration support.
+   Generation/check remain read-only; separate lifecycle routes manage files.
 
 The change planner and evidence-guidance cores are stateless pure projections.
 Project status reads only an explicit repository root, the conventional routing
@@ -132,9 +132,15 @@ identity and a bounded freshness classification, never observed content, its
 digest, or caller root paths. Exit 0 means current, exit 2 means a classified
 missing/stale/invalid file, and exit 1 means an invocation or operation error.
 Source returns 0 on success and 1 on error. Neither accepts `--output` or an
-install option. Manual export guidance is owned by `ADOPTION.md`.
+install option. Managed lifecycle guidance is owned by `ADOPTION.md`.
 
-Phase5B managed installation, update, and safe removal remains explicitly open.
+`REQ-PROOFKIT-WORKFLOW-019` owns `integration plan`, `integration apply`, and
+`integration recover`. A reviewed install/update/remove changes only the
+selected bootstrap and its canonical cooperative baseline through the existing
+repository transaction owner. Both expected identities are required for apply;
+local edits or malformed baselines block mutation. Recovery uses historical
+journal state without assuming the current tool renderer. Desired absence
+selects journal v2, while present-only v1 identities and recovery remain stable.
 Host discovery, body loading, and approved-launcher invocation require separate
 isolated native-host observations; direct CLI execution cannot prove skill use.
 

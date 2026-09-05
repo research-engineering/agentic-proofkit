@@ -297,6 +297,7 @@ func TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry(t *testing.T
 
 func TestTerminalReplayClassificationPreservesDistinctOutcomes(t *testing.T) {
 	transactionID := "sha256:" + strings.Repeat("a", 64)
+	operational := errors.New("native observation failed")
 	tests := []struct {
 		name             string
 		result           repositorytransaction.Result
@@ -305,11 +306,17 @@ func TestTerminalReplayClassificationPreservesDistinctOutcomes(t *testing.T) {
 		wantError        error
 		wantState        string
 	}{
-		{name: "lost acknowledgement", result: repositorytransaction.Result{AppliedCount: 3, AppliedCountKnown: true, RecoveredBy: repositorytransaction.RecoveryResume, State: repositorytransaction.StateApplied, TransactionID: transactionID}, wantState: repositorytransaction.StateAlreadySatisfied},
+		{name: "admitted replay", result: repositorytransaction.Result{AppliedCountKnown: true, State: repositorytransaction.StateAlreadySatisfied, TransactionID: transactionID}, wantState: repositorytransaction.StateAlreadySatisfied},
+		{name: "historical result only", result: repositorytransaction.Result{AppliedCount: 3, AppliedCountKnown: true, RecoveredBy: repositorytransaction.RecoveryResume, State: repositorytransaction.StateApplied, TransactionID: transactionID}, wantFailureClass: "transaction_identity_mismatch"},
+		{name: "read cleanup", err: repositorytransaction.ErrReadCleanup, wantError: repositorytransaction.ErrReadCleanup},
 		{name: "busy", err: repositorytransaction.ErrBusy, wantFailureClass: "transaction_busy"},
 		{name: "cancelled", err: context.Canceled, wantError: context.Canceled},
 		{name: "deadline", err: context.DeadlineExceeded, wantError: context.DeadlineExceeded},
-		{name: "absent", err: errors.New("absent"), wantFailureClass: "transaction_identity_mismatch"},
+		{name: "absent", err: repositorytransaction.ErrReplayMismatch, wantFailureClass: "transaction_identity_mismatch"},
+		{name: "operational", err: operational, wantError: operational},
+		{name: "mismatch and cleanup", err: errors.Join(repositorytransaction.ErrReplayMismatch, repositorytransaction.ErrReadCleanup), wantError: repositorytransaction.ErrReadCleanup},
+		{name: "busy and cleanup", err: errors.Join(repositorytransaction.ErrBusy, repositorytransaction.ErrReadCleanup), wantError: repositorytransaction.ErrReadCleanup},
+		{name: "pending and cleanup", err: errors.Join(repositorytransaction.ErrRecoveryRequired, repositorytransaction.ErrReadCleanup), wantError: repositorytransaction.ErrReadCleanup},
 		{name: "wrong terminal state", result: repositorytransaction.Result{AppliedCountKnown: true, State: repositorytransaction.StateRolledBack, TransactionID: transactionID}, wantFailureClass: "transaction_identity_mismatch"},
 	}
 	for _, test := range tests {

@@ -194,13 +194,19 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{}
-
-var currentAdditions = []Change{
-	{ChangeID: "proofkit.repository-transaction.native-construction", Summary: "Keep re-admitted transaction reports non-executable for empty and nonempty payloads by binding Apply to native construction of the complete transaction identity. Preserve public JSON, valid native operations, and journal recovery."},
+var currentBreakingChanges = []Change{
+	{ChangeID: "proofkit.repository-transaction.bound-terminal-replay", Summary: "New terminal receipts use schema v2 to bind each completed transaction to its exact desired-state identity. Legacy schema-v1 receipts remain readable and recoverable, but cannot authorize acknowledgement replay; a newly reviewed plan is required. Roots containing v2 receipts are not compatible with older binaries."},
 }
 
-var currentMigrationSteps = []string{}
+var currentAdditions = []Change{
+	{ChangeID: "proofkit.agent-integration.managed-lifecycle", Summary: "Add explicit integration plan, apply and recover routes for reviewed install, update and removal of the selected tool bootstrap. Preserve local edits and neighboring instructions with one native two-target transaction and a cooperative baseline."},
+	{ChangeID: "proofkit.repository-transaction.desired-absence", Summary: "Support exact desired absence, guarded deletion and recovery through versioned native journals while preserving present-only v1 bytes and identities. Bind idempotent current-state replay to the pending-state and retained-result checks under one native lock."},
+}
+
+var currentMigrationSteps = []string{
+	"For an acknowledgement retry backed by a legacy terminal receipt, run adopt materialize plan again and review both current identities before apply; do not reuse the old transaction identity.",
+	"Use this or a later supporting binary for roots containing v2 journals or terminal receipts. Completing recovery does not make retained v2 receipts downgrade-compatible; do not delete private control state as a downgrade shortcut.",
+}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -220,7 +226,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.10.1",
+		"# @research-engineering/agentic-proofkit 0.11.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -242,7 +248,8 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"No consumer migration is required.",
+		"Migration is required:",
+		"",
 	)
 	for _, step := range currentMigrationSteps {
 		lines = append(lines, "- "+step)
@@ -263,14 +270,15 @@ func currentExpectedReleaseNotes() string {
 		"- Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
 		"- The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
-		"- Integration source and check do not install, update, remove, activate, or execute a host skill. Managed lifecycle and observed host activation remain separate open work.",
+		"- Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
+		"- Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts.",
 		"",
 		"## Install",
 		"",
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.10.1",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.11.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -281,7 +289,8 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Rollback",
 		"",
-		"- Pin npm consumers to the previous admitted version 0.10.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.10.0`.",
+		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
+		"- Pin npm consumers to the previous admitted version 0.10.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.10.1`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

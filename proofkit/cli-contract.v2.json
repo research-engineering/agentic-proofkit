@@ -112,7 +112,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
+          "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -143,17 +143,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
+            "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -167,7 +167,8 @@
           "schemaVersion=1",
           "apply receipt binds expected transaction and desired-state identities to the transaction result",
           "JSON receipt and bounded text projection preserve the same operation outcome",
-          "root-shape-only definition proofkit.adoption-materialization.apply-output.v1.root-shape; nested fields, types, and cardinalities remain native-owner claims"
+          "root-shape-only definition proofkit.adoption-materialization.apply-output.v1.root-shape; nested fields, types, and cardinalities remain native-owner claims",
+          "Replay requires a retained generation-2 terminal receipt binding the exact desiredStateId under the native lock; generation-1 receipts remain recoverable but acknowledgement retries require a newly reviewed plan. Roots with generation-2 receipts require a supporting binary even after recovery completes."
         ],
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
@@ -250,7 +251,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
+          "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -281,17 +282,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
+            "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -395,17 +396,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:2940a39db54e51167e3f3373aa38525fc734fddc3902ac7d7ed1fdf326066cfe",
+            "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -1186,7 +1187,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2426,6 +2427,144 @@
       }
     },
     {
+      "command": "integration-apply",
+      "route": [
+        "integration",
+        "apply"
+      ],
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_mutation",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--expect-desired-state",
+        "--expect-transaction",
+        "--format",
+        "--operation",
+        "--repo-root",
+        "--tool"
+      ],
+      "requiredFlags": [
+        "--expect-desired-state",
+        "--expect-transaction",
+        "--operation",
+        "--repo-root",
+        "--tool"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--expect-desired-state",
+        "--expect-transaction",
+        "--format",
+        "--operation",
+        "--repo-root",
+        "--tool"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ],
+        "--operation": [
+          "install",
+          "remove",
+          "update"
+        ],
+        "--tool": [
+          "claude",
+          "codex"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.integration-apply.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.integration-apply.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:9072801d4aa7a9820e81f0de02ff04e22ced6188958c31d2f3682d01d2cc84ed",
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/agentintegration",
+            "canonicalDigest": "sha256:e03209a37e8c7cc7c59c56c80c2906b789091e8de25679a6fe37704bfb2009c4",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "evidenceClass": "source_checkout"
+          }
+        ],
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/agent_integration_lifecycle_command_test.go",
+          "test": "TestIntegrationApplyCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationApplyCLI$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "kind=proofkit.integration-receipt.v1; state=passed|blocked|failed|recovery_required|cleanup_required|durability_unknown; transactionResult is the native owner projection or null",
+          "JSON is the default; text is opt-in with color=auto|never, default never; color requires explicit --format text and ANSI requires a capable TTY without NO_COLOR",
+          "No input, stdin, input pointer, output-file, implicit tool selection, package installation or native host activation",
+          "Invocation flags and SHA256 identity references are admitted before repository I/O; unsafe routes, I/O, pre-effect cancellation and output errors use exit 1 and non-disclosing stderr without a classified JSON packet",
+          "Ready plans and passed receipts exit 0; classified conflict, recovery, cleanup and durability outcomes exit 1 with exactly one report and empty stderr",
+          "Selected fixed bootstrap and proofkit/integrations/<tool>.v1.json form one native transaction; canonical baseline is cooperative byte/mode bookkeeping, not authenticated origin",
+          "Apply requires both reviewed transaction and desired-state identities; replay requires exact current desired files, no pending transaction and the retained applied receipt under one native lock",
+          "root-shape-only definition proofkit.integration-apply.output.v1.root-shape; nested field shapes, leaf types and relational semantics remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-033",
+          "REQ-PROOFKIT-WORKFLOW-019"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ],
+          "--operation": [
+            "install",
+            "remove",
+            "update"
+          ],
+          "--tool": [
+            "claude",
+            "codex"
+          ]
+        }
+      }
+    },
+    {
       "command": "integration-check",
       "route": [
         "integration",
@@ -2473,17 +2612,17 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/agentintegration",
-            "canonicalDigest": "sha256:d85cf0fc38bbd28f86ececb3e41f9e04fca7f2741507bf006cd1a55500484505",
+            "canonicalDigest": "sha256:e03209a37e8c7cc7c59c56c80c2906b789091e8de25679a6fe37704bfb2009c4",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2523,6 +2662,260 @@
           "--tool": [
             "claude",
             "codex"
+          ]
+        }
+      }
+    },
+    {
+      "command": "integration-plan",
+      "route": [
+        "integration",
+        "plan"
+      ],
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--color",
+        "--format",
+        "--operation",
+        "--repo-root",
+        "--tool"
+      ],
+      "requiredFlags": [
+        "--operation",
+        "--repo-root",
+        "--tool"
+      ],
+      "singleOccurrenceFlags": [
+        "--color",
+        "--format",
+        "--operation",
+        "--repo-root",
+        "--tool"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ],
+        "--operation": [
+          "install",
+          "remove",
+          "update"
+        ],
+        "--tool": [
+          "claude",
+          "codex"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.integration-plan.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.integration-plan.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:2f1c3c16d0a794ed7f2cbc8a71062e8f8d1d0a6076980a729b6f62dfb131cedd",
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/agentintegration",
+            "canonicalDigest": "sha256:e03209a37e8c7cc7c59c56c80c2906b789091e8de25679a6fe37704bfb2009c4",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "evidenceClass": "source_checkout"
+          }
+        ],
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/agent_integration_lifecycle_command_test.go",
+          "test": "TestIntegrationPlanCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationPlanCLI$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "kind=proofkit.integration-plan.v1; state=ready|blocked|recovery_required; ready contains an owner-admitted descriptive transaction, conflict has transaction=null",
+          "JSON is the default; text is opt-in with color=auto|never, default never; color requires explicit --format text and ANSI requires a capable TTY without NO_COLOR",
+          "No input, stdin, input pointer, output-file, implicit tool selection, package installation or native host activation",
+          "Invocation flags and SHA256 identity references are admitted before repository I/O; unsafe routes, I/O, pre-effect cancellation and output errors use exit 1 and non-disclosing stderr without a classified JSON packet",
+          "Ready plans and passed receipts exit 0; classified conflict, recovery, cleanup and durability outcomes exit 1 with exactly one report and empty stderr",
+          "Selected fixed bootstrap and proofkit/integrations/<tool>.v1.json form one native transaction; canonical baseline is cooperative byte/mode bookkeeping, not authenticated origin",
+          "Install never overwrites unknown or stale unbaselined content; update requires a matched prior baseline; remove deletes only a matched pair or valid orphan baseline, never adjacent instructions",
+          "root-shape-only definition proofkit.integration-plan.output.v1.root-shape; nested field shapes, leaf types and relational semantics remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-033",
+          "REQ-PROOFKIT-WORKFLOW-019"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ],
+          "--operation": [
+            "install",
+            "remove",
+            "update"
+          ],
+          "--tool": [
+            "claude",
+            "codex"
+          ]
+        }
+      }
+    },
+    {
+      "command": "integration-recover",
+      "route": [
+        "integration",
+        "recover"
+      ],
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_mutation",
+      "outputModes": [
+        "json",
+        "text"
+      ],
+      "allowedFlags": [
+        "--action",
+        "--color",
+        "--format",
+        "--repo-root",
+        "--transaction"
+      ],
+      "requiredFlags": [
+        "--action",
+        "--repo-root",
+        "--transaction"
+      ],
+      "singleOccurrenceFlags": [
+        "--action",
+        "--color",
+        "--format",
+        "--repo-root",
+        "--transaction"
+      ],
+      "flagChoices": {
+        "--color": [
+          "auto",
+          "never"
+        ],
+        "--format": [
+          "json",
+          "text"
+        ],
+        "--action": [
+          "resume",
+          "rollback"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--color",
+          "requiredFlagValues": [
+            {
+              "flag": "--format",
+              "value": "text"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.integration-recover.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.integration-recover.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:c833d7c58535cc55b77c0cbbac27899ff3eb3be3ec9ceddad24ed17808f3b7a9",
+        "nativeSources": [
+          {
+            "path": "internal/app",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/command/agentintegration",
+            "canonicalDigest": "sha256:e03209a37e8c7cc7c59c56c80c2906b789091e8de25679a6fe37704bfb2009c4",
+            "evidenceClass": "source_checkout"
+          },
+          {
+            "path": "internal/kernel/repositorytransaction",
+            "canonicalDigest": "sha256:09690b58bdcc1794fbacd3b95ebcc368e044df2a44f0a8cf7f50b6bd0e2b933f",
+            "evidenceClass": "source_checkout"
+          }
+        ],
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/agent_integration_lifecycle_command_test.go",
+          "test": "TestIntegrationRecoverCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationRecoverCLI$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "schemaVersion=1",
+          "kind=proofkit.integration-receipt.v1; state=passed|blocked|failed|recovery_required|cleanup_required|durability_unknown; transactionResult is the native owner projection or null",
+          "JSON is the default; text is opt-in with color=auto|never, default never; color requires explicit --format text and ANSI requires a capable TTY without NO_COLOR",
+          "No input, stdin, input pointer, output-file, implicit tool selection, package installation or native host activation",
+          "Invocation flags and SHA256 identity references are admitted before repository I/O; unsafe routes, I/O, pre-effect cancellation and output errors use exit 1 and non-disclosing stderr without a classified JSON packet",
+          "Ready plans and passed receipts exit 0; classified conflict, recovery, cleanup and durability outcomes exit 1 with exactly one report and empty stderr",
+          "Recovery requires only root, transaction and action; tool and expectedDesiredStateId are null; historical recovery does not prove current installed or removed state",
+          "A committed transaction cannot be rolled back; native incomplete transactions retain the native resume and rollback rules",
+          "root-shape-only definition proofkit.integration-recover.output.v1.root-shape; nested field shapes, leaf types and relational semantics remain native-owner claims"
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-033",
+          "REQ-PROOFKIT-WORKFLOW-019"
+        ],
+        "flagChoices": {
+          "--color": [
+            "auto",
+            "never"
+          ],
+          "--format": [
+            "json",
+            "text"
+          ],
+          "--action": [
+            "resume",
+            "rollback"
           ]
         }
       }
@@ -2572,12 +2965,12 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/agentintegration",
-            "canonicalDigest": "sha256:d85cf0fc38bbd28f86ececb3e41f9e04fca7f2741507bf006cd1a55500484505",
+            "canonicalDigest": "sha256:e03209a37e8c7cc7c59c56c80c2906b789091e8de25679a6fe37704bfb2009c4",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -3247,7 +3640,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
             "evidenceClass": "source_checkout"
           },
           {
@@ -6537,7 +6930,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+          "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6566,7 +6959,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:8cf495d309f3447cc7743e8c2e9ff303e5f4bb78d69eeff27fd48d37fa47d605",
+          "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -10981,6 +11374,54 @@
       "canonicalDigest": "sha256:e6dacd55cace039ca8e24bdec628b1498d0c12bbfcdb60c46854ab2047c3f2d7"
     },
     {
+      "definitionId": "proofkit.integration-apply.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "expectedDesiredStateId",
+              "expectedTransactionId",
+              "failureClass",
+              "kind",
+              "nonClaims",
+              "operation",
+              "schemaVersion",
+              "state",
+              "tool",
+              "transactionResult"
+            ],
+            "requiredFields": [
+              "expectedDesiredStateId",
+              "expectedTransactionId",
+              "failureClass",
+              "kind",
+              "nonClaims",
+              "operation",
+              "schemaVersion",
+              "state",
+              "tool",
+              "transactionResult"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON mode"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:9072801d4aa7a9820e81f0de02ff04e22ced6188958c31d2f3682d01d2cc84ed"
+    },
+    {
       "definitionId": "proofkit.integration-check.output.v1.root-shape",
       "schemaVersion": 1,
       "rootType": "object",
@@ -11023,6 +11464,100 @@
         ]
       },
       "canonicalDigest": "sha256:309c5f43b8d5596d88859819ed59e4486926d75d5f41d2b2b6e252389f5913ca"
+    },
+    {
+      "definitionId": "proofkit.integration-plan.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "failureClass",
+              "kind",
+              "nonClaims",
+              "operation",
+              "recoveryTransactionId",
+              "schemaVersion",
+              "state",
+              "tool",
+              "transaction"
+            ],
+            "requiredFields": [
+              "failureClass",
+              "kind",
+              "nonClaims",
+              "operation",
+              "recoveryTransactionId",
+              "schemaVersion",
+              "state",
+              "tool",
+              "transaction"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON mode"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:2f1c3c16d0a794ed7f2cbc8a71062e8f8d1d0a6076980a729b6f62dfb131cedd"
+    },
+    {
+      "definitionId": "proofkit.integration-recover.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "expectedDesiredStateId",
+              "expectedTransactionId",
+              "failureClass",
+              "kind",
+              "nonClaims",
+              "operation",
+              "schemaVersion",
+              "state",
+              "tool",
+              "transactionResult"
+            ],
+            "requiredFields": [
+              "expectedDesiredStateId",
+              "expectedTransactionId",
+              "failureClass",
+              "kind",
+              "nonClaims",
+              "operation",
+              "schemaVersion",
+              "state",
+              "tool",
+              "transactionResult"
+            ],
+            "rootKind": "object",
+            "variantId": "01-root",
+            "when": [
+              "default JSON mode"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:c833d7c58535cc55b77c0cbbac27899ff3eb3be3ec9ceddad24ed17808f3b7a9"
     },
     {
       "definitionId": "proofkit.integration-source.output.v1.root-shape",

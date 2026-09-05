@@ -64,6 +64,9 @@ func verifyIntegrations(ctx context.Context, run Runner) (returnErr error) {
 		if err := verifyIntegrationStates(ctx, run, root, tool, source); err != nil {
 			return err
 		}
+		if err := verifyIntegrationLifecycle(ctx, run, tool, source); err != nil {
+			return err
+		}
 	}
 	return verifyFailure(ctx, run, "integration explicit tool", unreadInvocation("integration", "source"), "requires --tool")
 }

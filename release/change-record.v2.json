@@ -1,18 +1,30 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.10.0",
-  "version": "0.10.1",
-  "changeClass": "compatible",
-  "breakingChanges": [],
+  "previousVersion": "0.10.1",
+  "version": "0.11.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
+    {
+      "changeId": "proofkit.repository-transaction.bound-terminal-replay",
+      "summary": "New terminal receipts use schema v2 to bind each completed transaction to its exact desired-state identity. Legacy schema-v1 receipts remain readable and recoverable, but cannot authorize acknowledgement replay; a newly reviewed plan is required. Roots containing v2 receipts are not compatible with older binaries."
+    }
+  ],
   "additions": [
     {
-      "changeId": "proofkit.repository-transaction.native-construction",
-      "summary": "Keep re-admitted transaction reports non-executable for empty and nonempty payloads by binding Apply to native construction of the complete transaction identity. Preserve public JSON, valid native operations, and journal recovery."
+      "changeId": "proofkit.agent-integration.managed-lifecycle",
+      "summary": "Add explicit integration plan, apply and recover routes for reviewed install, update and removal of the selected tool bootstrap. Preserve local edits and neighboring instructions with one native two-target transaction and a cooperative baseline."
+    },
+    {
+      "changeId": "proofkit.repository-transaction.desired-absence",
+      "summary": "Support exact desired absence, guarded deletion and recovery through versioned native journals while preserving present-only v1 bytes and identities. Bind idempotent current-state replay to the pending-state and retained-result checks under one native lock."
     }
   ],
   "migration": {
-    "required": false,
-    "steps": []
+    "required": true,
+    "steps": [
+      "For an acknowledgement retry backed by a legacy terminal receipt, run adopt materialize plan again and review both current identities before apply; do not reuse the old transaction identity.",
+      "Use this or a later supporting binary for roots containing v2 journals or terminal receipts. Completing recovery does not make retained v2 receipts downgrade-compatible; do not delete private control state as a downgrade shortcut."
+    ]
   },
   "platformRequirements": [
     "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
@@ -26,7 +38,8 @@
     "Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
     "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
     "TSX source parsing remains unsupported.",
-    "Integration source and check do not install, update, remove, activate, or execute a host skill. Managed lifecycle and observed host activation remain separate open work."
+    "Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
+    "Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts."
   ],
   "rollback": {
     "strategy": "previous_admitted_version"

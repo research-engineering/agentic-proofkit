@@ -227,12 +227,23 @@ func (runtime engine) cleanupRecovered(root *os.Root, plan Plan, state, action s
 		return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: "temporary_cleanup_failed", RecoveredBy: action, State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
 	}
 	terminal := Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, RecoveredBy: action, State: state, TransactionID: plan.TransactionID}
+	if exists, err := pathExists(root, activeDirectory+"/"+terminalReceiptName); err != nil {
+		return Result{FailureClass: "invalid_terminal_receipt", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+	} else if exists {
+		receipt, err := loadTerminalReceipt(root, activeDirectory)
+		expected, relationErr := terminalReceiptFromResult(plan, receipt.result())
+		if err != nil || relationErr != nil || receipt.State != state || !terminalReceiptMatchesPlan(receipt, expected) {
+			return Result{FailureClass: "invalid_terminal_receipt", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+		}
+		terminal = receipt.result()
+	}
 	if err := runtime.archiveAndCleanupTerminal(root, plan, terminal); err != nil {
 		if errors.Is(err, errCleanupDurabilityUnknown) {
 			return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: state + "_cleanup_durability_unknown", RecoveredBy: action, State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
 		}
 		return Result{AppliedCount: prefixForState(plan, state), AppliedCountKnown: true, FailureClass: "cleanup_failed", RecoveredBy: action, State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
 	}
+	terminal.RecoveredBy = action
 	return terminal, nil
 }
 

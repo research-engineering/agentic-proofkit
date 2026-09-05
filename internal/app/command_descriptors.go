@@ -28,6 +28,7 @@ const (
 	commandRunnerAgentWorkflow               commandRunner = "agent_workflow"
 	commandRunnerAgentRoute                  commandRunner = "agent_route"
 	commandRunnerAgentIntegration            commandRunner = "agent_integration"
+	commandRunnerAgentIntegrationLifecycle   commandRunner = "agent_integration_lifecycle"
 	commandRunnerConformanceProfile          commandRunner = "conformance_profile"
 	commandRunnerContractEnvelope            commandRunner = "contract_envelope"
 	commandRunnerGradualAdoptionBootstrap    commandRunner = "gradual_adoption_bootstrap"
@@ -123,7 +124,10 @@ var commandDescriptors = []commandDescriptor{
 	command("gradual-adoption-guidance", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--contract-envelope", "--guidance-mode", "--input", "--input-pointer", "--touched-rule-id"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerGradualAdoptionGuidance), withAgentEnvelope(), withContractEnvelope()),
 	command("help", commandInputNone, flags("--help", "-h"), modes("text"), ownerDirs("help"), withRunner(commandRunnerHelp), withSemanticAppTests("TestHelpCommandContractForms")),
 	command("impact", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("impact")),
+	command("integration-apply", commandInputNone, flags("--color", "--expect-desired-state", "--expect-transaction", "--format", "--operation", "--repo-root", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegrationLifecycle), withSemanticAppTests("TestIntegrationApplyCLI"), withScopeClass(commandScopeExplicitFileSystemMutation), withRequiredFlags("--expect-desired-state", "--expect-transaction", "--operation", "--repo-root", "--tool"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagChoices("--operation", "install", "remove", "update"), withFlagChoices("--tool", agentintegration.Tools()...), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--expect-desired-state", "--expect-transaction", "--operation", "--repo-root", "--tool")),
 	command("integration-check", commandInputNone, flags("--format", "--repo-root", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegration), withSemanticAppTests("TestIntegrationCheckCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root", "--tool"), withFlagChoices("--format", "json", "text"), withFlagChoices("--tool", agentintegration.Tools()...), withSingleOccurrenceFlags("--repo-root", "--tool")),
+	command("integration-plan", commandInputNone, flags("--color", "--format", "--operation", "--repo-root", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegrationLifecycle), withSemanticAppTests("TestIntegrationPlanCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--operation", "--repo-root", "--tool"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagChoices("--operation", "install", "remove", "update"), withFlagChoices("--tool", agentintegration.Tools()...), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--operation", "--repo-root", "--tool")),
+	command("integration-recover", commandInputNone, flags("--action", "--color", "--format", "--repo-root", "--transaction"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegrationLifecycle), withSemanticAppTests("TestIntegrationRecoverCLI"), withScopeClass(commandScopeExplicitFileSystemMutation), withRequiredFlags("--action", "--repo-root", "--transaction"), withFlagChoices("--action", "resume", "rollback"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--action", "--color", "--repo-root", "--transaction")),
 	command("integration-source", commandInputNone, flags("--format", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegration), withSemanticAppTests("TestIntegrationSourceCLI"), withRequiredFlags("--tool"), withFlagChoices("--format", "json", "text"), withFlagChoices("--tool", agentintegration.Tools()...), withSingleOccurrenceFlags("--tool")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource), withRequiredFlags("--language")),
 	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
@@ -189,6 +193,7 @@ var commandDescriptors = []commandDescriptor{
 
 var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerAgentIntegration:            {},
+	commandRunnerAgentIntegrationLifecycle:   {},
 	commandRunnerGenericInput:                {},
 	commandRunnerAdoptionFrontDoor:           {},
 	commandRunnerAdoptionMaterialization:     {},

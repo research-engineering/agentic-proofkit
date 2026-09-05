@@ -82,7 +82,13 @@ func Apply(ctx context.Context, raw any, repositoryRoot, expectedTransactionID, 
 		if transactionHasChanges(plan.Transaction) {
 			return blockedReceipt(OperationApply, expected, expectedDesired, "transaction_identity_mismatch", plan.NonClaims)
 		}
-		terminal, terminalErr := repositorytransaction.ReadTerminalResult(ctx, repositoryRoot, expected)
+		terminal, terminalErr := repositorytransaction.ReplayApplied(ctx, repositoryRoot, plan.Transaction, expected)
+		if errors.Is(terminalErr, repositorytransaction.ErrReadCleanup) {
+			return Receipt{}, 1, terminalErr
+		}
+		if errors.Is(terminalErr, repositorytransaction.ErrRecoveryRequired) {
+			return pendingReceipt(OperationApply, expected, expectedDesired, terminalErr, plan.NonClaims)
+		}
 		replay, failureClass, replayErr := classifyTerminalReplay(terminal, terminalErr)
 		if replayErr != nil {
 			return Receipt{}, 1, replayErr
@@ -108,21 +114,19 @@ func Apply(ctx context.Context, raw any, repositoryRoot, expectedTransactionID, 
 func classifyTerminalReplay(result repositorytransaction.Result, err error) (repositorytransaction.Result, string, error) {
 	if err != nil {
 		switch {
-		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded), errors.Is(err, repositorytransaction.ErrReadCleanup):
 			return repositorytransaction.Result{}, "", err
 		case errors.Is(err, repositorytransaction.ErrBusy):
 			return repositorytransaction.Result{}, "transaction_busy", nil
-		default:
+		case errors.Is(err, repositorytransaction.ErrReplayMismatch):
 			return repositorytransaction.Result{}, "transaction_identity_mismatch", nil
+		default:
+			return repositorytransaction.Result{}, "", err
 		}
 	}
-	if result.State != repositorytransaction.StateApplied {
+	if result.State != repositorytransaction.StateAlreadySatisfied {
 		return repositorytransaction.Result{}, "transaction_identity_mismatch", nil
 	}
-	result.AppliedCount = 0
-	result.AppliedCountKnown = true
-	result.RecoveredBy = ""
-	result.State = repositorytransaction.StateAlreadySatisfied
 	return result, "", nil
 }
 

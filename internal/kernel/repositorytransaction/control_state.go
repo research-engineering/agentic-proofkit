@@ -56,7 +56,9 @@ func validateTransactionEntries(entries []fs.DirEntry, plan *Plan, allowPartialT
 			if operation.Action == ActionUnchanged {
 				continue
 			}
-			allowed[strings.TrimPrefix(afterObjectPath(index), activeDirectory+"/")] = struct{}{}
+			if operation.After.Exists {
+				allowed[strings.TrimPrefix(afterObjectPath(index), activeDirectory+"/")] = struct{}{}
+			}
 			allowed[strings.TrimPrefix(transactionTemporaryPath(plan.TransactionID, index, operation.Path), activeDirectory+"/")] = struct{}{}
 			if operation.Before.Exists {
 				allowed[strings.TrimPrefix(beforeObjectPath(index), activeDirectory+"/")] = struct{}{}

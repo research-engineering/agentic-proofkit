@@ -26,7 +26,12 @@ func TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff(t *testing.T) {
 
 func readArchivedProjectNavigationContract(t *testing.T) map[string]any {
 	t.Helper()
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), archivedProjectNavigationReleaseRoot, "cli-contract.v2.json.zip"))
+	return readArchivedCLIContract(t, archivedProjectNavigationReleaseRoot, archivedProjectNavigationContractSHA256)
+}
+
+func readArchivedCLIContract(t *testing.T, relativeRoot, expectedDigest string) map[string]any {
+	t.Helper()
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), relativeRoot, "cli-contract.v2.json.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +51,7 @@ func readArchivedProjectNavigationContract(t *testing.T) map[string]any {
 	if err != nil || closeErr != nil {
 		t.Fatalf("read archived CLI contract: %v; close: %v", err, closeErr)
 	}
-	if got := fmt.Sprintf("%x", sha256.Sum256(raw)); got != archivedProjectNavigationContractSHA256 {
+	if got := fmt.Sprintf("%x", sha256.Sum256(raw)); got != expectedDigest {
 		t.Fatalf("archived CLI contract changed: %s", got)
 	}
 	value, err := admission.DecodeJSON(bytes.NewReader(raw), int64(len(raw)))

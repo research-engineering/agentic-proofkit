@@ -15,6 +15,10 @@ func platformOwnedByCurrentUser(os.FileInfo) (bool, error) {
 	return false, fmt.Errorf("repository transactions require darwin or linux")
 }
 
+func platformSameFilesystem(os.FileInfo, os.FileInfo) (bool, error) {
+	return false, fmt.Errorf("repository transactions require darwin or linux")
+}
+
 func openNoFollow(*os.Root, string) (*os.File, error) {
 	return nil, fmt.Errorf("repository transactions require darwin or linux")
 }

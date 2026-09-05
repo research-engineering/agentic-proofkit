@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -84,40 +83,11 @@ func writeAdoptionMaterializationText(plain string, exitCode int, err error, opt
 	if err != nil {
 		return writeText("", 1, err, stdout, stderr)
 	}
-	output, err := renderTerminalText(adoptionMaterializationTerminalText(plain), options.color, capabilities)
+	output, err := renderTerminalText(labeledTerminalText(plain), options.color, capabilities)
 	if err == nil && options.color == "never" && output != plain {
 		err = fmt.Errorf("adoption materialization text projection drifted")
 	}
 	return writeText(output, exitCode, err, stdout, stderr)
-}
-
-func adoptionMaterializationTerminalText(plain string) terminalText {
-	lines := strings.SplitAfter(plain, "\n")
-	tokens := make([]terminalTextToken, 0, len(lines)*2)
-	for _, line := range lines {
-		if line == "" {
-			continue
-		}
-		content := strings.TrimSuffix(line, "\n")
-		newline := strings.TrimPrefix(line, content)
-		if strings.HasPrefix(content, "- ") {
-			tokens = append(tokens, terminalTextToken{kind: terminalTokenPlain, text: line})
-			continue
-		}
-		separator := strings.IndexByte(content, ':')
-		if separator < 0 {
-			tokens = append(tokens,
-				terminalTextToken{kind: terminalTokenLabel, text: content},
-				terminalTextToken{kind: terminalTokenPlain, text: newline},
-			)
-			continue
-		}
-		tokens = append(tokens,
-			terminalTextToken{kind: terminalTokenLabel, text: content[:separator]},
-			terminalTextToken{kind: terminalTokenPlain, text: content[separator:] + newline},
-		)
-	}
-	return newTerminalText(tokens...)
 }
 
 func parseAdoptionMaterializationArgs(command string, args []string) (adoptionMaterializationArgs, error) {

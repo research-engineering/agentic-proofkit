@@ -1,5 +1,6 @@
 // Package agentintegration owns portable CLI bootstrap materialization and
-// read-only freshness. It does not own host activation or installation.
+// read-only freshness, and explicit managed file lifecycle. Host activation
+// remains outside this package's authority.
 package agentintegration
 
 import (

@@ -2,7 +2,6 @@ package repositorytransaction
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -87,7 +86,10 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 			}
 		}
 		validatedPaths = append(validatedPaths, targetPath)
-		if target.Mode == 0 || target.Mode&^fs.ModePerm != 0 || target.Mode.Perm()&0o400 == 0 {
+		if target.Absent && (target.Mode != 0 || len(target.Content) != 0) {
+			return Plan{}, fmt.Errorf("repository transaction absent target %d must have no content or mode", index)
+		}
+		if !target.Absent && (target.Mode == 0 || target.Mode&^fs.ModePerm != 0 || target.Mode.Perm()&0o400 == 0) {
 			return Plan{}, fmt.Errorf("repository transaction target %d mode is invalid", index)
 		}
 		if len(target.Content) > MaximumFileBytes {
@@ -97,8 +99,10 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 		if err != nil {
 			return Plan{}, err
 		}
-		for _, directory := range missing {
-			directories[directory] = struct{}{}
+		if !target.Absent {
+			for _, directory := range missing {
+				directories[directory] = struct{}{}
+			}
 		}
 		before, beforeContent, err := inspectTarget(root, targetPath, MaximumFileBytes)
 		if err != nil {
@@ -107,16 +111,18 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 		if before.Exists && before.Mode.Perm()&0o400 == 0 {
 			return Plan{}, fmt.Errorf("repository transaction target %d existing mode is not owner-readable", index)
 		}
-		after := snapshotForContent(target.Content, target.Mode)
+		after := Snapshot{}
+		if !target.Absent {
+			after = snapshotForContent(target.Content, target.Mode)
+		}
 		aggregate += before.ByteCount + after.ByteCount
 		if aggregate > MaximumAggregateBytes {
 			return Plan{}, fmt.Errorf("repository transaction exceeds the aggregate byte limit")
 		}
-		action := ActionCreate
-		if before.Exists {
-			action = ActionReplace
-			if equalSnapshot(before, after) {
-				action = ActionUnchanged
+		action := snapshotAction(before, after)
+		if action == ActionDelete {
+			if err := verifyDeletionFilesystem(root, targetPath); err != nil {
+				return Plan{}, err
 			}
 		}
 		plan.Operations = append(plan.Operations, Operation{
@@ -185,7 +191,7 @@ func desiredStateIdentityValue(plan Plan) map[string]any {
 	return map[string]any{
 		"desiredStateKind": "proofkit.repository-desired-state",
 		"rootId":           plan.RootID,
-		"schemaVersion":    json.Number("1"),
+		"schemaVersion":    plan.schemaVersion(),
 		"targets":          targets,
 	}
 }
@@ -209,6 +215,19 @@ func snapshotForContent(content []byte, mode fs.FileMode) Snapshot {
 
 func equalSnapshot(left, right Snapshot) bool {
 	return left.Exists == right.Exists && left.ByteCount == right.ByteCount && left.Mode == right.Mode && left.SHA256 == right.SHA256
+}
+
+func snapshotAction(before, after Snapshot) string {
+	switch {
+	case equalSnapshot(before, after):
+		return ActionUnchanged
+	case !after.Exists:
+		return ActionDelete
+	case !before.Exists:
+		return ActionCreate
+	default:
+		return ActionReplace
+	}
 }
 
 func pathsOverlap(left, right string) bool {
