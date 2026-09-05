@@ -24,6 +24,11 @@ The public capability is deliberately small:
    bounded action. Admitted in-bound records bind exact content digests;
    unread out-of-bound records bind only their invalid class. Neither command
    claims native execution or proof completion.
+5. `integration source --tool <claude|codex>` emits one portable static
+   bootstrap without reading repositories or writing files;
+   `integration check --tool <claude|codex> --repo-root <path>` compares only
+   the selected descriptor-owned file through confined read-only inspection.
+   These are generation/check targets, not managed integration support.
 
 The change planner and evidence-guidance cores are stateless pure projections.
 Project status reads only an explicit repository root, the conventional routing
@@ -92,10 +97,46 @@ projections remain independently owned by the spec-proof-core package.
   without claiming cancellation rollback or atomicity from an external sink,
   and a versioned breaking replacement
   of the flat change route by `change plan` across source and installed carriers.
+- `REQ-PROOFKIT-WORKFLOW-016`: one private descriptor/template owner, portable
+  approved-launcher guidance, 512-byte metadata and 4096-byte body limits, and
+  identity over exactly consumed registered invocation contracts rather than
+  package version or the entire command universe.
+- `REQ-PROOFKIT-WORKFLOW-017`: pre-I/O invocation admission, a confined
+  application-write-free two-observation check with an 8192-byte read bound per
+  observation, distinct missing/current/stale/invalid states, non-disclosing
+  operational failures, and independent cancellation/cleanup outcomes.
+- `REQ-PROOFKIT-WORKFLOW-018`: exact source/check CLI flags, JSON root shapes,
+  exit semantics, one source/check-only command family, and source, generated,
+  and installed-carrier closure obligations. A binding is not an execution
+  receipt; final frozen-tree and installed-carrier integration proof requires
+  actual execution against the named source and artifacts.
 
 Shared stable-JSON/diagnostic hardening is owned by the supply-chain-quality
 spec. Typed local-reference closure is owned by the existing agent-envelope
 requirement. This workflow spec consumes those owners without duplicating them.
+
+## Thin Integration Boundary
+
+The production owner is `internal/command/agentintegration`. The descriptor
+alone selects `.agents/skills/agentic-proofkit/SKILL.md` for `codex` or
+`.claude/skills/agentic-proofkit/SKILL.md` for `claude`. Source and check share
+the same renderer. Common name/description frontmatter and static Markdown
+delegate to the current CLI instead of embedding schemas or workflow policy.
+The bootstrap persists logical routes, not machine-local executable paths;
+an absent or ambiguous repository-approved installed launcher needs an owner
+decision, never an implicit package manager, install, or network fallback.
+
+The source contract's default JSON includes exact content and its digest;
+`--format text` emits those file bytes. Check returns only expected generated
+identity and a bounded freshness classification, never observed content, its
+digest, or caller root paths. Exit 0 means current, exit 2 means a classified
+missing/stale/invalid file, and exit 1 means an invocation or operation error.
+Source returns 0 on success and 1 on error. Neither accepts `--output` or an
+install option. Manual export guidance is owned by `ADOPTION.md`.
+
+Phase5B managed installation, update, and safe removal remains explicitly open.
+Host discovery, body loading, and approved-launcher invocation require separate
+isolated native-host observations; direct CLI execution cannot prove skill use.
 
 ## Non-Claims
 
@@ -106,5 +147,9 @@ requirement. This workflow spec consumes those owners without duplicating them.
 - Least dependency closure does not prove context truth, freshness, semantic
   sufficiency, or global minimality.
 - A finite pilot does not prove universal repository fit.
+- Bootstrap byte bounds are not token counts, and consumed registered-contract
+  identity is not complete transitive semantic proof.
+- Generated-byte freshness does not install, activate, authorize, or grant
+  permissions. File removal does not revoke instructions already in host context.
 - This spec does not select a persisted requirement-source codec.
 - This spec does not approve merge, release, rollout, or production readiness.

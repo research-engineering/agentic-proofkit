@@ -104,19 +104,28 @@ func OpenInspectionLease(ctx context.Context, rootPath string) (*InspectionLease
 // OpenExactRegularFile opens one exact repository-relative regular file
 // without exposing the mutation-capable confined root.
 func (lease *InspectionLease) OpenExactRegularFile(relativePath string) (InspectionFile, error) {
+	file, _, err := lease.OpenObservedExactRegularFile(relativePath)
+	return file, err
+}
+
+// OpenObservedExactRegularFile projects a read-only file capability and the
+// traversal owner's opaque witness, including missing and unsafe terminals.
+func (lease *InspectionLease) OpenObservedExactRegularFile(relativePath string) (InspectionFile, rootpath.RouteObservation, error) {
 	if lease == nil || lease.root == nil {
-		return nil, fmt.Errorf("repository inspection lease is closed")
+		return nil, rootpath.RouteObservation{}, fmt.Errorf("repository inspection lease is closed")
 	}
-	file, err := rootpath.OpenExactRegularFile(lease.root, relativePath)
+	file, observation, err := rootpath.OpenObservedExactRegularFile(lease.root, relativePath)
 	switch {
+	case errors.Is(err, rootpath.ErrTraversalCleanup):
+		return nil, rootpath.RouteObservation{}, err
 	case errors.Is(err, rootpath.ErrRouteChanged):
-		return nil, ErrInspectionRouteChanged
+		return nil, rootpath.RouteObservation{}, ErrInspectionRouteChanged
 	case errors.Is(err, rootpath.ErrUnsafeRoute):
-		return nil, ErrUnsafeInspectionRoute
+		return nil, observation, ErrUnsafeInspectionRoute
 	case err == nil:
-		return &inspectionFile{file: file}, nil
+		return &inspectionFile{file: file}, observation, nil
 	default:
-		return nil, err
+		return nil, observation, err
 	}
 }
 

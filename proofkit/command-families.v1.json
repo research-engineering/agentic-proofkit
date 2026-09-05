@@ -28,6 +28,15 @@
       ]
     },
     {
+      "familyId": "agent-integrations",
+      "label": "Agent integrations",
+      "purpose": "Generate portable bootstrap source and check generated-byte freshness without installation or host activation.",
+      "commands": [
+        "integration-check",
+        "integration-source"
+      ]
+    },
+    {
       "familyId": "agent-workflow-planning",
       "label": "Agent workflow planning",
       "purpose": "Plan bounded engineering-change stages and expose repository-neutral native-evidence guidance.",

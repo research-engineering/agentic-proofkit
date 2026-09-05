@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "9a6842b45a218d6caa5da517b0b20f861e13c35a2900e92d34361cdf771781f7"
+	cliContractPublicABISHA256               = "0e246c0d26bebd39ca6d6747ee7e325cb73aaca4dc01d80fa63cb6dc4899155f"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1525,6 +1525,8 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adopt-plan":                     "agentic-proofkit adopt plan [--color <auto|never>] [--format <json|text>] --mode <audit-from-code|code-baseline|fresh> --repo-root <path> [--stack <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>]",
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
+		"integration-check":              "agentic-proofkit integration check [--format <json|text>] --repo-root <path> --tool <claude|codex>",
+		"integration-source":             "agentic-proofkit integration source [--format <json|text>] --tool <claude|codex>",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
 		"next":                           "agentic-proofkit next [--color <auto|never>] [--format <json|text>] --repo-root <path>",
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",

@@ -194,20 +194,14 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.agent-workflow.change-plan-route", Summary: "Replace the flat change-workflow-plan CLI route with the hierarchical change plan route while preserving one internal command implementation and its input and output contracts."},
-	{ChangeID: "proofkit.cli-contract.omitted-route-policy", Summary: "Make the command-id fallback for an omitted command route an explicit required CLI-contract grammar field; Proofkit source and installed-carrier validators reject contracts that omit or alter this policy."},
-}
+var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.project-state.next-action", Summary: "Add a bounded next command that maps each admitted structural project state to exactly one non-authoritative repository action."},
-	{ChangeID: "proofkit.project-state.status", Summary: "Add a read-only status command that classifies a bounded normalized materialized-project and transaction observation; admitted in-bound records bind exact content digests, while unread out-of-bound records identify only their invalid class, without claiming native verification or workflow completion."},
+	{ChangeID: "proofkit.agent-integration.freshness", Summary: "Add integration check for explicit Codex or Claude repository paths; compare bounded current template bytes through confined read-only inspection without granting installation or host-activation authority."},
+	{ChangeID: "proofkit.agent-integration.source", Summary: "Add integration source to generate one bounded portable skill body and descriptor-owned path, with an identity bound to consumed registered CLI invocation contracts rather than package version or a host-specific executable."},
 }
 
-var currentMigrationSteps = []string{
-	"Replace agentic-proofkit change-workflow-plan invocations with agentic-proofkit change plan; input and output JSON contracts are unchanged.",
-	"Update CLI-contract consumers to require commandRouteGrammar.omittedRoutePolicy=command_id; commands without an explicit route continue to resolve to their stable command ID.",
-}
+var currentMigrationSteps = []string{}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -227,7 +221,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.9.0",
+		"# @research-engineering/agentic-proofkit 0.10.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -249,8 +243,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"Migration is required:",
-		"",
+		"No consumer migration is required.",
 	)
 	for _, step := range currentMigrationSteps {
 		lines = append(lines, "- "+step)
@@ -271,13 +264,14 @@ func currentExpectedReleaseNotes() string {
 		"- Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
 		"- The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
+		"- Integration source and check do not install, update, remove, activate, or execute a host skill. Managed lifecycle and observed host activation remain separate open work.",
 		"",
 		"## Install",
 		"",
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.9.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.10.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -288,7 +282,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Rollback",
 		"",
-		"- Pin npm consumers to the previous admitted version 0.8.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.8.0`.",
+		"- Pin npm consumers to the previous admitted version 0.9.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.9.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

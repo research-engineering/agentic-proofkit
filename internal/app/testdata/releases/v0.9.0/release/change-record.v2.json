@@ -1,22 +1,34 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.9.0",
-  "version": "0.10.0",
-  "changeClass": "compatible",
-  "breakingChanges": [],
-  "additions": [
+  "previousVersion": "0.8.0",
+  "version": "0.9.0",
+  "changeClass": "breaking",
+  "breakingChanges": [
     {
-      "changeId": "proofkit.agent-integration.freshness",
-      "summary": "Add integration check for explicit Codex or Claude repository paths; compare bounded current template bytes through confined read-only inspection without granting installation or host-activation authority."
+      "changeId": "proofkit.agent-workflow.change-plan-route",
+      "summary": "Replace the flat change-workflow-plan CLI route with the hierarchical change plan route while preserving one internal command implementation and its input and output contracts."
     },
     {
-      "changeId": "proofkit.agent-integration.source",
-      "summary": "Add integration source to generate one bounded portable skill body and descriptor-owned path, with an identity bound to consumed registered CLI invocation contracts rather than package version or a host-specific executable."
+      "changeId": "proofkit.cli-contract.omitted-route-policy",
+      "summary": "Make the command-id fallback for an omitted command route an explicit required CLI-contract grammar field; Proofkit source and installed-carrier validators reject contracts that omit or alter this policy."
+    }
+  ],
+  "additions": [
+    {
+      "changeId": "proofkit.project-state.next-action",
+      "summary": "Add a bounded next command that maps each admitted structural project state to exactly one non-authoritative repository action."
+    },
+    {
+      "changeId": "proofkit.project-state.status",
+      "summary": "Add a read-only status command that classifies a bounded normalized materialized-project and transaction observation; admitted in-bound records bind exact content digests, while unread out-of-bound records identify only their invalid class, without claiming native verification or workflow completion."
     }
   ],
   "migration": {
-    "required": false,
-    "steps": []
+    "required": true,
+    "steps": [
+      "Replace agentic-proofkit change-workflow-plan invocations with agentic-proofkit change plan; input and output JSON contracts are unchanged.",
+      "Update CLI-contract consumers to require commandRouteGrammar.omittedRoutePolicy=command_id; commands without an explicit route continue to resolve to their stable command ID."
+    ]
   },
   "platformRequirements": [
     "Published Darwin package binaries require macOS 13.0 or later on arm64 and x86_64."
@@ -29,8 +41,7 @@
     "Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
     "Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
     "The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
-    "TSX source parsing remains unsupported.",
-    "Integration source and check do not install, update, remove, activate, or execute a host skill. Managed lifecycle and observed host activation remain separate open work."
+    "TSX source parsing remains unsupported."
   ],
   "rollback": {
     "strategy": "previous_admitted_version"

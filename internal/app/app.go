@@ -140,6 +140,8 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 		})
 	case commandRunnerAgentWorkflow:
 		return runAgentWorkflowCommand(args[0], args[1:], stdin, stdout, stderr, capabilities)
+	case commandRunnerAgentIntegration:
+		return runAgentIntegration(ctx, args[0], args[1:], stdout, stderr)
 	case commandRunnerAgentRoute:
 		return runAgentRoute(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerContractEnvelope:

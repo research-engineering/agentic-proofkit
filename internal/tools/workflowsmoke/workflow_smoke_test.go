@@ -34,6 +34,12 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		materializedOnly bool
 		apply            func(workflowsmoke.Result) workflowsmoke.Result
 	}{
+		{name: "integration source identity", match: "integration source --tool codex --format json", apply: replaceStdout(`{"kind":"wrong"}`)},
+		{name: "integration source text suffix", match: "integration source --tool claude --format text", apply: appendStdout("surplus\n")},
+		{name: "integration missing promoted", match: "integration check --tool codex --repo-root ", matchPrefix: true, apply: func(result workflowsmoke.Result) workflowsmoke.Result {
+			result.ExitCode = 0
+			return result
+		}},
 		{name: "retired planner route", match: "change-workflow-plan --input -", apply: func(result workflowsmoke.Result) workflowsmoke.Result {
 			return workflowsmoke.Result{ExitCode: 0, Stdout: []byte("{}\n")}
 		}},

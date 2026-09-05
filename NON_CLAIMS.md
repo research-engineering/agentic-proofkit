@@ -36,6 +36,24 @@ This repository state does not claim:
 Consuming repositories must keep their own specifications, proof bindings,
 native witnesses, CI gates, rollback policy, and rollout decisions.
 
+Phase5A integration source/check implements only bounded portable generation
+and read-only generated-byte freshness. It does not install, update, remove,
+repair, activate host instructions, grant tool permissions, or authorize native
+execution. Phase5B managed lifecycle remains open; manual shell export does not
+close it. `current` neither proves semantic full proof nor guarantees stability
+after return. Consumed registered-contract identity is not complete transitive
+native-semantic identity, and byte budgets are not token counts.
+
+Declared witness routes do not prove execution. Installed npm/Python integration
+smokes and final frozen-tree closure require actual execution against the named
+source and artifacts. Native-host discovery, body loading, and approved-launcher
+invocation require separate isolated evidence; direct CLI calls cannot prove
+skill use. Removing an on-disk file does not revoke already-loaded instructions.
+Read-only checks do not suppress filesystem-owned access metadata updates or
+exclude uncooperative writers. Cancellation after the final pre-emission check
+cannot retract bytes accepted by an external stdout writer, and prefix-accepting
+transport failure does not imply an atomic sink.
+
 Reference infrastructure boundary:
 
 ```text
