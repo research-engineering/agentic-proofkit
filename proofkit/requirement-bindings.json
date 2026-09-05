@@ -886,7 +886,7 @@
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["A coherent read snapshot does not prevent later filesystem mutation, authenticate repository ownership, provide power-loss or multi-reader atomicity, exclude a same-user writer that bypasses the repository transaction owner, or identify unread out-of-bound record bytes beyond their normalized invalid class."]
+      "nonClaims": ["A coherent read snapshot does not prevent later filesystem mutation, authenticate repository ownership, provide power-loss or multi-reader atomicity, exclude a same-user writer that bypasses the repository transaction owner, identify unread out-of-bound record bytes beyond their normalized invalid class, or prevent the filesystem from updating read-side metadata such as access time."]
     },
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-014",
@@ -6263,6 +6263,25 @@
       "environmentClasses": ["local-go"]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "scenarioId": "proofkit.spec-proof-core.project-navigation-public-abi-diff",
+      "witnessId": "proofkit.project-navigation.public-abi-diff-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_navigation_abi_closure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff$'"
+        },
+        {
+          "selector": "TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift",
+          "command": "go test ./internal/app -run '^TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
       "scenarioId": "proofkit.agent-workflow.project-state-total-classification",
       "witnessId": "proofkit.project-state.total-classification-falsifier",
@@ -6323,8 +6342,8 @@
       "witnessPath": "internal/command/projectstatus/inspect_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestInspectClassifiesMaterializedProjectWithoutMutation",
-          "command": "go test ./internal/command/projectstatus -run '^TestInspectClassifiesMaterializedProjectWithoutMutation$'"
+          "selector": "TestInspectClassifiesMaterializedProjectWithoutApplicationWrites",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectClassifiesMaterializedProjectWithoutApplicationWrites$'"
         },
         {
           "selector": "TestInspectFailsClosedOnSymlinksAndBoundsWithoutDisclosure",
@@ -6373,6 +6392,10 @@
         {
           "selector": "TestInspectDeduplicatesRepeatedIssueCodes",
           "command": "go test ./internal/command/projectstatus -run '^TestInspectDeduplicatesRepeatedIssueCodes$'"
+        },
+        {
+          "selector": "TestInspectHonorsCancellationBetweenBoundedReads",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectHonorsCancellationBetweenBoundedReads$'"
         },
         {
           "selector": "TestOutOfBoundManifestIdentityIsAClassificationNotByteIdentity",
@@ -6489,6 +6512,10 @@
         {
           "selector": "TestProjectStatusCLI",
           "command": "go test ./internal/app -run '^TestProjectStatusCLI$'"
+        },
+        {
+          "selector": "TestProjectStatusCLIHonorsCanceledContextBeforeOutput",
+          "command": "go test ./internal/app -run '^TestProjectStatusCLIHonorsCanceledContextBeforeOutput$'"
         },
         {
           "selector": "TestProjectStatusOutputMatrix",

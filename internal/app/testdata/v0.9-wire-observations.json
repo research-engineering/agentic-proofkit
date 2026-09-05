@@ -9,7 +9,7 @@
   "changeRecordRef": "release/change-record.v2.json",
   "changeRecordSha256": "sha256:6aaa914c454d6f135ece86b632b8618911b71d6b5da08bc2c25657c09228f4f3",
   "previousPublicAbiSha256": "sha256:b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463",
-  "currentPublicAbiSha256": "sha256:17b7f185adb80bcdeb6bc5e6a08cf0b95e6b6f8766d2cba634d08f59b7821e0b",
+  "currentPublicAbiSha256": "sha256:a331f29499c3dbfd7e03ac4c0d56ce4d71910f735297af79ba0092b543e171f0",
   "addedCommandContracts": [
     {
       "command": "next",

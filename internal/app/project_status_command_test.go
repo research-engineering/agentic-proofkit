@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
@@ -234,6 +236,22 @@ func TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim(
 	code := projectStatusResult("status", projectStatusArgs{color: "never", format: "json", repositoryRoot: "unused"}, status, stdout, &stderr, PresentationCapabilities{})
 	if code != 1 || stdout.calls != 1 || stdout.Len() != stdout.maximum || !strings.Contains(stderr.String(), "write output") {
 		t.Fatalf("transport failure exit=%d calls=%d stdout=%q stderr=%q", code, stdout.calls, stdout.String(), stderr.String())
+	}
+}
+
+func TestProjectStatusCLIHonorsCanceledContextBeforeOutput(t *testing.T) {
+	for _, command := range []string{"next", "status"} {
+		t.Run(command, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			repositoryRoot := t.TempDir()
+			code := RunWithRendererAndCapabilities(ctx, []string{command, "--repo-root", repositoryRoot}, panicReader{}, &stdout, &stderr, cliexec.PathRenderer(), PresentationCapabilities{})
+			if code != 1 || stdout.Len() != 0 || stderr.Len() == 0 || strings.Contains(stderr.String(), repositoryRoot) {
+				t.Fatalf("%s cancellation exit=%d stdout=%q stderr=%q", command, code, stdout.String(), stderr.String())
+			}
+		})
 	}
 }
 

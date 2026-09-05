@@ -21,8 +21,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-func TestInspectClassifiesMaterializedProjectWithoutMutation(t *testing.T) {
-	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.086999612230625810638279009641652637656804117475637022915480714642144225105240")
+func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing.T) {
+	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.068153284639677751912209073851318961044240216422390589277786880896123148215480")
 	root := t.TempDir()
 	status, err := Inspect(context.Background(), root)
 	if err != nil {
@@ -429,6 +429,30 @@ func TestInspectHonorsCancellationBeforeReads(t *testing.T) {
 	cancel()
 	if _, err := Inspect(ctx, t.TempDir()); !errors.Is(err, context.Canceled) {
 		t.Fatalf("Inspect() error = %v", err)
+	}
+}
+
+func TestInspectHonorsCancellationBetweenBoundedReads(t *testing.T) {
+	root := t.TempDir()
+	materializeTestProject(t, root)
+	ctx, cancel := context.WithCancel(context.Background())
+	readCount := 0
+	dependencies := defaultInspectionDependencies
+	dependencies.readFile = func(ctx context.Context, lease *repositorytransaction.InspectionLease, path string, budget *readBudget) (fileObservation, error) {
+		observation, err := readProjectFile(ctx, lease, path, budget)
+		if err == nil {
+			readCount++
+			if readCount == 1 {
+				cancel()
+			}
+		}
+		return observation, err
+	}
+	if _, err := inspectWithDependencies(ctx, root, dependencies); !errors.Is(err, context.Canceled) {
+		t.Fatalf("inspectWithDependencies() error = %v, want context cancellation", err)
+	}
+	if readCount != 1 {
+		t.Fatalf("read count=%d, want cancellation before the second bounded read", readCount)
 	}
 }
 

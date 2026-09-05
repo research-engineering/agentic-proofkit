@@ -113,11 +113,12 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/command/projectstatus/inspect_test.go",
 			selectors: []string{
 				"TestInspectAttemptRejectsFinalRepositoryRootReplacement",
-				"TestInspectClassifiesMaterializedProjectWithoutMutation",
+				"TestInspectClassifiesMaterializedProjectWithoutApplicationWrites",
 				"TestInspectCleanupFailureDominatesRetryableSnapshotChange",
 				"TestInspectCohortValidationClosesCleanEpochABA",
 				"TestInspectDeduplicatesRepeatedIssueCodes",
 				"TestInspectFailsClosedOnSymlinksAndBoundsWithoutDisclosure",
+				"TestInspectHonorsCancellationBetweenBoundedReads",
 				"TestInspectMapsInvalidControlState",
 				"TestInspectMapsRecoverableControlState",
 				"TestInspectRejectsAdmittedChildrenWithInvalidCrossRecordClosure",
@@ -166,6 +167,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/app/project_status_command_test.go",
 			selectors: []string{
 				"TestProjectStatusCLI",
+				"TestProjectStatusCLIHonorsCanceledContextBeforeOutput",
 				"TestProjectStatusOutputMatrix",
 				"TestProjectStatusTransportFailureUsesOneBoundedWriteWithoutAtomicSinkClaim",
 			},
@@ -784,6 +786,13 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestProjectNavigationVersionEdgeClosesPublicRoutes",
 				"TestProjectNavigationVersionEdgePreservesFrozenPredecessor",
 				"TestProjectNavigationVersionEdgeRejectsCoordinatedChangeRecordDrift",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-035", "proofkit.spec-proof-core.project-navigation-public-abi-diff"}: {
+			witnessPath: "internal/app/project_navigation_abi_closure_test.go",
+			selectors: []string{
+				"TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff",
+				"TestProjectNavigationVersionEdgeRejectsUndeclaredPublicABIDrift",
 			},
 		},
 		{"REQ-PROOFKIT-RETIRE-006", "proofkit.consumer-infra-retirement.migration-parity-admission"}: {

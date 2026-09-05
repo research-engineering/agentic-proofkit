@@ -79,10 +79,12 @@ projections remain independently owned by the spec-proof-core package.
 - `REQ-PROOFKIT-WORKFLOW-012`: one truthful project-state owner, exhaustive
   precedence, existing child and cross-record closure owners, and no promotion
   of source declarations or caller status into execution evidence.
-- `REQ-PROOFKIT-WORKFLOW-013`: one root-bound inspection lease, cooperative
-  writer exclusion, descriptor-relative exact-path traversal, bounded
-  content-cohort validation, fail-closed partial control observations, one
-  bounded retry, and a portable non-disclosing normalized-observation identity.
+- `REQ-PROOFKIT-WORKFLOW-013`: one application-write-free root-bound inspection
+  lease, cooperative writer exclusion, descriptor-relative exact-path
+  traversal, bounded content-cohort validation, fail-closed partial control
+  observations, one bounded retry, and a portable non-disclosing
+  normalized-observation identity.
+  Filesystem-owned read metadata such as access time is outside that guarantee.
 - `REQ-PROOFKIT-WORKFLOW-014`: one total state-to-action table, one bounded
   next action, explicit owner decisions, and no embedded route universe.
 - `REQ-PROOFKIT-WORKFLOW-015`: status/next CLI channel and exit semantics,

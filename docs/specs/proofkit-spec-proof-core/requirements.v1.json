@@ -689,7 +689,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-034",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "The 0.7.0-to-0.8.0 public version edge binds the exact previous and current public ABI digests; the exact addition of adopt materialize plan, apply, and recover with their public routes and input/output contract identities and digests; an explicit added-command selection policy; and the complete ordered additive inventory to one digest-bound current release change record. The edge is compatible, contains no breaking changes or migration steps, and does not mutate or reinterpret the frozen 0.6.0-to-0.7.0 edge.",
+      "invariant": "The byte-frozen 0.7.0-to-0.8.0 public version edge binds the exact previous and released 0.8.0 public ABI digests; the exact addition of adopt materialize plan, apply, and recover with their public routes and input/output contract identities and digests; an explicit added-command selection policy; and the complete ordered additive inventory to one digest-bound archived 0.8.0 release change record. The edge is compatible, contains no breaking changes or migration steps, and later releases cannot mutate, reinterpret, or bind it to the live current release record or live command metadata.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],
@@ -702,7 +702,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-035",
       "ownerId": "proofkit.spec-proof-core",
-      "invariant": "The 0.8.0-to-0.9.0 public version edge binds the exact previous and current public ABI digests; the exact addition of status and next with their public routes and output contract identities and digests; the exact replacement of the flat change-workflow-plan route by change plan while preserving its single internal implementation and input/output contract identities and digests; and the complete ordered breaking, additive, and migration inventories to one digest-bound current release change record. The edge rejects the retired route, admits the hierarchical route, and cannot mutate or reinterpret the byte-frozen 0.7.0-to-0.8.0 edge.",
+      "invariant": "The 0.8.0-to-0.9.0 public version edge binds the exact raw previous and current public ABI digests and proves their complete semantic difference: status and next are the only added commands; their public routes and output contract identities and digests are exact; the flat change-workflow-plan route is replaced by change plan while preserving one internal implementation and the input/output contract identities and digests; every predecessor command is otherwise identical after normalizing only native-source canonical digests; every predecessor contract definition remains exact; added definitions are exactly the transitive closure of the added commands; and omitted-route policy is the only process-contract addition. Native-source digest churn remains bound by the raw edge digests rather than being misclassified as wire-semantic change. The complete ordered breaking, additive, and migration inventories bind to one digest-bound current release change record; the edge rejects the retired route, admits the hierarchical route, and cannot mutate or reinterpret the byte-frozen 0.7.0-to-0.8.0 edge.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["proofkit/requirement-bindings.json"],

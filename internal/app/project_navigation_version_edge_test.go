@@ -19,8 +19,6 @@ import (
 const projectNavigationVersionEdgePath = "internal/app/testdata/v0.9-wire-observations.json"
 const frozenProjectNavigationPredecessorPath = "internal/app/testdata/v0.8-wire-observations.json"
 const frozenProjectNavigationPredecessorSHA256 = "ed0651c53c015c00d8ed7a0db681a213e9df6248302c5f12fc898e4b6a82c5ab"
-const frozenProjectNavigationCommandContractPath = "internal/app/testdata/releases/v0.8.0/preserved-command-contracts.json"
-const frozenProjectNavigationCommandContractSHA256 = "907259153bb1e45e982295ec6081b40eb9f02b219c25af6004eb8c29a12c328a"
 
 type projectNavigationVersionEdge struct {
 	AddedCommandContracts    []versionEdgeCommandContract  `json:"addedCommandContracts"`
@@ -56,27 +54,6 @@ type versionEdgeRouteReplacement struct {
 	PreservedInputContract  versionEdgeContractIdentity `json:"preservedInputContract"`
 	PreservedOutputContract versionEdgeContractIdentity `json:"preservedOutputContract"`
 	PreviousRoute           []string                    `json:"previousRoute"`
-}
-
-type frozenProjectNavigationCommandContract struct {
-	Command             string                      `json:"command"`
-	CommandRouteGrammar frozenCommandRouteGrammar   `json:"commandRouteGrammar"`
-	InputContract       versionEdgeContractIdentity `json:"inputContract"`
-	NonClaims           []string                    `json:"nonClaims"`
-	ObservationKind     string                      `json:"observationKind"`
-	OutputContract      versionEdgeContractIdentity `json:"outputContract"`
-	PublicABISHA256     string                      `json:"publicAbiSha256"`
-	ReleaseVersion      string                      `json:"releaseVersion"`
-	Route               []string                    `json:"route"`
-	SchemaVersion       int                         `json:"schemaVersion"`
-}
-
-type frozenCommandRouteGrammar struct {
-	AmbiguityPolicy string `json:"ambiguityPolicy"`
-	MaximumTokens   int    `json:"maximumTokens"`
-	MinimumTokens   int    `json:"minimumTokens"`
-	Separator       string `json:"separator"`
-	TokenPattern    string `json:"tokenPattern"`
 }
 
 func TestProjectNavigationVersionEdgeClosesPublicRoutes(t *testing.T) {
@@ -186,51 +163,11 @@ func TestProjectNavigationVersionEdgePreservesFrozenPredecessor(t *testing.T) {
 	if got := fmt.Sprintf("%x", digest); got != frozenProjectNavigationPredecessorSHA256 {
 		t.Fatalf("frozen predecessor digest=%s, want %s", got, frozenProjectNavigationPredecessorSHA256)
 	}
-	frozen := readFrozenProjectNavigationCommandContract(t)
+	frozen := readFrozenProjectNavigationPublicABI(t)
 	record := readProjectNavigationVersionEdge(t)
-	replacement := record.ChangedCommandRoutes[0]
-	if record.PreviousVersion != frozen.ReleaseVersion || record.PreviousPublicABISHA256 != frozen.PublicABISHA256 || replacement.Command != frozen.Command || !slices.Equal(replacement.PreviousRoute, frozen.Route) || replacement.PreservedInputContract != frozen.InputContract || replacement.PreservedOutputContract != frozen.OutputContract {
-		t.Fatalf("version edge does not preserve the frozen predecessor contract: edge=%#v frozen=%#v", replacement, frozen)
+	if record.PreviousVersion != frozen.ReleaseVersion || record.PreviousPublicABISHA256 != frozen.PublicABISHA256 {
+		t.Fatalf("version edge does not preserve the frozen predecessor ABI: edge=%#v frozen=%#v", record, frozen)
 	}
-}
-
-func readFrozenProjectNavigationCommandContract(t *testing.T) frozenProjectNavigationCommandContract {
-	t.Helper()
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), frozenProjectNavigationCommandContractPath))
-	if err != nil {
-		t.Fatal(err)
-	}
-	digest := sha256.Sum256(content)
-	if got := fmt.Sprintf("%x", digest); got != frozenProjectNavigationCommandContractSHA256 {
-		t.Fatalf("frozen command contract digest=%s, want %s", got, frozenProjectNavigationCommandContractSHA256)
-	}
-	value, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
-	if err != nil {
-		t.Fatal(err)
-	}
-	root, ok := value.(map[string]any)
-	if !ok {
-		t.Fatal("frozen command contract observation must be an object")
-	}
-	assertExactObjectKeys(t, root, []string{"command", "commandRouteGrammar", "inputContract", "nonClaims", "observationKind", "outputContract", "publicAbiSha256", "releaseVersion", "route", "schemaVersion"}, "frozen command contract observation")
-	assertExactObjectKeys(t, root["commandRouteGrammar"].(map[string]any), []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"}, "frozen command route grammar")
-	assertExactObjectKeys(t, root["inputContract"].(map[string]any), []string{"contractId", "contractSha256"}, "frozen input contract")
-	assertExactObjectKeys(t, root["outputContract"].(map[string]any), []string{"contractId", "contractSha256"}, "frozen output contract")
-	var record frozenProjectNavigationCommandContract
-	if err := json.Unmarshal(content, &record); err != nil {
-		t.Fatal(err)
-	}
-	wantGrammar := frozenCommandRouteGrammar{
-		AmbiguityPolicy: "no_route_is_prefix_of_another",
-		MaximumTokens:   4,
-		MinimumTokens:   1,
-		Separator:       " ",
-		TokenPattern:    "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-	}
-	if record.SchemaVersion != 1 || record.ObservationKind != "proofkit.frozen-command-contract-observation" || record.ReleaseVersion != "0.8.0" || record.PublicABISHA256 != "sha256:b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463" || record.Command != "change-workflow-plan" || record.CommandRouteGrammar != wantGrammar || !slices.Equal(record.Route, []string{"change-workflow-plan"}) || !slices.Equal(record.NonClaims, []string{"This frozen source observation does not authenticate registry publication, provider state, consumer migration, or runtime compatibility."}) {
-		t.Fatalf("frozen command contract observation is invalid: %#v", record)
-	}
-	return record
 }
 
 func readProjectNavigationVersionEdge(t *testing.T) projectNavigationVersionEdge {
