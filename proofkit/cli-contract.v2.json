@@ -153,7 +153,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
+            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -291,7 +291,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
+            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -405,7 +405,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
+            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2483,7 +2483,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
+            "canonicalDigest": "sha256:927d0a6fcdd5bfcb3961b78cc0bad7ccad1d991f3bdb2c7af1f476afcd215bfc",
             "evidenceClass": "source_checkout"
           },
           {

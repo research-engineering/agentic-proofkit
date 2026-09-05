@@ -72,6 +72,8 @@ type Plan struct {
 	Operations         []Operation
 	RootID             string
 	TransactionID      string
+
+	constructedTransactionID string
 }
 
 type Result struct {

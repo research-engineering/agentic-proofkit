@@ -6093,6 +6093,37 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-native-construction",
+      "witnessId": "proofkit.repository-transaction.native-construction-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/construction_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPlanConstructionRejectsPublicFieldTransplant",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPlanConstructionRejectsPublicFieldTransplant$'"
+        },
+        {
+          "selector": "TestPlanConstructionRetainsIndependentExecutionChecks",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPlanConstructionRetainsIndependentExecutionChecks$'"
+        },
+        {
+          "selector": "TestPlanConstructionSurvivesOnlyNativeCopies",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPlanConstructionSurvivesOnlyNativeCopies$'"
+        },
+        {
+          "selector": "TestRecoveryDoesNotRequirePublicPlanConstruction",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestRecoveryDoesNotRequirePublicPlanConstruction$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
       "scenarioId": "proofkit.spec-proof-core.repository-transaction-terminal-state",
       "witnessId": "proofkit.repository-transaction.terminal-state-falsifier",
       "witnessKind": "contract",
