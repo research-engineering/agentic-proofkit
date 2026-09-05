@@ -227,9 +227,9 @@ func TestCheckProjectionHasOnlyAdmittedFields(t *testing.T) {
 
 func TestCheckRejectsZeroDocumentBeforeInspection(t *testing.T) {
 	dependencies := nativeCheckDependencies()
-	dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, error) {
+	dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
 		t.Fatal("zero document reached file inspection")
-		return nil, nil
+		return nil, rootpath.RouteObservation{}, nil
 	}
 	result, err := checkWithDependencies(context.Background(), checkPrivateSentinel, Document{}, dependencies)
 	checkWantError(t, result, err)
@@ -339,8 +339,8 @@ func TestCheckOpenErrorsAreNotMissingOrInvalid(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
 			dependencies := nativeCheckDependencies()
-			dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, error) {
-				return nil, &fs.PathError{Op: checkPrivateSentinel, Path: root, Err: test.err}
+			dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+				return nil, rootpath.RouteObservation{}, &fs.PathError{Op: checkPrivateSentinel, Path: root, Err: test.err}
 			}
 			before := checkTree(t, root)
 			result, err := checkWithDependencies(context.Background(), root, document, dependencies)
@@ -354,8 +354,12 @@ func TestCheckOpenErrorsAreNotMissingOrInvalid(t *testing.T) {
 	t.Run("wrapped absence", func(t *testing.T) {
 		root := t.TempDir()
 		dependencies := nativeCheckDependencies()
-		dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, error) {
-			return nil, &fs.PathError{Op: checkPrivateSentinel, Path: root, Err: fs.ErrNotExist}
+		dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+			file, route, err := lease.OpenObservedExactRegularFile(path)
+			if file != nil || !errors.Is(err, fs.ErrNotExist) {
+				t.Fatal("fixture did not observe ordinary absence")
+			}
+			return nil, route, &fs.PathError{Op: checkPrivateSentinel, Path: root, Err: err}
 		}
 		result, err := checkWithDependencies(context.Background(), root, document, dependencies)
 		checkNoDisclosure(t, result, err, root)
@@ -382,8 +386,8 @@ func TestCheckPermissionDeniedIsNotMissing(t *testing.T) {
 			t.Fatal("permission probe cleanup failed")
 		}
 		// Privileged filesystems cannot supply a real denied-read operand.
-		dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, error) {
-			return nil, &fs.PathError{Op: "open", Path: selected, Err: fs.ErrPermission}
+		dependencies.openFile = func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+			return nil, rootpath.RouteObservation{}, &fs.PathError{Op: "open", Path: selected, Err: fs.ErrPermission}
 		}
 	} else if !errors.Is(probeErr, fs.ErrPermission) {
 		t.Fatal("permission fixture failed for an unrelated reason")
@@ -404,10 +408,10 @@ func TestCheckDetectsChangesWithinAnObservation(t *testing.T) {
 			selected := filepath.Join(root, document.path)
 			checkWrite(t, selected, document.Content())
 			dependencies := nativeCheckDependencies()
-			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, error) {
-				file, err := lease.OpenExactRegularFile(path)
+			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+				file, route, err := lease.OpenObservedExactRegularFile(path)
 				if err != nil {
-					return nil, err
+					return nil, route, err
 				}
 				changed := false
 				return checkTestFile{InspectionFile: file, read: func(buffer []byte) (int, error) {
@@ -425,7 +429,7 @@ func TestCheckDetectsChangesWithinAnObservation(t *testing.T) {
 						}
 					}
 					return file.Read(buffer)
-				}}, nil
+				}}, route, nil
 			}
 			result, err := checkWithDependencies(context.Background(), root, document, dependencies)
 			checkWantError(t, result, err, root)
@@ -459,7 +463,7 @@ func TestCheckReobservesBytesStateAndOpenedIdentityIndependently(t *testing.T) {
 			}
 			dependencies := nativeCheckDependencies()
 			opens := 0
-			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, error) {
+			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
 				opens++
 				if opens == 2 {
 					switch scenario {
@@ -494,7 +498,7 @@ func TestCheckReobservesBytesStateAndOpenedIdentityIndependently(t *testing.T) {
 						}
 					}
 				}
-				return lease.OpenExactRegularFile(path)
+				return lease.OpenObservedExactRegularFile(path)
 			}
 			result, err := checkWithDependencies(context.Background(), root, document, dependencies)
 			checkWantError(t, result, err, root)
@@ -512,10 +516,10 @@ func TestCheckVerifiesRootAfterBothObservations(t *testing.T) {
 	checkWrite(t, filepath.Join(root, document.path), document.Content())
 	dependencies := nativeCheckDependencies()
 	closes := 0
-	dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, error) {
-		file, err := lease.OpenExactRegularFile(path)
+	dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+		file, route, err := lease.OpenObservedExactRegularFile(path)
 		if err != nil {
-			return nil, err
+			return nil, route, err
 		}
 		return checkTestFile{InspectionFile: file, close: func() error {
 			closeErr := file.Close()
@@ -527,7 +531,7 @@ func TestCheckVerifiesRootAfterBothObservations(t *testing.T) {
 				checkMkdir(t, root)
 			}
 			return closeErr
-		}}, nil
+		}}, route, nil
 	}
 	result, err := checkWithDependencies(context.Background(), root, document, dependencies)
 	checkWantError(t, result, err, root)
@@ -543,15 +547,15 @@ func TestCheckUsesOneLeaseAndStrictReadBounds(t *testing.T) {
 	dependencies := nativeCheckDependencies()
 	var pinned *repositorytransaction.InspectionLease
 	opens, closes, totalRead, leaseCloses := 0, 0, 0, 0
-	dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, error) {
+	dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
 		if pinned != nil && pinned != lease || path != document.path {
 			t.Fatal("check changed its root lease or selected path")
 		}
 		pinned = lease
 		opens++
-		file, err := lease.OpenExactRegularFile(path)
+		file, route, err := lease.OpenObservedExactRegularFile(path)
 		if err != nil {
-			return nil, err
+			return nil, route, err
 		}
 		read := 0
 		return checkTestFile{InspectionFile: file, read: func(buffer []byte) (int, error) {
@@ -565,7 +569,7 @@ func TestCheckUsesOneLeaseAndStrictReadBounds(t *testing.T) {
 		}, close: func() error {
 			closes++
 			return file.Close()
-		}}, nil
+		}}, route, nil
 	}
 	dependencies.closeLease = func(lease *repositorytransaction.InspectionLease) error {
 		leaseCloses++
@@ -664,11 +668,11 @@ func TestCheckFileIOAndCleanupFailures(t *testing.T) {
 			defer cancel()
 			dependencies := nativeCheckDependencies()
 			opens, closes, leaseCloses := 0, 0, 0
-			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, error) {
+			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
 				opens++
-				file, err := lease.OpenExactRegularFile(path)
+				file, route, err := lease.OpenObservedExactRegularFile(path)
 				if err != nil {
-					return nil, err
+					return nil, route, err
 				}
 				stats := 0
 				return checkTestFile{InspectionFile: file, read: func(buffer []byte) (int, error) {
@@ -694,7 +698,7 @@ func TestCheckFileIOAndCleanupFailures(t *testing.T) {
 						return errors.New(checkPrivateSentinel)
 					}
 					return nil
-				}}, nil
+				}}, route, nil
 			}
 			dependencies.closeLease = func(lease *repositorytransaction.InspectionLease) error {
 				leaseCloses++
@@ -716,5 +720,68 @@ func TestCheckFileIOAndCleanupFailures(t *testing.T) {
 			}
 			checkUnchanged(t, root, before)
 		})
+	}
+}
+
+func TestCheckRouteWitnessRejectsZeroInEveryState(t *testing.T) {
+	for _, state := range []string{"missing", "current", "stale", "invalid"} {
+		t.Run(state, func(t *testing.T) {
+			root := t.TempDir()
+			document := checkTestDocument(t, "codex")
+			checkStateFixture(t, root, document, state)
+			dependencies := nativeCheckDependencies()
+			dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+				file, _, err := lease.OpenObservedExactRegularFile(path)
+				return file, rootpath.RouteObservation{}, err
+			}
+			before := checkTree(t, root)
+			result, err := checkWithDependencies(context.Background(), root, document, dependencies)
+			checkWantError(t, result, err, root)
+			checkUnchanged(t, root, before)
+		})
+	}
+}
+
+func TestCheckRouteWitnessIgnoresUnrelatedSiblingWrites(t *testing.T) {
+	for _, tool := range []string{"codex", "claude"} {
+		for _, state := range []string{"missing", "current", "stale", "invalid"} {
+			t.Run(tool+"/"+state, func(t *testing.T) {
+				root := t.TempDir()
+				document := checkTestDocument(t, tool)
+				parent := filepath.Dir(filepath.Join(root, document.path))
+				checkMkdir(t, parent)
+				checkStateFixture(t, root, document, state)
+				dependencies := nativeCheckDependencies()
+				opens := 0
+				var expectedTree map[string]checkTestEntry
+				dependencies.openFile = func(lease *repositorytransaction.InspectionLease, path string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error) {
+					opens++
+					if opens == 2 {
+						for directory := parent; ; directory = filepath.Dir(directory) {
+							before, err := os.Stat(directory)
+							if err != nil {
+								t.Fatal(err)
+							}
+							checkWrite(t, filepath.Join(directory, "unrelated-sibling"), checkPrivateSentinel)
+							changedTime := before.ModTime().Add(time.Hour)
+							if err := os.Chtimes(directory, changedTime, changedTime); err != nil {
+								t.Fatal(err)
+							}
+							if directory == root {
+								break
+							}
+						}
+						expectedTree = checkTree(t, root)
+					}
+					return lease.OpenObservedExactRegularFile(path)
+				}
+				result, err := checkWithDependencies(context.Background(), root, document, dependencies)
+				checkNoDisclosure(t, result, err, root)
+				if err != nil || result.State() != state || opens != 2 {
+					t.Fatal("unrelated directory changes altered classification")
+				}
+				checkUnchanged(t, root, expectedTree)
+			})
+		}
 	}
 }

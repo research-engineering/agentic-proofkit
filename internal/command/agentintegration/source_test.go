@@ -75,6 +75,14 @@ func TestSourceBindsPortableConsumedContracts(t *testing.T) {
 }
 
 func TestSourceRejectsUnboundCapabilities(t *testing.T) {
+	t.Run("rendered body budget", func(t *testing.T) {
+		capabilities := sourceCapabilities()
+		capabilities[0].Route = []string{strings.Repeat("route", MaximumBodyBytes)}
+		document, err := Source("codex", capabilities)
+		if err == nil || document != (Document{}) || !strings.Contains(err.Error(), "byte budget") {
+			t.Fatal("an admitted route beyond the rendered body budget was not rejected")
+		}
+	})
 	for _, mutate := range []func([]Capability) []Capability{
 		func(values []Capability) []Capability { return values[1:] },
 		func(values []Capability) []Capability { return append(values, values[0]) },

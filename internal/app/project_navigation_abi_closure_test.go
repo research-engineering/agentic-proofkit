@@ -1,8 +1,8 @@
 package app
 
 import (
+	"archive/zip"
 	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"fmt"
 	"io"
@@ -26,11 +26,18 @@ func TestProjectNavigationVersionEdgeClosesCompletePublicABIDiff(t *testing.T) {
 
 func readArchivedProjectNavigationContract(t *testing.T) map[string]any {
 	t.Helper()
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), archivedProjectNavigationReleaseRoot, "cli-contract.v2.json.gz"))
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), archivedProjectNavigationReleaseRoot, "cli-contract.v2.json.zip"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader, err := gzip.NewReader(bytes.NewReader(content))
+	archive, err := zip.NewReader(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(archive.File) != 1 || archive.File[0].Name != "cli-contract.v2.json" || archive.File[0].UncompressedSize64 > 1<<20 {
+		t.Fatal("archived CLI contract must contain exactly its bounded contract entry")
+	}
+	reader, err := archive.File[0].Open()
 	if err != nil {
 		t.Fatal(err)
 	}

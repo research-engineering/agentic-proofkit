@@ -222,7 +222,24 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			selectors: []string{
 				"TestCheckCancellationBeforeAndAfterObservation", "TestCheckCleanupFailureInvalidatesEveryState", "TestCheckDetectsChangesWithinAnObservation",
 				"TestCheckFileIOAndCleanupFailures", "TestCheckOpenErrorsAreNotMissingOrInvalid", "TestCheckPermissionDeniedIsNotMissing",
-				"TestCheckReobservesBytesStateAndOpenedIdentityIndependently", "TestCheckVerifiesRootAfterBothObservations",
+				"TestCheckReobservesBytesStateAndOpenedIdentityIndependently",
+				"TestCheckRouteWitnessIgnoresUnrelatedSiblingWrites", "TestCheckRouteWitnessRejectsZeroInEveryState",
+				"TestCheckVerifiesRootAfterBothObservations",
+			},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-complete-route-reobservation"}: {
+			witnessPath: "internal/command/agentintegration/check_unix_test.go",
+			selectors:   []string{"TestCheckReobservesCompleteRoute"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-inspection-route-capability"}: {
+			witnessPath: "internal/kernel/repositorytransaction/control_inspection_test.go",
+			selectors:   []string{"TestInspectionLeaseObservedOpenPreservesWitnessAndReadCapability", "TestInspectionLeaseObservedRouteBindsRootAndMissingPosition"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-opaque-route-observation"}: {
+			witnessPath: "internal/kernel/rootpath/observation_unix_test.go",
+			selectors: []string{
+				"TestObservedOpenBindsRealRouteChangesWithoutSiblingMetadata", "TestObservedOpenPreservesLegacyResultsAndPrivateWitness",
+				"TestObservedOpenRejectsAdmissionModeDriftAndCleanup", "TestRouteObservationEqualityBindsEveryOperand",
 			},
 		},
 		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-pre-io-cli-admission"}: {

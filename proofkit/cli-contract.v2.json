@@ -153,7 +153,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
+            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -291,7 +291,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
+            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -405,7 +405,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
+            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2478,17 +2478,17 @@
           },
           {
             "path": "internal/command/agentintegration",
-            "canonicalDigest": "sha256:0e6f808d4fa7515383915426cf9678ee88f916c6baf77006cc9a500fa61fdbec",
+            "canonicalDigest": "sha256:d85cf0fc38bbd28f86ececb3e41f9e04fca7f2741507bf006cd1a55500484505",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
+            "canonicalDigest": "sha256:4279c057766efe379f92e1fbfdbafa1f961a1a15c0b113230ea6cb8cfd0d7ae1",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/kernel/rootpath",
-            "canonicalDigest": "sha256:160244fcf85783eb77d19ccbb9c7bf80de38bbb190fcc5b9358f3d5701844607",
+            "canonicalDigest": "sha256:948e23e5063da448335fbcd9a1bee0a0d92e9b07092fafeec7a1ca935d425055",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -2577,7 +2577,7 @@
           },
           {
             "path": "internal/command/agentintegration",
-            "canonicalDigest": "sha256:0e6f808d4fa7515383915426cf9678ee88f916c6baf77006cc9a500fa61fdbec",
+            "canonicalDigest": "sha256:d85cf0fc38bbd28f86ececb3e41f9e04fca7f2741507bf006cd1a55500484505",
             "evidenceClass": "source_checkout"
           }
         ],

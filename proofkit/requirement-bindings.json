@@ -6812,6 +6812,14 @@
           "command": "go test ./internal/command/agentintegration -run '^TestCheckReobservesBytesStateAndOpenedIdentityIndependently$'"
         },
         {
+          "selector": "TestCheckRouteWitnessIgnoresUnrelatedSiblingWrites",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckRouteWitnessIgnoresUnrelatedSiblingWrites$'"
+        },
+        {
+          "selector": "TestCheckRouteWitnessRejectsZeroInEveryState",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckRouteWitnessRejectsZeroInEveryState$'"
+        },
+        {
           "selector": "TestCheckVerifiesRootAfterBothObservations",
           "command": "go test ./internal/command/agentintegration -run '^TestCheckVerifiesRootAfterBothObservations$'"
         }
@@ -6993,6 +7001,79 @@
         {
           "selector": "TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift",
           "command": "go test ./internal/app -run '^TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-complete-route-reobservation",
+      "witnessId": "proofkit.agent-integration.complete-route-reobservation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/check_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCheckReobservesCompleteRoute",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckReobservesCompleteRoute$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-inspection-route-capability",
+      "witnessId": "proofkit.agent-integration.inspection-route-capability-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/control_inspection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInspectionLeaseObservedOpenPreservesWitnessAndReadCapability",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeaseObservedOpenPreservesWitnessAndReadCapability$'"
+        },
+        {
+          "selector": "TestInspectionLeaseObservedRouteBindsRootAndMissingPosition",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestInspectionLeaseObservedRouteBindsRootAndMissingPosition$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-opaque-route-observation",
+      "witnessId": "proofkit.agent-integration.opaque-route-observation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/rootpath/observation_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestObservedOpenBindsRealRouteChangesWithoutSiblingMetadata",
+          "command": "go test ./internal/kernel/rootpath -run '^TestObservedOpenBindsRealRouteChangesWithoutSiblingMetadata$'"
+        },
+        {
+          "selector": "TestObservedOpenPreservesLegacyResultsAndPrivateWitness",
+          "command": "go test ./internal/kernel/rootpath -run '^TestObservedOpenPreservesLegacyResultsAndPrivateWitness$'"
+        },
+        {
+          "selector": "TestObservedOpenRejectsAdmissionModeDriftAndCleanup",
+          "command": "go test ./internal/kernel/rootpath -run '^TestObservedOpenRejectsAdmissionModeDriftAndCleanup$'"
+        },
+        {
+          "selector": "TestRouteObservationEqualityBindsEveryOperand",
+          "command": "go test ./internal/kernel/rootpath -run '^TestRouteObservationEqualityBindsEveryOperand$'"
         }
       ],
       "commandIds": [

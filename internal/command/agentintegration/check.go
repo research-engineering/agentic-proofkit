@@ -52,13 +52,13 @@ func checkNonClaims() []any {
 }
 
 type checkDependencies struct {
-	openFile   func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, error)
+	openFile   func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error)
 	closeLease func(*repositorytransaction.InspectionLease) error
 }
 
 func nativeCheckDependencies() checkDependencies {
 	return checkDependencies{
-		openFile:   (*repositorytransaction.InspectionLease).OpenExactRegularFile,
+		openFile:   (*repositorytransaction.InspectionLease).OpenObservedExactRegularFile,
 		closeLease: (*repositorytransaction.InspectionLease).Close,
 	}
 }
@@ -132,13 +132,14 @@ type checkObservation struct {
 	state   string
 	content []byte
 	info    fs.FileInfo
+	route   rootpath.RouteObservation
 }
 
-func observeCheckFile(ctx context.Context, lease *repositorytransaction.InspectionLease, document Document, openFile func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, error)) (observation checkObservation, returnErr error) {
+func observeCheckFile(ctx context.Context, lease *repositorytransaction.InspectionLease, document Document, openFile func(*repositorytransaction.InspectionLease, string) (repositorytransaction.InspectionFile, rootpath.RouteObservation, error)) (observation checkObservation, returnErr error) {
 	if err := ctx.Err(); err != nil {
 		return checkObservation{}, fmt.Errorf("integration check operation cancelled: %w", err)
 	}
-	file, err := openFile(lease, document.path)
+	file, route, err := openFile(lease, document.path)
 	switch {
 	case errors.Is(err, repositorytransaction.ErrReadCleanup), errors.Is(err, rootpath.ErrTraversalCleanup):
 		return checkObservation{}, checkCleanupError("open selected file")
@@ -146,9 +147,9 @@ func observeCheckFile(ctx context.Context, lease *repositorytransaction.Inspecti
 		errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded), errors.Is(err, fs.ErrPermission):
 		return checkObservation{}, checkOperationError("open selected file")
 	case errors.Is(err, fs.ErrNotExist):
-		return checkObservation{state: "missing"}, nil
+		return checkObservation{state: "missing", route: route}, nil
 	case errors.Is(err, repositorytransaction.ErrUnsafeInspectionRoute):
-		return checkObservation{state: "invalid"}, nil
+		return checkObservation{state: "invalid", route: route}, nil
 	case err != nil:
 		return checkObservation{}, checkOperationError("open selected file")
 	}
@@ -163,7 +164,7 @@ func observeCheckFile(ctx context.Context, lease *repositorytransaction.Inspecti
 		return checkObservation{}, checkOperationError("inspect selected file")
 	}
 	if !opened.Mode().IsRegular() {
-		return checkObservation{state: "invalid", info: opened}, nil
+		return checkObservation{state: "invalid", info: opened, route: route}, nil
 	}
 	// Oversized files remain invalid, but their bounded prefix participates in
 	// reobservation too. Never read more than the admitted 8 KiB per observation.
@@ -185,10 +186,13 @@ func observeCheckFile(ctx context.Context, lease *repositorytransaction.Inspecti
 	case string(content) == document.content:
 		state = "current"
 	}
-	return checkObservation{state: state, content: content, info: opened}, nil
+	return checkObservation{state: state, content: content, info: opened, route: route}, nil
 }
 
 func sameCheckObservation(before, after checkObservation) bool {
+	if !before.route.Equal(after.route) {
+		return false
+	}
 	if before.state != after.state || !bytes.Equal(before.content, after.content) {
 		return false
 	}

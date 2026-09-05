@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -453,6 +454,101 @@ func TestInspectionLeaseFileCannotBeReassertedAsMutable(t *testing.T) {
 	}
 	if err := lease.Close(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestInspectionLeaseObservedOpenPreservesWitnessAndReadCapability(t *testing.T) {
+	for _, state := range []string{"missing", "regular", "unsafe"} {
+		t.Run(state, func(t *testing.T) {
+			rootPath := t.TempDir()
+			selected := filepath.Join(rootPath, "record")
+			var kernelErr, leaseErr error
+			switch state {
+			case "missing":
+				kernelErr, leaseErr = fs.ErrNotExist, fs.ErrNotExist
+			case "regular":
+				if err := os.WriteFile(selected, []byte("private fixture"), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			case "unsafe":
+				kernelErr, leaseErr = rootpath.ErrUnsafeRoute, ErrUnsafeInspectionRoute
+				if err := os.Symlink("private target", selected); err != nil {
+					t.Fatal(err)
+				}
+			}
+			lease, err := OpenInspectionLease(context.Background(), rootPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer lease.Close()
+			kernelFile, kernelWitness, err := rootpath.OpenObservedExactRegularFile(lease.root, "record")
+			if !errors.Is(err, kernelErr) {
+				t.Fatal("unexpected kernel outcome")
+			}
+			if kernelFile != nil {
+				if err := kernelFile.Close(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			file, witness, err := lease.OpenObservedExactRegularFile("record")
+			if !errors.Is(err, leaseErr) || !kernelWitness.Equal(witness) {
+				t.Fatal("lease lost kernel witness or changed classification")
+			}
+			if file != nil {
+				if _, mutable := file.(interface{ Write([]byte) (int, error) }); mutable {
+					t.Fatal("observed file exposes mutation")
+				}
+				if _, raw := file.(*os.File); raw {
+					t.Fatal("observed file exposes raw descriptor")
+				}
+				if err := file.Close(); err != nil {
+					t.Fatal(err)
+				}
+			} else if state == "regular" {
+				t.Fatal("regular observation lost file capability")
+			}
+			if err := lease.Close(); err != nil {
+				t.Fatal(err)
+			}
+			file, witness, err = lease.OpenObservedExactRegularFile("record")
+			if file != nil || err == nil || witness.Equal(witness) {
+				t.Fatal("closed lease admitted observation")
+			}
+		})
+	}
+	var lease *InspectionLease
+	file, witness, err := lease.OpenObservedExactRegularFile("record")
+	if file != nil || err == nil || witness.Equal(witness) {
+		t.Fatal("nil lease admitted observation")
+	}
+}
+
+func TestInspectionLeaseObservedRouteBindsRootAndMissingPosition(t *testing.T) {
+	firstRoot, secondRoot := t.TempDir(), t.TempDir()
+	first, err := OpenInspectionLease(context.Background(), firstRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer first.Close()
+	second, err := OpenInspectionLease(context.Background(), secondRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer second.Close()
+	_, before, err := first.OpenObservedExactRegularFile("docs/record")
+	if !errors.Is(err, fs.ErrNotExist) {
+		t.Fatal(err)
+	}
+	_, otherRoot, err := second.OpenObservedExactRegularFile("docs/record")
+	if !errors.Is(err, fs.ErrNotExist) || before.Equal(otherRoot) {
+		t.Fatal("distinct base roots compared equal")
+	}
+	if err := os.Mkdir(filepath.Join(firstRoot, "docs"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	_, after, err := first.OpenObservedExactRegularFile("docs/record")
+	if !errors.Is(err, fs.ErrNotExist) || before.Equal(after) {
+		t.Fatal("lease discarded changed missing terminal")
 	}
 }
 

@@ -9,6 +9,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
 )
@@ -21,6 +23,59 @@ var (
 	ErrTraversalCleanup = errors.New("exact root path traversal cleanup failed")
 	ErrUnsafeRoute      = errors.New("exact root path traverses a symlink or non-regular entry")
 )
+
+type routeTerminal uint8
+
+const (
+	routeIncomplete routeTerminal = iota
+	routeRegular
+	routeMissing
+	routeUnsafe
+)
+
+type routeComponent struct {
+	device uint64
+	inode  uint64
+	mode   uint32
+}
+
+// RouteObservation is an immutable, process-local traversal witness. Its
+// private components include the base directory but exclude directory size
+// and timestamps, which can change through unrelated sibling writes.
+type RouteObservation struct {
+	route      string
+	components []routeComponent
+	terminal   routeTerminal
+	position   int
+}
+
+// Equal compares complete observations only; a zero or incomplete witness
+// never supplies evidence of stability, even when compared with itself.
+func (observation RouteObservation) Equal(other RouteObservation) bool {
+	return observation.complete() && other.complete() &&
+		observation.route == other.route && observation.terminal == other.terminal &&
+		observation.position == other.position && slices.Equal(observation.components, other.components)
+}
+
+func (observation RouteObservation) complete() bool {
+	if observation.route == "" || observation.position < 0 {
+		return false
+	}
+	last := strings.Count(observation.route, "/")
+	if observation.position > last {
+		return false
+	}
+	switch observation.terminal {
+	case routeMissing:
+		return len(observation.components) == observation.position+1
+	case routeUnsafe:
+		return len(observation.components) == observation.position+2
+	case routeRegular:
+		return observation.position == last && len(observation.components) == last+2
+	default:
+		return false
+	}
+}
 
 // ExactEntryExists reports whether component exists with the exact spelling
 // supplied by the caller. A portable-equivalent alias is rejected instead of
