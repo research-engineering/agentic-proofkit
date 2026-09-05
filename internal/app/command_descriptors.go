@@ -4,6 +4,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/agentintegration"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbrowser"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementproofview"
 )
@@ -26,6 +27,7 @@ const (
 	commandRunnerAdoptionWorkflow            commandRunner = "adoption_workflow"
 	commandRunnerAgentWorkflow               commandRunner = "agent_workflow"
 	commandRunnerAgentRoute                  commandRunner = "agent_route"
+	commandRunnerAgentIntegration            commandRunner = "agent_integration"
 	commandRunnerConformanceProfile          commandRunner = "conformance_profile"
 	commandRunnerContractEnvelope            commandRunner = "contract_envelope"
 	commandRunnerGradualAdoptionBootstrap    commandRunner = "gradual_adoption_bootstrap"
@@ -121,6 +123,8 @@ var commandDescriptors = []commandDescriptor{
 	command("gradual-adoption-guidance", commandInputRequired, flags("--agent-envelope", "--checked-scope", "--contract-envelope", "--guidance-mode", "--input", "--input-pointer", "--touched-rule-id"), modes("json"), ownerDirs("gradualadoption"), withRunner(commandRunnerGradualAdoptionGuidance), withAgentEnvelope(), withContractEnvelope()),
 	command("help", commandInputNone, flags("--help", "-h"), modes("text"), ownerDirs("help"), withRunner(commandRunnerHelp), withSemanticAppTests("TestHelpCommandContractForms")),
 	command("impact", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("impact")),
+	command("integration-check", commandInputNone, flags("--format", "--repo-root", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegration), withSemanticAppTests("TestIntegrationCheckCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root", "--tool"), withFlagChoices("--format", "json", "text"), withFlagChoices("--tool", agentintegration.Tools()...), withSingleOccurrenceFlags("--repo-root", "--tool")),
+	command("integration-source", commandInputNone, flags("--format", "--tool"), modes("json", "text"), ownerDirs("agentintegration"), withRunner(commandRunnerAgentIntegration), withSemanticAppTests("TestIntegrationSourceCLI"), withRequiredFlags("--tool"), withFlagChoices("--format", "json", "text"), withFlagChoices("--tool", agentintegration.Tools()...), withSingleOccurrenceFlags("--tool")),
 	command("json-report-cli-adapter-source", commandInputNone, flags("--format", "--language"), modes("json"), ownerDirs("jsonreportcliadaptersource"), withRunner(commandRunnerJSONReportCLIAdapterSource), withRequiredFlags("--language")),
 	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
@@ -184,6 +188,7 @@ var commandDescriptors = []commandDescriptor{
 }
 
 var knownCommandRunners = map[commandRunner]struct{}{
+	commandRunnerAgentIntegration:            {},
 	commandRunnerGenericInput:                {},
 	commandRunnerAdoptionFrontDoor:           {},
 	commandRunnerAdoptionMaterialization:     {},

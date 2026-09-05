@@ -528,6 +528,19 @@ func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]stri
 		return append(cloneStrings(descriptor.routeTokens), "--mode", "fresh", "--repo-root", t.TempDir()), true
 	case "help":
 		return []string{"help"}, false
+	case "integration-source":
+		return []string{"integration", "source", "--tool", "codex"}, true
+	case "integration-check":
+		root := t.TempDir()
+		document := integrationDocument(t, "codex")
+		path := filepath.Join(root, ".agents", "skills", "agentic-proofkit", "SKILL.md")
+		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(document.Content()), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		return []string{"integration", "check", "--tool", "codex", "--repo-root", root}, true
 	case "json-report-cli-adapter-source":
 		return []string{"json-report-cli-adapter-source", "--language", "typescript"}, true
 	case "native-evidence-guidance":

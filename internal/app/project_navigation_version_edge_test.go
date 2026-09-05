@@ -17,6 +17,7 @@ import (
 )
 
 const projectNavigationVersionEdgePath = "internal/app/testdata/v0.9-wire-observations.json"
+const archivedProjectNavigationReleaseRoot = "internal/app/testdata/releases/v0.9.0"
 const frozenProjectNavigationPredecessorPath = "internal/app/testdata/v0.8-wire-observations.json"
 const frozenProjectNavigationPredecessorSHA256 = "ed0651c53c015c00d8ed7a0db681a213e9df6248302c5f12fc898e4b6a82c5ab"
 
@@ -58,8 +59,8 @@ type versionEdgeRouteReplacement struct {
 
 func TestProjectNavigationVersionEdgeClosesPublicRoutes(t *testing.T) {
 	record := readProjectNavigationVersionEdge(t)
-	root := repoRoot(t)
-	if err := validateProjectNavigationVersionEdge(record, root, root, currentCLIContractPublicABISHA256(t)); err != nil {
+	root := filepath.Join(repoRoot(t), archivedProjectNavigationReleaseRoot)
+	if err := validateProjectNavigationVersionEdge(record, root); err != nil {
 		t.Fatal(err)
 	}
 	assertProjectNavigationRouteCutover(t)
@@ -114,7 +115,7 @@ func TestProjectNavigationVersionEdgeClosesPublicRoutes(t *testing.T) {
 		t.Run(fmt.Sprintf("mutant-%d", index), func(t *testing.T) {
 			value := cloneProjectNavigationVersionEdge(record)
 			mutate(&value)
-			if err := validateProjectNavigationVersionEdge(value, root, root, currentCLIContractPublicABISHA256(t)); err == nil {
+			if err := validateProjectNavigationVersionEdge(value, root); err == nil {
 				t.Fatal("project navigation version-edge mutant was admitted")
 			}
 		})
@@ -123,7 +124,7 @@ func TestProjectNavigationVersionEdgeClosesPublicRoutes(t *testing.T) {
 
 func TestProjectNavigationVersionEdgeRejectsCoordinatedChangeRecordDrift(t *testing.T) {
 	record := readProjectNavigationVersionEdge(t)
-	content, err := os.ReadFile(filepath.Join(repoRoot(t), record.ChangeRecordRef))
+	content, err := os.ReadFile(filepath.Join(repoRoot(t), archivedProjectNavigationReleaseRoot, record.ChangeRecordRef))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +150,7 @@ func TestProjectNavigationVersionEdgeRejectsCoordinatedChangeRecordDrift(t *test
 	mutant := cloneProjectNavigationVersionEdge(record)
 	digest := sha256.Sum256(mutantContent)
 	mutant.ChangeRecordSHA256 = fmt.Sprintf("sha256:%x", digest)
-	if err := validateProjectNavigationVersionEdge(mutant, repoRoot(t), mutantRoot, currentCLIContractPublicABISHA256(t)); err == nil || !strings.Contains(err.Error(), "contradicts") {
+	if err := validateProjectNavigationVersionEdge(mutant, mutantRoot); err == nil || !strings.Contains(err.Error(), "contradicts") {
 		t.Fatalf("coordinated change-record mutant error=%v, want inventory contradiction", err)
 	}
 }
@@ -207,7 +208,7 @@ func readProjectNavigationVersionEdge(t *testing.T) projectNavigationVersionEdge
 	return record
 }
 
-func validateProjectNavigationVersionEdge(record projectNavigationVersionEdge, contractRoot, changeRecordRoot, currentABI string) error {
+func validateProjectNavigationVersionEdge(record projectNavigationVersionEdge, changeRecordRoot string) error {
 	if record.SchemaVersion != 1 || record.EdgeID != "proofkit.public-wire.0.8.0-to-0.9.0" || record.EvidenceClass != "owner_authored_current_version_edge_observation" {
 		return fmt.Errorf("project navigation version-edge identity is invalid")
 	}
@@ -217,28 +218,20 @@ func validateProjectNavigationVersionEdge(record projectNavigationVersionEdge, c
 	if record.CommandContractSelection != "added_commands_changed_routes_and_process_contract" {
 		return fmt.Errorf("project navigation command-contract selection policy is invalid")
 	}
-	if record.PreviousPublicABISHA256 != "sha256:b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463" || record.CurrentPublicABISHA256 != "sha256:"+currentABI || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
+	if record.PreviousPublicABISHA256 != "sha256:b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463" || record.CurrentPublicABISHA256 != "sha256:9a6842b45a218d6caa5da517b0b20f861e13c35a2900e92d34361cdf771781f7" || record.PreviousPublicABISHA256 == record.CurrentPublicABISHA256 {
 		return fmt.Errorf("project navigation version-edge ABI identity is invalid")
 	}
-	currentAdded, err := currentVersionEdgeCommandContracts(contractRoot, []string{"next", "status"})
-	if err != nil {
-		return err
-	}
-	if !slices.EqualFunc(record.AddedCommandContracts, currentAdded, equalVersionEdgeCommandContract) {
+	if !slices.EqualFunc(record.AddedCommandContracts, frozenProjectNavigationCommands(), equalVersionEdgeCommandContract) {
 		return fmt.Errorf("project navigation added command contracts are not exact")
 	}
-	currentRoute, err := currentVersionEdgeRouteReplacement(contractRoot)
-	if err != nil {
-		return err
-	}
-	if !slices.EqualFunc(record.ChangedCommandRoutes, []versionEdgeRouteReplacement{currentRoute}, equalVersionEdgeRouteReplacement) {
+	if !slices.EqualFunc(record.ChangedCommandRoutes, []versionEdgeRouteReplacement{frozenProjectNavigationRoute()}, equalVersionEdgeRouteReplacement) {
 		return fmt.Errorf("project navigation route replacement is not exact")
 	}
 	processChanges := []versionEdgeProcessChange{{
-		ChangeID: "proofkit.cli-contract.omitted-route-policy", CurrentValue: commandroute.OmittedRoutePolicy,
+		ChangeID: "proofkit.cli-contract.omitted-route-policy", CurrentValue: "command_id",
 		JSONPointer: "/processContract/commandRouteGrammar/omittedRoutePolicy", PreviousState: "absent",
 	}}
-	if !slices.Equal(record.ProcessContractChanges, processChanges) || currentOmittedRoutePolicy(contractRoot) != commandroute.OmittedRoutePolicy {
+	if !slices.Equal(record.ProcessContractChanges, processChanges) {
 		return fmt.Errorf("project navigation process-contract change is not exact")
 	}
 	if !slices.Equal(record.BreakingChangeIDs, []string{"proofkit.agent-workflow.change-plan-route", "proofkit.cli-contract.omitted-route-policy"}) || !slices.Equal(record.AdditionChangeIDs, []string{"proofkit.project-state.next-action", "proofkit.project-state.status"}) {
@@ -386,6 +379,10 @@ func currentOmittedRoutePolicy(root string) string {
 
 func assertProjectNavigationRouteCutover(t *testing.T) {
 	t.Helper()
+	currentRoute, err := currentVersionEdgeRouteReplacement(repoRoot(t))
+	if err != nil || currentRoute.Command != "change-workflow-plan" || !slices.Equal(currentRoute.CurrentRoute, []string{"change", "plan"}) || currentOmittedRoutePolicy(repoRoot(t)) != commandroute.OmittedRoutePolicy {
+		t.Fatal("current route contract does not preserve project navigation cutover")
+	}
 	status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", "-"}, panicReader{}, PresentationCapabilities{})
 	if status != 1 || stdout != "" || !strings.Contains(stderr, "unsupported command: change-workflow-plan") {
 		t.Fatalf("retired route status=%d stdout=%q stderr=%q", status, stdout, stderr)
@@ -393,5 +390,20 @@ func assertProjectNavigationRouteCutover(t *testing.T) {
 	status, stdout, stderr = executeAgentWorkflowCLI(t, []string{"change", "plan", "--input", "-"}, bytes.NewBufferString(validChangeWorkflowInput), PresentationCapabilities{})
 	if status != 0 || stdout == "" || stderr != "" {
 		t.Fatalf("current route status=%d stdout=%q stderr=%q", status, stdout, stderr)
+	}
+}
+
+func frozenProjectNavigationCommands() []versionEdgeCommandContract {
+	return []versionEdgeCommandContract{
+		{Command: "next", Route: []string{"next"}, OutputContract: versionEdgeContractIdentity{ContractID: "proofkit.next.output.v1", ContractSHA256: "sha256:92f6d3dc427a795ec97112e6c3ce55ebd4ab670e4323b4faa8215310a8492747"}},
+		{Command: "status", Route: []string{"status"}, OutputContract: versionEdgeContractIdentity{ContractID: "proofkit.status.output.v1", ContractSHA256: "sha256:3ac87fa98c4650fc3b758ab4a43dee1beeb12f9aee3631a35a2ddf5d0fc5f899"}},
+	}
+}
+
+func frozenProjectNavigationRoute() versionEdgeRouteReplacement {
+	return versionEdgeRouteReplacement{
+		Command: "change-workflow-plan", PreviousRoute: []string{"change-workflow-plan"}, CurrentRoute: []string{"change", "plan"},
+		PreservedInputContract:  versionEdgeContractIdentity{ContractID: "proofkit.change-workflow-plan.input.v1", ContractSHA256: "sha256:e3124fc636b7f66b24daf8e1435cea11da15a741abeabe0cc3d3890b13c71625"},
+		PreservedOutputContract: versionEdgeContractIdentity{ContractID: "proofkit.change-workflow-plan.output.v1", ContractSHA256: "sha256:cd035e9b71d83c341b1a937a18699fd727cb4b0d694983d715b064292ae4d8bd"},
 	}
 }

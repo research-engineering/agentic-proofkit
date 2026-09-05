@@ -154,7 +154,10 @@ func Verify(ctx context.Context, run Runner) error {
 		return fmt.Errorf("no-input guidance text does not equal the command-owned plain-text projection")
 	}
 
-	return verifyProjectNavigation(ctx, run)
+	if err := verifyProjectNavigation(ctx, run); err != nil {
+		return err
+	}
+	return verifyIntegrations(ctx, run)
 }
 
 func bytesInvocation(input []byte, args ...string) Invocation {

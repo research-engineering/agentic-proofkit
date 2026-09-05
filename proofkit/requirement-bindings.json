@@ -907,6 +907,42 @@
         "CLI surface closure does not prove registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness.",
         "Cancellation racing after the final pre-emission checkpoint cannot retract bytes subsequently accepted by an external writer."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-016",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "Byte budgets do not prove tokenizer-specific token cost or model behavior.",
+        "Materialization identity binds consumed registered invocation contracts, not complete schemas or every transitive native semantic behavior.",
+        "Generation does not install instructions, activate a host skill, grant permissions, authorize execution, or prove native verification."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "Current means exact generated-byte freshness only, not installation, host activation, approved-launcher invocation, native execution, semantic proof completion, or stability after return.",
+        "Application-write-free inspection does not prevent filesystem-owned read metadata updates, exclude an uncooperative same-user writer, or identify unread oversized-file bytes beyond the bounded observation."
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "ownerId": "proofkit.agent-workflow",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "Witness selectors declare exact verification routes, not executed or passed proof; installed npm/Python integration witnesses and final frozen-tree closure require actual execution against the named source and artifacts.",
+        "Installed CLI behavior does not prove native-host file discovery, body loading, approved-launcher calls, registry publication, consumer migration, or host instruction revocation after file removal.",
+        "Cancellation after the final pre-emission checkpoint cannot retract accepted output, and a caller-provided writer that accepts a prefix before failure is not an atomic sink.",
+        "Phase5A is generation/check only, not managed installation, update, removal, host activation, permission grant, semantic full proof, merge approval, or production readiness."
+      ]
     }
   ],
   "bindings": [
@@ -6631,6 +6667,340 @@
       ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-016",
+      "scenarioId": "proofkit.agent-workflow.integration-capability-and-carrier-identity",
+      "witnessId": "proofkit.agent-integration.capability-and-carrier-identity-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_integration_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationCapabilityIdentityScope",
+          "command": "go test ./internal/app -run '^TestIntegrationCapabilityIdentityScope$'"
+        },
+        {
+          "selector": "TestIntegrationSourcesAreCarrierIndependent",
+          "command": "go test ./internal/app -run '^TestIntegrationSourcesAreCarrierIndependent$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-016",
+      "scenarioId": "proofkit.agent-workflow.integration-portable-source",
+      "witnessId": "proofkit.agent-integration.portable-source-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/source_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSourceBindsPortableConsumedContracts",
+          "command": "go test ./internal/command/agentintegration -run '^TestSourceBindsPortableConsumedContracts$'"
+        },
+        {
+          "selector": "TestSourceRejectsUnboundCapabilities",
+          "command": "go test ./internal/command/agentintegration -run '^TestSourceRejectsUnboundCapabilities$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-bounded-read-only-classification",
+      "witnessId": "proofkit.agent-integration.bounded-read-only-classification-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/check_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCheckInvalidRootsAreOperationErrors",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckInvalidRootsAreOperationErrors$'"
+        },
+        {
+          "selector": "TestCheckPortableAliasesAreOperationErrors",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckPortableAliasesAreOperationErrors$'"
+        },
+        {
+          "selector": "TestCheckProjectionHasOnlyAdmittedFields",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckProjectionHasOnlyAdmittedFields$'"
+        },
+        {
+          "selector": "TestCheckRejectsEverySymlinkComponentWithoutFollowing",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckRejectsEverySymlinkComponentWithoutFollowing$'"
+        },
+        {
+          "selector": "TestCheckRejectsZeroDocumentBeforeInspection",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckRejectsZeroDocumentBeforeInspection$'"
+        },
+        {
+          "selector": "TestCheckStatesAreReadOnlyAndPrivate",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckStatesAreReadOnlyAndPrivate$'"
+        },
+        {
+          "selector": "TestCheckUsesOneLeaseAndStrictReadBounds",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckUsesOneLeaseAndStrictReadBounds$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-fifo-denial",
+      "witnessId": "proofkit.agent-integration.fifo-denial-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/check_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCheckFIFONeverRead",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckFIFONeverRead$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-operational-failure-and-cohort",
+      "witnessId": "proofkit.agent-integration.operational-failure-and-cohort-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/agentintegration/check_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCheckCancellationBeforeAndAfterObservation",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckCancellationBeforeAndAfterObservation$'"
+        },
+        {
+          "selector": "TestCheckCleanupFailureInvalidatesEveryState",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckCleanupFailureInvalidatesEveryState$'"
+        },
+        {
+          "selector": "TestCheckDetectsChangesWithinAnObservation",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckDetectsChangesWithinAnObservation$'"
+        },
+        {
+          "selector": "TestCheckFileIOAndCleanupFailures",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckFileIOAndCleanupFailures$'"
+        },
+        {
+          "selector": "TestCheckOpenErrorsAreNotMissingOrInvalid",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckOpenErrorsAreNotMissingOrInvalid$'"
+        },
+        {
+          "selector": "TestCheckPermissionDeniedIsNotMissing",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckPermissionDeniedIsNotMissing$'"
+        },
+        {
+          "selector": "TestCheckReobservesBytesStateAndOpenedIdentityIndependently",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckReobservesBytesStateAndOpenedIdentityIndependently$'"
+        },
+        {
+          "selector": "TestCheckVerifiesRootAfterBothObservations",
+          "command": "go test ./internal/command/agentintegration -run '^TestCheckVerifiesRootAfterBothObservations$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
+      "scenarioId": "proofkit.agent-workflow.integration-pre-io-cli-admission",
+      "witnessId": "proofkit.agent-integration.pre-io-cli-admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_integration_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationCheckCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationCheckCLI$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-contract-and-route-closure",
+      "witnessId": "proofkit.agent-integration.contract-and-route-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/cli_contract_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCLIContractMatchesDispatcherAndHelp",
+          "command": "go test ./internal/app -run '^TestCLIContractMatchesDispatcherAndHelp$'"
+        },
+        {
+          "selector": "TestCLIContractsAreCompleteGeneratedAndWitnessBound",
+          "command": "go test ./internal/app -run '^TestCLIContractsAreCompleteGeneratedAndWitnessBound$'"
+        },
+        {
+          "selector": "TestContractMapDecisionTreeHasThreeCells",
+          "command": "go test ./internal/app -run '^TestContractMapDecisionTreeHasThreeCells$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.command-contract-check",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-public-cli",
+      "witnessId": "proofkit.agent-integration.public-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/agent_integration_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationCancellationBeforeOutput",
+          "command": "go test ./internal/app -run '^TestIntegrationCancellationBeforeOutput$'"
+        },
+        {
+          "selector": "TestIntegrationCheckCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationCheckCLI$'"
+        },
+        {
+          "selector": "TestIntegrationCommandsExactRootShapes",
+          "command": "go test ./internal/app -run '^TestIntegrationCommandsExactRootShapes$'"
+        },
+        {
+          "selector": "TestIntegrationSourceCLI",
+          "command": "go test ./internal/app -run '^TestIntegrationSourceCLI$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-installed-carriers",
+      "witnessId": "proofkit.agent-integration.installed-carriers-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyAcceptsApplicationCLI",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyAcceptsApplicationCLI$'"
+        },
+        {
+          "selector": "TestVerifyRejectsCarrierContractMutations",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyRejectsCarrierContractMutations$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test",
+        "proofkit.package-artifact"
+      ],
+      "environmentClasses": [
+        "local-go",
+        "local-go-python"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-installed-npm-carrier-closure",
+      "witnessId": "proofkit.agent-integration.installed-npm-carrier-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledNPMWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/packageverify -run '^TestInstalledNPMWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-installed-wheel-carrier-closure",
+      "witnessId": "proofkit.agent-integration.installed-wheel-carrier-closure-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/workflow_carrier_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInstalledPythonWorkflowCarrierClosure",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestInstalledPythonWorkflowCarrierClosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-version-edge",
+      "witnessId": "proofkit.agent-integration.version-edge-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/integration_version_edge_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationVersionEdgeClosesCompletePublicABIDiff",
+          "command": "go test ./internal/app -run '^TestIntegrationVersionEdgeClosesCompletePublicABIDiff$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
+      "scenarioId": "proofkit.agent-workflow.integration-public-abi-mutations",
+      "witnessId": "proofkit.agent-integration.public-abi-mutations-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/public_abi_mutation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift",
+          "command": "go test ./internal/app -run '^TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [

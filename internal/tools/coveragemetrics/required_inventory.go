@@ -191,6 +191,69 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/app/project_navigation_version_edge_test.go",
 			selectors:   []string{"TestProjectNavigationVersionEdgeClosesPublicRoutes"},
 		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-installed-carriers"}: {
+			commandIDs:         []string{"proofkit.go-test", "proofkit.package-artifact"},
+			environmentClasses: []string{"local-go", "local-go-python"},
+			witnessPath:        "internal/tools/workflowsmoke/workflow_smoke_test.go",
+			selectors:          []string{"TestVerifyAcceptsApplicationCLI", "TestVerifyRejectsCarrierContractMutations"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-016", "proofkit.agent-workflow.integration-capability-and-carrier-identity"}: {
+			witnessPath: "internal/app/agent_integration_command_test.go",
+			selectors:   []string{"TestIntegrationCapabilityIdentityScope", "TestIntegrationSourcesAreCarrierIndependent"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-016", "proofkit.agent-workflow.integration-portable-source"}: {
+			witnessPath: "internal/command/agentintegration/source_test.go",
+			selectors:   []string{"TestSourceBindsPortableConsumedContracts", "TestSourceRejectsUnboundCapabilities"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-bounded-read-only-classification"}: {
+			witnessPath: "internal/command/agentintegration/check_test.go",
+			selectors: []string{
+				"TestCheckInvalidRootsAreOperationErrors", "TestCheckPortableAliasesAreOperationErrors", "TestCheckProjectionHasOnlyAdmittedFields",
+				"TestCheckRejectsEverySymlinkComponentWithoutFollowing", "TestCheckRejectsZeroDocumentBeforeInspection",
+				"TestCheckStatesAreReadOnlyAndPrivate", "TestCheckUsesOneLeaseAndStrictReadBounds",
+			},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-fifo-denial"}: {
+			witnessPath: "internal/command/agentintegration/check_unix_test.go",
+			selectors:   []string{"TestCheckFIFONeverRead"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-operational-failure-and-cohort"}: {
+			witnessPath: "internal/command/agentintegration/check_test.go",
+			selectors: []string{
+				"TestCheckCancellationBeforeAndAfterObservation", "TestCheckCleanupFailureInvalidatesEveryState", "TestCheckDetectsChangesWithinAnObservation",
+				"TestCheckFileIOAndCleanupFailures", "TestCheckOpenErrorsAreNotMissingOrInvalid", "TestCheckPermissionDeniedIsNotMissing",
+				"TestCheckReobservesBytesStateAndOpenedIdentityIndependently", "TestCheckVerifiesRootAfterBothObservations",
+			},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-017", "proofkit.agent-workflow.integration-pre-io-cli-admission"}: {
+			witnessPath: "internal/app/agent_integration_command_test.go",
+			selectors:   []string{"TestIntegrationCheckCLI"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-contract-and-route-closure"}: {
+			commandIDs:  []string{"proofkit.command-contract-check", "proofkit.go-test"},
+			witnessPath: "internal/app/cli_contract_test.go",
+			selectors:   []string{"TestCLIContractMatchesDispatcherAndHelp", "TestCLIContractsAreCompleteGeneratedAndWitnessBound", "TestContractMapDecisionTreeHasThreeCells"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-public-cli"}: {
+			witnessPath: "internal/app/agent_integration_command_test.go",
+			selectors:   []string{"TestIntegrationCancellationBeforeOutput", "TestIntegrationCheckCLI", "TestIntegrationCommandsExactRootShapes", "TestIntegrationSourceCLI"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-installed-npm-carrier-closure"}: {
+			witnessPath: "internal/tools/packageverify/workflow_carrier_test.go",
+			selectors:   []string{"TestInstalledNPMWorkflowCarrierClosure"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-installed-wheel-carrier-closure"}: {
+			witnessPath: "internal/tools/pythonpackage/workflow_carrier_test.go",
+			selectors:   []string{"TestInstalledPythonWorkflowCarrierClosure"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-version-edge"}: {
+			witnessPath: "internal/app/integration_version_edge_test.go",
+			selectors:   []string{"TestIntegrationVersionEdgeClosesCompletePublicABIDiff"},
+		},
+		{"REQ-PROOFKIT-WORKFLOW-018", "proofkit.agent-workflow.integration-public-abi-mutations"}: {
+			witnessPath: "internal/app/public_abi_mutation_test.go",
+			selectors:   []string{"TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift"},
+		},
 		{"REQ-PROOFKIT-PACKAGE-001", "proofkit.package-boundary.root-export-and-deep-import-denial"}: {
 			witnessPath: "internal/tools/packageverify/main_test.go",
 			selectors:   []string{"TestVerifyRootPackageRejectsEachForbiddenRootEntry"},
