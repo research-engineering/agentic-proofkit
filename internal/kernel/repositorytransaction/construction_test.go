@@ -154,10 +154,13 @@ func TestPlanConstructionRejectsPublicFieldTransplant(t *testing.T) {
 }
 
 func TestPlanConstructionRetainsIndependentExecutionChecks(t *testing.T) {
-	for _, defect := range []string{"before-payload", "after-payload", "root", "target-state"} {
+	for _, defect := range []string{"before-payload", "after-payload", "root", "target-state", "parent-state"} {
 		t.Run(defect, func(t *testing.T) {
 			root := t.TempDir()
 			item := constructionTarget{path: "old/a", exists: true, before: "before", after: "after", beforeMode: 0o600, afterMode: 0o644}
+			if defect == "parent-state" {
+				item = constructionTarget{path: "new/a", after: "after", afterMode: 0o644}
+			}
 			plan := buildConstructionPlan(t, root, []constructionTarget{item})
 			mutated := clonePlan(plan)
 			switch defect {
@@ -169,6 +172,10 @@ func TestPlanConstructionRetainsIndependentExecutionChecks(t *testing.T) {
 				assertConstructionRejected(t, t.TempDir(), mutated)
 			case "target-state":
 				mustWriteTestFile(t, root, item.path, "foreign", item.beforeMode)
+			case "parent-state":
+				if err := os.Mkdir(filepath.Join(root, "new"), 0o755); err != nil {
+					t.Fatal(err)
+				}
 			}
 			if mutated.constructedTransactionID != mutated.TransactionID {
 				t.Fatal("counterexample lost its native construction binding")
@@ -178,6 +185,11 @@ func TestPlanConstructionRetainsIndependentExecutionChecks(t *testing.T) {
 			}
 			if defect == "target-state" {
 				mustWriteTestFile(t, root, item.path, item.before, item.beforeMode)
+			}
+			if defect == "parent-state" {
+				if err := os.Remove(filepath.Join(root, "new")); err != nil {
+					t.Fatal(err)
+				}
 			}
 			result, err := Apply(context.Background(), root, plan)
 			if err != nil || result.State != StateApplied || result.AppliedCount != 1 || !result.AppliedCountKnown {

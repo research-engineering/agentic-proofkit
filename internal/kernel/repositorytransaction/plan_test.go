@@ -235,6 +235,8 @@ func TestApplyRejectsForgedCreatedDirectoryOwnership(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// Isolate filesystem ownership from the independent construction guard.
+			plan.constructedTransactionID = plan.TransactionID
 			if _, err := Apply(context.Background(), root, plan); err == nil {
 				t.Fatal("Apply() admitted forged created-directory ownership")
 			}
