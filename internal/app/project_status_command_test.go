@@ -309,16 +309,31 @@ func TestProjectStatusCLIHonorsCanceledContextBeforeOutput(t *testing.T) {
 		for _, format := range []string{"json", "text"} {
 			t.Run(command+"/pre-emission/"+format, func(t *testing.T) {
 				ctx, cancel := context.WithCancel(context.Background())
-				cancel()
-				var stdout bytes.Buffer
+				defer cancel()
+				lateContext := &cancelAfterFirstCheckContext{Context: ctx, cancel: cancel}
+				stdout := &prefixThenErrorWriter{maximum: 7}
 				var stderr bytes.Buffer
-				code := projectStatusResult(ctx, command, projectStatusArgs{color: "never", format: format, repositoryRoot: "unused"}, status, &stdout, &stderr, PresentationCapabilities{})
-				if code != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "cancel") {
-					t.Fatalf("%s/%s cancellation exit=%d stdout=%q stderr=%q", command, format, code, stdout.String(), stderr.String())
+				code := projectStatusResult(lateContext, command, projectStatusArgs{color: "never", format: format, repositoryRoot: "unused"}, status, stdout, &stderr, PresentationCapabilities{})
+				if code != 1 || stdout.calls != 0 || lateContext.checks < 2 || !strings.Contains(stderr.String(), "cancel") {
+					t.Fatalf("%s/%s late cancellation exit=%d writes=%d checks=%d stderr=%q", command, format, code, stdout.calls, lateContext.checks, stderr.String())
 				}
 			})
 		}
 	}
+}
+
+type cancelAfterFirstCheckContext struct {
+	context.Context
+	cancel context.CancelFunc
+	checks int
+}
+
+func (ctx *cancelAfterFirstCheckContext) Err() error {
+	ctx.checks++
+	if ctx.checks == 2 {
+		ctx.cancel()
+	}
+	return ctx.Context.Err()
 }
 
 type prefixThenErrorWriter struct {

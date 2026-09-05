@@ -153,7 +153,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:9847e806c891410d428477672b06d32db289bfa89ba2b83868cba08aa76422a0",
+            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -291,7 +291,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:9847e806c891410d428477672b06d32db289bfa89ba2b83868cba08aa76422a0",
+            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
             "evidenceClass": "source_checkout"
           }
         ],
@@ -405,7 +405,7 @@
           },
           {
             "path": "internal/kernel/repositorytransaction",
-            "canonicalDigest": "sha256:9847e806c891410d428477672b06d32db289bfa89ba2b83868cba08aa76422a0",
+            "canonicalDigest": "sha256:fd549a1f5795524d4f7feed3a4ebcef03e3d6fe53d6ce7e8e24ff5014de9a9cd",
             "evidenceClass": "source_checkout"
           }
         ],

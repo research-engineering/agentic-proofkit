@@ -213,6 +213,41 @@ func TestInspectCohortValidationClosesCleanEpochABA(t *testing.T) {
 	if reads != 4 {
 		t.Fatalf("read count = %d, want two complete two-pass attempts", reads)
 	}
+	for _, changedPath := range []string{adoptionmaterialization.ProjectManifestPath, "docs/specs/pilot/requirements.v1.json"} {
+		for _, changeDigest := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/digest-change=%t", changedPath, changeDigest), func(t *testing.T) {
+				root := t.TempDir()
+				materializeTestProject(t, root)
+				pathReads := 0
+				dependencies := defaultInspectionDependencies
+				dependencies.inspectControl = func(context.Context, *repositorytransaction.InspectionLease) (repositorytransaction.ControlInspection, error) {
+					return control, nil
+				}
+				dependencies.readFile = func(ctx context.Context, lease *repositorytransaction.InspectionLease, path string, budget *readBudget) (fileObservation, error) {
+					observation, err := readProjectFile(ctx, lease, path, budget)
+					if err == nil && path == changedPath {
+						pathReads++
+						if observation.state != fileRead {
+							t.Fatalf("cohort fixture state=%s, want read", observation.state)
+						}
+						if changeDigest && pathReads%2 == 0 {
+							observation.content = append(observation.content, '\n')
+							observation.digest = digest.SHA256BytesRef(observation.content)
+						}
+					}
+					return observation, err
+				}
+				status, err := inspectWithDependencies(context.Background(), root, dependencies)
+				if changeDigest {
+					if err == nil || !strings.Contains(err.Error(), "both bounded inspection attempts") || pathReads != 4 {
+						t.Fatalf("digest drift error=%v reads=%d, want rejection after two two-pass attempts", err, pathReads)
+					}
+				} else if err != nil || status.ProjectState != StateVerificationRequired || pathReads != 2 {
+					t.Fatalf("stable cohort state=%s error=%v reads=%d", status.ProjectState, err, pathReads)
+				}
+			})
+		}
+	}
 }
 
 func TestInspectCleanupFailureDominatesRetryableSnapshotChange(t *testing.T) {
@@ -317,6 +352,33 @@ func TestInspectMapsInvalidControlState(t *testing.T) {
 	}
 	if status.ProjectState != StateBlocked || status.NextAction.ActionClass != ActionRepairControlState || !reflectIssue(status.IssueCodes, IssueTransactionInvalid) {
 		t.Fatalf("Inspect()=%#v, want invalid transaction classification", status)
+	}
+	var expectedStatus Status
+	var expectedNext Next
+	for index, names := range [][]string{{"a", "Z"}, {"z", "a"}, {"A", "z"}} {
+		root := t.TempDir()
+		controlDirectory := filepath.Join(root, filepath.FromSlash(repositorytransaction.ControlDirectory))
+		if err := os.MkdirAll(controlDirectory, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		for _, name := range names {
+			if err := os.WriteFile(filepath.Join(controlDirectory, name), []byte("opaque"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		status, err := Inspect(context.Background(), root)
+		if err != nil || status.ProjectState != StateBlocked {
+			t.Fatalf("portable invalid namespace status=%#v error=%v", status, err)
+		}
+		next, err := NextFromStatus(status)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if index == 0 {
+			expectedStatus, expectedNext = status, next
+		} else if !reflect.DeepEqual(status, expectedStatus) || !reflect.DeepEqual(next, expectedNext) {
+			t.Fatal("portable-equivalent control names changed status or next identity")
+		}
 	}
 }
 

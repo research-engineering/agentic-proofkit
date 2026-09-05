@@ -165,12 +165,14 @@ func sortInspectionEntries(entries []fs.DirEntry) error {
 		if err != nil {
 			return errControlObservationShape
 		}
-		if _, exists := keys[key]; exists {
-			return errControlObservationShape
-		}
-		keys[key] = entry.Name()
+		keys[entry.Name()] = key
 	}
 	sort.Slice(entries, func(left, right int) bool { return keys[entries[left].Name()] < keys[entries[right].Name()] })
+	for index := 1; index < len(entries); index++ {
+		if keys[entries[index-1].Name()] == keys[entries[index].Name()] {
+			return errControlObservationShape
+		}
+	}
 	return nil
 }
 

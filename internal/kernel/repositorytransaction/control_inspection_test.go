@@ -641,10 +641,35 @@ func TestInspectControlStateNormalizesPortableEntryNames(t *testing.T) {
 		{"caf\u00e9", "cafe\u0301"},
 		{"Custom", "custom"},
 	} {
-		left := invalidControlEpochForName(t, pair[0])
-		right := invalidControlEpochForName(t, pair[1])
+		left := invalidControlEpochForNames(t, pair[0])
+		right := invalidControlEpochForNames(t, pair[1])
 		if left != right {
 			t.Fatalf("portable-equivalent names %q and %q produced different epochs", pair[0], pair[1])
+		}
+	}
+	var expectedEpoch string
+	for _, names := range [][3]string{
+		{"a", "Z", "caf\u00e9"},
+		{"A", "z", "cafe\u0301"},
+		{"a", "z", "caf\u00e9"},
+	} {
+		for _, order := range [][3]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}} {
+			permuted := []string{names[order[0]], names[order[1]], names[order[2]]}
+			entries := []fs.DirEntry{testNamedDirEntry(permuted[0]), testNamedDirEntry(permuted[1]), testNamedDirEntry(permuted[2])}
+			if err := sortInspectionEntries(entries); err != nil {
+				t.Fatal(err)
+			}
+			gotOrder := []string{entries[0].Name(), entries[1].Name(), entries[2].Name()}
+			wantOrder := []string{names[0], names[2], names[1]}
+			if !reflect.DeepEqual(gotOrder, wantOrder) {
+				t.Fatalf("portable entry order=%q, want %q", gotOrder, wantOrder)
+			}
+			epoch := invalidControlEpochForNames(t, permuted...)
+			if expectedEpoch == "" {
+				expectedEpoch = epoch
+			} else if epoch != expectedEpoch {
+				t.Fatalf("portable-equivalent entry set %q changed epoch", permuted)
+			}
 		}
 	}
 }
@@ -679,21 +704,27 @@ func TestInspectControlStateRejectsClassificationChangeHiddenByPortableNameIdent
 }
 
 func TestControlObservationRejectsPortableEntryAliasCollision(t *testing.T) {
-	entries := []fs.DirEntry{testNamedDirEntry("caf\u00e9"), testNamedDirEntry("cafe\u0301")}
-	if err := sortInspectionEntries(entries); !errors.Is(err, errControlObservationShape) {
-		t.Fatalf("sortInspectionEntries() error=%v, want unsupported shape", err)
+	for _, pair := range [][2]string{{"caf\u00e9", "cafe\u0301"}, {"Z", "z"}, {"same", "same"}} {
+		for _, order := range [][2]int{{0, 1}, {1, 0}} {
+			entries := []fs.DirEntry{testNamedDirEntry(pair[order[0]]), testNamedDirEntry(pair[order[1]])}
+			if err := sortInspectionEntries(entries); !errors.Is(err, errControlObservationShape) {
+				t.Fatalf("sortInspectionEntries() error=%v, want unsupported shape", err)
+			}
+		}
 	}
 }
 
-func invalidControlEpochForName(t *testing.T, name string) string {
+func invalidControlEpochForNames(t *testing.T, names ...string) string {
 	t.Helper()
 	rootPath := t.TempDir()
 	controlPath := filepath.Join(rootPath, filepath.FromSlash(ControlDirectory))
 	if err := os.MkdirAll(controlPath, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(controlPath, name), []byte("portable\n"), 0o600); err != nil {
-		t.Fatal(err)
+	for _, name := range names {
+		if err := os.WriteFile(filepath.Join(controlPath, name), []byte("portable\n"), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
 	inspection, err := InspectControlState(context.Background(), rootPath)
 	if err != nil || inspection.State != ControlStateInvalid {
