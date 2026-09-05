@@ -201,6 +201,7 @@ var currentBreakingChanges = []Change{
 var currentAdditions = []Change{
 	{ChangeID: "proofkit.agent-integration.managed-lifecycle", Summary: "Add explicit integration plan, apply and recover routes for reviewed install, update and removal of the selected tool bootstrap. Preserve local edits and neighboring instructions with one native two-target transaction and a cooperative baseline."},
 	{ChangeID: "proofkit.repository-transaction.desired-absence", Summary: "Support exact desired absence, guarded deletion and recovery through versioned native journals while preserving present-only v1 bytes and identities. Bind idempotent current-state replay to the pending-state and retained-result checks under one native lock."},
+	{ChangeID: "proofkit.repository-transaction.recovery-observation", Summary: "Preserve operational target-observation failures through recovery and both CLI consumers instead of presenting them as observed state mismatches. Keep target and control state unchanged on pre-effect refusal, including temporary-journal publication, and retain cleanup outcomes after the final committed effect."},
 }
 
 var currentMigrationSteps = []string{
