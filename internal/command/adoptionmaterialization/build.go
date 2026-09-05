@@ -248,26 +248,18 @@ func validateExistingArtifacts(transaction repositorytransaction.Plan, artifacts
 }
 
 func admitExistingArtifact(content []byte, desired artifact, projectID string) error {
+	if desired.Kind != ArtifactProjectManifest {
+		identity, admitted := admitProjectChildRecord(content, Route{ArtifactKind: desired.Kind, Path: desired.Path}, &admittedProjectChildren{})
+		if !admitted || identity != desired.ID {
+			return fmt.Errorf("adoption materialization existing artifact has incompatible ownership")
+		}
+		return nil
+	}
 	raw, err := admission.DecodeJSON(bytes.NewReader(content), repositorytransaction.MaximumFileBytes)
 	if err != nil {
 		return fmt.Errorf("adoption materialization refuses to replace an unknown existing artifact")
 	}
 	switch desired.Kind {
-	case ArtifactRequirementSource:
-		result, err := requirementsourceadmission.Evaluate(raw)
-		if err != nil || result.ExitCode != 0 || result.Source.SourceID != desired.ID {
-			return fmt.Errorf("adoption materialization existing requirement source has incompatible ownership")
-		}
-	case ArtifactRequirementBinding:
-		result, err := requirementbinding.Build(raw)
-		if err != nil || result.Record.State != "passed" || result.Input.BindingID != desired.ID {
-			return fmt.Errorf("adoption materialization existing requirement binding has incompatible ownership")
-		}
-	case ArtifactTestInventory:
-		result, err := testevidenceinventory.EvaluateDirect(raw)
-		if err != nil || result.ExitCode != 0 || result.Inventory.InventoryID != desired.ID {
-			return fmt.Errorf("adoption materialization existing test inventory has incompatible ownership")
-		}
 	case ArtifactProjectManifest:
 		manifest, err := AdmitManifest(raw)
 		if err != nil || manifest.ProjectID != projectID {

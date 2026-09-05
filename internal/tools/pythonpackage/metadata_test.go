@@ -18,7 +18,7 @@ import (
 
 const (
 	testLicenseContent     = "MIT License\n"
-	testCLIContractContent = `{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another"}},"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`
+	testCLIContractContent = `{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another","omittedRoutePolicy":"command_id"}},"commands":[{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo"]}}}]}`
 )
 
 func TestPythonPackageReadersRejectAmbiguousJSON(t *testing.T) {

@@ -69,7 +69,7 @@ func TestExactDisplayedCommandRoutesAdmitBoundedMultiTokenRoutes(t *testing.T) {
 
 func testInstalledCLIContract(t *testing.T) installedclicontract.Contract {
 	t.Helper()
-	contract, err := installedclicontract.Admit([]byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another"}},"commands":[{"command":"sample","route":["adopt","plan"]}]}`))
+	contract, err := installedclicontract.Admit([]byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another","omittedRoutePolicy":"command_id"}},"commands":[{"command":"sample","route":["adopt","plan"]}]}`))
 	if err != nil {
 		t.Fatal(err)
 	}

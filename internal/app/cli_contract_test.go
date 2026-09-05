@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463"
+	cliContractPublicABISHA256               = "17b7f185adb80bcdeb6bc5e6a08cf0b95e6b6f8766d2cba634d08f59b7821e0b"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -792,8 +792,9 @@ func TestProofkitContractMapRoutesRequiredInputCommands(t *testing.T) {
 		if command.Input != "required" {
 			continue
 		}
-		if !strings.Contains(document, "`"+command.Command+"`") {
-			t.Fatalf("docs/proofkit-contract-map.md does not route required-input command %s", command.Command)
+		route := strings.Join(effectiveContractRoute(command), " ")
+		if !strings.Contains(document, "`"+route+"`") {
+			t.Fatalf("docs/proofkit-contract-map.md does not route required-input command %s through %s", command.Command, route)
 		}
 	}
 }
@@ -1525,11 +1526,13 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"adoption-contract-envelope":     "agentic-proofkit adoption-contract-envelope --input <path|-> [--agent-envelope] [--checked-scope <scope>] [--guidance-mode <mode>] [--materialization-manifest] --mode <mode> [--pilot <value>] [--touched-rule-id <id>]",
 		"conformance-profile":            "agentic-proofkit conformance-profile --input <path|-> [--format <mode>] [--input-pointer <pointer>] (--list | --profile <value> | --verify)",
 		"json-report-cli-adapter-source": "agentic-proofkit json-report-cli-adapter-source [--format <mode>] --language <value>",
+		"next":                           "agentic-proofkit next [--color <auto|never>] [--format <json|text>] --repo-root <path>",
 		"requirement-browser-server":     "agentic-proofkit requirement-browser-server --input <path|-> [--empty-local-environment-policy] [--host <127.0.0.1|::1>] [--input-pointer <pointer>] [--local-environment-class <id>] [--open] [--port <port>] [--scope <graph|slice>] [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>] --view <coverage|proof|source|spec-tree|workspace>",
 		"requirement-context-compose":    "agentic-proofkit requirement-context-compose --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 		"requirement-proof-resolver":     "agentic-proofkit requirement-proof-resolver --input <path|-> [--input-pointer <pointer>] (--empty-local-environment-policy | --local-environment-class <id>)",
 		"repository-inventory":           "agentic-proofkit repository-inventory --repo-root <path>",
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
+		"status":                         "agentic-proofkit status [--color <auto|never>] [--format <json|text>] --repo-root <path>",
 		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
 	}
 	constrainedCount := 0
@@ -1728,12 +1731,13 @@ func assertCLIContractSchema(t *testing.T) {
 	if err := json.Unmarshal(processContract["commandRouteGrammar"], &routeGrammar); err != nil {
 		t.Fatalf("decode command route grammar: %v", err)
 	}
-	assertKeys(t, "CLI command route grammar", keysAny(routeGrammar), []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "separator", "tokenPattern"})
+	assertKeys(t, "CLI command route grammar", keysAny(routeGrammar), []string{"ambiguityPolicy", "maximumTokens", "minimumTokens", "omittedRoutePolicy", "separator", "tokenPattern"})
 	if routeGrammar["minimumTokens"] != float64(commandroute.MinimumTokens) ||
 		routeGrammar["maximumTokens"] != float64(commandroute.MaximumTokens) ||
 		routeGrammar["separator"] != commandroute.Separator ||
 		routeGrammar["tokenPattern"] != commandroute.TokenPattern ||
-		routeGrammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy {
+		routeGrammar["ambiguityPolicy"] != commandroute.AmbiguityPolicy ||
+		routeGrammar["omittedRoutePolicy"] != commandroute.OmittedRoutePolicy {
 		t.Fatalf("CLI command route grammar does not match runtime owner: %#v", routeGrammar)
 	}
 	var globalOptions map[string]any
@@ -1896,10 +1900,11 @@ func assertCLIContractSchema(t *testing.T) {
 }
 
 func effectiveContractRoute(command cliContractCommand) []string {
-	if len(command.Route) == 0 {
-		return []string{command.Command}
+	route, ok := commandroute.Resolve(command.Command, command.Route)
+	if !ok {
+		return nil
 	}
-	return append([]string(nil), command.Route...)
+	return route
 }
 
 func commandByContractID(commands []cliContractCommand, commandID string) cliContractCommand {

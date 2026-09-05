@@ -18,13 +18,14 @@ type agentWorkflowArgs struct {
 
 func parseAgentWorkflowArgs(command string, args []string) (agentWorkflowArgs, error) {
 	options := agentWorkflowArgs{format: "json", color: "never"}
+	diagnosticRoute := commandRouteForDiagnostic(command)
 	seen := map[string]bool{}
 	for index := 0; index < len(args); index++ {
 		argument := args[index]
 		switch argument {
 		case "--agent-envelope":
 			if command != "change-workflow-plan" {
-				return agentWorkflowArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, argument)
+				return agentWorkflowArgs{}, fmt.Errorf("unsupported argument for %s: %s", diagnosticRoute, argument)
 			}
 			if seen[argument] {
 				return agentWorkflowArgs{}, fmt.Errorf("%s may be specified only once", argument)
@@ -33,13 +34,13 @@ func parseAgentWorkflowArgs(command string, args []string) (agentWorkflowArgs, e
 			options.agentEnvelope = true
 		case "--color", "--format", "--input", "--input-pointer":
 			if command == "native-evidence-guidance" && (argument == "--input" || argument == "--input-pointer") {
-				return agentWorkflowArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, argument)
+				return agentWorkflowArgs{}, fmt.Errorf("unsupported argument for %s: %s", diagnosticRoute, argument)
 			}
 			if seen[argument] {
 				return agentWorkflowArgs{}, fmt.Errorf("%s may be specified only once", argument)
 			}
 			if index+1 >= len(args) || args[index+1] == "" && argument != "--input-pointer" {
-				return agentWorkflowArgs{}, missingAgentWorkflowValue(command, argument)
+				return agentWorkflowArgs{}, missingAgentWorkflowValue(diagnosticRoute, argument)
 			}
 			seen[argument] = true
 			value := args[index+1]
@@ -67,11 +68,11 @@ func parseAgentWorkflowArgs(command string, args []string) (agentWorkflowArgs, e
 				options.pointerPresent = true
 			}
 		default:
-			return agentWorkflowArgs{}, fmt.Errorf("unsupported argument for %s: %s", command, argument)
+			return agentWorkflowArgs{}, fmt.Errorf("unsupported argument for %s: %s", diagnosticRoute, argument)
 		}
 	}
 	if command == "change-workflow-plan" && options.inputPath == "" {
-		return agentWorkflowArgs{}, fmt.Errorf("change-workflow-plan requires --input <path|->")
+		return agentWorkflowArgs{}, fmt.Errorf("%s requires --input <path|->", diagnosticRoute)
 	}
 	if options.colorExplicit && options.format != "text" {
 		return agentWorkflowArgs{}, fmt.Errorf("--color is valid only with --format text")

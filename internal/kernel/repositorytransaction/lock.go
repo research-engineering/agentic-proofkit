@@ -1,6 +1,7 @@
 package repositorytransaction
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,9 +48,15 @@ func lockTransactionDirectory(root *os.Root) (*transactionLock, error) {
 }
 
 func (lock *transactionLock) release() {
+	_ = lock.releaseChecked()
+}
+
+func (lock *transactionLock) releaseChecked() error {
 	if lock == nil || lock.directory == nil {
-		return
+		return nil
 	}
-	_ = unlockDirectory(lock.directory)
-	_ = lock.directory.Close()
+	unlockErr := unlockDirectory(lock.directory)
+	closeErr := lock.directory.Close()
+	lock.directory = nil
+	return errors.Join(unlockErr, closeErr)
 }

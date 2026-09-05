@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "edgeId": "proofkit.public-wire.0.8.0-to-0.9.0",
+  "previousVersion": "0.8.0",
+  "version": "0.9.0",
+  "evidenceClass": "owner_authored_current_version_edge_observation",
+  "changeClass": "breaking",
+  "commandContractSelection": "added_commands_changed_routes_and_process_contract",
+  "changeRecordRef": "release/change-record.v2.json",
+  "changeRecordSha256": "sha256:6aaa914c454d6f135ece86b632b8618911b71d6b5da08bc2c25657c09228f4f3",
+  "previousPublicAbiSha256": "sha256:b5ea707ee5851cea6b75442e4faf20e93879371faf3636e96a98ccd23b527463",
+  "currentPublicAbiSha256": "sha256:17b7f185adb80bcdeb6bc5e6a08cf0b95e6b6f8766d2cba634d08f59b7821e0b",
+  "addedCommandContracts": [
+    {
+      "command": "next",
+      "route": ["next"],
+      "outputContract": {
+        "contractId": "proofkit.next.output.v1",
+        "contractSha256": "sha256:9dfa71617f9d727949a988bf726bcf0070460faa59565a8adc468994a36594c6"
+      }
+    },
+    {
+      "command": "status",
+      "route": ["status"],
+      "outputContract": {
+        "contractId": "proofkit.status.output.v1",
+        "contractSha256": "sha256:29cf593bf349fd5ec7276f28ce75817a44a8b12fc7aea5b4c055cfaf4188924c"
+      }
+    }
+  ],
+  "changedCommandRoutes": [
+    {
+      "command": "change-workflow-plan",
+      "previousRoute": ["change-workflow-plan"],
+      "currentRoute": ["change", "plan"],
+      "preservedInputContract": {
+        "contractId": "proofkit.change-workflow-plan.input.v1",
+        "contractSha256": "sha256:e3124fc636b7f66b24daf8e1435cea11da15a741abeabe0cc3d3890b13c71625"
+      },
+      "preservedOutputContract": {
+        "contractId": "proofkit.change-workflow-plan.output.v1",
+        "contractSha256": "sha256:cd035e9b71d83c341b1a937a18699fd727cb4b0d694983d715b064292ae4d8bd"
+      }
+    }
+  ],
+  "processContractChanges": [
+    {
+      "changeId": "proofkit.cli-contract.omitted-route-policy",
+      "jsonPointer": "/processContract/commandRouteGrammar/omittedRoutePolicy",
+      "previousState": "absent",
+      "currentValue": "command_id"
+    }
+  ],
+  "breakingChangeIds": [
+    "proofkit.agent-workflow.change-plan-route",
+    "proofkit.cli-contract.omitted-route-policy"
+  ],
+  "additionChangeIds": [
+    "proofkit.project-state.next-action",
+    "proofkit.project-state.status"
+  ],
+  "migrationSteps": [
+    "Replace agentic-proofkit change-workflow-plan invocations with agentic-proofkit change plan; input and output JSON contracts are unchanged.",
+    "Update CLI-contract consumers to require commandRouteGrammar.omittedRoutePolicy=command_id; commands without an explicit route continue to resolve to their stable command ID."
+  ],
+  "nonClaims": [
+    "This owner-authored version-edge observation binds source and contract identities; it does not authenticate registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."
+  ]
+}

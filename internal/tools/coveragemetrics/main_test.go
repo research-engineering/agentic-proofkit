@@ -597,6 +597,15 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.agent-workflow.native-evidence-guidance-slot-closure",
 		"proofkit.agent-workflow.no-ambient-authority",
 		"proofkit.agent-workflow.prompt-coordinate-and-escalation-closure",
+		"proofkit.agent-workflow.project-navigation-installed-carriers",
+		"proofkit.agent-workflow.project-navigation-public-cli",
+		"proofkit.agent-workflow.project-navigation-version-edge",
+		"proofkit.agent-workflow.project-next-action-output-closure",
+		"proofkit.agent-workflow.project-state-bounded-inspection",
+		"proofkit.agent-workflow.project-state-child-owner-delegation",
+		"proofkit.agent-workflow.project-state-control-file-coherence",
+		"proofkit.agent-workflow.project-state-exact-route-traversal",
+		"proofkit.agent-workflow.project-state-total-classification",
 		"proofkit.agent-workflow.public-cli-relation-closure",
 		"proofkit.agent-workflow.pure-single-admission-owner",
 		"proofkit.agent-workflow.reference-closed-bounded-context",
@@ -720,6 +729,24 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 				t.Fatalf("command-drift error=%v", err)
 			}
 		})
+		if scenarioID == "proofkit.agent-workflow.project-navigation-installed-carriers" {
+			t.Run(scenarioID+"/execution-command-class-drift", func(t *testing.T) {
+				mutated := cloneBindingFile(bindings)
+				mutated.Bindings[index].CommandIDs = []string{"proofkit.go-test"}
+				err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+				if err == nil || !strings.Contains(err.Error(), "commandIds=") {
+					t.Fatalf("command-id drift error=%v", err)
+				}
+			})
+			t.Run(scenarioID+"/environment-class-drift", func(t *testing.T) {
+				mutated := cloneBindingFile(bindings)
+				mutated.Bindings[index].EnvironmentClasses = []string{"local-go"}
+				err := validateBindingWitnessSelectorsAtRoot(root, mutated)
+				if err == nil || !strings.Contains(err.Error(), "environmentClasses=") {
+					t.Fatalf("environment-class drift error=%v", err)
+				}
+			})
+		}
 	}
 
 	t.Run("workflow/surplus-binding", func(t *testing.T) {
@@ -843,6 +870,7 @@ func cloneBindingFile(source bindingFile) bindingFile {
 	}
 	for index := range clone.Bindings {
 		clone.Bindings[index].CommandIDs = append([]string(nil), source.Bindings[index].CommandIDs...)
+		clone.Bindings[index].EnvironmentClasses = append([]string(nil), source.Bindings[index].EnvironmentClasses...)
 		clone.Bindings[index].WitnessSelectors = append([]witnessSelector(nil), source.Bindings[index].WitnessSelectors...)
 	}
 	return clone

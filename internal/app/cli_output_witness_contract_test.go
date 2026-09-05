@@ -403,6 +403,14 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 			ExecutableCommand: "go test ./internal/app -run '^TestAgentRouteEnvelopeModesUseExactRootShapes$'",
 		},
 		{
+			Command:           "next",
+			NativeSourceForm:  "nativeSource",
+			NativeSourcePaths: []string{"internal/command/projectstatus"},
+			SelectorPath:      "internal/app/project_status_command_test.go",
+			SelectorTest:      "TestNextOutputUsesExactRootShape",
+			ExecutableCommand: "go test ./internal/app -run '^TestNextOutputUsesExactRootShape$'",
+		},
+		{
 			Command:           "pilot-admission",
 			NativeSourceForm:  "nativeSources",
 			NativeSourcePaths: []string{"internal/app", "internal/command/pilotadmission"},
@@ -417,6 +425,14 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 			SelectorPath:      "internal/app/cli_abi_test.go",
 			SelectorTest:      "TestRequirementAuthoringPlanOutputUsesVersionedRootShape",
 			ExecutableCommand: "go test ./internal/app -run '^TestRequirementAuthoringPlanOutputUsesVersionedRootShape$'",
+		},
+		{
+			Command:           "status",
+			NativeSourceForm:  "nativeSource",
+			NativeSourcePaths: []string{"internal/command/projectstatus"},
+			SelectorPath:      "internal/app/project_status_command_test.go",
+			SelectorTest:      "TestStatusOutputUsesExactRootShape",
+			ExecutableCommand: "go test ./internal/app -run '^TestStatusOutputUsesExactRootShape$'",
 		},
 		{
 			Command:           "self-check",
@@ -472,6 +488,16 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 			SelectorTest:  "TestStandaloneMultiVariantCommandsUseExactRootShapes",
 		},
 		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.project-status-output-root-witnesses",
+			SelectorTest:  "TestNextOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-PACKAGE-002",
+			ScenarioID:    "proofkit.package-boundary.project-status-output-root-witnesses",
+			SelectorTest:  "TestStatusOutputUsesExactRootShape",
+		},
+		{
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",
 			ScenarioID:    "proofkit.supply-chain-quality.adoption-materialization-cli-abi",
 			SelectorTest:  "TestAdoptMaterializeApplyOutputUsesExactRootShape",
@@ -510,6 +536,16 @@ func rootDistinctOutputBindingMappings() []rootDistinctOutputBindingMapping {
 			RequirementID: "REQ-PROOFKIT-QUALITY-004",
 			ScenarioID:    "proofkit.supply-chain-quality.cli-abi-golden",
 			SelectorTest:  "TestStandaloneMultiVariantCommandsUseExactRootShapes",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.project-status-cli-abi",
+			SelectorTest:  "TestNextOutputUsesExactRootShape",
+		},
+		{
+			RequirementID: "REQ-PROOFKIT-QUALITY-004",
+			ScenarioID:    "proofkit.supply-chain-quality.project-status-cli-abi",
+			SelectorTest:  "TestStatusOutputUsesExactRootShape",
 		},
 		{
 			RequirementID: "REQ-PROOFKIT-SPEC-011",

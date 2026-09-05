@@ -34,6 +34,7 @@ const (
 	commandRunnerJSONReportCLIAdapterSource  commandRunner = "json_report_cli_adapter_source"
 	commandRunnerPilotAdmission              commandRunner = "pilot_admission"
 	commandRunnerPlanning                    commandRunner = "planning"
+	commandRunnerProjectStatus               commandRunner = "project_status"
 	commandRunnerProjectStructure            commandRunner = "project_structure"
 	commandRunnerRequirementBrowserServer    commandRunner = "requirement_browser_server"
 	commandRunnerRequirementContextCompose   commandRunner = "requirement_context_compose"
@@ -124,6 +125,7 @@ var commandDescriptors = []commandDescriptor{
 	command("migration-parity-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationparityadmission")),
 	command("migration-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("migrationplan")),
 	command("native-evidence-guidance", commandInputNone, flags("--color", "--format"), modes("json", "text"), ownerDirs("nativeevidenceguidance"), withRunner(commandRunnerAgentWorkflow), withSemanticAppTests("TestAgentWorkflowCLITruthTable"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withSingleOccurrenceFlags("--color")),
+	command("next", commandInputNone, flags("--color", "--format", "--repo-root"), modes("json", "text"), ownerDirs("projectstatus"), withRunner(commandRunnerProjectStatus), withSemanticAppTests("TestProjectStatusCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--repo-root")),
 	command("obligation-decision", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("obligationdecision"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
 	command("package-runtime-dependency-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("packageruntimedependency")),
 	command("pilot-admission", commandInputRequired, flags("--contract-envelope", "--input", "--input-pointer", "--pilot", "--stack-diverse"), modes("json"), ownerDirs("pilotadmission"), withRunner(commandRunnerPilotAdmission), withContractEnvelope(), withFlagValueRequirement("--pilot", "all", "--contract-envelope")),
@@ -169,6 +171,7 @@ var commandDescriptors = []commandDescriptor{
 	command("spec-overview-claims", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specoverviewclaims")),
 	command("spec-proof-bundle-admission", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("specproofbundleadmission")),
 	command("stack-preset", commandInputNone, flags("--preset"), modes("json"), ownerDirs("stackpreset"), withRunner(commandRunnerStackPreset), withSemanticAppTests("TestNoInputCommandsHaveCommandSpecificBehavior"), withRequiredFlags("--preset")),
+	command("status", commandInputNone, flags("--color", "--format", "--repo-root"), modes("json", "text"), ownerDirs("projectstatus"), withRunner(commandRunnerProjectStatus), withSemanticAppTests("TestProjectStatusCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--repo-root")),
 	command("test-evidence-inventory", commandInputRequired, flags("--input", "--input-pointer", "--normalized-inventory", "--projection"), modes("json", "normalized-inventory"), ownerDirs("proofbindingtestinventory", "testevidenceinventory"), withRunner(commandRunnerTestEvidenceInventory)),
 	command("text-policy", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("textpolicy")),
 	command("typescript-public-api-surfaces", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("publicapi"), withRunner(commandRunnerTypeScriptPublicAPISurfaces), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root")),
@@ -197,6 +200,7 @@ var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerJSONReportCLIAdapterSource:  {},
 	commandRunnerPilotAdmission:              {},
 	commandRunnerPlanning:                    {},
+	commandRunnerProjectStatus:               {},
 	commandRunnerProjectStructure:            {},
 	commandRunnerRequirementBrowserServer:    {},
 	commandRunnerRequirementContextCompose:   {},

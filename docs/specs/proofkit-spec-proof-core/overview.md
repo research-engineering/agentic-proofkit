@@ -200,6 +200,10 @@ execution receipts, and merge policy.
   materialization public version edge binds all three transactional
   materialization routes and their exact public contracts to a compatible
   release record without reinterpreting the frozen prior edge.
+- `REQ-PROOFKIT-SPEC-035`: the project-state public version edge binds status,
+  next, and the change-plan route replacement to exact ABI and command-contract
+  identities plus one breaking release record without reinterpreting the
+  frozen prior edge.
 
 ## Non-Claims
 

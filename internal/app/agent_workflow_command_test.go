@@ -24,11 +24,11 @@ func TestAgentWorkflowCLITruthTable(t *testing.T) {
 		semanticOutputClasses     = 24
 		envelopeTransitionClasses = 8
 		frozenRejectionClasses    = 45
-		extraRejectionCases       = 2
+		extraRejectionCases       = 3
 		helpClasses               = 10
 		colorClasses              = 8
 	)
-	if got, want := semanticOutputClasses+envelopeTransitionClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 97; got != want {
+	if got, want := semanticOutputClasses+envelopeTransitionClasses+frozenRejectionClasses+extraRejectionCases+helpClasses+colorClasses, 98; got != want {
 		t.Fatalf("agent workflow CLI truth-table cardinality = %d, want %d", got, want)
 	}
 	t.Run("semantic output classes", testAgentWorkflowSemanticOutputClasses)
@@ -36,6 +36,12 @@ func TestAgentWorkflowCLITruthTable(t *testing.T) {
 	t.Run("usage errors precede input", testAgentWorkflowUsageErrorsPrecedeInput)
 	t.Run("exclusive help classes", testAgentWorkflowHelpClasses)
 	t.Run("terminal capability product", testAgentWorkflowTerminalCapabilityProduct)
+	t.Run("retired flat route", func(t *testing.T) {
+		status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", "-"}, panicReader{}, PresentationCapabilities{})
+		if status != 1 || stdout != "" || !strings.Contains(stderr, "unsupported command: change-workflow-plan") {
+			t.Fatalf("status=%d stdout=%q stderr=%q", status, stdout, stderr)
+		}
+	})
 }
 
 func testAgentWorkflowEnvelopeTransitionClasses(t *testing.T) {
@@ -79,7 +85,7 @@ func testAgentWorkflowEnvelopeTransitionClasses(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", "-", "--agent-envelope"}, bytes.NewReader(payload), PresentationCapabilities{})
+			status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change", "plan", "--input", "-", "--agent-envelope"}, bytes.NewReader(payload), PresentationCapabilities{})
 			if status != 0 || stderr != "" {
 				t.Fatalf("status=%d stderr=%q", status, stderr)
 			}
@@ -129,7 +135,7 @@ func testAgentWorkflowEnvelopeTransitionClasses(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", "-", "--agent-envelope"}, bytes.NewReader(payload), PresentationCapabilities{})
+		status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change", "plan", "--input", "-", "--agent-envelope"}, bytes.NewReader(payload), PresentationCapabilities{})
 		if status != 0 || stderr != "" {
 			t.Fatalf("status=%d stderr=%q", status, stderr)
 		}
@@ -163,7 +169,7 @@ func testAgentWorkflowSemanticOutputClasses(t *testing.T) {
 			for _, envelope := range []bool{false, true} {
 				name := strings.Join([]string{"planner", formatClass(explicitFormat), layout, envelopeClass(envelope)}, "/")
 				t.Run(name, func(t *testing.T) {
-					args := []string{"change-workflow-plan", "--input", "-"}
+					args := []string{"change", "plan", "--input", "-"}
 					if explicitFormat {
 						args = append(args, "--format", "json")
 					}
@@ -191,9 +197,9 @@ func testAgentWorkflowSemanticOutputClasses(t *testing.T) {
 	}
 
 	for _, args := range [][]string{
-		{"change-workflow-plan", "--input", "-", "--format", "text"},
-		{"change-workflow-plan", "--input", "-", "--format", "text", "--color", "never"},
-		{"change-workflow-plan", "--input", "-", "--format", "text", "--color", "auto"},
+		{"change", "plan", "--input", "-", "--format", "text"},
+		{"change", "plan", "--input", "-", "--format", "text", "--color", "never"},
+		{"change", "plan", "--input", "-", "--format", "text", "--color", "auto"},
 	} {
 		status, stdout, stderr := executeAgentWorkflowCLI(t, args, strings.NewReader(validChangeWorkflowInput), PresentationCapabilities{})
 		if status != 0 || stderr != "" || stdout != wantText || strings.Contains(stdout, "\x1b[") {
@@ -235,30 +241,30 @@ func testAgentWorkflowSemanticOutputClasses(t *testing.T) {
 
 func testAgentWorkflowUsageErrorsPrecedeInput(t *testing.T) {
 	cases := map[string][]string{
-		"planner/json auto":                    {"change-workflow-plan", "--input", "-", "--color", "auto"},
-		"planner/json auto envelope":           {"change-workflow-plan", "--input", "-", "--color", "auto", "--agent-envelope"},
-		"planner/json explicit never":          {"change-workflow-plan", "--input", "-", "--color", "never"},
-		"planner/text envelope never":          {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "never", "--agent-envelope"},
-		"planner/text envelope auto":           {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "auto", "--agent-envelope"},
-		"planner/text layout pretty":           {"--json-layout", "pretty", "change-workflow-plan", "--input", "-", "--format", "text"},
-		"planner/text layout compact":          {"--json-layout", "compact", "change-workflow-plan", "--input", "-", "--format", "text"},
-		"planner/missing input":                {"change-workflow-plan"},
-		"planner/output":                       {"change-workflow-plan", "--input", "-", "--output", "out.json"},
-		"planner/duplicate input":              {"change-workflow-plan", "--input", "-", "--input", "second.json"},
-		"planner/duplicate pointer":            {"change-workflow-plan", "--input", "-", "--input-pointer", "", "--input-pointer", "/other"},
-		"planner/duplicate format":             {"change-workflow-plan", "--input", "-", "--format", "json", "--format", "text"},
-		"planner/duplicate color":              {"change-workflow-plan", "--input", "-", "--color", "never", "--color", "auto"},
-		"planner/unknown flag":                 {"change-workflow-plan", "--input", "-", "--unknown"},
-		"planner/missing input value":          {"change-workflow-plan", "--input"},
-		"planner/missing pointer value":        {"change-workflow-plan", "--input", "-", "--input-pointer"},
-		"planner/missing format value":         {"change-workflow-plan", "--input", "-", "--format"},
-		"planner/missing color value":          {"change-workflow-plan", "--input", "-", "--color"},
-		"planner/bad pointer":                  {"change-workflow-plan", "--input", "-", "--input-pointer", "workflow"},
-		"planner/malformed UTF-8 pointer":      {"change-workflow-plan", "--input", "-", "--input-pointer", string([]byte{'/', 0xff})},
-		"planner/bad format":                   {"change-workflow-plan", "--input", "-", "--format", "yaml"},
-		"planner/bad color":                    {"change-workflow-plan", "--input", "-", "--format", "text", "--color", "always"},
-		"planner/post-command layout":          {"change-workflow-plan", "--json-layout", "compact", "--input", "-"},
-		"planner/surplus operand":              {"change-workflow-plan", "--input", "-", "surplus"},
+		"planner/json auto":                    {"change", "plan", "--input", "-", "--color", "auto"},
+		"planner/json auto envelope":           {"change", "plan", "--input", "-", "--color", "auto", "--agent-envelope"},
+		"planner/json explicit never":          {"change", "plan", "--input", "-", "--color", "never"},
+		"planner/text envelope never":          {"change", "plan", "--input", "-", "--format", "text", "--color", "never", "--agent-envelope"},
+		"planner/text envelope auto":           {"change", "plan", "--input", "-", "--format", "text", "--color", "auto", "--agent-envelope"},
+		"planner/text layout pretty":           {"--json-layout", "pretty", "change", "plan", "--input", "-", "--format", "text"},
+		"planner/text layout compact":          {"--json-layout", "compact", "change", "plan", "--input", "-", "--format", "text"},
+		"planner/missing input":                {"change", "plan"},
+		"planner/output":                       {"change", "plan", "--input", "-", "--output", "out.json"},
+		"planner/duplicate input":              {"change", "plan", "--input", "-", "--input", "second.json"},
+		"planner/duplicate pointer":            {"change", "plan", "--input", "-", "--input-pointer", "", "--input-pointer", "/other"},
+		"planner/duplicate format":             {"change", "plan", "--input", "-", "--format", "json", "--format", "text"},
+		"planner/duplicate color":              {"change", "plan", "--input", "-", "--color", "never", "--color", "auto"},
+		"planner/unknown flag":                 {"change", "plan", "--input", "-", "--unknown"},
+		"planner/missing input value":          {"change", "plan", "--input"},
+		"planner/missing pointer value":        {"change", "plan", "--input", "-", "--input-pointer"},
+		"planner/missing format value":         {"change", "plan", "--input", "-", "--format"},
+		"planner/missing color value":          {"change", "plan", "--input", "-", "--color"},
+		"planner/bad pointer":                  {"change", "plan", "--input", "-", "--input-pointer", "workflow"},
+		"planner/malformed UTF-8 pointer":      {"change", "plan", "--input", "-", "--input-pointer", string([]byte{'/', 0xff})},
+		"planner/bad format":                   {"change", "plan", "--input", "-", "--format", "yaml"},
+		"planner/bad color":                    {"change", "plan", "--input", "-", "--format", "text", "--color", "always"},
+		"planner/post-command layout":          {"change", "plan", "--json-layout", "compact", "--input", "-"},
+		"planner/surplus operand":              {"change", "plan", "--input", "-", "surplus"},
 		"guidance/input":                       {"native-evidence-guidance", "--input", "-"},
 		"guidance/pointer":                     {"native-evidence-guidance", "--input-pointer", "/workflow"},
 		"guidance/output":                      {"native-evidence-guidance", "--output", "out.json"},
@@ -276,11 +282,11 @@ func testAgentWorkflowUsageErrorsPrecedeInput(t *testing.T) {
 		"guidance/bad color":                   {"native-evidence-guidance", "--format", "text", "--color", "always"},
 		"guidance/post-command layout":         {"native-evidence-guidance", "--json-layout", "compact"},
 		"guidance/surplus operand":             {"native-evidence-guidance", "surplus"},
-		"global/missing layout value planner":  {"--json-layout", "change-workflow-plan", "--input", "-"},
+		"global/missing layout value planner":  {"--json-layout", "change", "plan", "--input", "-"},
 		"global/missing layout value guidance": {"--json-layout", "native-evidence-guidance"},
-		"global/bad layout planner":            {"--json-layout", "dense", "change-workflow-plan", "--input", "-"},
+		"global/bad layout planner":            {"--json-layout", "dense", "change", "plan", "--input", "-"},
 		"global/bad layout guidance":           {"--json-layout", "dense", "native-evidence-guidance"},
-		"global/duplicate layout planner":      {"--json-layout", "pretty", "--json-layout", "compact", "change-workflow-plan", "--input", "-"},
+		"global/duplicate layout planner":      {"--json-layout", "pretty", "--json-layout", "compact", "change", "plan", "--input", "-"},
 		"global/duplicate layout guidance":     {"--json-layout", "pretty", "--json-layout", "compact", "native-evidence-guidance"},
 	}
 	if got, want := len(cases)-2, 45; got != want {
@@ -299,8 +305,8 @@ func testAgentWorkflowUsageErrorsPrecedeInput(t *testing.T) {
 
 func testAgentWorkflowHelpClasses(t *testing.T) {
 	valid := [][]string{
-		{"change-workflow-plan", "--help"},
-		{"change-workflow-plan", "-h"},
+		{"change", "plan", "--help"},
+		{"change", "plan", "-h"},
 		{"native-evidence-guidance", "--help"},
 		{"native-evidence-guidance", "-h"},
 	}
@@ -314,10 +320,10 @@ func testAgentWorkflowHelpClasses(t *testing.T) {
 		args []string
 		want string
 	}{
-		{args: []string{"--json-layout", "compact", "change-workflow-plan", "--help"}, want: "--json-layout is valid only for JSON command output"},
+		{args: []string{"--json-layout", "compact", "change", "plan", "--help"}, want: "--json-layout is valid only for JSON command output"},
 		{args: []string{"--json-layout", "compact", "native-evidence-guidance", "--help"}, want: "--json-layout is valid only for JSON command output"},
-		{args: []string{"change-workflow-plan", "--input", "-", "--help"}, want: "help accepts no additional arguments"},
-		{args: []string{"change-workflow-plan", "-h", "--input", "-"}, want: "help accepts no additional arguments"},
+		{args: []string{"change", "plan", "--input", "-", "--help"}, want: "help accepts no additional arguments"},
+		{args: []string{"change", "plan", "-h", "--input", "-"}, want: "help accepts no additional arguments"},
 		{args: []string{"native-evidence-guidance", "--format", "text", "--help"}, want: "help accepts no additional arguments"},
 		{args: []string{"native-evidence-guidance", "-h", "--format", "text"}, want: "help accepts no additional arguments"},
 	}
@@ -330,7 +336,7 @@ func testAgentWorkflowHelpClasses(t *testing.T) {
 
 	t.Run("help_like_input_paths_are_values", func(t *testing.T) {
 		for _, path := range []string{"--help", "-h"} {
-			status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change-workflow-plan", "--input", path}, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
+			status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"change", "plan", "--input", path}, panicReader{}, PresentationCapabilities{StdoutIsTTY: true})
 			if status != 1 || stdout != "" || stderr == "" || strings.Contains(stderr, "help accepts no additional arguments") {
 				t.Fatalf("path=%q status=%d stdout=%q stderr=%q", path, status, stdout, stderr)
 			}
@@ -357,7 +363,7 @@ func testAgentWorkflowTerminalCapabilityProduct(t *testing.T) {
 		stdin func() io.Reader
 		plain string
 	}{
-		{name: "change-workflow-plan", args: []string{"change-workflow-plan", "--input", "-", "--format", "text", "--color", "auto"}, stdin: func() io.Reader { return strings.NewReader(validChangeWorkflowInput) }, plain: wantWorkflowText},
+		{name: "change plan", args: []string{"change", "plan", "--input", "-", "--format", "text", "--color", "auto"}, stdin: func() io.Reader { return strings.NewReader(validChangeWorkflowInput) }, plain: wantWorkflowText},
 		{name: "native-evidence-guidance", args: []string{"native-evidence-guidance", "--format", "text", "--color", "auto"}, stdin: func() io.Reader { return strings.NewReader("unread") }, plain: wantGuidanceText},
 	}
 	for _, command := range commands {

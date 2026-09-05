@@ -698,6 +698,19 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-035",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "The 0.8.0-to-0.9.0 public version edge binds the exact previous and current public ABI digests; the exact addition of status and next with their public routes and output contract identities and digests; the exact replacement of the flat change-workflow-plan route by change plan while preserving its single internal implementation and input/output contract identities and digests; and the complete ordered breaking, additive, and migration inventories to one digest-bound current release change record. The edge rejects the retired route, admits the hierarchical route, and cannot mutate or reinterpret the byte-frozen 0.7.0-to-0.8.0 edge.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-035"],
+      "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [
