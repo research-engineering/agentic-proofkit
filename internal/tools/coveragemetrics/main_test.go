@@ -593,6 +593,15 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.agent-workflow.catalog-prerequisite-causality",
 		"proofkit.agent-workflow.cli-presentation-capability-product",
 		"proofkit.agent-workflow.installed-carrier-smoke-closure",
+		"proofkit.agent-workflow.integration-lifecycle-cli",
+		"proofkit.agent-workflow.integration-lifecycle-npm-carrier",
+		"proofkit.agent-workflow.integration-lifecycle-pair-recognition",
+		"proofkit.agent-workflow.integration-lifecycle-version-edge",
+		"proofkit.agent-workflow.integration-lifecycle-version-edge-mutants",
+		"proofkit.agent-workflow.integration-lifecycle-wheel-carrier",
+		"proofkit.agent-workflow.integration-lifecycle-whole-operation",
+		"proofkit.agent-workflow.integration-recover-busy-stream",
+		"proofkit.agent-workflow.integration-update-effect-oracle",
 		"proofkit.agent-workflow.native-evidence-guidance-purity",
 		"proofkit.agent-workflow.native-evidence-guidance-slot-closure",
 		"proofkit.agent-workflow.no-ambient-authority",
@@ -735,6 +744,22 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 				t.Fatalf("command-drift error=%v", err)
 			}
 		})
+		if bindings.Bindings[index].RequirementID == "REQ-PROOFKIT-WORKFLOW-019" {
+			t.Run(scenarioID+"/execution-command-class-drift", func(t *testing.T) {
+				mutated := cloneBindingFile(bindings)
+				mutated.Bindings[index].CommandIDs = []string{"proofkit.package-artifact"}
+				if err := validateBindingWitnessSelectorsAtRoot(root, mutated); err == nil || !strings.Contains(err.Error(), "commandIds=") {
+					t.Fatalf("managed lifecycle command-class drift error=%v", err)
+				}
+			})
+			t.Run(scenarioID+"/environment-class-drift", func(t *testing.T) {
+				mutated := cloneBindingFile(bindings)
+				mutated.Bindings[index].EnvironmentClasses = []string{"local-python"}
+				if err := validateBindingWitnessSelectorsAtRoot(root, mutated); err == nil || !strings.Contains(err.Error(), "environmentClasses=") {
+					t.Fatalf("managed lifecycle environment-class drift error=%v", err)
+				}
+			})
+		}
 		if scenarioID == "proofkit.agent-workflow.project-navigation-installed-carriers" {
 			t.Run(scenarioID+"/execution-command-class-drift", func(t *testing.T) {
 				mutated := cloneBindingFile(bindings)
