@@ -9,7 +9,7 @@ import (
 
 const maxWorkspaceLookupResponseBytes = 16 << 20
 
-// Both private lookup routes share the encoded-page budget, not row semantics.
+// Private lookup routes share the encoded-page budget, not row semantics.
 type workspacePage struct {
 	Count      int
 	Offset     int

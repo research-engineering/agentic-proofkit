@@ -35,15 +35,6 @@ async function expectCSS(locator, properties) {
   expect(completed).toEqual(plan);
 }
 
-async function expectAllCSS(locator, properties) {
-  const propertyNames = Object.keys(properties);
-  const actual = await locator.evaluateAll((elements, names) => elements.map((element) => {
-    const computed = window.getComputedStyle(element);
-    return Object.fromEntries(names.map((name) => [name, computed.getPropertyValue(name)]));
-  }), propertyNames);
-  expect(actual).toEqual(actual.map(() => properties));
-}
-
 function assertAssertionPlanFalsifiers() {
   const first = Object.freeze({property: "opacity", value: "1"});
   const second = Object.freeze({property: "filter", value: "none"});
@@ -56,64 +47,6 @@ function assertAssertionPlanFalsifiers() {
   ]) expect(mutant).not.toEqual(plan);
 }
 
-async function expectVisibleTable(table, caption, headers, rows) {
-  const viewport = table.locator("..");
-  await expect(table).toBeVisible();
-  const commonStyles = {
-    opacity: "1",
-    filter: "none",
-    "clip-path": "none",
-    "mask-image": "none",
-    "content-visibility": "visible",
-    zoom: "1",
-    "animation-name": "none",
-    "transition-duration": "0s",
-    "transition-delay": "0s",
-  };
-  for (const element of [
-    viewport,
-    table,
-    table.locator(":scope > thead"),
-    table.locator(":scope > thead > tr"),
-    table.locator(":scope > tbody"),
-  ]) {
-    await expect(element).toBeVisible();
-    await expectCSS(element, commonStyles);
-  }
-  const captionLocator = table.locator(":scope > caption");
-  await expect(captionLocator).toHaveText(caption);
-  const headerCells = table.locator(":scope > thead > tr > th");
-  await expect(headerCells).toHaveText(headers);
-  const bodyRows = table.locator(":scope > tbody > tr");
-  await expect(bodyRows).toHaveCount(rows.length);
-  await expect(table.locator(":scope > tbody > tr:visible")).toHaveCount(rows.length);
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-    const row = bodyRows.nth(rowIndex);
-    await expect(row).toBeVisible();
-    await expect(row.locator(":scope > td")).toHaveText(rows[rowIndex]);
-  }
-  await expectAllCSS(bodyRows, commonStyles);
-  const textElements = table.locator("caption, th, td");
-  const textCount = 1 + headers.length + rows.reduce((count, row) => count + row.length, 0);
-  await expect(textElements).toHaveCount(textCount);
-  await expect(table.locator("caption:visible, th:visible, td:visible")).toHaveCount(textCount);
-  await expectAllCSS(textElements, {
-    opacity: "1",
-    color: "rgb(32, 37, 34)",
-    "font-size": "16px",
-    "font-size-adjust": "none",
-    "-webkit-text-security": "none",
-    "text-transform": "none",
-    filter: "none",
-    "clip-path": "none",
-    "mask-image": "none",
-    "content-visibility": "visible",
-    zoom: "1",
-    "animation-name": "none",
-    "transition-duration": "0s",
-    "transition-delay": "0s",
-  });
-}
 
 const axeTest = test.extend({
   axePage: async ({page}, use) => {
@@ -323,7 +256,7 @@ for (const row of workspaceStateMatrix) {
       const packetRegion = page.getByRole("region", {name: "Handoff packet"});
       await expect(packetRegion).toBeVisible();
       if (row.packetState === "result") {
-        await expect(packetRegion.locator("pre")).toContainText('"state": "submitted"');
+        expect(JSON.parse(await packetRegion.locator("pre").textContent()).state).toBe("submitted");
       } else {
         await expect(packetRegion.locator("pre")).toBeEmpty();
       }
@@ -563,7 +496,7 @@ test("handoff packet output never creates a zero-value keyboard stop", async ({b
   await page.getByRole("textbox", {name: "Question"}).fill("Is the handoff output still readable?");
   await page.getByRole("button", {name: "Create handoff packet"}).click();
   await expect(page.locator("body")).toHaveAttribute("data-state", "handoff-result");
-  await expect(packet).toContainText('"state": "submitted"');
+  await expect(packet).toHaveText('{"state":"submitted"}');
   await expectNotFocusable();
 
   handoffFails = true;
@@ -602,6 +535,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
   const selectInvariant = page.getByRole("button", {name: "Select invariant"});
   const specificationsView = page.getByRole("button", {name: "Specifications"});
   const diffView = page.getByRole("button", {name: "Diff"});
+  const coverageView = page.getByRole("button", {name: "Coverage", exact: true});
   await expect(specificationsView).toHaveAttribute("aria-current", "page");
   await specificationsView.focus();
   await page.keyboard.press("Tab");
@@ -613,16 +547,16 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
       await expect(authoritySummary).toBeFocused();
       await specificationsView.focus();
       await page.keyboard.press("Alt+Tab");
-      await expect(diffView).toBeFocused();
+      await expect(coverageView).toBeFocused();
       await page.keyboard.press("Alt+Shift+Tab");
       await expect(specificationsView).toBeFocused();
     } else {
-      await expect(diffView).toBeFocused();
+      await expect(coverageView).toBeFocused();
       await page.keyboard.press("Shift+Tab");
       await expect(specificationsView).toBeFocused();
     }
   } else {
-    await expect(diffView).toBeFocused();
+    await expect(coverageView).toBeFocused();
     await page.keyboard.press("Shift+Tab");
     await expect(specificationsView).toBeFocused();
   }
@@ -638,13 +572,14 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
   await page.getByRole("button", {name: "Create handoff packet"}).click();
   await expect(page.getByRole("status")).toContainText("Handoff packet created");
   const packetRegion = page.getByRole("region", {name: "Handoff packet"});
-  await expect(packetRegion).toContainText('"state": "submitted"');
+  await expect(packetRegion).toContainText('"state":"submitted"');
   await expect(packetRegion).toContainText("retry \u{1F680}");
 
   await page.getByRole("button", {name: "Diff"}).click();
   await expect(diffView).toHaveAttribute("aria-current", "page");
   await expect(specificationsView).not.toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", {name: /scalar_changed/})).toBeVisible();
+  await page.getByText("Before and after", {exact: true}).click();
   await expect(page.getByText(/Source digests: sha256:/)).toBeVisible();
   const diffBoundary = page.locator(".projection-boundary");
   await expect(diffBoundary).toContainText("lookup_fragment_only");
@@ -719,214 +654,57 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
     const edges = projection.edges;
     const nodeIDs = nodes.map((node) => node.nodeId);
     const edgeIDs = edges.map((edge) => edge.edgeId);
-    const graph = page.getByRole("img", {name: /traceability nodes and edges/});
+    const graph = page.locator(".graph-canvas > svg");
     const graphViewport = page.getByRole("region", {name: "Traceability graph viewport"});
     await expect(graphViewport).toBeVisible();
-    await expect(graph).toBeVisible();
+    await expect(graph).toHaveAttribute("aria-hidden", "true");
     await expect(graph).toHaveAttribute("data-node-ids", nodeIDs.join(" "));
     await expect(graph).toHaveAttribute("data-edge-ids", edgeIDs.join(" "));
-    const expectedHeight = Math.max(180, Math.ceil(nodes.length / 2) * 76 + 40);
-    await expect(graph).toHaveAttribute("viewBox", `0 0 800 ${expectedHeight}`);
-    await expectCSS(graphViewport, {
-      display: "block",
-      visibility: "visible",
-      opacity: "1",
-      "overflow-x": "auto",
-      "overflow-y": "auto",
-      transform: "none",
-      translate: "none",
-      rotate: "none",
-      scale: "none",
-      "offset-path": "none",
-      zoom: "1",
-      "content-visibility": "visible",
-      filter: "none",
-      "clip-path": "none",
-      "mask-image": "none",
-      "animation-name": "none",
-      "transition-duration": "0s",
-      "transition-delay": "0s",
-    });
-    await expectCSS(graph, {
-      display: "block",
-      visibility: "visible",
-      opacity: "1",
-      "min-width": "800px",
-      height: /^(?:1[89]\d|[2-9]\d{2,})(?:\.\d+)?px$/,
-      transform: "none",
-      translate: "none",
-      rotate: "none",
-      scale: "none",
-      "offset-path": "none",
-      zoom: "1",
-      "content-visibility": "visible",
-      filter: "none",
-      "clip-path": "none",
-      "mask-image": "none",
-      "animation-name": "none",
-      "transition-duration": "0s",
-      "transition-delay": "0s",
-    });
-    for (const ancestor of [
-      page.locator("html"),
-      page.locator("body"),
-      page.locator("body > main"),
-      page.locator("#workspace-content"),
-    ]) {
-      await expectCSS(ancestor, {
-        "animation-name": "none",
-        "transition-duration": "0s",
-        "transition-delay": "0s",
-      });
-    }
-    await expect(page.locator("animate, animateColor, animateMotion, animateTransform, discard, set")).toHaveCount(0);
-    const positions = new Map(nodes.map((node, index) => [
-      node.nodeId,
-      {x: 28 + (index % 2) * 390, y: 28 + Math.floor(index / 2) * 76},
-    ]));
-    const rootChildren = graph.locator(":scope > *");
-    await expect(rootChildren).toHaveCount(edges.length + nodes.length);
-    for (let index = 0; index < edges.length; index += 1) {
-      const edge = edges[index];
-      const from = positions.get(edge.fromNodeId);
-      const to = positions.get(edge.toNodeId);
-      expect(from).toBeDefined();
-      expect(to).toBeDefined();
-      const line = graph.locator(`:scope > line:nth-child(${index + 1})`);
-      await expect(line).toHaveAttribute("data-edge-id", edge.edgeId);
-      const coordinates = {
-        x1: String(from.x + 180),
-        y1: String(from.y + 24),
-        x2: String(to.x + 180),
-        y2: String(to.y + 24),
-      };
-      expect(coordinates.x1 !== coordinates.x2 || coordinates.y1 !== coordinates.y2).toBe(true);
-      for (const [name, value] of Object.entries(coordinates)) {
-        await expect(line).toHaveAttribute(name, value);
-      }
-      await expect(line.locator(":scope > *")).toHaveCount(0);
-      await expectCSS(line, {
-        display: /^(?:inline|block)$/,
-        visibility: "visible",
-        opacity: "1",
-        stroke: "rgb(32, 37, 34)",
-        "stroke-opacity": "1",
-        "stroke-width": "1.5px",
-        "stroke-dasharray": "none",
-        transform: "none",
-        translate: "none",
-        rotate: "none",
-        scale: "none",
-        "offset-path": "none",
-        zoom: "1",
-        "content-visibility": "visible",
-        filter: "none",
-        "clip-path": "none",
-        "mask-image": "none",
-        "animation-name": "none",
-        "transition-duration": "0s",
-        "transition-delay": "0s",
-      });
-    }
-    for (let index = 0; index < nodes.length; index += 1) {
+    const buttons = page.locator(".graph-canvas > button[data-graph-select]");
+    await expect(buttons).toHaveCount(nodes.length);
+    const primaryIDs = new Set(projection.primaryNodeIds);
+    const nativeFields = page.locator(".graph-inspector > dl");
+    for (let index = 0; index < nodes.length; index++) {
       const node = nodes[index];
-      const position = positions.get(node.nodeId);
-      const group = graph.locator(`:scope > g:nth-child(${edges.length + index + 1})`);
-      await expect(group).toHaveAttribute("data-node-id", node.nodeId);
-      await expect(group.locator(":scope > *")).toHaveCount(3);
-      const title = group.locator(":scope > title:nth-child(1)");
-      const rect = group.locator(":scope > rect:nth-child(2)");
-      const text = group.locator(":scope > text:nth-child(3)");
-      const fullLabel = `${node.evidencePlane}: ${node.label}`;
-      const visibleLabel = [...fullLabel].length > 48 ? `${[...fullLabel].slice(0, 47).join("")}...` : fullLabel;
-      await expect(title).toHaveText(fullLabel);
-      await expect(text).toHaveText(visibleLabel);
-      await expect(title.locator(":scope > *")).toHaveCount(0);
-      await expect(text.locator(":scope > *")).toHaveCount(0);
-      for (const [name, value] of Object.entries({
-        x: String(position.x),
-        y: String(position.y),
-        width: "350",
-        height: "48",
-        rx: "4",
-      })) await expect(rect).toHaveAttribute(name, value);
-      await expect(rect.locator(":scope > *")).toHaveCount(0);
-      await expect(text).toHaveAttribute("x", String(position.x + 10));
-      await expect(text).toHaveAttribute("y", String(position.y + 29));
-      for (const name of ["dx", "dy", "textLength", "lengthAdjust", "rotate"]) {
-        await expect(text).not.toHaveAttribute(name, /(?:)/);
-      }
-      await expectCSS(rect, {
-        display: /^(?:inline|block)$/,
-        visibility: "visible",
-        opacity: "1",
-        fill: "rgb(245, 246, 245)",
-        "fill-opacity": "1",
-        stroke: "rgb(119, 134, 125)",
-        "stroke-opacity": "1",
-        x: `${position.x}px`,
-        y: `${position.y}px`,
-        width: "350px",
-        height: "48px",
-        rx: "4px",
-        ry: "auto",
-      });
-      await expectCSS(text, {
-        display: /^(?:inline|block)$/,
-        visibility: "visible",
-        opacity: "1",
-        fill: "rgb(32, 37, 34)",
-        "fill-opacity": "1",
-        "font-size": "13px",
-        "font-size-adjust": "none",
-        "text-anchor": "start",
-        direction: "ltr",
-        "writing-mode": "horizontal-tb",
-        "dominant-baseline": "auto",
-        "letter-spacing": "normal",
-        "word-spacing": "0px",
-        "text-transform": "none",
-        "-webkit-text-security": "none",
-      });
-      for (const element of [group, rect, text]) {
-        await expectCSS(element, {
-          display: /^(?:inline|block)$/,
-          visibility: "visible",
-          opacity: "1",
-          transform: "none",
-          translate: "none",
-          rotate: "none",
-          scale: "none",
-          "offset-path": "none",
-          zoom: "1",
-          "content-visibility": "visible",
-          filter: "none",
-          "clip-path": "none",
-          "mask-image": "none",
-          "animation-name": "none",
-          "transition-duration": "0s",
-          "transition-delay": "0s",
-        });
-      }
+      const button = buttons.nth(index);
+      await expect(button).toHaveAttribute("data-graph-select", node.nodeId);
+      await expect(button).toHaveAttribute("data-plane", node.evidencePlane);
+      await expect(button).toHaveAttribute("data-boundary", String(!primaryIDs.has(node.nodeId)));
+      await expect(button.locator(".graph-node-label")).toHaveText(node.label);
+      await expect(button.locator(".graph-node-identity")).toHaveText(node.nodeId);
+      await expect(button).toHaveAttribute("title", `${node.label}: ${node.nodeId}`);
+      await button.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.locator(`.graph-canvas > button[data-graph-select="${node.nodeId}"]`)).toBeFocused();
+      await expect(nativeFields.locator("dt")).toHaveText(Object.keys(node));
+      await expect(nativeFields.locator("dd")).toHaveText(Object.values(node).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+      await expectCSS(nativeFields, {visibility: "visible", opacity: "1", filter: "none", "clip-path": "none", "content-visibility": "visible"});
     }
-    const nodeRows = nodes.map((node) => [
-      node.nodeId, node.kind, node.evidencePlane, node.sourceId, node.authorityClass,
-      node.currentnessState, node.rangeVerification, node.state, node.producerId,
-    ].map((value) => value ?? ""));
-    const edgeRows = edges.map((edge) => [
-      edge.edgeId, edge.edgeKind, edge.fromNodeId, edge.toNodeId,
-      edge.authorityClass, edge.currentnessState,
-      Array.isArray(edge.evidenceRefs) ? edge.evidenceRefs.join(", ") : (edge.evidenceRefs ?? ""),
-    ].map((value) => value ?? ""));
-    const nodeTable = page.locator('table[data-identity-kind="node"]');
-    const edgeTable = page.locator('table[data-identity-kind="edge"]');
-    await expectVisibleTable(nodeTable, "Admitted traceability nodes",
-      ["Node", "Kind", "Evidence plane", "Source", "Authority", "Currentness", "Verification", "State", "Producer"], nodeRows);
-    await expectVisibleTable(edgeTable, "Admitted traceability edges",
-      ["Edge", "Kind", "From", "To", "Authority", "Currentness", "Evidence"], edgeRows);
-    await expectIdentityOrder(nodeTable.locator("tbody tr"), nodeIDs);
-    await expectIdentityOrder(edgeTable.locator("tbody tr"), edgeIDs);
-    await expect(graph.locator(`:scope > g:nth-child(${edges.length + 1}) > title`)).toContainText(sentinel);
+    const nodeRecords = page.getByRole("list", {name: "Admitted traceability nodes"}).locator(":scope > li");
+    const edgeRecords = page.getByRole("list", {name: "Admitted traceability edges"}).locator(":scope > li");
+    await expectIdentityOrder(nodeRecords, nodeIDs);
+    await expectIdentityOrder(edgeRecords, edgeIDs);
+    for (let index = 0; index < edges.length; index++) {
+      const edge = edges[index];
+      const details = edgeRecords.nth(index).locator("details");
+      await details.locator("summary").click();
+      await expect(details.locator("dt")).toHaveText(Object.keys(edge));
+      await expect(details.locator("dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+      const line = graph.locator(":scope > line").nth(index);
+      await expect(line).toHaveAttribute("data-edge-id", edge.edgeId);
+      await expect(line).toHaveAttribute("marker-end", "url(#graph-arrow)");
+      const geometry = await line.evaluate(element => ["x1", "y1", "x2", "y2"].map(name => Number(element.getAttribute(name))));
+      expect(geometry.every(Number.isFinite)).toBe(true);
+      expect(geometry[0] !== geometry[2] || geometry[1] !== geometry[3]).toBe(true);
+      await expectCSS(line, {visibility: "visible", opacity: "1", stroke: "rgb(32, 37, 34)", "stroke-width": "1.5px", filter: "none", "clip-path": "none"});
+    }
+    const boxes = await buttons.evaluateAll(elements => elements.map(element => ({x: element.offsetLeft, y: element.offsetTop, width: element.offsetWidth, height: element.offsetHeight})));
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], b = boxes[j];
+      expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true);
+    }
+    await expect(buttons.first()).toContainText(sentinel);
+    await expect(page.locator("animate, animateColor, animateMotion, animateTransform")).toHaveCount(0);
   } finally {
     const stateBeforeCleanup = graphAttemptState;
     graphAttemptState = "closing";
@@ -949,24 +727,30 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
     expect(graphResponses).toHaveLength(1);
     expect(graphAttemptState).toBe("detached");
   }
-  const repositoryRow = page.locator('table[data-identity-kind="node"] tbody tr[data-identity="code:code.repository"]');
-  await expect(repositoryRow).toContainText("stale");
-  const rangeRow = page.locator('table[data-identity-kind="node"] tbody tr[data-identity="code:code.retry"]');
-  await expect(rangeRow).toContainText("source_range");
-  await expect(rangeRow).toContainText("verified");
-  const candidateRow = page.locator('table[data-identity-kind="node"] tbody tr').filter({hasText: "browser.fixture.candidate-runner"});
-  await expect(candidateRow).toContainText("caller_reported");
-  await expect(candidateRow).toContainText("unverified");
-  await expect(candidateRow).toContainText("failed");
-  const executionRow = page.locator('table[data-identity-kind="node"] tbody tr').filter({hasText: "browser.fixture.runner"});
-  await expect(executionRow).toContainText("receipt_admitted");
-  await expect(executionRow).toContainText("current");
-  await expect(executionRow).toContainText("passed");
-  const traceEdgeRow = page.locator('table[data-identity-kind="edge"] tbody tr').filter({hasText: "browser.fixture.trace"});
+  const inspector = page.getByRole("region", {name: "Selected graph node"});
+  const selectNode = async id => { await page.locator(`.graph-records button[data-graph-select="${id}"]`).click(); };
+  await selectNode("code:code.repository");
+  await expect(inspector).toContainText("stale");
+  await selectNode("code:code.retry");
+  await expect(inspector).toContainText("source_range");
+  await expect(inspector).toContainText("verified");
+  const nodes = graphResponses[0].body.projection.nodes;
+  await selectNode(nodes.find(node => node.producerId === "browser.fixture.candidate-runner").nodeId);
+  await expect(inspector).toContainText("caller_reported");
+  await expect(inspector).toContainText("unverified");
+  await expect(inspector).toContainText("failed");
+  await selectNode(nodes.find(node => node.producerId === "browser.fixture.runner").nodeId);
+  await expect(inspector).toContainText("receipt_admitted");
+  await expect(inspector).toContainText("current");
+  await expect(inspector).toContainText("passed");
+  const traceEdge = graphResponses[0].body.projection.edges.find(edge => edge.evidenceRefs?.includes("browser.fixture.trace"));
+  expect(traceEdge).toBeDefined();
+  const traceEdgeRow = page.getByRole("list", {name: "Admitted traceability edges"}).locator(`:scope > li[data-identity="${traceEdge.edgeId}"]`);
+  if (!(await traceEdgeRow.locator("details").evaluate(element => element.open))) await traceEdgeRow.locator("summary").click();
   await expect(traceEdgeRow).toContainText("owner_admitted");
   await expect(traceEdgeRow).toContainText("current");
   await expect(page.locator(".projection-boundary")).toContainText("does not infer code topology");
-  await expect(page.getByRole("img", {name: /traceability nodes and edges/}).locator("title").filter({hasText: /deliberately long traceability label/})).toHaveCount(1);
+  await expect(page.locator(".graph-canvas > button").filter({hasText: /deliberately long traceability label/})).toHaveCount(1);
   expect(consoleErrors).toEqual([]);
 });
 
@@ -1148,11 +932,13 @@ for (const handoffOutcome of [
     await expect(page.locator("body")).toHaveAttribute("data-state", "diff");
     await expect(page.getByRole("button", {name: "Diff"})).toHaveAttribute("aria-current", "page");
 
+    await expect(page.getByRole("button", {name: "Create handoff packet"})).toBeDisabled();
     releaseHandoff();
-    await expect(page.getByText(handoffOutcome.expectedStatus, {exact: true})).toBeVisible();
-    if (handoffOutcome.name === "successful") {
-      await expect(page.getByRole("region", {name: "Handoff packet"}).locator("pre")).toContainText('"state": "submitted"');
-    }
+    await expect(page.getByRole("button", {name: "Create handoff packet"})).toBeEnabled();
+    await expect(page.getByText(handoffOutcome.expectedStatus, {exact: true})).toHaveCount(0);
+    await expect(page.locator("#handoff-packet")).toBeEmpty();
+    await expect(page.locator("#handoff-preview")).toBeEmpty();
+    await expect(page.getByRole("textbox", {name: "Question"})).toHaveValue("Does a newer view retain its state?");
     await expect(page.locator("body")).toHaveAttribute("data-state", "diff");
     await expect(page.getByRole("button", {name: "Diff"})).toHaveAttribute("aria-current", "page");
   });
@@ -1259,7 +1045,7 @@ async function assertReflow(page, row) {
   });
   expect(result.documentOverflow).toBeLessThanOrEqual(1);
   expect(result.viewTitles).toEqual([
-    {title: "Specifications", lines: 1}, {title: "Diff", lines: 1}, {title: "Traceability", lines: 1},
+    {title: "Specifications", lines: 1}, {title: "Coverage", lines: 1}, {title: "Diff", lines: 1}, {title: "Traceability", lines: 1},
   ]);
   const unlabelledOverflow = result.internal.filter((viewport) =>
     !["graph-viewport", "table-viewport"].includes(viewport.className) ||

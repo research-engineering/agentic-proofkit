@@ -47,12 +47,20 @@ export function initializePanels(commitSelection) {
       close(panel);
       return;
     }
+    show(name, opener);
+  }
+
+  /** @param {"navigation" | "inspector"} name @param {HTMLElement} opener */
+  function show(name, opener) {
+    const panel = panels[name];
     openers.set(panel, opener);
-    if (mobile.matches) {
-      for (const other of Object.values(panels)) close(other, false);
-      panel.showModal();
-    } else {
-      panel.show();
+    if (!panel.open) {
+      if (mobile.matches) {
+        for (const other of Object.values(panels)) close(other, false);
+        panel.showModal();
+      } else {
+        panel.show();
+      }
     }
     synchronize();
     const initial = panel.querySelector(name === "inspector" ? "#annotation-question" : "#requirement-search");
@@ -94,5 +102,8 @@ export function initializePanels(commitSelection) {
   }
   mobile.addEventListener("change", changeLayout);
   changeLayout();
-  return {closeNavigation: () => { if (mobile.matches) close(navigation); }};
+  return {
+    closeNavigation: () => { if (mobile.matches) close(navigation); },
+    showInspector: (/** @type {HTMLElement} */ opener) => show("inspector", opener),
+  };
 }

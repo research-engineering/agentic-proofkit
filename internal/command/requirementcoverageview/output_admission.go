@@ -126,6 +126,18 @@ func SelectRequirements(output map[string]any, selected map[string]struct{}) map
 	}
 }
 
+// CountSelectedRequirements counts membership in an owner-admitted output
+// without materializing the selected nested evidence rows.
+func CountSelectedRequirements(output map[string]any, selected map[string]struct{}) int {
+	count := 0
+	for _, raw := range output["requirementCoverage"].([]any) {
+		if _, ok := selected[raw.(map[string]any)["requirementId"].(string)]; ok {
+			count++
+		}
+	}
+	return count
+}
+
 func admitCoverageOutputRows(record map[string]any, rowsKey, countKey, idKey, proofMode string) error {
 	rows, ok := record[rowsKey].([]any)
 	if !ok {

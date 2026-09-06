@@ -801,6 +801,38 @@
       "nonClaims": ["Browser runtime witnesses cover the admitted Playwright Chromium, Firefox, and WebKit scenarios, not all browser preferences, assistive technologies, operating-system themes, branded Safari behavior, complete WCAG conformance, annotation persistence, agent execution, or provider delivery."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-038",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Coverage presentation does not execute witnesses, authenticate declared evidence, infer a verdict for absent rows, or approve merge, release, rollout or production readiness."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["A displayed topology, local filter or layout is not evidence of source completeness, proof truth, native execution, publication, rollout or production readiness. Browser-emulated mobile interaction does not certify physical devices or operating-system behavior."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-040",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["A question packet does not establish live checkout freshness, native witness execution, agent delivery, annotation persistence, merge approval or production readiness. Already exported bytes are not revoked by later view changes."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-041",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Diff counts, risk labels and presentation do not determine compatibility, source authenticity, witness truth, merge approval, publication or production readiness."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
@@ -5554,6 +5586,184 @@
       "witnessPath": "tests/browser/workspace-paging.spec.mjs",
       "commandIds": ["proofkit.browser-check"],
       "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-038",
+      "scenarioId": "proofkit.spec-proof-core.coverage-owner-join",
+      "witnessId": "proofkit.coverage-owner-join.falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_coverage_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-038",
+      "scenarioId": "proofkit.spec-proof-core.coverage-native-interaction",
+      "witnessId": "proofkit.coverage-native-interaction.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-evidence.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "scenarioId": "proofkit.spec-proof-core.graph-reference-owner",
+      "witnessId": "proofkit.graph-reference-owner.falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementgraph/reference_projection_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "scenarioId": "proofkit.spec-proof-core.graph-reference-window",
+      "witnessId": "proofkit.graph-reference-window.falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_graph_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "scenarioId": "proofkit.spec-proof-core.graph-model-algebra",
+      "witnessId": "proofkit.graph-model-algebra.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "scripts/browser-evidence-models.test.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "scenarioId": "proofkit.spec-proof-core.graph-native-interaction",
+      "witnessId": "proofkit.graph-native-interaction.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-graph.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "scenarioId": "proofkit.spec-proof-core.graph-native-reflow",
+      "witnessId": "proofkit.graph-native-reflow.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-evidence-layout.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "scenarioId": "proofkit.spec-proof-core.graph-numeric-observation",
+      "witnessId": "proofkit.graph-numeric-observation.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-graph.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-040",
+      "scenarioId": "proofkit.spec-proof-core.handoff-whole-packet",
+      "witnessId": "proofkit.handoff-whole-packet.falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_test.go",
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-040",
+      "scenarioId": "proofkit.spec-proof-core.handoff-exact-carrier",
+      "witnessId": "proofkit.handoff-exact-carrier.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-evidence.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-040",
+      "scenarioId": "proofkit.spec-proof-core.handoff-pending-lock",
+      "witnessId": "proofkit.handoff-pending-lock.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-locking.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-040",
+      "scenarioId": "proofkit.spec-proof-core.handoff-native-reflow",
+      "witnessId": "proofkit.handoff-native-reflow.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-evidence-layout.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-041",
+      "scenarioId": "proofkit.spec-proof-core.diff-class-facets",
+      "witnessId": "proofkit.diff-class-facets.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "scripts/browser-evidence-models.test.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-041",
+      "scenarioId": "proofkit.spec-proof-core.diff-native-page",
+      "witnessId": "proofkit.diff-native-page.falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-paging.spec.mjs",
+      "commandIds": [
+        "proofkit.browser-check"
+      ],
+      "environmentClasses": [
+        "local-node-browser"
+      ]
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-022",

@@ -737,6 +737,58 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-038",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Workspace Coverage uses the admitted lookup cohort and a left join to owner-admitted coverage rows. Matching reported and not-reported counts partition the complete filtered requirement cohort before bounded paging; an absent projection, a zero-row projection and a missing row remain distinct. Missing rows are Not reported, never inferred failures. One child membership count and one batched detached selection preserve complete compact and structured row fields without cloning the full matching cohort. The shared seven-key coverage fragment and existing review-context and handoff projections remain unchanged; only the new private browser response copies proofMode from the admitted full report. Whole rows and original anchors survive the 16 MiB page bound. Coverage filters refresh Coverage. Ask about evidence commits the explicit source anchor, shows the existing inspector idempotently and prefills only an exactly empty question; no draft is overwritten or submitted, and locked or pending actions remain unavailable.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-038"],
+      "nonClaims": ["Coverage presentation does not execute witnesses, authenticate declared evidence, infer a verdict for absent rows, or approve merge, release, rollout or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-039",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Workspace graph inspection preserves the graph owner's node, edge and evidence-plane identities, primary-window and incident-edge selection, and endpoint boundary closure. The page exposes exact primary IDs and child-owned typed parentNodeId, fromNodeId, toNodeId and codeNodeId references with canonical target offsets and included or outside_page dispositions. Structural references do not infer edges or recursively fetch ancestors. Explicit target following resets local filters and relation offset and selects only a current-generation returned target. The default browser window requests 64 primary nodes and 128 incident edges, admitting at most 192 returned nodes. Plane filtering retains edges only with visible endpoints; selected-node neighborhood shows undirected distance-one neighbors and their induced directed edges, preserving parallel identities. Hidden selection clears selection and neighborhood with visible focus recovery. Global, returned-page and visible counts remain distinct. Source coordinate text preserves exact admitted numeric tokens, including unverified ranges beyond JavaScript's safe integer domain; missing native precision support yields a sanitized unavailable view rather than rounded values. Deterministic bounded layout and keyboard-accessible records preserve inspectability without witness or source-edit authority.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-039"],
+      "nonClaims": ["A displayed topology, local filter or layout is not evidence of source completeness, proof truth, native execution, publication, rollout or production readiness. Browser-emulated mobile interaction does not certify physical devices or operating-system behavior."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-040",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "A workspace question packet keeps the existing source-bound handoff structure, Unicode code-point coordinates and immutable snapshot authority while using compact server-owned JSON bytes. One request acquisition retains the raw response text separately from the parsed preview. Explicit copy and download use the exact original text including its final newline, never reserialization of parsed JavaScript numbers. Preview detail resolves exactly one included requirement by annotation.anchor.requirementId, not targetId or original-file array index; missing or ambiguous detail stays unavailable. A content-generation transition clears preview and export and rejects obsolete success or failure carriers, while independent POST exclusion releases only on settlement and cannot clear a request lock. Late clipboard effects cannot label a replacement packet. Denied clipboard or export preserves the draft and exact-text fallback; download URLs are cleaned up. No browser operation rereads live source or promotes the packet to proof authority.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-040"],
+      "nonClaims": ["A question packet does not establish live checkout freshness, native witness execution, agent delivery, annotation persistence, merge approval or production readiness. Already exported bytes are not revoked by later view changes."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-041",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Workspace semantic diff summaries derive only from the admitted returned change page: change count, distinct entity count and the exact change-class partition. Risk changes count only scalar changes at the exact riskClass field pointer; record addition or removal containing risk data is not a risk transition. Lifecycle changes use the owner change class. Risk and lifecycle are overlapping facets, not an asserted partition. Page summaries remain distinct from available, selected and omitted change counts and both source snapshot identities. Full before and after values remain available through disclosure without reinterpreting scalar, set, map, lifecycle or entity semantics or inventing a breaking-change verdict.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-041"],
+      "nonClaims": ["Diff counts, risk labels and presentation do not determine compatibility, source authenticity, witness truth, merge approval, publication or production readiness."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

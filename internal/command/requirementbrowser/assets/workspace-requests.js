@@ -1,5 +1,7 @@
 // @ts-check
 
+import {parseWorkspaceJSON} from "./workspace-json.js";
+
 export class WorkspaceRequestError extends Error {
   /** @param {number} status */
   constructor(status) {
@@ -10,6 +12,11 @@ export class WorkspaceRequestError extends Error {
 
 /** @param {string} path @param {RequestInit} init @returns {Promise<any>} */
 export async function fetchWorkspaceJSON(path, init) {
+  return (await fetchWorkspaceResponse(path, init)).value;
+}
+
+/** @param {string} path @param {RequestInit} init @returns {Promise<{text: string, value: any}>} */
+export async function fetchWorkspaceResponse(path, init) {
   /** @type {string} */
   let body;
   try {
@@ -20,7 +27,7 @@ export async function fetchWorkspaceJSON(path, init) {
     if (init.signal?.aborted || error instanceof WorkspaceRequestError) throw error;
     throw new WorkspaceRequestError(0);
   }
-  return JSON.parse(body);
+  return {text: body, value: parseWorkspaceJSON(body)};
 }
 
 /** @param {unknown} error @param {boolean} optional */

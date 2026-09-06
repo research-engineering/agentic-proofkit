@@ -214,6 +214,16 @@ execution receipts, and merge policy.
   distinct error actions, and responsive native panels preserve keyboard
   focus, source selection, and drafts without promoting presentation authority.
 
+- `REQ-PROOFKIT-SPEC-038`: Coverage joins the complete lookup cohort to admitted
+  coverage rows, preserves both proof modes and the shared fragment contract,
+  and never interprets an absent row as a failed requirement.
+- `REQ-PROOFKIT-SPEC-039`: graph inspection preserves primary and boundary sets,
+  typed off-page references, evidence planes and accessible bounded navigation.
+- `REQ-PROOFKIT-SPEC-040`: handoff preview and explicit export preserve exact
+  server bytes, source identity, drafts and independent generation/lock state.
+- `REQ-PROOFKIT-SPEC-041`: diff summaries count only admitted page changes and
+  retain distinct global counts, source identities and full disclosed values.
+
 ## Non-Claims
 
 - This spec does not claim consumer repository adoption.

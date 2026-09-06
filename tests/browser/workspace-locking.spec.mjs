@@ -29,14 +29,11 @@ for (const outcome of [200, 400]) {
       expect(await handoff.count()).toBe(1);
 
       handoff.release();
+      await handoff.settled();
       const packet = page.locator("#handoff-packet");
-      if (outcome === 200) {
-        await expect(page.locator("#handoff-status")).toHaveText("Handoff packet created.");
-        expect(JSON.parse(await packet.textContent()).annotations.map(item => item.question)).toEqual(["First pending question."]);
-      } else {
-        await expect(page.locator("#handoff-status")).toHaveText("The handoff packet could not be created.");
-        await expect(packet).toBeEmpty();
-      }
+      await expect(packet).toBeEmpty();
+      await expect(page.locator("#handoff-preview")).toBeEmpty();
+      await expect(page.locator("#handoff-status")).toHaveText("1 source-bound target(s) selected.");
       await expect(question).toHaveValue("Second intentional question.");
       await expect(submit).toBeEnabled();
       await submit.click();
@@ -66,7 +63,12 @@ for (const status of [403, 409]) {
           const message = status === 403 ? "Access to this workspace was denied." : "The workspace snapshot has changed.";
           await expect(page.locator("#workspace-content [role=alert]")).toHaveText(message);
         };
-        const expectHandoff = () => expect(page.locator("#handoff-status")).toHaveText("Handoff packet created.");
+        const expectHandoff = async () => {
+          await handoff.settled();
+          await expect(page.locator("#handoff-packet")).toBeEmpty();
+          await expect(page.locator("#handoff-preview")).toBeEmpty();
+          await expect(page.locator("#handoff-status")).toHaveText("No source-bound text selected.");
+        };
         if (first === "handoff") {
           handoff.release();
           await expectHandoff();
@@ -93,30 +95,67 @@ for (const status of [403, 409]) {
   }
 }
 
+for (const status of [403, 409]) {
+  for (const refresh of [false, true]) {
+    test(`handoff ${status} locks requests in the ${refresh ? "new" : "submitting"} view`, async ({baseURL, page}) => {
+      const handoff = await holdFirstHandoff(page, status);
+      try {
+        await startPendingHandoff(page, baseURL, handoff.started);
+        if (refresh) {
+          await page.getByRole("button", {name: "Specifications", exact: true}).click();
+          await expect(page.locator("#workspace-content")).toHaveAttribute("aria-busy", "false");
+        }
+        handoff.release();
+        await handoff.settled();
+        const submit = page.getByRole("button", {name: "Create handoff packet", exact: true});
+        await expect(submit).toBeDisabled();
+        expect(await page.locator("[data-protected-request]").evaluateAll(items => items.every(item => item.disabled))).toBe(true);
+        await expect(page.locator("body")).toHaveAttribute("data-state", refresh ? "specifications" : "handoff-failed");
+        await expect(page.locator("#handoff-preview")).toBeEmpty();
+        await expect(page.locator("#handoff-packet")).toBeEmpty();
+        await expect(page.getByRole("textbox", {name: "Question", exact: true})).toHaveValue("First pending question.");
+        await expect(page.getByRole("button", {name: "Reload workspace", exact: true})).toHaveCount(status === 409 ? 1 : 0);
+        await submit.dispatchEvent("click");
+        expect(await handoff.count()).toBe(1);
+        await expect(page.locator("body")).not.toContainText("private handoff detail");
+      } finally { handoff.release(); }
+    });
+  }
+}
+
 async function holdFirstHandoff(page, outcome) {
   const barrier = Promise.withResolvers();
   const started = Promise.withResolvers();
   await page.addInitScript(() => {
     const nativeFetch = globalThis.fetch.bind(globalThis);
     globalThis.__handoffFetchCount = 0;
-    globalThis.fetch = (input, init) => {
+    globalThis.__handoffSettled = 0;
+    globalThis.fetch = async (input, init) => {
       const url = new URL(typeof input === "string" ? input : input.url, location.href);
-      if (url.pathname === "/api/v1/handoff") globalThis.__handoffFetchCount += 1;
-      return nativeFetch(input, init);
+      if (url.pathname !== "/api/v1/handoff") return nativeFetch(input, init);
+      globalThis.__handoffFetchCount += 1;
+      const response = await nativeFetch(input, init);
+      const settled = () => setTimeout(() => { globalThis.__handoffSettled++; }, 0);
+      if (!response.ok) settled();
+      else {
+        const read = response.text.bind(response);
+        response.text = async () => { const text = await read(); settled(); return text; };
+      }
+      return response;
     };
   });
   let count = 0;
   await page.route("**/api/v1/handoff", async route => {
     count += 1;
     if (count !== 1) return route.continue();
-    const response = outcome === 200 ? await route.fetch() :
-      await route.fetch({postData: {...route.request().postDataJSON(), annotations: []}});
-    expect(response.status()).toBe(outcome);
+    const response = outcome === 200 ? await route.fetch() : outcome === 400 ?
+      await route.fetch({postData: {...route.request().postDataJSON(), annotations: []}}) : null;
+    if (response) expect(response.status()).toBe(outcome);
     started.resolve();
     await barrier.promise;
-    return route.fulfill({response});
+    return response ? route.fulfill({response}) : route.fulfill({status: outcome, body: "private handoff detail"});
   });
-  return {release: barrier.resolve, started: started.promise, count: () => page.evaluate(() => globalThis.__handoffFetchCount)};
+  return {release: barrier.resolve, started: started.promise, count: () => page.evaluate(() => globalThis.__handoffFetchCount), settled: () => page.waitForFunction(() => globalThis.__handoffSettled >= 1)};
 }
 
 async function startPendingHandoff(page, url, started) {
@@ -189,7 +228,7 @@ async function assertLockedContentCommit(page, url, view, status) {
       await expect(page.locator("#workspace-content article > p").first()).toHaveText("/requirements/REQ-CONSUMER-001/riskClass");
     } else {
       await expect(page.getByRole("button", {name: "Previous graph relation page", exact: true})).toBeVisible();
-      await expect(page.locator('table[data-identity-kind="edge"] tbody tr')).toHaveCount(1);
+      await expect(page.getByRole("list", {name: "Admitted traceability edges"}).locator(":scope > li")).toHaveCount(1);
     }
     const controls = page.locator("[data-protected-request]");
     expect(await controls.evaluateAll(elements => elements.filter(element => !element.disabled).map(element => element.textContent))).toEqual([]);
