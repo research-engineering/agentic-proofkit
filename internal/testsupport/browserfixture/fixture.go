@@ -13,14 +13,14 @@ import (
 const RequirementID = "REQ-CONSUMER-001"
 
 func Workspace() (map[string]any, error) {
-	return workspace("high")
+	return workspace("high", true)
 }
 
 func PagingWorkspace() (map[string]any, error) {
-	return workspace("medium")
+	return workspace("medium", false)
 }
 
-func workspace(currentRisk string) (map[string]any, error) {
+func workspace(currentRisk string, parallelTrace bool) (map[string]any, error) {
 	base, err := snapshot("The system preserves the original semantic identity.", "high")
 	if err != nil {
 		return nil, err
@@ -35,13 +35,14 @@ func workspace(currentRisk string) (map[string]any, error) {
 	}
 	code := "package retry\n\nfunc Retry() {}\n"
 	start := strings.Index(code, "func Retry")
+	traceEdges := []any{map[string]any{"authorityClass": "owner_admitted", "codeNodeId": "code.retry", "currentnessState": "current", "evidenceRefs": []any{"browser.fixture.trace"}, "requirementId": RequirementID}}
+	if parallelTrace {
+		traceEdges = append(traceEdges, map[string]any{"authorityClass": "owner_admitted", "codeNodeId": "code.retry", "currentnessState": "current", "evidenceRefs": []any{"browser.fixture.parallel-trace"}, "requirementId": RequirementID})
+	}
 	graphInput := map[string]any{
 		"codeSources": []any{map[string]any{"content": code, "path": "src/retry.go"}},
 		"codeTopology": map[string]any{
-			"edges": []any{
-				map[string]any{"authorityClass": "owner_admitted", "codeNodeId": "code.retry", "currentnessState": "current", "evidenceRefs": []any{"browser.fixture.trace"}, "requirementId": RequirementID},
-				map[string]any{"authorityClass": "owner_admitted", "codeNodeId": "code.retry", "currentnessState": "current", "evidenceRefs": []any{"browser.fixture.parallel-trace"}, "requirementId": RequirementID},
-			},
+			"edges": traceEdges,
 			"nativeCoverage": []any{
 				map[string]any{"authorityClass": "caller_reported", "codeNodeId": "code.retry", "currentnessState": "unverified", "evidenceRef": "browser.fixture.candidate", "producerId": "browser.fixture.candidate-runner", "requirementId": RequirementID, "state": "failed"},
 				map[string]any{"authorityClass": "receipt_admitted", "codeNodeId": "code.retry", "currentnessState": "current", "evidenceRef": "browser.fixture.execution", "producerId": "browser.fixture.runner", "requirementId": RequirementID, "state": "passed"},
