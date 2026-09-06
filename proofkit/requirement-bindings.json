@@ -785,6 +785,22 @@
       "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."]
     },
     {
+      "requirementId": "REQ-PROOFKIT-SPEC-036",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Lookup fragments do not establish source completeness outside the admitted snapshot, lifecycle-closed context, proof coverage, native execution, provider freshness, merge approval, or production readiness. Private browser HTTP routes are not a separately supported public SDK."]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-037",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": ["Browser runtime witnesses cover the admitted Playwright Chromium, Firefox, and WebKit scenarios, not all browser preferences, assistive technologies, operating-system themes, branded Safari behavior, complete WCAG conformance, annotation persistence, agent execution, or provider delivery."]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
       "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
@@ -5464,6 +5480,78 @@
       "witnessId": "proofkit.requirement-browser.unicode-selection-falsifier",
       "witnessKind": "technical",
       "witnessPath": "tests/browser/workspace.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-036",
+      "scenarioId": "proofkit.spec-proof-core.workspace-lookup-cohort-and-anchor",
+      "witnessId": "proofkit.workspace-lookup.cohort-anchor-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_lookup_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-036",
+      "scenarioId": "proofkit.spec-proof-core.workspace-lookup-admission",
+      "witnessId": "proofkit.workspace-lookup.admission-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_lookup_admission_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-036",
+      "scenarioId": "proofkit.spec-proof-core.workspace-lookup-byte-bound",
+      "witnessId": "proofkit.workspace-lookup.byte-bound-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/workspace_page_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-036",
+      "scenarioId": "proofkit.spec-proof-core.workspace-lookup-browser",
+      "witnessId": "proofkit.workspace-lookup.browser-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/lookup.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-037",
+      "scenarioId": "proofkit.spec-proof-core.workspace-responsive-panels",
+      "witnessId": "proofkit.workspace-panels.browser-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-panels.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-037",
+      "scenarioId": "proofkit.spec-proof-core.workspace-error-authority",
+      "witnessId": "proofkit.workspace-errors.browser-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-errors.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-037",
+      "scenarioId": "proofkit.spec-proof-core.workspace-request-lifecycle",
+      "witnessId": "proofkit.workspace-requests.browser-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-request-lifecycle.spec.mjs",
+      "commandIds": ["proofkit.browser-check"],
+      "environmentClasses": ["local-node-browser"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-037",
+      "scenarioId": "proofkit.spec-proof-core.workspace-exact-page-retry",
+      "witnessId": "proofkit.workspace-paging.browser-falsifier",
+      "witnessKind": "technical",
+      "witnessPath": "tests/browser/workspace-paging.spec.mjs",
       "commandIds": ["proofkit.browser-check"],
       "environmentClasses": ["local-node-browser"]
     },

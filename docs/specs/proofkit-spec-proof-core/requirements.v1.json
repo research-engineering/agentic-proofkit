@@ -711,6 +711,32 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-036",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "Workspace lookup indexes immutable admitted requirement sources once, preserves each original source digest and snapshot JSON pointer, and intersects search, owner, lifecycle, and selected-node descendant scope before stable requirement-ID paging. Scope uses only requirement-role source-ID references, never overview or path-digest aliases or inferred ancestor membership. Search applies Unicode trimming and simple lowercase independently to ID, owner, and invariant, without normalization or cross-field concatenation, after 1024-byte and 256-code-point admission bounds. Available A, matching M, and selected S counts yield filtered A-M, page-omitted M-S, and total-omitted A-S counts. Lookup does not expand lifecycle closure; handoff delegates closure to the existing context owner. Navigation projects only the root or one admitted parent's ordered child window; both lookup routes cap compact response bytes at 16 MiB without truncating invariant text and reject an unfit first row before output. Browser navigation retains at most 256 rows with explicit recovery of discarded sibling pages, while requirement paging returns to actual visited offsets rather than assuming fixed response length.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-036"],
+      "nonClaims": ["Lookup fragments do not establish source completeness outside the admitted snapshot, lifecycle-closed context, proof coverage, native execution, provider freshness, merge approval, or production readiness. Private browser HTTP routes are not a separately supported public SDK."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-037",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "The workspace has one content-generation owner and independent identity-bound navigation requests. Superseded, aborted, or collapsed-branch replies cannot replace current content, selection, focus, or request authority. Retry requires explicit activation and repeats the immutable failed method, route, snapshot, and complete query with a new request ID; unsent form edits do not alter it. Sanitized errors distinguish correction (400), denied and locked without Retry (403), stale and locked with explicit reload (409), explicit Retry for transport/429/5xx, and optional versus required unavailability (404). Responsive panels use one native modal at a time at or below 64rem, restore visible opener focus on close, and release modality on desktop resize while preserving the question draft. Inspector entry commits source selection before moving focus; content transitions clear targets and displayed packets. Navigation render commits preserve a focused node/action identity and derive protected-control state from current authority. Native page focus stays inside the open modal without trapping browser chrome. Invariants precede lazily expanded owner/non-claim details and remain source-bound through Unicode selection and handoff.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+      "nonClaimRefs": ["NC-PROOFKIT-SPEC-037"],
+      "nonClaims": ["Browser runtime witnesses cover the admitted Playwright Chromium, Firefox, and WebKit scenarios, not all browser preferences, assistive technologies, operating-system themes, branded Safari behavior, complete WCAG conformance, annotation persistence, agent execution, or provider delivery."],
+      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+      "deferral": null,
+      "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
     }
   ],
   "nonClaims": [

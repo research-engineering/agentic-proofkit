@@ -1,12 +1,15 @@
 package requirementbrowser
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
 func TestWriteAPIErrorUsesTypedClassification(t *testing.T) {
@@ -53,20 +56,29 @@ func TestWorkspaceRequestAdmissionIsBounded(t *testing.T) {
 
 func TestProjectionQueryKeepsEveryAdmittedRequirementPageReachable(t *testing.T) {
 	const finalOffset = 20_224
-	requirements := make([]any, finalOffset+1)
-	for index := range requirements {
-		requirements[index] = map[string]any{"requirementId": fmt.Sprintf("REQ-%05d", index)}
+	index := workspaceLookupIndex{Rows: make([]workspaceRequirement, finalOffset+1)}
+	for position := range index.Rows {
+		index.Rows[position].Requirement.RequirementID = fmt.Sprintf("REQ-%05d", position)
 	}
-	query, err := admitProjectionQuery(map[string]any{
+	query, err := admitWorkspaceLookupQuery(map[string]any{
 		"maxRecords": json.Number("256"),
 		"offset":     json.Number("20224"),
-	})
+	}, index)
 	if err != nil {
 		t.Fatalf("admit final reachable page: %v", err)
 	}
-	projection, state := requirementWindow(requirements, query)
-	if state != "partial_with_omissions" || projection["selectedRequirementCount"] != 1 {
-		t.Fatalf("final page state=%s projection=%#v", state, projection)
+	body, err := workspaceLookupPage(index, query).encode("page.test", "snapshot.test", maxWorkspaceLookupResponseBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(body), int64(len(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := value.(map[string]any)
+	projection := response["projection"].(map[string]any)
+	if response["state"] != "partial_with_omissions" || projection["selectedRequirementCount"] != json.Number("1") {
+		t.Fatalf("final page lost exact selection: %#v", projection)
 	}
 	selected := projection["requirements"].([]any)
 	if got := selected[0].(map[string]any)["requirementId"]; got != "REQ-20224" {

@@ -1,6 +1,10 @@
 // @ts-check
 
 import {emptySelectionState, transitionSelection} from "./selection-authority.js";
+import {decorateIcons, icon} from "./workspace-icons.js";
+import {initializePanels} from "./workspace-panels.js";
+import {initializeNavigation} from "./workspace-navigation.js";
+import {fetchWorkspaceJSON, workspaceFailure} from "./workspace-requests.js";
 
 export {};
 
@@ -30,19 +34,15 @@ let requestSequence = 0;
 /** @type {AbortController | null} */
 let activeViewController = null;
 let selectionState = emptySelectionState();
+let requestsLocked = false;
+let handoffPending = false;
+/** @type {import("./workspace-navigation.js").LookupFilters} */
+let activeFilters = Object.freeze({});
 
 /** @param {string} prefix */
 function nextRequestId(prefix) {
   requestSequence += 1;
-  activeRequestId = `${prefix}.${requestSequence.toString(36)}`;
-  return activeRequestId;
-}
-
-/** @param {string} path @param {RequestInit} init @returns {Promise<any>} */
-async function fetchJSON(path, init) {
-  const response = await fetch(path, init);
-  if (!response.ok) throw new Error(`Workspace request failed: ${response.status}`);
-  return response.json();
+  return `${prefix}.${requestSequence.toString(36)}`;
 }
 
 /** @param {string} state */
@@ -62,36 +62,65 @@ function setActiveView(activeView) {
   }
 }
 
-function enableViewControls() {
-  for (const control of document.querySelectorAll("[data-view]")) {
-    if (control instanceof HTMLButtonElement) control.disabled = false;
+function handoffUnavailable() {
+  return manifest === null || requestsLocked || handoffPending;
+}
+
+function reconcileRequestControls() {
+  for (const control of document.querySelectorAll("[data-protected-request]")) {
+    if (control instanceof HTMLButtonElement || control instanceof HTMLInputElement || control instanceof HTMLSelectElement) {
+      control.disabled = control === submit ? handoffUnavailable() : requestsLocked;
+    }
   }
 }
 
+/** @param {"specifications" | "diff" | "graph"} state */
+function completeContentView(state) {
+  reconcileRequestControls();
+  content.setAttribute("aria-busy", "false");
+  setWorkspaceState(state);
+}
+
 async function initializeWorkspace() {
+  if (requestsLocked) return;
+  activeViewController?.abort();
+  activeViewController = new AbortController();
+  const signal = activeViewController.signal;
+  const requestId = nextRequestId("browser.bootstrap");
+  activeRequestId = requestId;
+  setWorkspaceState("bootstrap-loading");
+  const heading = document.createElement("h2");
+  heading.textContent = "Loading workspace";
+  const status = document.createElement("p");
+  status.setAttribute("role", "status");
+  status.textContent = "Loading admitted manifest...";
+  content.replaceChildren(heading, status);
+  content.setAttribute("aria-busy", "true");
   try {
-    manifest = await fetchJSON("/api/v1/manifest", {headers: {"X-Proofkit-Browser-Capability": capability}});
+    const response = await fetchWorkspaceJSON("/api/v1/manifest", {headers: {"X-Proofkit-Browser-Capability": capability}, signal});
+    if (signal.aborted || requestId !== activeRequestId) return;
+    manifest = response;
     authorityTextView.textContent = `Authority: ${manifest.authority}. Snapshot: ${manifest.snapshotId}. Expected-digest coverage: ${manifest.expectedDigestCoverage}.`;
     appendTextItems(authorityNonClaimsView, manifest.nonClaims ?? []);
-    enableViewControls();
+    reconcileRequestControls();
+    navigation.start(manifest);
     await renderSpecifications();
-  } catch {
+  } catch (error) {
+    if (signal.aborted || requestId !== activeRequestId) return;
     activeViewController?.abort();
     content.replaceChildren();
     content.setAttribute("aria-busy", "false");
     const heading = document.createElement("h2");
     heading.textContent = "Workspace unavailable";
-    const alert = document.createElement("p");
-    alert.setAttribute("role", "alert");
-    alert.textContent = "The admitted workspace could not be loaded.";
-    content.append(heading, alert);
+    content.append(heading);
+    showFailure(error, content, () => void initializeWorkspace());
     setWorkspaceState("bootstrap-failed");
   }
 }
 
 /** @param {string} path @param {any} body @param {AbortSignal} [signal] @returns {Promise<any>} */
 async function post(path, body, signal) {
-  return fetchJSON(path, {method: "POST", headers, body: JSON.stringify(body), signal});
+  return fetchWorkspaceJSON(path, {method: "POST", headers, body: JSON.stringify(body), signal});
 }
 
 /** @param {string} title @param {string} requestPrefix @param {"specifications" | "diff" | "graph"} view */
@@ -99,7 +128,9 @@ function beginView(title, requestPrefix, view) {
   activeViewController?.abort();
   activeViewController = new AbortController();
   const requestId = nextRequestId(requestPrefix);
+  activeRequestId = requestId;
   clearSelection();
+  packetView.replaceChildren();
   setActiveView(view);
   setWorkspaceState(`${view}-loading`);
   content.replaceChildren();
@@ -115,14 +146,42 @@ function beginView(title, requestPrefix, view) {
   return {requestId, signal: activeViewController.signal, status};
 }
 
-/** @param {HTMLElement} status */
-function failView(status) {
+/** @param {unknown} error @param {HTMLElement} container @param {() => void} retry @param {boolean} [optional] */
+function showFailure(error, container, retry, optional = false) {
+  const failure = workspaceFailure(error, optional);
+  if (failure.lock) {
+    requestsLocked = true;
+    reconcileRequestControls();
+    navigation.cancel();
+  }
+  const message = document.createElement("p");
+  message.setAttribute("role", "alert");
+  message.dataset.state = failure.kind;
+  message.textContent = failure.message;
+  container.append(message);
+  if (failure.action === "none") return;
+  const action = document.createElement("button");
+  action.type = "button";
+  if (failure.action === "retry") {
+    action.dataset.protectedRequest = "";
+    action.disabled = requestsLocked;
+  }
+  action.append(icon("refresh-cw"), document.createTextNode(failure.action === "retry" ? "Retry" : "Reload workspace"));
+  action.addEventListener("click", () => {
+    if (!action.isConnected) return;
+    if (failure.action === "reload") window.location.reload();
+    else if (!requestsLocked) retry();
+  });
+  container.append(action);
+}
+
+/** @param {HTMLElement} status @param {unknown} error @param {() => void} retry @param {boolean} [optional] */
+function failView(status, error, retry, optional = false) {
   content.setAttribute("aria-busy", "false");
   setWorkspaceState("view-failed");
-  status.setAttribute("role", "alert");
-  status.setAttribute("aria-live", "assertive");
-  status.dataset.state = "failed";
-  status.textContent = "The admitted workspace view could not be loaded.";
+  status.remove();
+  const failedRequestId = activeRequestId;
+  showFailure(error, content, () => { if (activeRequestId === failedRequestId) retry(); }, optional);
 }
 
 /** @param {any} response @param {string} requestId @param {AbortSignal} signal */
@@ -134,14 +193,17 @@ function admitCurrentViewResponse(response, requestId, signal) {
   return true;
 }
 
-/** @param {number} [offset] */
-async function renderSpecifications(offset = 0) {
+/** @param {number} [offset] @param {import("./workspace-navigation.js").LookupFilters} [filters] @param {number[]} [history] */
+async function renderSpecifications(offset = 0, filters = activeFilters, history = []) {
+  if (requestsLocked) return;
+  activeFilters = filters;
+  const query = Object.freeze({...filters, maxRecords: 64, offset});
   const {requestId, signal, status} = beginView("Specifications", "browser.specifications", "specifications");
   try {
     const response = await post("/api/v1/requirements", {
       requestId,
       snapshotId: manifest.snapshotId,
-      query: {maxRecords: 256, offset},
+      query,
     }, signal);
     if (!admitCurrentViewResponse(response, requestId, signal)) return;
     status.remove();
@@ -155,14 +217,18 @@ async function renderSpecifications(offset = 0) {
         article.dataset.requirementId = requirement.requirementId;
         const title = document.createElement("h3");
         title.textContent = requirement.requirementId;
-        const boundary = document.createElement("section");
+        const boundary = document.createElement("details");
         boundary.className = "requirement-boundary";
         boundary.setAttribute("aria-label", `Boundary for ${requirement.requirementId}`);
-        const ownership = document.createElement("p");
+        const ownership = document.createElement("summary");
         ownership.textContent = `Owner: ${requirement.ownerId}. Claim level: ${requirement.claimLevel}.`;
-        const nonClaims = document.createElement("ul");
-        appendTextItems(nonClaims, [...(requirement.sourceNonClaims ?? []), ...(requirement.nonClaims ?? [])]);
-        boundary.append(ownership, nonClaims);
+        boundary.append(ownership);
+        boundary.addEventListener("toggle", () => {
+          if (!boundary.open || boundary.querySelector("ul")) return;
+          const nonClaims = document.createElement("ul");
+          appendTextItems(nonClaims, [...(requirement.sourceNonClaims ?? []), ...(requirement.nonClaims ?? [])]);
+          boundary.append(nonClaims);
+        });
         const invariant = document.createElement("p");
         const anchorId = requirement.anchor.anchorId;
         invariant.dataset.anchorId = anchorId;
@@ -171,14 +237,14 @@ async function renderSpecifications(offset = 0) {
         choose.type = "button";
         choose.dataset.selectAnchor = anchorId;
         choose.setAttribute("aria-pressed", "false");
-        choose.textContent = "Select invariant";
+        choose.append(icon("check"), document.createTextNode("Select invariant"));
         choose.addEventListener("click", () => {
           for (const control of content.querySelectorAll("[data-select-anchor]")) control.setAttribute("aria-pressed", "false");
           choose.setAttribute("aria-pressed", "true");
           selectionState = transitionSelection(selectionState, {kind: "button", targets: [{anchorId, exactQuote: requirement.invariant, startCodePoint: 0, endCodePoint: [...requirement.invariant].length}]});
           announceSelection();
         });
-        article.append(title, boundary, invariant, choose);
+        article.append(title, invariant, boundary, choose);
         item.append(article);
         list.append(item);
         itemIndex += 1;
@@ -187,22 +253,21 @@ async function renderSpecifications(offset = 0) {
       status.dataset.state = "no-match";
       status.textContent = "No requirements matched the admitted query.";
       content.append(status);
-      content.setAttribute("aria-busy", "false");
-      setWorkspaceState("specifications");
+      completeContentView("specifications");
       return;
     }
     content.append(list);
-    appendPagingControls("specifications", offset, response.projection.selectedRequirementCount ?? 0, response.projection.availableRequirementCount ?? 0);
-    content.setAttribute("aria-busy", "false");
-    setWorkspaceState("specifications");
+    appendRequirementPaging(offset, response.projection.selectedRequirementCount ?? 0, response.projection.matchingRequirementCount ?? 0, filters, history);
+    completeContentView("specifications");
   } catch (error) {
-    if (signal.aborted) return;
-    failView(status);
+    if (signal.aborted || requestId !== activeRequestId) return;
+    failView(status, error, () => void renderSpecifications(offset, filters, history));
   }
 }
 
 /** @param {number} [offset] */
 async function renderDiff(offset = 0) {
+  if (requestsLocked) return;
   const {requestId, signal, status} = beginView("Semantic diff", "browser.diff", "diff");
   if (!manifest.diffAvailable) {
     content.setAttribute("aria-busy", "false");
@@ -234,16 +299,16 @@ async function renderDiff(offset = 0) {
       content.append(article);
     }
     appendPagingControls("diff", offset, response.projection.selectedChangeCount ?? 0, response.projection.availableChangeCount ?? 0);
-    content.setAttribute("aria-busy", "false");
-    setWorkspaceState("diff");
+    completeContentView("diff");
   } catch (error) {
-    if (signal.aborted) return;
-    failView(status);
+    if (signal.aborted || requestId !== activeRequestId) return;
+    failView(status, error, () => void renderDiff(offset), true);
   }
 }
 
 /** @param {number} [offset] */
 async function renderGraph(offset = 0, edgeOffset = 0) {
+  if (requestsLocked) return;
   const {requestId, signal, status} = beginView("Traceability graph", "browser.graph", "graph");
   if (!manifest.graphAvailable) {
     content.setAttribute("aria-busy", "false");
@@ -320,15 +385,36 @@ async function renderGraph(offset = 0, edgeOffset = 0) {
     ));
     appendPagingControls("graph", offset, graph.primaryNodeCount ?? 0, graph.availableNodeCount ?? 0);
     appendGraphEdgeControls(offset, edgeOffset, graph.selectedEdgeCount ?? 0, graph.availableIncidentEdgeCount ?? 0);
-    content.setAttribute("aria-busy", "false");
-    setWorkspaceState("graph");
+    completeContentView("graph");
   } catch (error) {
-    if (signal.aborted) return;
-    failView(status);
+    if (signal.aborted || requestId !== activeRequestId) return;
+    failView(status, error, () => void renderGraph(offset, edgeOffset), true);
   }
 }
 
-/** @param {"specifications" | "diff" | "graph"} view @param {number} offset @param {number} selectedCount @param {number} availableCount */
+/** @param {number} offset @param {number} selected @param {number} matching @param {import("./workspace-navigation.js").LookupFilters} filters @param {number[]} history */
+function appendRequirementPaging(offset, selected, matching, filters, history) {
+  const summary = document.createElement("p");
+  summary.className = "page-summary";
+  summary.textContent = `Showing ${selected === 0 ? 0 : offset + 1}-${offset + selected} of ${matching} specifications records.`;
+  content.append(summary);
+  const controls = document.createElement("nav");
+  controls.setAttribute("aria-label", "specifications pages");
+  /** @param {string} label @param {string} symbol @param {() => void} action */
+  function add(label, symbol, action) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.protectedRequest = "";
+    button.append(icon(symbol), document.createTextNode(label));
+    button.addEventListener("click", action);
+    controls.append(button);
+  }
+  if (history.length > 0) add("Previous specifications page", "arrow-left", () => void renderSpecifications(history.at(-1) ?? 0, filters, history.slice(0, -1)));
+  if (offset + selected < matching) add("Next specifications page", "arrow-right", () => void renderSpecifications(offset + selected, filters, [...history, offset]));
+  content.append(controls);
+}
+
+/** @param {"diff" | "graph"} view @param {number} offset @param {number} selectedCount @param {number} availableCount */
 function appendPagingControls(view, offset, selectedCount, availableCount) {
   const summary = document.createElement("p");
   const first = selectedCount === 0 ? 0 : offset + 1;
@@ -341,15 +427,17 @@ function appendPagingControls(view, offset, selectedCount, availableCount) {
   if (offset > 0) {
     const previous = document.createElement("button");
     previous.type = "button";
+    previous.dataset.protectedRequest = "";
     previous.textContent = `Previous ${view} page`;
-    previous.addEventListener("click", () => void (view === "diff" ? renderDiff(Math.max(0, offset - pageSize)) : view === "graph" ? renderGraph(Math.max(0, offset - pageSize)) : renderSpecifications(Math.max(0, offset - pageSize))));
+    previous.addEventListener("click", () => void (view === "diff" ? renderDiff(Math.max(0, offset - pageSize)) : renderGraph(Math.max(0, offset - pageSize))));
     controls.append(previous);
   }
   if (offset + selectedCount < availableCount) {
     const next = document.createElement("button");
     next.type = "button";
+    next.dataset.protectedRequest = "";
     next.textContent = `Next ${view} page`;
-    next.addEventListener("click", () => void (view === "diff" ? renderDiff(offset + selectedCount) : view === "graph" ? renderGraph(offset + selectedCount) : renderSpecifications(offset + selectedCount)));
+    next.addEventListener("click", () => void (view === "diff" ? renderDiff(offset + selectedCount) : renderGraph(offset + selectedCount)));
     controls.append(next);
   }
   content.append(controls);
@@ -367,6 +455,7 @@ function appendGraphEdgeControls(nodeOffset, edgeOffset, selectedCount, availabl
   if (edgeOffset > 0) {
     const previous = document.createElement("button");
     previous.type = "button";
+    previous.dataset.protectedRequest = "";
     previous.textContent = "Previous graph relation page";
     previous.addEventListener("click", () => void renderGraph(nodeOffset, Math.max(0, edgeOffset - 2048)));
     controls.append(previous);
@@ -374,6 +463,7 @@ function appendGraphEdgeControls(nodeOffset, edgeOffset, selectedCount, availabl
   if (edgeOffset + selectedCount < availableCount) {
     const next = document.createElement("button");
     next.type = "button";
+    next.dataset.protectedRequest = "";
     next.textContent = "Next graph relation page";
     next.addEventListener("click", () => void renderGraph(nodeOffset, edgeOffset + selectedCount));
     controls.append(next);
@@ -541,7 +631,7 @@ for (const control of [questionInput, submit]) {
 }
 clearSelectionButton.addEventListener("click", clearSelection);
 submit.addEventListener("click", async () => {
-  if (submit.disabled) return;
+  if (submit.disabled || handoffUnavailable()) return;
   const question = questionInput.value.trim();
   if (selectionState.targets.length === 0 || !question) {
     status.setAttribute("role", "status");
@@ -550,7 +640,8 @@ submit.addEventListener("click", async () => {
     return;
   }
   const submissionViewRequestId = activeRequestId;
-  submit.disabled = true;
+  handoffPending = true;
+  reconcileRequestControls();
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   status.textContent = "Creating handoff packet...";
@@ -566,9 +657,19 @@ submit.addEventListener("click", async () => {
     status.textContent = "The handoff packet could not be created.";
     if (submissionViewRequestId === activeRequestId) setWorkspaceState("handoff-failed");
   } finally {
-    submit.disabled = false;
+    handoffPending = false;
+    reconcileRequestControls();
   }
 });
 
+decorateIcons(document);
+const panels = initializePanels(commitSelection);
+const navigation = initializeNavigation({
+  post,
+  nextRequestId,
+  select(filters) { void renderSpecifications(0, filters); panels.closeNavigation(); },
+  fail: showFailure,
+  locked: () => requestsLocked,
+});
 announceSelection();
 void initializeWorkspace();

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"sort"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
@@ -24,13 +23,13 @@ type workspaceAnchor struct {
 }
 
 type workspaceSession struct {
-	Anchors      map[string]workspaceAnchor
-	Diff         map[string]any
-	Graph        map[string]any
-	Manifest     map[string]any
-	Requirements []any
-	Snapshot     requirementcontext.Snapshot
-	SnapshotID   string
+	Anchors    map[string]workspaceAnchor
+	Diff       map[string]any
+	Graph      map[string]any
+	Manifest   map[string]any
+	Lookup     workspaceLookupIndex
+	Snapshot   requirementcontext.Snapshot
+	SnapshotID string
 }
 
 func buildWorkspace(raw any) (workspaceSession, string, error) {
@@ -52,10 +51,7 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 	if err != nil {
 		return workspaceSession{}, "", err
 	}
-	anchors, requirements, err := workspaceRequirements(snapshot)
-	if err != nil {
-		return workspaceSession{}, "", err
-	}
+	lookup, anchors := buildWorkspaceLookupIndex(snapshot)
 	var diff map[string]any
 	if record["diffInput"] != nil {
 		diff, err = requirementdiff.Build(record["diffInput"])
@@ -94,12 +90,13 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
 		"graphAvailable":         graph != nil,
 		"nonClaims":              admit.StringSliceToAny(serverNonClaims),
-		"requirementCount":       len(requirements),
+		"requirementCount":       len(lookup.Rows),
+		"lookupFacets":           map[string]any{"ownerIds": workspaceSortedSet(lookup.Owners), "lifecycleStates": workspaceSortedSet(lookup.LifecycleStates)},
 		"schemaVersion":          json.Number("2"),
 		"snapshotId":             snapshot.SnapshotID,
 		"workspaceId":            workspaceID,
 	}
-	return workspaceSession{Anchors: anchors, Diff: diff, Graph: graph, Manifest: manifest, Requirements: requirements, Snapshot: snapshot, SnapshotID: snapshot.SnapshotID}, workspaceHTML(workspaceID), nil
+	return workspaceSession{Anchors: anchors, Diff: diff, Graph: graph, Manifest: manifest, Lookup: lookup, Snapshot: snapshot, SnapshotID: snapshot.SnapshotID}, workspaceHTML(workspaceID), nil
 }
 
 func admitWorkspaceInputVersion(record map[string]any) error {
@@ -192,57 +189,6 @@ func sameStringSet(left, right map[string]struct{}) bool {
 	return true
 }
 
-func workspaceRequirements(snapshot requirementcontext.Snapshot) (map[string]workspaceAnchor, []any, error) {
-	rawSources, ok := snapshot.Projections["requirementSources"].([]any)
-	if !ok {
-		return nil, nil, fmt.Errorf("requirement browser workspace requires requirement source projections")
-	}
-	digestBySource := map[string]string{}
-	for _, source := range snapshot.Sources {
-		if source.Kind == "requirement_source" {
-			digestBySource[source.SourceRef] = source.CurrentDigest
-		}
-	}
-	anchors := map[string]workspaceAnchor{}
-	requirements := []any{}
-	for sourceIndex, rawSource := range rawSources {
-		source, ok := rawSource.(map[string]any)
-		if !ok {
-			return nil, nil, fmt.Errorf("requirement browser workspace source projection is invalid")
-		}
-		sourceID, _ := source["sourceId"].(string)
-		digest := digestBySource[sourceID]
-		rawRequirements, ok := source["requirements"].([]any)
-		if !ok {
-			return nil, nil, fmt.Errorf("requirement browser workspace requirements projection is invalid")
-		}
-		for requirementIndex, rawRequirement := range rawRequirements {
-			requirement, ok := rawRequirement.(map[string]any)
-			if !ok {
-				return nil, nil, fmt.Errorf("requirement browser workspace requirement projection is invalid")
-			}
-			id, _ := requirement["requirementId"].(string)
-			invariant, _ := requirement["invariant"].(string)
-			anchorID := "requirement:" + id + ":invariant"
-			anchor := workspaceAnchor{AnchorID: anchorID, JSONPointer: fmt.Sprintf("/projections/requirementSources/%d/requirements/%d/invariant", sourceIndex, requirementIndex), RequirementID: id, SourceDigest: digest, Text: invariant}
-			anchors[anchorID] = anchor
-			requirements = append(requirements, map[string]any{
-				"anchor":          anchorValue(anchor),
-				"claimLevel":      requirement["claimLevel"],
-				"invariant":       invariant,
-				"nonClaims":       requirement["nonClaims"],
-				"ownerId":         requirement["ownerId"],
-				"requirementId":   id,
-				"sourceNonClaims": source["nonClaims"],
-			})
-		}
-	}
-	sort.Slice(requirements, func(left, right int) bool {
-		return requirements[left].(map[string]any)["requirementId"].(string) < requirements[right].(map[string]any)["requirementId"].(string)
-	})
-	return anchors, requirements, nil
-}
-
 func anchorValue(anchor workspaceAnchor) map[string]any {
 	return map[string]any{"anchorId": anchor.AnchorID, "jsonPointer": anchor.JSONPointer, "requirementId": anchor.RequirementID, "sourceDigest": anchor.SourceDigest}
 }
@@ -254,10 +200,23 @@ func workspaceHTML(workspaceID string) string {
 		"<meta name=\"proofkit-browser-capability\" content=\"" + workspaceCapabilityPlaceholder + "\">",
 		"<title>" + html.EscapeString(workspaceID) + " - Proofkit workspace</title>",
 		"<link rel=\"stylesheet\" href=\"/assets/workspace.css\"></head>",
-		"<body data-state=\"bootstrap-loading\"><header><p>Proofkit semantic workspace</p><h1>" + html.EscapeString(workspaceID) + "</h1><section id=\"workspace-authority\" aria-label=\"Authority boundary\"><h2>Authority boundary</h2><p data-authority>Loading admitted authority...</p><ul data-non-claims></ul></section></header>",
-		"<main><nav aria-label=\"Workspace views\"><button type=\"button\" data-view=\"specifications\" disabled>Specifications</button><button type=\"button\" data-view=\"diff\" disabled>Diff</button><button type=\"button\" data-view=\"graph\" disabled>Traceability</button></nav>",
-		"<section id=\"workspace-content\" aria-busy=\"true\"><h2>Loading workspace</h2><p role=\"status\" aria-live=\"polite\">Loading admitted manifest...</p></section></main>",
-		"<aside aria-label=\"Agent question\"><h2>Ask about selection</h2><h3>Selected source text</h3><ul id=\"selected-context\" aria-label=\"Selected source text\"></ul><button id=\"clear-selection\" type=\"button\" disabled>Clear selection</button><label for=\"annotation-question\">Question</label><textarea id=\"annotation-question\" maxlength=\"4096\"></textarea><button id=\"submit-question\" type=\"button\">Create handoff packet</button><p id=\"handoff-status\" role=\"status\" aria-live=\"polite\"></p><section id=\"handoff-output\" aria-labelledby=\"handoff-packet-heading\"><h3 id=\"handoff-packet-heading\">Handoff packet</h3><pre id=\"handoff-packet\"></pre></section></aside>",
+		`<body data-state="bootstrap-loading"><header class="product-bar">
+<button id="open-navigation" class="icon-button" type="button" data-open-panel="navigation" data-icon="panel-left" aria-label="Toggle specification navigation" title="Toggle specification navigation" aria-controls="workspace-navigation" aria-expanded="false"></button>
+<div class="product-identity"><strong>Proofkit</strong><h1>` + html.EscapeString(workspaceID) + `</h1></div>
+<button id="open-inspector" class="icon-button" type="button" data-open-panel="inspector" data-icon="panel-right" aria-label="Toggle question inspector" title="Toggle question inspector" aria-controls="workspace-inspector" aria-expanded="false"></button></header>
+<dialog id="workspace-navigation" class="workspace-panel" aria-labelledby="navigation-heading"><div class="panel-heading"><h2 id="navigation-heading">Browse</h2><button class="icon-button" type="button" data-close-panel data-icon="x" aria-label="Close navigation" title="Close navigation"></button></div>
+<form id="workspace-search" role="search"><label for="requirement-search">Search requirements</label><div class="search-field"><input id="requirement-search" type="search" autocomplete="off" data-protected-request disabled><button class="icon-button" type="submit" data-icon="search" aria-label="Search requirements" title="Search requirements" data-protected-request disabled></button></div>
+<label for="requirement-owner">Owner</label><select id="requirement-owner" data-protected-request disabled><option value="">All owners</option></select>
+<label for="requirement-lifecycle">Lifecycle</label><select id="requirement-lifecycle" data-protected-request disabled><option value="">All lifecycle states</option></select>
+<button id="reset-filters" type="button" data-protected-request disabled>Reset filters</button></form>
+<section id="selected-scope" aria-label="Selected specification scope"></section><h3>Specification hierarchy</h3><button id="all-requirements" type="button" data-protected-request disabled>All requirements</button>
+<div id="spec-navigation" aria-live="polite"></div></dialog>
+<main><nav class="view-controls" aria-label="Workspace views"><button type="button" data-view="specifications" data-protected-request data-icon="file-text" disabled>Specifications</button><button type="button" data-view="diff" data-protected-request data-icon="git-compare-arrows" disabled>Diff</button><button type="button" data-view="graph" data-protected-request data-icon="network" disabled>Traceability</button></nav>
+<details id="workspace-authority" aria-label="Authority boundary"><summary data-icon="info">Derived view</summary><h2>Authority boundary</h2><p data-authority>Loading admitted authority...</p><ul data-non-claims></ul></details>
+<section id="workspace-content" aria-busy="true"><h2>Loading workspace</h2><p role="status" aria-live="polite">Loading admitted manifest...</p></section></main>
+<dialog id="workspace-inspector" class="workspace-panel" aria-labelledby="inspector-heading"><div class="panel-heading"><h2 id="inspector-heading">Ask about selection</h2><button class="icon-button" type="button" data-close-panel data-icon="x" aria-label="Close inspector" title="Close inspector"></button></div>
+<h3>Selected source text</h3><ul id="selected-context" aria-label="Selected source text"></ul><button id="clear-selection" class="icon-button" type="button" data-icon="x" aria-label="Clear selection" title="Clear selection" disabled></button>
+<label for="annotation-question">Question</label><textarea id="annotation-question" maxlength="4096"></textarea><button id="submit-question" type="button" data-protected-request data-icon="message-square" disabled>Create handoff packet</button><p id="handoff-status" role="status" aria-live="polite"></p><section id="handoff-output" aria-labelledby="handoff-packet-heading"><h3 id="handoff-packet-heading">Handoff packet</h3><pre id="handoff-packet"></pre></section></dialog>`,
 		"<script type=\"module\" src=\"/assets/workspace.js\"></script></body></html>\n",
 	}, "")
 }

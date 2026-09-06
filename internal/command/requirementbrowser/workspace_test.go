@@ -512,22 +512,6 @@ func TestGraphWindowRetainsCrossPageRelationsWithEndpointClosure(t *testing.T) {
 	}
 }
 
-func TestRequirementWindowMakesEveryBoundedPageReachable(t *testing.T) {
-	requirements := make([]any, 257)
-	for index := range requirements {
-		requirements[index] = map[string]any{"requirementId": fmt.Sprintf("REQ-%03d", index)}
-	}
-	first, firstState := requirementWindow(requirements, projectionQuery{MaxRecords: 256})
-	second, secondState := requirementWindow(requirements, projectionQuery{MaxRecords: 256, Offset: 256})
-	if firstState != "partial_with_omissions" || first["selectedRequirementCount"] != 256 || secondState != "partial_with_omissions" || second["selectedRequirementCount"] != 1 {
-		t.Fatalf("requirement pagination is not omission-honest: first=%#v second=%#v", first, second)
-	}
-	last := second["requirements"].([]any)[0].(map[string]any)["requirementId"]
-	if last != "REQ-256" {
-		t.Fatalf("last requirement is unreachable: %v", last)
-	}
-}
-
 func workspaceFixture(t *testing.T) map[string]any {
 	return workspaceFixtureWithInvariant(t, "The system preserves semantic identity. "+strings.Repeat("x", maxHandoffAnnotations+1))
 }
