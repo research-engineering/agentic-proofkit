@@ -388,7 +388,8 @@ test("owner resolution closes manifest, Go dependencies, and role-owned paths", 
 });
 
 test("workspace navigation excludes provider-falsified lifecycle waits", () => {
-  const source = readFileSync("tests/browser/workspace.spec.mjs", "utf8");
+  const {inputPaths} = loadBrowserProofInputResolution();
+  const source = inputPaths.filter(path => path.startsWith("tests/browser/") && path.endsWith(".mjs")).map(path => readFileSync(path, "utf8")).join("\n");
   const lifecycleMethods = [...source.matchAll(
     /\bpage\.(goBack|goForward|goto|reload|waitForLoadState|waitForNavigation|waitForURL)\s*\(/g,
   )].map((match) => match[1]);

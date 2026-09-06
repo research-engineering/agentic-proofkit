@@ -207,6 +207,13 @@ execution receipts, and merge policy.
   change-plan route replacement, and omitted-route policy to one breaking
   release record without reinterpreting the frozen prior edge.
 
+- `REQ-PROOFKIT-SPEC-036`: full-cohort requirement lookup intersects literal
+  search, owner, lifecycle, and typed descendant scope before byte-bounded
+  paging; navigation and handoff preserve their distinct identities and closure.
+- `REQ-PROOFKIT-SPEC-037`: generation-owned requests, exact explicit Retry,
+  distinct error actions, and responsive native panels preserve keyboard
+  focus, source selection, and drafts without promoting presentation authority.
+
 ## Non-Claims
 
 - This spec does not claim consumer repository adoption.

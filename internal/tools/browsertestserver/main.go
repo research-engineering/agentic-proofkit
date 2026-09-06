@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,7 +13,17 @@ import (
 )
 
 func main() {
-	workspace, err := browserfixture.Workspace()
+	build := browserfixture.Workspace
+	if len(os.Args) == 2 && os.Args[1] == "--lookup" {
+		build = browserfixture.LookupWorkspace
+	} else if len(os.Args) == 2 && os.Args[1] == "--paging" {
+		build = browserfixture.PagingWorkspace
+	} else if len(os.Args) == 2 && os.Args[1] == "--capacity" {
+		build = browserfixture.CapacityWorkspace
+	} else if len(os.Args) != 1 {
+		fatal(errors.New("unsupported browser fixture selector"))
+	}
+	workspace, err := build()
 	if err != nil {
 		fatal(err)
 	}

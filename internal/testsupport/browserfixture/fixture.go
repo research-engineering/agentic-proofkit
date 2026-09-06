@@ -13,11 +13,19 @@ import (
 const RequirementID = "REQ-CONSUMER-001"
 
 func Workspace() (map[string]any, error) {
-	base, err := snapshot("The system preserves the original semantic identity.")
+	return workspace("high")
+}
+
+func PagingWorkspace() (map[string]any, error) {
+	return workspace("medium")
+}
+
+func workspace(currentRisk string) (map[string]any, error) {
+	base, err := snapshot("The system preserves the original semantic identity.", "high")
 	if err != nil {
 		return nil, err
 	}
-	current, err := snapshot("The system preserves semantic identity for retry \U0001F680.")
+	current, err := snapshot("The system preserves semantic identity for retry \U0001F680.", currentRisk)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +53,11 @@ func Workspace() (map[string]any, error) {
 	return map[string]any{"context": current, "diffInput": diffInput, "graphInput": graphInput, "schemaVersion": json.Number("2"), "workspaceId": "browser.fixture.workspace"}, nil
 }
 
-func snapshot(invariant string) (map[string]any, error) {
+func snapshot(invariant, risk string) (map[string]any, error) {
 	tree := map[string]any{"callerAnnotations": []any{}, "edges": []any{}, "nodes": []any{map[string]any{"callerAnnotations": []any{}, "displayOrder": json.Number("1"), "label": "Fixture specification", "nodeId": "spec.root", "nodeKind": "meta_spec", "sourceRefs": []any{map[string]any{"sourceId": "browser.fixture.requirements", "sourceRefId": "spec.root.requirements", "sourceRefKind": "source_id", "sourceRole": "requirements"}}}}, "overlays": []any{}, "rootNodeId": "spec.root", "schemaVersion": json.Number("2"), "treeId": "browser.fixture.tree"}
 	requirementSource := map[string]any{
 		"nonClaims": []any{"Fixture requirements do not approve merge."}, "overviewPath": "docs/specs/browser-fixture/overview.md",
-		"requirements":     []any{map[string]any{"claimLevel": "blocking", "invariant": invariant, "lifecycle": map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "ownerId": "browser.fixture.owner", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": RequirementID, "riskClass": "high", "updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "browser.fixture.owner"}}},
+		"requirements":     []any{map[string]any{"claimLevel": "blocking", "invariant": invariant, "lifecycle": map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "ownerId": "browser.fixture.owner", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": RequirementID, "riskClass": risk, "updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "browser.fixture.owner"}}},
 		"requirementsPath": "docs/specs/browser-fixture/requirements.v1.json", "schemaVersion": json.Number("1"), "sourceId": "browser.fixture.requirements", "specPackagePath": "docs/specs/browser-fixture",
 	}
 	projections := map[string]any{"requirementSources": []any{requirementSource}, "specTree": tree}

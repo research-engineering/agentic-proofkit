@@ -59,6 +59,14 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 			serveWorkspaceAsset(response, method, workspaceJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/selection-authority.js":
 			serveWorkspaceAsset(response, method, selectionAuthorityJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-icons.js":
+			serveWorkspaceAsset(response, method, workspaceIconsJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-panels.js":
+			serveWorkspaceAsset(response, method, workspacePanelsJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-requests.js":
+			serveWorkspaceAsset(response, method, workspaceRequestsJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-navigation.js":
+			serveWorkspaceAsset(response, method, workspaceNavigationJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace.css":
 			serveWorkspaceAsset(response, method, workspaceCSS, "text/css; charset=utf-8")
 		case "/api/v1/manifest":
@@ -81,7 +89,7 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 			}
 			defer releaseWorkspaceRequest(workspaceRequests)
 			serveWorkspaceQuery(response, request, expectedOrigin, capability, rendered.workspace)
-		case "/api/v1/requirements":
+		case "/api/v1/requirements", "/api/v1/navigation":
 			if method != http.MethodPost {
 				methodNotAllowed(response, method, "POST")
 				return
@@ -149,24 +157,28 @@ func serveWorkspaceRequirements(response http.ResponseWriter, request *http.Requ
 		writeAPIError(response, request.Method, err)
 		return
 	}
-	query, err := admitProjectionQuery(record["query"])
+	var page workspacePage
+	if request.URL.Path == "/api/v1/navigation" {
+		query, queryErr := admitWorkspaceNavigationQuery(record["query"], session.Lookup)
+		if queryErr != nil {
+			writeAPIError(response, request.Method, queryErr)
+			return
+		}
+		page = workspaceNavigationPage(session.Lookup, query)
+	} else {
+		query, queryErr := admitWorkspaceLookupQuery(record["query"], session.Lookup)
+		if queryErr != nil {
+			writeAPIError(response, request.Method, queryErr)
+			return
+		}
+		page = workspaceLookupPage(session.Lookup, query)
+	}
+	body, err := page.encode(requestID, session.SnapshotID, maxWorkspaceLookupResponseBytes)
 	if err != nil {
 		writeAPIError(response, request.Method, err)
 		return
 	}
-	projection, state := requirementWindow(session.Requirements, query)
-	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number("2"), "snapshotId": session.SnapshotID, "state": state})
-}
-
-func requirementWindow(requirements []any, query projectionQuery) (map[string]any, string) {
-	start := min(query.Offset, len(requirements))
-	end := min(start+query.MaxRecords, len(requirements))
-	selected := append([]any{}, requirements[start:end]...)
-	state := "complete"
-	if start > 0 || end < len(requirements) {
-		state = "partial_with_omissions"
-	}
-	return map[string]any{"authority": "lookup_fragment_only", "availableRequirementCount": len(requirements), "omittedRequirementCount": len(requirements) - len(selected), "projectionKind": "proofkit.requirement-browser-requirement-fragment", "requirements": selected, "selectedRequirementCount": len(selected)}, state
+	serveWorkspaceJSONBytes(response, request.Method, body)
 }
 
 func serveWorkspaceQuery(response http.ResponseWriter, request *http.Request, expectedOrigin, capability string, session *workspaceSession) {
@@ -543,6 +555,10 @@ func serveWorkspaceJSON(response http.ResponseWriter, method string, value any) 
 		response.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	serveWorkspaceJSONBytes(response, method, body)
+}
+
+func serveWorkspaceJSONBytes(response http.ResponseWriter, method string, body []byte) {
 	response.Header().Set("cache-control", "no-store")
 	response.Header().Set("content-type", "application/json; charset=utf-8")
 	setWorkspaceSecurityHeaders(response)

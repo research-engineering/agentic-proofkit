@@ -194,20 +194,15 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.repository-transaction.bound-terminal-replay", Summary: "New terminal receipts use schema v2 to bind each completed transaction to its exact desired-state identity. Legacy schema-v1 receipts remain readable and recoverable, but cannot authorize acknowledgement replay; a newly reviewed plan is required. Roots containing v2 receipts are not compatible with older binaries."},
-}
+var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.agent-integration.managed-lifecycle", Summary: "Add explicit integration plan, apply and recover routes for reviewed install, update and removal of the selected tool bootstrap. Preserve local edits and neighboring instructions with one native two-target transaction and a cooperative baseline."},
-	{ChangeID: "proofkit.repository-transaction.desired-absence", Summary: "Support exact desired absence, guarded deletion and recovery through versioned native journals while preserving present-only v1 bytes and identities. Bind idempotent current-state replay to the pending-state and retained-result checks under one native lock."},
-	{ChangeID: "proofkit.repository-transaction.recovery-observation", Summary: "Preserve operational target-observation failures through recovery and both CLI consumers instead of presenting them as observed state mismatches. Keep target and control state unchanged on pre-effect refusal, including temporary-journal publication, and retain cleanup outcomes after the final committed effect."},
+	{ChangeID: "proofkit.browser.lookup", Summary: "Search and filter the complete admitted requirement cohort before bounded paging, navigate ordered specification children, and preserve original source anchors and exact omission counts without loading the full snapshot into the browser."},
+	{ChangeID: "proofkit.browser.request-recovery", Summary: "Distinguish correction, denied, stale, unavailable and retryable failures. Explicit Retry preserves the failed route, snapshot and complete page query, while superseded requests cannot restore stale content or request authority."},
+	{ChangeID: "proofkit.browser.responsive-shell", Summary: "Add compact Browse and Inspector panels with native modal behavior on smaller viewports, stable keyboard focus, retained question drafts, source-bound Unicode selection and lazy boundary details."},
 }
 
-var currentMigrationSteps = []string{
-	"For an acknowledgement retry backed by a legacy terminal receipt, run adopt materialize plan again and review both current identities before apply; do not reuse the old transaction identity.",
-	"Use this or a later supporting binary for roots containing v2 journals or terminal receipts. Completing recovery does not make retained v2 receipts downgrade-compatible; do not delete private control state as a downgrade shortcut.",
-}
+var currentMigrationSteps = []string{}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -227,7 +222,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.11.0",
+		"# @research-engineering/agentic-proofkit 0.12.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -249,8 +244,7 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"Migration is required:",
-		"",
+		"No consumer migration is required.",
 	)
 	for _, step := range currentMigrationSteps {
 		lines = append(lines, "- "+step)
@@ -273,13 +267,14 @@ func currentExpectedReleaseNotes() string {
 		"- TSX source parsing remains unsupported.",
 		"- Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
 		"- Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts.",
+		"- Browser lookup and navigation are presentation-only fragments, not proof coverage or an external HTTP SDK. Annotations are session-bound; browser controls do not edit specifications or execute agents.",
 		"",
 		"## Install",
 		"",
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.11.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.12.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -291,7 +286,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.10.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.10.1`.",
+		"- Pin npm consumers to the previous admitted version 0.11.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.11.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

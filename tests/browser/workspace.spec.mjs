@@ -1,81 +1,9 @@
-import {expect, test} from "@playwright/test";
+import {expect} from "@playwright/test";
+import {test} from "./workspace-test-harness.mjs";
 
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 
-const workspaceNavigationToken = "proofkit.workspace-navigation.scheduled";
-
-function admittedWorkspaceURL(baseURL) {
-  if (typeof baseURL !== "string") throw new Error("Workspace base URL is unavailable");
-  const url = new URL(baseURL);
-  if (
-    url.protocol !== "http:"
-    || url.hostname !== "127.0.0.1"
-    || url.port === ""
-    || url.username !== ""
-    || url.password !== ""
-    || url.pathname !== "/"
-    || url.search !== ""
-    || url.hash !== ""
-  ) throw new Error("Workspace base URL is outside the admitted local origin");
-  return url.href;
-}
-
-function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame) {
-  const request = candidate.request();
-  return candidate.url() === workspaceURL
-    && request.isNavigationRequest()
-    && request.frame() === mainFrame;
-}
-
-async function navigateWorkspace(page, workspaceURL, trigger, responseError) {
-  const controller = new AbortController();
-  const mainFrame = page.mainFrame();
-  const responsePromise = page.waitForResponse(
-    (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
-    {signal: controller.signal},
-  );
-  try {
-    const token = await trigger(workspaceNavigationToken);
-    if (token !== workspaceNavigationToken) {
-      throw new Error("Workspace navigation trigger token is invalid");
-    }
-    const response = await responsePromise;
-    if (!response.ok()) throw new Error(responseError);
-    await expect(
-      page.getByRole("heading", {name: "browser.fixture.workspace", exact: true}),
-    ).toBeVisible();
-  } catch (error) {
-    controller.abort();
-    await responsePromise.catch(() => undefined);
-    throw error;
-  }
-}
-
-async function openWorkspace(page, baseURL) {
-  const workspaceURL = admittedWorkspaceURL(baseURL);
-  await navigateWorkspace(
-    page,
-    workspaceURL,
-    (token) => page.evaluate(({target, value}) => {
-      window.setTimeout(() => window.location.assign(target), 0);
-      return value;
-    }, {target: workspaceURL, value: token}),
-    "Workspace navigation did not return a successful response",
-  );
-}
-
-async function reloadWorkspace(page, baseURL) {
-  const workspaceURL = admittedWorkspaceURL(baseURL);
-  await navigateWorkspace(
-    page,
-    workspaceURL,
-    (token) => page.evaluate((value) => {
-      window.setTimeout(() => window.location.reload(), 0);
-      return value;
-    }, token),
-    "Workspace reload did not return a successful response",
-  );
-}
+import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace} from "./workspace-navigation-harness.mjs";
 
 async function expectIdentityOrder(rows, expected) {
   await expect(rows).toHaveCount(expected.length);
@@ -171,7 +99,7 @@ async function expectVisibleTable(table, caption, headers, rows) {
   await expect(table.locator("caption:visible, th:visible, td:visible")).toHaveCount(textCount);
   await expectAllCSS(textElements, {
     opacity: "1",
-    color: "rgb(23, 32, 51)",
+    color: "rgb(32, 37, 34)",
     "font-size": "16px",
     "font-size-adjust": "none",
     "-webkit-text-security": "none",
@@ -186,16 +114,6 @@ async function expectVisibleTable(table, caption, headers, rows) {
     "transition-delay": "0s",
   });
 }
-
-test.beforeEach(async ({browser, browserName, channel, connectOptions, launchOptions}, testInfo) => {
-  testInfo.annotations.push({type: "proofkit.browser-engine", description: browserName});
-  testInfo.annotations.push({type: "proofkit.browser-version", description: browser.version()});
-  expect(browserName).toBe(testInfo.project.name);
-  expect(channel).toBeUndefined();
-  expect(connectOptions).toBeUndefined();
-  expect(launchOptions.channel).toBeUndefined();
-  expect(launchOptions.executablePath).toBeUndefined();
-});
 
 const axeTest = test.extend({
   axePage: async ({page}, use) => {
@@ -236,7 +154,7 @@ const workspaceStateMatrix = [
     setup: async (page, baseURL) => {
       await page.route("**/api/v1/manifest", (route) => route.fulfill({status: 503, contentType: "application/json", body: '{"error":"secret-internal-detail"}'}));
       await openWorkspace(page, baseURL);
-      await expect(page.getByRole("alert")).toContainText("The admitted workspace could not be loaded.");
+      await expect(page.getByRole("alert")).toContainText("The workspace could not be reached. Try this request again.");
       await expect(page.getByRole("alert")).not.toContainText("secret-internal-detail");
     },
     packetState: "empty",
@@ -365,7 +283,7 @@ const workspaceStateMatrix = [
     setup: async (page, baseURL) => {
       await page.route("**/api/v1/requirements", (route) => route.fulfill({status: 500, contentType: "application/json", body: '{"error":"secret-view-detail"}'}));
       await openWorkspace(page, baseURL);
-      await expect(page.getByRole("alert")).toContainText("The admitted workspace view could not be loaded.");
+      await expect(page.getByRole("alert")).toContainText("The workspace could not be reached. Try this request again.");
       await expect(page.getByRole("alert")).not.toContainText("secret-view-detail");
     },
     packetState: "empty",
@@ -612,7 +530,7 @@ for (const mismatch of [
     await openWorkspace(page, baseURL);
     await expect(page.locator("body")).toHaveAttribute("data-state", "view-failed");
     await expect(page.locator("#workspace-content")).toHaveAttribute("aria-busy", "false");
-    await expect(page.getByRole("alert")).toHaveText("The admitted workspace view could not be loaded.");
+    await expect(page.getByRole("alert")).toHaveText("The admitted workspace is unavailable.");
     await expect(page.getByRole("alert")).not.toContainText(mismatch.value);
   });
 }
@@ -675,6 +593,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
   await expect(workspaceAuthority).toContainText("do not prove receipt freshness");
 
   const requirementBoundary = page.getByLabel("Boundary for REQ-CONSUMER-001");
+  await requirementBoundary.locator("summary").click();
   await expect(requirementBoundary).toContainText("Owner: browser.fixture.owner");
   await expect(requirementBoundary).toContainText("Claim level: blocking");
   await expect(requirementBoundary).toContainText("Fixture requirements do not approve merge");
@@ -687,12 +606,11 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
   await specificationsView.focus();
   await page.keyboard.press("Tab");
   if (browserName === "webkit") {
-    const question = page.getByRole("textbox", {name: "Question"});
-    if (await question.evaluate((element) => element === document.activeElement)) {
+    const authoritySummary = page.locator("#workspace-authority > summary");
+    if (await authoritySummary.evaluate((element) => element === document.activeElement)) {
       // Playwright WebKit follows the macOS preference that Tab visits
-      // text-entry controls while Option-Tab includes all native controls.
-      await page.keyboard.press("Shift+Tab");
-      await expect(question).not.toBeFocused();
+      // selected native control kinds; Option-Tab includes all controls.
+      await expect(authoritySummary).toBeFocused();
       await specificationsView.focus();
       await page.keyboard.press("Alt+Tab");
       await expect(diffView).toBeFocused();
@@ -891,7 +809,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         display: /^(?:inline|block)$/,
         visibility: "visible",
         opacity: "1",
-        stroke: "rgb(23, 32, 51)",
+        stroke: "rgb(32, 37, 34)",
         "stroke-opacity": "1",
         "stroke-width": "1.5px",
         "stroke-dasharray": "none",
@@ -942,9 +860,9 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         display: /^(?:inline|block)$/,
         visibility: "visible",
         opacity: "1",
-        fill: "rgb(242, 244, 247)",
+        fill: "rgb(245, 246, 245)",
         "fill-opacity": "1",
-        stroke: "rgb(102, 112, 133)",
+        stroke: "rgb(119, 134, 125)",
         "stroke-opacity": "1",
         x: `${position.x}px`,
         y: `${position.y}px`,
@@ -957,7 +875,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         display: /^(?:inline|block)$/,
         visibility: "visible",
         opacity: "1",
-        fill: "rgb(23, 32, 51)",
+        fill: "rgb(32, 37, 34)",
         "fill-opacity": "1",
         "font-size": "13px",
         "font-size-adjust": "none",
@@ -1163,8 +1081,8 @@ for (const unavailableView of [
     await disableOptionalViews(page);
     await page.addInitScript(() => {
       const nativeFetch = globalThis.fetch.bind(globalThis);
-      globalThis.AbortController = class {
-        signal = {aborted: false, addEventListener() {}};
+      const NativeAbortController = globalThis.AbortController;
+      globalThis.AbortController = class extends NativeAbortController {
         abort() {}
       };
       globalThis.__proofkitLateResponse = {consumed: false, release: undefined, started: false};
@@ -1175,20 +1093,20 @@ for (const unavailableView of [
         const {signal: _ignored, ...nonCooperativeInit} = init;
         const response = await nativeFetch(input, nonCooperativeInit);
         await new Promise((resolve) => { globalThis.__proofkitLateResponse.release = resolve; });
-        return {
-          ok: response.ok,
-          status: response.status,
-          async json() {
-            const value = await response.json();
+        for (const method of ["text", "json"]) {
+          const readBody = response[method].bind(response);
+          response[method] = async () => {
+            const value = await readBody();
             setTimeout(() => { globalThis.__proofkitLateResponse.consumed = true; }, 0);
             return value;
-          },
-        };
+          };
+        }
+        return response;
       };
     });
 
     await openWorkspace(page, baseURL);
-    await page.waitForFunction(() => globalThis.__proofkitLateResponse?.started === true);
+    await page.waitForFunction(() => typeof globalThis.__proofkitLateResponse?.release === "function");
     await page.getByRole("button", {name: unavailableView.button}).click();
     await expect(page.getByRole("heading", {name: unavailableView.heading})).toBeVisible();
     await expect(page.locator("#workspace-content [role=status]")).toHaveAttribute("data-state", "unavailable");
@@ -1265,10 +1183,11 @@ async function assertHandoffPacketTabOrder(page, packetRegion) {
   expect(await packet.getAttribute("tabindex")).toBeNull();
   expect(await packet.evaluate((element) => element.tabIndex)).toBe(-1);
   const submit = page.getByRole("button", {name: "Create handoff packet"});
-  await submit.focus();
+  const focusOwner = await submit.isDisabled() ? page.getByRole("textbox", {name: "Question"}) : submit;
+  await focusOwner.focus();
   await page.keyboard.press("Tab");
   await expect(packet).not.toBeFocused();
-  await submit.focus();
+  await focusOwner.focus();
   await page.keyboard.press("Shift+Tab");
   await expect(packet).not.toBeFocused();
 }
@@ -1306,7 +1225,9 @@ function withAxeOutcome(result, outcome, ruleId, target) {
 }
 
 async function assertReflow(page, row) {
+  const previousViewport = page.viewportSize();
   await page.setViewportSize({width: 320, height: 800});
+  if (row.heading === "Handoff packet") await page.getByRole("button", {name: "Toggle question inspector"}).click();
   await assertWorkspaceState(page, row);
   const result = await page.evaluate(() => {
     const documentOverflow = document.documentElement.scrollWidth - document.documentElement.clientWidth;
@@ -1321,14 +1242,33 @@ async function assertReflow(page, row) {
         scrollWidth: element.scrollWidth,
         tagName: element.tagName,
       }));
-    return {documentOverflow, internal};
+    const viewTitles = [...document.querySelectorAll(".view-controls button")].map(button => {
+      const lines = new Set();
+      const walker = document.createTreeWalker(button, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        if (!walker.currentNode.textContent.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(walker.currentNode);
+        for (const rect of range.getClientRects()) {
+          if (rect.width > 0 && rect.height > 0) lines.add(rect.top);
+        }
+      }
+      return {title: button.textContent.trim(), lines: lines.size};
+    });
+    return {documentOverflow, internal, viewTitles};
   });
   expect(result.documentOverflow).toBeLessThanOrEqual(1);
+  expect(result.viewTitles).toEqual([
+    {title: "Specifications", lines: 1}, {title: "Diff", lines: 1}, {title: "Traceability", lines: 1},
+  ]);
   const unlabelledOverflow = result.internal.filter((viewport) =>
     !["graph-viewport", "table-viewport"].includes(viewport.className) ||
     viewport.role !== "region" ||
     !viewport.label);
   expect(unlabelledOverflow).toEqual([]);
+  await page.setViewportSize(previousViewport);
+  await expect(page.locator("#workspace-inspector")).toBeVisible();
+  await expect(page.locator("#workspace-navigation")).toBeVisible();
 }
 
 async function assertRenderedContrast(page, row) {
@@ -1371,7 +1311,7 @@ async function assertRenderedContrast(page, row) {
         const second = luminance(right);
         return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
       };
-      const controls = [document.querySelector("#submit-question"), document.querySelector("[data-view]:not([disabled])")]
+      const controls = [document.querySelector("#annotation-question"), document.querySelector("#submit-question:not([disabled])"), document.querySelector("[data-view]:not([disabled])")]
         .filter((element, index, values) => element instanceof HTMLElement && values.indexOf(element) === index);
       const values = [];
       for (const control of controls) {
