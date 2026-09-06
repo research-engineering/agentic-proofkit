@@ -1,21 +1,21 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.11.0",
-  "version": "0.12.0",
+  "previousVersion": "0.12.0",
+  "version": "0.13.0",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.browser.lookup",
-      "summary": "Search and filter the complete admitted requirement cohort before bounded paging, navigate ordered specification children, and preserve original source anchors and exact omission counts without loading the full snapshot into the browser."
+      "changeId": "proofkit.browser.coverage-inspection",
+      "summary": "Inspect compact or structured coverage beside original source-bound requirements, distinguish missing evidence from reported verdicts, preserve complete evidence and non-claims in disclosures, and ask an explicit evidence question without replacing an existing draft."
     },
     {
-      "changeId": "proofkit.browser.request-recovery",
-      "summary": "Distinguish correction, denied, stale, unavailable and retryable failures. Explicit Retry preserves the failed route, snapshot and complete page query, while superseded requests cannot restore stale content or request authority."
+      "changeId": "proofkit.browser.diff-and-graph-inspection",
+      "summary": "Show exact diff-page class, entity, risk and lifecycle counts. Inspect a bounded traceability diagram and equivalent records with local evidence-plane and neighborhood filters, preserved directed relations, exact numeric source coordinates, explicit outside-page references and deliberate target-page navigation."
     },
     {
-      "changeId": "proofkit.browser.responsive-shell",
-      "summary": "Add compact Browse and Inspector panels with native modal behavior on smaller viewports, stable keyboard focus, retained question drafts, source-bound Unicode selection and lazy boundary details."
+      "changeId": "proofkit.browser.handoff-inspection",
+      "summary": "Preview included source-bound handoff context by stable requirement identity and explicitly copy or download the exact compact server JSON. Obsolete view or clipboard results cannot replace current output; independent pending exclusion and denied or stale request locks survive settlement, with one workspace reload action for a stale session."
     }
   ],
   "migration": {
@@ -36,7 +36,7 @@
     "TSX source parsing remains unsupported.",
     "Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
     "Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts.",
-    "Browser lookup and navigation are presentation-only fragments, not proof coverage or an external HTTP SDK. Annotations are session-bound; browser controls do not edit specifications or execute agents."
+    "Browser lookup, coverage, diff and graph fragments are derived presentation, not authenticated evidence, proof execution or an external HTTP SDK. Local graph filters apply only to the returned page; absent coverage is not a verdict. Exact numeric observation requires native JSON source-token and raw-value support; unsupported clients show unavailable instead of rounded coordinates. Annotations are session-bound and exported bytes are not revoked by later navigation; browser controls do not edit specifications or execute agents."
   ],
   "rollback": {
     "strategy": "previous_admitted_version"

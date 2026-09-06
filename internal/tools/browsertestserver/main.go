@@ -20,6 +20,16 @@ func main() {
 		build = browserfixture.PagingWorkspace
 	} else if len(os.Args) == 2 && os.Args[1] == "--capacity" {
 		build = browserfixture.CapacityWorkspace
+	} else if len(os.Args) == 2 && os.Args[1] == "--graph-capacity" {
+		build = browserfixture.GraphCapacityWorkspace
+	} else if len(os.Args) == 2 && os.Args[1] == "--graph-numeric" {
+		build = browserfixture.GraphNumericWorkspace
+	} else if len(os.Args) == 2 && os.Args[1] == "--coverage-compact" {
+		build = func() (map[string]any, error) { return browserfixture.CoverageWorkspace("compact", false) }
+	} else if len(os.Args) == 2 && os.Args[1] == "--coverage-structured" {
+		build = func() (map[string]any, error) { return browserfixture.CoverageWorkspace("structured", false) }
+	} else if len(os.Args) == 2 && os.Args[1] == "--coverage-empty" {
+		build = func() (map[string]any, error) { return browserfixture.CoverageWorkspace("compact", true) }
 	} else if len(os.Args) != 1 {
 		fatal(errors.New("unsupported browser fixture selector"))
 	}

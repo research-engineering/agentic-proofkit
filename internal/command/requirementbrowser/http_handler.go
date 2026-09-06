@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
@@ -65,8 +66,18 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 			serveWorkspaceAsset(response, method, workspacePanelsJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace-requests.js":
 			serveWorkspaceAsset(response, method, workspaceRequestsJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-json.js":
+			serveWorkspaceAsset(response, method, workspaceJSONJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace-navigation.js":
 			serveWorkspaceAsset(response, method, workspaceNavigationJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-coverage.js":
+			serveWorkspaceAsset(response, method, workspaceCoverageJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-diff.js":
+			serveWorkspaceAsset(response, method, workspaceDiffJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-graph.js":
+			serveWorkspaceAsset(response, method, workspaceGraphJavaScript, "text/javascript; charset=utf-8")
+		case "/assets/workspace-handoff.js":
+			serveWorkspaceAsset(response, method, workspaceHandoffJavaScript, "text/javascript; charset=utf-8")
 		case "/assets/workspace.css":
 			serveWorkspaceAsset(response, method, workspaceCSS, "text/css; charset=utf-8")
 		case "/api/v1/manifest":
@@ -89,7 +100,7 @@ func browserHandler(view string, rendered renderedView, expectedAuthority, capab
 			}
 			defer releaseWorkspaceRequest(workspaceRequests)
 			serveWorkspaceQuery(response, request, expectedOrigin, capability, rendered.workspace)
-		case "/api/v1/requirements", "/api/v1/navigation":
+		case "/api/v1/requirements", "/api/v1/navigation", "/api/v1/coverage":
 			if method != http.MethodPost {
 				methodNotAllowed(response, method, "POST")
 				return
@@ -171,7 +182,15 @@ func serveWorkspaceRequirements(response http.ResponseWriter, request *http.Requ
 			writeAPIError(response, request.Method, queryErr)
 			return
 		}
-		page = workspaceLookupPage(session.Lookup, query)
+		if request.URL.Path == "/api/v1/coverage" {
+			if session.Snapshot.Coverage == nil {
+				response.WriteHeader(http.StatusNotFound)
+				return
+			}
+			page = workspaceCoveragePage(session, query)
+		} else {
+			page = workspaceLookupPage(session.Lookup, query)
+		}
 	}
 	body, err := page.encode(requestID, session.SnapshotID, maxWorkspaceLookupResponseBytes)
 	if err != nil {
@@ -356,10 +375,25 @@ func graphWindow(full map[string]any, query projectionQuery) (map[string]any, st
 		selectedIDs[edge["toNodeId"].(string)] = struct{}{}
 	}
 	selectedNodes := make([]any, 0, len(selectedIDs))
-	for _, raw := range nodes {
-		if _, ok := selectedIDs[raw.(map[string]any)["nodeId"].(string)]; ok {
+	targetOffsets := make(map[string]int, len(nodes))
+	for offset, raw := range nodes {
+		id := raw.(map[string]any)["nodeId"].(string)
+		targetOffsets[id] = offset
+		if _, ok := selectedIDs[id]; ok {
 			selectedNodes = append(selectedNodes, raw)
 		}
+	}
+	references := []any{}
+	for _, ref := range requirementgraph.NodeReferences(selectedNodes, selectedEdges) {
+		disposition := "outside_page"
+		if _, included := selectedIDs[ref.TargetNodeID]; included {
+			disposition = "included"
+		}
+		references = append(references, map[string]any{
+			"disposition": disposition, "field": ref.Field, "recordId": ref.RecordID,
+			"recordKind": ref.RecordKind, "targetNodeId": ref.TargetNodeID,
+			"targetOffset": targetOffsets[ref.TargetNodeID],
+		})
 	}
 	availableEdges := len(full["edges"].([]any))
 	omittedNodes := len(nodes) - len(selectedNodes)
@@ -384,7 +418,9 @@ func graphWindow(full map[string]any, query projectionQuery) (map[string]any, st
 		"omittedNodeCount":           omittedNodes,
 		"omittedPrimaryNodeCount":    omittedPrimaryNodes,
 		"primaryNodeCount":           len(primaryNodes),
+		"primaryNodeIds":             workspaceSortedSet(primaryIDs),
 		"projectionKind":             "proofkit.requirement-traceability-graph-fragment",
+		"references":                 references,
 		"selectedEdgeCount":          len(selectedEdges),
 		"selectedNodeCount":          len(selectedNodes),
 		"sourceGraphId":              full["graphId"],
@@ -490,13 +526,18 @@ func serveHandoff(response http.ResponseWriter, request *http.Request, expectedO
 		writeBody(response, request.Method, []byte("invalid handoff\n"))
 		return
 	}
+	body, err := stablejson.MarshalLayout(packet, stablejson.LayoutCompact)
+	if err != nil {
+		response.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	if oneShot {
 		if !terminal.TryCommit(packet) {
 			response.WriteHeader(http.StatusConflict)
 			return
 		}
 	}
-	serveWorkspaceJSON(response, request.Method, packet)
+	serveWorkspaceJSONBytes(response, request.Method, body)
 }
 
 func browserCapability() (string, error) {

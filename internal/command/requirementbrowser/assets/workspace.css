@@ -94,6 +94,8 @@ article h3 { font-family: ui-monospace, monospace; color: var(--muted-text); fon
 [data-anchor-id] { font-size: 1.0625rem; line-height: 1.65; margin: .75rem 0; max-inline-size: 75ch; }
 .requirement-boundary { margin: .75rem 0; color: var(--muted-text); font-size: .8125rem; }
 .page-summary { font-size: .8125rem; color: var(--muted-text); }
+details.projection-boundary { margin-block: 1rem; color: var(--muted-text); font-size: .8125rem; }
+details.projection-boundary > summary { min-block-size: 2.75rem; padding-block: .625rem; }
 .workspace-panel {
   position: sticky;
   top: 4.25rem;
@@ -128,15 +130,48 @@ article h3 { font-family: ui-monospace, monospace; color: var(--muted-text); fon
 #submit-question { margin-top: .75rem; }
 #handoff-status { font-size: .8125rem; }
 #handoff-packet { font-size: .75rem; }
+#handoff-output summary { min-block-size: 2.75rem; padding-block: .625rem; }
 pre { margin: 0; max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap; }
 .graph-viewport, .table-viewport { border: 1px solid var(--border); min-width: 0; max-width: 100%; overflow: auto; }
 .graph-viewport { max-height: 42rem; }
 .table-viewport { margin-block: 1rem; }
-.graph-viewport svg { display: block; min-width: 50rem; width: 100%; max-width: none; }
+.graph-canvas { position: relative; }
+.graph-canvas > svg { position: absolute; inset: 0; pointer-events: none; }
+.graph-plane-heading { position: absolute; top: 0; width: 240px; font-size: .8125rem; font-weight: 650; }
+.graph-node { position: absolute; width: 240px; height: 96px; display: flex; flex-direction: column; align-items: start; text-align: start; overflow: hidden; }
+.graph-node[data-boundary="true"] { border-style: dashed; }
+.graph-node[data-plane="proof_coverage"] { border-inline-start: 4px solid #77589b; }
+.graph-node[data-plane="code_traceability"] { border-inline-start: 4px solid #387080; }
+.graph-node[data-plane="native_execution_coverage"] { border-inline-start: 4px solid #8a681a; }
+.graph-node-label, .graph-node-identity { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; max-width: 100%; }
+.graph-node-identity { color: var(--muted-text); font-size: .75rem; }
+.graph-filters { display: flex; flex-wrap: wrap; gap: .5rem 1rem; border: 0; padding: 0; margin: 1rem 0; }
+.graph-filters legend { font-size: .875rem; font-weight: 650; }
+.graph-filters label { display: inline-flex; align-items: center; gap: .5rem; min-height: 2.75rem; margin: 0; }
+.graph-filters input { width: 1.125rem; height: 1.125rem; min-height: 0; flex: 0 0 1.125rem; }
+.graph-records { margin-block: 1rem; }
+.graph-records ul, .graph-inspector ul { list-style: none; padding: 0; }
+.graph-records li, .graph-inspector li { margin-block: .5rem; }
+.graph-records [data-graph-select] { display: flex; flex-direction: column; align-items: start; width: 100%; text-align: start; }
+.graph-record-fields, .coverage-state { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: .25rem .75rem; font-size: .8125rem; }
+dt { font-weight: 600; overflow-wrap: anywhere; }
+dd { margin: 0; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.graph-reference { max-width: 100%; margin-block: .25rem; text-align: start; }
+.graph-inspector { border-block: 1px solid var(--border); margin-block: 1rem; }
+.caller-text { unicode-bidi: plaintext; overflow-wrap: anywhere; }
+.coverage-matrix { list-style: none; padding: 0; margin: 0; }
+.coverage-record { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: .5rem 1rem; }
+.coverage-actions, .coverage-details { grid-column: 1 / -1; }
+.coverage-details details { margin-block: .5rem; }
+.coverage-details pre { margin-top: .5rem; font-size: .8125rem; }
+.diff-class-counts { display: flex; flex-wrap: wrap; gap: .5rem 1rem; list-style: none; padding: 0; font-size: .8125rem; }
+.handoff-export-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+#handoff-preview article h4 { margin-block: .5rem; font-size: .8125rem; }
+#handoff-preview p, #handoff-preview li, #handoff-preview blockquote { font-size: .8125rem; }
+#handoff-preview blockquote { margin-inline: 0; border-inline-start: 2px solid var(--border); padding-inline-start: .75rem; }
 [data-select-anchor][aria-pressed="true"] { outline: 3px solid var(--focus); outline-offset: 2px; }
-.graph-viewport svg rect { fill: var(--surface); stroke: var(--border); }
 .graph-viewport svg line { stroke: var(--text); stroke-width: 1.5; }
-.graph-viewport svg text { fill: var(--text); font-size: 13px; }
+.graph-viewport svg path { fill: var(--text); }
 table { border-collapse: collapse; min-width: 100%; width: max-content; }
 th, td { border: 1px solid var(--border); max-width: 24rem; padding: .5rem; text-align: left; }
 
@@ -163,12 +198,16 @@ th, td { border: 1px solid var(--border); max-width: 24rem; padding: .5rem; text
     max-width: calc(100% - 1rem);
     height: 100dvh;
     max-height: 100dvh;
-    padding: 1rem;
+    padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
   }
   #workspace-inspector { inset: 0 0 0 auto; }
   .workspace-panel::backdrop { background: #00000080; }
   .view-controls button { flex: 1 1 auto; min-width: 0; padding: .5rem .375rem; }
   .view-controls .workspace-icon { display: none; }
+}
+@media (max-width: 48rem) {
+  .graph-viewport { display: none; }
+  .coverage-record { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto; }
@@ -176,7 +215,6 @@ th, td { border: 1px solid var(--border); max-width: 24rem; padding: .5rem; text
 @media (forced-colors: active) {
   .product-bar, .workspace-panel, article, button, input, select, textarea, .graph-viewport, .table-viewport, th, td { border-color: CanvasText; }
   button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible, [data-select-anchor][aria-pressed="true"] { outline-color: Highlight; }
-  .graph-viewport svg rect { fill: Canvas; stroke: CanvasText; }
   .graph-viewport svg line { stroke: CanvasText; }
-  .graph-viewport svg text { fill: CanvasText; }
+  .graph-viewport svg path { fill: CanvasText; }
 }

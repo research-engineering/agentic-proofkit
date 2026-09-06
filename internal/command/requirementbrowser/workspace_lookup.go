@@ -207,9 +207,12 @@ func (row workspaceRequirement) value() map[string]any {
 }
 
 func workspaceLookupPage(index workspaceLookupIndex, query workspaceLookupQuery) workspacePage {
-	matches := index.matchingRequirements(query)
+	return workspaceRequirementPage(index, index.matchingRequirements(query), query.Page)
+}
+
+func workspaceRequirementPage(index workspaceLookupIndex, matches []int, query projectionQuery) workspacePage {
 	return workspacePage{
-		Count: len(matches), Offset: query.Page.Offset, Limit: query.Page.MaxRecords, RowsKey: "requirements",
+		Count: len(matches), Offset: query.Offset, Limit: query.MaxRecords, RowsKey: "requirements",
 		Row: func(position int) map[string]any { return index.Rows[matches[position]].value() },
 		Projection: func(rows []any) (map[string]any, string) {
 			state := "complete"

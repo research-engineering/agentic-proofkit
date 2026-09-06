@@ -85,7 +85,8 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 	}
 	manifest := map[string]any{
 		"authority":              "presentation_adapter",
-		"availableViews":         []any{"specifications", "diff", "graph"},
+		"availableViews":         []any{"specifications", "coverage", "diff", "graph"},
+		"coverageAvailable":      snapshot.Coverage != nil,
 		"diffAvailable":          diff != nil,
 		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
 		"graphAvailable":         graph != nil,
@@ -211,12 +212,12 @@ func workspaceHTML(workspaceID string) string {
 <button id="reset-filters" type="button" data-protected-request disabled>Reset filters</button></form>
 <section id="selected-scope" aria-label="Selected specification scope"></section><h3>Specification hierarchy</h3><button id="all-requirements" type="button" data-protected-request disabled>All requirements</button>
 <div id="spec-navigation" aria-live="polite"></div></dialog>
-<main><nav class="view-controls" aria-label="Workspace views"><button type="button" data-view="specifications" data-protected-request data-icon="file-text" disabled>Specifications</button><button type="button" data-view="diff" data-protected-request data-icon="git-compare-arrows" disabled>Diff</button><button type="button" data-view="graph" data-protected-request data-icon="network" disabled>Traceability</button></nav>
+<main><nav class="view-controls" aria-label="Workspace views"><button type="button" data-view="specifications" data-protected-request data-icon="file-text" disabled>Specifications</button><button type="button" data-view="coverage" data-protected-request data-icon="check" disabled>Coverage</button><button type="button" data-view="diff" data-protected-request data-icon="git-compare-arrows" disabled>Diff</button><button type="button" data-view="graph" data-protected-request data-icon="network" disabled>Traceability</button></nav>
 <details id="workspace-authority" aria-label="Authority boundary"><summary data-icon="info">Derived view</summary><h2>Authority boundary</h2><p data-authority>Loading admitted authority...</p><ul data-non-claims></ul></details>
 <section id="workspace-content" aria-busy="true"><h2>Loading workspace</h2><p role="status" aria-live="polite">Loading admitted manifest...</p></section></main>
 <dialog id="workspace-inspector" class="workspace-panel" aria-labelledby="inspector-heading"><div class="panel-heading"><h2 id="inspector-heading">Ask about selection</h2><button class="icon-button" type="button" data-close-panel data-icon="x" aria-label="Close inspector" title="Close inspector"></button></div>
 <h3>Selected source text</h3><ul id="selected-context" aria-label="Selected source text"></ul><button id="clear-selection" class="icon-button" type="button" data-icon="x" aria-label="Clear selection" title="Clear selection" disabled></button>
-<label for="annotation-question">Question</label><textarea id="annotation-question" maxlength="4096"></textarea><button id="submit-question" type="button" data-protected-request data-icon="message-square" disabled>Create handoff packet</button><p id="handoff-status" role="status" aria-live="polite"></p><section id="handoff-output" aria-labelledby="handoff-packet-heading"><h3 id="handoff-packet-heading">Handoff packet</h3><pre id="handoff-packet"></pre></section></dialog>`,
+<label for="annotation-question">Question</label><textarea id="annotation-question" maxlength="4096"></textarea><button id="submit-question" type="button" data-protected-request data-icon="message-square" disabled>Create handoff packet</button><p id="handoff-status" role="status" aria-live="polite"></p><section id="handoff-output" aria-labelledby="handoff-packet-heading"><h3 id="handoff-packet-heading">Handoff packet</h3><div id="handoff-preview"></div><details><summary>Exact JSON</summary><pre id="handoff-packet"></pre></details></section></dialog>`,
 		"<script type=\"module\" src=\"/assets/workspace.js\"></script></body></html>\n",
 	}, "")
 }

@@ -82,7 +82,7 @@ func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing
 	}
 	body, _ := io.ReadAll(handoffResponse.Body)
 	_ = handoffResponse.Body.Close()
-	if handoffResponse.StatusCode != http.StatusOK || !bytes.Contains(body, []byte(`"handoffKind": "proofkit.requirement-browser-question"`)) {
+	if handoffResponse.StatusCode != http.StatusOK || bytes.Count(body, []byte("\n")) != 1 || body[len(body)-1] != '\n' {
 		t.Fatalf("handoff status=%d body=%s", handoffResponse.StatusCode, body)
 	}
 	packet, err := admission.DecodeJSON(bytes.NewReader(body), int64(len(body)))
@@ -90,6 +90,9 @@ func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing
 		t.Fatal(err)
 	}
 	packetRecord := packet.(map[string]any)
+	if packetRecord["handoffKind"] != "proofkit.requirement-browser-question" {
+		t.Fatal("compact handoff lost its owner identity")
+	}
 	annotation := packetRecord["annotations"].([]any)[0].(map[string]any)
 	anchor := annotation["anchor"].(map[string]any)
 	if anchor["jsonPointer"] != "/projections/requirementSources/0/requirements/0/invariant" || anchor["sourceDigest"] != "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" || packetRecord["snapshotRefs"].([]any)[0].(map[string]any)["snapshotId"] != handle.SnapshotID {

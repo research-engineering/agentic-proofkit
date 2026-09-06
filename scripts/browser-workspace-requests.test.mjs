@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import {createServer} from "node:http";
 import test from "node:test";
 
-import {fetchWorkspaceJSON, workspaceFailure, WorkspaceRequestError} from "../internal/command/requirementbrowser/assets/workspace-requests.js";
+import {fetchWorkspaceJSON, fetchWorkspaceResponse, workspaceFailure, WorkspaceRequestError} from "../internal/command/requirementbrowser/assets/workspace-requests.js";
+import {workspaceScalarText} from "../internal/command/requirementbrowser/assets/workspace-json.js";
 
 async function endpoint(t, respond) {
   const received = Promise.withResolvers();
@@ -77,6 +78,20 @@ test("a successful complete JSON body retains its admitted value", async t => {
   assert.deepEqual(await fetchWorkspaceJSON(fixture.url, {}), {requestId: "request.example", rows: [1]});
 });
 
+test("the raw response carrier preserves exact numeric and escaped JSON bytes", async t => {
+  const body = '{"number":9007199254740993,"escaped":"\\u0061","text":"\\u{1F642}"}\n'.replace("\\u{1F642}", "\\ud83d\\ude42");
+  let calls = 0;
+  const fixture = await endpoint(t, response => {
+    calls++;
+    response.writeHead(200, {"Content-Type": "application/json"});
+    response.end(body);
+  });
+  const result = await fetchWorkspaceResponse(fixture.url, {});
+  assert.equal(result.text, body);
+  assert.notEqual(JSON.stringify(result.value) + "\n", body);
+  assert.equal(calls, 1);
+});
+
 test("HTTP status owns recovery before an unconsumed malformed body", async t => {
   const fixture = await endpoint(t, response => {
     response.writeHead(409, {"Content-Type": "application/json", "Content-Length": "200"});
@@ -88,4 +103,47 @@ test("HTTP status owns recovery before an unconsumed malformed body", async t =>
   assert.deepEqual(workspaceFailure(error), {
     message: "The workspace snapshot has changed.", action: "reload", lock: true, kind: "stale",
   });
+});
+
+test("HTTP numeric observations retain exact tokens and native scalar branding", async t => {
+  const body = '{"start":9007199254740992,"end":9007199254740993,"safe":9007199254740991,"zero":0,"string":"9007199254740993","nested":[1.0000000000000001,1e-400,-0,1e400,-9007199254740993,0.123456789012345678901],"unbranded":{"rawJSON":"17"}}';
+  const fixture = await endpoint(t, response => response.end(body));
+  const {value, text} = await fetchWorkspaceResponse(fixture.url, {});
+  assert.equal(text, body);
+  assert.equal(JSON.stringify(value), body);
+  assert.equal(workspaceScalarText(value.start), "9007199254740992");
+  assert.equal(workspaceScalarText(value.end), "9007199254740993");
+  assert.equal(value.safe, 9007199254740991);
+  assert.equal(value.zero, 0);
+  assert.equal(typeof value.string, "string");
+  assert.equal(value.string, "9007199254740993");
+  assert.equal(JSON.isRawJSON(value.unbranded), false);
+  assert.equal(workspaceScalarText(value.unbranded), "[object Object]");
+  for (const raw of [value.start, value.end, ...value.nested]) {
+    assert.equal(JSON.isRawJSON(raw), true);
+    assert.equal(Object.isFrozen(raw), true);
+    assert.equal(Object.getPrototypeOf(raw), null);
+  }
+});
+
+test("missing native numeric factories fail closed without a rounded success", async t => {
+  const fixture = await endpoint(t, response => response.end("9007199254740993"));
+  for (const name of ["rawJSON", "isRawJSON"]) {
+    const descriptor = Object.getOwnPropertyDescriptor(JSON, name);
+    assert(descriptor);
+    try {
+      Object.defineProperty(JSON, name, {...descriptor, value: undefined});
+      const error = await fetchWorkspaceJSON(fixture.url, {}).catch(error => error);
+      assert(error instanceof SyntaxError);
+      assert.deepEqual(workspaceFailure(error), {message: "The admitted workspace is unavailable.", action: "none", lock: false, kind: "unavailable"});
+    } finally { Object.defineProperty(JSON, name, descriptor); }
+  }
+});
+
+test("missing reviver source context cannot admit rounded numeric observations", async t => {
+  const nativeParse = JSON.parse;
+  t.mock.method(JSON, "parse", (source, reviver) => typeof reviver === "function" ? nativeParse(source, (key, value) => reviver(key, value)) : nativeParse(source, reviver));
+  assert.deepEqual(JSON.parse('{"unrelated":1}'), {unrelated: 1});
+  const fixture = await endpoint(t, response => response.end("1.0000000000000001"));
+  await assert.rejects(fetchWorkspaceJSON(fixture.url, {}), {name: "SyntaxError", message: "Exact numeric observation is unavailable"});
 });

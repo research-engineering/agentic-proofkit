@@ -17,8 +17,23 @@ var workspacePanelsJavaScript []byte
 //go:embed assets/workspace-requests.js
 var workspaceRequestsJavaScript []byte
 
+//go:embed assets/workspace-json.js
+var workspaceJSONJavaScript []byte
+
 //go:embed assets/workspace-navigation.js
 var workspaceNavigationJavaScript []byte
+
+//go:embed assets/workspace-coverage.js
+var workspaceCoverageJavaScript []byte
+
+//go:embed assets/workspace-diff.js
+var workspaceDiffJavaScript []byte
+
+//go:embed assets/workspace-graph.js
+var workspaceGraphJavaScript []byte
+
+//go:embed assets/workspace-handoff.js
+var workspaceHandoffJavaScript []byte
 
 //go:embed assets/workspace.css
 var workspaceCSS []byte

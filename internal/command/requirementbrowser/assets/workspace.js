@@ -4,11 +4,16 @@ import {emptySelectionState, transitionSelection} from "./selection-authority.js
 import {decorateIcons, icon} from "./workspace-icons.js";
 import {initializePanels} from "./workspace-panels.js";
 import {initializeNavigation} from "./workspace-navigation.js";
-import {fetchWorkspaceJSON, workspaceFailure} from "./workspace-requests.js";
+import {fetchWorkspaceJSON, fetchWorkspaceResponse, workspaceFailure} from "./workspace-requests.js";
+import {renderCoveragePage} from "./workspace-coverage.js";
+import {renderDiffPage} from "./workspace-diff.js";
+import {GRAPH_PAGE, renderGraphPage} from "./workspace-graph.js";
+import {initializeHandoffPreview} from "./workspace-handoff.js";
 
 export {};
 
 /** @typedef {import("./selection-authority.js").SelectionTarget} SelectionTarget */
+/** @typedef {"specifications" | "coverage" | "diff" | "graph"} WorkspaceView */
 
 const capabilityElement = document.querySelector('meta[name="proofkit-browser-capability"]');
 if (!(capabilityElement instanceof HTMLMetaElement)) throw new Error("Missing browser capability");
@@ -19,6 +24,9 @@ const headers = {"Content-Type": "application/json", "X-Proofkit-Browser-Capabil
 const contentElement = document.querySelector("#workspace-content");
 if (!(contentElement instanceof HTMLElement)) throw new Error("Missing workspace content region");
 const content = /** @type {HTMLElement} */ (contentElement);
+const recovery = document.createElement("div");
+recovery.id = "workspace-recovery";
+content.before(recovery);
 
 const authorityElement = document.querySelector("#workspace-authority");
 if (!(authorityElement instanceof HTMLElement)) throw new Error("Missing workspace authority boundary");
@@ -36,6 +44,8 @@ let activeViewController = null;
 let selectionState = emptySelectionState();
 let requestsLocked = false;
 let handoffPending = false;
+/** @type {"specifications" | "coverage"} */
+let lookupView = "specifications";
 /** @type {import("./workspace-navigation.js").LookupFilters} */
 let activeFilters = Object.freeze({});
 
@@ -50,7 +60,7 @@ function setWorkspaceState(state) {
   document.body.dataset.state = state;
 }
 
-/** @param {"specifications" | "diff" | "graph"} activeView */
+/** @param {WorkspaceView} activeView */
 function setActiveView(activeView) {
   for (const control of document.querySelectorAll("[data-view]")) {
     if (!(control instanceof HTMLButtonElement)) continue;
@@ -69,12 +79,12 @@ function handoffUnavailable() {
 function reconcileRequestControls() {
   for (const control of document.querySelectorAll("[data-protected-request]")) {
     if (control instanceof HTMLButtonElement || control instanceof HTMLInputElement || control instanceof HTMLSelectElement) {
-      control.disabled = control === submit ? handoffUnavailable() : requestsLocked;
+      control.disabled = control === submit || control.hasAttribute("data-evidence-question") ? handoffUnavailable() : requestsLocked;
     }
   }
 }
 
-/** @param {"specifications" | "diff" | "graph"} state */
+/** @param {WorkspaceView} state */
 function completeContentView(state) {
   reconcileRequestControls();
   content.setAttribute("aria-busy", "false");
@@ -123,54 +133,69 @@ async function post(path, body, signal) {
   return fetchWorkspaceJSON(path, {method: "POST", headers, body: JSON.stringify(body), signal});
 }
 
-/** @param {string} title @param {string} requestPrefix @param {"specifications" | "diff" | "graph"} view */
-function beginView(title, requestPrefix, view) {
+/** @param {string} title @param {string} requestPrefix @param {WorkspaceView} view @param {boolean} [focusContent] */
+function beginView(title, requestPrefix, view, focusContent = false) {
+  const restoreFocus = focusContent || document.activeElement !== null && content.contains(document.activeElement);
   activeViewController?.abort();
   activeViewController = new AbortController();
   const requestId = nextRequestId(requestPrefix);
   activeRequestId = requestId;
   clearSelection();
-  packetView.replaceChildren();
+  handoffPreview.clear();
   setActiveView(view);
   setWorkspaceState(`${view}-loading`);
   content.replaceChildren();
   content.setAttribute("aria-busy", "true");
   const heading = document.createElement("h2");
   heading.textContent = title;
+  heading.tabIndex = -1;
   const status = document.createElement("p");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   status.dataset.state = "loading";
   status.textContent = "Loading admitted data...";
   content.append(heading, status);
-  return {requestId, signal: activeViewController.signal, status};
+  if (restoreFocus) heading.focus();
+  const focusAfterCommit = () => {
+    if (restoreFocus && heading.isConnected && activeRequestId === requestId && (document.activeElement === document.body || document.activeElement === heading)) heading.focus();
+  };
+  return {requestId, signal: activeViewController.signal, status, focusAfterCommit};
+}
+
+/** @param {ReturnType<typeof workspaceFailure>} failure */
+function applyFailureLock(failure) {
+  if (!failure.lock) return;
+  requestsLocked = true;
+  reconcileRequestControls();
+  navigation.cancel();
+  if (failure.action === "reload" && !recovery.hasChildNodes()) {
+    const action = document.createElement("button");
+    action.type = "button";
+    action.title = failure.message;
+    action.append(icon("refresh-cw"), document.createTextNode("Reload workspace"));
+    action.addEventListener("click", () => window.location.reload());
+    recovery.append(action);
+  }
 }
 
 /** @param {unknown} error @param {HTMLElement} container @param {() => void} retry @param {boolean} [optional] */
 function showFailure(error, container, retry, optional = false) {
   const failure = workspaceFailure(error, optional);
-  if (failure.lock) {
-    requestsLocked = true;
-    reconcileRequestControls();
-    navigation.cancel();
-  }
+  applyFailureLock(failure);
   const message = document.createElement("p");
   message.setAttribute("role", "alert");
   message.dataset.state = failure.kind;
   message.textContent = failure.message;
   container.append(message);
-  if (failure.action === "none") return;
+  if (failure.action === "none" || failure.lock) return;
   const action = document.createElement("button");
   action.type = "button";
-  if (failure.action === "retry") {
-    action.dataset.protectedRequest = "";
-    action.disabled = requestsLocked;
-  }
-  action.append(icon("refresh-cw"), document.createTextNode(failure.action === "retry" ? "Retry" : "Reload workspace"));
+  action.dataset.protectedRequest = "";
+  action.disabled = requestsLocked;
+  action.append(icon("refresh-cw"), document.createTextNode("Retry"));
   action.addEventListener("click", () => {
     if (!action.isConnected) return;
-    if (failure.action === "reload") window.location.reload();
-    else if (!requestsLocked) retry();
+    if (!requestsLocked) retry();
   });
   container.append(action);
 }
@@ -196,6 +221,7 @@ function admitCurrentViewResponse(response, requestId, signal) {
 /** @param {number} [offset] @param {import("./workspace-navigation.js").LookupFilters} [filters] @param {number[]} [history] */
 async function renderSpecifications(offset = 0, filters = activeFilters, history = []) {
   if (requestsLocked) return;
+  lookupView = "specifications";
   activeFilters = filters;
   const query = Object.freeze({...filters, maxRecords: 64, offset});
   const {requestId, signal, status} = beginView("Specifications", "browser.specifications", "specifications");
@@ -257,11 +283,46 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
       return;
     }
     content.append(list);
-    appendRequirementPaging(offset, response.projection.selectedRequirementCount ?? 0, response.projection.matchingRequirementCount ?? 0, filters, history);
+    appendRequirementPaging("specifications", offset, response.projection.selectedRequirementCount ?? 0, response.projection.matchingRequirementCount ?? 0, filters, history);
     completeContentView("specifications");
   } catch (error) {
     if (signal.aborted || requestId !== activeRequestId) return;
     failView(status, error, () => void renderSpecifications(offset, filters, history));
+  }
+}
+
+/** @param {number} [offset] @param {import("./workspace-navigation.js").LookupFilters} [filters] @param {number[]} [history] */
+async function renderCoverage(offset = 0, filters = activeFilters, history = []) {
+  if (requestsLocked) return;
+  lookupView = "coverage";
+  activeFilters = filters;
+  const query = Object.freeze({...filters, maxRecords: 64, offset});
+  const {requestId, signal, status} = beginView("Coverage", "browser.coverage", "coverage");
+  if (!manifest.coverageAvailable) {
+    content.setAttribute("aria-busy", "false");
+    setWorkspaceState("coverage-unavailable");
+    status.dataset.state = "unavailable";
+    status.textContent = "No admitted coverage report was supplied.";
+    return;
+  }
+  try {
+    const response = await post("/api/v1/coverage", {requestId, snapshotId: manifest.snapshotId, query}, signal);
+    if (!admitCurrentViewResponse(response, requestId, signal)) return;
+    status.remove();
+    const projection = response.projection;
+    appendProjectionBoundary(projection.coverageAuthority, projection.nonClaims, [`Coverage input: ${projection.sourceViewInputId}.`], true);
+    renderCoveragePage(content, projection, (requirement, opener) => {
+      if (handoffUnavailable()) return;
+      selectionState = transitionSelection(selectionState, {kind: "button", targets: [{anchorId: requirement.anchor.anchorId, exactQuote: requirement.invariant, startCodePoint: 0, endCodePoint: [...requirement.invariant].length}]});
+      announceSelection();
+      if (questionInput.value === "") questionInput.value = `What evidence supports ${requirement.requirementId}?`;
+      panels.showInspector(opener);
+    });
+    appendRequirementPaging("coverage", offset, projection.selectedRequirementCount, projection.matchingRequirementCount, filters, history);
+    completeContentView("coverage");
+  } catch (error) {
+    if (signal.aborted || requestId !== activeRequestId) return;
+    failView(status, error, () => void renderCoverage(offset, filters, history), true);
   }
 }
 
@@ -284,20 +345,7 @@ async function renderDiff(offset = 0) {
       `Base snapshot: ${response.projection.baseSnapshotId} (expected-digest coverage: ${response.projection.baseExpectedDigestCoverage}).`,
       `Current snapshot: ${response.projection.currentSnapshotId} (expected-digest coverage: ${response.projection.currentExpectedDigestCoverage}).`,
     ]);
-    for (const change of response.projection.changes ?? []) {
-      const article = document.createElement("article");
-      article.dataset.changeId = change.changeId;
-      const title = document.createElement("h3");
-      title.textContent = `${change.changeClass}: ${change.entityId}`;
-      const pointer = document.createElement("p");
-      pointer.textContent = change.jsonPointer;
-      const sourceDigests = document.createElement("p");
-      sourceDigests.textContent = `Source digests: ${change.baseSourceDigest ?? "not-recorded"} -> ${change.currentSourceDigest ?? "not-recorded"}`;
-      const values = document.createElement("pre");
-      values.textContent = `${JSON.stringify(change.before, null, 2)}\n->\n${JSON.stringify(change.after, null, 2)}`;
-      article.append(title, pointer, sourceDigests, values);
-      content.append(article);
-    }
+    renderDiffPage(content, response.projection.changes ?? []);
     appendPagingControls("diff", offset, response.projection.selectedChangeCount ?? 0, response.projection.availableChangeCount ?? 0);
     completeContentView("diff");
   } catch (error) {
@@ -306,10 +354,10 @@ async function renderDiff(offset = 0) {
   }
 }
 
-/** @param {number} [offset] */
-async function renderGraph(offset = 0, edgeOffset = 0) {
+/** @param {number} [offset] @param {number} [edgeOffset] @param {string | null} [initialId] */
+async function renderGraph(offset = 0, edgeOffset = 0, initialId = null) {
   if (requestsLocked) return;
-  const {requestId, signal, status} = beginView("Traceability graph", "browser.graph", "graph");
+  const {requestId, signal, status, focusAfterCommit} = beginView("Traceability graph", "browser.graph", "graph", initialId !== null);
   if (!manifest.graphAvailable) {
     content.setAttribute("aria-busy", "false");
     setWorkspaceState("graph-unavailable");
@@ -318,88 +366,36 @@ async function renderGraph(offset = 0, edgeOffset = 0) {
     return;
   }
   try {
-    const response = await post("/api/v1/graph", {requestId, snapshotId: manifest.snapshotId, query: {edgeOffset, maxEdges: 2048, maxRecords: 256, offset}}, signal);
+    const response = await post("/api/v1/graph", {requestId, snapshotId: manifest.snapshotId, query: {...GRAPH_PAGE, edgeOffset, offset}}, signal);
     if (!admitCurrentViewResponse(response, requestId, signal)) return;
     status.remove();
     const graph = response.projection;
     appendProjectionBoundary(graph.authority, graph.nonClaims ?? [], [`Source snapshot: ${graph.sourceSnapshotId}.`]);
-    const nodes = /** @type {any[]} */ (graph.nodes ?? []);
-    const edges = /** @type {any[]} */ (graph.edges ?? []);
-    const positions = new Map(nodes.map((node, index) => [node.nodeId, {x: 28 + (index % 2) * 390, y: 28 + Math.floor(index / 2) * 76}]));
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("role", "img");
-    svg.setAttribute("aria-label", "Non-authoritative layout of admitted traceability nodes and edges");
-    svg.setAttribute("viewBox", `0 0 800 ${Math.max(180, Math.ceil(nodes.length / 2) * 76 + 40)}`);
-    svg.dataset.nodeIds = nodes.map((node) => node.nodeId).join(" ");
-    svg.dataset.edgeIds = edges.map((edge) => edge.edgeId).join(" ");
-    for (const edge of edges) {
-      const from = positions.get(edge.fromNodeId);
-      const to = positions.get(edge.toNodeId);
-      if (!from || !to) throw new Error("Graph edge endpoint is not present in admitted nodes");
-      const line = document.createElementNS(svg.namespaceURI, "line");
-      line.setAttribute("data-edge-id", edge.edgeId);
-      line.setAttribute("x1", String(from.x + 180));
-      line.setAttribute("y1", String(from.y + 24));
-      line.setAttribute("x2", String(to.x + 180));
-      line.setAttribute("y2", String(to.y + 24));
-      svg.append(line);
-    }
-    for (const node of nodes) {
-      const position = positions.get(node.nodeId);
-      if (!position) throw new Error("Graph node position is unavailable");
-      const group = document.createElementNS(svg.namespaceURI, "g");
-      group.setAttribute("data-node-id", node.nodeId);
-      const box = document.createElementNS(svg.namespaceURI, "rect");
-      box.setAttribute("x", String(position.x));
-      box.setAttribute("y", String(position.y));
-      box.setAttribute("width", "350");
-      box.setAttribute("height", "48");
-      box.setAttribute("rx", "4");
-      const label = document.createElementNS(svg.namespaceURI, "text");
-      label.setAttribute("x", String(position.x + 10));
-      label.setAttribute("y", String(position.y + 29));
-      const fullLabel = `${node.evidencePlane}: ${node.label}`;
-      label.textContent = [...fullLabel].length > 48 ? `${[...fullLabel].slice(0, 47).join("")}...` : fullLabel;
-      const accessibleLabel = document.createElementNS(svg.namespaceURI, "title");
-      accessibleLabel.textContent = fullLabel;
-      group.append(accessibleLabel, box, label);
-      svg.append(group);
-    }
-    const viewport = document.createElement("div");
-    viewport.className = "graph-viewport";
-    viewport.setAttribute("role", "region");
-    viewport.setAttribute("aria-label", "Traceability graph viewport");
-    viewport.tabIndex = 0;
-    viewport.append(svg);
-    content.append(viewport, graphTable(
-      "Admitted traceability nodes",
-      ["Node", "Kind", "Evidence plane", "Source", "Authority", "Currentness", "Verification", "State", "Producer"],
-      nodes.map((node) => [node.nodeId, node.kind, node.evidencePlane, node.sourceId, node.authorityClass, node.currentnessState, node.rangeVerification, node.state, node.producerId]),
-      "node",
-    ));
-    content.append(graphTable(
-      "Admitted traceability edges",
-      ["Edge", "Kind", "From", "To", "Authority", "Currentness", "Evidence"],
-      edges.map((edge) => [edge.edgeId, edge.edgeKind, edge.fromNodeId, edge.toNodeId, edge.authorityClass, edge.currentnessState, displayList(edge.evidenceRefs)]),
-      "edge",
-    ));
+    if (initialId !== null && !graph.nodes.some((/** @type {any} */ node) => node.nodeId === initialId)) throw new Error("Referenced node is unavailable in its canonical page");
+    renderGraphPage(content, graph, {
+      follow: (targetOffset, targetId) => void renderGraph(targetOffset, 0, targetId),
+      reconcile: reconcileRequestControls,
+      initialId,
+    });
     appendPagingControls("graph", offset, graph.primaryNodeCount ?? 0, graph.availableNodeCount ?? 0);
     appendGraphEdgeControls(offset, edgeOffset, graph.selectedEdgeCount ?? 0, graph.availableIncidentEdgeCount ?? 0);
     completeContentView("graph");
+    focusAfterCommit();
   } catch (error) {
     if (signal.aborted || requestId !== activeRequestId) return;
-    failView(status, error, () => void renderGraph(offset, edgeOffset), true);
+    failView(status, error, () => void renderGraph(offset, edgeOffset, initialId), true);
   }
 }
 
-/** @param {number} offset @param {number} selected @param {number} matching @param {import("./workspace-navigation.js").LookupFilters} filters @param {number[]} history */
-function appendRequirementPaging(offset, selected, matching, filters, history) {
+/** @param {"specifications" | "coverage"} view @param {number} offset @param {number} selected @param {number} matching @param {import("./workspace-navigation.js").LookupFilters} filters @param {number[]} history */
+function appendRequirementPaging(view, offset, selected, matching, filters, history) {
+  const render = view === "coverage" ? renderCoverage : renderSpecifications;
   const summary = document.createElement("p");
   summary.className = "page-summary";
-  summary.textContent = `Showing ${selected === 0 ? 0 : offset + 1}-${offset + selected} of ${matching} specifications records.`;
+  summary.textContent = `Showing ${selected === 0 ? 0 : offset + 1}-${offset + selected} of ${matching} ${view} records.`;
   content.append(summary);
   const controls = document.createElement("nav");
-  controls.setAttribute("aria-label", "specifications pages");
+  controls.setAttribute("aria-label", `${view} pages`);
   /** @param {string} label @param {string} symbol @param {() => void} action */
   function add(label, symbol, action) {
     const button = document.createElement("button");
@@ -409,8 +405,8 @@ function appendRequirementPaging(offset, selected, matching, filters, history) {
     button.addEventListener("click", action);
     controls.append(button);
   }
-  if (history.length > 0) add("Previous specifications page", "arrow-left", () => void renderSpecifications(history.at(-1) ?? 0, filters, history.slice(0, -1)));
-  if (offset + selected < matching) add("Next specifications page", "arrow-right", () => void renderSpecifications(offset + selected, filters, [...history, offset]));
+  if (history.length > 0) add(`Previous ${view} page`, "arrow-left", () => void render(history.at(-1) ?? 0, filters, history.slice(0, -1)));
+  if (offset + selected < matching) add(`Next ${view} page`, "arrow-right", () => void render(offset + selected, filters, [...history, offset]));
   content.append(controls);
 }
 
@@ -423,7 +419,7 @@ function appendPagingControls(view, offset, selectedCount, availableCount) {
   if (offset === 0 && selectedCount >= availableCount) return;
   const controls = document.createElement("nav");
   controls.setAttribute("aria-label", `${view} pages`);
-  const pageSize = view === "diff" ? 512 : 256;
+  const pageSize = view === "diff" ? 512 : GRAPH_PAGE.maxRecords;
   if (offset > 0) {
     const previous = document.createElement("button");
     previous.type = "button";
@@ -457,7 +453,7 @@ function appendGraphEdgeControls(nodeOffset, edgeOffset, selectedCount, availabl
     previous.type = "button";
     previous.dataset.protectedRequest = "";
     previous.textContent = "Previous graph relation page";
-    previous.addEventListener("click", () => void renderGraph(nodeOffset, Math.max(0, edgeOffset - 2048)));
+    previous.addEventListener("click", () => void renderGraph(nodeOffset, Math.max(0, edgeOffset - GRAPH_PAGE.maxEdges)));
     controls.append(previous);
   }
   if (edgeOffset + selectedCount < availableCount) {
@@ -471,46 +467,6 @@ function appendGraphEdgeControls(nodeOffset, edgeOffset, selectedCount, availabl
   content.append(controls);
 }
 
-/** @param {string} captionText @param {string[]} headings @param {string[][]} rows @param {string} identityKind */
-function graphTable(captionText, headings, rows, identityKind) {
-  const viewport = document.createElement("div");
-  viewport.className = "table-viewport";
-  viewport.setAttribute("role", "region");
-  viewport.setAttribute("aria-label", `${captionText} table viewport`);
-  viewport.tabIndex = 0;
-  const table = document.createElement("table");
-  table.dataset.identityKind = identityKind;
-  const caption = document.createElement("caption");
-  caption.textContent = captionText;
-  const head = document.createElement("thead");
-  const headRow = document.createElement("tr");
-  for (const label of headings) {
-    const cell = document.createElement("th");
-    cell.textContent = label;
-    headRow.append(cell);
-  }
-  head.append(headRow);
-  const body = document.createElement("tbody");
-  for (const values of rows) {
-    const row = document.createElement("tr");
-    row.dataset.identity = values[0] ?? "";
-    for (const value of values) {
-      const cell = document.createElement("td");
-      cell.textContent = value ?? "";
-      row.append(cell);
-    }
-    body.append(row);
-  }
-  table.append(caption, head, body);
-  viewport.append(table);
-  return viewport;
-}
-
-/** @param {unknown} value */
-function displayList(value) {
-  return Array.isArray(value) ? value.join(", ") : value;
-}
-
 /** @param {HTMLUListElement} list @param {unknown[]} values */
 function appendTextItems(list, values) {
   for (const value of values) {
@@ -520,13 +476,13 @@ function appendTextItems(list, values) {
   }
 }
 
-/** @param {unknown} authority @param {unknown[]} nonClaims @param {string[]} details */
-function appendProjectionBoundary(authority, nonClaims, details) {
-  const section = document.createElement("section");
+/** @param {unknown} authority @param {unknown[]} nonClaims @param {string[]} details @param {boolean} [collapsed] */
+function appendProjectionBoundary(authority, nonClaims, details, collapsed = false) {
+  const section = document.createElement(collapsed ? "details" : "section");
   section.className = "projection-boundary";
   section.setAttribute("aria-label", "Projection boundary");
-  const heading = document.createElement("h3");
-  heading.textContent = "Projection boundary";
+  const heading = document.createElement(collapsed ? "summary" : "h3");
+  heading.textContent = collapsed ? `Derived coverage: ${String(authority)}` : "Projection boundary";
   const authorityText = document.createElement("p");
   authorityText.textContent = `Authority: ${String(authority)}.`;
   section.append(heading, authorityText);
@@ -544,6 +500,7 @@ function appendProjectionBoundary(authority, nonClaims, details) {
 document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => {
   if (!(button instanceof HTMLButtonElement)) return;
   if (button.dataset.view === "specifications") void renderSpecifications();
+  if (button.dataset.view === "coverage") void renderCoverage();
   if (button.dataset.view === "diff") void renderDiff();
   if (button.dataset.view === "graph") void renderGraph();
 }));
@@ -551,13 +508,15 @@ document.querySelectorAll("[data-view]").forEach((button) => button.addEventList
 const questionInputElement = document.querySelector("#annotation-question");
 const statusElement = document.querySelector("#handoff-status");
 const packetElement = document.querySelector("#handoff-packet");
+const previewElement = document.querySelector("#handoff-preview");
 const submitElement = document.querySelector("#submit-question");
 const selectedContextElement = document.querySelector("#selected-context");
 const clearSelectionElement = document.querySelector("#clear-selection");
-if (!(questionInputElement instanceof HTMLTextAreaElement) || !(statusElement instanceof HTMLElement) || !(packetElement instanceof HTMLElement) || !(submitElement instanceof HTMLButtonElement) || !(selectedContextElement instanceof HTMLUListElement) || !(clearSelectionElement instanceof HTMLButtonElement)) throw new Error("Missing handoff controls");
+if (!(questionInputElement instanceof HTMLTextAreaElement) || !(statusElement instanceof HTMLElement) || !(packetElement instanceof HTMLElement) || !(previewElement instanceof HTMLElement) || !(submitElement instanceof HTMLButtonElement) || !(selectedContextElement instanceof HTMLUListElement) || !(clearSelectionElement instanceof HTMLButtonElement)) throw new Error("Missing handoff controls");
 const questionInput = /** @type {HTMLTextAreaElement} */ (questionInputElement);
 const status = /** @type {HTMLElement} */ (statusElement);
 const packetView = /** @type {HTMLElement} */ (packetElement);
+const handoffPreview = initializeHandoffPreview(previewElement, packetView, status);
 const submit = /** @type {HTMLButtonElement} */ (submitElement);
 const selectedContext = /** @type {HTMLUListElement} */ (selectedContextElement);
 const clearSelectionButton = /** @type {HTMLButtonElement} */ (clearSelectionElement);
@@ -646,16 +605,20 @@ submit.addEventListener("click", async () => {
   status.setAttribute("aria-live", "polite");
   status.textContent = "Creating handoff packet...";
   try {
-    const packet = await post("/api/v1/handoff", {annotations: selectionState.targets.map((target) => ({...target, question}))});
-    packetView.textContent = JSON.stringify(packet, null, 2);
+    const response = await fetchWorkspaceResponse("/api/v1/handoff", {method: "POST", headers, body: JSON.stringify({annotations: selectionState.targets.map((target) => ({...target, question}))})});
+    if (submissionViewRequestId !== activeRequestId) return;
+    handoffPreview.show(response.text, response.value);
     status.textContent = "Handoff packet created.";
-    if (submissionViewRequestId === activeRequestId) setWorkspaceState("handoff-result");
-  } catch {
-    packetView.replaceChildren();
+    setWorkspaceState("handoff-result");
+  } catch (error) {
+    const failure = workspaceFailure(error);
+    applyFailureLock(failure);
+    if (submissionViewRequestId !== activeRequestId) return;
+    handoffPreview.clear();
     status.setAttribute("role", "alert");
     status.setAttribute("aria-live", "assertive");
-    status.textContent = "The handoff packet could not be created.";
-    if (submissionViewRequestId === activeRequestId) setWorkspaceState("handoff-failed");
+    status.textContent = failure.lock ? failure.message : "The handoff packet could not be created.";
+    setWorkspaceState("handoff-failed");
   } finally {
     handoffPending = false;
     reconcileRequestControls();
@@ -667,7 +630,7 @@ const panels = initializePanels(commitSelection);
 const navigation = initializeNavigation({
   post,
   nextRequestId,
-  select(filters) { void renderSpecifications(0, filters); panels.closeNavigation(); },
+  select(filters) { void (lookupView === "coverage" ? renderCoverage(0, filters) : renderSpecifications(0, filters)); panels.closeNavigation(); },
   fail: showFailure,
   locked: () => requestsLocked,
 });

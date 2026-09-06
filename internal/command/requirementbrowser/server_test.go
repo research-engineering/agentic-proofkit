@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/browserfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
@@ -702,122 +703,9 @@ func proofInput(t *testing.T) any {
 
 func coverageInput(t *testing.T) any {
 	t.Helper()
-	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 2,
-  "viewInputId": "proofkit.browser.coverage.view",
-  "requirementSource": {
-    "schemaVersion": 1,
-    "sourceId": "proofkit.browser.coverage.source",
-    "specPackagePath": "docs/specs/browser-coverage",
-    "overviewPath": "docs/specs/browser-coverage/overview.md",
-    "requirementsPath": "docs/specs/browser-coverage/requirements.v1.json",
-    "requirements": [
-      {
-        "requirementId": "REQ-BROWSER-COVERAGE-001",
-        "ownerId": "browser.coverage",
-        "invariant": "Coverage browser views render test evidence for each requirement.",
-        "claimLevel": "blocking",
-        "riskClass": "high",
-        "proofBindingRefs": ["proofkit/browser-coverage-bindings.json"],
-        "nonClaimRefs": [],
-        "nonClaims": ["Coverage browser fixture does not execute tests."],
-        "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
-        "deferral": null,
-        "updatePolicy": {
-          "reviewOwnerId": "browser.coverage",
-          "requiresImpactDeclaration": true,
-          "requiresProofBindingReview": true
-        }
-      }
-    ],
-    "nonClaims": ["Coverage browser source fixture does not own native tests."]
-  },
-  "requirementProofBinding": {
-    "schemaVersion": 1,
-    "bindingId": "proofkit.browser.coverage.binding",
-    "requirements": [
-      {
-        "requirementId": "REQ-BROWSER-COVERAGE-001",
-        "ownerId": "browser.coverage",
-        "specPath": "docs/specs/browser-coverage/requirements.v1.json",
-        "claimLevel": "blocking",
-        "proofState": "witness_backed",
-        "nonClaims": ["Coverage browser binding fixture does not execute witnesses."]
-      }
-    ],
-    "bindings": [
-      {
-        "requirementId": "REQ-BROWSER-COVERAGE-001",
-        "scenarioId": "proofkit.browser.coverage.scenario",
-        "witnessId": "proofkit.browser.coverage.witness",
-        "witnessKind": "contract",
-        "witnessPath": "internal/browser_coverage_test.go",
-        "commandIds": ["proofkit.browser.coverage.command"],
-        "environmentClasses": ["local-go"]
-      }
-    ],
-    "witnessCommands": [
-      {
-        "commandId": "proofkit.browser.coverage.command",
-        "command": "go test ./internal/command/requirementbrowser",
-        "environmentClass": "local-go"
-      }
-    ],
-    "selection": {"changedPaths": [], "ownerIds": [], "requirementIds": []},
-    "nonClaims": ["Coverage browser binding fixture does not prove command pass evidence."]
-  },
-  "compactProofContract": null,
-  "ownerInvariantRegistry": null,
-  "coverageUniverse": {
-    "schemaVersion": 1,
-    "universeId": "proofkit.browser.coverage.universe",
-    "authority": "caller_owned_inventory",
-    "completenessDeclaration": "selected_owner_surfaces",
-    "ownerIds": ["browser.coverage"],
-    "codeSurfaces": [{"surfaceId": "browser.coverage.code", "ownerId": "browser.coverage", "path": "internal/command/requirementbrowser"}],
-    "specSurfaces": [{"surfaceId": "browser.coverage.spec", "ownerId": "browser.coverage", "path": "docs/specs/browser-coverage/requirements.v1.json"}],
-    "testSurfaces": [{"surfaceId": "browser.coverage.test", "ownerId": "browser.coverage", "path": "internal/command/requirementbrowser/server_test.go"}],
-    "commandRefs": ["proofkit.browser.coverage.command"],
-    "nonClaims": ["Coverage browser universe is selected-owner scope only."]
-  },
-  "testEvidenceInventory": {
-    "schemaVersion": 1,
-    "inventoryId": "proofkit.browser.coverage.inventory",
-    "authority": "caller_owned_inventory",
-    "entries": [
-      {
-        "testId": "test.browser.coverage.semantic",
-        "selector": "go test ./internal/command/requirementbrowser -run TestStartServerServesExplicitCoverageViews",
-        "sourcePath": "internal/command/requirementbrowser/server_test.go",
-        "ownerId": "browser.coverage",
-        "evidenceClass": "declared_semantic_falsifier_route",
-        "requirementRefs": ["REQ-BROWSER-COVERAGE-001"],
-        "ownerInvariantRefs": [],
-        "commandRefs": ["proofkit.browser.coverage.command"],
-        "witnessRefs": ["proofkit.browser.coverage.witness"],
-        "falsifier": {
-          "falsifierId": "falsifier.browser.coverage",
-          "negativeCaseId": "case.browser.coverage.route-only",
-          "wrongImplementationClassId": "wrong.browser.coverage.no-test-detail",
-          "dominanceGroup": "browser.coverage",
-          "supersedes": []
-        },
-        "oracle": {
-          "oracleId": "oracle.browser.coverage",
-          "oracleKind": "html_contains_test_detail",
-          "expectedPublicOutcome": "rendered report contains semantic test detail",
-          "assertionSummary": "Route-only evidence remains insufficient."
-        },
-        "nonClaims": []
-      }
-    ],
-    "nonClaims": ["Coverage browser inventory fixture does not execute native tests."]
-  },
-  "localEnvironmentPolicy": null,
-  "options": {"scope": "graph"}
-}`), 1<<20)
+	input, err := browserfixture.CoverageInput("structured")
 	if err != nil {
-		t.Fatalf("decode coverage fixture: %v", err)
+		t.Fatal(err)
 	}
 	return input
 }

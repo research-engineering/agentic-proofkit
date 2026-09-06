@@ -28,6 +28,14 @@ export const pagingTest = test.extend({
 
 export const capacityTest = test.extend({
   capacityURL: [async ({}, use) => { await withFixture("--capacity", use); }, {scope: "worker"}],
+  graphCapacityURL: [async ({}, use) => { await withFixture("--graph-capacity", use); }, {scope: "worker"}],
+  graphNumericURL: [async ({}, use) => { await withFixture("--graph-numeric", use); }, {scope: "worker"}],
+});
+
+export const coverageTest = test.extend({
+  compactURL: [async ({}, use) => { await withFixture("--coverage-compact", use); }, {scope: "worker"}],
+  structuredURL: [async ({}, use) => { await withFixture("--coverage-structured", use); }, {scope: "worker"}],
+  emptyCoverageURL: [async ({}, use) => { await withFixture("--coverage-empty", use); }, {scope: "worker"}],
 });
 
 async function withFixture(selector, use) {
