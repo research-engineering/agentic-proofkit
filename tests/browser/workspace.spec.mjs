@@ -654,6 +654,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
     const edges = projection.edges;
     const nodeIDs = nodes.map((node) => node.nodeId);
     const edgeIDs = edges.map((edge) => edge.edgeId);
+    expect(edges.some((edge, index) => edges.slice(index + 1).some(other => edge.edgeId !== other.edgeId && edge.fromNodeId === other.fromNodeId && edge.toNodeId === other.toNodeId)), "source fixture preserves owner-distinct parallel relations").toBe(true);
     const graph = page.locator(".graph-canvas > svg");
     const graphViewport = page.getByRole("region", {name: "Traceability graph viewport"});
     await expect(graphViewport).toBeVisible();
@@ -684,21 +685,51 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
     const edgeRecords = page.getByRole("list", {name: "Admitted traceability edges"}).locator(":scope > li");
     await expectIdentityOrder(nodeRecords, nodeIDs);
     await expectIdentityOrder(edgeRecords, edgeIDs);
+    const nativeGraph = await graph.evaluate(svg => ({
+      boxes: Array.from(svg.parentElement.querySelectorAll(":scope > button[data-graph-select]"), element => {
+        const rect = element.getBoundingClientRect();
+        return {id: element.dataset.graphSelect, x: rect.left, y: rect.top, width: rect.width, height: rect.height};
+      }),
+      lines: Array.from(svg.querySelectorAll("line"), line => {
+        const matrix = line.getScreenCTM();
+        if (!matrix) throw new Error("Native line coordinate system is unavailable");
+        const start = new DOMPoint(line.x1.baseVal.value, line.y1.baseVal.value).matrixTransform(matrix);
+        const end = new DOMPoint(line.x2.baseVal.value, line.y2.baseVal.value).matrixTransform(matrix);
+        return {id: line.dataset.edgeId, raw: ["x1", "y1", "x2", "y2"].map(name => Number(line.getAttribute(name))), points: [start.x, start.y, end.x, end.y]};
+      }),
+    }));
+    expect(nativeGraph.lines.map(line => line.id), "complete native line identities").toEqual(edgeIDs);
+    const boxes = nativeGraph.boxes;
+    const boxesByID = new Map(boxes.map(box => [box.id, box]));
+    expect([...boxesByID.keys()]).toEqual(nodeIDs);
+    for (const box of boxes) {
+      expect([box.x, box.y, box.width, box.height].every(Number.isFinite)).toBe(true);
+      expect(box.width).toBeGreaterThan(0);
+      expect(box.height).toBeGreaterThan(0);
+    }
     for (let index = 0; index < edges.length; index++) {
       const edge = edges[index];
       const details = edgeRecords.nth(index).locator("details");
       await details.locator("summary").click();
       await expect(details.locator("dt")).toHaveText(Object.keys(edge));
       await expect(details.locator("dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
-      const line = graph.locator(":scope > line").nth(index);
+      const line = graph.locator("line").nth(index);
       await expect(line).toHaveAttribute("data-edge-id", edge.edgeId);
       await expect(line).toHaveAttribute("marker-end", "url(#graph-arrow)");
-      const geometry = await line.evaluate(element => ["x1", "y1", "x2", "y2"].map(name => Number(element.getAttribute(name))));
+      const geometry = nativeGraph.lines[index].points;
+      expect(nativeGraph.lines[index].raw.every(Number.isFinite)).toBe(true);
       expect(geometry.every(Number.isFinite)).toBe(true);
       expect(geometry[0] !== geometry[2] || geometry[1] !== geometry[3]).toBe(true);
+      for (const [role, id, x, y] of [["source", edge.fromNodeId, geometry[0], geometry[1]], ["target", edge.toNodeId, geometry[2], geometry[3]]]) {
+        const box = boxesByID.get(id);
+        expect(box, `${role} endpoint node`).toBeDefined();
+        const tolerance = 0.5;
+        const inside = x >= box.x - tolerance && x <= box.x + box.width + tolerance && y >= box.y - tolerance && y <= box.y + box.height + tolerance;
+        const perimeter = Math.min(Math.abs(x - box.x), Math.abs(x - box.x - box.width), Math.abs(y - box.y), Math.abs(y - box.y - box.height)) <= tolerance;
+        expect(inside && perimeter, `${role} endpoint of ${edge.edgeId} touches ${id}`).toBe(true);
+      }
       await expectCSS(line, {visibility: "visible", opacity: "1", stroke: "rgb(32, 37, 34)", "stroke-width": "1.5px", filter: "none", "clip-path": "none"});
     }
-    const boxes = await buttons.evaluateAll(elements => elements.map(element => ({x: element.offsetLeft, y: element.offsetTop, width: element.offsetWidth, height: element.offsetHeight})));
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];
       expect(a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y).toBe(true);

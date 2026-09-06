@@ -199,28 +199,66 @@ test("unavailable export effects preserve a selectable exact JSON fallback", asy
   await expect(page.locator("body")).not.toContainText("private download detail");
 });
 
-for (const outcome of ["resolved", "rejected"]) {
-  test(`a late ${outcome} clipboard effect cannot label a newer view`, async ({baseURL, page}) => {
+for (const outcome of ["resolved", "rejected"]) for (const newer of ["view", "packet"]) {
+  test(`a late ${outcome} clipboard effect cannot label a newer ${newer}`, async ({baseURL, page}) => {
     await page.setViewportSize({width: 1920, height: 1080});
     await page.addInitScript(() => {
-      Object.defineProperty(navigator, "clipboard", {value: {writeText: () => new Promise((resolve, reject) => { globalThis.__clipboardRelease = {resolve, reject}; })}});
+      globalThis.__clipboardCalls = [];
+      Object.defineProperty(navigator, "clipboard", {value: {writeText: text => {
+        let resolve, reject;
+        const promise = new Promise((accept, deny) => { resolve = accept; reject = deny; });
+        globalThis.__clipboardCalls.push({text, resolve, reject, settled: promise.catch(() => {})});
+        return promise;
+      }}});
     });
     await openWorkspace(page, baseURL);
     await page.getByRole("button", {name: "Select invariant"}).click();
     const question = page.getByRole("textbox", {name: "Question", exact: true});
     await question.fill("Do not erase this draft.");
+    const firstResponse = page.waitForResponse(response => response.url().endsWith("/api/v1/handoff"));
     await page.getByRole("button", {name: "Create handoff packet"}).click();
+    const firstRaw = await (await firstResponse).text();
     await page.getByRole("button", {name: "Copy JSON", exact: true}).click();
     await expect(page.getByRole("button", {name: "Copy JSON", exact: true})).toBeDisabled();
-    await page.getByRole("button", {name: "Diff", exact: true}).click();
-    await expect(page.locator("body")).toHaveAttribute("data-state", "diff");
+    expect(await page.evaluate(() => globalThis.__clipboardCalls.map(call => call.text))).toEqual([firstRaw]);
+    let secondRaw;
+    if (newer === "view") {
+      await page.getByRole("button", {name: "Diff", exact: true}).click();
+      await expect(page.locator("body")).toHaveAttribute("data-state", "diff");
+    } else {
+      await question.fill("Preserve packet B and its draft.");
+      const secondResponse = page.waitForResponse(response => response.url().endsWith("/api/v1/handoff"));
+      await page.getByRole("button", {name: "Create handoff packet"}).click();
+      secondRaw = await (await secondResponse).text();
+      expect(secondRaw).not.toBe(firstRaw);
+      await expect(page.locator("#handoff-status")).toHaveText("Handoff packet created.");
+      expect(await page.locator("#handoff-packet").textContent()).toBe(secondRaw);
+      await page.getByRole("button", {name: "Copy JSON", exact: true}).click();
+      await expect(page.getByRole("button", {name: "Copy JSON", exact: true})).toBeDisabled();
+      expect(await page.evaluate(() => globalThis.__clipboardCalls.map(call => call.text))).toEqual([firstRaw, secondRaw]);
+    }
     await page.evaluate(async outcome => {
-      if (outcome === "resolved") globalThis.__clipboardRelease.resolve(); else globalThis.__clipboardRelease.reject(new Error("private clipboard failure"));
-      await new Promise(resolve => setTimeout(resolve, 0));
+      const call = globalThis.__clipboardCalls[0];
+      if (outcome === "resolved") call.resolve(); else call.reject(new Error("private clipboard failure"));
+      await call.settled;
     }, outcome);
-    await expect(page.locator("#handoff-status")).toHaveText("No source-bound text selected.");
-    await expect(page.locator("#handoff-preview")).toBeEmpty();
-    await expect(question).toHaveValue("Do not erase this draft.");
+    if (newer === "view") {
+      await expect(page.locator("#handoff-status")).toHaveText("No source-bound text selected.");
+      await expect(page.locator("#handoff-preview")).toBeEmpty();
+      await expect(question).toHaveValue("Do not erase this draft.");
+    } else {
+      await expect(page.locator("#handoff-status"), "packet B status ignores old Copy settlement").toHaveText("Handoff packet created.");
+      expect(await page.locator("#handoff-packet").textContent()).toBe(secondRaw);
+      await expect(question).toHaveValue("Preserve packet B and its draft.");
+      await expect(page.getByRole("button", {name: "Copy JSON", exact: true})).toBeDisabled();
+      await expect(page.getByRole("button", {name: "Download JSON", exact: true})).toBeEnabled();
+      await page.evaluate(async () => { const call = globalThis.__clipboardCalls[1]; call.resolve(); await call.settled; });
+      await expect(page.locator("#handoff-status")).toHaveText("Exact handoff JSON copied.");
+      expect(await page.locator("#handoff-packet").textContent(), "settled packet B carrier").toBe(secondRaw);
+      await expect(question).toHaveValue("Preserve packet B and its draft.");
+      await expect(page.getByRole("button", {name: "Download JSON", exact: true})).toBeEnabled();
+      await expect(page.getByRole("button", {name: "Copy JSON", exact: true})).toBeEnabled();
+    }
     await expect(page.locator("body")).not.toContainText("private clipboard failure");
   });
 }
