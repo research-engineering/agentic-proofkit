@@ -197,9 +197,9 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.browser.lookup", Summary: "Search and filter the complete admitted requirement cohort before bounded paging, navigate ordered specification children, and preserve original source anchors and exact omission counts without loading the full snapshot into the browser."},
-	{ChangeID: "proofkit.browser.request-recovery", Summary: "Distinguish correction, denied, stale, unavailable and retryable failures. Explicit Retry preserves the failed route, snapshot and complete page query, while superseded requests cannot restore stale content or request authority."},
-	{ChangeID: "proofkit.browser.responsive-shell", Summary: "Add compact Browse and Inspector panels with native modal behavior on smaller viewports, stable keyboard focus, retained question drafts, source-bound Unicode selection and lazy boundary details."},
+	{ChangeID: "proofkit.browser.coverage-inspection", Summary: "Inspect compact or structured coverage beside original source-bound requirements, distinguish missing evidence from reported verdicts, preserve complete evidence and non-claims in disclosures, and ask an explicit evidence question without replacing an existing draft."},
+	{ChangeID: "proofkit.browser.diff-and-graph-inspection", Summary: "Show exact diff-page class, entity, risk and lifecycle counts. Inspect a bounded traceability diagram and equivalent records with local evidence-plane and neighborhood filters, preserved directed relations, exact numeric source coordinates, explicit outside-page references and deliberate target-page navigation."},
+	{ChangeID: "proofkit.browser.handoff-inspection", Summary: "Preview included source-bound handoff context by stable requirement identity and explicitly copy or download the exact compact server JSON. Obsolete view or clipboard results cannot replace current output; independent pending exclusion and denied or stale request locks survive settlement, with one workspace reload action for a stale session."},
 }
 
 var currentMigrationSteps = []string{}
@@ -222,7 +222,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.12.0",
+		"# @research-engineering/agentic-proofkit 0.13.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -267,14 +267,14 @@ func currentExpectedReleaseNotes() string {
 		"- TSX source parsing remains unsupported.",
 		"- Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
 		"- Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts.",
-		"- Browser lookup and navigation are presentation-only fragments, not proof coverage or an external HTTP SDK. Annotations are session-bound; browser controls do not edit specifications or execute agents.",
+		"- Browser lookup, coverage, diff and graph fragments are derived presentation, not authenticated evidence, proof execution or an external HTTP SDK. Local graph filters apply only to the returned page; absent coverage is not a verdict. Exact numeric observation requires native JSON source-token and raw-value support; unsupported clients show unavailable instead of rounded coordinates. Annotations are session-bound and exported bytes are not revoked by later navigation; browser controls do not edit specifications or execute agents.",
 		"",
 		"## Install",
 		"",
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.12.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.13.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -286,7 +286,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.11.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.11.0`.",
+		"- Pin npm consumers to the previous admitted version 0.12.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.12.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"
