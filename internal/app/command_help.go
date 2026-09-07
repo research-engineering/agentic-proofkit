@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
@@ -105,6 +106,9 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 		if descriptor.contractEnvelope {
 			lines = append(lines, "  --contract-envelope admits the command's aggregate contract envelope when provided.")
 		}
+	}
+	if descriptor.name == "capability-map-admission" {
+		lines = append(lines, "", strings.TrimSuffix(capabilitymapadmission.InputGuide, "\n"))
 	}
 	lines = append(lines, "", "Public contract:")
 	lines = append(lines, "  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")

@@ -69,6 +69,10 @@ func TestAdoptionFrontDoorCLI(t *testing.T) {
 				if strings.Contains(stdout, repositoryRoot) || strings.Contains(stdout, "private-notes.txt") {
 					t.Fatal("adoption plan disclosed repository root or an unknown entry name")
 				}
+				hasGuide := strings.Contains(plan.Packet.Tasks[0].Instruction, "capability-map-admission --help")
+				if hasGuide != (item.mode != adoptionplan.IntentFresh) || strings.Contains(stdout, "```json") {
+					t.Fatal("capability guide must be linked before code observation, never embedded in plans")
+				}
 			})
 		}
 	})
