@@ -15,14 +15,25 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 const processHelperMode = "PROOFKIT_WORKFLOW_SMOKE_HELPER_MODE"
 
 func TestVerifyAcceptsApplicationCLI(t *testing.T) {
-	if err := workflowsmoke.Verify(t.Context(), applicationRunner); err != nil {
+	trustModes := map[string]int{}
+	runner := func(ctx context.Context, invocation workflowsmoke.Invocation) (workflowsmoke.Result, error) {
+		if mode := capabilityInputTrustMode(t, invocation); mode != "" {
+			trustModes[mode]++
+		}
+		return applicationRunner(ctx, invocation)
+	}
+	if err := workflowsmoke.Verify(t.Context(), runner); err != nil {
 		t.Fatal(err)
+	}
+	if len(trustModes) != 2 || trustModes["audit_from_code"] != 1 || trustModes["code_baseline"] != 1 {
+		t.Fatalf("actual guide input invocations=%v, want one audit and one baseline", trustModes)
 	}
 }
 
@@ -32,8 +43,12 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		match            string
 		matchPrefix      bool
 		materializedOnly bool
+		stdinTrustMode   string
 		apply            func(workflowsmoke.Result) workflowsmoke.Result
 	}{
+		{name: "capability help example changed", match: "capability-map-admission --help", apply: replaceStdoutFragment(`"dirtyState": "unknown"`, `"dirtyState": "clean"`)},
+		{name: "capability input runner drops report", match: "capability-map-admission --input -", apply: replaceStdout(`{"state":"passed"}`)},
+		{name: "capability baseline runner drops report", match: "capability-map-admission --input -", stdinTrustMode: "code_baseline", apply: replaceStdout(`{"state":"passed"}`)},
 		{name: "integration source identity", match: "integration source --tool codex --format json", apply: replaceStdout(`{"kind":"wrong"}`)},
 		{name: "managed plan missing transaction", match: "integration plan --tool codex --operation install --repo-root ", matchPrefix: true, apply: replaceStdout(`{"kind":"proofkit.integration-plan.v1","state":"ready","transaction":null}`)},
 		{name: "managed apply identity", match: "integration apply --tool codex --operation install --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"kind": "proofkit.integration-receipt.v1"`, `"kind": "wrong"`)},
@@ -79,6 +94,9 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 				if matches && mutation.materializedOnly && !hasMaterializedProject(invocation) {
 					matches = false
 				}
+				if matches && mutation.stdinTrustMode != "" && capabilityInputTrustMode(t, invocation) != mutation.stdinTrustMode {
+					matches = false
+				}
 				if err == nil && !applied && matches {
 					result = mutation.apply(result)
 					applied = true
@@ -93,6 +111,29 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func capabilityInputTrustMode(t *testing.T, invocation workflowsmoke.Invocation) string {
+	t.Helper()
+	if len(invocation.Args) != 3 || invocation.Args[0] != "capability-map-admission" || invocation.Args[1] != "--input" || invocation.Args[2] != "-" {
+		return ""
+	}
+	if invocation.StdinClass != workflowsmoke.StdinBytes {
+		t.Fatal("guide input must be sent through stdin")
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(invocation.Input), int64(len(invocation.Input)))
+	if err != nil {
+		t.Fatalf("guide input must be strict JSON: %v", err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok {
+		t.Fatal("guide input must be an object")
+	}
+	mode, ok := record["trustMode"].(string)
+	if !ok || mode == "" {
+		t.Fatal("guide input must declare trustMode")
+	}
+	return mode
 }
 
 func hasMaterializedProject(invocation workflowsmoke.Invocation) bool {

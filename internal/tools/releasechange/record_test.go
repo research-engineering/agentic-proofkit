@@ -197,8 +197,8 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.documentation.project-workflow", Summary: "Present read-only adoption, explicit owner-reviewed materialization and daily project navigation as distinct states. One diagram connects invariant authoring to native proof and derived views; current managed integration limits replace obsolete phase status. CLI and machine contract semantics are unchanged."},
-	{ChangeID: "proofkit.package.workspace-illustration", Summary: "Ship one real synthetic-project browser image with exact npm path admission, source-byte equality, independent PNG decoding and byte/dimension bounds. Installed README checks retain the read-only first action and state-qualified daily command routes. The image does not represent executed proof or certify future browser rendering."},
+	{ChangeID: "proofkit.adoption.capability-input-guide", Summary: "Expose two complete synthetic capability-map inputs and field relationships through existing command help. Code-observation adoption tasks link to this guide on demand without embedding examples or inventing missing witnesses. Accepted input sets, report shapes and candidate-only authority are unchanged; the adoption task text and native-source contract digests are updated."},
+	{ChangeID: "proofkit.package.capability-guide-execution", Summary: "Verify that installed npm and Python entrypoints expose the exact command-owned input guide and admit both examples through stdin. Whole-CLI negative tests preserve missing-witness, reference, malformed-input and nondisclosure boundaries. These checks do not execute consumer tests or establish product correctness."},
 }
 
 var currentMigrationSteps = []string{}
@@ -221,7 +221,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.1",
+		"# @research-engineering/agentic-proofkit 0.14.2",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -274,7 +274,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.1",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.2",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -286,7 +286,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.0`.",
+		"- Pin npm consumers to the previous admitted version 0.14.1 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.1`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

@@ -157,6 +157,9 @@ func Verify(ctx context.Context, run Runner) error {
 	if err := verifyProjectNavigation(ctx, run); err != nil {
 		return err
 	}
+	if err := verifyCapabilityInputGuide(ctx, run); err != nil {
+		return err
+	}
 	return verifyIntegrations(ctx, run)
 }
 

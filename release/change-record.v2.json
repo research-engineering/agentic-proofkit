@@ -1,17 +1,17 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.0",
-  "version": "0.14.1",
+  "previousVersion": "0.14.1",
+  "version": "0.14.2",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.documentation.project-workflow",
-      "summary": "Present read-only adoption, explicit owner-reviewed materialization and daily project navigation as distinct states. One diagram connects invariant authoring to native proof and derived views; current managed integration limits replace obsolete phase status. CLI and machine contract semantics are unchanged."
+      "changeId": "proofkit.adoption.capability-input-guide",
+      "summary": "Expose two complete synthetic capability-map inputs and field relationships through existing command help. Code-observation adoption tasks link to this guide on demand without embedding examples or inventing missing witnesses. Accepted input sets, report shapes and candidate-only authority are unchanged; the adoption task text and native-source contract digests are updated."
     },
     {
-      "changeId": "proofkit.package.workspace-illustration",
-      "summary": "Ship one real synthetic-project browser image with exact npm path admission, source-byte equality, independent PNG decoding and byte/dimension bounds. Installed README checks retain the read-only first action and state-qualified daily command routes. The image does not represent executed proof or certify future browser rendering."
+      "changeId": "proofkit.package.capability-guide-execution",
+      "summary": "Verify that installed npm and Python entrypoints expose the exact command-owned input guide and admit both examples through stdin. Whole-CLI negative tests preserve missing-witness, reference, malformed-input and nondisclosure boundaries. These checks do not execute consumer tests or establish product correctness."
     }
   ],
   "migration": {

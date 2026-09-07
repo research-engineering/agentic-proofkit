@@ -148,6 +148,13 @@ updates into a non-authoritative requirement-source preview and transition
 check. Durable truth still starts only after the consumer commits and admits
 `requirements.v1.json`.
 
+Before authoring a capability map, run `agentic-proofkit capability-map-admission --help`.
+The same command in npm and Python installations provides complete synthetic
+audit and baseline examples, field relationships, and candidate-only limits.
+Replace example facts with reviewed observations; missing tests must remain
+missing, not be invented to satisfy baseline admission. The guide is available
+on demand and is not an exhaustive nested schema or execution authorization.
+
 ## First Adoption Loop
 
 Proofkit can reduce initial adoption glue, but it must not turn observation into

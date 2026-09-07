@@ -74,6 +74,7 @@ func codeTasks(intent string) []Task {
 	if intent == IntentCodeBaseline {
 		observationInstruction = "Use the inventory only as non-semantic routing context. Ask the repository owner to select an explicit bounded code, test, and documentation scope, including a module root when root entries are opaque; materialize current behavior only from that scope as caller-declared baseline candidates, and keep every statement candidate-only until owner review and source admission."
 	}
+	observationInstruction += " Before authoring the packet, read capability-map-admission --help for complete synthetic input examples; replace example facts only with reviewed observations and never invent missing witnesses."
 	return []Task{
 		newTask(1, "materialize-capability-observations", nil, "caller_owned_capability_map", observationInstruction),
 		newTask(2, "admit-capability-observations", commandRef("capability-map-admission"), "candidate_requirement_and_binding_seeds", "Run capability-map-admission with the plan's exact capabilityMapTrustMode; preserve unresolved owner questions and do not promote candidate seeds."),
