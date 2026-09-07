@@ -36,13 +36,15 @@ This repository state does not claim:
 Consuming repositories must keep their own specifications, proof bindings,
 native witnesses, CI gates, rollback policy, and rollout decisions.
 
-Phase5A integration source/check implements only bounded portable generation
-and read-only generated-byte freshness. It does not install, update, remove,
-repair, activate host instructions, grant tool permissions, or authorize native
-execution. Phase5B managed lifecycle remains open; manual shell export does not
-close it. `current` neither proves semantic full proof nor guarantees stability
-after return. Consumed registered-contract identity is not complete transitive
-native-semantic identity, and byte budgets are not token counts.
+Integration source/check provides bounded portable generation and read-only
+generated-byte freshness. Managed integration plan/apply/recover provides
+explicit install, update, removal and recovery through the repository
+transaction owner. Neither proves host instruction discovery or activation,
+grants tool permissions, or authorizes native execution. Manual shell export
+does not prove native-host integration. `current` neither proves semantic full
+proof nor guarantees stability after return. Consumed registered-contract
+identity is not complete transitive native-semantic identity, and byte budgets
+are not token counts.
 
 Declared witness routes do not prove execution. Installed npm/Python integration
 smokes and final frozen-tree closure require actual execution against the named

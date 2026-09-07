@@ -87,6 +87,7 @@ func TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift(t *testing.T)
 	withWorkingDirectory(t, root)
 	entries := []string{
 		"package/LICENSE",
+		"package/docs/images/workspace.png",
 		"package/dist/agentic-proofkit",
 		"package/package.json",
 		"package/docs/specs/example/requirements.v1.json",
@@ -881,7 +882,10 @@ func TestExactTarballOnboardingTrace(t *testing.T) {
 		if err := snapshot.Verify(consumer); err != nil {
 			return err
 		}
-		return verifyInstalledOnboardingTraceWithCarrier(consumer, snapshot.Contract, snapshot.Readme, runInstalledWithInput, runInstalledBinaryWithInput)
+		if err := verifyInstalledOnboardingTraceWithCarrier(consumer, snapshot.Contract, snapshot.Readme, runInstalledWithInput, runInstalledBinaryWithInput); err != nil {
+			return err
+		}
+		return verifyInstalledREADMEWorkflow(consumer)
 	}); err != nil {
 		t.Fatalf("exact tarball onboarding trace failed: %v", err)
 	}
@@ -2057,6 +2061,7 @@ func packageManifestFixture(repositoryURL string) string {
     "README.md",
     "SECURITY.md",
     "dist/**",
+    "docs/images/workspace.png",
     "docs/proofkit-contract-map.md",
     "docs/release-process.md",
     "docs/specs/**/*",

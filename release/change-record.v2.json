@@ -1,29 +1,17 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.13.0",
-  "version": "0.14.0",
+  "previousVersion": "0.14.0",
+  "version": "0.14.1",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.browser.project-entry",
-      "summary": "Use view --repo-root to prepare a read-only workspace from one complete materialized project, or add --serve to inspect it through the existing loopback browser. Explicit --open, one-shot questions, compact JSON plans and bounded diagnostics reuse the existing browser and CLI owners."
+      "changeId": "proofkit.documentation.project-workflow",
+      "summary": "Present read-only adoption, explicit owner-reviewed materialization and daily project navigation as distinct states. One diagram connects invariant authoring to native proof and derived views; current managed integration limits replace obsolete phase status. CLI and machine contract semantics are unchanged."
     },
     {
-      "changeId": "proofkit.browser.reference-closure",
-      "summary": "Resolve question anchors against the exact browser-issued session inventory, preserving admitted long requirement identities without expanding base identifier limits or weakening quote, source and terminal checks."
-    },
-    {
-      "changeId": "proofkit.cli.deterministic-choice-diagnostics",
-      "summary": "Validate flag choices in descriptor order so identical invalid invocations select the same diagnostic. Effect-sensitive tests cover rejection before project preparation and inspection, including errors deliberately discarded by a faulty caller."
-    },
-    {
-      "changeId": "proofkit.context.captured-project-origin",
-      "summary": "Add closed project-origin context schema 3, with owner-replayed source and binding projections, role-preserving physical identities and source-level limitations retained in question handoffs. Existing context v1/v2 identities and low-level browser contracts remain unchanged."
-    },
-    {
-      "changeId": "proofkit.graph.derived-reference-admission",
-      "summary": "Apply one typed identity owner to graph nodes and relation references. Transparent prefixes preserve the full admitted component length; digest-derived identities remain distinct from caller IDs. Invalid components, unresolved references and inconsistent topology remain rejected."
+      "changeId": "proofkit.package.workspace-illustration",
+      "summary": "Ship one real synthetic-project browser image with exact npm path admission, source-byte equality, independent PNG decoding and byte/dimension bounds. Installed README checks retain the read-only first action and state-qualified daily command routes. The image does not represent executed proof or certify future browser rendering."
     }
   ],
   "migration": {
