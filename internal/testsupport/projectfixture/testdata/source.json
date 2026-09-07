@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "sourceId": "wire.requirements",
+  "specPackagePath": "docs/specs/wire",
+  "overviewPath": "docs/specs/wire/overview.md",
+  "requirementsPath": "docs/specs/wire/requirements.v1.json",
+  "requirements": [{
+    "requirementId": "REQ-WIRE-001",
+    "ownerId": "wire.owner",
+    "invariant": "A bounded context preserves its admitted requirement identity.",
+    "claimLevel": "blocking",
+    "riskClass": "high",
+    "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
+    "proofBindingRefs": ["proofkit/bindings.json"],
+    "nonClaimRefs": [],
+    "nonClaims": ["This fixture does not establish execution evidence."],
+    "updatePolicy": {"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "wire.owner"}
+  }],
+  "nonClaims": ["Wire compatibility is not consumer readiness."]
+}

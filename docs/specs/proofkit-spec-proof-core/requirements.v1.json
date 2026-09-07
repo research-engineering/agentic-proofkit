@@ -789,6 +789,33 @@
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
       "updatePolicy": {"reviewOwnerId": "proofkit.spec-proof-core", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "ownerId": "proofkit.spec-proof-core",
+      "invariant": "The explicit-root view command consumes one completed read-only project inspection and retains an opaque project only after child admission, exact manifest route currentness and cross-record closure. Context schema 3 binds the captured manifest bytes, closed canonical project origin, exact role/source/path partition and derived collection in one snapshot; re-admission replays the project owner and rejects contradictory or re-signed projections. Existing context v1/v2 wire identities and source fragments remain unchanged. The existing workspace renders that captured context and declared-relation graph without rescanning, creating coverage or baseline evidence, writing project records or executing witnesses. Unicode handoff preserves original source digests, resolving pointers, requirement identity and distinct source and requirement non-claims even after live files change. Flags and mode constraints are admitted before project I/O; paths are not reinterpreted as flags. The default output is a bounded JSON plan, serving preserves the existing browse and one-shot process contracts, and every terminal route closes and awaits its owned server without double consumption or disclosing caller input.",
+      "claimLevel": "blocking",
+      "riskClass": "high",
+      "proofBindingRefs": [
+        "proofkit/requirement-bindings.json"
+      ],
+      "nonClaimRefs": [
+        "NC-PROOFKIT-SPEC-042"
+      ],
+      "nonClaims": [
+        "Viewing a captured project does not establish native witness execution, semantic proof adequacy, live source freshness after capture, owner approval, merge, release, deployment or production readiness. Coverage and semantic diff require their own admitted evidence and are unavailable in the project front door."
+      ],
+      "lifecycle": {
+        "state": "active",
+        "replacementRequirementIds": [],
+        "evidenceRefs": []
+      },
+      "deferral": null,
+      "updatePolicy": {
+        "reviewOwnerId": "proofkit.spec-proof-core",
+        "requiresImpactDeclaration": true,
+        "requiresProofBindingReview": true
+      }
     }
   ],
   "nonClaims": [

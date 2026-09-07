@@ -10,6 +10,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/projectfixture"
 )
 
 func TestSupportedCommandsHaveExplicitCoverageRoutes(t *testing.T) {
@@ -557,6 +558,8 @@ func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]stri
 		return append(cloneStrings(descriptor.routeTokens), "--repo-root", t.TempDir()), true
 	case "stack-preset":
 		return []string{"stack-preset", "--preset", "typescript_workspace"}, true
+	case "view":
+		return []string{"view", "--repo-root", projectfixture.New(t).Root}, true
 	default:
 		panic("missing no-input command smoke args for " + descriptor.name)
 	}

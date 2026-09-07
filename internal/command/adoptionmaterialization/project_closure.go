@@ -34,6 +34,7 @@ type RoutedProjectRecordAdmission struct {
 type MaterializedProjectAdmission struct {
 	ClosureAdmitted  bool
 	ClosureEvaluated bool
+	Project          *Project
 	Records          []RoutedProjectRecordAdmission
 }
 
@@ -111,6 +112,9 @@ func AdmitMaterializedProject(manifest Manifest, records []RoutedProjectRecord) 
 		Manifest: manifest, Sources: children.sources,
 	}
 	result.ClosureAdmitted = validateMaterializedProjectSnapshot(snapshot) == nil
+	if result.ClosureAdmitted {
+		result.Project = &Project{snapshot: &snapshot}
+	}
 	return result, nil
 }
 

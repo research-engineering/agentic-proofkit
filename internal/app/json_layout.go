@@ -47,8 +47,8 @@ func validateJSONLayoutUse(descriptor commandDescriptor, parsed descriptorArgume
 	if !slices.Contains(descriptor.outputModes, "json") {
 		return fmt.Errorf("--json-layout is valid only for JSON command output")
 	}
-	if descriptor.name == "requirement-browser-server" && parsed.present["--serve"] {
-		return fmt.Errorf("--json-layout is invalid when requirement-browser-server serves a browser session")
+	if (descriptor.name == "requirement-browser-server" || descriptor.name == "view") && parsed.present["--serve"] {
+		return fmt.Errorf("--json-layout is invalid when %s serves a browser session", descriptor.name)
 	}
 	for _, format := range parsed.values["--format"] {
 		if format != "json" {

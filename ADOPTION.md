@@ -321,6 +321,30 @@ requirement records or be rejected by the consuming repository's policy.
 
 ## Rendering And Browser Views
 
+After reviewing and applying the candidate project with `adopt materialize
+plan` and `adopt materialize apply`, inspect it without composing browser JSON:
+
+```sh
+agentic-proofkit status --repo-root .
+agentic-proofkit view --repo-root . --serve
+```
+
+Only `--open` opens the local browser. Without `--serve`, `view` returns a
+bounded JSON plan and opens no listener. For a single question use `--serve
+--open --session-mode one-shot-question`; the terminal packet follows server
+cleanup. `--session-timeout-seconds` is optional, bounded to 1..7200 and valid
+only in that one-shot mode. Serving does not accept `--json-layout`.
+
+`view` requires a complete, current, structurally admitted materialized
+project. Other states direct the caller to `next` with the same explicit root;
+they do not trigger repair or materialization. The single captured project
+provides specifications and declared proof relations, not native proof results.
+Coverage and semantic diff are unavailable without their own evidence inputs.
+The browser remains bound to that capture when live files change. Viewing does
+not change `verification_required` into verified. Existing
+`requirement-browser-server` routes remain available for explicitly composed
+source, proof, coverage, tree or comparison workspaces.
+
 Rendered HTML, Markdown, lookup graphs, and browser views are presentation
 products. They should be generated on demand from explicit caller-owned inputs
 unless a consumer explicitly admits a small tracked artifact with a freshness

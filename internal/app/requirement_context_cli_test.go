@@ -12,13 +12,50 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/projectfixture"
 )
+
+func TestProjectContextConsumersThroughWholeCLI(t *testing.T) {
+	fixture := projectfixture.New(t)
+	inspection, err := projectstatus.InspectProject(t.Context(), fixture.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := requirementcontext.FromProject(inspection.Project, inspection.ManifestContentDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	context := requirementcontext.SnapshotValue(snapshot)
+	slice := runAppJSON(t, []string{"requirement-context-slice", "--input", "-"}, map[string]any{
+		"schemaVersion": json.Number("1"), "sliceId": "project.slice", "context": context,
+		"query": map[string]any{"profile": "review", "requirementIds": []any{"REQ-WIRE-001"}},
+	})
+	if slice["state"] != "selected" || slice["snapshotId"] != context["snapshotId"] {
+		t.Fatal("CLI did not consume the captured project context")
+	}
+	sources := slice["projections"].(map[string]any)["requirementSources"].([]any)
+	if len(sources) != 1 {
+		t.Fatal("CLI selected sources outside the explicit project requirement")
+	}
+	source := sources[0].(map[string]any)
+	limitations := source["nonClaims"].([]any)
+	if source["sourceId"] != "zeta.source" || len(limitations) != 1 || limitations[0] != "Source a does not prove execution." {
+		t.Fatal("CLI lost the selected source identity or limitations")
+	}
+	graph := runAppJSON(t, []string{"requirement-traceability-graph", "--input", "-"}, map[string]any{
+		"schemaVersion": json.Number("2"), "graphId": "project.graph", "context": context,
+	})
+	if _, err := requirementgraph.AdmitOutput(graph, context["snapshotId"].(string)); err != nil || len(graph["nodes"].([]any)) != 7 || len(graph["edges"].([]any)) != 6 {
+		t.Fatalf("CLI project graph is not reference-closed: %v", err)
+	}
+}
 
 func TestRequirementContextCommandsComposeThroughWholeCLI(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.097109304805955804866101416335094065400345464281933061498534528351192063227949")
@@ -92,14 +129,15 @@ func TestRequirementContextCommandsComposeThroughWholeCLI(t *testing.T) {
 func TestLegacyDigestVocabularyConfinedToV1AdaptersAndFixtures(t *testing.T) {
 	repoRoot := filepath.Clean(filepath.Join("..", ".."))
 	allowed := map[string]struct{}{
-		"internal/app/requirement_context_cli_test.go":                   {},
-		"internal/command/requirementbrowser/v1_adapter.go":              {},
-		"internal/command/requirementbrowser/workspace_test.go":          {},
-		"internal/command/requirementcontext/requirementcontext_test.go": {},
-		"internal/command/requirementcontext/v1_adapter.go":              {},
-		"internal/command/requirementdiff/requirementdiff_test.go":       {},
-		"internal/command/requirementdiff/v1_adapter.go":                 {},
-		"internal/command/requirementgraph/requirementgraph_test.go":     {},
+		"internal/app/requirement_context_cli_test.go":                           {},
+		"internal/command/requirementbrowser/v1_adapter.go":                      {},
+		"internal/command/requirementbrowser/workspace_test.go":                  {},
+		"internal/command/requirementcontext/context_wire_compatibility_test.go": {},
+		"internal/command/requirementcontext/requirementcontext_test.go":         {},
+		"internal/command/requirementcontext/v1_adapter.go":                      {},
+		"internal/command/requirementdiff/requirementdiff_test.go":               {},
+		"internal/command/requirementdiff/v1_adapter.go":                         {},
+		"internal/command/requirementgraph/requirementgraph_test.go":             {},
 	}
 	legacy := []string{
 		"BaselineVerification",

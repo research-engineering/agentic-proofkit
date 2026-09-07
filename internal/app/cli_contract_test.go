@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "3fea991fd7ef956c6e2252e909aa4a01ffaf453c8cf3ae1c6ba8df4fe9521cb1"
+	cliContractPublicABISHA256               = "ea558a436e8f4302da57a94695ccb4dbf8132e70a3a836e130a117d7d6a193c2"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1539,6 +1539,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 		"stack-preset":                   "agentic-proofkit stack-preset --preset <agentic_runtime_repo|generated_docs_contract_repo|python_service|python_typescript_service|typescript_monorepo|typescript_workspace>",
 		"status":                         "agentic-proofkit status [--color <auto|never>] [--format <json|text>] --repo-root <path>",
 		"typescript-public-api-surfaces": "agentic-proofkit typescript-public-api-surfaces --input <path|-> [--input-pointer <pointer>] --repo-root <path>",
+		"view":                           "agentic-proofkit view [--host <127.0.0.1|::1>] [--open] [--port <port>] --repo-root <path> [--serve] [--session-mode <browse|one-shot-question>] [--session-timeout-seconds <1..7200>]",
 	}
 	constrainedCount := 0
 	for _, descriptor := range commandDescriptors {

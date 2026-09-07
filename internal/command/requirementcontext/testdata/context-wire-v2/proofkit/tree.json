@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 2,
+  "treeId": "wire.tree",
+  "rootNodeId": "wire.root",
+  "nodes": [{
+    "nodeId": "wire.root",
+    "nodeKind": "meta_spec",
+    "label": "Wire compatibility",
+    "displayOrder": 1,
+    "callerAnnotations": [],
+    "sourceRefs": [{"sourceRefId": "wire.requirements.ref", "sourceRefKind": "source_id", "sourceRole": "requirements", "sourceId": "wire.requirements"}]
+  }],
+  "edges": [],
+  "overlays": [],
+  "callerAnnotations": []
+}

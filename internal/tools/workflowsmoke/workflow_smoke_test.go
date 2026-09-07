@@ -60,6 +60,9 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		{name: "guidance applicability", match: "native-evidence-guidance", apply: replaceStdoutFragment(`"applicabilityClass": "always"`, `"applicabilityClass": "external_process"`)},
 		{name: "guidance middle slot", match: "native-evidence-guidance", apply: replaceStdoutFragment(`"slotId": "output_bounds"`, `"slotId": "wrong"`)},
 		{name: "guidance text suffix", match: "native-evidence-guidance --format text --color never", apply: appendStdout("surplus\n")},
+		{name: "project view identity", match: "view --repo-root ", matchPrefix: true, materializedOnly: true, apply: replaceStdoutFragment(`"planKind": "proofkit.requirement-browser-server-plan"`, `"planKind": "wrong"`)},
+		{name: "project view wrong mode", match: "view --repo-root ", matchPrefix: true, materializedOnly: true, apply: replaceStdoutFragment(`"view": "workspace"`, `"view": "proof"`)},
+		{name: "project view unbounded shape", match: "view --repo-root ", matchPrefix: true, materializedOnly: true, apply: replaceStdout(`{"ok":true}`)},
 		{name: "project status identity", match: "status --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"reportKind": "proofkit.project-status"`, `"reportKind": "wrong"`)},
 		{name: "project next identity", match: "next --repo-root ", matchPrefix: true, apply: replaceStdoutFragment(`"packetKind": "proofkit.project-next-action"`, `"packetKind": "wrong"`)},
 		{name: "materialized project status failure", match: "status --repo-root ", matchPrefix: true, materializedOnly: true, apply: func(result workflowsmoke.Result) workflowsmoke.Result {

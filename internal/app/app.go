@@ -29,6 +29,10 @@ func RunWithRenderer(ctx context.Context, args []string, stdin io.Reader, stdout
 }
 
 func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer, capabilities PresentationCapabilities) int {
+	return runWithProjectView(ctx, args, stdin, stdout, stderr, renderer, capabilities, runProjectView)
+}
+
+func runWithProjectView(ctx context.Context, args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, renderer cliexec.Renderer, capabilities PresentationCapabilities, projectView projectViewRunner) int {
 	args, layout, layoutExplicit, err := parseProcessOptions(args)
 	if err != nil {
 		writeDiagnostic(stderr, err)
@@ -164,6 +168,8 @@ func RunWithRendererAndCapabilities(ctx context.Context, args []string, stdin io
 		return runPilotAdmission(args[1:], stdin, stdout, stderr)
 	case commandRunnerProjectStatus:
 		return runProjectStatus(ctx, args[0], args[1:], stdout, stderr, capabilities)
+	case commandRunnerProjectView:
+		return projectView(ctx, parsedArguments, stdout, stderr)
 	case commandRunnerProjectStructure:
 		return runProjectStructure(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerTypeScriptPublicAPISurfaces:

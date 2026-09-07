@@ -45,6 +45,7 @@ type Snapshot struct {
 	SnapshotID             string
 	Sources                []Source
 	Tree                   requirementspectree.Tree
+	projectOrigin          *projectOrigin
 }
 
 func SnapshotValue(snapshot Snapshot) map[string]any {
@@ -67,7 +68,7 @@ func SnapshotValue(snapshot Snapshot) map[string]any {
 		}
 		sources = append(sources, record)
 	}
-	return map[string]any{
+	value := map[string]any{
 		"catalogId":              snapshot.CatalogID,
 		"contextKind":            ContextKind,
 		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
@@ -77,6 +78,11 @@ func SnapshotValue(snapshot Snapshot) map[string]any {
 		"snapshotId":             snapshot.SnapshotID,
 		"sources":                sources,
 	}
+	if snapshot.projectOrigin != nil {
+		value["schemaVersion"] = json.Number("3")
+		value["projectOrigin"] = snapshot.projectOrigin.value()
+	}
+	return value
 }
 
 func AdmitSnapshot(raw any) (Snapshot, error) {
@@ -89,8 +95,10 @@ func AdmitSnapshot(raw any) (Snapshot, error) {
 		return admitV1Snapshot(record)
 	case admit.JSONNumberEquals(record["schemaVersion"], 2):
 		return admitV2Snapshot(record)
+	case admit.JSONNumberEquals(record["schemaVersion"], 3):
+		return admitProjectSnapshot(record)
 	default:
-		return Snapshot{}, fmt.Errorf("requirement context schemaVersion must be 1 or 2")
+		return Snapshot{}, fmt.Errorf("requirement context schemaVersion must be 1, 2 or 3")
 	}
 }
 
@@ -345,13 +353,21 @@ func admitExactNonClaims(raw any, expectedNonClaims []string) error {
 }
 
 func admitSources(raw any) ([]Source, error) {
+	return admitSourceInventory(raw, false)
+}
+
+func admitSourceInventory(raw any, fromProject bool) ([]Source, error) {
 	values, ok := raw.([]any)
 	if !ok || len(values) == 0 {
 		return nil, fmt.Errorf("requirement context sources must be a non-empty array")
 	}
 	result := make([]Source, 0, len(values))
 	seenPaths := map[string]struct{}{}
-	seenRefs := map[string]struct{}{}
+	seenRefs := map[[2]string]struct{}{}
+	kinds := map[string]struct{}{"coverage": {}, "proof_binding": {}, "requirement_source": {}, "spec_tree": {}}
+	if fromProject {
+		kinds = map[string]struct{}{"project_manifest": {}, "test_inventory": {}, "proof_binding": {}, "requirement_source": {}}
+	}
 	for index, value := range values {
 		record, ok := value.(map[string]any)
 		if !ok {
@@ -383,7 +399,7 @@ func admitSources(raw any) ([]Source, error) {
 				return nil, err
 			}
 		}
-		kind, err := admit.Enum(record["kind"], map[string]struct{}{"coverage": {}, "proof_binding": {}, "requirement_source": {}, "spec_tree": {}}, "requirement context source kind")
+		kind, err := admit.Enum(record["kind"], kinds, "requirement context source kind")
 		if err != nil {
 			return nil, err
 		}
@@ -391,10 +407,14 @@ func admitSources(raw any) ([]Source, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, exists := seenRefs[sourceRef]; exists {
+		key := [2]string{"", sourceRef}
+		if fromProject {
+			key[0] = kind
+		}
+		if _, exists := seenRefs[key]; exists {
 			return nil, fmt.Errorf("requirement context source refs must be unique")
 		}
-		seenRefs[sourceRef] = struct{}{}
+		seenRefs[key] = struct{}{}
 		if expectedDigest != "" && expectedDigest != currentDigest {
 			return nil, fmt.Errorf("requirement context source expectedDigest must equal currentDigest")
 		}
@@ -414,8 +434,17 @@ func admitSources(raw any) ([]Source, error) {
 		}
 		result = append(result, Source{CurrentDigest: currentDigest, ExpectedDigest: expectedDigest, Kind: kind, NodeID: nodeID, Path: path, SourceRef: sourceRef, SourceRole: sourceRole})
 	}
-	sort.Slice(result, func(left, right int) bool { return result[left].SourceRef < result[right].SourceRef })
+	sortSourceInventory(result, fromProject)
 	return result, nil
+}
+
+func sortSourceInventory(values []Source, fromProject bool) {
+	sort.Slice(values, func(left, right int) bool {
+		if fromProject && values[left].Kind != values[right].Kind {
+			return values[left].Kind < values[right].Kind
+		}
+		return values[left].SourceRef < values[right].SourceRef
+	})
 }
 
 func admitDigestRef(raw any, context string) (string, error) {

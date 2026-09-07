@@ -7,9 +7,10 @@ import (
 )
 
 type descriptorArguments struct {
-	counts  map[string]int
-	present map[string]bool
-	values  map[string][]string
+	counts     map[string]int
+	present    map[string]bool
+	values     map[string][]string
+	unexpected bool
 }
 
 func classifyDescriptorArguments(descriptor commandDescriptor, args []string) descriptorArguments {
@@ -22,6 +23,7 @@ func classifyDescriptorArguments(descriptor commandDescriptor, args []string) de
 			continue
 		}
 		if !slices.Contains(descriptor.allowedFlags, argument) {
+			parsed.unexpected = true
 			continue
 		}
 		parsed.present[argument] = true
@@ -43,7 +45,11 @@ func validateFlagConstraints(descriptor commandDescriptor, parsed descriptorArgu
 			return fmt.Errorf("%s may be specified only once", flag)
 		}
 	}
-	for flag, choices := range descriptor.flagValueChoices {
+	for _, flag := range descriptor.allowedFlags {
+		choices, constrained := descriptor.flagValueChoices[flag]
+		if !constrained {
+			continue
+		}
 		for _, value := range parsed.values[flag] {
 			if !slices.Contains(choices, value) {
 				return flagChoiceError(flag, choices)

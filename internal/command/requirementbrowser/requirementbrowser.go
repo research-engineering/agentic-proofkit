@@ -60,6 +60,18 @@ type Options struct {
 }
 
 func BuildPlan(raw any, options Options) (map[string]any, int, error) {
+	options, err := admitServerAddress(options)
+	if err != nil {
+		return nil, 1, err
+	}
+	rendered, err := render(raw, options)
+	if err != nil {
+		return nil, 1, err
+	}
+	return renderedPlan(rendered, options), 0, nil
+}
+
+func admitServerAddress(options Options) (Options, error) {
 	if options.Host == "" {
 		options.Host = defaultHost
 	}
@@ -67,15 +79,15 @@ func BuildPlan(raw any, options Options) (map[string]any, int, error) {
 		options.Port = defaultPort
 	}
 	if err := admitLoopbackHost(options.Host); err != nil {
-		return nil, 1, err
+		return Options{}, err
 	}
 	if err := admitPort(options.Port); err != nil {
-		return nil, 1, err
+		return Options{}, err
 	}
-	rendered, err := render(raw, options)
-	if err != nil {
-		return nil, 1, err
-	}
+	return options, nil
+}
+
+func renderedPlan(rendered renderedView, options Options) map[string]any {
 	portSelection := "fixed"
 	var plannedURL any = browserURL(options.Host, options.Port)
 	if options.Port == 0 {
@@ -95,7 +107,7 @@ func BuildPlan(raw any, options Options) (map[string]any, int, error) {
 		"schemaVersion":     1,
 		"url":               plannedURL,
 		"view":              options.View,
-	}, 0, nil
+	}
 }
 
 type renderedView struct {

@@ -227,7 +227,7 @@ func admitGraphEdge(edge map[string]any) error {
 		keys = append(keys, "codeNodeId")
 	}
 	if plane == "native_execution_coverage" && edge["edgeKind"] == "observed_by" {
-		if _, err := admit.RuleID(edge["codeNodeId"], "requirement traceability graph edge codeNodeId"); err != nil {
+		if _, err := admitGraphID(edge["codeNodeId"], "requirement traceability graph edge codeNodeId"); err != nil {
 			return err
 		}
 	}
@@ -241,7 +241,7 @@ func admitGraphEdge(edge map[string]any) error {
 		return err
 	}
 	for _, key := range []string{"fromNodeId", "toNodeId"} {
-		if _, err := admit.RuleID(edge[key], "requirement traceability graph edge "+key); err != nil {
+		if _, err := admitGraphID(edge[key], "requirement traceability graph edge "+key); err != nil {
 			return err
 		}
 	}
@@ -346,6 +346,15 @@ func admitGraphID(raw any, context string) (string, error) {
 	value, ok := raw.(string)
 	if ok && derivedGraphIDPattern.MatchString(value) {
 		return value, nil
+	}
+	if prefix, component, found := strings.Cut(value, ":"); ok && found {
+		switch prefix {
+		case "spec", "requirement", "code", "execution":
+			if _, err := admit.RuleID(component, context); err != nil {
+				return "", err
+			}
+			return value, nil
+		}
 	}
 	return admit.RuleID(raw, context)
 }

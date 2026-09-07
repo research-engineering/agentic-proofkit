@@ -724,12 +724,9 @@ func admitAnnotation(annotation map[string]any, session workspaceSession) (map[s
 	if err := admit.KnownKeys(annotation, []string{"anchorId", "endCodePoint", "exactQuote", "question", "startCodePoint"}, "browser handoff annotation"); err != nil {
 		return nil, err
 	}
-	anchorID, err := admit.RuleID(annotation["anchorId"], "browser handoff anchorId")
-	if err != nil {
-		return nil, err
-	}
-	anchor, ok := session.Anchors[anchorID]
-	if !ok {
+	anchorID, isText := annotation["anchorId"].(string)
+	anchor, known := session.Anchors[anchorID]
+	if !isText || !known {
 		return nil, fmt.Errorf("handoff references unknown anchor")
 	}
 	quote, ok := annotation["exactQuote"].(string)

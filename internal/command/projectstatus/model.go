@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
@@ -118,6 +119,14 @@ type inspectionSnapshot struct {
 	Manifest     manifestObservation
 	ProjectID    string
 	Transaction  transactionObservation
+	project      *adoptionmaterialization.Project
+}
+
+// Inspection carries one completed cohort without expanding the public status.
+type Inspection struct {
+	ManifestContentDigest string
+	Project               *adoptionmaterialization.Project
+	Status                Status
 }
 
 type NextAction struct {

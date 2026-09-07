@@ -83,10 +83,11 @@
     {
       "familyId": "project-state-navigation",
       "label": "Project state navigation",
-      "purpose": "Classify a materialized project and expose one bounded next action.",
+      "purpose": "Classify a materialized project, expose one bounded next action and inspect its captured specifications in a local browser.",
       "commands": [
         "next",
-        "status"
+        "status",
+        "view"
       ]
     },
     {

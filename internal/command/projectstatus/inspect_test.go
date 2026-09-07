@@ -27,12 +27,13 @@ func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.068153284639677751912209073851318961044240216422390589277786880896123148215480")
 	root := t.TempDir()
 	before := snapshotProjectTree(t, root)
-	status, err := Inspect(context.Background(), root)
+	inspection, err := InspectProject(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	status := inspection.Status
 	assertProjectTreeUnchanged(t, root, before)
-	if status.ProjectState != StateUninitialized || status.NextAction.ActionClass != ActionChooseAdoptionMode {
+	if inspection.Project != nil || status.ProjectState != StateUninitialized || status.NextAction.ActionClass != ActionChooseAdoptionMode {
 		t.Fatalf("Inspect() = %#v", status)
 	}
 	if _, err := os.Stat(filepath.Join(root, repositorytransaction.ControlRoot)); !errors.Is(err, os.ErrNotExist) {
@@ -41,12 +42,13 @@ func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing
 
 	materializeTestProject(t, root)
 	before = snapshotProjectTree(t, root)
-	status, err = Inspect(context.Background(), root)
+	inspection, err = InspectProject(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	status = inspection.Status
 	assertProjectTreeUnchanged(t, root, before)
-	if status.ProjectState != StateVerificationRequired || status.ProjectID != "pilot.project" || status.ManifestID == "" {
+	if inspection.Project == nil || status.ProjectState != StateVerificationRequired || status.ProjectID != "pilot.project" || status.ManifestID == "" {
 		t.Fatalf("Inspect() = %#v", status)
 	}
 
@@ -55,12 +57,13 @@ func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing
 		t.Fatal(err)
 	}
 	before = snapshotProjectTree(t, root)
-	status, err = Inspect(context.Background(), root)
+	inspection, err = InspectProject(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
+	status = inspection.Status
 	assertProjectTreeUnchanged(t, root, before)
-	if status.ProjectState != StateStale || !reflectIssue(status.IssueCodes, IssueChildDigestMismatch) {
+	if inspection.Project != nil || status.ProjectState != StateStale || !reflectIssue(status.IssueCodes, IssueChildDigestMismatch) {
 		t.Fatalf("Inspect() after drift = %#v", status)
 	}
 }
@@ -118,11 +121,12 @@ func TestInspectRejectsAdmittedChildrenWithInvalidCrossRecordClosure(t *testing.
 	root := t.TempDir()
 	materializeTestProject(t, root)
 	breakMaterializedProjectClosure(t, root)
-	status, err := Inspect(context.Background(), root)
+	inspection, err := InspectProject(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if status.ProjectState != StateBlocked || !reflectIssue(status.IssueCodes, IssueClosureInvalid) {
+	status := inspection.Status
+	if inspection.Project != nil || status.ProjectState != StateBlocked || !reflectIssue(status.IssueCodes, IssueClosureInvalid) {
 		t.Fatalf("Inspect() = %#v, want blocked closure-invalid status", status)
 	}
 }
@@ -237,13 +241,14 @@ func TestInspectCohortValidationClosesCleanEpochABA(t *testing.T) {
 					}
 					return observation, err
 				}
-				status, err := inspectWithDependencies(context.Background(), root, dependencies)
+				inspection, err := inspectProjectWithDependencies(context.Background(), root, dependencies)
 				if changeDigest {
+					assertEmptyInspection(t, inspection)
 					if err == nil || !strings.Contains(err.Error(), "both bounded inspection attempts") || pathReads != 4 {
 						t.Fatalf("digest drift error=%v reads=%d, want rejection after two two-pass attempts", err, pathReads)
 					}
-				} else if err != nil || status.ProjectState != StateVerificationRequired || pathReads != 2 {
-					t.Fatalf("stable cohort state=%s error=%v reads=%d", status.ProjectState, err, pathReads)
+				} else if err != nil || inspection.Project == nil || inspection.Status.ProjectState != StateVerificationRequired || pathReads != 2 {
+					t.Fatalf("stable cohort state=%s error=%v reads=%d", inspection.Status.ProjectState, err, pathReads)
 				}
 			})
 		}
@@ -272,7 +277,9 @@ func TestInspectCleanupFailureDominatesRetryableSnapshotChange(t *testing.T) {
 			return errors.New("injected inspection cleanup failure")
 		},
 	}
-	if _, err := inspectWithDependencies(context.Background(), t.TempDir(), dependencies); err == nil || !strings.Contains(err.Error(), "cleanup failure") || errors.Is(err, errSnapshotChanged) {
+	inspection, err := inspectProjectWithDependencies(context.Background(), t.TempDir(), dependencies)
+	assertEmptyInspection(t, inspection)
+	if err == nil || !strings.Contains(err.Error(), "cleanup failure") || errors.Is(err, errSnapshotChanged) {
 		t.Fatalf("inspectWithDependencies() error=%v, want terminal cleanup failure", err)
 	}
 	if controlReads != 2 || closeCalls != 1 {
@@ -328,11 +335,12 @@ func TestInspectMapsRecoverableControlState(t *testing.T) {
 			return fileObservation{}, nil
 		},
 	}
-	status, err := inspectWithDependencies(context.Background(), t.TempDir(), dependencies)
+	inspection, err := inspectProjectWithDependencies(context.Background(), t.TempDir(), dependencies)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if status.ProjectState != StateRecoveryRequired || status.NextAction.ActionClass != ActionChooseRecovery || status.NextAction.ContextRef != transactionID {
+	status := inspection.Status
+	if inspection.Project != nil || inspection.ManifestContentDigest != "" || status.ProjectState != StateRecoveryRequired || status.NextAction.ActionClass != ActionChooseRecovery || status.NextAction.ContextRef != transactionID {
 		t.Fatalf("inspectWithDependencies() = %#v", status)
 	}
 }
@@ -346,11 +354,12 @@ func TestInspectMapsInvalidControlState(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(controlDirectory, "unknown"), []byte("opaque"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	status, err := Inspect(context.Background(), root)
+	inspection, err := InspectProject(context.Background(), root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if status.ProjectState != StateBlocked || status.NextAction.ActionClass != ActionRepairControlState || !reflectIssue(status.IssueCodes, IssueTransactionInvalid) {
+	status := inspection.Status
+	if inspection.Project != nil || inspection.ManifestContentDigest != "" || status.ProjectState != StateBlocked || status.NextAction.ActionClass != ActionRepairControlState || !reflectIssue(status.IssueCodes, IssueTransactionInvalid) {
 		t.Fatalf("Inspect()=%#v, want invalid transaction classification", status)
 	}
 	var expectedStatus Status
@@ -388,6 +397,7 @@ func TestInspectAttemptRejectsFinalRepositoryRootReplacement(t *testing.T) {
 	if err := os.Mkdir(root, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	materializeTestProject(t, root)
 	control := repositorytransaction.ControlInspection{EpochID: digest.SHA256TextRef("stable epoch"), State: repositorytransaction.ControlStateClean}
 	controlReads := 0
 	dependencies := inspectionDependencies{
@@ -403,11 +413,11 @@ func TestInspectAttemptRejectsFinalRepositoryRootReplacement(t *testing.T) {
 			}
 			return control, nil
 		},
-		readFile: func(context.Context, *repositorytransaction.InspectionLease, string, *readBudget) (fileObservation, error) {
-			return fileObservation{state: fileMissing}, nil
-		},
+		readFile: readProjectFile,
 	}
-	if _, err := inspectAttempt(context.Background(), root, dependencies); !errors.Is(err, repositorytransaction.ErrControlStateChanged) {
+	inspection, err := inspectAttempt(context.Background(), root, dependencies)
+	assertEmptyInspection(t, inspection)
+	if !errors.Is(err, repositorytransaction.ErrControlStateChanged) {
 		t.Fatalf("inspectAttempt() error=%v, want repository-root change", err)
 	}
 }
@@ -426,7 +436,9 @@ func TestInspectRejectsChangingControlEpochAcrossBothAttempts(t *testing.T) {
 			return fileObservation{state: fileMissing}, nil
 		},
 	}
-	if _, err := inspectWithDependencies(context.Background(), t.TempDir(), dependencies); err == nil || !strings.Contains(err.Error(), "both bounded inspection attempts") {
+	inspection, err := inspectProjectWithDependencies(context.Background(), t.TempDir(), dependencies)
+	assertEmptyInspection(t, inspection)
+	if err == nil || !strings.Contains(err.Error(), "both bounded inspection attempts") {
 		t.Fatalf("inspectWithDependencies() error = %v", err)
 	}
 	if controlReads != 4 {
@@ -546,7 +558,9 @@ func TestOutOfBoundManifestIdentityIsAClassificationNotByteIdentity(t *testing.T
 func TestInspectHonorsCancellationBeforeReads(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, err := Inspect(ctx, t.TempDir()); !errors.Is(err, context.Canceled) {
+	inspection, err := InspectProject(ctx, t.TempDir())
+	assertEmptyInspection(t, inspection)
+	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("Inspect() error = %v", err)
 	}
 }
@@ -567,7 +581,9 @@ func TestInspectHonorsCancellationBetweenBoundedReads(t *testing.T) {
 		}
 		return observation, err
 	}
-	if _, err := inspectWithDependencies(ctx, root, dependencies); !errors.Is(err, context.Canceled) {
+	inspection, err := inspectProjectWithDependencies(ctx, root, dependencies)
+	assertEmptyInspection(t, inspection)
+	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("inspectWithDependencies() error = %v, want context cancellation", err)
 	}
 	if readCount != 1 {
@@ -576,6 +592,8 @@ func TestInspectHonorsCancellationBetweenBoundedReads(t *testing.T) {
 }
 
 func TestInspectHonorsCancellationAfterFinalControlObservation(t *testing.T) {
+	root := t.TempDir()
+	materializeTestProject(t, root)
 	ctx, cancel := context.WithCancel(context.Background())
 	controlReads := 0
 	dependencies := defaultInspectionDependencies
@@ -589,7 +607,9 @@ func TestInspectHonorsCancellationAfterFinalControlObservation(t *testing.T) {
 			State:   repositorytransaction.ControlStateClean,
 		}, nil
 	}
-	if _, err := inspectWithDependencies(ctx, t.TempDir(), dependencies); !errors.Is(err, context.Canceled) {
+	inspection, err := inspectProjectWithDependencies(ctx, root, dependencies)
+	assertEmptyInspection(t, inspection)
+	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("inspectWithDependencies() error = %v, want context cancellation", err)
 	}
 }

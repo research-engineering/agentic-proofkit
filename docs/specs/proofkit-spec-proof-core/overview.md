@@ -223,6 +223,10 @@ execution receipts, and merge policy.
   server bytes, source identity, drafts and independent generation/lock state.
 - `REQ-PROOFKIT-SPEC-041`: diff summaries count only admitted page changes and
   retain distinct global counts, source identities and full disclosed values.
+- `REQ-PROOFKIT-SPEC-042`: the explicit-root project browser retains one
+  closure-admitted capture, replays a versioned role-preserving context and
+  reuses the existing workspace and terminal lifecycle without manufacturing
+  proof coverage, losing source restrictions or rereading live files.
 
 ## Non-Claims
 

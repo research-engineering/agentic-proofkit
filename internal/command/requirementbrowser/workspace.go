@@ -51,17 +51,9 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 	if err != nil {
 		return workspaceSession{}, "", err
 	}
-	lookup, anchors := buildWorkspaceLookupIndex(snapshot)
 	var diff map[string]any
 	if record["diffInput"] != nil {
 		diff, err = requirementdiff.Build(record["diffInput"])
-		if err != nil {
-			return workspaceSession{}, "", err
-		}
-		if diff["currentSnapshotId"] != snapshot.SnapshotID {
-			return workspaceSession{}, "", fmt.Errorf("requirement browser diff input current context must equal workspace context")
-		}
-		diff, err = requirementdiff.AdmitOutput(diff, snapshot.SnapshotID)
 		if err != nil {
 			return workspaceSession{}, "", err
 		}
@@ -72,6 +64,22 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 		if err != nil {
 			return workspaceSession{}, "", err
 		}
+	}
+	return prepareWorkspace(workspaceID, snapshot, diff, graph, workspaceHTML)
+}
+
+func prepareWorkspace(workspaceID string, snapshot requirementcontext.Snapshot, diff, graph map[string]any, document func(string) string) (workspaceSession, string, error) {
+	var err error
+	if diff != nil {
+		if diff["currentSnapshotId"] != snapshot.SnapshotID {
+			return workspaceSession{}, "", fmt.Errorf("requirement browser diff input current context must equal workspace context")
+		}
+		diff, err = requirementdiff.AdmitOutput(diff, snapshot.SnapshotID)
+		if err != nil {
+			return workspaceSession{}, "", err
+		}
+	}
+	if graph != nil {
 		if graph["snapshotId"] != snapshot.SnapshotID {
 			return workspaceSession{}, "", fmt.Errorf("requirement browser graph input context must equal workspace context")
 		}
@@ -83,6 +91,7 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 			return workspaceSession{}, "", err
 		}
 	}
+	lookup, anchors := buildWorkspaceLookupIndex(snapshot)
 	manifest := map[string]any{
 		"authority":              "presentation_adapter",
 		"availableViews":         []any{"specifications", "coverage", "diff", "graph"},
@@ -97,7 +106,7 @@ func buildWorkspace(raw any) (workspaceSession, string, error) {
 		"snapshotId":             snapshot.SnapshotID,
 		"workspaceId":            workspaceID,
 	}
-	return workspaceSession{Anchors: anchors, Diff: diff, Graph: graph, Manifest: manifest, Lookup: lookup, Snapshot: snapshot, SnapshotID: snapshot.SnapshotID}, workspaceHTML(workspaceID), nil
+	return workspaceSession{Anchors: anchors, Diff: diff, Graph: graph, Manifest: manifest, Lookup: lookup, Snapshot: snapshot, SnapshotID: snapshot.SnapshotID}, document(workspaceID), nil
 }
 
 func admitWorkspaceInputVersion(record map[string]any) error {
