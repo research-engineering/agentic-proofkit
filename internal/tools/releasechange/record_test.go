@@ -197,11 +197,8 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.browser.project-entry", Summary: "Use view --repo-root to prepare a read-only workspace from one complete materialized project, or add --serve to inspect it through the existing loopback browser. Explicit --open, one-shot questions, compact JSON plans and bounded diagnostics reuse the existing browser and CLI owners."},
-	{ChangeID: "proofkit.browser.reference-closure", Summary: "Resolve question anchors against the exact browser-issued session inventory, preserving admitted long requirement identities without expanding base identifier limits or weakening quote, source and terminal checks."},
-	{ChangeID: "proofkit.cli.deterministic-choice-diagnostics", Summary: "Validate flag choices in descriptor order so identical invalid invocations select the same diagnostic. Effect-sensitive tests cover rejection before project preparation and inspection, including errors deliberately discarded by a faulty caller."},
-	{ChangeID: "proofkit.context.captured-project-origin", Summary: "Add closed project-origin context schema 3, with owner-replayed source and binding projections, role-preserving physical identities and source-level limitations retained in question handoffs. Existing context v1/v2 identities and low-level browser contracts remain unchanged."},
-	{ChangeID: "proofkit.graph.derived-reference-admission", Summary: "Apply one typed identity owner to graph nodes and relation references. Transparent prefixes preserve the full admitted component length; digest-derived identities remain distinct from caller IDs. Invalid components, unresolved references and inconsistent topology remain rejected."},
+	{ChangeID: "proofkit.documentation.project-workflow", Summary: "Present read-only adoption, explicit owner-reviewed materialization and daily project navigation as distinct states. One diagram connects invariant authoring to native proof and derived views; current managed integration limits replace obsolete phase status. CLI and machine contract semantics are unchanged."},
+	{ChangeID: "proofkit.package.workspace-illustration", Summary: "Ship one real synthetic-project browser image with exact npm path admission, source-byte equality, independent PNG decoding and byte/dimension bounds. Installed README checks retain the read-only first action and state-qualified daily command routes. The image does not represent executed proof or certify future browser rendering."},
 }
 
 var currentMigrationSteps = []string{}
@@ -224,7 +221,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.0",
+		"# @research-engineering/agentic-proofkit 0.14.1",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -277,7 +274,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.1",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -289,7 +286,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.13.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.13.0`.",
+		"- Pin npm consumers to the previous admitted version 0.14.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

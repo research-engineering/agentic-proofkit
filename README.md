@@ -1,27 +1,14 @@
 # agentic-proofkit
 
-Reusable CLI and JSON proof infrastructure for spec-to-proof workflows in
-software repositories.
+Machine-readable specifications, proof bindings, selective verification,
+and bounded agent workflows for software repositories.
 
-`agentic-proofkit` helps repositories validate structured requirements, bind
-requirements to proof routes, plan selective checks, admit receipt-shaped
-evidence, render human views, and give coding agents bounded next-action
-packets without copying verifier logic between projects.
-
-## Current Repository State
-
-| Surface | State |
-|---|---|
-| Source repository | Declared in package metadata; provider visibility is a live GitHub fact |
-| Current layer | Public-source workflow; release evidence is version-specific |
-| Runtime implementation | Go CLI with npm and Python wrapper packaging |
-| Package release | Scoped npm release channel configured; exact version and registry identity are owned by npm and GitHub Release artifacts |
-| Public-source provenance | Claimed only for a version whose release assets, registry identity, and checksum manifests are artifact-closed |
-| License | MIT |
+Keep product promises in repo-owned requirements. Connect each requirement to
+the checks that can falsify it. Give agents the relevant context and next action;
+inspect the same records in a local browser. Your repository retains authority
+over requirement meaning, native tests and approval.
 
 ## Install
-
-The canonical registry identity is npm:
 
 ```bash
 npm install --save-dev --save-exact @research-engineering/agentic-proofkit
@@ -31,23 +18,130 @@ Pre-1.0 releases may contain owner-declared breaking changes, so npm consumers
 must retain the exact saved version instead of replacing it with a version
 range.
 
-The canonical local invocation resolves only the already-installed dependency:
+For an existing repository without an admitted specification, start with a
+read-only adoption plan:
+
+<!-- proofkit:first-action:start -->
+```bash
+npm exec --offline -- agentic-proofkit adopt plan --repo-root . --mode audit-from-code --format text
+```
+<!-- proofkit:first-action:end -->
+
+The plan returns authoring tasks and owner questions. It reads only a fixed
+root-file catalog; it does not analyze arbitrary source semantics, write a
+specification or run tests. An agent must inspect the selected code and design
+repo-specific checks with the owner. `--repo-root .` selects the repository;
+`--offline` resolves the already-installed dependency.
+
+Before opening a project in the browser, review the candidate artifacts and
+follow the separate [materialization workflow](docs/proofkit-contract-map.md#agent-decision-procedure):
+`adopt materialize plan`, then explicit `adopt materialize apply` with both
+reviewed transaction and desired-state identities. Planning alone does not
+create that project.
+
+## How It Works
+
+```mermaid
+flowchart TB
+    Observations["Code, tests, docs and maintainer intent"] --> Candidates["Agent: candidate invariants"]
+    Candidates --> Review["Repository owner: review and admit"]
+    Review --> Specs["Repo-owned specifications and proof bindings"]
+    Specs --> Checks["Proofkit: select required checks"]
+    Checks --> Native["Repository: run native tests and CI"]
+    Native --> Evidence["Proofkit: admit receipt-shaped evidence"]
+    Specs --> Views["Proofkit: bounded agent context and browser views"]
+    Evidence --> Views
+    Views --> Decision["Repository owner: decide"]
+```
+
+**Authoring is not proof.** Observed behavior and generated invariants remain
+candidates until the repository owner admits them. Binding a test declares a
+proof route; only its actual execution can supply execution evidence. Reports
+and views do not authenticate receipts or approve a change.
+
+### Choose What You Trust
+
+Select the mode explicitly; Proofkit does not infer that existing code is correct.
+
+| `--mode` | Starting assumption | Agent task |
+|---|---|---|
+| `fresh` | No existing implementation is accepted as product truth | Turn owner intent into candidate behavior statements and falsifiers. |
+| `code-baseline` | The owner chooses current behavior as the initial baseline | Record observed behavior and its limits for owner review. |
+| `audit-from-code` | Existing behavior may be wrong or incomplete | Separate observations, contradictions and unanswered owner questions. |
+
+All modes need repo-specific specifications and native checks. The
+[authoring and test-order guide](ADOPTION.md#requirement-contract-and-test-order)
+and [agent guidance](ADOPTION.md#agent-guidance) cover candidate promotion,
+policy ownership, falsifiers and evidence templates. Proofkit supplies reusable
+mechanics and prompts, not product policy or a native test implementation.
+
+## Inspect The Project
+
+![Proofkit workspace showing four synthetic delivery requirements and a source-bound question](docs/images/workspace.png)
+
+An actual `view` session over a materialized synthetic project. The requirements
+and proof routes are declarations, not executed evidence. This project input
+provides specification navigation, source-bound questions and declared
+traceability; coverage and baseline diff are unavailable. The separate
+[explicit-input browser](ADOPTION.md#rendering-and-browser-views) can present
+admitted coverage and comparison records.
+
+### Daily Workflow
+
+<!-- proofkit:daily-workflow:start -->
+For an already materialized, current project:
+
+```bash
+npm exec --offline -- agentic-proofkit status --repo-root . --format text
+npm exec --offline -- agentic-proofkit next --repo-root . --format text
+npm exec --offline -- agentic-proofkit view --repo-root . --serve
+```
+<!-- proofkit:daily-workflow:end -->
+
+`status` classifies project structure; `next` gives the next bounded action.
+Missing, stale or interrupted state must be resolved before `view` can serve.
+`verification_required` is not a passing verification result.
+
+The server prints a loopback URL. Add `--open` only when you want Proofkit to
+launch the browser; omit `--serve` to request a read-only browser plan instead.
+Browser questions produce handoff packets, not agent execution or spec edits.
+
+JSON is the default machine output. For `adopt plan`, `status` and `next`,
+`--format text` selects an uncolored human view; `--color auto` opts into
+terminal-aware color. To reduce JSON transport whitespace, place
+`--json-layout compact` before the command. This does not change the JSON value
+or the persisted specification format.
+
+## Find The Next Capability
 
 ```bash
 npm exec --offline -- agentic-proofkit help
+npm exec --offline -- agentic-proofkit help adopt plan
+npm exec --offline -- agentic-proofkit help repo-profile-admission
 ```
 
-npm remains the release-authority toolchain because release proof records npm
-registry identity, `dist.integrity`, `dist.shasum`, `npm pack`, and root-only
-registry install evidence. A bare `agentic-proofkit` command is valid when the
-package manager, script runner, or activated environment has already placed the
-installed binary on `PATH`; it is not the canonical copy-and-paste route.
-Equivalent exact-tarball Bun execution has not been admitted, so this README
-does not claim a Bun execution route.
+Command-specific help is derived from the private command descriptor table and
+does not read stdin. The full machine-readable command inventory remains
+`proofkit/cli-contract.v2.json`; the human route map is
+`docs/proofkit-contract-map.md`.
 
-Python consumers use the Python package as a runner wrapper over the same Go
-CLI, not as a Python SDK. Python projects should still treat CLI/JSON records,
-exit codes, and package metadata as the public contract.
+Use the [route map](docs/proofkit-contract-map.md#agent-decision-procedure)
+for selective checks, migration parity, adoption diagnostics and bounded
+specification context. Each route names its input and stopping conditions;
+a plan, projection or missing receipt is not proof that a check passed.
+
+For reviewed local Claude or Codex instructions, see the
+[portable bootstrap and managed file lifecycle](ADOPTION.md#portable-agent-bootstrap).
+Creating an instruction file does not prove that an agent application loads it.
+
+## Runtimes And Installation
+
+The Go CLI is distributed through npm and a Python runner wrapper. Neither
+package exposes the Go internals as an SDK. npm owns the canonical release
+toolchain and registry proof; equivalent exact-tarball Bun execution has not
+been admitted. A bare `agentic-proofkit` command is valid when an installed
+environment already places it on `PATH`; npm examples use explicit offline
+resolution.
 
 <!-- proofkit:platform-python:start -->
 Supported binary targets are macOS 13 or later on arm64 or x64.
@@ -74,152 +168,10 @@ These conditional commands do not claim that any current version is available
 on PyPI.
 <!-- proofkit:platform-python:end -->
 
-## Project Boundary
-
-`agentic-proofkit` is intended to provide reusable proof-workflow mechanics for
-repositories that want explicit requirements, proof bindings, deterministic
-reports, and bounded guidance for coding agents.
-
-Proofkit does not own a consuming repository's product requirements, native
-witness execution, receipt authenticity, proof freshness, merge admission,
-rollout, deployment, or production readiness.
-
-## How It Works
-
-Proofkit has two related but separate loops:
-
-- an **authoring loop** for turning observations into candidate invariants and
-  repo-owned specifications;
-- a **proof loop** for admitting those specifications, binding them to evidence,
-  and producing derived views or bounded next actions.
-
-The loops are separate because generated observations are not product truth.
-Only the consuming repository can promote a candidate invariant into an
-admitted requirement.
-
-### Proof Loop
-
-```mermaid
-flowchart TB
-    subgraph Repo["Consumer repository authority"]
-        Requirements["Requirements and invariants"]
-        Bindings["Proof bindings and witness commands"]
-        Execution["Native test and CI execution"]
-        Decision["Owner decision"]
-    end
-
-    subgraph Proofkit["Proofkit reusable mechanics"]
-        Admission["Admit and normalize JSON"]
-        Graph["Build proof graph"]
-        Planning["Plan selected checks"]
-        Receipts["Admit receipt-shaped evidence"]
-        Views["Render derived views"]
-        Packets["Emit bounded agent packets"]
-    end
-
-    Requirements --> Admission
-    Bindings --> Admission
-    Admission --> Graph
-    Graph --> Planning
-    Planning --> Execution
-    Execution --> Receipts
-    Receipts --> Decision
-    Graph --> Views
-    Graph --> Packets
-    Views --> Decision
-    Packets --> Decision
-```
-
-The core invariant is separation of authority. The consuming repository owns
-what the product must do and which native checks prove it. Proofkit owns the
-reusable mechanics: admitting structured inputs, preserving provenance,
-checking proof-binding shape, planning bounded verification, rendering derived
-views, and returning agent-readable next-action packets.
-
-The diagram keeps the rendering syntax intentionally simple for GitHub README
-compatibility. Requirements, bindings, witness commands, native execution, and
-final decisions stay in the consumer repository. Proofkit outputs are admitted
-reports, plans, views, receipts, or agent packets; they do not become product
-truth unless the consumer explicitly admits them.
-
-### Invariant Authoring Loop
-
-For a repository with no specification, Proofkit can guide an agent through
-three explicit starting modes:
-
-```mermaid
-flowchart TB
-    Start["Code, docs, tests, issues, and maintainer intent"] --> Mode["Choose trust mode"]
-    Mode --> Fresh["Fresh authoring mode"]
-    Mode --> Baseline["Code baseline mode"]
-    Mode --> Audit["Code audit mode"]
-    Fresh --> Contract["Owner-authored product contract"]
-    Baseline --> Observations["Caller-owned capability observations"]
-    Audit --> Observations
-    Observations --> Seeds["Candidate invariants and requirement seeds"]
-    Seeds --> Review["Owner review and promotion"]
-    Review --> Specs["Repo-owned requirements.v1.json"]
-    Contract --> Specs
-    Specs --> Obligations["Proof obligations"]
-    Obligations --> Evidence["Proof bindings and test inventory"]
-    Evidence --> Admission["Proofkit admission and coverage"]
-```
-
-| Mode | Use when | Result |
-|---|---|---|
-| Fresh authoring | No existing code or specification is accepted as product truth | Owner-authored behavior statements that remain candidates until admitted as repository requirements |
-| Code baseline | Current behavior is accepted as the starting contract | Candidate requirements and bindings that preserve current behavior until owners review them |
-| Code audit | Current behavior may be wrong or incomplete | Untrusted observations and questions that must be promoted by a repository owner before becoming requirements |
-
-In all three modes, generated records remain candidates until the consuming
-repository admits them as repo-owned requirements, proof bindings, and witness
-plans. Proofkit can structure and validate candidate packets, but it does not
-extract complete behavior from arbitrary source code, invent product policy, or
-make generated invariants authoritative by itself.
-
-## Start Here
-
-Use the CLI help route before reading source:
-
-```bash
-npm exec --offline -- agentic-proofkit help
-npm exec --offline -- agentic-proofkit adopt plan --mode fresh --repo-root .
-npm exec --offline -- agentic-proofkit help adopt plan
-npm exec --offline -- agentic-proofkit help repo-profile-admission
-npm exec --offline -- agentic-proofkit repo-profile-admission --help
-```
-
-Command-specific help is derived from the private command descriptor table and
-does not read stdin. The full machine-readable command inventory remains
-`proofkit/cli-contract.v2.json`; the human route map is
-`docs/proofkit-contract-map.md`.
-
-`adopt plan` is the read-only front door. It inventories only a fixed catalog
-of recognized files at the explicit repository root, validates all arguments
-before filesystem access, and returns candidate-authoring tasks. It does not
-infer a stack, parse arbitrary source semantics, generate requirements, write
-files, or execute evidence. `--stack` is an optional caller-selected hint and
-cannot change the selected trust mode.
-
-| Repository state | Minimal first route | Stop condition |
-|---|---|---|
-| Fresh repository with no specification | `adopt plan --mode fresh --repo-root .` | Stop before writing files or inventing requirement meaning |
-| Current code is intentionally accepted as the initial baseline | `adopt plan --mode code-baseline --repo-root .` | The flag is a caller declaration, not evidence that the code is correct; stop before promoting candidate observations |
-| Current code must be audited before it becomes a contract | `adopt plan --mode audit-from-code --repo-root .` | Stop at explicit observations, owner questions, and candidate-only records |
-| Legacy repository has local proof infrastructure | `migration-parity-admission`, then `migration-plan` | Stop before deleting local proof owners without parity evidence |
-| A change set needs bounded checks | `changed-path-set`, optional `impact`, then `selective-gate-plan` and `selective-gate-evidence` | Stop on unknown scope, missing routes, or stale receipts |
-| An agent needs only one specification subtree | `requirement-context-compose --repo-root . --input context-catalog.json`, then `requirement-context-slice` | Stop before treating a bounded slice as complete repository truth |
-| A human needs semantic navigation, comparison, or traceability | `requirement-browser-server --view workspace --serve` over an admitted workspace input | Browser output, annotations, diff, and graph remain derived and non-authoritative |
-
-JSON commands default to readable output. Agents can request the same JSON
-value with lower transport overhead by placing the process option before the
-command:
-
-```bash
-npm exec --offline -- agentic-proofkit --json-layout compact requirement-context-slice --input slice-input.json
-```
-
 ### First Valid Input
+
+<details>
+<summary>Inspect a complete minimal JSON input</summary>
 
 The following marker-bounded record is a complete minimal requirement-source
 input. Its example IDs, paths, owner, invariant, and non-claims are
@@ -271,6 +223,8 @@ npm exec --offline -- agentic-proofkit requirement-source-admission --input -
 ```
 <!-- proofkit:first-valid-input:end -->
 
+</details>
+
 Use `secret-scan` only when the caller provides an explicit file inventory with
 content. It is a dedicated secret-like text detector for admitted inventory
 records; it does not traverse the repository, validate credential liveness, or
@@ -287,13 +241,15 @@ The generated adapter remains caller-owned after materialization. It must be
 reviewed, pinned to the installed package, and kept behind the same CLI/JSON
 contract; it does not become a separate public SDK or proof authority.
 
+## Documentation And Boundaries
+
 | Need | Owner |
 |---|---|
 | Human orientation | This README |
-| Adoption and release-channel model | `ADOPTION.md` |
-| Vulnerability reporting boundary | `SECURITY.md` |
-| Explicit boundary denials | `NON_CLAIMS.md` |
-| `LICENSE` | MIT license |
+| Adoption and release-channel model | [ADOPTION.md](ADOPTION.md) |
+| Vulnerability reporting boundary | [SECURITY.md](SECURITY.md) |
+| Explicit boundary denials | [NON_CLAIMS.md](NON_CLAIMS.md) |
+| License | [LICENSE](LICENSE) |
 
 ## Non-Claims
 

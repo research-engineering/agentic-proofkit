@@ -286,7 +286,7 @@ func verifyPackedPlatformBinariesMatchSource(artifact rootPackageArtifact) error
 
 func sourceOwnedPackageEntry(entry string) bool {
 	switch entry {
-	case "package/LICENSE", "package/dist/agentic-proofkit", "package/package.json":
+	case "package/LICENSE", "package/dist/agentic-proofkit", "package/package.json", workspaceImageEntry:
 		return true
 	default:
 		return packageTextEntry(entry)
@@ -324,7 +324,11 @@ func verifyRootPackage(record packRecord) (rootPackageArtifact, error) {
 			return rootPackageArtifact{}, fmt.Errorf("root package contains unexpected entry %s", entry)
 		}
 	}
-	return rootPackageArtifact{Content: content, Entries: entries, Headers: entryHeaders, Record: record}, nil
+	artifact := rootPackageArtifact{Content: content, Entries: entries, Headers: entryHeaders, Record: record}
+	if err := verifyPackedWorkspaceImage(artifact); err != nil {
+		return rootPackageArtifact{}, err
+	}
+	return artifact, nil
 }
 
 func verifyPackRecordBytes(record packRecord) error {
@@ -357,6 +361,7 @@ func requiredRootEntries() []string {
 		"package/README.md",
 		"package/SECURITY.md",
 		"package/dist/agentic-proofkit",
+		workspaceImageEntry,
 		"package/docs/proofkit-contract-map.md",
 		"package/docs/release-process.md",
 		"package/package.json",
@@ -460,6 +465,9 @@ func verifyTarEntryHeader(entry tarEntry) error {
 	}
 	if entry.Size < 0 || entry.Size > maxTarEntryBytes {
 		return fmt.Errorf("root package tar entry %s has invalid size %d", entry.Name, entry.Size)
+	}
+	if entry.Name == workspaceImageEntry && (entry.Size == 0 || entry.Size > maxWorkspaceImageBytes || entry.Mode != 0o644) {
+		return fmt.Errorf("root package workspace image requires bounded non-empty bytes and mode 0644")
 	}
 	if rootBinaryEntry(entry.Name) {
 		if entry.Size == 0 || entry.Size > maxEmbeddedBinaryBytes {
@@ -570,6 +578,7 @@ func forbiddenRootEntry(path string) bool {
 
 func allowedRootEntry(path string) bool {
 	allowedExact := map[string]struct{}{
+		workspaceImageEntry:                                                          {},
 		"package/ADOPTION.md":                                                        {},
 		"package/LICENSE":                                                            {},
 		"package/NON_CLAIMS.md":                                                      {},
@@ -677,6 +686,7 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 		"README.md",
 		"SECURITY.md",
 		"dist/**",
+		"docs/images/workspace.png",
 		"docs/proofkit-contract-map.md",
 		"docs/release-process.md",
 		"docs/specs/**/*",
@@ -2646,7 +2656,7 @@ func verifyInstalledJSONABI(consumer string) error {
 	if err := verifyInstalledNPMWorkflowSmoke(consumer); err != nil {
 		return fmt.Errorf("outside consumer agent-workflow smoke failed: %w", err)
 	}
-	return nil
+	return verifyInstalledREADMEWorkflow(consumer)
 }
 
 func verifyInstalledAgentRouteEnvelopeModes(consumer string) error {
