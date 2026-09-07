@@ -119,31 +119,43 @@ func TestPackageVerifierImageFailureProcess(t *testing.T) {
 		t.Fatalf("build actual package verifier: %v\n%s", err, output)
 	}
 	const sentinel = "private-image-process-sentinel"
-	entries := map[string]string{}
-	for _, name := range requiredRootEntries() {
-		entries[name] = "fixture"
-	}
-	entries["package/docs/images/workspace.png"] = sentinel
-	archive := mustReadBytes(t, writePackageTarball(t, entries))
-	root := t.TempDir()
-	const filename = "image-proof.tgz"
-	writeFileBytes(t, filepath.Join(root, "artifacts/package", filename), archive)
-	records, err := json.Marshal([]packRecord{{Filename: filename, Name: rootPackageName, Version: "1.2.3", Integrity: testNPMIntegrity(archive), Shasum: testSHA1(archive)}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	writeFileBytes(t, filepath.Join(root, "artifacts/package/npm-pack.json"), records)
-	command := exec.CommandContext(ctx, binaryPath)
-	command.Dir = root
-	var stdout, stderr bytes.Buffer
-	command.Stdout, command.Stderr = &stdout, &stderr
-	err = command.Run()
-	var exit *exec.ExitError
-	if !errors.As(err, &exit) || exit.ExitCode() != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "PNG metadata") {
-		t.Fatal("actual verifier did not reject at the image boundary with failure exit and stderr only")
-	}
-	if bytes.Contains(stdout.Bytes(), []byte(sentinel)) || bytes.Contains(stderr.Bytes(), []byte(sentinel)) {
-		t.Fatal("actual verifier disclosed image input bytes")
+	valid := workspacePNG(t, 1, 1)
+	for _, item := range []struct {
+		name    string
+		content []byte
+		want    string
+	}{
+		{"metadata", []byte(sentinel), "PNG metadata"},
+		{"complete decode", append(append([]byte{}, valid[:33]...), []byte(sentinel)...), "complete PNG"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			entries := map[string]string{}
+			for _, name := range requiredRootEntries() {
+				entries[name] = "fixture"
+			}
+			entries["package/docs/images/workspace.png"] = string(item.content)
+			archive := mustReadBytes(t, writePackageTarball(t, entries))
+			root := t.TempDir()
+			const filename = "image-proof.tgz"
+			writeFileBytes(t, filepath.Join(root, "artifacts/package", filename), archive)
+			records, err := json.Marshal([]packRecord{{Filename: filename, Name: rootPackageName, Version: "1.2.3", Integrity: testNPMIntegrity(archive), Shasum: testSHA1(archive)}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			writeFileBytes(t, filepath.Join(root, "artifacts/package/npm-pack.json"), records)
+			command := exec.CommandContext(ctx, binaryPath)
+			command.Dir = root
+			var stdout, stderr bytes.Buffer
+			command.Stdout, command.Stderr = &stdout, &stderr
+			err = command.Run()
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) || exit.ExitCode() != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), item.want) {
+				t.Fatal("actual verifier did not reject at the image boundary with failure exit and stderr only")
+			}
+			if bytes.Contains(stdout.Bytes(), []byte(sentinel)) || bytes.Contains(stderr.Bytes(), []byte(sentinel)) {
+				t.Fatal("actual verifier disclosed image input bytes")
+			}
+		})
 	}
 }
 
