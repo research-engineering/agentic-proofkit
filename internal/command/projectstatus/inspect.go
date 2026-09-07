@@ -26,6 +26,13 @@ type cohortEntry struct {
 	state  fileState
 }
 
+type childInspection struct {
+	children []childObservation
+	closure  ClosureState
+	cohort   []cohortEntry
+	project  *adoptionmaterialization.Project
+}
+
 var defaultInspectionDependencies = inspectionDependencies{
 	inspectControl: func(ctx context.Context, lease *repositorytransaction.InspectionLease) (repositorytransaction.ControlInspection, error) {
 		return lease.InspectControlState(ctx)
@@ -40,26 +47,35 @@ func Inspect(ctx context.Context, repositoryRoot string) (Status, error) {
 	return inspectWithDependencies(ctx, repositoryRoot, defaultInspectionDependencies)
 }
 
-func inspectWithDependencies(ctx context.Context, repositoryRoot string, dependencies inspectionDependencies) (Status, error) {
-	if dependencies.inspectControl == nil || dependencies.readFile == nil {
-		return Status{}, fmt.Errorf("project status inspection dependencies are incomplete")
-	}
-	for attempt := 0; attempt < 2; attempt++ {
-		status, err := inspectAttempt(ctx, repositoryRoot, dependencies)
-		if err == nil {
-			return status, nil
-		}
-		if !errors.Is(err, errSnapshotChanged) && !errors.Is(err, repositorytransaction.ErrControlStateChanged) {
-			return Status{}, err
-		}
-	}
-	return Status{}, fmt.Errorf("project status repository changed during both bounded inspection attempts")
+func InspectProject(ctx context.Context, repositoryRoot string) (Inspection, error) {
+	return inspectProjectWithDependencies(ctx, repositoryRoot, defaultInspectionDependencies)
 }
 
-func inspectAttempt(ctx context.Context, repositoryRoot string, dependencies inspectionDependencies) (status Status, returnErr error) {
+func inspectWithDependencies(ctx context.Context, repositoryRoot string, dependencies inspectionDependencies) (Status, error) {
+	inspection, err := inspectProjectWithDependencies(ctx, repositoryRoot, dependencies)
+	return inspection.Status, err
+}
+
+func inspectProjectWithDependencies(ctx context.Context, repositoryRoot string, dependencies inspectionDependencies) (Inspection, error) {
+	if dependencies.inspectControl == nil || dependencies.readFile == nil {
+		return Inspection{}, fmt.Errorf("project status inspection dependencies are incomplete")
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		inspection, err := inspectAttempt(ctx, repositoryRoot, dependencies)
+		if err == nil {
+			return inspection, nil
+		}
+		if !errors.Is(err, errSnapshotChanged) && !errors.Is(err, repositorytransaction.ErrControlStateChanged) {
+			return Inspection{}, err
+		}
+	}
+	return Inspection{}, fmt.Errorf("project status repository changed during both bounded inspection attempts")
+}
+
+func inspectAttempt(ctx context.Context, repositoryRoot string, dependencies inspectionDependencies) (inspection Inspection, returnErr error) {
 	lease, err := repositorytransaction.OpenInspectionLease(ctx, repositoryRoot)
 	if err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	closeLease := dependencies.closeLease
 	if closeLease == nil {
@@ -67,20 +83,20 @@ func inspectAttempt(ctx context.Context, repositoryRoot string, dependencies ins
 	}
 	defer func() {
 		if closeErr := closeLease(lease); closeErr != nil {
-			status = Status{}
+			inspection = Inspection{}
 			returnErr = fmt.Errorf("close project status inspection: %w", closeErr)
 		}
 	}()
 	before, err := dependencies.inspectControl(ctx, lease)
 	if err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	if err := lease.VerifyRootIdentity(); err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	transaction, err := observeTransaction(before)
 	if err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	snapshot := inspectionSnapshot{
 		ClosureState: ClosureNotEvaluated,
@@ -91,33 +107,33 @@ func inspectAttempt(ctx context.Context, repositoryRoot string, dependencies ins
 	if transaction.State == TransactionClean {
 		snapshot, cohort, err = inspectProjectFiles(ctx, lease, transaction, dependencies.readFile)
 		if err != nil {
-			return Status{}, err
+			return Inspection{}, err
 		}
 		if err := verifyCohort(ctx, lease, cohort, dependencies.readFile); err != nil {
-			return Status{}, err
+			return Inspection{}, err
 		}
 	}
 	after, err := dependencies.inspectControl(ctx, lease)
 	if err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	if before != after {
-		return Status{}, errSnapshotChanged
+		return Inspection{}, errSnapshotChanged
 	}
 	if err := lease.VerifyRootIdentity(); err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	if err := ctx.Err(); err != nil {
-		return Status{}, fmt.Errorf("project status inspection cancelled before evaluation: %w", err)
+		return Inspection{}, fmt.Errorf("project status inspection cancelled before evaluation: %w", err)
 	}
-	status, err = evaluate(snapshot)
+	status, err := evaluate(snapshot)
 	if err != nil {
-		return Status{}, err
+		return Inspection{}, err
 	}
 	if err := ctx.Err(); err != nil {
-		return Status{}, fmt.Errorf("project status inspection cancelled before completion: %w", err)
+		return Inspection{}, fmt.Errorf("project status inspection cancelled before completion: %w", err)
 	}
-	return status, nil
+	return Inspection{ManifestContentDigest: snapshot.Manifest.ContentDigest, Project: snapshot.project, Status: status}, nil
 }
 
 func observeTransaction(value repositorytransaction.ControlInspection) (transactionObservation, error) {
@@ -170,24 +186,25 @@ func inspectProjectFiles(ctx context.Context, lease *repositorytransaction.Inspe
 	}
 	snapshot.Manifest = manifestObservation{ContentDigest: manifestFile.digest, ManifestID: manifest.ManifestID, State: ManifestAdmitted}
 	snapshot.ProjectID = manifest.ProjectID
-	children, closure, childCohort, err := inspectChildren(ctx, lease, manifest, budget, readFile)
+	children, err := inspectChildren(ctx, lease, manifest, budget, readFile)
 	if err != nil {
 		return inspectionSnapshot{}, nil, err
 	}
-	cohort = append(cohort, childCohort...)
-	snapshot.Children = children
-	snapshot.ClosureState = closure
+	cohort = append(cohort, children.cohort...)
+	snapshot.Children = children.children
+	snapshot.ClosureState = children.closure
+	snapshot.project = children.project
 	return snapshot, cohort, nil
 }
 
-func inspectChildren(ctx context.Context, lease *repositorytransaction.InspectionLease, manifest adoptionmaterialization.Manifest, budget *readBudget, readFile projectFileReader) ([]childObservation, ClosureState, []cohortEntry, error) {
+func inspectChildren(ctx context.Context, lease *repositorytransaction.InspectionLease, manifest adoptionmaterialization.Manifest, budget *readBudget, readFile projectFileReader) (childInspection, error) {
 	observations := make(map[string]fileObservation, len(manifest.Routes))
 	records := make([]adoptionmaterialization.RoutedProjectRecord, 0, len(manifest.Routes))
 	cohort := make([]cohortEntry, 0, len(manifest.Routes))
 	for _, route := range manifest.Routes {
 		file, err := readFile(ctx, lease, route.Path, budget)
 		if err != nil {
-			return nil, ClosureNotEvaluated, nil, err
+			return childInspection{}, err
 		}
 		observations[route.Path] = file
 		cohort = append(cohort, cohortEntry{digest: file.digest, path: route.Path, state: file.state})
@@ -197,7 +214,7 @@ func inspectChildren(ctx context.Context, lease *repositorytransaction.Inspectio
 	}
 	admissionResult, err := adoptionmaterialization.AdmitMaterializedProject(manifest, records)
 	if err != nil {
-		return nil, ClosureNotEvaluated, nil, err
+		return childInspection{}, err
 	}
 	admissions := make(map[string]adoptionmaterialization.RoutedProjectRecordAdmission, len(admissionResult.Records))
 	for _, item := range admissionResult.Records {
@@ -223,7 +240,7 @@ func inspectChildren(ctx context.Context, lease *repositorytransaction.Inspectio
 				child.State = ChildAdmitted
 			}
 		default:
-			return nil, ClosureNotEvaluated, nil, fmt.Errorf("project status file owner returned an unsupported state")
+			return childInspection{}, fmt.Errorf("project status file owner returned an unsupported state")
 		}
 		children = append(children, child)
 	}
@@ -234,7 +251,7 @@ func inspectChildren(ctx context.Context, lease *repositorytransaction.Inspectio
 			closure = ClosureAdmitted
 		}
 	}
-	return children, closure, cohort, nil
+	return childInspection{children: children, closure: closure, cohort: cohort, project: admissionResult.Project}, nil
 }
 
 func verifyCohort(ctx context.Context, lease *repositorytransaction.InspectionLease, cohort []cohortEntry, readFile projectFileReader) error {

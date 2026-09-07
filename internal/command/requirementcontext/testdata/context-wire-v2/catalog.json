@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "wire.catalog",
+  "specTree": {"path": "proofkit/tree.json"},
+  "requirementSources": [{"nodeId": "wire.root", "path": "docs/specs/wire/requirements.v1.json"}]
+}

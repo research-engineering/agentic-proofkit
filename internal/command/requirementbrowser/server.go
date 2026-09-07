@@ -75,22 +75,18 @@ func (handle ServerHandle) Done() <-chan error {
 }
 
 func StartServer(raw any, options Options) (ServerHandle, error) {
-	if options.Host == "" {
-		options.Host = defaultHost
-	}
-	if !options.PortSet {
-		options.Port = defaultPort
-	}
-	if err := admitLoopbackHost(options.Host); err != nil {
-		return ServerHandle{}, err
-	}
-	if err := admitPort(options.Port); err != nil {
+	options, err := admitServerAddress(options)
+	if err != nil {
 		return ServerHandle{}, err
 	}
 	rendered, err := render(raw, options)
 	if err != nil {
 		return ServerHandle{}, err
 	}
+	return startRenderedServer(rendered, options)
+}
+
+func startRenderedServer(rendered renderedView, options Options) (ServerHandle, error) {
 	listener, err := net.Listen("tcp", net.JoinHostPort(options.Host, strconv.Itoa(options.Port)))
 	if err != nil {
 		return ServerHandle{}, err
@@ -161,26 +157,26 @@ func Serve(ctx context.Context, raw any, options Options, stdout io.Writer) erro
 }
 
 func serveHandle(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer) error {
+	return serveHandleWithOpener(ctx, handle, options, stdout, openBrowser)
+}
+
+func serveHandleWithOpener(ctx context.Context, handle ServerHandle, options Options, stdout io.Writer, open func(context.Context, string) error) error {
 	if options.SessionMode == "one-shot-question" {
 		return serveOneShot(ctx, handle, options, stdout)
 	}
-	defer func() { _ = closeHandle(handle) }()
 	if options.Open {
-		if err := openBrowser(ctx, handle.URL); err != nil {
-			return err
+		if err := open(ctx, handle.URL); err != nil {
+			return errors.Join(err, closeAndWaitServer(handle))
 		}
 	}
 	if _, err := fmt.Fprintf(stdout, "Proofkit requirement browser: %s\n", handle.URL); err != nil {
-		return err
+		return errors.Join(err, closeAndWaitServer(handle))
 	}
 	select {
 	case <-ctx.Done():
-		closeErr := closeHandle(handle)
-		waitCtx, cancel := context.WithTimeout(context.Background(), serverShutdownTimeout)
-		defer cancel()
-		return errors.Join(closeErr, waitServerDone(waitCtx, handle))
+		return closeAndWaitServer(handle)
 	case err := <-handle.Done():
-		return err
+		return errors.Join(err, closeHandle(handle))
 	}
 }
 

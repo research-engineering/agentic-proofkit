@@ -169,7 +169,7 @@ func TestAdmitMaterializedProjectRoutesEveryManifestArtifactKindThroughItsOwner(
 		records = append(records, RoutedProjectRecord{Content: artifact.Content, Path: artifact.Path})
 	}
 	result, err := AdmitMaterializedProject(manifest, records)
-	if err != nil || !result.ClosureEvaluated || !result.ClosureAdmitted || len(result.Records) != len(manifest.Routes) {
+	if err != nil || !result.ClosureEvaluated || !result.ClosureAdmitted || result.Project == nil || len(result.Records) != len(manifest.Routes) {
 		t.Fatalf("AdmitMaterializedProject()=%#v, %v", result, err)
 	}
 	for _, item := range result.Records {
@@ -195,7 +195,7 @@ func TestAdmitMaterializedProjectRoutesEveryManifestArtifactKindThroughItsOwner(
 					routeAdmission = item
 				}
 			}
-			if err != nil || got.ClosureEvaluated || got.ClosureAdmitted || routeAdmission.DigestMatches || routeAdmission.Admitted {
+			if err != nil || got.ClosureEvaluated || got.ClosureAdmitted || got.Project != nil || routeAdmission.DigestMatches || routeAdmission.Admitted {
 				t.Fatalf("mutated route admission=%#v, %v", got, err)
 			}
 		})
@@ -218,7 +218,7 @@ func TestAdmitMaterializedProjectRoutesEveryManifestArtifactKindThroughItsOwner(
 					routeAdmission = item
 				}
 			}
-			if err != nil || got.ClosureEvaluated || got.ClosureAdmitted || !routeAdmission.DigestMatches || routeAdmission.Admitted {
+			if err != nil || got.ClosureEvaluated || got.ClosureAdmitted || got.Project != nil || !routeAdmission.DigestMatches || routeAdmission.Admitted {
 				t.Fatalf("semantically invalid route admission=%#v, %v", got, err)
 			}
 		})

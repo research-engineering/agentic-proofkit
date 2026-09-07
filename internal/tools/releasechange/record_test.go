@@ -197,9 +197,11 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.browser.coverage-inspection", Summary: "Inspect compact or structured coverage beside original source-bound requirements, distinguish missing evidence from reported verdicts, preserve complete evidence and non-claims in disclosures, and ask an explicit evidence question without replacing an existing draft."},
-	{ChangeID: "proofkit.browser.diff-and-graph-inspection", Summary: "Show exact diff-page class, entity, risk and lifecycle counts. Inspect a bounded traceability diagram and equivalent records with local evidence-plane and neighborhood filters, preserved directed relations, exact numeric source coordinates, explicit outside-page references and deliberate target-page navigation."},
-	{ChangeID: "proofkit.browser.handoff-inspection", Summary: "Preview included source-bound handoff context by stable requirement identity and explicitly copy or download the exact compact server JSON. Obsolete view or clipboard results cannot replace current output; independent pending exclusion and denied or stale request locks survive settlement, with one workspace reload action for a stale session."},
+	{ChangeID: "proofkit.browser.project-entry", Summary: "Use view --repo-root to prepare a read-only workspace from one complete materialized project, or add --serve to inspect it through the existing loopback browser. Explicit --open, one-shot questions, compact JSON plans and bounded diagnostics reuse the existing browser and CLI owners."},
+	{ChangeID: "proofkit.browser.reference-closure", Summary: "Resolve question anchors against the exact browser-issued session inventory, preserving admitted long requirement identities without expanding base identifier limits or weakening quote, source and terminal checks."},
+	{ChangeID: "proofkit.cli.deterministic-choice-diagnostics", Summary: "Validate flag choices in descriptor order so identical invalid invocations select the same diagnostic. Effect-sensitive tests cover rejection before project preparation and inspection, including errors deliberately discarded by a faulty caller."},
+	{ChangeID: "proofkit.context.captured-project-origin", Summary: "Add closed project-origin context schema 3, with owner-replayed source and binding projections, role-preserving physical identities and source-level limitations retained in question handoffs. Existing context v1/v2 identities and low-level browser contracts remain unchanged."},
+	{ChangeID: "proofkit.graph.derived-reference-admission", Summary: "Apply one typed identity owner to graph nodes and relation references. Transparent prefixes preserve the full admitted component length; digest-derived identities remain distinct from caller IDs. Invalid components, unresolved references and inconsistent topology remain rejected."},
 }
 
 var currentMigrationSteps = []string{}
@@ -222,7 +224,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.13.0",
+		"# @research-engineering/agentic-proofkit 0.14.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -263,6 +265,7 @@ func currentExpectedReleaseNotes() string {
 		"- Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
 		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
 		"- Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
+		"- View requires an explicitly selected complete materialized project. It neither scans source files nor writes project records or executes native witnesses. Its graph contains declared relations only; coverage and diff remain unavailable. The captured snapshot does not claim filesystem freshness after inspection.",
 		"- The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
 		"- TSX source parsing remains unsupported.",
 		"- Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
@@ -274,7 +277,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.13.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -286,7 +289,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.12.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.12.0`.",
+		"- Pin npm consumers to the previous admitted version 0.13.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.13.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

@@ -1,0 +1,93 @@
+{
+  "catalogId": "wire.catalog",
+  "contextKind": "proofkit.requirement-context",
+  "expectedDigestCoverage": "none",
+  "nonClaims": [
+    "Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+    "Requirement context does not execute native witnesses or prove source freshness after composition.",
+    "Expected-digest coverage records caller-supplied expected/current equality only and does not authenticate a producer, baseline, checkout, or freshness."
+  ],
+  "projections": {
+    "requirementSources": [
+      {
+        "nonClaims": [
+          "Wire compatibility is not consumer readiness."
+        ],
+        "overviewPath": "docs/specs/wire/overview.md",
+        "requirements": [
+          {
+            "claimLevel": "blocking",
+            "invariant": "A bounded context preserves its admitted requirement identity.",
+            "lifecycle": {
+              "evidenceRefs": [],
+              "replacementRequirementIds": [],
+              "state": "active"
+            },
+            "nonClaimRefs": [],
+            "nonClaims": [
+              "This fixture does not establish execution evidence."
+            ],
+            "ownerId": "wire.owner",
+            "proofBindingRefs": [
+              "proofkit/bindings.json"
+            ],
+            "requirementId": "REQ-WIRE-001",
+            "riskClass": "high",
+            "updatePolicy": {
+              "requiresImpactDeclaration": true,
+              "requiresProofBindingReview": true,
+              "reviewOwnerId": "wire.owner"
+            }
+          }
+        ],
+        "requirementsPath": "docs/specs/wire/requirements.v1.json",
+        "schemaVersion": 1,
+        "sourceId": "wire.requirements",
+        "specPackagePath": "docs/specs/wire"
+      }
+    ],
+    "specTree": {
+      "callerAnnotations": [],
+      "edges": [],
+      "nodes": [
+        {
+          "callerAnnotations": [],
+          "displayOrder": 1,
+          "label": "Wire compatibility",
+          "nodeId": "wire.root",
+          "nodeKind": "meta_spec",
+          "sourceRefs": [
+            {
+              "sourceId": "wire.requirements",
+              "sourceRefId": "wire.requirements.ref",
+              "sourceRefKind": "source_id",
+              "sourceRole": "requirements"
+            }
+          ]
+        }
+      ],
+      "overlays": [],
+      "rootNodeId": "wire.root",
+      "schemaVersion": 2,
+      "treeId": "wire.tree"
+    }
+  },
+  "schemaVersion": 2,
+  "snapshotId": "sha256:6fb22780b923a77dd826e9eb3a2f55f59bec8bb526c684bc070e77ac60096467",
+  "sources": [
+    {
+      "currentDigest": "sha256:b5ed1da77cad818a8a2909b686d5c51d4b132812ab6c04c017bec13965dda3a3",
+      "kind": "spec_tree",
+      "path": "proofkit/tree.json",
+      "sourceRef": "spec_tree:wire.tree"
+    },
+    {
+      "currentDigest": "sha256:5bcd8dfd746e8bbf85ae220e893eb7928f159a3577a1f31f82b849546d88b86b",
+      "kind": "requirement_source",
+      "nodeId": "wire.root",
+      "path": "docs/specs/wire/requirements.v1.json",
+      "sourceRef": "wire.requirements",
+      "sourceRole": "requirements"
+    }
+  ]
+}

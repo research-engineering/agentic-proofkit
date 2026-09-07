@@ -38,6 +38,7 @@ const (
 	commandRunnerPilotAdmission              commandRunner = "pilot_admission"
 	commandRunnerPlanning                    commandRunner = "planning"
 	commandRunnerProjectStatus               commandRunner = "project_status"
+	commandRunnerProjectView                 commandRunner = "project_view"
 	commandRunnerProjectStructure            commandRunner = "project_structure"
 	commandRunnerRequirementBrowserServer    commandRunner = "requirement_browser_server"
 	commandRunnerRequirementContextCompose   commandRunner = "requirement_context_compose"
@@ -183,6 +184,7 @@ var commandDescriptors = []commandDescriptor{
 	command("test-evidence-inventory", commandInputRequired, flags("--input", "--input-pointer", "--normalized-inventory", "--projection"), modes("json", "normalized-inventory"), ownerDirs("proofbindingtestinventory", "testevidenceinventory"), withRunner(commandRunnerTestEvidenceInventory)),
 	command("text-policy", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("textpolicy")),
 	command("typescript-public-api-surfaces", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("publicapi"), withRunner(commandRunnerTypeScriptPublicAPISurfaces), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root")),
+	command("view", commandInputNone, flags("--host", "--open", "--port", "--repo-root", "--serve", "--session-mode", "--session-timeout-seconds"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerProjectView), withSemanticAppTests("TestProjectViewCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--host", requirementbrowser.HostChoices()...), withFlagChoices("--session-mode", requirementbrowser.SessionModeChoices()...), withFlagPresenceRequirement("--open", "--serve"), withFlagPresenceRequirement("--session-mode", "--serve"), withFlagPresenceAndRequiredValue("--session-timeout-seconds", "--session-mode", "one-shot-question"), withFlagValueRequirement("--session-mode", "one-shot-question", "--open", "--serve"), withSingleOccurrenceFlags("--host", "--open", "--port", "--repo-root", "--serve", "--session-mode", "--session-timeout-seconds")),
 	command("witness-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("witnessplan")),
 	command("witness-scheduler-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("witnessschedulerplan")),
 	command("workspace-changed-package-plan", commandInputRequired, flags("--agent-envelope", "--input", "--input-pointer"), modes("json"), ownerDirs("workspaceplanning"), withRunner(commandRunnerPlanning), withAgentEnvelope()),
@@ -211,6 +213,7 @@ var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerPilotAdmission:              {},
 	commandRunnerPlanning:                    {},
 	commandRunnerProjectStatus:               {},
+	commandRunnerProjectView:                 {},
 	commandRunnerProjectStructure:            {},
 	commandRunnerRequirementBrowserServer:    {},
 	commandRunnerRequirementContextCompose:   {},

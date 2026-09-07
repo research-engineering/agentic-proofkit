@@ -1003,6 +1003,16 @@
         "Recovery reports a historical transaction, not current installed/removed state or post-return stability; cancellation after the final effect cannot retract a committed operation.",
         "The baseline is cooperative bookkeeping, not authenticated origin, owner approval, or protection from coordinated same-user edits or rollback."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "Viewing a captured project does not establish native witness execution, semantic proof adequacy, live source freshness after capture, owner approval, merge, release, deployment or production readiness. Coverage and semantic diff require their own admitted evidence and are unavailable in the project front door."
+      ]
     }
   ],
   "bindings": [
@@ -7733,6 +7743,466 @@
         {
           "selector": "TestInstalledLifecycleWitnessRejectsUpdateWithoutEffects",
           "command": "go test ./internal/tools/workflowsmoke -run '^TestInstalledLifecycleWitnessRejectsUpdateWithoutEffects$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-browser-cleanup",
+      "witnessId": "proofkit.spec-proof-core.project-browser-cleanup-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/server_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBrowseTerminalPathsJoinCleanupAndConsumeDoneOnce",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestBrowseTerminalPathsJoinCleanupAndConsumeDoneOnce$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-browser-handoff",
+      "witnessId": "proofkit.spec-proof-core.project-browser-handoff-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/project_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectBrowserCapturesAndHandsOffExactSourceFacts",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestProjectBrowserCapturesAndHandsOffExactSourceFacts$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-browser-handoff-identities",
+      "witnessId": "proofkit.spec-proof-core.project-browser-handoff-identities-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/project_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectHandoffPreservesLongRequirementIdentities",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestProjectHandoffPreservesLongRequirementIdentities$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-browser-listener",
+      "witnessId": "proofkit.spec-proof-core.project-browser-listener-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/project_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectBrowserRejectsIncompleteProjectBeforeListening",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestProjectBrowserRejectsIncompleteProjectBeforeListening$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-browser-preparation",
+      "witnessId": "proofkit.spec-proof-core.project-browser-preparation-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementbrowser/project_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectBrowserRejectsOptionsBeforeRepositoryRead",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestProjectBrowserRejectsOptionsBeforeRepositoryRead$'"
+        },
+        {
+          "selector": "TestProjectWorkspacePreparationValidatesBeforeRendering",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestProjectWorkspacePreparationValidatesBeforeRendering$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-context-partition",
+      "witnessId": "proofkit.spec-proof-core.project-context-partition-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/project_origin_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectContextRejectsInvalidOriginAndSourcePartition",
+          "command": "go test ./internal/command/requirementcontext -run '^TestProjectContextRejectsInvalidOriginAndSourcePartition$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-context-predecessor",
+      "witnessId": "proofkit.spec-proof-core.project-context-predecessor-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/context_wire_compatibility_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestContextPredecessorWireIdentity",
+          "command": "go test ./internal/command/requirementcontext -run '^TestContextPredecessorWireIdentity$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-context-tree-replay",
+      "witnessId": "proofkit.spec-proof-core.project-context-tree-replay-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/project_origin_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectContextRejectsResignedUnrelatedTree",
+          "command": "go test ./internal/command/requirementcontext -run '^TestProjectContextRejectsResignedUnrelatedTree$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-context-wire",
+      "witnessId": "proofkit.spec-proof-core.project-context-wire-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/project_origin_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectContextCaptureWireAdmissionAndSlice",
+          "command": "go test ./internal/command/requirementcontext -run '^TestProjectContextCaptureWireAdmissionAndSlice$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-cross-record",
+      "witnessId": "proofkit.spec-proof-core.project-cross-record-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptionmaterialization/project_projection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectRetentionRejectsDigestMatchedCrossRecordContradiction",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestProjectRetentionRejectsDigestMatchedCrossRecordContradiction$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-graph-digest-reference",
+      "witnessId": "proofkit.spec-proof-core.project-graph-digest-reference-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementgraph/reference_projection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGraphDigestNodeAndEndpointAdmissionAgree",
+          "command": "go test ./internal/command/requirementgraph -run '^TestGraphDigestNodeAndEndpointAdmissionAgree$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-graph-transparent-reference",
+      "witnessId": "proofkit.spec-proof-core.project-graph-transparent-reference-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementgraph/reference_projection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTransparentGraphIdentitiesPreserveComponentBounds",
+          "command": "go test ./internal/command/requirementgraph -run '^TestTransparentGraphIdentitiesPreserveComponentBounds$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-inspection",
+      "witnessId": "proofkit.spec-proof-core.project-inspection-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/project_inspection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInspectProjectRetainsOriginalCohortAndStatusIdentity",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectProjectRetainsOriginalCohortAndStatusIdentity$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-inspection-cleanup",
+      "witnessId": "proofkit.spec-proof-core.project-inspection-cleanup-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/projectstatus/project_inspection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestInspectProjectCleanupFailureClearsWholeResult",
+          "command": "go test ./internal/command/projectstatus -run '^TestInspectProjectCleanupFailureClearsWholeResult$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-installed-protocol",
+      "witnessId": "proofkit.spec-proof-core.project-installed-protocol-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyAcceptsApplicationCLI",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyAcceptsApplicationCLI$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-installed-protocol-oracle",
+      "witnessId": "proofkit.spec-proof-core.project-installed-protocol-oracle-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyRejectsCarrierContractMutations",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyRejectsCarrierContractMutations$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-retention",
+      "witnessId": "proofkit.spec-proof-core.project-retention-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/adoptionmaterialization/project_projection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectProjectionPreservesIndependentChildExpectations",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestProjectProjectionPreservesIndependentChildExpectations$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-cli",
+      "witnessId": "proofkit.spec-proof-core.project-view-cli-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewCLI",
+          "command": "go test ./internal/app -run '^TestProjectViewCLI$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-diagnostic-order",
+      "witnessId": "proofkit.spec-proof-core.project-view-diagnostic-order-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewChoiceDiagnosticsAreDeterministic",
+          "command": "go test ./internal/app -run '^TestProjectViewChoiceDiagnosticsAreDeterministic$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-diagnostics",
+      "witnessId": "proofkit.spec-proof-core.project-view-diagnostics-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewDiagnosticsDoNotDiscloseCallerText",
+          "command": "go test ./internal/app -run '^TestProjectViewDiagnosticsDoNotDiscloseCallerText$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-flag-admission",
+      "witnessId": "proofkit.spec-proof-core.project-view-flag-admission-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewRejectsFlagsBeforeProjectIO",
+          "command": "go test ./internal/app -run '^TestProjectViewRejectsFlagsBeforeProjectIO$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-help-layout",
+      "witnessId": "proofkit.spec-proof-core.project-view-help-layout-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewHelpLayoutAndFlagShapedPaths",
+          "command": "go test ./internal/app -run '^TestProjectViewHelpLayoutAndFlagShapedPaths$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-one-shot",
+      "witnessId": "proofkit.spec-proof-core.project-view-one-shot-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewOneShotCLIOutputVariants",
+          "command": "go test ./internal/app -run '^TestProjectViewOneShotCLIOutputVariants$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-042",
+      "scenarioId": "proofkit.spec-proof-core.project-view-signal",
+      "witnessId": "proofkit.spec-proof-core.project-view-signal-witness",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/project_view_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestProjectViewSignalClosesNativeProcessServer",
+          "command": "go test ./internal/app -run '^TestProjectViewSignalClosesNativeProcessServer$'"
         }
       ],
       "commandIds": [

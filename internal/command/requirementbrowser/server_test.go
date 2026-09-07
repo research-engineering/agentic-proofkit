@@ -591,6 +591,96 @@ func TestServeOneShotDoesNotReadCompletedDoneTwice(t *testing.T) {
 	}
 }
 
+func TestBrowseTerminalPathsJoinCleanupAndConsumeDoneOnce(t *testing.T) {
+	for _, mode := range []string{"output", "open", "cancel", "done"} {
+		t.Run(mode, func(t *testing.T) {
+			primary, closeFailure, doneFailure := errors.New("primary failure"), errors.New("close failure"), errors.New("done failure")
+			unread := errors.New("unread completion")
+			done := make(chan error, 2)
+			closeCalls := 0
+			if mode == "done" {
+				done <- primary
+				done <- unread
+			}
+			handle := ServerHandle{URL: "http://127.0.0.1:43127/", done: done, close: func(context.Context) error {
+				closeCalls++
+				if mode != "done" {
+					done <- doneFailure
+					done <- unread
+				}
+				return closeFailure
+			}}
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if mode == "cancel" {
+				cancel()
+			}
+			writes, opens := 0, 0
+			writer := browserWriterFunc(func(data []byte) (int, error) {
+				writes++
+				if mode == "output" {
+					return 0, primary
+				}
+				return len(data), nil
+			})
+			err := serveHandleWithOpener(ctx, handle, Options{Open: mode == "open"}, writer, func(context.Context, string) error { opens++; return primary })
+			if !errors.Is(err, closeFailure) || closeCalls != 1 {
+				t.Fatal("browse terminal path dropped cleanup failure or closed more than once")
+			}
+			if mode != "cancel" && !errors.Is(err, primary) {
+				t.Fatal("browse path dropped its primary failure")
+			}
+			if mode != "done" && !errors.Is(err, doneFailure) {
+				t.Fatal("browse path did not await and report Serve completion")
+			}
+			if mode == "open" && (opens != 1 || writes != 0) || mode != "open" && (opens != 0 || writes != 1) {
+				t.Fatal("launch and output effects have changed order")
+			}
+			select {
+			case remaining := <-done:
+				if remaining != unread {
+					t.Fatal("browse path did not consume its exact first completion")
+				}
+			default:
+				t.Fatal("browse path consumed Done twice")
+			}
+		})
+	}
+}
+
+func TestBrowseEarlyFailuresCloseAndAwaitRealServer(t *testing.T) {
+	for _, mode := range []string{"output", "open"} {
+		t.Run(mode, func(t *testing.T) {
+			handle, err := StartServer(sourceInput(t), Options{View: "source"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			realClose, realDone := handle.close, handle.done
+			t.Cleanup(func() { _ = realClose(context.Background()) })
+			primary, closeFailure, doneFailure := errors.New("primary failure"), errors.New("close failure"), errors.New("done failure")
+			closeCalls := 0
+			handle.close = func(ctx context.Context) error { closeCalls++; return errors.Join(realClose(ctx), closeFailure) }
+			completion := make(chan error, 1)
+			go func() { completion <- errors.Join(<-realDone, doneFailure) }()
+			handle.done = completion
+			writer := browserWriterFunc(func([]byte) (int, error) { return 0, primary })
+			err = serveHandleWithOpener(t.Context(), handle, Options{Open: mode == "open"}, writer, func(context.Context, string) error { return primary })
+			if !errors.Is(err, primary) || !errors.Is(err, closeFailure) || !errors.Is(err, doneFailure) || closeCalls != 1 {
+				t.Fatal("real server early failure did not own primary, cleanup and completion results")
+			}
+			connection, err := net.DialTimeout("tcp", net.JoinHostPort(handle.Host, strconv.Itoa(handle.Port)), time.Second)
+			if err == nil {
+				_ = connection.Close()
+				t.Fatal("early failure returned with an open listener")
+			}
+		})
+	}
+}
+
+type browserWriterFunc func([]byte) (int, error)
+
+func (write browserWriterFunc) Write(data []byte) (int, error) { return write(data) }
+
 type readyWriter struct {
 	ready chan<- string
 }

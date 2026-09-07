@@ -3,6 +3,7 @@ package workflowsmoke
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/repositorytransaction"
 )
 
@@ -93,6 +95,9 @@ func verifyProjectNavigation(ctx context.Context, run Runner) (returnErr error) 
 	if err := verifyFailure(ctx, run, "project next JSON color denial", unreadInvocation("next", "--repo-root", repositoryRoot, "--color", "never"), "--color requires --format text"); err != nil {
 		return err
 	}
+	if err := verifyFailure(ctx, run, "uninitialized project view", unreadInvocation("view", "--repo-root", repositoryRoot), "requires a complete admitted project"); err != nil {
+		return err
+	}
 	return verifyMaterializedProjectNavigation(ctx, run, repositoryRoot)
 }
 
@@ -135,6 +140,9 @@ func verifyMaterializedProjectNavigation(ctx context.Context, run Runner, reposi
 	if err := verifyInstalledProjectState(ctx, run, repositoryRoot, projectstatus.StateVerificationRequired, projectstatus.ActionRunRepositoryVerification, "materialized"); err != nil {
 		return err
 	}
+	if err := verifyInstalledProjectView(ctx, run, repositoryRoot); err != nil {
+		return err
+	}
 	if len(expectedPlan.Manifest.Routes) == 0 {
 		return fmt.Errorf("installed materialization plan has no routed child")
 	}
@@ -150,7 +158,41 @@ func verifyMaterializedProjectNavigation(ctx context.Context, run Runner, reposi
 	if err := file.Close(); err != nil {
 		return fmt.Errorf("close drifted installed materialization child: %w", err)
 	}
-	return verifyInstalledProjectState(ctx, run, repositoryRoot, projectstatus.StateStale, projectstatus.ActionRematerializeProject, "drifted materialized")
+	if err := verifyInstalledProjectState(ctx, run, repositoryRoot, projectstatus.StateStale, projectstatus.ActionRematerializeProject, "drifted materialized"); err != nil {
+		return err
+	}
+	return verifyFailure(ctx, run, "stale project view", unreadInvocation("view", "--repo-root", repositoryRoot), "requires a complete admitted project")
+}
+
+func verifyInstalledProjectView(ctx context.Context, run Runner, repositoryRoot string) error {
+	result, err := invoke(ctx, run, "materialized project view", unreadInvocation("view", "--repo-root", repositoryRoot))
+	if err != nil {
+		return err
+	}
+	value, err := admission.DecodeJSON(bytes.NewReader(result.Stdout), 4096)
+	if err != nil {
+		return fmt.Errorf("installed project view is not a bounded JSON plan")
+	}
+	plan, ok := value.(map[string]any)
+	keys := []string{"authority", "host", "htmlByteLength", "nonClaims", "planKind", "port", "portSelection", "renderedAuthority", "renderedViewKind", "schemaVersion", "url", "view"}
+	if !ok || len(plan) != len(keys) || admit.KnownKeys(plan, keys, "installed project view") != nil {
+		return fmt.Errorf("installed project view has an invalid plan shape")
+	}
+	if plan["authority"] != "presentation_adapter_plan" || plan["host"] != "127.0.0.1" || plan["planKind"] != "proofkit.requirement-browser-server-plan" || plan["port"] != json.Number("0") || plan["portSelection"] != "ephemeral" || plan["renderedAuthority"] != "presentation_adapter" || plan["renderedViewKind"] != "proofkit.requirement-workspace" || plan["schemaVersion"] != json.Number("1") || plan["url"] != nil || plan["view"] != "workspace" {
+		return fmt.Errorf("installed project view changed its workspace plan semantics")
+	}
+	length, ok := plan["htmlByteLength"].(json.Number)
+	if !ok {
+		return fmt.Errorf("installed project view has no HTML byte count")
+	}
+	count, err := length.Int64()
+	if err != nil || count <= 0 {
+		return fmt.Errorf("installed project view has an invalid HTML byte count")
+	}
+	if _, err := admit.TextArray(plan["nonClaims"], "installed project view nonClaims", false); err != nil {
+		return fmt.Errorf("installed project view lost its limitations")
+	}
+	return nil
 }
 
 func verifyInstalledProjectState(ctx context.Context, run Runner, repositoryRoot string, wantState projectstatus.ProjectState, wantAction, label string) error {

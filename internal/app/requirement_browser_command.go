@@ -110,9 +110,9 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			if index+1 >= len(args) {
 				return requirementBrowserArgs{}, fmt.Errorf("--port requires an integer from 0 to 65535")
 			}
-			port, err := strconv.Atoi(args[index+1])
-			if err != nil || port < 0 || port > 65535 {
-				return requirementBrowserArgs{}, fmt.Errorf("--port requires an integer from 0 to 65535")
+			port, err := parseBrowserInteger("--port", args[index+1])
+			if err != nil {
+				return requirementBrowserArgs{}, err
 			}
 			options.port = port
 			options.portSet = true
@@ -132,9 +132,9 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 			if index+1 >= len(args) {
 				return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds requires an integer from 1 to 7200")
 			}
-			seconds, err := strconv.Atoi(args[index+1])
-			if err != nil || seconds < 1 || seconds > 7200 {
-				return requirementBrowserArgs{}, fmt.Errorf("--session-timeout-seconds requires an integer from 1 to 7200")
+			seconds, err := parseBrowserInteger("--session-timeout-seconds", args[index+1])
+			if err != nil {
+				return requirementBrowserArgs{}, err
 			}
 			options.sessionTimeoutSeconds = seconds
 			index++
@@ -192,6 +192,23 @@ func parseRequirementBrowserArgs(args []string) (requirementBrowserArgs, error) 
 
 func requirementBrowserFlagChoices(flag string) []string {
 	return commandDescriptorByName["requirement-browser-server"].flagValueChoices[flag]
+}
+
+func parseBrowserInteger(flag, value string) (int, error) {
+	var minimum, maximum int
+	switch flag {
+	case "--port":
+		maximum = 65535
+	case "--session-timeout-seconds":
+		minimum, maximum = 1, 7200
+	default:
+		return 0, fmt.Errorf("unsupported browser numeric option")
+	}
+	number, err := strconv.Atoi(value)
+	if err != nil || number < minimum || number > maximum {
+		return 0, fmt.Errorf("%s requires an integer from %d to %d", flag, minimum, maximum)
+	}
+	return number, nil
 }
 
 func requirementBrowserFlagValueAllowed(flag string, value string) bool {

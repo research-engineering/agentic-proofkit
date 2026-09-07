@@ -112,7 +112,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
+          "canonicalDigest": "sha256:f9bd5797a95e7d620a3f0dadf814d917ded15599dabb0fc6530a2f785bcc03b4",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -143,12 +143,12 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
+            "canonicalDigest": "sha256:f9bd5797a95e7d620a3f0dadf814d917ded15599dabb0fc6530a2f785bcc03b4",
             "evidenceClass": "source_checkout"
           },
           {
@@ -251,7 +251,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
+          "canonicalDigest": "sha256:f9bd5797a95e7d620a3f0dadf814d917ded15599dabb0fc6530a2f785bcc03b4",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -282,12 +282,12 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
+            "canonicalDigest": "sha256:f9bd5797a95e7d620a3f0dadf814d917ded15599dabb0fc6530a2f785bcc03b4",
             "evidenceClass": "source_checkout"
           },
           {
@@ -396,12 +396,12 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:a02e36ec07451d0923b79f102edf984b6b34eee255dc7d0fa1f7bc41440c306e",
+            "canonicalDigest": "sha256:f9bd5797a95e7d620a3f0dadf814d917ded15599dabb0fc6530a2f785bcc03b4",
             "evidenceClass": "source_checkout"
           },
           {
@@ -1187,7 +1187,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2506,7 +2506,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2612,7 +2612,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2740,7 +2740,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2867,7 +2867,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2965,7 +2965,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -3370,7 +3370,7 @@
         "rootDefinitionDigest": "sha256:b046def1ec1d608e3c76efd84127df7cd8b0a10a920e7ad9b8b850826432d3af",
         "nativeSource": {
           "path": "internal/command/projectstatus",
-          "canonicalDigest": "sha256:050ff57dee13ac2cc7c71ab4f2ed94c8d9a73f945544ecb57c18c07da4ed5c13",
+          "canonicalDigest": "sha256:b67a14ae9a1348fcbc0610bebc0148600d4fd3e4d54ed9efe1738af2d975dfe2",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3640,7 +3640,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+            "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
             "evidenceClass": "source_checkout"
           },
           {
@@ -4939,7 +4939,7 @@
         "rootDefinitionDigest": "sha256:e6af5b9edb1284ab2ff2f1a276a6b924127b99810cd9446bffbc971f638a0997",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
-          "canonicalDigest": "sha256:308099bac0caa0aa309a9f236182a6a09e0caac6fb5c7c07679fa471d1ee590c",
+          "canonicalDigest": "sha256:70f0fc4f0dfa82f4077c844f9b247a524591ec49d7c8093c789b48ff525a5ab1",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4976,7 +4976,7 @@
         "rootDefinitionDigest": "sha256:c2e7d851c7928560d4267fe85ebc0ae61e33c4c0ef15f7f7b01deb73bb80eda7",
         "nativeSource": {
           "path": "internal/command/requirementbrowser",
-          "canonicalDigest": "sha256:308099bac0caa0aa309a9f236182a6a09e0caac6fb5c7c07679fa471d1ee590c",
+          "canonicalDigest": "sha256:70f0fc4f0dfa82f4077c844f9b247a524591ec49d7c8093c789b48ff525a5ab1",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5023,7 +5023,7 @@
         "rootDefinitionDigest": "sha256:41bc233c96bd468bc96eeb0447e037cacdbcf92bb04161052303e8747e4282f2",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
+          "canonicalDigest": "sha256:2ee9c04ca2b3775a8e1d1f066a3eefcee71ea4f3e24c6b6690fd2e3c4c2aeb40",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5063,7 +5063,7 @@
         "rootDefinitionDigest": "sha256:cdadd7b589d682a122cfe2b801f001a3b22a2269aa4977ebe073932d11e1f816",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
+          "canonicalDigest": "sha256:2ee9c04ca2b3775a8e1d1f066a3eefcee71ea4f3e24c6b6690fd2e3c4c2aeb40",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5110,7 +5110,7 @@
         "rootDefinitionDigest": "sha256:43852cf1a52b3c1f000ec95e460fbad157a6b6a39958d20f81c9e1e4d31e3c6f",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
+          "canonicalDigest": "sha256:2ee9c04ca2b3775a8e1d1f066a3eefcee71ea4f3e24c6b6690fd2e3c4c2aeb40",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -5122,7 +5122,8 @@
         "compatibilitySummary": [
           "schemaVersion=1",
           "sliceId",
-          "context=proofkit.requirement-context schemaVersion=2 with strict v1 adapter",
+          "context=proofkit.requirement-context schemaVersion=2 with strict v1 adapter, or schemaVersion=3 closed captured project origin",
+          "Project-origin v3 replay validates the exact canonical project and role/source partition; it does not reread live files or reinterpret the existing v1/v2 identities.",
           "query.profile=routing|specification|proof|coverage|review",
           "query.nodeIds[]|requirementIds[]|ownerIds[]|lifecycleStates[]",
           "query.maxDepth=0..512",
@@ -5136,7 +5137,8 @@
           "REQ-PROOFKIT-SPEC-019",
           "REQ-PROOFKIT-SPEC-020",
           "REQ-PROOFKIT-SPEC-022",
-          "REQ-PROOFKIT-SPEC-023"
+          "REQ-PROOFKIT-SPEC-023",
+          "REQ-PROOFKIT-SPEC-042"
         ]
       },
       "outputContract": {
@@ -5148,7 +5150,7 @@
         "rootDefinitionDigest": "sha256:61f7fd43e2e9da5bde9b61bb86e02cbf337a43c6891ca888c1d42936e5b16456",
         "nativeSource": {
           "path": "internal/command/requirementcontext",
-          "canonicalDigest": "sha256:15b85d9a093c8ce0b30f6428a72d3d4e62baf8e9f51be2b1f12d47f2f3f34509",
+          "canonicalDigest": "sha256:2ee9c04ca2b3775a8e1d1f066a3eefcee71ea4f3e24c6b6690fd2e3c4c2aeb40",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -5159,6 +5161,7 @@
         },
         "compatibilitySummary": [
           "schemaVersion=1",
+          "Source-level nonClaims are retained separately in fragments from project-origin v3; v1/v2 fragment fields remain unchanged.",
           "root-shape-only definition proofkit.requirement-context-slice.output.v1.root-shape; nested fields, types, and cardinalities are non-claims"
         ],
         "ownerRequirementRefs": [
@@ -6344,7 +6347,7 @@
         "rootDefinitionDigest": "sha256:6487ff537380d1cbffe5a72b9688e9ce6baffa218e76f8dbbfe8f50d14509219",
         "nativeSource": {
           "path": "internal/command/requirementgraph",
-          "canonicalDigest": "sha256:26836d1c497ccf3f8609dfc6e4559f24c1a5f767e15114af955f97ab26238926",
+          "canonicalDigest": "sha256:05b5121d8d16352bea9ee5c7279a3fc5f4495cd8314e333ee7b1fa966ae4c79e",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6356,7 +6359,8 @@
         "compatibilitySummary": [
           "schemaVersion=2",
           "graphId",
-          "context=proofkit.requirement-context schemaVersion=2 with strict v1 adapter",
+          "context=proofkit.requirement-context schemaVersion=2 with strict v1 adapter, or schemaVersion=3 closed captured project origin",
+          "Project-origin v3 replay validates the exact canonical project and role/source partition; it does not reread live files or reinterpret the existing v1/v2 identities.",
           "codeSources[].path+content (optional, bounded UTF-8)",
           "codeTopology.nodes[].abstractionLevel=repository|package|module|file|symbol|source_range",
           "codeTopology.nodes[].sourceDigest+currentnessState",
@@ -6370,7 +6374,8 @@
           "REQ-PROOFKIT-SPEC-019",
           "REQ-PROOFKIT-SPEC-020",
           "REQ-PROOFKIT-SPEC-022",
-          "REQ-PROOFKIT-SPEC-023"
+          "REQ-PROOFKIT-SPEC-023",
+          "REQ-PROOFKIT-SPEC-042"
         ]
       },
       "outputContract": {
@@ -6382,7 +6387,7 @@
         "rootDefinitionDigest": "sha256:37d07abc4d9122176ffab9842b5d85fbfdbe068ee9e4097da8fc21206aae1d47",
         "nativeSource": {
           "path": "internal/command/requirementgraph",
-          "canonicalDigest": "sha256:26836d1c497ccf3f8609dfc6e4559f24c1a5f767e15114af955f97ab26238926",
+          "canonicalDigest": "sha256:05b5121d8d16352bea9ee5c7279a3fc5f4495cd8314e333ee7b1fa966ae4c79e",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -6930,7 +6935,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+          "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6959,7 +6964,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:2bea687b114cac5e816ae754ab7c27cdaf953f9b81134733373ba27ff86fc2e3",
+          "canonicalDigest": "sha256:da018bb511cc1dd050a9314b69b539cb96972733a1418c9fd1692ce561bac0e7",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -7236,7 +7241,7 @@
         "rootDefinitionDigest": "sha256:4d26ca7b7f6be8120fbac40519db02d8e5ae8ba7264208c714fbb9f1cb88ef15",
         "nativeSource": {
           "path": "internal/command/projectstatus",
-          "canonicalDigest": "sha256:050ff57dee13ac2cc7c71ab4f2ed94c8d9a73f945544ecb57c18c07da4ed5c13",
+          "canonicalDigest": "sha256:b67a14ae9a1348fcbc0610bebc0148600d4fd3e4d54ed9efe1738af2d975dfe2",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -7730,6 +7735,115 @@
         "ownerRequirementRefs": [
           "REQ-PROOFKIT-PACKAGE-002",
           "REQ-PROOFKIT-QUALITY-004"
+        ]
+      }
+    },
+    {
+      "command": "view",
+      "input": "none",
+      "stdin": false,
+      "inputPointer": false,
+      "scopeClass": "explicit_filesystem_scan",
+      "outputModes": [
+        "json",
+        "server"
+      ],
+      "allowedFlags": [
+        "--host",
+        "--open",
+        "--port",
+        "--repo-root",
+        "--serve",
+        "--session-mode",
+        "--session-timeout-seconds"
+      ],
+      "requiredFlags": [
+        "--repo-root"
+      ],
+      "singleOccurrenceFlags": [
+        "--host",
+        "--open",
+        "--port",
+        "--repo-root",
+        "--serve",
+        "--session-mode",
+        "--session-timeout-seconds"
+      ],
+      "flagChoices": {
+        "--host": [
+          "127.0.0.1",
+          "::1"
+        ],
+        "--session-mode": [
+          "browse",
+          "one-shot-question"
+        ]
+      },
+      "flagPresenceRequirements": [
+        {
+          "flag": "--open",
+          "requiredFlags": [
+            "--serve"
+          ]
+        },
+        {
+          "flag": "--session-mode",
+          "requiredFlags": [
+            "--serve"
+          ]
+        },
+        {
+          "flag": "--session-timeout-seconds",
+          "requiredFlagValues": [
+            {
+              "flag": "--session-mode",
+              "value": "one-shot-question"
+            }
+          ],
+          "requiredFlags": []
+        }
+      ],
+      "flagValueRequirements": [
+        {
+          "flag": "--session-mode",
+          "requiredFlags": [
+            "--open",
+            "--serve"
+          ],
+          "value": "one-shot-question"
+        }
+      ],
+      "outputContract": {
+        "contractId": "proofkit.view.output.v1",
+        "schemaVersion": 1,
+        "rootType": "object",
+        "closed": true,
+        "rootDefinitionRef": "proofkit.view.output.v1.root-shape",
+        "rootDefinitionDigest": "sha256:a99a87f8bcd3ba8fe9c0609896d93670f6acffffd8015b6c8732369c779b6c79",
+        "nativeSource": {
+          "path": "internal/command/requirementbrowser",
+          "canonicalDigest": "sha256:70f0fc4f0dfa82f4077c844f9b247a524591ec49d7c8093c789b48ff525a5ab1",
+          "evidenceClass": "source_checkout"
+        },
+        "nativeOutputWitnessSelector": {
+          "path": "internal/app/project_view_command_test.go",
+          "test": "TestProjectViewCLI",
+          "command": "go test ./internal/app -run '^TestProjectViewCLI$'",
+          "evidenceClass": "source_checkout"
+        },
+        "compatibilitySummary": [
+          "No JSON input; --repo-root explicitly selects one complete materialized project and never reads stdin.",
+          "The non-serving JSON plan shares the existing presentation_adapter_plan root and supports pretty or compact layout.",
+          "Serving emits a loopback URL in browse mode or one fixed compact JSON terminal packet in one-shot-question mode; --json-layout is rejected for every serving mode.",
+          "--port is 0..65535; --session-timeout-seconds is 1..7200 and requires --session-mode one-shot-question; one-shot-question requires --serve --open.",
+          "One closed captured project supplies context schemaVersion=3, exact source-role references and source nonClaims; old workspace context versions remain unchanged.",
+          "Graph shows declared relations only; coverage and diff are unavailable. Viewing does not execute witnesses, write project files or establish current filesystem freshness after capture.",
+          "Root-shape-only variants; nested fields, semantic admission, host effects and complete execution remain native-owner and native-witness claims."
+        ],
+        "ownerRequirementRefs": [
+          "REQ-PROOFKIT-PACKAGE-002",
+          "REQ-PROOFKIT-QUALITY-004",
+          "REQ-PROOFKIT-SPEC-042"
         ]
       }
     },
@@ -16980,6 +17094,108 @@
         ]
       },
       "canonicalDigest": "sha256:93da5f4d5efd4c482cb5da37bb60a80f8e47e4eab549428790ddd1a4e680009d"
+    },
+    {
+      "definitionId": "proofkit.view.output.v1.root-shape",
+      "schemaVersion": 1,
+      "rootType": "object",
+      "closed": true,
+      "definitionRefs": [],
+      "fieldTree": {
+        "kind": "root_shape_only",
+        "nonClaims": [
+          "Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
+          "Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection."
+        ],
+        "variants": [
+          {
+            "allowedFields": [
+              "authority",
+              "host",
+              "htmlByteLength",
+              "nonClaims",
+              "planKind",
+              "port",
+              "portSelection",
+              "renderedAuthority",
+              "renderedViewKind",
+              "schemaVersion",
+              "url",
+              "view"
+            ],
+            "requiredFields": [
+              "authority",
+              "host",
+              "htmlByteLength",
+              "nonClaims",
+              "planKind",
+              "port",
+              "portSelection",
+              "renderedAuthority",
+              "renderedViewKind",
+              "schemaVersion",
+              "url",
+              "view"
+            ],
+            "rootKind": "object",
+            "variantId": "01-plan",
+            "when": [
+              "without --serve"
+            ]
+          },
+          {
+            "allowedFields": [
+              "handoffKind",
+              "nonClaims",
+              "schemaVersion",
+              "snapshotRefs",
+              "state"
+            ],
+            "requiredFields": [
+              "handoffKind",
+              "nonClaims",
+              "schemaVersion",
+              "snapshotRefs",
+              "state"
+            ],
+            "rootKind": "object",
+            "variantId": "02-one-shot-terminal",
+            "when": [
+              "--open; --serve; --session-mode one-shot-question; state=cancelled|expired"
+            ]
+          },
+          {
+            "allowedFields": [
+              "annotations",
+              "context",
+              "handoffKind",
+              "instructionAuthority",
+              "nonClaims",
+              "schemaVersion",
+              "snapshotRefs",
+              "sourceTextAuthority",
+              "state"
+            ],
+            "requiredFields": [
+              "annotations",
+              "context",
+              "handoffKind",
+              "instructionAuthority",
+              "nonClaims",
+              "schemaVersion",
+              "snapshotRefs",
+              "sourceTextAuthority",
+              "state"
+            ],
+            "rootKind": "object",
+            "variantId": "03-one-shot-submitted",
+            "when": [
+              "--open; --serve; --session-mode one-shot-question; state=submitted"
+            ]
+          }
+        ]
+      },
+      "canonicalDigest": "sha256:a99a87f8bcd3ba8fe9c0609896d93670f6acffffd8015b6c8732369c779b6c79"
     },
     {
       "definitionId": "proofkit.witness-plan.input.v1.root-shape",

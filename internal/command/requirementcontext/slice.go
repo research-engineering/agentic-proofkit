@@ -104,7 +104,7 @@ func buildSlice(sliceID string, snapshot Snapshot, query SliceQuery) (map[string
 		selectedNodes = nodeResult.selected
 	}
 	projections := map[string]any{
-		"requirementSources": requirementSourceFragmentValues(snapshot.RequirementSources, selectedSources),
+		"requirementSources": requirementSourceFragmentValues(snapshot.RequirementSources, selectedSources, snapshot.projectOrigin != nil),
 		"specTree":           treeSliceValue(snapshot.Tree, selectedNodes, selectedSourceIDs),
 	}
 	if query.Profile == "proof" || query.Profile == "review" {
@@ -423,7 +423,7 @@ func treeSliceValue(tree requirementspectree.Tree, selected, selectedSourceIDs m
 	return value
 }
 
-func requirementSourceFragmentValues(all, selected []requirementsourceadmission.Source) []any {
+func requirementSourceFragmentValues(all, selected []requirementsourceadmission.Source, includeSourceNonClaims bool) []any {
 	totals := map[string]int{}
 	for _, source := range all {
 		totals[source.SourceID] = len(source.Requirements)
@@ -434,12 +434,16 @@ func requirementSourceFragmentValues(all, selected []requirementsourceadmission.
 		for _, requirement := range source.Requirements {
 			requirements = append(requirements, requirementsourceadmission.RequirementValue(requirement))
 		}
-		values = append(values, map[string]any{
+		fragment := map[string]any{
 			"authority": "lookup_fragment_only", "omittedRequirementCount": totals[source.SourceID] - len(source.Requirements),
 			"projectionKind": "proofkit.requirement-source-fragment", "requirements": requirements,
 			"selectedRequirementCount": len(source.Requirements), "sourceId": source.SourceID,
 			"totalRequirementCount": totals[source.SourceID],
-		})
+		}
+		if includeSourceNonClaims {
+			fragment["nonClaims"] = admit.StringSliceToAny(source.NonClaims)
+		}
+		values = append(values, fragment)
 	}
 	return values
 }
