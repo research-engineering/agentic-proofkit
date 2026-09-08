@@ -108,7 +108,7 @@ func normalizeDeferral(value *Deferral, path string) (*Deferral, error) {
 	if err != nil {
 		return nil, err
 	}
-	reviewCondition, err := canonicalText(value.ReviewCondition, path+".reviewCondition", false, true)
+	reviewCondition, err := canonicalText(value.ReviewCondition, path+".reviewCondition", false, false)
 	if err != nil {
 		return nil, err
 	}

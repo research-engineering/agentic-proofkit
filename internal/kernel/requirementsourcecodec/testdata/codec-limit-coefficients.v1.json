@@ -15,7 +15,7 @@
     {"id": "profiles", "coefficient": 448},
     {"id": "scenarios", "coefficient": 896},
     {"id": "terms", "coefficient": 160},
-    {"id": "total_text_bytes", "coefficient": 3}
+    {"id": "total_text_bytes", "coefficient": 6}
   ],
   "lexicalTokenCoefficients": [
     {"id": "collection_items", "coefficient": 32},

@@ -86,7 +86,8 @@ func MaxLexicalTokens(limits requirementsourcemodel.Limits) (int, error) {
 
 func canonicalByteCoefficients(limits requirementsourcemodel.Limits) []limitCoefficient {
 	return []limitCoefficient{
-		{ID: "total_text_bytes", Count: limits.MaxTotalTextBytes, Coefficient: 3},
+		// A one-byte control scalar expands to six bytes in a JSON Unicode escape.
+		{ID: "total_text_bytes", Count: limits.MaxTotalTextBytes, Coefficient: 6},
 		{ID: "collection_items", Count: limits.MaxCollectionItems, Coefficient: 32},
 		{ID: "definitions", Count: limits.MaxDefinitions, Coefficient: 96},
 		{ID: "terms", Count: limits.MaxTerms, Coefficient: 160},
