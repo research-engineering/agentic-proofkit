@@ -60,6 +60,7 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 		"regexp",
 		"sort",
 		"strings",
+		"unicode/utf8",
 	}
 	if !reflect.DeepEqual(actualImports, expectedImports) {
 		t.Fatalf("production direct imports = %v, representation-neutral allowlist = %v", actualImports, expectedImports)

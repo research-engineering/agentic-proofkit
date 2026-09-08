@@ -3,6 +3,7 @@ package requirementsourcecodec
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"sort"
@@ -69,21 +70,32 @@ func TestLimitArithmeticRejectsOverflow(t *testing.T) {
 }
 
 func TestCanonicalByteBoundCoversWorstAdmittedEscapeExpansion(t *testing.T) {
+	for _, scalar := range []string{"\x00", "\u0085"} {
+		t.Run(fmt.Sprintf("U+%04X", []rune(scalar)[0]), func(t *testing.T) {
+			assertMaximalEscapedTextRoundTrip(t, scalar)
+		})
+	}
+}
+
+func assertMaximalEscapedTextRoundTrip(t *testing.T, scalar string) {
+	t.Helper()
 	limits := compactTestModelLimits()
 	low := 0
-	high := limits.MaxTotalTextBytes/2 + 1
+	high := limits.MaxTotalTextBytes/len(scalar) + 1
 	for low+1 < high {
 		middle := low + (high-low)/2
 		draft := testDraft()
-		draft.NonClaimDefinitions[0].Statement = "X" + strings.Repeat("\u0085", middle) + "Y"
+		draft.NonClaimDefinitions[0].Statement = "X" + strings.Repeat(scalar, middle) + "Y"
 		if _, err := requirementsourcemodel.NormalizeWithLimits(draft, limits); err == nil {
 			low = middle
-		} else {
+		} else if requirementsourcemodel.ErrorCode(err) == "text_budget_exceeded" {
 			high = middle
+		} else {
+			t.Fatalf("boundary search encountered an unrelated rejection: %v", err)
 		}
 	}
 	draft := testDraft()
-	draft.NonClaimDefinitions[0].Statement = "X" + strings.Repeat("\u0085", low) + "Y"
+	draft.NonClaimDefinitions[0].Statement = "X" + strings.Repeat(scalar, low) + "Y"
 	model, err := requirementsourcemodel.NormalizeWithLimits(draft, limits)
 	if err != nil {
 		t.Fatalf("maximum admitted escape fixture error = %v", err)
@@ -96,11 +108,16 @@ func TestCanonicalByteBoundCoversWorstAdmittedEscapeExpansion(t *testing.T) {
 	if int64(len(payload)) > codecLimits.MaxOutputBytes {
 		t.Fatalf("canonical bytes = %d, bound = %d", len(payload), codecLimits.MaxOutputBytes)
 	}
-	if !bytes.Contains(payload, []byte(`\u0085`)) {
-		t.Fatal("worst-case admitted control scalar was not escaped")
+	escaped := []byte(fmt.Sprintf(`\u%04x`, []rune(scalar)[0]))
+	if low == 0 || bytes.Count(payload, escaped) != low {
+		t.Fatal("maximal control text was not escaped exactly")
+	}
+	parsed, err := ParseWithLimits(payload, codecLimits, limits)
+	if err != nil || !projectionsEqual(model, parsed.Model) {
+		t.Fatal("maximal admitted text did not round trip under paired limits")
 	}
 	over := testDraft()
-	over.NonClaimDefinitions[0].Statement = "X" + strings.Repeat("\u0085", high) + "Y"
+	over.NonClaimDefinitions[0].Statement = "X" + strings.Repeat(scalar, high) + "Y"
 	if _, err := requirementsourcemodel.NormalizeWithLimits(over, limits); requirementsourcemodel.ErrorCode(err) != "text_budget_exceeded" {
 		t.Fatalf("limit-plus-one model error = %v", err)
 	}

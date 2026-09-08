@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
@@ -61,13 +62,8 @@ func canonicalText(value string, path string, allowEmpty bool, rejectPlaceholder
 		return "", nil
 	}
 	admitted, err := admit.NonEmptyText(value, path)
-	if err != nil || admitted != value {
+	if err != nil || admitted != value || !utf8.ValidString(value) {
 		return "", invalid("invalid_text", path)
-	}
-	for _, character := range value {
-		if character < 0x20 || character == 0x7f {
-			return "", invalid("invalid_text", path)
-		}
 	}
 	if rejectPlaceholders && placeholderPattern.MatchString(value) {
 		return "", invalid("placeholder_text", path)

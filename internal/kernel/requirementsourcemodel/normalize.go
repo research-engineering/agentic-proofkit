@@ -107,7 +107,7 @@ func normalizeDefinitions(values []NonClaimDefinition) ([]NonClaimDefinition, ma
 		if _, exists := ids[id]; exists {
 			return nil, nil, invalid("duplicate_id", "nonClaimDefinitions")
 		}
-		statement, err := canonicalText(value.Statement, path+"statement", false, true)
+		statement, err := canonicalText(value.Statement, path+"statement", false, false)
 		if err != nil {
 			return nil, nil, err
 		}
