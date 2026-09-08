@@ -112,7 +112,7 @@
         "rootDefinitionDigest": "sha256:3dbf760a8f8b0a4093c1dd4edc23367c5ef8027b31c18a01490afb657fcc03ad",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:60d2a22d78bde9016931c03b85f3ccd41f83e6569d44cc9216fb561093846591",
+          "canonicalDigest": "sha256:a4899baa2f5e2958552aa1046262248bffdedb4edf4a002db7310de9925ac95d",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -148,7 +148,7 @@
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:60d2a22d78bde9016931c03b85f3ccd41f83e6569d44cc9216fb561093846591",
+            "canonicalDigest": "sha256:a4899baa2f5e2958552aa1046262248bffdedb4edf4a002db7310de9925ac95d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -251,7 +251,7 @@
         "rootDefinitionDigest": "sha256:c18995fb310dbde102bea231d83ec3756ffdf863199acbc88237471d06278c9e",
         "nativeSource": {
           "path": "internal/command/adoptionmaterialization",
-          "canonicalDigest": "sha256:60d2a22d78bde9016931c03b85f3ccd41f83e6569d44cc9216fb561093846591",
+          "canonicalDigest": "sha256:a4899baa2f5e2958552aa1046262248bffdedb4edf4a002db7310de9925ac95d",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -287,7 +287,7 @@
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:60d2a22d78bde9016931c03b85f3ccd41f83e6569d44cc9216fb561093846591",
+            "canonicalDigest": "sha256:a4899baa2f5e2958552aa1046262248bffdedb4edf4a002db7310de9925ac95d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -401,7 +401,7 @@
           },
           {
             "path": "internal/command/adoptionmaterialization",
-            "canonicalDigest": "sha256:60d2a22d78bde9016931c03b85f3ccd41f83e6569d44cc9216fb561093846591",
+            "canonicalDigest": "sha256:a4899baa2f5e2958552aa1046262248bffdedb4edf4a002db7310de9925ac95d",
             "evidenceClass": "source_checkout"
           },
           {
