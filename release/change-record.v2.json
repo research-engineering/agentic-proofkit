@@ -7,7 +7,7 @@
   "additions": [
     {
       "changeId": "proofkit.adoption.nonclaims-input-guidance",
-      "summary": "Clarify in lazy materialization input help that nonClaims lists are sorted and unique, while argv token order is preserved. Exercise ordered multi-item nonClaims through planning, approved materialization and stored re-admission; reject unsorted and duplicate lists at packet, source, requirement, inventory and entry boundaries. Accepted input semantics, authority denials, public identities and platform requirements are unchanged."
+      "summary": "Clarify in lazy materialization input help that nonClaims lists are sorted and unique, while argv token order is preserved. Exercise ordered multi-item nonClaims through planning, approved materialization and stored re-admission; reject unsorted and duplicate lists at packet, source, requirement, inventory and entry boundaries. Refresh source-bound contract digests and the ABI fingerprint. Accepted input semantics, request/report kinds, schema versions, authority denials and platform requirements are unchanged."
     }
   ],
   "migration": {
