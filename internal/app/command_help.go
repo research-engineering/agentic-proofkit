@@ -5,7 +5,9 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
@@ -62,7 +64,7 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	if descriptor.name == "stack-preset" || descriptor.name == "requirement-source-admission" {
 		lines = append(lines,
 			"",
-			"Continue with the installed README first-valid-input example:",
+			"Optional human first-input example (CLI guidance is available below):",
 			"  Path: node_modules/@research-engineering/agentic-proofkit/README.md",
 		)
 	}
@@ -110,10 +112,41 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	if descriptor.name == "capability-map-admission" {
 		lines = append(lines, "", strings.TrimSuffix(capabilitymapadmission.InputGuide, "\n"))
 	}
+	if descriptor.name == "adopt-materialize-plan" {
+		lines = append(lines, "", strings.TrimSuffix(adoptionmaterialization.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "requirement-authoring-plan" {
+		lines = append(lines, "", strings.TrimSuffix(requirementauthoringplan.InputGuide(renderer), "\n"))
+	}
+	if pointer := adoptionGuidePointer(descriptor.name); pointer != "" {
+		lines = append(lines, "", "CLI authoring continuation:",
+			"  "+renderer.DisplayCommand("adopt", "materialize", "plan", "--help"),
+			"  The connected request template contains this command's input at "+pointer+".",
+			"  Read its prerequisites and non-claims before adapting the synthetic values.")
+	}
+	if descriptor.name == "adopt-plan" || descriptor.name == "native-evidence-guidance" || descriptor.name == "capability-map-admission" || descriptor.name == "stack-preset" {
+		lines = append(lines, "", "After owner review and native witness design:",
+			"  "+renderer.DisplayCommand("adopt", "materialize", "plan", "--help"),
+			"  This guide connects requirements, scenarios, test routes and write planning.",
+			"  Do not promote candidates or infer execution from admission success.")
+	}
 	lines = append(lines, "", "Public contract:")
 	lines = append(lines, "  CLI command routing, root JSON shapes, output modes, exit codes, and flags are owned by proofkit/cli-contract.v2.json.")
 	lines = append(lines, "  Nested field semantics remain owned by native command admission.")
 	return strings.Join(lines, "\n") + "\n"
+}
+
+func adoptionGuidePointer(command string) string {
+	switch command {
+	case "requirement-source-admission":
+		return "/requirementSources/0"
+	case "requirement-bindings":
+		return "/requirementProofBinding/record"
+	case "test-evidence-inventory":
+		return "/testEvidenceInventory/record"
+	default:
+		return ""
+	}
 }
 
 func installedCommandUsageLine(descriptor commandDescriptor) string {

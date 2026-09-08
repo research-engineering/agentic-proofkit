@@ -145,6 +145,15 @@ func TestCurrentCompactV2WireSemanticsMatchFrozenVersionEdge(t *testing.T) {
 			frozenValue = compactWithoutContractFreshnessDigests(t, frozenValue, key+" frozen")
 			currentValue = compactWithoutContractFreshnessDigests(t, currentValue, key+" current")
 		}
+		if key == "test-evidence-inventory|input|union" {
+			record := clonePublicABIRecord(currentValue.(map[string]any))
+			input, err := normalizeInventoryInputGuideContract(record["contract"].(map[string]any))
+			if err != nil {
+				t.Fatal(err)
+			}
+			record["contract"] = input
+			currentValue = record
+		}
 		if !compactJSONEqual(frozenValue, currentValue) {
 			pointers := []string{}
 			collectUncoveredCompactWireDiffs(frozenValue, true, currentValue, true, "", map[string]string{}, map[string]struct{}{}, &pointers)

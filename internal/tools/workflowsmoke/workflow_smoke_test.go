@@ -46,6 +46,13 @@ func TestVerifyRejectsCarrierContractMutations(t *testing.T) {
 		stdinTrustMode   string
 		apply            func(workflowsmoke.Result) workflowsmoke.Result
 	}{
+		{name: "materialization guide omitted", match: "adopt materialize plan --help", apply: replaceStdout("Usage:\n")},
+		{name: "materialization guide initial command", match: "adopt materialize plan --help", apply: replaceStdoutFragment("adopt plan --repo-root <root>", "adopt plann --repo-root <root>")},
+		{name: "materialization guide source plan dropped", match: "adopt plan --repo-root ", matchPrefix: true, apply: replaceStdout(`{}`)},
+		{name: "materialization guide child report dropped", match: "requirement-source-admission --input - --input-pointer /requirementSources/0", apply: replaceStdout(`{}`)},
+		{name: "authoring guide invalid mode", match: "requirement-authoring-plan --help", apply: replaceStdoutFragment(`"mode": "retrospective_baseline"`, `"mode": "invalid_mode"`)},
+		{name: "authoring guide lost carrier", match: "requirement-authoring-plan --help", apply: replaceStdoutFragment("  agentic-proofkit requirement-authoring-plan --input <packet>", "  wrong-proofkit requirement-authoring-plan --input <packet>")},
+		{name: "authoring guide report dropped", match: "requirement-authoring-plan --input -", apply: replaceStdout(`{"state":"passed"}`)},
 		{name: "capability help example changed", match: "capability-map-admission --help", apply: replaceStdoutFragment(`"dirtyState": "unknown"`, `"dirtyState": "clean"`)},
 		{name: "capability input runner drops report", match: "capability-map-admission --input -", apply: replaceStdout(`{"state":"passed"}`)},
 		{name: "capability baseline runner drops report", match: "capability-map-admission --input -", stdinTrustMode: "code_baseline", apply: replaceStdout(`{"state":"passed"}`)},

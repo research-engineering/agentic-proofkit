@@ -160,6 +160,9 @@ func Verify(ctx context.Context, run Runner) error {
 	if err := verifyCapabilityInputGuide(ctx, run); err != nil {
 		return err
 	}
+	if err := verifyAdoptionInputGuides(ctx, run); err != nil {
+		return err
+	}
 	return verifyIntegrations(ctx, run)
 }
 
