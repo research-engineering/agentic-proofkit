@@ -197,8 +197,8 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.source-model.metadata-parity", Summary: "Preserve independently authored source and requirement non-claims, external non-claim references and proof-binding paths in the private candidate source model. Keep named local references distinct from direct text and external identity; reject duplicate effective boundary statements within one scope and require binding paths for active blocking requirements. Private codec fields, projections, budgets and tests preserve member or shared-profile ownership. Public source admission and CLI contracts remain unchanged; no source-v2 cutover is included."},
-	{ChangeID: "proofkit.source-model.boundary-closure", Summary: "Preserve complete dotted identifiers when mapping model errors to exact lexical owner spans, reject invalid UTF-8 paths before formatting, and admit completed grouped invariants through the shared text policy. Bound expanded projection work before repeated payload traversal while retaining item-before-text rejection precedence and exact admitted costs. Require the minimum JSON depth to cover complete canonical output and locate effective non-claim duplicates at their participating reference owner. Negative controls cover hidden payload copying, mixed budgets, Unicode paths, diagnostic identity collisions and composition. Published platform requirements are unchanged."},
+	{ChangeID: "proofkit.adoption.cli-input-guidance", Summary: "Expose a connected requirement, scenario, witness and test-inventory example through on-demand CLI help. Source, binding and inventory help route to exact input pointers instead of requiring package documentation. Authoring help explains empty-source bootstrap, candidate-only previews and lifecycle owners without duplicating the source template. Guidance preserves full desired-state materialization, trust declarations, exact write approval and recovery distinctions; no consumer policy or native execution is introduced."},
+	{ChangeID: "proofkit.adoption.guide-contract-witnesses", Summary: "Distinguish direct inventory schemaVersion 1 from aggregate contract v2 and projection-specific versions in input help. Check actual published source-plan and continuation operands, original authoring mode, installed launcher rendering and connected examples through native and installed-carrier witnesses. Preserve accepted input semantics and platform requirements; a declared test route still does not prove execution, approval or complete coverage."},
 }
 
 var currentMigrationSteps = []string{}
@@ -221,7 +221,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.4",
+		"# @research-engineering/agentic-proofkit 0.14.5",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -274,7 +274,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.4",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.5",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -286,7 +286,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.3 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.3`.",
+		"- Pin npm consumers to the previous admitted version 0.14.4 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.4`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"
