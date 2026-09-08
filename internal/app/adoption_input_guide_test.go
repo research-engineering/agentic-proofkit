@@ -76,7 +76,7 @@ func TestAdoptionInputGuideCLI(t *testing.T) {
 		if !reflect.DeepEqual(commands, expectedMaterializationGuideCommands()) {
 			t.Fatalf("published carrier command operands drifted: %v", commands)
 		}
-		for _, denial := range []string{"NOT an additive patch", "binding's specPath must equal its source's requirementsPath", "durability_unknown", "not an execution"} {
+		for _, denial := range []string{"NOT an additive patch", "binding's specPath must equal its source's requirementsPath", "durability_unknown", "not an execution", "Sort unique ID/path lists and every nonClaims list lexicographically.", "Do not sort argv; its token order is meaningful."} {
 			if !strings.Contains(guide, denial) {
 				t.Fatalf("guide lost required boundary: %s", denial)
 			}
@@ -96,6 +96,16 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 		t.Run(intent, func(t *testing.T) {
 			root := t.TempDir()
 			packet := adoptionHelpPacket(t, root, intent)
+			nonClaims := []any{"Candidate meaning requires owner review.", "Witness execution is not proven."}
+			packet["nonClaims"] = nonClaims
+			source := packet["requirementSources"].([]any)[0].(map[string]any)
+			source["nonClaims"] = nonClaims
+			adoptionHelpRequirement(packet)["nonClaims"] = nonClaims
+			binding := packet["requirementProofBinding"].(map[string]any)["record"].(map[string]any)
+			binding["nonClaims"] = nonClaims
+			binding["requirements"].([]any)[0].(map[string]any)["nonClaims"] = nonClaims
+			packet["testEvidenceInventory"].(map[string]any)["record"].(map[string]any)["nonClaims"] = nonClaims
+			adoptionHelpEntry(packet)["nonClaims"] = nonClaims
 			payload := adoptionHelpJSON(t, packet)
 			_, help, _ := executeAgentWorkflowCLI(t, []string{"adopt", "materialize", "plan", "--help"}, panicReader{}, PresentationCapabilities{})
 			commands := guideCommands(t, help, "Materialization input guide:", cliexec.PathRenderer())
@@ -137,8 +147,19 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			binding := decodeCLIJSON(t, string(bindingBytes)).(map[string]any)
-			route := binding["bindings"].([]any)[0].(map[string]any)
+			materializedBinding := decodeCLIJSON(t, string(bindingBytes)).(map[string]any)
+			if !reflect.DeepEqual(materializedBinding["requirements"].([]any)[0].(map[string]any)["nonClaims"], nonClaims) {
+				t.Fatal("materialization lost ordered requirement nonClaims")
+			}
+			inventoryBytes, err := os.ReadFile(filepath.Join(root, "proofkit/test-evidence-inventory.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			materializedInventory := decodeCLIJSON(t, string(inventoryBytes)).(map[string]any)
+			if !reflect.DeepEqual(materializedInventory["entries"].([]any)[0].(map[string]any)["nonClaims"], nonClaims) {
+				t.Fatal("materialization lost ordered inventory entry nonClaims")
+			}
+			route := materializedBinding["bindings"].([]any)[0].(map[string]any)
 			if route["scenarioId"] != "example.requests.empty" || route["witnessId"] != "example.witness.empty" || route["requirementId"] != "REQ-EXAMPLE-001" {
 				t.Fatal("materialization lost the scenario/requirement/witness edge")
 			}
@@ -148,6 +169,38 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAdoptionInputGuideNonClaimsOrdering(t *testing.T) {
+	for _, scope := range []string{"packet", "source", "requirement", "inventory", "entry"} {
+		for _, invalid := range []struct {
+			name   string
+			values []any
+		}{
+			{"unsorted", []any{"Witness execution is not proven.", "Candidate meaning requires owner review."}},
+			{"duplicate", []any{"Witness execution is not proven.", "Witness execution is not proven."}},
+		} {
+			t.Run(scope+"/"+invalid.name, func(t *testing.T) {
+				root := t.TempDir()
+				packet := adoptionHelpPacket(t, root, "fresh")
+				owners := map[string]map[string]any{
+					"packet":      packet,
+					"source":      packet["requirementSources"].([]any)[0].(map[string]any),
+					"requirement": adoptionHelpRequirement(packet),
+					"inventory":   packet["testEvidenceInventory"].(map[string]any)["record"].(map[string]any),
+					"entry":       adoptionHelpEntry(packet),
+				}
+				owners[scope]["nonClaims"] = invalid.values
+				status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"adopt", "materialize", "plan", "--input", "-", "--repo-root", root}, bytes.NewReader(adoptionHelpJSON(t, packet)), PresentationCapabilities{})
+				if status != 1 || stdout != "" || !strings.Contains(stderr, "nonClaims") || !strings.Contains(stderr, "sorted") || !strings.Contains(stderr, "unique") {
+					t.Fatalf("wrong rejection: status=%d stdout=%q stderr=%q", status, stdout, stderr)
+				}
+				if entries, err := os.ReadDir(root); err != nil || len(entries) != 0 {
+					t.Fatal("noncanonical nonClaims planning mutated the repository")
+				}
+			})
+		}
 	}
 }
 
