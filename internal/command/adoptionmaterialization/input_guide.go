@@ -41,8 +41,10 @@ const inputGuide = `Materialization input guide:
   requirementSources are requirement-source-admission inputs, not source reports.
   Binding and inventory record fields are raw owner inputs, not passed reports.
   Paths are repository-relative; stable IDs and ID lists must obey admission.
-  Sort unique ID/path lists. Preserve identical requirementId, ownerId,
-  claimLevel and nonClaims across the source and binding projection.
+  Sort unique ID/path lists and every nonClaims list lexicographically.
+  Do not sort argv; its token order is meaningful. Preserve identical
+  requirementId, ownerId, claimLevel and nonClaims across the source and binding
+  projection.
   The binding's specPath must equal its source's requirementsPath; the source
   does not have a specPath field.
   Each inventory entry's requirementRefs, witnessRefs, commandRefs and sourcePath
