@@ -77,6 +77,9 @@ const managedReplayPolicy = "Replay requires a retained generation-2 terminal re
 
 func verifyManagedIntegrationPublicABIDiff(frozen frozenPublicABI, current map[string]any) error {
 	current = clonePublicABIRecord(current)
+	if err := normalizeInventoryInputGuidePublicABIDelta(current); err != nil {
+		return err
+	}
 	if err := normalizeProjectContextPublicABIDelta(current); err != nil {
 		return err
 	}
