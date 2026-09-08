@@ -69,6 +69,7 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 	metadataValue := object(map[string]shapeField{
 		"ownerId": {shape: stringValue}, "claimLevel": {shape: stringValue}, "riskClass": {shape: stringValue},
 		"nonClaimRefs": {shape: stringsValue}, "lifecycle": {shape: lifecycleValue}, "deferral": {shape: deferralValue}, "updatePolicy": {shape: updatePolicyValue},
+		"nonClaims": {shape: stringsValue}, "externalNonClaimRefs": {shape: stringsValue}, "proofBindingRefs": {shape: stringsValue},
 	})
 	nonClaimValue := object(requiredFields(map[string]*shape{"nonClaimId": stringValue, "statement": stringValue}))
 	termValue := object(requiredFields(map[string]*shape{"termId": stringValue, "kind": stringValue, "label": stringValue, "definition": stringValue}))
@@ -103,6 +104,7 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 		"sourceId":            stringValue,
 		"specPackagePath":     stringValue,
 		"sourceNonClaimRefs":  stringsValue,
+		"sourceNonClaims":     stringsValue,
 		"nonClaimDefinitions": array(nonClaimValue, limitDefinitions, limits),
 		"vocabulary":          array(termValue, limitTerms, limits),
 		"derivations":         array(derivationValue, limitDerivations, limits),

@@ -23,18 +23,24 @@ func testDraft() requirementsourcemodel.Draft {
 		},
 	}
 	memberFields := requirementsourcemodel.MetadataFields{
-		NonClaimRefs: requirementsourcemodel.Own([]string{"NCL-CODEC-002"}),
-		Lifecycle:    requirementsourcemodel.Own(active),
-		Deferral:     requirementsourcemodel.Own[*requirementsourcemodel.Deferral](nil),
+		NonClaims:            requirementsourcemodel.Own([]string{"Requirement admission does not execute native witnesses."}),
+		ExternalNonClaimRefs: requirementsourcemodel.Own([]string{"proofkit.nonclaim.native"}),
+		ProofBindingRefs:     requirementsourcemodel.Own([]string{"proofkit/requirement-bindings.json"}),
+		NonClaimRefs:         requirementsourcemodel.Own([]string{"NCL-CODEC-002"}),
+		Lifecycle:            requirementsourcemodel.Own(active),
+		Deferral:             requirementsourcemodel.Own[*requirementsourcemodel.Deferral](nil),
 	}
 	completeFields := func(claim requirementsourcemodel.ClaimLevel, lifecycle requirementsourcemodel.Lifecycle, deferral *requirementsourcemodel.Deferral) requirementsourcemodel.MetadataFields {
 		return requirementsourcemodel.MetadataFields{
-			OwnerID:      requirementsourcemodel.Own("proofkit.codec"),
-			ClaimLevel:   requirementsourcemodel.Own(claim),
-			RiskClass:    requirementsourcemodel.Own(requirementsourcemodel.RiskMedium),
-			NonClaimRefs: requirementsourcemodel.Own([]string{"NCL-CODEC-002"}),
-			Lifecycle:    requirementsourcemodel.Own(lifecycle),
-			Deferral:     requirementsourcemodel.Own(deferral),
+			NonClaims:            requirementsourcemodel.Own([]string{"Requirement admission does not execute native witnesses."}),
+			ExternalNonClaimRefs: requirementsourcemodel.Own([]string{"proofkit.nonclaim.native"}),
+			ProofBindingRefs:     requirementsourcemodel.Own([]string{"proofkit/requirement-bindings.json"}),
+			OwnerID:              requirementsourcemodel.Own("proofkit.codec"),
+			ClaimLevel:           requirementsourcemodel.Own(claim),
+			RiskClass:            requirementsourcemodel.Own(requirementsourcemodel.RiskMedium),
+			NonClaimRefs:         requirementsourcemodel.Own([]string{"NCL-CODEC-002"}),
+			Lifecycle:            requirementsourcemodel.Own(lifecycle),
+			Deferral:             requirementsourcemodel.Own(deferral),
 			UpdatePolicy: requirementsourcemodel.Own(requirementsourcemodel.UpdatePolicy{
 				ReviewOwnerID:              "proofkit.codec",
 				RequiresImpactDeclaration:  true,
@@ -53,6 +59,7 @@ func testDraft() requirementsourcemodel.Draft {
 	return requirementsourcemodel.Draft{
 		SourceID:           "proofkit.codec.source",
 		SpecPackagePath:    "docs/specs/proofkit-codec",
+		SourceNonClaims:    []string{"Source admission does not execute native witnesses."},
 		SourceNonClaimRefs: []string{"NCL-CODEC-001"},
 		NonClaimDefinitions: []requirementsourcemodel.NonClaimDefinition{
 			{NonClaimID: "NCL-CODEC-001", Statement: "The codec does not prove implementation correctness."},

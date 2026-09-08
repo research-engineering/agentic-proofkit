@@ -79,23 +79,69 @@ func TestCanonicalByteBoundCoversWorstAdmittedEscapeExpansion(t *testing.T) {
 
 func assertMaximalEscapedTextRoundTrip(t *testing.T, scalar string) {
 	t.Helper()
+	assertMaximalTextRoundTrip(t, scalar, "text_budget_exceeded", func(draft *requirementsourcemodel.Draft, value string) {
+		draft.NonClaimDefinitions[0].Statement = value
+	})
+}
+
+func TestBoundaryMetadataMaximalTextPreservesPairedCodecLimits(t *testing.T) {
+	t.Run("source", func(t *testing.T) {
+		assertMaximalTextRoundTrip(t, "\x00", "text_budget_exceeded", func(draft *requirementsourcemodel.Draft, value string) {
+			draft.SourceNonClaims = []string{value}
+		})
+	})
+	for _, item := range []struct {
+		name      string
+		scalar    string
+		limitCode string
+		set       func(*requirementsourcemodel.MetadataFields, requirementsourcemodel.Field[[]string])
+	}{
+		{"nonClaims", "\x00", "text_budget_exceeded", func(fields *requirementsourcemodel.MetadataFields, value requirementsourcemodel.Field[[]string]) {
+			fields.NonClaims = value
+		}},
+		{"externalNonClaimRefs", "a", "invalid_id", func(fields *requirementsourcemodel.MetadataFields, value requirementsourcemodel.Field[[]string]) {
+			fields.ExternalNonClaimRefs = value
+		}},
+		{"proofBindingRefs", "a", "text_budget_exceeded", func(fields *requirementsourcemodel.MetadataFields, value requirementsourcemodel.Field[[]string]) {
+			fields.ProofBindingRefs = value
+		}},
+	} {
+		for _, owner := range []string{"member", "profile"} {
+			t.Run(item.name+"/"+owner, func(t *testing.T) {
+				assertMaximalTextRoundTrip(t, item.scalar, item.limitCode, func(draft *requirementsourcemodel.Draft, value string) {
+					fields := &draft.Groups[0].Members[0].Fields
+					if owner == "profile" {
+						for index := range draft.Groups[0].Members {
+							item.set(&draft.Groups[0].Members[index].Fields, requirementsourcemodel.Field[[]string]{})
+						}
+						fields = &draft.Profiles[0].Fields
+					}
+					item.set(fields, requirementsourcemodel.Own([]string{value}))
+				})
+			})
+		}
+	}
+}
+
+func assertMaximalTextRoundTrip(t *testing.T, scalar string, limitCode string, set func(*requirementsourcemodel.Draft, string)) {
+	t.Helper()
 	limits := compactTestModelLimits()
 	low := 0
 	high := limits.MaxTotalTextBytes/len(scalar) + 1
 	for low+1 < high {
 		middle := low + (high-low)/2
 		draft := testDraft()
-		draft.NonClaimDefinitions[0].Statement = "X" + strings.Repeat(scalar, middle) + "Y"
+		set(&draft, "X"+strings.Repeat(scalar, middle)+"Y")
 		if _, err := requirementsourcemodel.NormalizeWithLimits(draft, limits); err == nil {
 			low = middle
-		} else if requirementsourcemodel.ErrorCode(err) == "text_budget_exceeded" {
+		} else if requirementsourcemodel.ErrorCode(err) == limitCode {
 			high = middle
 		} else {
 			t.Fatalf("boundary search encountered an unrelated rejection: %v", err)
 		}
 	}
 	draft := testDraft()
-	draft.NonClaimDefinitions[0].Statement = "X" + strings.Repeat(scalar, low) + "Y"
+	set(&draft, "X"+strings.Repeat(scalar, low)+"Y")
 	model, err := requirementsourcemodel.NormalizeWithLimits(draft, limits)
 	if err != nil {
 		t.Fatalf("maximum admitted escape fixture error = %v", err)
@@ -108,8 +154,15 @@ func assertMaximalEscapedTextRoundTrip(t *testing.T, scalar string) {
 	if int64(len(payload)) > codecLimits.MaxOutputBytes {
 		t.Fatalf("canonical bytes = %d, bound = %d", len(payload), codecLimits.MaxOutputBytes)
 	}
-	escaped := []byte(fmt.Sprintf(`\u%04x`, []rune(scalar)[0]))
-	if low == 0 || bytes.Count(payload, escaped) != low {
+	escaped := []byte(strings.Repeat(scalar, low))
+	if scalar != "a" {
+		unit := fmt.Sprintf(`\u%04x`, []rune(scalar)[0])
+		if bytes.Count(payload, []byte(unit)) != low {
+			t.Fatal("admitted control scalar count changed during formatting")
+		}
+		escaped = []byte(strings.Repeat(unit, low))
+	}
+	if low == 0 || bytes.Count(payload, escaped) != 1 {
 		t.Fatal("maximal control text was not escaped exactly")
 	}
 	parsed, err := ParseWithLimits(payload, codecLimits, limits)
@@ -117,8 +170,8 @@ func assertMaximalEscapedTextRoundTrip(t *testing.T, scalar string) {
 		t.Fatal("maximal admitted text did not round trip under paired limits")
 	}
 	over := testDraft()
-	over.NonClaimDefinitions[0].Statement = "X" + strings.Repeat(scalar, high) + "Y"
-	if _, err := requirementsourcemodel.NormalizeWithLimits(over, limits); requirementsourcemodel.ErrorCode(err) != "text_budget_exceeded" {
+	set(&over, "X"+strings.Repeat(scalar, high)+"Y")
+	if _, err := requirementsourcemodel.NormalizeWithLimits(over, limits); requirementsourcemodel.ErrorCode(err) != limitCode {
 		t.Fatalf("limit-plus-one model error = %v", err)
 	}
 }

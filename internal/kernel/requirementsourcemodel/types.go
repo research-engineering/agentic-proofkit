@@ -106,6 +106,7 @@ const (
 type Draft struct {
 	SourceID            string
 	SpecPackagePath     string
+	SourceNonClaims     []string
 	SourceNonClaimRefs  []string
 	NonClaimDefinitions []NonClaimDefinition
 	Vocabulary          []VocabularyTerm
@@ -168,13 +169,16 @@ type Member struct {
 }
 
 type MetadataFields struct {
-	OwnerID      Field[string]
-	ClaimLevel   Field[ClaimLevel]
-	RiskClass    Field[RiskClass]
-	NonClaimRefs Field[[]string]
-	Lifecycle    Field[Lifecycle]
-	Deferral     Field[*Deferral]
-	UpdatePolicy Field[UpdatePolicy]
+	NonClaims            Field[[]string]
+	ExternalNonClaimRefs Field[[]string]
+	ProofBindingRefs     Field[[]string]
+	OwnerID              Field[string]
+	ClaimLevel           Field[ClaimLevel]
+	RiskClass            Field[RiskClass]
+	NonClaimRefs         Field[[]string]
+	Lifecycle            Field[Lifecycle]
+	Deferral             Field[*Deferral]
+	UpdatePolicy         Field[UpdatePolicy]
 }
 
 type Lifecycle struct {
@@ -227,6 +231,7 @@ type Model struct {
 type AtomicProjection struct {
 	SourceID            string
 	SpecPackagePath     string
+	SourceNonClaims     []string
 	SourceNonClaimRefs  []string
 	NonClaimDefinitions []NonClaimDefinition
 	Vocabulary          []VocabularyTerm
@@ -235,16 +240,19 @@ type AtomicProjection struct {
 }
 
 type AtomicRequirement struct {
-	RequirementID  string
-	Invariant      string
-	SharedPremises []string
-	OwnerID        string
-	ClaimLevel     ClaimLevel
-	RiskClass      RiskClass
-	NonClaimRefs   []string
-	Lifecycle      Lifecycle
-	Deferral       *Deferral
-	UpdatePolicy   UpdatePolicy
+	RequirementID        string
+	Invariant            string
+	SharedPremises       []string
+	OwnerID              string
+	ClaimLevel           ClaimLevel
+	RiskClass            RiskClass
+	NonClaimRefs         []string
+	NonClaims            []string
+	ExternalNonClaimRefs []string
+	ProofBindingRefs     []string
+	Lifecycle            Lifecycle
+	Deferral             *Deferral
+	UpdatePolicy         UpdatePolicy
 }
 
 type LayoutProjection struct {

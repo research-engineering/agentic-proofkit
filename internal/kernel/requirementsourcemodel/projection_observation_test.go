@@ -26,6 +26,8 @@ func observeManifestField(model Model, fieldID string, projection string) (any, 
 		}
 	case "source.specPackagePath":
 		return atomic.SpecPackagePath, projection == "atomic"
+	case "source.nonClaims":
+		return atomic.SourceNonClaims, projection == "atomic"
 	case "source.nonClaimRefs":
 		switch projection {
 		case "atomic":
@@ -87,6 +89,7 @@ func observeManifestField(model Model, fieldID string, projection string) (any, 
 			return observeEdges(references, ReferenceGroupProfile), true
 		}
 	case "metadata.ownerId", "metadata.claimLevel", "metadata.riskClass", "metadata.nonClaimRefs",
+		"metadata.nonClaims", "metadata.externalNonClaimRefs", "metadata.proofBindingRefs",
 		"metadata.lifecycle.state", "metadata.lifecycle.replacementRequirementIds", "metadata.lifecycle.evidenceRefs",
 		"metadata.deferral.presence", "metadata.deferral.ownerId", "metadata.deferral.riskAcceptedBy",
 		"metadata.deferral.reviewCondition", "metadata.deferral.expiryRef", "metadata.deferral.mergePolicy",
@@ -322,6 +325,12 @@ func observeAtomicMetadata(value AtomicProjection, fieldID string) []any {
 			return requirement.RiskClass
 		case "metadata.nonClaimRefs":
 			return requirement.NonClaimRefs
+		case "metadata.nonClaims":
+			return requirement.NonClaims
+		case "metadata.externalNonClaimRefs":
+			return requirement.ExternalNonClaimRefs
+		case "metadata.proofBindingRefs":
+			return requirement.ProofBindingRefs
 		case "metadata.lifecycle.state":
 			return requirement.Lifecycle.State
 		case "metadata.lifecycle.replacementRequirementIds":
@@ -388,6 +397,12 @@ func metadataFieldPresent(value MetadataFields, fieldID string) bool {
 		return value.RiskClass.Present
 	case fieldID == "metadata.nonClaimRefs":
 		return value.NonClaimRefs.Present
+	case fieldID == "metadata.nonClaims":
+		return value.NonClaims.Present
+	case fieldID == "metadata.externalNonClaimRefs":
+		return value.ExternalNonClaimRefs.Present
+	case fieldID == "metadata.proofBindingRefs":
+		return value.ProofBindingRefs.Present
 	case fieldID == "metadata.lifecycle.state" || fieldID == "metadata.lifecycle.replacementRequirementIds" || fieldID == "metadata.lifecycle.evidenceRefs":
 		return value.Lifecycle.Present
 	case fieldID == "metadata.deferral.presence" || stringsHasPrefix(fieldID, "metadata.deferral."):
@@ -408,6 +423,12 @@ func metadataFieldValue(value MetadataFields, fieldID string) (bool, any) {
 		return value.RiskClass.Present, value.RiskClass.Value
 	case "metadata.nonClaimRefs":
 		return value.NonClaimRefs.Present, value.NonClaimRefs.Value
+	case "metadata.nonClaims":
+		return value.NonClaims.Present, value.NonClaims.Value
+	case "metadata.externalNonClaimRefs":
+		return value.ExternalNonClaimRefs.Present, value.ExternalNonClaimRefs.Value
+	case "metadata.proofBindingRefs":
+		return value.ProofBindingRefs.Present, value.ProofBindingRefs.Value
 	case "metadata.lifecycle.state":
 		return value.Lifecycle.Present, value.Lifecycle.Value.State
 	case "metadata.lifecycle.replacementRequirementIds":

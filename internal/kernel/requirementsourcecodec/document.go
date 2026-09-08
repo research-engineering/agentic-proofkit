@@ -12,6 +12,7 @@ type document struct {
 	Kind                string               `json:"kind"`
 	SourceID            string               `json:"sourceId"`
 	SpecPackagePath     string               `json:"specPackagePath"`
+	SourceNonClaims     []string             `json:"sourceNonClaims"`
 	SourceNonClaimRefs  []string             `json:"sourceNonClaimRefs"`
 	NonClaimDefinitions []nonClaimDefinition `json:"nonClaimDefinitions"`
 	Vocabulary          []vocabularyTerm     `json:"vocabulary"`
@@ -74,13 +75,16 @@ type member struct {
 }
 
 type metadataFields struct {
-	OwnerID      *string         `json:"ownerId,omitempty"`
-	ClaimLevel   *string         `json:"claimLevel,omitempty"`
-	RiskClass    *string         `json:"riskClass,omitempty"`
-	NonClaimRefs *[]string       `json:"nonClaimRefs,omitempty"`
-	Lifecycle    *lifecycle      `json:"lifecycle,omitempty"`
-	Deferral     json.RawMessage `json:"deferral,omitempty"`
-	UpdatePolicy *updatePolicy   `json:"updatePolicy,omitempty"`
+	NonClaims            *[]string       `json:"nonClaims,omitempty"`
+	ExternalNonClaimRefs *[]string       `json:"externalNonClaimRefs,omitempty"`
+	ProofBindingRefs     *[]string       `json:"proofBindingRefs,omitempty"`
+	OwnerID              *string         `json:"ownerId,omitempty"`
+	ClaimLevel           *string         `json:"claimLevel,omitempty"`
+	RiskClass            *string         `json:"riskClass,omitempty"`
+	NonClaimRefs         *[]string       `json:"nonClaimRefs,omitempty"`
+	Lifecycle            *lifecycle      `json:"lifecycle,omitempty"`
+	Deferral             json.RawMessage `json:"deferral,omitempty"`
+	UpdatePolicy         *updatePolicy   `json:"updatePolicy,omitempty"`
 }
 
 type lifecycle struct {
@@ -178,12 +182,22 @@ func draftFromDocument(value document) (requirementsourcemodel.Draft, error) {
 	}
 	return requirementsourcemodel.Draft{
 		SourceID: value.SourceID, SpecPackagePath: value.SpecPackagePath, SourceNonClaimRefs: cloneStrings(value.SourceNonClaimRefs),
+		SourceNonClaims:     cloneStrings(value.SourceNonClaims),
 		NonClaimDefinitions: definitions, Vocabulary: vocabulary, Derivations: derivations, Profiles: profiles, Groups: groups, Scenarios: scenarios,
 	}, nil
 }
 
 func modelMetadata(value metadataFields) (requirementsourcemodel.MetadataFields, error) {
 	result := requirementsourcemodel.MetadataFields{}
+	if value.NonClaims != nil {
+		result.NonClaims = requirementsourcemodel.Own(cloneStrings(*value.NonClaims))
+	}
+	if value.ExternalNonClaimRefs != nil {
+		result.ExternalNonClaimRefs = requirementsourcemodel.Own(cloneStrings(*value.ExternalNonClaimRefs))
+	}
+	if value.ProofBindingRefs != nil {
+		result.ProofBindingRefs = requirementsourcemodel.Own(cloneStrings(*value.ProofBindingRefs))
+	}
 	if value.OwnerID != nil {
 		result.OwnerID = requirementsourcemodel.Own(*value.OwnerID)
 	}
@@ -222,6 +236,7 @@ func documentFromModel(model requirementsourcemodel.Model) (document, error) {
 	references := model.References()
 	value := document{
 		SchemaVersion: SchemaVersion, Kind: DocumentKind, SourceID: atomic.SourceID, SpecPackagePath: atomic.SpecPackagePath,
+		SourceNonClaims:    nonNilStrings(atomic.SourceNonClaims),
 		SourceNonClaimRefs: nonNilStrings(atomic.SourceNonClaimRefs), NonClaimDefinitions: make([]nonClaimDefinition, len(atomic.NonClaimDefinitions)),
 		Vocabulary: make([]vocabularyTerm, len(atomic.Vocabulary)), Derivations: make([]derivation, len(references.Derivations)),
 		Profiles: make([]profile, len(layout.Profiles)), Groups: make([]group, len(layout.Groups)), Scenarios: make([]scenario, len(atomic.Scenarios)),
@@ -269,6 +284,18 @@ func documentFromModel(model requirementsourcemodel.Model) (document, error) {
 
 func wireMetadata(value requirementsourcemodel.MetadataFields) (metadataFields, error) {
 	result := metadataFields{}
+	if value.NonClaims.Present {
+		item := nonNilStrings(value.NonClaims.Value)
+		result.NonClaims = &item
+	}
+	if value.ExternalNonClaimRefs.Present {
+		item := nonNilStrings(value.ExternalNonClaimRefs.Value)
+		result.ExternalNonClaimRefs = &item
+	}
+	if value.ProofBindingRefs.Present {
+		item := nonNilStrings(value.ProofBindingRefs.Value)
+		result.ProofBindingRefs = &item
+	}
 	if value.OwnerID.Present {
 		item := value.OwnerID.Value
 		result.OwnerID = &item

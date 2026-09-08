@@ -2,11 +2,66 @@ package requirementsourcecodec
 
 import (
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 )
+
+func TestAcceptedNestingLimitsCoverCompleteCanonicalOutput(t *testing.T) {
+	model := mustModel(t)
+	payload := mustPayload(t)
+	var wire any
+	if err := json.Unmarshal(payload, &wire); err != nil {
+		t.Fatal(err)
+	}
+	depth := fullJSONValueDepth(wire)
+	// The fixture includes scalar leaves in member lifecycle and deferral arrays.
+	if depth != 9 {
+		t.Fatalf("complete fixture depth = %d, want 9", depth)
+	}
+	if minimumJSONNesting != depth {
+		t.Fatalf("complete wire depth = %d, minimum = %d", depth, minimumJSONNesting)
+	}
+	for nesting := 1; nesting <= defaultMaxNesting; nesting++ {
+		t.Run(fmt.Sprintf("depth=%d", nesting), func(t *testing.T) {
+			limits := DefaultLimits()
+			limits.MaxNesting = nesting
+			encoded, formatErr := FormatWithLimits(model, limits, requirementsourcemodel.DefaultLimits())
+			if nesting < depth {
+				_, parseErr := ParseWithLimits(payload, limits, requirementsourcemodel.DefaultLimits())
+				if formatErr == nil || parseErr == nil || ErrorCode(formatErr) != "" || ErrorCode(parseErr) != "" {
+					t.Fatalf("under-covering configuration: format=%v parse=%v", formatErr, parseErr)
+				}
+				return
+			}
+			if formatErr != nil {
+				t.Fatalf("valid nesting configuration: %v", formatErr)
+			}
+			parsed, err := ParseWithLimits(encoded, limits, requirementsourcemodel.DefaultLimits())
+			if err != nil || !projectionsEqual(model, parsed.Model) {
+				t.Fatalf("canonical output failed whole-pair admission: %v", err)
+			}
+		})
+	}
+}
+
+func fullJSONValueDepth(value any) int {
+	childDepth := 0
+	switch value := value.(type) {
+	case map[string]any:
+		for _, child := range value {
+			childDepth = max(childDepth, fullJSONValueDepth(child))
+		}
+	case []any:
+		for _, child := range value {
+			childDepth = max(childDepth, fullJSONValueDepth(child))
+		}
+	}
+	return childDepth + 1
+}
 
 func TestRawByteBoundaryIsExactAndDominatesUTF8(t *testing.T) {
 	modelLimits := compactTestModelLimits()

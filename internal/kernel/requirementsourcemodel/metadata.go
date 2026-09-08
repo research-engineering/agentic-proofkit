@@ -5,9 +5,12 @@ import "reflect"
 var metadataFieldIDs = []MetadataFieldID{
 	"claimLevel",
 	"deferral",
+	"externalNonClaimRefs",
 	"lifecycle",
 	"nonClaimRefs",
+	"nonClaims",
 	"ownerId",
+	"proofBindingRefs",
 	"riskClass",
 	"updatePolicy",
 }
@@ -18,6 +21,24 @@ func normalizeMetadataFields(value MetadataFields, path string) (MetadataFields,
 	}
 	result := value
 	var err error
+	if value.NonClaims.Present {
+		result.NonClaims.Value, err = normalizeTexts(value.NonClaims.Value, path+".nonClaims", true, false)
+		if err != nil {
+			return MetadataFields{}, err
+		}
+	}
+	if value.ExternalNonClaimRefs.Present {
+		result.ExternalNonClaimRefs.Value, err = normalizeIDs(value.ExternalNonClaimRefs.Value, "", path+".externalNonClaimRefs", true)
+		if err != nil {
+			return MetadataFields{}, err
+		}
+	}
+	if value.ProofBindingRefs.Present {
+		result.ProofBindingRefs.Value, err = normalizePaths(value.ProofBindingRefs.Value, path+".proofBindingRefs", true)
+		if err != nil {
+			return MetadataFields{}, err
+		}
+	}
 	if value.OwnerID.Present {
 		result.OwnerID.Value, err = canonicalExternalID(value.OwnerID.Value, path+".ownerId")
 		if err != nil {
@@ -68,6 +89,9 @@ func rejectHiddenMetadataValues(value MetadataFields, path string) error {
 		zero    any
 		field   string
 	}{
+		{value.NonClaims.Present, value.NonClaims.Value, []string(nil), "nonClaims"},
+		{value.ExternalNonClaimRefs.Present, value.ExternalNonClaimRefs.Value, []string(nil), "externalNonClaimRefs"},
+		{value.ProofBindingRefs.Present, value.ProofBindingRefs.Value, []string(nil), "proofBindingRefs"},
 		{value.OwnerID.Present, value.OwnerID.Value, "", "ownerId"},
 		{value.ClaimLevel.Present, value.ClaimLevel.Value, ClaimLevel(""), "claimLevel"},
 		{value.RiskClass.Present, value.RiskClass.Value, RiskClass(""), "riskClass"},
@@ -155,13 +179,16 @@ func metadataFieldCount(value MetadataFields) int {
 
 func metadataPresence(value MetadataFields) map[MetadataFieldID]bool {
 	return map[MetadataFieldID]bool{
-		"ownerId":      value.OwnerID.Present,
-		"claimLevel":   value.ClaimLevel.Present,
-		"riskClass":    value.RiskClass.Present,
-		"nonClaimRefs": value.NonClaimRefs.Present,
-		"lifecycle":    value.Lifecycle.Present,
-		"deferral":     value.Deferral.Present,
-		"updatePolicy": value.UpdatePolicy.Present,
+		"nonClaims":            value.NonClaims.Present,
+		"externalNonClaimRefs": value.ExternalNonClaimRefs.Present,
+		"proofBindingRefs":     value.ProofBindingRefs.Present,
+		"ownerId":              value.OwnerID.Present,
+		"claimLevel":           value.ClaimLevel.Present,
+		"riskClass":            value.RiskClass.Present,
+		"nonClaimRefs":         value.NonClaimRefs.Present,
+		"lifecycle":            value.Lifecycle.Present,
+		"deferral":             value.Deferral.Present,
+		"updatePolicy":         value.UpdatePolicy.Present,
 	}
 }
 
@@ -185,6 +212,21 @@ func resolveMetadata(profileID string, memberID string, profile MetadataFields, 
 		owners = append(owners, FieldOwner{FieldID: fieldID, OwnerKind: ownerKind, OwnerID: ownerID})
 	}
 	result := AtomicRequirement{}
+	if profile.NonClaims.Present {
+		result.NonClaims = cloneStrings(profile.NonClaims.Value)
+	} else {
+		result.NonClaims = cloneStrings(member.NonClaims.Value)
+	}
+	if profile.ExternalNonClaimRefs.Present {
+		result.ExternalNonClaimRefs = cloneStrings(profile.ExternalNonClaimRefs.Value)
+	} else {
+		result.ExternalNonClaimRefs = cloneStrings(member.ExternalNonClaimRefs.Value)
+	}
+	if profile.ProofBindingRefs.Present {
+		result.ProofBindingRefs = cloneStrings(profile.ProofBindingRefs.Value)
+	} else {
+		result.ProofBindingRefs = cloneStrings(member.ProofBindingRefs.Value)
+	}
 	if profile.OwnerID.Present {
 		result.OwnerID = profile.OwnerID.Value
 	} else {

@@ -43,7 +43,7 @@ func resolveRequirementPath(wire document, segments []string) diagnosticPath {
 			if len(tail) == 0 {
 				return sameDiagnosticPath(base)
 			}
-			if isMetadataField(tail[0]) {
+			if _, known := metadataFieldPresence(memberValue.Fields, tail[0]); known {
 				base = metadataOwnerPath(wire, groupValue, memberValue, groupIndex, memberIndex, tail[0])
 				base = joinPointer(base, tail[0])
 				tail = tail[1:]
@@ -56,44 +56,41 @@ func resolveRequirementPath(wire document, segments []string) diagnosticPath {
 
 func metadataOwnerPath(wire document, groupValue group, memberValue member, groupIndex int, memberIndex int, field string) string {
 	memberBase := pointer("groups", groupIndex, "members", memberIndex, "fields")
-	if metadataFieldPresent(memberValue.Fields, field) || groupValue.ProfileID == "" {
+	if present, _ := metadataFieldPresence(memberValue.Fields, field); present || groupValue.ProfileID == "" {
 		return memberBase
 	}
 	for profileIndex, profileValue := range wire.Profiles {
-		if profileValue.ProfileID == groupValue.ProfileID && metadataFieldPresent(profileValue.Fields, field) {
+		if present, _ := metadataFieldPresence(profileValue.Fields, field); profileValue.ProfileID == groupValue.ProfileID && present {
 			return pointer("profiles", profileIndex, "fields")
 		}
 	}
 	return memberBase
 }
 
-func metadataFieldPresent(fields metadataFields, field string) bool {
+func metadataFieldPresence(fields metadataFields, field string) (present bool, known bool) {
 	switch field {
+	case "nonClaims":
+		return fields.NonClaims != nil, true
+	case "externalNonClaimRefs":
+		return fields.ExternalNonClaimRefs != nil, true
+	case "proofBindingRefs":
+		return fields.ProofBindingRefs != nil, true
 	case "ownerId":
-		return fields.OwnerID != nil
+		return fields.OwnerID != nil, true
 	case "claimLevel":
-		return fields.ClaimLevel != nil
+		return fields.ClaimLevel != nil, true
 	case "riskClass":
-		return fields.RiskClass != nil
+		return fields.RiskClass != nil, true
 	case "nonClaimRefs":
-		return fields.NonClaimRefs != nil
+		return fields.NonClaimRefs != nil, true
 	case "lifecycle":
-		return fields.Lifecycle != nil
+		return fields.Lifecycle != nil, true
 	case "deferral":
-		return fields.Deferral != nil
+		return fields.Deferral != nil, true
 	case "updatePolicy":
-		return fields.UpdatePolicy != nil
+		return fields.UpdatePolicy != nil, true
 	default:
-		return false
-	}
-}
-
-func isMetadataField(value string) bool {
-	switch value {
-	case "ownerId", "claimLevel", "riskClass", "nonClaimRefs", "lifecycle", "deferral", "updatePolicy":
-		return true
-	default:
-		return false
+		return false, false
 	}
 }
 
@@ -186,8 +183,11 @@ func modelPathSegments(path string) []string {
 				return segments
 			}
 			end += offset
-			if _, err := strconv.Atoi(path[offset+1 : end]); err == nil {
-				segments = append(segments, path[offset+1:end])
+			component := path[offset+1 : end]
+			if identifier, err := strconv.Unquote(component); err == nil {
+				segments = append(segments, identifier)
+			} else if _, err := strconv.Atoi(component); err == nil {
+				segments = append(segments, component)
 			}
 			offset = end + 1
 		default:

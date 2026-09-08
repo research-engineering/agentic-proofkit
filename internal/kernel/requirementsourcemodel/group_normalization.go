@@ -73,7 +73,10 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 			}
 			invariant := completion
 			if stem != "" {
-				invariant = stem + " " + completion
+				invariant, err = canonicalText(stem+" "+completion, memberPath+"statementCompletion", false, true)
+				if err != nil {
+					return nil, nil, nil, nil, err
+				}
 			}
 			resolved.RequirementID = requirementID
 			resolved.Invariant = invariant
@@ -108,7 +111,7 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 func validateProfileUses(profiles []Profile, uses map[string]int) error {
 	for _, profile := range profiles {
 		if uses[profile.ProfileID] < 2 {
-			return invalid("vacuous_profile", "profiles."+profile.ProfileID)
+			return invalid("vacuous_profile", identified("profiles", profile.ProfileID))
 		}
 	}
 	return nil
@@ -116,7 +119,7 @@ func validateProfileUses(profiles []Profile, uses map[string]int) error {
 
 func validateRequirementLifecycles(requirements []AtomicRequirement, byID map[string]AtomicRequirement) error {
 	for _, requirement := range requirements {
-		path := "requirements." + requirement.RequirementID
+		path := identified("requirements", requirement.RequirementID)
 		if requirement.ClaimLevel == ClaimDeferred && requirement.Deferral == nil {
 			return invalid("missing_deferral", path+".deferral")
 		}
@@ -136,6 +139,9 @@ func validateRequirementLifecycles(requirements []AtomicRequirement, byID map[st
 			return invalid("nonactive_blocking_requirement", path+".claimLevel")
 		}
 		if requirement.ClaimLevel == ClaimBlocking && requirement.Lifecycle.State == LifecycleActive {
+			if len(requirement.ProofBindingRefs) == 0 {
+				return invalid("missing_proof_binding", path+".proofBindingRefs")
+			}
 			if !requirement.UpdatePolicy.RequiresImpactDeclaration {
 				return invalid("impact_review_required", path+".updatePolicy.requiresImpactDeclaration")
 			}

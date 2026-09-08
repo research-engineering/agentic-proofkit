@@ -3,7 +3,37 @@ package requirementsourcemodel
 import (
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
+
+func TestNormalizeAdmitsTheCompleteGroupedInvariant(t *testing.T) {
+	const stem = "Bearer"
+	const completion = "syntheticfixture"
+	for _, part := range []string{stem, completion} {
+		if _, err := admit.NonEmptyText(part, "fixture"); err != nil {
+			t.Fatal("fixture fragment must pass the shared text owner")
+		}
+	}
+	if _, err := admit.NonEmptyText(stem+" "+completion, "fixture"); err == nil {
+		t.Fatal("fixture must reach the shared composed-text rejection")
+	}
+	draft := validDraft()
+	draft.Groups[0].StatementStem = stem
+	draft.Groups[0].Members[0].StatementCompletion = completion
+	_, err := Normalize(draft)
+	if ErrorCode(err) != "invalid_text" {
+		t.Fatalf("effective invariant bypassed admission: code=%q", ErrorCode(err))
+	}
+	if strings.Contains(err.Error(), stem) || strings.Contains(err.Error(), completion) {
+		t.Fatal("composition diagnostic disclosed the fixture")
+	}
+	draft.Groups[0].StatementStem = "The bearer must"
+	model, err := Normalize(draft)
+	if err != nil || model.Atomic().Requirements[0].Invariant != "The bearer must "+completion {
+		t.Fatal("safe composition changed or was rejected")
+	}
+}
 
 func TestNormalizePreservesTextBySemanticRole(t *testing.T) {
 	const completion = "accept\nrequests\twith \"quoted\" \\ values,\r\nUnicode \U0001f680 and \x00 data."

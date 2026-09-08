@@ -16,6 +16,7 @@ func cloneDraft(value Draft) Draft {
 	return Draft{
 		SourceID:            value.SourceID,
 		SpecPackagePath:     value.SpecPackagePath,
+		SourceNonClaims:     cloneStrings(value.SourceNonClaims),
 		SourceNonClaimRefs:  cloneStrings(value.SourceNonClaimRefs),
 		NonClaimDefinitions: append([]NonClaimDefinition(nil), value.NonClaimDefinitions...),
 		Vocabulary:          append([]VocabularyTerm(nil), value.Vocabulary...),
@@ -30,6 +31,7 @@ func cloneAtomicProjection(value AtomicProjection) AtomicProjection {
 	return AtomicProjection{
 		SourceID:            value.SourceID,
 		SpecPackagePath:     value.SpecPackagePath,
+		SourceNonClaims:     cloneStrings(value.SourceNonClaims),
 		SourceNonClaimRefs:  cloneStrings(value.SourceNonClaimRefs),
 		NonClaimDefinitions: append([]NonClaimDefinition(nil), value.NonClaimDefinitions...),
 		Vocabulary:          append([]VocabularyTerm(nil), value.Vocabulary...),
@@ -42,16 +44,19 @@ func cloneAtomicRequirements(values []AtomicRequirement) []AtomicRequirement {
 	result := make([]AtomicRequirement, len(values))
 	for index, value := range values {
 		result[index] = AtomicRequirement{
-			RequirementID:  value.RequirementID,
-			Invariant:      value.Invariant,
-			SharedPremises: cloneStrings(value.SharedPremises),
-			OwnerID:        value.OwnerID,
-			ClaimLevel:     value.ClaimLevel,
-			RiskClass:      value.RiskClass,
-			NonClaimRefs:   cloneStrings(value.NonClaimRefs),
-			Lifecycle:      cloneLifecycle(value.Lifecycle),
-			Deferral:       cloneDeferral(value.Deferral),
-			UpdatePolicy:   value.UpdatePolicy,
+			RequirementID:        value.RequirementID,
+			Invariant:            value.Invariant,
+			SharedPremises:       cloneStrings(value.SharedPremises),
+			OwnerID:              value.OwnerID,
+			ClaimLevel:           value.ClaimLevel,
+			RiskClass:            value.RiskClass,
+			NonClaimRefs:         cloneStrings(value.NonClaimRefs),
+			NonClaims:            cloneStrings(value.NonClaims),
+			ExternalNonClaimRefs: cloneStrings(value.ExternalNonClaimRefs),
+			ProofBindingRefs:     cloneStrings(value.ProofBindingRefs),
+			Lifecycle:            cloneLifecycle(value.Lifecycle),
+			Deferral:             cloneDeferral(value.Deferral),
+			UpdatePolicy:         value.UpdatePolicy,
 		}
 	}
 	return result
@@ -110,6 +115,15 @@ func cloneGroup(value Group) Group {
 
 func cloneMetadataFields(value MetadataFields) MetadataFields {
 	result := value
+	if value.NonClaims.Present {
+		result.NonClaims.Value = cloneStrings(value.NonClaims.Value)
+	}
+	if value.ExternalNonClaimRefs.Present {
+		result.ExternalNonClaimRefs.Value = cloneStrings(value.ExternalNonClaimRefs.Value)
+	}
+	if value.ProofBindingRefs.Present {
+		result.ProofBindingRefs.Value = cloneStrings(value.ProofBindingRefs.Value)
+	}
 	if value.NonClaimRefs.Present {
 		result.NonClaimRefs.Value = cloneStrings(value.NonClaimRefs.Value)
 	}

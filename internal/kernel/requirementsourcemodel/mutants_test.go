@@ -2,6 +2,14 @@ package requirementsourcemodel
 
 func mutantImplementations() map[string]func(*Draft) {
 	return map[string]func(*Draft){
+		"source-direct-nonclaims":   func(draft *Draft) { draft.SourceNonClaims[0] += " This is a declaration." },
+		"metadata-direct-nonclaims": func(draft *Draft) { draft.Groups[0].Members[0].Fields.NonClaims.Value[0] += " This is a declaration." },
+		"metadata-external-nonclaim-refs": func(draft *Draft) {
+			draft.Groups[0].Members[0].Fields.ExternalNonClaimRefs.Value[0] = "proofkit.nonclaim.external"
+		},
+		"metadata-proof-binding-refs": func(draft *Draft) {
+			draft.Groups[0].Members[0].Fields.ProofBindingRefs.Value[0] = "proofkit/other-bindings.json"
+		},
 		"source-id":            func(draft *Draft) { draft.SourceID = "proofkit.model.changed" },
 		"source-package-path":  func(draft *Draft) { draft.SpecPackagePath = "docs/specs/proofkit-model-v2" },
 		"source-nonclaim-refs": func(draft *Draft) { draft.SourceNonClaimRefs = []string{"NCL-MODEL-001", "NCL-MODEL-002"} },
