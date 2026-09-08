@@ -197,8 +197,7 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.adoption.cli-input-guidance", Summary: "Expose a connected requirement, scenario, witness and test-inventory example through on-demand CLI help. Source, binding and inventory help route to exact input pointers instead of requiring package documentation. Authoring help explains empty-source bootstrap, candidate-only previews and lifecycle owners without duplicating the source template. Guidance preserves full desired-state materialization, trust declarations, exact write approval and recovery distinctions; no consumer policy or native execution is introduced."},
-	{ChangeID: "proofkit.adoption.guide-contract-witnesses", Summary: "Distinguish direct inventory schemaVersion 1 from aggregate contract v2 and projection-specific versions in input help. Check actual published source-plan and continuation operands, original authoring mode, installed launcher rendering and connected examples through native and installed-carrier witnesses. Preserve accepted input semantics and platform requirements; a declared test route still does not prove execution, approval or complete coverage."},
+	{ChangeID: "proofkit.adoption.nonclaims-input-guidance", Summary: "Clarify in lazy materialization input help that nonClaims lists are sorted and unique, while argv token order is preserved. Exercise ordered multi-item nonClaims through planning, approved materialization and stored re-admission; reject unsorted and duplicate lists at packet, source, requirement, inventory and entry boundaries. Refresh source-bound contract digests and the ABI fingerprint. Accepted input semantics, request/report kinds, schema versions, authority denials and platform requirements are unchanged."},
 }
 
 var currentMigrationSteps = []string{}
@@ -221,7 +220,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.5",
+		"# @research-engineering/agentic-proofkit 0.14.6",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -274,7 +273,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.5",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.6",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -286,7 +285,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.4 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.4`.",
+		"- Pin npm consumers to the previous admitted version 0.14.5 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.5`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

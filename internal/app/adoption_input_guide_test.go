@@ -151,6 +151,14 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 			if !reflect.DeepEqual(materializedBinding["requirements"].([]any)[0].(map[string]any)["nonClaims"], nonClaims) {
 				t.Fatal("materialization lost ordered requirement nonClaims")
 			}
+			inventoryBytes, err := os.ReadFile(filepath.Join(root, "proofkit/test-evidence-inventory.json"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			materializedInventory := decodeCLIJSON(t, string(inventoryBytes)).(map[string]any)
+			if !reflect.DeepEqual(materializedInventory["entries"].([]any)[0].(map[string]any)["nonClaims"], nonClaims) {
+				t.Fatal("materialization lost ordered inventory entry nonClaims")
+			}
 			route := materializedBinding["bindings"].([]any)[0].(map[string]any)
 			if route["scenarioId"] != "example.requests.empty" || route["witnessId"] != "example.witness.empty" || route["requirementId"] != "REQ-EXAMPLE-001" {
 				t.Fatal("materialization lost the scenario/requirement/witness edge")
