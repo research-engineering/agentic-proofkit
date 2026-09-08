@@ -94,12 +94,12 @@ func validateReferenceClosure(definitions map[string]struct{}, vocabulary map[st
 	}
 	for _, definitionID := range sortedSetKeys(definitions) {
 		if _, exists := usedDefinitions[definitionID]; !exists {
-			return invalid("unreferenced_definition", "nonClaimDefinitions."+definitionID)
+			return invalid("unreferenced_definition", identified("nonClaimDefinitions", definitionID))
 		}
 	}
 	for _, termID := range sortedSetKeys(vocabulary) {
 		if _, exists := usedVocabulary[termID]; !exists {
-			return invalid("unreferenced_vocabulary", "vocabulary."+termID)
+			return invalid("unreferenced_vocabulary", identified("vocabulary", termID))
 		}
 	}
 	return nil

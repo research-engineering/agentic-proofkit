@@ -59,6 +59,7 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 		"reflect",
 		"regexp",
 		"sort",
+		"strconv",
 		"strings",
 		"unicode/utf8",
 	}

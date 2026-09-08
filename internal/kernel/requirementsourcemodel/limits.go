@@ -161,7 +161,7 @@ func collectionItemsWithinBudget(draft Draft, limit int) bool {
 		remaining -= value
 		return true
 	}
-	if !add(len(draft.SourceNonClaimRefs)) || !add(len(draft.NonClaimDefinitions)) || !add(len(draft.Vocabulary)) ||
+	if !add(len(draft.SourceNonClaims)) || !add(len(draft.SourceNonClaimRefs)) || !add(len(draft.NonClaimDefinitions)) || !add(len(draft.Vocabulary)) ||
 		!add(len(draft.Derivations)) || !add(len(draft.Profiles)) || !add(len(draft.Groups)) || !add(len(draft.Scenarios)) {
 		return false
 	}
@@ -201,6 +201,15 @@ func collectionItemsWithinBudget(draft Draft, limit int) bool {
 }
 
 func metadataCollectionsWithinBudget(fields MetadataFields, add func(int) bool) bool {
+	if fields.NonClaims.Present && !add(len(fields.NonClaims.Value)) {
+		return false
+	}
+	if fields.ExternalNonClaimRefs.Present && !add(len(fields.ExternalNonClaimRefs.Value)) {
+		return false
+	}
+	if fields.ProofBindingRefs.Present && !add(len(fields.ProofBindingRefs.Value)) {
+		return false
+	}
 	if fields.NonClaimRefs.Present && !add(len(fields.NonClaimRefs.Value)) {
 		return false
 	}
@@ -230,6 +239,7 @@ func decimal(value int) string {
 
 func draftTextBytes(draft Draft) uint64 {
 	total := textBytes(draft.SourceID, draft.SpecPackagePath)
+	total += stringsBytes(draft.SourceNonClaims)
 	total += stringsBytes(draft.SourceNonClaimRefs)
 	for _, definition := range draft.NonClaimDefinitions {
 		total += textBytes(definition.NonClaimID, definition.Statement)
@@ -267,6 +277,15 @@ func draftTextBytes(draft Draft) uint64 {
 
 func metadataTextBytes(fields MetadataFields) uint64 {
 	total := uint64(0)
+	if fields.NonClaims.Present {
+		total += stringsBytes(fields.NonClaims.Value)
+	}
+	if fields.ExternalNonClaimRefs.Present {
+		total += stringsBytes(fields.ExternalNonClaimRefs.Value)
+	}
+	if fields.ProofBindingRefs.Present {
+		total += stringsBytes(fields.ProofBindingRefs.Value)
+	}
 	if fields.OwnerID.Present {
 		total += uint64(len(fields.OwnerID.Value))
 	}

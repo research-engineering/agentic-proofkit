@@ -9,7 +9,7 @@ import (
 
 const (
 	defaultMaxNesting           = 64
-	minimumJSONNesting          = 7
+	minimumJSONNesting          = 9
 	canonicalByteBaseOverhead   = 4096
 	lexicalTokenBaseOverhead    = 1024
 	lexicalTokenItemCoefficient = 32

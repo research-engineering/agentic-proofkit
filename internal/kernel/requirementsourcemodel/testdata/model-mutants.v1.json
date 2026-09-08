@@ -2,6 +2,10 @@
   "schemaVersion": 1,
   "kind": "proofkit.requirement-source-model-mutant-corpus",
   "mutants": [
+    {"mutantId":"source-direct-nonclaims","mutatedFields":["source.nonClaims"],"provenFields":["source.nonClaims"],"relationIds":[],"changedProjections":["atomic"]},
+    {"mutantId":"metadata-direct-nonclaims","mutatedFields":["metadata.nonClaims"],"provenFields":["metadata.nonClaims"],"relationIds":[],"changedProjections":["atomic","layout"]},
+    {"mutantId":"metadata-external-nonclaim-refs","mutatedFields":["metadata.externalNonClaimRefs"],"provenFields":["metadata.externalNonClaimRefs"],"relationIds":[],"changedProjections":["atomic","layout"]},
+    {"mutantId":"metadata-proof-binding-refs","mutatedFields":["metadata.proofBindingRefs"],"provenFields":["metadata.proofBindingRefs"],"relationIds":[],"changedProjections":["atomic","layout"]},
     {"mutantId":"source-id","mutatedFields":["source.id"],"provenFields":["source.id"],"relationIds":[],"changedProjections":["atomic","layout","references"]},
     {"mutantId":"source-package-path","mutatedFields":["source.specPackagePath"],"provenFields":["source.specPackagePath"],"relationIds":[],"changedProjections":["atomic"]},
     {"mutantId":"source-nonclaim-refs","mutatedFields":["source.nonClaimRefs"],"provenFields":["source.nonClaimRefs"],"relationIds":[],"changedProjections":["atomic","references"]},

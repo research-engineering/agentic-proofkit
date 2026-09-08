@@ -3,7 +3,7 @@
   "kind": "proofkit.requirement-source-codec-limit-coefficients",
   "canonicalByteBaseOverhead": 4096,
   "lexicalTokenBaseOverhead": 1024,
-  "minimumJsonNesting": 7,
+  "minimumJsonNesting": 9,
   "maximumJsonNesting": 64,
   "canonicalByteCoefficients": [
     {"id": "collection_items", "coefficient": 32},

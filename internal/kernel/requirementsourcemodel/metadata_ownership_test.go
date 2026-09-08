@@ -8,9 +8,12 @@ import (
 var independentlyExpectedMetadataFieldIDs = []MetadataFieldID{
 	"claimLevel",
 	"deferral",
+	"externalNonClaimRefs",
 	"lifecycle",
 	"nonClaimRefs",
+	"nonClaims",
 	"ownerId",
+	"proofBindingRefs",
 	"riskClass",
 	"updatePolicy",
 }
@@ -205,6 +208,12 @@ func setMetadataField(target *MetadataFields, fieldID MetadataFieldID, source Me
 		target.RiskClass = value.RiskClass
 	case "nonClaimRefs":
 		target.NonClaimRefs = value.NonClaimRefs
+	case "nonClaims":
+		target.NonClaims = value.NonClaims
+	case "externalNonClaimRefs":
+		target.ExternalNonClaimRefs = value.ExternalNonClaimRefs
+	case "proofBindingRefs":
+		target.ProofBindingRefs = value.ProofBindingRefs
 	case "lifecycle":
 		target.Lifecycle = value.Lifecycle
 	case "deferral":
@@ -224,6 +233,12 @@ func clearMetadataField(target *MetadataFields, fieldID MetadataFieldID) {
 		target.RiskClass = Field[RiskClass]{}
 	case "nonClaimRefs":
 		target.NonClaimRefs = Field[[]string]{}
+	case "nonClaims":
+		target.NonClaims = Field[[]string]{}
+	case "externalNonClaimRefs":
+		target.ExternalNonClaimRefs = Field[[]string]{}
+	case "proofBindingRefs":
+		target.ProofBindingRefs = Field[[]string]{}
 	case "lifecycle":
 		target.Lifecycle = Field[Lifecycle]{}
 	case "deferral":

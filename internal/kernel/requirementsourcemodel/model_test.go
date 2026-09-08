@@ -270,7 +270,7 @@ func TestNormalizeReportsUnreferencedDefinitionsDeterministically(t *testing.T) 
 		NonClaimDefinition{NonClaimID: "NCL-MODEL-006", Statement: "This sixth declaration remains deliberately unreferenced."},
 		NonClaimDefinition{NonClaimID: "NCL-MODEL-005", Statement: "This fifth declaration remains deliberately unreferenced."},
 	)
-	const expected = "unreferenced_definition: nonClaimDefinitions.NCL-MODEL-005"
+	const expected = `unreferenced_definition: nonClaimDefinitions["NCL-MODEL-005"]`
 	for attempt := 0; attempt < 100; attempt++ {
 		_, err := Normalize(draft)
 		if err == nil || err.Error() != expected {
@@ -330,19 +330,25 @@ func validDraft() Draft {
 	}
 	memberFields := func() MetadataFields {
 		return MetadataFields{
-			NonClaimRefs: Own([]string{"NCL-MODEL-002"}),
-			Lifecycle:    Own(active),
-			Deferral:     Own[*Deferral](nil),
+			NonClaims:            Own([]string{"Requirement admission does not execute native witnesses."}),
+			ExternalNonClaimRefs: Own([]string{"proofkit.nonclaim.native"}),
+			ProofBindingRefs:     Own([]string{"proofkit/requirement-bindings.json"}),
+			NonClaimRefs:         Own([]string{"NCL-MODEL-002"}),
+			Lifecycle:            Own(active),
+			Deferral:             Own[*Deferral](nil),
 		}
 	}
 	fullFields := func(claim ClaimLevel, lifecycle Lifecycle, deferral *Deferral) MetadataFields {
 		return MetadataFields{
-			OwnerID:      Own("proofkit.model"),
-			ClaimLevel:   Own(claim),
-			RiskClass:    Own(RiskMedium),
-			NonClaimRefs: Own([]string{"NCL-MODEL-002"}),
-			Lifecycle:    Own(lifecycle),
-			Deferral:     Own(deferral),
+			NonClaims:            Own([]string{"Requirement admission does not execute native witnesses."}),
+			ExternalNonClaimRefs: Own([]string{"proofkit.nonclaim.native"}),
+			ProofBindingRefs:     Own([]string{"proofkit/requirement-bindings.json"}),
+			OwnerID:              Own("proofkit.model"),
+			ClaimLevel:           Own(claim),
+			RiskClass:            Own(RiskMedium),
+			NonClaimRefs:         Own([]string{"NCL-MODEL-002"}),
+			Lifecycle:            Own(lifecycle),
+			Deferral:             Own(deferral),
 			UpdatePolicy: Own(UpdatePolicy{
 				ReviewOwnerID:              "proofkit.model",
 				RequiresImpactDeclaration:  true,
@@ -361,6 +367,7 @@ func validDraft() Draft {
 	return Draft{
 		SourceID:           "proofkit.model.source",
 		SpecPackagePath:    "docs/specs/proofkit-model",
+		SourceNonClaims:    []string{"Source admission does not execute native witnesses."},
 		SourceNonClaimRefs: []string{"NCL-MODEL-001"},
 		NonClaimDefinitions: []NonClaimDefinition{
 			{NonClaimID: "NCL-MODEL-001", Statement: "The model does not prove implementation correctness."},

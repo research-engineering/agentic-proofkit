@@ -48,6 +48,8 @@ func observeDraftField(draft Draft, fieldID string) (any, bool) {
 		return draft.SpecPackagePath, true
 	case "source.nonClaimRefs":
 		return sortedObservationStrings(draft.SourceNonClaimRefs), true
+	case "source.nonClaims":
+		return sortedObservationStrings(draft.SourceNonClaims), true
 	case "nonClaim.id":
 		return projectIdentities(draft.NonClaimDefinitions, func(value NonClaimDefinition) string { return value.NonClaimID }), true
 	case "nonClaim.statement":

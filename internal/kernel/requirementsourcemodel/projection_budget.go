@@ -9,39 +9,48 @@ type projectionCost struct {
 
 type projectionBudget struct {
 	cost         projectionCost
+	limits       Limits
 	itemOverflow bool
 	textOverflow bool
 }
 
 func (budget *projectionBudget) records(count int) {
-	if count < 0 || !addMultiplied(&budget.cost.Items, uint64(count), materializationCopies) {
+	if budget.itemOverflow {
+		return
+	}
+	if count < 0 || !addMultiplied(&budget.cost.Items, uint64(count), materializationCopies) || budget.cost.Items > uint64(budget.limits.MaxExpandedItems) {
 		budget.itemOverflow = true
 	}
 }
 
 func (budget *projectionBudget) text(values ...string) {
-	for _, value := range values {
-		budget.records(1)
-		budget.addTextBytes(value)
-	}
+	budget.texts(values)
 }
 
 func (budget *projectionBudget) composedText(values ...string) {
 	budget.records(1)
 	for _, value := range values {
+		if budget.itemOverflow || budget.textOverflow {
+			return
+		}
 		budget.addTextBytes(value)
 	}
 }
 
 func (budget *projectionBudget) addTextBytes(value string) {
-	if !addMultiplied(&budget.cost.TextBytes, uint64(len(value)), materializationCopies) {
+	if !addMultiplied(&budget.cost.TextBytes, uint64(len(value)), materializationCopies) || budget.cost.TextBytes > uint64(budget.limits.MaxExpandedTextBytes) {
 		budget.textOverflow = true
 	}
 }
 
 func (budget *projectionBudget) texts(values []string) {
+	// Count the expanded cardinality before visiting any collection payload.
+	budget.records(len(values))
 	for _, value := range values {
-		budget.text(value)
+		if budget.itemOverflow || budget.textOverflow {
+			return
+		}
+		budget.addTextBytes(value)
 	}
 }
 
@@ -59,7 +68,7 @@ func addMultiplied(total *uint64, value uint64, multiplier uint64) bool {
 }
 
 func preflightExpandedProjectionBudget(draft Draft, limits Limits) error {
-	cost, itemOverflow, textOverflow := estimateExpandedProjectionCost(draft)
+	cost, itemOverflow, textOverflow := estimateExpandedProjectionCost(draft, limits)
 	if itemOverflow || cost.Items > uint64(limits.MaxExpandedItems) {
 		return invalid("expanded_item_budget_exceeded", "draft")
 	}
@@ -69,8 +78,8 @@ func preflightExpandedProjectionBudget(draft Draft, limits Limits) error {
 	return nil
 }
 
-func estimateExpandedProjectionCost(draft Draft) (projectionCost, bool, bool) {
-	budget := &projectionBudget{}
+func estimateExpandedProjectionCost(draft Draft, limits Limits) (projectionCost, bool, bool) {
+	budget := &projectionBudget{limits: limits}
 	profiles := make(map[string]MetadataFields, len(draft.Profiles))
 	for _, profile := range draft.Profiles {
 		profiles[profile.ProfileID] = profile.Fields
@@ -78,6 +87,7 @@ func estimateExpandedProjectionCost(draft Draft) (projectionCost, bool, bool) {
 
 	budget.records(3)
 	budget.text(draft.SourceID, draft.SpecPackagePath)
+	budget.texts(draft.SourceNonClaims)
 	budget.texts(draft.SourceNonClaimRefs)
 	for _, definition := range draft.NonClaimDefinitions {
 		budget.records(1)
@@ -181,6 +191,15 @@ func estimateExpandedProjectionCost(draft Draft) (projectionCost, bool, bool) {
 
 func (budget *projectionBudget) layoutMetadata(fields MetadataFields) {
 	budget.records(1 + len(metadataFieldIDs))
+	if fields.NonClaims.Present {
+		budget.texts(fields.NonClaims.Value)
+	}
+	if fields.ExternalNonClaimRefs.Present {
+		budget.texts(fields.ExternalNonClaimRefs.Value)
+	}
+	if fields.ProofBindingRefs.Present {
+		budget.texts(fields.ProofBindingRefs.Value)
+	}
 	if fields.OwnerID.Present {
 		budget.text(fields.OwnerID.Value)
 	}
@@ -221,6 +240,9 @@ func (budget *projectionBudget) atomicMetadata(profile MetadataFields, member Me
 		string(selectedField(profile.RiskClass, member.RiskClass)),
 	)
 	budget.texts(selectedField(profile.NonClaimRefs, member.NonClaimRefs))
+	budget.texts(selectedField(profile.NonClaims, member.NonClaims))
+	budget.texts(selectedField(profile.ExternalNonClaimRefs, member.ExternalNonClaimRefs))
+	budget.texts(selectedField(profile.ProofBindingRefs, member.ProofBindingRefs))
 	lifecycle := selectedField(profile.Lifecycle, member.Lifecycle)
 	budget.text(string(lifecycle.State))
 	budget.texts(lifecycle.ReplacementRequirementIDs)
@@ -237,7 +259,11 @@ func selectedField[T any](profile Field[T], member Field[T]) T {
 	if profile.Present {
 		return profile.Value
 	}
-	return member.Value
+	if member.Present {
+		return member.Value
+	}
+	var absent T
+	return absent
 }
 
 func (budget *projectionBudget) scenario(value Scenario) {
@@ -270,11 +296,17 @@ func (budget *projectionBudget) derivation(value Derivation) {
 func (budget *projectionBudget) metadataEdges(requirementID string, fields MetadataFields) {
 	if fields.NonClaimRefs.Present {
 		for _, nonClaimID := range fields.NonClaimRefs.Value {
+			if budget.itemOverflow {
+				return
+			}
 			budget.edge(ReferenceRequirementNonClaim, EntityRequirement, requirementID, EntityNonClaim, nonClaimID)
 		}
 	}
 	if fields.Lifecycle.Present {
 		for _, replacementID := range fields.Lifecycle.Value.ReplacementRequirementIDs {
+			if budget.itemOverflow {
+				return
+			}
 			budget.edge(ReferenceLifecycleReplacement, EntityRequirement, requirementID, EntityRequirement, replacementID)
 		}
 	}

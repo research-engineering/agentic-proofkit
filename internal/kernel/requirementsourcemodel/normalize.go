@@ -35,6 +35,13 @@ func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
 	if err != nil {
 		return Model{}, err
 	}
+	sourceNonClaims, err := normalizeTexts(snapshot.SourceNonClaims, "sourceNonClaims", true, false)
+	if err != nil {
+		return Model{}, err
+	}
+	if len(sourceNonClaims) == 0 && len(sourceNonClaimRefs) == 0 {
+		return Model{}, invalid("empty_source_nonclaims", "sourceNonClaims")
+	}
 
 	definitions, definitionIDs, err := normalizeDefinitions(snapshot.NonClaimDefinitions)
 	if err != nil {
@@ -75,10 +82,14 @@ func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
 	if err := validateReferenceClosure(definitionIDs, vocabularyIDs, edges); err != nil {
 		return Model{}, err
 	}
+	if err := validateNonClaimScopes(sourceNonClaims, sourceNonClaimRefs, definitions, requirements); err != nil {
+		return Model{}, err
+	}
 
 	atomic := AtomicProjection{
 		SourceID:            sourceID,
 		SpecPackagePath:     specPackagePath,
+		SourceNonClaims:     sourceNonClaims,
 		SourceNonClaimRefs:  sourceNonClaimRefs,
 		NonClaimDefinitions: definitions,
 		Vocabulary:          vocabulary,
@@ -97,7 +108,6 @@ func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
 func normalizeDefinitions(values []NonClaimDefinition) ([]NonClaimDefinition, map[string]struct{}, error) {
 	result := make([]NonClaimDefinition, len(values))
 	ids := make(map[string]struct{}, len(values))
-	statements := make(map[string]struct{}, len(values))
 	for index, value := range values {
 		path := indexed("nonClaimDefinitions", index, "")
 		id, err := canonicalID(value.NonClaimID, "NCL-", path+"nonClaimId")
@@ -111,11 +121,7 @@ func normalizeDefinitions(values []NonClaimDefinition) ([]NonClaimDefinition, ma
 		if err != nil {
 			return nil, nil, err
 		}
-		if _, exists := statements[statement]; exists {
-			return nil, nil, invalid("duplicate_definition", "nonClaimDefinitions")
-		}
 		ids[id] = struct{}{}
-		statements[statement] = struct{}{}
 		result[index] = NonClaimDefinition{NonClaimID: id, Statement: statement}
 	}
 	sort.Slice(result, func(left int, right int) bool { return result[left].NonClaimID < result[right].NonClaimID })

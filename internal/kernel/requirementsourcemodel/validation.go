@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -41,6 +42,10 @@ func invalid(code string, path string) error {
 	return &ValidationError{Code: code, Path: path}
 }
 
+func identified(root string, id string) string {
+	return root + "[" + strconv.Quote(id) + "]"
+}
+
 func canonicalID(value string, prefix string, path string) (string, error) {
 	admitted, err := admit.RuleID(value, path)
 	if err != nil || !strings.HasPrefix(admitted, prefix) || len(admitted) == len(prefix) {
@@ -73,7 +78,7 @@ func canonicalText(value string, path string, allowEmpty bool, rejectPlaceholder
 
 func canonicalPath(value string, path string) (string, error) {
 	admitted, err := admit.SafeRepoRelativePath(value, path)
-	if err != nil || admitted != value {
+	if err != nil || admitted != value || !utf8.ValidString(value) {
 		return "", invalid("invalid_path", path)
 	}
 	return admitted, nil
