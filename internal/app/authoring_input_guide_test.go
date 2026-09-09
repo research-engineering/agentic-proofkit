@@ -60,6 +60,10 @@ func TestAuthoringInputGuideBootstrapCLI(t *testing.T) {
 	firstRef := packet["authoringRefs"].([]any)[0].(map[string]any)
 	secondRef := decodeCLIJSON(t, string(adoptionHelpJSON(t, firstRef))).(map[string]any)
 	secondRef["refId"] = "example.observation.z"
+	secondRef["kind"] = "test_summary"
+	secondRef["path"] = "tests/request_test.go"
+	secondRef["digest"] = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	secondRef["nonClaims"] = []any{"Separate synthetic test observation; execution is not authenticated."}
 	secondRef["summary"] = "A second independent observation remains pending owner review."
 	refs := []any{firstRef, secondRef}
 	refIDs := []any{firstRef["refId"], secondRef["refId"]}
