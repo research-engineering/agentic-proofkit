@@ -4653,7 +4653,7 @@
         "rootDefinitionDigest": "sha256:86f8f4913b5316caa63c40d79125199b282d108cbd8b9711db21c2023d1a4ca4",
         "nativeSource": {
           "path": "internal/command/requirementauthoringplan",
-          "canonicalDigest": "sha256:8f6b7c3cbac7c379f8f0534489961d49a8a0ee5e9c737f0d2d8fc9826b747f19",
+          "canonicalDigest": "sha256:c9df82eae1d9b8a7dd475b2510616d1d3cd851306f83dd5f1bb7983e7effb792",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -4681,7 +4681,7 @@
         "rootDefinitionDigest": "sha256:c2264058757e40789005b7cf7417906461f064b9b9bca0c5ddda86704e3b36cc",
         "nativeSource": {
           "path": "internal/command/requirementauthoringplan",
-          "canonicalDigest": "sha256:8f6b7c3cbac7c379f8f0534489961d49a8a0ee5e9c737f0d2d8fc9826b747f19",
+          "canonicalDigest": "sha256:c9df82eae1d9b8a7dd475b2510616d1d3cd851306f83dd5f1bb7983e7effb792",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

@@ -32,6 +32,9 @@ func TestAuthoringInputGuideBootstrapCLI(t *testing.T) {
 		}
 		canonical = help
 	}
+	if !strings.Contains(canonical, "Order authoringRefs by refId, strictly ascending and without duplicates.") {
+		t.Fatal("authoring help omits multi-reference ordering")
+	}
 	parts := strings.Split(canonical, "```json\n")
 	if len(parts) != 2 {
 		t.Fatal("authoring help must contain one template, not duplicate source examples")
@@ -54,24 +57,52 @@ func TestAuthoringInputGuideBootstrapCLI(t *testing.T) {
 		t.Fatal("authoring template fabricated its source or candidate")
 	}
 	packet["currentRequirementSource"], update["candidateRequirement"] = empty, candidate
-	for _, mode := range []string{"retrospective_baseline", "pull_request_design"} {
-		packet["mode"] = mode
-		report := runAdoptionHelpCLI(t, adoptionHelpJSON(t, packet), args...)
-		if report["planKind"] != "proofkit.requirement-authoring-plan" || report["state"] != "passed" || report["mode"] != mode {
-			t.Fatalf("wrong authoring report: %v", report)
+	firstRef := packet["authoringRefs"].([]any)[0].(map[string]any)
+	secondRef := decodeCLIJSON(t, string(adoptionHelpJSON(t, firstRef))).(map[string]any)
+	secondRef["refId"] = "example.observation.z"
+	secondRef["summary"] = "A second independent observation remains pending owner review."
+	refs := []any{firstRef, secondRef}
+	refIDs := []any{firstRef["refId"], secondRef["refId"]}
+	for _, count := range []int{1, 2} {
+		packet["authoringRefs"] = refs[:count]
+		update["sourceRefIds"] = refIDs[:count]
+		for _, mode := range []string{"retrospective_baseline", "pull_request_design"} {
+			packet["mode"] = mode
+			report := runAdoptionHelpCLI(t, adoptionHelpJSON(t, packet), args...)
+			if report["planKind"] != "proofkit.requirement-authoring-plan" || report["state"] != "passed" || report["mode"] != mode {
+				t.Fatalf("wrong authoring report: %v", report)
+			}
+			if !reflect.DeepEqual(report["authoringRefs"], packet["authoringRefs"]) {
+				t.Fatal("authoring projection lost or changed a complete reference record")
+			}
+			preview := report["nonAuthoritativeAdmissionPreview"].(map[string]any)
+			if preview["candidateOnly"] != true || preview["ownerReviewRequired"] != true || preview["authority"] != "candidate_only" {
+				t.Fatal("admitted bootstrap became product approval")
+			}
+			if !reflect.DeepEqual(preview["requirementSourcePreview"], source) {
+				t.Fatalf("bootstrap source mismatch:\ngot: %s\nwant: %s", adoptionHelpJSON(t, preview["requirementSourcePreview"]), adoptionHelpJSON(t, source))
+			}
+			materialization["requirementSources"] = []any{preview["requirementSourcePreview"]}
+			plan := runAdoptionHelpCLI(t, adoptionHelpJSON(t, materialization), "adopt", "materialize", "plan", "--input", "-", "--repo-root", root)
+			if plan["state"] != "ready" || plan["sourceIntent"] != "audit-from-code" {
+				t.Fatal("bootstrap preview cannot feed the existing materialization route")
+			}
 		}
-		preview := report["nonAuthoritativeAdmissionPreview"].(map[string]any)
-		if preview["candidateOnly"] != true || preview["ownerReviewRequired"] != true || preview["authority"] != "candidate_only" {
-			t.Fatal("admitted bootstrap became product approval")
-		}
-		if !reflect.DeepEqual(preview["requirementSourcePreview"], source) {
-			t.Fatalf("bootstrap source mismatch:\ngot: %s\nwant: %s", adoptionHelpJSON(t, preview["requirementSourcePreview"]), adoptionHelpJSON(t, source))
-		}
-		materialization["requirementSources"] = []any{preview["requirementSourcePreview"]}
-		plan := runAdoptionHelpCLI(t, adoptionHelpJSON(t, materialization), "adopt", "materialize", "plan", "--input", "-", "--repo-root", root)
-		if plan["state"] != "ready" || plan["sourceIntent"] != "audit-from-code" {
-			t.Fatal("bootstrap preview cannot feed the existing materialization route")
-		}
+	}
+	for _, mutation := range []string{"unsorted", "duplicate"} {
+		t.Run(mutation+" authoring refs", func(t *testing.T) {
+			invalid := decodeCLIJSON(t, string(adoptionHelpJSON(t, packet))).(map[string]any)
+			refs := invalid["authoringRefs"].([]any)
+			if mutation == "unsorted" {
+				refs[0], refs[1] = refs[1], refs[0]
+			} else {
+				refs[1] = refs[0]
+			}
+			status, stdout, stderr := executeAgentWorkflowCLI(t, args, bytes.NewReader(adoptionHelpJSON(t, invalid)), PresentationCapabilities{})
+			if status != 1 || stdout != "" || !strings.Contains(stderr, "authoringRef ids must be sorted and unique") {
+				t.Fatalf("invalid ref order: status=%d stdout=%q stderr=%q", status, stdout, stderr)
+			}
+		})
 	}
 
 	// A source containing the candidate must not be treated as empty bootstrap.

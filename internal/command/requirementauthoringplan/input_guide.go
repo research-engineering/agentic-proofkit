@@ -37,6 +37,10 @@ const inputGuide = `Requirement authoring input guide:
   Use retrospective_baseline for reviewed code-derived candidates, or
   pull_request_design for proposed design changes. Neither mode grants approval.
 
+  Order authoringRefs by refId, strictly ascending and without duplicates.
+  Move each complete reference record with its ID; do not sort IDs separately
+  from their paths, digests, summaries or nonClaims.
+
 Authoring template (two object operands must be supplied):
 ` + "```json\n" + `{
   "schemaVersion": 1,

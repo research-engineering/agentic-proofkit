@@ -197,7 +197,7 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.adoption.nonclaims-input-guidance", Summary: "Clarify in lazy materialization input help that nonClaims lists are sorted and unique, while argv token order is preserved. Exercise ordered multi-item nonClaims through planning, approved materialization and stored re-admission; reject unsorted and duplicate lists at packet, source, requirement, inventory and entry boundaries. Refresh source-bound contract digests and the ABI fingerprint. Accepted input semantics, request/report kinds, schema versions, authority denials and platform requirements are unchanged."},
+	{ChangeID: "proofkit.authoring.reference-order-guidance", Summary: "Clarify in lazy requirement-authoring help that authoringRefs are strictly sorted by unique refId values while complete reference records stay together. Exercise two distinct references through authoring and materialization planning; preserve their exact fields and reject unsorted or duplicate references. Refresh source-bound contract digests and the ABI fingerprint. Accepted input semantics, request/report kinds, schema versions, authority denials and platform requirements are unchanged."},
 }
 
 var currentMigrationSteps = []string{}
@@ -220,7 +220,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.6",
+		"# @research-engineering/agentic-proofkit 0.14.7",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -273,7 +273,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.6",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.7",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -285,7 +285,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.5 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.5`.",
+		"- Pin npm consumers to the previous admitted version 0.14.6 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.6`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"
