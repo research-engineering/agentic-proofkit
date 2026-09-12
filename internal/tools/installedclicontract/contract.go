@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"sort"
 	"strconv"
 	"strings"
@@ -197,6 +198,19 @@ func (contract Contract) CommandIDsByRoute() map[string]string {
 		result[route] = commandID
 	}
 	return result
+}
+
+// CheckCommandRoutes requires the observed route-to-command map to equal the
+// admitted contract. Callers must reject duplicate observations before folding
+// them into a map, because map equality cannot prove collection multiplicity.
+func (contract Contract) CheckCommandRoutes(observed map[string]string) error {
+	if len(contract.commandIDsByRoute) == 0 {
+		return fmt.Errorf("installed CLI contract has not been admitted")
+	}
+	if !maps.Equal(observed, contract.commandIDsByRoute) {
+		return fmt.Errorf("installed CLI command routes or identities differ from the admitted contract")
+	}
+	return nil
 }
 
 func (contract Contract) PresetIDs() ([]string, error) {

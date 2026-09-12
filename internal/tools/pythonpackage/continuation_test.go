@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,11 +78,11 @@ func testInstalledCLIContract(t *testing.T) installedclicontract.Contract {
 }
 
 func TestInstalledPythonCommandRoutesRequireExactContractBijection(t *testing.T) {
-	expected := map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}
-	if err := requireInstalledPythonCommandRouteBijection(
-		map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"},
-		expected,
-	); err != nil {
+	contract, err := installedclicontract.Admit([]byte(`{"processContract":{"commandRouteGrammar":{"minimumTokens":1,"maximumTokens":4,"separator":" ","tokenPattern":"^[a-z0-9]+(?:-[a-z0-9]+)*$","ambiguityPolicy":"no_route_is_prefix_of_another","omittedRoutePolicy":"command_id"}},"commands":[{"command":"adopt-plan","route":["adopt","plan"]},{"command":"self-check"}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := contract.CheckCommandRoutes(map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}); err != nil {
 		t.Fatalf("exact route bijection rejected: %v", err)
 	}
 	mutants := []map[string]string{
@@ -91,7 +92,7 @@ func TestInstalledPythonCommandRoutesRequireExactContractBijection(t *testing.T)
 		{"adopt plan": "adopt-plan", "self-check": "self-check", "other": "other"},
 	}
 	for _, mutant := range mutants {
-		if err := requireInstalledPythonCommandRouteBijection(mutant, expected); err == nil {
+		if err := contract.CheckCommandRoutes(mutant); err == nil {
 			t.Fatalf("route mutant survived exact bijection: %v", mutant)
 		}
 	}
@@ -220,6 +221,34 @@ func runInstalledWheelContinuationWitness(t *testing.T, repositoryRoot string) {
 	if err := verifyInstalledPythonWheel(fixture.consumer, fixture.venvPython, fixture.wheelPath, fixture.contract, fixture.binary, fixture.environment); err != nil {
 		t.Fatal(err)
 	}
+	t.Run("wrong leaf identity", func(t *testing.T) {
+		var declared map[string]any
+		if err := json.Unmarshal(fixture.contract, &declared); err != nil {
+			t.Fatal(err)
+		}
+		changed := 0
+		for _, raw := range declared["commands"].([]any) {
+			command := raw.(map[string]any)
+			if command["command"] == "self-check" {
+				command["command"] = "different-self-check"
+				command["route"] = []string{"self-check"}
+				changed++
+			}
+		}
+		if changed != 1 {
+			t.Fatalf("changed %d command identities, want exactly one", changed)
+		}
+		modified, err := json.Marshal(declared)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(installedPythonContractPath(t, fixture), modified, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := verifyInstalledPythonPresetContinuation(fixture.consumer, fixture.venvPython, modified, fixture.environment); err == nil || !strings.Contains(err.Error(), "identities differ from the admitted contract") {
+			t.Fatalf("wrong leaf identity error=%v, want route-identity rejection", err)
+		}
+	})
 }
 
 type installedWheelFixture struct {
