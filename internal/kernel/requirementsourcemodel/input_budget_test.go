@@ -193,6 +193,21 @@ func TestRequirementFreeSourcePreservesIdentityAndBoundaries(t *testing.T) {
 	if !reflect.DeepEqual(model.Atomic().SourceNonClaimRefs, draft.SourceNonClaimRefs) || !reflect.DeepEqual(model.Atomic().NonClaimDefinitions, draft.NonClaimDefinitions) || !reflect.DeepEqual(model.References().Edges, wantEdges) {
 		t.Fatal("empty source lost the declared non-claim target or edge")
 	}
+	wantAtomic := AtomicProjection{
+		SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
+		SourceNonClaimRefs:  []string{"NCL-EMPTY"},
+		NonClaimDefinitions: []NonClaimDefinition{{NonClaimID: "NCL-EMPTY", Statement: "Source admission does not prove coverage."}},
+		Requirements:        []AtomicRequirement{}, Scenarios: []Scenario{},
+	}
+	draft.SourceNonClaimRefs[0] = "NCL-CHANGED"
+	draft.NonClaimDefinitions[0].Statement = "Changed caller definition."
+	model.Atomic().SourceNonClaimRefs[0] = "NCL-CHANGED"
+	model.Atomic().NonClaimDefinitions[0].Statement = "Changed returned definition."
+	model.References().Edges[0].To.ID = "NCL-CHANGED"
+	if !reflect.DeepEqual(model.Atomic(), wantAtomic) || !reflect.DeepEqual(model.References().Edges, wantEdges) {
+		t.Fatal("empty source retained mutable reference or definition aliases")
+	}
+	draft.SourceNonClaimRefs = []string{"NCL-EMPTY"}
 	draft.NonClaimDefinitions = nil
 	if _, err := Normalize(draft); ErrorCode(err) != "dangling_nonclaim_ref" {
 		t.Fatalf("empty source bypassed reference closure: %v", err)
@@ -200,6 +215,11 @@ func TestRequirementFreeSourcePreservesIdentityAndBoundaries(t *testing.T) {
 	draft.SourceNonClaimRefs = nil
 	if _, err := Normalize(draft); ErrorCode(err) != "empty_source_nonclaims" {
 		t.Fatalf("empty source bypassed boundary-denial admission: %v", err)
+	}
+	draft.SourceNonClaims = []string{"Source admission does not prove coverage."}
+	draft.Profiles = []Profile{{ProfileID: "RPROF-UNUSED", Fields: MetadataFields{OwnerID: Own("owner.empty")}}}
+	if _, err := Normalize(draft); ErrorCode(err) != "vacuous_profile" {
+		t.Fatalf("empty source bypassed profile-use admission: %v", err)
 	}
 }
 

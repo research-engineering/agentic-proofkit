@@ -87,6 +87,66 @@ func TestFormatParseRoundTripPreservesEveryProjection(t *testing.T) {
 	}
 }
 
+func TestRequirementFreeSourceReferencedDenialRoundTrip(t *testing.T) {
+	const source = `{
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
+  "sourceId": "proofkit.empty.source",
+  "specPackagePath": "docs/specs/empty",
+  "sourceNonClaims": [],
+  "sourceNonClaimRefs": ["NCL-EMPTY"],
+  "nonClaimDefinitions": [
+    {"nonClaimId":"NCL-EMPTY","statement":"Source admission does not prove coverage."}
+  ],
+  "vocabulary": [],
+  "derivations": [],
+  "profiles": [],
+  "groups": [],
+  "scenarios": []
+}
+`
+	for _, test := range []struct {
+		name, wire string
+		nonClaims  []string
+	}{
+		{name: "referenced only", wire: source},
+		{name: "inline and referenced", wire: string(bytes.Replace([]byte(source), []byte(`"sourceNonClaims": []`), []byte(`"sourceNonClaims": ["No implementation correctness is established."]`), 1)), nonClaims: []string{"No implementation correctness is established."}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := Parse([]byte(test.wire))
+			if err != nil {
+				t.Fatalf("Parse(empty referenced source): %v", err)
+			}
+			wantAtomic := requirementsourcemodel.AtomicProjection{
+				SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
+				SourceNonClaims: test.nonClaims, SourceNonClaimRefs: []string{"NCL-EMPTY"},
+				NonClaimDefinitions: []requirementsourcemodel.NonClaimDefinition{{NonClaimID: "NCL-EMPTY", Statement: "Source admission does not prove coverage."}},
+				Requirements:        []requirementsourcemodel.AtomicRequirement{}, Scenarios: []requirementsourcemodel.Scenario{},
+			}
+			wantLayout := requirementsourcemodel.LayoutProjection{SourceID: "proofkit.empty.source", Profiles: []requirementsourcemodel.Profile{}, Groups: []requirementsourcemodel.Group{}, Origins: []requirementsourcemodel.Origin{}}
+			wantReferences := requirementsourcemodel.ReferenceProjection{
+				SourceID: "proofkit.empty.source", Derivations: []requirementsourcemodel.Derivation{},
+				Edges: []requirementsourcemodel.ReferenceEdge{{Kind: requirementsourcemodel.ReferenceSourceNonClaim, From: requirementsourcemodel.ReferenceEndpoint{Kind: requirementsourcemodel.EntitySource, ID: "proofkit.empty.source"}, To: requirementsourcemodel.ReferenceEndpoint{Kind: requirementsourcemodel.EntityNonClaim, ID: "NCL-EMPTY"}}},
+			}
+			if !reflect.DeepEqual(result.Model.Atomic(), wantAtomic) || !reflect.DeepEqual(result.Model.Layout(), wantLayout) || !reflect.DeepEqual(result.Model.References(), wantReferences) {
+				t.Fatal("empty referenced source lost an independently expected projection")
+			}
+			location, ok := result.SourceMap.Location("/nonClaimDefinitions/0/nonClaimId")
+			if !ok || test.wire[location.ValueSpan.Start:location.ValueSpan.End] != `"NCL-EMPTY"` {
+				t.Fatal("referenced denial lost its source coordinate")
+			}
+			formatted, err := Format(result.Model)
+			if err != nil || string(formatted) != test.wire {
+				t.Fatalf("Format(empty referenced source) differs from independent bytes: %v", err)
+			}
+			readmitted, err := Parse(formatted)
+			if err != nil || !projectionsEqual(readmitted.Model, result.Model) {
+				t.Fatalf("empty referenced source failed whole-projection round trip: %v", err)
+			}
+		})
+	}
+}
+
 func TestCanonicalFormatIsIdempotent(t *testing.T) {
 	first, err := Format(mustModel(t))
 	if err != nil {
