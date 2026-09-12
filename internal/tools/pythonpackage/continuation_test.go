@@ -245,8 +245,9 @@ func runInstalledWheelContinuationWitness(t *testing.T, repositoryRoot string) {
 		if err := os.WriteFile(installedPythonContractPath(t, fixture), modified, 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if err := verifyInstalledPythonPresetContinuation(fixture.consumer, fixture.venvPython, modified, fixture.environment); err == nil || !strings.Contains(err.Error(), "identities differ from the admitted contract") {
-			t.Fatalf("wrong leaf identity error=%v, want route-identity rejection", err)
+		const want = "installed Python wheel family navigation: installed CLI command routes or identities differ from the admitted contract"
+		if err := verifyInstalledPythonPresetContinuation(fixture.consumer, fixture.venvPython, modified, fixture.environment); err == nil || err.Error() != want {
+			t.Fatalf("wrong leaf identity error=%v, want %q", err, want)
 		}
 	})
 }

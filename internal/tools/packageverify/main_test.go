@@ -931,6 +931,26 @@ func TestInstalledNPMCarrierIsExactRegularTarballProjection(t *testing.T) {
 			t.Fatalf("changed carrier error=%v, want exact-byte rejection", err)
 		}
 	})
+	for _, relativePath := range []string{
+		"dist/agentic-proofkit",
+		strings.TrimPrefix(target.PackageTarEntry, "package/"),
+		"README.md",
+		"proofkit/cli-contract.v2.json",
+	} {
+		t.Run("missing file/"+relativePath, func(t *testing.T) {
+			consumer := materialize(t)
+			if err := snapshot.Verify(consumer); err != nil {
+				t.Fatalf("exact carrier rejected before removal: %v", err)
+			}
+			if err := os.Remove(filepath.Join(installedNPMPackageRoot(consumer), filepath.FromSlash(relativePath))); err != nil {
+				t.Fatal(err)
+			}
+			want := "read installed npm carrier " + relativePath + ": open artifact file failed"
+			if err := snapshot.Verify(consumer); err == nil || err.Error() != want {
+				t.Fatalf("missing carrier error=%v, want %q", err, want)
+			}
+		})
+	}
 	t.Run("symlink", func(t *testing.T) {
 		consumer := materialize(t)
 		contractPath := filepath.Join(installedNPMPackageRoot(consumer), "proofkit", "cli-contract.v2.json")
@@ -1154,8 +1174,9 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 			}
 			return result, err
 		}
-		if err := verifyTrace(wrongIdentity, wrongIdentity); err == nil || !strings.Contains(err.Error(), "identities differ from the admitted contract") {
-			t.Fatalf("wrong leaf identity error=%v, want route-identity rejection", err)
+		const want = "outside consumer family navigation: installed CLI command routes or identities differ from the admitted contract"
+		if err := verifyTrace(wrongIdentity, wrongIdentity); err == nil || err.Error() != want {
+			t.Fatalf("wrong leaf identity error=%v, want %q", err, want)
 		}
 	})
 	wantTransportCalls := [][]string{{"help"}, {"help", "adopt", "plan"}}
