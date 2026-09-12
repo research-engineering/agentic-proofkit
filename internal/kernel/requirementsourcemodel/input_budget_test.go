@@ -142,13 +142,84 @@ func TestPreflightCardinalityBudgetsHaveExactTransitions(t *testing.T) {
 
 	emptyGroups := validDraft()
 	emptyGroups.Groups = nil
-	if err := preflight(emptyGroups, DefaultLimits()); ErrorCode(err) != "group_budget_exceeded" {
-		t.Fatalf("empty groups ErrorCode() = %q, error = %v", ErrorCode(err), err)
+	if err := preflight(emptyGroups, DefaultLimits()); err != nil {
+		t.Fatalf("zero groups exceed no cardinality budget: %v", err)
 	}
 	emptyMembers := validDraft()
 	emptyMembers.Groups[0].Members = nil
 	if err := preflight(emptyMembers, DefaultLimits()); ErrorCode(err) != "group_member_budget_exceeded" {
 		t.Fatalf("empty members ErrorCode() = %q, error = %v", ErrorCode(err), err)
+	}
+}
+
+func TestRequirementFreeSourcePreservesIdentityAndBoundaries(t *testing.T) {
+	for _, groups := range [][]Group{nil, {}} {
+		draft := Draft{
+			SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
+			SourceNonClaims: []string{"Source admission does not prove coverage."},
+			Groups:          groups,
+		}
+		model, err := Normalize(draft)
+		if err != nil {
+			t.Fatalf("Normalize(empty source): %v", err)
+		}
+		wantAtomic := AtomicProjection{
+			SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
+			SourceNonClaims: []string{"Source admission does not prove coverage."},
+			Requirements:    []AtomicRequirement{}, Scenarios: []Scenario{},
+		}
+		wantLayout := LayoutProjection{SourceID: "proofkit.empty.source", Profiles: []Profile{}, Groups: []Group{}, Origins: []Origin{}}
+		wantReferences := ReferenceProjection{SourceID: "proofkit.empty.source", Derivations: []Derivation{}}
+		if !reflect.DeepEqual(model.Atomic(), wantAtomic) || !reflect.DeepEqual(model.Layout(), wantLayout) || !reflect.DeepEqual(model.References(), wantReferences) {
+			t.Fatal("empty source changed identity, boundary denials or empty projections")
+		}
+		draft.SourceNonClaims[0] = "Changed caller text."
+		model.Atomic().SourceNonClaims[0] = "Changed projection text."
+		if !reflect.DeepEqual(model.Atomic(), wantAtomic) {
+			t.Fatal("empty source retained a mutable non-claim alias")
+		}
+	}
+
+	draft := Draft{
+		SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
+		SourceNonClaimRefs:  []string{"NCL-EMPTY"},
+		NonClaimDefinitions: []NonClaimDefinition{{NonClaimID: "NCL-EMPTY", Statement: "Source admission does not prove coverage."}},
+	}
+	model, err := Normalize(draft)
+	if err != nil {
+		t.Fatalf("Normalize(empty source with referenced denial): %v", err)
+	}
+	wantEdges := []ReferenceEdge{{Kind: ReferenceSourceNonClaim, From: ReferenceEndpoint{Kind: EntitySource, ID: "proofkit.empty.source"}, To: ReferenceEndpoint{Kind: EntityNonClaim, ID: "NCL-EMPTY"}}}
+	if !reflect.DeepEqual(model.Atomic().SourceNonClaimRefs, draft.SourceNonClaimRefs) || !reflect.DeepEqual(model.Atomic().NonClaimDefinitions, draft.NonClaimDefinitions) || !reflect.DeepEqual(model.References().Edges, wantEdges) {
+		t.Fatal("empty source lost the declared non-claim target or edge")
+	}
+	wantAtomic := AtomicProjection{
+		SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
+		SourceNonClaimRefs:  []string{"NCL-EMPTY"},
+		NonClaimDefinitions: []NonClaimDefinition{{NonClaimID: "NCL-EMPTY", Statement: "Source admission does not prove coverage."}},
+		Requirements:        []AtomicRequirement{}, Scenarios: []Scenario{},
+	}
+	draft.SourceNonClaimRefs[0] = "NCL-CHANGED"
+	draft.NonClaimDefinitions[0].Statement = "Changed caller definition."
+	model.Atomic().SourceNonClaimRefs[0] = "NCL-CHANGED"
+	model.Atomic().NonClaimDefinitions[0].Statement = "Changed returned definition."
+	model.References().Edges[0].To.ID = "NCL-CHANGED"
+	if !reflect.DeepEqual(model.Atomic(), wantAtomic) || !reflect.DeepEqual(model.References().Edges, wantEdges) {
+		t.Fatal("empty source retained mutable reference or definition aliases")
+	}
+	draft.SourceNonClaimRefs = []string{"NCL-EMPTY"}
+	draft.NonClaimDefinitions = nil
+	if _, err := Normalize(draft); ErrorCode(err) != "dangling_nonclaim_ref" {
+		t.Fatalf("empty source bypassed reference closure: %v", err)
+	}
+	draft.SourceNonClaimRefs = nil
+	if _, err := Normalize(draft); ErrorCode(err) != "empty_source_nonclaims" {
+		t.Fatalf("empty source bypassed boundary-denial admission: %v", err)
+	}
+	draft.SourceNonClaims = []string{"Source admission does not prove coverage."}
+	draft.Profiles = []Profile{{ProfileID: "RPROF-UNUSED", Fields: MetadataFields{OwnerID: Own("owner.empty")}}}
+	if _, err := Normalize(draft); ErrorCode(err) != "vacuous_profile" {
+		t.Fatalf("empty source bypassed profile-use admission: %v", err)
 	}
 }
 

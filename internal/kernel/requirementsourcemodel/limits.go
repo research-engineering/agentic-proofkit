@@ -107,7 +107,7 @@ func preflight(draft Draft, limits Limits) error {
 	if len(draft.Profiles) > limits.MaxProfiles {
 		return invalid("profile_budget_exceeded", "profiles")
 	}
-	if len(draft.Groups) == 0 || len(draft.Groups) > limits.MaxGroups {
+	if len(draft.Groups) > limits.MaxGroups {
 		return invalid("group_budget_exceeded", "groups")
 	}
 	if len(draft.Scenarios) > limits.MaxScenarios {
