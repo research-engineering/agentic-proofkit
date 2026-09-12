@@ -3,10 +3,73 @@ package installedclicontract
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
 )
+
+func TestCheckCommandRoutesUsesAdmittedIdentityAndExactDomain(t *testing.T) {
+	contract, err := Admit(contractFixture(`{"command":"adopt-plan","route":["adopt","plan"]},{"command":"self-check"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	exact := map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}
+	if err := contract.CheckCommandRoutes(exact); err != nil {
+		t.Fatalf("exact independent map was rejected: %v", err)
+	}
+	mutants := map[string]map[string]string{
+		"nil":           nil,
+		"empty":         {},
+		"missing":       {"adopt plan": "adopt-plan"},
+		"extra":         {"adopt plan": "adopt-plan", "self-check": "self-check", "other": "other"},
+		"substitution":  {"adopt plan": "adopt-plan", "other": "self-check"},
+		"wrong id":      {"adopt plan": "wrong", "self-check": "self-check"},
+		"swapped ids":   {"adopt plan": "self-check", "self-check": "adopt-plan"},
+		"duplicate ids": {"adopt plan": "adopt-plan", "self-check": "adopt-plan"},
+		"empty id":      {"adopt plan": "", "self-check": "self-check"},
+	}
+	for name, observed := range mutants {
+		t.Run(name, func(t *testing.T) {
+			before := maps.Clone(observed)
+			if err := contract.CheckCommandRoutes(observed); err == nil {
+				t.Fatal("non-equivalent observed map was accepted")
+			}
+			if !maps.Equal(observed, before) {
+				t.Fatal("validation mutated observed routes")
+			}
+		})
+	}
+	copy := contract.CommandIDsByRoute()
+	copy["self-check"] = "wrong"
+	if err := contract.CheckCommandRoutes(exact); err != nil {
+		t.Fatalf("caller copy changed the admitted identity: %v", err)
+	}
+}
+
+func TestCheckCommandRoutesRejectsUnadmittedContract(t *testing.T) {
+	for _, observed := range []map[string]string{nil, {}, {"sample": "sample"}} {
+		if err := (Contract{}).CheckCommandRoutes(observed); err == nil {
+			t.Fatal("zero contract was accepted")
+		}
+	}
+}
+
+func TestCheckCommandRoutesDoesNotEchoObservedText(t *testing.T) {
+	contract, err := Admit(contractFixture(`{"command":"sample"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, observed := range []map[string]string{
+		{"sample": strings.Repeat("private-value", 1024)},
+		{strings.Repeat("private-route", 1024): "sample"},
+	} {
+		err := contract.CheckCommandRoutes(observed)
+		if err == nil || err.Error() != "installed CLI command routes or identities differ from the admitted contract" {
+			t.Fatalf("expected deterministic minimized diagnostic, got %v", err)
+		}
+	}
+}
 
 func TestAdmitPreservesExactRoutesAndPresetChoices(t *testing.T) {
 	content := contractFixture(`{"command":"adopt-plan","route":["adopt","plan"]},{"command":"stack-preset","outputContract":{"flagChoices":{"--preset":["go_cli_repo","python_service"]}}}`)

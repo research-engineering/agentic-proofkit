@@ -931,6 +931,26 @@ func TestInstalledNPMCarrierIsExactRegularTarballProjection(t *testing.T) {
 			t.Fatalf("changed carrier error=%v, want exact-byte rejection", err)
 		}
 	})
+	for _, relativePath := range []string{
+		"dist/agentic-proofkit",
+		strings.TrimPrefix(target.PackageTarEntry, "package/"),
+		"README.md",
+		"proofkit/cli-contract.v2.json",
+	} {
+		t.Run("missing file/"+relativePath, func(t *testing.T) {
+			consumer := materialize(t)
+			if err := snapshot.Verify(consumer); err != nil {
+				t.Fatalf("exact carrier rejected before removal: %v", err)
+			}
+			if err := os.Remove(filepath.Join(installedNPMPackageRoot(consumer), filepath.FromSlash(relativePath))); err != nil {
+				t.Fatal(err)
+			}
+			want := "read installed npm carrier " + relativePath + ": open artifact file failed"
+			if err := snapshot.Verify(consumer); err == nil || err.Error() != want {
+				t.Fatalf("missing carrier error=%v, want %q", err, want)
+			}
+		})
+	}
 	t.Run("symlink", func(t *testing.T) {
 		consumer := materialize(t)
 		contractPath := filepath.Join(installedNPMPackageRoot(consumer), "proofkit", "cli-contract.v2.json")
@@ -1146,6 +1166,19 @@ func TestOnboardingTraceCoversEveryDiscoveredPresetAndREADMEInput(t *testing.T) 
 	if err := verifyTrace(transportExecute, execute); err != nil {
 		t.Fatalf("verifyInstalledOnboardingTraceWithCarrier() error=%v", err)
 	}
+	t.Run("wrong leaf identity", func(t *testing.T) {
+		wrongIdentity := func(consumer string, input []byte, args ...string) (installedCommandResult, error) {
+			result, err := execute(consumer, input, args...)
+			if slices.Equal(args, []string{"help", "self-check"}) {
+				result.Stdout = bytes.Replace(result.Stdout, []byte("Command ID:\n  self-check\n"), []byte("Command ID:\n  wrong-command\n"), 1)
+			}
+			return result, err
+		}
+		const want = "outside consumer family navigation: installed CLI command routes or identities differ from the admitted contract"
+		if err := verifyTrace(wrongIdentity, wrongIdentity); err == nil || err.Error() != want {
+			t.Fatalf("wrong leaf identity error=%v, want %q", err, want)
+		}
+	})
 	wantTransportCalls := [][]string{{"help"}, {"help", "adopt", "plan"}}
 	if !reflect.DeepEqual(transportCalls, wantTransportCalls) {
 		t.Fatalf("transport calls = %v, want %v", transportCalls, wantTransportCalls)
@@ -1385,8 +1418,11 @@ func testCommandRouteGrammar() map[string]any {
 }
 
 func TestInstalledCommandRouteBijectionBindsCommandIdentity(t *testing.T) {
-	expected := map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}
-	if err := requireInstalledCommandRouteBijection(map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}, expected); err != nil {
+	contract, err := installedclicontract.Admit(installedContractFixture(`{"command":"adopt-plan","route":["adopt","plan"]},{"command":"self-check"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := contract.CheckCommandRoutes(map[string]string{"adopt plan": "adopt-plan", "self-check": "self-check"}); err != nil {
 		t.Fatalf("exact route-to-command bijection rejected: %v", err)
 	}
 	mutants := []map[string]string{
@@ -1395,7 +1431,7 @@ func TestInstalledCommandRouteBijectionBindsCommandIdentity(t *testing.T) {
 		{"adopt plan": "adopt-plan", "self-check": "self-check", "extra": "extra"},
 	}
 	for index, mutant := range mutants {
-		if err := requireInstalledCommandRouteBijection(mutant, expected); err == nil {
+		if err := contract.CheckCommandRoutes(mutant); err == nil {
 			t.Fatalf("route-to-command mutant %d was accepted", index)
 		}
 	}

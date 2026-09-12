@@ -644,8 +644,8 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 			observedRoutes[helpIdentity.Route] = helpIdentity.CommandID
 		}
 	}
-	if err := requireInstalledPythonCommandRouteBijection(observedRoutes, contractCommandIDsByRoute); err != nil {
-		return err
+	if err := contract.CheckCommandRoutes(observedRoutes); err != nil {
+		return fmt.Errorf("installed Python wheel family navigation: %w", err)
 	}
 
 	requirementSourceRef := "requirements.v1.json"
@@ -884,22 +884,6 @@ with os.fdopen(fd, "rb", closefd=True) as stream:
 		return nil, fmt.Errorf("installed Python package resource reader exited with code %d: %s", result.ExitCode, result.Stderr)
 	}
 	return result.Stdout, nil
-}
-
-func requireInstalledPythonCommandRouteBijection(observed map[string]string, expected map[string]string) error {
-	if len(observed) != len(expected) {
-		return fmt.Errorf("installed Python wheel family routes=%d embedded contract routes=%d", len(observed), len(expected))
-	}
-	for route, commandID := range expected {
-		observedCommandID, exists := observed[route]
-		if !exists {
-			return fmt.Errorf("installed Python wheel family navigation omitted embedded contract route %q", route)
-		}
-		if observedCommandID != commandID {
-			return fmt.Errorf("installed Python wheel route %q command id=%q, want %q", route, observedCommandID, commandID)
-		}
-	}
-	return nil
 }
 
 func verifyInstalledPythonAgentRouteEnvelopeModes(consumer string, environment []string, renderer cliexec.Renderer, inputPath string) error {

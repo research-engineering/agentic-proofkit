@@ -1942,8 +1942,8 @@ func verifyInstalledOnboardingTraceWithCarrier(consumer string, contractContent 
 			requirementSourceHelpFound = true
 		}
 	}
-	if err := requireInstalledCommandRouteBijection(observedCommandIDsByRoute, contractCommandIDsByRoute); err != nil {
-		return err
+	if err := installedContract.CheckCommandRoutes(observedCommandIDsByRoute); err != nil {
+		return fmt.Errorf("outside consumer family navigation: %w", err)
 	}
 	if !stackHelpFound {
 		return fmt.Errorf("outside consumer family navigation did not expose stack-preset")
@@ -2024,22 +2024,6 @@ func representativeMultiTokenHelpRoute(commandIDsByRoute map[string]string) (ins
 		Route: route,
 		Argv:  append([]string{"help"}, strings.Split(route, " ")...),
 	}, nil
-}
-
-func requireInstalledCommandRouteBijection(observed map[string]string, expected map[string]string) error {
-	if len(observed) != len(expected) {
-		return fmt.Errorf("outside consumer family command routes=%d installed contract routes=%d", len(observed), len(expected))
-	}
-	for route, commandID := range expected {
-		observedCommandID, exists := observed[route]
-		if !exists {
-			return fmt.Errorf("outside consumer family navigation omitted installed contract route %q", route)
-		}
-		if observedCommandID != commandID {
-			return fmt.Errorf("outside consumer route %q command id=%q, want %q", route, observedCommandID, commandID)
-		}
-	}
-	return nil
 }
 
 func installedRootHelpFamilyArgv(content []byte) ([]string, error) {
