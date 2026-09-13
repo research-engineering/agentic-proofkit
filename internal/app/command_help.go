@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
@@ -127,9 +128,7 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 		lines = append(lines, "", strings.TrimSuffix(specproofbundleadmission.InputGuide(renderer), "\n"))
 	}
 	if descriptor.name == "native-evidence-guidance" {
-		lines = append(lines, "", "After native execution or a recorded blocked/not-run attempt:",
-			"  "+renderer.DisplayCommand("proof-receipt-admission", "--help"),
-			"  This separate guide explains receipt operands and bundle linkage, not execution or trust.")
+		lines = append(lines, "", strings.TrimSuffix(nativeevidenceguidance.TraceabilityGuide(renderer), "\n"))
 	}
 	if pointer := adoptionGuidePointer(descriptor.name); pointer != "" {
 		lines = append(lines, "", "CLI authoring continuation:",
@@ -140,7 +139,7 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			lines = append(lines, "  Use only the source record for rendering; no materialization plan or apply is required.")
 		}
 	}
-	if descriptor.name == "adopt-plan" || descriptor.name == "native-evidence-guidance" || descriptor.name == "capability-map-admission" || descriptor.name == "stack-preset" {
+	if descriptor.name == "adopt-plan" || descriptor.name == "capability-map-admission" || descriptor.name == "stack-preset" {
 		lines = append(lines, "", "After owner review and native witness design:",
 			"  "+renderer.DisplayCommand("adopt", "materialize", "plan", "--help"),
 			"  This guide connects requirements, scenarios, test routes and write planning.",

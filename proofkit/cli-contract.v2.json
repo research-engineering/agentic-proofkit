@@ -143,7 +143,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -282,7 +282,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -396,7 +396,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -1187,7 +1187,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2506,7 +2506,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2612,7 +2612,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2740,7 +2740,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2867,7 +2867,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -2965,7 +2965,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -3281,7 +3281,7 @@
         "rootDefinitionDigest": "sha256:218011a133540f57ef74f8748747e00d33b6757c9f77725ecef39f45fb19423f",
         "nativeSource": {
           "path": "internal/command/nativeevidenceguidance",
-          "canonicalDigest": "sha256:dc0f538649d2f097f6cd39dad1db4b11da249206cac1b741a528beab48969974",
+          "canonicalDigest": "sha256:09c65c50c3b953691d3839400ba5739d386d7fab725fcd0aa3bbffce199ed9e2",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {
@@ -3640,7 +3640,7 @@
         "nativeSources": [
           {
             "path": "internal/app",
-            "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+            "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
             "evidenceClass": "source_checkout"
           },
           {
@@ -6935,7 +6935,7 @@
         "rootDefinitionDigest": "sha256:3c842174dff5361e7f83166469b832805e05aa314b073c16234b5b64e346281e",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+          "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
           "evidenceClass": "source_checkout"
         },
         "nativeAdmissionWitnessSelector": {
@@ -6964,7 +6964,7 @@
         "rootDefinitionDigest": "sha256:0ea95e277ebe44cd2de42c29b47c38686ac0b6b390d8965367437b3fe138e209",
         "nativeSource": {
           "path": "internal/app",
-          "canonicalDigest": "sha256:cda1717c3eeb47829fcae5d179d567d1c1d69561fdf8a614b3a2873182206faa",
+          "canonicalDigest": "sha256:a1b281f736785bdc5b054f72c7f7467236e1b7226c691de8cec88ef83bc0cf5d",
           "evidenceClass": "source_checkout"
         },
         "nativeOutputWitnessSelector": {

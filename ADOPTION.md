@@ -375,6 +375,63 @@ adequacy or update the affected artifacts; tests must not silently redefine
 requirements. These commands do not infer semantic equivalence, implement a
 persistent approval store or require meaningless edits to unchanged artifacts.
 
+### Native Traceability Cookbook
+
+The installed CLI contains the recipe and repository-specific adapter checklist:
+
+```sh
+agentic-proofkit native-evidence-guidance --help
+```
+
+It connects the existing authoring template, full binding graph, native
+discovery, receipt admission and reverse-impact review without a documentation
+lookup or a new runner. Normal JSON and text guidance stay bounded to their
+existing slots; the longer recipe is loaded only on explicit help.
+
+Start with one owner-reviewed promise, such as rejecting an empty request.
+The connected `adopt materialize plan --help` example supplies its requirement,
+scenario and witness records. Replace fictional paths, selectors, command and
+environment with actual repository facts. Run declaration checks before any
+write planning; their success is not evidence that the test exists or ran.
+
+| Step | Consumer-owned action | Observation to retain |
+|---|---|---|
+| Establish the route | Bind the stable requirement/scenario/witness tuple to native discovery, a path/selector and command/environment. | Every retained edge resolves; missing, unmapped and excluded tests remain explicit. |
+| Exercise behavior | Run the approved native check on a known-good implementation, then on one accepting the empty request. | The positive passes; the near miss fails the intended assertion, even if the declaration graph is unchanged. |
+| Exercise linkage | Remove a discovered test, then add a test with no admitted route. | The consumer linkage check identifies the missing and unmapped cases; it does not count them as passes. |
+| Exercise freshness | Keep the old receipt and change one bound source, test, command or environment operand. | The old success remains a historical observation and fails the currentness predicate. |
+| Restore | Restore the known-good subject and regenerate inventory before fresh execution. | Independent expected edges and the positive outcome are recovered. |
+
+Stable references may live beside native tests while inventories are derived.
+Do not duplicate a scenario's behavioral description in an editable inventory.
+A separate scenario document is justified only when it owns independently
+meaningful behavior; a binding's `scenarioId` alone is not that description.
+Native framework selectors and parameter instances are not portable scenario
+identities. Keep all matching requirement/witness edges for a shared scenario,
+and require an explicit consumer mapping when a selector or wrapper path is
+ambiguous. Proofkit's public structured graph preserves declared routes; it does
+not discover native tests or judge their assertions.
+
+Reverse review is distinct from the forward execution route above:
+
+```mermaid
+flowchart TB
+    Change["Changed source, test or route"] --> Facts["Exact base/current records"]
+    Facts --> Impact["Impact composition and routing"]
+    Impact --> Review["Review affected meanings and checks"]
+    Review --> Decision{"Adequacy preserved?"}
+    Decision -->|Yes| Confirm["Consumer records exact-subject confirmation"]
+    Decision -->|No| Update["Owner updates affected artifacts"]
+    Confirm --> Run["Required fresh native evidence"]
+    Update --> Run
+```
+
+`requirement-impact-input-compose` and `impact` own routing, not the confirmation
+store or the consumer's selection of fresh checks. This cookbook is a bounded
+workflow template, not a shipped native-discovery adapter or universal test
+completeness claim. A language migration must preserve observed promises while
+reviewing native adapters and evidence again; stable IDs do not prove parity.
+
 ## Rendering And Browser Views
 
 After reviewing and applying the candidate project with `adopt materialize
