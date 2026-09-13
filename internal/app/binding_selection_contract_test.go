@@ -143,3 +143,25 @@ func TestBindingSelectionCorrectionRejectsUndeclaredDrift(t *testing.T) {
 		})
 	}
 }
+
+func TestBindingSelectionCorrectionRejectsCoherentRequirednessDrift(t *testing.T) {
+	current := readCLIContractRaw(t)
+	var changedDigest string
+	mutatePublicABIRecord(t, current, "contractDefinitions", "definitionId", bindingSelectionDefinition, func(record map[string]any) {
+		variant := record["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
+		variant["requiredFields"] = variant["requiredFields"].([]any)[1:]
+		delete(record, "canonicalDigest")
+		encoded, err := stablejson.MarshalLayout(record, stablejson.LayoutCompact)
+		if err != nil {
+			t.Fatal(err)
+		}
+		changedDigest = digest.SHA256BytesRef(bytes.TrimSuffix(encoded, []byte{'\n'}))
+		record["canonicalDigest"] = changedDigest
+	})
+	mutatePublicABIRecord(t, current, "commands", "command", "requirement-bindings", func(record map[string]any) {
+		record["inputContract"].(map[string]any)["rootDefinitionDigest"] = changedDigest
+	})
+	if err := normalizeBindingSelectionPublicABIDelta(current); err == nil || err.Error() != "binding selection root fields differ from the declared correction" {
+		t.Fatalf("coherent requiredness drift was not rejected by the field-set predicate: %v", err)
+	}
+}
