@@ -14,6 +14,7 @@ import (
 
 func main() {
 	build := browserfixture.Workspace
+	view := "workspace"
 	if len(os.Args) == 2 && os.Args[1] == "--lookup" {
 		build = browserfixture.LookupWorkspace
 	} else if len(os.Args) == 2 && os.Args[1] == "--paging" {
@@ -30,6 +31,9 @@ func main() {
 		build = func() (map[string]any, error) { return browserfixture.CoverageWorkspace("structured", false) }
 	} else if len(os.Args) == 2 && os.Args[1] == "--coverage-empty" {
 		build = func() (map[string]any, error) { return browserfixture.CoverageWorkspace("compact", true) }
+	} else if len(os.Args) == 2 && os.Args[1] == "--source" {
+		build = browserfixture.Source
+		view = "source"
 	} else if len(os.Args) != 1 {
 		fatal(errors.New("unsupported browser fixture selector"))
 	}
@@ -39,7 +43,7 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	if err := requirementbrowser.Serve(ctx, workspace, requirementbrowser.Options{Host: "127.0.0.1", Port: 0, PortSet: true, SessionMode: "browse", View: "workspace"}, os.Stdout); err != nil && err != context.Canceled {
+	if err := requirementbrowser.Serve(ctx, workspace, requirementbrowser.Options{Host: "127.0.0.1", Port: 0, PortSet: true, SessionMode: "browse", View: view}, os.Stdout); err != nil && err != context.Canceled {
 		fatal(err)
 	}
 }

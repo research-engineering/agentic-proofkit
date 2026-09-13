@@ -20,6 +20,15 @@ func PagingWorkspace() (map[string]any, error) {
 	return workspace("medium", false)
 }
 
+func Source() (map[string]any, error) {
+	source := requirementSource("The system preserves the original semantic identity.", "high")
+	path := "docs/specs/" + strings.Repeat("source", 20)
+	source["specPackagePath"] = path
+	source["overviewPath"] = path + "/overview.md"
+	source["requirementsPath"] = path + "/requirements.v1.json"
+	return source, nil
+}
+
 func workspace(currentRisk string, parallelTrace bool) (map[string]any, error) {
 	base, err := snapshot("The system preserves the original semantic identity.", "high")
 	if err != nil {
@@ -59,12 +68,7 @@ func workspace(currentRisk string, parallelTrace bool) (map[string]any, error) {
 
 func snapshot(invariant, risk string) (map[string]any, error) {
 	tree := map[string]any{"callerAnnotations": []any{}, "edges": []any{}, "nodes": []any{map[string]any{"callerAnnotations": []any{}, "displayOrder": json.Number("1"), "label": "Fixture specification", "nodeId": "spec.root", "nodeKind": "meta_spec", "sourceRefs": []any{map[string]any{"sourceId": "browser.fixture.requirements", "sourceRefId": "spec.root.requirements", "sourceRefKind": "source_id", "sourceRole": "requirements"}}}}, "overlays": []any{}, "rootNodeId": "spec.root", "schemaVersion": json.Number("2"), "treeId": "browser.fixture.tree"}
-	requirementSource := map[string]any{
-		"nonClaims": []any{"Fixture requirements do not approve merge."}, "overviewPath": "docs/specs/browser-fixture/overview.md",
-		"requirements":     []any{map[string]any{"claimLevel": "blocking", "invariant": invariant, "lifecycle": map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "ownerId": "browser.fixture.owner", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": RequirementID, "riskClass": risk, "updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "browser.fixture.owner"}}},
-		"requirementsPath": "docs/specs/browser-fixture/requirements.v1.json", "schemaVersion": json.Number("1"), "sourceId": "browser.fixture.requirements", "specPackagePath": "docs/specs/browser-fixture",
-	}
-	projections := map[string]any{"requirementSources": []any{requirementSource}, "specTree": tree}
+	projections := map[string]any{"requirementSources": []any{requirementSource(invariant, risk)}, "specTree": tree}
 	treeBytes, err := stablejson.Marshal(tree)
 	if err != nil {
 		return nil, err
@@ -79,4 +83,12 @@ func snapshot(invariant, risk string) (map[string]any, error) {
 		return nil, err
 	}
 	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "browser.fixture.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources}), nil
+}
+
+func requirementSource(invariant, risk string) map[string]any {
+	return map[string]any{
+		"nonClaims": []any{"Fixture requirements do not approve merge."}, "overviewPath": "docs/specs/browser-fixture/overview.md",
+		"requirements":     []any{map[string]any{"claimLevel": "blocking", "invariant": invariant, "lifecycle": map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "ownerId": "browser.fixture.owner", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": RequirementID, "riskClass": risk, "updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "browser.fixture.owner"}}},
+		"requirementsPath": "docs/specs/browser-fixture/requirements.v1.json", "schemaVersion": json.Number("1"), "sourceId": "browser.fixture.requirements", "specPackagePath": "docs/specs/browser-fixture",
+	}
 }
