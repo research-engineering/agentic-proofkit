@@ -299,6 +299,47 @@ a requirement. Native tests and tools own executable verification procedures
 and observed result semantics. Contract tests and validators prove the proof
 infrastructure itself is coherent.
 
+For a route that actually runs:
+
+```mermaid
+flowchart TB
+    Requirement["Stable requirement ID"] --> Scenario["Scenario ID in a proof binding"]
+    Scenario --> Witness["Native witness, path and selector"]
+    Witness --> Command["Command and environment"]
+    Command --> Run["Repository-approved execution"]
+    Run --> Receipt["Result and subject digests"]
+    Receipt --> Admission["Receipt and bundle admission"]
+```
+
+This is an authoring and execution route, not automatic test generation or a
+transfer of semantic authority. A requirement may have several scenario and
+witness routes; a native test may reference several requirements. Keep logical
+IDs stable when a test is renamed or an implementation changes language, and
+review the changed native bindings. Public bindings carry scenario identity
+and routing, not a complete language-independent scenario body.
+
+Read the two kinds of result separately:
+
+| Question | Current result and boundary |
+|---|---|
+| Which declared tests and routes reference a requirement? | `requirement-coverage-input-compose` prepares `requirement-coverage-view` input from requirements, proof bindings and test inventory. The resulting coverage is declaration lookup, not execution evidence or proof that a test is an adequate falsifier. |
+| What was recorded for a run, and is the record usable? | `proof-receipt-admission` and `spec-proof-bundle-admission` validate supplied records and linkage. Use the separate currentness, producer and trust owners under consumer policy. Structurally admitted records can describe failed, blocked or not-run attempts; admission does not authenticate a producer or approve a change. |
+
+For the exact input recipes, ask the installed CLI rather than maintaining a
+second copy of its JSON fields:
+
+```sh
+agentic-proofkit requirement-authoring-plan --help
+agentic-proofkit native-evidence-guidance --help
+agentic-proofkit proof-receipt-admission --help
+agentic-proofkit spec-proof-bundle-admission --help
+```
+
+The authoring guide connects candidate materialization; native guidance names
+the repository-specific check and evidence obligations. Receipt and bundle
+guides distinguish actual observations from missing operands. Their deliberately
+incomplete templates must not be filled with invented success or provenance.
+
 Formal authority order:
 
 ```text
@@ -325,6 +366,14 @@ when the requirement and proof-binding route make the tested obligation
 explicit. Some high-level context can remain explanatory, but durable
 `must`, `shall`, `guarantee`, or readiness claims must resolve to stable
 requirement records or be rejected by the consuming repository's policy.
+
+Change impact runs in the other direction: a changed requirement, binding,
+test path, command or environment can require review of affected routes.
+`requirement-impact-input-compose` and `impact` use explicit base/current
+records and caller-supplied change facts. The consumer must confirm continued
+adequacy or update the affected artifacts; tests must not silently redefine
+requirements. These commands do not infer semantic equivalence, implement a
+persistent approval store or require meaningless edits to unchanged artifacts.
 
 ## Rendering And Browser Views
 
