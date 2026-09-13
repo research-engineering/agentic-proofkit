@@ -337,11 +337,13 @@ func hierarchyItems(items []HierarchyItem) string {
 func controls(filters []Filter, hasTable bool) string {
 	parts := []string{
 		"<section class=\"controls\" aria-label=\"View filters\">",
+		"<div class=\"control\">",
 		"<label class=\"search-label\" for=\"proofkit-search\">Search</label>",
 		"<input id=\"proofkit-search\" type=\"search\" autocomplete=\"off\" placeholder=\"Filter records\">",
+		"</div>",
 	}
 	if hasTable {
-		parts = append(parts, "<label for=\"proofkit-view-mode\">View</label><select id=\"proofkit-view-mode\"><option value=\"cards\">Cards</option><option value=\"table\">Table</option></select>")
+		parts = append(parts, "<div class=\"control\"><label for=\"proofkit-view-mode\">View</label><select id=\"proofkit-view-mode\"><option value=\"cards\">Cards</option><option value=\"table\">Table</option></select></div>")
 	}
 	parts = append(parts,
 		"<label class=\"toggle\"><input id=\"proofkit-show-ids\" type=\"checkbox\" checked> Show IDs</label>",
@@ -350,6 +352,7 @@ func controls(filters []Filter, hasTable bool) string {
 	for _, filter := range filters {
 		key := safeFilterKey(filter.Key)
 		parts = append(parts,
+			"<div class=\"control\">",
 			fmt.Sprintf("<label for=\"proofkit-filter-%s\">%s</label>", Escape(key), Escape(filter.Label)),
 			fmt.Sprintf("<select id=\"proofkit-filter-%s\" data-proofkit-filter data-filter-key=\"%s\">", Escape(key), Escape(key)),
 			"<option value=\"\">All</option>",
@@ -357,7 +360,7 @@ func controls(filters []Filter, hasTable bool) string {
 		for _, value := range filter.Values {
 			parts = append(parts, fmt.Sprintf("<option value=\"%s\">%s</option>", Escape(value), Escape(value)))
 		}
-		parts = append(parts, "</select>")
+		parts = append(parts, "</select></div>")
 	}
 	parts = append(parts, "</section>")
 	return strings.Join(parts, "\n")
@@ -524,7 +527,7 @@ func stableSuffix(value string) string {
 func css() string {
 	return strings.Join([]string{
 		":root{color-scheme:light dark;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;line-height:1.45;background:#f7f7f4;color:#1f2428}",
-		"body{margin:0}",
+		"body{margin:0;overflow-wrap:anywhere}",
 		"main{max-width:1120px;margin:0 auto;padding:32px 20px 56px}",
 		"header{margin-bottom:20px}",
 		"h1{font-size:clamp(1.7rem,2.8vw,2.6rem);line-height:1.1;margin:0}",
@@ -543,7 +546,8 @@ func css() string {
 		"dt{font-weight:700;color:#4b5563}",
 		"dd{margin:0;min-width:0}",
 		"code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;background:#f1f5f9;border-radius:4px;padding:.1em .3em}",
-		".controls{display:grid;grid-template-columns:minmax(180px,1fr) repeat(auto-fit,minmax(130px,200px));gap:10px;align-items:end;padding:14px;margin-bottom:10px;position:sticky;top:0;z-index:1}",
+		".controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;padding:14px;margin-bottom:10px;position:sticky;top:0;z-index:1}",
+		".control{display:grid;gap:6px;min-width:0}",
 		".search-label{position:absolute;left:-10000px}",
 		"input[type=search],select{width:100%;box-sizing:border-box;border:1px solid #c9d1d9;border-radius:6px;padding:8px 10px;background:#fff;color:inherit}",
 		".toggle{white-space:nowrap;font-size:.92rem}",
@@ -552,6 +556,7 @@ func css() string {
 		"button{border:1px solid #c9d1d9;border-radius:6px;background:#f6f8fa;color:inherit;padding:8px 10px;cursor:pointer}button:hover{background:#eef2f6}",
 		".result-count{margin:12px 2px;color:#586069}",
 		".cards{display:grid;gap:18px}",
+		".cards[hidden]{display:none}",
 		".card-group{display:grid;gap:12px;scroll-margin-top:86px}",
 		".card-group>h2{border-bottom:1px solid #d8dee4;padding-bottom:8px}",
 		".card{padding:18px}",

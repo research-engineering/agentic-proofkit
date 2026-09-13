@@ -3,9 +3,65 @@ package requirementsourceview
 import (
 	"encoding/json"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+func TestHTMLModesShareCompleteRequirementSearch(t *testing.T) {
+	input := validRequirementSource()
+	requirement := input["requirements"].([]any)[0].(map[string]any)
+	requirement["nonClaimRefs"] = []any{"NC-RENDERING-001"}
+	requirement["lifecycle"].(map[string]any)["evidenceRefs"] = []any{"review.rendering"}
+	output, code, err := BuildHTML(input)
+	if err != nil || code != 0 {
+		t.Fatalf("BuildHTML() code=%d error=%v", code, err)
+	}
+	search := regexp.MustCompile(`data-search="([^"]*)"`).FindAllStringSubmatch(output, -1)
+	if len(search) != 2 || search[0][1] != search[1][1] {
+		t.Fatal("card and table must search the same complete requirement record")
+	}
+	for _, value := range []string{
+		"REQ-PROOFKIT-VIEW-001", "proofkit.test",
+		"Renderer must preserve caller-controlled text safely.",
+		"blocking", "medium", "active", "NC-RENDERING-001", "review.rendering",
+		"docs/contracts/requirement-proof-binding-sources.v1.json",
+		"This test requirement does not execute native witnesses.",
+	} {
+		if !strings.Contains(search[0][1], strings.ToLower(value)) {
+			t.Fatalf("shared search omitted %q", value)
+		}
+	}
+}
+
+func TestHTMLModesSearchReplacementReferences(t *testing.T) {
+	input := validRequirementSource()
+	requirement := input["requirements"].([]any)[0].(map[string]any)
+	replacement := validRequirementSource()["requirements"].([]any)[0].(map[string]any)
+	replacement["requirementId"] = "REQ-PROOFKIT-VIEW-002"
+	requirement["claimLevel"] = "advisory"
+	requirement["lifecycle"] = map[string]any{
+		"state": "superseded", "evidenceRefs": []any{"review.replacement"},
+		"replacementRequirementIds": []any{"REQ-PROOFKIT-VIEW-002"},
+	}
+	input["requirements"] = append(input["requirements"].([]any), replacement)
+	output, code, err := BuildHTML(input)
+	if err != nil || code != 0 {
+		t.Fatalf("BuildHTML() code=%d error=%v", code, err)
+	}
+	matched := 0
+	for _, search := range regexp.MustCompile(`data-search="([^"]*)"`).FindAllStringSubmatch(output, -1) {
+		if strings.Contains(search[1], "req-proofkit-view-001") {
+			matched++
+			if !strings.Contains(search[1], "req-proofkit-view-002") {
+				t.Fatal("superseded requirement search omitted its replacement reference")
+			}
+		}
+	}
+	if matched != 2 {
+		t.Fatal("both projections of the superseded requirement must be checked")
+	}
+}
 
 func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.115603095301227499403457054570913397276777831949518460396011319173029743458113")

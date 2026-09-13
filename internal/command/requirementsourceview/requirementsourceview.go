@@ -244,7 +244,7 @@ func html(view map[string]any) string {
 				browserdoc.TableCell("lifecycle", lifecycle, false),
 				{Key: "proofBindings", Value: browserdoc.ListOrNone(stringArray(requirement["proofBindingRefs"]), true)},
 			},
-			SearchText:   browserdoc.SearchText(append([]string{stringValue(requirement["requirementId"]), owner, stringValue(requirement["invariant"]), claim, risk, lifecycle}, stringArray(requirement["proofBindingRefs"])...)),
+			SearchText:   search,
 			FilterValues: filters,
 		})
 	}

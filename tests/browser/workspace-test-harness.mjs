@@ -22,6 +22,10 @@ export const lookupTest = test.extend({
   lookupURL: [async ({}, use) => { await withFixture("--lookup", use); }, {scope: "worker"}],
 });
 
+export const sourceViewTest = test.extend({
+  sourceViewURL: [async ({}, use) => { await withFixture("--source", use); }, {scope: "worker"}],
+});
+
 export const pagingTest = test.extend({
   pagingURL: [async ({}, use) => { await withFixture("--paging", use); }, {scope: "worker"}],
 });
