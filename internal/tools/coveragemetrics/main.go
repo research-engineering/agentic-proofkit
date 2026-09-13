@@ -295,6 +295,17 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 }
 
 func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bindingFile) error {
+	// Command shape does not depend on source discovery or the active Go build.
+	for _, binding := range bindings.Bindings {
+		packagePath := "./" + filepath.ToSlash(filepath.Dir(binding.WitnessPath))
+		for _, selector := range binding.WitnessSelectors {
+			expectedCommand := fmt.Sprintf("go test %s -run '^%s$'", packagePath, selector.Selector)
+			if selector.Command != expectedCommand {
+				return fmt.Errorf("binding %s selector command=%q, want %q", binding.ScenarioID, selector.Command, expectedCommand)
+			}
+		}
+	}
+
 	activeWitnessPackages := map[string]map[string]struct{}{}
 	packageFunctionScopes := map[string]map[string]*ast.FuncDecl{}
 	for _, binding := range bindings.Bindings {
@@ -322,10 +333,6 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 			}
 			if !validGoTestFunction(function, testingAliases, dotImportedTesting) {
 				return fmt.Errorf("binding %s selector %s is not a valid Go test function", binding.ScenarioID, selector.Selector)
-			}
-			expectedCommand := fmt.Sprintf("go test %s -run '^%s$'", packagePath, selector.Selector)
-			if selector.Command != expectedCommand {
-				return fmt.Errorf("binding %s selector command=%q, want %q", binding.ScenarioID, selector.Command, expectedCommand)
 			}
 		}
 		if !strings.HasSuffix(binding.WitnessPath, "_test.go") {

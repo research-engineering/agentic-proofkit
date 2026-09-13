@@ -554,6 +554,50 @@ func TestEachLinkageDeadZoneConjunctHasIndependentFalsifier(t *testing.T) {
 	}
 }
 
+func TestBindingWitnessCommandPreflightPrecedesSourceDiscovery(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "missing-root")
+	first := bindingSelectorFixture("scenario.first", "internal/sample/first_test.go", "TestFirst")
+	last := bindingSelectorFixture("scenario.last", "internal/sample/last_test.go", "TestLast")
+	wantCommand := last.WitnessSelectors[0].Command
+	last.WitnessSelectors[0].Command = "go test ./wrong"
+	want := fmt.Sprintf("binding %s selector command=%q, want %q", last.ScenarioID, last.WitnessSelectors[0].Command, wantCommand)
+	for _, test := range []struct {
+		name     string
+		bindings []bindingScenario
+	}{
+		{name: "first binding", bindings: []bindingScenario{last}},
+		{name: "later binding", bindings: []bindingScenario{first, last}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindingFile{Bindings: test.bindings})
+			if err == nil || err.Error() != want {
+				t.Fatalf("command preflight error=%v, want %q", err, want)
+			}
+		})
+	}
+	t.Run("later selector", func(t *testing.T) {
+		binding := bindingSelectorFixture("scenario.multiple", first.WitnessPath, "TestFirst")
+		binding.WitnessSelectors = append(binding.WitnessSelectors, witnessSelector{Selector: "TestSecond", Command: "go test ./wrong"})
+		err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindingFile{Bindings: []bindingScenario{binding}})
+		want := "binding scenario.multiple selector command=\"go test ./wrong\", want \"go test ./internal/sample -run '^TestSecond$'\""
+		if err == nil || err.Error() != want {
+			t.Fatalf("later selector error=%v, want %q", err, want)
+		}
+	})
+	t.Run("valid shape still reads source", func(t *testing.T) {
+		err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindingFile{Bindings: []bindingScenario{first}})
+		if err == nil || !strings.Contains(err.Error(), "parse binding witness internal/sample/first_test.go:") {
+			t.Fatalf("source discovery error=%v, want missing witness rejection", err)
+		}
+	})
+	t.Run("no selectors", func(t *testing.T) {
+		first.WitnessSelectors = nil
+		if err := validateBindingWitnessSelectorExecutabilityAtRoot(root, bindingFile{Bindings: []bindingScenario{first}}); err != nil {
+			t.Fatalf("selector-free binding error=%v", err)
+		}
+	})
+}
+
 func TestBindingWitnessSelectorsRejectMissingSemanticOwner(t *testing.T) {
 	root := filepath.Join("..", "..", "..")
 	bindings, err := readJSON[bindingFile](filepath.Join(root, "proofkit", "requirement-bindings.json"))

@@ -1,17 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.9",
-  "version": "0.14.10",
+  "previousVersion": "0.14.10",
+  "version": "0.14.11",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.docs.adoption-proof-flow",
-      "summary": "Explain the stable requirement, scenario, native witness and execution route in the adoption guide. Separate declaration-only coverage from receipt and bundle admission, point to existing CLI input recipes, and clarify consumer-owned reverse impact review. Public CLI behavior, source formats and execution authority remain unchanged."
-    },
-    {
-      "changeId": "proofkit.runtime.process-group-retirement",
-      "summary": "Allow bounded process-group cleanup to observe disappearance after an ambiguous permission result, including a Darwin zombie-only group. Cleanup still requires observed group absence; persistent permission failures, remaining groups and other system errors remain failures. Clean repository-snapshot Git groups on every post-start terminal path, including normal completion and native failure. Preserve existing timeouts and direct cancellation behavior."
+      "changeId": "proofkit.tooling.witness-command-preflight",
+      "summary": "Reject malformed witness selector commands before source parsing and Go package discovery in the repository coverage gate. Preserve all existing inventory, source, build, skip and assertion checks for shape-valid commands. Private diagnostics prioritize command shape when several defects coexist. Public CLI behavior and source formats remain unchanged."
     }
   ],
   "migration": {
