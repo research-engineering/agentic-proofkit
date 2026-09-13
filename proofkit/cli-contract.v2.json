@@ -4720,7 +4720,7 @@
         "rootType": "object",
         "closed": true,
         "rootDefinitionRef": "proofkit.requirement-bindings.input.v1.root-shape",
-        "rootDefinitionDigest": "sha256:e7da70a2267f2ca13771e864bba6a1a0416132c2d56decb5db9f9694de021daf",
+        "rootDefinitionDigest": "sha256:123984c0fbb3eeee5020af333f8a5628e10d6aa931b038e42e44fbee92682e1f",
         "nativeSource": {
           "path": "internal/command/requirementbinding",
           "canonicalDigest": "sha256:ded6cdd4f6a6f12b7cf2b75e08f58e3960c6d51e7e0c7516b92750d239976aec",
@@ -13763,7 +13763,6 @@
               "nonClaims",
               "requirements",
               "schemaVersion",
-              "selection",
               "witnessCommands"
             ],
             "rootKind": "object",
@@ -13774,7 +13773,7 @@
           }
         ]
       },
-      "canonicalDigest": "sha256:e7da70a2267f2ca13771e864bba6a1a0416132c2d56decb5db9f9694de021daf"
+      "canonicalDigest": "sha256:123984c0fbb3eeee5020af333f8a5628e10d6aa931b038e42e44fbee92682e1f"
     },
     {
       "definitionId": "proofkit.requirement-bindings.output.v1.root-shape",

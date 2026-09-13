@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "8f5af076a5570fa279a67773ccef3abfe40e95920780e106ed6acfda06fcc828"
+	cliContractPublicABISHA256               = "1a4643ca0e9935b7cda81332bca168028c7b7bda28491867d41e244dad2aab2c"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -181,6 +181,11 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			definitionID: "proofkit.registry-consumer.input.v1.root-shape",
 			allowed:      []string{"input", "proof", "schemaVersion"},
 			required:     []string{"input", "schemaVersion"},
+		},
+		{
+			definitionID: "proofkit.requirement-bindings.input.v1.root-shape",
+			allowed:      []string{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "selection", "witnessCommands"},
+			required:     []string{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "witnessCommands"},
 		},
 		{
 			definitionID: "proofkit.requirement-proof-source-set.input.v2.root-shape",
