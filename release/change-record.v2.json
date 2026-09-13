@@ -1,21 +1,17 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.8",
-  "version": "0.14.9",
+  "previousVersion": "0.14.9",
+  "version": "0.14.10",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.cli.receipt-input-guidance",
-      "summary": "Add lazy command-help recipes and incomplete JSON templates for proof-receipt-admission and spec-proof-bundle-admission, with a native-evidence-guidance handoff. Explain logical selectors, digest subjects, actual execution statuses, original receipt retention and downstream currentness and trust boundaries. Guidance does not execute native tests, manufacture evidence or authenticate producers."
+      "changeId": "proofkit.docs.adoption-proof-flow",
+      "summary": "Explain the stable requirement, scenario, native witness and execution route in the adoption guide. Separate declaration-only coverage from receipt and bundle admission, point to existing CLI input recipes, and clarify consumer-owned reverse impact review. Public CLI behavior, source formats and execution authority remain unchanged."
     },
     {
-      "changeId": "proofkit.contract.optional-binding-selection",
-      "summary": "Correct the requirement-bindings root-shape declaration to make selection optional, matching existing native admission. Refresh its structural definition digest and generated projections while preserving the native input identity and behavior. Add exact contract-to-CLI checks and isolated coherent-digest controls; no consumer migration is required."
-    },
-    {
-      "changeId": "proofkit.verification.cli-owner-closure",
-      "summary": "Centralize private installed CLI route identity verification and retain bounded CLI parser ownership without expanding the accepted public syntax. Historical release observations remain immutable; their current comparison excludes only the independently validated later selection correction."
+      "changeId": "proofkit.runtime.process-group-retirement",
+      "summary": "Allow bounded process-group cleanup to observe disappearance after an ambiguous permission result, including a Darwin zombie-only group. Cleanup still requires observed group absence; persistent permission failures, remaining groups and other system errors remain failures. Clean repository-snapshot Git groups on every post-start terminal path, including normal completion and native failure. Preserve existing timeouts and direct cancellation behavior."
     }
   ],
   "migration": {

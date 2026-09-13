@@ -40,16 +40,25 @@ func TerminateAndWait(command *exec.Cmd, timeout time.Duration) error {
 	if command.Process == nil {
 		return nil
 	}
+	return terminateAndWait(command.Process.Pid, timeout, syscall.Kill)
+}
+
+func terminateAndWait(processGroupID int, timeout time.Duration, signal func(int, syscall.Signal) error) error {
 	if timeout <= 0 {
 		return fmt.Errorf("process-group cleanup timeout must be positive")
 	}
-	processGroupID := command.Process.Pid
-	if err := Terminate(command); err != nil {
-		return err
-	}
 	deadline := time.Now().Add(timeout)
+	terminationErr := signal(-processGroupID, syscall.SIGKILL)
+	if errors.Is(terminationErr, syscall.ESRCH) {
+		return nil
+	}
+	// Darwin can return EPERM for a zombie-only group. Only observed absence,
+	// not that ambiguous signal result, satisfies the cleanup obligation.
+	if terminationErr != nil && !errors.Is(terminationErr, syscall.EPERM) {
+		return terminationErr
+	}
 	for {
-		err := syscall.Kill(-processGroupID, syscall.Signal(0))
+		err := signal(-processGroupID, syscall.Signal(0))
 		if errors.Is(err, syscall.ESRCH) {
 			return nil
 		}
@@ -58,7 +67,7 @@ func TerminateAndWait(command *exec.Cmd, timeout time.Duration) error {
 		}
 		remaining := time.Until(deadline)
 		if remaining <= 0 {
-			return fmt.Errorf("process group %d remained present after cleanup timeout", processGroupID)
+			return errors.Join(fmt.Errorf("process group %d remained present after cleanup timeout", processGroupID), terminationErr)
 		}
 		if remaining > processGroupProbeInterval {
 			remaining = processGroupProbeInterval
