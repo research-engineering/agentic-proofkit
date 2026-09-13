@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.10",
-  "version": "0.14.11",
+  "previousVersion": "0.14.11",
+  "version": "0.14.12",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.tooling.witness-command-preflight",
-      "summary": "Reject malformed witness selector commands before source parsing and Go package discovery in the repository coverage gate. Preserve all existing inventory, source, build, skip and assertion checks for shape-valid commands. Private diagnostics prioritize command shape when several defects coexist. Public CLI behavior and source formats remain unchanged."
+      "changeId": "proofkit.guidance.source-view-input",
+      "summary": "Link requirement-source-view help to the existing connected source example without copying its template. Clarify that rendering needs only the source record, not a materialization plan or apply operation. Refresh shared application provenance fingerprints while preserving input admission, rendering, launcher profiles and public input/output schema identities."
     }
   ],
   "migration": {

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "1a4643ca0e9935b7cda81332bca168028c7b7bda28491867d41e244dad2aab2c"
+	cliContractPublicABISHA256               = "88d41c3e6d1be1393330a90466fe72c66fca2def6bcb4ff633d0274afb97b011"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
