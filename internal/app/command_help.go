@@ -7,7 +7,9 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
@@ -117,6 +119,17 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	}
 	if descriptor.name == "requirement-authoring-plan" {
 		lines = append(lines, "", strings.TrimSuffix(requirementauthoringplan.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "proof-receipt-admission" {
+		lines = append(lines, "", strings.TrimSuffix(proofreceiptadmission.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "spec-proof-bundle-admission" {
+		lines = append(lines, "", strings.TrimSuffix(specproofbundleadmission.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "native-evidence-guidance" {
+		lines = append(lines, "", "After native execution or a recorded blocked/not-run attempt:",
+			"  "+renderer.DisplayCommand("proof-receipt-admission", "--help"),
+			"  This separate guide explains receipt operands and bundle linkage, not execution or trust.")
 	}
 	if pointer := adoptionGuidePointer(descriptor.name); pointer != "" {
 		lines = append(lines, "", "CLI authoring continuation:",

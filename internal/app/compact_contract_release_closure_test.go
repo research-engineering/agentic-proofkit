@@ -437,6 +437,10 @@ func assertCompactParentContractSemanticClassification(t *testing.T, manifest co
 	t.Helper()
 	oldObservations := readCompactV1WireObservations(t)
 	currentObservations := currentCompactV2WireObservations(t)
+	currentContract := readCLIContractRaw(t)
+	if err := normalizeBindingSelectionPublicABIDelta(currentContract); err != nil {
+		t.Fatalf("validate subsequent binding selection correction: %v", err)
+	}
 	metadataOnly := []string{}
 	for _, delta := range manifest.Deltas {
 		if delta.Class != "parent_contract" && delta.Class != "metadata_freshness" {
@@ -445,6 +449,10 @@ func assertCompactParentContractSemanticClassification(t *testing.T, manifest co
 		key := compactWireObservationKey(delta.Surface, delta.Direction, delta.Variant)
 		oldValue := compactWithoutNativeSourceDigest(t, oldObservations[key], key+" frozen")
 		currentValue := compactWithoutNativeSourceDigest(t, currentObservations[key], key+" current")
+		if delta.Surface == "requirement-bindings" && delta.Direction == "input" {
+			// Exclude only the independently checked correction made after this release.
+			currentValue.(map[string]any)["contract"].(map[string]any)["rootDefinitionDigest"] = oldBindingSelectionDigest
+		}
 		equalWithoutDigest := compactJSONEqual(oldValue, currentValue)
 		if equalWithoutDigest != (delta.Class == "metadata_freshness") {
 			t.Fatalf("parent-contract delta %s class=%s does not match metadata-only=%t", delta.DeltaID, delta.Class, equalWithoutDigest)

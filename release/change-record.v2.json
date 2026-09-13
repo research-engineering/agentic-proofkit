@@ -1,13 +1,21 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.7",
-  "version": "0.14.8",
+  "previousVersion": "0.14.8",
+  "version": "0.14.9",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.source.empty-domain-parity",
-      "summary": "Admit requirement-free sources in the private grouped source model while preserving source identity, explicit non-claims, reference closure and resource limits. Existing groups still require members. Add exact canonical wire round trips and controls for referenced denials, immutable projections and unused profiles. The v2 codec remains internal; public CLI identities, active v1 sources and platform requirements are unchanged. No consumer migration is required."
+      "changeId": "proofkit.cli.receipt-input-guidance",
+      "summary": "Add lazy command-help recipes and incomplete JSON templates for proof-receipt-admission and spec-proof-bundle-admission, with a native-evidence-guidance handoff. Explain logical selectors, digest subjects, actual execution statuses, original receipt retention and downstream currentness and trust boundaries. Guidance does not execute native tests, manufacture evidence or authenticate producers."
+    },
+    {
+      "changeId": "proofkit.contract.optional-binding-selection",
+      "summary": "Correct the requirement-bindings root-shape declaration to make selection optional, matching existing native admission. Refresh its structural definition digest and generated projections while preserving the native input identity and behavior. Add exact contract-to-CLI checks and isolated coherent-digest controls; no consumer migration is required."
+    },
+    {
+      "changeId": "proofkit.verification.cli-owner-closure",
+      "summary": "Centralize private installed CLI route identity verification and retain bounded CLI parser ownership without expanding the accepted public syntax. Historical release observations remain immutable; their current comparison excludes only the independently validated later selection correction."
     }
   ],
   "migration": {
