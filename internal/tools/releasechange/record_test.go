@@ -198,7 +198,7 @@ var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
 	{ChangeID: "proofkit.docs.adoption-proof-flow", Summary: "Explain the stable requirement, scenario, native witness and execution route in the adoption guide. Separate declaration-only coverage from receipt and bundle admission, point to existing CLI input recipes, and clarify consumer-owned reverse impact review. Public CLI behavior, source formats and execution authority remain unchanged."},
-	{ChangeID: "proofkit.runtime.process-group-retirement", Summary: "Allow bounded process-group cleanup to observe disappearance after an ambiguous permission result, including a Darwin zombie-only group. Cleanup still requires observed group absence; persistent permission failures, remaining groups and other system errors remain failures. Preserve existing timeouts and direct cancellation behavior."},
+	{ChangeID: "proofkit.runtime.process-group-retirement", Summary: "Allow bounded process-group cleanup to observe disappearance after an ambiguous permission result, including a Darwin zombie-only group. Cleanup still requires observed group absence; persistent permission failures, remaining groups and other system errors remain failures. Clean repository-snapshot Git groups on every post-start terminal path, including normal completion and native failure. Preserve existing timeouts and direct cancellation behavior."},
 }
 
 var currentMigrationSteps = []string{}
