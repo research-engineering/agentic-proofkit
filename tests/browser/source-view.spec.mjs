@@ -11,6 +11,12 @@ test("source search preserves the record set and count across cards and table", 
     await page.getByRole("searchbox").fill(query);
     for (const mode of ["cards", "table", "cards"]) {
       await page.getByLabel("View", {exact: true}).selectOption(mode);
+      for (const [kind, active] of [["card", mode === "cards"], ["table", mode === "table"]]) {
+        const section = page.locator(`[data-proofkit-${kind}-section]`);
+        await expect(section).toHaveJSProperty("hidden", !active);
+        if (!active) await expect(section).toBeHidden();
+        else if (ids.length > 0) await expect(section).toBeVisible();
+      }
       const rows = page.locator(mode === "cards" ? "[data-proofkit-card]:visible .proofkit-id" : "[data-proofkit-table-row]:visible td:first-child");
       await expect(rows).toHaveText(ids);
       await expect(page.locator("#proofkit-visible-count")).toHaveText(String(ids.length));

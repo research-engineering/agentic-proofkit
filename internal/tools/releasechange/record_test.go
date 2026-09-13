@@ -198,7 +198,7 @@ var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
 	{ChangeID: "proofkit.views.source-search-parity", Summary: "Preserve the same requirement search results and visible count when switching between source-view cards and tables by reusing one complete search projection, including non-claims and reference metadata. Refresh source-view provenance fingerprints without changing source admission or public JSON schema identities."},
-	{ChangeID: "proofkit.views.static-layout", Summary: "Keep static-view select labels with their controls and wrap long source paths and identifiers within the page without clipping or shortening their text. Preserve existing event IDs, accessible labels, filters, downloads and table scrolling."},
+	{ChangeID: "proofkit.views.static-layout", Summary: "Keep static-view select labels with their controls, honor exclusive cards/table visibility, and wrap long source paths and identifiers within the page without clipping or shortening their text. Preserve existing event IDs, accessible labels, filters, downloads and table scrolling."},
 }
 
 var currentMigrationSteps = []string{}

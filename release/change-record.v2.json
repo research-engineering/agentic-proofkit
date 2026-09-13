@@ -11,7 +11,7 @@
     },
     {
       "changeId": "proofkit.views.static-layout",
-      "summary": "Keep static-view select labels with their controls and wrap long source paths and identifiers within the page without clipping or shortening their text. Preserve existing event IDs, accessible labels, filters, downloads and table scrolling."
+      "summary": "Keep static-view select labels with their controls, honor exclusive cards/table visibility, and wrap long source paths and identifiers within the page without clipping or shortening their text. Preserve existing event IDs, accessible labels, filters, downloads and table scrolling."
     }
   ],
   "migration": {

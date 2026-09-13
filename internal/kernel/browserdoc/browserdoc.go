@@ -556,6 +556,7 @@ func css() string {
 		"button{border:1px solid #c9d1d9;border-radius:6px;background:#f6f8fa;color:inherit;padding:8px 10px;cursor:pointer}button:hover{background:#eef2f6}",
 		".result-count{margin:12px 2px;color:#586069}",
 		".cards{display:grid;gap:18px}",
+		".cards[hidden]{display:none}",
 		".card-group{display:grid;gap:12px;scroll-margin-top:86px}",
 		".card-group>h2{border-bottom:1px solid #d8dee4;padding-bottom:8px}",
 		".card{padding:18px}",
