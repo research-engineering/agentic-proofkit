@@ -136,6 +136,9 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			"  "+renderer.DisplayCommand("adopt", "materialize", "plan", "--help"),
 			"  The connected request template contains this command's input at "+pointer+".",
 			"  Read its prerequisites and non-claims before adapting the synthetic values.")
+		if descriptor.name == "requirement-source-view" {
+			lines = append(lines, "  Use only the source record for rendering; no materialization plan or apply is required.")
+		}
 	}
 	if descriptor.name == "adopt-plan" || descriptor.name == "native-evidence-guidance" || descriptor.name == "capability-map-admission" || descriptor.name == "stack-preset" {
 		lines = append(lines, "", "After owner review and native witness design:",
@@ -151,7 +154,7 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 
 func adoptionGuidePointer(command string) string {
 	switch command {
-	case "requirement-source-admission":
+	case "requirement-source-admission", "requirement-source-view":
 		return "/requirementSources/0"
 	case "requirement-bindings":
 		return "/requirementProofBinding/record"

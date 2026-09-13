@@ -3,6 +3,7 @@ package app
 import (
 	"bytes"
 	"encoding/json"
+	"html"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -41,16 +42,22 @@ func TestAdoptionInputGuideCLI(t *testing.T) {
 
 	for command, pointer := range map[string]string{
 		"requirement-source-admission": "/requirementSources/0",
+		"requirement-source-view":      "/requirementSources/0",
 		"requirement-bindings":         "/requirementProofBinding/record",
 		"test-evidence-inventory":      "/testEvidenceInventory/record",
 	} {
 		t.Run(command, func(t *testing.T) {
-			status, help, stderr := executeAgentWorkflowCLI(t, []string{command, "--help"}, panicReader{}, PresentationCapabilities{})
-			if status != 0 || stderr != "" || !strings.Contains(help, "adopt materialize plan --help") || !strings.Contains(help, pointer) {
-				t.Fatalf("missing CLI continuation: status=%d stderr=%q help=%s", status, stderr, help)
-			}
-			if strings.Contains(help, "Connected request template") || strings.Contains(help, "Continue with the installed README") {
-				t.Fatal("child help duplicated the template or requires external documentation")
+			for _, args := range [][]string{{command, "--help"}, {command, "-h"}, {"help", command}} {
+				status, help, stderr := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+				if status != 0 || stderr != "" || !strings.Contains(help, "adopt materialize plan --help") || !strings.Contains(help, pointer) {
+					t.Fatalf("missing CLI continuation: status=%d stderr=%q help=%s", status, stderr, help)
+				}
+				if strings.Contains(help, "Connected request template") || strings.Contains(help, "Continue with the installed README") {
+					t.Fatal("child help duplicated the template or requires external documentation")
+				}
+				if command == "requirement-source-view" && !strings.Contains(help, "no materialization plan or apply is required") {
+					t.Fatal("source view continuation must not require the materialization workflow")
+				}
 			}
 		})
 	}
@@ -62,15 +69,17 @@ func TestAdoptionInputGuideCLI(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		descriptor, ok := commandDescriptorFor("requirement-source-admission")
-		if !ok {
-			t.Fatal("requirement source descriptor missing")
+		for _, command := range []string{"requirement-source-admission", "requirement-source-view"} {
+			descriptor, ok := commandDescriptorFor(command)
+			if !ok {
+				t.Fatal("requirement source descriptor missing")
+			}
+			help := commandUsageWithRenderer(descriptor, renderer)
+			if !strings.Contains(help, renderer.DisplayCommand("adopt", "materialize", "plan", "--help")) {
+				t.Fatal("continuation lost the installed carrier")
+			}
 		}
-		help := commandUsageWithRenderer(descriptor, renderer)
-		if !strings.Contains(help, renderer.DisplayCommand("adopt", "materialize", "plan", "--help")) {
-			t.Fatal("continuation lost the installed carrier")
-		}
-		descriptor, _ = commandDescriptorFor("adopt-materialize-plan")
+		descriptor, _ := commandDescriptorFor("adopt-materialize-plan")
 		guide := commandUsageWithRenderer(descriptor, renderer)
 		commands := guideCommands(t, guide, "Materialization input guide:", renderer)
 		if !reflect.DeepEqual(commands, expectedMaterializationGuideCommands()) {
@@ -107,6 +116,7 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 			packet["testEvidenceInventory"].(map[string]any)["record"].(map[string]any)["nonClaims"] = nonClaims
 			adoptionHelpEntry(packet)["nonClaims"] = nonClaims
 			payload := adoptionHelpJSON(t, packet)
+			assertSourceViewGuide(t, packet, payload)
 			_, help, _ := executeAgentWorkflowCLI(t, []string{"adopt", "materialize", "plan", "--help"}, panicReader{}, PresentationCapabilities{})
 			commands := guideCommands(t, help, "Materialization input guide:", cliexec.PathRenderer())
 			if !reflect.DeepEqual(commands, expectedMaterializationGuideCommands()) {
@@ -283,6 +293,53 @@ func adoptionHelpPacket(t *testing.T, root, intent string) map[string]any {
 	args := fillGuideOperands(t, commands[0], map[string]string{"<root>": root, "<intent>": intent})
 	packet["sourcePlan"] = runAdoptionHelpCLI(t, nil, args...)
 	return packet
+}
+
+func assertSourceViewGuide(t *testing.T, packet map[string]any, payload []byte) {
+	t.Helper()
+	status, help, stderr := executeAgentWorkflowCLI(t, []string{"requirement-source-view", "--help"}, panicReader{}, PresentationCapabilities{})
+	if status != 0 || stderr != "" {
+		t.Fatalf("source view help status=%d stderr=%q", status, stderr)
+	}
+	const prefix = "  The connected request template contains this command's input at "
+	pointer := ""
+	for _, line := range strings.Split(help, "\n") {
+		if value, ok := strings.CutPrefix(line, prefix); ok {
+			if pointer != "" {
+				t.Fatal("source view has more than one input continuation")
+			}
+			pointer = strings.TrimSuffix(value, ".")
+		}
+	}
+	if pointer != "/requirementSources/0" {
+		t.Fatalf("source view input pointer=%q", pointer)
+	}
+	source := packet["requirementSources"].([]any)[0].(map[string]any)
+	requirement := adoptionHelpRequirement(packet)
+	invalid := decodeCLIJSON(t, string(payload)).(map[string]any)
+	invalid["requirementSources"].([]any)[0].(map[string]any)["sourceId"] = ""
+	for _, format := range []string{"json", "html"} {
+		args := []string{"requirement-source-view", "--input", "-", "--input-pointer", pointer, "--format", format}
+		status, stdout, stderr := executeAgentWorkflowCLI(t, args, bytes.NewReader(payload), PresentationCapabilities{})
+		if status != 0 || stderr != "" {
+			t.Fatalf("source view %s status=%d stderr=%q", format, status, stderr)
+		}
+		if format == "json" {
+			view := decodeCLIJSON(t, stdout).(map[string]any)
+			viewRequirement := view["requirements"].([]any)[0].(map[string]any)
+			if view["viewKind"] != "proofkit.requirement-source-view" || view["authority"] != "presentation_only" || view["sourceId"] != source["sourceId"] ||
+				viewRequirement["requirementId"] != requirement["requirementId"] || viewRequirement["invariant"] != requirement["invariant"] {
+				t.Fatal("source view lost the selected template identity or presentation boundary")
+			}
+		} else if !strings.HasPrefix(stdout, "<!doctype html>") || !strings.Contains(stdout, "presentation_only") ||
+			!strings.Contains(stdout, html.EscapeString(requirement["invariant"].(string))) || !strings.Contains(stdout, requirement["requirementId"].(string)) {
+			t.Fatal("HTML source view lost the selected template content or presentation boundary")
+		}
+		status, stdout, stderr = executeAgentWorkflowCLI(t, args, bytes.NewReader(adoptionHelpJSON(t, invalid)), PresentationCapabilities{})
+		if status != 1 || stdout != "" || stderr == "" {
+			t.Fatalf("invalid source view %s status=%d stdout=%q stderr=%q", format, status, stdout, stderr)
+		}
+	}
 }
 
 func adoptionHelpJSON(t *testing.T, value any) []byte {
