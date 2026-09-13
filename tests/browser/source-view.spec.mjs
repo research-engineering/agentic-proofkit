@@ -1,10 +1,12 @@
 import {expect} from "@playwright/test";
 import {sourceViewTest as test} from "./workspace-test-harness.mjs";
+import {openWorkspace} from "./workspace-navigation-harness.mjs";
 
 const requirementId = "REQ-CONSUMER-001";
+const sourceHeading = "Requirement Source View: browser.fixture.requirements";
 
 test("source search preserves the record set and count across cards and table", async ({sourceViewURL, page}) => {
-  await page.goto(sourceViewURL);
+  await openWorkspace(page, sourceViewURL, sourceHeading);
   for (const [query, ids] of [["does not approve", [requirementId]], [requirementId, [requirementId]], ["no-such-record", []]]) {
     await page.getByRole("searchbox").fill(query);
     for (const mode of ["cards", "table", "cards"]) {
@@ -16,10 +18,15 @@ test("source search preserves the record set and count across cards and table", 
   }
 });
 
+test("source navigation rejects an incorrect view identity", async ({sourceViewURL, page}) => {
+  await expect(openWorkspace(page, sourceViewURL, "Requirement Source View: missing.source")).rejects.toThrow();
+  await expect(page.getByRole("heading", {name: sourceHeading, exact: true})).toBeVisible();
+});
+
 for (const width of [390, 1280]) {
   test(`source select labels stay grouped at ${width}px`, async ({sourceViewURL, page}) => {
     await page.setViewportSize({width, height: 900});
-    await page.goto(sourceViewURL);
+    await openWorkspace(page, sourceViewURL, sourceHeading);
     await expect(page.getByRole("searchbox", {name: "Search", exact: true})).toBeVisible();
     for (const id of ["proofkit-view-mode", "proofkit-filter-owner", "proofkit-filter-claim-level", "proofkit-filter-risk-class", "proofkit-filter-lifecycle"]) {
       const label = page.locator(`label[for="${id}"]`);
@@ -37,7 +44,7 @@ for (const width of [390, 1280]) {
 
   test(`source paths remain readable without overflow at ${width}px`, async ({sourceViewURL, page}) => {
     await page.setViewportSize({width, height: 900});
-    await page.goto(sourceViewURL);
+    await openWorkspace(page, sourceViewURL, sourceHeading);
     await expect(page.locator(".summary code").last()).toHaveText(`docs/specs/${"source".repeat(20)}/requirements.v1.json`);
     const layout = await page.evaluate(() => ({width: innerWidth, scrollWidth: document.documentElement.scrollWidth}));
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.width);

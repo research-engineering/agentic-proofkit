@@ -25,7 +25,7 @@ export function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame
     && request.frame() === mainFrame;
 }
 
-export async function navigateWorkspace(page, workspaceURL, trigger, responseError) {
+export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace") {
   const controller = new AbortController();
   const mainFrame = page.mainFrame();
   const responsePromise = page.waitForResponse(
@@ -40,7 +40,7 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     const response = await responsePromise;
     if (!response.ok()) throw new Error(responseError);
     await expect(
-      page.getByRole("heading", {name: "browser.fixture.workspace", exact: true}),
+      page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
   } catch (error) {
     controller.abort();
@@ -49,7 +49,7 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
   }
 }
 
-export async function openWorkspace(page, baseURL) {
+export async function openWorkspace(page, baseURL, heading) {
   const workspaceURL = admittedWorkspaceURL(baseURL);
   await navigateWorkspace(
     page,
@@ -59,6 +59,7 @@ export async function openWorkspace(page, baseURL) {
       return value;
     }, {target: workspaceURL, value: token}),
     "Workspace navigation did not return a successful response",
+    heading,
   );
 }
 
