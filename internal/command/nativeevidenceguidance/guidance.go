@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -28,6 +29,77 @@ const (
 )
 
 var errInvalidGuidanceTable = errors.New("native evidence guidance table is invalid")
+
+// TraceabilityGuide is lazy help, not a new runner or an inventory schema.
+func TraceabilityGuide(renderer cliexec.Renderer) string {
+	return strings.ReplaceAll(traceabilityGuide, "{{cli}}", renderer.DisplayCommand())
+}
+
+const traceabilityGuide = `Native traceability cookbook:
+  Use the repository-approved installed launcher. Read the connected example:
+    {{cli}} adopt materialize plan --help
+  Keep one editable requirement meaning. Code, tests, existing specifications,
+  design and implementation-plan documents are candidate sources, not approval.
+  Keep unresolved contradictions for owner review; code-baseline requires an
+  explicit decision to trust existing behavior. For candidate source changes:
+    {{cli}} requirement-authoring-plan --help
+
+  The materialization example owns the source, binding and inventory shapes.
+  Do not run materialization just to inspect declarations. For its scratch
+  <packet>, these commands read only the selected records; sourcePlan may remain
+  null while reading these children. Neither command below reads native files:
+  {{cli}} requirement-bindings --input <packet> --input-pointer /requirementProofBinding/record
+  {{cli}} evidence-graph --input <packet> --input-pointer /requirementProofBinding/record
+  Exit 0 proves declaration admission only. The graph groups full scenario rows
+  under each requirementId. Recover each key as
+  (requirementId, scenarioId, witnessId), not scenarioId alone. Keep commandIds,
+  environmentClasses, witnessPath and optional witnessSelectors together.
+  Resolve commandIds against witnessCommands in the admitted binding input;
+  command display strings are not approved argv arrays. Do not execute them as
+  shell text. A wrapper witnessPath need not equal the discovered native path.
+
+Repository-specific adapter template (implement under consumer authority):
+  1. Discover the selected native tests using the framework's actual inventory.
+     Bind native test IDs, paths, selectors and parameter instances. Keep missing,
+     skipped, excluded and discovered-but-unmapped cases distinct from passed.
+  2. Keep stable scenario references beside native declarations when appropriate.
+     Derive inventory from those references and the admitted binding records;
+     do not maintain a second editable copy of scenario bodies or inventory.
+     A separate portable scenario body belongs in a normative owner only when
+     it has independent meaning. Public binding v1 carries IDs, not such bodies.
+  3. Define the native selector convention explicitly. Match full binding rows,
+     retaining many-to-many edges. When using scenario plus selector as the
+     lookup key, retain every matching requirement/witness row. Compare declared
+     paths/selectors to discovery and reject unknown references or ambiguity;
+     missing optional selectors require a consumer decision, not a guessed match.
+     Index once; do not rescan all bindings for every discovered test.
+  4. Regenerate the derived inventory and compare it with any saved inventory.
+     Map requirementRefs, witnessRefs and commandRefs from the same matched rows;
+     preserve unbound rows for review. Admission of separate ID sets is not proof
+     of a valid qualified edge. Use currentness and native execution separately.
+  5. Run an independent positive control and a behavior-breaking near miss using
+     approved argv, root, environment and bounds from the evidence-guidance slots.
+     Also remove a discovered test, add an unmapped test, and replay evidence
+     after changing a bound subject. Require the intended failure in each case;
+     compare against independently authored expectations, not a second run of
+     the same projection. Restoration must recover the positive control.
+  6. Record actual status, exit, streams and subject identities. Do not turn a
+     structurally valid failed/not-run receipt into a successful native result:
+    {{cli}} proof-receipt-admission --help
+    {{cli}} spec-proof-bundle-admission --help
+     Declaration coverage, actual execution, currentness, producer trust and
+     merge approval are separate predicates. No step here grants those powers.
+  7. For a changed requirement, test, binding, command or environment, retain
+     exact base/current records and review affected routes with:
+    {{cli}} requirement-impact-input-compose --help
+     Confirm continued adequacy or update affected owners; never automatically
+     rewrite specification meaning from a test change. Bind any confirmation to
+     exact subjects. A prior success cannot certify changed input or toolchains.
+
+  This recipe is not a generic discovery importer, native runner, persistent
+  confirmation store or claim of complete coverage. Compact proof contracts use
+  their own versioned resolver and identities; do not feed them to this v1 recipe.
+`
 
 // Slot is one repository-owned decision required for executable native evidence.
 type Slot struct {

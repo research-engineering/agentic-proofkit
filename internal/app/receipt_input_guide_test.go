@@ -267,3 +267,158 @@ func checkReceiptGuideMutations(t *testing.T, packet, bundle map[string]any) {
 		})
 	}
 }
+
+func TestNativeTraceabilityGuideIsLazyAndCarrierBound(t *testing.T) {
+	var canonical string
+	for _, args := range [][]string{{"native-evidence-guidance", "--help"}, {"native-evidence-guidance", "-h"}, {"help", "native-evidence-guidance"}} {
+		code, output, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+		if code != 0 || diagnostic != "" || len(output) > 10<<10 || strings.Contains(output, "\x1b[") {
+			t.Fatalf("native help must be bounded and input-free: %v %q", code, diagnostic)
+		}
+		if canonical != "" && canonical != output {
+			t.Fatal("native help aliases differ")
+		}
+		canonical = output
+	}
+	for _, boundary := range []string{
+		"(requirementId, scenarioId, witnessId)", "not scenarioId alone",
+		"many-to-many", "missing optional selectors", "not a guessed match",
+		"independently authored expectations", "Index once",
+		"Declaration coverage, actual execution, currentness, producer trust",
+		"sourcePlan may remain", "Neither command below reads native files",
+		"Compact proof contracts use", "do not feed them to this v1 recipe",
+	} {
+		if !strings.Contains(canonical, boundary) {
+			t.Fatalf("guide lost boundary %q", boundary)
+		}
+	}
+	for _, carrier := range []struct{ profile, python string }{
+		{cliexec.ProfilePath, ""}, {cliexec.ProfileNPMOffline, ""}, {cliexec.ProfilePythonModule, "/example/python 3"},
+	} {
+		renderer, err := cliexec.AdmitLauncherProfile(carrier.profile, carrier.python)
+		if err != nil {
+			t.Fatal(err)
+		}
+		descriptor, _ := commandDescriptorFor("native-evidence-guidance")
+		help := commandUsageWithRenderer(descriptor, renderer)
+		want := [][]string{
+			{"requirement-bindings", "--input", "<packet>", "--input-pointer", "/requirementProofBinding/record"},
+			{"evidence-graph", "--input", "<packet>", "--input-pointer", "/requirementProofBinding/record"},
+		}
+		// Two-space indentation marks executable steps; four spaces mark lazy help.
+		if got := guideCommands(t, help, "Native traceability cookbook:", renderer); !reflect.DeepEqual(got, want) {
+			t.Fatalf("native recipe commands differ: %v", got)
+		}
+		var actualLazy, expectedLazy []string
+		for _, line := range strings.Split(help, "\n") {
+			if strings.HasPrefix(line, "    "+renderer.DisplayCommand()+" ") {
+				actualLazy = append(actualLazy, line)
+			}
+		}
+		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"requirement-impact-input-compose", "--help"}} {
+			expectedLazy = append(expectedLazy, "    "+renderer.DisplayCommand(command...))
+			code, output, diagnostic := executeAgentWorkflowCLI(t, command, panicReader{}, PresentationCapabilities{})
+			if code != 0 || output == "" || diagnostic != "" {
+				t.Fatalf("lazy help route is not executable: %v", command)
+			}
+		}
+		if !reflect.DeepEqual(actualLazy, expectedLazy) {
+			t.Fatalf("lazy help commands differ: %v", actualLazy)
+		}
+	}
+	for _, args := range [][]string{{"help"}, {"help", "families"}, {"native-evidence-guidance"}, {"native-evidence-guidance", "--format", "text"}, {"changed-path-set", "--help"}} {
+		code, output, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
+		if code != 0 || diagnostic != "" || strings.Contains(output, "Native traceability cookbook:") {
+			t.Fatal("long recipe must remain demand-loaded")
+		}
+	}
+}
+
+func TestNativeGuidanceDefaultBytesMatchReleasedBaseline(t *testing.T) {
+	// Independent installed v0.14.13 outputs, from source cde95855deb6.
+	for _, item := range []struct {
+		args   []string
+		bytes  int
+		digest string
+	}{
+		{[]string{"native-evidence-guidance"}, 9877, "366f2f37482506b8c94042dbd974469fceda79e2141b4faec61071893190b3ea"},
+		{[]string{"native-evidence-guidance", "--format", "text"}, 5712, "e7e69bd94b4f70962621f0cce57b872c306d9a811ee355b5135d3aec1a3a28c2"},
+	} {
+		code, output, diagnostic := executeAgentWorkflowCLI(t, item.args, panicReader{}, PresentationCapabilities{})
+		if code != 0 || diagnostic != "" || len(output) != item.bytes || fmt.Sprintf("%x", sha256.Sum256([]byte(output))) != item.digest {
+			t.Fatalf("default guidance differs from released bytes: %v", item.args)
+		}
+	}
+}
+
+func TestNativeTraceabilityGuidePreservesQualifiedRows(t *testing.T) {
+	packet := adoptionHelpPacket(t, t.TempDir(), "fresh")
+	packet["sourcePlan"] = nil // Child inspection does not require a materialization plan.
+	binding := packet["requirementProofBinding"].(map[string]any)["record"].(map[string]any)
+	first := binding["bindings"].([]any)[0].(map[string]any)
+	first["witnessSelectors"] = []any{map[string]any{"command": "go test ./src -run TestRejectEmptyInput", "selector": "TestRejectEmptyInput"}}
+	secondRequirement := cloneMap(t, binding["requirements"].([]any)[0].(map[string]any))
+	secondRequirement["requirementId"] = "REQ-EXAMPLE-002"
+	binding["requirements"] = append(binding["requirements"].([]any), secondRequirement)
+	second := cloneMap(t, first)
+	second["requirementId"] = "REQ-EXAMPLE-002"
+	delete(second, "witnessSelectors")
+	third := cloneMap(t, first)
+	third["witnessId"] = "example.witness.shared"
+	third["witnessPath"] = "src/shared_test.go"
+	third["commandIds"] = []any{"example.test.shared"}
+	third["environmentClasses"] = []any{"ci-go"}
+	third["witnessSelectors"] = []any{map[string]any{"command": "go test ./src -run TestShared", "selector": "TestShared"}}
+	binding["witnessCommands"] = append(binding["witnessCommands"].([]any), map[string]any{
+		"commandId": "example.test.shared", "command": "go test ./src -run TestShared", "environmentClasses": []any{"ci-go"},
+	})
+	binding["bindings"] = []any{first, third, second}
+	payload := adoptionHelpJSON(t, packet)
+	_, help, _ := executeAgentWorkflowCLI(t, []string{"native-evidence-guidance", "--help"}, panicReader{}, PresentationCapabilities{})
+	commands := guideCommands(t, help, "Native traceability cookbook:", cliexec.PathRenderer())
+	operands := map[string]string{"<packet>": "-"}
+	report := runAdoptionHelpCLI(t, payload, fillGuideOperands(t, commands[0], operands)...)
+	if report["state"] != "passed" {
+		t.Fatal("qualified input did not pass declaration admission")
+	}
+	graph := runAdoptionHelpCLI(t, payload, fillGuideOperands(t, commands[1], operands)...)
+	if graph["graphKind"] != "proofkit.requirement-evidence-graph" || fmt.Sprint(graph["bindingCount"]) != "3" || fmt.Sprint(graph["requirementCount"]) != "2" || fmt.Sprint(graph["commandCount"]) != "2" {
+		t.Fatalf("graph lost its qualified domain: %v", graph)
+	}
+	rows := graph["requirements"].([]any)
+	for index, witnessIDs := range [][]string{{"example.witness.empty", "example.witness.shared"}, {"example.witness.empty"}} {
+		row := rows[index].(map[string]any)
+		if row["requirementId"] != []string{"REQ-EXAMPLE-001", "REQ-EXAMPLE-002"}[index] {
+			t.Fatal("graph moved an edge to the wrong requirement")
+		}
+		want := make([]any, 0, len(witnessIDs))
+		for _, id := range witnessIDs {
+			expected := map[string]any{
+				"scenarioId": "example.requests.empty", "witnessId": id, "witnessKind": "contract", "witnessPath": "src/request_test.go",
+				"commandIds": []any{"example.test.requests"}, "environmentClasses": []any{"local-go"},
+				"witnessSelectors": []any{map[string]any{"command": "go test ./src -run TestRejectEmptyInput", "selector": "TestRejectEmptyInput"}},
+			}
+			if id == "example.witness.shared" {
+				expected["witnessPath"] = "src/shared_test.go"
+				expected["commandIds"] = []any{"example.test.shared"}
+				expected["environmentClasses"] = []any{"ci-go"}
+				expected["witnessSelectors"] = []any{map[string]any{"command": "go test ./src -run TestShared", "selector": "TestShared"}}
+			}
+			if index == 1 {
+				delete(expected, "witnessSelectors")
+			}
+			want = append(want, expected)
+		}
+		if !reflect.DeepEqual(row["scenarios"], want) {
+			t.Fatalf("qualified scenario rows differ: got %v want %v", row["scenarios"], want)
+		}
+	}
+	if !bytes.Equal(payload, adoptionHelpJSON(t, packet)) {
+		t.Fatal("read-only recipe changed the input")
+	}
+	first["commandIds"] = []any{"example.missing"}
+	code, output, diagnostic := executeAgentWorkflowCLI(t, fillGuideOperands(t, commands[1], operands), bytes.NewReader(adoptionHelpJSON(t, packet)), PresentationCapabilities{})
+	if code != 1 || output != "" || !strings.Contains(diagnostic, "unknown commandId") {
+		t.Fatalf("unresolved command must not become a graph: %d %q %q", code, output, diagnostic)
+	}
+}
