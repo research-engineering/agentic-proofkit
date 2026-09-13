@@ -43,10 +43,39 @@ func TestGitOutputTerminatesGroupAfterParentExit(t *testing.T) {
 				if childAbsent {
 					return
 				}
-				if data, err := os.ReadFile(pidPath); err == nil {
-					if pid, err := strconv.Atoi(string(data)); err == nil && pid > 1 {
-						_ = syscall.Kill(pid, syscall.SIGKILL)
+				data, err := os.ReadFile(pidPath)
+				if errors.Is(err, os.ErrNotExist) {
+					return
+				}
+				if err != nil {
+					t.Errorf("read owned child identity for cleanup: %v", err)
+					return
+				}
+				pid, err := strconv.Atoi(string(data))
+				if err != nil || pid <= 1 {
+					t.Error("invalid owned child identity during cleanup")
+					return
+				}
+				if err := syscall.Kill(pid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
+					t.Errorf("terminate owned child during cleanup: %v", err)
+					return
+				}
+				deadline := time.Now().Add(2 * time.Second)
+				for {
+					err := syscall.Kill(pid, 0)
+					if errors.Is(err, syscall.ESRCH) {
+						t.Log("fallback cleanup observed owned child absence")
+						return
 					}
+					if err != nil {
+						t.Errorf("observe owned child during cleanup: %v", err)
+						return
+					}
+					if !time.Now().Before(deadline) {
+						t.Error("owned child remained after cleanup deadline")
+						return
+					}
+					time.Sleep(time.Millisecond)
 				}
 			})
 			ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
