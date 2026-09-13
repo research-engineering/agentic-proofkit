@@ -8,6 +8,10 @@
     {
       "changeId": "proofkit.docs.adoption-proof-flow",
       "summary": "Explain the stable requirement, scenario, native witness and execution route in the adoption guide. Separate declaration-only coverage from receipt and bundle admission, point to existing CLI input recipes, and clarify consumer-owned reverse impact review. Public CLI behavior, source formats and execution authority remain unchanged."
+    },
+    {
+      "changeId": "proofkit.runtime.process-group-retirement",
+      "summary": "Allow bounded process-group cleanup to observe disappearance after an ambiguous permission result, including a Darwin zombie-only group. Cleanup still requires observed group absence; persistent permission failures, remaining groups and other system errors remain failures. Preserve existing timeouts and direct cancellation behavior."
     }
   ],
   "migration": {
