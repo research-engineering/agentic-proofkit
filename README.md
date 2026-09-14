@@ -43,21 +43,17 @@ create that project.
 
 ```mermaid
 flowchart TB
-    Observations["Code, tests, docs and maintainer intent"] --> Candidates["Agent: candidate invariants"]
-    Candidates --> Review["Repository owner: review and admit"]
-    Review --> Specs["Repo-owned specifications and proof bindings"]
-    Specs --> Checks["Proofkit: select required checks"]
-    Checks --> Native["Repository: run native tests and CI"]
-    Native --> Evidence["Proofkit: admit receipt-shaped evidence"]
-    Specs --> Views["Proofkit: bounded agent context and browser views"]
-    Evidence --> Views
-    Views --> Decision["Repository owner: decide"]
+    Sources["Code, tests, specs, plans or intent"] --> Draft["Agent: candidate invariants"]
+    Draft --> Spec["Owner accepts specs and check bindings"]
+    Spec --> Run["Proofkit selects; repository runs checks"]
+    Run --> Review["Owner: inspect and decide"]
 ```
 
 **Authoring is not proof.** Observed behavior and generated invariants remain
 candidates until the repository owner admits them. Binding a test declares a
 proof route; only its actual execution can supply execution evidence. Reports
-and views do not authenticate receipts or approve a change.
+and views do not authenticate receipts or approve a change. A current,
+materialized project's declarations can be inspected before checks run.
 
 ### Choose What You Trust
 
@@ -117,13 +113,14 @@ or the persisted specification format.
 ```bash
 npm exec --offline -- agentic-proofkit help
 npm exec --offline -- agentic-proofkit help adopt plan
-npm exec --offline -- agentic-proofkit help repo-profile-admission
+npm exec --offline -- agentic-proofkit help adopt materialize plan
 ```
 
 Command-specific help is derived from the private command descriptor table and
 does not read stdin. The full machine-readable command inventory remains
 `proofkit/cli-contract.v2.json`; the human route map is
-`docs/proofkit-contract-map.md`.
+`docs/proofkit-contract-map.md`. Materialization help includes a connected
+requirement, scenario and native-witness input template.
 
 Use the [route map](docs/proofkit-contract-map.md#agent-decision-procedure)
 for selective checks, migration parity, adoption diagnostics and bounded
@@ -225,10 +222,11 @@ npm exec --offline -- agentic-proofkit requirement-source-admission --input -
 
 </details>
 
-Use `secret-scan` only when the caller provides an explicit file inventory with
-content. It is a dedicated secret-like text detector for admitted inventory
-records; it does not traverse the repository, validate credential liveness, or
-replace provider secret scanning.
+Source admission checks the supplied record and its declared relationships.
+It does not read the referenced files, execute native checks, authenticate
+results or approve a change.
+
+### Caller-Owned Adapters
 
 For TypeScript consumers that want a small wrapper instead of hand-written
 child-process code:
