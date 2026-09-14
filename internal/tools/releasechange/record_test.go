@@ -197,7 +197,7 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 var currentBreakingChanges = []Change{}
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.guidance.coverage-currentness", Summary: "Connect lazy CLI input recipes for declaration coverage and receipt currentness to the native traceability cookbook. Preserve composer-to-view handoff, original receipt subjects, scope decisions and separate execution, currentness and trust predicates. Add causal recipe tests and refresh source-checkout provenance digests without changing runtime admission, ordinary guidance outputs, machine schema semantics, dependencies or supported platforms."},
+	{ChangeID: "proofkit.source.compatibility-boundaries", Summary: "Make common-field source correspondence, public v1 identity and paths, qualified binding projection and private-model resource-domain boundaries permanent cross-owner regression checks. Clarify that the internal grouped codec is not a public source transition. Runtime admission, CLI contracts, source formats, resource limits, dependencies and supported platforms remain unchanged."},
 }
 
 var currentMigrationSteps = []string{}
