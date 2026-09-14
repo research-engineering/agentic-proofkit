@@ -156,8 +156,9 @@ func (replay *sourceMapReplay) walk(pointer string, expected any, parent *ByteSp
 		if parent == nil || keySpan.Start <= parent.Start || !replay.gap(keySpan.End, span.Start, ":") {
 			return errors.New("source-map key/value separation differs")
 		}
-		actual, err := decodeReplayJSON(replay.source[keySpan.Start:keySpan.End])
-		if err != nil || actual != *key {
+		rawKey := replay.source[keySpan.Start:keySpan.End]
+		actual, err := decodeReplayJSON(rawKey)
+		if err != nil || actual != *key || !bytes.Equal(rawKey, bytes.TrimSpace(rawKey)) {
 			return errors.New("source-map key replay differs")
 		}
 	}
@@ -323,6 +324,31 @@ func TestSourceMapReplayRejectsIsolatedCoordinateFaults(t *testing.T) {
 			}
 			if err := sourceMapReplayError([]byte(source), candidate); err == nil || err.Error() != test.want {
 				t.Fatalf("isolated fault = %v; want %s", err, test.want)
+			}
+		})
+	}
+}
+
+func TestSourceMapReplayExcludesKeyWhitespace(t *testing.T) {
+	const source = `{ "a" :0}`
+	for _, test := range []struct {
+		name       string
+		start, end int64
+	}{
+		{"exact", 2, 5}, {"leading whitespace", 1, 5}, {"trailing whitespace", 2, 6},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			locations := SourceMap{entries: map[string]Location{
+				"":   {ValueSpan: ByteSpan{0, 9}, Start: Position{1, 1}, End: Position{1, 10}},
+				"/a": {KeySpan: &ByteSpan{test.start, test.end}, ValueSpan: ByteSpan{7, 8}, Start: Position{1, 8}, End: Position{1, 9}},
+			}}
+			err := sourceMapReplayError([]byte(source), locations)
+			if test.name == "exact" {
+				if err != nil {
+					t.Fatalf("positive key-token boundary: %v", err)
+				}
+			} else if err == nil || err.Error() != "source-map key replay differs" {
+				t.Fatalf("key whitespace control: %v", err)
 			}
 		})
 	}
