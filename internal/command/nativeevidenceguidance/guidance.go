@@ -77,6 +77,8 @@ Repository-specific adapter template (implement under consumer authority):
      Map requirementRefs, witnessRefs and commandRefs from the same matched rows;
      preserve unbound rows for review. Admission of separate ID sets is not proof
      of a valid qualified edge. Use currentness and native execution separately.
+     Inspect declaration coverage with the connected direct-input recipe:
+    {{cli}} requirement-coverage-input-compose --help
   5. Run an independent positive control and a behavior-breaking near miss using
      approved argv, root, environment and bounds from the evidence-guidance slots.
      Also remove a discovered test, add an unmapped test, and replay evidence
@@ -87,6 +89,7 @@ Repository-specific adapter template (implement under consumer authority):
      structurally valid failed/not-run receipt into a successful native result:
     {{cli}} proof-receipt-admission --help
     {{cli}} spec-proof-bundle-admission --help
+    {{cli}} receipt-currentness-scope --help
      Declaration coverage, actual execution, currentness, producer trust and
      merge approval are separate predicates. No step here grants those powers.
   7. For a changed requirement, test, binding, command or environment, retain

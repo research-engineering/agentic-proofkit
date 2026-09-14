@@ -333,6 +333,8 @@ agentic-proofkit requirement-authoring-plan --help
 agentic-proofkit native-evidence-guidance --help
 agentic-proofkit proof-receipt-admission --help
 agentic-proofkit spec-proof-bundle-admission --help
+agentic-proofkit requirement-coverage-input-compose --help
+agentic-proofkit receipt-currentness-scope --help
 ```
 
 The authoring guide connects candidate materialization; native guidance names
@@ -387,6 +389,15 @@ It connects the existing authoring template, full binding graph, native
 discovery, receipt admission and reverse-impact review without a documentation
 lookup or a new runner. Normal JSON and text guidance stay bounded to their
 existing slots; the longer recipe is loaded only on explicit help.
+
+The coverage guide connects the original source, binding and inventory inputs
+to the coverage composer and then its exact output to the view. Composer success
+does not mean coverage passed: retain the downstream failures, unmapped tests
+and declared dead zones. Currentness has a separate input guide that binds the
+original receipt's recorded subjects to independently captured current subjects.
+It does not discover files or authenticate supplied hashes; an inapplicable
+scope is not a current passing test. Both templates deliberately reject until
+the consumer supplies their missing operands.
 
 Start with one owner-reviewed promise, such as rejecting an empty request.
 The connected `adopt materialize plan --help` example supplies its requirement,
