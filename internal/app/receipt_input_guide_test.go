@@ -90,12 +90,21 @@ func TestReceiptInputGuideNativeHelper(t *testing.T) {
 		return
 	}
 	switch os.Args[len(os.Args)-1] {
-	case "passed":
+	case "passed", "failed":
+		accept := func(request string) bool { return request != "" }
+		if os.Args[len(os.Args)-1] == "failed" {
+			accept = func(string) bool { return true }
+		}
+		if !accept("valid") {
+			fmt.Fprintln(os.Stderr, "nonempty control rejected")
+			os.Exit(2)
+		}
+		if accept("") {
+			fmt.Print("empty input accepted\n")
+			os.Exit(1)
+		}
 		fmt.Print("empty input rejected\n")
 		os.Exit(0)
-	case "failed":
-		fmt.Print("empty input accepted\n")
-		os.Exit(1)
 	default:
 		os.Exit(2)
 	}
@@ -226,6 +235,7 @@ func TestReceiptInputGuideExecutionAndBundleChain(t *testing.T) {
 			if !bytes.Equal(payload, adoptionHelpJSON(t, packet)) {
 				t.Fatal("composition modified the source receipt")
 			}
+			checkCurrentnessGuideReceiptHandoff(t, packet, binding, root)
 			checkReceiptGuideMutations(t, packet, bundle)
 		})
 	}
@@ -315,7 +325,7 @@ func TestNativeTraceabilityGuideIsLazyAndCarrierBound(t *testing.T) {
 				actualLazy = append(actualLazy, line)
 			}
 		}
-		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"requirement-impact-input-compose", "--help"}} {
+		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"requirement-coverage-input-compose", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"receipt-currentness-scope", "--help"}, {"requirement-impact-input-compose", "--help"}} {
 			expectedLazy = append(expectedLazy, "    "+renderer.DisplayCommand(command...))
 			code, output, diagnostic := executeAgentWorkflowCLI(t, command, panicReader{}, PresentationCapabilities{})
 			if code != 0 || output == "" || diagnostic != "" {

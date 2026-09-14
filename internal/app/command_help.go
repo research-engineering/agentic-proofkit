@@ -9,7 +9,9 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
@@ -129,6 +131,12 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	}
 	if descriptor.name == "native-evidence-guidance" {
 		lines = append(lines, "", strings.TrimSuffix(nativeevidenceguidance.TraceabilityGuide(renderer), "\n"))
+	}
+	if descriptor.name == "requirement-coverage-input-compose" {
+		lines = append(lines, "", strings.TrimSuffix(requirementcoverageinput.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "receipt-currentness-scope" {
+		lines = append(lines, "", strings.TrimSuffix(receiptcurrentnessscope.InputGuide(renderer), "\n"))
 	}
 	if pointer := adoptionGuidePointer(descriptor.name); pointer != "" {
 		lines = append(lines, "", "CLI authoring continuation:",
