@@ -43,10 +43,10 @@ create that project.
 
 ```mermaid
 flowchart TB
-    Sources["Code, tests, specs, plans or intent"] --> Draft["Agent proposes candidate invariants"]
+    Sources["Code, tests, specs, plans or intent"] --> Draft["Agent: candidate invariants"]
     Draft --> Spec["Owner accepts specs and check bindings"]
     Spec --> Run["Proofkit selects; repository runs checks"]
-    Run --> Review["Inspect reported evidence; owner decides"]
+    Run --> Review["Owner: inspect and decide"]
 ```
 
 **Authoring is not proof.** Observed behavior and generated invariants remain
