@@ -1,17 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.13",
-  "version": "0.14.14",
+  "previousVersion": "0.14.14",
+  "version": "0.14.15",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.guidance.native-traceability",
-      "summary": "Add a demand-loaded native-evidence help recipe connecting the existing authoring template, qualified requirement/scenario/witness rows, repository-specific discovery, receipt admission and reverse-impact review. Preserve the ordinary 22-slot JSON/text guidance bytes, command routes and public schemas; refresh induced native-source provenance fingerprints."
-    },
-    {
-      "changeId": "proofkit.guidance.traceability-cookbook",
-      "summary": "Explain positive, behavior-breaking, missing-test, unmapped-test and stale-evidence controls in the adoption cookbook, with a separate reverse-impact diagram and explicit consumer ownership. The recipe does not implement native discovery, test execution, a confirmation store or a second scenario-body source."
+      "changeId": "proofkit.source-coordinate.replay-oracle",
+      "summary": "Strengthen private source-codec tests with input-derived lexical replay of the complete JSON pointer inventory, keys, values, parent containment, array order and Unicode scalar coordinates. Add independent corrupt-map controls and admitted-source cases for compact JSON, LF, CRLF, CR and exact large integers. Production parsing, formatting, resource limits and public CLI contracts are unchanged; finite controls do not establish exhaustive proof or a public source-format cutover."
     }
   ],
   "migration": {

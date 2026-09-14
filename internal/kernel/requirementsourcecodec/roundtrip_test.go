@@ -28,6 +28,7 @@ func TestRequirementFreeSourceWireRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse(empty source): %v", err)
 	}
+	assertFuzzSourceMap(t, []byte(source), result.SourceMap)
 	want := requirementsourcemodel.AtomicProjection{
 		SourceID: "proofkit.empty.source", SpecPackagePath: "docs/specs/empty",
 		SourceNonClaims: []string{"Source admission does not prove coverage."},
@@ -238,6 +239,7 @@ func TestSourceMapIndexesLexicalWireOrderNotNormalizedOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse() error = %v", err)
 	}
+	assertFuzzSourceMap(t, payload, result.SourceMap)
 	location, ok := result.SourceMap.Location("/groups/0/groupId")
 	if !ok {
 		t.Fatal("source map lacks lexical first group")

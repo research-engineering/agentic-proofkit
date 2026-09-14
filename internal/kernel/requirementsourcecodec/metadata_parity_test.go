@@ -28,6 +28,7 @@ func TestBoundaryMetadataWireRoundTripPreservesExactOwnerValues(t *testing.T) {
 	if err != nil || !projectionsEqual(model, parsed.Model) {
 		t.Fatalf("metadata round trip failed: %v", err)
 	}
+	assertFuzzSourceMap(t, payload, parsed.SourceMap)
 	first := parsed.Model.Atomic().Requirements[0]
 	for _, check := range []struct{ got, want []string }{
 		{parsed.Model.Atomic().SourceNonClaims, draft.SourceNonClaims},
