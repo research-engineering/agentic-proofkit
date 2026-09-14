@@ -220,7 +220,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.17",
+		"# @research-engineering/agentic-proofkit 0.14.18",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -273,7 +273,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.17",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.18",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -285,7 +285,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.16 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.16`.",
+		"- Pin npm consumers to the previous admitted version 0.14.17 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.17`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

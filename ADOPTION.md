@@ -293,6 +293,18 @@ human context in `overview.md` plus machine-admissible `requirements.v1.json`
 records. The overview explains context; it does not create uncited durable
 truth.
 
+The public source contract still requires `schemaVersion: 1` and the matching
+`specPackagePath/overview.md` and `specPackagePath/requirements.v1.json` paths.
+The internal grouped v2 model and codec are not an alternative public reader.
+Changing a version number or filename does not migrate a source or its bindings.
+
+Canonical field correspondence and accepted input domains are separate checks.
+The current public byte limit does not imply that a source fits the private
+model's member and expanded-projection budgets. A future source transition must
+declare its versioned limits and qualify every affected consumer; it must not
+silently narrow current admission or infer scenario bodies from binding IDs.
+Keep the public v1 source active until that transition is explicitly admitted.
+
 Proof bindings are verification-route contracts. They answer which scenario,
 witness, command, environment class, and receipt policy can falsify or support
 a requirement. Native tests and tools own executable verification procedures
