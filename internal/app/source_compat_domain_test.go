@@ -47,10 +47,17 @@ func TestSourceCompatibilityResourceDomainsAreNotInterchangeable(t *testing.T) {
 
 func TestSourceCompatibilityPublicIdentityAndPathsStayV1(t *testing.T) {
 	source := sourceCompatSource(1)
-	for _, field := range []string{"overviewPath", "requirementsPath"} {
-		t.Run(field, func(t *testing.T) {
+	for _, item := range []struct{ name, field, path string }{
+		{"overview/directory", "overviewPath", "docs/specs/other/overview.md"},
+		{"overview/basename", "overviewPath", source.SpecPackagePath + "/summary.md"},
+		{"overview/both", "overviewPath", "docs/specs/other/summary.md"},
+		{"requirements/directory", "requirementsPath", "docs/specs/other/requirements.v1.json"},
+		{"requirements/basename", "requirementsPath", source.SpecPackagePath + "/requirements.v2.json"},
+		{"requirements/both", "requirementsPath", "docs/specs/other/requirements.v2.json"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
 			input := legacy.SourceValue(source)
-			input[field] = "docs/specs/other/" + map[string]string{"overviewPath": "overview.md", "requirementsPath": "requirements.v2.json"}[field]
+			input[item.field] = item.path
 			var stdout, stderr bytes.Buffer
 			exit := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(sourceCompatJSON(t, input)), &stdout, &stderr)
 			if exit != 1 || stderr.Len() != 0 {
@@ -59,6 +66,9 @@ func TestSourceCompatibilityPublicIdentityAndPathsStayV1(t *testing.T) {
 			report := sourceCompatDecode(t, stdout.Bytes()).(map[string]any)
 			if report["state"] != "failed" || report["reportKind"] != "proofkit.requirement-source-admission" {
 				t.Fatal("path contradiction did not produce the expected failed report")
+			}
+			if report["summary"].(map[string]any)["failureCount"] != json.Number("1") {
+				t.Fatal("path case triggered an unrelated additional failure")
 			}
 		})
 	}

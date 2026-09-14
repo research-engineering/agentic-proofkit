@@ -23,9 +23,15 @@ func TestSourceCompatibilityQualifiedBindingRowsSurviveCLI(t *testing.T) {
 		input.Bindings[i].ScenarioID = "scenario.shared"
 		input.Bindings[i].WitnessID = "witness.shared"
 	}
+	originalSelectors := slices.Clone(input.Bindings[0].WitnessSelectors)
 	otherScenario, otherWitness := input.Bindings[0], input.Bindings[0]
 	otherScenario.ScenarioID = "scenario.other"
+	otherScenario.WitnessSelectors = []requirementbinding.WitnessSelector{{Command: "go test ./tests -run TestScenarioVariant", Selector: "TestScenarioVariant"}}
 	otherWitness.WitnessID = "witness.other"
+	otherWitness.WitnessSelectors = []requirementbinding.WitnessSelector{{Command: "go test ./tests -run TestWitnessVariant", Selector: "TestWitnessVariant"}}
+	if !reflect.DeepEqual(input.Bindings[0].WitnessSelectors, originalSelectors) {
+		t.Fatal("fixture variants mutated the original selector payload")
+	}
 	input.Bindings = append(input.Bindings, otherScenario, otherWitness)
 	slices.SortFunc(input.Bindings, func(a, b requirementbinding.Binding) int {
 		for _, pair := range [][2]string{{a.RequirementID, b.RequirementID}, {a.ScenarioID, b.ScenarioID}, {a.WitnessID, b.WitnessID}} {
