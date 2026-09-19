@@ -79,7 +79,7 @@ func validateReferenceClosure(definitions map[string]struct{}, vocabulary map[st
 				return invalid("invalid_reference_role", "references")
 			}
 			if _, exists := definitions[edge.To.ID]; !exists {
-				return invalid("dangling_nonclaim_ref", "references")
+				return invalid("dangling_nonclaim_ref", nonClaimReferencePath(edge))
 			}
 			usedDefinitions[edge.To.ID] = struct{}{}
 		case ReferenceScenarioVocabulary:
@@ -103,6 +103,21 @@ func validateReferenceClosure(definitions map[string]struct{}, vocabulary map[st
 		}
 	}
 	return nil
+}
+
+func nonClaimReferencePath(edge ReferenceEdge) string {
+	switch edge.Kind {
+	case ReferenceSourceNonClaim:
+		return "sourceNonClaimRefs"
+	case ReferenceRequirementNonClaim:
+		return identified("requirements", edge.From.ID) + ".nonClaimRefs"
+	case ReferenceScenarioNonClaim:
+		return identified("scenarios", edge.From.ID) + ".nonClaimRefs"
+	case ReferenceDerivationNonClaim:
+		return identified("derivations", edge.From.ID) + ".nonClaimRefs"
+	default:
+		return "references"
+	}
 }
 
 func sortedSetKeys(values map[string]struct{}) []string {

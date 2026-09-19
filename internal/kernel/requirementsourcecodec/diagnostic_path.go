@@ -24,6 +24,10 @@ func resolveModelPath(wire document, path string) diagnosticPath {
 		return resolveIdentifiedPath(segments, "nonClaimDefinitions", len(wire.NonClaimDefinitions), func(index int) string { return wire.NonClaimDefinitions[index].NonClaimID })
 	case "vocabulary":
 		return resolveIdentifiedPath(segments, "vocabulary", len(wire.Vocabulary), func(index int) string { return wire.Vocabulary[index].TermID })
+	case "scenarios":
+		return resolveIdentifiedPath(segments, "scenarios", len(wire.Scenarios), func(index int) string { return wire.Scenarios[index].ScenarioID })
+	case "derivations":
+		return resolveIdentifiedPath(segments, "derivations", len(wire.Derivations), func(index int) string { return wire.Derivations[index].DerivationID })
 	default:
 		return conventionalModelPath(segments)
 	}
@@ -129,13 +133,8 @@ func conventionalModelPath(segments []string) diagnosticPath {
 }
 
 func appendSafeSegments(base string, segments []string) diagnosticPath {
-	lookup := base
-	reported := base
-	for _, segment := range segments {
-		lookup = joinPointer(lookup, segment)
-		reported = joinPointer(reported, segment)
-	}
-	return diagnosticPath{lookup: lookup, reported: reported}
+	tail := conventionalModelPath(segments)
+	return diagnosticPath{lookup: base + tail.lookup, reported: base + tail.reported}
 }
 
 func sameDiagnosticPath(path string) diagnosticPath {
