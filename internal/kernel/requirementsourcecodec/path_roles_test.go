@@ -12,7 +12,7 @@ import (
 
 func TestScenarioDiagnosticRolesDoNotCollide(t *testing.T) {
 	for _, reverse := range []bool{false, true} {
-		for _, role := range []string{"aggregate", "position", "identity"} {
+		for _, role := range []string{"aggregate", "structural-position", "position", "identity"} {
 			t.Run(fmt.Sprintf("%s/reverse=%t", role, reverse), func(t *testing.T) {
 				payload := mutateRoot(t, mustPayload(t), func(root map[string]any) {
 					first := root["scenarios"].([]any)[0].(map[string]any)
@@ -38,10 +38,11 @@ func TestScenarioDiagnosticRolesDoNotCollide(t *testing.T) {
 					t.Fatal(err)
 				}
 				expected := object["scenarios"]
+				occurrences := 1
 				switch role {
 				case "aggregate":
 					limits.MaxExamples = 3
-				case "position":
+				case "structural-position":
 					limits.MaxExamplesPerScenario = 1
 					path, code = "/scenarios/0/examples", "collection_limit_exceeded"
 					var scenarios []map[string]json.RawMessage
@@ -49,22 +50,37 @@ func TestScenarioDiagnosticRolesDoNotCollide(t *testing.T) {
 						t.Fatal(err)
 					}
 					expected = scenarios[0]["examples"]
-				case "identity":
+					occurrences = 2
+				case "position", "identity":
 					index := 0
 					if reverse {
 						index = 1
 					}
 					payload = mutateRoot(t, payload, func(root map[string]any) {
-						root["scenarios"].([]any)[index].(map[string]any)["nonClaimRefs"] = []any{"NCL-MISSING"}
+						scenario := root["scenarios"].([]any)[index].(map[string]any)
+						if role == "position" {
+							scenario["actionSequence"] = []any{"FIXME position sentinel"}
+						} else {
+							scenario["nonClaimRefs"] = []any{"NCL-MISSING"}
+						}
 					})
 					path, code = fmt.Sprintf("/scenarios/%d/nonClaimRefs", index), "dangling_nonclaim_ref"
 					expected = []byte(`["NCL-MISSING"]`)
+					if role == "position" {
+						path, code = fmt.Sprintf("/scenarios/%d/actionSequence/0", index), "placeholder_text"
+						expected = []byte(`"FIXME position sentinel"`)
+					}
 				}
 				_, err := ParseWithLimits(payload, DefaultLimits(), limits)
 				assertDiagnostic(t, err, code, path)
 				span := err.(*Error).Diagnostic().Span
-				if !bytes.Equal(payload[span.Start:span.End], expected) {
-					t.Fatal("diagnostic role selected another original value")
+				if bytes.Count(payload, expected) != occurrences {
+					t.Fatal("fixture occurrence count differs")
+				}
+				start := bytes.Index(payload, expected)
+				want := ByteSpan{Start: int64(start), End: int64(start + len(expected))}
+				if span != want {
+					t.Fatalf("diagnostic span = %#v, want original occurrence %#v", span, want)
 				}
 			})
 		}
@@ -83,7 +99,7 @@ func TestModelPathRoleSelectsOnlyQuotedIdentities(t *testing.T) {
 	}
 	for _, root := range []string{"profiles", "nonClaimDefinitions", "vocabulary", "scenarios", "derivations"} {
 		for _, item := range []struct{ suffix, want string }{
-			{"", ""}, {".examples", "/examples"}, {"[0].examples", "/0/examples"},
+			{"", ""}, {".examples", "/examples"}, {"[0].examples", "/0/examples"}, {"[1].examples", "/1/examples"},
 			{`["examples"].nonClaimRefs`, "/0/nonClaimRefs"},
 			{`["0"].nonClaimRefs`, "/1/nonClaimRefs"},
 		} {
