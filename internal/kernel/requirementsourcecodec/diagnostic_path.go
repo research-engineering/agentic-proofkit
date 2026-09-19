@@ -15,6 +15,10 @@ func resolveModelPath(wire document, path string) diagnosticPath {
 	if len(segments) == 0 {
 		return diagnosticPath{}
 	}
+	// Only the model's quoted-identity syntax denotes an entity lookup.
+	if !strings.HasPrefix(path, segments[0]+`["`) {
+		return conventionalModelPath(segments)
+	}
 	switch segments[0] {
 	case "requirements":
 		return resolveRequirementPath(wire, segments)
@@ -101,9 +105,6 @@ func metadataFieldPresence(fields metadataFields, field string) (present bool, k
 func resolveIdentifiedPath(segments []string, root string, count int, identity func(int) string) diagnosticPath {
 	if len(segments) < 2 {
 		return conventionalModelPath(segments)
-	}
-	if index, err := strconv.Atoi(segments[1]); err == nil && index >= 0 && index < count {
-		return appendSafeSegments(pointer(root, index), segments[2:])
 	}
 	for index := 0; index < count; index++ {
 		if identity(index) == segments[1] {
