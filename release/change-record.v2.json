@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.18",
-  "version": "0.14.19",
+  "previousVersion": "0.14.19",
+  "version": "0.14.20",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.traceability.input-guidance",
-      "summary": "Add lazy CLI recipes for source-intake roles, canonical catalog/tree composition and current-subject review of the exact publication plane. Strengthen connected input and normative-guidance regression oracles and explain scenario-storage ownership. Public source formats, command input/output semantics, runtime admission, native execution authority, dependencies and supported platforms remain unchanged."
+      "changeId": "proofkit.source-model.materialization",
+      "summary": "Remove redundant atomic and layout copies from private requirement-source normalization, size member projections from the admitted snapshot, and retain reference compaction and detached public accessors. Add allocation benchmarks and independent caller-mutation, later-normalization and retained-capacity checks. Public source formats, CLI semantics, resource limits, dependencies and supported platforms remain unchanged; no source-v2 cutover is introduced."
     }
   ],
   "migration": {

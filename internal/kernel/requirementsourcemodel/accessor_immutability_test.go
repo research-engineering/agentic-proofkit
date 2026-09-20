@@ -5,6 +5,43 @@ import (
 	"testing"
 )
 
+func TestNormalizeOwnsDetachedInputAcrossCalls(t *testing.T) {
+	for _, owner := range []MetadataOwnerKind{MetadataOwnerMember, MetadataOwnerProfile} {
+		t.Run(string(owner), func(t *testing.T) {
+			draft := validDraft()
+			applyMetadataVariantForOwner(&draft, "claimLevel", string(ClaimDeferred), owner)
+			model, err := Normalize(draft)
+			if err != nil {
+				t.Fatal(err)
+			}
+			atomic := detachedTestCopy(model.Atomic())
+			layout := detachedTestCopy(model.Layout())
+			references := detachedTestCopy(model.References())
+			assertUnchanged := func(step string) {
+				t.Helper()
+				if !reflect.DeepEqual(model.Atomic(), atomic) || !reflect.DeepEqual(model.Layout(), layout) || !reflect.DeepEqual(model.References(), references) {
+					t.Fatalf("%s changed an admitted model", step)
+				}
+			}
+			if mutateReferencedState(reflect.ValueOf(&draft).Elem(), false) == 0 {
+				t.Fatal("draft fixture did not expose mutable references")
+			}
+			assertUnchanged("caller mutation")
+			other := validDraft()
+			other.SourceID = "source.second"
+			other.SourceNonClaims = []string{"A separate source boundary."}
+			other.Groups[0].StatementStem = "The API must"
+			if _, err := Normalize(other); err != nil {
+				t.Fatal(err)
+			}
+			assertUnchanged("later normalization")
+			assertAccessorReturnsDetachedState(t, "atomic", model.Atomic)
+			assertAccessorReturnsDetachedState(t, "layout", model.Layout)
+			assertAccessorReturnsDetachedState(t, "references", model.References)
+		})
+	}
+}
+
 func assertAccessorReturnsDetachedState[T any](t *testing.T, name string, accessor func() T) {
 	t.Helper()
 	baseline := detachedTestCopy(accessor())
