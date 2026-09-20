@@ -22,12 +22,14 @@ func FuzzParseCanonicalRoundTrip(f *testing.F) {
 	f.Add([]byte(`{}`))
 	f.Add([]byte(`{"schemaVersion":2,"kind":"proofkit.requirement-source"}`))
 	model, err := requirementsourcemodel.NormalizeWithLimits(testDraft(), modelLimits)
-	if err == nil {
-		payload, formatErr := FormatWithLimits(model, codecLimits, modelLimits)
-		if formatErr == nil {
-			f.Add(payload)
-		}
+	if err != nil {
+		f.Fatal(err)
 	}
+	payload, err := FormatWithLimits(model, codecLimits, modelLimits)
+	if err != nil {
+		f.Fatal(err)
+	}
+	f.Add(payload)
 	f.Fuzz(func(t *testing.T, source []byte) {
 		assertCodecFuzzProperties(t, source, codecLimits, modelLimits)
 	})
