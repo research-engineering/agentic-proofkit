@@ -32,7 +32,7 @@ func indexJSON(source []byte, limits Limits, expected *shape) (indexedValue, err
 	decoder := json.NewDecoder(bytes.NewReader(source))
 	decoder.UseNumber()
 	indexer := &jsonIndexer{source: source, decoder: decoder, limits: limits, locations: map[string]rawLocation{}}
-	value, _, err := indexer.parseValue("", "", 1, expected)
+	value, _, err := indexer.parseValue("", "", 1, expected, true)
 	if err != nil {
 		return indexedValue{}, err
 	}
@@ -48,7 +48,7 @@ func indexJSON(source []byte, limits Limits, expected *shape) (indexedValue, err
 	return indexedValue{value: value, locations: indexer.locations}, nil
 }
 
-func (indexer *jsonIndexer) parseValue(rawPath string, safePath string, depth int, expected *shape) (any, ByteSpan, error) {
+func (indexer *jsonIndexer) parseValue(rawPath string, safePath string, depth int, expected *shape, retain bool) (any, ByteSpan, error) {
 	if depth > indexer.limits.MaxNesting {
 		offset := indexer.decoder.InputOffset()
 		return nil, ByteSpan{}, diagnosticError(indexer.source, "nesting_limit_exceeded", safePath, ByteSpan{Start: offset, End: offset}, true)
@@ -59,22 +59,26 @@ func (indexer *jsonIndexer) parseValue(rawPath string, safePath string, depth in
 	}
 	delimiter, isDelimiter := token.(json.Delim)
 	if !isDelimiter {
-		indexer.locations[rawPath] = rawLocation{value: span}
+		if retain {
+			indexer.locations[rawPath] = rawLocation{value: span}
+		}
 		return token, span, nil
 	}
 	switch delimiter {
 	case '{':
-		return indexer.parseObject(rawPath, safePath, depth, span, expected)
+		return indexer.parseObject(rawPath, safePath, depth, span, expected, retain)
 	case '[':
-		return indexer.parseArray(rawPath, safePath, depth, span, expected)
+		return indexer.parseArray(rawPath, safePath, depth, span, expected, retain)
 	default:
 		return nil, ByteSpan{}, diagnosticError(indexer.source, "invalid_syntax", safePath, span, true)
 	}
 }
 
-func (indexer *jsonIndexer) parseObject(rawPath string, safePath string, depth int, opening ByteSpan, expected *shape) (any, ByteSpan, error) {
+func (indexer *jsonIndexer) parseObject(rawPath string, safePath string, depth int, opening ByteSpan, expected *shape, retain bool) (any, ByteSpan, error) {
 	result := map[string]any{}
 	seen := map[string]struct{}{}
+	// Keep lexical validation even when structural admission cannot visit children.
+	retainChildren := retain && expected != nil && expected.kind == shapeObject
 	for indexer.decoder.More() {
 		keyToken, keySpan, err := indexer.nextToken(safePath)
 		if err != nil {
@@ -88,17 +92,22 @@ func (indexer *jsonIndexer) parseObject(rawPath string, safePath string, depth i
 			return nil, ByteSpan{}, diagnosticError(indexer.source, "duplicate_field", safePath, keySpan, true)
 		}
 		seen[key] = struct{}{}
-		rawChildPath := joinPointer(rawPath, key)
+		rawChildPath := ""
+		if retainChildren {
+			rawChildPath = joinPointer(rawPath, key)
+		}
 		safeKey, childShape := safeObjectChild(expected, key)
 		safeChildPath := joinPointer(safePath, safeKey)
-		value, _, err := indexer.parseValue(rawChildPath, safeChildPath, depth+1, childShape)
+		value, _, err := indexer.parseValue(rawChildPath, safeChildPath, depth+1, childShape, retainChildren)
 		if err != nil {
 			return nil, ByteSpan{}, err
 		}
-		location := indexer.locations[rawChildPath]
-		location.key = &keySpan
-		indexer.locations[rawChildPath] = location
-		result[key] = value
+		if retainChildren {
+			location := indexer.locations[rawChildPath]
+			location.key = &keySpan
+			indexer.locations[rawChildPath] = location
+			result[key] = value
+		}
 	}
 	closingToken, closingSpan, err := indexer.nextToken(safePath)
 	if err != nil {
@@ -108,27 +117,33 @@ func (indexer *jsonIndexer) parseObject(rawPath string, safePath string, depth i
 		return nil, ByteSpan{}, diagnosticError(indexer.source, "invalid_syntax", safePath, closingSpan, true)
 	}
 	span := ByteSpan{Start: opening.Start, End: closingSpan.End}
-	location := indexer.locations[rawPath]
-	location.value = span
-	indexer.locations[rawPath] = location
+	if retain {
+		indexer.locations[rawPath] = rawLocation{value: span}
+	}
 	return result, span, nil
 }
 
-func (indexer *jsonIndexer) parseArray(rawPath string, safePath string, depth int, opening ByteSpan, expected *shape) (any, ByteSpan, error) {
+func (indexer *jsonIndexer) parseArray(rawPath string, safePath string, depth int, opening ByteSpan, expected *shape, retain bool) (any, ByteSpan, error) {
 	result := []any{}
 	var childShape *shape
+	retainChildren := retain && expected != nil && expected.kind == shapeArray
 	if expected != nil && expected.kind == shapeArray {
 		childShape = expected.element
 	}
 	for index := 0; indexer.decoder.More(); index++ {
 		indexValue := strconv.Itoa(index)
-		rawChildPath := joinPointer(rawPath, indexValue)
+		rawChildPath := ""
+		if retainChildren {
+			rawChildPath = joinPointer(rawPath, indexValue)
+		}
 		safeChildPath := joinPointer(safePath, indexValue)
-		value, _, err := indexer.parseValue(rawChildPath, safeChildPath, depth+1, childShape)
+		value, _, err := indexer.parseValue(rawChildPath, safeChildPath, depth+1, childShape, retainChildren)
 		if err != nil {
 			return nil, ByteSpan{}, err
 		}
-		result = append(result, value)
+		if retainChildren {
+			result = append(result, value)
+		}
 	}
 	closingToken, closingSpan, err := indexer.nextToken(safePath)
 	if err != nil {
@@ -138,9 +153,9 @@ func (indexer *jsonIndexer) parseArray(rawPath string, safePath string, depth in
 		return nil, ByteSpan{}, diagnosticError(indexer.source, "invalid_syntax", safePath, closingSpan, true)
 	}
 	span := ByteSpan{Start: opening.Start, End: closingSpan.End}
-	location := indexer.locations[rawPath]
-	location.value = span
-	indexer.locations[rawPath] = location
+	if retain {
+		indexer.locations[rawPath] = rawLocation{value: span}
+	}
 	return result, span, nil
 }
 

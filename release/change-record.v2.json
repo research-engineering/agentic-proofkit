@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.19",
-  "version": "0.14.20",
+  "previousVersion": "0.14.20",
+  "version": "0.14.21",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.source-model.materialization",
-      "summary": "Remove redundant atomic and layout copies from private requirement-source normalization, size member projections from the admitted snapshot, and retain reference compaction and detached public accessors. Add allocation benchmarks and independent caller-mutation, later-normalization and retained-capacity checks. Public source formats, CLI semantics, resource limits, dependencies and supported platforms remain unchanged; no source-v2 cutover is introduced."
+      "changeId": "proofkit.source-codec.rejected-index-retention",
+      "summary": "Avoid retaining descendant values and raw lexical paths beneath structurally rejected private requirement-source branches while preserving full lexical validation, duplicate detection, nesting limits, exact diagnostics and admitted source maps. Add retention, failure-isolation and recovery tests; make valid fuzz seed construction fail explicitly. Public source formats, CLI semantics, resource limits, dependencies and supported platforms remain unchanged."
     }
   ],
   "migration": {
