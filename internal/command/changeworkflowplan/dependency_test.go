@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -31,8 +32,9 @@ func TestWorkflowAmbientAuthorityPredicates(t *testing.T) {
 		assertNoSourceTokens(t, production, "git.Command", "go-git")
 	})
 	t.Run("no_process_environment", func(t *testing.T) {
+		// Parsed imports cover every exec alias; Command( also matched DisplayCommand(.
 		assertNoImports(t, production, "os/exec")
-		assertNoSourceTokens(t, production, "Getenv(", "LookupEnv(", "Environ(", "Command(")
+		assertNoSourceTokens(t, production, "Getenv(", "LookupEnv(", "Environ(")
 	})
 	t.Run("no_setup_or_route", func(t *testing.T) {
 		assertNoSourceTokens(t, production, "agentroute", "setup facade", "repository scan", "consumer-specific")
@@ -60,17 +62,47 @@ func productionSource(t *testing.T) []sourceUnit {
 		if err != nil {
 			t.Fatal(err)
 		}
-		parsed, err := parser.ParseFile(token.NewFileSet(), entry.Name(), content, parser.ImportsOnly)
+		imports, err := sourceImports(entry.Name(), content)
 		if err != nil {
 			t.Fatal(err)
-		}
-		imports := map[string]struct{}{}
-		for _, imported := range parsed.Imports {
-			imports[strings.Trim(imported.Path.Value, "\"")] = struct{}{}
 		}
 		result = append(result, sourceUnit{name: filepath.Base(entry.Name()), imports: imports, text: string(content)})
 	}
 	return result
+}
+
+func sourceImports(name string, content []byte) (map[string]struct{}, error) {
+	parsed, err := parser.ParseFile(token.NewFileSet(), name, content, parser.ImportsOnly)
+	if err != nil {
+		return nil, err
+	}
+	imports := map[string]struct{}{}
+	for _, imported := range parsed.Imports {
+		path, err := strconv.Unquote(imported.Path.Value)
+		if err != nil {
+			return nil, err
+		}
+		imports[path] = struct{}{}
+	}
+	return imports, nil
+}
+
+func TestWorkflowProcessImportGuard(t *testing.T) {
+	for _, alias := range []string{"", "process ", ". ", "_ "} {
+		for _, literal := range []string{"\"os/exec\"", "`os/exec`"} {
+			imports, err := sourceImports("fixture.go", []byte("package fixture\nimport "+alias+literal+"\n"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, forbidden := imports["os/exec"]; !forbidden {
+				t.Fatalf("direct process authority escaped parsed-import policy: %s%s", alias, literal)
+			}
+		}
+	}
+	imports, err := sourceImports("fixture.go", []byte("package fixture\nfunc render(renderer Renderer) string { return renderer.DisplayCommand() }\n"))
+	if err != nil || len(imports) != 0 {
+		t.Fatal("pure rendering acquired process authority")
+	}
 }
 
 func assertNoImports(t *testing.T, units []sourceUnit, forbidden ...string) {

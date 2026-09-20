@@ -98,6 +98,8 @@ Repository-specific adapter template (implement under consumer authority):
      Confirm continued adequacy or update affected owners; never automatically
      rewrite specification meaning from a test change. Bind any confirmation to
      exact subjects. A prior success cannot certify changed input or toolchains.
+     Build and check an actual current subject before submitting a checkpoint:
+    {{cli}} change plan --help
 
   This recipe is not a generic discovery importer, native runner, persistent
   confirmation store or claim of complete coverage. Compact proof contracts use
