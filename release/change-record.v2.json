@@ -1,13 +1,13 @@
 {
   "schemaVersion": 2,
-  "previousVersion": "0.14.17",
-  "version": "0.14.18",
+  "previousVersion": "0.14.18",
+  "version": "0.14.19",
   "changeClass": "compatible",
   "breakingChanges": [],
   "additions": [
     {
-      "changeId": "proofkit.source.compatibility-boundaries",
-      "summary": "Make common-field source correspondence, public v1 identity and paths, qualified binding projection and private-model resource-domain boundaries permanent cross-owner regression checks. Clarify that the internal grouped codec is not a public source transition. Runtime admission, CLI contracts, source formats, resource limits, dependencies and supported platforms remain unchanged."
+      "changeId": "proofkit.traceability.input-guidance",
+      "summary": "Add lazy CLI recipes for source-intake roles, canonical catalog/tree composition and current-subject review of the exact publication plane. Strengthen connected input and normative-guidance regression oracles and explain scenario-storage ownership. Public source formats, command input/output semantics, runtime admission, native execution authority, dependencies and supported platforms remain unchanged."
     }
   ],
   "migration": {

@@ -16,8 +16,20 @@ const inputGuide = `Current-subject review input guide:
   artifactPath, discover dependencies, authenticate a reviewer or approve a change.
   A supplied digest is not proof that current files still have that content.
 
+  For canonical source/binding records and explicit observed-file provenance:
+    {{cli}} requirement-context-compose --help
+  That snapshot still excludes undeclared native dependencies and is not a
+  complete review subject by itself.
+
 Consumer adapter steps (implement in the repository's change/check workflow):
-  1. Read exact base/current inputs from an explicit bounded scope. Bind source
+  1. Declare which plane is being approved: working tree, Git index, immutable
+     commit or materialized artifact. Read that exact plane; a working-tree
+     check alone cannot approve different staged bytes. If partial staging is
+     unsupported, require exact index/worktree bytes and executable modes for
+     the complete input scope, including untracked inputs and filter effects.
+     Otherwise materialize and check the selected index/commit separately.
+     Proofkit performs neither Git inspection nor this consumer precondition.
+     Read exact base/current inputs from an explicit bounded scope. Bind source
      namespace, requirement/scenario meaning, matched native witness/path/selector,
      assertion and helper inputs, command argv, environment/toolchain and receipt
      policy. Enumerate transitive semantic dependencies; omitted inputs cannot

@@ -435,6 +435,30 @@ and require an explicit consumer mapping when a selector or wrapper path is
 ambiguous. Proofkit's public structured graph preserves declared routes; it does
 not discover native tests or judge their assertions.
 
+Choose scenario storage by the meaning it must own, not by a mandatory extra
+document layer:
+
+| Candidate | Appropriate boundary | Cost or limitation to review |
+|---|---|---|
+| Separate scenario document | Independently meaningful portable conditions or examples with their own review lifecycle. | Another normative artifact, reference closure and freshness policy; do not repeat the same promise. |
+| Scenarios inside the specification | Portable scenario meaning owned with the requirement. | Public source v1 has no typed scenario-body field; do not add unadmitted keys or describe a private candidate as public. |
+| Structured native declarations | Stable references, parameter instances and executable expected observations near the native check. | Derive the inventory and require review when assertions or qualified links change; native expectations cannot silently redefine intent. |
+| Test-adjacent annotations | References attached to a framework-owned test declaration. | Parse the actual native declaration association; comments alone do not prove discovery, execution or assertion quality. |
+
+Prefer the existing source plus structured native declarations when it expresses
+the required workflow. A separately editable scenario store is not necessary
+just to connect IDs. Reconsider it when portable scenario meaning cannot be
+expressed without losing a required distinction. This is not a universal format
+or human-usability ranking; measure the complete input, edit and maintenance
+cost for the consuming repository.
+
+Use `requirement-context-compose --help` for the connected catalog/tree recipe
+and canonical source/binding snapshot. Before committing, a confirmation must
+cover the publication plane actually being approved. Checking working files
+does not approve different index bytes; `change plan --help` explains this
+consumer-owned precondition. Neither command installs a Git hook or grants
+approval authority.
+
 Reverse review is distinct from the forward execution route above:
 
 ```mermaid
