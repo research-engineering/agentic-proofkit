@@ -7,6 +7,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/capabilitymapadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/changeworkflowplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/nativeevidenceguidance"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
@@ -122,6 +123,9 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 	}
 	if descriptor.name == "requirement-authoring-plan" {
 		lines = append(lines, "", strings.TrimSuffix(requirementauthoringplan.InputGuide(renderer), "\n"))
+	}
+	if descriptor.name == "change-workflow-plan" {
+		lines = append(lines, "", strings.TrimSuffix(changeworkflowplan.InputGuide(renderer), "\n"))
 	}
 	if descriptor.name == "proof-receipt-admission" {
 		lines = append(lines, "", strings.TrimSuffix(proofreceiptadmission.InputGuide(renderer), "\n"))

@@ -15,7 +15,7 @@ const planKind = "proofkit.requirement-authoring-plan"
 
 var (
 	modeSet            = map[string]struct{}{"pull_request_design": {}, "retrospective_baseline": {}}
-	refKindSet         = map[string]struct{}{"clarification_answer": {}, "code_summary": {}, "design_doc": {}, "implementation_plan": {}, "pr_facts": {}, "test_summary": {}}
+	refKindSet         = referenceKindSet()
 	operationSet       = map[string]struct{}{"add": {}, "deprecate": {}, "modify": {}, "supersede": {}}
 	obligationKindSet  = map[string]struct{}{"native_witness": {}, "overview_claim": {}, "proof_binding": {}, "receipt": {}, "test_inventory": {}}
 	sha256DigestRegexp = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)

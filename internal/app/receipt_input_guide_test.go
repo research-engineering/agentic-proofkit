@@ -17,10 +17,10 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
-func receiptHelpTemplate(t *testing.T, command string) (map[string]any, string) {
+func receiptHelpTemplate(t *testing.T, command ...string) (map[string]any, string) {
 	t.Helper()
 	var canonical string
-	for _, args := range [][]string{{command, "--help"}, {command, "-h"}, {"help", command}} {
+	for _, args := range [][]string{append(append([]string{}, command...), "--help"), append(append([]string{}, command...), "-h"), append([]string{"help"}, command...)} {
 		code, output, diagnostic := executeAgentWorkflowCLI(t, args, panicReader{}, PresentationCapabilities{})
 		if code != 0 || diagnostic != "" || len(output) > 12<<10 || strings.Contains(output, "\x1b[") {
 			t.Fatalf("help is not bounded, input-free plain text: %v, %d, %q", args, code, diagnostic)
@@ -325,7 +325,7 @@ func TestNativeTraceabilityGuideIsLazyAndCarrierBound(t *testing.T) {
 				actualLazy = append(actualLazy, line)
 			}
 		}
-		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"requirement-coverage-input-compose", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"receipt-currentness-scope", "--help"}, {"requirement-impact-input-compose", "--help"}} {
+		for _, command := range [][]string{{"adopt", "materialize", "plan", "--help"}, {"requirement-authoring-plan", "--help"}, {"requirement-coverage-input-compose", "--help"}, {"proof-receipt-admission", "--help"}, {"spec-proof-bundle-admission", "--help"}, {"receipt-currentness-scope", "--help"}, {"requirement-impact-input-compose", "--help"}, {"change", "plan", "--help"}} {
 			expectedLazy = append(expectedLazy, "    "+renderer.DisplayCommand(command...))
 			code, output, diagnostic := executeAgentWorkflowCLI(t, command, panicReader{}, PresentationCapabilities{})
 			if code != 0 || output == "" || diagnostic != "" {
