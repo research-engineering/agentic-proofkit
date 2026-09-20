@@ -21,9 +21,23 @@ func TestChangeInputGuideIsLazyAndExecutable(t *testing.T) {
 	for _, boundary := range []string{
 		"does not read", "Do not hash only IDs", "source-qualified pairs",
 		"required consumer check", "not authenticated approval", "empty prefix reviews architecture",
+		"working tree, Git index, immutable", "different staged bytes", "executable modes",
+		"untracked inputs and filter effects", "neither Git inspection",
+		"requirement-context-compose --help", "excludes undeclared native dependencies",
 	} {
 		if !strings.Contains(help, boundary) {
 			t.Fatalf("guide lost boundary %q", boundary)
+		}
+	}
+	normalized := strings.Join(strings.Fields(help), " ")
+	for _, sentence := range []string{
+		"Read that exact plane; a working-tree check alone cannot approve different staged bytes.",
+		"If partial staging is unsupported, require exact index/worktree bytes and executable modes for the complete input scope, including untracked inputs and filter effects.",
+		"Otherwise materialize and check the selected index/commit separately.",
+		"Proofkit performs neither Git inspection nor this consumer precondition.",
+	} {
+		if !strings.Contains(normalized, sentence) {
+			t.Fatalf("publication-plane policy changed: %s", sentence)
 		}
 	}
 	code, output, diagnostic := executeAgentWorkflowCLI(t, []string{"change", "plan", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, packet)), PresentationCapabilities{})
