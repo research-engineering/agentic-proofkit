@@ -98,9 +98,11 @@ func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
 	}
 	layout := LayoutProjection{SourceID: sourceID, Profiles: profiles, Groups: groups, Origins: origins}
 	references := ReferenceProjection{SourceID: sourceID, Derivations: derivations, Edges: edges}
+	// Atomic and layout values belong to this detached snapshot; accessors copy
+	// them on exit. Reference cloning also trims its append-built edge storage.
 	return Model{
-		atomic:     cloneAtomicProjection(atomic),
-		layout:     cloneLayoutProjection(layout),
+		atomic:     atomic,
+		layout:     layout,
 		references: cloneReferenceProjection(references),
 	}, nil
 }

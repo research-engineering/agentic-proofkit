@@ -6,8 +6,13 @@ func normalizeGroups(values []Group, profiles map[string]Profile) ([]Group, []At
 	groups := make([]Group, len(values))
 	groupIDs := make(map[string]struct{}, len(values))
 	requirementIDs := map[string]struct{}{}
-	requirements := []AtomicRequirement{}
-	origins := []Origin{}
+	// NormalizeWithLimits has already bounded the complete snapshot membership.
+	memberCount := 0
+	for _, group := range values {
+		memberCount += len(group.Members)
+	}
+	requirements := make([]AtomicRequirement, 0, memberCount)
+	origins := make([]Origin, 0, memberCount)
 	profileUses := map[string]int{}
 
 	for groupIndex, value := range values {
