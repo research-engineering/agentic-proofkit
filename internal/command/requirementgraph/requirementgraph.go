@@ -69,8 +69,8 @@ func Build(raw any) (map[string]any, error) {
 	if err := admit.KnownKeys(record, []string{"codeSources", "codeTopology", "context", "graphId", "schemaVersion"}, "requirement traceability graph input"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return nil, fmt.Errorf("requirement traceability graph input schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return nil, fmt.Errorf("requirement traceability graph input schemaVersion must be 3")
 	}
 	graphID, err := admit.RuleID(record["graphId"], "requirement traceability graph graphId")
 	if err != nil {
@@ -134,14 +134,18 @@ func Build(raw any) (map[string]any, error) {
 	if err != nil || len(encoded) > maxGraphOutputBytes {
 		return nil, fmt.Errorf("requirement traceability graph exceeds output byte limit")
 	}
+	// Budget and semantic admission must precede this descriptive shape check.
+	if err := graphInputShape.CheckGenerated(record, "requirement traceability graph input"); err != nil {
+		return nil, err
+	}
 	return output, nil
 }
 
 func appendSpecificationRequirementEdges(snapshot requirementcontext.Snapshot, tree requirementspectree.Tree, budget *graphBudget, edges *[]map[string]any) error {
 	requirementsBySource := map[string][]string{}
 	for _, source := range snapshot.RequirementSources {
-		for _, requirement := range source.Requirements {
-			requirementsBySource[source.SourceID] = append(requirementsBySource[source.SourceID], requirement.RequirementID)
+		for _, requirement := range source.Requirements() {
+			requirementsBySource[source.SourceID()] = append(requirementsBySource[source.SourceID()], requirement.RequirementID)
 		}
 	}
 	relationCount := 0
@@ -177,14 +181,14 @@ func appendSpecificationRequirementEdges(snapshot requirementcontext.Snapshot, t
 func appendRequirementNodes(snapshot requirementcontext.Snapshot, budget *graphBudget, nodes *[]map[string]any) (map[string]struct{}, error) {
 	requirementCount := 0
 	for _, source := range snapshot.RequirementSources {
-		requirementCount += len(source.Requirements)
+		requirementCount += source.RequirementCount()
 	}
 	if err := budget.reserveOutput(requirementCount, 0); err != nil {
 		return nil, err
 	}
 	ids := map[string]struct{}{}
 	for _, source := range snapshot.RequirementSources {
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			id := requirement.RequirementID
 			if _, exists := ids[id]; exists {
 				return nil, fmt.Errorf("requirement traceability graph requirement ids must be unique")
@@ -281,7 +285,7 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, budget *grap
 		if err != nil {
 			return err
 		}
-		level, err := admit.Enum(node["abstractionLevel"], map[string]struct{}{"file": {}, "module": {}, "package": {}, "repository": {}, "source_range": {}, "symbol": {}}, "codeTopology node abstractionLevel")
+		level, err := admit.Enum(node["abstractionLevel"], codeLevels, "codeTopology node abstractionLevel")
 		if err != nil {
 			return err
 		}
@@ -304,7 +308,7 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, budget *grap
 		if err != nil {
 			return err
 		}
-		currentness, err := admit.Enum(node["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "codeTopology node currentnessState")
+		currentness, err := admit.Enum(node["currentnessState"], currentnessStates, "codeTopology node currentnessState")
 		if err != nil {
 			return err
 		}
@@ -384,11 +388,11 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, budget *grap
 		if err != nil || len(evidenceRefs) == 0 {
 			return fmt.Errorf("codeTopology edge evidenceRefs must be a non-empty unique array")
 		}
-		authority, err := admit.Enum(edge["authorityClass"], map[string]struct{}{"caller_reported": {}, "owner_admitted": {}}, "codeTopology edge authorityClass")
+		authority, err := admit.Enum(edge["authorityClass"], traceAuthorities, "codeTopology edge authorityClass")
 		if err != nil {
 			return err
 		}
-		currentness, err := admit.Enum(edge["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "codeTopology edge currentnessState")
+		currentness, err := admit.Enum(edge["currentnessState"], currentnessStates, "codeTopology edge currentnessState")
 		if err != nil {
 			return err
 		}
@@ -426,15 +430,15 @@ func appendCodeTopology(raw any, codeSources map[string]codeSource, budget *grap
 			if err != nil {
 				return err
 			}
-			state, err := admit.Enum(item["state"], map[string]struct{}{"failed": {}, "passed": {}, "skipped": {}, "unavailable": {}}, "codeTopology native coverage state")
+			state, err := admit.Enum(item["state"], executionStates, "codeTopology native coverage state")
 			if err != nil {
 				return err
 			}
-			authority, err := admit.Enum(item["authorityClass"], map[string]struct{}{"caller_reported": {}, "receipt_admitted": {}}, "codeTopology native coverage authorityClass")
+			authority, err := admit.Enum(item["authorityClass"], executionAuthorities, "codeTopology native coverage authorityClass")
 			if err != nil {
 				return err
 			}
-			currentness, err := admit.Enum(item["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "codeTopology native coverage currentnessState")
+			currentness, err := admit.Enum(item["currentnessState"], currentnessStates, "codeTopology native coverage currentnessState")
 			if err != nil {
 				return err
 			}

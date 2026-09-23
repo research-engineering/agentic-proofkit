@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/proofvocab"
@@ -98,7 +99,7 @@ func ProjectObligationDecision(raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	trustDiagnostics, err := trustDiagnosticsByObligation(record["receiptTrustClassAdmission"], routesByObligation, receiptGroups)
+	trustDiagnostics, err := trustDiagnosticsByObligation(record["receiptTrustClassAdmission"], routesByObligation, receiptGroups, producerReceiptsByID(evidence.producerReceipts))
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +289,7 @@ func currentnessDiagnosticsByObligation(raw any, routes map[string]map[string]an
 	return result, nil
 }
 
-func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, receiptGroups map[string][]receiptSummary) (map[string]*trustProjectionDiagnostic, error) {
+func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, receiptGroups map[string][]receiptSummary, producerReceipts map[string]receiptproduceradmission.ReceiptProjection) (map[string]*trustProjectionDiagnostic, error) {
 	if raw == nil {
 		return map[string]*trustProjectionDiagnostic{}, nil
 	}
@@ -319,6 +320,13 @@ func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, rec
 		if receipt.Status != diagnostic.ReceiptStatus {
 			return nil, fmt.Errorf("selective evidence obligation projection receipt trust-class receiptStatus mismatch for obligation: %s", obligationID)
 		}
+		producer, ok := producerReceipts[diagnostic.ReceiptID]
+		if !ok {
+			return nil, fmt.Errorf("selective evidence obligation projection receipt trust-class requires admitted producer receipt for obligation: %s", obligationID)
+		}
+		if err := validateTrustReceiptBinding(diagnostic, receipt, producer); err != nil {
+			return nil, err
+		}
 		result[obligationID] = trustProjectionFromDiagnostic(diagnostic)
 	}
 	missing := missingDiagnosticObligationIDs(routes, receiptGroups, result)
@@ -326,6 +334,30 @@ func trustDiagnosticsByObligation(raw any, routes map[string]map[string]any, rec
 		return nil, fmt.Errorf("selective evidence obligation projection missing receipt trust-class diagnostics for obligations: %s", strings.Join(missing, ", "))
 	}
 	return result, nil
+}
+
+func validateTrustReceiptBinding(diagnostic receipttrustclass.ProjectionDiagnostic, receipt receiptSummary, producer receiptproduceradmission.ReceiptProjection) error {
+	fields := []struct {
+		name  string
+		equal bool
+	}{
+		{"receiptKind", diagnostic.ReceiptKind == producer.ReceiptKind},
+		{"environmentClass", diagnostic.EnvironmentClass == producer.EnvironmentClass},
+		{"producerAdmissionClass", diagnostic.ProducerAdmissionClass == producer.ProducerAdmissionClass},
+		{"receiptStatus", diagnostic.ReceiptStatus == producer.Status},
+		{"artifactRefs", equalStringSlices(diagnostic.ArtifactRefs, receipt.ArtifactRefs) && equalStringSlices(diagnostic.ArtifactRefs, producer.ArtifactRefs)},
+		{"provenanceRef", equalOptionalText(diagnostic.ProvenanceRef, producer.ProvenanceRef)},
+	}
+	for _, field := range fields {
+		if !field.equal {
+			return fmt.Errorf("selective evidence obligation projection receipt trust-class %s mismatch for obligation: %s", field.name, diagnostic.ObligationID)
+		}
+	}
+	return nil
+}
+
+func equalOptionalText(left, right *string) bool {
+	return left == nil && right == nil || left != nil && right != nil && *left == *right
 }
 
 func currentnessProjectionFromDiagnostic(diagnostic receiptcurrentnessscope.ProjectionDiagnostic) *currentnessProjectionDiagnostic {

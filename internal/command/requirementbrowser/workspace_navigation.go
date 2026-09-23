@@ -59,15 +59,15 @@ func workspaceNavigationPage(index workspaceLookupIndex, query workspaceNavigati
 	return workspacePage{
 		Count: len(nodes), Offset: query.Offset, Limit: query.MaxRecords, RowsKey: "nodes",
 		Row: func(position int) map[string]any { return index.navigationNodeValue(nodes[position]) },
-		Projection: func(rows []any) (map[string]any, string) {
+		Projection: func(rows []any) (workspaceProjection, error) {
 			state := "complete"
 			if len(rows) != len(nodes) {
 				state = "partial_with_omissions"
 			}
-			return map[string]any{
+			return workspaceProjection{Value: map[string]any{
 				"authority": "lookup_fragment_only", "projectionKind": "proofkit.requirement-browser-navigation-fragment",
 				"parent": parent, "nodes": rows, "availableNodeCount": len(nodes), "selectedNodeCount": len(rows), "omittedNodeCount": len(nodes) - len(rows),
-			}, state
+			}, State: state}, nil
 		},
 	}
 }

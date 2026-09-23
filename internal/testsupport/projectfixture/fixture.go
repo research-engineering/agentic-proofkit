@@ -39,10 +39,11 @@ func WithRequirementIDs(t testing.TB, ids [3]string) Fixture {
 	files := map[string][]byte{}
 	for index, item := range []struct{ id, directory, text string }{{"zeta.source", "a", "Collection \U0001f9ed A preserves its explicit invariant."}, {"shared.identity", "z", "Collection E\u0301 Z preserves its explicit invariant."}} {
 		source := record(t, seed)
-		path := "docs/specs/" + item.directory + "/requirements.v1.json"
-		source["sourceId"], source["specPackagePath"], source["overviewPath"], source["requirementsPath"] = item.id, "docs/specs/"+item.directory, "docs/specs/"+item.directory+"/overview.md", path
-		source["nonClaims"] = []any{"Source " + item.directory + " does not prove execution."}
-		items := source["requirements"].([]any)
+		path := "docs/specs/" + item.directory + "/requirements.v2.json"
+		source["sourceId"], source["specPackagePath"] = item.id, "docs/specs/"+item.directory
+		source["sourceNonClaims"] = []any{"Source " + item.directory + " does not prove execution."}
+		group := source["groups"].([]any)[0].(map[string]any)
+		items := group["members"].([]any)
 		if index == 1 {
 			items = append(items, clone(t, items[0].(map[string]any)))
 		}
@@ -50,10 +51,11 @@ func WithRequirementIDs(t testing.TB, ids [3]string) Fixture {
 			requirement := raw.(map[string]any)
 			number := index + position + 1
 			id := ids[number-1]
-			requirement["requirementId"], requirement["invariant"] = id, item.text
-			requirement["nonClaimRefs"] = []any{"collection.nonclaim.execution"}
+			requirement["requirementId"], requirement["statementCompletion"] = id, item.text
+			fields := requirement["fields"].(map[string]any)
+			fields["externalNonClaimRefs"] = []any{"collection.nonclaim.execution"}
 			suffix := fmt.Sprintf("%03d", number)
-			requirements = append(requirements, map[string]any{"requirementId": id, "ownerId": "wire.owner", "specPath": path, "claimLevel": "blocking", "proofState": "witness_backed", "nonClaims": requirement["nonClaims"]})
+			requirements = append(requirements, map[string]any{"requirementId": id, "ownerId": "wire.owner", "specPath": path, "claimLevel": "blocking", "proofState": "witness_backed", "nonClaims": fields["nonClaims"]})
 			bindings = append(bindings, map[string]any{"requirementId": id, "scenarioId": "collection.scenario." + suffix, "witnessId": "collection.witness." + suffix, "witnessKind": "contract", "witnessPath": "tests/collection_test.go", "witnessSelectors": []any{map[string]any{"selector": "TestCollection" + suffix, "command": "go test ./tests -run TestCollection" + suffix}}, "commandIds": []any{"collection.check"}, "environmentClasses": []any{"local-go"}})
 			entries = append(entries, map[string]any{
 				"testId": "collection.test." + suffix, "selector": "go test ./tests -run TestCollection" + suffix, "sourcePath": "tests/collection_test.go", "ownerId": "wire.owner",
@@ -62,14 +64,20 @@ func WithRequirementIDs(t testing.TB, ids [3]string) Fixture {
 				"oracle":    map[string]any{"oracleId": "collection.oracle." + suffix, "oracleKind": "negative_exit_and_diagnostic", "expectedPublicOutcome": "invalid collection fails", "assertionSummary": "A contradictory collection is rejected."}, "nonClaims": []any{},
 			})
 		}
-		source["requirements"] = items
+		group["members"] = items
 		admitted, err := requirementsourceadmission.Evaluate(source)
 		if err != nil || admitted.ExitCode != 0 {
 			t.Fatalf("independent source fixture: %v", err)
 		}
-		canonical := requirementsourceadmission.SourceValue(admitted.Source)
+		canonical, err := requirementsourceadmission.SourceValue(admitted.Source)
+		if err != nil {
+			t.Fatal(err)
+		}
 		sources = append(sources, canonical)
-		files[path] = jsonBytes(t, canonical)
+		files[path], err = requirementsourceadmission.SourceBytes(admitted.Source)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	binding, err := requirementbinding.Build(map[string]any{
 		"schemaVersion": json.Number("1"), "bindingId": "shared.identity", "requirements": requirements, "bindings": bindings,
@@ -92,7 +100,7 @@ func WithRequirementIDs(t testing.TB, ids [3]string) Fixture {
 	files["proofkit/bindings.json"], files["proofkit/tests.json"] = jsonBytes(t, bindingValue), jsonBytes(t, inventoryValue)
 	routes := []any{}
 	for _, item := range []struct{ kind, path string }{
-		{"requirement_source", "docs/specs/a/requirements.v1.json"}, {"requirement_source", "docs/specs/z/requirements.v1.json"},
+		{"requirement_source", "docs/specs/a/requirements.v2.json"}, {"requirement_source", "docs/specs/z/requirements.v2.json"},
 		{"requirement_proof_binding", "proofkit/bindings.json"}, {"test_evidence_inventory", "proofkit/tests.json"},
 	} {
 		routes = append(routes, map[string]any{"artifactId": contentDigest(files[item.path]), "artifactKind": item.kind, "path": item.path})

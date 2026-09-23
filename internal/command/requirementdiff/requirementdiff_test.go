@@ -3,6 +3,7 @@ package requirementdiff
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
@@ -16,7 +17,7 @@ func TestBuildClassifiesOwnerAwareRequirementChanges(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.070793924321910266811017548213459952142613821158702213873670242368963866904489")
 	baseline := contextFixture(t, "The system preserves the baseline.")
 	current := contextFixture(t, "The system preserves the revised invariant.")
-	output, err := Build(map[string]any{"schemaVersion": json.Number("2"), "diffId": "consumer.requirement.diff", "baseContext": baseline, "currentContext": current, "query": map[string]any{"requirementIds": []any{"REQ-CONSUMER-001"}}})
+	output, err := Build(map[string]any{"schemaVersion": json.Number("3"), "diffId": "consumer.requirement.diff", "baseContext": baseline, "currentContext": current, "query": map[string]any{"requirementIds": []any{"REQ-CONSUMER-001"}}})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -47,26 +48,22 @@ func TestBuildClassifiesOwnerAwareRequirementChanges(t *testing.T) {
 	}
 }
 
-func TestDigestCoverageAdaptersPreserveSemanticDiffV2(t *testing.T) {
+func TestCurrentDiffIdentityRejectsRetiredContracts(t *testing.T) {
 	baseV2 := contextFixture(t, "The system preserves the baseline.")
 	currentV2 := contextFixture(t, "The system preserves the revised invariant.")
-	v2Input := map[string]any{"baseContext": baseV2, "currentContext": currentV2, "diffId": "consumer.digest-coverage.diff", "schemaVersion": json.Number("2")}
+	v2Input := map[string]any{"baseContext": baseV2, "currentContext": currentV2, "diffId": "consumer.digest-coverage.diff", "schemaVersion": json.Number("3")}
 	v2Output, err := Build(v2Input)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if v2Output["schemaVersion"] != json.Number("2") || v2Output["baseExpectedDigestCoverage"] != "none" || v2Output["currentExpectedDigestCoverage"] != "none" {
-		t.Fatalf("semantic diff did not emit v2 digest coverage: %#v", v2Output)
+	if v2Output["schemaVersion"] != json.Number("3") || v2Output["baseExpectedDigestCoverage"] != "none" || v2Output["currentExpectedDigestCoverage"] != "none" {
+		t.Fatalf("semantic diff did not emit current digest coverage: %#v", v2Output)
 	}
 
 	baseV1 := v1DiffContextFixture(t, baseV2)
 	currentV1 := v1DiffContextFixture(t, currentV2)
-	v1Output, err := Build(map[string]any{"baseContext": baseV1, "currentContext": currentV1, "diffId": "consumer.digest-coverage.diff", "schemaVersion": json.Number("1")})
-	if err != nil {
-		t.Fatalf("Build(v1) error = %v", err)
-	}
-	if got, want := stableBytes(t, v1Output), stableBytes(t, v2Output); !bytes.Equal(got, want) {
-		t.Fatalf("v1 input normalized to a different semantic diff\n got: %s\nwant: %s", got, want)
+	if _, err := Build(map[string]any{"baseContext": baseV1, "currentContext": currentV1, "diffId": "consumer.digest-coverage.diff", "schemaVersion": json.Number("1")}); err == nil {
+		t.Fatal("retired v1 diff admitted grouped semantics")
 	}
 
 	var v1WireOutput map[string]any
@@ -81,18 +78,16 @@ func TestDigestCoverageAdaptersPreserveSemanticDiffV2(t *testing.T) {
 		expectedV2 := cloneRequirementRecord(t, v2Output)
 		expectedV2["baseExpectedDigestCoverage"] = mapping.v2
 		expectedV2["currentExpectedDigestCoverage"] = mapping.v2
-		v1WireOutput = cloneRequirementRecord(t, expectedV2)
-		delete(v1WireOutput, "baseExpectedDigestCoverage")
-		delete(v1WireOutput, "currentExpectedDigestCoverage")
-		v1WireOutput["baseBaselineVerification"] = mapping.legacy
-		v1WireOutput["currentBaselineVerification"] = mapping.legacy
-		v1WireOutput["schemaVersion"] = json.Number("1")
-		normalized, err := AdmitOutput(v1WireOutput, currentV2["snapshotId"].(string))
+		v1WireOutput = v1DiffOutputFixture(t, expectedV2, mapping.legacy)
+		if _, err := AdmitOutput(v1WireOutput, currentV2["snapshotId"].(string)); err == nil {
+			t.Fatal("retired output identity admitted current semantics")
+		}
+		normalized, err := AdmitOutput(expectedV2, currentV2["snapshotId"].(string))
 		if err != nil {
-			t.Fatalf("AdmitOutput(v1 %s) error = %v", mapping.legacy, err)
+			t.Fatal(err)
 		}
 		if got, want := stableBytes(t, normalized), stableBytes(t, expectedV2); !bytes.Equal(got, want) {
-			t.Fatalf("v1 %s output normalized to a different semantic record\n got: %s\nwant: %s", mapping.legacy, got, want)
+			t.Fatalf("current %s output changed admitted values\n got: %s\nwant: %s", mapping.v2, got, want)
 		}
 	}
 
@@ -108,12 +103,44 @@ func TestDigestCoverageAdaptersPreserveSemanticDiffV2(t *testing.T) {
 	if _, err := AdmitOutput(v1WireOutput, currentV2["snapshotId"].(string)); err == nil {
 		t.Fatal("AdmitOutput accepted mixed v1/v2 digest coverage fields under schema v1")
 	}
+	for _, version := range []string{"1", "2"} {
+		old := cloneRequirementRecord(t, v2Input)
+		old["schemaVersion"] = json.Number(version)
+		if _, err := Build(old); err == nil {
+			t.Fatalf("old diff input %s accepted", version)
+		}
+		old = cloneRequirementRecord(t, v2Output)
+		old["schemaVersion"] = json.Number(version)
+		if _, err := AdmitOutput(old, currentV2["snapshotId"].(string)); err == nil {
+			t.Fatalf("old diff output %s accepted", version)
+		}
+	}
+	for _, side := range []string{"baseContext", "currentContext"} {
+		for _, version := range []string{"1", "2", "3"} {
+			mixed := cloneRequirementRecord(t, v2Input)
+			mixed[side].(map[string]any)["schemaVersion"] = json.Number(version)
+			if _, err := Build(mixed); err == nil {
+				t.Fatalf("mixed %s/%s accepted", side, version)
+			}
+		}
+	}
+}
+
+func v1DiffOutputFixture(t *testing.T, output map[string]any, coverage string) map[string]any {
+	t.Helper()
+	value := cloneRequirementRecord(t, output)
+	delete(value, "baseExpectedDigestCoverage")
+	delete(value, "currentExpectedDigestCoverage")
+	value["baseBaselineVerification"] = coverage
+	value["currentBaselineVerification"] = coverage
+	value["schemaVersion"] = json.Number("1")
+	return value
 }
 
 func TestBuildOutputIsClosedUnderAdmissionForMultipleChanges(t *testing.T) {
 	baseline := contextFixture(t, "The system preserves the baseline.")
 	current := contextFixture(t, "The system preserves the revised invariant.")
-	requirement := current["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
+	requirement := diffSourceGroup(current)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
 	requirement["claimLevel"] = "advisory"
 	requirement["nonClaims"] = []any{"The revised requirement does not approve merge."}
 	requirement["ownerId"] = "consumer.next-owner"
@@ -121,7 +148,7 @@ func TestBuildOutputIsClosedUnderAdmissionForMultipleChanges(t *testing.T) {
 	requirement["updatePolicy"].(map[string]any)["reviewOwnerId"] = "consumer.next-owner"
 	resignContextFixture(t, current)
 
-	output, err := Build(map[string]any{"baseContext": baseline, "currentContext": current, "diffId": "consumer.multi-field.diff", "schemaVersion": json.Number("2")})
+	output, err := Build(map[string]any{"baseContext": baseline, "currentContext": current, "diffId": "consumer.multi-field.diff", "schemaVersion": json.Number("3")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +176,7 @@ func TestBuildOutputIsClosedUnderAdmissionForMultipleChanges(t *testing.T) {
 func TestOwnerFilterPreservesStableIdentityAcrossOwnershipChange(t *testing.T) {
 	baseline := contextFixture(t, "The system preserves the same invariant.")
 	current := contextFixture(t, "The system preserves the same invariant.")
-	requirement := current["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
+	requirement := diffSourceGroup(current)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
 	requirement["ownerId"] = "consumer.next-owner"
 	resignContextFixture(t, current)
 
@@ -163,7 +190,7 @@ func TestOwnerFilterPreservesStableIdentityAcrossOwnershipChange(t *testing.T) {
 	} {
 		t.Run(item.ownerID, func(t *testing.T) {
 			output, err := Build(map[string]any{
-				"baseContext": baseline, "currentContext": current, "diffId": "consumer.owner-transition.diff", "schemaVersion": json.Number("2"),
+				"baseContext": baseline, "currentContext": current, "diffId": "consumer.owner-transition.diff", "schemaVersion": json.Number("3"),
 				"query": map[string]any{"ownerIds": []any{item.ownerID}},
 			})
 			if err != nil {
@@ -191,22 +218,22 @@ func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.020074570913264891573344859495254807591700934304007335407083834667788859243594")
 	baseline := contextFixture(t, "The shared requirement remains stable.")
 	current := contextFixture(t, "The shared requirement changes its invariant.")
-	baseRequirements := baseline["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)
-	currentRequirements := current["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)
+	baseRequirements := diffSourceGroup(baseline)["members"].([]any)
+	currentRequirements := diffSourceGroup(current)["members"].([]any)
 
 	removed := cloneRequirementRecord(t, baseRequirements[0].(map[string]any))
 	removed["requirementId"] = "REQ-CONSUMER-REMOVED"
-	baseline["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"] = append(baseRequirements, removed)
+	diffSourceGroup(baseline)["members"] = append(baseRequirements, removed)
 
 	added := cloneRequirementRecord(t, currentRequirements[0].(map[string]any))
 	added["requirementId"] = "REQ-CONSUMER-ADDED"
-	added["invariant"] = "The added requirement remains independently identifiable."
-	current["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"] = append(currentRequirements, added)
+	added["statementCompletion"] = "The added requirement remains independently identifiable."
+	diffSourceGroup(current)["members"] = append(currentRequirements, added)
 
-	shared := currentRequirements[0].(map[string]any)
+	shared := currentRequirements[0].(map[string]any)["fields"].(map[string]any)
 	shared["claimLevel"] = "advisory"
-	shared["nonClaimRefs"] = []any{"NC-CONSUMER-001", "NC-CONSUMER-002"}
-	shared["updatePolicy"].(map[string]any)["requiresImpactDeclaration"] = false
+	shared["externalNonClaimRefs"] = []any{"NC-CONSUMER-001", "NC-CONSUMER-002"}
+	delete(shared["updatePolicy"].(map[string]any), "requiresImpactDeclaration")
 	shared["lifecycle"] = map[string]any{
 		"state":                     "superseded",
 		"replacementRequirementIds": []any{"REQ-CONSUMER-ADDED"},
@@ -217,7 +244,7 @@ func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
 
 	output, err := Build(map[string]any{
 		"baseContext": baseline, "currentContext": current,
-		"diffId": "consumer.complete-algebra.diff", "schemaVersion": json.Number("2"),
+		"diffId": "consumer.complete-algebra.diff", "schemaVersion": json.Number("3"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -236,12 +263,12 @@ func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
 		}
 	}
 	for pointer, class := range map[string]string{
-		"/requirements/REQ-CONSUMER-ADDED":            "entity_added",
-		"/requirements/REQ-CONSUMER-REMOVED":          "entity_removed",
-		"/requirements/REQ-CONSUMER-001/invariant":    "scalar_changed",
-		"/requirements/REQ-CONSUMER-001/nonClaimRefs": "set_membership_changed",
-		"/requirements/REQ-CONSUMER-001/updatePolicy": "opaque_value_changed",
-		"/requirements/REQ-CONSUMER-001/lifecycle":    "lifecycle_transition",
+		"/requirements/REQ-CONSUMER-ADDED":                    "entity_added",
+		"/requirements/REQ-CONSUMER-REMOVED":                  "entity_removed",
+		"/requirements/REQ-CONSUMER-001/invariant":            "scalar_changed",
+		"/requirements/REQ-CONSUMER-001/externalNonClaimRefs": "set_membership_changed",
+		"/requirements/REQ-CONSUMER-001/updatePolicy":         "opaque_value_changed",
+		"/requirements/REQ-CONSUMER-001/lifecycle":            "lifecycle_transition",
 	} {
 		if pointers[pointer] != class {
 			t.Fatalf("change %s class=%q, want %q", pointer, pointers[pointer], class)
@@ -263,7 +290,7 @@ func TestBuildCoversCompleteRequirementChangeAlgebra(t *testing.T) {
 func TestBuildIncludesDeferralAndAdmissionBindsChangeIdentity(t *testing.T) {
 	base := deferredContextFixture(t, "Review after the migration window.")
 	current := deferredContextFixture(t, "Review after the compatibility window.")
-	output, err := Build(map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.deferral.diff", "schemaVersion": json.Number("2")})
+	output, err := Build(map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.deferral.diff", "schemaVersion": json.Number("3")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -275,6 +302,10 @@ func TestBuildIncludesDeferralAndAdmissionBindsChangeIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	admitted, err := AdmitOutput(decoded, current["snapshotId"].(string))
+	if err != nil || !bytes.Equal(stableBytes(t, admitted), encoded) {
+		t.Fatalf("authentic deferral change did not re-admit exactly: %v", err)
+	}
 	tampered := decoded.(map[string]any)
 	tampered["changes"].([]any)[0].(map[string]any)["changeId"] = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 	if _, err := AdmitOutput(tampered, current["snapshotId"].(string)); err == nil {
@@ -282,14 +313,46 @@ func TestBuildIncludesDeferralAndAdmissionBindsChangeIdentity(t *testing.T) {
 	}
 }
 
+func TestBuildMaxChangesAcceptsExactBoundAndRejectsOverflow(t *testing.T) {
+	base := contextFixture(t, "The system preserves the baseline.")
+	current := contextFixture(t, "The system preserves the revised invariant.")
+	fields := diffSourceGroup(current)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
+	fields["riskClass"] = "critical"
+	resignContextFixture(t, current)
+	input := map[string]any{
+		"schemaVersion": json.Number("3"), "diffId": "consumer.exact-limit.diff",
+		"baseContext": base, "currentContext": current,
+		"query": map[string]any{"maxChanges": json.Number("2")},
+	}
+	output, err := Build(input)
+	if err != nil || output["changeCount"] != 2 {
+		t.Fatalf("exact bound rejected two changes: output=%v, err=%v", output, err)
+	}
+	encoded, err := stablejson.Marshal(output)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := admission.DecodeJSON(bytes.NewReader(encoded), int64(len(encoded)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AdmitOutput(decoded, current["snapshotId"].(string)); err != nil {
+		t.Fatalf("exact-bound output did not re-admit: %v", err)
+	}
+	input["query"] = map[string]any{"maxChanges": json.Number("1")}
+	if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "maxChanges") {
+		t.Fatalf("overflow did not fail at maxChanges: %v", err)
+	}
+}
+
 func deferredContextFixture(t *testing.T, reviewCondition string) map[string]any {
 	t.Helper()
 	value := contextFixture(t, "The deferred contract remains explicit.")
 	projections := value["projections"].(map[string]any)
-	requirement := projections["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
+	requirement := diffSourceGroup(value)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
 	requirement["claimLevel"] = "deferred"
 	requirement["deferral"] = map[string]any{"evidenceRefs": []any{"docs/evidence/deferral.json"}, "expiryRef": "consumer.expiry", "mergePolicy": "consumer.deferred", "ownerId": "consumer.owner", "reviewCondition": reviewCondition, "riskAcceptedBy": "consumer.owner"}
-	identity := map[string]any{"catalogId": value["catalogId"], "projections": projections, "sources": []any{map[string]any{"currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "expectedDigest": "", "kind": "requirement_source", "nodeId": "spec.root", "path": "docs/specs/consumer/requirements.v1.json", "sourceRef": "consumer.requirements", "sourceRole": "requirements"}, map[string]any{"currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "expectedDigest": "", "kind": "spec_tree", "path": "proofkit/spec-tree.json", "sourceRef": "spec_tree:consumer.spec-tree"}}}
+	identity := map[string]any{"catalogId": value["catalogId"], "projections": projections, "sources": []any{map[string]any{"currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "expectedDigest": "", "kind": "requirement_source", "nodeId": "spec.root", "path": "docs/specs/consumer/requirements.v2.json", "sourceRef": "consumer.requirements", "sourceRole": "requirements"}, map[string]any{"currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "expectedDigest": "", "kind": "spec_tree", "path": "proofkit/spec-tree.json", "sourceRef": "spec_tree:consumer.spec-tree"}}}
 	encoded, err := stablejson.Marshal(identity)
 	if err != nil {
 		t.Fatal(err)
@@ -303,17 +366,27 @@ func contextFixture(t *testing.T, invariant string) map[string]any {
 	projections := map[string]any{
 		"specTree": treeFixture(),
 		"requirementSources": []any{map[string]any{
-			"schemaVersion": json.Number("1"), "sourceId": "consumer.requirements", "specPackagePath": "docs/specs/consumer", "overviewPath": "docs/specs/consumer/overview.md", "requirementsPath": "docs/specs/consumer/requirements.v1.json", "nonClaims": []any{"Consumer source does not approve merge."},
-			"requirements": []any{map[string]any{"requirementId": "REQ-CONSUMER-001", "ownerId": "consumer.owner", "invariant": invariant, "claimLevel": "blocking", "riskClass": "high", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "lifecycle": map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}}, "updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}}},
+			"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": "consumer.requirements", "specPackagePath": "docs/specs/consumer", "sourceNonClaims": []any{"Consumer source does not approve merge."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-CONSUMER", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId": "REQ-CONSUMER-001", "statementCompletion": invariant,
+					"fields": map[string]any{"ownerId": "consumer.owner", "claimLevel": "blocking", "riskClass": "high", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{}, "externalNonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "lifecycle": map[string]any{"state": "active"}, "deferral": nil, "updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}},
+				}},
+			}},
 		}},
 	}
-	sources := []requirementcontext.Source{{CurrentDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/consumer/requirements.v1.json", SourceRef: "consumer.requirements", SourceRole: "requirements"}, {CurrentDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.spec-tree"}}
+	sources := []requirementcontext.Source{{CurrentDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/consumer/requirements.v2.json", SourceRef: "consumer.requirements", SourceRole: "requirements"}, {CurrentDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.spec-tree"}}
 	identity := map[string]any{"catalogId": "consumer.context", "projections": projections, "sources": []any{map[string]any{"currentDigest": sources[0].CurrentDigest, "expectedDigest": "", "kind": sources[0].Kind, "nodeId": sources[0].NodeID, "path": sources[0].Path, "sourceRef": sources[0].SourceRef, "sourceRole": sources[0].SourceRole}, map[string]any{"currentDigest": sources[1].CurrentDigest, "expectedDigest": "", "kind": sources[1].Kind, "path": sources[1].Path, "sourceRef": sources[1].SourceRef}}}
 	encoded, err := stablejson.Marshal(identity)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "consumer.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
+}
+
+func diffSourceGroup(context map[string]any) map[string]any {
+	return context["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["groups"].([]any)[0].(map[string]any)
 }
 
 func v1DiffContextFixture(t *testing.T, value map[string]any) map[string]any {

@@ -52,6 +52,7 @@ type ReceiptProjection struct {
 	ArtifactRefs             []string
 	EnvironmentClass         string
 	EvidenceRef              string
+	ProducerAdmissionClass   string
 	ProducerID               string
 	ProvenanceRef            *string
 	ReceiptID                string
@@ -137,7 +138,7 @@ func Evaluate(raw any) (Projection, report.Record, int, error) {
 	}
 	projection := Projection{
 		PolicyID: input.PolicyID,
-		Receipts: receiptProjections(input.Receipts),
+		Receipts: receiptProjections(input.Receipts, producersByID),
 	}
 	if state == "passed" {
 		return projection, record, 0, nil
@@ -145,13 +146,14 @@ func Evaluate(raw any) (Projection, report.Record, int, error) {
 	return projection, record, 1, nil
 }
 
-func receiptProjections(receipts []receipt) []ReceiptProjection {
+func receiptProjections(receipts []receipt, producers map[string]producer) []ReceiptProjection {
 	result := make([]ReceiptProjection, 0, len(receipts))
 	for _, receipt := range receipts {
 		result = append(result, ReceiptProjection{
 			ArtifactRefs:             append([]string{}, receipt.ArtifactRefs...),
 			EnvironmentClass:         receipt.EnvironmentClass,
 			EvidenceRef:              receipt.EvidenceRef,
+			ProducerAdmissionClass:   producers[receipt.ProducerID].AdmissionLevel,
 			ProducerID:               receipt.ProducerID,
 			ProvenanceRef:            cloneStringPointer(receipt.ProvenanceRef),
 			ReceiptID:                receipt.ReceiptID,

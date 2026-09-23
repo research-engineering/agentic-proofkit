@@ -827,7 +827,7 @@ func promotionState(mode string) string {
 func instructions(mode string) []any {
 	if mode == TrustModeCodeBaseline {
 		return []any{
-			"Review candidateRequirementSeeds and materialize accepted records into requirements.v1.json.",
+			"Review candidateRequirementSeeds and materialize accepted records into requirements.v2.json.",
 			"Run requirement-source-admission after materialization.",
 			"Materialize candidateProofBindingSeeds for accepted scenarios and run requirement-bindings.",
 			"Create or update test-evidence-inventory records from native tests before claiming coverage.",

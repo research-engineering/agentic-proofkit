@@ -66,7 +66,7 @@ func prepareProjectWithInspector(ctx context.Context, repositoryRoot string, opt
 		return renderedView{}, Options{}, fmt.Errorf("view could not prepare bounded project context")
 	}
 	graph, err := requirementgraph.Build(map[string]any{
-		"schemaVersion": json.Number("2"), "graphId": snapshot.CatalogID,
+		"schemaVersion": json.Number("3"), "graphId": snapshot.CatalogID,
 		"context": requirementcontext.SnapshotValue(snapshot),
 	})
 	if err != nil {

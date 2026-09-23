@@ -67,8 +67,8 @@ func TestRequirementProofSourceSetCLIRejectsLegacyWrapper(t *testing.T) {
 func TestImpactCLIRejectsUnsafeResolutionOrderWithoutStdout(t *testing.T) {
 	fixture := strings.Replace(
 		cliImpactInputComposeInput(),
-		`"paths":["docs/specs/proofkit-cli-impact/requirements.v1.json"]`,
-		`"paths":["docs/specs/proofkit-cli-impact/requirements.v1.json","internal/app/cli_abi_test.go"]`,
+		`"paths":["docs/specs/proofkit-cli-impact/requirements.v2.json"]`,
+		`"paths":["docs/specs/proofkit-cli-impact/requirements.v2.json","internal/app/cli_abi_test.go"]`,
 		1,
 	)
 	composed := runCLIForJSON(t, []string{"requirement-impact-input-compose", "--input", "-"}, fixture)
@@ -93,8 +93,8 @@ func TestImpactCLIRejectsUnsafeResolutionOrderWithoutStdout(t *testing.T) {
 func TestCompactV2ComposeImpactPilotRoundTrip(t *testing.T) {
 	fixture := strings.Replace(
 		cliImpactInputComposeInput(),
-		`"paths":["docs/specs/proofkit-cli-impact/requirements.v1.json"]`,
-		`"paths":["docs/specs/proofkit-cli-impact/requirements.v1.json","internal/app/cli_abi_test.go"]`,
+		`"paths":["docs/specs/proofkit-cli-impact/requirements.v2.json"]`,
+		`"paths":["docs/specs/proofkit-cli-impact/requirements.v2.json","internal/app/cli_abi_test.go"]`,
 		1,
 	)
 	composed := runCLIForJSON(t, []string{"requirement-impact-input-compose", "--input", "-"}, fixture)
@@ -105,7 +105,7 @@ func TestCompactV2ComposeImpactPilotRoundTrip(t *testing.T) {
 	pilot := cliPilotInput("proofkit.cli.compact-round-trip", false)
 	demo := pilot["impactDemos"].([]any)[0].(map[string]any)
 	demo["impactInput"] = composed
-	demo["sourceOwnedChangedPaths"] = []any{"docs/specs/proofkit-cli-impact/requirements.v1.json"}
+	demo["sourceOwnedChangedPaths"] = []any{"docs/specs/proofkit-cli-impact/requirements.v2.json"}
 	report := runCLIForJSON(t, []string{"pilot-admission", "--input", "-"}, cliJSON(pilot))
 	if report["state"] != "passed" {
 		t.Fatalf("pilot report=%#v want passed compose -> impact -> pilot route", report)

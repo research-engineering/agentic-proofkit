@@ -17,10 +17,10 @@ import (
 )
 
 const (
-	SchemaVersion = 1
-	RequestKind   = "proofkit.adoption-materialization-request"
-	PlanKind      = "proofkit.adoption-materialization-plan"
-	ReceiptKind   = "proofkit.adoption-materialization-receipt"
+	RequestSchemaVersion = 2
+	RequestKind          = "proofkit.adoption-materialization-request"
+	PlanKind             = "proofkit.adoption-materialization-plan"
+	ReceiptKind          = "proofkit.adoption-materialization-receipt"
 
 	ProjectManifestPath = "proofkit/project.v1.json"
 

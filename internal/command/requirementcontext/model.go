@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	ContextKind      = "proofkit.requirement-context"
-	maxSnapshotBytes = 8 << 20
+	ContextKind           = "proofkit.requirement-context"
+	SnapshotSchemaVersion = 4
+	maxSnapshotBytes      = 8 << 20
 )
 
 var boundaryNonClaims = []string{
@@ -74,12 +75,11 @@ func SnapshotValue(snapshot Snapshot) map[string]any {
 		"expectedDigestCoverage": snapshot.ExpectedDigestCoverage,
 		"nonClaims":              admit.StringSliceToAny(boundaryNonClaims),
 		"projections":            snapshot.Projections,
-		"schemaVersion":          json.Number("2"),
+		"schemaVersion":          json.Number(fmt.Sprint(SnapshotSchemaVersion)),
 		"snapshotId":             snapshot.SnapshotID,
 		"sources":                sources,
 	}
 	if snapshot.projectOrigin != nil {
-		value["schemaVersion"] = json.Number("3")
 		value["projectOrigin"] = snapshot.projectOrigin.value()
 	}
 	return value
@@ -90,24 +90,21 @@ func AdmitSnapshot(raw any) (Snapshot, error) {
 	if !ok {
 		return Snapshot{}, fmt.Errorf("requirement context must be an object")
 	}
-	switch {
-	case admit.JSONNumberEquals(record["schemaVersion"], 1):
-		return admitV1Snapshot(record)
-	case admit.JSONNumberEquals(record["schemaVersion"], 2):
-		return admitV2Snapshot(record)
-	case admit.JSONNumberEquals(record["schemaVersion"], 3):
-		return admitProjectSnapshot(record)
-	default:
-		return Snapshot{}, fmt.Errorf("requirement context schemaVersion must be 1, 2 or 3")
+	if !admit.JSONNumberEquals(record["schemaVersion"], SnapshotSchemaVersion) {
+		return Snapshot{}, fmt.Errorf("requirement context schemaVersion must be 4")
 	}
+	if _, present := record["projectOrigin"]; present {
+		return admitProjectSnapshot(record)
+	}
+	return admitCatalogSnapshot(record)
 }
 
-func admitV2Snapshot(record map[string]any) (Snapshot, error) {
-	if err := admit.KnownKeys(record, []string{"catalogId", "contextKind", "expectedDigestCoverage", "nonClaims", "projections", "schemaVersion", "snapshotId", "sources"}, "requirement context v2"); err != nil {
+func admitCatalogSnapshot(record map[string]any) (Snapshot, error) {
+	if err := admit.KnownKeys(record, []string{"catalogId", "contextKind", "expectedDigestCoverage", "nonClaims", "projections", "schemaVersion", "snapshotId", "sources"}, "requirement context"); err != nil {
 		return Snapshot{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) || record["contextKind"] != ContextKind {
-		return Snapshot{}, fmt.Errorf("requirement context v2 identity is invalid")
+	if record["contextKind"] != ContextKind {
+		return Snapshot{}, fmt.Errorf("requirement context identity is invalid")
 	}
 	coverage, err := admit.Enum(record["expectedDigestCoverage"], map[string]struct{}{"all": {}, "none": {}, "partial": {}}, "requirement context expectedDigestCoverage")
 	if err != nil {
@@ -176,7 +173,15 @@ func admitSnapshotRecord(record map[string]any, expectedNonClaims []string) (Sna
 }
 
 func validateSnapshotSize(snapshot Snapshot) (Snapshot, error) {
-	fullValue, err := stablejson.Marshal(SnapshotValue(snapshot))
+	value := SnapshotValue(snapshot)
+	shape := catalogSnapshotShape
+	if snapshot.projectOrigin != nil {
+		shape = projectSnapshotShape
+	}
+	if err := shape.CheckGenerated(value, "requirement context"); err != nil {
+		return Snapshot{}, err
+	}
+	fullValue, err := stablejson.Marshal(value)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -201,7 +206,7 @@ func validateProjectionSources(tree requirementspectree.Tree, requirementSources
 		}
 	}
 	for _, source := range requirementSources {
-		expected["requirement_source:"+source.SourceID] = source.SourceID
+		expected["requirement_source:"+source.SourceID()] = source.SourceID()
 	}
 	if len(requirementNodes) != len(requirementSources) {
 		return fmt.Errorf("requirement context specification tree requirement refs do not match requirement projections")
@@ -239,10 +244,10 @@ func validateProjectionSources(tree requirementspectree.Tree, requirementSources
 	}
 	knownRequirements := map[string]struct{}{}
 	for _, source := range requirementSources {
-		if _, ok := requirementNodes[source.SourceID]; !ok {
+		if _, ok := requirementNodes[source.SourceID()]; !ok {
 			return fmt.Errorf("requirement context requirement projection is not referenced by the specification tree")
 		}
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			knownRequirements[requirement.RequirementID] = struct{}{}
 		}
 	}
@@ -288,11 +293,11 @@ func admitSnapshotProjections(projections map[string]any) (requirementspectree.T
 		if result.ExitCode != 0 {
 			return requirementspectree.Tree{}, nil, nil, nil, nil, fmt.Errorf("requirement context requirement source projection failed admission")
 		}
-		if _, exists := seen[result.Source.SourceID]; exists {
+		if _, exists := seen[result.Source.SourceID()]; exists {
 			return requirementspectree.Tree{}, nil, nil, nil, nil, fmt.Errorf("requirement context requirement source ids must be unique")
 		}
-		seen[result.Source.SourceID] = struct{}{}
-		for _, requirement := range result.Source.Requirements {
+		seen[result.Source.SourceID()] = struct{}{}
+		for _, requirement := range result.Source.Requirements() {
 			if _, duplicate := seenRequirements[requirement.RequirementID]; duplicate {
 				return requirementspectree.Tree{}, nil, nil, nil, nil, fmt.Errorf("requirement context requirement ids must be unique across sources")
 			}
@@ -301,7 +306,7 @@ func admitSnapshotProjections(projections map[string]any) (requirementspectree.T
 		requirementSources = append(requirementSources, result.Source)
 	}
 	sort.Slice(requirementSources, func(left, right int) bool {
-		return requirementSources[left].SourceID < requirementSources[right].SourceID
+		return requirementSources[left].SourceID() < requirementSources[right].SourceID()
 	})
 	var proofBinding *requirementbinding.Input
 	if rawProof, ok := projections["proofBinding"]; ok {
@@ -318,8 +323,12 @@ func admitSnapshotProjections(projections map[string]any) (requirementspectree.T
 			return requirementspectree.Tree{}, nil, nil, nil, nil, fmt.Errorf("requirement context coverage projection is invalid: %w", err)
 		}
 	}
+	sourceValues, err := requirementSourceValues(requirementSources)
+	if err != nil {
+		return requirementspectree.Tree{}, nil, nil, nil, nil, err
+	}
 	canonical := map[string]any{
-		"requirementSources": requirementSourceValues(requirementSources),
+		"requirementSources": sourceValues,
 		"specTree":           requirementspectree.TreeValue(treeResult.Tree),
 	}
 	if proofBinding != nil {
@@ -331,12 +340,16 @@ func admitSnapshotProjections(projections map[string]any) (requirementspectree.T
 	return treeResult.Tree, requirementSources, proofBinding, coverage, canonical, nil
 }
 
-func requirementSourceValues(sources []requirementsourceadmission.Source) []any {
+func requirementSourceValues(sources []requirementsourceadmission.Source) ([]any, error) {
 	values := make([]any, 0, len(sources))
 	for _, source := range sources {
-		values = append(values, requirementsourceadmission.SourceValue(source))
+		value, err := requirementsourceadmission.SourceValue(source)
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, value)
 	}
-	return values
+	return values, nil
 }
 
 func admitExactNonClaims(raw any, expectedNonClaims []string) error {

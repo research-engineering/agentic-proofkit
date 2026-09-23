@@ -14,31 +14,30 @@ func workspaceLookupFixture(t *testing.T) map[string]any {
 	contextValue := fixture["context"].(map[string]any)
 	projections := contextValue["projections"].(map[string]any)
 	template := projections["requirementSources"].([]any)[0].(map[string]any)
-	requirementTemplate := template["requirements"].([]any)[0].(map[string]any)
+	requirementTemplate := template["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
 	makeRequirement := func(id, owner, invariant string) map[string]any {
 		record := cloneWorkspaceRecord(t, requirementTemplate)
-		record["requirementId"], record["ownerId"], record["invariant"] = id, owner, invariant
-		record["updatePolicy"].(map[string]any)["reviewOwnerId"] = owner
+		record["requirementId"], record["statementCompletion"] = id, invariant
+		record["fields"].(map[string]any)["ownerId"] = owner
+		record["fields"].(map[string]any)["updatePolicy"].(map[string]any)["reviewOwnerId"] = owner
 		return record
 	}
 	makeSource := func(name string, requirements []any) map[string]any {
 		source := cloneWorkspaceRecord(t, template)
 		source["sourceId"] = "consumer." + name
 		source["specPackagePath"] = "docs/specs/" + name
-		source["overviewPath"] = "docs/specs/" + name + "/overview.md"
-		source["requirementsPath"] = "docs/specs/" + name + "/requirements.v1.json"
-		source["requirements"] = requirements
+		source["groups"].([]any)[0].(map[string]any)["members"] = requirements
 		return source
 	}
 	rows := make([]any, 130)
 	for index := range rows {
 		rows[index] = makeRequirement(fmt.Sprintf("REQ-B-%03d", index), "owner.b", fmt.Sprintf("Capability %03d remains explicit.", index))
 	}
-	rows[0].(map[string]any)["claimLevel"] = "advisory"
-	rows[0].(map[string]any)["lifecycle"] = map[string]any{"state": "superseded", "replacementRequirementIds": []any{"REQ-B-001"}, "evidenceRefs": []any{"consumer.migration"}}
-	rows[1].(map[string]any)["ownerId"] = "owner.c"
-	rows[1].(map[string]any)["updatePolicy"].(map[string]any)["reviewOwnerId"] = "owner.c"
-	rows[129].(map[string]any)["invariant"] = "State \U0001f9ed e\u0301 keeps source identity."
+	rows[0].(map[string]any)["fields"].(map[string]any)["claimLevel"] = "advisory"
+	rows[0].(map[string]any)["fields"].(map[string]any)["lifecycle"] = map[string]any{"state": "superseded", "replacementRequirementIds": []any{"REQ-B-001"}, "evidenceRefs": []any{"consumer.migration"}}
+	rows[1].(map[string]any)["fields"].(map[string]any)["ownerId"] = "owner.c"
+	rows[1].(map[string]any)["fields"].(map[string]any)["updatePolicy"].(map[string]any)["reviewOwnerId"] = "owner.c"
+	rows[129].(map[string]any)["statementCompletion"] = "State \U0001f9ed e\u0301 keeps source identity."
 	projections["requirementSources"] = []any{
 		makeSource("a", []any{makeRequirement("REQ-A", "owner.a", "The root contract remains explicit.")}),
 		makeSource("b", rows),
@@ -65,9 +64,9 @@ func workspaceLookupFixture(t *testing.T) map[string]any {
 		map[string]any{"overlayId": "overlay.path-b", "overlayKind": "source", "label": "Auxiliary overview", "refKind": "source_ref", "refId": "root.path-b", "targetNodeId": "spec.root", "callerAnnotations": []any{}},
 	}
 	contextValue["sources"] = []any{
-		map[string]any{"currentDigest": digest.SHA256TextRef("source-a"), "kind": "requirement_source", "nodeId": "spec.root", "path": "docs/specs/a/requirements.v1.json", "sourceRef": "consumer.a", "sourceRole": "requirements"},
-		map[string]any{"currentDigest": digest.SHA256TextRef("source-b"), "kind": "requirement_source", "nodeId": "spec.child", "path": "docs/specs/b/requirements.v1.json", "sourceRef": "consumer.b", "sourceRole": "requirements"},
-		map[string]any{"currentDigest": digest.SHA256TextRef("source-c"), "kind": "requirement_source", "nodeId": "spec.grandchild", "path": "docs/specs/c/requirements.v1.json", "sourceRef": "consumer.c", "sourceRole": "requirements"},
+		map[string]any{"currentDigest": digest.SHA256TextRef("source-a"), "kind": "requirement_source", "nodeId": "spec.root", "path": "docs/specs/a/requirements.v2.json", "sourceRef": "consumer.a", "sourceRole": "requirements"},
+		map[string]any{"currentDigest": digest.SHA256TextRef("source-b"), "kind": "requirement_source", "nodeId": "spec.child", "path": "docs/specs/b/requirements.v2.json", "sourceRef": "consumer.b", "sourceRole": "requirements"},
+		map[string]any{"currentDigest": digest.SHA256TextRef("source-c"), "kind": "requirement_source", "nodeId": "spec.grandchild", "path": "docs/specs/c/requirements.v2.json", "sourceRef": "consumer.c", "sourceRole": "requirements"},
 		map[string]any{"currentDigest": digest.SHA256TextRef("tree"), "kind": "spec_tree", "path": "proofkit/spec-tree.json", "sourceRef": "spec_tree:consumer.spec-tree"},
 	}
 	resignWorkspaceSnapshot(t, contextValue)

@@ -100,8 +100,8 @@ func admitInput(raw any) (input, error) {
 	if err := admit.KnownKeys(record, []string{"baseCommit", "baseCompactProofContract", "baseRef", "baseRequirementSources", "changedPathSources", "composerInputId", "currentCompactProofContract", "currentRequirementSources", "generatedArtifactPolicyState", "generatedArtifactRules", "headCommit", "headRef", "localEnvironmentPolicy", "nonClaims", "preexistingFailures", "proofBindingSourcePaths", "proofLikePathPolicy", "schemaVersion", "unboundProofChangeRationale"}, "requirement impact input compose input"); err != nil {
 		return input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return input{}, fmt.Errorf("requirement impact input compose schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return input{}, fmt.Errorf("requirement impact input compose schemaVersion must be 3")
 	}
 	if _, err := admit.RuleID(record["composerInputId"], "requirement impact input compose composerInputId"); err != nil {
 		return input{}, err
@@ -126,6 +126,7 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
+	baseSourcesPresent := record["baseRequirementSources"] != nil
 	baseRequirements, err := admitRequirementSources(record["baseRequirementSources"], "baseRequirementSources", true)
 	if err != nil {
 		return input{}, err
@@ -142,7 +143,7 @@ func admitInput(raw any) (input, error) {
 		}
 		baseContract = &contract
 	}
-	if (len(baseRequirements) == 0) != (baseContract == nil) {
+	if baseSourcesPresent != (baseContract != nil) {
 		return input{}, fmt.Errorf("requirement impact input compose baseRequirementSources and baseCompactProofContract must both be present or both be null for new-adoption baselines")
 	}
 	changedPathSources, err := changedPathSources(record["changedPathSources"])
@@ -317,7 +318,7 @@ func admitRequirementSources(raw any, context string, nullable bool) (map[string
 		if result.ExitCode != 0 {
 			return nil, fmt.Errorf("requirement impact input compose %s item %d must pass requirement source admission", context, index+1)
 		}
-		for _, requirement := range result.Source.Requirements {
+		for _, requirement := range result.Source.Requirements() {
 			if _, exists := byID[requirement.RequirementID]; exists {
 				return nil, fmt.Errorf("requirement impact input compose duplicate requirementId across %s: %s", context, requirement.RequirementID)
 			}
@@ -639,23 +640,7 @@ func isActiveBlocking(requirement requirementsourceadmission.Requirement) bool {
 }
 
 func requirementFingerprint(requirement requirementsourceadmission.Requirement) string {
-	return stableFingerprint(map[string]any{
-		"claimLevel":       requirement.ClaimLevel,
-		"deferral":         deferralValue(requirement.Deferral),
-		"invariant":        requirement.Invariant,
-		"lifecycle":        lifecycleValue(requirement.Lifecycle),
-		"nonClaimRefs":     stringsToAny(requirement.NonClaimRefs),
-		"nonClaims":        stringsToAny(requirement.NonClaims),
-		"ownerId":          requirement.OwnerID,
-		"proofBindingRefs": stringsToAny(requirement.ProofBindingRefs),
-		"requirementId":    requirement.RequirementID,
-		"riskClass":        requirement.RiskClass,
-		"updatePolicy": map[string]any{
-			"requiresImpactDeclaration":  requirement.UpdatePolicy.RequiresImpactDeclaration,
-			"requiresProofBindingReview": requirement.UpdatePolicy.RequiresProofBindingReview,
-			"reviewOwnerId":              requirement.UpdatePolicy.ReviewOwnerID,
-		},
-	})
+	return stableFingerprint(requirementsourceadmission.RequirementValue(requirement))
 }
 
 func bindingFingerprint(binding bindingRecord) string {
@@ -709,28 +694,6 @@ func stableFingerprint(value any) string {
 	}
 	sum := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(sum[:])
-}
-
-func deferralValue(deferral *requirementsourceadmission.Deferral) any {
-	if deferral == nil {
-		return nil
-	}
-	return map[string]any{
-		"evidenceRefs":    stringsToAny(deferral.EvidenceRefs),
-		"expiryRef":       deferral.ExpiryRef,
-		"mergePolicy":     deferral.MergePolicy,
-		"ownerId":         deferral.OwnerID,
-		"reviewCondition": deferral.ReviewCondition,
-		"riskAcceptedBy":  deferral.RiskAcceptedBy,
-	}
-}
-
-func lifecycleValue(lifecycle requirementsourceadmission.Lifecycle) map[string]any {
-	return map[string]any{
-		"evidenceRefs":              stringsToAny(lifecycle.EvidenceRefs),
-		"replacementRequirementIds": stringsToAny(lifecycle.ReplacementRequirementIDs),
-		"state":                     lifecycle.State,
-	}
 }
 
 func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {

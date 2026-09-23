@@ -54,7 +54,7 @@ func normalizeInventoryInputGuidePublicABIDelta(current map[string]any) error {
 func TestAdoptionInputGuideContractRejectsUndeclaredDelta(t *testing.T) {
 	for _, mutation := range []string{"old-summary", "wrong-version", "missing-summary", "extra-summary", "other-field"} {
 		t.Run(mutation, func(t *testing.T) {
-			current := readCLIContractRaw(t)
+			current := readArchivedSourceCutoverPredecessor(t)
 			mutatePublicABIRecord(t, current, "commands", "command", "test-evidence-inventory", func(record map[string]any) {
 				input := clonePublicABIRecord(record["inputContract"].(map[string]any))
 				summary := slices.Clone(input["compatibilitySummary"].([]any))

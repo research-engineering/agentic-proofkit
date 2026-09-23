@@ -181,39 +181,49 @@ npm exec --offline -- agentic-proofkit requirement-source-admission --input -
 
 ```json
 {
-  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source",
+  "schemaVersion": 2,
   "sourceId": "example.requirements",
   "specPackagePath": "docs/specs/example",
-  "overviewPath": "docs/specs/example/overview.md",
-  "requirementsPath": "docs/specs/example/requirements.v1.json",
-  "nonClaims": [
+  "sourceNonClaims": [
     "This example does not approve merge or release."
   ],
-  "requirements": [
+  "groups": [
     {
-      "requirementId": "REQ-EXAMPLE-001",
-      "ownerId": "example.owner",
-      "invariant": "The example owner must replace this sentence with an admitted product invariant.",
-      "claimLevel": "blocking",
-      "riskClass": "medium",
-      "proofBindingRefs": [
-        "proofkit/requirement-bindings.json"
-      ],
-      "nonClaimRefs": [],
-      "nonClaims": [
-        "This example does not execute or authenticate a native witness."
-      ],
-      "lifecycle": {
-        "state": "active",
-        "replacementRequirementIds": [],
-        "evidenceRefs": []
-      },
-      "deferral": null,
-      "updatePolicy": {
-        "reviewOwnerId": "example.owner",
-        "requiresImpactDeclaration": true,
-        "requiresProofBindingReview": true
-      }
+      "groupId": "RGRP-FIXTURE",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {
+          "requirementId": "REQ-EXAMPLE-001",
+          "statementCompletion": "The example owner must replace this sentence with an admitted product invariant.",
+          "fields": {
+            "ownerId": "example.owner",
+            "claimLevel": "blocking",
+            "riskClass": "medium",
+            "proofBindingRefs": [
+              "proofkit/requirement-bindings.json"
+            ],
+            "nonClaims": [
+              "This example does not execute or authenticate a native witness."
+            ],
+            "lifecycle": {
+              "state": "active",
+              "replacementRequirementIds": [],
+              "evidenceRefs": []
+            },
+            "deferral": null,
+            "updatePolicy": {
+              "reviewOwnerId": "example.owner",
+              "requiresImpactDeclaration": true,
+              "requiresProofBindingReview": true
+            },
+            "nonClaimRefs": [],
+            "externalNonClaimRefs": []
+          }
+        }
+      ]
     }
   ]
 }

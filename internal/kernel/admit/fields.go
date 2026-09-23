@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	secretWhitespaceClassSource      = `\t\n\v\f\r \x{0085}\p{Zs}\p{Zl}\p{Zp}`
+	secretWhitespaceClassSource      = `\t\n\v\f\r \x85\p{Zs}\p{Zl}\p{Zp}`
 	secretWhitespacePatternSource    = `[` + secretWhitespaceClassSource + `]`
 	secretNonWhitespacePatternSource = `[^` + secretWhitespaceClassSource + `]`
-	secretContextPatternSource       = `authorization` + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
+	secretKeyQuotePatternSource      = `(?:\\?["'])?`
+	secretContextPatternSource       = `authorization` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
 	secretSharedTokenPatternSource   = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
 	secretScalarTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
 	secretPathTokenPatternSource     = secretSharedTokenPatternSource + `|sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
@@ -65,6 +66,8 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "api_key_control_split", Input: "api_\u200bkey=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
+		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "token_escaped_json_key", Input: `\"token\": \"synthetic-fixture-value\"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "github_pat", Input: githubPAT, SensitiveNeedles: []string{githubPAT}},
 		{Name: "github_ghp", Input: githubToken, SensitiveNeedles: []string{githubToken}},
 		{Name: "openai_key", Input: openAIKey, SensitiveNeedles: []string{"abcdefghijklmnop"}},
@@ -100,11 +103,14 @@ func KnownKeys(record map[string]any, admitted []string, context string) error {
 
 func RuleID(raw any, context string) (string, error) {
 	value, ok := raw.(string)
-	if !ok || !ruleIDPattern.MatchString(value) {
+	if !ok {
 		return "", fmt.Errorf("%s must be stable rule identifier text", context)
 	}
 	if len(value) > maxRuleIDBytes {
 		return "", fmt.Errorf("%s exceeds the %d-byte stable identifier limit", context, maxRuleIDBytes)
+	}
+	if !ruleIDPattern.MatchString(value) {
+		return "", fmt.Errorf("%s must be stable rule identifier text", context)
 	}
 	if ContainsSecretLikeValue(value) {
 		return "", fmt.Errorf("%s must not contain secret-like values", context)
@@ -164,11 +170,9 @@ func SHA256HexRef(raw any, context string) (string, error) {
 }
 
 func ContainsSecretLikeValue(value string) bool {
-	if ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value) {
-		return true
-	}
-	withoutUnsafe := withoutUnsafeScalars(value)
-	return withoutUnsafe != value && (ContainsSecretTokenLikeValue(withoutUnsafe) || ContainsURLCredentialValue(withoutUnsafe))
+	return matchesNormalizedSecret(value, func(text string) bool {
+		return secretValuePattern.MatchString(text) || urlUserInfoPattern.MatchString(text)
+	})
 }
 
 func ContainsReportVisibleUnsafeValue(value string) bool {
@@ -176,19 +180,31 @@ func ContainsReportVisibleUnsafeValue(value string) bool {
 }
 
 func ContainsSecretLikePathValue(value string) bool {
-	if ContainsURLCredentialValue(value) || secretPathContextPattern.MatchString(value) || secretPathTokenPattern.MatchString(value) {
-		return true
-	}
-	withoutUnsafe := withoutUnsafeScalars(value)
-	return withoutUnsafe != value && (ContainsURLCredentialValue(withoutUnsafe) || secretPathContextPattern.MatchString(withoutUnsafe) || secretPathTokenPattern.MatchString(withoutUnsafe))
+	return matchesNormalizedSecret(value, func(text string) bool {
+		return urlUserInfoPattern.MatchString(text) || secretPathContextPattern.MatchString(text) || secretPathTokenPattern.MatchString(text)
+	})
 }
 
 func ContainsSecretTokenLikeValue(value string) bool {
-	return secretValuePattern.MatchString(value)
+	return matchesNormalizedSecret(value, secretValuePattern.MatchString)
 }
 
 func ContainsURLCredentialValue(value string) bool {
-	return urlUserInfoPattern.MatchString(value)
+	return matchesNormalizedSecret(value, urlUserInfoPattern.MatchString)
+}
+
+// SecretLikeValuePatternSources projects the shared, case-insensitive Unicode
+// pattern bodies for generated adapters. Normalization remains a separate step.
+func SecretLikeValuePatternSources() []string {
+	return []string{secretContextPatternSource + "|" + secretScalarTokenPatternSource, urlUserInfoPattern.String()}
+}
+
+func matchesNormalizedSecret(value string, matches func(string) bool) bool {
+	if matches(value) {
+		return true
+	}
+	withoutUnsafe := withoutUnsafeScalars(value)
+	return withoutUnsafe != value && matches(withoutUnsafe)
 }
 
 func RedactSecretLikeValue(value string) string {
@@ -430,9 +446,17 @@ func preserveSortedCanonical(canonical []string, context string) ([]string, erro
 }
 
 func PreserveSortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, err := TextArray(raw, context, allowEmpty)
-	if err != nil {
-		return nil, err
+	items, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be an array", context)
+	}
+	values := make([]string, len(items))
+	for index, item := range items {
+		value, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s[%d] must be text", context, index)
+		}
+		values[index] = value
 	}
 	return PreserveSortedText(values, context, allowEmpty)
 }

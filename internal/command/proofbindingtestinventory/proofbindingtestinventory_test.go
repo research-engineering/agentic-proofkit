@@ -82,7 +82,7 @@ func TestBuildProjectsCompactProofBindingToAdmittedInventory(t *testing.T) {
 
 func TestBuildRejectsMissingRequirementOwner(t *testing.T) {
 	input := validInput()
-	input["requirementSource"].(map[string]any)["requirements"] = []any{}
+	input["requirementSource"].(map[string]any)["groups"] = []any{}
 
 	_, exitCode, err := Build(input)
 	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "has no owner") {
@@ -248,18 +248,26 @@ func TestBuildRejectsDerivedCommandRefCollision(t *testing.T) {
 
 func validInput() map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("2"),
+		"schemaVersion": json.Number("3"),
 		"inventoryId":   "proofkit.derived.inventory",
 		"commandRefPolicy": map[string]any{
 			"prefix": "proofkit_repo",
 		},
 		"requirementSource": map[string]any{
-			"requirements": []any{
-				map[string]any{
-					"requirementId": "REQ-PROOFKIT-COMPACT-001",
-					"ownerId":       "proofkit.spec",
-				},
-			},
+			"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"),
+			"sourceId": "proofkit.test.source", "specPackagePath": "docs/specs/test", "sourceNonClaims": []any{"This source does not establish execution."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-TEST", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId": "REQ-PROOFKIT-COMPACT-001", "statementCompletion": "A declared route retains its requirement owner.",
+					"fields": map[string]any{
+						"ownerId": "proofkit.spec", "claimLevel": "blocking", "riskClass": "high", "deferral": nil,
+						"lifecycle":        map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
+						"proofBindingRefs": []any{"proofkit/bindings.json"}, "nonClaimRefs": []any{}, "externalNonClaimRefs": []any{}, "nonClaims": []any{},
+						"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "proofkit.spec"},
+					},
+				}},
+			}},
 		},
 		"compactProofContract": validCompactContract(),
 		"nonClaims":            []any{"Fixture projection does not execute native tests."},

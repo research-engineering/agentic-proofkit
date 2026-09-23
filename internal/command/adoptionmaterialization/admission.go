@@ -19,7 +19,7 @@ func admitRequest(raw any) (Request, error) {
 	if err := admit.KnownKeys(record, []string{"nonClaims", "projectId", "requestId", "requestKind", "requirementProofBinding", "requirementSources", "schemaVersion", "sourcePlan", "testEvidenceInventory"}, "adoption materialization request"); err != nil {
 		return Request{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], SchemaVersion) || record["requestKind"] != RequestKind {
+	if !admit.JSONNumberEquals(record["schemaVersion"], RequestSchemaVersion) || record["requestKind"] != RequestKind {
 		return Request{}, fmt.Errorf("adoption materialization request identity is invalid")
 	}
 	requestID, err := admit.RuleID(record["requestId"], "adoption materialization requestId")
@@ -78,7 +78,9 @@ func admitSources(raw any) ([]requirementsourceadmission.Source, error) {
 		}
 		sources = append(sources, result.Source)
 	}
-	sort.Slice(sources, func(left, right int) bool { return sources[left].RequirementsPath < sources[right].RequirementsPath })
+	sort.Slice(sources, func(left, right int) bool {
+		return sources[left].RequirementsPath() < sources[right].RequirementsPath()
+	})
 	return sources, nil
 }
 

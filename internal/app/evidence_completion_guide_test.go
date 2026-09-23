@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
@@ -57,6 +58,14 @@ func TestCoverageGuideComposesActualInputsAndRetainsGaps(t *testing.T) {
 	input["composerInputId"], input["viewInputId"] = "example.compose", "example.view"
 	input["selectedOwnerIds"] = []any{"example.backend"}
 	input["requirementSource"] = materialization["requirementSources"].([]any)[0]
+	sourceResult, err := requirementsourceadmission.Evaluate(input["requirementSource"])
+	if err != nil || sourceResult.ExitCode != 0 {
+		t.Fatalf("source premise: %v", err)
+	}
+	expectedSource, err := requirementsourceadmission.SourceValue(sourceResult.Source)
+	if err != nil {
+		t.Fatal(err)
+	}
 	input["requirementProofBinding"] = materialization["requirementProofBinding"].(map[string]any)["record"]
 	input["testEvidenceInventory"] = materialization["testEvidenceInventory"].(map[string]any)["record"]
 	universe := input["coverageUniverse"].(map[string]any)
@@ -64,7 +73,7 @@ func TestCoverageGuideComposesActualInputsAndRetainsGaps(t *testing.T) {
 	universe["ownerIds"] = []any{"example.backend"}
 	universe["commandRefs"] = []any{"example.test.requests"}
 	universe["codeSurfaces"] = []any{map[string]any{"surfaceId": "example.code", "ownerId": "example.backend", "path": "src"}}
-	universe["specSurfaces"] = []any{map[string]any{"surfaceId": "example.spec", "ownerId": "example.backend", "path": "docs/specs/requests/requirements.v1.json"}}
+	universe["specSurfaces"] = []any{map[string]any{"surfaceId": "example.spec", "ownerId": "example.backend", "path": "docs/specs/requests/requirements.v2.json"}}
 	universe["testSurfaces"] = []any{map[string]any{"surfaceId": "example.test", "ownerId": "example.backend", "path": "src/request_test.go"}}
 	commands := guideCommands(t, help, "Declaration coverage input guide:", cliexec.PathRenderer())
 	composeArgs := fillGuideOperands(t, commands[0], map[string]string{"<coverage-input>": "-"})
@@ -89,7 +98,7 @@ func TestCoverageGuideComposesActualInputsAndRetainsGaps(t *testing.T) {
 				t.Fatalf("compose failed before downstream: %d %s", code, diagnostic)
 			}
 			composed := decodeCLIJSON(t, wire).(map[string]any)
-			if !equalCLIJSON(t, composed["requirementSource"], candidate["requirementSource"]) {
+			if !equalCLIJSON(t, composed["requirementSource"], expectedSource) {
 				t.Fatal("composer lost source operands")
 			}
 			binding := composed["requirementProofBinding"].(map[string]any)["bindings"].([]any)[0].(map[string]any)
@@ -125,7 +134,7 @@ func TestCoverageGuideComposesActualInputsAndRetainsGaps(t *testing.T) {
 			if variant == "missing" {
 				wantIDs = []any{}
 			}
-			if row["requirementId"] != "REQ-EXAMPLE-001" || row["ownerId"] != "example.backend" || row["specPath"] != "docs/specs/requests/requirements.v1.json" || !reflect.DeepEqual(row["testIds"], wantIDs) {
+			if row["requirementId"] != "REQ-EXAMPLE-001" || row["ownerId"] != "example.backend" || row["specPath"] != "docs/specs/requests/requirements.v2.json" || !reflect.DeepEqual(row["testIds"], wantIDs) {
 				t.Fatalf("view changed identity or test linkage: %v", row)
 			}
 			if variant == "missing" && !reflect.DeepEqual(view["deadZones"], []any{map[string]any{

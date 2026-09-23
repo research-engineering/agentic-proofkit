@@ -5,6 +5,16 @@ import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mj
 
 import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace} from "./workspace-navigation-harness.mjs";
 
+test("requirement boundary resolves its named source restriction and labels external references", async ({baseURL, page}) => {
+  await openWorkspace(page, baseURL);
+  const boundary = page.locator('.requirement-boundary');
+  await expect(boundary).toHaveCount(1);
+  await boundary.locator("summary").click();
+  await expect(boundary).toContainText("NCL-BROWSER: This source does not prove native execution.");
+  await expect(boundary).toContainText("External non-claim reference: NC-CONSUMER-001");
+  await expect(boundary).not.toContainText("Definition unavailable");
+});
+
 async function expectIdentityOrder(rows, expected) {
   await expect(rows).toHaveCount(expected.length);
   for (let index = 0; index < expected.length; index += 1) {

@@ -230,7 +230,7 @@ func serveWorkspaceQuery(response http.ResponseWriter, request *http.Request, ex
 	serveWorkspaceJSON(response, request.Method, map[string]any{
 		"queryId":       queryID,
 		"requestId":     requestID,
-		"schemaVersion": json.Number("2"),
+		"schemaVersion": json.Number(fmt.Sprint(workspaceProjectionSchemaVersion)),
 		"slice":         slice,
 		"snapshotId":    session.SnapshotID,
 		"state":         slice["state"],
@@ -269,7 +269,7 @@ func serveWorkspaceProjection(response http.ResponseWriter, request *http.Reques
 	} else {
 		projection, state = graphWindow(projection, query)
 	}
-	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number("2"), "snapshotId": session.SnapshotID, "state": state})
+	serveWorkspaceJSON(response, request.Method, map[string]any{"projection": projection, "requestId": requestID, "schemaVersion": json.Number(fmt.Sprint(workspaceProjectionSchemaVersion)), "snapshotId": session.SnapshotID, "state": state})
 }
 
 type projectionQuery struct {
@@ -438,7 +438,7 @@ func serveCancel(response http.ResponseWriter, request *http.Request, expectedOr
 		writeAPIError(response, request.Method, err)
 		return
 	}
-	packet := map[string]any{"handoffKind": "proofkit.requirement-browser-question", "nonClaims": admit.StringSliceToAny(serverNonClaims), "schemaVersion": json.Number("1"), "snapshotRefs": []any{map[string]any{"role": "current", "snapshotId": session.SnapshotID}}, "state": "cancelled"}
+	packet := map[string]any{"handoffKind": "proofkit.requirement-browser-question", "nonClaims": admit.StringSliceToAny(serverNonClaims), "schemaVersion": json.Number(fmt.Sprint(questionPacketSchemaVersion)), "snapshotRefs": []any{map[string]any{"role": "current", "snapshotId": session.SnapshotID}}, "state": "cancelled"}
 	if oneShot {
 		if !terminal.TryCommit(packet) {
 			response.WriteHeader(http.StatusConflict)
@@ -688,7 +688,7 @@ func buildHandoffPacket(request *http.Request, session workspaceSession) (map[st
 		"handoffKind":          "proofkit.requirement-browser-question",
 		"instructionAuthority": "browser_session_submission",
 		"nonClaims":            admit.StringSliceToAny(serverNonClaims),
-		"schemaVersion":        json.Number("1"),
+		"schemaVersion":        json.Number(fmt.Sprint(questionPacketSchemaVersion)),
 		"snapshotRefs":         []any{map[string]any{"role": "current", "snapshotId": session.SnapshotID}},
 		"sourceTextAuthority":  "untrusted_context",
 		"state":                "submitted",

@@ -62,7 +62,7 @@ func normalizeProjectContextPublicABIDelta(current map[string]any) error {
 }
 
 func TestProjectViewVersionEdgePreservesCallerRecord(t *testing.T) {
-	current := readCLIContractRaw(t)
+	current := readArchivedSourceCutoverPredecessor(t)
 	before, err := json.Marshal(current)
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestProjectViewVersionEdgeRejectsContextContractDrift(t *testing.T) {
 				continue
 			}
 			t.Run(name+"/"+field, func(t *testing.T) {
-				current := readCLIContractRaw(t)
+				current := readArchivedSourceCutoverPredecessor(t)
 				mutatePublicABIRecord(t, current, "commands", "command", name, func(record map[string]any) {
 					input := record["inputContract"].(map[string]any)
 					switch field {

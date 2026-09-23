@@ -225,7 +225,7 @@ func TestJSONLayoutPreservesFlagShapedInputPathAtProcessBoundary(t *testing.T) {
 		t.Fatalf("unexpected browser plan for flag-shaped input path: %#v", plan)
 	}
 
-	requirementSource := `{"schemaVersion":1,"sourceId":"consumer.requirements","specPackagePath":"docs/specs/consumer","overviewPath":"docs/specs/consumer/overview.md","requirementsPath":"docs/specs/consumer/requirements.v1.json","requirements":[{"requirementId":"REQ-CONSUMER-001","ownerId":"consumer.owner","invariant":"The system preserves semantic identity.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":["NC-CONSUMER-001"],"nonClaims":["This requirement does not approve merge."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"consumer.owner","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["Consumer repositories own requirement meaning."]}`
+	requirementSource := `{"kind":"proofkit.requirement-source","schemaVersion":2,"sourceId":"consumer.requirements","specPackagePath":"docs/specs/consumer","sourceNonClaims":["Consumer repositories own requirement meaning."],"groups":[{"groupId":"RGRP-FIXTURE","profileId":"","statementStem":"","sharedPremises":[],"members":[{"requirementId":"REQ-CONSUMER-001","statementCompletion":"The system preserves semantic identity.","fields":{"ownerId":"consumer.owner","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaims":["This requirement does not approve merge."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"consumer.owner","requiresImpactDeclaration":true,"requiresProofBindingReview":true},"nonClaimRefs":[],"externalNonClaimRefs":["NC-CONSUMER-001"]}}]}]}`
 	if err := os.WriteFile("--format", []byte(requirementSource), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -1192,31 +1192,53 @@ func TestGoRunRequirementBrowserServerProcess(t *testing.T) {
 	root := t.TempDir()
 	inputPath := filepath.Join(root, "requirements.json")
 	if err := os.WriteFile(inputPath, []byte(`{
-  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source",
+  "schemaVersion": 2,
   "sourceId": "proofkit.app.browser",
   "specPackagePath": "docs/specs/browser",
-  "overviewPath": "docs/specs/browser/overview.md",
-  "requirementsPath": "docs/specs/browser/requirements.v1.json",
-  "requirements": [
-    {
-      "requirementId": "REQ-BROWSER-001",
-      "ownerId": "browser.owner",
-      "invariant": "The process server serves source views from explicit input.",
-      "claimLevel": "blocking",
-      "riskClass": "high",
-      "proofBindingRefs": ["proofkit/browser.json"],
-      "nonClaimRefs": ["NC-BROWSER-001"],
-      "nonClaims": ["The browser process test does not prove production deployment."],
-      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
-      "deferral": null,
-      "updatePolicy": {
-        "reviewOwnerId": "browser.owner",
-        "requiresImpactDeclaration": true,
-        "requiresProofBindingReview": true
-      }
-    }
+  "sourceNonClaims": [
+    "Consumer repositories own requirement meaning."
   ],
-  "nonClaims": ["Consumer repositories own requirement meaning."]
+  "groups": [
+    {
+      "groupId": "RGRP-FIXTURE",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {
+          "requirementId": "REQ-BROWSER-001",
+          "statementCompletion": "The process server serves source views from explicit input.",
+          "fields": {
+            "ownerId": "browser.owner",
+            "claimLevel": "blocking",
+            "riskClass": "high",
+            "proofBindingRefs": [
+              "proofkit/browser.json"
+            ],
+            "nonClaims": [
+              "The browser process test does not prove production deployment."
+            ],
+            "lifecycle": {
+              "state": "active",
+              "replacementRequirementIds": [],
+              "evidenceRefs": []
+            },
+            "deferral": null,
+            "updatePolicy": {
+              "reviewOwnerId": "browser.owner",
+              "requiresImpactDeclaration": true,
+              "requiresProofBindingReview": true
+            },
+            "nonClaimRefs": [],
+            "externalNonClaimRefs": [
+              "NC-BROWSER-001"
+            ]
+          }
+        }
+      ]
+    }
+  ]
 }`), 0o600); err != nil {
 		t.Fatalf("write input: %v", err)
 	}

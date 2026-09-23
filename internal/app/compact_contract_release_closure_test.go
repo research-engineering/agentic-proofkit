@@ -436,8 +436,8 @@ func assertCompactParentContractChangeSetClosure(t *testing.T, manifest compactW
 func assertCompactParentContractSemanticClassification(t *testing.T, manifest compactWireManifest) {
 	t.Helper()
 	oldObservations := readCompactV1WireObservations(t)
-	currentObservations := currentCompactV2WireObservations(t)
-	currentContract := readCLIContractRaw(t)
+	currentObservations := readCompactV2WireObservations(t)
+	currentContract := readArchivedSourceCutoverPredecessor(t)
 	if err := normalizeBindingSelectionPublicABIDelta(currentContract); err != nil {
 		t.Fatalf("validate subsequent binding selection correction: %v", err)
 	}
@@ -448,11 +448,7 @@ func assertCompactParentContractSemanticClassification(t *testing.T, manifest co
 		}
 		key := compactWireObservationKey(delta.Surface, delta.Direction, delta.Variant)
 		oldValue := compactWithoutNativeSourceDigest(t, oldObservations[key], key+" frozen")
-		currentValue := compactWithoutNativeSourceDigest(t, currentObservations[key], key+" current")
-		if delta.Surface == "requirement-bindings" && delta.Direction == "input" {
-			// Exclude only the independently checked correction made after this release.
-			currentValue.(map[string]any)["contract"].(map[string]any)["rootDefinitionDigest"] = oldBindingSelectionDigest
-		}
+		currentValue := compactWithoutNativeSourceDigest(t, currentObservations[key], key+" frozen successor")
 		equalWithoutDigest := compactJSONEqual(oldValue, currentValue)
 		if equalWithoutDigest != (delta.Class == "metadata_freshness") {
 			t.Fatalf("parent-contract delta %s class=%s does not match metadata-only=%t", delta.DeltaID, delta.Class, equalWithoutDigest)
@@ -463,45 +459,6 @@ func assertCompactParentContractSemanticClassification(t *testing.T, manifest co
 	}
 	sort.Strings(metadataOnly)
 	assertExactStringSet(t, metadataOnly, expectedCompactMetadataFreshnessDirections, "metadata-only CLI parent-contract direction closure")
-}
-
-func compactWithoutContractFreshnessDigests(t *testing.T, value any, context string) any {
-	t.Helper()
-	content, err := json.Marshal(value)
-	if err != nil {
-		t.Fatalf("encode %s: %v", context, err)
-	}
-	clone, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
-	if err != nil {
-		t.Fatalf("clone %s: %v", context, err)
-	}
-	record, ok := clone.(map[string]any)
-	if !ok {
-		t.Fatalf("%s must be an object", context)
-	}
-	contract, ok := record["contract"].(map[string]any)
-	if !ok {
-		t.Fatalf("%s must contain a contract object", context)
-	}
-	delete(contract, "rootDefinitionDigest")
-	if nativeSources, ok := contract["nativeSources"].([]any); ok {
-		for index, raw := range nativeSources {
-			nativeSource, ok := raw.(map[string]any)
-			if !ok {
-				t.Fatalf("%s nativeSources[%d] must be an object", context, index)
-			}
-			delete(nativeSource, "canonicalDigest")
-		}
-	}
-	nativeSource, ok := contract["nativeSource"].(map[string]any)
-	if !ok {
-		return record
-	}
-	if _, ok := nativeSource["canonicalDigest"]; !ok {
-		return record
-	}
-	delete(nativeSource, "canonicalDigest")
-	return record
 }
 
 func compactWithoutNativeSourceDigest(t *testing.T, value any, context string) any {

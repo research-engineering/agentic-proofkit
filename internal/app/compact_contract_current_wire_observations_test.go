@@ -32,8 +32,8 @@ func currentCompactV2WireObservations(t *testing.T) map[string]any {
 
 	impactFixture := strings.Replace(
 		cliImpactInputComposeInput(),
-		`"paths":["docs/specs/proofkit-cli-impact/requirements.v1.json"]`,
-		`"paths":["docs/specs/proofkit-cli-impact/requirements.v1.json","internal/app/cli_abi_test.go"]`,
+		`"paths":["docs/specs/proofkit-cli-impact/requirements.v2.json"]`,
+		`"paths":["docs/specs/proofkit-cli-impact/requirements.v2.json","internal/app/cli_abi_test.go"]`,
 		1,
 	)
 	impactComposeInput := strictJSONObjectFromText(t, impactFixture, "current impact compose input")
@@ -112,38 +112,38 @@ func currentCompactContextChainObservations(t *testing.T) map[string]any {
 		}},
 	}
 	writeCLIJSONFixture(t, root, "proofkit/spec-tree.json", tree)
-	writeCLIJSONFixture(t, root, "docs/specs/compact/requirements.v1.json", requirementSource)
+	writeCLIJSONFixture(t, root, "docs/specs/compact/requirements.v2.json", requirementSource)
 	writeCLIJSONFixture(t, root, "proofkit/coverage-input.json", coverageInput)
 	catalog := map[string]any{
-		"schemaVersion": json.Number("1"), "catalogId": "proofkit.compact.context",
+		"schemaVersion": json.Number("2"), "catalogId": "proofkit.compact.context",
 		"specTree": map[string]any{"path": "proofkit/spec-tree.json"},
 		"requirementSources": []any{map[string]any{
-			"nodeId": "proofkit.compact.context-root", "path": "docs/specs/compact/requirements.v1.json",
+			"nodeId": "proofkit.compact.context-root", "path": "docs/specs/compact/requirements.v2.json",
 		}},
 		"coverage": map[string]any{"path": "proofkit/coverage-input.json"},
 	}
 	base := runAppJSON(t, []string{"requirement-context-compose", "--input", "-", "--repo-root", root}, catalog)
 	sliceInput := map[string]any{
-		"schemaVersion": json.Number("1"), "sliceId": "proofkit.compact.context.slice", "context": base,
+		"schemaVersion": json.Number("2"), "sliceId": "proofkit.compact.context.slice", "context": base,
 		"query": map[string]any{"profile": "coverage", "requirementIds": []any{"REQ-PROOFKIT-CLI-COVERAGE-001"}},
 	}
 	sliceOutput := runAppJSON(t, []string{"requirement-context-slice", "--input", "-"}, sliceInput)
 
-	requirements := requirementSource["requirements"].([]any)
-	requirements[0].(map[string]any)["invariant"] = "Compact context fixture changed invariant."
-	writeCLIJSONFixture(t, root, "docs/specs/compact/requirements.v1.json", requirementSource)
+	members := requirementSource["groups"].([]any)[0].(map[string]any)["members"].([]any)
+	members[0].(map[string]any)["statementCompletion"] = "Compact context fixture changed invariant."
+	writeCLIJSONFixture(t, root, "docs/specs/compact/requirements.v2.json", requirementSource)
 	current := runAppJSON(t, []string{"requirement-context-compose", "--input", "-", "--repo-root", root}, catalog)
 	diffInput := map[string]any{
-		"schemaVersion": json.Number("2"), "diffId": "proofkit.compact.context.diff",
+		"schemaVersion": json.Number("3"), "diffId": "proofkit.compact.context.diff",
 		"baseContext": base, "currentContext": current,
 	}
 	diffOutput := runAppJSON(t, []string{"requirement-semantic-diff", "--input", "-"}, diffInput)
 	graphInput := map[string]any{
-		"schemaVersion": json.Number("2"), "graphId": "proofkit.compact.context.graph", "context": current,
+		"schemaVersion": json.Number("3"), "graphId": "proofkit.compact.context.graph", "context": current,
 	}
 	graphOutput := runAppJSON(t, []string{"requirement-traceability-graph", "--input", "-"}, graphInput)
 	workspaceInput := map[string]any{
-		"schemaVersion": json.Number("2"), "workspaceId": "proofkit.compact.context.workspace", "context": current,
+		"schemaVersion": json.Number("3"), "workspaceId": "proofkit.compact.context.workspace", "context": current,
 		"diffInput": diffInput, "graphInput": graphInput,
 	}
 	browserHandle, err := requirementbrowser.StartServer(workspaceInput, requirementbrowser.Options{Host: "127.0.0.1", Port: 0, PortSet: true, View: "workspace"})

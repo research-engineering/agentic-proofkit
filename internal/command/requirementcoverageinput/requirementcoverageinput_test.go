@@ -232,7 +232,7 @@ func TestBuildRejectsDiscoveryDraftCandidateInventoryAsStrictInventory(t *testin
 	}
 
 	_, _, err := Build(input)
-	if err == nil || !strings.Contains(err.Error(), "candidateKind") {
+	if err == nil || !strings.Contains(err.Error(), "unsupported field") {
 		t.Fatalf("Build() error=%v, want candidate inventory rejection", err)
 	}
 }
@@ -437,25 +437,26 @@ func TestBuildRejectsObservedSurfaceIDCollisionWithDeclaredSurface(t *testing.T)
 func validComposeInput(t *testing.T, inventoryEntries string) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "composerInputId": "proofkit.coverage.compose",
   "viewInputId": "proofkit.coverage.view",
   "selectedOwnerIds": ["proofkit.coverage"],
   "requirementSource": {
-    "schemaVersion": 1,
+    "kind": "proofkit.requirement-source",
+    "schemaVersion": 2,
     "sourceId": "proofkit.coverage.source",
     "specPackagePath": "docs/specs/proofkit-coverage",
-    "overviewPath": "docs/specs/proofkit-coverage/overview.md",
-    "requirementsPath": "docs/specs/proofkit-coverage/requirements.v1.json",
-    "requirements": [
+    "groups": [{"groupId": "RGRP-COVERAGE", "profileId": "", "statementStem": "", "sharedPremises": [], "members": [
       {
         "requirementId": "REQ-PROOFKIT-COVERAGE-001",
+        "statementCompletion": "Coverage input composition must preserve declared coverage universe facts.",
+        "fields": {
         "ownerId": "proofkit.coverage",
-        "invariant": "Coverage input composition must preserve declared coverage universe facts.",
         "claimLevel": "blocking",
         "riskClass": "high",
         "proofBindingRefs": ["proofkit/requirement-bindings.json"],
         "nonClaimRefs": [],
+        "externalNonClaimRefs": [],
         "nonClaims": ["Coverage composer fixture does not execute native tests."],
         "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
         "deferral": null,
@@ -464,9 +465,9 @@ func validComposeInput(t *testing.T, inventoryEntries string) any {
           "requiresImpactDeclaration": true,
           "requiresProofBindingReview": true
         }
-      }
-    ],
-    "nonClaims": ["Coverage composer fixture source is test-only."]
+      }}
+    ]}],
+    "sourceNonClaims": ["Coverage composer fixture source is test-only."]
   },
   "compactProofContract": {
     "schema_version": 2,
@@ -519,7 +520,7 @@ func validComposeInput(t *testing.T, inventoryEntries string) any {
     "completenessDeclaration": "selected_owner_surfaces",
     "ownerIds": ["proofkit.coverage"],
     "codeSurfaces": [{"surfaceId": "proofkit.coverage.code", "ownerId": "proofkit.coverage", "path": "internal/command/requirementcoverageinput"}],
-    "specSurfaces": [{"surfaceId": "proofkit.coverage.spec", "ownerId": "proofkit.coverage", "path": "docs/specs/proofkit-coverage/requirements.v1.json"}],
+    "specSurfaces": [{"surfaceId": "proofkit.coverage.spec", "ownerId": "proofkit.coverage", "path": "docs/specs/proofkit-coverage/requirements.v2.json"}],
     "testSurfaces": [{"surfaceId": "proofkit.coverage.missing_test", "ownerId": "proofkit.coverage", "path": "internal/command/requirementcoverageinput/missing_test.go"}],
     "commandRefs": ["proofkit.coverage.missing"],
     "nonClaims": ["Coverage composer fixture is selected-owner scope only."]
@@ -543,7 +544,7 @@ func directRequirementProofBinding(t *testing.T) map[string]any {
     {
       "requirementId": "REQ-PROOFKIT-COVERAGE-001",
       "ownerId": "proofkit.coverage",
-      "specPath": "docs/specs/proofkit-coverage/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-coverage/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Coverage direct binding fixture does not execute witnesses."]

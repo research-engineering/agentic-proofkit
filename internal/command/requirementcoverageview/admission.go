@@ -18,8 +18,8 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 	if err := admit.KnownKeys(record, []string{"compactProofContract", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementProofBinding", "requirementSource", "schemaVersion", "testEvidenceInventory", "viewInputId"}, "requirement coverage view input"); err != nil {
 		return compositeInput{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return compositeInput{}, fmt.Errorf("requirement coverage view schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return compositeInput{}, fmt.Errorf("requirement coverage view schemaVersion must be 3")
 	}
 	viewInputID, err := admit.RuleID(record["viewInputId"], "requirement coverage view viewInputId")
 	if err != nil {

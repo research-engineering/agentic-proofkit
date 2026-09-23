@@ -529,7 +529,7 @@ func TestRenderRejectsIncompleteAndStaleCommandContracts(t *testing.T) {
 				_ = os.Remove(path)
 				_ = os.Symlink("sample.go", path)
 			},
-			want: "regular non-symlink file",
+			want: "symlink",
 		},
 	}
 

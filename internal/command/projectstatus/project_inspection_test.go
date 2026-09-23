@@ -21,7 +21,7 @@ import (
 func TestInspectProjectRetainsOriginalCohortAndStatusIdentity(t *testing.T) {
 	root := t.TempDir()
 	materializeTestProject(t, root)
-	unlistedSource, err := os.ReadFile(filepath.Join(root, "docs/specs/pilot/requirements.v1.json"))
+	unlistedSource, err := os.ReadFile(filepath.Join(root, "docs/specs/pilot/requirements.v2.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,10 +114,10 @@ func TestInspectProjectDoesNotRetainUnusableRecords(t *testing.T) {
 	}{
 		{"missing manifest", adoptionmaterialization.ProjectManifestPath, StateUninitialized},
 		{"invalid manifest", adoptionmaterialization.ProjectManifestPath, StateBlocked},
-		{"missing source", "docs/specs/pilot/requirements.v1.json", StateStale},
-		{"invalid source", "docs/specs/pilot/requirements.v1.json", StateStale},
-		{"source symlink", "docs/specs/pilot/requirements.v1.json", StateBlocked},
-		{"oversized source", "docs/specs/pilot/requirements.v1.json", StateBlocked},
+		{"missing source", "docs/specs/pilot/requirements.v2.json", StateStale},
+		{"invalid source", "docs/specs/pilot/requirements.v2.json", StateStale},
+		{"source symlink", "docs/specs/pilot/requirements.v2.json", StateBlocked},
+		{"oversized source", "docs/specs/pilot/requirements.v2.json", StateBlocked},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()

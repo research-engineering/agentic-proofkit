@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
@@ -49,9 +50,14 @@ func TestContextGuideComposesActualChildInputs(t *testing.T) {
 	root := t.TempDir()
 	materialize := adoptionHelpPacket(t, root, "fresh")
 	source := materialize["requirementSources"].([]any)[0].(map[string]any)
+	admittedSource, err := requirementsourceadmission.Evaluate(source)
+	if err != nil || admittedSource.ExitCode != 0 {
+		t.Fatalf("source premise: %v", err)
+	}
+	sourcePath := admittedSource.Source.RequirementsPath()
 	binding := materialize["requirementProofBinding"].(map[string]any)
 	bindingRecord := binding["record"].(map[string]any)
-	writeCLIJSONFixture(t, root, source["requirementsPath"].(string), source)
+	writeCLIJSONFixture(t, root, sourcePath, source)
 	writeCLIJSONFixture(t, root, binding["path"].(string), binding["record"])
 	catalog := packet["catalog"].(map[string]any)
 	treePath := catalog["specTree"].(map[string]any)["path"].(string)
@@ -71,7 +77,11 @@ func TestContextGuideComposesActualChildInputs(t *testing.T) {
 		t.Fatal("context identity or expected-digest boundary differs")
 	}
 	projections := composed["projections"].(map[string]any)
-	if !equalCLIJSON(t, projections["requirementSources"].([]any)[0], source) || !equalCLIJSON(t, projections["specTree"], packet["tree"]) {
+	canonicalSource, err := requirementsourceadmission.SourceValue(admittedSource.Source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !equalCLIJSON(t, projections["requirementSources"].([]any)[0], canonicalSource) || !equalCLIJSON(t, projections["specTree"], packet["tree"]) {
 		t.Fatal("composition lost source or tree input semantics")
 	}
 	if !equalCLIJSON(t, projections["proofBinding"], bindingRecord) {
@@ -116,13 +126,13 @@ func TestContextGuideComposesActualChildInputs(t *testing.T) {
 			case "source":
 				wrong := decodeCLIJSON(t, string(adoptionHelpJSON(t, source))).(map[string]any)
 				wrong["sourceId"] = "example.other"
-				writeCLIJSONFixture(t, root, source["requirementsPath"].(string), wrong)
+				writeCLIJSONFixture(t, root, sourcePath, wrong)
 				delete(entry, "expectedSourceDigest")
 				if report := runAdoptionHelpCLI(t, adoptionHelpJSON(t, wrong), "requirement-source-admission", "--input", "-"); report["state"] != "passed" {
 					t.Fatal("source counterexample is not independently owner-valid")
 				}
 				wantDiagnostic = "source is not referenced by the specification tree"
-				t.Cleanup(func() { writeCLIJSONFixture(t, root, source["requirementsPath"].(string), source) })
+				t.Cleanup(func() { writeCLIJSONFixture(t, root, sourcePath, source) })
 			case "digest":
 				entry["expectedSourceDigest"] = "sha256:" + strings.Repeat("0", 64)
 				wantDiagnostic = "expected digest mismatch"

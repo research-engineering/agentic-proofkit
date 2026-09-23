@@ -23,7 +23,7 @@ func TestBuildKeepsTraceabilityEvidencePlanesDistinct(t *testing.T) {
 	code := "package handler\n\nfunc Handle() { return }\n"
 	codeDigest := digest.SHA256TextRef(code)
 	output, err := Build(map[string]any{
-		"schemaVersion": json.Number("2"), "graphId": "consumer.traceability", "context": contextValue,
+		"schemaVersion": json.Number("3"), "graphId": "consumer.traceability", "context": contextValue,
 		"codeSources": []any{map[string]any{"path": "src/handler.go", "content": code}},
 		"codeTopology": map[string]any{
 			"nodes": []any{
@@ -217,7 +217,7 @@ func TestBuildRejectsCodeSourceDigestMismatchAtEveryAbstractionLevel(t *testing.
 func TestBuildRejectsBudgetsBeforePerItemSemantics(t *testing.T) {
 	t.Run("code nodes", func(t *testing.T) {
 		input := map[string]any{
-			"schemaVersion": json.Number("2"), "graphId": "consumer.traceability.node-budget", "context": graphContextFixture(t),
+			"schemaVersion": json.Number("3"), "graphId": "consumer.traceability.node-budget", "context": graphContextFixture(t),
 			"codeTopology": map[string]any{"nodes": make([]any, maxGraphNodes+1), "edges": []any{}},
 		}
 		if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "node or edge limit") {
@@ -227,7 +227,7 @@ func TestBuildRejectsBudgetsBeforePerItemSemantics(t *testing.T) {
 
 	t.Run("code edges", func(t *testing.T) {
 		input := map[string]any{
-			"schemaVersion": json.Number("2"), "graphId": "consumer.traceability.edge-budget", "context": graphContextFixture(t),
+			"schemaVersion": json.Number("3"), "graphId": "consumer.traceability.edge-budget", "context": graphContextFixture(t),
 			"codeTopology": map[string]any{"nodes": []any{}, "edges": make([]any, maxGraphEdges+1)},
 		}
 		if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "node or edge limit") {
@@ -238,11 +238,25 @@ func TestBuildRejectsBudgetsBeforePerItemSemantics(t *testing.T) {
 	t.Run("code source bytes", func(t *testing.T) {
 		oversizedInvalidUTF8 := strings.Repeat("x", maxCodeSourceBytes+1) + string([]byte{0xff})
 		input := map[string]any{
-			"schemaVersion": json.Number("2"), "graphId": "consumer.traceability.source-budget", "context": graphContextFixture(t),
+			"schemaVersion": json.Number("3"), "graphId": "consumer.traceability.source-budget", "context": graphContextFixture(t),
 			"codeSources": []any{map[string]any{"path": "../outside.go", "content": oversizedInvalidUTF8}},
 		}
 		if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "code sources exceed byte limit") {
 			t.Fatalf("Build() error = %v, want byte budget rejection before path and UTF-8 admission", err)
+		}
+	})
+
+	t.Run("code source inclusive byte bound", func(t *testing.T) {
+		input := map[string]any{
+			"schemaVersion": json.Number("3"), "graphId": "consumer.traceability.source-bound", "context": graphContextFixture(t),
+			"codeSources": []any{map[string]any{"path": "src/bound.go", "content": strings.Repeat("x", maxCodeSourceBytes)}},
+		}
+		if _, err := Build(input); err != nil {
+			t.Fatalf("Build rejected a code source at the inclusive byte bound: %v", err)
+		}
+		input["codeSources"].([]any)[0].(map[string]any)["content"] = strings.Repeat("x", maxCodeSourceBytes+1)
+		if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "code sources exceed byte limit") {
+			t.Fatalf("Build accepted a code source above the byte bound: %v", err)
 		}
 	})
 }
@@ -277,17 +291,17 @@ func TestBuildRejectsSemanticallyInertTopologyID(t *testing.T) {
 	}
 }
 
-func TestBuildRequiresInputSchemaVersion2(t *testing.T) {
+func TestBuildRequiresInputSchemaVersion3(t *testing.T) {
 	input := graphPermutationInput(t)
 	input["schemaVersion"] = json.Number("1")
-	if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "input schemaVersion must be 2") {
+	if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "input schemaVersion must be 3") {
 		t.Fatalf("Build() error = %v, want old input schema rejection", err)
 	}
 }
 
-func TestBuildConsumesNormalizedV1AndV2ContextSnapshots(t *testing.T) {
+func TestBuildRejectsRetiredContextSnapshotIdentities(t *testing.T) {
 	v2Context := graphContextFixture(t)
-	v2Output, err := Build(map[string]any{"context": v2Context, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("2")})
+	_, err := Build(map[string]any{"context": v2Context, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("3")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -299,14 +313,15 @@ func TestBuildConsumesNormalizedV1AndV2ContextSnapshots(t *testing.T) {
 		"Requirement context does not execute native witnesses or prove source freshness after composition.",
 	}
 	v1Context["schemaVersion"] = json.Number("1")
-	v1Output, err := Build(map[string]any{"context": v1Context, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("2")})
-	if err != nil {
-		t.Fatalf("Build(v1 context) error = %v", err)
+	if _, err := Build(map[string]any{"context": v1Context, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("3")}); err == nil {
+		t.Fatal("old vocabulary entered current graph")
 	}
-	got, _ := stablejson.Marshal(v1Output)
-	want, _ := stablejson.Marshal(v2Output)
-	if !bytes.Equal(got, want) {
-		t.Fatalf("v1 and v2 contexts produced different graph records\n got: %s\nwant: %s", got, want)
+	for _, version := range []string{"1", "2", "3"} {
+		old := decodedGraphOutput(t, v2Context)
+		old["schemaVersion"] = json.Number(version)
+		if _, err := Build(map[string]any{"context": old, "graphId": "consumer.traceability.context-migration", "schemaVersion": json.Number("3")}); err == nil {
+			t.Fatalf("retired context %s admitted", version)
+		}
 	}
 }
 
@@ -382,7 +397,7 @@ func graphPermutationInput(t *testing.T) map[string]any {
 	code := "package handler\n\nfunc Handle() { return }\n"
 	codeDigest := digest.SHA256TextRef(code)
 	return map[string]any{
-		"schemaVersion": json.Number("2"), "graphId": "consumer.traceability.permutation", "context": contextValue,
+		"schemaVersion": json.Number("3"), "graphId": "consumer.traceability.permutation", "context": contextValue,
 		"codeSources": []any{map[string]any{"path": "src/handler.go", "content": code}},
 		"codeTopology": map[string]any{
 			"nodes": []any{
@@ -454,12 +469,18 @@ func graphContextFixture(t *testing.T) map[string]any {
 	projections := map[string]any{
 		"specTree": map[string]any{"schemaVersion": json.Number("2"), "treeId": "consumer.spec-tree", "rootNodeId": "spec.root", "callerAnnotations": []any{}, "edges": []any{}, "overlays": []any{}, "nodes": []any{map[string]any{"nodeId": "spec.root", "nodeKind": "meta_spec", "label": "Root", "displayOrder": json.Number("1"), "callerAnnotations": []any{}, "sourceRefs": []any{map[string]any{"sourceRefId": "spec.root.requirements", "sourceRefKind": "source_id", "sourceRole": "requirements", "sourceId": "consumer.requirements"}}}}},
 		"requirementSources": []any{map[string]any{
-			"schemaVersion": json.Number("1"), "sourceId": "consumer.requirements", "specPackagePath": "docs/specs/consumer", "overviewPath": "docs/specs/consumer/overview.md", "requirementsPath": "docs/specs/consumer/requirements.v1.json", "nonClaims": []any{"Consumer source does not approve merge."},
-			"requirements": []any{map[string]any{"requirementId": "REQ-CONSUMER-001", "ownerId": "consumer.owner", "invariant": "The system preserves semantic identity.", "claimLevel": "blocking", "riskClass": "high", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "lifecycle": map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}}, "updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}}},
+			"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": "consumer.requirements", "specPackagePath": "docs/specs/consumer", "sourceNonClaims": []any{"Consumer source does not approve merge."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-CONSUMER", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId": "REQ-CONSUMER-001", "statementCompletion": "The system preserves semantic identity.",
+					"fields": map[string]any{"ownerId": "consumer.owner", "claimLevel": "blocking", "riskClass": "high", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{}, "externalNonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "lifecycle": map[string]any{"state": "active"}, "deferral": nil, "updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}},
+				}},
+			}},
 		}},
 		"proofBinding": map[string]any{
 			"schemaVersion": json.Number("1"), "bindingId": "consumer.proof-bindings",
-			"requirements":    []any{map[string]any{"claimLevel": "blocking", "nonClaims": []any{"Fixture proof requirement does not approve merge."}, "ownerId": "consumer.owner", "proofState": "witness_backed", "requirementId": "REQ-CONSUMER-001", "specPath": "docs/specs/consumer/requirements.v1.json"}},
+			"requirements":    []any{map[string]any{"claimLevel": "blocking", "nonClaims": []any{"Fixture proof requirement does not approve merge."}, "ownerId": "consumer.owner", "proofState": "witness_backed", "requirementId": "REQ-CONSUMER-001", "specPath": "docs/specs/consumer/requirements.v2.json"}},
 			"bindings":        []any{map[string]any{"commandIds": []any{"consumer.test"}, "environmentClasses": []any{"local-go"}, "requirementId": "REQ-CONSUMER-001", "scenarioId": "consumer.scenario", "witnessId": "consumer.witness", "witnessKind": "contract", "witnessPath": "internal/consumer_test.go"}},
 			"witnessCommands": []any{map[string]any{"command": "go test ./internal", "commandId": "consumer.test", "environmentClass": "local-go"}},
 			"selection":       map[string]any{"changedPaths": []any{}, "ownerIds": []any{}, "requirementIds": []any{}},
@@ -471,7 +492,7 @@ func graphContextFixture(t *testing.T) map[string]any {
 		t.Fatalf("admit graph proof fixture: %v state=%v", err, proofResult.Record.State)
 	}
 	projections["proofBinding"] = requirementbinding.InputValue(proofResult.Input)
-	sources := []requirementcontext.Source{{CurrentDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/consumer/requirements.v1.json", SourceRef: "consumer.requirements", SourceRole: "requirements"}, {CurrentDigest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", Kind: "proof_binding", Path: "proofkit/requirement-bindings.json", SourceRef: "proof_binding:consumer.proof-bindings"}, {CurrentDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.spec-tree"}}
+	sources := []requirementcontext.Source{{CurrentDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/consumer/requirements.v2.json", SourceRef: "consumer.requirements", SourceRole: "requirements"}, {CurrentDigest: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", Kind: "proof_binding", Path: "proofkit/requirement-bindings.json", SourceRef: "proof_binding:consumer.proof-bindings"}, {CurrentDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.spec-tree"}}
 	identity := map[string]any{"catalogId": "consumer.context", "projections": projections, "sources": []any{map[string]any{"currentDigest": sources[0].CurrentDigest, "expectedDigest": "", "kind": sources[0].Kind, "nodeId": sources[0].NodeID, "path": sources[0].Path, "sourceRef": sources[0].SourceRef, "sourceRole": sources[0].SourceRole}, map[string]any{"currentDigest": sources[1].CurrentDigest, "expectedDigest": "", "kind": sources[1].Kind, "path": sources[1].Path, "sourceRef": sources[1].SourceRef}, map[string]any{"currentDigest": sources[2].CurrentDigest, "expectedDigest": "", "kind": sources[2].Kind, "path": sources[2].Path, "sourceRef": sources[2].SourceRef}}}
 	encoded, err := stablejson.Marshal(identity)
 	if err != nil {

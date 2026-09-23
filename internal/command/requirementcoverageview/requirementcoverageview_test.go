@@ -261,7 +261,7 @@ func TestAdmitOutputRejectsAggregateRowDiagnosticDrift(t *testing.T) {
 			"invariants": []any{map[string]any{
 				"ownerInvariantId": "invariant.coverage.unmapped",
 				"ownerId":          "proofkit.coverage",
-				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v1.json",
+				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v2.json",
 				"summary":          "Unmapped owner invariant fixture.",
 				"nonClaims":        []any{"Fixture does not claim native execution."},
 			}},
@@ -383,7 +383,7 @@ func TestAdmitOutputRejectsProjectedTestParentRefDrift(t *testing.T) {
 			"schemaVersion": json.Number("1"), "registryId": "proofkit.coverage.owner-invariants",
 			"invariants": []any{map[string]any{
 				"ownerInvariantId": "invariant.coverage.semantic", "ownerId": "proofkit.coverage",
-				"sourcePath": "docs/specs/proofkit-coverage/requirements.v1.json",
+				"sourcePath": "docs/specs/proofkit-coverage/requirements.v2.json",
 				"summary":    "Coverage owner invariant fixture.", "nonClaims": []any{"Fixture does not claim execution."},
 			}},
 			"nonClaims": []any{"Registry fixture is caller-owned."},
@@ -411,7 +411,7 @@ func TestAdmitOutputRejectsInconsistentRepeatedTestProjection(t *testing.T) {
 		"schemaVersion": json.Number("1"), "registryId": "proofkit.coverage.owner-invariants",
 		"invariants": []any{map[string]any{
 			"ownerInvariantId": "invariant.coverage.semantic", "ownerId": "proofkit.coverage",
-			"sourcePath": "docs/specs/proofkit-coverage/requirements.v1.json",
+			"sourcePath": "docs/specs/proofkit-coverage/requirements.v2.json",
 			"summary":    "Coverage owner invariant fixture.", "nonClaims": []any{"Fixture does not claim execution."},
 		}},
 		"nonClaims": []any{"Registry fixture is caller-owned."},
@@ -718,23 +718,25 @@ func TestBuildJSONCompactProjectionAggregatesScenariosAndRequirementLocalCommand
 	entry := inventoryEntry(input)
 	entry["witnessRefs"] = []any{}
 	source := record["requirementSource"].(map[string]any)
-	source["requirements"] = append(source["requirements"].([]any), map[string]any{
-		"claimLevel":       "advisory",
-		"deferral":         nil,
-		"invariant":        "Unrelated coverage fixture must not affect the selected requirement command projection.",
-		"lifecycle":        map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
-		"nonClaimRefs":     []any{},
-		"nonClaims":        []any{"Unrelated fixture is present only to prove requirement-local command isolation."},
-		"ownerId":          "proofkit.coverage",
-		"proofBindingRefs": []any{},
-		"requirementId":    "REQ-PROOFKIT-COVERAGE-002",
-		"riskClass":        "low",
-		"updatePolicy": map[string]any{
-			"requiresImpactDeclaration":  false,
-			"requiresProofBindingReview": false,
-			"reviewOwnerId":              "proofkit.coverage",
-		},
-	})
+	coverageSourceGroup(source)["members"] = append(coverageSourceGroup(source)["members"].([]any), map[string]any{
+		"requirementId":       "REQ-PROOFKIT-COVERAGE-002",
+		"statementCompletion": "Unrelated coverage fixture must not affect the selected requirement command projection.",
+		"fields": map[string]any{
+			"claimLevel":           "advisory",
+			"deferral":             nil,
+			"lifecycle":            map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
+			"nonClaimRefs":         []any{},
+			"externalNonClaimRefs": []any{},
+			"nonClaims":            []any{"Unrelated fixture is present only to prove requirement-local command isolation."},
+			"ownerId":              "proofkit.coverage",
+			"proofBindingRefs":     []any{},
+			"riskClass":            "low",
+			"updatePolicy": map[string]any{
+				"requiresImpactDeclaration":  false,
+				"requiresProofBindingReview": false,
+				"reviewOwnerId":              "proofkit.coverage",
+			},
+		}})
 	universe := record["coverageUniverse"].(map[string]any)
 	universe["commandRefs"] = []any{"proofkit.coverage.command", "proofkit.coverage.unrelated"}
 	inventory := record["testEvidenceInventory"].(map[string]any)
@@ -933,7 +935,7 @@ func TestBuildJSONProjectsOwnerInvariantCoverage(t *testing.T) {
 			map[string]any{
 				"ownerInvariantId": "invariant.coverage.semantic",
 				"ownerId":          "proofkit.coverage",
-				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v1.json",
+				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v2.json",
 				"summary":          "Coverage owner invariant rows must render linked semantic tests.",
 				"nonClaims":        []any{"Owner invariant fixture does not claim native execution."},
 			},
@@ -1213,25 +1215,28 @@ func TestBuildJSONClassifiesRemovedRequirementAsNotApplicableWarning(t *testing.
 
 func TestBuildJSONScopesSelectedOwnersWithoutBlockingOutOfScopeRequirements(t *testing.T) {
 	input := validCoverageInput(t)
-	requirements := input.(map[string]any)["requirementSource"].(map[string]any)["requirements"].([]any)
+	group := coverageSourceGroup(input.(map[string]any)["requirementSource"].(map[string]any))
+	requirements := group["members"].([]any)
 	requirements = append(requirements, map[string]any{
-		"claimLevel":       "blocking",
-		"deferral":         nil,
-		"invariant":        "Out of scope requirement must not change a selected owner coverage view.",
-		"lifecycle":        map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
-		"nonClaimRefs":     []any{},
-		"nonClaims":        []any{"Out of scope fixture is not part of the coverage universe."},
-		"ownerId":          "proofkit.other",
-		"proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
-		"requirementId":    "REQ-PROOFKIT-COVERAGE-999",
-		"riskClass":        "high",
-		"updatePolicy": map[string]any{
-			"requiresImpactDeclaration":  true,
-			"requiresProofBindingReview": true,
-			"reviewOwnerId":              "proofkit.other",
-		},
-	})
-	input.(map[string]any)["requirementSource"].(map[string]any)["requirements"] = requirements
+		"requirementId":       "REQ-PROOFKIT-COVERAGE-999",
+		"statementCompletion": "Out of scope requirement must not change a selected owner coverage view.",
+		"fields": map[string]any{
+			"claimLevel":           "blocking",
+			"deferral":             nil,
+			"lifecycle":            map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
+			"nonClaimRefs":         []any{},
+			"externalNonClaimRefs": []any{},
+			"nonClaims":            []any{"Out of scope fixture is not part of the coverage universe."},
+			"ownerId":              "proofkit.other",
+			"proofBindingRefs":     []any{"proofkit/requirement-bindings.json"},
+			"riskClass":            "high",
+			"updatePolicy": map[string]any{
+				"requiresImpactDeclaration":  true,
+				"requiresProofBindingReview": true,
+				"reviewOwnerId":              "proofkit.other",
+			},
+		}})
+	group["members"] = requirements
 	binding := input.(map[string]any)["requirementProofBinding"].(map[string]any)
 	binding["requirements"] = append(binding["requirements"].([]any), map[string]any{
 		"claimLevel":    "blocking",
@@ -1239,7 +1244,7 @@ func TestBuildJSONScopesSelectedOwnersWithoutBlockingOutOfScopeRequirements(t *t
 		"ownerId":       "proofkit.other",
 		"proofState":    "witness_backed",
 		"requirementId": "REQ-PROOFKIT-COVERAGE-999",
-		"specPath":      "docs/specs/proofkit-other/requirements.v1.json",
+		"specPath":      "docs/specs/proofkit-other/requirements.v2.json",
 	})
 	binding["bindings"] = append(binding["bindings"].([]any), map[string]any{
 		"commandIds":         []any{"proofkit.other.command"},
@@ -1274,25 +1279,28 @@ func TestBuildJSONScopesSelectedOwnersWithoutBlockingOutOfScopeRequirements(t *t
 
 func TestBuildJSONRejectsFullRepositoryOwnerScopeMismatch(t *testing.T) {
 	input := validCoverageInput(t)
-	requirements := input.(map[string]any)["requirementSource"].(map[string]any)["requirements"].([]any)
+	group := coverageSourceGroup(input.(map[string]any)["requirementSource"].(map[string]any))
+	requirements := group["members"].([]any)
 	requirements = append(requirements, map[string]any{
-		"claimLevel":       "blocking",
-		"deferral":         nil,
-		"invariant":        "Full repository coverage cannot omit a source owner.",
-		"lifecycle":        map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
-		"nonClaimRefs":     []any{},
-		"nonClaims":        []any{"Full repository mismatch fixture does not execute tests."},
-		"ownerId":          "proofkit.other",
-		"proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
-		"requirementId":    "REQ-PROOFKIT-COVERAGE-999",
-		"riskClass":        "high",
-		"updatePolicy": map[string]any{
-			"requiresImpactDeclaration":  true,
-			"requiresProofBindingReview": true,
-			"reviewOwnerId":              "proofkit.other",
-		},
-	})
-	input.(map[string]any)["requirementSource"].(map[string]any)["requirements"] = requirements
+		"requirementId":       "REQ-PROOFKIT-COVERAGE-999",
+		"statementCompletion": "Full repository coverage cannot omit a source owner.",
+		"fields": map[string]any{
+			"claimLevel":           "blocking",
+			"deferral":             nil,
+			"lifecycle":            map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
+			"nonClaimRefs":         []any{},
+			"externalNonClaimRefs": []any{},
+			"nonClaims":            []any{"Full repository mismatch fixture does not execute tests."},
+			"ownerId":              "proofkit.other",
+			"proofBindingRefs":     []any{"proofkit/requirement-bindings.json"},
+			"riskClass":            "high",
+			"updatePolicy": map[string]any{
+				"requiresImpactDeclaration":  true,
+				"requiresProofBindingReview": true,
+				"reviewOwnerId":              "proofkit.other",
+			},
+		}})
+	group["members"] = requirements
 	input.(map[string]any)["coverageUniverse"].(map[string]any)["completenessDeclaration"] = "full_repository"
 
 	view, exitCode, err := BuildJSON(input, Options{})
@@ -1478,7 +1486,7 @@ func TestBuildJSONWarnsWhenOwnerInvariantHasNoInventory(t *testing.T) {
 			map[string]any{
 				"ownerInvariantId": "invariant.coverage.uncovered",
 				"ownerId":          "proofkit.coverage",
-				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v1.json",
+				"sourcePath":       "docs/specs/proofkit-coverage/requirements.v2.json",
 				"summary":          "Coverage owner invariant rows must emit missing-inventory warnings.",
 				"nonClaims":        []any{"Owner invariant fixture does not claim native execution."},
 			},
@@ -1524,7 +1532,7 @@ func TestBuildJSONRequiresExactlyOneProofInput(t *testing.T) {
 
 func TestBuildHTMLEscapesCoverageSpecificCallerFields(t *testing.T) {
 	input := validCoverageInput(t)
-	sourceRequirement(input)["invariant"] = "Invariant <script>alert(1)</script>"
+	coverageSourceGroup(input.(map[string]any)["requirementSource"].(map[string]any))["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Invariant <script>alert(1)</script>"
 	entry := inventoryEntry(input)
 	entry["selector"] = "go test ./internal/coverage -run TestEvil"
 	entry["oracle"].(map[string]any)["assertionSummary"] = "Oracle <img src=x onerror=alert(1)>"
@@ -1659,23 +1667,24 @@ func requireClassificationIncludes(t *testing.T, view map[string]any, diagnostic
 func validCoverageInput(t *testing.T) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "viewInputId": "proofkit.coverage.view",
   "requirementSource": {
-    "schemaVersion": 1,
+    "kind": "proofkit.requirement-source",
+    "schemaVersion": 2,
     "sourceId": "proofkit.coverage.source",
     "specPackagePath": "docs/specs/proofkit-coverage",
-    "overviewPath": "docs/specs/proofkit-coverage/overview.md",
-    "requirementsPath": "docs/specs/proofkit-coverage/requirements.v1.json",
-    "requirements": [
+    "groups": [{"groupId": "RGRP-COVERAGE", "profileId": "", "statementStem": "", "sharedPremises": [], "members": [
       {
         "requirementId": "REQ-PROOFKIT-COVERAGE-001",
+        "statementCompletion": "Coverage view must not count proof routes as semantic test coverage.",
+        "fields": {
         "ownerId": "proofkit.coverage",
-        "invariant": "Coverage view must not count proof routes as semantic test coverage.",
         "claimLevel": "blocking",
         "riskClass": "high",
         "proofBindingRefs": ["proofkit/requirement-bindings.json"],
         "nonClaimRefs": [],
+        "externalNonClaimRefs": [],
         "nonClaims": ["Coverage fixture does not execute tests."],
         "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
         "deferral": null,
@@ -1684,9 +1693,9 @@ func validCoverageInput(t *testing.T) any {
           "requiresImpactDeclaration": true,
           "requiresProofBindingReview": true
         }
-      }
-    ],
-    "nonClaims": ["Coverage fixture source does not own native tests."]
+      }}
+    ]}],
+    "sourceNonClaims": ["Coverage fixture source does not own native tests."]
   },
   "requirementProofBinding": {
     "schemaVersion": 1,
@@ -1695,7 +1704,7 @@ func validCoverageInput(t *testing.T) any {
       {
         "requirementId": "REQ-PROOFKIT-COVERAGE-001",
         "ownerId": "proofkit.coverage",
-        "specPath": "docs/specs/proofkit-coverage/requirements.v1.json",
+        "specPath": "docs/specs/proofkit-coverage/requirements.v2.json",
         "claimLevel": "blocking",
         "proofState": "witness_backed",
         "nonClaims": ["Coverage fixture binding does not execute witnesses."]
@@ -1731,7 +1740,7 @@ func validCoverageInput(t *testing.T) any {
     "completenessDeclaration": "selected_owner_surfaces",
     "ownerIds": ["proofkit.coverage"],
     "codeSurfaces": [{"surfaceId": "proofkit.coverage.code", "ownerId": "proofkit.coverage", "path": "internal/command/requirementcoverageview"}],
-    "specSurfaces": [{"surfaceId": "proofkit.coverage.spec", "ownerId": "proofkit.coverage", "path": "docs/specs/proofkit-coverage/requirements.v1.json"}],
+    "specSurfaces": [{"surfaceId": "proofkit.coverage.spec", "ownerId": "proofkit.coverage", "path": "docs/specs/proofkit-coverage/requirements.v2.json"}],
     "testSurfaces": [{"surfaceId": "proofkit.coverage.test", "ownerId": "proofkit.coverage", "path": "internal/command/requirementcoverageview/requirementcoverageview_test.go"}],
     "commandRefs": ["proofkit.coverage.command"],
     "nonClaims": ["Coverage universe is selected-owner scope only."]
@@ -1864,7 +1873,11 @@ func addUnboundCodeSurface(input any, declaration string) {
 
 func sourceRequirement(input any) map[string]any {
 	source := input.(map[string]any)["requirementSource"].(map[string]any)
-	return source["requirements"].([]any)[0].(map[string]any)
+	return coverageSourceGroup(source)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
+}
+
+func coverageSourceGroup(source map[string]any) map[string]any {
+	return source["groups"].([]any)[0].(map[string]any)
 }
 
 func stringArrayContains(raw any, want string) bool {

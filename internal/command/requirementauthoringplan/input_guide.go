@@ -37,19 +37,24 @@ Admitted reference roles:
   Obtain the connected requirement/source example from:
     {{cli}} adopt materialize plan --help
   It owns the example shape at /requirementSources/0 and the single requirement
-  at /requirementSources/0/requirements/0. Do not use an admission report in place
+  at /requirementSources/0/groups/0/members/0. Do not use an admission report in place
   of those source inputs. Paths and meaning must come from reviewed consumer facts.
 
   When the selected source already exists, currentRequirementSource is its
   exact admitted input. When no specification exists yet, use the source shape
-  from that CLI example with requirements: []; retain its sourceId, paths and
-  nonClaims. This empty source is a proposed bootstrap boundary, not a claim
+  from that CLI example with groups: []; retain its sourceId, specPackagePath and
+  sourceNonClaims. This empty source is a proposed bootstrap boundary, not a claim
   that a file exists. Never erase existing requirements to simulate bootstrap.
 
-  Fill both null slots below: currentRequirementSource with that source object,
-  and candidateRequirement with the reviewed requirement object. The candidate's
-  requirementId must equal the update's requirementId. add requires an absent
-  ID; modify requires an existing ID. deprecate and supersede must satisfy the
+  Fill both null slots below with complete source objects: currentRequirementSource
+  is the admitted current or empty bootstrap source; candidateRequirementSource
+  is the intended grouped source after review. Preserve untouched groups and
+  explicit profile/member ownership. Do not flatten or infer shared profiles.
+  Every added or changed requirement needs exactly one candidateUpdates row.
+  A shared profile, stem or premise edit can require rows for multiple members.
+  Source-only layout, scenario, vocabulary, provenance and nonclaim changes need
+  whole-candidate owner review; they are reported separately. A no-op is rejected.
+  add requires an absent ID; modify requires an existing ID. deprecate and supersede must satisfy the
   lifecycle transition owner; do not delete stable IDs to avoid those rules.
   Use retrospective_baseline for reviewed code-derived candidates, or
   pull_request_design for proposed design changes. Neither mode grants approval.
@@ -60,10 +65,11 @@ Admitted reference roles:
 
 Authoring template (two object operands must be supplied):
 ` + "```json\n" + `{
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "authoringPlanId": "example.authoring",
   "mode": "retrospective_baseline",
   "currentRequirementSource": null,
+  "candidateRequirementSource": null,
   "authoringRefs": [{
     "refId": "example.observation",
     "kind": "code_summary",
@@ -86,8 +92,7 @@ Authoring template (two object operands must be supplied):
       "description": "Create a native test that rejects an implementation accepting empty requests.",
       "blocking": true,
       "evidenceRefs": []
-    }],
-    "candidateRequirement": null
+    }]
   }],
   "nonClaims": ["Synthetic authoring plan; owner approval and test execution are not proven."]
 }

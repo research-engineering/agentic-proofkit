@@ -116,7 +116,9 @@ func codecMutantPayload(t *testing.T, mutantID string) []byte {
 	case "multiple_values":
 		return append(append([]byte(nil), valid...), []byte("{}")...)
 	case "negative_zero":
-		return bytes.Replace(valid, []byte(`"start":0`), []byte(`"start":-0`), 1)
+		return mutateRoot(t, valid, func(root map[string]any) {
+			root["derivations"].([]any)[0].(map[string]any)["selector"].(map[string]any)["start"] = "-0"
+		})
 	case "secret_shaped_text":
 		return mutateRoot(t, valid, func(root map[string]any) {
 			definitions := root["nonClaimDefinitions"].([]any)

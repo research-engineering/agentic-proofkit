@@ -6,17 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 // This independently authored ASCII fixture was captured and its explicit
 // preimage checked at 3d6f81f6a85cb963f2bbb96073c75f1137afa153. Never regenerate
 // expected.json from the candidate under test.
-func TestContextPredecessorWireIdentity(t *testing.T) {
+func TestContextRejectsPredecessorFlatSourceWire(t *testing.T) {
 	const root = "testdata/context-wire-v2"
 	const snapshotID = "sha256:6fb22780b923a77dd826e9eb3a2f55f59bec8bb526c684bc070e77ac60096467"
 	expectedBytes, err := os.ReadFile(root + "/expected.json")
@@ -42,9 +40,13 @@ func TestContextPredecessorWireIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	composed, err := Compose(root, predecessorRecord(t, catalogBytes))
-	if err != nil || !reflect.DeepEqual(composed, expected) {
-		t.Fatalf("Compose changed predecessor semantics: %v", err)
+	if composed, err := Compose(root, predecessorRecord(t, catalogBytes)); err == nil || composed != nil {
+		t.Fatalf("Compose accepted retired flat-source input: %v", err)
+	}
+	currentCatalog := predecessorRecord(t, catalogBytes)
+	currentCatalog["schemaVersion"] = json.Number("2")
+	if composed, err := Compose(root, currentCatalog); err == nil || composed != nil {
+		t.Fatal("current catalog admitted a retired flat source")
 	}
 	for _, version := range []string{"1", "2"} {
 		t.Run("v"+version, func(t *testing.T) {
@@ -55,26 +57,8 @@ func TestContextPredecessorWireIdentity(t *testing.T) {
 				input["baselineVerification"] = "unverified"
 				input["nonClaims"] = input["nonClaims"].([]any)[:2]
 			}
-			snapshot, err := AdmitSnapshot(input)
-			if err != nil {
-				t.Fatal(err)
-			}
-			encoded, err := stablejson.Marshal(SnapshotValue(snapshot))
-			if err != nil || !bytes.Equal(encoded, expectedBytes) {
-				t.Fatalf("admission changed predecessor wire: %v", err)
-			}
-			slice, err := SliceSnapshot(snapshot, map[string]any{"profile": "review", "requirementIds": []any{"REQ-WIRE-001"}}, "wire.slice")
-			if err != nil {
-				t.Fatal(err)
-			}
-			wantFragment := []any{map[string]any{
-				"authority": "lookup_fragment_only", "omittedRequirementCount": 0,
-				"projectionKind":           "proofkit.requirement-source-fragment",
-				"requirements":             expected["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"],
-				"selectedRequirementCount": 1, "sourceId": "wire.requirements", "totalRequirementCount": 1,
-			}}
-			if !reflect.DeepEqual(slice["projections"].(map[string]any)["requirementSources"], wantFragment) {
-				t.Fatal("predecessor fragment fields or values changed")
+			if _, err := AdmitSnapshot(input); err == nil {
+				t.Fatal("admission accepted retired flat-source wire")
 			}
 		})
 	}

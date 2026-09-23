@@ -25,7 +25,7 @@
     "ownerPackage": "internal/kernel/requirementsourcecodec",
     "documentKind": "proofkit.requirement-source",
     "schemaVersion": 2,
-    "productionFiles": ["diagnostic_path.go", "document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"]
+    "productionFiles": ["assessment.go", "diagnostic_path.go", "document.go", "format.go", "input_structure.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go", "value_admission.go"]
   },
   "roles": {
     "statusQuoComparators": ["flat-v1"],

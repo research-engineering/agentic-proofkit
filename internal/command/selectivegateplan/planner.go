@@ -21,6 +21,8 @@ func buildPlan(input input) map[string]any {
 		}
 		if _, ok := commands.byKey[key]; !ok {
 			commands.order = append(commands.order, key)
+		} else if item.CommandOwnership == nil {
+			item.CommandOwnership = commands.byKey[key].CommandOwnership
 		}
 		commands.byKey[key] = item
 	}

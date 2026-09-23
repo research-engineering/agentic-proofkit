@@ -175,11 +175,12 @@ func assertRepresentationNeutralModelShape(t *testing.T) {
 	if !reflect.DeepEqual(actualFields, expectedFields) {
 		t.Fatalf("Model structural inventory = %v, want %v", actualFields, expectedFields)
 	}
-	assertMethodNames(t, model, []string{"Atomic", "Layout", "References"})
-	assertMethodNames(t, reflect.PointerTo(model), []string{"Atomic", "Layout", "References"})
+	assertMethodNames(t, model, []string{"Atomic", "Layout", "NonClaimDefinitions", "References", "RequirementCount", "Requirements", "ResolvedSourceNonClaims", "SourceID", "SpecPackagePath"})
+	assertMethodNames(t, reflect.PointerTo(model), []string{"Atomic", "Layout", "NonClaimDefinitions", "References", "RequirementCount", "Requirements", "ResolvedSourceNonClaims", "SourceID", "SpecPackagePath"})
 	assertAccessorSignature(t, model, "Atomic", reflect.TypeOf(AtomicProjection{}))
 	assertAccessorSignature(t, model, "Layout", reflect.TypeOf(LayoutProjection{}))
 	assertAccessorSignature(t, model, "References", reflect.TypeOf(ReferenceProjection{}))
+	assertAccessorSignature(t, model, "NonClaimDefinitions", reflect.TypeOf([]NonClaimDefinition{}))
 }
 
 func inspectRepresentationNeutralType(t *testing.T, value reflect.Type, seen map[reflect.Type]struct{}) {
@@ -267,7 +268,7 @@ func assertExactProductionMethodSets(t *testing.T, reflected map[reflect.Type]st
 		}
 		expected := []string{}
 		if name == "Model" {
-			expected = []string{"Atomic", "Layout", "References"}
+			expected = []string{"Atomic", "Layout", "NonClaimDefinitions", "References", "RequirementCount", "Requirements", "ResolvedSourceNonClaims", "SourceID", "SpecPackagePath"}
 		}
 		assertGoMethodSet(t, name, types.NewMethodSet(named), expected)
 		assertGoMethodSet(t, "*"+name, types.NewMethodSet(types.NewPointer(named)), expected)

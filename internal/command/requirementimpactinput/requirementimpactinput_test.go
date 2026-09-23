@@ -18,7 +18,7 @@ func TestBuildComposesInputAndRoutesChangedBlockingRequirement(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.030089205175258355525512374181401591961738735214675037864934765862429075466299")
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition must route changed blocking requirement records to caller-owned proof obligations."
+	impactSourceGroup(currentSource)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Requirement impact input composition must route changed blocking requirement records to caller-owned proof obligations."
 
 	output, exitCode, err := Build(input)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestBuildPreservesRouteOnlyCommandsAndEnvironments(t *testing.T) {
 		falsification[2] = []any{"go test ./... -run TestFalsification"}
 	}
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Changed invariant with route-only proof commands."
+	impactSourceGroup(currentSource)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Changed invariant with route-only proof commands."
 
 	output, exitCode, err := Build(input)
 	if err != nil || exitCode != 0 {
@@ -106,7 +106,7 @@ func TestBuildPreservesRouteOnlyCommandsAndEnvironments(t *testing.T) {
 func TestBuildFailsDownstreamWhenChangedBlockingRequirementHasNoBinding(t *testing.T) {
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition must fail closed when a changed active blocking requirement has no current binding."
+	impactSourceGroup(currentSource)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Requirement impact input composition must fail closed when a changed active blocking requirement has no current binding."
 	currentContract := input["currentCompactProofContract"].(map[string]any)
 	currentContract["bindings"] = currentContract["bindings"].([]any)[1:]
 
@@ -192,7 +192,7 @@ func TestBuildAcceptsFullNullNewAdoptionBaseline(t *testing.T) {
 func TestBuildFailsDownstreamForRemovedRequirementAndRemovedBinding(t *testing.T) {
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"] = currentSource["requirements"].([]any)[1:]
+	impactSourceGroup(currentSource)["members"] = impactSourceGroup(currentSource)["members"].([]any)[1:]
 
 	output, _, err := Build(input)
 	if err != nil {
@@ -322,7 +322,7 @@ func TestBuildFailsClosedWhenReferencedSurfaceSemanticDriftLacksSourcePath(t *te
 func TestBuildRoutesAddedCurrentBinding(t *testing.T) {
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"] = append(currentSource["requirements"].([]any), requirement("REQ-PROOFKIT-IMPACT-004", "Requirement impact input composition routes added current proof bindings when proof source evidence changed.", "blocking"))
+	impactSourceGroup(currentSource)["members"] = append(impactSourceGroup(currentSource)["members"].([]any), requirement("REQ-PROOFKIT-IMPACT-004", "Requirement impact input composition routes added current proof bindings when proof source evidence changed.", "blocking"))
 	currentContract := input["currentCompactProofContract"].(map[string]any)
 	currentContract["bindings"] = append(currentContract["bindings"].([]any), binding("REQ-PROOFKIT-IMPACT-004", "proofkit.impact.surface::scenario_added", "proofkit.impact_added", "internal/command/requirementimpactinput/added_test.go::positive_added", "internal/command/requirementimpactinput/added_test.go::negative_added"))
 	input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/contracts/proofkit-impact.json"}}}
@@ -345,7 +345,7 @@ func TestBuildRoutesAddedCurrentBinding(t *testing.T) {
 func TestBuildDoesNotCreateObligationsForAdvisoryRequirementChanges(t *testing.T) {
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"].([]any)[2].(map[string]any)["invariant"] = "Requirement impact input composition preserves advisory deltas without creating blocking obligations."
+	impactSourceGroup(currentSource)["members"].([]any)[2].(map[string]any)["statementCompletion"] = "Requirement impact input composition preserves advisory deltas without creating blocking obligations."
 
 	output, _, err := Build(input)
 	if err != nil {
@@ -363,7 +363,7 @@ func TestBuildDoesNotCreateObligationsForAdvisoryRequirementChanges(t *testing.T
 
 func TestBuildFlattensMultipleRequirementSourcesDeterministically(t *testing.T) {
 	first := validComposeInput(t)
-	firstRequirements := first["currentRequirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)
+	firstRequirements := impactSourceGroup(first["currentRequirementSources"].([]any)[0].(map[string]any))["members"].([]any)
 	firstSource := requirementSource([]any{firstRequirements[0]})
 	setSourceIdentity(firstSource, "proofkit.impact.source_a", "docs/specs/proofkit-impact-a")
 	secondSource := requirementSource([]any{firstRequirements[1], firstRequirements[2]})
@@ -415,7 +415,7 @@ func TestBuildRejectsFailedChangedPathAdmission(t *testing.T) {
 func TestBuildPreservesMultipleCurrentBindingsPerRequirement(t *testing.T) {
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition fans changed requirements out to every declared binding."
+	impactSourceGroup(currentSource)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Requirement impact input composition fans changed requirements out to every declared binding."
 	currentContract := input["currentCompactProofContract"].(map[string]any)
 	bindings := currentContract["bindings"].([]any)
 	duplicate := cloneAny(t, bindings[0]).([]any)
@@ -605,7 +605,7 @@ func TestBuildPreservesGeneratedMirrorRulesForDownstreamImpact(t *testing.T) {
 	assertContainsFailure(t, report, "changed generated mirror without source change: docs/generated/report.md")
 
 	input = validComposeInput(t)
-	input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/generated/report.md", "docs/specs/proofkit-impact/requirements.v1.json"}}}
+	input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/generated/report.md", "docs/specs/proofkit-impact/requirements.v2.json"}}}
 	output, _, err = Build(input)
 	if err != nil {
 		t.Fatalf("Build() generated mirror with source error = %v", err)
@@ -622,7 +622,7 @@ func TestBuildPreservesGeneratedMirrorRulesForDownstreamImpact(t *testing.T) {
 func TestBuildOutputIsDeterministicForEquivalentAdmittedInputs(t *testing.T) {
 	first := validComposeInput(t)
 	first["changedPathSources"] = []any{
-		map[string]any{"sourceId": "source_a", "paths": []any{"docs/specs/proofkit-impact/requirements.v1.json"}},
+		map[string]any{"sourceId": "source_a", "paths": []any{"docs/specs/proofkit-impact/requirements.v2.json"}},
 		map[string]any{"sourceId": "source_b", "paths": []any{"internal/command/requirementimpactinput/shared_test.go"}},
 	}
 	second := cloneAny(t, first).(map[string]any)
@@ -658,7 +658,7 @@ func TestBuildOutputIsDeterministicForEquivalentAdmittedInputs(t *testing.T) {
 func TestBuildMarksObligationPreconditionedFromLocalEnvironmentPolicy(t *testing.T) {
 	input := validComposeInput(t)
 	currentSource := input["currentRequirementSources"].([]any)[0].(map[string]any)
-	currentSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "Requirement impact input composition marks obligations preconditioned when local environment classes do not satisfy required classes."
+	impactSourceGroup(currentSource)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Requirement impact input composition marks obligations preconditioned when local environment classes do not satisfy required classes."
 	input["localEnvironmentPolicy"] = map[string]any{"localEnvironmentClasses": []any{}}
 
 	output, _, err := Build(input)
@@ -680,13 +680,13 @@ func validComposeInput(t *testing.T) map[string]any {
 	})
 	contract := compactContract()
 	return map[string]any{
-		"schemaVersion":                json.Number("2"),
+		"schemaVersion":                json.Number("3"),
 		"composerInputId":              "proofkit.impact_input.fixture",
 		"baseRef":                      "main",
 		"baseCommit":                   "base-sha",
 		"headRef":                      "feature/impact-input",
 		"headCommit":                   nil,
-		"changedPathSources":           []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/specs/proofkit-impact/requirements.v1.json"}}},
+		"changedPathSources":           []any{map[string]any{"sourceId": "git_diff", "paths": []any{"docs/specs/proofkit-impact/requirements.v2.json"}}},
 		"baseRequirementSources":       []any{cloneAny(t, source)},
 		"currentRequirementSources":    []any{cloneAny(t, source)},
 		"baseCompactProofContract":     cloneAny(t, contract),
@@ -702,22 +702,27 @@ func validComposeInput(t *testing.T) map[string]any {
 }
 
 func requirementSource(requirements []any) map[string]any {
+	groups := []any{}
+	if len(requirements) > 0 {
+		groups = []any{map[string]any{"groupId": "RGRP-IMPACT", "profileId": "", "statementStem": "", "sharedPremises": []any{}, "members": requirements}}
+	}
 	return map[string]any{
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         "proofkit.impact.source",
-		"specPackagePath":  "docs/specs/proofkit-impact",
-		"overviewPath":     "docs/specs/proofkit-impact/overview.md",
-		"requirementsPath": "docs/specs/proofkit-impact/requirements.v1.json",
-		"requirements":     requirements,
-		"nonClaims":        []any{"Impact fixture source records do not own product semantics."},
+		"kind":            "proofkit.requirement-source",
+		"schemaVersion":   json.Number("2"),
+		"sourceId":        "proofkit.impact.source",
+		"specPackagePath": "docs/specs/proofkit-impact",
+		"groups":          groups,
+		"sourceNonClaims": []any{"Impact fixture source records do not own product semantics."},
 	}
 }
 
 func setSourceIdentity(source map[string]any, sourceID string, specPackagePath string) {
 	source["sourceId"] = sourceID
 	source["specPackagePath"] = specPackagePath
-	source["overviewPath"] = specPackagePath + "/overview.md"
-	source["requirementsPath"] = specPackagePath + "/requirements.v1.json"
+}
+
+func impactSourceGroup(source map[string]any) map[string]any {
+	return source["groups"].([]any)[0].(map[string]any)
 }
 
 func requirement(id string, invariant string, claimLevel string) map[string]any {
@@ -725,19 +730,18 @@ func requirement(id string, invariant string, claimLevel string) map[string]any 
 	if claimLevel == "blocking" {
 		proofRefs = []any{"docs/contracts/proofkit-impact.json"}
 	}
-	return map[string]any{
-		"requirementId":    id,
-		"ownerId":          "proofkit.impact_input",
-		"invariant":        invariant,
-		"claimLevel":       claimLevel,
-		"riskClass":        "medium",
-		"proofBindingRefs": proofRefs,
-		"nonClaimRefs":     []any{},
-		"nonClaims":        []any{},
-		"lifecycle":        map[string]any{"state": "active", "evidenceRefs": []any{}, "replacementRequirementIds": []any{}},
-		"deferral":         nil,
-		"updatePolicy":     map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": claimLevel == "blocking", "reviewOwnerId": "proofkit.impact_input"},
-	}
+	return map[string]any{"requirementId": id, "statementCompletion": invariant, "fields": map[string]any{
+		"ownerId":              "proofkit.impact_input",
+		"claimLevel":           claimLevel,
+		"riskClass":            "medium",
+		"proofBindingRefs":     proofRefs,
+		"nonClaimRefs":         []any{},
+		"externalNonClaimRefs": []any{},
+		"nonClaims":            []any{},
+		"lifecycle":            map[string]any{"state": "active", "evidenceRefs": []any{}, "replacementRequirementIds": []any{}},
+		"deferral":             nil,
+		"updatePolicy":         map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": claimLevel == "blocking", "reviewOwnerId": "proofkit.impact_input"},
+	}}
 }
 
 func compactContract() map[string]any {

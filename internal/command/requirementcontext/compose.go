@@ -85,14 +85,18 @@ func Compose(repoRoot string, raw any) (map[string]any, error) {
 			if err != nil || result.ExitCode != 0 {
 				return nil, fmt.Errorf("admit requirement source")
 			}
-			if _, exists := requirementSourceIDs[result.Source.SourceID]; exists {
+			if _, exists := requirementSourceIDs[result.Source.SourceID()]; exists {
 				return nil, fmt.Errorf("requirement context requirement source ids must be unique")
 			}
-			requirementSources = append(requirementSources, requirementsourceadmission.SourceValue(result.Source))
-			entry.SourceRef = result.Source.SourceID
-			requirementSourceIDs[result.Source.SourceID] = struct{}{}
-			requirementSourceNodes[result.Source.SourceID] = entry.NodeID
-			for _, requirement := range result.Source.Requirements {
+			value, err := requirementsourceadmission.SourceValue(result.Source)
+			if err != nil {
+				return nil, err
+			}
+			requirementSources = append(requirementSources, value)
+			entry.SourceRef = result.Source.SourceID()
+			requirementSourceIDs[result.Source.SourceID()] = struct{}{}
+			requirementSourceNodes[result.Source.SourceID()] = entry.NodeID
+			for _, requirement := range result.Source.Requirements() {
 				if _, exists := requirementIDs[requirement.RequirementID]; exists {
 					return nil, fmt.Errorf("requirement context requirement ids must be unique across sources")
 				}
@@ -187,16 +191,11 @@ func Compose(repoRoot string, raw any) (map[string]any, error) {
 }
 
 func admitCatalog(raw any) (string, []catalogSource, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return "", nil, fmt.Errorf("requirement context catalog must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"catalogId", "coverage", "proofBinding", "requirementSources", "schemaVersion", "specTree"}, "requirement context catalog"); err != nil {
+	value, err := catalogInputShape.Admit(raw, "requirement context catalog")
+	if err != nil {
 		return "", nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return "", nil, fmt.Errorf("requirement context catalog schemaVersion must be 1")
-	}
+	record := value.(map[string]any)
 	catalogID, err := admit.RuleID(record["catalogId"], "requirement context catalogId")
 	if err != nil {
 		return "", nil, err
@@ -207,10 +206,7 @@ func admitCatalog(raw any) (string, []catalogSource, error) {
 		return "", nil, err
 	}
 	entries = append(entries, specTree)
-	values, ok := record["requirementSources"].([]any)
-	if !ok || len(values) == 0 {
-		return "", nil, fmt.Errorf("requirement context catalog requirementSources must be a non-empty array")
-	}
+	values := record["requirementSources"].([]any)
 	for index, value := range values {
 		entry, err := admitCatalogEntry(value, "requirement_source", fmt.Sprintf("requirement-source-%d", index+1))
 		if err != nil {
@@ -244,18 +240,12 @@ func admitCatalog(raw any) (string, []catalogSource, error) {
 }
 
 func admitCatalogEntry(raw any, kind, defaultRef string) (catalogSource, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return catalogSource{}, fmt.Errorf("requirement context catalog entry must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"expectedSourceDigest", "nodeId", "path", "sourceRef"}, "requirement context catalog entry"); err != nil {
-		return catalogSource{}, err
-	}
-	pathText, err := admit.NonEmptyText(record["path"], "requirement context catalog entry path")
+	record := raw.(map[string]any)
+	_, err := admit.NonEmptyText(record["path"], "requirement context catalog entry path")
 	if err != nil {
 		return catalogSource{}, err
 	}
-	path, err := admit.SafeRepoRelativePath(pathText, "requirement context catalog entry path")
+	path, err := admit.SafeRepoRelativePath(record["path"].(string), "requirement context catalog entry path")
 	if err != nil {
 		return catalogSource{}, err
 	}
@@ -279,8 +269,6 @@ func admitCatalogEntry(raw any, kind, defaultRef string) (catalogSource, error) 
 		if err != nil {
 			return catalogSource{}, err
 		}
-	} else if record["nodeId"] != nil {
-		return catalogSource{}, fmt.Errorf("requirement context non-requirement catalog entries must not declare nodeId")
 	}
 	return catalogSource{ExpectedDigest: expected, Kind: kind, NodeID: nodeID, Path: path, SourceRef: sourceRef}, nil
 }

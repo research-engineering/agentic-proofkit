@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
@@ -114,8 +115,8 @@ func admitInput(raw any) (Input, error) {
 	if err := admit.KnownKeys(record, []string{"commandRefPolicy", "compactProofContract", "inventoryId", "nonClaims", "requirementSource", "schemaVersion"}, "proof-binding test inventory input"); err != nil {
 		return Input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return Input{}, fmt.Errorf("proof-binding test inventory schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return Input{}, fmt.Errorf("proof-binding test inventory schemaVersion must be 3")
 	}
 	inventoryID, err := admit.RuleID(record["inventoryId"], "proof-binding test inventory inventoryId")
 	if err != nil {
@@ -154,32 +155,16 @@ func commandRefPrefix(raw any) (string, error) {
 }
 
 func requirementOwners(raw any) (map[string]string, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("proof-binding test inventory requirementSource must be an object")
+	result, err := requirementsourceadmission.Evaluate(raw)
+	if err != nil {
+		return nil, fmt.Errorf("proof-binding test inventory requirementSource: %w", err)
 	}
-	requirements, ok := record["requirements"].([]any)
-	if !ok {
-		return nil, fmt.Errorf("proof-binding test inventory requirementSource.requirements must be an array")
+	if result.ExitCode != 0 {
+		return nil, fmt.Errorf("proof-binding test inventory requirementSource failed admission: %s", strings.Join(result.Failures, "; "))
 	}
 	owners := map[string]string{}
-	for index, value := range requirements {
-		requirement, ok := value.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("proof-binding test inventory requirementSource.requirements[%d] must be an object", index)
-		}
-		requirementID, err := admit.RuleID(requirement["requirementId"], fmt.Sprintf("proof-binding test inventory requirement #%d requirementId", index+1))
-		if err != nil {
-			return nil, err
-		}
-		ownerID, err := admit.RuleID(requirement["ownerId"], fmt.Sprintf("proof-binding test inventory requirement %s ownerId", requirementID))
-		if err != nil {
-			return nil, err
-		}
-		if previous, ok := owners[requirementID]; ok {
-			return nil, fmt.Errorf("proof-binding test inventory duplicate requirement owner for %s: %s and %s", requirementID, previous, ownerID)
-		}
-		owners[requirementID] = ownerID
+	for _, requirement := range result.Source.Requirements() {
+		owners[requirement.RequirementID] = requirement.OwnerID
 	}
 	return owners, nil
 }

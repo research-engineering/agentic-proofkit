@@ -44,8 +44,12 @@ func admitCoverageRowMetadata(row map[string]any, rowsKey string, ownerSet map[s
 		if err := admitCoveragePath(row["specPath"], context+" specPath"); err != nil {
 			return err
 		}
-		_, err = admit.PreserveSortedTextArray(row["nonClaims"], context+" nonClaims", true)
-		return err
+		for _, field := range []string{"nonClaims", "sharedPremises", "nonClaimRefs", "externalNonClaimRefs"} {
+			if _, err := admit.PreserveSortedTextArray(row[field], context+" "+field, true); err != nil {
+				return err
+			}
+		}
+		return nil
 	case "ownerInvariantCoverage":
 		if err := admitCoverageOwner(row["ownerId"], ownerSet, context+" ownerId"); err != nil {
 			return err

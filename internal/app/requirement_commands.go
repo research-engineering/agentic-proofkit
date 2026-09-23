@@ -266,6 +266,8 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 	}
 	defer parentRoot.Close()
 	leaf := pathBase(relative)
+	outputMode := os.FileMode(0o644)
+	var priorOutput os.FileInfo
 	if info, err := parentRoot.Lstat(filepath.FromSlash(leaf)); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
 			return fmt.Errorf("output path must not be a symlink: %s", relative)
@@ -273,6 +275,11 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 		if info.IsDir() {
 			return fmt.Errorf("output path must not be a directory: %s", relative)
 		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("output path must be a regular file: %s", relative)
+		}
+		priorOutput = info
+		outputMode = info.Mode().Perm()
 	} else if !os.IsNotExist(err) {
 		return err
 	}
@@ -286,6 +293,7 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 	if err != nil {
 		return err
 	}
+	defer temp.Close()
 	cleanup := true
 	defer func() {
 		if cleanup {
@@ -296,16 +304,13 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 		_ = temp.Close()
 		return err
 	}
-	if err := temp.Chmod(0o644); err != nil {
+	if err := temp.Chmod(outputMode); err != nil {
 		_ = temp.Close()
 		return err
 	}
 	tempInfo, err := temp.Stat()
 	if err != nil {
 		_ = temp.Close()
-		return err
-	}
-	if err := temp.Close(); err != nil {
 		return err
 	}
 	if outputWriterBarrier != nil {
@@ -321,11 +326,12 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 	if currentTempRouteInfo.Mode()&os.ModeSymlink != 0 || !os.SameFile(tempInfo, currentTempRouteInfo) {
 		return errors.New("temporary output identity changed before publication")
 	}
-	if currentTempRouteInfo.Mode() != 0o644 {
+	if currentTempRouteInfo.Mode() != outputMode {
 		return errors.New("temporary output mode changed before publication")
 	}
-	currentTemp, err := parentRoot.Open(filepath.FromSlash(tempRelative))
-	if err != nil {
+	// Retain the opened descriptor: the selected mode may forbid reopening.
+	currentTemp := temp
+	if _, err := currentTemp.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 	currentTempInfo, err := currentTemp.Stat()
@@ -337,7 +343,7 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 		_ = currentTemp.Close()
 		return errors.New("temporary output identity changed before publication")
 	}
-	if currentTempInfo.Mode() != 0o644 {
+	if currentTempInfo.Mode() != outputMode {
 		_ = currentTemp.Close()
 		return errors.New("temporary output mode changed before publication")
 	}
@@ -358,6 +364,14 @@ func writeRepoRelativeOutputFile(nativePath string, content []byte) error {
 	}
 	if err := requireStableOutputParent(root, parent, parentInfo); err != nil {
 		return err
+	}
+	currentOutput, outputErr := parentRoot.Lstat(filepath.FromSlash(leaf))
+	if priorOutput == nil {
+		if !os.IsNotExist(outputErr) {
+			return errors.New("output destination changed before publication")
+		}
+	} else if outputErr != nil || !os.SameFile(priorOutput, currentOutput) || priorOutput.Mode() != currentOutput.Mode() {
+		return errors.New("output destination identity or mode changed before publication")
 	}
 	if err := parentRoot.Rename(filepath.FromSlash(tempRelative), filepath.FromSlash(leaf)); err != nil {
 		return err
@@ -450,7 +464,7 @@ func createRootTemp(root *os.Root, parent string) (string, *os.File, error) {
 		if parent != "." && parent != "" {
 			relative = parent + "/" + name
 		}
-		file, err := root.OpenFile(filepath.FromSlash(relative), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+		file, err := root.OpenFile(filepath.FromSlash(relative), os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o600)
 		if err == nil {
 			return relative, file, nil
 		}

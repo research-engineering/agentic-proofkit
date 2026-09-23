@@ -24,7 +24,11 @@ func (project *Project) JSONValue() (map[string]any, error) {
 	snapshot := project.snapshot
 	sources := make([]any, 0, len(snapshot.Sources))
 	for _, source := range snapshot.Sources {
-		sources = append(sources, requirementsourceadmission.SourceValue(source))
+		value, err := requirementsourceadmission.SourceValue(source)
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, value)
 	}
 	return map[string]any{
 		"manifest":              snapshot.Manifest.JSONValue(),

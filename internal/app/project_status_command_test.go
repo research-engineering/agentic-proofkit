@@ -210,7 +210,7 @@ func TestProjectStatusCLI(t *testing.T) {
 			t.Fatalf("materialized next admission=%v packet=%#v", err, next)
 		}
 
-		requirementPath := filepath.Join(materializedRoot, "docs", "specs", "pilot", "requirements.v1.json")
+		requirementPath := filepath.Join(materializedRoot, "docs", "specs", "pilot", "requirements.v2.json")
 		content, err := os.ReadFile(requirementPath)
 		if err != nil {
 			t.Fatal(err)

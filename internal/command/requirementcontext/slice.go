@@ -33,6 +33,11 @@ type nodeSelection struct {
 	sourceIDs       map[string]struct{}
 }
 
+type sourceSelection struct {
+	source       requirementsourceadmission.Source
+	requirements []requirementsourceadmission.Requirement
+}
+
 func Slice(raw any) (map[string]any, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -41,8 +46,8 @@ func Slice(raw any) (map[string]any, error) {
 	if err := admit.KnownKeys(record, []string{"context", "query", "schemaVersion", "sliceId"}, "requirement context slice input"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return nil, fmt.Errorf("requirement context slice schemaVersion must be 1")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
+		return nil, fmt.Errorf("requirement context slice schemaVersion must be 2")
 	}
 	snapshot, err := AdmitSnapshot(record["context"])
 	if err != nil {
@@ -62,6 +67,9 @@ func SliceSnapshot(snapshot Snapshot, rawQuery any, rawSliceID any) (map[string]
 	}
 	output, err := buildSlice(sliceID, snapshot, query)
 	if err != nil {
+		return nil, err
+	}
+	if err := sliceOutputShape.CheckGenerated(output, "requirement context slice"); err != nil {
 		return nil, err
 	}
 	encoded, err := stablejson.Marshal(output)
@@ -103,8 +111,12 @@ func buildSlice(sliceID string, snapshot Snapshot, query SliceQuery) (map[string
 		nodeResult.maxNodesOmitted = 0
 		selectedNodes = nodeResult.selected
 	}
+	fragments, err := requirementSourceFragmentValues(snapshot.RequirementSources, selectedSources)
+	if err != nil {
+		return nil, err
+	}
 	projections := map[string]any{
-		"requirementSources": requirementSourceFragmentValues(snapshot.RequirementSources, selectedSources, snapshot.projectOrigin != nil),
+		"requirementSources": fragments,
 		"specTree":           treeSliceValue(snapshot.Tree, selectedNodes, selectedSourceIDs),
 	}
 	if query.Profile == "proof" || query.Profile == "review" {
@@ -137,7 +149,7 @@ func buildSlice(sliceID string, snapshot Snapshot, query SliceQuery) (map[string
 		"omissions":     omissions,
 		"profile":       query.Profile,
 		"projections":   projections,
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"sliceId":       sliceID,
 		"snapshotId":    snapshot.SnapshotID,
 		"state":         state,
@@ -253,11 +265,11 @@ func parentBeforeChildOrder(rootID string, children map[string][]string) []strin
 	return ordered
 }
 
-func selectRequirements(values []requirementsourceadmission.Source, sourceIDs map[string]struct{}, treeScopeActive bool, query SliceQuery) ([]requirementsourceadmission.Source, int, int, map[string]struct{}, map[string]struct{}, error) {
+func selectRequirements(values []requirementsourceadmission.Source, sourceIDs map[string]struct{}, treeScopeActive bool, query SliceQuery) ([]sourceSelection, int, int, map[string]struct{}, map[string]struct{}, error) {
 	requirementFilter := stringSet(query.RequirementIDs)
 	ownerFilter := stringSet(query.OwnerIDs)
 	lifecycleFilter := stringSet(query.LifecycleStates)
-	selectedSources := []requirementsourceadmission.Source{}
+	selectedSources := []sourceSelection{}
 	selectedSourceIDs := map[string]struct{}{}
 	selectedIDs := map[string]struct{}{}
 	knownIDs := map[string]struct{}{}
@@ -269,8 +281,8 @@ func selectRequirements(values []requirementsourceadmission.Source, sourceIDs ma
 	candidates := []string{}
 	eligibleIDs := map[string]struct{}{}
 	for sourceIndex, source := range values {
-		_, selectedByNode := sourceIDs[source.SourceID]
-		for _, requirement := range source.Requirements {
+		_, selectedByNode := sourceIDs[source.SourceID()]
+		for _, requirement := range source.Requirements() {
 			id := requirement.RequirementID
 			knownIDs[id] = struct{}{}
 			locations[id] = location{requirement: requirement, sourceIndex: sourceIndex}
@@ -346,7 +358,7 @@ func selectRequirements(values []requirementsourceadmission.Source, sourceIDs ma
 	}
 	for sourceIndex, source := range values {
 		selected := []requirementsourceadmission.Requirement{}
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			if _, ok := selectedIDs[requirement.RequirementID]; ok && locations[requirement.RequirementID].sourceIndex == sourceIndex {
 				selected = append(selected, requirement)
 			}
@@ -354,10 +366,8 @@ func selectRequirements(values []requirementsourceadmission.Source, sourceIDs ma
 		if len(selected) == 0 {
 			continue
 		}
-		copySource := source
-		copySource.Requirements = selected
-		selectedSources = append(selectedSources, copySource)
-		selectedSourceIDs[source.SourceID] = struct{}{}
+		selectedSources = append(selectedSources, sourceSelection{source: source, requirements: selected})
+		selectedSourceIDs[source.SourceID()] = struct{}{}
 	}
 	return selectedSources, len(selectedIDs), omitted, selectedIDs, selectedSourceIDs, nil
 }
@@ -423,29 +433,35 @@ func treeSliceValue(tree requirementspectree.Tree, selected, selectedSourceIDs m
 	return value
 }
 
-func requirementSourceFragmentValues(all, selected []requirementsourceadmission.Source, includeSourceNonClaims bool) []any {
+func requirementSourceFragmentValues(all []requirementsourceadmission.Source, selected []sourceSelection) ([]any, error) {
 	totals := map[string]int{}
 	for _, source := range all {
-		totals[source.SourceID] = len(source.Requirements)
+		totals[source.SourceID()] = source.RequirementCount()
 	}
 	values := make([]any, 0, len(selected))
-	for _, source := range selected {
-		requirements := make([]any, 0, len(source.Requirements))
-		for _, requirement := range source.Requirements {
+	for _, selection := range selected {
+		source := selection.source
+		requirements := make([]any, 0, len(selection.requirements))
+		refs := []string{}
+		for _, requirement := range selection.requirements {
 			requirements = append(requirements, requirementsourceadmission.RequirementValue(requirement))
+			refs = append(refs, requirement.NonClaimRefs...)
+		}
+		definitions, err := source.NonClaimDefinitions().Select(refs)
+		if err != nil {
+			return nil, err
 		}
 		fragment := map[string]any{
-			"authority": "lookup_fragment_only", "omittedRequirementCount": totals[source.SourceID] - len(source.Requirements),
+			"authority": "lookup_fragment_only", "omittedRequirementCount": totals[source.SourceID()] - len(selection.requirements),
 			"projectionKind": "proofkit.requirement-source-fragment", "requirements": requirements,
-			"selectedRequirementCount": len(source.Requirements), "sourceId": source.SourceID,
-			"totalRequirementCount": totals[source.SourceID],
-		}
-		if includeSourceNonClaims {
-			fragment["nonClaims"] = admit.StringSliceToAny(source.NonClaims)
+			"selectedRequirementCount": len(selection.requirements), "sourceId": source.SourceID(),
+			"totalRequirementCount": totals[source.SourceID()],
+			"nonClaims":             admit.StringSliceToAny(source.NonClaims()),
+			"nonClaimDefinitions":   definitions.Value(),
 		}
 		values = append(values, fragment)
 	}
-	return values
+	return values, nil
 }
 
 func stringSet(values []string) map[string]struct{} {
@@ -474,7 +490,7 @@ func validateSelectorVocabulary(sources []requirementsourceadmission.Source, que
 	knownOwners := map[string]struct{}{}
 	knownLifecycles := map[string]struct{}{}
 	for _, source := range sources {
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			knownOwners[requirement.OwnerID] = struct{}{}
 			knownLifecycles[requirement.Lifecycle.State] = struct{}{}
 		}

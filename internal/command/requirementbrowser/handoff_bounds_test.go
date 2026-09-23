@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -64,9 +65,27 @@ func TestHandoffDerivedContextByteBoundary(t *testing.T) {
 }
 
 func TestHandoffFinalPacketByteBoundaryIsReachable(t *testing.T) {
-	const invariantBytes = maxHandoffContextBytes - 2800
 	const quoteBytes = 16204
+	contextBytes := func(session workspaceSession) int {
+		slice, err := requirementcontext.SliceSnapshot(session.Snapshot, map[string]any{
+			"profile": "review", "maxNodes": json.Number("4096"), "maxRequirements": json.Number("16384"),
+			"requirementIds": []any{"REQ-CONSUMER-001"},
+		}, "browser.handoff.context")
+		if err != nil {
+			t.Fatal(err)
+		}
+		encoded, err := stablejson.Marshal(slice)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(encoded)
+	}
+	overhead := contextBytes(workspaceSessionForInvariant(t, "z")) - 1
+	invariantBytes := maxHandoffContextBytes - overhead
 	session := workspaceSessionForInvariant(t, strings.Repeat("z", invariantBytes))
+	if size := contextBytes(session); size != maxHandoffContextBytes {
+		t.Fatalf("final-packet fixture must reach the valid context boundary: got %d, want %d", size, maxHandoffContextBytes)
+	}
 	anchor := session.Anchors["requirement:REQ-CONSUMER-001:invariant"]
 	annotations := make([]any, maxHandoffAnnotations)
 	for index := range annotations {

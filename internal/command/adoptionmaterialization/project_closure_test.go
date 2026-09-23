@@ -21,13 +21,13 @@ func TestMaterializedProjectClosureIsDeterministic(t *testing.T) {
 
 func TestMaterializedProjectRecordSnapshotDoesNotAliasCallerInput(t *testing.T) {
 	content := []byte("owner bytes")
-	records := []RoutedProjectRecord{{Content: content, Path: "docs/specs/owner/requirements.v1.json"}}
+	records := []RoutedProjectRecord{{Content: content, Path: "docs/specs/owner/requirements.v2.json"}}
 	snapshot := snapshotRoutedProjectRecords(records)
 
 	content[0] = 'X'
 	records[0].Content[1] = 'Y'
 	records[0].Path = "changed"
-	if got := string(snapshot[0].Content); got != "owner bytes" || snapshot[0].Path != "docs/specs/owner/requirements.v1.json" {
+	if got := string(snapshot[0].Content); got != "owner bytes" || snapshot[0].Path != "docs/specs/owner/requirements.v2.json" {
 		t.Fatalf("snapshot aliases caller-owned records: %#v", snapshot[0])
 	}
 }
@@ -124,12 +124,13 @@ func TestMaterializedProjectClosureRejectsMissingAndSurplusSources(t *testing.T)
 
 	t.Run("surplus", func(t *testing.T) {
 		snapshot := validMaterializedProjectSnapshot(t)
-		raw := requirementsourceadmission.SourceValue(snapshot.Sources[0])
+		raw, err := requirementsourceadmission.SourceValue(snapshot.Sources[0])
+		if err != nil {
+			t.Fatal(err)
+		}
 		raw["sourceId"] = "surplus.requirements"
 		raw["specPackagePath"] = "docs/specs/surplus"
-		raw["overviewPath"] = "docs/specs/surplus/overview.md"
-		raw["requirementsPath"] = "docs/specs/surplus/requirements.v1.json"
-		requirement := raw["requirements"].([]any)[0].(map[string]any)
+		requirement := materializationSourceMember(raw)
 		requirement["requirementId"] = "REQ-SURPLUS-001"
 		result, err := requirementsourceadmission.Evaluate(raw)
 		if err != nil || result.ExitCode != 0 {

@@ -23,6 +23,30 @@ func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	}
 }
 
+func TestRuleIDByteBudgetPrecedesLexicalValidation(t *testing.T) {
+	t.Parallel()
+
+	boundary := strings.Repeat("a", 256)
+	if value, err := RuleID(boundary, "reference"); err != nil || value != boundary {
+		t.Fatalf("exact identifier boundary changed: %v", err)
+	}
+	for _, input := range []any{
+		boundary + "a", boundary + "!", "!" + boundary,
+		strings.Repeat("a", 1<<20), strings.Repeat("!", 1<<20),
+	} {
+		value, err := RuleID(input, "reference")
+		if value != "" || err == nil || err.Error() != "reference exceeds the 256-byte stable identifier limit" {
+			t.Fatalf("byte budget did not dominate lexical validation: %v", err)
+		}
+	}
+	for _, input := range []any{nil, 1, "", "bad id", "!"} {
+		value, err := RuleID(input, "reference")
+		if value != "" || err == nil || err.Error() != "reference must be stable rule identifier text" {
+			t.Fatalf("bounded type/lexical diagnostic changed: %v", err)
+		}
+	}
+}
+
 func TestNonEmptyTextRejectsSecretLikeDiagnostics(t *testing.T) {
 	t.Parallel()
 

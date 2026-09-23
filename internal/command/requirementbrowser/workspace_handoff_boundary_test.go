@@ -261,26 +261,11 @@ func branchedWorkspaceFixture(t *testing.T, branchDepth int) map[string]any {
 	contextValue := fixture["context"].(map[string]any)
 	projections := contextValue["projections"].(map[string]any)
 	firstSource := projections["requirementSources"].([]any)[0].(map[string]any)
-	secondSource := map[string]any{
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         "consumer.requirements.second",
-		"specPackagePath":  "docs/specs/consumer-second",
-		"overviewPath":     "docs/specs/consumer-second/overview.md",
-		"requirementsPath": "docs/specs/consumer-second/requirements.v1.json",
-		"nonClaims":        []any{"Consumer source does not approve merge."},
-		"requirements": []any{map[string]any{
-			"requirementId":    "REQ-CONSUMER-002",
-			"ownerId":          "consumer.owner",
-			"claimLevel":       "blocking",
-			"riskClass":        "high",
-			"invariant":        "The system preserves semantic identity.",
-			"proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
-			"nonClaimRefs":     []any{"NC-CONSUMER-002"},
-			"nonClaims":        []any{"This requirement does not approve merge."},
-			"lifecycle":        map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
-			"updatePolicy":     map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true},
-		}},
-	}
+	secondSource := cloneWorkspaceRecord(t, firstSource)
+	secondSource["sourceId"], secondSource["specPackagePath"] = "consumer.requirements.second", "docs/specs/consumer-second"
+	member := secondSource["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
+	member["requirementId"] = "REQ-CONSUMER-002"
+	member["fields"].(map[string]any)["externalNonClaimRefs"] = []any{"NC-CONSUMER-002"}
 	projections["requirementSources"] = []any{firstSource, secondSource}
 
 	tree := projections["specTree"].(map[string]any)
@@ -324,7 +309,7 @@ func branchedWorkspaceFixture(t *testing.T, branchDepth int) map[string]any {
 		"currentDigest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
 		"kind":          "requirement_source",
 		"nodeId":        leafIDs[1],
-		"path":          "docs/specs/consumer-second/requirements.v1.json",
+		"path":          "docs/specs/consumer-second/requirements.v2.json",
 		"sourceRef":     "consumer.requirements.second",
 		"sourceRole":    "requirements",
 	}

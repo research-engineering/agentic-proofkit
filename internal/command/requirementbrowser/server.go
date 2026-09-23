@@ -223,7 +223,7 @@ func terminalPacket(state string, handle ServerHandle) map[string]any {
 	packet := map[string]any{
 		"handoffKind":   "proofkit.requirement-browser-question",
 		"nonClaims":     admit.StringSliceToAny(serverNonClaims),
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number(fmt.Sprint(questionPacketSchemaVersion)),
 		"state":         state,
 	}
 	if handle.SnapshotID != "" {

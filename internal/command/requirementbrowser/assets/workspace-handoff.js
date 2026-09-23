@@ -107,7 +107,7 @@ export function initializeHandoffPreview(preview, carrier, status) {
         invariant.textContent = resolved.state === "found" ? resolved.requirement.invariant : `Requirement detail ${resolved.state} in this packet.`;
         const identity = document.createElement("p");
         identity.className = "caller-text";
-        identity.textContent = `${annotation.anchor.jsonPointer}\n${annotation.anchor.sourceDigest}`;
+        identity.textContent = `${annotation.anchor.coordinateSpace}: ${annotation.anchor.sourceId} / ${annotation.anchor.requirementId}${annotation.anchor.jsonPointer}\n${annotation.anchor.sourceDigest}`;
         details.append(invariant, identity);
       });
       article.append(heading, question, quote, coordinates, details);

@@ -18,15 +18,15 @@ func validateClosure(request Request) error {
 	requirements := map[string]requirementsourceadmission.Requirement{}
 	requirementPaths := map[string]string{}
 	for _, source := range request.Sources {
-		if _, exists := sourceIDs[source.SourceID]; exists {
+		if _, exists := sourceIDs[source.SourceID()]; exists {
 			return fmt.Errorf("adoption materialization requirement sourceIds must be unique")
 		}
-		sourceIDs[source.SourceID] = struct{}{}
+		sourceIDs[source.SourceID()] = struct{}{}
 		pathUses = append(pathUses,
-			pathUse{Path: source.RequirementsPath, Role: roleRequirementSource, Target: true},
-			pathUse{Path: source.OverviewPath, Role: roleOverviewReference},
+			pathUse{Path: source.RequirementsPath(), Role: roleRequirementSource, Target: true},
+			pathUse{Path: source.OverviewPath(), Role: roleOverviewReference},
 		)
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			if _, exists := requirements[requirement.RequirementID]; exists {
 				return fmt.Errorf("adoption materialization requirementIds must be unique across sources")
 			}
@@ -36,7 +36,7 @@ func validateClosure(request Request) error {
 				}
 			}
 			requirements[requirement.RequirementID] = requirement
-			requirementPaths[requirement.RequirementID] = source.RequirementsPath
+			requirementPaths[requirement.RequirementID] = source.RequirementsPath()
 		}
 	}
 	if len(request.Binding.Requirements) != len(requirements) {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionmaterialization"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 )
 
@@ -116,24 +117,27 @@ func verifyAuthoringInputGuide(ctx context.Context, run Runner, materialization 
 	if !ok {
 		return fmt.Errorf("installed connected template source must be an object")
 	}
-	requirements, ok := source["requirements"].([]any)
-	if !ok || len(requirements) != 1 {
-		return fmt.Errorf("installed connected template must have one requirement")
+	admitted, err := requirementsourceadmission.Evaluate(source)
+	if err != nil || admitted.ExitCode != 0 || admitted.Source.RequirementCount() != 1 {
+		return fmt.Errorf("installed connected template must have one admitted requirement")
 	}
 	updates, ok := packet["candidateUpdates"].([]any)
 	if !ok || len(updates) != 1 {
 		return fmt.Errorf("installed authoring template must have one candidate update")
 	}
 	update, ok := updates[0].(map[string]any)
-	if !ok || packet["currentRequirementSource"] != nil || update["candidateRequirement"] != nil {
+	if !ok || packet["currentRequirementSource"] != nil || packet["candidateRequirementSource"] != nil {
 		return fmt.Errorf("installed authoring template must declare its two object operands")
+	}
+	if _, obsolete := update["candidateRequirement"]; obsolete {
+		return fmt.Errorf("installed authoring guide retained a retired leaf candidate")
 	}
 	emptySource := make(map[string]any, len(source))
 	for key, value := range source {
 		emptySource[key] = value
 	}
-	emptySource["requirements"] = []any{}
-	packet["currentRequirementSource"], update["candidateRequirement"] = emptySource, requirements[0]
+	emptySource["groups"] = []any{}
+	packet["currentRequirementSource"], packet["candidateRequirementSource"] = emptySource, source
 	expected, exitCode, err := requirementauthoringplan.Build(packet)
 	if err != nil {
 		return fmt.Errorf("installed authoring template must pass native admission: %w", err)
@@ -146,7 +150,11 @@ func verifyAuthoringInputGuide(ctx context.Context, run Runner, materialization 
 	if err != nil {
 		return err
 	}
-	if err := verifyExactJSONObject(Result{Stdout: previewBytes}, source, "guide authoring source preservation"); err != nil {
+	canonicalSource, err := requirementsourceadmission.SourceValue(admitted.Source)
+	if err != nil {
+		return err
+	}
+	if err := verifyExactJSONObject(Result{Stdout: previewBytes}, canonicalSource, "guide authoring source preservation"); err != nil {
 		return err
 	}
 	input, err := json.Marshal(packet)

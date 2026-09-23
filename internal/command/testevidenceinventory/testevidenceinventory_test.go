@@ -115,7 +115,7 @@ func TestBuildDiscoveryDraftEmitsCandidateOnlyInventory(t *testing.T) {
 	if candidate["authority"] != discoveryCandidateInventoryAuthority || candidate["candidateKind"] != discoveryCandidateInventoryKind {
 		t.Fatalf("candidate inventory must use non-strict authority/kind: %#v", candidate)
 	}
-	if _, err := Evaluate(candidate); err == nil || !strings.Contains(err.Error(), "candidateKind") {
+	if _, err := Evaluate(candidate); err == nil || !strings.Contains(err.Error(), "contains an unsupported field") {
 		t.Fatalf("strict inventory admission accepted candidate inventory: err=%v", err)
 	}
 	entries := candidate["entries"].([]any)
@@ -682,7 +682,7 @@ func TestBuildRejectsUnknownQualityFindingClass(t *testing.T) {
 	}
 
 	_, _, err := Build(input)
-	if err == nil || !strings.Contains(err.Error(), "qualityFinding #1 class") {
+	if err == nil || !strings.Contains(err.Error(), ".qualityFindings[0].class must be a declared enum value") {
 		t.Fatalf("Build() error=%v, want unknown quality finding class rejection", err)
 	}
 }

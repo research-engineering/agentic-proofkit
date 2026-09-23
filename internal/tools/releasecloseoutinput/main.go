@@ -1530,7 +1530,7 @@ func registryPublicationNonClaimCriterion() criterion {
 			"This advisory criterion records publication and attestation non-claims; it does not block local candidate package closeout.",
 		},
 		Owner:                  "proofkit.release-closeout",
-		ProofRefs:              []string{"docs/specs/proofkit-supply-chain-quality/requirements.v1.json#REQ-PROOFKIT-QUALITY-018"},
+		ProofRefs:              []string{"docs/specs/proofkit-supply-chain-quality/requirements.v2.json#REQ-PROOFKIT-QUALITY-018"},
 		Status:                 "advisory_skipped",
 		StructuredDecisionRefs: []string{},
 		ValidatorRefs:          []string{"provider:npm-registry", "provider:pypi-registry", "provider:github-artifact-attestation"},

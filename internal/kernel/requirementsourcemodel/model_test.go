@@ -110,6 +110,35 @@ func TestModelAccessorsDoNotExposeMutableOwnerState(t *testing.T) {
 	assertAccessorReturnsDetachedState(t, "atomic", model.Atomic)
 	assertAccessorReturnsDetachedState(t, "layout", model.Layout)
 	assertAccessorReturnsDetachedState(t, "references", model.References)
+	assertAccessorReturnsDetachedState(t, "requirements", model.Requirements)
+	assertAccessorReturnsDetachedState(t, "resolved source nonclaims", model.ResolvedSourceNonClaims)
+}
+
+func TestModelBoundedAccessorsMatchCompleteOwnerProjections(t *testing.T) {
+	model, err := Normalize(validDraft())
+	if err != nil {
+		t.Fatal(err)
+	}
+	atomic := model.Atomic()
+	if model.SourceID() != atomic.SourceID || model.SpecPackagePath() != atomic.SpecPackagePath ||
+		model.RequirementCount() != len(atomic.Requirements) || !reflect.DeepEqual(model.Requirements(), atomic.Requirements) {
+		t.Fatal("bounded accessor lost a canonical value")
+	}
+	assessment, err := Assess(validDraft())
+	if err != nil {
+		t.Fatal(err)
+	}
+	summary, ok := assessment.Summary()
+	if !ok || !reflect.DeepEqual(model.ResolvedSourceNonClaims(), summary.NonClaims) {
+		t.Fatal("assessment and model source denial projections diverged")
+	}
+	if allocations := testing.AllocsPerRun(10, func() {
+		if model.SourceID() == "" || model.SpecPackagePath() == "" || model.RequirementCount() != 4 {
+			t.Fatal("identity/count changed")
+		}
+	}); allocations != 0 {
+		t.Fatalf("identity/count accessor copies unrelated model data: %v allocations", allocations)
+	}
 }
 
 func TestNormalizeRejectsInvalidReferenceAndMetadataPartitions(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
@@ -86,7 +87,12 @@ func (bundle Bundle) JSONValue() map[string]any {
 }
 
 func TypeScriptSource() string {
+	patterns := admit.SecretLikeValuePatternSources()
+	for index, pattern := range patterns {
+		patterns[index] = strconv.Quote(pattern)
+	}
 	return strings.NewReplacer(
+		"__PROOFKIT_SECRET_PATTERNS__", "["+strings.Join(patterns, ", ")+"]",
 		"__PROOFKIT_COMMAND_ROUTE_MINIMUM__", strconv.Itoa(commandroute.MinimumTokens),
 		"__PROOFKIT_COMMAND_ROUTE_MAXIMUM__", strconv.Itoa(commandroute.MaximumTokens),
 		"__PROOFKIT_COMMAND_ROUTE_SEPARATOR__", strconv.Quote(commandroute.Separator),
@@ -453,20 +459,10 @@ function containsProofkitUnsafeScalar(value: string): boolean {
 	return false;
 }
 
+const proofkitSecretPatterns = __PROOFKIT_SECRET_PATTERNS__.map((source) => new RegExp(source, "iu"));
+
 function containsProofkitSecretLikeValue(value: string): boolean {
-	return [
-		/authorization\s*:\s*[^\r\n]+/iu,
-		/bearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,
-		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+/iu,
-		/github_pat_[A-Za-z0-9_]+/iu,
-		/gh[pousr]_[A-Za-z0-9_]+/iu,
-		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,
-		/xox[abprs]-[A-Za-z0-9-]+/iu,
-		/glpat-[A-Za-z0-9_-]+/iu,
-		/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu,
-		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
-		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
-	].some((pattern) => pattern.test(value));
+	return proofkitSecretPatterns.some((pattern) => pattern.test(value));
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(

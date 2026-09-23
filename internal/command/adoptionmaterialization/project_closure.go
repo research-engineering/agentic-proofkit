@@ -141,7 +141,7 @@ func admitProjectChildRecord(content []byte, route Route, children *admittedProj
 			return "", false
 		}
 		children.sources = append(children.sources, result.Source)
-		return result.Source.SourceID, true
+		return result.Source.SourceID(), true
 	case ArtifactRequirementBinding:
 		result, err := requirementbinding.Build(raw)
 		if err != nil || result.Record.State != "passed" {

@@ -197,11 +197,14 @@ func receiptOutcome(operation string, result repositorytransaction.Result) (stri
 func childArtifacts(request Request) ([]artifact, error) {
 	items := make([]artifact, 0, len(request.Sources)+2)
 	for _, source := range request.Sources {
-		item, err := encodeArtifact(ArtifactRequirementSource, source.SourceID, source.RequirementsPath, requirementsourceadmission.SourceValue(source))
+		content, err := requirementsourceadmission.SourceBytes(source)
 		if err != nil {
 			return nil, err
 		}
-		items = append(items, item)
+		if len(content) > repositorytransaction.MaximumFileBytes {
+			return nil, fmt.Errorf("adoption materialization source exceeds its file byte limit")
+		}
+		items = append(items, artifact{Content: content, ID: source.SourceID(), Kind: ArtifactRequirementSource, Path: source.RequirementsPath()})
 	}
 	binding, err := encodeArtifact(ArtifactRequirementBinding, request.Binding.BindingID, request.BindingPath, requirementbinding.InputValue(request.Binding))
 	if err != nil {

@@ -122,50 +122,56 @@ func validateProfileUses(profiles []Profile, uses map[string]int) error {
 	return nil
 }
 
-func validateRequirementLifecycles(requirements []AtomicRequirement, byID map[string]AtomicRequirement) error {
+func requirementLifecycleViolations(requirements []AtomicRequirement, byID map[string]AtomicRequirement) []PolicyViolation {
+	var violations []PolicyViolation
 	for _, requirement := range requirements {
 		path := identified("requirements", requirement.RequirementID)
+		add := func(code, field, related string) {
+			violations = append(violations, PolicyViolation{Code: code, Path: path + field,
+				RequirementID: requirement.RequirementID, RelatedRequirementID: related})
+		}
 		if requirement.ClaimLevel == ClaimDeferred && requirement.Deferral == nil {
-			return invalid("missing_deferral", path+".deferral")
+			add("missing_deferral", ".deferral", "")
 		}
 		if requirement.ClaimLevel != ClaimDeferred && requirement.Deferral != nil {
-			return invalid("unexpected_deferral", path+".deferral")
+			add("unexpected_deferral", ".deferral", "")
 		}
 		if requirement.Lifecycle.State != LifecycleActive && len(requirement.Lifecycle.EvidenceRefs) == 0 {
-			return invalid("missing_lifecycle_evidence", path+".lifecycle.evidenceRefs")
+			add("missing_lifecycle_evidence", ".lifecycle.evidenceRefs", "")
 		}
 		if requirement.Lifecycle.State == LifecycleSuperseded && len(requirement.Lifecycle.ReplacementRequirementIDs) == 0 {
-			return invalid("missing_replacement", path+".lifecycle.replacementRequirementIds")
+			add("missing_replacement", ".lifecycle.replacementRequirementIds", "")
 		}
 		if requirement.Lifecycle.State != LifecycleSuperseded && len(requirement.Lifecycle.ReplacementRequirementIDs) != 0 {
-			return invalid("unexpected_replacement", path+".lifecycle.replacementRequirementIds")
+			add("unexpected_replacement", ".lifecycle.replacementRequirementIds", "")
 		}
 		if requirement.ClaimLevel == ClaimBlocking && requirement.Lifecycle.State != LifecycleActive {
-			return invalid("nonactive_blocking_requirement", path+".claimLevel")
+			add("nonactive_blocking_requirement", ".claimLevel", "")
 		}
 		if requirement.ClaimLevel == ClaimBlocking && requirement.Lifecycle.State == LifecycleActive {
 			if len(requirement.ProofBindingRefs) == 0 {
-				return invalid("missing_proof_binding", path+".proofBindingRefs")
+				add("missing_proof_binding", ".proofBindingRefs", "")
 			}
 			if !requirement.UpdatePolicy.RequiresImpactDeclaration {
-				return invalid("impact_review_required", path+".updatePolicy.requiresImpactDeclaration")
+				add("impact_review_required", ".updatePolicy.requiresImpactDeclaration", "")
 			}
 			if !requirement.UpdatePolicy.RequiresProofBindingReview {
-				return invalid("proof_binding_review_required", path+".updatePolicy.requiresProofBindingReview")
+				add("proof_binding_review_required", ".updatePolicy.requiresProofBindingReview", "")
 			}
 		}
 		for _, replacementID := range requirement.Lifecycle.ReplacementRequirementIDs {
 			if replacementID == requirement.RequirementID {
-				return invalid("self_replacement", path+".lifecycle.replacementRequirementIds")
+				add("self_replacement", ".lifecycle.replacementRequirementIds", replacementID)
 			}
 			replacement, exists := byID[replacementID]
 			if !exists {
-				return invalid("dangling_replacement", path+".lifecycle.replacementRequirementIds")
+				add("dangling_replacement", ".lifecycle.replacementRequirementIds", replacementID)
+				continue
 			}
 			if replacement.Lifecycle.State != LifecycleActive {
-				return invalid("inactive_replacement", path+".lifecycle.replacementRequirementIds")
+				add("inactive_replacement", ".lifecycle.replacementRequirementIds", replacementID)
 			}
 		}
 	}
-	return nil
+	return violations
 }

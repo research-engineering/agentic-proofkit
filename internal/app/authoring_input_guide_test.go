@@ -13,9 +13,8 @@ func TestAuthoringInputGuideBootstrapCLI(t *testing.T) {
 	root := t.TempDir()
 	materialization := adoptionHelpPacket(t, root, "audit-from-code")
 	source := materialization["requirementSources"].([]any)[0].(map[string]any)
-	candidate := source["requirements"].([]any)[0]
 	empty := decodeCLIJSON(t, string(adoptionHelpJSON(t, source))).(map[string]any)
-	empty["requirements"] = []any{}
+	empty["groups"] = []any{}
 
 	var canonical string
 	for _, args := range [][]string{
@@ -53,10 +52,13 @@ func TestAuthoringInputGuideBootstrapCLI(t *testing.T) {
 	}
 	args := fillGuideOperands(t, commands[0], map[string]string{"<packet>": "-"})
 	update := packet["candidateUpdates"].([]any)[0].(map[string]any)
-	if packet["currentRequirementSource"] != nil || update["candidateRequirement"] != nil {
+	if packet["currentRequirementSource"] != nil || packet["candidateRequirementSource"] != nil {
 		t.Fatal("authoring template fabricated its source or candidate")
 	}
-	packet["currentRequirementSource"], update["candidateRequirement"] = empty, candidate
+	if _, exists := update["candidateRequirement"]; exists {
+		t.Fatal("template retains the removed leaf composer operand")
+	}
+	packet["currentRequirementSource"], packet["candidateRequirementSource"] = empty, source
 	firstRef := packet["authoringRefs"].([]any)[0].(map[string]any)
 	secondRef := decodeCLIJSON(t, string(adoptionHelpJSON(t, firstRef))).(map[string]any)
 	secondRef["refId"] = "example.observation.z"

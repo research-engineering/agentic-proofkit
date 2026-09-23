@@ -18,8 +18,8 @@ func TestBuildComposesCandidateSourceAcceptedByAdmissionAndTransition(t *testing
 	if exitCode != 0 || output["state"] != "passed" {
 		t.Fatalf("Build() exit=%d state=%v output=%#v", exitCode, output["state"], output)
 	}
-	if output["schemaVersion"] != 2 {
-		t.Fatalf("Build() schemaVersion=%#v, want versioned output schema 2", output["schemaVersion"])
+	if output["schemaVersion"] != 3 {
+		t.Fatalf("Build() schemaVersion=%#v, want versioned output schema 3", output["schemaVersion"])
 	}
 	preview, ok := output["nonAuthoritativeAdmissionPreview"].(map[string]any)
 	if !ok {
@@ -32,7 +32,11 @@ func TestBuildComposesCandidateSourceAcceptedByAdmissionAndTransition(t *testing
 	if err != nil || expectedResult.ExitCode != 0 {
 		t.Fatalf("admit expected next source: exit=%d err=%v", expectedResult.ExitCode, err)
 	}
-	assertStableJSONEqual(t, "candidate source preview", requirementsourceadmission.SourceValue(expectedResult.Source), preview["requirementSourcePreview"])
+	expectedValue, err := requirementsourceadmission.SourceValue(expectedResult.Source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStableJSONEqual(t, "candidate source preview", expectedValue, preview["requirementSourcePreview"])
 	assertOutputContains(t, output, "Requirement authoring plans do not infer requirement meaning")
 	assertOutputContains(t, output, "proofkit.requirement-authoring-plan.review-candidates")
 	assertOutputContains(t, output, "run_admitted_validation")
@@ -76,7 +80,11 @@ func TestAdmitInputUsesCanonicalRequirementSourceProjection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("admitInput() error = %v", err)
 	}
-	assertStableJSONEqual(t, "canonical current requirement source", requirementsourceadmission.SourceValue(admitted.CurrentRequirementState), admitted.CurrentRequirementValue)
+	expectedValue, err := requirementsourceadmission.SourceValue(admitted.CurrentRequirementState)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStableJSONEqual(t, "canonical current requirement source", expectedValue, admitted.CurrentRequirementValue)
 	raw["currentRequirementSource"].(map[string]any)["sourceId"] = "proofkit.test.mutated"
 	if admitted.CurrentRequirementValue["sourceId"] == "proofkit.test.mutated" {
 		t.Fatal("admitted current requirement source retained caller alias")
@@ -89,7 +97,7 @@ func TestBuildRejectsInvalidCurrentRequirementSourceBeforeComposition(t *testing
 	current["overviewPath"] = "docs/specs/proofkit-authoring-test/not-overview.md"
 
 	_, _, err := Build(input)
-	if err == nil || !strings.Contains(err.Error(), "currentRequirementSource must pass requirement-source-admission") {
+	if err == nil || !strings.Contains(err.Error(), "currentRequirementSource") || !strings.Contains(err.Error(), "unsupported field") {
 		t.Fatalf("Build() error=%v, want invalid current source failure", err)
 	}
 }
@@ -126,7 +134,7 @@ func TestBuildRejectsCandidateMissingRequiredAuthoringFields(t *testing.T) {
 			mutate: func(input map[string]any) {
 				firstUpdate(input)["declaredProofObligations"] = []any{}
 			},
-			want: "proofObligations must be a non-empty array",
+			want: "declaredProofObligations must be non-empty",
 		},
 	}
 	for _, item := range cases {
@@ -144,7 +152,7 @@ func TestBuildRejectsCandidateMissingRequiredAuthoringFields(t *testing.T) {
 func TestBuildRejectsCandidateSourceAdmissionFailure(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.083389748775835400553445979904052979137934295186556847066581462858159571590041")
 	input := validInput()
-	candidate := firstUpdate(input)["candidateRequirement"].(map[string]any)
+	candidate := candidateMember(input)["fields"].(map[string]any)
 	candidate["proofBindingRefs"] = []any{}
 
 	output, exitCode, err := Build(input)
@@ -160,8 +168,8 @@ func TestBuildRejectsCandidateSourceAdmissionFailure(t *testing.T) {
 func TestBuildRejectsSecretShapedCandidateBeforeCompositionWithoutEcho(t *testing.T) {
 	input := validInput()
 	sentinel := "sk-proj-aaaaaaaaaaa"
-	candidate := firstUpdate(input)["candidateRequirement"].(map[string]any)
-	candidate["invariant"] = "Sentinel " + sentinel + " must be rejected without echo."
+	candidate := candidateMember(input)
+	candidate["statementCompletion"] = "Sentinel " + sentinel + " must be rejected without echo."
 
 	output, exitCode, err := Build(input)
 	if err == nil || output != nil || exitCode != 1 {
@@ -177,7 +185,7 @@ func TestBuildRejectsLifecycleTransitionWithoutNewEvidence(t *testing.T) {
 	update := firstUpdate(input)
 	update["operation"] = "deprecate"
 	update["requirementId"] = "REQ-PROOFKIT-AUTHORING-000"
-	update["candidateRequirement"] = deprecatedExistingRequirement([]any{})
+	setCandidateRequirement(input, deprecatedExistingRequirement([]any{}))
 
 	output, exitCode, err := Build(input)
 	if err != nil {
@@ -189,7 +197,7 @@ func TestBuildRejectsLifecycleTransitionWithoutNewEvidence(t *testing.T) {
 	if output["nonAuthoritativeAdmissionPreview"] != nil {
 		t.Fatalf("failed transition must not expose candidate source preview: %#v", output["nonAuthoritativeAdmissionPreview"])
 	}
-	assertOutputContains(t, output, "candidate transition must pass requirement-source-transition")
+	assertOutputContains(t, output, "candidate next source must pass requirement-source-admission")
 }
 
 func TestBuildRejectsOperationTargetDrift(t *testing.T) {
@@ -203,7 +211,7 @@ func TestBuildRejectsOperationTargetDrift(t *testing.T) {
 			mutate: func(input map[string]any) {
 				firstUpdate(input)["operation"] = "add"
 				firstUpdate(input)["requirementId"] = "REQ-PROOFKIT-AUTHORING-000"
-				firstUpdate(input)["candidateRequirement"] = activeExistingRequirement()
+				setCandidateRequirement(input, activeExistingRequirement())
 			},
 			want: "add candidate must target a new requirement id",
 		},
@@ -219,15 +227,15 @@ func TestBuildRejectsOperationTargetDrift(t *testing.T) {
 			mutate: func(input map[string]any) {
 				firstUpdate(input)["operation"] = "modify"
 				firstUpdate(input)["requirementId"] = "REQ-PROOFKIT-AUTHORING-000"
-				firstUpdate(input)["candidateRequirement"] = deprecatedExistingRequirement([]any{"docs/evidence/authoring.md"})
+				setCandidateRequirement(input, deprecatedExistingRequirement([]any{"docs/evidence/authoring.md"}))
 			},
-			want: "modify candidate must keep active lifecycle",
+			want: "modify candidate must target active lifecycle",
 		},
 		{
 			name: "deprecate missing",
 			mutate: func(input map[string]any) {
 				firstUpdate(input)["operation"] = "deprecate"
-				firstUpdate(input)["candidateRequirement"] = deprecatedCandidateRequirement([]any{"docs/evidence/authoring.md"})
+				setCandidateRequirement(input, deprecatedCandidateRequirement([]any{"docs/evidence/authoring.md"}))
 			},
 			want: "deprecate candidate must target an existing requirement id",
 		},
@@ -236,9 +244,9 @@ func TestBuildRejectsOperationTargetDrift(t *testing.T) {
 			mutate: func(input map[string]any) {
 				firstUpdate(input)["operation"] = "deprecate"
 				firstUpdate(input)["requirementId"] = "REQ-PROOFKIT-AUTHORING-000"
-				firstUpdate(input)["candidateRequirement"] = activeExistingRequirement()
+				setCandidateRequirement(input, activeExistingRequirement())
 			},
-			want: "deprecate candidate must set deprecated lifecycle",
+			want: "deprecate candidate must target deprecated lifecycle",
 		},
 		{
 			name: "supersede missing",
@@ -249,7 +257,7 @@ func TestBuildRejectsOperationTargetDrift(t *testing.T) {
 				candidate["lifecycle"].(map[string]any)["state"] = "superseded"
 				candidate["lifecycle"].(map[string]any)["evidenceRefs"] = []any{"docs/evidence/authoring.md"}
 				candidate["lifecycle"].(map[string]any)["replacementRequirementIds"] = []any{"REQ-PROOFKIT-AUTHORING-000"}
-				firstUpdate(input)["candidateRequirement"] = candidate
+				setCandidateRequirement(input, candidate)
 			},
 			want: "supersede candidate must target an existing requirement id",
 		},
@@ -258,16 +266,16 @@ func TestBuildRejectsOperationTargetDrift(t *testing.T) {
 			mutate: func(input map[string]any) {
 				firstUpdate(input)["operation"] = "supersede"
 				firstUpdate(input)["requirementId"] = "REQ-PROOFKIT-AUTHORING-000"
-				firstUpdate(input)["candidateRequirement"] = activeExistingRequirement()
+				setCandidateRequirement(input, activeExistingRequirement())
 			},
-			want: "supersede candidate must set superseded lifecycle",
+			want: "supersede candidate must target superseded lifecycle",
 		},
 		{
 			name: "add wrong lifecycle",
 			mutate: func(input map[string]any) {
-				firstUpdate(input)["candidateRequirement"] = deprecatedCandidateRequirement([]any{"docs/evidence/authoring.md"})
+				setCandidateRequirement(input, deprecatedCandidateRequirement([]any{"docs/evidence/authoring.md"}))
 			},
-			want: "add candidate must start active",
+			want: "add candidate must target active lifecycle",
 		},
 	}
 	for _, item := range cases {
@@ -349,10 +357,11 @@ func TestBuildRejectsUnsafeAuthoringRefPathAndMalformedDigest(t *testing.T) {
 
 func validInput() map[string]any {
 	return map[string]any{
-		"schemaVersion":            json.Number("1"),
-		"authoringPlanId":          "proofkit.test.requirement-authoring-plan",
-		"mode":                     "pull_request_design",
-		"currentRequirementSource": currentRequirementSource(),
+		"schemaVersion":              json.Number("2"),
+		"authoringPlanId":            "proofkit.test.requirement-authoring-plan",
+		"mode":                       "pull_request_design",
+		"currentRequirementSource":   currentRequirementSource(),
+		"candidateRequirementSource": expectedNextSource(),
 		"authoringRefs": []any{
 			map[string]any{
 				"refId":     "proofkit.test.design-doc",
@@ -391,7 +400,6 @@ func validInput() map[string]any {
 						"evidenceRefs": []any{"proofkit/requirement-bindings.json"},
 					},
 				},
-				"candidateRequirement": candidateRequirement(),
 			},
 		},
 		"nonClaims": []any{"Caller non-claim keeps this fixture advisory."},
@@ -399,16 +407,38 @@ func validInput() map[string]any {
 }
 
 func currentRequirementSource() map[string]any {
+	return groupedTestSource(activeExistingRequirement())
+}
+
+func groupedTestSource(requirements ...map[string]any) map[string]any {
+	members := []any{}
+	for _, requirement := range requirements {
+		fields := cloneObject(requirement)
+		delete(fields, "requirementId")
+		delete(fields, "invariant")
+		fields["externalNonClaimRefs"] = []any{}
+		members = append(members, map[string]any{"requirementId": requirement["requirementId"], "statementCompletion": requirement["invariant"], "fields": fields})
+	}
 	return map[string]any{
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         "proofkit.test.authoring.requirements",
-		"specPackagePath":  "docs/specs/proofkit-authoring-test",
-		"overviewPath":     "docs/specs/proofkit-authoring-test/overview.md",
-		"requirementsPath": "docs/specs/proofkit-authoring-test/requirements.v1.json",
-		"nonClaims":        []any{"Current authoring fixture source is test-only."},
-		"requirements": []any{
-			activeExistingRequirement(),
-		},
+		"schemaVersion":   json.Number("2"),
+		"kind":            "proofkit.requirement-source",
+		"sourceId":        "proofkit.test.authoring.requirements",
+		"specPackagePath": "docs/specs/proofkit-authoring-test",
+		"sourceNonClaims": []any{"Current authoring fixture source is test-only."},
+		"groups":          []any{map[string]any{"groupId": "RGRP-AUTHORING", "profileId": "", "statementStem": "", "sharedPremises": []any{}, "members": members}},
+	}
+}
+
+func candidateMember(input map[string]any) map[string]any {
+	members := input["candidateRequirementSource"].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)
+	return members[len(members)-1].(map[string]any)
+}
+
+func setCandidateRequirement(input map[string]any, requirement map[string]any) {
+	if requirement["requirementId"] == "REQ-PROOFKIT-AUTHORING-000" {
+		input["candidateRequirementSource"] = groupedTestSource(requirement)
+	} else {
+		input["candidateRequirementSource"] = groupedTestSource(activeExistingRequirement(), requirement)
 	}
 }
 
@@ -481,12 +511,7 @@ func candidateRequirement() map[string]any {
 }
 
 func expectedNextSource() map[string]any {
-	source := currentRequirementSource()
-	source["requirements"] = []any{
-		activeExistingRequirement(),
-		candidateRequirement(),
-	}
-	return source
+	return groupedTestSource(activeExistingRequirement(), candidateRequirement())
 }
 
 func firstUpdate(input map[string]any) map[string]any {

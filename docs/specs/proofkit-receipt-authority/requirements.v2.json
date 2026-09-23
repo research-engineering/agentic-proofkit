@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
+  "sourceId": "proofkit.receipt-authority.requirements",
+  "specPackagePath": "docs/specs/proofkit-receipt-authority",
+  "sourceNonClaims": ["Consumers still own producer trust roots, native witness execution, receipt freshness, current-obligation matching, CI admission, merge policy, and rollout decisions.","Proofkit receipt authority requirements describe reusable receipt shape and linkage primitives only."],
+  "groups": [
+    {
+      "groupId": "RGRP-COMPAT-00000",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {"requirementId":"REQ-PROOFKIT-RECEIPT-001","statementCompletion":"Proof receipt admission validates caller-provided receipt shape, digests, timestamps, selectors, evidence refs, artifact refs, status, and provenance fields without authenticating producers or computing freshness.","fields":{"nonClaims":["This requirement does not claim producer authentication, receipt freshness, native command execution, command result correctness, current-obligation matching, or merge approval."],"externalNonClaimRefs":["NC-PROOFKIT-RECEIPT-001"],"proofBindingRefs":["proofkit/requirement-bindings.json"],"ownerId":"proofkit.receipt-authority","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.receipt-authority","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      , {"requirementId":"REQ-PROOFKIT-RECEIPT-002","statementCompletion":"Receipt producer admission validates caller-owned producer policy and receipt metadata linkage without proving that the producer actually created the receipt.","fields":{"nonClaims":["This requirement does not claim producer authentication, receipt freshness, command execution, command result correctness, CI log authority, or merge approval."],"externalNonClaimRefs":["NC-PROOFKIT-RECEIPT-002"],"proofBindingRefs":["proofkit/requirement-bindings.json"],"ownerId":"proofkit.receipt-authority","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.receipt-authority","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      , {"requirementId":"REQ-PROOFKIT-RECEIPT-003","statementCompletion":"Producer-policy self-proof detects when merge-obligation receipts depend on trust tuples newly admitted by the same policy change without approving or rejecting the policy change itself.","fields":{"nonClaims":["This requirement does not claim producer authentication, receipt freshness, policy digest provenance, policy-diff discovery, migration exception approval, or merge approval."],"externalNonClaimRefs":["NC-PROOFKIT-RECEIPT-003"],"proofBindingRefs":["proofkit/requirement-bindings.json"],"ownerId":"proofkit.receipt-authority","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.receipt-authority","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      , {"requirementId":"REQ-PROOFKIT-RECEIPT-004","statementCompletion":"Spec-proof bundle admission validates linkage across requirement bindings, witness plans, producer admission, and receipt admission without executing native witnesses or approving merge.","fields":{"nonClaims":["This requirement does not claim native witness execution, producer authentication, proof freshness, command result correctness, merge approval, release approval, or rollout approval."],"externalNonClaimRefs":["NC-PROOFKIT-RECEIPT-004"],"proofBindingRefs":["proofkit/requirement-bindings.json"],"ownerId":"proofkit.receipt-authority","claimLevel":"blocking","riskClass":"high","nonClaimRefs":[],"lifecycle":{"state":"active"},"deferral":null,"updatePolicy":{"reviewOwnerId":"proofkit.receipt-authority","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}}
+      ]
+    }
+  ]
+}

@@ -42,6 +42,9 @@ for (const mode of ["compact", "structured"]) {
         await expect(row.locator(".coverage-details")).toContainText("Route-only evidence remains insufficient.");
         expect(await row.locator(".coverage-details pre").allTextContents()).toEqual([evidence.scenarios, evidence.tests, mode === "compact" ? evidence.declaredWitnessRoutes : evidence.witnessRefs].map(value => JSON.stringify(value, null, 2)));
         await expect(row.locator(".coverage-details")).toContainText(requirement.sourceNonClaims[0]);
+        await expect(row.locator(".coverage-details")).toContainText("NCL-BROWSER: Coverage declarations do not prove a passing execution.");
+        await expect(row.locator(".coverage-details")).toContainText("External non-claim reference: NCL-BROWSER");
+        await expect(row.locator(".coverage-details")).not.toContainText("This source does not prove native execution.");
       }
     }
     expect((await analyzeAxe(page)).violations).toEqual([]);

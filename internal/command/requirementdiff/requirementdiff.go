@@ -59,13 +59,16 @@ func Build(raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := diffInputShape.CheckGenerated(record, "requirement semantic diff input"); err != nil {
+		return nil, err
+	}
 	baseRequirements := requirementsByID(base, diffQuery.RequirementIDs)
 	currentRequirements := requirementsByID(current, diffQuery.RequirementIDs)
 	changes, err := compareRequirements(base, current, baseRequirements, currentRequirements, diffQuery.OwnerIDs, diffQuery.MaxChanges)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
+	output := map[string]any{
 		"baseExpectedDigestCoverage":    base.ExpectedDigestCoverage,
 		"baseSnapshotId":                base.SnapshotID,
 		"changeCount":                   len(changes),
@@ -75,26 +78,26 @@ func Build(raw any) (map[string]any, error) {
 		"diffId":                        diffID,
 		"diffKind":                      "proofkit.requirement-semantic-diff",
 		"nonClaims":                     admit.StringSliceToAny(nonClaims),
-		"schemaVersion":                 json.Number("2"),
-	}, nil
+		"schemaVersion":                 json.Number("3"),
+	}
+	if err := diffOutputShape.CheckGenerated(output, "requirement semantic diff output"); err != nil {
+		return nil, err
+	}
+	return output, nil
 }
 
 func admitDiffInputVersion(record map[string]any) error {
-	switch {
-	case admit.JSONNumberEquals(record["schemaVersion"], 1):
-		return admitV1DiffInput(record)
-	case admit.JSONNumberEquals(record["schemaVersion"], 2):
-		return requireContextVersions(record, 2)
-	default:
-		return fmt.Errorf("requirement semantic diff schemaVersion must be 1 or 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return fmt.Errorf("requirement semantic diff schemaVersion must be 3")
 	}
+	return requireContextVersions(record, requirementcontext.SnapshotSchemaVersion)
 }
 
 func requireContextVersions(record map[string]any, expected int) error {
 	for _, key := range []string{"baseContext", "currentContext"} {
 		contextRecord, ok := record[key].(map[string]any)
 		if !ok || !admit.JSONNumberEquals(contextRecord["schemaVersion"], int64(expected)) {
-			return fmt.Errorf("requirement semantic diff schemaVersion %d requires %s schemaVersion %d", expected, key, expected)
+			return fmt.Errorf("requirement semantic diff requires %s schemaVersion %d", key, expected)
 		}
 	}
 	return nil
@@ -161,13 +164,13 @@ func requirementsByID(snapshot requirementcontext.Snapshot, requirementFilter ma
 	}
 	result := map[string]requirementRecord{}
 	for _, source := range snapshot.RequirementSources {
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			if len(requirementFilter) > 0 {
 				if _, ok := requirementFilter[requirement.RequirementID]; !ok {
 					continue
 				}
 			}
-			result[requirement.RequirementID] = requirementRecord{Digest: digestBySource[source.SourceID], Requirement: requirement}
+			result[requirement.RequirementID] = requirementRecord{Digest: digestBySource[source.SourceID()], Requirement: requirement}
 		}
 	}
 	return result

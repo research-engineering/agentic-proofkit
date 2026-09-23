@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 )
 
 func TestSelfHostingProofCoreCommandsAcceptCurrentRecords(t *testing.T) {
@@ -50,7 +52,7 @@ func TestSelfHostingCoverageMetricsDeclaresTimestampedOutput(t *testing.T) {
 func requirementSourcePaths(t *testing.T) []string {
 	t.Helper()
 	root := repoRoot(t)
-	matches, err := filepath.Glob(filepath.Join(root, "docs", "specs", "*", "requirements.v1.json"))
+	matches, err := filepath.Glob(filepath.Join(root, "docs", "specs", "*", "requirements.v2.json"))
 	if err != nil {
 		t.Fatalf("glob requirement sources: %v", err)
 	}
@@ -112,21 +114,23 @@ func TestSelfHostingRequirementBindingRecordsPreserveSourceAuthority(t *testing.
 	}
 	sources := map[string]sourceRequirement{}
 	for _, path := range requirementSourcePaths(t) {
-		record := readJSONFile(t, path).(map[string]any)
-		for _, value := range record["requirements"].([]any) {
-			requirement := value.(map[string]any)
-			requirementID := requirement["requirementId"].(string)
+		result, err := requirementsourceadmission.Evaluate(readCLIJSONObject(t, path))
+		if err != nil || result.ExitCode != 0 {
+			t.Fatalf("source owner admission failed: %s: %v", path, err)
+		}
+		for _, requirement := range result.Source.Requirements() {
+			requirementID := requirement.RequirementID
 			if _, exists := sources[requirementID]; exists {
 				t.Fatalf("duplicate source requirementId %s", requirementID)
 			}
 			nonClaims := map[string]struct{}{}
-			for _, nonClaim := range requirement["nonClaims"].([]any) {
-				nonClaims[nonClaim.(string)] = struct{}{}
+			for _, nonClaim := range requirement.NonClaims {
+				nonClaims[nonClaim] = struct{}{}
 			}
 			sources[requirementID] = sourceRequirement{
-				claimLevel: requirement["claimLevel"].(string),
+				claimLevel: requirement.ClaimLevel,
 				nonClaims:  nonClaims,
-				ownerID:    requirement["ownerId"].(string),
+				ownerID:    requirement.OwnerID,
 				specPath:   path,
 			}
 		}

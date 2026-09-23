@@ -13,7 +13,7 @@ func TestProjectFixtureHasIndependentRecordsFilesAndCalls(t *testing.T) {
 		t.Fatal("fresh fixture does not preserve equivalent independent project inputs")
 	}
 	want := jsonBytes(t, second.Project)
-	first.Project["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)["invariant"] = "Mutated fixture input."
+	first.Project["requirementSources"].([]any)[0].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "Mutated fixture input."
 	for path, content := range first.Files {
 		content[0] = '!'
 		onDisk, err := os.ReadFile(filepath.Join(first.Root, filepath.FromSlash(path)))

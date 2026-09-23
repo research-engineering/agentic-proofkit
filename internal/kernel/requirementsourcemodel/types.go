@@ -303,3 +303,17 @@ func (model Model) Layout() LayoutProjection {
 func (model Model) References() ReferenceProjection {
 	return cloneReferenceProjection(model.references)
 }
+
+func (model Model) SourceID() string { return model.atomic.SourceID }
+
+func (model Model) SpecPackagePath() string { return model.atomic.SpecPackagePath }
+
+func (model Model) RequirementCount() int { return len(model.atomic.Requirements) }
+
+func (model Model) Requirements() []AtomicRequirement {
+	return cloneAtomicRequirements(model.atomic.Requirements)
+}
+
+func (model Model) NonClaimDefinitions() []NonClaimDefinition {
+	return append([]NonClaimDefinition{}, model.atomic.NonClaimDefinitions...)
+}

@@ -80,9 +80,9 @@ func TestBuildRejectsPathDrift(t *testing.T) {
 		{
 			name: "requirements path",
 			mutate: func(input map[string]any) {
-				input["requirementsPath"] = "docs/specs/other/requirements.v1.json"
+				input["requirementsPath"] = "docs/specs/other/requirements.v2.json"
 			},
-			message: "requirementsPath must equal specPackagePath/requirements.v1.json",
+			message: "requirementsPath must equal specPackagePath/requirements.v2.json",
 		},
 	}
 	for _, item := range cases {
@@ -205,7 +205,7 @@ func validBoundary() map[string]any {
 		"sourceId":         "proofkit.test.requirements",
 		"specPackagePath":  "docs/specs/proofkit-test",
 		"overviewPath":     "docs/specs/proofkit-test/overview.md",
-		"requirementsPath": "docs/specs/proofkit-test/requirements.v1.json",
+		"requirementsPath": "docs/specs/proofkit-test/requirements.v2.json",
 		"requirementIds":   []any{"REQ-PROOFKIT-SPEC-001"},
 		"extractionRefs":   []any{"scripts/verify-spec-overview-claims.ts"},
 		"nonClaims":        []any{"Spec overview claim test input does not prove extractor completeness."},

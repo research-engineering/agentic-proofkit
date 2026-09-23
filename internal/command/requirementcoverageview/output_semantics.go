@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
 func validateCoverageOutputSemantics(record map[string]any) error {
+	if err := validateCoverageNonClaimSupport(record); err != nil {
+		return err
+	}
 	proofMode, err := admit.Enum(record["proofMode"], map[string]struct{}{"compact": {}, "structured": {}}, "requirement coverage output proofMode")
 	if err != nil {
 		return err
@@ -138,6 +142,37 @@ func validateCoverageOutputSemantics(record map[string]any) error {
 		return err
 	}
 	return nil
+}
+
+func validateCoverageNonClaimSupport(record map[string]any) error {
+	definitions, err := requirementsourceadmission.AdmitNonClaimDefinitions(record["nonClaimDefinitions"])
+	if err != nil {
+		return err
+	}
+	rows, ok := record["requirementCoverage"].([]any)
+	if !ok {
+		return fmt.Errorf("requirement coverage must be an array")
+	}
+	refs := []string{}
+	for _, raw := range rows {
+		row, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("requirement coverage row must be an object")
+		}
+		direct, err := admit.PreserveSortedTextArray(row["nonClaims"], "requirement nonClaims", true)
+		if err != nil {
+			return err
+		}
+		local, err := admit.PreserveSortedTextArray(row["nonClaimRefs"], "requirement nonClaimRefs", true)
+		if err != nil {
+			return err
+		}
+		if err := definitions.CheckScope(direct, local); err != nil {
+			return err
+		}
+		refs = append(refs, local...)
+	}
+	return definitions.RequireExactRefs(refs)
 }
 
 func admitCoverageOutputIdentity(record map[string]any, proofMode string) error {

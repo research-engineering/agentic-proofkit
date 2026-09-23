@@ -54,7 +54,7 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 		t.Fatalf("AdmitReceiptOutput() receipt=%#v error=%v", admitted, err)
 	}
 
-	sourceRaw := readJSON(t, filepath.Join(root, "docs/specs/pilot/requirements.v1.json"))
+	sourceRaw := readJSON(t, filepath.Join(root, "docs/specs/pilot/requirements.v2.json"))
 	source, err := requirementsourceadmission.Evaluate(sourceRaw)
 	if err != nil || source.ExitCode != 0 {
 		t.Fatalf("materialized source admission=%#v err=%v", source, err)
@@ -252,6 +252,15 @@ func jsonRoundTripValue(t *testing.T, value any) any {
 	return decoded
 }
 
+func TestMaterializationRejectsRetiredRequestBeforeRepositoryRead(t *testing.T) {
+	root := t.TempDir()
+	request := validRequest(t, root)
+	request["schemaVersion"] = json.Number("1")
+	if _, err := BuildPlan(context.Background(), request, filepath.Join(root, "missing")); err == nil || !strings.Contains(err.Error(), "request identity is invalid") {
+		t.Fatalf("retired request reached repository read: %v", err)
+	}
+}
+
 func TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry(t *testing.T) {
 	root := t.TempDir()
 	request := validRequest(t, root)
@@ -262,8 +271,8 @@ func TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry(t *testing.T
 
 	changed := cloneRequest(t, request)
 	source := changed["requirementSources"].([]any)[0].(map[string]any)
-	requirement := source["requirements"].([]any)[0].(map[string]any)
-	requirement["invariant"] = "Pilot materialization preserves revised admitted requirement meaning."
+	requirement := materializationSourceMember(source)
+	requirement["statementCompletion"] = "Pilot materialization preserves revised admitted requirement meaning."
 	blocked, exitCode, err := Apply(context.Background(), changed, root, initial.Transaction.TransactionID, initial.Transaction.DesiredStateID)
 	if err != nil || exitCode != 1 || blocked.State != ReceiptStateBlocked || blocked.FailureClass != "desired_state_identity_mismatch" || blocked.TransactionResult != nil {
 		t.Fatalf("stale Apply() receipt=%#v exit=%d err=%v", blocked, exitCode, err)
@@ -340,12 +349,12 @@ func TestApplyDistinguishesStaleBeforeSnapshotFromDesiredState(t *testing.T) {
 		t.Fatal(err)
 	}
 	existing := cloneRequest(t, request)["requirementSources"].([]any)[0].(map[string]any)
-	existing["requirements"].([]any)[0].(map[string]any)["invariant"] = "A different but owner-valid current invariant."
+	materializationSourceMember(existing)["statementCompletion"] = "A different but owner-valid current invariant."
 	content, err := stablejson.Marshal(existing)
 	if err != nil {
 		t.Fatal(err)
 	}
-	mustWrite(t, root, "docs/specs/pilot/requirements.v1.json", content)
+	mustWrite(t, root, "docs/specs/pilot/requirements.v2.json", content)
 	receipt, exitCode, err := Apply(context.Background(), request, root, initial.Transaction.TransactionID, initial.Transaction.DesiredStateID)
 	if err != nil || exitCode != 1 || receipt.State != ReceiptStateBlocked || receipt.FailureClass != "transaction_identity_mismatch" {
 		t.Fatalf("stale-before Apply() receipt=%#v exit=%d err=%v", receipt, exitCode, err)
@@ -390,8 +399,8 @@ func TestMaterializationReplacesOnlyCompatibleOwnerRecords(t *testing.T) {
 	}
 
 	changed := cloneRequest(t, request)
-	requirement := changed["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
-	requirement["invariant"] = "Pilot materialization preserves a reviewed replacement invariant."
+	requirement := materializationSourceMember(changed["requirementSources"].([]any)[0].(map[string]any))
+	requirement["statementCompletion"] = "Pilot materialization preserves a reviewed replacement invariant."
 	replacement, err := BuildPlan(context.Background(), changed, root)
 	if err != nil {
 		t.Fatalf("replacement BuildPlan() error = %v", err)
@@ -399,10 +408,10 @@ func TestMaterializationReplacesOnlyCompatibleOwnerRecords(t *testing.T) {
 	if _, exitCode, err := Apply(context.Background(), changed, root, replacement.Transaction.TransactionID, replacement.Transaction.DesiredStateID); err != nil || exitCode != 0 {
 		t.Fatalf("replacement Apply() exit=%d err=%v", exitCode, err)
 	}
-	got := readJSON(t, filepath.Join(root, "docs/specs/pilot/requirements.v1.json")).(map[string]any)
-	gotInvariant := got["requirements"].([]any)[0].(map[string]any)["invariant"]
-	if gotInvariant != requirement["invariant"] {
-		t.Fatalf("materialized invariant=%q, want %q", gotInvariant, requirement["invariant"])
+	got := readJSON(t, filepath.Join(root, "docs/specs/pilot/requirements.v2.json")).(map[string]any)
+	gotInvariant := materializationSourceMember(got)["statementCompletion"]
+	if gotInvariant != requirement["statementCompletion"] {
+		t.Fatalf("materialized invariant=%q, want %q", gotInvariant, requirement["statementCompletion"])
 	}
 
 	unknownRoot := t.TempDir()
@@ -484,39 +493,38 @@ func validRequest(t *testing.T, root string) map[string]any {
 	}
 	requirementNonClaims := []any{"Pilot requirement fixture does not prove rollout."}
 	return map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"requestKind":   RequestKind,
 		"requestId":     "pilot.materialization.request",
 		"projectId":     "pilot.project",
 		"sourcePlan":    sourcePlan.JSONValue(),
 		"requirementSources": []any{map[string]any{
-			"schemaVersion":    json.Number("1"),
-			"sourceId":         "pilot.requirements",
-			"specPackagePath":  "docs/specs/pilot",
-			"overviewPath":     "docs/specs/pilot/overview.md",
-			"requirementsPath": "docs/specs/pilot/requirements.v1.json",
-			"nonClaims":        []any{"Pilot source fixture does not prove production readiness."},
-			"requirements": []any{map[string]any{
-				"claimLevel": "blocking",
-				"deferral":   nil,
-				"invariant":  "Pilot materialization preserves admitted requirement meaning.",
-				"lifecycle": map[string]any{
-					"evidenceRefs":              []any{},
-					"replacementRequirementIds": []any{},
-					"state":                     "active",
-				},
-				"nonClaimRefs":     []any{},
-				"nonClaims":        requirementNonClaims,
-				"ownerId":          "pilot.owner",
-				"proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
-				"requirementId":    "REQ-PILOT-001",
-				"riskClass":        "high",
-				"updatePolicy": map[string]any{
-					"requiresImpactDeclaration":  true,
-					"requiresProofBindingReview": true,
-					"reviewOwnerId":              "pilot.owner",
-				},
-			}},
+			"kind":            "proofkit.requirement-source",
+			"schemaVersion":   json.Number("2"),
+			"sourceId":        "pilot.requirements",
+			"specPackagePath": "docs/specs/pilot",
+			"sourceNonClaims": []any{"Pilot source fixture does not prove production readiness."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-PILOT", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId":       "REQ-PILOT-001",
+					"statementCompletion": "Pilot materialization preserves admitted requirement meaning.",
+					"fields": map[string]any{
+						"claimLevel":           "blocking",
+						"deferral":             nil,
+						"lifecycle":            map[string]any{"state": "active"},
+						"nonClaimRefs":         []any{},
+						"externalNonClaimRefs": []any{},
+						"nonClaims":            requirementNonClaims,
+						"ownerId":              "pilot.owner",
+						"proofBindingRefs":     []any{"proofkit/requirement-bindings.json"},
+						"riskClass":            "high",
+						"updatePolicy": map[string]any{
+							"requiresImpactDeclaration":  true,
+							"requiresProofBindingReview": true,
+							"reviewOwnerId":              "pilot.owner",
+						},
+					}}}}},
 		}},
 		"requirementProofBinding": map[string]any{
 			"path": "proofkit/requirement-bindings.json",
@@ -529,7 +537,7 @@ func validRequest(t *testing.T, root string) map[string]any {
 					"ownerId":       "pilot.owner",
 					"proofState":    "witness_backed",
 					"requirementId": "REQ-PILOT-001",
-					"specPath":      "docs/specs/pilot/requirements.v1.json",
+					"specPath":      "docs/specs/pilot/requirements.v2.json",
 				}},
 				"bindings": []any{map[string]any{
 					"commandIds":         []any{"pilot.command.test"},

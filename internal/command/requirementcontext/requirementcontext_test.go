@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
@@ -30,7 +29,7 @@ func TestComposeAndSliceRoundTrip(t *testing.T) {
 		t.Fatalf("expected digest coverage = %q, want none", snapshot.ExpectedDigestCoverage)
 	}
 	output, err := Slice(map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"sliceId":       "consumer.context.slice",
 		"context":       contextValue,
 		"query": map[string]any{
@@ -78,7 +77,7 @@ func sameStableJSON(t *testing.T, left, right any) bool {
 	return bytes.Equal(leftJSON, rightJSON)
 }
 
-func TestV1DigestCoverageAdapters(t *testing.T) {
+func TestDigestCoverageAndRetiredSnapshotIdentities(t *testing.T) {
 	root := fixtureRepository(t)
 	for _, test := range []struct {
 		name     string
@@ -104,16 +103,26 @@ func TestV1DigestCoverageAdapters(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if v2["schemaVersion"] != json.Number("2") || v2["expectedDigestCoverage"] != test.expected {
-				t.Fatalf("v2 projection = %#v, want coverage %q", v2, test.expected)
+			if v2["schemaVersion"] != json.Number("4") || v2["expectedDigestCoverage"] != test.expected {
+				t.Fatalf("current projection = %#v, want coverage %q", v2, test.expected)
 			}
 			v1 := v1SnapshotFixture(t, v2, test.legacy)
-			admitted, err := AdmitSnapshot(v1)
+			if _, err := AdmitSnapshot(v1); err == nil {
+				t.Fatal("retired v1 snapshot accepted new nested source semantics")
+			}
+			admitted, err := AdmitSnapshot(v2)
 			if err != nil {
-				t.Fatalf("AdmitSnapshot(v1) error = %v", err)
+				t.Fatal(err)
 			}
 			if got, want := mustStableJSON(t, SnapshotValue(admitted)), mustStableJSON(t, v2); !bytes.Equal(got, want) {
-				t.Fatalf("v1 normalized output differs from v2\n got: %s\nwant: %s", got, want)
+				t.Fatalf("current snapshot admission changed coverage\n got: %s\nwant: %s", got, want)
+			}
+			for _, version := range []string{"1", "2", "3"} {
+				old := deepClone(t, v2)
+				old["schemaVersion"] = json.Number(version)
+				if _, err := AdmitSnapshot(old); err == nil {
+					t.Fatalf("retired snapshot %s accepted", version)
+				}
 			}
 		})
 	}
@@ -136,6 +145,13 @@ func TestV1DigestCoverageAdapters(t *testing.T) {
 	if _, err := AdmitSnapshot(malformedV1); err == nil {
 		t.Fatal("AdmitSnapshot accepted a malformed legacy coverage claim")
 	}
+	for _, bad := range []any{nil, "origin", map[string]any{}} {
+		withOrigin := deepClone(t, v2)
+		withOrigin["projectOrigin"] = bad
+		if _, err := AdmitSnapshot(withOrigin); err == nil {
+			t.Fatal("invalid explicit origin was ignored")
+		}
+	}
 }
 
 func setExpectedFixtureDigest(t *testing.T, root string, entry map[string]any) {
@@ -152,7 +168,10 @@ func v1SnapshotFixture(t *testing.T, v2 map[string]any, legacy string) map[strin
 	v1 := deepClone(t, v2)
 	delete(v1, "expectedDigestCoverage")
 	v1["baselineVerification"] = legacy
-	v1["nonClaims"] = admit.StringSliceToAny(v1BoundaryNonClaims)
+	v1["nonClaims"] = []any{
+		"Requirement context is a derived projection and is not requirement, proof, coverage, merge, release, rollout, or readiness authority.",
+		"Requirement context does not execute native witnesses or prove source freshness after composition.",
+	}
 	v1["schemaVersion"] = json.Number("1")
 	return v1
 }
@@ -191,8 +210,8 @@ func TestSnapshotAdmissionRejectsForgedCoverageAndProjectionLedger(t *testing.T)
 	}
 
 	oversized := deepClone(t, contextValue)
-	requirement := oversized["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
-	requirement["invariant"] = strings.Repeat("a", maxSnapshotBytes)
+	requirement := oversized["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
+	requirement["statementCompletion"] = strings.Repeat("a", maxSnapshotBytes)
 	resignSnapshot(t, oversized)
 	if _, err := AdmitSnapshot(oversized); err == nil {
 		t.Fatal("AdmitSnapshot accepted a snapshot larger than the producer bound")
@@ -204,7 +223,7 @@ func TestSliceUsesExplicitLookupFragments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, err := Slice(map[string]any{"context": contextValue, "query": map[string]any{"maxRequirements": json.Number("1"), "profile": "specification", "requirementIds": []any{"REQ-PROOFKIT-SPEC-001"}}, "schemaVersion": json.Number("1"), "sliceId": "consumer.fragment"})
+	output, err := Slice(map[string]any{"context": contextValue, "query": map[string]any{"maxRequirements": json.Number("1"), "profile": "specification", "requirementIds": []any{"REQ-PROOFKIT-SPEC-001"}}, "schemaVersion": json.Number("2"), "sliceId": "consumer.fragment"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +240,7 @@ func TestSliceUsesExplicitLookupFragments(t *testing.T) {
 
 func TestSlicePreservesTransitiveLifecycleReplacementClosure(t *testing.T) {
 	root := fixtureRepository(t)
-	path := filepath.Join(root, "docs/specs/proofkit-spec-proof-core/requirements.v1.json")
+	path := filepath.Join(root, "docs/specs/proofkit-spec-proof-core/requirements.v2.json")
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
@@ -231,14 +250,14 @@ func TestSlicePreservesTransitiveLifecycleReplacementClosure(t *testing.T) {
 		t.Fatal(err)
 	}
 	source := decoded.(map[string]any)
-	requirements := source["requirements"].([]any)
+	requirements := source["groups"].([]any)[0].(map[string]any)["members"].([]any)
 	first := requirements[0].(map[string]any)
 	second := requirements[1].(map[string]any)
 	firstID := first["requirementId"].(string)
 	secondID := second["requirementId"].(string)
-	first["claimLevel"] = "advisory"
-	first["lifecycle"] = map[string]any{"evidenceRefs": []any{"proof.lifecycle.first"}, "replacementRequirementIds": []any{secondID}, "state": "superseded"}
-	second["lifecycle"] = map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"}
+	first["fields"].(map[string]any)["claimLevel"] = "advisory"
+	first["fields"].(map[string]any)["lifecycle"] = map[string]any{"evidenceRefs": []any{"proof.lifecycle.first"}, "replacementRequirementIds": []any{secondID}, "state": "superseded"}
+	second["fields"].(map[string]any)["lifecycle"] = map[string]any{"state": "active"}
 	updated, err := stablejson.Marshal(source)
 	if err != nil {
 		t.Fatal(err)
@@ -250,7 +269,7 @@ func TestSlicePreservesTransitiveLifecycleReplacementClosure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	output, err := Slice(map[string]any{"context": contextValue, "query": map[string]any{"maxRequirements": json.Number("2"), "profile": "review", "requirementIds": []any{firstID}}, "schemaVersion": json.Number("1"), "sliceId": "consumer.lifecycle-closure"})
+	output, err := Slice(map[string]any{"context": contextValue, "query": map[string]any{"maxRequirements": json.Number("2"), "profile": "review", "requirementIds": []any{firstID}}, "schemaVersion": json.Number("2"), "sliceId": "consumer.lifecycle-closure"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +281,7 @@ func TestSlicePreservesTransitiveLifecycleReplacementClosure(t *testing.T) {
 	if !containsAll(got, firstID, secondID) {
 		t.Fatalf("selected lifecycle closure=%v", got)
 	}
-	if _, err := Slice(map[string]any{"context": contextValue, "query": map[string]any{"maxRequirements": json.Number("1"), "profile": "review", "requirementIds": []any{firstID}}, "schemaVersion": json.Number("1"), "sliceId": "consumer.lifecycle-closure-bounded"}); err == nil {
+	if _, err := Slice(map[string]any{"context": contextValue, "query": map[string]any{"maxRequirements": json.Number("1"), "profile": "review", "requirementIds": []any{firstID}}, "schemaVersion": json.Number("2"), "sliceId": "consumer.lifecycle-closure-bounded"}); err == nil {
 		t.Fatal("Slice accepted a bound that cannot retain mandatory lifecycle closure")
 	}
 }
@@ -327,7 +346,7 @@ func TestSliceRejectsTamperedSnapshotAndUnknownNode(t *testing.T) {
 		t.Fatal("AdmitSnapshot accepted content with a stale snapshotId")
 	}
 	_, err = Slice(map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"sliceId":       "consumer.context.slice",
 		"context":       contextValue,
 		"query": map[string]any{
@@ -339,14 +358,14 @@ func TestSliceRejectsTamperedSnapshotAndUnknownNode(t *testing.T) {
 		t.Fatal("Slice accepted an unknown explicit node")
 	}
 	_, err = Slice(map[string]any{
-		"schemaVersion": json.Number("1"), "sliceId": "consumer.context.slice", "context": contextValue,
+		"schemaVersion": json.Number("2"), "sliceId": "consumer.context.slice", "context": contextValue,
 		"query": map[string]any{"profile": "specification", "requirementIds": []any{"REQ-UNKNOWN-001"}},
 	})
 	if err == nil {
 		t.Fatal("Slice accepted an unknown explicit requirement")
 	}
 	bounded, err := Slice(map[string]any{
-		"schemaVersion": json.Number("1"), "sliceId": "consumer.context.slice", "context": contextValue,
+		"schemaVersion": json.Number("2"), "sliceId": "consumer.context.slice", "context": contextValue,
 		"query": map[string]any{"profile": "specification", "nodeIds": []any{"spec.root"}, "maxNodes": json.Number("1")},
 	})
 	if err != nil {
@@ -409,11 +428,11 @@ func fixtureRepository(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
 	repoRoot := filepath.Clean(filepath.Join("..", "..", ".."))
-	source, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/proofkit-spec-proof-core/requirements.v1.json"))
+	source, err := os.ReadFile(filepath.Join(repoRoot, "docs/specs/proofkit-spec-proof-core/requirements.v2.json"))
 	if err != nil {
 		t.Fatalf("read requirement source fixture: %v", err)
 	}
-	writeFixture(t, root, "docs/specs/proofkit-spec-proof-core/requirements.v1.json", source)
+	writeFixture(t, root, "docs/specs/proofkit-spec-proof-core/requirements.v2.json", source)
 	tree := map[string]any{
 		"schemaVersion":     json.Number("2"),
 		"treeId":            "proofkit.spec-tree",
@@ -448,14 +467,14 @@ func fixtureRepository(t *testing.T) string {
 
 func fixtureCatalog() map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"catalogId":     "consumer.spec-context",
 		"specTree": map[string]any{
 			"path": "proofkit/spec-tree.json",
 		},
 		"requirementSources": []any{map[string]any{
 			"nodeId": "spec.root",
-			"path":   "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+			"path":   "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
 		}},
 	}
 }

@@ -42,7 +42,7 @@ func TestPackageVerifyReadersRejectAmbiguousJSON(t *testing.T) {
 		},
 		{
 			name:    "requirement bindings trailing value",
-			content: `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}]} true`,
+			content: `{"requirements":[{"specPath":"docs/specs/example/requirements.v2.json"}]} true`,
 			read: func(path string) error {
 				content, err := os.ReadFile(path)
 				if err != nil {
@@ -72,10 +72,10 @@ func TestVerifySpecReferenceClosureReadsTarballBindings(t *testing.T) {
 	t.Parallel()
 
 	tarball := writePackageTarball(t, map[string]string{
-		"package/proofkit/requirement-bindings.json": `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}]} true`,
+		"package/proofkit/requirement-bindings.json": `{"requirements":[{"specPath":"docs/specs/example/requirements.v2.json"}]} true`,
 	})
 	err := verifySpecReferenceClosure(tarballArtifact(t, tarball), map[string]struct{}{
-		"package/docs/specs/example/requirements.v1.json": {},
+		"package/docs/specs/example/requirements.v2.json": {},
 	})
 	if err == nil || !strings.Contains(err.Error(), "multiple JSON values") {
 		t.Fatalf("verifySpecReferenceClosure() error=%v, want tarball JSON failure", err)
@@ -90,7 +90,7 @@ func TestVerifyPackedOwnerRecordsRejectsSourceArtifactContentDrift(t *testing.T)
 		"package/docs/images/workspace.png",
 		"package/dist/agentic-proofkit",
 		"package/package.json",
-		"package/docs/specs/example/requirements.v1.json",
+		"package/docs/specs/example/requirements.v2.json",
 		"package/proofkit/cli-contract.v2.json",
 	}
 	for _, entry := range entries {
@@ -355,8 +355,8 @@ func TestSnapshotReadersDoNotRereadMutableTarballPath(t *testing.T) {
 		"package/NON_CLAIMS.md":                           "package docs describe embedded Go binaries.",
 		"package/docs/proofkit-contract-map.md":           "package docs describe embedded Go binaries.",
 		"package/package.json":                            packageManifestFixture("git+https://github.com/research-engineering/agentic-proofkit.git"),
-		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}]}`,
-		"package/docs/specs/example/requirements.v1.json": `{"requirements":[]}`,
+		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v2.json"}]}`,
+		"package/docs/specs/example/requirements.v2.json": `{"requirements":[]}`,
 	})
 	artifact := tarballArtifact(t, tarball)
 	if err := os.WriteFile(tarball, []byte("not-a-gzip-tarball"), 0o644); err != nil {
@@ -369,7 +369,7 @@ func TestSnapshotReadersDoNotRereadMutableTarballPath(t *testing.T) {
 		t.Fatalf("verifyNoStalePackageDocs(snapshot) error = %v", err)
 	}
 	if err := verifySpecReferenceClosure(artifact, map[string]struct{}{
-		"package/docs/specs/example/requirements.v1.json": {},
+		"package/docs/specs/example/requirements.v2.json": {},
 	}); err != nil {
 		t.Fatalf("verifySpecReferenceClosure(snapshot) error = %v", err)
 	}
@@ -769,7 +769,8 @@ func TestPackagePublicReferenceClosure(t *testing.T) {
 		{
 			name: "ambiguous brief boundary policy requirement",
 			mutate: func(entries map[string]string) {
-				entries["package/docs/specs/example/requirements.v1.json"] = strings.Replace(entries["package/docs/specs/example/requirements.v1.json"], `]}`, `,{"requirementId":"REQ-PROOFKIT-SPEC-026"}]}`, 1)
+				entries["package/docs/specs/other/requirements.v2.json"] = packageReferenceSource("docs/specs/other", "REQ-PROOFKIT-SPEC-026")
+				entries["package/docs/specs/other/overview.md"] = "Other.\n"
 			},
 			want: "boundary policy ref must resolve to exactly one shipped requirement",
 		},
@@ -783,7 +784,7 @@ func TestPackagePublicReferenceClosure(t *testing.T) {
 		{
 			name: "surplus resolvable brief boundary policy ref",
 			mutate: func(entries map[string]string) {
-				entries["package/docs/specs/example/requirements.v1.json"] = strings.Replace(entries["package/docs/specs/example/requirements.v1.json"], `]}`, `,{"requirementId":"REQ-OTHER"}]}`, 1)
+				entries["package/docs/specs/example/requirements.v2.json"] = packageReferenceSource("docs/specs/example", "REQ-OTHER", "REQ-PROOFKIT-SPEC-005", "REQ-PROOFKIT-SPEC-026")
 				entries["package/proofkit/cli-contract.v2.json"] = strings.Replace(entries["package/proofkit/cli-contract.v2.json"], `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"`, `"REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026","REQ-OTHER"`, 1)
 			},
 			want: "must equal the exact canonical policy set",
@@ -791,16 +792,16 @@ func TestPackagePublicReferenceClosure(t *testing.T) {
 		{
 			name: "dangling binding witness path",
 			mutate: func(entries map[string]string) {
-				entries["package/proofkit/requirement-bindings.json"] = `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"MISSING.go"}]}`
+				entries["package/proofkit/requirement-bindings.json"] = `{"requirements":[{"specPath":"docs/specs/example/requirements.v2.json"}],"bindings":[{"witnessPath":"MISSING.go"}]}`
 			},
 			want: "dangling source-checkout route MISSING.go",
 		},
 		{
 			name: "dangling requirement source overview path",
 			mutate: func(entries map[string]string) {
-				entries["package/docs/specs/example/requirements.v1.json"] = `{"specPackagePath":"docs/specs/example","overviewPath":"MISSING.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[]}`
+				delete(entries, "package/docs/specs/example/overview.md")
 			},
-			want: "dangling package-public route MISSING.md",
+			want: "dangling package-public route docs/specs/example/overview.md",
 		},
 		{
 			name: "dangling witness plan source selector",
@@ -1677,17 +1678,41 @@ func mustReadBytes(t *testing.T, path string) []byte {
 	return content
 }
 
+func packageReferenceSource(specPath string, ids ...string) string {
+	members := []any{}
+	for _, id := range ids {
+		members = append(members, map[string]any{
+			"requirementId": id, "statementCompletion": "Package source identity remains explicit.",
+			"fields": map[string]any{
+				"ownerId": "fixture.owner", "claimLevel": "advisory", "riskClass": "low",
+				"nonClaims": []any{"No runtime proof is asserted."}, "nonClaimRefs": []any{}, "externalNonClaimRefs": []any{}, "proofBindingRefs": []any{},
+				"lifecycle": map[string]any{"state": "active"}, "deferral": nil, "updatePolicy": map[string]any{"reviewOwnerId": "fixture.owner"},
+			},
+		})
+	}
+	value := map[string]any{
+		"kind": "proofkit.requirement-source", "schemaVersion": 2, "sourceId": "fixture.source", "specPackagePath": specPath,
+		"sourceNonClaims": []any{"No runtime proof is asserted."},
+		"groups":          []any{map[string]any{"groupId": "RGRP-FIXTURE", "profileId": "", "statementStem": "", "sharedPremises": []any{}, "members": members}},
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return string(encoded)
+}
+
 func packageReferenceClosureFixture() map[string]string {
 	return map[string]string{
 		"package/README.md":                               readmePreOneExactPinPolicy + "\n\nThe full machine-readable command inventory remains\n`proofkit/cli-contract.v2.json`; the human route map is\n`docs/proofkit-contract-map.md`.\n\n| Need | Owner |\n|---|---|\n| Adoption | `ADOPTION.md` |\n\n[Adoption](ADOPTION.md \"Guide\")\n[Adoption reference][adoption]\n[adoption]: ADOPTION.md \"Guide\"\n",
 		"package/ADOPTION.md":                             "Adoption.\n",
 		"package/docs/proofkit-contract-map.md":           "Contract map.\n",
 		"package/docs/specs/example/overview.md":          "Example.\n",
-		"package/docs/specs/example/requirements.v1.json": `{"specPackagePath":"docs/specs/example","overviewPath":"docs/specs/example/overview.md","requirementsPath":"docs/specs/example/requirements.v1.json","requirements":[{"requirementId":"REQ-PROOFKIT-SPEC-005"},{"requirementId":"REQ-PROOFKIT-SPEC-026"}]}`,
-		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v1.json"}],"bindings":[{"witnessPath":"internal/tools/packageverify/main_test.go","witnessSelectors":[{"selector":"TestPackagePublicReferenceClosure","command":"go test ./internal/tools/packageverify -run '^TestPackagePublicReferenceClosure$'"}]}]}`,
+		"package/docs/specs/example/requirements.v2.json": packageReferenceSource("docs/specs/example", "REQ-PROOFKIT-SPEC-005", "REQ-PROOFKIT-SPEC-026"),
+		"package/proofkit/requirement-bindings.json":      `{"requirements":[{"specPath":"docs/specs/example/requirements.v2.json"}],"bindings":[{"witnessPath":"internal/tools/packageverify/main_test.go","witnessSelectors":[{"selector":"TestPackagePublicReferenceClosure","command":"go test ./internal/tools/packageverify -run '^TestPackagePublicReferenceClosure$'"}]}]}`,
 		"package/proofkit/witness-plan.json":              `{"commands":[],"policies":[]}`,
 		"package/proofkit/command-families.v1.json":       `{"families":[]}`,
-		"package/proofkit/receipt-producer-policy.json":   `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/specs/example/requirements.v1.json"]}]}`,
+		"package/proofkit/receipt-producer-policy.json":   `{"producers":[{"producerId":"local.developer","evidenceRefs":["docs/specs/example/requirements.v2.json"]}]}`,
 		"package/proofkit/cli-contract.v2.json":           `{"processContract":{"helpGrammar":{"helpCatalogFormsSource":"proofkit/command-families.v1.json"}},"commands":[{"command":"agent-route","inputContract":{"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}},"outputContract":{"briefPacketContract":{"boundaryPolicyRefs":["REQ-PROOFKIT-SPEC-005","REQ-PROOFKIT-SPEC-026"],"fieldRules":{"boundaryPolicyRefs":"policy field description","contextRefs":"runtime field description"}},"nativeSource":{"path":"internal/tools/packageverify/main.go","evidenceClass":"source_checkout"}}}]}`,
 	}
 }

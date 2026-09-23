@@ -21,23 +21,24 @@ func CoverageInput(mode string) (map[string]any, error) {
 		return nil, fmt.Errorf("unsupported coverage fixture mode")
 	}
 	value, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "viewInputId": "proofkit.browser.coverage.view",
   "requirementSource": {
-    "schemaVersion": 1,
+    "kind": "proofkit.requirement-source",
+    "schemaVersion": 2,
     "sourceId": "proofkit.browser.coverage.source",
     "specPackagePath": "docs/specs/browser-coverage",
-    "overviewPath": "docs/specs/browser-coverage/overview.md",
-    "requirementsPath": "docs/specs/browser-coverage/requirements.v1.json",
-    "requirements": [
+    "groups": [{"groupId": "RGRP-COVERAGE", "profileId": "", "statementStem": "", "sharedPremises": [], "members": [
       {
         "requirementId": "REQ-BROWSER-COVERAGE-001",
+        "statementCompletion": "Coverage browser views render test evidence for each requirement.",
+        "fields": {
         "ownerId": "browser.coverage",
-        "invariant": "Coverage browser views render test evidence for each requirement.",
         "claimLevel": "blocking",
         "riskClass": "high",
         "proofBindingRefs": ["proofkit/browser-coverage-bindings.json"],
         "nonClaimRefs": [],
+        "externalNonClaimRefs": [],
         "nonClaims": ["Coverage browser fixture does not execute tests."],
         "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
         "deferral": null,
@@ -46,9 +47,9 @@ func CoverageInput(mode string) (map[string]any, error) {
           "requiresImpactDeclaration": true,
           "requiresProofBindingReview": true
         }
-      }
-    ],
-    "nonClaims": ["Coverage browser source fixture does not own native tests."]
+      }}
+    ]}],
+    "sourceNonClaims": ["Coverage browser source fixture does not own native tests."]
   },
   "requirementProofBinding": {
     "schemaVersion": 1,
@@ -57,7 +58,7 @@ func CoverageInput(mode string) (map[string]any, error) {
       {
         "requirementId": "REQ-BROWSER-COVERAGE-001",
         "ownerId": "browser.coverage",
-        "specPath": "docs/specs/browser-coverage/requirements.v1.json",
+        "specPath": "docs/specs/browser-coverage/requirements.v2.json",
         "claimLevel": "blocking",
         "proofState": "witness_backed",
         "nonClaims": ["Coverage browser binding fixture does not execute witnesses."]
@@ -93,7 +94,7 @@ func CoverageInput(mode string) (map[string]any, error) {
     "completenessDeclaration": "selected_owner_surfaces",
     "ownerIds": ["browser.coverage"],
     "codeSurfaces": [{"surfaceId": "browser.coverage.code", "ownerId": "browser.coverage", "path": "internal/command/requirementbrowser"}],
-    "specSurfaces": [{"surfaceId": "browser.coverage.spec", "ownerId": "browser.coverage", "path": "docs/specs/browser-coverage/requirements.v1.json"}],
+    "specSurfaces": [{"surfaceId": "browser.coverage.spec", "ownerId": "browser.coverage", "path": "docs/specs/browser-coverage/requirements.v2.json"}],
     "testSurfaces": [{"surfaceId": "browser.coverage.test", "ownerId": "browser.coverage", "path": "internal/command/requirementbrowser/server_test.go"}],
     "commandRefs": ["proofkit.browser.coverage.command"],
     "nonClaims": ["Coverage browser universe is selected-owner scope only."]
@@ -138,6 +139,10 @@ func CoverageInput(mode string) (map[string]any, error) {
 		return nil, err
 	}
 	input := value.(map[string]any)
+	source := input["requirementSource"].(map[string]any)
+	source["nonClaimDefinitions"] = []any{map[string]any{"nonClaimId": "NCL-BROWSER", "statement": "Coverage declarations do not prove a passing execution."}}
+	fields := source["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
+	fields["nonClaimRefs"], fields["externalNonClaimRefs"] = []any{"NCL-BROWSER"}, []any{"NCL-BROWSER"}
 	if mode == "compact" {
 		input["requirementProofBinding"] = nil
 		input["localEnvironmentPolicy"] = map[string]any{"authority": "caller_provided", "localEnvironmentClasses": []any{"local-go"}}
@@ -173,7 +178,8 @@ func CoverageWorkspace(mode string, empty bool) (map[string]any, error) {
 	source := input["requirementSource"]
 	if empty {
 		source = nil
-		input["requirementSource"].(map[string]any)["requirements"] = []any{}
+		input["requirementSource"].(map[string]any)["groups"] = []any{}
+		input["requirementSource"].(map[string]any)["nonClaimDefinitions"] = []any{}
 		input["testEvidenceInventory"].(map[string]any)["entries"] = []any{}
 		if mode == "compact" {
 			input["compactProofContract"].(map[string]any)["bindings"] = []any{}
@@ -204,7 +210,7 @@ func CoverageWorkspace(mode string, empty bool) (map[string]any, error) {
 		node["sourceRefs"] = append(node["sourceRefs"].([]any), map[string]any{"sourceId": "proofkit.browser.coverage.source", "sourceRefId": "spec.root.coverage", "sourceRefKind": "source_id", "sourceRole": "requirements"})
 		sources = append(sources, map[string]any{
 			"currentDigest": digest.SHA256TextRef("coverage source fixture"), "kind": "requirement_source", "nodeId": "spec.root",
-			"path": "docs/specs/browser-coverage/requirements.v1.json", "sourceRef": "proofkit.browser.coverage.source", "sourceRole": "requirements",
+			"path": "docs/specs/browser-coverage/requirements.v2.json", "sourceRef": "proofkit.browser.coverage.source", "sourceRole": "requirements",
 		})
 	}
 	encoded, err := stablejson.Marshal(coverage)
@@ -225,7 +231,11 @@ func CoverageWorkspace(mode string, empty bool) (map[string]any, error) {
 		if result.ExitCode != 0 {
 			return nil, fmt.Errorf("coverage fixture source failed admission")
 		}
-		canonicalSources = append(canonicalSources, requirementsourceadmission.SourceValue(result.Source))
+		value, err := requirementsourceadmission.SourceValue(result.Source)
+		if err != nil {
+			return nil, err
+		}
+		canonicalSources = append(canonicalSources, value)
 	}
 	projections["requirementSources"] = canonicalSources
 	tree, err := requirementspectree.Evaluate(projections["specTree"])

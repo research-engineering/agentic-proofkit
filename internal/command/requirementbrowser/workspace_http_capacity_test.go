@@ -70,7 +70,7 @@ func TestWorkspaceLookupHTTPEnforcesExpandedWireBudget(t *testing.T) {
 	fixture := workspaceLookupFixture(t)
 	contextValue := fixture["context"].(map[string]any)
 	source := contextValue["projections"].(map[string]any)["requirementSources"].([]any)[1].(map[string]any)
-	source["nonClaims"] = []any{boundary}
+	source["sourceNonClaims"] = []any{boundary}
 	resignWorkspaceSnapshot(t, contextValue)
 	if len(stableWorkspaceBytes(t, contextValue)) >= 8<<20 {
 		t.Fatal("wire expansion fixture must fit the independently admitted snapshot input cap")
@@ -115,7 +115,7 @@ func TestWorkspaceLookupHTTPEnforcesExpandedWireBudget(t *testing.T) {
 		for index, raw := range rows {
 			row := raw.(map[string]any)
 			anchor := row["anchor"].(map[string]any)
-			if anchor["jsonPointer"] != fmt.Sprintf("/projections/requirementSources/1/requirements/%d/invariant", offset+index) || anchor["sourceDigest"] != digest.SHA256TextRef("source-b") {
+			if anchor["jsonPointer"] != "/invariant" || anchor["sourceDigest"] != digest.SHA256TextRef("source-b") || anchor["requirementId"] != ids[index] || anchor["sourceId"] != "consumer.b" || anchor["coordinateSpace"] != "resolved_requirement" {
 				t.Fatal("byte-limited HTTP page rebased an original source anchor")
 			}
 			claims := row["sourceNonClaims"].([]any)

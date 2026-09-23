@@ -61,7 +61,7 @@ func TestSourceCompatibilityQualifiedBindingRowsSurviveCLI(t *testing.T) {
 			actual[key] = row
 		}
 	}
-	if !reflect.DeepEqual(sourcePaths, map[string]string{"REQ-WIRE-001": "docs/specs/a/requirements.v1.json", "REQ-WIRE-002": "docs/specs/z/requirements.v1.json", "REQ-WIRE-003": "docs/specs/z/requirements.v1.json"}) {
+	if !reflect.DeepEqual(sourcePaths, map[string]string{"REQ-WIRE-001": "docs/specs/a/requirements.v2.json", "REQ-WIRE-002": "docs/specs/z/requirements.v2.json", "REQ-WIRE-003": "docs/specs/z/requirements.v2.json"}) {
 		t.Fatal("source-qualified requirement paths changed")
 	}
 	if len(actual) != 5 {
@@ -94,7 +94,7 @@ func TestSourceCompatibilityRejectsKnownButWrongSourcePath(t *testing.T) {
 	if err != nil {
 		t.Fatal("project premise failed", err)
 	}
-	for _, substitute := range []string{"docs/specs/z/requirements.v1.json", "docs/specs/missing/requirements.v1.json"} {
+	for _, substitute := range []string{"docs/specs/z/requirements.v2.json", "docs/specs/missing/requirements.v2.json"} {
 		value, err := project.JSONValue()
 		if err != nil {
 			t.Fatal(err)
