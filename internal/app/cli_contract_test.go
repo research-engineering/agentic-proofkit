@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "ae6e092d1e33864940cec931817bf2c356e0a170bfa0f6a7d4060035f25af0e7"
+	cliContractPublicABISHA256               = "a7653949a28903909e90d6bf8d4d3871ccddacda44957925be68abdf8e3ac4fc"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2099,6 +2099,8 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"duplicate type-only re-export modifier",
 		"type-only re-export attributes other than resolution-mode",
 		"inline type-only re-export import attributes",
+		"legacy assert import attributes",
+		"type-only import attributes after a line terminator",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
 	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "ambiguous bare or default single-parameter angle form", "compiler-invalid nested default single-parameter angle form", ".mts angle nesting deeper than 128", "CommonJS-ambiguity guards"} {

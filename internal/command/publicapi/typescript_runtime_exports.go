@@ -19,23 +19,7 @@ type runtimeExportMetafile struct {
 }
 
 func collectRuntimeExports(source string, extension string) ([]string, error) {
-	sourcefile := "entry" + extension
-	result := api.Build(api.BuildOptions{
-		Stdin: &api.StdinOptions{
-			Contents:   source,
-			Loader:     api.LoaderTS,
-			Sourcefile: sourcefile,
-		},
-		Bundle:      false,
-		Format:      api.FormatESModule,
-		LogLevel:    api.LogLevelSilent,
-		Metafile:    true,
-		Outfile:     "entry.js",
-		Platform:    api.PlatformNeutral,
-		Target:      api.ESNext,
-		TsconfigRaw: "{}",
-		Write:       false,
-	})
+	result := buildRuntimeExportInventory(source, extension)
 	if len(result.Errors) != 0 {
 		return nil, unsupportedTypeScriptSourceGrammar("TypeScript parser rejected source")
 	}
@@ -46,6 +30,7 @@ func collectRuntimeExports(source string, extension string) ([]string, error) {
 	if len(metadata.Inputs) != 1 {
 		return nil, fmt.Errorf("TypeScript public API parser input inventory is invalid")
 	}
+	sourcefile := "entry" + extension
 	inputFormat := metadata.Inputs[sourcefile].Format
 	for _, output := range metadata.Outputs {
 		if output.EntryPoint != sourcefile {
@@ -67,4 +52,25 @@ func collectRuntimeExports(source string, extension string) ([]string, error) {
 		return names, nil
 	}
 	return nil, fmt.Errorf("TypeScript public API parser output is missing")
+}
+
+func buildRuntimeExportInventory(source string, extension string) api.BuildResult {
+	sourcefile := "entry" + extension
+	return api.Build(api.BuildOptions{
+		Stdin: &api.StdinOptions{
+			Contents:   source,
+			Loader:     api.LoaderTS,
+			Sourcefile: sourcefile,
+		},
+		Bundle:           false,
+		Format:           api.FormatESModule,
+		LogLevel:         api.LogLevelSilent,
+		Metafile:         true,
+		MinifyWhitespace: true,
+		Outfile:          "entry.js",
+		Platform:         api.PlatformNeutral,
+		Target:           api.ESNext,
+		TsconfigRaw:      "{}",
+		Write:            false,
+	})
 }

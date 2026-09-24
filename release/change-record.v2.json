@@ -14,7 +14,7 @@
     },
     {
       "changeId": "proofkit.deployment-endpoint.admission",
-      "summary": "Stable endpoints using case, trailing-root-dot or IDNA-equivalent variants of a declared temporary DNS suffix, endpoints matching caller-owned local indicators across Unicode, punycode or root-dot forms, and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. Local indicators that erase under IDNA normalization are rejected instead of becoming wildcards. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches; announced historical leap seconds remain valid."
+      "summary": "Stable endpoints using case, trailing-root-dot or IDNA-equivalent variants of a declared temporary DNS suffix, endpoints matching caller-owned local indicators across Unicode, punycode, root-dot or equivalent IPv6 spellings, and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. Local indicators that erase under IDNA normalization are rejected instead of becoming wildcards. Equivalent Unicode host spellings now receive the same local-indicator decision. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches; announced historical leap seconds remain valid."
     },
     {
       "changeId": "proofkit.typescript-public-api.exports",

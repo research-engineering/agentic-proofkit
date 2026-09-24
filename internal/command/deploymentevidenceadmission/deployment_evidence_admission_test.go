@@ -239,6 +239,25 @@ func TestBuildLocalIndicatorIsInvariantAcrossEquivalentHostRepresentations(t *te
 	}
 }
 
+func TestBuildLocalIndicatorIsInvariantAcrossIPv6Spellings(t *testing.T) {
+	for _, test := range []struct{ indicator, host string }{
+		{"::1", "[0:0:0:0:0:0:0:1]"},
+		{"0:0:0:0:0:0:0:1", "[::1]"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{test.indicator}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode == 0 || record.State != "failed" {
+			t.Fatalf("Build(%q, %q) exit=%d state=%s error=%v, want local-host denial", test.indicator, test.host, exitCode, record.State, err)
+		}
+	}
+}
+
 func TestPolicyRejectsLocalIndicatorThatNormalizesToEmpty(t *testing.T) {
 	for _, indicator := range []string{"\u00ad", "\u200b"} {
 		input := validDeploymentEvidenceInput()

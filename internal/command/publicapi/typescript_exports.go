@@ -96,9 +96,15 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 }
 
 func admitTypeReexportAttributes(rawTail string, topLevelType bool) error {
-	index := skipTypeScriptTrivia(rawTail, 0)
+	index, crossedLine := scanTypeScriptTrivia(rawTail, 0)
+	if strings.HasPrefix(rawTail[index:], "assert") && (index+6 == len(rawTail) || !isASCIITypeScriptIdentifierByte(rawTail[index+6])) {
+		return unsupportedTypeScriptSourceGrammar("legacy assert import attributes are not admitted")
+	}
 	if !strings.HasPrefix(rawTail[index:], "with") || index+4 < len(rawTail) && isASCIITypeScriptIdentifierByte(rawTail[index+4]) {
 		return nil
+	}
+	if crossedLine {
+		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must follow the module specifier on the same line")
 	}
 	if !topLevelType {
 		return unsupportedTypeScriptSourceGrammar("inline type-only re-exports cannot use import attributes")
@@ -130,26 +136,44 @@ func admitTypeReexportAttributes(rawTail string, topLevelType bool) error {
 }
 
 func skipTypeScriptTrivia(source string, index int) int {
+	index, _ = scanTypeScriptTrivia(source, index)
+	return index
+}
+
+func scanTypeScriptTrivia(source string, index int) (int, bool) {
+	crossedLine := false
 	for index < len(source) {
+		if width := unicodeLineTerminatorWidth(source, index); width != 0 {
+			index += width
+			crossedLine = true
+			continue
+		}
 		if strings.ContainsRune(" \t\r\n\v\f", rune(source[index])) {
+			if source[index] == '\r' || source[index] == '\n' {
+				crossedLine = true
+			}
 			index++
 			continue
 		}
 		if strings.HasPrefix(source[index:], "//") {
-			for index < len(source) && source[index] != '\n' && source[index] != '\r' {
+			for index < len(source) && source[index] != '\n' && source[index] != '\r' && unicodeLineTerminatorWidth(source, index) == 0 {
 				index++
 			}
 			continue
 		}
 		if strings.HasPrefix(source[index:], "/*") {
 			if end := strings.Index(source[index+2:], "*/"); end >= 0 {
+				body := source[index+2 : index+2+end]
+				if strings.ContainsAny(body, "\r\n") || strings.ContainsRune(body, '\u2028') || strings.ContainsRune(body, '\u2029') {
+					crossedLine = true
+				}
 				index += end + 4
 				continue
 			}
 		}
 		break
 	}
-	return index
+	return index, crossedLine
 }
 
 func readTypeScriptAttributeString(source string, index int) (string, int, bool) {
@@ -175,7 +199,7 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 			continue
 		}
 		index := start + 1
-		for index < len(masked) && strings.ContainsRune(" \t\r\n", rune(masked[index])) {
+		for index < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[index])) {
 			index++
 		}
 		if index >= len(masked) || !isASCIITypeScriptIdentifierByte(masked[index]) {
@@ -183,6 +207,7 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 		}
 		angle, square, round, curly := 1, 0, 0, 0
 		separated := false
+		defaultSeen := false
 		for ; index < len(masked); index++ {
 			switch masked[index] {
 			case '<':
@@ -197,7 +222,7 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 				angle--
 				if angle == 0 {
 					after := index + 1
-					for after < len(masked) && strings.ContainsRune(" \t\r\n", rune(masked[after])) {
+					for after < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[after])) {
 						after++
 					}
 					if after < len(masked) && masked[after] == '(' && !separated {
@@ -221,8 +246,12 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 				if angle == 1 && square == 0 && round == 0 && curly == 0 {
 					separated = true
 				}
+			case '=':
+				if angle == 1 && square == 0 && round == 0 && curly == 0 && (index+1 == len(masked) || masked[index+1] != '>') {
+					defaultSeen = true
+				}
 			}
-			if angle == 1 && square == 0 && round == 0 && curly == 0 && strings.HasPrefix(masked[index:], "extends") && (index == 0 || !isASCIITypeScriptIdentifierByte(masked[index-1])) {
+			if !defaultSeen && angle == 1 && square == 0 && round == 0 && curly == 0 && strings.HasPrefix(masked[index:], "extends") && (index == 0 || !isASCIITypeScriptIdentifierByte(masked[index-1])) {
 				end := index + len("extends")
 				if end == len(masked) || !isASCIITypeScriptIdentifierByte(masked[end]) {
 					separated = true

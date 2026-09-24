@@ -681,6 +681,9 @@ func isLocalEndpointHost(canonicalHost string, policy policy) bool {
 }
 
 func normalizeLocalHostIndicator(indicator string) string {
+	if ip := net.ParseIP(indicator); ip != nil {
+		return ip.String()
+	}
 	mapped := strings.Map(func(character rune) rune {
 		switch character {
 		case '\u3002', '\uff0e', '\uff61':
@@ -711,8 +714,8 @@ func hasTemporaryEndpointSuffix(value string, policy policy) bool {
 }
 
 func canonicalEndpointHost(host string) (string, error) {
-	if net.ParseIP(host) != nil {
-		return strings.ToLower(host), nil
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.String(), nil
 	}
 	mapped, err := idna.Lookup.ToASCII(host)
 	if err != nil {
