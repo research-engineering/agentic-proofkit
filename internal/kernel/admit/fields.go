@@ -75,6 +75,7 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "api_key_escaped_unicode_letter", Input: `api_k\\u0065y=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "api_key_escaped_supplementary_control", Input: `api_\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "api_key_escaped_composed_controls", Input: `api_\\u200b\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_letter_and_control", Input: `api_\\u006b\\uDB40\\uDC01ey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},

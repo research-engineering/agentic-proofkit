@@ -163,6 +163,7 @@ test("diagnostic whole-value redaction", () => {
     String.raw`{"passw\u006frd":"synthetic-fixture-value"}`,
     String.raw`api_\uDB40\uDC01key=synthetic-fixture-value`,
     String.raw`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
+    String.raw`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
   ]) {
     let serialized = initial;
     for (let depth = 0; depth <= 4; depth++) {
