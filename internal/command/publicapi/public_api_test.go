@@ -581,6 +581,7 @@ func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 		"export {",
 		"  type\nOptions,",
 		"} from \"./more.js\";",
+		"export { type as as PublicAs } from \"./other.js\";",
 	}, "\n")
 
 	runtimeExports, typeExports, err := CollectExports(source)
@@ -588,7 +589,7 @@ func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 		t.Fatalf("collect exports: %v", err)
 	}
 	assertStringSlice(t, runtimeExports, []string{})
-	assertStringSlice(t, typeExports, []string{"Mode", "Options", "PublicThing"})
+	assertStringSlice(t, typeExports, []string{"Mode", "Options", "PublicAs", "PublicThing"})
 }
 
 func TestCollectExportsRejectsUnresolvedRuntimeReexportsAndConstEnum(t *testing.T) {

@@ -45,13 +45,14 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		{"let B = 0, i = 0; export const A = 1\n++i, B = 2;", "", ""},
 		{"export type { Shape$ }\nfrom './other';", "export type { Shape$ }", "Shape$"},
 		{"export { type\nShape$ as Public } from './other';", "export { type Shape$ as Public }", "Public"},
+		{"export { type as as Public } from './other';", "export { type as as Public }", "Public"},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")
 		if err := os.WriteFile(sourcePath, []byte(test.source), 0o600); err != nil {
 			t.Fatalf("write TypeScript fixture: %v", err)
 		}
-		if err := os.WriteFile(filepath.Join(folder, "other.ts"), []byte("export const A = 1; export type Shape$ = { value: string };"), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(folder, "other.ts"), []byte("export const A = 1; export type Shape$ = { value: string }; export type T = string; export type { T as as };"), 0o600); err != nil {
 			t.Fatalf("write re-export fixture: %v", err)
 		}
 		command := exec.Command(compiler, "--target", "es2022", "--module", "commonjs", "--declaration", "--outDir", folder, sourcePath)

@@ -318,5 +318,11 @@ func isInlineTypeOnlyReexport(part string) bool {
 		return false
 	}
 	rest := strings.TrimSpace(strings.TrimPrefix(part, "type "))
-	return rest != "" && !strings.HasPrefix(rest, "as ")
+	if rest == "" {
+		return false
+	}
+	if strings.HasPrefix(rest, "as ") {
+		return strings.HasPrefix(rest, "as as ")
+	}
+	return true
 }
