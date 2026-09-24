@@ -51,7 +51,7 @@ type generatedArtifactRule struct {
 type proofLikePolicy struct {
 	IgnoredProofLikePaths []string
 	NonClaims             []string
-	ProofLikePathPatterns []string
+	ProofLikePathPatterns []pathpattern.Pattern
 }
 
 type bindingRecord struct {
@@ -400,6 +400,10 @@ func admitProofLikePolicy(raw any) (proofLikePolicy, error) {
 	if err != nil {
 		return proofLikePolicy{}, err
 	}
+	compiled, err := pathpattern.CompileAll(patterns, "requirement impact input compose proofLikePathPatterns")
+	if err != nil {
+		return proofLikePolicy{}, err
+	}
 	ignored, err := admit.PreserveSortedPathArray(record["ignoredProofLikePaths"], "requirement impact input compose ignoredProofLikePaths", true)
 	if err != nil {
 		return proofLikePolicy{}, err
@@ -408,7 +412,7 @@ func admitProofLikePolicy(raw any) (proofLikePolicy, error) {
 	if err != nil {
 		return proofLikePolicy{}, err
 	}
-	return proofLikePolicy{IgnoredProofLikePaths: ignored, NonClaims: nonClaims, ProofLikePathPatterns: patterns}, nil
+	return proofLikePolicy{IgnoredProofLikePaths: ignored, NonClaims: nonClaims, ProofLikePathPatterns: compiled}, nil
 }
 
 func admitGeneratedArtifactPolicy(raw any) (generatedArtifactPolicy, error) {
@@ -616,7 +620,7 @@ func changedWitnessPathCoverage(contract compactproofcontract.Contract, changedP
 	return result, nil
 }
 
-func proofLikeChangedPaths(changedPaths []string, patterns []string, ignored []string) []string {
+func proofLikeChangedPaths(changedPaths []string, patterns []pathpattern.Pattern, ignored []string) []string {
 	ignoredSet := mapSet(ignored)
 	result := []string{}
 	for _, changedPath := range changedPaths {
@@ -624,7 +628,7 @@ func proofLikeChangedPaths(changedPaths []string, patterns []string, ignored []s
 			continue
 		}
 		for _, pattern := range patterns {
-			if pathpattern.Match(pattern, changedPath) {
+			if pattern.MatchAdmitted(changedPath) {
 				result = append(result, changedPath)
 				break
 			}

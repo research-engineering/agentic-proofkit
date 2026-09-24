@@ -45,6 +45,30 @@ func TestChangedPackagePlanEscalatesToFullWorkspaceForMatchedRule(t *testing.T) 
 	}
 }
 
+func TestChangedPackagePlanMatchesUnicodeEscalationPattern(t *testing.T) {
+	for _, test := range []struct {
+		path string
+		want bool
+	}{
+		{"docs/\u00e9clair.md", true},
+		{"docs/eclair.md", false},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			input := validChangedPackagePlanInput()
+			input["changedPaths"] = []any{test.path}
+			input["escalationRules"] = []any{map[string]any{"pattern": "docs/\u00e9*", "reason": "workspace.global"}}
+			plan, err := BuildChangedPackagePlan(input)
+			if err != nil || plan["fullWorkspace"] != test.want {
+				t.Fatalf("BuildChangedPackagePlan() plan=%#v error=%v, want fullWorkspace=%v", plan, err, test.want)
+			}
+			reasons := plan["escalationReasons"].([]any)
+			if test.want && (len(reasons) != 1 || reasons[0] != "workspace.global") || !test.want && len(reasons) != 0 {
+				t.Fatalf("escalationReasons=%#v, want matched=%v", reasons, test.want)
+			}
+		})
+	}
+}
+
 func TestChangedPackagePlanRejectsSchemaDrift(t *testing.T) {
 	input := validChangedPackagePlanInput()
 	input["schemaVersion"] = json.Number("2")

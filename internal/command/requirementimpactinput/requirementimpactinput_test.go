@@ -564,6 +564,26 @@ func TestBuildDerivesWitnessCoverageAndProofLikeFailures(t *testing.T) {
 	}
 }
 
+func TestBuildRetainsUnicodeProofLikePaths(t *testing.T) {
+	input := validComposeInput(t)
+	input["changedPathSources"] = []any{map[string]any{"sourceId": "git_diff", "paths": []any{"tests/\u00e9preuve.go"}}}
+	input["proofLikePathPolicy"] = map[string]any{
+		"ignoredProofLikePaths": []any{},
+		"nonClaims":             []any{"Path classification does not prove test execution."},
+		"proofLikePathPatterns": []any{"tests/\u00e9*"},
+	}
+	output, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Build() exit=%d error=%v", exitCode, err)
+	}
+	assertStringArray(t, output["proofLikePaths"].([]any), []string{"tests/\u00e9preuve.go"})
+	report, reportExit, err := impact.Build(output)
+	if err != nil || reportExit == 0 {
+		t.Fatalf("impact.Build() exit=%d error=%v report=%#v, want unbound proof failure", reportExit, err, report)
+	}
+	assertContainsFailure(t, report, "proof changes without parent record need a rationale")
+}
+
 func TestBuildProjectsGeneratedArtifactPolicyFailures(t *testing.T) {
 	input := validComposeInput(t)
 	input["generatedArtifactPolicyState"] = map[string]any{

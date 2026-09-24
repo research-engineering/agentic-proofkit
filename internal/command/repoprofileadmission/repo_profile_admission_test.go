@@ -41,6 +41,28 @@ func TestBuildAdmitsValidRepoProfileAndRejectsRootPackageMismatch(t *testing.T) 
 	assertRecordContains(t, record.JSONValue(), "rootPackageName must match")
 }
 
+func TestBuildMatchesUnicodePytestPath(t *testing.T) {
+	input := validRepoProfileInput()
+	profile := input["profile"].(map[string]any)
+	profile["repository"].(map[string]any)["primaryLanguages"] = []any{"python"}
+	profile["proofs"].(map[string]any)["environmentClasses"] = []any{"local-python"}
+	profile["commandMatchers"] = []any{map[string]any{
+		"id": "proofkit.test.python", "kind": "python_pytest_contract",
+		"allowedTestPathGlobs": []any{"tests/\u00e9*.py"},
+		"credentialClass":      "none", "networkPolicy": "none", "parallelGroup": "local",
+	}}
+	facts := input["facts"].(map[string]any)
+	facts["commandEnvironmentPairs"] = []any{map[string]any{
+		"command":            "python3 -m pytest tests/\u00e9preuve.py -q",
+		"environmentClasses": []any{"local-python"},
+	}}
+	facts["trackedFiles"] = append(facts["trackedFiles"].([]any), "tests/\u00e9preuve.py")
+	record, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build() exit=%d error=%v record=%#v", exitCode, err, record)
+	}
+}
+
 func admitNonClaims(values []any) []string {
 	out := make([]string, 0, len(values))
 	for _, value := range values {

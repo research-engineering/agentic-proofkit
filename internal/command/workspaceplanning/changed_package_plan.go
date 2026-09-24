@@ -135,14 +135,15 @@ func escalationRuleInputs(raw any) ([]escalationRule, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace escalation pattern must be a repository-relative POSIX path")
 		}
-		if err := pathpattern.Validate(pattern, "path pattern"); err != nil {
+		compiled, err := pathpattern.Compile(pattern, "path pattern")
+		if err != nil {
 			return nil, err
 		}
 		reason, err := admit.RuleID(record["reason"], "workspace escalation reason")
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, escalationRule{Pattern: pattern, Reason: reason})
+		result = append(result, escalationRule{Pattern: compiled, Reason: reason})
 	}
 	return result, nil
 }
@@ -175,7 +176,7 @@ func escalationReasons(changedPaths []string, rules []escalationRule) []string {
 	reasons := map[string]struct{}{}
 	for _, rule := range rules {
 		for _, pathValue := range changedPaths {
-			if pathpattern.Match(rule.Pattern, pathValue) {
+			if rule.Pattern.MatchAdmitted(pathValue) {
 				reasons[rule.Reason] = struct{}{}
 			}
 		}

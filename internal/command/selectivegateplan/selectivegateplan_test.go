@@ -75,6 +75,22 @@ func TestBuildAcceptsMinimalExplicitPlanInput(t *testing.T) {
 	}
 }
 
+func TestBuildRetainsCommandsTriggeredByUnicodePaths(t *testing.T) {
+	input := validPlanInput()
+	input["changedPaths"] = []any{"docs/\u00e9clair.md"}
+	input["pathTriggeredCommands"] = []any{map[string]any{
+		"command":      planCommand("docs.check", "npm run docs-check", "docs_changed"),
+		"pathPatterns": []any{"docs/\u00e9*"},
+	}}
+	output, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Build() exit=%d error=%v", exitCode, err)
+	}
+	if !commandIDExists(output["requiredCommands"], "docs.check") {
+		t.Fatalf("Unicode path dropped a required command: %#v", output["requiredCommands"])
+	}
+}
+
 func TestBuildEmitsOwnerMarkedScanObligation(t *testing.T) {
 	input := validPlanInput()
 	input["scanObligation"] = map[string]any{
