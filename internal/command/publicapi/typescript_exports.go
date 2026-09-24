@@ -16,9 +16,14 @@ var (
 	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
+	ambiguousMTSGeneric    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])<[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*>[[:space:]]*\(`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
+	return collectExportsWithExtension(source, ".ts")
+}
+
+func collectExportsWithExtension(source string, extension string) ([]string, []string, error) {
 	scan, err := scanTypeScriptSource(source)
 	if err != nil {
 		return nil, nil, err
@@ -26,7 +31,10 @@ func CollectExports(source string) ([]string, []string, error) {
 	if commonJSBindingPattern.MatchString(scan.masked) {
 		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
-	runtimeExports, err := collectRuntimeExports(source)
+	if extension == ".mts" && ambiguousMTSGeneric.MatchString(scan.masked) {
+		return nil, nil, unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
+	}
+	runtimeExports, err := collectRuntimeExports(runtimeParserSource(source, scan), extension)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -58,8 +66,8 @@ func CollectExports(source string) ([]string, []string, error) {
 			continue
 		}
 		if match := typeDeclPattern.FindStringSubmatch(statement); match != nil {
-			if match[1] == "type" && invalidTypeAliasName(match[2]) {
-				return nil, nil, unsupportedTypeScriptSourceGrammar("type alias name is not admitted")
+			if invalidTypeDeclarationName(match[1], match[2]) {
+				return nil, nil, unsupportedTypeScriptSourceGrammar("type declaration name is not admitted")
 			}
 			typeExports[match[2]] = struct{}{}
 			continue
@@ -80,9 +88,39 @@ func CollectExports(source string) ([]string, []string, error) {
 	return runtimeExports, sortedSet(typeExports), nil
 }
 
-func invalidTypeAliasName(name string) bool {
+// Only erased interface names are substituted for esbuild; original bytes own type names and offsets.
+func runtimeParserSource(source string, scan typeScriptLexicalScan) string {
+	var rewritten []byte
+	for _, start := range scan.topLevelExportOffsets {
+		indices := typeDeclPattern.FindStringSubmatchIndex(scan.masked[start:])
+		if indices == nil || scan.masked[start+indices[2]:start+indices[3]] != "interface" {
+			continue
+		}
+		nameStart, nameEnd := start+indices[4], start+indices[5]
+		name := scan.masked[nameStart:nameEnd]
+		if name != "as" && name != "satisfies" {
+			continue
+		}
+		if rewritten == nil {
+			rewritten = []byte(source)
+		}
+		rewritten[nameStart] = '_'
+		for index := nameStart + 1; index < nameEnd; index++ {
+			rewritten[index] = 'x'
+		}
+	}
+	if rewritten == nil {
+		return source
+	}
+	return string(rewritten)
+}
+
+func invalidTypeDeclarationName(kind string, name string) bool {
+	if kind == "type" && name == "as" {
+		return true
+	}
 	switch name {
-	case "as", "await", "implements", "interface", "let", "package", "private", "protected", "public", "static", "yield":
+	case "any", "await", "bigint", "boolean", "implements", "interface", "let", "never", "number", "object", "package", "private", "protected", "public", "static", "string", "symbol", "undefined", "unknown", "yield":
 		return true
 	default:
 		return false
@@ -313,6 +351,9 @@ func addClauseExports(clause string, target map[string]struct{}, typeClause bool
 		}
 		typeOnly := typeClause
 		if isInlineTypeOnlyReexport(part) {
+			if typeClause {
+				return unsupportedTypeScriptSourceGrammar("duplicate type-only re-export modifier")
+			}
 			typeOnly = true
 			part = strings.TrimSpace(strings.TrimPrefix(part, "type "))
 		}

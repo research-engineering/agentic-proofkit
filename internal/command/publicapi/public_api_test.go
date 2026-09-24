@@ -627,9 +627,81 @@ func TestCollectExportsAdmitsEmptyESMScript(t *testing.T) {
 	assertStringSlice(t, typeExports, []string{})
 }
 
+func TestCollectExportsUsesModuleExtensionGrammar(t *testing.T) {
+	ambiguous := "export const id = <T>(value: T) => value;"
+	if runtime, _, err := collectExportsWithExtension(ambiguous, ".ts"); err != nil {
+		t.Fatalf(".ts exports=%v error=%v, want id", runtime, err)
+	} else {
+		assertStringSlice(t, runtime, []string{"id"})
+	}
+	for _, extension := range []string{".mts"} {
+		if _, _, err := collectExportsWithExtension(ambiguous, extension); err == nil {
+			t.Fatalf("%s admitted ambiguous generic-arrow grammar", extension)
+		}
+		valid := "export const id = <T,>(value: T) => value;"
+		if runtime, _, err := collectExportsWithExtension(valid, extension); err != nil {
+			t.Fatalf("%s exports=%v error=%v, want id", extension, runtime, err)
+		} else {
+			assertStringSlice(t, runtime, []string{"id"})
+		}
+	}
+}
+
+func TestVerifyTypeScriptPublicAPIRejectsCTSPath(t *testing.T) {
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["exportConditions"] = []any{map[string]any{
+		"condition": "import", "path": "./src/index.cts", "sourcePath": "packages/alpha/src/index.cts",
+	}}
+	_, exitCode, err := Verify(input, Options{RepoRoot: writeTypeScriptPackageFixture(t)})
+	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source with ESM semantics") {
+		t.Fatalf("Verify(.cts) exit=%d error=%v, want CommonJS source rejection", exitCode, err)
+	}
+}
+
+func TestVerifyTypeScriptPublicAPIUsesMTSGrammar(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
+	writeJSON(t, filepath.Join(packageRoot, "package.json"), map[string]any{
+		"name": "@example/alpha",
+		"exports": map[string]any{
+			".":          map[string]any{"import": "./src/index.mts", "types": "./src/index.mts"},
+			"./internal": nil,
+		},
+	})
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["exportConditions"] = []any{
+		map[string]any{"condition": "import", "path": "./src/index.mts", "sourcePath": "packages/alpha/src/index.mts"},
+		map[string]any{"condition": "types", "path": "./src/index.mts", "sourcePath": "packages/alpha/src/index.mts"},
+	}
+	entry["runtimeExports"] = []any{"id"}
+	entry["typeExports"] = []any{}
+	sourcePath := filepath.Join(packageRoot, "src", "index.mts")
+	if err := os.WriteFile(sourcePath, []byte("export const id = <T>(value: T) => value;"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
+		t.Fatalf("Verify(ambiguous .mts) exit=%d error=%v, want grammar rejection", exitCode, err)
+	}
+	if err := os.WriteFile(sourcePath, []byte("export const id = <T,>(value: T) => value;"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 0 || err != nil {
+		t.Fatalf("Verify(valid .mts) exit=%d error=%v, want passed", exitCode, err)
+	}
+}
+
 func TestCollectExportsRejectsInvalidTypeAliasNamedAs(t *testing.T) {
-	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type alias name is not admitted") {
+	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type declaration name is not admitted") {
 		t.Fatalf("CollectExports() error=%v, want contextual keyword rejection", err)
+	}
+}
+
+func TestCollectExportsRejectsDuplicateTypeOnlyModifier(t *testing.T) {
+	source := `export type { type Shape as Public } from "./other";`
+	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "duplicate type-only re-export modifier") {
+		t.Fatalf("CollectExports() error=%v, want duplicate modifier rejection", err)
 	}
 }
 

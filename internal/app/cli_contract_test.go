@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "be875acbe788aef287c5a19237fc0a99007a117dddffe4d847d8c37be19f14ed"
+	cliContractPublicABISHA256               = "182477df0a78c31404a0d119e61f15bbb32fd8fb75d4e988b0f9fd9493cbad7d"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2077,6 +2077,10 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v2" || grammar["mode"] != "fail_closed" {
 		t.Fatalf("TypeScript public API source grammar is not fail-closed: %#v", grammar)
 	}
+	if grammar["moduleSemantics"] != "static_esm_declarations_only" {
+		t.Fatalf("TypeScript public API module semantics drifted: %#v", grammar)
+	}
+	assertStringSet(t, stringsFromAny(grammar["supportedExtensions"].([]any)), []string{".mts", ".ts"}, "TypeScript public API source extensions")
 	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
 	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") {
 		t.Fatalf("TypeScript public API source grammar omits parser-backed typed variables: %s", admitted)
@@ -2087,10 +2091,11 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	assertStringSet(t, stringsFromAny(grammar["rejectedExportForms"].([]any)), []string{
 		"const enum exports",
 		"unresolved named runtime re-exports",
-		"compiler-invalid contextual type alias names",
+		"compiler-invalid type and interface declaration names",
+		"duplicate type-only re-export modifier",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "bare single-identifier angle bracket before parenthesis in .mts", "CommonJS-ambiguity guards"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}

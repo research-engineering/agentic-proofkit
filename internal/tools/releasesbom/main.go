@@ -87,11 +87,7 @@ type cyclonedxHash struct {
 }
 
 type cyclonedxLicense struct {
-	License cyclonedxLicenseID `json:"license"`
-}
-
-type cyclonedxLicenseID struct {
-	ID string `json:"id"`
+	Expression string `json:"expression"`
 }
 
 type cyclonedxProperty struct {
@@ -425,7 +421,7 @@ func admitReleaseFile(
 			Content: hex.EncodeToString(contentDigest[:]),
 		}},
 		Licenses: []cyclonedxLicense{{
-			License: cyclonedxLicenseID{ID: manifest.License},
+			Expression: manifest.License,
 		}},
 		Properties: []cyclonedxProperty{{
 			Name:  "proofkit:path",
@@ -496,7 +492,7 @@ func rootComponent(manifest packageJSON) cyclonedxComponent {
 		Version:    manifest.Version,
 		PackageURL: toolComponent + "@" + manifest.Version,
 		Licenses: []cyclonedxLicense{{
-			License: cyclonedxLicenseID{ID: manifest.License},
+			Expression: manifest.License,
 		}},
 		Properties: []cyclonedxProperty{
 			{Name: "proofkit:repository", Value: manifest.Repository.URL},

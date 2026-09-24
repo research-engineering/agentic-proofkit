@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"slices"
@@ -9,6 +10,31 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 )
+
+func TestCompoundLicenseUsesCycloneDXExpression(t *testing.T) {
+	manifest := packageJSON{Name: "@research-engineering/agentic-proofkit", Version: "1.2.3", License: "MIT AND BSD-3-Clause"}
+	path := filepath.Join(t.TempDir(), "artifact.txt")
+	writeFile(t, path, "artifact")
+	files, _, err := releaseFileEvidence(manifest, []string{path}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, component := range append([]cyclonedxComponent{rootComponent(manifest)}, files...) {
+		encoded, err := json.Marshal(component)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var value map[string]any
+		if err := json.Unmarshal(encoded, &value); err != nil {
+			t.Fatal(err)
+		}
+		licenses := value["licenses"].([]any)
+		choice := licenses[0].(map[string]any)
+		if choice["expression"] != manifest.License || len(choice) != 1 {
+			t.Fatalf("CycloneDX license choice=%v, want only SPDX expression", choice)
+		}
+	}
+}
 
 func TestArtifactSpecificRuntimeEdgesAndExcludedInventory(t *testing.T) {
 	source := []goModuleRecord{

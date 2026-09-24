@@ -198,11 +198,11 @@ var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.native-admission.branch-version", Summary: "Branch authority rejects names outside the Git branch shorthand grammar, and five package, registry, release, and consumer commands enforce full SemVer 2.0.0 after their existing field-specific text admission. Inputs previously accepted only because of incomplete local predicates now fail admission."},
 	{ChangeID: "proofkit.conformance-profile.ambiguous-id", Summary: "Conformance profile selection rejects duplicate records with the selected profileId instead of choosing whichever appears first. The full-manifest verification command continues to report duplicate IDs."},
 	{ChangeID: "proofkit.deployment-endpoint.admission", Summary: "Stable endpoints using case, trailing-root-dot or IDNA-equivalent variants of a declared temporary DNS suffix, endpoints matching caller-owned local indicators across Unicode, punycode or root-dot forms, and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches; announced historical leap seconds remain valid."},
-	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API manifests that truncate dollar-suffixed identifiers or claim exports from a later local declaration now fail verification. Unresolved named runtime re-exports, code identifiers module/exports, const enums, and compiler-invalid contextual type alias names fail closed; valid direct semicolonless exports and empty export inventories remain supported. The machine-readable sourceGrammar marker advances to v2."},
+	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API verification now admits only static ESM source declarations in .ts/.mts files; CommonJS .cts needs a repository-owned native witness. Manifests claiming truncated dollar-suffixed names or exports from a later local declaration fail. Unresolved runtime re-exports, code identifiers module/exports, const enums, invalid type names, duplicate type-only modifiers, and ambiguous .mts angle syntax fail closed; direct semicolonless exports and empty inventories remain supported. The sourceGrammar marker advances to v2."},
 }
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.distribution-license-closure", Summary: "npm and wheel license expressions identify the MIT and bundled BSD-3-Clause code in their distribution archives, and the bundled xxhash copyright notice is retained."},
+	{ChangeID: "proofkit.distribution-license-closure", Summary: "npm and wheel license expressions identify the MIT and bundled BSD-3-Clause code in their distribution archives; CycloneDX records the compound SPDX expression, and the bundled xxhash copyright notice is retained."},
 	{ChangeID: "proofkit.typescript-public-api.typed-variable", Summary: "The TypeScript public API scanner admits exported variable declarations with generic type annotations through an in-process TypeScript parser instead of rejecting valid angle-bracket syntax."},
 }
 
@@ -210,7 +210,7 @@ var currentMigrationSteps = []string{
 	"Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
 	"Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names or exports borrowed from a later local declaration.",
 	"Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
-	"Replace unresolved named runtime re-exports or code identifiers module/exports with direct ESM exports, or defer adoption until an owner-admitted target resolver exists; use explicit type-only re-exports only with separate target-symbol evidence.",
+	"Use a repository-owned native witness for .cts or built-module export claims. Replace unsupported runtime re-exports and code identifiers module/exports with direct ESM declarations, use unambiguous .mts generic syntax, and retain separate target-symbol evidence for type-only re-exports.",
 	"Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality.",
 }
 
@@ -271,7 +271,7 @@ func currentExpectedReleaseNotes() string {
 		"- Branch authority admits caller-owned branch facts but does not query Git refs or repository protection settings.",
 		"- Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
 		"- The UTC leap-second validator admits IERS-announced positive leap dates through 2016 and fails closed on unannounced future insertions until its source is updated.",
-		"- The TypeScript public API scanner supports its declared non-JSX lexical subset; TSX and arbitrary TypeScript syntax are not admitted.",
+		"- The TypeScript public API scanner supports only its declared non-JSX .ts/.mts ESM source subset; TSX, CommonJS .cts, arbitrary TypeScript syntax, and built-module runtime export claims are not admitted.",
 		"- Named runtime re-exports, code identifiers module/exports, and const enum declarations are not admitted; explicit type-only re-exports do not prove target-symbol existence.",
 		"- Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints.",
 		"",

@@ -18,12 +18,13 @@ type runtimeExportMetafile struct {
 	} `json:"outputs"`
 }
 
-func collectRuntimeExports(source string) ([]string, error) {
+func collectRuntimeExports(source string, extension string) ([]string, error) {
+	sourcefile := "entry" + extension
 	result := api.Build(api.BuildOptions{
 		Stdin: &api.StdinOptions{
 			Contents:   source,
 			Loader:     api.LoaderTS,
-			Sourcefile: "entry.ts",
+			Sourcefile: sourcefile,
 		},
 		Bundle:      false,
 		Format:      api.FormatESModule,
@@ -45,9 +46,9 @@ func collectRuntimeExports(source string) ([]string, error) {
 	if len(metadata.Inputs) != 1 {
 		return nil, fmt.Errorf("TypeScript public API parser input inventory is invalid")
 	}
-	inputFormat := metadata.Inputs["entry.ts"].Format
+	inputFormat := metadata.Inputs[sourcefile].Format
 	for _, output := range metadata.Outputs {
-		if output.EntryPoint != "entry.ts" {
+		if output.EntryPoint != sourcefile {
 			return nil, fmt.Errorf("TypeScript public API parser output has an unexpected entrypoint")
 		}
 		if (inputFormat == "" || inputFormat == "cjs") && (len(output.Exports) == 0 || len(output.Exports) == 1 && output.Exports[0] == "default") {

@@ -48,6 +48,8 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		{"export type { Shape$ }\nfrom './other';", "export type { Shape$ }", "Shape$"},
 		{"export { type\nShape$ as Public } from './other';", "export { type Shape$ as Public }", "Public"},
 		{"export { type as as Public } from './other';", "export { type as as Public }", "Public"},
+		{"export interface as { value: number }", "export interface as", "as"},
+		{"export interface satisfies { value: number }; export const A = 1;", "export interface satisfies", "satisfies"},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")
@@ -168,7 +170,7 @@ func TestInvalidContextualTypeAliasMatchesCompilerRejection(t *testing.T) {
 	if output, err := command.CombinedOutput(); err == nil || !strings.Contains(string(output), "TS1005") {
 		t.Fatalf("TypeScript compiler error=%v output=%s, want syntax rejection", err, output)
 	}
-	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type alias name is not admitted") {
+	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type declaration name is not admitted") {
 		t.Fatalf("CollectExports() error=%v, want syntax rejection", err)
 	}
 }
@@ -188,6 +190,7 @@ func TestTypeAliasKeywordAdmissionDoesNotExceedCompiler(t *testing.T) {
 		"break", "case", "catch", "class", "const", "continue", "debugger", "delete", "do", "else", "export", "extends", "false", "finally",
 		"for", "function", "if", "import", "in", "instanceof", "new", "null", "return", "super", "switch", "this", "throw", "true", "try",
 		"typeof", "var", "void", "while", "with", "implements", "private", "protected", "public", "static", "let", "package", "arguments", "eval",
+		"any", "unknown", "never", "string", "number", "boolean", "undefined", "object", "symbol", "bigint", "intrinsic",
 	} {
 		source := "export type " + name + " = number;"
 		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
@@ -199,5 +202,89 @@ func TestTypeAliasKeywordAdmissionDoesNotExceedCompiler(t *testing.T) {
 		if compilerErr != nil && admissionErr == nil {
 			t.Errorf("CollectExports(%q) accepted compiler-invalid source: %s", source, output)
 		}
+	}
+}
+
+func TestInterfaceKeywordAdmissionDoesNotExceedCompiler(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	path := filepath.Join(t.TempDir(), "entry.ts")
+	for _, name := range []string{
+		"as", "satisfies", "from", "type", "interface", "await", "yield", "implements", "private", "protected", "public", "static", "let", "package",
+		"any", "unknown", "never", "string", "number", "boolean", "undefined", "object", "symbol", "bigint", "intrinsic",
+	} {
+		source := "export interface " + name + " { value: number }"
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(compiler, "--noEmit", "--pretty", "false", path)
+		output, compilerErr := command.CombinedOutput()
+		_, _, admissionErr := CollectExports(source)
+		if compilerErr != nil && admissionErr == nil {
+			t.Errorf("CollectExports(%q) accepted compiler-invalid source: %s", source, output)
+		}
+	}
+}
+
+func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	for _, test := range []struct {
+		extension string
+		source    string
+		valid     bool
+	}{
+		{".ts", "export const id = <T>(value: T) => value;", true},
+		{".mts", "export const id = <T>(value: T) => value;", false},
+		{".mts", "export const id = <T,>(value: T) => value;", true},
+	} {
+		path := filepath.Join(t.TempDir(), "entry"+test.extension)
+		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(compiler, "--noEmit", "--module", "nodenext", "--moduleResolution", "nodenext", path)
+		output, compilerErr := command.CombinedOutput()
+		_, _, admissionErr := collectExportsWithExtension(test.source, test.extension)
+		if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
+			t.Fatalf("%s source=%q compilerError=%v output=%s admissionError=%v, valid=%t", test.extension, test.source, compilerErr, output, admissionErr, test.valid)
+		}
+	}
+}
+
+func TestDuplicateTypeOnlyModifierMatchesCompilerRejection(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	folder := t.TempDir()
+	source := `export type { type Shape as Public } from "./other";`
+	if err := os.WriteFile(filepath.Join(folder, "entry.ts"), []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(folder, "other.ts"), []byte("export type Shape = string;"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command(compiler, "--noEmit", filepath.Join(folder, "entry.ts"))
+	if output, err := command.CombinedOutput(); err == nil || !strings.Contains(string(output), "TS2207") {
+		t.Fatalf("TypeScript compiler error=%v output=%s, want TS2207", err, output)
+	}
+	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "duplicate type-only re-export modifier") {
+		t.Fatalf("CollectExports() error=%v, want duplicate modifier rejection", err)
 	}
 }

@@ -174,6 +174,8 @@ func TestBuildRejectsCallerLocalIndicatorsAcrossDNSRepresentations(t *testing.T)
 		{"b\u00fcro.example", "xn--bro-hoa.example"},
 		{"b\u00fcro", "xn--meinbro-r2a.example"},
 		{"bu\u0308ro", "xn--meinbro-r2a.example"},
+		{"b\u00fcro.example.", "xn--meinbro-r2a.example."},
+		{"b\u00fcro.example\u3002", "xn--meinbro-r2a.example."},
 		{"xn--bro-hoa.example", "b\u00fcro.example"},
 		{"internal.example.", "internal.example"},
 	} {
@@ -201,6 +203,9 @@ func TestBuildDoesNotExpandRootDotIndicatorAcrossLabelBoundary(t *testing.T) {
 		host      string
 	}{
 		{"internal.example.", "internal.examplez"},
+		{"internal.example\u3002", "internal.examplez"},
+		{"internal.example\uff0e", "internal.examplez"},
+		{"internal.example\uff61", "internal.examplez"},
 		{"b\u00fcro.example.", "xn--bro-hoa.examplez"},
 	} {
 		input := validDeploymentEvidenceInput()

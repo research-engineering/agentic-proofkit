@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"golang.org/x/net/idna"
+	"golang.org/x/text/unicode/norm"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
@@ -659,34 +660,46 @@ func isLocalRef(value string, policy policy) bool {
 }
 
 func isLocalEndpointHost(rawHost string, canonicalHost string, policy policy) bool {
-	if isLocalRef(rawHost, policy) || isLocalRef(canonicalHost, policy) {
+	if isLocalRef(rawHost, policy) {
 		return true
 	}
 	unicodeHost, err := idna.Lookup.ToUnicode(canonicalHost)
-	if err == nil && isLocalRef(unicodeHost, policy) {
-		return true
+	if err != nil {
+		unicodeHost = canonicalHost
 	}
+	asciiWithRoot := strings.ToLower(canonicalHost + ".")
+	unicodeWithRoot := strings.ToLower(unicodeHost + ".")
 	for _, indicator := range policy.LocalRefIndicators {
-		canonicalIndicator, err := canonicalEndpointHost(indicator)
-		if err != nil {
-			continue
-		}
-		unicodeIndicator, err := idna.Lookup.ToUnicode(canonicalIndicator)
-		if strings.HasSuffix(indicator, ".") {
-			if dnsSuffixMatch(canonicalHost, canonicalIndicator) || err == nil && dnsSuffixMatch(strings.ToLower(unicodeHost), strings.ToLower(unicodeIndicator)) {
-				return true
-			}
-			continue
-		}
-		if strings.Contains(canonicalHost, canonicalIndicator) || err == nil && strings.Contains(strings.ToLower(unicodeHost), strings.ToLower(unicodeIndicator)) {
+		normalized := normalizeLocalHostIndicator(indicator)
+		if strings.Contains(asciiWithRoot, strings.ToLower(normalized)) || strings.Contains(unicodeWithRoot, strings.ToLower(normalized)) {
 			return true
 		}
 	}
 	return false
 }
 
-func dnsSuffixMatch(host string, suffix string) bool {
-	return host == suffix || strings.HasSuffix(host, "."+suffix)
+func normalizeLocalHostIndicator(indicator string) string {
+	mapped := strings.Map(func(character rune) rune {
+		switch character {
+		case '\u3002', '\uff0e', '\uff61':
+			return '.'
+		default:
+			return character
+		}
+	}, indicator)
+	if !strings.ContainsFunc(mapped, func(character rune) bool { return character > 127 }) {
+		return mapped
+	}
+	rootDot := strings.HasSuffix(mapped, ".")
+	core := strings.TrimSuffix(mapped, ".")
+	unicodeValue, err := idna.Lookup.ToUnicode(core)
+	if err != nil {
+		return norm.NFC.String(mapped)
+	}
+	if rootDot {
+		return unicodeValue + "."
+	}
+	return unicodeValue
 }
 
 func hasTemporaryEndpointSuffix(value string, policy policy) bool {
