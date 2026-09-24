@@ -559,12 +559,8 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsDuplicatePackageIdentity(t *test
 	}
 }
 
-func TestCollectExportsAcceptsMultilineReexports(t *testing.T) {
+func TestCollectExportsAcceptsMultilineTypeReexports(t *testing.T) {
 	source := strings.Join([]string{
-		"export {",
-		"  VALUE,",
-		"  makeThing,",
-		"} from \"./thing.js\";",
 		"export type {",
 		"  Mode,",
 		"  Thing,",
@@ -575,17 +571,15 @@ func TestCollectExportsAcceptsMultilineReexports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{"VALUE", "makeThing"})
+	assertStringSlice(t, runtimeExports, []string{})
 	assertStringSlice(t, typeExports, []string{"Mode", "Thing"})
 }
 
 func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 	source := strings.Join([]string{
-		"export { type Mode, VALUE, type Thing as PublicThing } from \"./thing.js\";",
-		"export { type as runtimeType } from \"./named-type.js\";",
+		"export { type Mode, type Thing as PublicThing } from \"./thing.js\";",
 		"export {",
-		"  type Options,",
-		"  makeThing,",
+		"  type\nOptions,",
 		"} from \"./more.js\";",
 	}, "\n")
 
@@ -593,8 +587,21 @@ func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{"VALUE", "makeThing", "runtimeType"})
+	assertStringSlice(t, runtimeExports, []string{})
 	assertStringSlice(t, typeExports, []string{"Mode", "Options", "PublicThing"})
+}
+
+func TestCollectExportsRejectsUnresolvedRuntimeReexportsAndConstEnum(t *testing.T) {
+	for _, source := range []string{
+		`export { VALUE } from "./thing.js";`,
+		`export { type Mode, VALUE } from "./thing.js";`,
+		"export { type as\nPublic } from './thing.js';",
+		`export const enum E { A, B }`,
+	} {
+		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "not admitted") {
+			t.Fatalf("CollectExports(%q) error=%v, want unresolved export rejection", source, err)
+		}
+	}
 }
 
 func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testing.T) {
@@ -694,6 +701,14 @@ func TestVerifyTypeScriptPublicAPITracksContinuationAndTemplateASI(t *testing.T)
 		{"let C = 0;\nexport const A = 1\nC = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
 		{"export function\nasync() { return 1; }", []any{"async"}, []any{}},
 		{"export const\nasync = 1;", []any{"async"}, []any{}},
+		{"export const values: Array<string> = [];", []any{"values"}, []any{}},
+		{"export const enum$ = 1;", []any{"enum$"}, []any{}},
+		{"const x = 1; export const A = typeof\nx, B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"class X {} export const A = new\nX(), B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"export const A = void\n0, B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"const tag = (parts: TemplateStringsArray) => parts[0]; export const A = tag\n`x`, B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"export const A = \"hello\\\nthere\", B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"let B = 0, i = 0; export const A = 1\n++i, B = 2;", []any{"A"}, []any{"A", "B"}},
 	} {
 		repoRoot := writeTypeScriptPackageFixture(t)
 		sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
@@ -712,6 +727,61 @@ func TestVerifyTypeScriptPublicAPITracksContinuationAndTemplateASI(t *testing.T)
 		output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
 		if err != nil || exitCode != 1 {
 			t.Fatalf("Verify(wrong manifest) output=%#v exit=%d error=%v", output, exitCode, err)
+		}
+	}
+}
+
+func TestVerifyTypeScriptPublicAPIAdmitsMultilineTypeReexports(t *testing.T) {
+	for _, test := range []struct {
+		source       string
+		runtimeNames []any
+		typeNames    []any
+	}{
+		{"export type { Shape$ }\nfrom './other';", []any{}, []any{"Shape$"}},
+		{"export { type\nShape$ as Public } from './other';", []any{}, []any{"Public"}},
+	} {
+		repoRoot := writeTypeScriptPackageFixture(t)
+		sourceDir := filepath.Join(repoRoot, "packages", "alpha", "src")
+		if err := os.WriteFile(filepath.Join(sourceDir, "index.ts"), []byte(test.source), 0o600); err != nil {
+			t.Fatalf("write source: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(sourceDir, "other.ts"), []byte("export const A = 1; export type Shape$ = { value: string };"), 0o600); err != nil {
+			t.Fatalf("write re-export source: %v", err)
+		}
+		input := publicAPIManifest()
+		entry := input["entries"].([]any)[0].(map[string]any)
+		entry["runtimeExports"] = test.runtimeNames
+		entry["typeExports"] = test.typeNames
+		output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+		if err != nil || exitCode != 0 {
+			t.Fatalf("Verify(correct re-export manifest) output=%#v exit=%d error=%v", output, exitCode, err)
+		}
+		entry["runtimeExports"] = []any{}
+		entry["typeExports"] = []any{}
+		output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
+		if err != nil || exitCode != 1 {
+			t.Fatalf("Verify(omitted re-export manifest) output=%#v exit=%d error=%v", output, exitCode, err)
+		}
+	}
+}
+
+func TestVerifyTypeScriptPublicAPIRejectsUnresolvedRuntimeReexport(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourceDir := filepath.Join(repoRoot, "packages", "alpha", "src")
+	if err := os.WriteFile(filepath.Join(sourceDir, "index.ts"), []byte("export { T }\nfrom './other';"), 0o600); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sourceDir, "other.ts"), []byte("export type T = string;"), 0o600); err != nil {
+		t.Fatalf("write type-only target: %v", err)
+	}
+	for _, names := range [][]any{{}, {"T"}} {
+		input := publicAPIManifest()
+		entry := input["entries"].([]any)[0].(map[string]any)
+		entry["runtimeExports"] = names
+		entry["typeExports"] = []any{}
+		_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+		if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "unresolved runtime re-exports") {
+			t.Fatalf("Verify(runtimeExports=%v) exit=%d error=%v, want fail-closed re-export", names, exitCode, err)
 		}
 	}
 }
@@ -767,7 +837,6 @@ func TestCollectExportsRejectsLexicallyAmbiguousOrOutOfGrammarSources(t *testing
 		{name: "unicode code identifier", source: "const \u03c0 = 1; export const Public = 3;"},
 		{name: "template interpolation", source: "const value = `prefix ${1}`; export const Public = 3;"},
 		{name: "escaped code identifier", source: "const \\u0061 = 1; export const Public = 3;"},
-		{name: "top-level angle syntax", source: "export const values: Array<string> = [];"},
 		{name: "unterminated block comment", source: "/* hidden export const Ghost = 1;"},
 		{name: "unbalanced delimiter", source: "if (true) { export const Nested = 1;"},
 	}

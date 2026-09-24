@@ -7,23 +7,28 @@ import (
 )
 
 var (
-	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
-	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
+	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["']`)
+	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["']`)
 	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s|[({<;=]|$)`)
 	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s|[({<;=]|$)`)
-	varDeclPattern        = regexp.MustCompile(`^export\s+(?:const|let|var)\s+(.+?);?$`)
+	constEnumPattern      = regexp.MustCompile(`^export\s+const\s+enum\s+`)
+	varDeclStartPattern   = regexp.MustCompile(`^export\s+(?:const|let|var)\s+`)
 	exportClauseNameRegex = regexp.MustCompile(`\bas\s+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
-	runtimeExports := map[string]struct{}{}
-	typeExports := map[string]struct{}{}
-	statements, err := exportStatements(source)
+	scan, err := scanTypeScriptSource(source)
 	if err != nil {
 		return nil, nil, err
 	}
-	for _, statement := range statements {
+	runtimeExports, err := collectRuntimeExports(source)
+	if err != nil {
+		return nil, nil, err
+	}
+	typeExports := map[string]struct{}{}
+	for _, start := range scan.topLevelExportOffsets {
+		statement := scan.masked[start:]
 		if strings.HasPrefix(statement, "export *") {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use export *")
 		}
@@ -40,32 +45,27 @@ func CollectExports(source string) ([]string, []string, error) {
 			continue
 		}
 		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
-			if err := addNamedClauseExports(match[1], runtimeExports, typeExports); err != nil {
+			if err := addNamedClauseTypeExports(match[1], typeExports); err != nil {
 				return nil, nil, err
 			}
 			continue
 		}
-		if match := runtimeDeclPattern.FindStringSubmatch(statement); match != nil {
-			runtimeExports[match[1]] = struct{}{}
+		if runtimeDeclPattern.MatchString(statement) {
 			continue
 		}
 		if match := typeDeclPattern.FindStringSubmatch(statement); match != nil {
 			typeExports[match[1]] = struct{}{}
 			continue
 		}
-		if match := varDeclPattern.FindStringSubmatch(statement); match != nil {
-			names, err := variableExportNames(match[1])
-			if err != nil {
-				return nil, nil, err
-			}
-			for _, name := range names {
-				runtimeExports[name] = struct{}{}
-			}
+		if constEnumPattern.MatchString(statement) {
+			return nil, nil, fmt.Errorf("TypeScript public API const enum exports are not admitted")
+		}
+		if varDeclStartPattern.MatchString(statement) {
 			continue
 		}
 		return nil, nil, fmt.Errorf("unsupported public export statement")
 	}
-	return sortedSet(runtimeExports), sortedSet(typeExports), nil
+	return runtimeExports, sortedSet(typeExports), nil
 }
 
 type typeScriptLexicalState uint8
@@ -82,26 +82,6 @@ const (
 type typeScriptLexicalScan struct {
 	masked                string
 	topLevelExportOffsets []int
-}
-
-func exportStatements(source string) ([]string, error) {
-	scan, err := scanTypeScriptSource(source)
-	if err != nil {
-		return nil, err
-	}
-	statements := make([]string, 0, len(scan.topLevelExportOffsets))
-	for index, start := range scan.topLevelExportOffsets {
-		limit := len(source)
-		if index+1 < len(scan.topLevelExportOffsets) {
-			limit = scan.topLevelExportOffsets[index+1]
-		}
-		end := exportStatementEnd(scan.masked, start, limit)
-		statement := strings.Join(strings.Fields(scan.masked[start:end]), " ")
-		if statement != "" {
-			statements = append(statements, statement)
-		}
-	}
-	return statements, nil
 }
 
 func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
@@ -277,113 +257,6 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts}, nil
 }
 
-func exportStatementEnd(masked string, start int, limit int) int {
-	parenDepth := 0
-	bracketDepth := 0
-	braceDepth := 0
-	lastTokenByte := byte(0)
-	lastTokenIndex := -1
-	nextToken := start
-	wordStart := -1
-	identifierCount := 0
-	lastWord := ""
-	for index := start; index < limit; index++ {
-		current := masked[index]
-		if isASCIITypeScriptIdentifierByte(current) {
-			if wordStart < 0 {
-				wordStart = index
-				if identifierCount < 5 {
-					identifierCount++
-				}
-			}
-		} else if wordStart >= 0 {
-			lastWord = masked[wordStart:index]
-			wordStart = -1
-		}
-		switch current {
-		case '(':
-			parenDepth++
-		case ')':
-			if parenDepth > 0 {
-				parenDepth--
-			}
-		case '[':
-			bracketDepth++
-		case ']':
-			if bracketDepth > 0 {
-				bracketDepth--
-			}
-		case '{':
-			braceDepth++
-		case '}':
-			if braceDepth > 0 {
-				braceDepth--
-			}
-		case ';':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				return index + 1
-			}
-		case '\n', '\r':
-			priorByte := byte(0)
-			if lastTokenIndex > start {
-				priorByte = masked[lastTokenIndex-1]
-			}
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 &&
-				canEndAfter(lastTokenByte, priorByte) && !incompleteExportHeader(lastWord, identifierCount) {
-				if nextToken <= index {
-					nextToken = index + 1
-					for nextToken < limit && isLineSpace(masked[nextToken]) {
-						nextToken++
-					}
-				}
-				if startsNewTopLevelStatement(masked[nextToken:limit]) {
-					return index
-				}
-			}
-		}
-		if !isLineSpace(current) {
-			lastTokenByte = current
-			lastTokenIndex = index
-		}
-	}
-	return limit
-}
-
-func canEndAfter(last byte, prior byte) bool {
-	if last == '+' || last == '-' {
-		return prior == last
-	}
-	return last != 0 && !strings.ContainsRune("=,*/?:.([{&|<>%^~", rune(last))
-}
-
-func isLineSpace(value byte) bool {
-	return value == ' ' || value == '\t' || value == '\r' || value == '\n'
-}
-
-func incompleteExportHeader(lastWord string, identifierCount int) bool {
-	if identifierCount > 3 {
-		return false
-	}
-	switch lastWord {
-	case "export", "abstract", "async", "const", "let", "var", "function", "class", "enum", "interface", "type":
-		return true
-	}
-	return false
-}
-
-func startsNewTopLevelStatement(rest string) bool {
-	if rest == "" {
-		return false
-	}
-	for _, continuation := range []string{"as", "satisfies", "instanceof", "in"} {
-		if strings.HasPrefix(rest, continuation) && (len(rest) == len(continuation) || !isASCIITypeScriptIdentifierByte(rest[len(continuation)])) {
-			return false
-		}
-	}
-	first := rest[0]
-	return isASCIITypeScriptIdentifierByte(first) || first == '\'' || first == '"' || first == '`' || first == '{'
-}
-
 func isASCIITypeScriptIdentifierByte(value byte) bool {
 	return value == '_' || value == '$' || value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
 }
@@ -403,17 +276,17 @@ func unsupportedTypeScriptSourceGrammar(reason string) error {
 }
 
 func addTypeClauseExports(clause string, target map[string]struct{}) error {
-	return addClauseExports(clause, nil, target, true)
+	return addClauseExports(clause, target, true)
 }
 
-func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) error {
-	return addClauseExports(clause, runtimeTarget, typeTarget, false)
+func addNamedClauseTypeExports(clause string, target map[string]struct{}) error {
+	return addClauseExports(clause, target, false)
 }
 
-func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) error {
+func addClauseExports(clause string, target map[string]struct{}, typeClause bool) error {
 	body := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(clause), "{"), "}")
 	for _, rawPart := range strings.Split(body, ",") {
-		part := strings.TrimSpace(rawPart)
+		part := strings.Join(strings.Fields(rawPart), " ")
 		if part == "" {
 			continue
 		}
@@ -432,11 +305,10 @@ func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarg
 		if !identifierRegex.MatchString(name) {
 			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
 		}
-		if typeOnly {
-			typeTarget[name] = struct{}{}
-			continue
+		if !typeOnly {
+			return fmt.Errorf("TypeScript public API unresolved runtime re-exports are not admitted")
 		}
-		runtimeTarget[name] = struct{}{}
+		target[name] = struct{}{}
 	}
 	return nil
 }
@@ -447,69 +319,4 @@ func isInlineTypeOnlyReexport(part string) bool {
 	}
 	rest := strings.TrimSpace(strings.TrimPrefix(part, "type "))
 	return rest != "" && !strings.HasPrefix(rest, "as ")
-}
-
-func variableExportNames(declarations string) ([]string, error) {
-	names := []string{}
-	parts, err := splitTopLevelComma(declarations)
-	if err != nil {
-		return nil, err
-	}
-	for _, rawPart := range parts {
-		part := strings.TrimSpace(rawPart)
-		if equals := strings.Index(part, "="); equals >= 0 {
-			part = strings.TrimSpace(part[:equals])
-		}
-		if colon := strings.Index(part, ":"); colon >= 0 {
-			part = strings.TrimSpace(part[:colon])
-		}
-		if !identifierRegex.MatchString(part) {
-			return nil, fmt.Errorf("TypeScript public API variable exports must use identifier declarations")
-		}
-		names = append(names, part)
-	}
-	return names, nil
-}
-
-func splitTopLevelComma(value string) ([]string, error) {
-	parts := []string{}
-	start := 0
-	parenDepth := 0
-	bracketDepth := 0
-	braceDepth := 0
-	for index, char := range value {
-		switch char {
-		case '(':
-			parenDepth++
-		case ')':
-			if parenDepth > 0 {
-				parenDepth--
-			}
-		case '[':
-			bracketDepth++
-		case ']':
-			if bracketDepth > 0 {
-				bracketDepth--
-			}
-		case '{':
-			braceDepth++
-		case '}':
-			if braceDepth > 0 {
-				braceDepth--
-			}
-		case '<', '>':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				if char != '>' || index == 0 || value[index-1] != '=' {
-					return nil, unsupportedTypeScriptSourceGrammar("top-level angle-bracket syntax in variable exports is not admitted")
-				}
-			}
-		case ',':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				parts = append(parts, value[start:index])
-				start = index + len(string(char))
-			}
-		}
-	}
-	parts = append(parts, value[start:])
-	return parts, nil
 }

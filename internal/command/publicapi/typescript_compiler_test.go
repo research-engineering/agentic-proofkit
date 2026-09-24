@@ -35,11 +35,24 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		{"let C = 0;\nexport const A = 1\nC = 2, C = 3;", "", ""},
 		{"export function\nasync() { return 1; }", "", ""},
 		{"export const\nasync = 1;", "", ""},
+		{"export const values: Array<string> = [];", "", ""},
+		{"export const enum$ = 1;", "", ""},
+		{"const x = 1; export const A = typeof\nx, B = 2;", "", ""},
+		{"class X {} export const A = new\nX(), B = 2;", "", ""},
+		{"export const A = void\n0, B = 2;", "", ""},
+		{"const tag = (parts: TemplateStringsArray) => parts[0]; export const A = tag\n`x`, B = 2;", "", ""},
+		{"export const A = \"hello\\\nthere\", B = 2;", "", ""},
+		{"let B = 0, i = 0; export const A = 1\n++i, B = 2;", "", ""},
+		{"export type { Shape$ }\nfrom './other';", "export type { Shape$ }", "Shape$"},
+		{"export { type\nShape$ as Public } from './other';", "export { type Shape$ as Public }", "Public"},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")
 		if err := os.WriteFile(sourcePath, []byte(test.source), 0o600); err != nil {
 			t.Fatalf("write TypeScript fixture: %v", err)
+		}
+		if err := os.WriteFile(filepath.Join(folder, "other.ts"), []byte("export const A = 1; export type Shape$ = { value: string };"), 0o600); err != nil {
+			t.Fatalf("write re-export fixture: %v", err)
 		}
 		command := exec.Command(compiler, "--target", "es2022", "--module", "commonjs", "--declaration", "--outDir", folder, sourcePath)
 		output, err := command.CombinedOutput()

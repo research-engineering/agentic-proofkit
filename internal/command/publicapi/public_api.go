@@ -154,6 +154,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
 			"TypeScript public API verification does not parse JSX or admit TSX source files.",
 			"TypeScript public API verification admits a documented fail-closed export grammar subset; it does not parse unrestricted TypeScript.",
+			"Explicit type-only re-exports are declarative; this command does not resolve target symbols and rejects unresolved runtime re-exports.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},
 	}, exitCode, nil

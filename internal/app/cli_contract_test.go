@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "13236cca7b7405e41e9c7a0415ec0384a20cc92a602c0a4d8735f24d29708eac"
+	cliContractPublicABISHA256               = "93f42efd4c41eee876cf45d48ee5662dacec5658c68b6fbf054dceeb0842f413"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2074,14 +2074,31 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
 	}
 	grammar := inputContract["sourceGrammar"].(map[string]any)
-	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v1" || grammar["mode"] != "fail_closed" {
+	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v2" || grammar["mode"] != "fail_closed" {
 		t.Fatalf("TypeScript public API source grammar is not fail-closed: %#v", grammar)
 	}
+	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
+	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") {
+		t.Fatalf("TypeScript public API source grammar omits parser-backed typed variables: %s", admitted)
+	}
+	if !strings.Contains(admitted, "explicit inline type-only re-exports") || strings.Contains(admitted, "named runtime re-exports") {
+		t.Fatalf("TypeScript public API source grammar misstates re-export authority: %s", admitted)
+	}
+	assertStringSet(t, stringsFromAny(grammar["rejectedExportForms"].([]any)), []string{
+		"const enum exports",
+		"unresolved named runtime re-exports",
+	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}
+	}
+	if strings.Contains(rejected, "angle-bracket syntax") {
+		t.Fatalf("TypeScript public API grammar still rejects admitted typed variables: %s", rejected)
+	}
+	if !strings.Contains(strings.Join(stringsFromAny(inputContract["nonClaims"].([]any)), " "), "does not resolve re-export target symbols") {
+		t.Fatal("TypeScript public API contract omits target-resolution non-claim")
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
