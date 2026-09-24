@@ -124,6 +124,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 		switch state {
 		case typeScriptLineComment:
 			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
+				masked[index], masked[index+1], masked[index+2] = '\n', ' ', ' '
 				state = typeScriptCode
 				index += width - 1
 				continue
@@ -135,11 +136,14 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptBlockComment:
-			if current == '*' && next == '/' {
+			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
+				masked[index], masked[index+1], masked[index+2] = '\n', ' ', ' '
+				index += width - 1
+			} else if current == '*' && next == '/' {
 				masked[index], masked[index+1] = ' ', ' '
 				state = typeScriptCode
 				index++
-			} else if current != '\n' {
+			} else if current != '\n' && current != '\r' {
 				masked[index] = ' '
 			}
 			continue
@@ -177,10 +181,16 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptTemplateQuoted:
-			if current != '\n' {
+			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
+				masked[index], masked[index+1], masked[index+2] = '\n', ' ', ' '
+				index += width - 1
+				continue
+			}
+			if current != '\n' && current != '\r' && current != '`' {
 				masked[index] = ' '
 			}
 			if escaped {
+				masked[index] = ' '
 				escaped = false
 			} else if current == '\\' {
 				escaped = true
@@ -214,7 +224,6 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			state = typeScriptDoubleQuoted
 			continue
 		case current == '`':
-			masked[index] = ' '
 			state = typeScriptTemplateQuoted
 			continue
 		case current == '\\':
@@ -272,7 +281,12 @@ func exportStatementEnd(masked string, start int, limit int) (int, error) {
 	bracketDepth := 0
 	braceDepth := 0
 	nextNonSpace := start
+	nextToken := ""
+	lastContent := start - 1
 	for index := start; index < limit; index++ {
+		if !strings.ContainsRune(" \t\r\n", rune(masked[index])) {
+			lastContent = index
+		}
 		switch masked[index] {
 		case '(':
 			parenDepth++
@@ -305,28 +319,59 @@ func exportStatementEnd(masked string, start int, limit int) (int, error) {
 				for nextNonSpace < limit && strings.ContainsRune(" \t\r\n", rune(masked[nextNonSpace])) {
 					nextNonSpace++
 				}
+				nextToken = ""
+				if nextNonSpace < limit && isASCIITypeScriptIdentifierByte(masked[nextNonSpace]) {
+					tokenEnd := nextNonSpace + 1
+					for tokenEnd < limit && isASCIITypeScriptIdentifierByte(masked[tokenEnd]) {
+						tokenEnd++
+					}
+					nextToken = masked[nextNonSpace:tokenEnd]
+				}
 			}
-			next := masked[nextNonSpace:limit]
-			for _, keyword := range []string{"const", "let", "var", "function", "class", "interface", "type", "enum", "import"} {
-				if !strings.HasPrefix(next, keyword) || len(next) > len(keyword) && isASCIITypeScriptIdentifierByte(next[len(keyword)]) {
-					continue
-				}
-				prefix := strings.TrimSpace(masked[start:index])
-				if prefix == "export" {
-					break
-				}
-				if prefix == "" || !mayTerminateExportStatement(prefix[len(prefix)-1]) {
+			if nextToken == "" {
+				continue
+			}
+			token := nextToken
+			if lastContent == start+len("export")-1 || token == "as" || token == "satisfies" || token == "in" || token == "instanceof" {
+				continue
+			}
+			if mayTerminateExportStatement(masked, lastContent) {
+				return index, nil
+			}
+			if token == "function" || token == "class" || token == "const" && hasTrailingTypeScriptToken(masked, lastContent, "as") {
+				continue
+			}
+			for _, declaration := range []string{"const", "let", "var", "interface", "type", "enum", "import", "declare", "using"} {
+				if token == declaration {
 					return 0, unsupportedTypeScriptSourceGrammar("ambiguous semicolonless export boundary")
 				}
-				return index, nil
 			}
 		}
 	}
 	return limit, nil
 }
 
-func mayTerminateExportStatement(last byte) bool {
-	return isASCIITypeScriptIdentifierByte(last) || strings.ContainsRune(")]}\"'`", rune(last))
+func mayTerminateExportStatement(masked string, last int) bool {
+	if last < 0 {
+		return false
+	}
+	if last > 0 && (masked[last] == '+' || masked[last] == '-') && masked[last-1] == masked[last] {
+		return true
+	}
+	if !isASCIITypeScriptIdentifierByte(masked[last]) {
+		return strings.ContainsRune(")]}\"'`", rune(masked[last]))
+	}
+	for _, incomplete := range []string{"void", "new", "typeof", "delete", "await", "yield", "instanceof", "in", "as", "satisfies"} {
+		if hasTrailingTypeScriptToken(masked, last, incomplete) {
+			return false
+		}
+	}
+	return true
+}
+
+func hasTrailingTypeScriptToken(masked string, last int, token string) bool {
+	start := last + 1 - len(token)
+	return start >= 0 && masked[start:last+1] == token && (start == 0 || !isASCIITypeScriptIdentifierByte(masked[start-1]))
 }
 
 func isASCIITypeScriptIdentifierByte(value byte) bool {

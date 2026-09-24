@@ -664,6 +664,12 @@ func TestCollectExportsSeparatesSemicolonlessLocalDeclarations(t *testing.T) {
 		"export const A = 1\n// local declaration\nconst B = 2, C = 3;",
 		"export const A = 1;\nconst B = 2, C = 3;",
 		"export\nconst A = 1;\nconst B = 2, C = 3;",
+		"export const A = `text`\nconst B = 2, C = 3;",
+		"export const A = 1/*\r*/const B = 2, C = 3;",
+		"export const A = 1/*\u2028*/const B = 2, C = 3;",
+		"export const A = 1\ndeclare const B: number, C: number;",
+		"export const A = 1\nusing B = null, C = null;",
+		"function local() {}\nlet C = 0;\nexport const A = 1\nlocal(), C = 3;",
 	} {
 		runtimeExports, typeExports, err := CollectExports(source)
 		if err != nil {
@@ -679,22 +685,60 @@ func TestCollectExportsSeparatesSemicolonlessLocalDeclarations(t *testing.T) {
 	assertStringSlice(t, runtimeExports, []string{"A", "B"})
 }
 
-func TestVerifyTypeScriptPublicAPIRejectsExportsFromFollowingLocalDeclaration(t *testing.T) {
-	repoRoot := writeTypeScriptPackageFixture(t)
-	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
-	if err := os.WriteFile(sourcePath, []byte("export const A = 1\nconst B = 2, C = 3;\n"), 0o600); err != nil {
+func TestCollectExportsPreservesSemicolonlessExpressionContinuation(t *testing.T) {
+	for _, item := range []struct {
+		source string
+		want   []string
+	}{
+		{source: "export const A = void\nfunction() {}, B = 2;", want: []string{"A", "B"}},
+		{source: "export const A =\nfunction() {};", want: []string{"A"}},
+		{source: "export const A = 1 as\nconst, B = 2;", want: []string{"A", "B"}},
+		{source: "export const A = n++\nconst B = 2, C = 3;", want: []string{"A"}},
+	} {
+		runtimeExports, _, err := CollectExports(item.source)
+		if err != nil {
+			t.Fatalf("CollectExports(%q) error = %v", item.source, err)
+		}
+		assertStringSlice(t, runtimeExports, item.want)
+	}
+}
+
+func TestCollectExportsBoundsBlankLineScan(t *testing.T) {
+	runtimeExports, _, err := CollectExports("export\n" + strings.Repeat("\n", 131072) + "const A = 1;")
+	if err != nil {
 		t.Fatal(err)
 	}
-	input := publicAPIManifest()
-	entry := input["entries"].([]any)[0].(map[string]any)
-	entry["runtimeExports"] = []any{"A"}
-	entry["typeExports"] = []any{}
-	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode != 0 {
-		t.Fatalf("Verify(actual exports) exit=%d error=%v output=%#v", exitCode, err, output)
-	}
-	entry["runtimeExports"] = []any{"A", "C"}
-	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode == 0 {
-		t.Fatalf("Verify(local export claim) exit=%d error=%v output=%#v, want mismatch", exitCode, err, output)
+	assertStringSlice(t, runtimeExports, []string{"A"})
+}
+
+func TestVerifyTypeScriptPublicAPIRejectsExportsFromFollowingLocalDeclaration(t *testing.T) {
+	for _, item := range []struct {
+		name   string
+		source string
+	}{
+		{name: "const", source: "export const A = 1\nconst B = 2, C = 3;"},
+		{name: "declare", source: "export const A = 1\ndeclare const B: number, C: number;"},
+		{name: "using", source: "export const A = 1\nusing B = null, C = null;"},
+		{name: "expression", source: "function local() {}\nlet C = 0;\nexport const A = 1\nlocal(), C = 3;"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			repoRoot := writeTypeScriptPackageFixture(t)
+			sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+			if err := os.WriteFile(sourcePath, []byte(item.source), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			input := publicAPIManifest()
+			entry := input["entries"].([]any)[0].(map[string]any)
+			entry["runtimeExports"] = []any{"A"}
+			entry["typeExports"] = []any{}
+			if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode != 0 {
+				t.Fatalf("Verify(actual exports) exit=%d error=%v output=%#v", exitCode, err, output)
+			}
+			entry["runtimeExports"] = []any{"A", "C"}
+			if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode == 0 {
+				t.Fatalf("Verify(local export claim) exit=%d error=%v output=%#v, want mismatch", exitCode, err, output)
+			}
+		})
 	}
 }
 
@@ -736,6 +780,55 @@ func TestTypeScriptCompilerOracleForDeclarationBoundaries(t *testing.T) {
 		t.Fatalf("TypeScript declaration omits Shape$: %s", declarations)
 	}
 	assertStringSlice(t, typeExports, []string{"Shape$"})
+}
+
+func TestTypeScriptCompilerOracleForSemicolonlessBoundaries(t *testing.T) {
+	compiler := filepath.Join("..", "..", "..", "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); os.IsNotExist(err) {
+		t.Skip("pinned TypeScript compiler is not installed")
+	} else if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range []struct {
+		name   string
+		source string
+	}{
+		{name: "void function continuation", source: "export const A = void\nfunction() {}, B = 2;"},
+		{name: "equals function continuation", source: "export const A =\nfunction() {};"},
+		{name: "template literal boundary", source: "export const A = `text`\nconst B = 2, C = 3;"},
+		{name: "block comment carriage return", source: "export const A = 1/*\r*/const B = 2, C = 3;"},
+		{name: "block comment unicode line", source: "export const A = 1/*\u2028*/const B = 2, C = 3;"},
+		{name: "local declare declaration", source: "export const A = 1\ndeclare const B: number, C: number;"},
+		{name: "local using declaration", source: "export const A = 1\nusing B = null, C = null;"},
+		{name: "as const continuation", source: "export const A = 1 as\nconst, B = 2;"},
+		{name: "postfix increment boundary", source: "let n = 1;\nexport const A = n++\nconst B = 2, C = 3;"},
+		{name: "local expression statement", source: "function local() {}\nlet C = 0;\nexport const A = 1\nlocal(), C = 3;"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			runtimeExports, _, err := CollectExports(item.source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			root := t.TempDir()
+			sourcePath := filepath.Join(root, "source.ts")
+			if err := os.WriteFile(sourcePath, []byte(item.source), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if output, err := exec.Command(compiler, "--target", "es2022", "--module", "esnext", "--lib", "esnext", "--outDir", root, sourcePath).CombinedOutput(); err != nil {
+				t.Fatalf("TypeScript compile error=%v output=%s", err, output)
+			}
+			const inspectExports = `const fs = require("node:fs"); const code = fs.readFileSync(process.argv[1]).toString("base64"); import("data:text/javascript;base64," + code).then(mod => process.stdout.write(JSON.stringify(Object.keys(mod).sort())));`
+			output, err := exec.Command("node", "-e", inspectExports, filepath.Join(root, "source.js")).CombinedOutput()
+			if err != nil {
+				t.Fatalf("compiled module inspection error=%v output=%s", err, output)
+			}
+			var compilerExports []string
+			if err := json.Unmarshal(output, &compilerExports); err != nil {
+				t.Fatal(err)
+			}
+			assertStringSlice(t, runtimeExports, compilerExports)
+		})
+	}
 }
 
 func TestCollectExportsRecognizesAllLineCommentTerminators(t *testing.T) {
