@@ -642,8 +642,8 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.Version != artifact.Record.Version {
 		return fmt.Errorf("root package version mismatch: manifest=%s pack=%s", manifest.Version, artifact.Record.Version)
 	}
-	if manifest.License != "MIT" {
-		return fmt.Errorf("root package license must be MIT, got %s", manifest.License)
+	if manifest.License != "MIT AND BSD-3-Clause" {
+		return fmt.Errorf("root package license must be MIT AND BSD-3-Clause, got %s", manifest.License)
 	}
 	if manifest.PackageManager != "npm@12.0.2" {
 		return fmt.Errorf("root package packageManager must be npm@12.0.2, got %s", manifest.PackageManager)

@@ -605,6 +605,17 @@ func TestCollectExportsRejectsUnresolvedRuntimeReexportsAndConstEnum(t *testing.
 	}
 }
 
+func TestCollectExportsRejectsCommonJSSyntheticExports(t *testing.T) {
+	for _, source := range []string{
+		"declare var module: {exports: unknown}; module.exports = { A: 1 };",
+		"declare var exports: {Public: number}; exports.Public = 1;",
+	} {
+		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS source is not admitted") {
+			t.Fatalf("CollectExports(%q) error=%v, want CommonJS rejection", source, err)
+		}
+	}
+}
+
 func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testing.T) {
 	source := strings.Join([]string{
 		"export const a = {x: 1, b: 2}, c = [\"x\", \"y\"];",

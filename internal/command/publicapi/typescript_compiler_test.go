@@ -24,6 +24,7 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		typeName        string
 	}{
 		{"export const A = 1\nconst B = 2, C = 3;\nexport function public$() { return 1; }\nexport type Shape$ = { value: string };", "export type Shape$", "Shape$"},
+		{"export\vconst A = 1;", "", ""},
 		{"export const A = 1,\n B = 2;\nexport interface public$ { value: number }", "export interface public$", "public$"},
 		{"export const A = true &&\nfunction () {}, B = 2;", "", ""},
 		{"export const A = `x`\nconst B = 2, C = 3;", "", ""},
@@ -84,5 +85,34 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		if test.typeName == "" && len(typeExports) != 0 || test.typeName != "" && (len(typeExports) != 1 || typeExports[0] != test.typeName) {
 			t.Fatalf("CollectExports() type exports=%v, compiler declaration=%q", typeExports, declaration)
 		}
+	}
+}
+
+func TestCommonJSSourceIsNotAnESMExportInventory(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	folder := t.TempDir()
+	source := "declare var exports: {Public: number}; exports.Public = 1;"
+	path := filepath.Join(folder, "entry.cts")
+	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command(compiler, "--target", "es2022", "--module", "nodenext", "--moduleResolution", "nodenext", "--outDir", folder, path)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("TypeScript compiler error=%v: %s", err, output)
+	}
+	command = exec.Command("node", "-e", `process.stdout.write(JSON.stringify(Object.keys(require(process.argv[1])).sort()))`, filepath.Join(folder, "entry.cjs"))
+	output, err := command.CombinedOutput()
+	if err != nil || string(output) != `["Public"]` {
+		t.Fatalf("CommonJS export names=%s, error=%v, want Public", output, err)
+	}
+	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS source is not admitted") {
+		t.Fatalf("CollectExports() error=%v, want CommonJS rejection", err)
 	}
 }

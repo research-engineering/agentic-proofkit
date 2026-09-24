@@ -440,7 +440,7 @@ func validateEndpoint(endpoint map[string]any, context string, policy policy, bl
 		*failures = append(*failures, context+".url must have a valid DNS or IP host")
 		return
 	}
-	if isLocalRef(hostname, policy) {
+	if isLocalEndpointHost(parsed.Hostname(), hostname, policy) {
 		*failures = append(*failures, context+".url must not be local or loopback")
 	}
 	if endpointKind != nil && *endpointKind == "stable" && hasTemporaryEndpointSuffix(hostname, policy) {
@@ -652,6 +652,19 @@ func isLocalRef(value string, policy policy) bool {
 	normalized := strings.ToLower(value)
 	for _, indicator := range policy.LocalRefIndicators {
 		if strings.Contains(normalized, strings.ToLower(indicator)) {
+			return true
+		}
+	}
+	return false
+}
+
+func isLocalEndpointHost(rawHost string, canonicalHost string, policy policy) bool {
+	if isLocalRef(rawHost, policy) || isLocalRef(canonicalHost, policy) {
+		return true
+	}
+	for _, indicator := range policy.LocalRefIndicators {
+		canonicalIndicator, err := canonicalEndpointHost(indicator)
+		if err == nil && strings.Contains(canonicalHost, canonicalIndicator) {
 			return true
 		}
 	}

@@ -165,6 +165,34 @@ func TestBuildRejectsIDNAEquivalentLocalHost(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsCallerLocalIndicatorsAcrossDNSRepresentations(t *testing.T) {
+	for _, test := range []struct {
+		indicator string
+		host      string
+	}{
+		{"b\u00fcro.example", "b\u00fcro.example"},
+		{"b\u00fcro.example", "xn--bro-hoa.example"},
+		{"xn--bro-hoa.example", "b\u00fcro.example"},
+		{"internal.example.", "internal.example"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{test.indicator}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode == 0 {
+			t.Fatalf("Build(%q, %q) exit=%d error=%v, want local-host denial", test.indicator, test.host, exitCode, err)
+		}
+		encoded, err := json.Marshal(record)
+		if err != nil || !strings.Contains(string(encoded), ".url must not be local or loopback") {
+			t.Fatalf("Build(%q, %q) failed for wrong reason: %s, error=%v", test.indicator, test.host, encoded, err)
+		}
+	}
+}
+
 func TestBuildAdmitsOnlyCalendarValidUTCExpiry(t *testing.T) {
 	for _, test := range []struct {
 		expiresAt string

@@ -9,6 +9,9 @@ import (
 )
 
 type runtimeExportMetafile struct {
+	Inputs map[string]struct {
+		Format string `json:"format"`
+	} `json:"inputs"`
 	Outputs map[string]struct {
 		EntryPoint string   `json:"entryPoint"`
 		Exports    []string `json:"exports"`
@@ -39,14 +42,17 @@ func collectRuntimeExports(source string) ([]string, error) {
 	if err := json.Unmarshal([]byte(result.Metafile), &metadata); err != nil || len(metadata.Outputs) != 1 {
 		return nil, fmt.Errorf("TypeScript public API parser did not produce one export inventory")
 	}
+	if len(metadata.Inputs) != 1 || metadata.Inputs["entry.ts"].Format != "esm" {
+		return nil, unsupportedTypeScriptSourceGrammar("CommonJS source is not admitted")
+	}
 	for _, output := range metadata.Outputs {
 		if output.EntryPoint != "entry.ts" {
 			return nil, fmt.Errorf("TypeScript public API parser output has an unexpected entrypoint")
 		}
 		names := append([]string{}, output.Exports...)
 		sort.Strings(names)
-		for index := 1; index < len(names); index++ {
-			if names[index-1] == names[index] {
+		for index, name := range names {
+			if index > 0 && names[index-1] == name {
 				return nil, fmt.Errorf("TypeScript public API parser output contains duplicate exports")
 			}
 		}

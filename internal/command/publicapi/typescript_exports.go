@@ -7,13 +7,13 @@ import (
 )
 
 var (
-	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["']`)
-	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["']`)
-	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s|[({<;=]|$)`)
-	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s|[({<;=]|$)`)
-	constEnumPattern      = regexp.MustCompile(`^export\s+const\s+enum\s+`)
-	varDeclStartPattern   = regexp.MustCompile(`^export\s+(?:const|let|var)\s+`)
-	exportClauseNameRegex = regexp.MustCompile(`\bas\s+([A-Za-z_$][A-Za-z0-9_$]*)$`)
+	namedExportPattern    = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	typeExportPattern     = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	runtimeDeclPattern    = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	typeDeclPattern       = regexp.MustCompile(`^export[[:space:]]+(?:interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	constEnumPattern      = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
+	varDeclStartPattern   = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
+	exportClauseNameRegex = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 )
 
@@ -64,6 +64,11 @@ func CollectExports(source string) ([]string, []string, error) {
 			continue
 		}
 		return nil, nil, fmt.Errorf("unsupported public export statement")
+	}
+	for _, name := range runtimeExports {
+		if name == "default" {
+			return nil, nil, unsupportedTypeScriptSourceGrammar("default exports are not admitted")
+		}
 	}
 	return runtimeExports, sortedSet(typeExports), nil
 }
