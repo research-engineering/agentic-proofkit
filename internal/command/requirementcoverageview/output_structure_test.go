@@ -100,6 +100,7 @@ func coverageStructureMutations() []coverageStructureMutation {
 		{"unknown-root", func(r map[string]any) { r["undeclared"] = true }},
 		{"missing-root", func(r map[string]any) { delete(r, "testInventoryId") }},
 		{"wrong-version", func(r map[string]any) { r["schemaVersion"] = json.Number("3") }},
+		{"invalid-source-digest", func(r map[string]any) { r["sourceDigest"] = "sha256:invalid" }},
 		{"wrong-mode", func(r map[string]any) { r["proofMode"] = "compact" }},
 		{"null-row-array", func(r map[string]any) { r["commandCoverage"] = nil }},
 		{"missing-row", func(r map[string]any) { delete(row(r), "sharedPremises") }},

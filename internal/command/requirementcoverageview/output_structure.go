@@ -34,7 +34,7 @@ func coverageOutputVariant(mode string) jsonshape.Shape {
 			"full_repository": {}, "selected_owner_surfaces": {}, "selected_paths_advisory": {},
 		})),
 		jsonshape.Required("nonClaims", jsonshape.Array(text, 1)),
-		jsonshape.Required("sourceDigest", jsonshape.String()),
+		jsonshape.Required("sourceDigest", jsonshape.StringGrammar(`sha256:[a-f0-9]{64}`)),
 		jsonshape.Required("nonClaimDefinitions", requirementsourceadmission.NonClaimDefinitionsShape()),
 		jsonshape.Required("coverageBasis", basis),
 		jsonshape.Required("requirementCoverage", jsonshape.Array(coverageRequirementShape(mode), 0)),
