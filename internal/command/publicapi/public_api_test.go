@@ -26,8 +26,8 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 		t.Fatalf("entryCount=%v want 1", output["entryCount"])
 	}
 	claims, ok := output["nonClaims"].([]any)
-	if !ok || !strings.Contains(fmt.Sprint(claims), "does not prove TypeScript compiler syntax or type validity") {
-		t.Fatalf("passing static inventory omitted compiler non-claim: %#v", output["nonClaims"])
+	if !ok || !strings.Contains(fmt.Sprint(claims), "does not prove TypeScript compiler syntax or type validity") || !strings.Contains(fmt.Sprint(claims), "not a hard bound on parser allocations") {
+		t.Fatalf("passing static inventory omitted compiler or resource non-claim: %#v", output["nonClaims"])
 	}
 }
 

@@ -2,6 +2,15 @@ package publicapi
 
 import "strings"
 
+const maxStringFoldEstimateBytes uint64 = 64 << 20
+
+func admitStringFoldEstimate(scan typeScriptLexicalScan) error {
+	if scan.plusTokens != 0 && scan.literalBytes > maxStringFoldEstimateBytes/scan.plusTokens {
+		return unsupportedTypeScriptSourceGrammar("string-fold work estimate exceeds 64 MiB")
+	}
+	return nil
+}
+
 func admitNoExpandingDeclarations(masked string) error {
 	for index := 0; index < len(masked); index++ {
 		if index > 0 && isASCIITypeScriptIdentifierByte(masked[index-1]) {

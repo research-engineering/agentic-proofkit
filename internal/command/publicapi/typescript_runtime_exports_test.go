@@ -63,3 +63,23 @@ func TestExpandingDeclarationsFailBeforeRuntimeBuild(t *testing.T) {
 		t.Fatalf("CollectExports(namespace property) runtime=%v error=%v, want passed", runtime, err)
 	}
 }
+
+func TestStringFoldEstimateRejectsLongLiteralChainBeforeRuntimeBuild(t *testing.T) {
+	source := "export const A = " + strings.Repeat("'xxxxxxxxxxxxxxxx'+", 8192) + "'';"
+	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "string-fold work estimate") {
+		t.Fatalf("CollectExports(long literal chain) error=%v, want pre-build refusal", err)
+	}
+	for _, admitted := range []string{
+		`export const A = 'x' + 'y';`,
+		`export const A = '+'; // +++`,
+	} {
+		runtime, _, err := CollectExports(admitted)
+		if err != nil || len(runtime) != 1 || runtime[0] != "A" {
+			t.Fatalf("CollectExports(%q) runtime=%v error=%v, want static inventory", admitted, runtime, err)
+		}
+	}
+	scan, err := scanTypeScriptSource("export const A = '+'; // +++")
+	if err != nil || scan.plusTokens != 0 || scan.literalBytes != 3 {
+		t.Fatalf("scanTypeScriptSource() plusTokens=%d literalBytes=%d error=%v, want only quoted literal bytes", scan.plusTokens, scan.literalBytes, err)
+	}
+}

@@ -15,8 +15,8 @@ var (
 	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
-	erasedInterfaceName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])interface[[:space:]]+(as|satisfies)[[:space:]]*(?:\{|<|extends[[:space:]])`)
-	erasedTypeAliasName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])type[[:space:]]+(as)[[:space:]]*=`)
+	erasedInterfaceName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])(interface)[[:space:]]+(as|satisfies)[[:space:]]*(?:\{|<|extends[[:space:]])`)
+	erasedTypeAliasName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])(type)[[:space:]]+(as)[[:space:]]*=`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
@@ -32,6 +32,9 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
 	if err := admitNoExpandingDeclarations(scan.masked); err != nil {
+		return nil, nil, err
+	}
+	if err := admitStringFoldEstimate(scan); err != nil {
 		return nil, nil, err
 	}
 	runtimeExports, err := collectRuntimeExports(runtimeParserSource(source, scan), extension)
@@ -194,7 +197,15 @@ func runtimeParserSource(source string, scan typeScriptLexicalScan) string {
 	var rewritten []byte
 	for _, pattern := range []*regexp.Regexp{erasedInterfaceName, erasedTypeAliasName} {
 		for _, indices := range pattern.FindAllStringSubmatchIndex(scan.masked, -1) {
-			nameStart, nameEnd := indices[2], indices[3]
+			keywordStart := indices[2]
+			before := keywordStart - 1
+			for before >= 0 && strings.ContainsRune(" \t\r\n\v\f", rune(scan.masked[before])) {
+				before--
+			}
+			if before >= 0 && scan.masked[before] == '.' {
+				continue
+			}
+			nameStart, nameEnd := indices[4], indices[5]
 			if rewritten == nil {
 				rewritten = []byte(source)
 			}
@@ -236,6 +247,8 @@ const (
 type typeScriptLexicalScan struct {
 	masked                string
 	topLevelExportOffsets []int
+	literalBytes          uint64
+	plusTokens            uint64
 }
 
 func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
@@ -246,6 +259,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 	braceDepth := 0
 	bracketDepth := 0
 	parenDepth := 0
+	var literalBytes, plusTokens uint64
 	for index := 0; index < len(source); index++ {
 		current := source[index]
 		next := byte(0)
@@ -287,6 +301,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptSingleQuoted, typeScriptDoubleQuoted:
+			literalBytes++
 			closing := byte('\'')
 			if state == typeScriptDoubleQuoted {
 				closing = '"'
@@ -297,11 +312,13 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			if escaped {
 				if unicodeLineWidth > 0 {
+					literalBytes += uint64(unicodeLineWidth - 1)
 					escaped = false
 					index += unicodeLineWidth - 1
 					continue
 				}
 				if current == '\r' && next == '\n' {
+					literalBytes++
 					escaped = false
 					index++
 					continue
@@ -320,6 +337,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptTemplateQuoted:
+			literalBytes++
 			if current != '\n' {
 				masked[index] = ' '
 			}
@@ -352,17 +370,23 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 		case current == '/':
 			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("slash tokens outside comments are not admitted")
 		case current == '\'':
+			literalBytes++
 			state = typeScriptSingleQuoted
 			continue
 		case current == '"':
+			literalBytes++
 			state = typeScriptDoubleQuoted
 			continue
 		case current == '`':
+			literalBytes++
 			masked[index] = ' '
 			state = typeScriptTemplateQuoted
 			continue
 		case current == '\\':
 			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("escaped code identifiers are not admitted")
+		}
+		if current == '+' {
+			plusTokens++
 		}
 		if braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 && strings.HasPrefix(source[index:], "export") {
 			beforeOK := index == 0 || !isASCIITypeScriptIdentifierByte(source[index-1]) && source[index-1] != '.'
@@ -408,7 +432,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 	if braceDepth != 0 || bracketDepth != 0 || parenDepth != 0 {
 		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("delimiters must be balanced")
 	}
-	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts}, nil
+	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts, literalBytes: literalBytes, plusTokens: plusTokens}, nil
 }
 
 func isASCIITypeScriptIdentifierByte(value byte) bool {

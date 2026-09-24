@@ -52,6 +52,8 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		{"export interface satisfies { value: number }; export const A = 1;", "export interface satisfies", "satisfies"},
 		{"export function f() { interface as {} }", "", ""},
 		{"export function f() { type as = number; }", "", ""},
+		{"const obj = { interface: { value: 1 } }; export const a = obj.interface as { value: number };", "", ""},
+		{"const obj = { interface: { value: 1 } }; export const a = obj.interface satisfies { value: number };", "", ""},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")

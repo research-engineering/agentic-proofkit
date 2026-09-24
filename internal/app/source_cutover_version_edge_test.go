@@ -46,7 +46,7 @@ var sourceCutoverDirectionDeltas = []string{
 }
 
 var nativeBoundaryDirectionDeltas = []string{
-	"typescript-public-api-surfaces/input:compatibilitySummary,fields,nonClaims,sourceGrammar",
+	"typescript-public-api-surfaces/input:compatibilitySummary,fields,nonClaims,resourceBudgets,sourceGrammar",
 }
 
 func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {

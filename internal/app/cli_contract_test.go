@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "c9fd0824f826a22c50ef78bbc4f81e3f84d5c87e516cc814a203f5b38eb6e8ef"
+	cliContractPublicABISHA256               = "1a124e5f2f84810ff4a26717f193bc8e67b596eb956001abdee281bdc3fade8f"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2071,7 +2071,8 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	budgets := inputContract["resourceBudgets"].(map[string]any)
 	if budgets["maxSourceFileBytes"] != float64(maxSourceFileBytesForContractTest) ||
 		budgets["maxPackageManifestBytes"] != float64(maxPackageManifestBytesForContractTest) ||
-		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) {
+		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) ||
+		budgets["maxStringFoldWorkEstimateBytes"] != float64(64<<20) {
 		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
 	}
 	grammar := inputContract["sourceGrammar"].(map[string]any)
@@ -2106,7 +2107,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"enum and namespace declarations require a native compiler witness",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "CommonJS-ambiguity guards"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "CommonJS-ambiguity guards", "string-fold work estimate above 64 MiB"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}
@@ -2119,7 +2120,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "pinned compiler witness") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "pinned compiler witness") || !strings.Contains(joinedNonClaims, "not a hard bound on esbuild allocations") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }
