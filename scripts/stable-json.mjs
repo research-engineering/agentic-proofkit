@@ -163,29 +163,62 @@ const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|
 const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
 const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
 const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
-const escapedSecretSequence = /\\+(?:u[0-9a-fA-F]{4}\\+u[0-9a-fA-F]{4}|u[0-9a-fA-F]{4}|[ntrfvb/"])/gu;
 const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
 
 function decodeEscapedSecretText(value) {
-  return value.replace(escapedSecretSequence, (sequence) => {
-    const unicodeStart = sequence.indexOf("u");
-    if (unicodeStart >= 0) {
-      const first = Number.parseInt(sequence.slice(unicodeStart + 1, unicodeStart + 5), 16);
-      if (sequence.length > unicodeStart + 5) {
-        const second = Number.parseInt(sequence.slice(-4), 16);
-        if (first >= 0xd800 && first <= 0xdbff && second >= 0xdc00 && second <= 0xdfff) {
-          return String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + second - 0xdc00);
-        }
-        return decodeSecretUnicodeScalar(first, sequence.slice(0, unicodeStart + 5)) +
-          decodeSecretUnicodeScalar(second, sequence.slice(unicodeStart + 5));
-      }
-      return decodeSecretUnicodeScalar(first, sequence);
+  const parts = [];
+  for (let index = 0; index < value.length;) {
+    const start = value.indexOf("\\", index);
+    if (start < 0) {
+      parts.push(value.slice(index));
+      break;
     }
-    const suffix = sequence.at(-1);
-    if (suffix in escapedSecretControls) return escapedSecretControls[suffix];
-    if (suffix === "/" || suffix === '"') return suffix;
-    return sequence;
-  });
+    if (start > index) parts.push(value.slice(index, start));
+    let cursor = start;
+    while (cursor < value.length && value[cursor] === "\\") cursor++;
+    if (cursor === value.length) {
+      parts.push(value.slice(start));
+      break;
+    }
+    if (hasSecretUnicodeUnit(value, cursor)) {
+      const first = Number.parseInt(value.slice(cursor + 1, cursor + 5), 16);
+      if (first >= 0xd800 && first <= 0xdbff) {
+        let second = cursor + 5;
+        const secondStart = second;
+        while (second < value.length && value[second] === "\\") second++;
+        if (second > secondStart && hasSecretUnicodeUnit(value, second)) {
+          const low = Number.parseInt(value.slice(second + 1, second + 5), 16);
+          if (low >= 0xdc00 && low <= 0xdfff) {
+            parts.push(String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + low - 0xdc00));
+            index = second + 5;
+            continue;
+          }
+        }
+      }
+      parts.push(decodeSecretUnicodeScalar(first, value.slice(start, cursor + 5)));
+      index = cursor + 5;
+      continue;
+    }
+    const suffix = value[cursor];
+    if (Object.hasOwn(escapedSecretControls, suffix)) parts.push(escapedSecretControls[suffix]);
+    else if (suffix === "/" || suffix === '"') parts.push(suffix);
+    else {
+      parts.push(value.slice(start, cursor));
+      index = cursor;
+      continue;
+    }
+    index = cursor + 1;
+  }
+  return parts.join("");
+}
+
+function hasSecretUnicodeUnit(value, index) {
+  if (value[index] !== "u" || index + 5 > value.length) return false;
+  for (let offset = 1; offset <= 4; offset++) {
+    const code = value.charCodeAt(index + offset);
+    if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102))) return false;
+  }
+  return true;
 }
 
 function decodeSecretUnicodeScalar(value, original) {

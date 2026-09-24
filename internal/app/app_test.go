@@ -768,6 +768,7 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 	for _, initial := range []string{
 		`{"passw\u006frd":"synthetic-fixture-value"}`,
 		`api_\uDB40\uDC01key=synthetic-fixture-value`,
+		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
 	} {
 		serialized := initial
 		for depth := 0; depth <= 4; depth++ {

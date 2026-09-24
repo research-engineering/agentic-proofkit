@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:72713172aab80c7b6722796b5b933f701f3950867d4aaab76e4d7834f4d104ad"
+const expectedTypeScriptSourceSha256 = "sha256:4ac1b3717e40af70a1b62d8b181276750cf5e6c4d2d69a6500f226c9bccfcba9"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -703,6 +703,9 @@ runProofkitJsonReportCliMain({
 	  }
 	}
 	assert.equal(formatProofkitCliError("\ud800"), fixedDiagnostic);
+	const slashRunStart = performance.now();
+	assert.equal(formatProofkitCliError("\\".repeat(65536)), "\\".repeat(512) + "...<truncated-diagnostic>");
+	assert(performance.now() - slashRunStart < 2000, "generated diagnostic escaping must remain linear");
 
 console.log("generated adapter semantics ok");
 `

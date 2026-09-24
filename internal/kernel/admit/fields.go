@@ -27,20 +27,19 @@ const (
 const RuleIDPatternBody = `[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*`
 
 var (
-	ruleIDPattern                = regexp.MustCompile(`^` + RuleIDPatternBody + `$`)
-	ruleIDSeparatorPattern       = regexp.MustCompile(`[._:-]`)
-	timestampLikePattern         = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
-	isoDateComponentPattern      = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
-	compactDateComponentRegexp   = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
-	driveLikePathPattern         = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
-	schemeLikePathPattern        = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
-	secretValuePattern           = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
-	secretEscapedSequencePattern = regexp.MustCompile(`\\+(?:u[0-9a-fA-F]{4}\\+u[0-9a-fA-F]{4}|u[0-9a-fA-F]{4}|[ntrfvb/"])`)
-	secretPathContextPattern     = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
-	secretPathTokenPattern       = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
-	urlUserInfoPattern           = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
-	controlRunePattern           = regexp.MustCompile(`[\x00-\x1f\x7f]`)
-	shellControlTokenPattern     = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
+	ruleIDPattern              = regexp.MustCompile(`^` + RuleIDPatternBody + `$`)
+	ruleIDSeparatorPattern     = regexp.MustCompile(`[._:-]`)
+	timestampLikePattern       = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
+	isoDateComponentPattern    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
+	compactDateComponentRegexp = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
+	driveLikePathPattern       = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
+	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+	secretValuePattern         = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
+	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
+	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
+	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
+	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
+	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
 
 const (
@@ -75,6 +74,7 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "api_key_double_json_escaped_control_split", Input: `api_\\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "api_key_escaped_unicode_letter", Input: `api_k\\u0065y=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "api_key_escaped_supplementary_control", Input: `api_\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_composed_controls", Input: `api_\\u200b\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
@@ -229,37 +229,77 @@ func matchesNormalizedSecret(value string, matches func(string) bool) bool {
 }
 
 func decodeEscapedSecretText(value string) string {
-	return secretEscapedSequencePattern.ReplaceAllStringFunc(value, func(sequence string) string {
-		if start := strings.IndexByte(sequence, 'u'); start >= 0 {
-			first := decodeSecretUnicodeUnit(sequence[start+1 : start+5])
-			if len(sequence) > start+5 {
-				second := decodeSecretUnicodeUnit(sequence[len(sequence)-4:])
-				if first >= 0xd800 && first <= 0xdbff && second >= 0xdc00 && second <= 0xdfff {
-					return string(utf16.DecodeRune(first, second))
+	var result strings.Builder
+	result.Grow(len(value))
+	for index := 0; index < len(value); {
+		if value[index] != '\\' {
+			result.WriteByte(value[index])
+			index++
+			continue
+		}
+		start := index
+		for index < len(value) && value[index] == '\\' {
+			index++
+		}
+		if index >= len(value) {
+			result.WriteString(value[start:index])
+			break
+		}
+		if value[index] == 'u' && hasSecretUnicodeUnit(value, index) {
+			first := decodeSecretUnicodeUnit(value[index+1 : index+5])
+			next := index + 5
+			if first >= 0xd800 && first <= 0xdbff {
+				secondStart := next
+				for next < len(value) && value[next] == '\\' {
+					next++
 				}
-				return decodeSecretUnicodeScalar(first, sequence[:start+5]) + decodeSecretUnicodeScalar(second, sequence[start+5:])
+				if next > secondStart && next < len(value) && value[next] == 'u' && hasSecretUnicodeUnit(value, next) {
+					second := decodeSecretUnicodeUnit(value[next+1 : next+5])
+					if second >= 0xdc00 && second <= 0xdfff {
+						result.WriteRune(utf16.DecodeRune(first, second))
+						index = next + 5
+						continue
+					}
+				}
 			}
-			return decodeSecretUnicodeScalar(first, sequence)
+			result.WriteString(decodeSecretUnicodeScalar(first, value[start:index+5]))
+			index += 5
+			continue
 		}
-		switch sequence[len(sequence)-1] {
+		switch value[index] {
 		case 'n':
-			return "\n"
+			result.WriteByte('\n')
 		case 't':
-			return "\t"
+			result.WriteByte('\t')
 		case 'r':
-			return "\r"
+			result.WriteByte('\r')
 		case 'f':
-			return "\f"
+			result.WriteByte('\f')
 		case 'v':
-			return "\v"
+			result.WriteByte('\v')
 		case 'b':
-			return "\b"
+			result.WriteByte('\b')
 		case '/', '"':
-			return sequence[len(sequence)-1:]
+			result.WriteByte(value[index])
 		default:
-			return sequence
+			result.WriteString(value[start:index])
+			continue
 		}
-	})
+		index++
+	}
+	return result.String()
+}
+
+func hasSecretUnicodeUnit(value string, index int) bool {
+	if index+5 > len(value) || value[index] != 'u' {
+		return false
+	}
+	for _, digit := range value[index+1 : index+5] {
+		if !(digit >= '0' && digit <= '9' || digit >= 'a' && digit <= 'f' || digit >= 'A' && digit <= 'F') {
+			return false
+		}
+	}
+	return true
 }
 
 func decodeSecretUnicodeUnit(hex string) rune {
