@@ -438,6 +438,7 @@ func TestBuildAdmitsEveryProofVocabularySelectiveEdgeClassAndCoverageState(t *te
 		t.Run("edge-"+class, func(t *testing.T) {
 			input := validEvidenceInput()
 			evidencePlan(input)["unknownEdges"] = []any{unknownEdgeRecord(class, proofvocab.SelectiveEdgeCoverageCoveredByFallback())}
+			evidencePlan(input)["fallbackCoverage"] = []any{map[string]any{"command": plannedCommand(), "edgeClasses": []any{class}, "reason": "Synthetic fallback covers this edge class."}}
 
 			if _, err := Build(input); err != nil {
 				t.Fatalf("Build() rejected owner selective edge class %q: %v", class, err)
@@ -447,7 +448,15 @@ func TestBuildAdmitsEveryProofVocabularySelectiveEdgeClassAndCoverageState(t *te
 	for _, state := range proofvocab.SelectiveEdgeCoverageStates() {
 		t.Run("coverage-"+state, func(t *testing.T) {
 			input := validEvidenceInput()
-			evidencePlan(input)["unknownEdges"] = []any{unknownEdgeRecord("dynamic_or_unknown", state)}
+			edge := unknownEdgeRecord("dynamic_or_unknown", state)
+			evidencePlan(input)["unknownEdges"] = []any{edge}
+			if state == proofvocab.SelectiveEdgeCoverageUncovered() {
+				edge["fallbackCommandIds"] = []any{}
+				evidencePlan(input)["planState"] = "fail_closed"
+				evidencePlan(input)["failures"] = []any{"Unknown edge has no declared fallback."}
+			} else {
+				evidencePlan(input)["fallbackCoverage"] = []any{map[string]any{"command": plannedCommand(), "edgeClasses": []any{"dynamic_or_unknown"}, "reason": "Synthetic fallback covers this edge class."}}
+			}
 
 			if _, err := Build(input); err != nil {
 				t.Fatalf("Build() rejected owner selective edge coverage state %q: %v", state, err)
@@ -512,7 +521,7 @@ func validEvidenceInput() map[string]any {
 			"proofLikePaths":              []any{},
 			"publicApiContractTouched":    false,
 			"requiredCommands":            []any{plannedCommand()},
-			"scanObligation":              map[string]any{"command": "agentic-proofkit secret-scan --input artifacts/secret-scan.json", "commandId": "secret-scan", "commandOwnership": "proofkit_secret_scan", "mode": "diff-scoped", "reason": "secret_scan", "required": true},
+			"scanObligation":              map[string]any{"command": "go test ./...", "commandId": "proofkit.go-test", "commandOwnership": "caller_owned_external", "mode": "diff-scoped", "reason": "external_secret_scan", "required": true},
 			"skippedGates":                []any{},
 			"touchedRequirementWitnesses": []any{},
 			"unknownEdges":                []any{},
@@ -652,9 +661,10 @@ func anyStringContains(values []any, needle string) bool {
 
 func plannedCommand() map[string]any {
 	return map[string]any{
-		"id":      "proofkit.go-test",
-		"command": "go test ./...",
-		"reason":  "Go tests cover changed command boundary.",
+		"id":               "proofkit.go-test",
+		"command":          "go test ./...",
+		"commandOwnership": "caller_owned_external",
+		"reason":           "external_secret_scan",
 	}
 }
 

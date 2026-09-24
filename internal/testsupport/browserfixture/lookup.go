@@ -26,19 +26,23 @@ func lookupWorkspace(siblingCount int) (map[string]any, error) {
 	}
 	projections := contextValue["projections"].(map[string]any)
 	template := projections["requirementSources"].([]any)[0].(map[string]any)
-	rowTemplate := template["requirements"].([]any)[0].(map[string]any)
+	groupTemplate := template["groups"].([]any)[0].(map[string]any)
+	rowTemplate := groupTemplate["members"].([]any)[0].(map[string]any)
 	row := func(id, owner, invariant string) map[string]any {
 		value := maps.Clone(rowTemplate)
-		value["requirementId"], value["ownerId"], value["invariant"] = id, owner, invariant
-		value["updatePolicy"] = map[string]any{"reviewOwnerId": owner, "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+		value["requirementId"], value["statementCompletion"] = id, invariant
+		fields := maps.Clone(rowTemplate["fields"].(map[string]any))
+		fields["ownerId"] = owner
+		fields["updatePolicy"] = map[string]any{"reviewOwnerId": owner, "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
+		value["fields"] = fields
 		return value
 	}
 	rows := make([]any, 130)
 	for index := range rows {
 		rows[index] = row(fmt.Sprintf("REQ-B-%03d", index), "owner.b", fmt.Sprintf("Capability %03d remains explicit.", index))
 	}
-	rows[0].(map[string]any)["claimLevel"] = "advisory"
-	rows[0].(map[string]any)["lifecycle"] = map[string]any{"state": "superseded", "replacementRequirementIds": []any{"REQ-B-001"}, "evidenceRefs": []any{"consumer.migration"}}
+	rows[0].(map[string]any)["fields"].(map[string]any)["claimLevel"] = "advisory"
+	rows[0].(map[string]any)["fields"].(map[string]any)["lifecycle"] = map[string]any{"state": "superseded", "replacementRequirementIds": []any{"REQ-B-001"}, "evidenceRefs": []any{"consumer.migration"}}
 	rows[1] = row("REQ-B-001", "owner.c", "Capability 001 remains explicit.")
 	rows[129] = row("REQ-B-129", "owner.b", "State \U0001f9ed e\u0301 keeps source identity.")
 	inputs := []struct {
@@ -52,15 +56,34 @@ func lookupWorkspace(siblingCount int) (map[string]any, error) {
 	sources, identitySources, requirementSources := []any{}, []any{}, []any{}
 	for _, input := range inputs {
 		source := maps.Clone(template)
-		source["sourceId"], source["requirements"] = "consumer."+input.id, input.rows
+		source["sourceId"] = "consumer." + input.id
+		group := maps.Clone(groupTemplate)
+		group["members"] = input.rows
+		source["groups"] = []any{group}
+		if input.id == "b" {
+			// Preserve the authored effective texts while exercising real shared
+			// stems in browser witnesses. The final Unicode row is independent.
+			group["groupId"], group["statementStem"] = "RGRP-CAPABILITIES", "Capability"
+			group["sharedPremises"] = []any{"Only the selected caller scope applies."}
+			group["members"] = input.rows[:129]
+			for index, raw := range input.rows[:129] {
+				raw.(map[string]any)["statementCompletion"] = fmt.Sprintf("%03d remains explicit.", index)
+			}
+			last := maps.Clone(groupTemplate)
+			last["groupId"], last["members"] = "RGRP-UNICODE", input.rows[129:]
+			source["groups"] = []any{group, last}
+		}
 		source["specPackagePath"] = "docs/specs/" + input.id
-		source["overviewPath"], source["requirementsPath"] = "docs/specs/"+input.id+"/overview.md", "docs/specs/"+input.id+"/requirements.v1.json"
 		admitted, err := requirementsourceadmission.Evaluate(source)
 		if err != nil || admitted.ExitCode != 0 {
 			return nil, fmt.Errorf("lookup fixture requirement source is invalid")
 		}
-		requirementSources = append(requirementSources, requirementsourceadmission.SourceValue(admitted.Source))
-		record := map[string]any{"currentDigest": digest.SHA256TextRef("source-" + input.id), "kind": "requirement_source", "nodeId": input.node, "path": source["requirementsPath"], "sourceRef": source["sourceId"], "sourceRole": "requirements"}
+		value, err := requirementsourceadmission.SourceValue(admitted.Source)
+		if err != nil {
+			return nil, err
+		}
+		requirementSources = append(requirementSources, value)
+		record := map[string]any{"currentDigest": digest.SHA256TextRef("source-" + input.id), "kind": "requirement_source", "nodeId": input.node, "path": "docs/specs/" + input.id + "/requirements.v2.json", "sourceRef": source["sourceId"], "sourceRole": "requirements"}
 		sources = append(sources, record)
 		identity := maps.Clone(record)
 		identity["expectedDigest"] = ""
@@ -115,5 +138,5 @@ func lookupWorkspace(siblingCount int) (map[string]any, error) {
 		return nil, err
 	}
 	contextValue["snapshotId"] = digest.SHA256TextRef(string(encoded))
-	return map[string]any{"schemaVersion": json.Number("2"), "workspaceId": "browser.fixture.workspace", "context": contextValue}, nil
+	return map[string]any{"schemaVersion": json.Number("3"), "workspaceId": "browser.fixture.workspace", "context": contextValue}, nil
 }

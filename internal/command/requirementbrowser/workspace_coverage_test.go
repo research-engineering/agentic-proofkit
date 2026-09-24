@@ -58,7 +58,7 @@ func TestWorkspaceCoveragePairedModesPreserveWholeOwnerRows(t *testing.T) {
 				}
 			}
 			anchor := projection["requirements"].([]any)[0].(map[string]any)["anchor"].(map[string]any)
-			if anchor["jsonPointer"] != "/projections/requirementSources/1/requirements/0/invariant" {
+			if anchor["jsonPointer"] != "/invariant" {
 				t.Fatal("coverage page rebased its source anchor")
 			}
 			selected := map[string]struct{}{"REQ-BROWSER-COVERAGE-001": {}}
@@ -91,9 +91,47 @@ func assertOriginalCoverageFragmentKeys(t *testing.T, fragment map[string]any) {
 		keys = append(keys, key)
 	}
 	slices.Sort(keys)
-	want := []string{"authority", "nonClaims", "requirementCoverage", "requirementCoverageCount", "schemaVersion", "sourceViewInputId", "viewKind"}
+	want := []string{"authority", "nonClaimDefinitions", "nonClaims", "requirementCoverage", "requirementCoverageCount", "schemaVersion", "sourceId", "sourceViewInputId", "viewKind"}
 	if !reflect.DeepEqual(keys, want) {
 		t.Fatalf("shared fragment contract changed: %v", keys)
+	}
+}
+
+func TestWorkspaceCoverageSliceProfilesRetainRowsAndEmptyIntersections(t *testing.T) {
+	for _, mode := range []string{"compact", "structured"} {
+		session, _, err := buildWorkspace(coverageWorkspaceFixture(t, mode, false))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, profile := range []string{"coverage", "review"} {
+			t.Run(mode+"/"+profile, func(t *testing.T) {
+				selected := map[string]struct{}{"REQ-BROWSER-COVERAGE-001": {}}
+				output, err := requirementcontext.SliceSnapshot(session.Snapshot, map[string]any{
+					"profile": profile, "requirementIds": []any{"REQ-BROWSER-COVERAGE-001"},
+				}, "test.coverage.slice")
+				if err != nil {
+					t.Fatal(err)
+				}
+				fragment := output["projections"].(map[string]any)["coverage"].(map[string]any)
+				if !reflect.DeepEqual(fragment, requirementcoverageview.SelectRequirements(session.Snapshot.Coverage, selected)) {
+					t.Fatal("slice lost an admitted coverage row or dictionary field")
+				}
+				noMatch, err := requirementcontext.SliceSnapshot(session.Snapshot, map[string]any{
+					"profile": profile, "requirementIds": []any{"REQ-BROWSER-COVERAGE-001"},
+					"ownerIds": []any{"browser.fixture.owner"},
+				}, "test.coverage.empty-intersection")
+				if err != nil {
+					t.Fatal(err)
+				}
+				if noMatch["state"] != "no_match" {
+					t.Fatalf("disjoint known selectors did not produce no_match: %v", noMatch["state"])
+				}
+				empty := noMatch["projections"].(map[string]any)["coverage"].(map[string]any)
+				if empty["requirementCoverageCount"] != 0 || len(empty["requirementCoverage"].([]any)) != 0 {
+					t.Fatal("empty intersection retained a coverage row")
+				}
+			})
+		}
 	}
 }
 
@@ -166,7 +204,11 @@ func TestWorkspaceCoverageAbsentAndAdmittedZeroRemainDistinct(t *testing.T) {
 			t.Fatal(err)
 		}
 		page := workspaceCoveragePage(&session, workspaceLookupQuery{Page: projectionQuery{MaxRecords: 2}})
-		projection, _ := page.Projection([]any{page.Row(0)})
+		result, err := page.Projection([]any{page.Row(0)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		projection := result.Value
 		if session.Manifest["coverageAvailable"] != true || projection["proofMode"] != mode || projection["matchingReportedRequirementCount"] != 0 || projection["matchingNotReportedRequirementCount"] != 1 {
 			t.Fatal("zero-row projection was treated as unavailable")
 		}

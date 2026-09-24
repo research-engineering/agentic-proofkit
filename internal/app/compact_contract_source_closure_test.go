@@ -113,7 +113,7 @@ func TestCompactV2ProductionSurfacesContainNoLegacyVocabulary(t *testing.T) {
 	paths = append(paths,
 		"docs/proofkit-contract-map.md",
 		"docs/specs/proofkit-spec-proof-core/overview.md",
-		"docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+		"docs/specs/proofkit-spec-proof-core/requirements.v2.json",
 		"internal/kernel/compactproofcontract/compactproofcontract.go",
 		"internal/kernel/compactproofcontract/identity.go",
 		"proofkit/cli-contract.v2.json",

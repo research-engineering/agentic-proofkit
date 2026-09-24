@@ -108,8 +108,8 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 			nonClaims := []any{"Candidate meaning requires owner review.", "Witness execution is not proven."}
 			packet["nonClaims"] = nonClaims
 			source := packet["requirementSources"].([]any)[0].(map[string]any)
-			source["nonClaims"] = nonClaims
-			adoptionHelpRequirement(packet)["nonClaims"] = nonClaims
+			source["sourceNonClaims"] = nonClaims
+			adoptionHelpRequirementFields(packet)["nonClaims"] = nonClaims
 			binding := packet["requirementProofBinding"].(map[string]any)["record"].(map[string]any)
 			binding["nonClaims"] = nonClaims
 			binding["requirements"].([]any)[0].(map[string]any)["nonClaims"] = nonClaims
@@ -144,7 +144,7 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 				t.Fatalf("wrong materialization receipt: %v", receipt)
 			}
 			for _, artifact := range []struct{ path, command string }{
-				{"docs/specs/requests/requirements.v1.json", "requirement-source-admission"},
+				{"docs/specs/requests/requirements.v2.json", "requirement-source-admission"},
 				{"proofkit/requirement-bindings.json", "requirement-bindings"},
 				{"proofkit/test-evidence-inventory.json", "test-evidence-inventory"},
 			} {
@@ -183,7 +183,7 @@ func TestAdoptionInputGuideWholeChain(t *testing.T) {
 }
 
 func TestAdoptionInputGuideNonClaimsOrdering(t *testing.T) {
-	for _, scope := range []string{"packet", "source", "requirement", "inventory", "entry"} {
+	for _, scope := range []string{"packet", "inventory", "entry"} {
 		for _, invalid := range []struct {
 			name   string
 			values []any
@@ -197,7 +197,7 @@ func TestAdoptionInputGuideNonClaimsOrdering(t *testing.T) {
 				owners := map[string]map[string]any{
 					"packet":      packet,
 					"source":      packet["requirementSources"].([]any)[0].(map[string]any),
-					"requirement": adoptionHelpRequirement(packet),
+					"requirement": adoptionHelpRequirementFields(packet),
 					"inventory":   packet["testEvidenceInventory"].(map[string]any)["record"].(map[string]any),
 					"entry":       adoptionHelpEntry(packet),
 				}
@@ -223,9 +223,11 @@ func TestAdoptionInputGuideRejectsBrokenEdges(t *testing.T) {
 		{"missing runtime operand", func(v map[string]any) { v["sourcePlan"] = nil }, "adoption plan"},
 		{"source plan ID is not a plan", func(v map[string]any) { v["sourcePlan"] = v["sourcePlan"].(map[string]any)["planId"] }, "adoption plan"},
 		{"wrong identity", func(v map[string]any) { v["requestKind"] = "example.wrong" }, "identity"},
-		{"owner projection", func(v map[string]any) { adoptionHelpRequirement(v)["ownerId"] = "example.other" }, "binding requirement projection"},
-		{"nonclaim projection", func(v map[string]any) { adoptionHelpRequirement(v)["nonClaims"] = []any{} }, "binding requirement projection"},
-		{"source binding path", func(v map[string]any) { adoptionHelpRequirement(v)["proofBindingRefs"] = []any{"proofkit/other.json"} }, "proofBindingRefs"},
+		{"owner projection", func(v map[string]any) { adoptionHelpRequirementFields(v)["ownerId"] = "example.other" }, "binding requirement projection"},
+		{"nonclaim projection", func(v map[string]any) { adoptionHelpRequirementFields(v)["nonClaims"] = []any{} }, "binding requirement projection"},
+		{"source binding path", func(v map[string]any) {
+			adoptionHelpRequirementFields(v)["proofBindingRefs"] = []any{"proofkit/other.json"}
+		}, "proofBindingRefs"},
 		{"inventory source edge", func(v map[string]any) {
 			adoptionHelpEntry(v)["sourcePath"] = "src/other_test.go"
 			adoptionHelpEntry(v)["selector"] = "src/other_test.go::TestRejectEmptyInput"
@@ -233,7 +235,7 @@ func TestAdoptionInputGuideRejectsBrokenEdges(t *testing.T) {
 		{"inventory command edge", func(v map[string]any) { adoptionHelpEntry(v)["commandRefs"] = []any{"example.unknown"} }, "not connected"},
 		{"inventory witness edge", func(v map[string]any) { adoptionHelpEntry(v)["witnessRefs"] = []any{"example.unknown"} }, "not connected"},
 		{"inventory requirement edge", func(v map[string]any) { adoptionHelpEntry(v)["requirementRefs"] = []any{"REQ-UNKNOWN-001"} }, "unknown requirement"},
-		{"secret text", func(v map[string]any) { adoptionHelpRequirement(v)["invariant"] = "api_key=private-example-value" }, "secret"},
+		{"secret text", func(v map[string]any) { adoptionHelpMember(v)["statementCompletion"] = "api_key=private-example-value" }, "invalid_text"},
 	} {
 		t.Run(mutation.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -245,6 +247,39 @@ func TestAdoptionInputGuideRejectsBrokenEdges(t *testing.T) {
 			}
 			if entries, err := os.ReadDir(root); err != nil || len(entries) != 0 {
 				t.Fatal("failed plan mutated the repository")
+			}
+		})
+	}
+}
+
+func TestAdoptionInputGuideGroupedDenialsNormalizeButRejectDuplicates(t *testing.T) {
+	for _, scope := range []string{"source", "requirement"} {
+		t.Run(scope, func(t *testing.T) {
+			root := t.TempDir()
+			packet := adoptionHelpPacket(t, root, "fresh")
+			denials := []any{"Candidate meaning requires owner review.", "Witness execution is not proven."}
+			source := packet["requirementSources"].([]any)[0].(map[string]any)
+			owner, field := source, "sourceNonClaims"
+			if scope == "requirement" {
+				owner, field = adoptionHelpRequirementFields(packet), "nonClaims"
+				binding := packet["requirementProofBinding"].(map[string]any)["record"].(map[string]any)
+				binding["requirements"].([]any)[0].(map[string]any)["nonClaims"] = append([]any{}, denials...)
+			}
+			owner[field] = append([]any{}, denials...)
+			args := []string{"adopt", "materialize", "plan", "--input", "-", "--repo-root", root}
+			canonical := runAdoptionHelpCLI(t, adoptionHelpJSON(t, packet), args...)
+			owner[field] = []any{denials[1], denials[0]}
+			permuted := runAdoptionHelpCLI(t, adoptionHelpJSON(t, packet), args...)
+			if !reflect.DeepEqual(canonical, permuted) {
+				t.Fatal("grouped denial set order changed materialization semantics")
+			}
+			owner[field] = []any{denials[0], denials[0]}
+			status, stdout, stderr := executeAgentWorkflowCLI(t, args, bytes.NewReader(adoptionHelpJSON(t, packet)), PresentationCapabilities{})
+			if status != 1 || stdout != "" || !strings.Contains(stderr, "duplicate_value") {
+				t.Fatalf("duplicate grouped denial admitted: status=%d stderr=%q", status, stderr)
+			}
+			if entries, err := os.ReadDir(root); err != nil || len(entries) != 0 {
+				t.Fatal("planning changed repository state")
 			}
 		})
 	}
@@ -263,7 +298,7 @@ func TestAdoptionInputGuideInventoryVersion(t *testing.T) {
 	}
 	inventory["schemaVersion"] = 2
 	status, stdout, stderr := executeAgentWorkflowCLI(t, []string{"test-evidence-inventory", "--input", "-"}, bytes.NewReader(adoptionHelpJSON(t, inventory)), PresentationCapabilities{})
-	if status != 1 || stdout != "" || !strings.Contains(stderr, "schemaVersion must be 1") {
+	if status != 1 || stdout != "" || !strings.Contains(stderr, "schemaVersion") {
 		t.Fatalf("direct v2 input was not rejected: status=%d stdout=%q stderr=%q", status, stdout, stderr)
 	}
 }
@@ -315,7 +350,7 @@ func assertSourceViewGuide(t *testing.T, packet map[string]any, payload []byte) 
 		t.Fatalf("source view input pointer=%q", pointer)
 	}
 	source := packet["requirementSources"].([]any)[0].(map[string]any)
-	requirement := adoptionHelpRequirement(packet)
+	requirement := adoptionHelpMember(packet)
 	invalid := decodeCLIJSON(t, string(payload)).(map[string]any)
 	invalid["requirementSources"].([]any)[0].(map[string]any)["sourceId"] = ""
 	for _, format := range []string{"json", "html"} {
@@ -328,11 +363,11 @@ func assertSourceViewGuide(t *testing.T, packet map[string]any, payload []byte) 
 			view := decodeCLIJSON(t, stdout).(map[string]any)
 			viewRequirement := view["requirements"].([]any)[0].(map[string]any)
 			if view["viewKind"] != "proofkit.requirement-source-view" || view["authority"] != "presentation_only" || view["sourceId"] != source["sourceId"] ||
-				viewRequirement["requirementId"] != requirement["requirementId"] || viewRequirement["invariant"] != requirement["invariant"] {
+				viewRequirement["requirementId"] != requirement["requirementId"] || viewRequirement["invariant"] != requirement["statementCompletion"] {
 				t.Fatal("source view lost the selected template identity or presentation boundary")
 			}
 		} else if !strings.HasPrefix(stdout, "<!doctype html>") || !strings.Contains(stdout, "presentation_only") ||
-			!strings.Contains(stdout, html.EscapeString(requirement["invariant"].(string))) || !strings.Contains(stdout, requirement["requirementId"].(string)) {
+			!strings.Contains(stdout, html.EscapeString(requirement["statementCompletion"].(string))) || !strings.Contains(stdout, requirement["requirementId"].(string)) {
 			t.Fatal("HTML source view lost the selected template content or presentation boundary")
 		}
 		status, stdout, stderr = executeAgentWorkflowCLI(t, args, bytes.NewReader(adoptionHelpJSON(t, invalid)), PresentationCapabilities{})
@@ -360,8 +395,12 @@ func runAdoptionHelpCLI(t *testing.T, input []byte, args ...string) map[string]a
 	return decodeCLIJSON(t, stdout).(map[string]any)
 }
 
-func adoptionHelpRequirement(v map[string]any) map[string]any {
-	return v["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
+func adoptionHelpRequirementFields(v map[string]any) map[string]any {
+	return adoptionHelpMember(v)["fields"].(map[string]any)
+}
+
+func adoptionHelpMember(v map[string]any) map[string]any {
+	return v["requirementSources"].([]any)[0].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
 }
 
 func adoptionHelpEntry(v map[string]any) map[string]any {

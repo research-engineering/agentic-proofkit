@@ -27,19 +27,22 @@ func materializationSmokeInput(ctx context.Context, repositoryRoot string) (any,
 	}
 	requirementNonClaims := []any{"Installed workflow fixture does not prove rollout."}
 	value := map[string]any{
-		"schemaVersion": json.Number("1"), "requestKind": adoptionmaterialization.RequestKind,
+		"schemaVersion": json.Number("2"), "requestKind": adoptionmaterialization.RequestKind,
 		"requestId": "proofkit.workflow-smoke.materialization", "projectId": "proofkit.workflow-smoke", "sourcePlan": sourcePlan.JSONValue(),
 		"requirementSources": []any{map[string]any{
-			"schemaVersion": json.Number("1"), "sourceId": "proofkit.workflow-smoke.requirements", "specPackagePath": "docs/specs/workflow-smoke",
-			"overviewPath": "docs/specs/workflow-smoke/overview.md", "requirementsPath": "docs/specs/workflow-smoke/requirements.v1.json",
-			"nonClaims": []any{"Installed workflow source fixture does not prove production readiness."},
-			"requirements": []any{map[string]any{
-				"claimLevel": "blocking", "deferral": nil, "invariant": "Installed carriers preserve admitted materialized-project navigation.",
-				"lifecycle":    map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
-				"nonClaimRefs": []any{}, "nonClaims": requirementNonClaims, "ownerId": "proofkit.workflow-smoke.owner",
-				"proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": "REQ-PROOFKIT-WORKFLOW-SMOKE-001", "riskClass": "high",
-				"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "proofkit.workflow-smoke.owner"},
-			}},
+			"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": "proofkit.workflow-smoke.requirements", "specPackagePath": "docs/specs/workflow-smoke",
+			"sourceNonClaims": []any{"Installed workflow source fixture does not prove production readiness."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-WORKFLOW", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId": "REQ-PROOFKIT-WORKFLOW-SMOKE-001", "statementCompletion": "Installed carriers preserve admitted materialized-project navigation.",
+					"fields": map[string]any{
+						"claimLevel": "blocking", "deferral": nil,
+						"lifecycle":    map[string]any{"state": "active"},
+						"nonClaimRefs": []any{}, "externalNonClaimRefs": []any{}, "nonClaims": requirementNonClaims, "ownerId": "proofkit.workflow-smoke.owner",
+						"proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "riskClass": "high",
+						"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "proofkit.workflow-smoke.owner"},
+					}}}}},
 		}},
 		"requirementProofBinding": map[string]any{
 			"path": "proofkit/requirement-bindings.json",
@@ -47,7 +50,7 @@ func materializationSmokeInput(ctx context.Context, repositoryRoot string) (any,
 				"schemaVersion": json.Number("1"), "bindingId": "proofkit.workflow-smoke.bindings",
 				"requirements": []any{map[string]any{
 					"claimLevel": "blocking", "nonClaims": requirementNonClaims, "ownerId": "proofkit.workflow-smoke.owner",
-					"proofState": "witness_backed", "requirementId": "REQ-PROOFKIT-WORKFLOW-SMOKE-001", "specPath": "docs/specs/workflow-smoke/requirements.v1.json",
+					"proofState": "witness_backed", "requirementId": "REQ-PROOFKIT-WORKFLOW-SMOKE-001", "specPath": "docs/specs/workflow-smoke/requirements.v2.json",
 				}},
 				"bindings": []any{map[string]any{
 					"commandIds": []any{"proofkit.workflow-smoke.test"}, "environmentClasses": []any{"local-go"}, "requirementId": "REQ-PROOFKIT-WORKFLOW-SMOKE-001",

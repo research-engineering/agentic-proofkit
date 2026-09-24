@@ -27,20 +27,21 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 		}
 	}
 	expectedExports := []string{
+		"Assess", "AssessWithLimits", "Assessment", "AssessmentSummary",
 		"AtomicProjection", "AtomicRequirement", "ByteRange",
 		"ClaimAdvisory", "ClaimBlocking", "ClaimDeferred", "ClaimLevel",
 		"DefaultLimits", "Deferral", "Derivation", "Draft",
 		"EntityDerivation", "EntityGroup", "EntityKind", "EntityNonClaim", "EntityProfile", "EntityRequirement", "EntityScenario", "EntitySource", "EntityTerm",
 		"ErrorCode", "Example", "Field", "FieldOwner", "GitBlobRef", "Group",
-		"LayoutProjection", "Lifecycle", "LifecycleActive", "LifecycleDeprecated", "LifecycleRemoved", "LifecycleState", "LifecycleSuperseded", "Limits",
+		"LayoutProjection", "Lifecycle", "LifecycleActive", "LifecycleDeprecated", "LifecycleRemoved", "LifecycleState", "LifecycleStates", "LifecycleSuperseded", "Limits",
 		"Member", "MetadataFieldID", "MetadataFields", "MetadataOwnerKind", "MetadataOwnerMember", "MetadataOwnerProfile", "Model",
-		"NonClaimDefinition", "Normalize", "NormalizeWithLimits",
-		"ObjectFormat", "ObjectSHA1", "ObjectSHA256", "Origin", "Own", "Profile",
+		"NonClaimDefinition", "Normalize", "NormalizeNonClaimDefinitions", "NormalizeWithLimits",
+		"ObjectFormat", "ObjectSHA1", "ObjectSHA256", "Origin", "Own", "PolicyViolation", "Profile",
 		"ReferenceDerivationNonClaim", "ReferenceDerivationRequirement", "ReferenceEdge", "ReferenceEndpoint", "ReferenceGroupMember", "ReferenceGroupProfile", "ReferenceKind", "ReferenceLifecycleReplacement", "ReferenceProjection", "ReferenceRequirementNonClaim", "ReferenceScenarioNonClaim", "ReferenceScenarioRequirement", "ReferenceScenarioVocabulary", "ReferenceSourceNonClaim",
-		"RiskClass", "RiskCritical", "RiskHigh", "RiskLow", "RiskMedium",
-		"Scenario", "ScenarioValue", "SourceClarification", "SourceCodeSnapshot", "SourceDesign", "SourceKind", "SourceOwnerDecision", "SourcePlan",
+		"AdmitScenarioReference", "ResolveScenario", "RiskClass", "RiskCritical", "RiskHigh", "RiskLow", "RiskMedium",
+		"Scenario", "ScenarioReference", "ScenarioResolution", "ScenarioValue", "SourceClarification", "SourceCodeSnapshot", "SourceDesign", "SourceKind", "SourceOwnerDecision", "SourcePlan",
 		"TermAction", "TermKind", "TermObservable", "TermState", "TermSubject", "TermValue",
-		"UpdatePolicy", "ValidateLimits", "ValidationError", "VocabularyTerm",
+		"UpdatePolicy", "ValidateLimits", "ValidateResolvedNonClaimScope", "ValidationError", "VocabularyTerm",
 	}
 	sort.Strings(actualExports)
 	sort.Strings(expectedExports)
@@ -56,8 +57,10 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 	expectedImports := []string{
 		"fmt",
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/admit",
+		"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity",
 		"reflect",
 		"regexp",
+		"slices",
 		"sort",
 		"strconv",
 		"strings",

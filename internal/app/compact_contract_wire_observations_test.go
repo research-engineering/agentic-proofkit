@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
@@ -136,29 +137,39 @@ func TestCompactV2WireDeltasResolveAgainstFrozenVersionEdgeObservations(t *testi
 func TestCurrentCompactV2WireSemanticsMatchFrozenVersionEdge(t *testing.T) {
 	frozen := readCompactV2WireObservations(t)
 	current := currentCompactV2WireObservations(t)
+	changedBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "internal/app/testdata/source-v2-compact-changed-hashes.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	changed, err := admission.DecodeTypedJSON[map[string]string](bytes.NewReader(changedBytes), int64(len(changedBytes)))
+	if err != nil {
+		t.Fatal(err)
+	}
 	assertExactStringSet(t, sortedMapKeys(frozen), expectedCompactWireObservationKeys, "frozen compact v2 observation closure")
 	assertExactStringSet(t, sortedMapKeys(current), expectedCompactWireObservationKeys, "current compact v2 observation closure")
+	observedChanges := 0
 	for _, key := range expectedCompactWireObservationKeys {
-		frozenValue := frozen[key]
-		currentValue := current[key]
-		if strings.HasSuffix(key, "|union") {
-			frozenValue = compactWithoutContractFreshnessDigests(t, frozenValue, key+" frozen")
-			currentValue = compactWithoutContractFreshnessDigests(t, currentValue, key+" current")
-		}
-		if key == "test-evidence-inventory|input|union" {
-			record := clonePublicABIRecord(currentValue.(map[string]any))
-			input, err := normalizeInventoryInputGuideContract(record["contract"].(map[string]any))
-			if err != nil {
-				t.Fatal(err)
+		wantHash, recorded := changed[key]
+		if compactJSONEqual(frozen[key], current[key]) {
+			if recorded {
+				t.Fatalf("declared source cutover change %s is no longer present", key)
 			}
-			record["contract"] = input
-			currentValue = record
+			continue
 		}
-		if !compactJSONEqual(frozenValue, currentValue) {
-			pointers := []string{}
-			collectUncoveredCompactWireDiffs(frozenValue, true, currentValue, true, "", map[string]string{}, map[string]struct{}{}, &pointers)
-			t.Fatalf("current compact v2 observation %s drifted from the frozen version-edge semantics at %v", key, pointers)
+		if !recorded {
+			t.Fatalf("unlisted compact observation changed under source cutover: %s", key)
 		}
+		encoded, err := stablejson.Marshal(current[key])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := digest.SHA256BytesRef(encoded); got != wantHash {
+			t.Fatalf("source cutover observation %s hash drifted: got %s want %s", key, got, wantHash)
+		}
+		observedChanges++
+	}
+	if observedChanges != len(changed) {
+		t.Fatalf("declared source cutover observations=%d, observed=%d", len(changed), observedChanges)
 	}
 }
 

@@ -4,6 +4,7 @@ import {icon} from "./workspace-icons.js";
 
 /** @param {HTMLElement} container @param {any} projection @param {(requirement: any, opener: HTMLButtonElement) => void} ask */
 export function renderCoveragePage(container, projection, ask) {
+  const definitionsBySource = new Map(projection.nonClaimDefinitionsBySource.map((/** @type {any} */ source) => [source.sourceId, new Map(source.definitions.map((/** @type {any} */ definition) => [definition.nonClaimId, definition.statement]))]));
   const summary = document.createElement("p");
   summary.className = "page-summary";
   summary.dataset.coverageSummary = "";
@@ -27,6 +28,17 @@ export function renderCoveragePage(container, projection, ask) {
     invariant.dataset.anchorId = requirement.anchor.anchorId;
     invariant.textContent = requirement.invariant;
     identity.append(title, invariant);
+    if (requirement.sharedPremises?.length) {
+      const premises = document.createElement("ul");
+      premises.className = "shared-premises caller-text";
+      premises.setAttribute("aria-label", "Shared premises");
+      for (const text of requirement.sharedPremises) {
+        const premise = document.createElement("li");
+        premise.textContent = text;
+        premises.append(premise);
+      }
+      identity.append(premises);
+    }
     const state = document.createElement("dl");
     state.className = "coverage-state";
     addField(state, "Coverage", row === null ? "Not reported" : row.coverageState);
@@ -81,7 +93,9 @@ export function renderCoveragePage(container, projection, ask) {
         }
       }
       const boundaries = document.createElement("ul");
-      for (const text of [...requirement.sourceNonClaims, ...requirement.nonClaims, ...(row?.nonClaims ?? [])]) {
+      const named = requirement.nonClaimRefs.map((/** @type {string} */ ref) => `${ref}: ${definitionsBySource.get(requirement.anchor.sourceId)?.get(ref) ?? "Definition unavailable"}`);
+      const external = requirement.externalNonClaimRefs.map((/** @type {string} */ ref) => `External non-claim reference: ${ref}`);
+      for (const text of [...new Set([...requirement.sourceNonClaims, ...requirement.nonClaims, ...(row?.nonClaims ?? []), ...named, ...external])]) {
         const entry = document.createElement("li");
         entry.className = "caller-text";
         entry.textContent = text;

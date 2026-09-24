@@ -24,22 +24,11 @@ func AdmitOutput(raw any, currentSnapshotID string) (map[string]any, error) {
 	if !ok {
 		return nil, fmt.Errorf("requirement semantic diff output must be an object")
 	}
-	switch {
-	case admit.JSONNumberEquals(record["schemaVersion"], 1):
-		return admitV1Output(record, currentSnapshotID)
-	case admit.JSONNumberEquals(record["schemaVersion"], 2):
-		return admitV2Output(record, currentSnapshotID)
-	default:
-		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 1 or 2")
-	}
-}
-
-func admitV2Output(record map[string]any, currentSnapshotID string) (map[string]any, error) {
-	if err := admit.KnownKeys(record, []string{"baseExpectedDigestCoverage", "baseSnapshotId", "changeCount", "changes", "currentExpectedDigestCoverage", "currentSnapshotId", "diffId", "diffKind", "nonClaims", "schemaVersion"}, "requirement semantic diff output v2"); err != nil {
+	if err := admit.KnownKeys(record, []string{"baseExpectedDigestCoverage", "baseSnapshotId", "changeCount", "changes", "currentExpectedDigestCoverage", "currentSnapshotId", "diffId", "diffKind", "nonClaims", "schemaVersion"}, "requirement semantic diff output"); err != nil {
 		return nil, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) && record["schemaVersion"] != 2 {
-		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return nil, fmt.Errorf("requirement semantic diff output schemaVersion must be 3")
 	}
 	if record["diffKind"] != "proofkit.requirement-semantic-diff" || record["currentSnapshotId"] != currentSnapshotID {
 		return nil, fmt.Errorf("requirement semantic diff output identity is invalid")
@@ -53,6 +42,9 @@ func admitV2Output(record map[string]any, currentSnapshotID string) (map[string]
 }
 
 func admitOutputRecord(record map[string]any) (map[string]any, error) {
+	if _, err := admit.RuleID(record["diffId"], "requirement semantic diff output diffId"); err != nil {
+		return nil, err
+	}
 	for _, key := range []string{"baseSnapshotId", "currentSnapshotId"} {
 		if _, err := digestRef(record[key], "requirement semantic diff output "+key); err != nil {
 			return nil, err
@@ -127,6 +119,9 @@ func admitOutputRecord(record map[string]any) (map[string]any, error) {
 		return nil, fmt.Errorf("requirement semantic diff output contains secret-shaped data")
 	}
 	if err := exactNonClaims(record["nonClaims"]); err != nil {
+		return nil, err
+	}
+	if err := diffOutputShape.CheckGenerated(record, "requirement semantic diff output"); err != nil {
 		return nil, err
 	}
 	return canonicalCopy(record)

@@ -58,29 +58,38 @@ const inputGuide = `Materialization input guide:
 
 Connected request template (sourcePlan is the only runtime placeholder):
 ` + "```json\n" + `{
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "requestKind": "proofkit.adoption-materialization-request",
   "requestId": "example.materialization",
   "projectId": "example.project",
   "sourcePlan": null,
   "requirementSources": [{
-    "schemaVersion": 1,
+    "schemaVersion": 2,
+    "kind": "proofkit.requirement-source",
     "sourceId": "example.requirements",
     "specPackagePath": "docs/specs/requests",
-    "overviewPath": "docs/specs/requests/overview.md",
-    "requirementsPath": "docs/specs/requests/requirements.v1.json",
-    "nonClaims": ["Synthetic source; no product intent or execution is proven."],
-    "requirements": [{
-      "requirementId": "REQ-EXAMPLE-001",
-      "ownerId": "example.backend",
-      "invariant": "Empty requests are rejected.",
-      "claimLevel": "blocking",
-      "riskClass": "high",
-      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
-      "nonClaimRefs": [],
-      "nonClaims": ["Synthetic requirement; no native execution is proven."],
-      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
-      "updatePolicy": {"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "example.backend"}
+    "sourceNonClaims": ["Synthetic source; no product intent or execution is proven."],
+    "groups": [{
+      "groupId": "RGRP-REQUESTS",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [{
+        "requirementId": "REQ-EXAMPLE-001",
+        "statementCompletion": "Empty requests are rejected.",
+        "fields": {
+          "ownerId": "example.backend",
+          "claimLevel": "blocking",
+          "riskClass": "high",
+          "lifecycle": {"state": "active"},
+          "deferral": null,
+          "nonClaimRefs": [],
+          "externalNonClaimRefs": [],
+          "nonClaims": ["Synthetic requirement; no native execution is proven."],
+          "proofBindingRefs": ["proofkit/requirement-bindings.json"],
+          "updatePolicy": {"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "example.backend"}
+        }
+      }]
     }]
   }],
   "requirementProofBinding": {
@@ -93,7 +102,7 @@ Connected request template (sourcePlan is the only runtime placeholder):
         "ownerId": "example.backend",
         "claimLevel": "blocking",
         "proofState": "witness_backed",
-        "specPath": "docs/specs/requests/requirements.v1.json",
+        "specPath": "docs/specs/requests/requirements.v2.json",
         "nonClaims": ["Synthetic requirement; no native execution is proven."]
       }],
       "bindings": [{

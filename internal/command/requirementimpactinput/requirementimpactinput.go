@@ -100,8 +100,8 @@ func admitInput(raw any) (input, error) {
 	if err := admit.KnownKeys(record, []string{"baseCommit", "baseCompactProofContract", "baseRef", "baseRequirementSources", "changedPathSources", "composerInputId", "currentCompactProofContract", "currentRequirementSources", "generatedArtifactPolicyState", "generatedArtifactRules", "headCommit", "headRef", "localEnvironmentPolicy", "nonClaims", "preexistingFailures", "proofBindingSourcePaths", "proofLikePathPolicy", "schemaVersion", "unboundProofChangeRationale"}, "requirement impact input compose input"); err != nil {
 		return input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return input{}, fmt.Errorf("requirement impact input compose schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return input{}, fmt.Errorf("requirement impact input compose schemaVersion must be 3")
 	}
 	if _, err := admit.RuleID(record["composerInputId"], "requirement impact input compose composerInputId"); err != nil {
 		return input{}, err
@@ -122,16 +122,20 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	currentRequirements, err := admitRequirementSources(record["currentRequirementSources"], "currentRequirementSources", false)
+	currentRequirements, currentSources, err := admitRequirementSources(record["currentRequirementSources"], "currentRequirementSources", false)
 	if err != nil {
 		return input{}, err
 	}
-	baseRequirements, err := admitRequirementSources(record["baseRequirementSources"], "baseRequirementSources", true)
+	baseSourcesPresent := record["baseRequirementSources"] != nil
+	baseRequirements, baseSources, err := admitRequirementSources(record["baseRequirementSources"], "baseRequirementSources", true)
 	if err != nil {
 		return input{}, err
 	}
 	currentContract, err := compactproofcontract.Admit(record["currentCompactProofContract"])
 	if err != nil {
+		return input{}, err
+	}
+	if err := requirementsourceadmission.AdmitScenarioLinks(currentSources, impactScenarioLinks(currentContract, currentRequirements)); err != nil {
 		return input{}, err
 	}
 	var baseContract *compactproofcontract.Contract
@@ -141,8 +145,11 @@ func admitInput(raw any) (input, error) {
 			return input{}, err
 		}
 		baseContract = &contract
+		if err := requirementsourceadmission.AdmitScenarioLinks(baseSources, impactScenarioLinks(contract, baseRequirements)); err != nil {
+			return input{}, err
+		}
 	}
-	if (len(baseRequirements) == 0) != (baseContract == nil) {
+	if baseSourcesPresent != (baseContract != nil) {
 		return input{}, fmt.Errorf("requirement impact input compose baseRequirementSources and baseCompactProofContract must both be present or both be null for new-adoption baselines")
 	}
 	changedPathSources, err := changedPathSources(record["changedPathSources"])
@@ -300,31 +307,47 @@ func compose(input input) (map[string]any, error) {
 	return output, nil
 }
 
-func admitRequirementSources(raw any, context string, nullable bool) (map[string]requirementsourceadmission.Requirement, error) {
+func admitRequirementSources(raw any, context string, nullable bool) (map[string]requirementsourceadmission.Requirement, []requirementsourceadmission.Source, error) {
 	if raw == nil && nullable {
-		return map[string]requirementsourceadmission.Requirement{}, nil
+		return map[string]requirementsourceadmission.Requirement{}, nil, nil
 	}
 	values, ok := raw.([]any)
 	if !ok || len(values) == 0 {
-		return nil, fmt.Errorf("requirement impact input compose %s must be a non-empty array", context)
+		return nil, nil, fmt.Errorf("requirement impact input compose %s must be a non-empty array", context)
 	}
 	byID := map[string]requirementsourceadmission.Requirement{}
+	sources := make([]requirementsourceadmission.Source, 0, len(values))
 	for index, value := range values {
 		result, err := requirementsourceadmission.Evaluate(value)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if result.ExitCode != 0 {
-			return nil, fmt.Errorf("requirement impact input compose %s item %d must pass requirement source admission", context, index+1)
+			return nil, nil, fmt.Errorf("requirement impact input compose %s item %d must pass requirement source admission", context, index+1)
 		}
-		for _, requirement := range result.Source.Requirements {
+		sources = append(sources, result.Source)
+		for _, requirement := range result.Source.Requirements() {
 			if _, exists := byID[requirement.RequirementID]; exists {
-				return nil, fmt.Errorf("requirement impact input compose duplicate requirementId across %s: %s", context, requirement.RequirementID)
+				return nil, nil, fmt.Errorf("requirement impact input compose duplicate requirementId across %s: %s", context, requirement.RequirementID)
 			}
 			byID[requirement.RequirementID] = requirement
 		}
 	}
-	return byID, nil
+	return byID, sources, nil
+}
+
+func impactScenarioLinks(contract compactproofcontract.Contract, requirements map[string]requirementsourceadmission.Requirement) []requirementsourceadmission.ScenarioLink {
+	bindings := contract.Bindings()
+	links := make([]requirementsourceadmission.ScenarioLink, 0, len(bindings))
+	for _, binding := range bindings {
+		if _, known := requirements[binding.RequirementID()]; !known {
+			continue
+		}
+		links = append(links, requirementsourceadmission.ScenarioLink{
+			RequirementID: binding.RequirementID(), ScenarioID: binding.ScenarioID(),
+		})
+	}
+	return links
 }
 
 func changedPathSources(raw any) ([]changedpathset.SourceInput, error) {
@@ -639,23 +662,7 @@ func isActiveBlocking(requirement requirementsourceadmission.Requirement) bool {
 }
 
 func requirementFingerprint(requirement requirementsourceadmission.Requirement) string {
-	return stableFingerprint(map[string]any{
-		"claimLevel":       requirement.ClaimLevel,
-		"deferral":         deferralValue(requirement.Deferral),
-		"invariant":        requirement.Invariant,
-		"lifecycle":        lifecycleValue(requirement.Lifecycle),
-		"nonClaimRefs":     stringsToAny(requirement.NonClaimRefs),
-		"nonClaims":        stringsToAny(requirement.NonClaims),
-		"ownerId":          requirement.OwnerID,
-		"proofBindingRefs": stringsToAny(requirement.ProofBindingRefs),
-		"requirementId":    requirement.RequirementID,
-		"riskClass":        requirement.RiskClass,
-		"updatePolicy": map[string]any{
-			"requiresImpactDeclaration":  requirement.UpdatePolicy.RequiresImpactDeclaration,
-			"requiresProofBindingReview": requirement.UpdatePolicy.RequiresProofBindingReview,
-			"reviewOwnerId":              requirement.UpdatePolicy.ReviewOwnerID,
-		},
-	})
+	return stableFingerprint(requirementsourceadmission.RequirementValue(requirement))
 }
 
 func bindingFingerprint(binding bindingRecord) string {
@@ -709,28 +716,6 @@ func stableFingerprint(value any) string {
 	}
 	sum := sha256.Sum256(encoded)
 	return "sha256:" + hex.EncodeToString(sum[:])
-}
-
-func deferralValue(deferral *requirementsourceadmission.Deferral) any {
-	if deferral == nil {
-		return nil
-	}
-	return map[string]any{
-		"evidenceRefs":    stringsToAny(deferral.EvidenceRefs),
-		"expiryRef":       deferral.ExpiryRef,
-		"mergePolicy":     deferral.MergePolicy,
-		"ownerId":         deferral.OwnerID,
-		"reviewCondition": deferral.ReviewCondition,
-		"riskAcceptedBy":  deferral.RiskAcceptedBy,
-	}
-}
-
-func lifecycleValue(lifecycle requirementsourceadmission.Lifecycle) map[string]any {
-	return map[string]any{
-		"evidenceRefs":              stringsToAny(lifecycle.EvidenceRefs),
-		"replacementRequirementIds": stringsToAny(lifecycle.ReplacementRequirementIDs),
-		"state":                     lifecycle.State,
-	}
 }
 
 func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {

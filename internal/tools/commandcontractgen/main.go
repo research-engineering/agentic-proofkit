@@ -12,7 +12,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
-	"io/fs"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,14 +57,19 @@ type generatedMetadata struct {
 
 func main() {
 	check := flag.Bool("check", false, "verify both generated command-contract projections")
+	refresh := flag.Bool("refresh-structures", false, "refresh native structural definitions and both generated projections")
 	flag.Parse()
-	if flag.NArg() != 0 {
-		fmt.Fprintln(os.Stderr, "commandcontractgen accepts only --check")
+	if flag.NArg() != 0 || (*check && *refresh) {
+		fmt.Fprintln(os.Stderr, "commandcontractgen accepts either --check or --refresh-structures")
 		os.Exit(1)
 	}
 	root, err := os.Getwd()
 	if err == nil {
-		err = run(root, *check)
+		if *refresh {
+			err = refreshStructures(root)
+		} else {
+			err = run(root, *check)
+		}
 	}
 	if err != nil {
 		diagnostic.WriteError(os.Stderr, err)
@@ -109,8 +114,15 @@ func render(root string) ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	return renderContract(root, source, contract)
+}
+
+func renderContract(root string, source []byte, contract map[string]any) ([]byte, []byte, error) {
 	definitions, err := admitDefinitions(contract)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := admitNativeStructureConsumers(contract, definitions); err != nil {
 		return nil, nil, err
 	}
 	metadata, presets, err := admitCommands(root, contract, definitions)
@@ -130,7 +142,16 @@ func render(root string) ([]byte, []byte, error) {
 }
 
 func readContract(path string) ([]byte, map[string]any, error) {
-	content, err := os.ReadFile(path)
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, nil, fmt.Errorf("read CLI contract: %w", err)
+	}
+	defer file.Close()
+	return readContractInput(file)
+}
+
+func readContractInput(reader io.Reader) ([]byte, map[string]any, error) {
+	content, err := io.ReadAll(io.LimitReader(reader, maxContractBytes+1))
 	if err != nil {
 		return nil, nil, fmt.Errorf("read CLI contract: %w", err)
 	}
@@ -265,6 +286,10 @@ func admitStructuralDefinition(id string, record map[string]any) error {
 	shape, ok := record["fieldTree"].(map[string]any)
 	if !ok {
 		return fmt.Errorf("contract definition %s is missing fieldTree", id)
+	}
+	_, native := nativeStructureOwner(id)
+	if native || shape["kind"] == "structural_json_schema" {
+		return admitNativeStructureDefinition(id, record)
 	}
 	if shape["kind"] != "root_shape_only" {
 		return fmt.Errorf("contract definition %s must use root_shape_only", id)
@@ -610,6 +635,15 @@ func admitCommandContract(root string, command string, direction string, contrac
 	if contract["rootType"] != definition.Content["rootType"] {
 		return "", nil, fmt.Errorf("%s rootType does not match definition %s", context, definitionID)
 	}
+	if err := admitChildBindings(command, direction, contract, definition, definitions); err != nil {
+		return "", nil, err
+	}
+	if err := admitPathRelations(command, direction, contract, definition); err != nil {
+		return "", nil, err
+	}
+	if err := admitHandoffClauses(command, direction, contract, definition); err != nil {
+		return "", nil, err
+	}
 	if err := admitConditionModelFlags(command, direction, definitionID, definition.Content, allowedFlags); err != nil {
 		return "", nil, err
 	}
@@ -865,54 +899,6 @@ func validTestSignature(function *ast.FuncDecl, testingAliases map[string]struct
 	}
 	identifier, ok := pointer.X.(*ast.Ident)
 	return ok && dotTesting && identifier.Name == "T"
-}
-
-func digestSourcePath(root string, relative string) (string, error) {
-	absolute := filepath.Join(root, filepath.FromSlash(relative))
-	info, err := os.Stat(absolute)
-	if err != nil {
-		return "", err
-	}
-	paths := []string{}
-	if info.IsDir() {
-		err = filepath.WalkDir(absolute, func(path string, entry fs.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
-			}
-			if entry.IsDir() {
-				return nil
-			}
-			if strings.HasSuffix(entry.Name(), ".go") && !strings.HasSuffix(entry.Name(), "_test.go") && !strings.HasSuffix(entry.Name(), "_generated.go") {
-				relativePath, err := filepath.Rel(root, path)
-				if err != nil {
-					return err
-				}
-				paths = append(paths, filepath.ToSlash(relativePath))
-			}
-			return nil
-		})
-		if err != nil {
-			return "", err
-		}
-	} else {
-		paths = append(paths, relative)
-	}
-	sort.Strings(paths)
-	if len(paths) == 0 {
-		return "", errors.New("native source contains no admitted Go files")
-	}
-	hash := sha256.New()
-	for _, path := range paths {
-		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(path)))
-		if err != nil {
-			return "", err
-		}
-		hash.Write([]byte(path))
-		hash.Write([]byte{0})
-		hash.Write(content)
-		hash.Write([]byte{0})
-	}
-	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func renderApp(sourceDigest string, metadata map[string]generatedMetadata) ([]byte, error) {

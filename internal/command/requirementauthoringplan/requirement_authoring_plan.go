@@ -9,6 +9,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
 const planKind = "proofkit.requirement-authoring-plan"
@@ -29,13 +30,15 @@ var standardNonClaims = []string{
 }
 
 type input struct {
-	AuthoringPlanID         string
-	AuthoringRefs           []authoringRef
-	CandidateUpdates        []candidateUpdate
-	CurrentRequirementValue map[string]any
-	CurrentRequirementState requirementsourceadmission.Source
-	Mode                    string
-	NonClaims               []string
+	AuthoringPlanID            string
+	AuthoringRefs              []authoringRef
+	CandidateUpdates           []candidateUpdate
+	CurrentRequirementValue    map[string]any
+	CurrentRequirementState    requirementsourceadmission.Source
+	CandidateRequirementResult requirementsourceadmission.Result
+	CandidateRequirementValue  map[string]any
+	Mode                       string
+	NonClaims                  []string
 }
 
 type authoringRef struct {
@@ -73,17 +76,19 @@ func Build(raw any) (map[string]any, int, error) {
 		return nil, 1, err
 	}
 	output, exitCode := buildOutput(input)
+	if err := authoringOutputShape.CheckGenerated(output, "requirement authoring plan output"); err != nil {
+		return nil, 1, err
+	}
 	return output, exitCode, nil
 }
 
 func buildOutput(input input) (map[string]any, int) {
-	nextSource, compositionFailures := composeNextRequirementSource(input)
-	sourceResult, sourceErr := requirementsourceadmission.Evaluate(nextSource)
-	if sourceErr == nil && sourceResult.ExitCode == 0 {
-		nextSource = requirementsourceadmission.SourceValue(sourceResult.Source)
-	}
+	nextSource := input.CandidateRequirementValue
+	sourceResult := input.CandidateRequirementResult
+	var sourceErr error
+	updates, changedPlanes, compositionFailures := compareCandidateSource(input)
 	transitionInput := map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"transitionId":  input.AuthoringPlanID + ".transition",
 		"nonClaims": []any{
 			"Requirement authoring plan transition proof does not promote candidates to stable repository truth.",
@@ -91,19 +96,28 @@ func buildOutput(input input) (map[string]any, int) {
 		"previous": input.CurrentRequirementValue,
 		"next":     nextSource,
 	}
-	transitionRecord, transitionExitCode, transitionErr := requirementsourcetransition.Build(transitionInput)
+	transitionRecord := report.Record{State: "skipped"}
+	transitionExitCode := 1
+	var transitionErr error
+	if sourceResult.ExitCode == 0 {
+		transitionRecord, transitionExitCode, transitionErr = requirementsourcetransition.Build(transitionInput)
+	}
 
-	failures := append([]string{}, compositionFailures...)
+	sourceFailures := []string{}
+	transitionFailures := []string{}
 	if sourceErr != nil {
-		failures = append(failures, "candidate next source admission error: "+sourceErr.Error())
+		sourceFailures = append(sourceFailures, "candidate next source admission error: "+sourceErr.Error())
 	} else if sourceResult.ExitCode != 0 {
-		failures = append(failures, "candidate next source must pass requirement-source-admission")
+		sourceFailures = append(sourceFailures, "candidate next source must pass requirement-source-admission")
 	}
 	if transitionErr != nil {
-		failures = append(failures, "candidate transition admission error: "+transitionErr.Error())
+		transitionFailures = append(transitionFailures, "candidate transition admission error: "+transitionErr.Error())
+	} else if transitionRecord.State == "skipped" {
+		transitionFailures = append(transitionFailures, "candidate transition requires an admitted candidate source")
 	} else if transitionExitCode != 0 {
-		failures = append(failures, "candidate transition must pass requirement-source-transition")
+		transitionFailures = append(transitionFailures, "candidate transition must pass requirement-source-transition")
 	}
+	failures := append(append(append([]string{}, compositionFailures...), sourceFailures...), transitionFailures...)
 	sort.Strings(failures)
 
 	state := "passed"
@@ -122,19 +136,28 @@ func buildOutput(input input) (map[string]any, int) {
 			"transitionAdmissionState": "passed",
 		}
 	}
+	var sourcePlanes any = admit.StringSliceToAny(changedPlanes)
+	comparisonState := "compared"
+	if sourceResult.ExitCode != 0 {
+		sourcePlanes = nil
+		comparisonState = "skipped_source_admission"
+	}
 	output := map[string]any{
-		"authoringRefs":                    authoringRefValues(input.AuthoringRefs),
-		"authoringPlanId":                  input.AuthoringPlanID,
-		"candidateChangeSet":               candidateUpdateValues(input.CandidateUpdates, state == "passed"),
-		"mode":                             input.Mode,
-		"nonAuthoritativeAdmissionPreview": nextCandidate,
-		"nonClaims":                        admit.StringSliceToAny(nonClaims(input.NonClaims)),
-		"ownerReviewPlan":                  ownerReviewPlan(input),
-		"planKind":                         planKind,
-		"promotionPreconditions":           promotionPreconditions(input),
-		"ruleResults":                      ruleResults(failures, sourceResult, sourceErr, transitionRecord.State, transitionErr),
-		"schemaVersion":                    2,
-		"state":                            state,
+		"authoringRefs":                     authoringRefValues(input.AuthoringRefs),
+		"authoringPlanId":                   input.AuthoringPlanID,
+		"candidateChangeSet":                candidateUpdateValues(updates, state == "passed"),
+		"changedSourcePlanes":               sourcePlanes,
+		"sourceComparisonState":             comparisonState,
+		"wholeCandidateOwnerReviewRequired": true,
+		"mode":                              input.Mode,
+		"nonAuthoritativeAdmissionPreview":  nextCandidate,
+		"nonClaims":                         admit.StringSliceToAny(nonClaims(input.NonClaims)),
+		"ownerReviewPlan":                   ownerReviewPlan(input),
+		"planKind":                          planKind,
+		"promotionPreconditions":            promotionPreconditions(input),
+		"ruleResults":                       ruleResults(compositionFailures, sourceFailures, transitionFailures, sourceResult, sourceErr, transitionRecord.State, transitionErr),
+		"schemaVersion":                     outputSchemaVersion,
+		"state":                             state,
 		"summary": map[string]any{
 			"authoringRefCount":            len(input.AuthoringRefs),
 			"candidateUpdateCount":         len(input.CandidateUpdates),
@@ -142,9 +165,9 @@ func buildOutput(input input) (map[string]any, int) {
 			"failureCount":                 len(failures),
 			"mode":                         input.Mode,
 			"sourceAdmissionState":         stateFromSourceResult(sourceResult, sourceErr),
-			"targetRequirementSourceId":    input.CurrentRequirementState.SourceID,
-			"targetRequirementsPath":       input.CurrentRequirementState.RequirementsPath,
-			"targetSpecPackagePath":        input.CurrentRequirementState.SpecPackagePath,
+			"targetRequirementSourceId":    input.CurrentRequirementState.SourceID(),
+			"targetRequirementsPath":       input.CurrentRequirementState.RequirementsPath(),
+			"targetSpecPackagePath":        input.CurrentRequirementState.SpecPackagePath(),
 			"transitionAdmissionState":     stateFromTransition(transitionRecord.State, transitionErr),
 			"writtenFileCountNonClaim":     0,
 		},
@@ -175,16 +198,11 @@ func authoringRefValues(refs []authoringRef) []any {
 }
 
 func admitInput(raw any) (input, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return input{}, fmt.Errorf("requirement authoring plan input must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"authoringPlanId", "authoringRefs", "candidateUpdates", "currentRequirementSource", "mode", "nonClaims", "schemaVersion"}, "requirement authoring plan input"); err != nil {
+	value, err := authoringInputShape.Admit(raw, "requirement authoring plan input")
+	if err != nil {
 		return input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return input{}, fmt.Errorf("requirement authoring plan schemaVersion must be 1")
-	}
+	record := value.(map[string]any)
 	authoringPlanID, err := admit.RuleID(record["authoringPlanId"], "requirement authoring plan authoringPlanId")
 	if err != nil {
 		return input{}, err
@@ -193,16 +211,24 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	current, ok := record["currentRequirementSource"].(map[string]any)
-	if !ok {
-		return input{}, fmt.Errorf("requirement authoring plan currentRequirementSource must be an object")
-	}
+	current := record["currentRequirementSource"].(map[string]any)
 	currentResult, err := requirementsourceadmission.Evaluate(current)
 	if err != nil {
 		return input{}, err
 	}
 	if currentResult.ExitCode != 0 {
 		return input{}, fmt.Errorf("requirement authoring plan currentRequirementSource must pass requirement-source-admission")
+	}
+	candidateResult, err := requirementsourceadmission.Evaluate(record["candidateRequirementSource"])
+	if err != nil {
+		return input{}, err
+	}
+	var candidateValue map[string]any
+	if candidateResult.ExitCode == 0 {
+		candidateValue, err = requirementsourceadmission.SourceValue(candidateResult.Source)
+		if err != nil {
+			return input{}, err
+		}
 	}
 	refs, err := admitAuthoringRefs(record["authoringRefs"])
 	if err != nil {
@@ -216,32 +242,29 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
+	currentValue, err := requirementsourceadmission.SourceValue(currentResult.Source)
+	if err != nil {
+		return input{}, err
+	}
 	return input{
-		AuthoringPlanID:         authoringPlanID,
-		AuthoringRefs:           refs,
-		CandidateUpdates:        updates,
-		CurrentRequirementValue: requirementsourceadmission.SourceValue(currentResult.Source),
-		CurrentRequirementState: currentResult.Source,
-		Mode:                    mode,
-		NonClaims:               nonClaims,
+		AuthoringPlanID:            authoringPlanID,
+		AuthoringRefs:              refs,
+		CandidateUpdates:           updates,
+		CurrentRequirementValue:    currentValue,
+		CurrentRequirementState:    currentResult.Source,
+		CandidateRequirementResult: candidateResult,
+		CandidateRequirementValue:  candidateValue,
+		Mode:                       mode,
+		NonClaims:                  nonClaims,
 	}, nil
 }
 
 func admitAuthoringRefs(raw any) ([]authoringRef, error) {
-	values, ok := raw.([]any)
-	if !ok || len(values) == 0 {
-		return nil, fmt.Errorf("requirement authoring plan authoringRefs must be a non-empty array")
-	}
+	values := raw.([]any)
 	result := make([]authoringRef, 0, len(values))
 	ids := []string{}
 	for _, value := range values {
-		record, ok := value.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("requirement authoring plan authoringRef must be an object")
-		}
-		if err := admit.KnownKeys(record, []string{"digest", "kind", "nonClaims", "path", "refId", "summary"}, "requirement authoring plan authoringRef"); err != nil {
-			return nil, err
-		}
+		record := value.(map[string]any)
 		refID, err := admit.RuleID(record["refId"], "requirement authoring plan authoringRef.refId")
 		if err != nil {
 			return nil, err
@@ -262,24 +285,21 @@ func admitAuthoringRefs(raw any) ([]authoringRef, error) {
 		if err != nil {
 			return nil, err
 		}
-		nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "requirement authoring plan authoringRef.nonClaims", false)
+		nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "requirement authoring plan authoringRef.nonClaims", true)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, authoringRef{Digest: digest, Kind: kind, NonClaims: nonClaims, Path: path, RefID: refID, Summary: summary})
 		ids = append(ids, refID)
 	}
-	if _, err := admit.PreserveSortedText(ids, "requirement authoring plan authoringRef ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(ids, "requirement authoring plan authoringRef ids", true); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
 func admitCandidateUpdates(raw any, refs []authoringRef) ([]candidateUpdate, error) {
-	values, ok := raw.([]any)
-	if !ok || len(values) == 0 {
-		return nil, fmt.Errorf("requirement authoring plan candidateUpdates must be a non-empty array")
-	}
+	values := raw.([]any)
 	refIDs := map[string]struct{}{}
 	for _, ref := range refs {
 		refIDs[ref.RefID] = struct{}{}
@@ -296,23 +316,17 @@ func admitCandidateUpdates(raw any, refs []authoringRef) ([]candidateUpdate, err
 		candidateIDs = append(candidateIDs, update.CandidateID)
 		requirementIDs = append(requirementIDs, update.RequirementID)
 	}
-	if _, err := admit.PreserveSortedText(candidateIDs, "requirement authoring plan candidate ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(candidateIDs, "requirement authoring plan candidate ids", true); err != nil {
 		return nil, err
 	}
-	if _, err := admit.PreserveSortedText(requirementIDs, "requirement authoring plan candidate requirement ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(requirementIDs, "requirement authoring plan candidate requirement ids", true); err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
 func admitCandidateUpdate(raw any, admittedRefIDs map[string]struct{}) (candidateUpdate, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return candidateUpdate{}, fmt.Errorf("requirement authoring plan candidateUpdate must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"candidateId", "candidateRequirement", "declaredProofObligations", "operation", "ownerQuestions", "rationale", "requirementId", "sourceRefIds"}, "requirement authoring plan candidateUpdate"); err != nil {
-		return candidateUpdate{}, err
-	}
+	record := raw.(map[string]any)
 	candidateID, err := admit.RuleID(record["candidateId"], "requirement authoring plan candidateId")
 	if err != nil {
 		return candidateUpdate{}, err
@@ -325,20 +339,20 @@ func admitCandidateUpdate(raw any, admittedRefIDs map[string]struct{}) (candidat
 	if err != nil {
 		return candidateUpdate{}, err
 	}
-	sourceRefIDs, err := admit.PreserveSortedTextArray(record["sourceRefIds"], "requirement authoring plan sourceRefIds", false)
+	sourceRefIDs, err := admit.PreserveSortedTextArray(record["sourceRefIds"], "requirement authoring plan sourceRefIds", true)
 	if err != nil {
 		return candidateUpdate{}, err
 	}
-	for _, refID := range sourceRefIDs {
+	for index, refID := range sourceRefIDs {
 		if _, ok := admittedRefIDs[refID]; !ok {
-			return candidateUpdate{}, fmt.Errorf("requirement authoring plan sourceRefIds references unknown authoring ref %s", refID)
+			return candidateUpdate{}, fmt.Errorf("requirement authoring plan sourceRefIds[%d] references unknown authoring ref", index)
 		}
 	}
 	rationale, err := admit.NonEmptyText(record["rationale"], "requirement authoring plan rationale")
 	if err != nil {
 		return candidateUpdate{}, err
 	}
-	ownerQuestions, err := admit.PreserveSortedTextArray(record["ownerQuestions"], "requirement authoring plan ownerQuestions", false)
+	ownerQuestions, err := admit.PreserveSortedTextArray(record["ownerQuestions"], "requirement authoring plan ownerQuestions", true)
 	if err != nil {
 		return candidateUpdate{}, err
 	}
@@ -346,46 +360,23 @@ func admitCandidateUpdate(raw any, admittedRefIDs map[string]struct{}) (candidat
 	if err != nil {
 		return candidateUpdate{}, err
 	}
-	candidateRequirement, ok := record["candidateRequirement"].(map[string]any)
-	if !ok {
-		return candidateUpdate{}, fmt.Errorf("requirement authoring plan candidateRequirement must be an object")
-	}
-	admittedCandidate, err := requirementsourceadmission.AdmitRequirement(candidateRequirement)
-	if err != nil {
-		return candidateUpdate{}, err
-	}
-	candidateRequirement = requirementsourceadmission.RequirementValue(admittedCandidate)
-	candidateRequirementID := admittedCandidate.RequirementID
-	if candidateRequirementID != targetRequirementID {
-		return candidateUpdate{}, fmt.Errorf("requirement authoring plan candidateRequirement.requirementId must equal candidateUpdate.requirementId")
-	}
 	return candidateUpdate{
-		CandidateID:          candidateID,
-		CandidateRequirement: candidateRequirement,
-		Operation:            operation,
-		OwnerQuestions:       ownerQuestions,
-		ProofObligations:     proofObligations,
-		Rationale:            rationale,
-		RequirementID:        targetRequirementID,
-		SourceRefIDs:         sourceRefIDs,
+		CandidateID:      candidateID,
+		Operation:        operation,
+		OwnerQuestions:   ownerQuestions,
+		ProofObligations: proofObligations,
+		Rationale:        rationale,
+		RequirementID:    targetRequirementID,
+		SourceRefIDs:     sourceRefIDs,
 	}, nil
 }
 
 func admitProofObligations(raw any) ([]proofObligation, error) {
-	values, ok := raw.([]any)
-	if !ok || len(values) == 0 {
-		return nil, fmt.Errorf("requirement authoring plan proofObligations must be a non-empty array")
-	}
+	values := raw.([]any)
 	result := make([]proofObligation, 0, len(values))
 	ids := []string{}
 	for _, value := range values {
-		record, ok := value.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("requirement authoring plan proofObligation must be an object")
-		}
-		if err := admit.KnownKeys(record, []string{"blocking", "description", "evidenceRefs", "kind", "obligationId", "ownerId"}, "requirement authoring plan proofObligation"); err != nil {
-			return nil, err
-		}
+		record := value.(map[string]any)
 		obligationID, err := admit.RuleID(record["obligationId"], "requirement authoring plan proofObligation.obligationId")
 		if err != nil {
 			return nil, err
@@ -413,76 +404,10 @@ func admitProofObligations(raw any) ([]proofObligation, error) {
 		result = append(result, proofObligation{Blocking: blocking, Description: description, EvidenceRefs: evidenceRefs, Kind: kind, ObligationID: obligationID, OwnerID: ownerID})
 		ids = append(ids, obligationID)
 	}
-	if _, err := admit.PreserveSortedText(ids, "requirement authoring plan proof obligation ids", false); err != nil {
+	if _, err := admit.PreserveSortedText(ids, "requirement authoring plan proof obligation ids", true); err != nil {
 		return nil, err
 	}
 	return result, nil
-}
-
-func composeNextRequirementSource(input input) (map[string]any, []string) {
-	current := cloneObject(input.CurrentRequirementValue)
-	requirements := cloneArray(current["requirements"].([]any))
-	indexByRequirementID := map[string]int{}
-	for index, raw := range requirements {
-		record := raw.(map[string]any)
-		id, _ := record["requirementId"].(string)
-		indexByRequirementID[id] = index
-	}
-	failures := []string{}
-	for _, update := range input.CandidateUpdates {
-		index, exists := indexByRequirementID[update.RequirementID]
-		state := lifecycleState(update.CandidateRequirement)
-		switch update.Operation {
-		case "add":
-			if exists {
-				failures = append(failures, fmt.Sprintf("add candidate must target a new requirement id: %s", update.RequirementID))
-			}
-			if state != "active" {
-				failures = append(failures, fmt.Sprintf("add candidate must start active: %s", update.RequirementID))
-			}
-			requirements = append(requirements, update.CandidateRequirement)
-		case "modify":
-			if !exists {
-				failures = append(failures, fmt.Sprintf("modify candidate must target an existing requirement id: %s", update.RequirementID))
-			} else if state != "active" {
-				failures = append(failures, fmt.Sprintf("modify candidate must keep active lifecycle: %s", update.RequirementID))
-			} else {
-				requirements[index] = update.CandidateRequirement
-			}
-		case "deprecate":
-			if !exists {
-				failures = append(failures, fmt.Sprintf("deprecate candidate must target an existing requirement id: %s", update.RequirementID))
-			} else if state != "deprecated" {
-				failures = append(failures, fmt.Sprintf("deprecate candidate must set deprecated lifecycle: %s", update.RequirementID))
-			} else {
-				requirements[index] = update.CandidateRequirement
-			}
-		case "supersede":
-			if !exists {
-				failures = append(failures, fmt.Sprintf("supersede candidate must target an existing requirement id: %s", update.RequirementID))
-			} else if state != "superseded" {
-				failures = append(failures, fmt.Sprintf("supersede candidate must set superseded lifecycle: %s", update.RequirementID))
-			} else {
-				requirements[index] = update.CandidateRequirement
-			}
-		}
-	}
-	sort.Slice(requirements, func(left, right int) bool {
-		leftID, _ := requirements[left].(map[string]any)["requirementId"].(string)
-		rightID, _ := requirements[right].(map[string]any)["requirementId"].(string)
-		return leftID < rightID
-	})
-	current["requirements"] = requirements
-	return current, failures
-}
-
-func lifecycleState(requirement map[string]any) string {
-	lifecycle, ok := requirement["lifecycle"].(map[string]any)
-	if !ok {
-		return ""
-	}
-	state, _ := lifecycle["state"].(string)
-	return state
 }
 
 func candidateUpdateValues(updates []candidateUpdate, includeRequirement bool) []any {
@@ -500,7 +425,7 @@ func candidateUpdateValues(updates []candidateUpdate, includeRequirement bool) [
 		if includeRequirement {
 			record["candidateRequirement"] = cloneObject(update.CandidateRequirement)
 		} else {
-			record["candidateRequirementOmitted"] = "candidate requirement payload is omitted until candidate source and transition admission pass"
+			record["candidateRequirementOmitted"] = omittedCandidateMessage
 		}
 		values = append(values, record)
 	}
@@ -525,9 +450,9 @@ func proofObligationValues(obligations []proofObligation) []any {
 func promotionPreconditions(input input) []any {
 	return []any{
 		precondition("owner.review", "owner_review", "A consuming repository owner must approve candidate requirement meaning before materialization.", input.AuthoringPlanID),
-		precondition("source.materialization", "materialization", "The consuming repository must write requirements.v1.json and overview changes itself.", input.CurrentRequirementState.RequirementsPath),
+		precondition("source.materialization", "materialization", "The consuming repository must write requirements.v2.json and overview changes itself.", input.CurrentRequirementState.RequirementsPath()),
 		precondition("proof.binding", "proof_binding", "The consuming repository must run proof-binding coverage after materialization.", "proofkit/requirement-bindings.json"),
-		precondition("native.witness", "native_witness", "The consuming repository must execute native witnesses and admit receipts through its producer policy.", input.CurrentRequirementState.SourceID),
+		precondition("native.witness", "native_witness", "The consuming repository must execute native witnesses and admit receipts through its producer policy.", input.CurrentRequirementState.SourceID()),
 	}
 }
 
@@ -547,7 +472,7 @@ func ownerReviewPlan(input input) []any {
 			"actionKind":  "review_candidate",
 			"owner":       "consuming_repository_owner",
 			"phase":       "owner-review",
-			"instruction": "Review each candidate requirement for durable product meaning before writing stable source files.",
+			"instruction": "Review the whole candidate source, including grouped ownership, scenario bodies, vocabulary, derivations and nonclaims, and each declared requirement change before writing stable source files.",
 			"nonClaims":   []any{"This action does not approve requirement promotion or file materialization."},
 		},
 		map[string]any{
@@ -576,12 +501,16 @@ func ownerReviewPlan(input input) []any {
 	return actions
 }
 
-func ruleResults(failures []string, sourceResult requirementsourceadmission.Result, sourceErr error, transitionState string, transitionErr error) []any {
+func ruleResults(compositionFailures, sourceFailures, transitionFailures []string, sourceResult requirementsourceadmission.Result, sourceErr error, transitionState string, transitionErr error) []any {
+	compositionState := statusFailedIf(len(compositionFailures) > 0)
+	if sourceErr != nil || sourceResult.ExitCode != 0 {
+		compositionState = "skipped"
+	}
 	return []any{
-		ruleResult("proofkit.requirement-authoring-plan.candidate-source-admission", sourceRuleStatus(sourceResult, sourceErr), "composed candidate source must pass requirement-source-admission", failuresForPrefix(failures, "candidate next source")),
-		ruleResult("proofkit.requirement-authoring-plan.transition-admission", transitionRuleStatus(transitionState, transitionErr), "current to candidate next source must pass requirement-source-transition", failuresForPrefix(failures, "candidate transition")),
+		ruleResult("proofkit.requirement-authoring-plan.candidate-source-admission", sourceRuleStatus(sourceResult, sourceErr), "candidate source must pass requirement-source-admission", sourceFailures),
+		ruleResult("proofkit.requirement-authoring-plan.transition-admission", transitionRuleStatus(transitionState, transitionErr), "current to candidate next source must pass requirement-source-transition", transitionFailures),
 		ruleResult("proofkit.requirement-authoring-plan.non-authority", "passed", "authoring output remains candidate data until owner materialization", []string{}),
-		ruleResult("proofkit.requirement-authoring-plan.composition", statusFailedIf(len(failuresForComposition(failures)) > 0), "candidate operations must match current requirement ids and lifecycle targets", failuresForComposition(failures)),
+		ruleResult("proofkit.requirement-authoring-plan.composition", compositionState, "candidate operations must cover exact changed requirement ids and lifecycle targets", compositionFailures),
 	}
 }
 
@@ -609,6 +538,9 @@ func sourceRuleStatus(sourceResult requirementsourceadmission.Result, sourceErr 
 }
 
 func transitionRuleStatus(state string, err error) string {
+	if state == "skipped" && err == nil {
+		return "skipped"
+	}
 	if err != nil || state != "passed" {
 		return "failed"
 	}
@@ -629,29 +561,6 @@ func stateFromTransition(state string, err error) string {
 	return state
 }
 
-func failuresForPrefix(failures []string, prefix string) []string {
-	selected := []string{}
-	for _, failure := range failures {
-		if len(failure) >= len(prefix) && failure[:len(prefix)] == prefix {
-			selected = append(selected, failure)
-		}
-	}
-	return selected
-}
-
-func failuresForComposition(failures []string) []string {
-	selected := []string{}
-	for _, failure := range failures {
-		if len(failure) >= len("add ") && failure[:len("add ")] == "add " ||
-			len(failure) >= len("modify ") && failure[:len("modify ")] == "modify " ||
-			len(failure) >= len("deprecate ") && failure[:len("deprecate ")] == "deprecate " ||
-			len(failure) >= len("supersede ") && failure[:len("supersede ")] == "supersede " {
-			selected = append(selected, failure)
-		}
-	}
-	return selected
-}
-
 func statusFailedIf(value bool) string {
 	if value {
 		return "failed"
@@ -667,11 +576,11 @@ func nonClaims(caller []string) []string {
 }
 
 func repoPath(raw any, context string) (string, error) {
-	value, err := admit.NonEmptyText(raw, context)
+	_, err := admit.NonEmptyText(raw, context)
 	if err != nil {
 		return "", err
 	}
-	pathValue, err := admit.SafeRepoRelativePath(value, context)
+	pathValue, err := admit.SafeRepoRelativePath(raw.(string), context)
 	if err != nil {
 		return "", err
 	}
@@ -682,19 +591,7 @@ func repoPath(raw any, context string) (string, error) {
 }
 
 func preserveSortedPaths(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, err := admit.TextArray(raw, context, allowEmpty)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]string, 0, len(values))
-	for _, value := range values {
-		pathValue, err := admit.SafeRepoRelativePath(value, context)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, pathValue)
-	}
-	return admit.PreserveSortedText(out, context, allowEmpty)
+	return admit.PreserveSortedPathArray(raw, context, allowEmpty)
 }
 
 func optionalDigest(raw any, context string) (*string, error) {

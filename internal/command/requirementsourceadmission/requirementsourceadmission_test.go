@@ -13,7 +13,7 @@ func TestComparisonFieldsExhaustRequirementProjection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Evaluate() error = %v", err)
 	}
-	requirement := result.Source.Requirements[0]
+	requirement := result.Source.Requirements()[0]
 	requirement.Deferral = &Deferral{}
 	projection := RequirementValue(requirement)
 	want := make([]string, 0, len(projection)-1)
@@ -52,7 +52,7 @@ func TestEvaluateAcceptsActiveBlockingRequirementWithProofRoute(t *testing.T) {
 func TestEvaluateRejectsBlockingRequirementWithoutProofRoute(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.072077823236321697138427281525724834744695054203573403855376161988559434150965")
 	input := validSource()
-	requirement := input["requirements"].([]any)[0].(map[string]any)
+	requirement := sourceMember(input, 0)["fields"].(map[string]any)
 	requirement["proofBindingRefs"] = []any{}
 
 	result, err := Evaluate(input)
@@ -70,45 +70,63 @@ func TestEvaluateRejectsUnknownTopLevelField(t *testing.T) {
 	input["legacyOracle"] = true
 
 	_, err := Evaluate(input)
-	if err == nil || !strings.Contains(err.Error(), "unsupported field") {
-		t.Fatalf("Evaluate() error=%v, want unsupported field", err)
+	if err == nil || !strings.Contains(err.Error(), "unknown_field") {
+		t.Fatalf("Evaluate() error=%v, want unknown field", err)
 	}
 }
 
 func validSource() map[string]any {
 	return map[string]any{
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         "proofkit.test.requirements",
-		"specPackagePath":  "docs/specs/proofkit-test",
-		"overviewPath":     "docs/specs/proofkit-test/overview.md",
-		"requirementsPath": "docs/specs/proofkit-test/requirements.v1.json",
-		"nonClaims":        []any{"Requirement source test input does not claim production readiness."},
-		"requirements": []any{
-			map[string]any{
-				"claimLevel": "blocking",
-				"deferral":   nil,
-				"invariant":  "Proofkit test requirement must preserve source admission semantics.",
-				"lifecycle": map[string]any{
-					"evidenceRefs":              []any{},
-					"replacementRequirementIds": []any{},
-					"state":                     "active",
-				},
-				"nonClaimRefs": []any{},
-				"nonClaims":    []any{"This test requirement does not execute native witnesses."},
-				"ownerId":      "proofkit.test",
-				"proofBindingRefs": []any{
-					"docs/contracts/requirement-proof-binding-sources.v1.json",
-				},
-				"requirementId": "REQ-PROOFKIT-SOURCE-001",
-				"riskClass":     "medium",
-				"updatePolicy": map[string]any{
-					"requiresImpactDeclaration":  true,
-					"requiresProofBindingReview": true,
-					"reviewOwnerId":              "proofkit.test",
+		"schemaVersion":   json.Number("2"),
+		"kind":            "proofkit.requirement-source",
+		"sourceId":        "proofkit.test.requirements",
+		"specPackagePath": "docs/specs/proofkit-test",
+		"sourceNonClaims": []any{"Requirement source test input does not claim production readiness."},
+		"groups": []any{map[string]any{
+			"groupId": "RGRP-TEST", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+			"members": []any{
+				map[string]any{
+					"requirementId":       "REQ-PROOFKIT-SOURCE-001",
+					"statementCompletion": "Proofkit test requirement must preserve source admission semantics.",
+					"fields": map[string]any{
+						"claimLevel": "blocking",
+						"deferral":   nil,
+						"lifecycle": map[string]any{
+							"evidenceRefs":              []any{},
+							"replacementRequirementIds": []any{},
+							"state":                     "active",
+						},
+						"nonClaimRefs":         []any{},
+						"externalNonClaimRefs": []any{},
+						"nonClaims":            []any{"This test requirement does not execute native witnesses."},
+						"ownerId":              "proofkit.test",
+						"proofBindingRefs": []any{
+							"docs/contracts/requirement-proof-binding-sources.v1.json",
+						},
+						"riskClass": "medium",
+						"updatePolicy": map[string]any{
+							"requiresImpactDeclaration":  true,
+							"requiresProofBindingReview": true,
+							"reviewOwnerId":              "proofkit.test",
+						},
+					},
 				},
 			},
-		},
+		}},
 	}
+}
+
+func sourceMember(source map[string]any, index int) map[string]any {
+	return source["groups"].([]any)[0].(map[string]any)["members"].([]any)[index].(map[string]any)
+}
+
+func mustSourceValue(t *testing.T, source Source) map[string]any {
+	t.Helper()
+	value, err := SourceValue(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return value
 }
 
 func assertFailure(t *testing.T, result Result, want string) {

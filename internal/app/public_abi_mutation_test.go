@@ -15,11 +15,11 @@ func TestIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift(t *testing.T) {
 }
 
 func TestManagedIntegrationVersionEdgeRejectsUndeclaredPublicABIDrift(t *testing.T) {
-	assertRejectsUndeclaredPublicABIDrift(t, readFrozenManagedIntegrationPredecessor(t), readCLIContractRaw, func(frozen frozenPublicABI, current map[string]any) error {
+	assertRejectsUndeclaredPublicABIDrift(t, readFrozenManagedIntegrationPredecessor(t), readArchivedSourceCutoverPredecessor, func(frozen frozenPublicABI, current map[string]any) error {
 		return verifyManagedIntegrationPublicABIDiff(frozen, current)
 	})
 	for _, replacement := range []any{nil, "weaker replay", managedReplayPolicy + " Drift."} {
-		current := readCLIContractRaw(t)
+		current := readArchivedSourceCutoverPredecessor(t)
 		mutatePublicABIRecord(t, current, "commands", "command", "adopt-materialize-apply", func(record map[string]any) {
 			output := record["outputContract"].(map[string]any)
 			summary := output["compatibilitySummary"].([]any)

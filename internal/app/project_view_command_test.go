@@ -59,7 +59,7 @@ func TestProjectViewCLI(t *testing.T) {
 			t.Fatal("view changed a captured project file")
 		}
 	}
-	if err := os.WriteFile(filepath.Join(fixture.Root, "docs/specs/a/requirements.v1.json"), []byte("{}\n"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(fixture.Root, "docs/specs/a/requirements.v2.json"), []byte("{}\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	code, output, diagnostic = executeAgentWorkflowCLI(t, []string{"view", "--repo-root", fixture.Root}, panicReader{}, PresentationCapabilities{})

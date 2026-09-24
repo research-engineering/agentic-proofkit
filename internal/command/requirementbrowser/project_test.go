@@ -21,6 +21,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/projectstatus"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonpointer"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/projectfixture"
@@ -28,6 +29,24 @@ import (
 
 // Bound a stuck test after both cleanup phases, not the product's response latency.
 const projectShutdownWatchdog = 2*serverShutdownTimeout + time.Second
+
+func resolvedAnchorFixture(t *testing.T, snapshot requirementcontext.Snapshot, anchor map[string]any) map[string]any {
+	t.Helper()
+	var matches []requirementsourceadmission.Requirement
+	for _, source := range snapshot.RequirementSources {
+		if source.SourceID() == anchor["sourceId"] {
+			for _, requirement := range source.Requirements() {
+				if requirement.RequirementID == anchor["requirementId"] {
+					matches = append(matches, requirement)
+				}
+			}
+		}
+	}
+	if len(matches) != 1 {
+		t.Fatalf("anchor resolves %d source-owner records, want one", len(matches))
+	}
+	return requirementsourceadmission.RequirementValue(matches[0])
+}
 
 func TestProjectBrowserCapturesAndHandsOffExactSourceFacts(t *testing.T) {
 	for _, selected := range []int{1, 2} {
@@ -92,15 +111,15 @@ func TestProjectBrowserCapturesAndHandsOffExactSourceFacts(t *testing.T) {
 				id, path, pointer, quote string
 				end                      int
 			}{
-				{"REQ-WIRE-001", "docs/specs/a/requirements.v1.json", "/projections/requirementSources/1/requirements/0/invariant", "\U0001f9ed", 12},
-				{"REQ-WIRE-002", "docs/specs/z/requirements.v1.json", "/projections/requirementSources/0/requirements/0/invariant", "E\u0301", 13},
+				{"REQ-WIRE-001", "docs/specs/a/requirements.v2.json", "/invariant", "\U0001f9ed", 12},
+				{"REQ-WIRE-002", "docs/specs/z/requirements.v2.json", "/invariant", "E\u0301", 13},
 			}[:selected] {
 				anchor := rows[index].(map[string]any)["anchor"].(map[string]any)
 				wantDigest := fmt.Sprintf("sha256:%x", sha256.Sum256(fixture.Files[item.path]))
-				if anchor["jsonPointer"] != item.pointer || anchor["sourceDigest"] != wantDigest || anchor["requirementId"] != item.id {
+				if anchor["jsonPointer"] != item.pointer || anchor["sourceDigest"] != wantDigest || anchor["requirementId"] != item.id || anchor["coordinateSpace"] != "resolved_requirement" {
 					t.Fatal("lookup source order changed its original anchor identity")
 				}
-				original, err := jsonpointer.Select(requirementcontext.SnapshotValue(prepared.workspace.Snapshot), item.pointer)
+				original, err := jsonpointer.Select(resolvedAnchorFixture(t, prepared.workspace.Snapshot, anchor), item.pointer)
 				if err != nil || original != rows[index].(map[string]any)["invariant"] {
 					t.Fatalf("original context pointer no longer resolves to lookup text: %v", err)
 				}
@@ -156,7 +175,7 @@ func TestProjectWorkspacePreparationValidatesBeforeRendering(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	graph, err := requirementgraph.Build(map[string]any{"schemaVersion": json.Number("2"), "graphId": "project.graph", "context": requirementcontext.SnapshotValue(snapshot)})
+	graph, err := requirementgraph.Build(map[string]any{"schemaVersion": json.Number("3"), "graphId": "project.graph", "context": requirementcontext.SnapshotValue(snapshot)})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,8 +225,8 @@ func TestProjectHandoffPreservesLongRequirementIdentities(t *testing.T) {
 			rows := projectHTTP(t, handle, capability, "requirements", query, http.StatusOK)["projection"].(map[string]any)["requirements"].([]any)
 			anchor := rows[0].(map[string]any)["anchor"].(map[string]any)
 			anchorID := "requirement:" + id + ":invariant"
-			wantDigest := fmt.Sprintf("sha256:%x", sha256.Sum256(fixture.Files["docs/specs/a/requirements.v1.json"]))
-			if anchor["anchorId"] != anchorID || anchor["requirementId"] != id || anchor["sourceDigest"] != wantDigest || anchor["jsonPointer"] != "/projections/requirementSources/1/requirements/0/invariant" {
+			wantDigest := fmt.Sprintf("sha256:%x", sha256.Sum256(fixture.Files["docs/specs/a/requirements.v2.json"]))
+			if anchor["anchorId"] != anchorID || anchor["requirementId"] != id || anchor["sourceDigest"] != wantDigest || anchor["jsonPointer"] != "/invariant" || anchor["sourceId"] != "zeta.source" || anchor["coordinateSpace"] != "resolved_requirement" {
 				t.Fatal("workspace changed the original long requirement coordinate")
 			}
 			for _, invalid := range []any{json.Number("7"), "requirement:unknown:invariant", anchorID + "x", "requirement:" + strings.Repeat("A", 257) + ":invariant"} {

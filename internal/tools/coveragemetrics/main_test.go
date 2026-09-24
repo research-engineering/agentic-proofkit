@@ -16,7 +16,7 @@ import (
 )
 
 func TestReadJSONRejectsDuplicateKeys(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "requirements.v1.json")
+	path := filepath.Join(t.TempDir(), "requirements.v2.json")
 	if err := os.WriteFile(path, []byte(`{"schemaVersion":1,"schemaVersion":1}`), 0o644); err != nil {
 		t.Fatalf("write fixture: %v", err)
 	}
@@ -45,13 +45,13 @@ func TestReadRequirementsRequiresOwnerAdmission(t *testing.T) {
 	if err := os.MkdirAll(sourceDir, 0o700); err != nil {
 		t.Fatalf("mkdir source: %v", err)
 	}
-	sourcePath := filepath.Join(sourceDir, "requirements.v1.json")
+	sourcePath := filepath.Join(sourceDir, "requirements.v2.json")
 	source := `{
   "schemaVersion": 1,
   "sourceId": "proofkit.test.requirements",
   "specPackagePath": "docs/specs/test-source",
   "overviewPath": "docs/specs/test-source/overview.md",
-  "requirementsPath": "docs/specs/test-source/requirements.v1.json",
+  "requirementsPath": "docs/specs/test-source/requirements.v2.json",
   "requirements": []
 }
 `
@@ -1261,28 +1261,52 @@ func firstCandidateInventoryEntry(t *testing.T, inventory map[string]any) map[st
 
 func writeMinimalCoverageMetricsRepo(t *testing.T, root string) {
 	t.Helper()
-	writeFile(t, filepath.Join(root, "docs/specs/test-source/requirements.v1.json"), `{
-  "schemaVersion": 1,
+	writeFile(t, filepath.Join(root, "docs/specs/test-source/requirements.v2.json"), `{
+  "kind": "proofkit.requirement-source",
+  "schemaVersion": 2,
   "sourceId": "proofkit.test.requirements",
   "specPackagePath": "docs/specs/test-source",
-  "overviewPath": "docs/specs/test-source/overview.md",
-  "requirementsPath": "docs/specs/test-source/requirements.v1.json",
-  "requirements": [
-    {
-      "requirementId": "REQ-PROOFKIT-TEST-001",
-      "ownerId": "proofkit.test",
-      "invariant": "Test coverage metrics fixture must have a bound active requirement.",
-      "claimLevel": "blocking",
-      "riskClass": "medium",
-      "proofBindingRefs": ["proofkit/requirement-bindings.json"],
-      "nonClaimRefs": [],
-      "nonClaims": ["Fixture requirement does not execute tests."],
-      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
-      "deferral": null,
-      "updatePolicy": {"reviewOwnerId": "proofkit.test", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}
-    }
+  "sourceNonClaims": [
+    "Fixture source does not own production behavior."
   ],
-  "nonClaims": ["Fixture source does not own production behavior."]
+  "groups": [
+    {
+      "groupId": "RGRP-FIXTURE",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "statementCompletion": "Test coverage metrics fixture must have a bound active requirement.",
+          "fields": {
+            "ownerId": "proofkit.test",
+            "claimLevel": "blocking",
+            "riskClass": "medium",
+            "proofBindingRefs": [
+              "proofkit/requirement-bindings.json"
+            ],
+            "nonClaims": [
+              "Fixture requirement does not execute tests."
+            ],
+            "lifecycle": {
+              "state": "active",
+              "replacementRequirementIds": [],
+              "evidenceRefs": []
+            },
+            "deferral": null,
+            "updatePolicy": {
+              "reviewOwnerId": "proofkit.test",
+              "requiresImpactDeclaration": true,
+              "requiresProofBindingReview": true
+            },
+            "nonClaimRefs": [],
+            "externalNonClaimRefs": []
+          }
+        }
+      ]
+    }
+  ]
 }
 `)
 	writeFile(t, filepath.Join(root, "proofkit/requirement-bindings.json"), `{

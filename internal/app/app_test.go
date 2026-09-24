@@ -225,7 +225,7 @@ func TestJSONLayoutPreservesFlagShapedInputPathAtProcessBoundary(t *testing.T) {
 		t.Fatalf("unexpected browser plan for flag-shaped input path: %#v", plan)
 	}
 
-	requirementSource := `{"schemaVersion":1,"sourceId":"consumer.requirements","specPackagePath":"docs/specs/consumer","overviewPath":"docs/specs/consumer/overview.md","requirementsPath":"docs/specs/consumer/requirements.v1.json","requirements":[{"requirementId":"REQ-CONSUMER-001","ownerId":"consumer.owner","invariant":"The system preserves semantic identity.","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaimRefs":["NC-CONSUMER-001"],"nonClaims":["This requirement does not approve merge."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"consumer.owner","requiresImpactDeclaration":true,"requiresProofBindingReview":true}}],"nonClaims":["Consumer repositories own requirement meaning."]}`
+	requirementSource := `{"kind":"proofkit.requirement-source","schemaVersion":2,"sourceId":"consumer.requirements","specPackagePath":"docs/specs/consumer","sourceNonClaims":["Consumer repositories own requirement meaning."],"groups":[{"groupId":"RGRP-FIXTURE","profileId":"","statementStem":"","sharedPremises":[],"members":[{"requirementId":"REQ-CONSUMER-001","statementCompletion":"The system preserves semantic identity.","fields":{"ownerId":"consumer.owner","claimLevel":"blocking","riskClass":"high","proofBindingRefs":["proofkit/requirement-bindings.json"],"nonClaims":["This requirement does not approve merge."],"lifecycle":{"state":"active","replacementRequirementIds":[],"evidenceRefs":[]},"deferral":null,"updatePolicy":{"reviewOwnerId":"consumer.owner","requiresImpactDeclaration":true,"requiresProofBindingReview":true},"nonClaimRefs":[],"externalNonClaimRefs":["NC-CONSUMER-001"]}}]}]}`
 	if err := os.WriteFile("--format", []byte(requirementSource), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -714,6 +714,91 @@ func TestCLIDiagnosticsRedactSecretLikeCallerLabels(t *testing.T) {
 	}
 }
 
+func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclosure(t *testing.T) {
+	secret := "synthetic-fixture-value"
+	source := map[string]any{
+		"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"),
+		"sourceId": "proofkit.synthetic.source", "specPackagePath": "docs/specs/synthetic",
+		"groups": []any{},
+	}
+	source["sourceNonClaims"] = []any{"Synthetic non-claim for admission control."}
+	baseline, err := json.Marshal(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var baselineStdout, baselineStderr bytes.Buffer
+	if status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(baseline), &baselineStdout, &baselineStderr); status != 0 {
+		t.Fatalf("benign source must be admitted before redaction falsifiers: status=%d stderr=%q", status, baselineStderr.String())
+	}
+	check := func(serialized string, label string, depth int) {
+		t.Helper()
+		source["sourceNonClaims"] = []any{serialized}
+		encoded, err := json.Marshal(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stdout, stderr bytes.Buffer
+		status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(encoded), &stdout, &stderr)
+		if status != 1 || strings.Contains(stdout.String(), secret) || strings.Contains(stderr.String(), secret) {
+			t.Fatalf("%s passed at depth %d: status=%d stdout=%q stderr=%q", label, depth, status, stdout.String(), stderr.String())
+		}
+	}
+	for _, separator := range []string{"\n", "\t", "\r"} {
+		serialized := `{"password"` + separator + `:"` + secret + `"}`
+		for depth := 1; depth <= 3; depth++ {
+			text, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(text)
+			check(serialized, "escaped whitespace", depth)
+		}
+	}
+	for _, separator := range []string{"\t", "\n", "\r", "\u000b", "\u200b"} {
+		serialized := "api_" + separator + "key=" + secret
+		for depth := 1; depth <= 4; depth++ {
+			text, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(text)
+			check(serialized, "serialized control split", depth)
+		}
+	}
+	for _, initial := range []string{
+		`{"passw\u006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`,
+		`api_\uDB40\uDC01key=synthetic-fixture-value`,
+		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
+		`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
+	} {
+		serialized := initial
+		for depth := 0; depth <= 4; depth++ {
+			check(serialized, "escaped Unicode", depth)
+			text, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(text)
+		}
+	}
+	base := `{"passw\u006frd":"synthetic-fixture-value"}`
+	encoded, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nested := strings.Replace(string(encoded), "u006f", `\u0075006f`, 1)
+	for depth := 0; depth <= 4; depth++ {
+		check(nested, "nested JSON slash parity", depth)
+		encoded, err = json.Marshal(nested)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nested = string(encoded)
+	}
+}
+
 func TestLocalEnvironmentClassAdmissionRejectsSecretsAcrossResolverAndViews(t *testing.T) {
 	secret := "api_key=local-environment-secret-sentinel"
 	cases := [][]string{
@@ -1192,31 +1277,53 @@ func TestGoRunRequirementBrowserServerProcess(t *testing.T) {
 	root := t.TempDir()
 	inputPath := filepath.Join(root, "requirements.json")
 	if err := os.WriteFile(inputPath, []byte(`{
-  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source",
+  "schemaVersion": 2,
   "sourceId": "proofkit.app.browser",
   "specPackagePath": "docs/specs/browser",
-  "overviewPath": "docs/specs/browser/overview.md",
-  "requirementsPath": "docs/specs/browser/requirements.v1.json",
-  "requirements": [
-    {
-      "requirementId": "REQ-BROWSER-001",
-      "ownerId": "browser.owner",
-      "invariant": "The process server serves source views from explicit input.",
-      "claimLevel": "blocking",
-      "riskClass": "high",
-      "proofBindingRefs": ["proofkit/browser.json"],
-      "nonClaimRefs": ["NC-BROWSER-001"],
-      "nonClaims": ["The browser process test does not prove production deployment."],
-      "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
-      "deferral": null,
-      "updatePolicy": {
-        "reviewOwnerId": "browser.owner",
-        "requiresImpactDeclaration": true,
-        "requiresProofBindingReview": true
-      }
-    }
+  "sourceNonClaims": [
+    "Consumer repositories own requirement meaning."
   ],
-  "nonClaims": ["Consumer repositories own requirement meaning."]
+  "groups": [
+    {
+      "groupId": "RGRP-FIXTURE",
+      "profileId": "",
+      "statementStem": "",
+      "sharedPremises": [],
+      "members": [
+        {
+          "requirementId": "REQ-BROWSER-001",
+          "statementCompletion": "The process server serves source views from explicit input.",
+          "fields": {
+            "ownerId": "browser.owner",
+            "claimLevel": "blocking",
+            "riskClass": "high",
+            "proofBindingRefs": [
+              "proofkit/browser.json"
+            ],
+            "nonClaims": [
+              "The browser process test does not prove production deployment."
+            ],
+            "lifecycle": {
+              "state": "active",
+              "replacementRequirementIds": [],
+              "evidenceRefs": []
+            },
+            "deferral": null,
+            "updatePolicy": {
+              "reviewOwnerId": "browser.owner",
+              "requiresImpactDeclaration": true,
+              "requiresProofBindingReview": true
+            },
+            "nonClaimRefs": [],
+            "externalNonClaimRefs": [
+              "NC-BROWSER-001"
+            ]
+          }
+        }
+      ]
+    }
+  ]
 }`), 0o600); err != nil {
 		t.Fatalf("write input: %v", err)
 	}

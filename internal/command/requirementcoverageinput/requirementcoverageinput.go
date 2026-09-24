@@ -25,7 +25,7 @@ type input struct {
 	Options                 any
 	OwnerInvariantRegistry  any
 	RequirementProofBinding any
-	RequirementSource       any
+	RequirementSource       requirementsourceadmission.Source
 	SelectedOwnerIDs        []string
 	ViewInputID             string
 }
@@ -71,8 +71,8 @@ func admitInput(raw any) (input, error) {
 	if err := admit.KnownKeys(record, []string{"compactProofContract", "composerInputId", "coverageUniverse", "localEnvironmentPolicy", "normalizedTestEvidenceInventory", "options", "ownerInvariantRegistry", "requirementProofBinding", "requirementSource", "schemaVersion", "selectedOwnerIds", "testEvidenceInventory", "viewInputId"}, "requirement coverage input compose input"); err != nil {
 		return input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return input{}, fmt.Errorf("requirement coverage input compose schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return input{}, fmt.Errorf("requirement coverage input compose schemaVersion must be 3")
 	}
 	if _, err := admit.RuleID(record["composerInputId"], "requirement coverage input compose composerInputId"); err != nil {
 		return input{}, err
@@ -117,7 +117,7 @@ func admitInput(raw any) (input, error) {
 		Options:                 record["options"],
 		OwnerInvariantRegistry:  record["ownerInvariantRegistry"],
 		RequirementProofBinding: proofBinding,
-		RequirementSource:       record["requirementSource"],
+		RequirementSource:       source.Source,
 		SelectedOwnerIDs:        selectedOwnerIDs,
 		ViewInputID:             viewInputID,
 	}, nil
@@ -286,10 +286,14 @@ func compose(input input) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	source, err := requirementsourceadmission.SourceValue(input.RequirementSource)
+	if err != nil {
+		return nil, err
+	}
 	output := map[string]any{
-		"schemaVersion":           json.Number("2"),
+		"schemaVersion":           json.Number("3"),
 		"viewInputId":             input.ViewInputID,
-		"requirementSource":       input.RequirementSource,
+		"requirementSource":       source,
 		"requirementProofBinding": input.RequirementProofBinding,
 		"compactProofContract":    input.CompactProofContract,
 		"ownerInvariantRegistry":  input.OwnerInvariantRegistry,

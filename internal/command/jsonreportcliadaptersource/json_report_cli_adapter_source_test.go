@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:62c34f1b920466f157d32d982fd5dd8355cbfb023eeda342e8cdbe5c15d731a0"
+const expectedTypeScriptSourceSha256 = "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -703,6 +703,23 @@ runProofkitJsonReportCliMain({
 	  }
 	}
 	assert.equal(formatProofkitCliError("\ud800"), fixedDiagnostic);
+	const slashRunStart = performance.now();
+	assert.equal(formatProofkitCliError("\\".repeat(65536)), "\\".repeat(512) + "...<truncated-diagnostic>");
+	assert(performance.now() - slashRunStart < 2000, "generated diagnostic escaping must remain linear");
+	const beyondDecodeBudget = "passw\\u005c" + "u005c".repeat(17) + "u006frd=synthetic-fixture-value";
+	assert.equal(formatProofkitCliError(beyondDecodeBudget), fixedDiagnostic);
+	let nestedJSON = JSON.stringify('{"passw\\u006frd":"synthetic-fixture-value"}').replace("u006f", "\\u0075006f");
+	for (let depth = 0; depth <= 4; depth++) {
+		assert.equal(formatProofkitCliError(nestedJSON), fixedDiagnostic);
+		nestedJSON = JSON.stringify(nestedJSON);
+	}
+	const regexStart = performance.now();
+	assert.equal(formatProofkitCliError("a".repeat(8192) + beyondDecodeBudget), fixedDiagnostic);
+	assert(performance.now() - regexStart < 2000, "generated repeated decoding must not amplify URL matching cost");
+	const guardedURLStart = performance.now();
+	assert.equal(formatProofkitCliError("a".repeat(8192) + "://safe " + beyondDecodeBudget), fixedDiagnostic);
+	assert(performance.now() - guardedURLStart < 2000, "generated URL candidate scanning must remain bounded");
+	assert.equal(formatProofkitCliError("123https://user:password@example.test"), fixedDiagnostic);
 
 console.log("generated adapter semantics ok");
 `

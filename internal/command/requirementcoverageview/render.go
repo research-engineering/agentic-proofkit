@@ -31,6 +31,11 @@ func markdown(view map[string]any) string {
 			"",
 			markdownfmt.Text(stringValue(requirement["invariant"])),
 			"",
+		)
+		for _, premise := range stringArray(requirement["sharedPremises"]) {
+			lines = append(lines, "- Shared premise: "+markdownfmt.Text(premise))
+		}
+		lines = append(lines,
 			"- Owner: "+markdownfmt.Text(stringValue(requirement["ownerId"])),
 			"- Coverage: "+markdownfmt.Text(stringValue(requirement["coverageState"])),
 			"- Evidence class: "+markdownfmt.Text(stringValue(requirement["evidenceClass"])),
@@ -39,8 +44,15 @@ func markdown(view map[string]any) string {
 			"- Commands: "+markdownfmt.CodeListOrNone(stringArray(requirement["commandIds"])),
 			"- Witnesses: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessRefs"])),
 			"- Witness selectors: "+markdownfmt.CodeListOrNone(stringArray(requirement["witnessSelectors"])),
+			"- Source-local non-claim refs: "+markdownfmt.CodeListOrNone(stringArray(requirement["nonClaimRefs"])),
+			"- External non-claim refs: "+markdownfmt.CodeListOrNone(stringArray(requirement["externalNonClaimRefs"])),
 			"",
+			"Non-claims:", "",
 		)
+		for _, claim := range stringArray(requirement["nonClaims"]) {
+			lines = append(lines, "- "+markdownfmt.Text(claim))
+		}
+		lines = append(lines, "")
 	}
 	lines = append(lines, "## Owner Invariants", "")
 	for _, raw := range anyArray(view["ownerInvariantCoverage"]) {
@@ -80,6 +92,11 @@ func markdown(view map[string]any) string {
 	for _, warning := range stringArray(view["warnings"]) {
 		lines = append(lines, "- "+markdownfmt.Text(warning))
 	}
+	lines = append(lines, "", "## Source-Local Non-Claim Definitions", "")
+	for _, raw := range anyArray(view["nonClaimDefinitions"]) {
+		definition := raw.(map[string]any)
+		lines = append(lines, "- "+markdownfmt.CodeSpan(stringValue(definition["nonClaimId"]))+": "+markdownfmt.Text(stringValue(definition["statement"])))
+	}
 	lines = append(lines, "", "## View Non-Claims", "")
 	for _, claim := range stringArray(view["nonClaims"]) {
 		lines = append(lines, "- "+markdownfmt.Text(claim))
@@ -103,13 +120,17 @@ func html(view map[string]any) string {
 		states = append(states, state)
 		classes = append(classes, class)
 		filters := []browserdoc.FilterValue{{Key: "owner", Value: owner}, {Key: "coverage-state", Value: state}, {Key: "evidence-class", Value: class}}
-		search := browserdoc.SearchText(append([]string{
+		searchTerms := []string{
 			stringValue(requirement["requirementId"]),
 			stringValue(requirement["invariant"]),
 			owner,
 			state,
 			class,
-		}, append(append(stringArray(requirement["testIds"]), stringArray(requirement["commandIds"])...), stringArray(requirement["witnessRefs"])...)...))
+		}
+		for _, key := range []string{"testIds", "commandIds", "witnessRefs", "sharedPremises", "nonClaimRefs", "externalNonClaimRefs"} {
+			searchTerms = append(searchTerms, stringArray(requirement[key])...)
+		}
+		search := browserdoc.SearchText(searchTerms)
 		cards = append(cards, browserdoc.Card{
 			ID:           stringValue(requirement["requirementId"]),
 			Title:        stringValue(requirement["invariant"]),
@@ -133,6 +154,11 @@ func html(view map[string]any) string {
 			FilterValues: filters,
 		})
 	}
+	definitions := []browserdoc.DefinitionItem{}
+	for _, raw := range anyArray(view["nonClaimDefinitions"]) {
+		definition := raw.(map[string]any)
+		definitions = append(definitions, browserdoc.Definition(stringValue(definition["nonClaimId"]), browserdoc.Text(stringValue(definition["statement"]))))
+	}
 	return browserdoc.HTML(browserdoc.Document{
 		Title:     "Requirement Coverage View: " + stringValue(view["viewInputId"]),
 		Authority: stringValue(view["authority"]),
@@ -144,6 +170,7 @@ func html(view map[string]any) string {
 			browserdoc.Summary("Commands", fmt.Sprint(intValue(view["commandCoverageCount"])), false),
 			browserdoc.Summary("Failures", fmt.Sprint(intValue(view["failureCount"])), false),
 			browserdoc.Summary("Warnings", fmt.Sprint(intValue(view["warningCount"])), false),
+			{Label: "Source-local definitions", Value: browserdoc.Details("Non-claim definitions", browserdoc.DefinitionList(definitions...))},
 		},
 		HierarchySections: []browserdoc.HierarchySection{
 			{Title: "Owners", Items: ownerHierarchy(requirements)},
@@ -174,6 +201,7 @@ func html(view map[string]any) string {
 func requirementBody(requirement map[string]any) browserdoc.Fragment {
 	return browserdoc.Concat(
 		browserdoc.DefinitionList(
+			browserdoc.Definition("Shared premises", browserdoc.ListOrNone(stringArray(requirement["sharedPremises"]), false)),
 			browserdoc.Definition("Owner", browserdoc.Text(stringValue(requirement["ownerId"]))),
 			browserdoc.Definition("Coverage state", browserdoc.Text(stringValue(requirement["coverageState"]))),
 			browserdoc.Definition("Evidence class", browserdoc.Text(stringValue(requirement["evidenceClass"]))),
@@ -192,6 +220,10 @@ func requirementBody(requirement map[string]any) browserdoc.Fragment {
 			browserdoc.ListOrNone(stringArray(requirement["failures"]), false),
 			browserdoc.Heading(3, "Non-claims"),
 			browserdoc.ListOrNone(stringArray(requirement["nonClaims"]), false),
+			browserdoc.Heading(3, "Source-local non-claim refs"),
+			browserdoc.ListOrNone(stringArray(requirement["nonClaimRefs"]), true),
+			browserdoc.Heading(3, "External non-claim refs"),
+			browserdoc.ListOrNone(stringArray(requirement["externalNonClaimRefs"]), true),
 		),
 	)
 }

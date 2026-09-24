@@ -6,23 +6,28 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
 
 const (
-	secretWhitespaceClassSource      = `\t\n\v\f\r \x{0085}\p{Zs}\p{Zl}\p{Zp}`
-	secretWhitespacePatternSource    = `[` + secretWhitespaceClassSource + `]`
+	secretWhitespaceClassSource      = `\t\n\v\f\r \x85\p{Zs}\p{Zl}\p{Zp}`
+	secretWhitespacePatternSource    = `(?:[` + secretWhitespaceClassSource + `]|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|00a0|202[89]))`
 	secretNonWhitespacePatternSource = `[^` + secretWhitespaceClassSource + `]`
-	secretContextPatternSource       = `authorization` + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
+	secretKeyQuotePatternSource      = `(?:\\*["'])?`
+	secretContextPatternSource       = `authorization` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
 	secretSharedTokenPatternSource   = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
 	secretScalarTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
 	secretPathTokenPatternSource     = secretSharedTokenPatternSource + `|sk-(?:proj-[A-Za-z0-9_-]{10,}|[A-Za-z0-9_-]{16,})`
 )
 
+const RuleIDPatternBody = `[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*`
+
 var (
-	ruleIDPattern              = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*$`)
+	ruleIDPattern              = regexp.MustCompile(`^` + RuleIDPatternBody + `$`)
 	ruleIDSeparatorPattern     = regexp.MustCompile(`[._:-]`)
 	timestampLikePattern       = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
 	isoDateComponentPattern    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
@@ -38,9 +43,10 @@ var (
 )
 
 const (
-	maxDiagnosticRunes = 512
-	maxRuleIDBytes     = 256
-	redactedValueLabel = "<redacted-diagnostic-value>"
+	maxDiagnosticRunes    = 512
+	maxSecretDecodePasses = 16
+	maxRuleIDBytes        = 256
+	redactedValueLabel    = "<redacted-diagnostic-value>"
 )
 
 type RedactionFixture struct {
@@ -59,12 +65,29 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 	jwtLike := secretFixtureText("eyJhbGciOiJIUzI1NiJ9", ".", "eyJzdWIiOiIxMjMifQ", ".", "signature")
 	return []RedactionFixture{
 		{Name: "authorization_header", Input: "request failed: Authorization: Basic YWxpY2U6c2VjcmV0", SensitiveNeedles: []string{"Authorization", "Basic", "YWxpY2U6c2VjcmV0"}},
+		{Name: "authorization_double_escaped_json_key", Input: `authorization\\": "Basic synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "authorization_json_escaped_unicode_space", Input: `\"Authorization\"\u202f:"Basic synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "bearer_token", Input: "Bearer abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "api_key_label", Input: "api_key=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "api_key_unicode_whitespace", Input: "api_key\u00a0=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "api_key_control_split", Input: "api_\u200bkey=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
+		{Name: "api_key_json_escaped_control_split", Input: `api_\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_double_json_escaped_control_split", Input: `api_\\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_unicode_letter", Input: `api_k\\u0065y=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_supplementary_control", Input: `api_\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_composed_controls", Input: `api_\\u200b\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_letter_and_control", Input: `api_\\u006b\\uDB40\\uDC01ey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
+		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "token_escaped_json_key", Input: `\"token\": \"synthetic-fixture-value\"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_double_escaped_json_key", Input: `password\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_triple_escaped_json_key", Input: `password\\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_nested_unicode_escape", Input: `{"passw\\u005cu006frd":"synthetic-fixture-value"}`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_control_before_nested_unicode", Input: `{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_json_escaped_newline", Input: `"password"\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_double_json_escaped_newline", Input: `"password"\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_triple_json_escaped_newline", Input: `"password"\\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "github_pat", Input: githubPAT, SensitiveNeedles: []string{githubPAT}},
 		{Name: "github_ghp", Input: githubToken, SensitiveNeedles: []string{githubToken}},
 		{Name: "openai_key", Input: openAIKey, SensitiveNeedles: []string{"abcdefghijklmnop"}},
@@ -100,11 +123,14 @@ func KnownKeys(record map[string]any, admitted []string, context string) error {
 
 func RuleID(raw any, context string) (string, error) {
 	value, ok := raw.(string)
-	if !ok || !ruleIDPattern.MatchString(value) {
+	if !ok {
 		return "", fmt.Errorf("%s must be stable rule identifier text", context)
 	}
 	if len(value) > maxRuleIDBytes {
 		return "", fmt.Errorf("%s exceeds the %d-byte stable identifier limit", context, maxRuleIDBytes)
+	}
+	if !ruleIDPattern.MatchString(value) {
+		return "", fmt.Errorf("%s must be stable rule identifier text", context)
 	}
 	if ContainsSecretLikeValue(value) {
 		return "", fmt.Errorf("%s must not contain secret-like values", context)
@@ -164,11 +190,9 @@ func SHA256HexRef(raw any, context string) (string, error) {
 }
 
 func ContainsSecretLikeValue(value string) bool {
-	if ContainsSecretTokenLikeValue(value) || ContainsURLCredentialValue(value) {
-		return true
-	}
-	withoutUnsafe := withoutUnsafeScalars(value)
-	return withoutUnsafe != value && (ContainsSecretTokenLikeValue(withoutUnsafe) || ContainsURLCredentialValue(withoutUnsafe))
+	return matchesNormalizedSecret(value, func(text string) bool {
+		return secretValuePattern.MatchString(text) || urlUserInfoPattern.MatchString(text)
+	})
 }
 
 func ContainsReportVisibleUnsafeValue(value string) bool {
@@ -176,19 +200,133 @@ func ContainsReportVisibleUnsafeValue(value string) bool {
 }
 
 func ContainsSecretLikePathValue(value string) bool {
-	if ContainsURLCredentialValue(value) || secretPathContextPattern.MatchString(value) || secretPathTokenPattern.MatchString(value) {
-		return true
-	}
-	withoutUnsafe := withoutUnsafeScalars(value)
-	return withoutUnsafe != value && (ContainsURLCredentialValue(withoutUnsafe) || secretPathContextPattern.MatchString(withoutUnsafe) || secretPathTokenPattern.MatchString(withoutUnsafe))
+	return matchesNormalizedSecret(value, func(text string) bool {
+		return urlUserInfoPattern.MatchString(text) || secretPathContextPattern.MatchString(text) || secretPathTokenPattern.MatchString(text)
+	})
 }
 
 func ContainsSecretTokenLikeValue(value string) bool {
-	return secretValuePattern.MatchString(value)
+	return matchesNormalizedSecret(value, secretValuePattern.MatchString)
 }
 
 func ContainsURLCredentialValue(value string) bool {
-	return urlUserInfoPattern.MatchString(value)
+	return matchesNormalizedSecret(value, urlUserInfoPattern.MatchString)
+}
+
+// SecretLikeValuePatternSources projects the shared, case-insensitive Unicode
+// pattern bodies for generated adapters. Normalization remains a separate step.
+func SecretLikeValuePatternSources() []string {
+	return []string{secretContextPatternSource + "|" + secretScalarTokenPatternSource, urlUserInfoPattern.String()}
+}
+
+func matchesNormalizedSecret(value string, matches func(string) bool) bool {
+	candidate := value
+	for depth := 0; depth <= maxSecretDecodePasses; depth++ {
+		if matches(candidate) {
+			return true
+		}
+		withoutUnsafe := withoutUnsafeScalars(candidate)
+		if withoutUnsafe != candidate && matches(withoutUnsafe) {
+			return true
+		}
+		decoded := decodeEscapedSecretText(withoutUnsafe)
+		if decoded == withoutUnsafe {
+			return false
+		}
+		if depth == maxSecretDecodePasses {
+			return true
+		}
+		candidate = decoded
+	}
+	return true
+}
+
+func decodeEscapedSecretText(value string) string {
+	var result strings.Builder
+	result.Grow(len(value))
+	for index := 0; index < len(value); {
+		if value[index] != '\\' {
+			result.WriteByte(value[index])
+			index++
+			continue
+		}
+		start := index
+		for index < len(value) && value[index] == '\\' {
+			index++
+		}
+		for count := (index - start) / 2; count > 0; count-- {
+			result.WriteByte('\\')
+		}
+		if (index-start)%2 == 0 {
+			continue
+		}
+		if index >= len(value) {
+			result.WriteByte('\\')
+			break
+		}
+		if value[index] == 'u' && hasSecretUnicodeUnit(value, index) {
+			first := decodeSecretUnicodeUnit(value[index+1 : index+5])
+			next := index + 5
+			if first >= 0xd800 && first <= 0xdbff && next+1 < len(value) && value[next] == '\\' {
+				if hasSecretUnicodeUnit(value, next+1) {
+					second := decodeSecretUnicodeUnit(value[next+2 : next+6])
+					if second >= 0xdc00 && second <= 0xdfff {
+						result.WriteRune(utf16.DecodeRune(first, second))
+						index = next + 6
+						continue
+					}
+				}
+			}
+			result.WriteString(decodeSecretUnicodeScalar(first, value[index-1:index+5]))
+			index += 5
+			continue
+		}
+		switch value[index] {
+		case 'n':
+			result.WriteByte('\n')
+		case 't':
+			result.WriteByte('\t')
+		case 'r':
+			result.WriteByte('\r')
+		case 'f':
+			result.WriteByte('\f')
+		case 'v':
+			result.WriteByte('\v')
+		case 'b':
+			result.WriteByte('\b')
+		case '/', '"':
+			result.WriteByte(value[index])
+		default:
+			result.WriteByte('\\')
+			continue
+		}
+		index++
+	}
+	return result.String()
+}
+
+func hasSecretUnicodeUnit(value string, index int) bool {
+	if index+5 > len(value) || value[index] != 'u' {
+		return false
+	}
+	for _, digit := range value[index+1 : index+5] {
+		if !(digit >= '0' && digit <= '9' || digit >= 'a' && digit <= 'f' || digit >= 'A' && digit <= 'F') {
+			return false
+		}
+	}
+	return true
+}
+
+func decodeSecretUnicodeUnit(hex string) rune {
+	value, _ := strconv.ParseUint(hex, 16, 16)
+	return rune(value)
+}
+
+func decodeSecretUnicodeScalar(value rune, original string) string {
+	if value >= 0xd800 && value <= 0xdfff {
+		return original
+	}
+	return string(value)
 }
 
 func RedactSecretLikeValue(value string) string {
@@ -430,9 +568,17 @@ func preserveSortedCanonical(canonical []string, context string) ([]string, erro
 }
 
 func PreserveSortedTextArray(raw any, context string, allowEmpty bool) ([]string, error) {
-	values, err := TextArray(raw, context, allowEmpty)
-	if err != nil {
-		return nil, err
+	items, ok := raw.([]any)
+	if !ok {
+		return nil, fmt.Errorf("%s must be an array", context)
+	}
+	values := make([]string, len(items))
+	for index, item := range items {
+		value, ok := item.(string)
+		if !ok {
+			return nil, fmt.Errorf("%s[%d] must be text", context, index)
+		}
+		values[index] = value
 	}
 	return PreserveSortedText(values, context, allowEmpty)
 }

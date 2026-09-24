@@ -30,8 +30,12 @@ func workspaceCoveragePage(session *workspaceSession, query workspaceLookupQuery
 		row["coverage"] = byID[row["requirementId"].(string)]
 		return row
 	}
-	page.Projection = func(rows []any) (map[string]any, string) {
-		projection, state := requirementProjection(rows)
+	page.Projection = func(rows []any) (workspaceProjection, error) {
+		result, err := requirementProjection(rows)
+		if err != nil {
+			return workspaceProjection{}, err
+		}
+		projection := result.Value
 		projection["projectionKind"] = "proofkit.requirement-browser-coverage-fragment"
 		projection["coverageAuthority"] = fragment["authority"]
 		projection["nonClaims"] = coverage["nonClaims"]
@@ -39,7 +43,7 @@ func workspaceCoveragePage(session *workspaceSession, query workspaceLookupQuery
 		projection["sourceViewInputId"] = fragment["sourceViewInputId"]
 		projection["matchingReportedRequirementCount"] = reported
 		projection["matchingNotReportedRequirementCount"] = len(matches) - reported
-		return projection, state
+		return result, nil
 	}
 	return page
 }

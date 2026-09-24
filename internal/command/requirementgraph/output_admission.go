@@ -160,7 +160,7 @@ func admitGraphNode(node map[string]any) error {
 		if _, err := admit.Enum(node["kind"], map[string]struct{}{"file": {}, "module": {}, "package": {}, "repository": {}, "source_range": {}, "symbol": {}}, "requirement traceability graph code node kind"); err != nil {
 			return err
 		}
-		if _, err := admit.Enum(node["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "requirement traceability graph code node currentnessState"); err != nil {
+		if _, err := admit.Enum(node["currentnessState"], currentnessStates, "requirement traceability graph code node currentnessState"); err != nil {
 			return err
 		}
 		if _, err := digestRef(node["sourceDigest"], "requirement traceability graph code node sourceDigest"); err != nil {
@@ -168,6 +168,11 @@ func admitGraphNode(node map[string]any) error {
 		}
 		if rawParentID, exists := node["parentNodeId"]; exists {
 			if _, err := admitGraphID(rawParentID, "requirement traceability graph code node parentNodeId"); err != nil {
+				return err
+			}
+		}
+		if symbolID, exists := node["symbolId"]; exists {
+			if _, err := admit.RuleID(symbolID, "requirement traceability graph code node symbolId"); err != nil {
 				return err
 			}
 		}
@@ -198,13 +203,13 @@ func admitGraphNode(node map[string]any) error {
 		if node["kind"] != "execution_evidence" {
 			return fmt.Errorf("requirement traceability graph execution node kind must be execution_evidence")
 		}
-		if _, err := admit.Enum(node["authorityClass"], map[string]struct{}{"caller_reported": {}, "receipt_admitted": {}}, "requirement traceability graph execution authorityClass"); err != nil {
+		if _, err := admit.Enum(node["authorityClass"], executionAuthorities, "requirement traceability graph execution authorityClass"); err != nil {
 			return err
 		}
-		if _, err := admit.Enum(node["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "requirement traceability graph execution currentnessState"); err != nil {
+		if _, err := admit.Enum(node["currentnessState"], currentnessStates, "requirement traceability graph execution currentnessState"); err != nil {
 			return err
 		}
-		if _, err := admit.Enum(node["state"], map[string]struct{}{"failed": {}, "passed": {}, "skipped": {}, "unavailable": {}}, "requirement traceability graph execution state"); err != nil {
+		if _, err := admit.Enum(node["state"], executionStates, "requirement traceability graph execution state"); err != nil {
 			return err
 		}
 		if _, err := admit.RuleID(node["producerId"], "requirement traceability graph execution producerId"); err != nil {
@@ -246,15 +251,20 @@ func admitGraphEdge(edge map[string]any) error {
 		}
 	}
 	if plane == "code_traceability" && edge["edgeKind"] == "traced_to" {
-		if _, err := admit.Enum(edge["authorityClass"], map[string]struct{}{"caller_reported": {}, "owner_admitted": {}}, "requirement traceability graph edge authorityClass"); err != nil {
+		if _, err := admit.Enum(edge["authorityClass"], traceAuthorities, "requirement traceability graph edge authorityClass"); err != nil {
 			return err
 		}
-		if _, err := admit.Enum(edge["currentnessState"], map[string]struct{}{"current": {}, "stale": {}, "unverified": {}}, "requirement traceability graph edge currentnessState"); err != nil {
+		if _, err := admit.Enum(edge["currentnessState"], currentnessStates, "requirement traceability graph edge currentnessState"); err != nil {
 			return err
 		}
 		values, err := admittedRuleIDArray(edge["evidenceRefs"], "requirement traceability graph edge evidenceRefs")
 		if err != nil || len(values) == 0 {
 			return fmt.Errorf("requirement traceability graph edge evidenceRefs must be non-empty")
+		}
+		for index, value := range values {
+			if edge["evidenceRefs"].([]any)[index] != value {
+				return fmt.Errorf("requirement traceability graph edge evidenceRefs must be canonically sorted")
+			}
 		}
 	}
 	if err := admitGraphEdgeIdentity(edge); err != nil {

@@ -16,9 +16,9 @@ var outputKeys = []string{
 	"authority", "bindingId", "commandCoverage", "commandCoverageCount",
 	"completenessDeclaration", "contractId", "coverageBasis", "coverageUniverseId", "deadZones",
 	"failureClassifications", "failureCount", "failures", "guidanceSummary",
-	"nonClaims", "ownerInvariantCoverage", "ownerInvariantCoverageCount",
+	"nonClaimDefinitions", "nonClaims", "ownerInvariantCoverage", "ownerInvariantCoverageCount",
 	"ownerInvariantRegistryId", "proofMode", "requirementCoverage",
-	"requirementCoverageCount", "schemaVersion", "sourceId", "state",
+	"requirementCoverageCount", "schemaVersion", "sourceDigest", "sourceId", "state",
 	"testInventoryId", "unmappedTests", "viewInputId", "viewKind", "warningClassifications",
 	"warningCount", "warnings",
 }
@@ -51,16 +51,23 @@ func AdmitOutput(raw any) (map[string]any, error) {
 			return nil, fmt.Errorf("requirement coverage output is missing required field %s", key)
 		}
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 3) && record["schemaVersion"] != 3 {
-		return nil, fmt.Errorf("requirement coverage output schemaVersion must be 3")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 4) && record["schemaVersion"] != 4 {
+		return nil, fmt.Errorf("requirement coverage output schemaVersion must be 4")
 	}
 	if record["viewKind"] != "proofkit.requirement-coverage-view" || record["authority"] != "lookup_only" {
 		return nil, fmt.Errorf("requirement coverage output identity is invalid")
 	}
 	for _, key := range []string{"viewInputId", "coverageUniverseId", "sourceId"} {
-		if _, err := admit.RuleID(record[key], "requirement coverage output "+key); err != nil {
+		canonical, err := admit.RuleID(record[key], "requirement coverage output "+key)
+		if err != nil {
 			return nil, err
 		}
+		if err := requireCanonicalWireString(record[key], canonical, "requirement coverage output "+key); err != nil {
+			return nil, err
+		}
+	}
+	if _, err := admit.SHA256Ref(record["sourceDigest"], "requirement coverage output sourceDigest"); err != nil {
+		return nil, err
 	}
 	nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "requirement coverage output nonClaims", false)
 	if err != nil {
@@ -89,6 +96,11 @@ func AdmitOutput(raw any) (map[string]any, error) {
 	if err := validateCoverageOutputSemantics(record); err != nil {
 		return nil, err
 	}
+	// Native replay has admitted this output, including generated int carriers.
+	// Enforce the same complete structural declaration used by the producer.
+	if err := coverageOutputShape.CheckGenerated(record, "requirement coverage output"); err != nil {
+		return nil, err
+	}
 	findings, err := secretjson.Scan(record, "requirement_coverage_output")
 	if err != nil || len(findings) > 0 {
 		return nil, fmt.Errorf("requirement coverage output contains secret-shaped data")
@@ -106,21 +118,33 @@ func AdmitOutput(raw any) (map[string]any, error) {
 
 // SelectRequirements returns a bounded lookup fragment. It is deliberately not
 // another complete coverage report, so omitted rows cannot affect report state
-// or dead-zone claims.
+// or dead-zone claims. The input must be an owner-admitted complete output.
 func SelectRequirements(output map[string]any, selected map[string]struct{}) map[string]any {
 	rows := make([]any, 0)
+	refs := map[string]struct{}{}
 	for _, raw := range output["requirementCoverage"].([]any) {
 		row := raw.(map[string]any)
 		if _, ok := selected[row["requirementId"].(string)]; ok {
 			rows = append(rows, cloneCoverageJSONValue(row))
+			for _, ref := range row["nonClaimRefs"].([]any) {
+				refs[ref.(string)] = struct{}{}
+			}
+		}
+	}
+	definitions := []any{}
+	for _, raw := range output["nonClaimDefinitions"].([]any) {
+		if _, selected := refs[raw.(map[string]any)["nonClaimId"].(string)]; selected {
+			definitions = append(definitions, cloneCoverageJSONValue(raw))
 		}
 	}
 	return map[string]any{
 		"authority":                "lookup_fragment_only",
-		"nonClaims":                admit.StringSliceToAny(defaultNonClaims),
+		"nonClaims":                cloneCoverageJSONValue(output["nonClaims"]),
+		"nonClaimDefinitions":      definitions,
+		"sourceId":                 output["sourceId"],
 		"requirementCoverage":      rows,
 		"requirementCoverageCount": len(rows),
-		"schemaVersion":            json.Number("1"),
+		"schemaVersion":            json.Number("2"),
 		"sourceViewInputId":        output["viewInputId"],
 		"viewKind":                 "proofkit.requirement-coverage-fragment",
 	}
@@ -246,7 +270,7 @@ func admitNestedRecords(raw any, keys []string, context string) error {
 func coverageRowKeys(rowsKey, proofMode string) []string {
 	switch rowsKey {
 	case "requirementCoverage":
-		common := []string{"claimLevel", "commandIds", "coverageState", "environmentClasses", "evidenceClass", "failures", "invariant", "lifecycleState", "nonClaims", "ownerId", "requirementId", "scenarioCount", "scenarios", "specPath", "testIds", "tests", "verifyCommands"}
+		common := []string{"claimLevel", "commandIds", "coverageState", "environmentClasses", "evidenceClass", "externalNonClaimRefs", "failures", "invariant", "lifecycleState", "nonClaimRefs", "nonClaims", "ownerId", "requirementId", "scenarioCount", "scenarios", "sharedPremises", "specPath", "testIds", "tests", "verifyCommands"}
 		if proofMode == "compact" {
 			return append(common, "declaredWitnessRoutes")
 		}

@@ -368,7 +368,7 @@ func TestStartServerServesExplicitSpecTreeViews(t *testing.T) {
 		"Download Markdown",
 		"data-proofkit-download",
 		"Module spec",
-		"docs/specs/module/requirements.v1.json",
+		"docs/specs/module/requirements.v2.json",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("spec-tree server output missing %q:\n%s", want, output)
@@ -713,20 +713,20 @@ func TestStartServerFailsClosedForNonLoopbackHosts(t *testing.T) {
 func sourceInput(t *testing.T) any {
 	t.Helper()
 	input, err := admission.DecodeJSON(strings.NewReader(`{
-  "schemaVersion": 1,
+  "kind": "proofkit.requirement-source",
+  "schemaVersion": 2,
   "sourceId": "proofkit.requirement-browser.source",
   "specPackagePath": "docs/specs/browser",
-  "overviewPath": "docs/specs/browser/overview.md",
-  "requirementsPath": "docs/specs/browser/requirements.v1.json",
-  "requirements": [
+  "groups": [{"groupId": "RGRP-BROWSER", "profileId": "", "statementStem": "", "sharedPremises": [], "members": [
     {
       "requirementId": "REQ-BROWSER-001",
+      "statementCompletion": "The browser server serves admitted requirement views from explicit input only.",
+      "fields": {
       "ownerId": "browser.owner",
-      "invariant": "The browser server serves admitted requirement views from explicit input only.",
       "claimLevel": "blocking",
       "riskClass": "high",
       "proofBindingRefs": ["docs/contracts/proof-bindings/browser.json"],
-      "nonClaimRefs": ["NC-BROWSER-001"],
+      "nonClaimRefs": [], "externalNonClaimRefs": ["NC-BROWSER-001"],
       "nonClaims": ["Browser samples do not claim repository rollout readiness."],
       "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
       "deferral": null,
@@ -735,9 +735,9 @@ func sourceInput(t *testing.T) any {
         "requiresImpactDeclaration": true,
         "requiresProofBindingReview": true
       }
-    }
-  ],
-  "nonClaims": ["Consumer repositories own requirement meaning."]
+    }}
+  ]}],
+  "sourceNonClaims": ["Consumer repositories own requirement meaning."]
 }`), 1<<20)
 	if err != nil {
 		t.Fatalf("decode source fixture: %v", err)
@@ -754,7 +754,7 @@ func proofInput(t *testing.T) any {
     {
       "requirementId": "REQ-BROWSER-001",
       "ownerId": "browser.owner",
-      "specPath": "docs/specs/browser/requirements.v1.json",
+      "specPath": "docs/specs/browser/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Browser proof samples do not execute native commands."]
@@ -828,7 +828,7 @@ func specTreeInput(t *testing.T) any {
           "sourceRefId": "source.module",
           "sourceRole": "requirements",
           "sourceRefKind": "path_digest",
-          "sourcePath": "docs/specs/module/requirements.v1.json",
+          "sourcePath": "docs/specs/module/requirements.v2.json",
           "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           "digestAlgorithm": "sha256"

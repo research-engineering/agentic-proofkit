@@ -362,7 +362,7 @@ func TestAdmittedSourceMapReplaysUnicodeLineEndingsAndExactIntegers(t *testing.T
 	compact := mutateRoot(t, mustPayload(t), func(root map[string]any) {
 		root["sourceNonClaims"] = []any{statement}
 		selector := root["derivations"].([]any)[0].(map[string]any)["selector"].(map[string]any)
-		selector["end"] = json.Number(integer)
+		selector["end"] = integer
 	})
 	var indented bytes.Buffer
 	if err := json.Indent(&indented, compact, "", "  "); err != nil {
@@ -383,9 +383,12 @@ func TestAdmittedSourceMapReplaysUnicodeLineEndingsAndExactIntegers(t *testing.T
 				t.Fatal(err)
 			}
 			assertFuzzSourceMap(t, test.wire, parsed.SourceMap)
+			if parsed.Model.References().Derivations[0].Selector.End != 9007199254740993 {
+				t.Fatal("semantic coordinate lost integer precision")
+			}
 			for _, check := range []struct{ path, lexeme string }{
 				{"/sourceNonClaims/0", `"` + statement + `"`},
-				{"/derivations/0/selector/end", integer},
+				{"/derivations/0/selector/end", `"` + integer + `"`},
 			} {
 				location, ok := parsed.SourceMap.Location(check.path)
 				if !ok || string(test.wire[location.ValueSpan.Start:location.ValueSpan.End]) != check.lexeme {

@@ -1,9 +1,24 @@
 import {expect} from "@playwright/test";
+import {once} from "node:events";
+import {createServer} from "node:http";
 import {test} from "./workspace-test-harness.mjs";
 
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 
 import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace} from "./workspace-navigation-harness.mjs";
+
+const fixtureWorkspaceCSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const fixtureStaticViewCSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+test("requirement boundary resolves its named source restriction and labels external references", async ({baseURL, page}) => {
+  await openWorkspace(page, baseURL);
+  const boundary = page.locator('.requirement-boundary');
+  await expect(boundary).toHaveCount(1);
+  await boundary.locator("summary").click();
+  await expect(boundary).toContainText("NCL-BROWSER: This source does not prove native execution.");
+  await expect(boundary).toContainText("External non-claim reference: NC-CONSUMER-001");
+  await expect(boundary).not.toContainText("Definition unavailable");
+});
 
 async function expectIdentityOrder(rows, expected) {
   await expect(rows).toHaveCount(expected.length);
@@ -367,30 +382,44 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   expect(decoyDelivered).toBe(true);
 
   const cleanupFrame = {};
-  let cleanupAbortObserved = false;
-  let cleanupConsumptionObserved = false;
+  const cleanupAborted = new Set();
+  const cleanupConsumed = new Set();
   const cleanupEvents = [];
+  const pendingWaiter = (name, signal) => {
+    cleanupEvents.push(`${name}-armed`);
+    let fallback;
+    const pending = new Promise((resolve, reject) => {
+      fallback = setTimeout(() => resolve({ok: () => false}), 25);
+      signal.addEventListener("abort", () => {
+        clearTimeout(fallback);
+        cleanupAborted.add(name);
+        cleanupEvents.push(`${name}-aborted`);
+        reject(new Error(`Workspace ${name} waiter aborted`));
+      }, {once: true});
+    });
+    const consume = pending.catch.bind(pending);
+    pending.catch = (...args) => {
+      cleanupConsumed.add(name);
+      cleanupEvents.push(`${name}-consumed`);
+      return consume(...args);
+    };
+    return pending;
+  };
   const cleanupPage = {
     mainFrame: () => cleanupFrame,
-    waitForResponse: (_predicate, {signal}) => {
-      cleanupEvents.push("waiter-armed");
-      let fallback;
-      const pending = new Promise((resolve, reject) => {
-        fallback = setTimeout(() => resolve({ok: () => false}), 25);
-        signal.addEventListener("abort", () => {
-          clearTimeout(fallback);
-          cleanupAbortObserved = true;
-          cleanupEvents.push("waiter-aborted");
-          reject(new Error("Workspace navigation waiter aborted"));
-        }, {once: true});
-      });
-      const consume = pending.catch.bind(pending);
-      pending.catch = (...args) => {
-        cleanupConsumptionObserved = true;
-        cleanupEvents.push("waiter-consumed");
-        return consume(...args);
-      };
-      return pending;
+    evaluate: async () => undefined,
+    on: (event) => {
+      expect(["request", "download"]).toContain(event);
+      cleanupEvents.push(`${event}-armed`);
+    },
+    off: (event) => {
+      expect(["request", "download"]).toContain(event);
+      cleanupEvents.push(`${event}-disarmed`);
+    },
+    waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
+    waitForEvent: (event, {signal}) => {
+      expect(event).toBe("framenavigated");
+      return pendingWaiter("navigation", signal);
     },
   };
   await expect(navigateWorkspace(
@@ -402,14 +431,186 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     },
     "Workspace navigation fallback response was admitted",
   )).rejects.toThrow("Workspace navigation trigger token is invalid");
-  expect(cleanupAbortObserved).toBe(true);
-  expect(cleanupConsumptionObserved).toBe(true);
+  expect([...cleanupAborted].sort()).toEqual(["navigation", "response"]);
+  expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
   expect(cleanupEvents).toEqual([
-    "waiter-armed",
+    "request-armed",
+    "download-armed",
+    "response-armed",
+    "navigation-armed",
+    "response-consumed",
+    "navigation-consumed",
     "trigger-called",
-    "waiter-aborted",
-    "waiter-consumed",
+    "response-aborted",
+    "navigation-aborted",
+    "request-disarmed",
+    "download-disarmed",
   ]);
+});
+
+for (const mutation of ["history", "document-open", "replace-root"]) test(`attachment with ${mutation} cannot satisfy workspace navigation`, async ({baseURL, page}) => {
+  await openWorkspace(page, baseURL);
+  const workspaceURL = admittedWorkspaceURL(baseURL);
+  let attachmentStatus = 0;
+  await page.route((url) => url.href === workspaceURL, async (route) => {
+    const response = await route.fetch();
+    attachmentStatus = response.status();
+    await route.fulfill({response, headers: {...response.headers(), "content-disposition": "attachment; filename=workspace.html"}});
+  });
+  await expect(navigateWorkspace(
+    page,
+    workspaceURL,
+    (token) => page.evaluate(({target, value, mutation}) => {
+      window.setTimeout(() => {
+        if (mutation === "document-open") {
+          document.open();
+          document.write("<html><body><h1>browser.fixture.workspace</h1></body></html>");
+          document.close();
+        } else if (mutation === "replace-root") {
+          const replacement = document.createElement("html");
+          replacement.innerHTML = "<body><h1>browser.fixture.workspace</h1></body>";
+          document.replaceChild(replacement, document.documentElement);
+        }
+        window.history.pushState({}, "", window.location.href);
+        window.location.assign(target);
+      }, 0);
+      return value;
+    }, {target: workspaceURL, value: token, mutation}),
+    "Workspace navigation did not return a document response",
+  )).rejects.toThrow("Workspace navigation did not return a document response");
+  expect(attachmentStatus).toBe(200);
+});
+
+test("download response cannot certify a later failed document", async ({baseURL, browserName, page}) => {
+  await openWorkspace(page, baseURL);
+  let failing = false;
+  const statuses = [];
+  const server = createServer((request, response) => {
+    if (request.url !== "/") {
+      response.writeHead(404).end();
+      return;
+    }
+    const status = failing ? 503 : 200;
+    statuses.push(status);
+    response.statusCode = status;
+    response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureWorkspaceCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    if (!failing) response.setHeader("Content-Disposition", "attachment; filename=workspace.html");
+    response.end("<h1>browser.fixture.workspace</h1>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  try {
+    page.once("download", () => {
+      failing = true;
+      void page.evaluate((target) => window.location.assign(target), workspaceURL).catch(() => undefined);
+    });
+    await expect(navigateWorkspace(
+      page,
+      workspaceURL,
+      (token) => page.evaluate(({target, value}) => {
+        window.setTimeout(() => window.location.assign(target), 0);
+        return value;
+      }, {target: workspaceURL, value: token}),
+      "A download response cannot certify the workspace document",
+    )).rejects.toThrow("A download response cannot certify the workspace document");
+    expect([[200], [200, 503]]).toContainEqual(statuses);
+    // WebKit may destroy the page context at download commit before the second navigation is scheduled.
+    if (browserName !== "webkit") expect(statuses).toEqual([200, 503]);
+    if (statuses.length === 2) await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("download response cannot certify a script-created or unchanged document", async ({browserName, page}) => {
+  let attachment = false;
+  let attachmentRequestCount = 0;
+  const server = createServer((request, response) => {
+    if (request.url !== "/") {
+      response.writeHead(404).end();
+      return;
+    }
+    response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    if (attachment) {
+      attachmentRequestCount++;
+      response.setHeader("Content-Disposition", "attachment; filename=workspace.html");
+    }
+    response.end("<h1>browser.fixture.workspace</h1>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  try {
+    await openWorkspace(page, workspaceURL, undefined, "static-view");
+    await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
+    attachment = true;
+    let scriptDocumentObserved = false;
+    let releaseObservation;
+    const observationBarrier = new Promise((resolve) => { releaseObservation = resolve; });
+    let finishScriptAction;
+    const scriptAction = new Promise((resolve) => { finishScriptAction = resolve; });
+    page.once("download", () => {
+      void page.evaluate(() => window.location.assign("javascript:'<h1>browser.fixture.workspace</h1><i id=script-document></i>'"))
+        .then(async () => {
+          await page.locator("#script-document").waitFor({state: "attached"});
+          await page.evaluate(() => window.history.pushState({}, "", window.location.href)).catch(() => undefined);
+          await observationBarrier;
+          scriptDocumentObserved = true;
+        }).catch(() => undefined).finally(finishScriptAction);
+    });
+    try {
+      await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+      expect(attachmentRequestCount).toBeGreaterThan(0);
+      if (browserName !== "webkit") expect(scriptDocumentObserved).toBe(false);
+    } finally {
+      releaseObservation();
+    }
+    // The attachment rejection is required in every engine; script replacement is required where delivery is stable.
+    if (browserName !== "webkit") {
+      await scriptAction;
+      expect(scriptDocumentObserved).toBe(true);
+    }
+    if (scriptDocumentObserved) await expect(page.locator("#script-document")).toHaveCount(1);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("a later failed reload cannot complete an earlier successful navigation", async ({page}) => {
+  const statuses = [];
+  const server = createServer((request, response) => {
+    if (request.url !== "/") {
+      response.writeHead(404).end();
+      return;
+    }
+    const status = statuses.length === 0 ? 200 : 503;
+    statuses.push(status);
+    response.statusCode = status;
+    response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.end(status === 200
+      ? "<p>loading</p><script>setTimeout(() => location.reload(), 250)</script>"
+      : "<h1>browser.fixture.workspace</h1>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  try {
+    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+    expect(statuses).toEqual([200, 503]);
+    await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 axeTest("combined axe negative control proves default and target-size sensitivity", async ({axePage: page}) => {

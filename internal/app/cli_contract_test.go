@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "7ff77cfb782eba71fb581e04aa618052a860e430f5a2b3b5d23bccd6c97352eb"
+	cliContractPublicABISHA256               = "3388503143307cdc5dc7237b4170bbf0abeee3a6026329022121608cd87d62cf"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -142,20 +142,28 @@ func TestCLIContractsAreCompleteGeneratedAndWitnessBound(t *testing.T) {
 	if len(contract.ContractDefinitions) == 0 {
 		t.Fatal("CLI contract must expose reusable closed definitions")
 	}
-	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	raw := readCLIContractRaw(t)
+	definitions, _, err := indexPublicABIRecords(raw["contractDefinitions"], "definitionId")
+	if err != nil {
+		t.Fatal(err)
+	}
+	commands, _, err := indexPublicABIRecords(raw["commands"], "command")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, command := range contract.Commands {
 		metadata, ok := generatedCommandContractMetadataByName[command.Command]
 		if !ok {
 			t.Fatalf("%s missing generated command-contract metadata", command.Command)
 		}
 		if command.Input == "required" {
-			assertBoundCommandContract(t, command.Command, "input", command.InputContract, definitions, metadata.InputContractSHA256, "nativeAdmissionWitnessSelector")
+			assertBoundCommandContract(t, command.Command, "input", commands[command.Command]["inputContract"], definitions, metadata.InputContractSHA256, "nativeAdmissionWitnessSelector")
 			if len(metadata.InputSchemaSummary) == 0 {
 				t.Fatalf("%s input help summary is empty", command.Command)
 			}
 		}
 		if slices.Contains(command.OutputModes, "json") {
-			assertBoundCommandContract(t, command.Command, "output", command.OutputContract, definitions, metadata.OutputContractSHA256, "nativeOutputWitnessSelector")
+			assertBoundCommandContract(t, command.Command, "output", commands[command.Command]["outputContract"], definitions, metadata.OutputContractSHA256, "nativeOutputWitnessSelector")
 		}
 	}
 	presetChoices := generatedCommandContractMetadataByName["stack-preset"].FlagChoices["--preset"]
@@ -183,7 +191,7 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			required:     []string{"input", "schemaVersion"},
 		},
 		{
-			definitionID: "proofkit.requirement-bindings.input.v1.root-shape",
+			definitionID: bindingStructureDefinition,
 			allowed:      []string{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "selection", "witnessCommands"},
 			required:     []string{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "witnessCommands"},
 		},
@@ -227,7 +235,7 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.T) {
 	contract := readCLIContract(t)
 	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
-	usedDefinitions := map[string]string{}
+	usedDefinitions := map[string][]string{}
 	for _, command := range contract.Commands {
 		for _, direction := range []struct {
 			name string
@@ -241,10 +249,7 @@ func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.
 			}
 			binding := canonicalJSONValue(t, direction.raw).(map[string]any)
 			definitionID := binding["rootDefinitionRef"].(string)
-			if prior, exists := usedDefinitions[definitionID]; exists {
-				t.Fatalf("root-shape definition %s is shared by %s and %s %s", definitionID, prior, command.Command, direction.name)
-			}
-			usedDefinitions[definitionID] = command.Command + " " + direction.name
+			usedDefinitions[definitionID] = append(usedDefinitions[definitionID], command.Command+" "+direction.name)
 			definition := definitions[definitionID]
 			if definition == nil {
 				t.Fatalf("%s %s root-shape definition %s is missing", command.Command, direction.name, definitionID)
@@ -254,6 +259,23 @@ func TestCLIContractRootShapeVariantInventoryIsClosedAndModeComplete(t *testing.
 	}
 	if len(usedDefinitions) != len(definitions) {
 		t.Fatalf("used root-shape definitions=%d want all %d definitions", len(usedDefinitions), len(definitions))
+	}
+	for definitionID, consumers := range usedDefinitions {
+		if definitionID == bindingStructureDefinition {
+			if !slices.Equal(consumers, []string{"evidence-graph input", "proof-slice input", "requirement-bindings input"}) {
+				t.Fatalf("shared binding input consumers=%v", consumers)
+			}
+		} else if definitionID == sourceStructureDefinition {
+			if !slices.Equal(consumers, []string{"requirement-source-admission input", "requirement-source-view input"}) {
+				t.Fatalf("shared source input consumers=%v", consumers)
+			}
+		} else if definitionID == specTreeStructureDefinition {
+			if !slices.Equal(consumers, []string{"requirement-spec-tree input", "requirement-spec-tree-view input"}) {
+				t.Fatalf("shared tree input consumers=%v", consumers)
+			}
+		} else if len(consumers) != 1 {
+			t.Fatalf("unqualified root-shape sharing: %s used by %v", definitionID, consumers)
+		}
 	}
 
 	expectedConditions := map[string][]string{
@@ -506,13 +528,35 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 		expectedFieldTreeKeys = []string{"conditionModel", "kind", "nonClaims", "variants"}
 	}
 	assertStringSet(t, sortedMapKeys(fieldTree), expectedFieldTreeKeys, id+" fieldTree keys")
-	if fieldTree["kind"] != "root_shape_only" {
-		t.Fatalf("%s fieldTree kind=%v want root_shape_only", id, fieldTree["kind"])
-	}
-	assertStringSet(t, stringsFromAny(fieldTree["nonClaims"].([]any)), []string{
+	structural := fieldTree["kind"] == "structural_json_schema"
+	nonClaims := []string{
 		"Root-shape definitions do not claim nested field shapes, leaf types, cardinalities, or semantic validity.",
 		"Root-shape definitions do not replace direct public-CLI runtime witnesses for variant selection.",
-	}, id+" non-claims")
+	}
+	if structural {
+		if _, admitted := map[string]struct{}{
+			bindingStructureDefinition: {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
+			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
+			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
+			specTreeStructureDefinition:                                    {},
+			"proofkit.requirement-coverage-view.output.v4.json-schema":     {},
+			"proofkit.requirement-context-compose.output.v4.json-schema":   {},
+			"proofkit.requirement-context-slice.input.v2.json-schema":      {},
+			"proofkit.requirement-context-slice.output.v2.json-schema":     {},
+			"proofkit.requirement-semantic-diff.input.v3.json-schema":      {},
+			"proofkit.requirement-semantic-diff.output.v3.json-schema":     {},
+			"proofkit.requirement-traceability-graph.input.v3.json-schema": {},
+		}[id]; !admitted {
+			t.Fatalf("%s has no admitted structural projection owner", id)
+		}
+		nonClaims = []string{
+			"Structural JSON Schema does not replace native canonicalization, semantic admission, or numeric representation checks.",
+			"Structural JSON Schema does not replace direct public-CLI runtime witnesses for variant selection.",
+		}
+	} else if fieldTree["kind"] != "root_shape_only" {
+		t.Fatalf("%s has unknown fieldTree kind=%v", id, fieldTree["kind"])
+	}
+	assertStringSet(t, stringsFromAny(fieldTree["nonClaims"].([]any)), nonClaims, id+" non-claims")
 	variants := fieldTree["variants"].([]any)
 	if len(variants) == 0 {
 		t.Fatalf("%s has no root-shape variants", id)
@@ -520,7 +564,11 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	rootKinds := map[string]struct{}{}
 	for _, raw := range variants {
 		variant := raw.(map[string]any)
-		assertStringSet(t, sortedMapKeys(variant), []string{"allowedFields", "requiredFields", "rootKind", "variantId", "when"}, id+" variant keys")
+		variantKeys := []string{"allowedFields", "requiredFields", "rootKind", "variantId", "when"}
+		if structural {
+			variantKeys = []string{"allowedFields", "requiredFields", "rootKind", "schema", "variantId", "when"}
+		}
+		assertStringSet(t, sortedMapKeys(variant), variantKeys, id+" variant keys")
 		allowed := stringsFromAny(variant["allowedFields"].([]any))
 		required := stringsFromAny(variant["requiredFields"].([]any))
 		assertSortedUnique(t, allowed, id+" allowed root fields")
@@ -711,7 +759,7 @@ func assertBoundCommandContract(t *testing.T, command string, direction string, 
 	if raw == nil {
 		t.Fatalf("%s missing %s contract", command, direction)
 	}
-	value := canonicalJSONValue(t, raw).(map[string]any)
+	value := raw.(map[string]any)
 	for _, field := range []string{"contractId", "schemaVersion", "rootType", "closed", "rootDefinitionRef", "rootDefinitionDigest", "ownerRequirementRefs", selectorKey, "compatibilitySummary"} {
 		if _, ok := value[field]; !ok {
 			t.Fatalf("%s %s contract missing %s", command, direction, field)
@@ -2106,24 +2154,32 @@ func TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract(t *testi
 			continue
 		}
 		output := canonicalJSONValue(t, command.OutputContract).(map[string]any)
-		if output["contractId"] != "proofkit.requirement-coverage-view.output.v3" || output["schemaVersion"] != float64(3) {
-			t.Fatalf("requirement coverage output identity=%#v, want versioned v3 contract", output)
+		if output["contractId"] != "proofkit.requirement-coverage-view.output.v4" || output["schemaVersion"] != float64(4) {
+			t.Fatalf("requirement coverage output identity=%#v, want versioned v4 contract", output)
 		}
 		definitionID := output["rootDefinitionRef"].(string)
 		definition := definitions[definitionID]
-		if definitionID != "proofkit.requirement-coverage-view.output.v3.root-shape" || definition["schemaVersion"] != float64(3) {
-			t.Fatalf("requirement coverage root definition=%#v, want versioned v3 root", definition)
+		if definitionID != "proofkit.requirement-coverage-view.output.v4.json-schema" || definition["schemaVersion"] != float64(1) {
+			t.Fatal("requirement coverage output lacks its structural v4 definition")
 		}
+		foundEnvelope, foundReport := false, false
 		for _, rawVariant := range definition["fieldTree"].(map[string]any)["variants"].([]any) {
 			variant := rawVariant.(map[string]any)
 			required := stringsFromAny(variant["requiredFields"].([]any))
+			if variant["variantId"] == "01-agent-envelope" && slices.Contains(required, "sourceReport") {
+				foundEnvelope = true
+			}
 			if variant["variantId"] == "02-report" &&
 				slices.Contains(required, "coverageBasis") &&
-				slices.Contains(required, "unmappedTests") {
-				return
+				slices.Contains(required, "unmappedTests") &&
+				len(variant["schema"].(map[string]any)["oneOf"].([]any)) == 2 {
+				foundReport = true
 			}
 		}
-		t.Fatal("requirement coverage v3 report root must require coverageBasis and unmappedTests")
+		if !foundEnvelope || !foundReport {
+			t.Fatal("requirement coverage v4 must preserve the envelope and both report proof modes")
+		}
+		return
 	}
 	t.Fatal("requirement-coverage-view missing from CLI contract")
 }

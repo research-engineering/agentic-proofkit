@@ -648,32 +648,31 @@ func verifyInstalledPythonHelpAndAgentRouteContinuity(consumer string, environme
 		return fmt.Errorf("installed Python wheel family navigation: %w", err)
 	}
 
-	requirementSourceRef := "requirements.v1.json"
+	requirementSourceRef := "requirements.v2.json"
 	requirementSourcePath := filepath.Join(consumer, requirementSourceRef)
 	requirementSource := map[string]any{
-		"schemaVersion":    1,
-		"sourceId":         "proofkit.python.consumer.requirements",
-		"specPackagePath":  "docs/specs/python-consumer",
-		"overviewPath":     "docs/specs/python-consumer/overview.md",
-		"requirementsPath": "docs/specs/python-consumer/requirements.v1.json",
-		"nonClaims":        []string{"Installed Python consumer fixture does not execute native witnesses."},
-		"requirements": []any{map[string]any{
-			"claimLevel":       "blocking",
-			"deferral":         nil,
-			"invariant":        "Installed Python consumer routes preserve the active launcher.",
-			"lifecycle":        map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
-			"nonClaimRefs":     []any{},
-			"nonClaims":        []string{"Installed Python consumer route does not prove publication."},
-			"ownerId":          "proofkit.python.consumer",
-			"proofBindingRefs": []string{"proofkit/requirement-bindings.json"},
-			"requirementId":    "REQ-PROOFKIT-PYTHON-CONSUMER-001",
-			"riskClass":        "medium",
-			"updatePolicy": map[string]any{
-				"requiresImpactDeclaration":  true,
-				"requiresProofBindingReview": true,
-				"reviewOwnerId":              "proofkit.python.consumer",
-			},
-		}},
+		"kind":            "proofkit.requirement-source",
+		"schemaVersion":   2,
+		"sourceId":        "proofkit.python.consumer.requirements",
+		"specPackagePath": "docs/specs/python-consumer",
+		"sourceNonClaims": []string{"Installed Python consumer fixture does not execute native witnesses."},
+		"groups": []any{map[string]any{"groupId": "RGRP-PYTHON-CONSUMER", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+			"members": []any{map[string]any{"requirementId": "REQ-PROOFKIT-PYTHON-CONSUMER-001", "statementCompletion": "Installed Python consumer routes preserve the active launcher.", "fields": map[string]any{
+				"claimLevel":           "blocking",
+				"deferral":             nil,
+				"lifecycle":            map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
+				"nonClaimRefs":         []any{},
+				"externalNonClaimRefs": []any{},
+				"nonClaims":            []string{"Installed Python consumer route does not prove publication."},
+				"ownerId":              "proofkit.python.consumer",
+				"proofBindingRefs":     []string{"proofkit/requirement-bindings.json"},
+				"riskClass":            "medium",
+				"updatePolicy": map[string]any{
+					"requiresImpactDeclaration":  true,
+					"requiresProofBindingReview": true,
+					"reviewOwnerId":              "proofkit.python.consumer",
+				},
+			}}}}},
 	}
 	if err := writeJSONFixture(requirementSourcePath, requirementSource); err != nil {
 		return err

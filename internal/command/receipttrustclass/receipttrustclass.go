@@ -79,11 +79,14 @@ type diagnostic struct {
 type ProjectionDiagnostic struct {
 	ArtifactRefs            []string
 	DecisionCandidateStates []string
+	EnvironmentClass        string
 	EvidenceRefs            []string
 	ObligationID            string
+	ProducerAdmissionClass  string
 	ProofRouteRef           string
 	ProvenanceRef           *string
 	ReceiptID               string
+	ReceiptKind             string
 	ReceiptStatus           string
 	RequirementID           string
 }
@@ -618,11 +621,14 @@ func projectionDiagnostics(diagnostics []diagnostic) []ProjectionDiagnostic {
 		result = append(result, ProjectionDiagnostic{
 			ArtifactRefs:            append([]string{}, item.ArtifactRefs...),
 			DecisionCandidateStates: append([]string{}, item.DecisionCandidateStates...),
+			EnvironmentClass:        item.EnvironmentClass,
 			EvidenceRefs:            append([]string{}, item.EvidenceRefs...),
 			ObligationID:            item.ObligationID,
+			ProducerAdmissionClass:  item.ProducerAdmissionClass,
 			ProofRouteRef:           item.ProofRouteRef,
 			ProvenanceRef:           provenanceRef,
 			ReceiptID:               item.ReceiptID,
+			ReceiptKind:             item.ReceiptKind,
 			ReceiptStatus:           item.ReceiptStatus,
 			RequirementID:           item.RequirementID,
 		})

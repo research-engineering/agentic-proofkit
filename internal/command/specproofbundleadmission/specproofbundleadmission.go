@@ -338,7 +338,9 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 		selectorCommandIDs[requirementID] = map[string]struct{}{}
 		for _, scenario := range graphScenarios(requirement) {
 			scenarioID, _ := text(scenario["scenarioId"], "graph scenarioId")
-			selectorCommandIDs[scenarioID] = map[string]struct{}{}
+			if _, exists := selectorCommandIDs[scenarioID]; !exists {
+				selectorCommandIDs[scenarioID] = map[string]struct{}{}
+			}
 			environmentClasses := stringArrayFromAny(scenario["environmentClasses"])
 			scenarioCommandEnvironments := map[string]struct{}{}
 			for _, commandID := range stringArrayFromAny(scenario["commandIds"]) {
@@ -399,6 +401,9 @@ func linkageFailures(witnessPlan witnessschedulerplan.Projection, graph map[stri
 		}
 		if _, ok := bindingCommandIDs[receiptKind]; !ok {
 			failures = append(failures, "receipt "+receiptID+" receiptKind must match a requirement binding command id")
+		}
+		if environments, known := commandEnvironments[receiptKind]; known && !contains(environments, receipt.EnvironmentClass) {
+			failures = append(failures, "receipt "+receiptID+" environmentClass must match its witness-plan command")
 		}
 		for _, selector := range receipt.WitnessSelectors {
 			commandSet, ok := selectorCommandIDs[selector]

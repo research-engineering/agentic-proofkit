@@ -7,9 +7,21 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 )
 
-const reportKind = "proofkit.requirement-source-transition"
+const (
+	reportKind            = "proofkit.requirement-source-transition"
+	inputSchemaVersion    = 2
+	outputSchemaVersion   = 2
+	boundaryRuleID        = reportKind + ".boundary"
+	sourceRuleID          = reportKind + ".source-admission"
+	latticeRuleID         = reportKind + ".transition-lattice"
+	boundaryMessage       = "proofkit compares caller-provided snapshots for one requirement source package"
+	sourceMessage         = "previous and next requirement source snapshots must pass source admission"
+	latticeMessage        = "requirement lifecycle transitions must preserve durable records and replacement traceability"
+	latticeSkippedMessage = "record-level lifecycle checks require admitted comparable requirement source snapshots"
+)
 
 var boundaryNonClaims = []string{
 	"Requirement source transition admission does not approve permanent deletion of retired requirement records.",
@@ -46,7 +58,7 @@ func Build(raw any) (report.Record, int, error) {
 	for _, failure := range nextResult.Failures {
 		sourceFailures = append(sourceFailures, "next source admission failed: "+failure)
 	}
-	boundaryFailures := sourceBoundaryFailures(previousResult.Source, nextResult.Source)
+	boundaryFailures := sourceBoundaryFailures(previousResult.Summary, nextResult.Summary)
 	recordFailures := []string{}
 	if len(sourceFailures) == 0 && len(boundaryFailures) == 0 {
 		recordFailures = recordTransitionFailures(previousResult.Source, nextResult.Source)
@@ -60,24 +72,27 @@ func Build(raw any) (report.Record, int, error) {
 	nonClaims := append(append([]string{}, boundaryNonClaims...), input.NonClaims...)
 	sort.Strings(nonClaims)
 	sourcePaths := []string{
-		previousResult.Source.RequirementsPath,
-		previousResult.Source.SpecPackagePath,
-		nextResult.Source.RequirementsPath,
-		nextResult.Source.SpecPackagePath,
+		requirementsourceadmission.RequirementsPath(previousResult.Summary.SpecPackagePath),
+		previousResult.Summary.SpecPackagePath,
+		requirementsourceadmission.RequirementsPath(nextResult.Summary.SpecPackagePath),
+		nextResult.Summary.SpecPackagePath,
 	}
 	sort.Strings(sourcePaths)
 	record := report.Record{
-		SchemaVersion: 1,
+		SchemaVersion: outputSchemaVersion,
 		ReportKind:    reportKind,
 		ReportID:      input.TransitionID,
 		State:         state,
-		Summary:       transitionSummary(previousResult.Source, nextResult.Source, failures),
+		Summary:       transitionResultSummary(previousResult, nextResult, failures),
 		Diagnostics: []report.Diagnostic{
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
 			{Key: "sourcePaths", Value: admit.StringSliceToAny(sourcePaths)},
 		},
 		RuleResults: transitionRuleResults(sourceFailures, boundaryFailures, recordFailures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
+	}
+	if err := transitionOutputShape.CheckGenerated(record.JSONValue(), "requirement source transition output"); err != nil {
+		return report.Record{}, 1, err
 	}
 	if state == "passed" {
 		return record, 0, nil
@@ -86,16 +101,11 @@ func Build(raw any) (report.Record, int, error) {
 }
 
 func admitInput(raw any) (admittedInput, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return admittedInput{}, fmt.Errorf("requirement source transition input must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"next", "nonClaims", "previous", "schemaVersion", "transitionId"}, "requirement source transition input"); err != nil {
+	value, err := transitionInputShape.Admit(raw, "requirement source transition input")
+	if err != nil {
 		return admittedInput{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return admittedInput{}, fmt.Errorf("requirement source transition schemaVersion must be 1")
-	}
+	record := value.(map[string]any)
 	nonClaims, err := textArray(record["nonClaims"], "requirement source transition nonClaims")
 	if err != nil {
 		return admittedInput{}, err
@@ -104,39 +114,40 @@ func admitInput(raw any) (admittedInput, error) {
 	if err != nil {
 		return admittedInput{}, err
 	}
-	previous, ok := record["previous"].(map[string]any)
-	if !ok {
-		return admittedInput{}, fmt.Errorf("requirement source transition previous must be an object")
-	}
-	next, ok := record["next"].(map[string]any)
-	if !ok {
-		return admittedInput{}, fmt.Errorf("requirement source transition next must be an object")
-	}
+	previous := record["previous"].(map[string]any)
+	next := record["next"].(map[string]any)
 	return admittedInput{Next: next, NonClaims: nonClaims, Previous: previous, TransitionID: transitionID}, nil
 }
 
-func sourceBoundaryFailures(previous requirementsourceadmission.Source, next requirementsourceadmission.Source) []string {
+func sourceBoundaryFailures(previous requirementsourcemodel.AssessmentSummary, next requirementsourcemodel.AssessmentSummary) []string {
 	failures := []string{}
 	if previous.SourceID != next.SourceID {
 		failures = append(failures, "transition must compare the same requirement sourceId")
 	}
 	if previous.SpecPackagePath != next.SpecPackagePath {
 		failures = append(failures, "transition must compare the same specPackagePath")
-	}
-	if previous.OverviewPath != next.OverviewPath {
 		failures = append(failures, "transition must compare the same overviewPath")
-	}
-	if previous.RequirementsPath != next.RequirementsPath {
 		failures = append(failures, "transition must compare the same requirementsPath")
 	}
 	return failures
 }
 
+func transitionResultSummary(previous, next requirementsourceadmission.Result, failures []string) map[string]any {
+	if previous.ExitCode == 0 && next.ExitCode == 0 {
+		return transitionSummary(previous.Source, next.Source, failures)
+	}
+	return map[string]any{
+		"addedRequirementCount": nil, "lifecycleChangedRequirementCount": nil, "missingRequirementCount": nil,
+		"nextRequirementCount": next.Summary.RequirementCount, "previousRequirementCount": previous.Summary.RequirementCount,
+		"failureCount": len(failures),
+	}
+}
+
 func recordTransitionFailures(previous requirementsourceadmission.Source, next requirementsourceadmission.Source) []string {
 	failures := []string{}
-	previousByID := requirementMap(previous.Requirements)
-	nextByID := requirementMap(next.Requirements)
-	for _, previousRequirement := range previous.Requirements {
+	previousByID := requirementMap(previous.Requirements())
+	nextByID := requirementMap(next.Requirements())
+	for _, previousRequirement := range previous.Requirements() {
 		nextRequirement, ok := nextByID[previousRequirement.RequirementID]
 		if !ok {
 			failures = append(failures, fmt.Sprintf("durable requirement must remain in next source before deletion: %s", previousRequirement.RequirementID))
@@ -144,7 +155,7 @@ func recordTransitionFailures(previous requirementsourceadmission.Source, next r
 		}
 		failures = append(failures, requirementTransitionFailures(previousRequirement, nextRequirement, nextByID)...)
 	}
-	for _, nextRequirement := range next.Requirements {
+	for _, nextRequirement := range next.Requirements() {
 		if _, ok := previousByID[nextRequirement.RequirementID]; !ok && nextRequirement.Lifecycle.State != "active" {
 			failures = append(failures, fmt.Sprintf("new requirement must start with active lifecycle: %s", nextRequirement.RequirementID))
 		}
@@ -218,10 +229,10 @@ func missingStableRefs(previousRefs []string, nextRefs []string, message string)
 }
 
 func transitionSummary(previous requirementsourceadmission.Source, next requirementsourceadmission.Source, failures []string) map[string]any {
-	previousByID := requirementMap(previous.Requirements)
+	previousByID := requirementMap(previous.Requirements())
 	addedRequirementCount := 0
 	lifecycleChangedRequirementCount := 0
-	for _, nextRequirement := range next.Requirements {
+	for _, nextRequirement := range next.Requirements() {
 		previousRequirement, ok := previousByID[nextRequirement.RequirementID]
 		if !ok {
 			addedRequirementCount++
@@ -232,11 +243,11 @@ func transitionSummary(previous requirementsourceadmission.Source, next requirem
 		}
 	}
 	nextIDs := map[string]struct{}{}
-	for _, requirement := range next.Requirements {
+	for _, requirement := range next.Requirements() {
 		nextIDs[requirement.RequirementID] = struct{}{}
 	}
 	missingRequirementCount := 0
-	for _, requirement := range previous.Requirements {
+	for _, requirement := range previous.Requirements() {
 		if _, ok := nextIDs[requirement.RequirementID]; !ok {
 			missingRequirementCount++
 		}
@@ -246,38 +257,38 @@ func transitionSummary(previous requirementsourceadmission.Source, next requirem
 		"failureCount":                     len(failures),
 		"lifecycleChangedRequirementCount": lifecycleChangedRequirementCount,
 		"missingRequirementCount":          missingRequirementCount,
-		"nextRequirementCount":             len(next.Requirements),
-		"previousRequirementCount":         len(previous.Requirements),
+		"nextRequirementCount":             next.RequirementCount(),
+		"previousRequirementCount":         previous.RequirementCount(),
 	}
 }
 
 func transitionRuleResults(sourceFailures []string, boundaryFailures []string, recordFailures []string) []report.RuleResult {
 	latticeSkipped := len(sourceFailures) > 0 || len(boundaryFailures) > 0
 	latticeStatus := "passed"
-	latticeMessage := "requirement lifecycle transitions must preserve durable records and replacement traceability"
+	message := latticeMessage
 	if latticeSkipped {
 		latticeStatus = "skipped"
-		latticeMessage = "record-level lifecycle checks require admitted comparable requirement source snapshots"
+		message = latticeSkippedMessage
 	} else if len(recordFailures) > 0 {
 		latticeStatus = "failed"
 	}
 	return []report.RuleResult{
 		{
-			RuleID:      "proofkit.requirement-source-transition.boundary",
+			RuleID:      boundaryRuleID,
 			Status:      statusFailedIf(len(boundaryFailures) > 0),
-			Message:     "proofkit compares caller-provided snapshots for one requirement source package",
+			Message:     boundaryMessage,
 			Diagnostics: failureDiagnostics(boundaryFailures),
 		},
 		{
-			RuleID:      "proofkit.requirement-source-transition.source-admission",
+			RuleID:      sourceRuleID,
 			Status:      statusFailedIf(len(sourceFailures) > 0),
-			Message:     "previous and next requirement source snapshots must pass source admission",
+			Message:     sourceMessage,
 			Diagnostics: failureDiagnostics(sourceFailures),
 		},
 		{
-			RuleID:      "proofkit.requirement-source-transition.transition-lattice",
+			RuleID:      latticeRuleID,
 			Status:      latticeStatus,
-			Message:     latticeMessage,
+			Message:     message,
 			Diagnostics: failureDiagnostics(recordFailures),
 		},
 	}

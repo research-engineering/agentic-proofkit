@@ -22,11 +22,6 @@ var sourceRoles = map[string]struct{}{
 	"other":          {},
 }
 
-var sourceRefKinds = map[string]struct{}{
-	"path_digest": {},
-	"source_id":   {},
-}
-
 var overlayKinds = map[string]struct{}{
 	"coverage":      {},
 	"proof":         {},

@@ -127,9 +127,9 @@ execution receipts, and merge policy.
   invocation forms, process channels, no-input behavior, and leaf dispatch;
   descriptor and help truth remains owned by `REQ-PROOFKIT-QUALITY-004`.
 - `REQ-PROOFKIT-SPEC-019`: explicit catalogs compose content-bound semantic
-  schema-v2 context snapshots with exact expected-digest coverage through
-  existing source, tree, proof, and coverage owners, with strict v1 adaptation
-  and without ambient repository discovery.
+  schema-v4 context snapshots with exact expected-digest coverage through
+  existing source, tree, proof, and coverage owners; retired context v1-v3
+  inputs are rejected without ambient repository discovery.
 - `REQ-PROOFKIT-SPEC-020`: bounded context queries select parent-before-child,
   role-aware, reference-closed semantic subsets by stable identity and report
   each active bound without treating bounded absence as source absence.
@@ -140,12 +140,12 @@ execution receipts, and merge policy.
   document semantics, and non-claims, then emits a bounded source-bound question
   packet from a visibly labelled region only after explicit user submission.
 - `REQ-PROOFKIT-SPEC-022`: semantic diff compares admitted requirement fields
-  by owner-declared scalar, set, map, and lifecycle semantics through schema-v2
-  records and strict v1 adapters, covers entity additions and removals, and
-  remains closed under output re-admission.
-- `REQ-PROOFKIT-SPEC-023`: traceability graph input schema v2 preserves
+  by owner-declared scalar, set, map, lifecycle, and source-review dependency
+  semantics through schema-v3 records, rejects retired v1/v2 adapters, covers
+  entity additions and removals, and remains closed under output re-admission.
+- `REQ-PROOFKIT-SPEC-023`: traceability graph input schema v3 preserves
   specification, proof, code traceability, and native execution as distinct
-  evidence planes, consumes the normalized v1/v2 context boundary, and accepts
+  evidence planes, consumes admitted context v4, and accepts
   code topology only as explicit caller-owned input with source-digest,
   parent-edge, abstraction-order, and pre-materialization budget closure.
 - `REQ-PROOFKIT-SPEC-024`: a private representation-neutral requirement-source

@@ -48,26 +48,9 @@ func (runtime engine) cleanupTerminalTombstone(root *os.Root, tombstone string) 
 }
 
 func (runtime engine) compactTerminalTombstone(root *os.Root, tombstone string, plan *Plan) error {
-	entries, err := transactionEntries(root, tombstone)
+	entries, err := admitTerminalCompaction(root, tombstone, plan)
 	if err != nil {
 		return err
-	}
-	if err := validateTransactionEntries(entries, plan, true); err != nil {
-		return err
-	}
-	receipt, err := loadTerminalReceipt(root, tombstone)
-	if err != nil {
-		return err
-	}
-	transactionID, state, ok := terminalEntryIdentity(filepath.Base(tombstone))
-	if !ok || receipt.TransactionID != transactionID || receipt.State != state {
-		return fmt.Errorf("repository transaction terminal receipt does not match its route")
-	}
-	if plan != nil {
-		want, relationErr := terminalReceiptFromResult(*plan, receipt.result())
-		if relationErr != nil || !terminalReceiptMatchesPlan(receipt, want) {
-			return fmt.Errorf("repository transaction terminal receipt does not match its plan")
-		}
 	}
 	for _, entry := range entries {
 		if entry.Name() == terminalReceiptName {
@@ -87,6 +70,33 @@ func (runtime engine) compactTerminalTombstone(root *os.Root, tombstone string, 
 		return fmt.Errorf("%w: terminal receipt route sync failed", errCleanupDurabilityUnknown)
 	}
 	return nil
+}
+
+// Inspection and recovery admit the same terminal-compaction prefix before
+// either exposes recovery identity or removes any retained staging entries.
+func admitTerminalCompaction(root *os.Root, tombstone string, plan *Plan) ([]os.DirEntry, error) {
+	entries, err := transactionEntries(root, tombstone)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateTransactionEntries(entries, plan, true); err != nil {
+		return nil, err
+	}
+	receipt, err := loadTerminalReceipt(root, tombstone)
+	if err != nil {
+		return nil, err
+	}
+	transactionID, state, ok := terminalEntryIdentity(filepath.Base(tombstone))
+	if !ok || receipt.TransactionID != transactionID || receipt.State != state {
+		return nil, fmt.Errorf("repository transaction terminal receipt does not match its route")
+	}
+	if plan != nil {
+		want, relationErr := terminalReceiptFromResult(*plan, receipt.result())
+		if relationErr != nil || !terminalReceiptMatchesPlan(receipt, want) {
+			return nil, fmt.Errorf("repository transaction terminal receipt does not match its plan")
+		}
+	}
+	return entries, nil
 }
 
 func discardTerminalReceipt(root *os.Root) error {

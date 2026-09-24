@@ -38,6 +38,7 @@ func TestNormalizeOwnsDetachedInputAcrossCalls(t *testing.T) {
 			assertAccessorReturnsDetachedState(t, "atomic", model.Atomic)
 			assertAccessorReturnsDetachedState(t, "layout", model.Layout)
 			assertAccessorReturnsDetachedState(t, "references", model.References)
+			assertAccessorReturnsDetachedState(t, "nonclaim definitions", model.NonClaimDefinitions)
 		})
 	}
 }

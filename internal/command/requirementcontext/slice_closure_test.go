@@ -12,7 +12,7 @@ import (
 func TestSlicePreservesRequirementSourceRole(t *testing.T) {
 	contextValue := sliceTopologyFixture(t)
 	output, err := Slice(map[string]any{
-		"context": contextValue, "schemaVersion": json.Number("1"), "sliceId": "consumer.role-slice",
+		"context": contextValue, "schemaVersion": json.Number("2"), "sliceId": "consumer.role-slice",
 		"query": map[string]any{"maxDepth": json.Number("0"), "nodeIds": []any{"spec.root"}, "profile": "specification"},
 	})
 	if err != nil {
@@ -32,7 +32,7 @@ func TestSlicePreservesRequirementSourceRole(t *testing.T) {
 
 func TestRoutingSliceRestrictsSourcesToSelectedTree(t *testing.T) {
 	output, err := Slice(map[string]any{
-		"context": sliceTopologyFixture(t), "schemaVersion": json.Number("1"), "sliceId": "consumer.routing-slice",
+		"context": sliceTopologyFixture(t), "schemaVersion": json.Number("2"), "sliceId": "consumer.routing-slice",
 		"query": map[string]any{"maxNodes": json.Number("1"), "profile": "routing"},
 	})
 	if err != nil {
@@ -47,7 +47,7 @@ func TestRoutingSliceRestrictsSourcesToSelectedTree(t *testing.T) {
 
 func TestSliceSelectorIntersectionReturnsNoMatch(t *testing.T) {
 	output, err := Slice(map[string]any{
-		"context": sliceTopologyFixture(t), "schemaVersion": json.Number("1"), "sliceId": "consumer.empty-intersection",
+		"context": sliceTopologyFixture(t), "schemaVersion": json.Number("2"), "sliceId": "consumer.empty-intersection",
 		"query": map[string]any{"ownerIds": []any{"consumer.owner-b"}, "profile": "specification", "requirementIds": []any{"REQ-CONSUMER-A"}},
 	})
 	if err != nil {
@@ -62,7 +62,7 @@ func TestSliceSelectorIntersectionReturnsNoMatch(t *testing.T) {
 func TestRequirementSelectorClosesTreeOverSelectedSource(t *testing.T) {
 	contextValue := sliceTopologyFixture(t)
 	input := map[string]any{
-		"context": contextValue, "schemaVersion": json.Number("1"), "sliceId": "consumer.requirement-tree-closure",
+		"context": contextValue, "schemaVersion": json.Number("2"), "sliceId": "consumer.requirement-tree-closure",
 		"query": map[string]any{"maxNodes": json.Number("2"), "profile": "specification", "requirementIds": []any{"REQ-CONSUMER-B"}},
 	}
 	output, err := Slice(input)
@@ -82,7 +82,7 @@ func TestRequirementSelectorClosesTreeOverSelectedSource(t *testing.T) {
 
 func TestRequirementSelectorDoesNotReportInternalTreeDerivationAsOmission(t *testing.T) {
 	output, err := Slice(map[string]any{
-		"context": threeLevelSliceTopologyFixture(t, [3]int{1, 2, 3}), "schemaVersion": json.Number("1"), "sliceId": "consumer.requirement-derived-tree",
+		"context": threeLevelSliceTopologyFixture(t, [3]int{1, 2, 3}), "schemaVersion": json.Number("2"), "sliceId": "consumer.requirement-derived-tree",
 		"query": map[string]any{"maxNodes": json.Number("2"), "profile": "specification", "requirementIds": []any{"REQ-CONSUMER-B"}},
 	})
 	if err != nil {
@@ -103,7 +103,7 @@ func TestSliceNodeBoundsPreserveAncestorsAcrossDisplayOrders(t *testing.T) {
 		t.Run(fmt.Sprint(order), func(t *testing.T) {
 			contextValue := threeLevelSliceTopologyFixture(t, order)
 			output, err := Slice(map[string]any{
-				"context": contextValue, "schemaVersion": json.Number("1"), "sliceId": "consumer.ancestor-closure",
+				"context": contextValue, "schemaVersion": json.Number("2"), "sliceId": "consumer.ancestor-closure",
 				"query": map[string]any{"maxNodes": json.Number("2"), "nodeIds": []any{"spec.root"}, "profile": "specification"},
 			})
 			if err != nil {
@@ -123,7 +123,7 @@ func TestSliceNodeBoundsPreserveAncestorsAcrossDisplayOrders(t *testing.T) {
 
 func TestSliceReportsDepthAndNodeOmissionsAsDisjointSets(t *testing.T) {
 	output, err := Slice(map[string]any{
-		"context": threeLevelSliceTopologyFixture(t, [3]int{3, 2, 1}), "schemaVersion": json.Number("1"), "sliceId": "consumer.depth-omissions",
+		"context": threeLevelSliceTopologyFixture(t, [3]int{3, 2, 1}), "schemaVersion": json.Number("2"), "sliceId": "consumer.depth-omissions",
 		"query": map[string]any{"maxDepth": json.Number("0"), "maxNodes": json.Number("1"), "nodeIds": []any{"spec.root"}, "profile": "specification"},
 	})
 	if err != nil {
@@ -190,7 +190,7 @@ func sliceTopologyFixture(t *testing.T) map[string]any {
 				map[string]any{"sourceId": "consumer.requirements-a", "sourceRefId": "spec.root.requirements-a", "sourceRefKind": "source_id", "sourceRole": "requirements"},
 				map[string]any{
 					"currentSourceDigest": digest.SHA256TextRef("auxiliary"), "digestAlgorithm": "sha256",
-					"recordedSourceDigest": digest.SHA256TextRef("auxiliary"), "sourcePath": "docs/specs/auxiliary/requirements.v1.json",
+					"recordedSourceDigest": digest.SHA256TextRef("auxiliary"), "sourcePath": "docs/specs/auxiliary/requirements.v2.json",
 					"sourceRefId": "spec.root.requirements-path", "sourceRefKind": "path_digest", "sourceRole": "requirements",
 				},
 			}},
@@ -208,8 +208,8 @@ func sliceTopologyFixture(t *testing.T) map[string]any {
 	}
 	projections := map[string]any{"requirementSources": []any{sourceA, sourceB}, "specTree": tree}
 	sources := []Source{
-		{CurrentDigest: digest.SHA256TextRef("consumer.requirements-a"), Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/a/requirements.v1.json", SourceRef: "consumer.requirements-a", SourceRole: "requirements"},
-		{CurrentDigest: digest.SHA256TextRef("consumer.requirements-b"), Kind: "requirement_source", NodeID: "spec.child", Path: "docs/specs/b/requirements.v1.json", SourceRef: "consumer.requirements-b", SourceRole: "requirements"},
+		{CurrentDigest: digest.SHA256TextRef("consumer.requirements-a"), Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/a/requirements.v2.json", SourceRef: "consumer.requirements-a", SourceRole: "requirements"},
+		{CurrentDigest: digest.SHA256TextRef("consumer.requirements-b"), Kind: "requirement_source", NodeID: "spec.child", Path: "docs/specs/b/requirements.v2.json", SourceRef: "consumer.requirements-b", SourceRole: "requirements"},
 		{CurrentDigest: digest.SHA256TextRef("consumer.slice-tree"), Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.slice-tree"},
 	}
 	identity, err := stablejson.Marshal(map[string]any{"catalogId": "consumer.slice-context", "projections": projections, "sources": sourceIdentityValues(sources)})
@@ -220,19 +220,22 @@ func sliceTopologyFixture(t *testing.T) map[string]any {
 }
 
 func sliceRequirement(id, owner, claimLevel, lifecycleState string, replacementIDs []any) map[string]any {
-	return map[string]any{
-		"claimLevel": claimLevel, "invariant": "The selected contract remains explicit.",
-		"lifecycle":    map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": replacementIDs, "state": lifecycleState},
-		"nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."},
-		"ownerId": owner, "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": id, "riskClass": "high",
-		"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": owner},
+	lifecycle := map[string]any{"state": lifecycleState}
+	if len(replacementIDs) > 0 {
+		lifecycle["replacementRequirementIds"] = replacementIDs
 	}
+	return map[string]any{"requirementId": id, "statementCompletion": "The selected contract remains explicit.", "fields": map[string]any{
+		"claimLevel": claimLevel, "deferral": nil, "lifecycle": lifecycle,
+		"nonClaimRefs": []any{}, "externalNonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."},
+		"ownerId": owner, "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "riskClass": "high",
+		"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": owner},
+	}}
 }
 
 func sliceRequirementSource(sourceID string, requirement map[string]any) map[string]any {
 	return map[string]any{
-		"nonClaims": []any{"Consumer source does not approve merge."}, "overviewPath": "docs/specs/consumer/overview.md",
-		"requirements": []any{requirement}, "requirementsPath": "docs/specs/consumer/requirements.v1.json",
-		"schemaVersion": json.Number("1"), "sourceId": sourceID, "specPackagePath": "docs/specs/consumer",
+		"sourceNonClaims": []any{"Consumer source does not approve merge."},
+		"groups":          []any{map[string]any{"groupId": "RGRP-CONSUMER", "profileId": "", "statementStem": "", "sharedPremises": []any{}, "members": []any{requirement}}},
+		"kind":            "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": sourceID, "specPackagePath": "docs/specs/consumer",
 	}
 }

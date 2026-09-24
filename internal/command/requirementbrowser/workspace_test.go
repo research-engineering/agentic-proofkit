@@ -95,7 +95,7 @@ func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing
 	}
 	annotation := packetRecord["annotations"].([]any)[0].(map[string]any)
 	anchor := annotation["anchor"].(map[string]any)
-	if anchor["jsonPointer"] != "/projections/requirementSources/0/requirements/0/invariant" || anchor["sourceDigest"] != "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" || packetRecord["snapshotRefs"].([]any)[0].(map[string]any)["snapshotId"] != handle.SnapshotID {
+	if anchor["jsonPointer"] != "/invariant" || anchor["sourceDigest"] != "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" || packetRecord["snapshotRefs"].([]any)[0].(map[string]any)["snapshotId"] != handle.SnapshotID {
 		t.Fatalf("handoff lost source identity: %#v", packetRecord)
 	}
 	spaceQuote := `{"annotations":[{"anchorId":"requirement:REQ-CONSUMER-001:invariant","exactQuote":" system","startCodePoint":3,"endCodePoint":10,"question":"Does whitespace remain source-bound?"}]}`
@@ -113,31 +113,31 @@ func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing
 	}
 }
 
-func TestV2DigestCoverageProjections(t *testing.T) {
+func TestCurrentDigestCoverageProjectionsRejectRetiredIdentities(t *testing.T) {
 	fixture := workspaceFixture(t)
 	current := fixture["context"].(map[string]any)
 	base := cloneWorkspaceRecord(t, current)
-	base["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)["invariant"] = "The system preserved the previous semantic identity."
+	workspaceSourceMember(base)["statementCompletion"] = "The system preserved the previous semantic identity."
 	resignWorkspaceSnapshot(t, base)
-	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.digest-coverage", "schemaVersion": json.Number("2")}
-	fixture["graphInput"] = map[string]any{"context": current, "graphId": "consumer.workspace.digest-coverage", "schemaVersion": json.Number("2")}
+	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.digest-coverage", "schemaVersion": json.Number("3")}
+	fixture["graphInput"] = map[string]any{"context": current, "graphId": "consumer.workspace.digest-coverage", "schemaVersion": json.Number("3")}
 
 	handle, capability := startWorkspaceTestServer(t, fixture, false)
 	manifest := getWorkspaceJSON(t, handle.URL+"api/v1/manifest", capability)
-	if manifest["schemaVersion"] != json.Number("2") || manifest["expectedDigestCoverage"] != "none" || manifest["baselineVerification"] != nil {
-		t.Fatalf("workspace manifest is not a clean v2 projection: %#v", manifest)
+	if manifest["schemaVersion"] != json.Number("3") || manifest["expectedDigestCoverage"] != "none" || manifest["baselineVerification"] != nil {
+		t.Fatalf("workspace manifest is not a clean v3 projection: %#v", manifest)
 	}
 	for _, path := range []string{"requirements", "diff", "graph"} {
 		response := postWorkspaceJSON(t, handle.URL+"api/v1/"+path, capability, map[string]any{
 			"query": map[string]any{}, "requestId": "consumer.workspace." + path, "snapshotId": handle.SnapshotID,
 		})
-		if response["schemaVersion"] != json.Number("2") {
-			t.Fatalf("%s response schemaVersion = %v, want 2", path, response["schemaVersion"])
+		if response["schemaVersion"] != json.Number("3") {
+			t.Fatalf("%s response schemaVersion = %v, want 3", path, response["schemaVersion"])
 		}
 		if path == "diff" {
 			projection := response["projection"].(map[string]any)
 			if projection["baseExpectedDigestCoverage"] != "none" || projection["currentExpectedDigestCoverage"] != "none" || projection["baseBaselineVerification"] != nil || projection["currentBaselineVerification"] != nil {
-				t.Fatalf("diff API projection is not clean v2: %#v", projection)
+				t.Fatalf("diff API projection is not clean v3: %#v", projection)
 			}
 		}
 	}
@@ -153,20 +153,23 @@ func TestV2DigestCoverageProjections(t *testing.T) {
 		"Requirement context does not execute native witnesses or prove source freshness after composition.",
 	}
 	v1Context["schemaVersion"] = json.Number("1")
-	v1Session, _, err := buildWorkspace(v1Minimal)
-	if err != nil {
-		t.Fatalf("buildWorkspace(v1) error = %v", err)
+	if _, _, err := buildWorkspace(v1Minimal); err == nil {
+		t.Fatal("retired workspace v1 admitted grouped source semantics")
 	}
-	v2Session, _, err := buildWorkspace(v2Minimal)
+	_, _, err := buildWorkspace(v2Minimal)
 	if err != nil {
 		t.Fatal(err)
-	}
-	if got, want := stableWorkspaceBytes(t, v1Session.Manifest), stableWorkspaceBytes(t, v2Session.Manifest); !bytes.Equal(got, want) {
-		t.Fatalf("v1 workspace normalized to a different v2 manifest\n got: %s\nwant: %s", got, want)
 	}
 	v1Minimal["context"] = current
 	if _, _, err := buildWorkspace(v1Minimal); err == nil {
 		t.Fatal("buildWorkspace accepted a v1 envelope with a v2 context")
+	}
+	for _, version := range []string{"1", "2"} {
+		old := cloneWorkspaceRecord(t, v2Minimal)
+		old["schemaVersion"] = json.Number(version)
+		if _, _, err := buildWorkspace(old); err == nil {
+			t.Fatalf("retired workspace %s accepted", version)
+		}
 	}
 }
 
@@ -341,7 +344,7 @@ func TestWorkspaceRejectsGraphInputForAnotherContext(t *testing.T) {
 	otherContext := decoded.(map[string]any)
 	otherContext["catalogId"] = "consumer.other-context"
 	resignWorkspaceSnapshot(t, otherContext)
-	fixture["graphInput"] = map[string]any{"context": otherContext, "graphId": "consumer.workspace.graph", "schemaVersion": json.Number("2")}
+	fixture["graphInput"] = map[string]any{"context": otherContext, "graphId": "consumer.workspace.graph", "schemaVersion": json.Number("3")}
 	if _, _, err := buildWorkspace(fixture); err == nil {
 		t.Fatal("buildWorkspace accepted graph input for a different context")
 	}
@@ -359,11 +362,11 @@ func TestWorkspaceAdmitsMultiFieldSemanticDiffFromProducer(t *testing.T) {
 		t.Fatal(err)
 	}
 	base := decoded.(map[string]any)
-	requirement := base["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)
-	requirement["invariant"] = "The system preserved the previous semantic identity."
-	requirement["riskClass"] = "medium"
+	requirement := workspaceSourceMember(base)
+	requirement["statementCompletion"] = "The system preserved the previous semantic identity."
+	requirement["fields"].(map[string]any)["riskClass"] = "medium"
 	resignWorkspaceSnapshot(t, base)
-	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.diff", "schemaVersion": json.Number("2")}
+	fixture["diffInput"] = map[string]any{"baseContext": base, "currentContext": current, "diffId": "consumer.workspace.diff", "schemaVersion": json.Number("3")}
 
 	workspace, _, err := buildWorkspace(fixture)
 	if err != nil {
@@ -393,12 +396,16 @@ func TestWorkspaceHandoffRetainsLifecycleReplacementClosure(t *testing.T) {
 	fixture := workspaceFixture(t)
 	contextValue := fixture["context"].(map[string]any)
 	source := contextValue["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)
-	requirements := source["requirements"].([]any)
+	group := source["groups"].([]any)[0].(map[string]any)
+	requirements := group["members"].([]any)
 	first := requirements[0].(map[string]any)
-	first["claimLevel"] = "advisory"
-	first["lifecycle"] = map[string]any{"state": "superseded", "replacementRequirementIds": []any{"REQ-CONSUMER-002"}, "evidenceRefs": []any{"consumer.lifecycle.migration"}}
-	second := map[string]any{"requirementId": "REQ-CONSUMER-002", "ownerId": "consumer.owner", "claimLevel": "blocking", "riskClass": "high", "invariant": "The replacement preserves semantic identity.", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{"NC-CONSUMER-002"}, "nonClaims": []any{"This replacement requirement does not approve merge."}, "lifecycle": map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}}, "updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true}}
-	source["requirements"] = append(requirements, second)
+	second := cloneWorkspaceRecord(t, first)
+	second["requirementId"], second["statementCompletion"] = "REQ-CONSUMER-002", "The replacement preserves semantic identity."
+	second["fields"].(map[string]any)["externalNonClaimRefs"] = []any{"NC-CONSUMER-002"}
+	second["fields"].(map[string]any)["nonClaims"] = []any{"This replacement requirement does not approve merge."}
+	first["fields"].(map[string]any)["claimLevel"] = "advisory"
+	first["fields"].(map[string]any)["lifecycle"] = map[string]any{"state": "superseded", "replacementRequirementIds": []any{"REQ-CONSUMER-002"}, "evidenceRefs": []any{"consumer.lifecycle.migration"}}
+	group["members"] = append(requirements, second)
 	resignWorkspaceSnapshot(t, contextValue)
 	handle, capability := startWorkspaceTestServer(t, fixture, false)
 	response := postWorkspaceHandoff(t, handle.URL, capability)
@@ -523,35 +530,41 @@ func workspaceFixtureWithInvariant(t *testing.T, invariant string) map[string]an
 	t.Helper()
 	projections := map[string]any{
 		"requirementSources": []any{map[string]any{
-			"schemaVersion":    json.Number("1"),
-			"sourceId":         "consumer.requirements",
-			"specPackagePath":  "docs/specs/consumer",
-			"overviewPath":     "docs/specs/consumer/overview.md",
-			"requirementsPath": "docs/specs/consumer/requirements.v1.json",
-			"nonClaims":        []any{"Consumer source does not approve merge."},
-			"requirements": []any{map[string]any{
-				"requirementId":    "REQ-CONSUMER-001",
-				"ownerId":          "consumer.owner",
-				"claimLevel":       "blocking",
-				"riskClass":        "high",
-				"invariant":        invariant,
-				"proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
-				"nonClaimRefs":     []any{"NC-CONSUMER-001"},
-				"nonClaims":        []any{"This requirement does not approve merge."},
-				"lifecycle":        map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
-				"updatePolicy":     map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true},
-			}},
+			"kind":            "proofkit.requirement-source",
+			"schemaVersion":   json.Number("2"),
+			"sourceId":        "consumer.requirements",
+			"specPackagePath": "docs/specs/consumer",
+			"sourceNonClaims": []any{"Consumer source does not approve merge."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-CONSUMER", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId":       "REQ-CONSUMER-001",
+					"statementCompletion": invariant,
+					"fields": map[string]any{
+						"ownerId":          "consumer.owner",
+						"claimLevel":       "blocking",
+						"riskClass":        "high",
+						"proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
+						"nonClaimRefs":     []any{}, "externalNonClaimRefs": []any{"NC-CONSUMER-001"}, "deferral": nil,
+						"nonClaims":    []any{"This requirement does not approve merge."},
+						"lifecycle":    map[string]any{"state": "active"},
+						"updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true},
+					}}}}},
 		}},
 		"specTree": map[string]any{"schemaVersion": json.Number("2"), "treeId": "consumer.spec-tree", "rootNodeId": "spec.root", "callerAnnotations": []any{}, "edges": []any{}, "overlays": []any{}, "nodes": []any{map[string]any{"nodeId": "spec.root", "nodeKind": "meta_spec", "label": "Root", "displayOrder": json.Number("1"), "callerAnnotations": []any{}, "sourceRefs": []any{map[string]any{"sourceRefId": "spec.root.requirements", "sourceRefKind": "source_id", "sourceRole": "requirements", "sourceId": "consumer.requirements"}}}}},
 	}
-	sources := []requirementcontext.Source{{CurrentDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/consumer/requirements.v1.json", SourceRef: "consumer.requirements", SourceRole: "requirements"}, {CurrentDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.spec-tree"}}
+	sources := []requirementcontext.Source{{CurrentDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/consumer/requirements.v2.json", SourceRef: "consumer.requirements", SourceRole: "requirements"}, {CurrentDigest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", Kind: "spec_tree", Path: "proofkit/spec-tree.json", SourceRef: "spec_tree:consumer.spec-tree"}}
 	identity := map[string]any{"catalogId": "consumer.context", "projections": projections, "sources": []any{map[string]any{"currentDigest": sources[0].CurrentDigest, "expectedDigest": "", "kind": sources[0].Kind, "nodeId": sources[0].NodeID, "path": sources[0].Path, "sourceRef": sources[0].SourceRef, "sourceRole": sources[0].SourceRole}, map[string]any{"currentDigest": sources[1].CurrentDigest, "expectedDigest": "", "kind": sources[1].Kind, "path": sources[1].Path, "sourceRef": sources[1].SourceRef}}}
 	encoded, err := stablejson.Marshal(identity)
 	if err != nil {
 		t.Fatal(err)
 	}
 	contextValue := requirementcontext.SnapshotValue(requirementcontext.Snapshot{CatalogID: "consumer.context", ExpectedDigestCoverage: "none", Projections: projections, SnapshotID: digest.SHA256TextRef(string(encoded)), Sources: sources})
-	return map[string]any{"schemaVersion": json.Number("2"), "workspaceId": "consumer.workspace", "context": contextValue}
+	return map[string]any{"schemaVersion": json.Number("3"), "workspaceId": "consumer.workspace", "context": contextValue}
+}
+
+func workspaceSourceMember(context map[string]any) map[string]any {
+	return context["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
 }
 
 func resignWorkspaceSnapshot(t *testing.T, contextValue map[string]any) {
@@ -563,7 +576,11 @@ func resignWorkspaceSnapshot(t *testing.T, contextValue map[string]any) {
 		if err != nil || result.ExitCode != 0 {
 			t.Fatalf("canonicalize requirement source: exit=%d err=%v failures=%v", result.ExitCode, err, result.Failures)
 		}
-		canonicalSources = append(canonicalSources, requirementsourceadmission.SourceValue(result.Source))
+		value, err := requirementsourceadmission.SourceValue(result.Source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		canonicalSources = append(canonicalSources, value)
 	}
 	projections["requirementSources"] = canonicalSources
 	treeResult, err := requirementspectree.Evaluate(projections["specTree"])

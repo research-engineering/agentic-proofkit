@@ -34,7 +34,7 @@
         "local-go-python"
       ],
       "evidenceRefs": [
-        "docs/specs/proofkit-package-boundary/requirements.v1.json"
+        "docs/specs/proofkit-package-boundary/requirements.v2.json"
       ],
       "nonClaim": "Local developer receipts are advisory and do not satisfy merge obligations."
     }

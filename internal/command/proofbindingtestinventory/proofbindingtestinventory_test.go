@@ -82,11 +82,43 @@ func TestBuildProjectsCompactProofBindingToAdmittedInventory(t *testing.T) {
 
 func TestBuildRejectsMissingRequirementOwner(t *testing.T) {
 	input := validInput()
-	input["requirementSource"].(map[string]any)["requirements"] = []any{}
+	input["requirementSource"].(map[string]any)["groups"] = []any{}
 
 	_, exitCode, err := Build(input)
 	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "has no owner") {
 		t.Fatalf("Build() exit=%d err=%v, want missing owner rejection", exitCode, err)
+	}
+}
+
+func TestBuildRejectsScenarioDeclaredForAnotherRequirement(t *testing.T) {
+	input := validInput()
+	source := input["requirementSource"].(map[string]any)
+	group := source["groups"].([]any)[0].(map[string]any)
+	first := group["members"].([]any)[0].(map[string]any)
+	second := map[string]any{"requirementId": "REQ-PROOFKIT-COMPACT-002", "statementCompletion": first["statementCompletion"], "fields": first["fields"]}
+	group["members"] = append(group["members"].([]any), second)
+	source["scenarios"] = []any{map[string]any{
+		"scenarioId": "proofkit.surface::scenario.compact", "requirementIds": []any{"REQ-PROOFKIT-COMPACT-002"},
+		"parameters": []any{}, "preconditions": []any{"A request is ready."},
+		"actionSequence": []any{"Submit the request."}, "expectedObservations": []any{"The response is accepted."},
+		"forbiddenObservations": []any{}, "examples": []any{}, "vocabularyRefs": []any{}, "nonClaimRefs": []any{},
+	}}
+	for _, build := range []struct {
+		name string
+		run  func(any) (int, error)
+	}{
+		{"projection", func(value any) (int, error) { _, exit, err := Build(value); return exit, err }},
+		{"normalized", func(value any) (int, error) { _, exit, err := BuildNormalized(value); return exit, err }},
+	} {
+		t.Run(build.name, func(t *testing.T) {
+			if exit, err := build.run(input); exit != 1 || err == nil || !strings.Contains(err.Error(), "scenario link disagrees") {
+				t.Fatalf("wrong scenario member: exit=%d err=%v", exit, err)
+			}
+		})
+	}
+	source["scenarios"].([]any)[0].(map[string]any)["requirementIds"] = []any{"REQ-PROOFKIT-COMPACT-001", "REQ-PROOFKIT-COMPACT-002"}
+	if _, exit, err := Build(input); exit != 0 || err != nil {
+		t.Fatalf("shared scenario member rejected: exit=%d err=%v", exit, err)
 	}
 }
 
@@ -248,18 +280,26 @@ func TestBuildRejectsDerivedCommandRefCollision(t *testing.T) {
 
 func validInput() map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("2"),
+		"schemaVersion": json.Number("3"),
 		"inventoryId":   "proofkit.derived.inventory",
 		"commandRefPolicy": map[string]any{
 			"prefix": "proofkit_repo",
 		},
 		"requirementSource": map[string]any{
-			"requirements": []any{
-				map[string]any{
-					"requirementId": "REQ-PROOFKIT-COMPACT-001",
-					"ownerId":       "proofkit.spec",
-				},
-			},
+			"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"),
+			"sourceId": "proofkit.test.source", "specPackagePath": "docs/specs/test", "sourceNonClaims": []any{"This source does not establish execution."},
+			"groups": []any{map[string]any{
+				"groupId": "RGRP-TEST", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{
+					"requirementId": "REQ-PROOFKIT-COMPACT-001", "statementCompletion": "A declared route retains its requirement owner.",
+					"fields": map[string]any{
+						"ownerId": "proofkit.spec", "claimLevel": "blocking", "riskClass": "high", "deferral": nil,
+						"lifecycle":        map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
+						"proofBindingRefs": []any{"proofkit/bindings.json"}, "nonClaimRefs": []any{}, "externalNonClaimRefs": []any{}, "nonClaims": []any{},
+						"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "proofkit.spec"},
+					},
+				}},
+			}},
 		},
 		"compactProofContract": validCompactContract(),
 		"nonClaims":            []any{"Fixture projection does not execute native tests."},

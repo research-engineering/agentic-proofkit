@@ -14,10 +14,14 @@ import (
 
 const workspaceCapabilityPlaceholder = "PROOFKIT_BROWSER_CAPABILITY_PLACEHOLDER"
 
+const workspaceProjectionSchemaVersion = 3
+const questionPacketSchemaVersion = 2
+
 type workspaceAnchor struct {
 	AnchorID      string
 	JSONPointer   string
 	RequirementID string
+	SourceID      string
 	SourceDigest  string
 	Text          string
 }
@@ -102,7 +106,7 @@ func prepareWorkspace(workspaceID string, snapshot requirementcontext.Snapshot, 
 		"nonClaims":              admit.StringSliceToAny(serverNonClaims),
 		"requirementCount":       len(lookup.Rows),
 		"lookupFacets":           map[string]any{"ownerIds": workspaceSortedSet(lookup.Owners), "lifecycleStates": workspaceSortedSet(lookup.LifecycleStates)},
-		"schemaVersion":          json.Number("2"),
+		"schemaVersion":          json.Number(fmt.Sprint(workspaceProjectionSchemaVersion)),
 		"snapshotId":             snapshot.SnapshotID,
 		"workspaceId":            workspaceID,
 	}
@@ -110,35 +114,31 @@ func prepareWorkspace(workspaceID string, snapshot requirementcontext.Snapshot, 
 }
 
 func admitWorkspaceInputVersion(record map[string]any) error {
-	switch {
-	case admit.JSONNumberEquals(record["schemaVersion"], 1):
-		return admitV1WorkspaceInput(record)
-	case admit.JSONNumberEquals(record["schemaVersion"], 2):
-		return requireWorkspaceNestedVersions(record, 2)
-	default:
-		return fmt.Errorf("requirement browser workspace schemaVersion must be 1 or 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return fmt.Errorf("requirement browser workspace schemaVersion must be 3")
 	}
+	return requireWorkspaceNestedVersions(record)
 }
 
-func requireWorkspaceNestedVersions(record map[string]any, expected int) error {
+func requireWorkspaceNestedVersions(record map[string]any) error {
 	contextRecord, ok := record["context"].(map[string]any)
-	if !ok || !admit.JSONNumberEquals(contextRecord["schemaVersion"], int64(expected)) {
-		return fmt.Errorf("requirement browser workspace schemaVersion %d requires context schemaVersion %d", expected, expected)
+	if !ok || !admit.JSONNumberEquals(contextRecord["schemaVersion"], requirementcontext.SnapshotSchemaVersion) {
+		return fmt.Errorf("requirement browser workspace requires context schemaVersion 4")
 	}
 	if rawDiff := record["diffInput"]; rawDiff != nil {
 		diff, ok := rawDiff.(map[string]any)
-		if !ok || !admit.JSONNumberEquals(diff["schemaVersion"], int64(expected)) {
-			return fmt.Errorf("requirement browser workspace schemaVersion %d requires diffInput schemaVersion %d", expected, expected)
+		if !ok || !admit.JSONNumberEquals(diff["schemaVersion"], 3) {
+			return fmt.Errorf("requirement browser workspace requires diffInput schemaVersion 3")
 		}
 	}
 	if rawGraph := record["graphInput"]; rawGraph != nil {
 		graph, ok := rawGraph.(map[string]any)
-		if !ok || !admit.JSONNumberEquals(graph["schemaVersion"], 2) {
-			return fmt.Errorf("requirement browser workspace graphInput schemaVersion must be 2")
+		if !ok || !admit.JSONNumberEquals(graph["schemaVersion"], 3) {
+			return fmt.Errorf("requirement browser workspace graphInput schemaVersion must be 3")
 		}
 		graphContext, ok := graph["context"].(map[string]any)
-		if !ok || !admit.JSONNumberEquals(graphContext["schemaVersion"], int64(expected)) {
-			return fmt.Errorf("requirement browser workspace schemaVersion %d requires graphInput context schemaVersion %d", expected, expected)
+		if !ok || !admit.JSONNumberEquals(graphContext["schemaVersion"], requirementcontext.SnapshotSchemaVersion) {
+			return fmt.Errorf("requirement browser workspace requires graphInput context schemaVersion 4")
 		}
 	}
 	return nil
@@ -151,7 +151,7 @@ func validateGraphSnapshotClosure(snapshot requirementcontext.Snapshot, graph ma
 	}
 	expectedRequirements := map[string]struct{}{}
 	for _, source := range snapshot.RequirementSources {
-		for _, requirement := range source.Requirements {
+		for _, requirement := range source.Requirements() {
 			expectedRequirements["requirement:"+requirement.RequirementID] = struct{}{}
 		}
 	}
@@ -200,7 +200,10 @@ func sameStringSet(left, right map[string]struct{}) bool {
 }
 
 func anchorValue(anchor workspaceAnchor) map[string]any {
-	return map[string]any{"anchorId": anchor.AnchorID, "jsonPointer": anchor.JSONPointer, "requirementId": anchor.RequirementID, "sourceDigest": anchor.SourceDigest}
+	return map[string]any{
+		"anchorId": anchor.AnchorID, "coordinateSpace": resolvedRequirementCoordinateSpace, "jsonPointer": anchor.JSONPointer,
+		"requirementId": anchor.RequirementID, "sourceId": anchor.SourceID, "sourceDigest": anchor.SourceDigest,
+	}
 }
 
 func workspaceHTML(workspaceID string) string {

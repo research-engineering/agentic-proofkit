@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/commandroute"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
@@ -86,7 +87,12 @@ func (bundle Bundle) JSONValue() map[string]any {
 }
 
 func TypeScriptSource() string {
+	patterns := admit.SecretLikeValuePatternSources()
+	for index, pattern := range patterns {
+		patterns[index] = strconv.Quote(pattern)
+	}
 	return strings.NewReplacer(
+		"__PROOFKIT_SECRET_PATTERNS__", "["+strings.Join(patterns, ", ")+"]",
 		"__PROOFKIT_COMMAND_ROUTE_MINIMUM__", strconv.Itoa(commandroute.MinimumTokens),
 		"__PROOFKIT_COMMAND_ROUTE_MAXIMUM__", strconv.Itoa(commandroute.MaximumTokens),
 		"__PROOFKIT_COMMAND_ROUTE_SEPARATOR__", strconv.Quote(commandroute.Separator),
@@ -453,20 +459,114 @@ function containsProofkitUnsafeScalar(value: string): boolean {
 	return false;
 }
 
+const proofkitSecretPattern = new RegExp(__PROOFKIT_SECRET_PATTERNS__[0], "iu");
+const proofkitURLCredentialPattern = new RegExp(__PROOFKIT_SECRET_PATTERNS__[1], "iuy");
+const proofkitEscapedSecretControls: Record<string, string> = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
+const proofkitMaxSecretDecodePasses = 16;
+
+function decodeProofkitEscapedSecretText(value: string): string {
+	const parts: string[] = [];
+	for (let index = 0; index < value.length;) {
+		const start = value.indexOf("\\", index);
+		if (start < 0) {
+			parts.push(value.slice(index));
+			break;
+		}
+		if (start > index) parts.push(value.slice(index, start));
+		let cursor = start;
+		while (cursor < value.length && value[cursor] === "\\") cursor++;
+		parts.push("\\".repeat(Math.floor((cursor - start) / 2)));
+		if ((cursor - start) % 2 === 0) {
+			index = cursor;
+			continue;
+		}
+		if (cursor === value.length) {
+			parts.push("\\");
+			break;
+		}
+		if (hasProofkitSecretUnicodeUnit(value, cursor)) {
+			const first = Number.parseInt(value.slice(cursor + 1, cursor + 5), 16);
+			if (first >= 0xd800 && first <= 0xdbff) {
+				const second = cursor + 5;
+				if (value[second] === "\\" && hasProofkitSecretUnicodeUnit(value, second + 1)) {
+					const low = Number.parseInt(value.slice(second + 2, second + 6), 16);
+					if (low >= 0xdc00 && low <= 0xdfff) {
+						parts.push(String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + low - 0xdc00));
+						index = second + 6;
+						continue;
+					}
+				}
+			}
+			parts.push(decodeProofkitSecretUnicodeScalar(first, value.slice(cursor - 1, cursor + 5)));
+			index = cursor + 5;
+			continue;
+		}
+		const suffix = value[cursor];
+		if (Object.hasOwn(proofkitEscapedSecretControls, suffix)) parts.push(proofkitEscapedSecretControls[suffix]);
+		else if (suffix === "/" || suffix === '"') parts.push(suffix);
+		else {
+			parts.push("\\");
+			index = cursor;
+			continue;
+		}
+		index = cursor + 1;
+	}
+	return parts.join("");
+}
+
+function hasProofkitSecretUnicodeUnit(value: string, index: number): boolean {
+	if (value[index] !== "u" || index + 5 > value.length) return false;
+	for (let offset = 1; offset <= 4; offset++) {
+		const code = value.charCodeAt(index + offset);
+		if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102))) return false;
+	}
+	return true;
+}
+
+function decodeProofkitSecretUnicodeScalar(value: number, original: string): string {
+	return value >= 0xd800 && value <= 0xdfff ? original : String.fromCodePoint(value);
+}
+
 function containsProofkitSecretLikeValue(value: string): boolean {
-	return [
-		/authorization\s*:\s*[^\r\n]+/iu,
-		/bearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,
-		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+/iu,
-		/github_pat_[A-Za-z0-9_]+/iu,
-		/gh[pousr]_[A-Za-z0-9_]+/iu,
-		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,
-		/xox[abprs]-[A-Za-z0-9-]+/iu,
-		/glpat-[A-Za-z0-9_-]+/iu,
-		/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu,
-		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
-		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
-	].some((pattern) => pattern.test(value));
+	let candidate = value;
+	for (let depth = 0; depth <= proofkitMaxSecretDecodePasses; depth++) {
+		if (matchesProofkitSecretPattern(candidate)) return true;
+		const withoutUnsafe = [...candidate].filter((character) => !isProofkitUnsafeScalar(character.codePointAt(0) as number)).join("");
+		if (withoutUnsafe !== candidate && matchesProofkitSecretPattern(withoutUnsafe)) return true;
+		const decoded = decodeProofkitEscapedSecretText(withoutUnsafe);
+		if (decoded === candidate) return false;
+		if (depth === proofkitMaxSecretDecodePasses) return true;
+		candidate = decoded;
+	}
+	return true;
+}
+
+function matchesProofkitSecretPattern(value: string): boolean {
+	return proofkitSecretPattern.test(value) || hasProofkitURLCredential(value);
+}
+
+function hasProofkitURLCredential(value: string): boolean {
+	for (let search = 0; search < value.length;) {
+		const separator = value.indexOf("://", search);
+		if (separator < 0) return false;
+		let start = separator;
+		while (start > 0 && isProofkitSchemeCode(value.charCodeAt(start - 1))) start--;
+		while (start < separator && !isProofkitASCIILetterCode(value.charCodeAt(start))) start++;
+		if (start < separator) {
+			proofkitURLCredentialPattern.lastIndex = start;
+			if (proofkitURLCredentialPattern.test(value)) return true;
+		}
+		search = separator + 3;
+	}
+	return false;
+}
+
+function isProofkitASCIILetterCode(code: number): boolean {
+	return code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+
+function isProofkitSchemeCode(code: number): boolean {
+	return isProofkitASCIILetterCode(code) || code >= 48 && code <= 57 || code === 43 || code === 45 || code === 46;
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(

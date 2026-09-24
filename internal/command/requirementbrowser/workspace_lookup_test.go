@@ -9,8 +9,101 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
+
+func TestWorkspaceLocalDefinitionsStaySourceScopedAcrossLookupAndHandoff(t *testing.T) {
+	input := workspaceLookupFixture(t)
+	contextValue := input["context"].(map[string]any)
+	sources := contextValue["projections"].(map[string]any)["requirementSources"].([]any)
+	for _, raw := range sources {
+		source := raw.(map[string]any)
+		source["nonClaimDefinitions"] = []any{map[string]any{"nonClaimId": "NCL-LOCAL", "statement": "No native evidence for " + source["sourceId"].(string) + "."}}
+		fields := source["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)["fields"].(map[string]any)
+		fields["nonClaimRefs"], fields["externalNonClaimRefs"] = []any{"NCL-LOCAL"}, []any{"NCL-LOCAL"}
+	}
+	resignWorkspaceSnapshot(t, contextValue)
+	session, _, err := buildWorkspace(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handle, capability := startWorkspaceTestServer(t, input, false)
+	response := postWorkspaceJSON(t, handle.URL+"api/v1/requirements", capability, map[string]any{"requestId": "local.refs", "snapshotId": handle.SnapshotID, "query": map[string]any{"maxRecords": json.Number("2")}})
+	projection := response["projection"].(map[string]any)
+	want := []any{}
+	for _, id := range []string{"consumer.a", "consumer.b"} {
+		want = append(want, map[string]any{"sourceId": id, "definitions": []any{map[string]any{"nonClaimId": "NCL-LOCAL", "statement": "No native evidence for " + id + "."}}})
+	}
+	if !reflect.DeepEqual(projection["nonClaimDefinitionsBySource"], want) {
+		t.Fatal("lookup widened support or aliased same-spelling local IDs across sources")
+	}
+	for _, raw := range projection["requirements"].([]any) {
+		row := raw.(map[string]any)
+		if !reflect.DeepEqual(row["nonClaimRefs"], []any{"NCL-LOCAL"}) || !reflect.DeepEqual(row["externalNonClaimRefs"], []any{"NCL-LOCAL"}) {
+			t.Fatal("lookup merged local and external reference roles")
+		}
+	}
+	packet := postWorkspaceJSON(t, handle.URL+"api/v1/handoff", capability, map[string]any{
+		"annotations": []any{map[string]any{"anchorId": "requirement:REQ-A:invariant", "startCodePoint": 0, "endCodePoint": 3, "exactQuote": "The", "question": "Which source owns this restriction?"}},
+	})
+	fragments := packet["context"].(map[string]any)["projections"].(map[string]any)["requirementSources"].([]any)
+	if len(fragments) != 1 || fragments[0].(map[string]any)["sourceId"] != "consumer.a" || !reflect.DeepEqual(fragments[0].(map[string]any)["nonClaimDefinitions"], want[0].(map[string]any)["definitions"]) {
+		t.Fatal("handoff dictionary is not the minimal selected source support")
+	}
+	slice, err := requirementcontext.SliceSnapshot(session.Snapshot, map[string]any{"profile": "specification", "requirementIds": []any{"REQ-B-002"}}, "local.empty")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fragment := slice["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)
+	if len(fragment["nonClaimDefinitions"].([]any)) != 0 {
+		t.Fatal("selected context imports unused definitions")
+	}
+}
+
+func TestWorkspaceDefinitionBudgetUsesActualRetainedRows(t *testing.T) {
+	index := workspaceLookupIndex{Definitions: map[string]requirementsourceadmission.NonClaimDefinitions{}}
+	for i, statement := range []string{"Short restriction.", strings.Repeat("Bounded restriction. ", 2000) + "End."} {
+		id := fmt.Sprintf("source.%d", i)
+		definitions, err := requirementsourceadmission.AdmitNonClaimDefinitions([]any{map[string]any{"nonClaimId": "NCL-LOCAL", "statement": statement}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		index.Definitions[id] = definitions
+		index.Rows = append(index.Rows, workspaceRequirement{SourceID: id, Anchor: workspaceAnchor{SourceID: id}, Requirement: requirementsourceadmission.Requirement{RequirementID: fmt.Sprintf("REQ-%d", i), NonClaimRefs: []string{"NCL-LOCAL"}}})
+	}
+	page := workspaceRequirementPage(index, []int{0, 1}, projectionQuery{MaxRecords: 2})
+	first, err := page.Projection([]any{page.Row(0)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := stablejson.MarshalLayout(map[string]any{"projection": first.Value, "requestId": "budget.refs", "schemaVersion": 3, "snapshotId": "snapshot.test", "state": first.State}, stablejson.LayoutCompact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, err := page.encode("budget.refs", "snapshot.test", len(encoded))
+	if err != nil || string(body) != string(encoded) {
+		t.Fatalf("support exceeds retained-row byte budget: %v", err)
+	}
+	value, err := admission.DecodeJSON(strings.NewReader(string(body)), int64(len(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection := value.(map[string]any)["projection"].(map[string]any)
+	if projection["selectedRequirementCount"] != json.Number("1") || len(projection["nonClaimDefinitionsBySource"].([]any)) != 1 {
+		t.Fatal("overflow row contributed shared support")
+	}
+	if _, err := page.encode("budget.refs", "snapshot.test", len(encoded)-1); err == nil {
+		t.Fatal("one-byte smaller limit accepted oversized first row")
+	}
+	delete(index.Definitions, "source.0")
+	if _, err := workspaceRequirementPage(index, []int{0}, projectionQuery{MaxRecords: 1}).encode("budget.refs", "snapshot.test", 100000); err == nil {
+		t.Fatal("missing local definition hidden by projection")
+	}
+}
 
 func TestWorkspaceLookupFiltersTheWholeCohortBeforePaging(t *testing.T) {
 	handle, capability := startWorkspaceTestServer(t, workspaceLookupFixture(t), false)
@@ -57,7 +150,7 @@ func TestWorkspaceLookupPreservesOriginalAnchorAndDistinctHandoffClosure(t *test
 	rows := response["projection"].(map[string]any)["requirements"].([]any)
 	assertWorkspaceRowIDs(t, rows, "requirementId", []string{"REQ-B-000"})
 	anchor := rows[0].(map[string]any)["anchor"].(map[string]any)
-	if anchor["jsonPointer"] != "/projections/requirementSources/1/requirements/0/invariant" || anchor["sourceDigest"] != digest.SHA256TextRef("source-b") {
+	if anchor["jsonPointer"] != "/invariant" || anchor["sourceDigest"] != digest.SHA256TextRef("source-b") || anchor["sourceId"] != "consumer.b" || anchor["coordinateSpace"] != "resolved_requirement" {
 		t.Fatal("lookup rebased the original source anchor")
 	}
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/handoff", strings.NewReader(`{"annotations":[{"anchorId":"requirement:REQ-B-000:invariant","exactQuote":"Capability","startCodePoint":0,"endCodePoint":10,"question":"Is replacement required?"}]}`))

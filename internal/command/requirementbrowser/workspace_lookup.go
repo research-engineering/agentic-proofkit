@@ -10,6 +10,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 type workspaceRequirement struct {
 	Anchor          workspaceAnchor
 	Requirement     requirementsourceadmission.Requirement
-	SearchFields    [3]string
+	SearchFields    [4]string
 	SourceID        string
 	SourceNonClaims []string
 }
@@ -33,6 +34,7 @@ type workspaceLookupIndex struct {
 	Owners          map[string]struct{}
 	LifecycleStates map[string]struct{}
 	RootNodeID      string
+	Definitions     map[string]requirementsourceadmission.NonClaimDefinitions
 }
 
 type workspaceLookupQuery struct {
@@ -48,6 +50,7 @@ func buildWorkspaceLookupIndex(snapshot requirementcontext.Snapshot) (workspaceL
 		Nodes: map[string]requirementspectree.Node{}, Children: map[string][]string{},
 		SourcesByNode: map[string][]string{}, Owners: map[string]struct{}{},
 		LifecycleStates: map[string]struct{}{}, RootNodeID: snapshot.Tree.RootNodeID,
+		Definitions: map[string]requirementsourceadmission.NonClaimDefinitions{},
 	}
 	digests := map[string]string{}
 	for _, source := range snapshot.Sources {
@@ -56,18 +59,21 @@ func buildWorkspaceLookupIndex(snapshot requirementcontext.Snapshot) (workspaceL
 		}
 	}
 	anchors := map[string]workspaceAnchor{}
-	// The snapshot owner orders both typed sources and their wire projection.
-	for sourceIndex, source := range snapshot.RequirementSources {
-		for requirementIndex, requirement := range source.Requirements {
+	// Effective text may span a group stem and member completion. Its pointer is
+	// relative to the resolved requirement record, never to grouped source bytes.
+	for _, source := range snapshot.RequirementSources {
+		sourceNonClaims := source.NonClaims()
+		index.Definitions[source.SourceID()] = source.NonClaimDefinitions()
+		for _, requirement := range source.Requirements() {
 			anchor := workspaceAnchor{
 				AnchorID:      "requirement:" + requirement.RequirementID + ":invariant",
-				JSONPointer:   fmt.Sprintf("/projections/requirementSources/%d/requirements/%d/invariant", sourceIndex, requirementIndex),
-				RequirementID: requirement.RequirementID, SourceDigest: digests[source.SourceID], Text: requirement.Invariant,
+				JSONPointer:   "/invariant",
+				RequirementID: requirement.RequirementID, SourceID: source.SourceID(), SourceDigest: digests[source.SourceID()], Text: requirement.Invariant,
 			}
 			anchors[anchor.AnchorID] = anchor
 			index.Rows = append(index.Rows, workspaceRequirement{
-				Anchor: anchor, Requirement: requirement, SourceID: source.SourceID, SourceNonClaims: source.NonClaims,
-				SearchFields: [3]string{strings.ToLower(requirement.RequirementID), strings.ToLower(requirement.OwnerID), strings.ToLower(requirement.Invariant)},
+				Anchor: anchor, Requirement: requirement, SourceID: source.SourceID(), SourceNonClaims: sourceNonClaims,
+				SearchFields: [4]string{strings.ToLower(requirement.RequirementID), strings.ToLower(requirement.OwnerID), strings.ToLower(requirement.Invariant), strings.ToLower(strings.Join(requirement.SharedPremises, "\n"))},
 			})
 			index.Owners[requirement.OwnerID] = struct{}{}
 			index.LifecycleStates[requirement.Lifecycle.State] = struct{}{}
@@ -189,7 +195,7 @@ func (index workspaceLookupIndex) matchingRequirements(query workspaceLookupQuer
 		if query.OwnerID != "" && row.Requirement.OwnerID != query.OwnerID || query.LifecycleState != "" && row.Requirement.Lifecycle.State != query.LifecycleState {
 			continue
 		}
-		if query.SearchText != "" && !strings.Contains(row.SearchFields[0], query.SearchText) && !strings.Contains(row.SearchFields[1], query.SearchText) && !strings.Contains(row.SearchFields[2], query.SearchText) {
+		if query.SearchText != "" && !strings.Contains(row.SearchFields[0], query.SearchText) && !strings.Contains(row.SearchFields[1], query.SearchText) && !strings.Contains(row.SearchFields[2], query.SearchText) && !strings.Contains(row.SearchFields[3], query.SearchText) {
 			continue
 		}
 		matches = append(matches, position)
@@ -201,7 +207,10 @@ func (row workspaceRequirement) value() map[string]any {
 	return map[string]any{
 		"anchor": anchorValue(row.Anchor), "claimLevel": row.Requirement.ClaimLevel,
 		"invariant": row.Requirement.Invariant, "lifecycleState": row.Requirement.Lifecycle.State,
-		"nonClaims": admit.StringSliceToAny(row.Requirement.NonClaims), "ownerId": row.Requirement.OwnerID,
+		"sharedPremises":       admit.StringSliceToAny(row.Requirement.SharedPremises),
+		"nonClaimRefs":         admit.StringSliceToAny(row.Requirement.NonClaimRefs),
+		"externalNonClaimRefs": admit.StringSliceToAny(row.Requirement.ExternalNonClaimRefs),
+		"nonClaims":            admit.StringSliceToAny(row.Requirement.NonClaims), "ownerId": row.Requirement.OwnerID,
 		"requirementId": row.Requirement.RequirementID, "sourceNonClaims": admit.StringSliceToAny(row.SourceNonClaims),
 	}
 }
@@ -211,22 +220,89 @@ func workspaceLookupPage(index workspaceLookupIndex, query workspaceLookupQuery)
 }
 
 func workspaceRequirementPage(index workspaceLookupIndex, matches []int, query projectionQuery) workspacePage {
+	definitionSizes := map[[2]string]int{}
+	start := min(query.Offset, len(matches))
 	return workspacePage{
 		Count: len(matches), Offset: query.Offset, Limit: query.MaxRecords, RowsKey: "requirements",
 		Row: func(position int) map[string]any { return index.Rows[matches[position]].value() },
-		Projection: func(rows []any) (map[string]any, string) {
+		Projection: func(rows []any) (workspaceProjection, error) {
+			if len(rows) > len(matches)-start {
+				return workspaceProjection{}, fmt.Errorf("browser lookup selection exceeds matching rows")
+			}
+			definitions, size, err := index.nonClaimSupport(matches[start:start+len(rows)], definitionSizes)
+			if err != nil {
+				return workspaceProjection{}, err
+			}
 			state := "complete"
 			if len(rows) != len(index.Rows) {
 				state = "partial_with_omissions"
 			}
-			return map[string]any{
+			return workspaceProjection{Value: map[string]any{
 				"authority": "lookup_fragment_only", "projectionKind": "proofkit.requirement-browser-requirement-fragment",
 				"availableRequirementCount": len(index.Rows), "matchingRequirementCount": len(matches), "selectedRequirementCount": len(rows),
 				"filteredOutRequirementCount": len(index.Rows) - len(matches), "pageOmittedRequirementCount": len(matches) - len(rows),
 				"omittedRequirementCount": len(index.Rows) - len(rows), "requirements": rows,
-			}, state
+				"nonClaimDefinitionsBySource": definitions,
+			}, State: state, EncodedArrayBytes: map[string]int{"nonClaimDefinitionsBySource": size}}, nil
 		},
 	}
+}
+
+// Only retained rows contribute support. Text is encoded once per definition
+// per page, even when many requirements share it; identity includes sourceId.
+func (index workspaceLookupIndex) nonClaimSupport(positions []int, sizes map[[2]string]int) ([]any, int, error) {
+	refs := map[string][]string{}
+	for _, position := range positions {
+		row := index.Rows[position]
+		if len(row.Requirement.NonClaimRefs) > 0 {
+			refs[row.SourceID] = append(refs[row.SourceID], row.Requirement.NonClaimRefs...)
+		}
+	}
+	sourceIDs := make([]string, 0, len(refs))
+	for id := range refs {
+		sourceIDs = append(sourceIDs, id)
+	}
+	sort.Strings(sourceIDs)
+	values, size := make([]any, 0, len(refs)), 2
+	for _, sourceID := range sourceIDs {
+		selected, err := index.Definitions[sourceID].Select(refs[sourceID])
+		if err != nil {
+			return nil, 0, err
+		}
+		definitions := selected.Value()
+		wrapper := map[string]any{"sourceId": sourceID, "definitions": []any{}}
+		wrapperSize, err := cachedDefinitionSize(sizes, sourceID, "", wrapper)
+		if err != nil {
+			return nil, 0, err
+		}
+		for _, raw := range definitions {
+			definition := raw.(map[string]any)
+			itemSize, err := cachedDefinitionSize(sizes, sourceID, definition["nonClaimId"].(string), definition)
+			if err != nil {
+				return nil, 0, err
+			}
+			wrapperSize += itemSize
+		}
+		wrapperSize += max(0, len(definitions)-1)
+		wrapper["definitions"] = definitions
+		values = append(values, wrapper)
+		size += wrapperSize
+	}
+	return values, size + max(0, len(values)-1), nil
+}
+
+func cachedDefinitionSize(sizes map[[2]string]int, sourceID, definitionID string, value map[string]any) (int, error) {
+	key := [2]string{sourceID, definitionID}
+	if size, ok := sizes[key]; ok {
+		return size, nil
+	}
+	encoded, err := stablejson.MarshalLayout(value, stablejson.LayoutCompact)
+	if err != nil {
+		return 0, err
+	}
+	size := len(encoded) - 1
+	sizes[key] = size
+	return size, nil
 }
 
 func workspaceSortedSet(values map[string]struct{}) []any {

@@ -15,7 +15,10 @@ import (
 func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 	record := readCodecSelection(t)
 	allowedOwners := map[string]struct{}{
+		"github.com/research-engineering/agentic-proofkit/internal/kernel/admit":                  {},
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel": {},
+		"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity":       {},
+		"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape":              {},
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy":          {},
 	}
 	files, err := filepath.Glob("*.go")
@@ -78,8 +81,9 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 	}
 	sort.Strings(exported)
 	want := []string{
-		"func:DefaultLimits", "func:ErrorCode", "func:Format", "func:FormatWithLimits",
-		"func:MaxCanonicalBytes", "func:MaxLexicalTokens", "func:Parse", "func:ParseWithLimits",
+		"func:Assess", "func:AssessWithLimits", "func:AssessValue", "func:AssessValueWithLimits", "type:AssessmentResult",
+		"func:DefaultLimits", "func:ErrorCode", "func:Format", "func:FormatWithLimits", "func:InputShape", "func:InputStructure",
+		"func:MaxCanonicalBytes", "func:MaxLexicalTokens", "func:Parse", "func:ParseWithLimits", "func:Value",
 		"type:ByteSpan", "type:Diagnostic", "type:Error", "type:Limits", "type:Location",
 		"type:Position", "type:Result", "type:SourceMap", "value:DocumentKind", "value:SchemaVersion",
 	}
@@ -91,7 +95,7 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 
 func TestSelectedV2GrammarOwnerRecordIsExact(t *testing.T) {
 	owner := readCodecSelection(t).GrammarOwner
-	wantFiles := []string{"diagnostic_path.go", "document.go", "format.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go"}
+	wantFiles := []string{"assessment.go", "diagnostic_path.go", "document.go", "format.go", "input_structure.go", "json_index.go", "limits.go", "parse.go", "shape.go", "types.go", "value_admission.go"}
 	if owner.OwnerPackage != "internal/kernel/requirementsourcecodec" || owner.DocumentKind != DocumentKind || owner.SchemaVersion != SchemaVersion || !reflect.DeepEqual(owner.ProductionFiles, wantFiles) {
 		t.Fatalf("grammar owner = %#v, want package identity and exact production inventory %v", owner, wantFiles)
 	}

@@ -23,10 +23,10 @@ func InputGuide(renderer cliexec.Renderer) string {
 	packet := map[string]any{
 		"tree": requirementspectree.TreeValue(tree),
 		"catalog": map[string]any{
-			"schemaVersion": 1, "catalogId": "example.context",
+			"schemaVersion": 2, "catalogId": "example.context",
 			"specTree": map[string]any{"path": "proofkit/spec-tree.json"},
 			"requirementSources": []any{map[string]any{
-				"path": "docs/specs/requests/requirements.v1.json", "nodeId": "example.root",
+				"path": "docs/specs/requests/requirements.v2.json", "nodeId": "example.root",
 			}},
 			"proofBinding": map[string]any{"path": "proofkit/requirement-bindings.json"},
 		},

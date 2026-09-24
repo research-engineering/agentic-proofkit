@@ -319,7 +319,7 @@ func BuildWitnessPlanInput(raw any, vocabularyRaw any) (map[string]any, error) {
 	if len(failures) > 0 {
 		return nil, fmt.Errorf("cannot project witness-plan input from failed requirement proof bindings: %s", strings.Join(failures, "; "))
 	}
-	vocabulary, err := witnesscommand.AdmitVocabulary(vocabularyRaw)
+	vocabulary, vocabularyValue, err := witnesscommand.AdmitVocabularySnapshot(vocabularyRaw)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func BuildWitnessPlanInput(raw any, vocabularyRaw any) (map[string]any, error) {
 	}
 	return map[string]any{
 		"commands":   commands,
-		"vocabulary": vocabularyRaw,
+		"vocabulary": vocabularyValue,
 	}, nil
 }
 
@@ -421,16 +421,11 @@ func displayCommandArgv(command string) ([]string, error) {
 }
 
 func admitInput(raw any, failures *[]string) (Input, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Input{}, fmt.Errorf("requirement proof binding input must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"bindingId", "bindings", "nonClaims", "requirements", "schemaVersion", "selection", "witnessCommands"}, "requirement proof binding input"); err != nil {
+	snapshot, err := bindingInputShape.Admit(raw, "requirement proof binding input")
+	if err != nil {
 		return Input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return Input{}, fmt.Errorf("requirement proof binding input schemaVersion must be 1")
-	}
+	record := snapshot.(map[string]any)
 	bindingID, err := admit.RuleID(record["bindingId"], "requirement proof bindingId")
 	if err != nil {
 		return Input{}, err
@@ -473,10 +468,7 @@ func admitInput(raw any, failures *[]string) (Input, error) {
 }
 
 func admitRequirements(raw any) ([]Requirement, error) {
-	values, err := array(raw, "requirements")
-	if err != nil {
-		return nil, err
-	}
+	values := raw.([]any)
 	requirements := make([]Requirement, 0, len(values))
 	for _, item := range values {
 		requirement, err := admitRequirement(item)
@@ -492,13 +484,7 @@ func admitRequirements(raw any) ([]Requirement, error) {
 }
 
 func admitRequirement(raw any) (Requirement, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Requirement{}, fmt.Errorf("requirement record must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"claimLevel", "nonClaims", "ownerId", "proofState", "requirementId", "specPath"}, "requirement record"); err != nil {
-		return Requirement{}, err
-	}
+	record := raw.(map[string]any)
 	requirementID, err := admit.RuleID(record["requirementId"], "requirementId")
 	if err != nil {
 		return Requirement{}, err
@@ -515,14 +501,8 @@ func admitRequirement(raw any) (Requirement, error) {
 	if err != nil {
 		return Requirement{}, err
 	}
-	claimLevel, err := enum(record["claimLevel"], claimLevels, "claimLevel")
-	if err != nil {
-		return Requirement{}, err
-	}
-	proofState, err := enum(record["proofState"], proofStates, "proofState")
-	if err != nil {
-		return Requirement{}, err
-	}
+	claimLevel := record["claimLevel"].(string)
+	proofState := record["proofState"].(string)
 	nonClaimValues, err := array(record["nonClaims"], "requirement nonClaims")
 	if err != nil {
 		return Requirement{}, err
@@ -542,10 +522,7 @@ func admitRequirement(raw any) (Requirement, error) {
 }
 
 func admitBindings(raw any) ([]Binding, error) {
-	values, err := array(raw, "bindings")
-	if err != nil {
-		return nil, err
-	}
+	values := raw.([]any)
 	bindings := make([]Binding, 0, len(values))
 	for _, item := range values {
 		binding, err := admitBinding(item)
@@ -561,13 +538,7 @@ func admitBindings(raw any) ([]Binding, error) {
 }
 
 func admitBinding(raw any) (Binding, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Binding{}, fmt.Errorf("proof binding record must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"commandIds", "environmentClasses", "requirementId", "scenarioId", "witnessId", "witnessKind", "witnessPath", "witnessSelectors"}, "proof binding record"); err != nil {
-		return Binding{}, err
-	}
+	record := raw.(map[string]any)
 	requirementID, err := admit.RuleID(record["requirementId"], "binding requirementId")
 	if err != nil {
 		return Binding{}, err
@@ -580,10 +551,7 @@ func admitBinding(raw any) (Binding, error) {
 	if err != nil {
 		return Binding{}, err
 	}
-	witnessKind, err := enum(record["witnessKind"], witnessKinds, "witnessKind")
-	if err != nil {
-		return Binding{}, err
-	}
+	witnessKind := record["witnessKind"].(string)
 	witnessText, err := text(record["witnessPath"], "witnessPath")
 	if err != nil {
 		return Binding{}, err
@@ -620,20 +588,11 @@ func admitWitnessSelectors(raw any) ([]WitnessSelector, error) {
 	if raw == nil {
 		return []WitnessSelector{}, nil
 	}
-	values, ok := raw.([]any)
-	if !ok || len(values) == 0 {
-		return nil, fmt.Errorf("witnessSelectors must be a non-empty array when present")
-	}
+	values := raw.([]any)
 	selectors := make([]WitnessSelector, 0, len(values))
 	seen := map[string]struct{}{}
-	for index, rawSelector := range values {
-		record, ok := rawSelector.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("witnessSelectors[%d] must be an object", index)
-		}
-		if err := admit.KnownKeys(record, []string{"command", "selector"}, "witness selector"); err != nil {
-			return nil, err
-		}
+	for _, rawSelector := range values {
+		record := rawSelector.(map[string]any)
 		selector, err := admit.NonEmptyText(record["selector"], "witness selector selector")
 		if err != nil {
 			return nil, err
@@ -669,10 +628,7 @@ func witnessSelectorValues(selectors []WitnessSelector) []any {
 }
 
 func admitWitnessCommands(raw any) ([]WitnessCommand, error) {
-	values, err := array(raw, "witnessCommands")
-	if err != nil {
-		return nil, err
-	}
+	values := raw.([]any)
 	commands := make([]WitnessCommand, 0, len(values))
 	for _, item := range values {
 		command, err := admitWitnessCommand(item)
@@ -688,13 +644,7 @@ func admitWitnessCommands(raw any) ([]WitnessCommand, error) {
 }
 
 func admitWitnessCommand(raw any) (WitnessCommand, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return WitnessCommand{}, fmt.Errorf("witness command record must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"command", "commandId", "environmentClass", "environmentClasses"}, "witness command record"); err != nil {
-		return WitnessCommand{}, err
-	}
+	record := raw.(map[string]any)
 	commandID, err := admit.RuleID(record["commandId"], "commandId")
 	if err != nil {
 		return WitnessCommand{}, err
@@ -703,19 +653,12 @@ func admitWitnessCommand(raw any) (WitnessCommand, error) {
 	if err != nil {
 		return WitnessCommand{}, err
 	}
-	_, hasEnvironmentClass := record["environmentClass"]
 	_, hasEnvironmentClasses := record["environmentClasses"]
-	if hasEnvironmentClass && hasEnvironmentClasses {
-		return WitnessCommand{}, fmt.Errorf("witness command must use either environmentClass or environmentClasses, not both")
-	}
 	var environmentClasses []string
 	if hasEnvironmentClasses {
 		environmentClasses, err = sortedRuleIDs(record["environmentClasses"], "environmentClasses")
 		if err != nil {
 			return WitnessCommand{}, err
-		}
-		if len(environmentClasses) == 0 {
-			return WitnessCommand{}, fmt.Errorf("environmentClasses must be non-empty")
 		}
 	} else {
 		environmentClass, err := admit.RuleID(record["environmentClass"], "environmentClass")
@@ -731,13 +674,7 @@ func admitSelection(raw any) (Selection, error) {
 	if raw == nil {
 		return Selection{ChangedPaths: []string{}, OwnerIDs: []string{}, RequirementIDs: []string{}}, nil
 	}
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Selection{}, fmt.Errorf("selection must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"changedPaths", "ownerIds", "requirementIds"}, "selection"); err != nil {
-		return Selection{}, err
-	}
+	record := raw.(map[string]any)
 	changedPaths, err := sortedPaths(valueOrEmptyArray(record["changedPaths"]), "selection changedPaths")
 	if err != nil {
 		return Selection{}, err
@@ -1044,26 +981,6 @@ func array(raw any, context string) ([]any, error) {
 
 func text(raw any, context string) (string, error) {
 	return admit.NonEmptyText(raw, context)
-}
-
-func enum(raw any, values map[string]struct{}, context string) (string, error) {
-	value, ok := raw.(string)
-	if !ok {
-		return "", fmt.Errorf("%s must be one of: %s", context, enumList(values))
-	}
-	if _, ok := values[value]; !ok {
-		return "", fmt.Errorf("%s must be one of: %s", context, enumList(values))
-	}
-	return value, nil
-}
-
-func enumList(values map[string]struct{}) string {
-	result := make([]string, 0, len(values))
-	for value := range values {
-		result = append(result, value)
-	}
-	sort.Strings(result)
-	return strings.Join(result, ", ")
 }
 
 func assertSortedUnique(values []string, context string) error {

@@ -48,11 +48,11 @@ func TestAuthoringSourceClassesPreserveProvenanceAndReviewCLI(t *testing.T) {
 				materialization := adoptionHelpPacket(t, root, mode)
 				source := materialization["requirementSources"].([]any)[0].(map[string]any)
 				empty := cloneMap(t, source)
-				empty["requirements"] = []any{}
+				empty["groups"] = []any{}
 				packet := cloneMap(t, input)
 				packet["currentRequirementSource"] = empty
+				packet["candidateRequirementSource"] = source
 				update := packet["candidateUpdates"].([]any)[0].(map[string]any)
-				update["candidateRequirement"] = source["requirements"].([]any)[0]
 				questions := []any{"Does the owner accept the proposed behavior?", "Which conflicting observation should be retained or rejected?"}
 				update["ownerQuestions"] = questions
 				ref := packet["authoringRefs"].([]any)[0].(map[string]any)

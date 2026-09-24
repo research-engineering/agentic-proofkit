@@ -236,6 +236,7 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
     const list = document.createElement("ul");
     list.setAttribute("aria-label", "Specification requirements");
     const requirements = response.projection?.requirements ?? [];
+    const definitionsBySource = new Map(response.projection.nonClaimDefinitionsBySource.map((/** @type {any} */ source) => [source.sourceId, new Map(source.definitions.map((/** @type {any} */ definition) => [definition.nonClaimId, definition.statement]))]));
     let itemIndex = 0;
     for (const requirement of requirements) {
         const item = document.createElement("li");
@@ -253,6 +254,11 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
           if (!boundary.open || boundary.querySelector("ul")) return;
           const nonClaims = document.createElement("ul");
           appendTextItems(nonClaims, [...(requirement.sourceNonClaims ?? []), ...(requirement.nonClaims ?? [])]);
+          for (const ref of requirement.nonClaimRefs) {
+            const statement = definitionsBySource.get(requirement.anchor.sourceId)?.get(ref);
+            appendTextItems(nonClaims, [`${ref}: ${statement ?? "Definition unavailable"}`]);
+          }
+          appendTextItems(nonClaims, requirement.externalNonClaimRefs.map((/** @type {string} */ ref) => `External non-claim reference: ${ref}`));
           boundary.append(nonClaims);
         });
         const invariant = document.createElement("p");
@@ -270,7 +276,15 @@ async function renderSpecifications(offset = 0, filters = activeFilters, history
           selectionState = transitionSelection(selectionState, {kind: "button", targets: [{anchorId, exactQuote: requirement.invariant, startCodePoint: 0, endCodePoint: [...requirement.invariant].length}]});
           announceSelection();
         });
-        article.append(title, invariant, boundary, choose);
+        article.append(title, invariant);
+        if (requirement.sharedPremises?.length) {
+          const premises = document.createElement("ul");
+          premises.className = "shared-premises caller-text";
+          premises.setAttribute("aria-label", "Shared premises");
+          appendTextItems(premises, requirement.sharedPremises);
+          article.append(premises);
+        }
+        article.append(boundary, choose);
         item.append(article);
         list.append(item);
         itemIndex += 1;

@@ -60,70 +60,51 @@ func build(raw any) (map[string]any, error) {
 	if result.Report.State != "passed" {
 		return nil, fmt.Errorf("cannot build requirement source view from failed requirement source admission")
 	}
-	requirements := make([]any, 0, len(result.Source.Requirements))
-	active := 0
-	blocking := 0
-	deferred := 0
-	for _, requirement := range result.Source.Requirements {
-		if requirement.Lifecycle.State == "active" {
-			active++
-		}
-		if requirement.ClaimLevel == "blocking" {
-			blocking++
-		}
-		if requirement.ClaimLevel == "deferred" {
-			deferred++
-		}
+	source, err := requirementsourceadmission.SourceValue(result.Source)
+	if err != nil {
+		return nil, err
+	}
+	requirements := make([]any, 0, result.Source.RequirementCount())
+	for _, requirement := range result.Source.Requirements() {
 		requirements = append(requirements, viewRequirement(requirement))
 	}
 	nonClaims := append([]string{}, defaultNonClaims...)
-	nonClaims = append(nonClaims, result.Source.NonClaims...)
-	return map[string]any{
-		"activeRequirementCount":   active,
+	nonClaims = append(nonClaims, result.Source.NonClaims()...)
+	view := map[string]any{
+		"activeRequirementCount":   result.Summary.ActiveRequirementCount,
 		"authority":                "presentation_only",
-		"blockingRequirementCount": blocking,
-		"deferredRequirementCount": deferred,
+		"blockingRequirementCount": result.Summary.BlockingRequirementCount,
+		"deferredRequirementCount": result.Summary.DeferredRequirementCount,
 		"nonClaims":                admit.StringSliceToAny(sortedUnique(nonClaims)),
-		"overviewPath":             result.Source.OverviewPath,
+		"nonClaimDefinitions":      anyArray(source["nonClaimDefinitions"]),
+		"sourceNonClaimRefs":       anyArray(source["sourceNonClaimRefs"]),
+		"groups":                   sourceGroupIndex(source),
+		"vocabulary":               anyArray(source["vocabulary"]),
+		"scenarios":                anyArray(source["scenarios"]),
+		"derivations":              anyArray(source["derivations"]),
+		"overviewPath":             result.Source.OverviewPath(),
 		"requirementCount":         len(requirements),
 		"requirements":             requirements,
-		"requirementsPath":         result.Source.RequirementsPath,
-		"schemaVersion":            1,
-		"sourceId":                 result.Source.SourceID,
-		"specPackagePath":          result.Source.SpecPackagePath,
-		"viewKind":                 "proofkit.requirement-source-view",
-	}, nil
+		"requirementsPath":         result.Source.RequirementsPath(),
+		"schemaVersion":            viewSchemaVersion,
+		"sourceId":                 result.Source.SourceID(),
+		"specPackagePath":          result.Source.SpecPackagePath(),
+		"viewKind":                 viewKind,
+	}
+	if err := sourceViewShape.CheckGenerated(view, "requirement source view"); err != nil {
+		return nil, err
+	}
+	return view, nil
 }
 
 func viewRequirement(requirement requirementsourceadmission.Requirement) map[string]any {
-	value := map[string]any{
-		"claimLevel":                requirement.ClaimLevel,
-		"deferral":                  nil,
-		"invariant":                 requirement.Invariant,
-		"lifecycleEvidenceRefs":     admit.StringSliceToAny(requirement.Lifecycle.EvidenceRefs),
-		"lifecycleState":            requirement.Lifecycle.State,
-		"nonClaimRefs":              admit.StringSliceToAny(requirement.NonClaimRefs),
-		"nonClaims":                 admit.StringSliceToAny(requirement.NonClaims),
-		"ownerId":                   requirement.OwnerID,
-		"proofBindingRefs":          admit.StringSliceToAny(requirement.ProofBindingRefs),
-		"replacementRequirementIds": admit.StringSliceToAny(requirement.Lifecycle.ReplacementRequirementIDs),
-		"requirementId":             requirement.RequirementID,
-		"riskClass":                 requirement.RiskClass,
-		"updatePolicy": map[string]any{
-			"requiresImpactDeclaration":  requirement.UpdatePolicy.RequiresImpactDeclaration,
-			"requiresProofBindingReview": requirement.UpdatePolicy.RequiresProofBindingReview,
-			"reviewOwnerId":              requirement.UpdatePolicy.ReviewOwnerID,
-		},
-	}
-	if requirement.Deferral != nil {
-		value["deferral"] = map[string]any{
-			"evidenceRefs":    admit.StringSliceToAny(requirement.Deferral.EvidenceRefs),
-			"expiryRef":       requirement.Deferral.ExpiryRef,
-			"mergePolicy":     requirement.Deferral.MergePolicy,
-			"ownerId":         requirement.Deferral.OwnerID,
-			"reviewCondition": requirement.Deferral.ReviewCondition,
-			"riskAcceptedBy":  requirement.Deferral.RiskAcceptedBy,
-		}
+	value := requirementsourceadmission.RequirementValue(requirement)
+	delete(value, "lifecycle")
+	value["lifecycleState"] = requirement.Lifecycle.State
+	value["lifecycleEvidenceRefs"] = admit.StringSliceToAny(requirement.Lifecycle.EvidenceRefs)
+	value["replacementRequirementIds"] = admit.StringSliceToAny(requirement.Lifecycle.ReplacementRequirementIDs)
+	if requirement.Deferral == nil {
+		value["deferral"] = nil
 	}
 	return value
 }
@@ -158,14 +139,18 @@ func markdown(view map[string]any) string {
 			"- Replacement requirements: "+inlineCodeListOrNone(stringArray(requirement["replacementRequirementIds"])),
 			"- Lifecycle evidence: "+inlineCodeListOrNone(stringArray(requirement["lifecycleEvidenceRefs"])),
 			"- Proof bindings: "+inlineCodeListOrNone(stringArray(requirement["proofBindingRefs"])),
-			"- Non-claim refs: "+inlineCodeListOrNone(stringArray(requirement["nonClaimRefs"])),
+			"- Source-local non-claim refs: "+inlineCodeListOrNone(stringArray(requirement["nonClaimRefs"])),
+			"- External non-claim refs: "+inlineCodeListOrNone(stringArray(requirement["externalNonClaimRefs"])),
 			"- Impact declaration required: "+fmt.Sprint(boolValue(requirement, "updatePolicy", "requiresImpactDeclaration")),
 			"- Proof-binding review required: "+fmt.Sprint(boolValue(requirement, "updatePolicy", "requiresProofBindingReview")),
 			"- Review owner: "+stringValue(requirement["updatePolicy"].(map[string]any)["reviewOwnerId"]),
 			"",
-			"Non-claims:",
-			"",
+			"Shared premises:", "",
 		)
+		for _, premise := range stringArray(requirement["sharedPremises"]) {
+			lines = append(lines, "- "+markdownText(premise))
+		}
+		lines = append(lines, "", "Non-claims:", "")
 		for _, claim := range stringArray(requirement["nonClaims"]) {
 			lines = append(lines, "- "+markdownText(claim))
 		}
@@ -184,7 +169,13 @@ func markdown(view map[string]any) string {
 			)
 		}
 	}
-	lines = append(lines, "## View Non-Claims", "")
+	lines = append(lines, sourceDeclarationsMarkdown(view)...)
+	lines = append(lines, "## Source-Local Non-Claim Definitions", "")
+	for _, raw := range anyArray(view["nonClaimDefinitions"]) {
+		definition := raw.(map[string]any)
+		lines = append(lines, "- "+markdownfmt.CodeSpan(stringValue(definition["nonClaimId"]))+": "+markdownText(stringValue(definition["statement"])))
+	}
+	lines = append(lines, "", "## View Non-Claims", "")
 	for _, claim := range stringArray(view["nonClaims"]) {
 		lines = append(lines, "- "+markdownText(claim))
 	}
@@ -194,6 +185,13 @@ func markdown(view map[string]any) string {
 
 func html(view map[string]any) string {
 	requirements := anyArray(view["requirements"])
+	groups := map[string]map[string]any{}
+	for _, raw := range anyArray(view["groups"]) {
+		group := raw.(map[string]any)
+		for _, id := range stringArray(group["requirementIds"]) {
+			groups[id] = group
+		}
+	}
 	cards := make([]browserdoc.Card, 0, len(requirements))
 	rows := make([]browserdoc.Row, 0, len(requirements))
 	ownerValues := []string{}
@@ -210,25 +208,30 @@ func html(view map[string]any) string {
 		claimValues = append(claimValues, claim)
 		riskValues = append(riskValues, risk)
 		lifecycleValues = append(lifecycleValues, lifecycle)
-		search := browserdoc.SearchText(append([]string{
+		searchParts := []string{
 			stringValue(requirement["requirementId"]),
 			owner,
 			stringValue(requirement["invariant"]),
 			claim,
 			risk,
 			lifecycle,
-		}, append(append(append(append(stringArray(requirement["replacementRequirementIds"]), stringArray(requirement["lifecycleEvidenceRefs"])...), stringArray(requirement["proofBindingRefs"])...), stringArray(requirement["nonClaimRefs"])...), stringArray(requirement["nonClaims"])...)...))
+		}
+		for _, field := range []string{"replacementRequirementIds", "lifecycleEvidenceRefs", "proofBindingRefs", "nonClaimRefs", "externalNonClaimRefs", "nonClaims", "sharedPremises"} {
+			searchParts = append(searchParts, stringArray(requirement[field])...)
+		}
+		search := browserdoc.SearchText(searchParts)
 		filters := []browserdoc.FilterValue{
 			{Key: "owner", Value: owner},
 			{Key: "claim-level", Value: claim},
 			{Key: "risk-class", Value: risk},
 			{Key: "lifecycle", Value: lifecycle},
 		}
+		group := groups[stringValue(requirement["requirementId"])]
 		cards = append(cards, browserdoc.Card{
 			ID:           stringValue(requirement["requirementId"]),
 			Title:        stringValue(requirement["invariant"]),
-			GroupID:      "owner:" + owner,
-			GroupLabel:   "Owner: " + owner,
+			GroupID:      "source-group:" + stringValue(group["groupId"]),
+			GroupLabel:   sourceGroupLabel(group),
 			Body:         sourceRequirementBody(requirement),
 			SearchText:   search,
 			FilterValues: filters,
@@ -248,10 +251,15 @@ func html(view map[string]any) string {
 			FilterValues: filters,
 		})
 	}
+	definitions := []browserdoc.DefinitionItem{}
+	for _, raw := range anyArray(view["nonClaimDefinitions"]) {
+		definition := raw.(map[string]any)
+		definitions = append(definitions, browserdoc.Definition(stringValue(definition["nonClaimId"]), browserdoc.Text(stringValue(definition["statement"]))))
+	}
 	return browserdoc.HTML(browserdoc.Document{
 		Title:     "Requirement Source View: " + stringValue(view["sourceId"]),
 		Authority: stringValue(view["authority"]),
-		SummaryItems: []browserdoc.SummaryItem{
+		SummaryItems: append([]browserdoc.SummaryItem{
 			browserdoc.Summary("Spec package", stringValue(view["specPackagePath"]), true),
 			browserdoc.Summary("Overview", stringValue(view["overviewPath"]), true),
 			browserdoc.Summary("Requirements source", stringValue(view["requirementsPath"]), true),
@@ -259,7 +267,8 @@ func html(view map[string]any) string {
 			browserdoc.Summary("Active", fmt.Sprint(intValue(view["activeRequirementCount"])), false),
 			browserdoc.Summary("Blocking", fmt.Sprint(intValue(view["blockingRequirementCount"])), false),
 			browserdoc.Summary("Deferred", fmt.Sprint(intValue(view["deferredRequirementCount"])), false),
-		},
+			{Label: "Source-local definitions", Value: browserdoc.Details("Non-claim definitions", browserdoc.DefinitionList(definitions...))},
+		}, sourceDeclarationsSummary(view)...),
 		HierarchySections: []browserdoc.HierarchySection{
 			{
 				Title: "Specification hierarchy",
@@ -269,6 +278,7 @@ func html(view map[string]any) string {
 					{Label: stringValue(view["requirementsPath"]), Detail: "structured records"},
 				},
 			},
+			{Title: "Source groups", Items: sourceGroupHierarchy(anyArray(view["groups"]))},
 			{Title: "Owners", Items: ownerHierarchy(requirements)},
 		},
 		Filters: []browserdoc.Filter{
@@ -304,7 +314,9 @@ func sourceRequirementBody(requirement map[string]any) browserdoc.Fragment {
 		browserdoc.Definition("Replacement requirements", browserdoc.ListOrNone(stringArray(requirement["replacementRequirementIds"]), true)),
 		browserdoc.Definition("Lifecycle evidence", browserdoc.ListOrNone(stringArray(requirement["lifecycleEvidenceRefs"]), true)),
 		browserdoc.Definition("Proof bindings", browserdoc.ListOrNone(stringArray(requirement["proofBindingRefs"]), true)),
-		browserdoc.Definition("Non-claim refs", browserdoc.ListOrNone(stringArray(requirement["nonClaimRefs"]), true)),
+		browserdoc.Definition("Source-local non-claim refs", browserdoc.ListOrNone(stringArray(requirement["nonClaimRefs"]), true)),
+		browserdoc.Definition("External non-claim refs", browserdoc.ListOrNone(stringArray(requirement["externalNonClaimRefs"]), true)),
+		browserdoc.Definition("Shared premises", browserdoc.ListOrNone(stringArray(requirement["sharedPremises"]), false)),
 		browserdoc.Definition("Impact declaration required", browserdoc.Text(fmt.Sprint(policy["requiresImpactDeclaration"]))),
 		browserdoc.Definition("Proof-binding review required", browserdoc.Text(fmt.Sprint(policy["requiresProofBindingReview"]))),
 		browserdoc.Definition("Review owner", browserdoc.Text(stringValue(policy["reviewOwnerId"]))),
@@ -346,7 +358,6 @@ func ownerHierarchy(requirements []any) []browserdoc.HierarchyItem {
 		items = append(items, browserdoc.HierarchyItem{
 			Label:  owner,
 			Detail: fmt.Sprintf("%d requirement(s)", counts[owner]),
-			Href:   "#" + browserdoc.FragmentID("owner:"+owner),
 		})
 	}
 	return items

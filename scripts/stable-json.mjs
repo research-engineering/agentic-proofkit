@@ -159,20 +159,129 @@ function containsUnsafeScalar(value) {
 	return false;
 }
 
+const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|00a0|202[89]))`;
+const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
+const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
+const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
+const urlCredentialPattern = /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iuy;
+const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
+const maxSecretDecodePasses = 16;
+
+function decodeEscapedSecretText(value) {
+  const parts = [];
+  for (let index = 0; index < value.length;) {
+    const start = value.indexOf("\\", index);
+    if (start < 0) {
+      parts.push(value.slice(index));
+      break;
+    }
+    if (start > index) parts.push(value.slice(index, start));
+    let cursor = start;
+    while (cursor < value.length && value[cursor] === "\\") cursor++;
+    parts.push("\\".repeat(Math.floor((cursor - start) / 2)));
+    if ((cursor - start) % 2 === 0) {
+      index = cursor;
+      continue;
+    }
+    if (cursor === value.length) {
+      parts.push("\\");
+      break;
+    }
+    if (hasSecretUnicodeUnit(value, cursor)) {
+      const first = Number.parseInt(value.slice(cursor + 1, cursor + 5), 16);
+      if (first >= 0xd800 && first <= 0xdbff) {
+        const second = cursor + 5;
+        if (value[second] === "\\" && hasSecretUnicodeUnit(value, second + 1)) {
+          const low = Number.parseInt(value.slice(second + 2, second + 6), 16);
+          if (low >= 0xdc00 && low <= 0xdfff) {
+            parts.push(String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + low - 0xdc00));
+            index = second + 6;
+            continue;
+          }
+        }
+      }
+      parts.push(decodeSecretUnicodeScalar(first, value.slice(cursor - 1, cursor + 5)));
+      index = cursor + 5;
+      continue;
+    }
+    const suffix = value[cursor];
+    if (Object.hasOwn(escapedSecretControls, suffix)) parts.push(escapedSecretControls[suffix]);
+    else if (suffix === "/" || suffix === '"') parts.push(suffix);
+    else {
+      parts.push("\\");
+      index = cursor;
+      continue;
+    }
+    index = cursor + 1;
+  }
+  return parts.join("");
+}
+
+function hasSecretUnicodeUnit(value, index) {
+  if (value[index] !== "u" || index + 5 > value.length) return false;
+  for (let offset = 1; offset <= 4; offset++) {
+    const code = value.charCodeAt(index + offset);
+    if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102))) return false;
+  }
+  return true;
+}
+
+function decodeSecretUnicodeScalar(value, original) {
+  return value >= 0xd800 && value <= 0xdfff ? original : String.fromCodePoint(value);
+}
+
 function containsSecretLikeValue(value) {
-	return [
-		/authorization\s*:\s*[^\r\n]+/iu,
-		/bearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,
-		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+/iu,
+	const patterns = [
+		authorizationPattern,
+		bearerPattern,
+		namedSecretPattern,
 		/github_pat_[A-Za-z0-9_]+/iu,
 		/gh[pousr]_[A-Za-z0-9_]+/iu,
 		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,
 		/xox[abprs]-[A-Za-z0-9-]+/iu,
 		/glpat-[A-Za-z0-9_-]+/iu,
-		/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu,
 		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
 		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
-	].some((pattern) => pattern.test(value));
+	];
+	let candidate = value;
+	for (let depth = 0; depth <= maxSecretDecodePasses; depth++) {
+		if (matchesSecretPattern(candidate)) return true;
+		const withoutUnsafe = [...candidate].filter((character) => !isUnsafeScalar(character.codePointAt(0))).join("");
+		if (withoutUnsafe !== candidate && matchesSecretPattern(withoutUnsafe)) return true;
+		const decoded = decodeEscapedSecretText(withoutUnsafe);
+		if (decoded === candidate) return false;
+		if (depth === maxSecretDecodePasses) return true;
+		candidate = decoded;
+	}
+	return true;
+
+	function matchesSecretPattern(text) {
+		return patterns.some((pattern) => pattern.test(text)) || hasURLCredential(text);
+	}
+}
+
+function hasURLCredential(value) {
+	for (let search = 0; search < value.length;) {
+		const separator = value.indexOf("://", search);
+		if (separator < 0) return false;
+		let start = separator;
+		while (start > 0 && isSchemeCode(value.charCodeAt(start - 1))) start--;
+		while (start < separator && !isASCIILetterCode(value.charCodeAt(start))) start++;
+		if (start < separator) {
+			urlCredentialPattern.lastIndex = start;
+			if (urlCredentialPattern.test(value)) return true;
+		}
+		search = separator + 3;
+	}
+	return false;
+}
+
+function isASCIILetterCode(code) {
+	return code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+
+function isSchemeCode(code) {
+	return isASCIILetterCode(code) || code >= 48 && code <= 57 || code === 43 || code === 45 || code === 46;
 }
 
 function unicodeEscape(value) {

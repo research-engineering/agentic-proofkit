@@ -3,7 +3,10 @@ package requirementsourcecodec
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"strconv"
 
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 )
 
@@ -13,13 +16,13 @@ type document struct {
 	SourceID            string               `json:"sourceId"`
 	SpecPackagePath     string               `json:"specPackagePath"`
 	SourceNonClaims     []string             `json:"sourceNonClaims"`
-	SourceNonClaimRefs  []string             `json:"sourceNonClaimRefs"`
-	NonClaimDefinitions []nonClaimDefinition `json:"nonClaimDefinitions"`
-	Vocabulary          []vocabularyTerm     `json:"vocabulary"`
-	Derivations         []derivation         `json:"derivations"`
-	Profiles            []profile            `json:"profiles"`
+	SourceNonClaimRefs  []string             `json:"sourceNonClaimRefs,omitempty"`
+	NonClaimDefinitions []nonClaimDefinition `json:"nonClaimDefinitions,omitempty"`
+	Vocabulary          []vocabularyTerm     `json:"vocabulary,omitempty"`
+	Derivations         []derivation         `json:"derivations,omitempty"`
+	Profiles            []profile            `json:"profiles,omitempty"`
 	Groups              []group              `json:"groups"`
-	Scenarios           []scenario           `json:"scenarios"`
+	Scenarios           []scenario           `json:"scenarios,omitempty"`
 }
 
 type nonClaimDefinition struct {
@@ -50,9 +53,20 @@ type gitBlobRef struct {
 	SHA256       string `json:"sha256"`
 }
 
+type decimalInt64 string
+
 type byteRange struct {
-	Start int64 `json:"start"`
-	End   int64 `json:"end"`
+	Start decimalInt64 `json:"start"`
+	End   decimalInt64 `json:"end"`
+}
+
+func parseCanonicalInt64(value string) (int64, bool) {
+	// A signed decimal int64 needs at most 20 bytes, including its sign.
+	if len(value) > 20 {
+		return 0, false
+	}
+	number, err := admit.CanonicalInteger(json.Number(value), "source integer")
+	return number, err == nil
 }
 
 type profile struct {
@@ -89,8 +103,8 @@ type metadataFields struct {
 
 type lifecycle struct {
 	State                     string   `json:"state"`
-	ReplacementRequirementIDs []string `json:"replacementRequirementIds"`
-	EvidenceRefs              []string `json:"evidenceRefs"`
+	ReplacementRequirementIDs []string `json:"replacementRequirementIds,omitempty"`
+	EvidenceRefs              []string `json:"evidenceRefs,omitempty"`
 }
 
 type deferral struct {
@@ -104,8 +118,8 @@ type deferral struct {
 
 type updatePolicy struct {
 	ReviewOwnerID              string `json:"reviewOwnerId"`
-	RequiresImpactDeclaration  bool   `json:"requiresImpactDeclaration"`
-	RequiresProofBindingReview bool   `json:"requiresProofBindingReview"`
+	RequiresImpactDeclaration  bool   `json:"requiresImpactDeclaration,omitempty"`
+	RequiresProofBindingReview bool   `json:"requiresProofBindingReview,omitempty"`
 }
 
 type scenario struct {
@@ -137,10 +151,15 @@ func draftFromDocument(value document) (requirementsourcemodel.Draft, error) {
 	}
 	derivations := make([]requirementsourcemodel.Derivation, len(value.Derivations))
 	for index, item := range value.Derivations {
+		start, startOK := parseCanonicalInt64(string(item.Selector.Start))
+		end, endOK := parseCanonicalInt64(string(item.Selector.End))
+		if !startOK || !endOK {
+			return requirementsourcemodel.Draft{}, errors.New("invalid decimal coordinate")
+		}
 		derivations[index] = requirementsourcemodel.Derivation{
 			DerivationID: item.DerivationID, SourceKind: requirementsourcemodel.SourceKind(item.SourceKind),
 			SourceRef:      requirementsourcemodel.GitBlobRef{ObjectFormat: requirementsourcemodel.ObjectFormat(item.SourceRef.ObjectFormat), CommitOID: item.SourceRef.CommitOID, Path: item.SourceRef.Path, SHA256: item.SourceRef.SHA256},
-			Selector:       requirementsourcemodel.ByteRange{Start: item.Selector.Start, End: item.Selector.End},
+			Selector:       requirementsourcemodel.ByteRange{Start: start, End: end},
 			RequirementIDs: cloneStrings(item.RequirementIDs), NonClaimRefs: cloneStrings(item.NonClaimRefs),
 		}
 	}
@@ -248,7 +267,7 @@ func documentFromModel(model requirementsourcemodel.Model) (document, error) {
 		value.Vocabulary[index] = vocabularyTerm{TermID: item.TermID, Kind: string(item.Kind), Label: item.Label, Definition: item.Definition}
 	}
 	for index, item := range references.Derivations {
-		value.Derivations[index] = derivation{DerivationID: item.DerivationID, SourceKind: string(item.SourceKind), SourceRef: gitBlobRef{ObjectFormat: string(item.SourceRef.ObjectFormat), CommitOID: item.SourceRef.CommitOID, Path: item.SourceRef.Path, SHA256: item.SourceRef.SHA256}, Selector: byteRange{Start: item.Selector.Start, End: item.Selector.End}, RequirementIDs: nonNilStrings(item.RequirementIDs), NonClaimRefs: nonNilStrings(item.NonClaimRefs)}
+		value.Derivations[index] = derivation{DerivationID: item.DerivationID, SourceKind: string(item.SourceKind), SourceRef: gitBlobRef{ObjectFormat: string(item.SourceRef.ObjectFormat), CommitOID: item.SourceRef.CommitOID, Path: item.SourceRef.Path, SHA256: item.SourceRef.SHA256}, Selector: byteRange{Start: decimalInt64(strconv.FormatInt(item.Selector.Start, 10)), End: decimalInt64(strconv.FormatInt(item.Selector.End, 10))}, RequirementIDs: nonNilStrings(item.RequirementIDs), NonClaimRefs: nonNilStrings(item.NonClaimRefs)}
 	}
 	for index, item := range layout.Profiles {
 		fields, err := wireMetadata(item.Fields)

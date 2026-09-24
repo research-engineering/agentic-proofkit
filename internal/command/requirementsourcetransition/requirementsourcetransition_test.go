@@ -77,35 +77,11 @@ func TestBuildRejectsRequirementSourceTransitionContractViolations(t *testing.T)
 			},
 		},
 		{
-			name: "overview path shape is admitted before boundary comparison",
-			want: "next source admission failed: overviewPath must equal specPackagePath/overview.md",
-			wantRules: map[string]string{
-				"proofkit.requirement-source-transition.boundary":           "failed",
-				"proofkit.requirement-source-transition.source-admission":   "failed",
-				"proofkit.requirement-source-transition.transition-lattice": "skipped",
-			},
-			edit: func(_ map[string]any, next map[string]any) {
-				next["overviewPath"] = "docs/specs/proofkit-test/other-overview.md"
-			},
-		},
-		{
-			name: "requirements path shape is admitted before boundary comparison",
-			want: "next source admission failed: requirementsPath must equal specPackagePath/requirements.v1.json",
-			wantRules: map[string]string{
-				"proofkit.requirement-source-transition.boundary":           "failed",
-				"proofkit.requirement-source-transition.source-admission":   "failed",
-				"proofkit.requirement-source-transition.transition-lattice": "skipped",
-			},
-			edit: func(_ map[string]any, next map[string]any) {
-				next["requirementsPath"] = "docs/specs/proofkit-test/other-requirements.v1.json"
-			},
-		},
-		{
 			name:      "previous durable requirement missing",
 			want:      "durable requirement must remain in next source before deletion",
 			wantRules: latticeRuleStatuses(),
 			edit: func(_ map[string]any, next map[string]any) {
-				next["requirements"] = []any{}
+				next["groups"] = []any{}
 			},
 		},
 		{
@@ -277,7 +253,7 @@ func validRequirementSourceTransitionInput(removeWithoutNewEvidence bool) map[st
 
 func transitionInput(previous map[string]any, next map[string]any) map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 		"transitionId":  "proofkit.test.requirement-source-transition",
 		"nonClaims":     []any{"Requirement source transition test input does not approve deletion."},
 		"previous":      previous,
@@ -294,19 +270,20 @@ type requirementFixture struct {
 
 func transitionRequirementSource(lifecycleState string, lifecycleEvidenceRefs []any) map[string]any {
 	return map[string]any{
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         "proofkit.test.requirements",
-		"specPackagePath":  "docs/specs/proofkit-test",
-		"overviewPath":     "docs/specs/proofkit-test/overview.md",
-		"requirementsPath": "docs/specs/proofkit-test/requirements.v1.json",
-		"nonClaims":        []any{"Requirement source transition fixture does not execute native witnesses."},
-		"requirements": []any{
-			requirementRecord(requirementFixture{
-				id:       "REQ-PROOFKIT-TRANSITION-001",
-				state:    lifecycleState,
-				evidence: lifecycleEvidenceRefs,
-			}),
-		},
+		"kind":            "proofkit.requirement-source",
+		"schemaVersion":   json.Number("2"),
+		"sourceId":        "proofkit.test.requirements",
+		"specPackagePath": "docs/specs/proofkit-test",
+		"sourceNonClaims": []any{"Requirement source transition fixture does not execute native witnesses."},
+		"groups": []any{map[string]any{
+			"groupId": "RGRP-TRANSITION", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+			"members": []any{
+				requirementRecord(requirementFixture{
+					id:       "REQ-PROOFKIT-TRANSITION-001",
+					state:    lifecycleState,
+					evidence: lifecycleEvidenceRefs,
+				}),
+			}}},
 	}
 }
 
@@ -323,41 +300,43 @@ func requirementRecord(item requirementFixture) map[string]any {
 	if replacements == nil {
 		replacements = []any{}
 	}
-	return map[string]any{
+	return map[string]any{"requirementId": item.id, "statementCompletion": "Requirement source transition must preserve lifecycle evidence monotonicity.", "fields": map[string]any{
 		"claimLevel": claimLevel,
 		"deferral":   nil,
-		"invariant":  "Requirement source transition must preserve lifecycle evidence monotonicity.",
 		"lifecycle": map[string]any{
 			"evidenceRefs":              evidence,
 			"replacementRequirementIds": replacements,
 			"state":                     item.state,
 		},
-		"nonClaimRefs": []any{},
-		"nonClaims":    []any{"This requirement does not prove merge readiness."},
-		"ownerId":      "proofkit.test",
+		"nonClaimRefs":         []any{},
+		"externalNonClaimRefs": []any{},
+		"nonClaims":            []any{"This requirement does not prove merge readiness."},
+		"ownerId":              "proofkit.test",
 		"proofBindingRefs": []any{
 			"docs/contracts/requirement-proof-binding-sources.v1.json",
 		},
-		"requirementId": item.id,
-		"riskClass":     "medium",
+		"riskClass": "medium",
 		"updatePolicy": map[string]any{
 			"requiresImpactDeclaration":  true,
 			"requiresProofBindingReview": true,
 			"reviewOwnerId":              "proofkit.test",
 		},
-	}
+	}}
 }
 
 func firstRequirement(source map[string]any) map[string]any {
-	return source["requirements"].([]any)[0].(map[string]any)
+	return transitionMembers(source)[0].(map[string]any)["fields"].(map[string]any)
+}
+
+func transitionMembers(source map[string]any) []any {
+	return source["groups"].([]any)[0].(map[string]any)["members"].([]any)
 }
 
 func replaceRequirement(source map[string]any, item requirementFixture) {
-	requirements := source["requirements"].([]any)
+	requirements := transitionMembers(source)
 	for index, value := range requirements {
 		if value.(map[string]any)["requirementId"] == item.id {
 			requirements[index] = requirementRecord(item)
-			source["requirements"] = requirements
 			return
 		}
 	}
@@ -365,13 +344,11 @@ func replaceRequirement(source map[string]any, item requirementFixture) {
 }
 
 func appendRequirement(source map[string]any, item requirementFixture) {
-	source["requirements"] = append(source["requirements"].([]any), requirementRecord(item))
+	source["groups"].([]any)[0].(map[string]any)["members"] = append(transitionMembers(source), requirementRecord(item))
 }
 
 func setPackage(source map[string]any, specPackagePath string) {
 	source["specPackagePath"] = specPackagePath
-	source["overviewPath"] = specPackagePath + "/overview.md"
-	source["requirementsPath"] = specPackagePath + "/requirements.v1.json"
 }
 
 func boundaryRuleStatuses() map[string]string {

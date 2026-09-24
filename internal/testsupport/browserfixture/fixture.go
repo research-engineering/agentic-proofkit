@@ -24,8 +24,18 @@ func Source() (map[string]any, error) {
 	source := requirementSource("The system preserves the original semantic identity.", "high")
 	path := "docs/specs/" + strings.Repeat("source", 20)
 	source["specPackagePath"] = path
-	source["overviewPath"] = path + "/overview.md"
-	source["requirementsPath"] = path + "/requirements.v1.json"
+	source["vocabulary"] = []any{map[string]any{"termId": "TERM-BROWSER", "kind": "subject", "label": "Source view", "definition": "The <input> text remains inert."}}
+	source["scenarios"] = []any{map[string]any{
+		"scenarioId": "SCN-BROWSER", "requirementIds": []any{RequirementID}, "parameters": []any{},
+		"preconditions": []any{"The source view is available."}, "actionSequence": []any{"Open the source.", "Read the invariant."},
+		"expectedObservations": []any{"The original requirement ID remains visible."}, "forbiddenObservations": []any{"A declaration is shown as an execution result."},
+		"examples": []any{}, "vocabularyRefs": []any{"TERM-BROWSER"}, "nonClaimRefs": []any{"NCL-BROWSER"},
+	}}
+	source["derivations"] = []any{map[string]any{
+		"derivationId": "DRV-BROWSER", "sourceKind": "owner_decision",
+		"sourceRef": map[string]any{"objectFormat": "sha1", "commitOid": strings.Repeat("a", 40), "path": "docs/decision.md", "sha256": strings.Repeat("b", 64)},
+		"selector":  map[string]any{"start": "0", "end": "16"}, "requirementIds": []any{RequirementID}, "nonClaimRefs": []any{"NCL-BROWSER"},
+	}}
 	return source, nil
 }
 
@@ -40,7 +50,7 @@ func workspace(currentRisk string, parallelTrace bool) (map[string]any, error) {
 	}
 	diffInput := map[string]any{
 		"baseContext": base, "currentContext": current, "diffId": "browser.fixture.diff",
-		"query": map[string]any{"requirementIds": []any{RequirementID}}, "schemaVersion": json.Number("2"),
+		"query": map[string]any{"requirementIds": []any{RequirementID}}, "schemaVersion": json.Number("3"),
 	}
 	code := "package retry\n\nfunc Retry() {}\n"
 	start := strings.Index(code, "func Retry")
@@ -61,9 +71,9 @@ func workspace(currentRisk string, parallelTrace bool) (map[string]any, error) {
 				map[string]any{"abstractionLevel": "source_range", "byteEnd": json.Number(fmt.Sprint(start + len("func Retry() {}"))), "byteStart": json.Number(fmt.Sprint(start)), "currentnessState": "current", "label": "Retry", "nodeId": "code.retry", "parentNodeId": "code.repository", "sourceDigest": digest.SHA256TextRef(code), "sourcePath": "src/retry.go"},
 			},
 		},
-		"context": current, "graphId": "browser.fixture.graph", "schemaVersion": json.Number("2"),
+		"context": current, "graphId": "browser.fixture.graph", "schemaVersion": json.Number("3"),
 	}
-	return map[string]any{"context": current, "diffInput": diffInput, "graphInput": graphInput, "schemaVersion": json.Number("2"), "workspaceId": "browser.fixture.workspace"}, nil
+	return map[string]any{"context": current, "diffInput": diffInput, "graphInput": graphInput, "schemaVersion": json.Number("3"), "workspaceId": "browser.fixture.workspace"}, nil
 }
 
 func snapshot(invariant, risk string) (map[string]any, error) {
@@ -74,7 +84,7 @@ func snapshot(invariant, risk string) (map[string]any, error) {
 		return nil, err
 	}
 	sources := []requirementcontext.Source{
-		{CurrentDigest: digest.SHA256TextRef(invariant), Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/browser-fixture/requirements.v1.json", SourceRef: "browser.fixture.requirements", SourceRole: "requirements"},
+		{CurrentDigest: digest.SHA256TextRef(invariant), Kind: "requirement_source", NodeID: "spec.root", Path: "docs/specs/browser-fixture/requirements.v2.json", SourceRef: "browser.fixture.requirements", SourceRole: "requirements"},
 		{CurrentDigest: digest.SHA256TextRef(string(treeBytes)), Kind: "spec_tree", Path: "proofkit/browser-fixture-tree.json", SourceRef: "spec_tree:browser.fixture.tree"},
 	}
 	identity := map[string]any{"catalogId": "browser.fixture.context", "projections": projections, "sources": []any{map[string]any{"currentDigest": sources[0].CurrentDigest, "expectedDigest": "", "kind": sources[0].Kind, "nodeId": sources[0].NodeID, "path": sources[0].Path, "sourceRef": sources[0].SourceRef, "sourceRole": sources[0].SourceRole}, map[string]any{"currentDigest": sources[1].CurrentDigest, "expectedDigest": "", "kind": sources[1].Kind, "path": sources[1].Path, "sourceRef": sources[1].SourceRef}}}
@@ -87,8 +97,21 @@ func snapshot(invariant, risk string) (map[string]any, error) {
 
 func requirementSource(invariant, risk string) map[string]any {
 	return map[string]any{
-		"nonClaims": []any{"Fixture requirements do not approve merge."}, "overviewPath": "docs/specs/browser-fixture/overview.md",
-		"requirements":     []any{map[string]any{"claimLevel": "blocking", "invariant": invariant, "lifecycle": map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"}, "nonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."}, "ownerId": "browser.fixture.owner", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": RequirementID, "riskClass": risk, "updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "browser.fixture.owner"}}},
-		"requirementsPath": "docs/specs/browser-fixture/requirements.v1.json", "schemaVersion": json.Number("1"), "sourceId": "browser.fixture.requirements", "specPackagePath": "docs/specs/browser-fixture",
+		"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": "browser.fixture.requirements", "specPackagePath": "docs/specs/browser-fixture",
+		"sourceNonClaims":     []any{"Fixture requirements do not approve merge."},
+		"nonClaimDefinitions": []any{map[string]any{"nonClaimId": "NCL-BROWSER", "statement": "This source does not prove native execution."}},
+		"groups": []any{map[string]any{
+			"groupId": "RGRP-BROWSER", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+			"members": []any{map[string]any{
+				"requirementId": RequirementID, "statementCompletion": invariant,
+				"fields": map[string]any{
+					"claimLevel": "blocking", "riskClass": risk, "deferral": nil,
+					"lifecycle":    map[string]any{"state": "active"},
+					"nonClaimRefs": []any{"NCL-BROWSER"}, "externalNonClaimRefs": []any{"NC-CONSUMER-001"}, "nonClaims": []any{"This requirement does not approve merge."},
+					"ownerId": "browser.fixture.owner", "proofBindingRefs": []any{"proofkit/requirement-bindings.json"},
+					"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "browser.fixture.owner"},
+				},
+			}},
+		}},
 	}
 }

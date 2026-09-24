@@ -431,9 +431,11 @@ func unwrapInventory(record map[string]any, context string) (map[string]any, err
 }
 
 func admitDirectInventory(record map[string]any, context string) (Inventory, error) {
-	if err := admit.KnownKeys(record, []string{"authority", "entries", "inventoryId", "nonClaims", "ownerId", "schemaVersion", "sourceId"}, context); err != nil {
+	value, err := directInventoryShape.Admit(record, context)
+	if err != nil {
 		return Inventory{}, err
 	}
+	record = value.(map[string]any)
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
 		return Inventory{}, fmt.Errorf("%s schemaVersion must be 1", context)
 	}

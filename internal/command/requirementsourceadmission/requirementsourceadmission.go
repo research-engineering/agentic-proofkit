@@ -7,18 +7,34 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 )
 
-const reportKind = "proofkit.requirement-source-admission"
+const (
+	reportKind             = "proofkit.requirement-source-admission"
+	outputSchemaVersion    = 2
+	boundaryRuleID         = reportKind + ".boundary"
+	lifecycleRuleID        = reportKind + ".lifecycle"
+	shapeRuleID            = reportKind + ".source-shape"
+	boundaryMessage        = "proofkit admits caller-provided requirement source records without owning requirement meaning"
+	shapeMessage           = "requirement source package paths derive from the admitted overview.md and requirements.v2.json model"
+	lifecyclePassedMessage = "requirement source lifecycle and proof-route admission passed"
+	lifecycleFailedMessage = "requirement source lifecycle or proof-route admission failed"
+)
 
 var claimLevels = []string{"advisory", "blocking", "deferred"}
 var claimLevelSet = toSet(claimLevels)
 
-var lifecycleStates = []string{"active", "deprecated", "removed", "superseded"}
+var lifecycleStates = func() []string {
+	variants := requirementsourcemodel.LifecycleStates()
+	values := make([]string, len(variants))
+	for index, variant := range variants {
+		values[index] = string(variant)
+	}
+	return values
+}()
 var lifecycleStateSet = toSet(lifecycleStates)
-
-var riskClasses = []string{"critical", "high", "low", "medium"}
-var riskClassSet = toSet(riskClasses)
 
 var placeholderPattern = regexp.MustCompile(`(?i)\b(?:fixme|todo|tbd)\b`)
 
@@ -31,17 +47,20 @@ var boundaryNonClaims = []string{
 }
 
 type Requirement struct {
-	ClaimLevel       string
-	Deferral         *Deferral
-	Invariant        string
-	Lifecycle        Lifecycle
-	NonClaimRefs     []string
-	NonClaims        []string
-	OwnerID          string
-	ProofBindingRefs []string
-	RequirementID    string
-	RiskClass        string
-	UpdatePolicy     UpdatePolicy
+	ClaimLevel           string
+	Deferral             *Deferral
+	Invariant            string
+	Lifecycle            Lifecycle
+	NonClaimRefs         []string
+	ExternalNonClaimRefs []string
+	SharedPremises       []string
+	NonClaims            []string
+	OwnerID              string
+	ProofBindingRefs     []string
+	RequirementID        string
+	RiskClass            string
+	sourceReviewDigest   string
+	UpdatePolicy         UpdatePolicy
 }
 
 type Lifecycle struct {
@@ -66,12 +85,9 @@ type UpdatePolicy struct {
 }
 
 type Source struct {
-	NonClaims        []string
-	OverviewPath     string
-	Requirements     []Requirement
-	RequirementsPath string
-	SourceID         string
-	SpecPackagePath  string
+	model         requirementsourcemodel.Model
+	reviewDigests map[string]string
+	admitted      bool
 }
 
 type Result struct {
@@ -79,6 +95,7 @@ type Result struct {
 	Failures []string
 	Report   report.Record
 	Source   Source
+	Summary  requirementsourcemodel.AssessmentSummary
 }
 
 func Build(raw any) (report.Record, int, error) {
@@ -90,369 +107,82 @@ func Build(raw any) (report.Record, int, error) {
 }
 
 func Evaluate(raw any) (Result, error) {
-	source, err := admitSource(raw)
+	assessment, err := requirementsourcecodec.AssessValue(raw)
 	if err != nil {
 		return Result{}, err
 	}
-	failures := sourceFailures(source)
+	summary, ok := assessment.Summary()
+	if !ok {
+		return Result{}, fmt.Errorf("requirement source assessment has no admitted summary")
+	}
+	failures := []string{}
+	for _, violation := range assessment.Violations() {
+		failures = append(failures, policyFailure(violation))
+	}
 	sort.Strings(failures)
 	state := "passed"
 	if len(failures) > 0 {
 		state = "failed"
 	}
-	nonClaims := append(append([]string{}, boundaryNonClaims...), source.NonClaims...)
+	nonClaims := append(append([]string{}, boundaryNonClaims...), summary.NonClaims...)
 	sort.Strings(nonClaims)
 	record := report.Record{
-		SchemaVersion: 1,
+		SchemaVersion: outputSchemaVersion,
 		ReportKind:    reportKind,
-		ReportID:      source.SourceID,
+		ReportID:      summary.SourceID,
 		State:         state,
 		Summary: map[string]any{
-			"activeRequirementCount":   countLifecycle(source.Requirements, "active"),
-			"blockingRequirementCount": countClaimLevel(source.Requirements, "blocking"),
-			"deferredRequirementCount": countClaimLevel(source.Requirements, "deferred"),
+			"activeRequirementCount":   summary.ActiveRequirementCount,
+			"blockingRequirementCount": summary.BlockingRequirementCount,
+			"deferredRequirementCount": summary.DeferredRequirementCount,
 			"failureCount":             len(failures),
-			"requirementCount":         len(source.Requirements),
+			"requirementCount":         summary.RequirementCount,
 			"sourcePathCount":          3,
 		},
 		Diagnostics: []report.Diagnostic{
 			{Key: "failures", Value: admit.StringSliceToAny(failures)},
-			{Key: "sourcePaths", Value: admit.StringSliceToAny(sortedStrings([]string{source.OverviewPath, source.RequirementsPath, source.SpecPackagePath}))},
+			{Key: "sourcePaths", Value: admit.StringSliceToAny(sortedStrings([]string{OverviewPath(summary.SpecPackagePath), RequirementsPath(summary.SpecPackagePath), summary.SpecPackagePath}))},
 		},
 		RuleResults: ruleResults(failures),
 		NonClaims:   admit.StringSliceToAny(nonClaims),
+	}
+	if err := sourceOutputShape.CheckGenerated(record.JSONValue(), "requirement source output"); err != nil {
+		return Result{}, err
 	}
 	exitCode := 0
 	if state == "failed" {
 		exitCode = 1
 	}
-	return Result{ExitCode: exitCode, Failures: failures, Report: record, Source: source}, nil
-}
-
-func admitSource(raw any) (Source, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Source{}, fmt.Errorf("requirement source admission input must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"nonClaims", "overviewPath", "requirements", "requirementsPath", "schemaVersion", "sourceId", "specPackagePath"}, "requirement source admission input"); err != nil {
-		return Source{}, err
-	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
-		return Source{}, fmt.Errorf("requirement source admission schemaVersion must be 1")
-	}
-	specPackagePath, err := pathField(record["specPackagePath"], "requirement source specPackagePath")
-	if err != nil {
-		return Source{}, err
-	}
-	overviewPath, err := pathField(record["overviewPath"], "requirement source overviewPath")
-	if err != nil {
-		return Source{}, err
-	}
-	requirementsPath, err := pathField(record["requirementsPath"], "requirement source requirementsPath")
-	if err != nil {
-		return Source{}, err
-	}
-	requirements, err := requirements(record["requirements"])
-	if err != nil {
-		return Source{}, err
-	}
-	requirementIDs := make([]string, 0, len(requirements))
-	for _, requirement := range requirements {
-		requirementIDs = append(requirementIDs, requirement.RequirementID)
-	}
-	if _, err := preserveSortedUnique(requirementIDs, "requirement source requirementIds", true); err != nil {
-		return Source{}, err
-	}
-	sourceID, err := admit.RuleID(record["sourceId"], "requirement source sourceId")
-	if err != nil {
-		return Source{}, err
-	}
-	nonClaims, err := sortedText(record["nonClaims"], "requirement source nonClaims", false)
-	if err != nil {
-		return Source{}, err
-	}
-	return Source{
-		NonClaims:        nonClaims,
-		OverviewPath:     overviewPath,
-		Requirements:     requirements,
-		RequirementsPath: requirementsPath,
-		SourceID:         sourceID,
-		SpecPackagePath:  specPackagePath,
-	}, nil
-}
-
-func requirements(raw any) ([]Requirement, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("requirement source requirements must be an array")
-	}
-	result := make([]Requirement, 0, len(values))
-	for _, value := range values {
-		requirement, err := admitRequirement(value)
+	var source Source
+	if model, ok := assessment.Model(); ok {
+		reviewDigests, err := reviewDependencyDigests(model)
 		if err != nil {
-			return nil, err
+			return Result{}, err
 		}
-		result = append(result, requirement)
+		source = Source{model: model, reviewDigests: reviewDigests, admitted: true}
 	}
-	return result, nil
-}
-
-func admitRequirement(raw any) (Requirement, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Requirement{}, fmt.Errorf("requirement source record must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"claimLevel", "deferral", "invariant", "lifecycle", "nonClaimRefs", "nonClaims", "ownerId", "proofBindingRefs", "requirementId", "riskClass", "updatePolicy"}, "requirement source record"); err != nil {
-		return Requirement{}, err
-	}
-	requirementID, err := requirementID(record["requirementId"], "requirement source requirementId")
-	if err != nil {
-		return Requirement{}, err
-	}
-	ownerID, err := admit.RuleID(record["ownerId"], fmt.Sprintf("requirement source %s ownerId", requirementID))
-	if err != nil {
-		return Requirement{}, err
-	}
-	invariant, err := invariantText(record["invariant"], fmt.Sprintf("requirement source %s invariant", requirementID))
-	if err != nil {
-		return Requirement{}, err
-	}
-	claimLevel, err := enum(record["claimLevel"], claimLevelSet, claimLevels, fmt.Sprintf("requirement source %s claimLevel", requirementID))
-	if err != nil {
-		return Requirement{}, err
-	}
-	riskClass, err := enum(record["riskClass"], riskClassSet, riskClasses, fmt.Sprintf("requirement source %s riskClass", requirementID))
-	if err != nil {
-		return Requirement{}, err
-	}
-	proofBindingRefs, err := sortedPaths(record["proofBindingRefs"], fmt.Sprintf("requirement source %s proofBindingRefs", requirementID), true)
-	if err != nil {
-		return Requirement{}, err
-	}
-	nonClaimRefs, err := sortedRuleIDs(record["nonClaimRefs"], fmt.Sprintf("requirement source %s nonClaimRefs", requirementID), true)
-	if err != nil {
-		return Requirement{}, err
-	}
-	nonClaims, err := sortedText(record["nonClaims"], fmt.Sprintf("requirement source %s nonClaims", requirementID), true)
-	if err != nil {
-		return Requirement{}, err
-	}
-	lifecycle, err := admitLifecycle(record["lifecycle"], requirementID)
-	if err != nil {
-		return Requirement{}, err
-	}
-	var deferral *Deferral
-	if record["deferral"] != nil {
-		value, err := admitDeferral(record["deferral"], requirementID)
-		if err != nil {
-			return Requirement{}, err
-		}
-		deferral = &value
-	}
-	updatePolicy, err := admitUpdatePolicy(record["updatePolicy"], requirementID)
-	if err != nil {
-		return Requirement{}, err
-	}
-	return Requirement{
-		ClaimLevel:       claimLevel,
-		Deferral:         deferral,
-		Invariant:        invariant,
-		Lifecycle:        lifecycle,
-		NonClaimRefs:     nonClaimRefs,
-		NonClaims:        nonClaims,
-		OwnerID:          ownerID,
-		ProofBindingRefs: proofBindingRefs,
-		RequirementID:    requirementID,
-		RiskClass:        riskClass,
-		UpdatePolicy:     updatePolicy,
-	}, nil
-}
-
-func admitLifecycle(raw any, requirementID string) (Lifecycle, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Lifecycle{}, fmt.Errorf("requirement source %s lifecycle must be an object", requirementID)
-	}
-	if err := admit.KnownKeys(record, []string{"evidenceRefs", "replacementRequirementIds", "state"}, fmt.Sprintf("requirement source %s lifecycle", requirementID)); err != nil {
-		return Lifecycle{}, err
-	}
-	state, err := enum(record["state"], lifecycleStateSet, lifecycleStates, fmt.Sprintf("requirement source %s lifecycle.state", requirementID))
-	if err != nil {
-		return Lifecycle{}, err
-	}
-	replacementRequirementIDs, err := sortedRequirementIDs(record["replacementRequirementIds"], fmt.Sprintf("requirement source %s lifecycle.replacementRequirementIds", requirementID), true)
-	if err != nil {
-		return Lifecycle{}, err
-	}
-	evidenceRefs, err := sortedPaths(record["evidenceRefs"], fmt.Sprintf("requirement source %s lifecycle.evidenceRefs", requirementID), true)
-	if err != nil {
-		return Lifecycle{}, err
-	}
-	return Lifecycle{EvidenceRefs: evidenceRefs, ReplacementRequirementIDs: replacementRequirementIDs, State: state}, nil
-}
-
-func admitDeferral(raw any, requirementID string) (Deferral, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Deferral{}, fmt.Errorf("requirement source %s deferral must be an object or null", requirementID)
-	}
-	if err := admit.KnownKeys(record, []string{"evidenceRefs", "expiryRef", "mergePolicy", "ownerId", "reviewCondition", "riskAcceptedBy"}, fmt.Sprintf("requirement source %s deferral", requirementID)); err != nil {
-		return Deferral{}, err
-	}
-	ownerID, err := admit.RuleID(record["ownerId"], fmt.Sprintf("requirement source %s deferral.ownerId", requirementID))
-	if err != nil {
-		return Deferral{}, err
-	}
-	riskAcceptedBy, err := admit.RuleID(record["riskAcceptedBy"], fmt.Sprintf("requirement source %s deferral.riskAcceptedBy", requirementID))
-	if err != nil {
-		return Deferral{}, err
-	}
-	reviewCondition, err := text(record["reviewCondition"], fmt.Sprintf("requirement source %s deferral.reviewCondition", requirementID))
-	if err != nil {
-		return Deferral{}, err
-	}
-	expiryRef, err := admit.RuleID(record["expiryRef"], fmt.Sprintf("requirement source %s deferral.expiryRef", requirementID))
-	if err != nil {
-		return Deferral{}, err
-	}
-	mergePolicy, err := admit.RuleID(record["mergePolicy"], fmt.Sprintf("requirement source %s deferral.mergePolicy", requirementID))
-	if err != nil {
-		return Deferral{}, err
-	}
-	evidenceRefs, err := sortedPaths(record["evidenceRefs"], fmt.Sprintf("requirement source %s deferral.evidenceRefs", requirementID), false)
-	if err != nil {
-		return Deferral{}, err
-	}
-	return Deferral{
-		EvidenceRefs:    evidenceRefs,
-		ExpiryRef:       expiryRef,
-		MergePolicy:     mergePolicy,
-		OwnerID:         ownerID,
-		ReviewCondition: reviewCondition,
-		RiskAcceptedBy:  riskAcceptedBy,
-	}, nil
-}
-
-func admitUpdatePolicy(raw any, requirementID string) (UpdatePolicy, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return UpdatePolicy{}, fmt.Errorf("requirement source %s updatePolicy must be an object", requirementID)
-	}
-	if err := admit.KnownKeys(record, []string{"requiresImpactDeclaration", "requiresProofBindingReview", "reviewOwnerId"}, fmt.Sprintf("requirement source %s updatePolicy", requirementID)); err != nil {
-		return UpdatePolicy{}, err
-	}
-	reviewOwnerID, err := admit.RuleID(record["reviewOwnerId"], fmt.Sprintf("requirement source %s updatePolicy.reviewOwnerId", requirementID))
-	if err != nil {
-		return UpdatePolicy{}, err
-	}
-	requiresImpactDeclaration, err := admit.Bool(record["requiresImpactDeclaration"], fmt.Sprintf("requirement source %s updatePolicy.requiresImpactDeclaration", requirementID))
-	if err != nil {
-		return UpdatePolicy{}, err
-	}
-	requiresProofBindingReview, err := admit.Bool(record["requiresProofBindingReview"], fmt.Sprintf("requirement source %s updatePolicy.requiresProofBindingReview", requirementID))
-	if err != nil {
-		return UpdatePolicy{}, err
-	}
-	return UpdatePolicy{
-		RequiresImpactDeclaration:  requiresImpactDeclaration,
-		RequiresProofBindingReview: requiresProofBindingReview,
-		ReviewOwnerID:              reviewOwnerID,
-	}, nil
-}
-
-func sourceFailures(source Source) []string {
-	failures := []string{}
-	if source.OverviewPath != source.SpecPackagePath+"/overview.md" {
-		failures = append(failures, "overviewPath must equal specPackagePath/overview.md")
-	}
-	if source.RequirementsPath != source.SpecPackagePath+"/requirements.v1.json" {
-		failures = append(failures, "requirementsPath must equal specPackagePath/requirements.v1.json")
-	}
-	requirementsByID := map[string]Requirement{}
-	for _, requirement := range source.Requirements {
-		requirementsByID[requirement.RequirementID] = requirement
-	}
-	for _, requirement := range source.Requirements {
-		failures = append(failures, requirementFailures(requirement, requirementsByID)...)
-	}
-	return failures
-}
-
-func requirementFailures(requirement Requirement, requirementsByID map[string]Requirement) []string {
-	failures := []string{}
-	if requirement.ClaimLevel == "blocking" && requirement.Lifecycle.State == "active" {
-		if len(requirement.ProofBindingRefs) == 0 {
-			failures = append(failures, fmt.Sprintf("active blocking requirement must route to proof bindings: %s", requirement.RequirementID))
-		}
-		if !requirement.UpdatePolicy.RequiresImpactDeclaration {
-			failures = append(failures, fmt.Sprintf("active blocking requirement must require impact declaration on change: %s", requirement.RequirementID))
-		}
-		if !requirement.UpdatePolicy.RequiresProofBindingReview {
-			failures = append(failures, fmt.Sprintf("active blocking requirement must require proof-binding review on change: %s", requirement.RequirementID))
-		}
-	}
-	if requirement.ClaimLevel == "deferred" && requirement.Deferral == nil {
-		failures = append(failures, fmt.Sprintf("deferred requirement must declare deferral policy: %s", requirement.RequirementID))
-	}
-	if requirement.ClaimLevel != "deferred" && requirement.Deferral != nil {
-		failures = append(failures, fmt.Sprintf("non-deferred requirement must not declare deferral policy: %s", requirement.RequirementID))
-	}
-	if requirement.Lifecycle.State != "active" && len(requirement.Lifecycle.EvidenceRefs) == 0 {
-		failures = append(failures, fmt.Sprintf("non-active requirement must declare lifecycle evidenceRefs: %s", requirement.RequirementID))
-	}
-	if requirement.Lifecycle.State != "superseded" && len(requirement.Lifecycle.ReplacementRequirementIDs) > 0 {
-		failures = append(failures, fmt.Sprintf("only superseded requirements may declare replacementRequirementIds: %s", requirement.RequirementID))
-	}
-	if requirement.Lifecycle.State == "superseded" && len(requirement.Lifecycle.ReplacementRequirementIDs) == 0 {
-		failures = append(failures, fmt.Sprintf("superseded requirement must declare replacementRequirementIds: %s", requirement.RequirementID))
-	}
-	for _, replacementID := range requirement.Lifecycle.ReplacementRequirementIDs {
-		if replacementID == requirement.RequirementID {
-			failures = append(failures, fmt.Sprintf("requirement must not replace itself: %s", requirement.RequirementID))
-		}
-		replacement, ok := requirementsByID[replacementID]
-		if !ok {
-			failures = append(failures, fmt.Sprintf("replacement requirement must be present in the same source: %s -> %s", requirement.RequirementID, replacementID))
-			continue
-		}
-		if replacement.Lifecycle.State != "active" {
-			failures = append(failures, fmt.Sprintf("replacement requirement must be active in the same source: %s -> %s", requirement.RequirementID, replacementID))
-		}
-	}
-	if requirement.ClaimLevel == "blocking" && requirement.Lifecycle.State != "active" {
-		failures = append(failures, fmt.Sprintf("non-active requirement must not remain blocking: %s", requirement.RequirementID))
-	}
-	return failures
+	return Result{ExitCode: exitCode, Failures: failures, Report: record, Source: source, Summary: summary}, nil
 }
 
 func ruleResults(failures []string) []report.RuleResult {
-	pathFailures := []string{}
-	lifecycleFailures := []string{}
-	for _, failure := range failures {
-		if stringsHasPrefix(failure, "overviewPath ") || stringsHasPrefix(failure, "requirementsPath ") {
-			pathFailures = append(pathFailures, failure)
-		} else {
-			lifecycleFailures = append(lifecycleFailures, failure)
-		}
-	}
 	return []report.RuleResult{
 		{
-			RuleID:      "proofkit.requirement-source-admission.boundary",
+			RuleID:      boundaryRuleID,
 			Status:      "passed",
-			Message:     "proofkit admits caller-provided requirement source records without owning requirement meaning",
+			Message:     boundaryMessage,
 			Diagnostics: []report.Diagnostic{},
 		},
 		{
-			RuleID:      "proofkit.requirement-source-admission.lifecycle",
-			Status:      statusFailedIf(len(lifecycleFailures) > 0),
-			Message:     lifecycleMessage(len(lifecycleFailures)),
-			Diagnostics: failureDiagnostics(lifecycleFailures),
+			RuleID:      lifecycleRuleID,
+			Status:      statusFailedIf(len(failures) > 0),
+			Message:     lifecycleMessage(len(failures)),
+			Diagnostics: failureDiagnostics(failures),
 		},
 		{
-			RuleID:      "proofkit.requirement-source-admission.source-shape",
-			Status:      statusFailedIf(len(pathFailures) > 0),
-			Message:     "requirement source package paths must follow the overview.md and requirements.v1.json model",
-			Diagnostics: failureDiagnostics(pathFailures),
+			RuleID:      shapeRuleID,
+			Status:      "passed",
+			Message:     shapeMessage,
+			Diagnostics: []report.Diagnostic{},
 		},
 	}
 }
@@ -466,9 +196,9 @@ func statusFailedIf(value bool) string {
 
 func lifecycleMessage(failureCount int) string {
 	if failureCount == 0 {
-		return "requirement source lifecycle and proof-route admission passed"
+		return lifecyclePassedMessage
 	}
-	return "requirement source lifecycle or proof-route admission failed"
+	return lifecycleFailedMessage
 }
 
 func failureDiagnostics(failures []string) []report.Diagnostic {
@@ -491,62 +221,6 @@ func requirementID(raw any, context string) (string, error) {
 		return "", fmt.Errorf("%s must start with REQ-", context)
 	}
 	return value, nil
-}
-
-func sortedRequirementIDs(raw any, context string, allowEmpty bool) ([]string, error) {
-	return sortedMapped(raw, context, allowEmpty, requirementID)
-}
-
-func sortedRuleIDs(raw any, context string, allowEmpty bool) ([]string, error) {
-	return sortedMapped(raw, context, allowEmpty, admit.RuleID)
-}
-
-func sortedPaths(raw any, context string, allowEmpty bool) ([]string, error) {
-	return sortedMapped(raw, context, allowEmpty, func(value any, itemContext string) (string, error) {
-		return pathField(value, itemContext)
-	})
-}
-
-func sortedText(raw any, context string, allowEmpty bool) ([]string, error) {
-	return sortedMapped(raw, context, allowEmpty, text)
-}
-
-func sortedMapped(raw any, context string, allowEmpty bool, mapper func(any, string) (string, error)) ([]string, error) {
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("%s must be a sorted unique string array", context)
-	}
-	result := make([]string, 0, len(values))
-	for _, value := range values {
-		item, err := mapper(value, context)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, item)
-	}
-	return preserveSortedUnique(result, context, allowEmpty)
-}
-
-func preserveSortedUnique(values []string, context string, allowEmpty bool) ([]string, error) {
-	if !allowEmpty && len(values) == 0 {
-		return nil, fmt.Errorf("%s must be non-empty", context)
-	}
-	sorted := append([]string{}, values...)
-	sort.Strings(sorted)
-	for index := range values {
-		if values[index] != sorted[index] || (index > 0 && values[index-1] == values[index]) {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
-		}
-	}
-	return values, nil
-}
-
-func pathField(raw any, context string) (string, error) {
-	value, err := text(raw, context)
-	if err != nil {
-		return "", err
-	}
-	return admit.SafeRepoRelativePath(value, context)
 }
 
 func invariantText(raw any, context string) (string, error) {
@@ -601,28 +275,4 @@ func join(values []string) string {
 func sortedStrings(values []string) []string {
 	sort.Strings(values)
 	return values
-}
-
-func countLifecycle(requirements []Requirement, state string) int {
-	count := 0
-	for _, requirement := range requirements {
-		if requirement.Lifecycle.State == state {
-			count++
-		}
-	}
-	return count
-}
-
-func countClaimLevel(requirements []Requirement, claimLevel string) int {
-	count := 0
-	for _, requirement := range requirements {
-		if requirement.ClaimLevel == claimLevel {
-			count++
-		}
-	}
-	return count
-}
-
-func stringsHasPrefix(value string, prefix string) bool {
-	return len(value) >= len(prefix) && value[:len(prefix)] == prefix
 }

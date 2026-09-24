@@ -1,16 +1,15 @@
 package requirementsourceadmission
 
-import "encoding/json"
+import (
+	"crypto/sha256"
+	"fmt"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
+)
 
 type ComparisonField struct {
 	Class string
 	Name  string
 	Value any
-}
-
-// AdmitRequirement exposes the requirement owner's canonical leaf admission.
-func AdmitRequirement(raw any) (Requirement, error) {
-	return admitRequirement(raw)
 }
 
 func AdmitRequirementID(raw any, context string) (string, error) {
@@ -29,33 +28,42 @@ func AdmitInvariantText(raw any, context string) (string, error) {
 	return invariantText(raw, context)
 }
 
-func SourceValue(source Source) map[string]any {
-	requirements := make([]any, 0, len(source.Requirements))
-	for _, requirement := range source.Requirements {
-		requirements = append(requirements, RequirementValue(requirement))
+func SourceValue(source Source) (map[string]any, error) {
+	if !source.admitted {
+		return nil, fmt.Errorf("requirement source has no admitted model")
 	}
-	return map[string]any{
-		"nonClaims":        stringValues(source.NonClaims),
-		"overviewPath":     source.OverviewPath,
-		"requirements":     requirements,
-		"requirementsPath": source.RequirementsPath,
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         source.SourceID,
-		"specPackagePath":  source.SpecPackagePath,
+	return requirementsourcecodec.Value(source.model)
+}
+
+func SourceBytes(source Source) ([]byte, error) {
+	if !source.admitted {
+		return nil, fmt.Errorf("requirement source has no admitted model")
 	}
+	return requirementsourcecodec.Format(source.model)
+}
+
+func SourceDigest(source Source) (string, error) {
+	encoded, err := SourceBytes(source)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(encoded)), nil
 }
 
 func RequirementValue(requirement Requirement) map[string]any {
 	record := map[string]any{
-		"claimLevel":       requirement.ClaimLevel,
-		"invariant":        requirement.Invariant,
-		"lifecycle":        lifecycleValue(requirement.Lifecycle),
-		"nonClaimRefs":     stringValues(requirement.NonClaimRefs),
-		"nonClaims":        stringValues(requirement.NonClaims),
-		"ownerId":          requirement.OwnerID,
-		"proofBindingRefs": stringValues(requirement.ProofBindingRefs),
-		"requirementId":    requirement.RequirementID,
-		"riskClass":        requirement.RiskClass,
+		"claimLevel":           requirement.ClaimLevel,
+		"invariant":            requirement.Invariant,
+		"lifecycle":            lifecycleValue(requirement.Lifecycle),
+		"nonClaimRefs":         stringValues(requirement.NonClaimRefs),
+		"externalNonClaimRefs": stringValues(requirement.ExternalNonClaimRefs),
+		"sharedPremises":       stringValues(requirement.SharedPremises),
+		"nonClaims":            stringValues(requirement.NonClaims),
+		"ownerId":              requirement.OwnerID,
+		"proofBindingRefs":     stringValues(requirement.ProofBindingRefs),
+		"requirementId":        requirement.RequirementID,
+		"riskClass":            requirement.RiskClass,
+		"sourceReviewDigest":   requirement.sourceReviewDigest,
 		"updatePolicy": map[string]any{
 			"requiresImpactDeclaration":  requirement.UpdatePolicy.RequiresImpactDeclaration,
 			"requiresProofBindingReview": requirement.UpdatePolicy.RequiresProofBindingReview,
@@ -82,6 +90,7 @@ func ComparisonFields(requirement Requirement) []ComparisonField {
 	return []ComparisonField{
 		{Name: "claimLevel", Class: "scalar", Value: value["claimLevel"]},
 		{Name: "deferral", Class: "map", Value: value["deferral"]},
+		{Name: "externalNonClaimRefs", Class: "set", Value: value["externalNonClaimRefs"]},
 		{Name: "invariant", Class: "scalar", Value: value["invariant"]},
 		{Name: "lifecycle", Class: "map", Value: value["lifecycle"]},
 		{Name: "nonClaimRefs", Class: "set", Value: value["nonClaimRefs"]},
@@ -89,6 +98,8 @@ func ComparisonFields(requirement Requirement) []ComparisonField {
 		{Name: "ownerId", Class: "scalar", Value: value["ownerId"]},
 		{Name: "proofBindingRefs", Class: "set", Value: value["proofBindingRefs"]},
 		{Name: "riskClass", Class: "scalar", Value: value["riskClass"]},
+		{Name: "sharedPremises", Class: "set", Value: value["sharedPremises"]},
+		{Name: "sourceReviewDigest", Class: "scalar", Value: value["sourceReviewDigest"]},
 		{Name: "updatePolicy", Class: "map", Value: value["updatePolicy"]},
 	}
 }

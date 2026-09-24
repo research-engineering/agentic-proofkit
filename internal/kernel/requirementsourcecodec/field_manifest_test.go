@@ -108,6 +108,9 @@ func wireRecordManifest(t *testing.T) []manifestRecord {
 }
 
 func manifestType(value reflect.Type, recordID string, fieldName string) (string, bool) {
+	if value == reflect.TypeOf(decimalInt64("")) {
+		return "decimal-int64", false
+	}
 	if value == rawMessageType && recordID == "metadataFields" && fieldName == "deferral" {
 		return "record:deferral", true
 	}
@@ -178,6 +181,8 @@ func assertShapeType(t *testing.T, expected string, limitOwner string, actual *s
 	case expected == "boolean" && actual.kind == shapeBoolean && limitOwner == "" && actual.limitOwner == "":
 		return
 	case expected == "integer" && actual.kind == shapeInteger && limitOwner == "" && actual.limitOwner == "":
+		return
+	case expected == "decimal-int64" && actual.kind == shapeDecimalInteger && limitOwner == "" && actual.limitOwner == "":
 		return
 	case expected == "map:string" && actual.kind == shapeObject && actual.dynamic != nil && actual.dynamic.kind == shapeString:
 		assertShapeLimitOwner(t, limitOwner, actual)

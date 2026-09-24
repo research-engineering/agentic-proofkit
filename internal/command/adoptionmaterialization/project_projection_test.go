@@ -48,7 +48,7 @@ func TestProjectProjectionPreservesIndependentChildExpectations(t *testing.T) {
 		t.Fatalf("project replay lost canonical child fields: %v", err)
 	}
 	// Mutate both a projection and all original input carriers after admission.
-	value["requirementSources"].([]any)[0].(map[string]any)["nonClaims"].([]any)[0] = "Changed source restriction."
+	value["requirementSources"].([]any)[0].(map[string]any)["sourceNonClaims"].([]any)[0] = "Changed source restriction."
 	value["proofBinding"].(map[string]any)["bindings"].([]any)[0].(map[string]any)["witnessSelectors"].([]any)[0].(map[string]any)["selector"] = "ChangedSelector"
 	value["testEvidenceInventory"].(map[string]any)["entries"].([]any)[0].(map[string]any)["qualityFindings"].([]any)[0].(map[string]any)["nonClaims"].([]any)[0] = "Changed finding restriction."
 	value["manifest"].(map[string]any)["routes"].([]any)[0].(map[string]any)["path"] = "changed"
@@ -98,7 +98,7 @@ func TestProjectReplayRejectsChangedProjectionOperands(t *testing.T) {
 		mutate func(map[string]any)
 	}{
 		{"source", func(value map[string]any) {
-			value["requirementSources"].([]any)[0].(map[string]any)["nonClaims"] = []any{"Different source restriction."}
+			value["requirementSources"].([]any)[0].(map[string]any)["sourceNonClaims"] = []any{"Different source restriction."}
 		}},
 		{"binding", func(value map[string]any) {
 			value["proofBinding"].(map[string]any)["nonClaims"] = []any{"Different binding restriction."}
@@ -185,9 +185,9 @@ func projectionFixtureRequest(t *testing.T) map[string]any {
 	t.Helper()
 	raw := validRequest(t, t.TempDir())
 	source := raw["requirementSources"].([]any)[0].(map[string]any)
-	requirement := source["requirements"].([]any)[0].(map[string]any)
+	requirement := materializationSourceMember(source)["fields"].(map[string]any)
 	requirement["claimLevel"] = "deferred"
-	requirement["nonClaimRefs"] = []any{"pilot.nonclaim.execution"}
+	requirement["externalNonClaimRefs"] = []any{"pilot.nonclaim.execution"}
 	requirement["deferral"] = map[string]any{
 		"evidenceRefs": []any{"docs/evidence/pilot.md"}, "expiryRef": "pilot.expiry.review",
 		"mergePolicy": "pilot.merge.policy", "ownerId": "pilot.owner",
@@ -206,6 +206,10 @@ func projectionFixtureRequest(t *testing.T) map[string]any {
 		"nonClaims": []any{"Candidate finding is not an owner verdict."}, "ownerReviewState": "candidate", "severity": "warning",
 	}}
 	return raw
+}
+
+func materializationSourceMember(source map[string]any) map[string]any {
+	return source["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
 }
 
 func projectFixtureRecords(t *testing.T, raw map[string]any) (Manifest, []RoutedProjectRecord) {

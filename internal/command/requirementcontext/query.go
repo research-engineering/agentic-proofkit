@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
@@ -17,7 +18,7 @@ func admitSliceQuery(raw any) (SliceQuery, error) {
 	if err := admit.KnownKeys(record, []string{"lifecycleStates", "maxDepth", "maxNodes", "maxRequirements", "nodeIds", "ownerIds", "profile", "requirementIds"}, "requirement context slice query"); err != nil {
 		return SliceQuery{}, err
 	}
-	profile, err := admit.Enum(record["profile"], map[string]struct{}{"coverage": {}, "proof": {}, "review": {}, "routing": {}, "specification": {}}, "requirement context slice profile")
+	profile, err := admit.Enum(record["profile"], sliceProfiles, "requirement context slice profile")
 	if err != nil {
 		return SliceQuery{}, err
 	}
@@ -33,7 +34,7 @@ func admitSliceQuery(raw any) (SliceQuery, error) {
 	if err != nil {
 		return SliceQuery{}, err
 	}
-	lifecycleStates, err := admittedEnums(record["lifecycleStates"], map[string]struct{}{"active": {}, "deprecated": {}, "removed": {}, "superseded": {}}, "requirement context slice lifecycleStates")
+	lifecycleStates, err := admittedLifecycleStates(record["lifecycleStates"], "requirement context slice lifecycleStates")
 	if err != nil {
 		return SliceQuery{}, err
 	}
@@ -58,6 +59,9 @@ func admitSliceQuery(raw any) (SliceQuery, error) {
 	}
 	if len(nodeIDs)+len(requirementIDs)+len(ownerIDs)+len(lifecycleStates) == 0 && profile != "routing" {
 		return SliceQuery{}, fmt.Errorf("requirement context slice requires a selector outside routing profile")
+	}
+	if err := sliceQueryShape.CheckGenerated(record, "requirement context slice query"); err != nil {
+		return SliceQuery{}, err
 	}
 	return SliceQuery{MaxDepth: maxDepth, MaxNodes: maxNodes, MaxRequirements: maxRequirements, NodeIDs: nodeIDs, OwnerIDs: ownerIDs, Profile: profile, RequirementIDs: requirementIDs, LifecycleStates: lifecycleStates}, nil
 }
@@ -87,7 +91,7 @@ func admittedIDs(raw any, context string) ([]string, error) {
 	return result, nil
 }
 
-func admittedEnums(raw any, allowed map[string]struct{}, context string) ([]string, error) {
+func admittedLifecycleStates(raw any, context string) ([]string, error) {
 	if raw == nil {
 		return nil, nil
 	}
@@ -98,7 +102,7 @@ func admittedEnums(raw any, allowed map[string]struct{}, context string) ([]stri
 	result := make([]string, 0, len(values))
 	seen := map[string]struct{}{}
 	for _, value := range values {
-		item, err := admit.Enum(value, allowed, context)
+		item, err := requirementsourceadmission.AdmitLifecycleState(value, context)
 		if err != nil {
 			return nil, err
 		}

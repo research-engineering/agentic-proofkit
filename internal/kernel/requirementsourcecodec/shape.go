@@ -19,6 +19,7 @@ const (
 	shapeString
 	shapeInteger
 	shapeBoolean
+	shapeDecimalInteger
 )
 
 const (
@@ -53,19 +54,21 @@ type shape struct {
 func documentShape(limits requirementsourcemodel.Limits) *shape {
 	stringValue := scalar(shapeString)
 	booleanValue := scalar(shapeBoolean)
-	integerValue := scalar(shapeInteger)
+	coordinateValue := scalar(shapeDecimalInteger)
 	stringsValue := array(stringValue, limitCollectionItems, limits)
-	lifecycleValue := object(requiredFields(map[string]*shape{
-		"state": stringValue, "replacementRequirementIds": stringsValue, "evidenceRefs": stringsValue,
-	}))
+	lifecycleValue := object(map[string]shapeField{
+		"state":                     {shape: stringValue, required: true},
+		"replacementRequirementIds": {shape: stringsValue}, "evidenceRefs": {shape: stringsValue},
+	})
 	deferralValue := object(requiredFields(map[string]*shape{
 		"ownerId": stringValue, "riskAcceptedBy": stringValue, "reviewCondition": stringValue,
 		"expiryRef": stringValue, "mergePolicy": stringValue, "evidenceRefs": stringsValue,
 	}))
 	deferralValue.nullable = true
-	updatePolicyValue := object(requiredFields(map[string]*shape{
-		"reviewOwnerId": stringValue, "requiresImpactDeclaration": booleanValue, "requiresProofBindingReview": booleanValue,
-	}))
+	updatePolicyValue := object(map[string]shapeField{
+		"reviewOwnerId": {shape: stringValue, required: true}, "requiresImpactDeclaration": {shape: booleanValue},
+		"requiresProofBindingReview": {shape: booleanValue},
+	})
 	metadataValue := object(map[string]shapeField{
 		"ownerId": {shape: stringValue}, "claimLevel": {shape: stringValue}, "riskClass": {shape: stringValue},
 		"nonClaimRefs": {shape: stringsValue}, "lifecycle": {shape: lifecycleValue}, "deferral": {shape: deferralValue}, "updatePolicy": {shape: updatePolicyValue},
@@ -74,7 +77,7 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 	nonClaimValue := object(requiredFields(map[string]*shape{"nonClaimId": stringValue, "statement": stringValue}))
 	termValue := object(requiredFields(map[string]*shape{"termId": stringValue, "kind": stringValue, "label": stringValue, "definition": stringValue}))
 	gitRefValue := object(requiredFields(map[string]*shape{"objectFormat": stringValue, "commitOid": stringValue, "path": stringValue, "sha256": stringValue}))
-	rangeValue := object(requiredFields(map[string]*shape{"start": integerValue, "end": integerValue}))
+	rangeValue := object(requiredFields(map[string]*shape{"start": coordinateValue, "end": coordinateValue}))
 	derivationValue := object(requiredFields(map[string]*shape{
 		"derivationId": stringValue, "sourceKind": stringValue, "sourceRef": gitRefValue, "selector": rangeValue,
 		"requirementIds": stringsValue, "nonClaimRefs": stringsValue,
@@ -98,20 +101,20 @@ func documentShape(limits requirementsourcemodel.Limits) *shape {
 	versionShape.exactInt = &version
 	kindShape := scalar(shapeString)
 	kindShape.exactString = DocumentKind
-	return object(requiredFields(map[string]*shape{
-		"schemaVersion":       versionShape,
-		"kind":                kindShape,
-		"sourceId":            stringValue,
-		"specPackagePath":     stringValue,
-		"sourceNonClaimRefs":  stringsValue,
-		"sourceNonClaims":     stringsValue,
-		"nonClaimDefinitions": array(nonClaimValue, limitDefinitions, limits),
-		"vocabulary":          array(termValue, limitTerms, limits),
-		"derivations":         array(derivationValue, limitDerivations, limits),
-		"profiles":            array(profileValue, limitProfiles, limits),
-		"groups":              array(groupValue, limitGroups, limits),
-		"scenarios":           array(scenarioValue, limitScenarios, limits),
-	}))
+	return object(map[string]shapeField{
+		"schemaVersion":       {shape: versionShape, required: true},
+		"kind":                {shape: kindShape, required: true},
+		"sourceId":            {shape: stringValue, required: true},
+		"specPackagePath":     {shape: stringValue, required: true},
+		"sourceNonClaimRefs":  {shape: stringsValue},
+		"sourceNonClaims":     {shape: stringsValue, required: true},
+		"nonClaimDefinitions": {shape: array(nonClaimValue, limitDefinitions, limits)},
+		"vocabulary":          {shape: array(termValue, limitTerms, limits)},
+		"derivations":         {shape: array(derivationValue, limitDerivations, limits)},
+		"profiles":            {shape: array(profileValue, limitProfiles, limits)},
+		"groups":              {shape: array(groupValue, limitGroups, limits), required: true},
+		"scenarios":           {shape: array(scenarioValue, limitScenarios, limits)},
+	})
 }
 
 func validateShape(value any, expected *shape, path string, locations map[string]rawLocation, source []byte) error {
@@ -187,12 +190,20 @@ func validateShape(value any, expected *shape, path string, locations map[string
 		if !ok {
 			return shapeError(source, locations, "invalid_type", path)
 		}
-		integer, err := strconv.ParseInt(string(number), 10, 64)
-		if err != nil || strconv.FormatInt(integer, 10) != string(number) {
+		integer, canonical := parseCanonicalInt64(string(number))
+		if !canonical {
 			return shapeError(source, locations, "invalid_integer", path)
 		}
 		if expected.exactInt != nil && integer != *expected.exactInt {
 			return shapeError(source, locations, "invalid_identity", path)
+		}
+	case shapeDecimalInteger:
+		text, ok := value.(string)
+		if !ok {
+			return shapeError(source, locations, "invalid_type", path)
+		}
+		if _, canonical := parseCanonicalInt64(text); !canonical {
+			return shapeError(source, locations, "invalid_integer", path)
 		}
 	case shapeBoolean:
 		if _, ok := value.(bool); !ok {

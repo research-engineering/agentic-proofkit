@@ -1,6 +1,11 @@
 import {expect} from "@playwright/test";
+import {randomUUID} from "node:crypto";
 
 const workspaceNavigationToken = "proofkit.workspace-navigation.scheduled";
+const cspBySecurityProfile = Object.freeze({
+  workspace: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "static-view": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+});
 
 export function admittedWorkspaceURL(baseURL) {
   if (typeof baseURL !== "string") throw new Error("Workspace base URL is unavailable");
@@ -25,13 +30,31 @@ export function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame
     && request.frame() === mainFrame;
 }
 
-export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace") {
+export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace", securityProfile = "workspace") {
+  const expectedCSP = cspBySecurityProfile[securityProfile];
+  if (!expectedCSP) throw new Error("Unsupported workspace security profile");
   const controller = new AbortController();
   const mainFrame = page.mainFrame();
+  const documentMarker = `proofkitNavigationMarker_${randomUUID()}`;
+  await page.evaluate((marker) => { Object.defineProperty(document, marker, {value: true}); }, documentMarker);
+  const navigationRequests = [];
+  let downloadObserved = false;
+  const recordNavigationRequest = (request) => {
+    if (request.isNavigationRequest() && request.frame() === mainFrame) navigationRequests.push(request);
+  };
+  const recordDownload = () => { downloadObserved = true; };
+  page.on("request", recordNavigationRequest);
+  page.on("download", recordDownload);
   const responsePromise = page.waitForResponse(
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
     {signal: controller.signal},
   );
+  const navigationPromise = page.waitForEvent("framenavigated", {
+    predicate: (frame) => frame === mainFrame && frame.url() === workspaceURL,
+    signal: controller.signal,
+  });
+  const responseSettled = responsePromise.catch(() => undefined);
+  const navigationSettled = navigationPromise.catch(() => undefined);
   try {
     const token = await trigger(workspaceNavigationToken);
     if (token !== workspaceNavigationToken) {
@@ -39,17 +62,28 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     }
     const response = await responsePromise;
     if (!response.ok()) throw new Error(responseError);
+    await navigationPromise;
+    await mainFrame.waitForLoadState("domcontentloaded");
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
+    const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
+    const headers = response.headers();
+    const disposition = headers["content-disposition"]?.split(";", 1)[0].trim().toLowerCase();
+    if (oldDocumentRetained || downloadObserved || disposition === "attachment" || navigationRequests.length !== 1 || navigationRequests[0] !== response.request() || page.url() !== workspaceURL || headers["content-security-policy"] !== expectedCSP || headers["x-content-type-options"] !== "nosniff") {
+      throw new Error(responseError);
+    }
   } catch (error) {
     controller.abort();
-    await responsePromise.catch(() => undefined);
+    await Promise.all([responseSettled, navigationSettled]);
     throw error;
+  } finally {
+    page.off("request", recordNavigationRequest);
+    page.off("download", recordDownload);
   }
 }
 
-export async function openWorkspace(page, baseURL, heading) {
+export async function openWorkspace(page, baseURL, heading, securityProfile = "workspace") {
   const workspaceURL = admittedWorkspaceURL(baseURL);
   await navigateWorkspace(
     page,
@@ -60,6 +94,7 @@ export async function openWorkspace(page, baseURL, heading) {
     }, {target: workspaceURL, value: token}),
     "Workspace navigation did not return a successful response",
     heading,
+    securityProfile,
   );
 }
 

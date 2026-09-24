@@ -82,7 +82,7 @@ func FromProject(project *adoptionmaterialization.Project, manifestContentDigest
 func projectSources(manifest adoptionmaterialization.Manifest, inventoryID, bindingID string, requirements []requirementsourceadmission.Source, manifestDigest string) []Source {
 	requirementIDs := make(map[string]string, len(requirements))
 	for _, source := range requirements {
-		requirementIDs[source.RequirementsPath] = source.SourceID
+		requirementIDs[source.RequirementsPath()] = source.SourceID()
 	}
 	sources := []Source{{Kind: "project_manifest", SourceRef: manifest.ProjectID, Path: adoptionmaterialization.ProjectManifestPath, CurrentDigest: manifestDigest}}
 	for _, route := range manifest.Routes {
@@ -104,7 +104,7 @@ func projectSources(manifest adoptionmaterialization.Manifest, inventoryID, bind
 
 func projectSnapshotIdentity(snapshot Snapshot) map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("3"), "catalogId": snapshot.CatalogID,
+		"schemaVersion": json.Number(fmt.Sprint(SnapshotSchemaVersion)), "catalogId": snapshot.CatalogID,
 		"projectOrigin": snapshot.projectOrigin.value(), "projections": snapshot.Projections,
 		"sources": sourceIdentityValues(snapshot.Sources),
 	}

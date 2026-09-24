@@ -42,8 +42,8 @@ func TestPathRoleLedgerRejectsWriteReferenceCollisions(t *testing.T) {
 		})
 	}
 	if err := validatePathRoles([]pathUse{
-		{Path: "docs/specs/core/requirements.v1.json", Role: roleRequirementSource, Target: true},
-		{Path: "docs/specs/core/requirements.v1.json", Role: roleRequirementSpecRef},
+		{Path: "docs/specs/core/requirements.v2.json", Role: roleRequirementSource, Target: true},
+		{Path: "docs/specs/core/requirements.v2.json", Role: roleRequirementSpecRef},
 		{Path: "internal/core/core_test.go", Role: roleWitnessSourceReference},
 		{Path: "internal/core/core_test.go", Role: roleTestSourceReference},
 	}); err != nil {
@@ -107,15 +107,15 @@ func TestManifestAdmissionEqualsProducerImage(t *testing.T) {
 		{
 			name: "missing inventory",
 			routes: []Route{
-				{ArtifactID: digest.SHA256BytesRef([]byte("source-a")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v1.json"},
-				{ArtifactID: digest.SHA256BytesRef([]byte("source-b")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/b/requirements.v1.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("source-a")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v2.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("source-b")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/b/requirements.v2.json"},
 				{ArtifactID: digest.SHA256BytesRef([]byte("binding")), ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
 			},
 		},
 		{
 			name: "duplicate artifact identity",
 			routes: []Route{
-				{ArtifactID: digest.SHA256BytesRef([]byte("duplicate")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v1.json"},
+				{ArtifactID: digest.SHA256BytesRef([]byte("duplicate")), ArtifactKind: ArtifactRequirementSource, Path: "docs/specs/a/requirements.v2.json"},
 				{ArtifactID: digest.SHA256BytesRef([]byte("duplicate")), ArtifactKind: ArtifactRequirementBinding, Path: "proofkit/binding.json"},
 				{ArtifactID: digest.SHA256BytesRef([]byte("inventory")), ArtifactKind: ArtifactTestInventory, Path: "proofkit/inventory.json"},
 			},

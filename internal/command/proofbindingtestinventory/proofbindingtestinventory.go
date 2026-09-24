@@ -7,6 +7,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
@@ -22,11 +23,12 @@ var projectionNonClaims = []string{
 }
 
 type Input struct {
-	CommandRefPrefix string
-	CompactProof     any
-	InventoryID      string
-	NonClaims        []string
-	RequirementOwner map[string]string
+	CommandRefPrefix  string
+	CompactProof      any
+	InventoryID       string
+	NonClaims         []string
+	RequirementOwner  map[string]string
+	RequirementSource requirementsourceadmission.Source
 }
 
 type Projection struct {
@@ -114,8 +116,8 @@ func admitInput(raw any) (Input, error) {
 	if err := admit.KnownKeys(record, []string{"commandRefPolicy", "compactProofContract", "inventoryId", "nonClaims", "requirementSource", "schemaVersion"}, "proof-binding test inventory input"); err != nil {
 		return Input{}, err
 	}
-	if !admit.JSONNumberEquals(record["schemaVersion"], 2) {
-		return Input{}, fmt.Errorf("proof-binding test inventory schemaVersion must be 2")
+	if !admit.JSONNumberEquals(record["schemaVersion"], 3) {
+		return Input{}, fmt.Errorf("proof-binding test inventory schemaVersion must be 3")
 	}
 	inventoryID, err := admit.RuleID(record["inventoryId"], "proof-binding test inventory inventoryId")
 	if err != nil {
@@ -125,7 +127,7 @@ func admitInput(raw any) (Input, error) {
 	if err != nil {
 		return Input{}, err
 	}
-	owners, err := requirementOwners(record["requirementSource"])
+	owners, source, err := requirementOwners(record["requirementSource"])
 	if err != nil {
 		return Input{}, err
 	}
@@ -134,11 +136,12 @@ func admitInput(raw any) (Input, error) {
 		return Input{}, err
 	}
 	return Input{
-		CommandRefPrefix: prefix,
-		CompactProof:     record["compactProofContract"],
-		InventoryID:      inventoryID,
-		NonClaims:        nonClaims,
-		RequirementOwner: owners,
+		CommandRefPrefix:  prefix,
+		CompactProof:      record["compactProofContract"],
+		InventoryID:       inventoryID,
+		NonClaims:         nonClaims,
+		RequirementOwner:  owners,
+		RequirementSource: source,
 	}, nil
 }
 
@@ -153,35 +156,19 @@ func commandRefPrefix(raw any) (string, error) {
 	return admit.RuleID(record["prefix"], "proof-binding test inventory commandRefPolicy.prefix")
 }
 
-func requirementOwners(raw any) (map[string]string, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("proof-binding test inventory requirementSource must be an object")
+func requirementOwners(raw any) (map[string]string, requirementsourceadmission.Source, error) {
+	result, err := requirementsourceadmission.Evaluate(raw)
+	if err != nil {
+		return nil, requirementsourceadmission.Source{}, fmt.Errorf("proof-binding test inventory requirementSource: %w", err)
 	}
-	requirements, ok := record["requirements"].([]any)
-	if !ok {
-		return nil, fmt.Errorf("proof-binding test inventory requirementSource.requirements must be an array")
+	if result.ExitCode != 0 {
+		return nil, requirementsourceadmission.Source{}, fmt.Errorf("proof-binding test inventory requirementSource failed admission: %s", strings.Join(result.Failures, "; "))
 	}
 	owners := map[string]string{}
-	for index, value := range requirements {
-		requirement, ok := value.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("proof-binding test inventory requirementSource.requirements[%d] must be an object", index)
-		}
-		requirementID, err := admit.RuleID(requirement["requirementId"], fmt.Sprintf("proof-binding test inventory requirement #%d requirementId", index+1))
-		if err != nil {
-			return nil, err
-		}
-		ownerID, err := admit.RuleID(requirement["ownerId"], fmt.Sprintf("proof-binding test inventory requirement %s ownerId", requirementID))
-		if err != nil {
-			return nil, err
-		}
-		if previous, ok := owners[requirementID]; ok {
-			return nil, fmt.Errorf("proof-binding test inventory duplicate requirement owner for %s: %s and %s", requirementID, previous, ownerID)
-		}
-		owners[requirementID] = ownerID
+	for _, requirement := range result.Source.Requirements() {
+		owners[requirement.RequirementID] = requirement.OwnerID
 	}
-	return owners, nil
+	return owners, result.Source, nil
 }
 
 func optionalSortedText(raw any, context string) ([]string, error) {
@@ -201,16 +188,23 @@ func project(input Input) (Projection, error) {
 		return Projection{}, err
 	}
 	routes := contract.FalsificationRoutes()
+	links := make([]requirementsourceadmission.ScenarioLink, 0, len(routes))
+	for _, route := range routes {
+		if _, ok := input.RequirementOwner[route.RequirementID]; !ok {
+			return Projection{}, fmt.Errorf("proof-binding test inventory requirement %s has no owner in requirementSource", route.RequirementID)
+		}
+		links = append(links, requirementsourceadmission.ScenarioLink{RequirementID: route.RequirementID, ScenarioID: route.ScenarioID})
+	}
+	if err := requirementsourceadmission.AdmitScenarioLinks([]requirementsourceadmission.Source{input.RequirementSource}, links); err != nil {
+		return Projection{}, fmt.Errorf("proof-binding test inventory: %w", err)
+	}
 	commandByRef := map[string]string{}
 	commandRefs := map[string]struct{}{}
 	entries := make([]map[string]any, 0, len(routes))
 	mappings := make([]map[string]any, 0, len(routes))
 	testIDCoordinates := map[string]string{}
 	for _, route := range routes {
-		ownerID, ok := input.RequirementOwner[route.RequirementID]
-		if !ok {
-			return Projection{}, fmt.Errorf("proof-binding test inventory requirement %s has no owner in requirementSource", route.RequirementID)
-		}
+		ownerID := input.RequirementOwner[route.RequirementID]
 		sourcePath, err := structuredSelectorPath(route.FalsificationSelector, "proof-binding test inventory "+route.RequirementID+" falsification selector")
 		if err != nil {
 			return Projection{}, err

@@ -6,6 +6,107 @@ import (
 	"testing"
 )
 
+func TestSecretLikeValueSurvivesJSONWhitespaceEscaping(t *testing.T) {
+	for _, separator := range []string{"\n", "\t", "\r", "\v", "\u2028"} {
+		serialized := `{"password"` + separator + `:"synthetic-fixture-value"}`
+		for depth := 1; depth <= 3; depth++ {
+			encoded, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(encoded)
+			if !ContainsSecretLikeValue(serialized) {
+				t.Fatalf("secret-shaped JSON pair with escaped whitespace passed at depth %d", depth)
+			}
+		}
+	}
+}
+
+func TestSecretLikeValueSurvivesSerializedControlSplit(t *testing.T) {
+	for _, separator := range []string{"\t", "\n", "\r", "\u000b", "\u200b"} {
+		serialized := "api_" + separator + "key=synthetic-fixture-value"
+		if !ContainsSecretLikeValue(serialized) {
+			t.Fatal("unserialized control split was not detected")
+		}
+		for depth := 1; depth <= 4; depth++ {
+			encoded, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(encoded)
+			if !ContainsSecretLikeValue(serialized) {
+				t.Fatalf("serialized control split passed at depth %d", depth)
+			}
+		}
+	}
+}
+
+func TestSecretLikeValueSurvivesEscapedUnicodeWhitespace(t *testing.T) {
+	serialized := `\"Authorization\"\u202f:"Basic synthetic-fixture-value"`
+	for depth := 0; depth <= 3; depth++ {
+		if !ContainsSecretLikeValue(serialized) {
+			t.Fatalf("escaped Unicode whitespace passed at depth %d", depth)
+		}
+		encoded, err := json.Marshal(serialized)
+		if err != nil {
+			t.Fatal(err)
+		}
+		serialized = string(encoded)
+	}
+}
+
+func TestSecretLikeValueSurvivesEscapedUnicodeLetterAndSurrogatePair(t *testing.T) {
+	for _, initial := range []string{
+		`{"passw\u006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`,
+		`api_\uDB40\uDC01key=synthetic-fixture-value`,
+		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
+		`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
+	} {
+		serialized := initial
+		for depth := 0; depth <= 4; depth++ {
+			if !ContainsSecretLikeValue(serialized) {
+				t.Fatalf("escaped secret passed at depth %d", depth)
+			}
+			encoded, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(encoded)
+		}
+	}
+	if !ContainsSecretLikeValue("api_" + string(rune(0xe0001)) + "key=synthetic-fixture-value") {
+		t.Fatal("literal supplementary control split passed")
+	}
+}
+
+func TestSecretLikeValuePreservesNestedJSONSlashParity(t *testing.T) {
+	base := `{"passw\u006frd":"synthetic-fixture-value"}`
+	encoded, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nested := strings.Replace(string(encoded), "u006f", `\u0075006f`, 1)
+	for depth := 0; depth <= 4; depth++ {
+		if !ContainsSecretLikeValue(nested) {
+			t.Fatalf("nested JSON slash parity passed at depth %d", depth)
+		}
+		encoded, err = json.Marshal(nested)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nested = string(encoded)
+	}
+}
+
+func TestSecretLikeValueFailsClosedAfterDecodeBudget(t *testing.T) {
+	value := `passw\u005c` + strings.Repeat("u005c", maxSecretDecodePasses+1) + "u006frd=synthetic-fixture-value"
+	if !ContainsSecretLikeValue(value) {
+		t.Fatal("nested escape beyond the decode budget passed")
+	}
+}
+
 func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	t.Parallel()
 
@@ -20,6 +121,30 @@ func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	}
 	if _, err := RuleID("proofkit."+strings.Repeat("a", maxRuleIDBytes), "rule id"); err == nil {
 		t.Fatal("expected oversized rule id rejection")
+	}
+}
+
+func TestRuleIDByteBudgetPrecedesLexicalValidation(t *testing.T) {
+	t.Parallel()
+
+	boundary := strings.Repeat("a", 256)
+	if value, err := RuleID(boundary, "reference"); err != nil || value != boundary {
+		t.Fatalf("exact identifier boundary changed: %v", err)
+	}
+	for _, input := range []any{
+		boundary + "a", boundary + "!", "!" + boundary,
+		strings.Repeat("a", 1<<20), strings.Repeat("!", 1<<20),
+	} {
+		value, err := RuleID(input, "reference")
+		if value != "" || err == nil || err.Error() != "reference exceeds the 256-byte stable identifier limit" {
+			t.Fatalf("byte budget did not dominate lexical validation: %v", err)
+		}
+	}
+	for _, input := range []any{nil, 1, "", "bad id", "!"} {
+		value, err := RuleID(input, "reference")
+		if value != "" || err == nil || err.Error() != "reference must be stable rule identifier text" {
+			t.Fatalf("bounded type/lexical diagnostic changed: %v", err)
+		}
 	}
 }
 

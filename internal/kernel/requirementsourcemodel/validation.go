@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity"
 )
 
 var placeholderPattern = regexp.MustCompile(`(?i)\b(?:fixme|todo|tbd)\b`)
@@ -18,6 +19,12 @@ var parameterReferencePattern = regexp.MustCompile(`\$\{([a-z][a-z0-9_]*)\}`)
 var claimLevelVariants = []ClaimLevel{ClaimAdvisory, ClaimBlocking, ClaimDeferred}
 var riskClassVariants = []RiskClass{RiskCritical, RiskHigh, RiskLow, RiskMedium}
 var lifecycleStateVariants = []LifecycleState{LifecycleActive, LifecycleDeprecated, LifecycleRemoved, LifecycleSuperseded}
+
+// LifecycleStates returns the model's closed lifecycle vocabulary without exposing its storage.
+func LifecycleStates() []LifecycleState {
+	return append([]LifecycleState(nil), lifecycleStateVariants...)
+}
+
 var termKindVariants = []TermKind{TermAction, TermObservable, TermState, TermSubject, TermValue}
 var sourceKindVariants = []SourceKind{SourceClarification, SourceCodeSnapshot, SourceDesign, SourceOwnerDecision, SourcePlan}
 var objectFormatVariants = []ObjectFormat{ObjectSHA1, ObjectSHA256}
@@ -60,6 +67,13 @@ func canonicalExternalID(value string, path string) (string, error) {
 		return "", invalid("invalid_id", path)
 	}
 	return admitted, nil
+}
+
+func canonicalScenarioID(value string, path string) (string, error) {
+	if admitted, err := scenarioidentity.AdmitSourceID(value, path); err == nil {
+		return admitted, nil
+	}
+	return "", invalid("invalid_id", path)
 }
 
 func canonicalText(value string, path string, allowEmpty bool, rejectPlaceholders bool) (string, error) {

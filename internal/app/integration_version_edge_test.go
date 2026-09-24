@@ -73,6 +73,11 @@ func readFrozenManagedIntegrationPredecessor(t *testing.T) frozenPublicABI {
 		"sha256:cc1fc5a55e00ea13e92d82edc3a3e3115cd9e69a00d08618fe2b1cefd25216d2")
 }
 
+func readArchivedSourceCutoverPredecessor(t *testing.T) map[string]any {
+	t.Helper()
+	return readArchivedCLIContract(t, "internal/app/testdata/releases/v0.14.21", "7a4a0bf93a1aca3dd91d84e7c0e6303944d301a665a3649293639c3c85d01fb1")
+}
+
 const managedReplayPolicy = "Replay requires a retained generation-2 terminal receipt binding the exact desiredStateId under the native lock; generation-1 receipts remain recoverable but acknowledgement retries require a newly reviewed plan. Roots with generation-2 receipts require a supporting binary even after recovery completes."
 
 func verifyManagedIntegrationPublicABIDiff(frozen frozenPublicABI, current map[string]any) error {
@@ -121,7 +126,7 @@ func TestManagedIntegrationVersionEdgeClosesDeclaredPublicABIDelta(t *testing.T)
 	if err := verifyAdditivePublicABIDiff(frozen, readArchivedIntegrationContract(t), []string{}, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := verifyManagedIntegrationPublicABIDiff(frozen, readCLIContractRaw(t)); err != nil {
+	if err := verifyManagedIntegrationPublicABIDiff(frozen, readArchivedSourceCutoverPredecessor(t)); err != nil {
 		t.Fatal(err)
 	}
 	if current := "sha256:" + currentCLIContractPublicABISHA256(t); current == frozen.PublicABISHA256 {

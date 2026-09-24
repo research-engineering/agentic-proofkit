@@ -22,12 +22,29 @@ type objectEntry struct {
 }
 
 type canonicalWriter struct {
-	buffer bytes.Buffer
-	err    error
+	buffer   bytes.Buffer
+	err      error
+	maxBytes int64
 }
 
 func Format(model requirementsourcemodel.Model) ([]byte, error) {
 	return FormatWithLimits(model, DefaultLimits(), requirementsourcemodel.DefaultLimits())
+}
+
+// Value projects the same document as Format for embedded CLI inputs. It has
+// no original-source coordinates and is never an editable source snapshot.
+func Value(model requirementsourcemodel.Model) (map[string]any, error) {
+	encoded, err := Format(model)
+	if err != nil {
+		return nil, err
+	}
+	decoder := json.NewDecoder(bytes.NewReader(encoded))
+	decoder.UseNumber()
+	var value map[string]any
+	if err := decoder.Decode(&value); err != nil {
+		return nil, formatError("invalid_model_projection")
+	}
+	return value, nil
 }
 
 func FormatWithLimits(model requirementsourcemodel.Model, codecLimits Limits, modelLimits requirementsourcemodel.Limits) ([]byte, error) {
@@ -216,6 +233,9 @@ func (writer *canonicalWriter) writeJSONString(value string) {
 	}
 	writer.writeByte('"')
 	for _, character := range value {
+		if writer.err != nil {
+			return
+		}
 		switch character {
 		case '"':
 			writer.writeString(`\"`)
@@ -271,12 +291,20 @@ func (writer *canonicalWriter) writeIndent(depth int) {
 
 func (writer *canonicalWriter) writeString(value string) {
 	if writer.err == nil {
+		if writer.maxBytes > 0 && int64(len(value)) > writer.maxBytes-int64(writer.buffer.Len()) {
+			writer.err = formatError("raw_byte_limit_exceeded")
+			return
+		}
 		_, _ = writer.buffer.WriteString(value)
 	}
 }
 
 func (writer *canonicalWriter) writeByte(value byte) {
 	if writer.err == nil {
+		if writer.maxBytes > 0 && int64(writer.buffer.Len()) == writer.maxBytes {
+			writer.err = formatError("raw_byte_limit_exceeded")
+			return
+		}
 		_ = writer.buffer.WriteByte(value)
 	}
 }
@@ -343,12 +371,24 @@ func objectEntries(value reflect.Value) []objectEntry {
 			name = fieldType.Name
 		}
 		fieldValue := value.Field(index)
-		if options["omitempty"] && fieldValue.IsZero() {
+		if options["omitempty"] && emptyJSONValue(fieldValue) {
 			continue
 		}
 		result = append(result, objectEntry{key: name, value: fieldValue})
 	}
 	return result
+}
+
+func emptyJSONValue(value reflect.Value) bool {
+	switch value.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.String:
+		return value.Len() == 0
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64, reflect.Interface, reflect.Pointer:
+		return value.IsZero()
+	}
+	return false
 }
 
 func parseJSONTag(tag string) (string, map[string]bool) {

@@ -91,12 +91,15 @@ func classifyControlState(root *os.Root, rootID string, observation controlObser
 		if len(entries) != 1 || !terminalFound {
 			return ControlStateInvalid, "", nil
 		}
-		valid, validationErr := validTerminalControlState(root, terminal)
+		state, validationErr := terminalControlState(root, terminal)
 		if operationalErr := controlInspectionOperationalError(validationErr); operationalErr != nil {
 			return "", "", operationalErr
 		}
-		if validationErr != nil || !valid {
+		if validationErr != nil || state == ControlStateInvalid {
 			return ControlStateInvalid, "", nil
+		}
+		if state == ControlStateRecoverable {
+			return state, terminal.TransactionID, nil
 		}
 		return ControlStateClean, "", nil
 	}
@@ -104,11 +107,11 @@ func classifyControlState(root *os.Root, rootID string, observation controlObser
 		return ControlStateInvalid, "", nil
 	}
 	if terminalFound {
-		valid, validationErr := validTerminalControlState(root, terminal)
+		state, validationErr := terminalControlState(root, terminal)
 		if operationalErr := controlInspectionOperationalError(validationErr); operationalErr != nil {
 			return "", "", operationalErr
 		}
-		if validationErr != nil || !valid {
+		if validationErr != nil || state != ControlStateClean {
 			return ControlStateInvalid, "", nil
 		}
 	}
@@ -159,23 +162,36 @@ func classifyControlState(root *os.Root, rootID string, observation controlObser
 	return ControlStateRecoverable, plan.TransactionID, nil
 }
 
-func validTerminalControlState(root *os.Root, terminal terminalControlIdentity) (bool, error) {
+func terminalControlState(root *os.Root, terminal terminalControlIdentity) (string, error) {
 	path := ControlDirectory + "/" + terminal.Entry.Name()
+	if !terminal.Retired {
+		children, err := admitTerminalCompaction(root, path, nil)
+		if err != nil {
+			return ControlStateInvalid, err
+		}
+		if len(children) > 1 {
+			return ControlStateRecoverable, nil
+		}
+		return ControlStateClean, nil
+	}
 	children, err := transactionEntries(root, path)
 	if err != nil {
-		return false, err
+		return ControlStateInvalid, err
 	}
-	if terminal.Retired && len(children) == 0 {
-		return true, nil
+	if len(children) == 0 {
+		return ControlStateClean, nil
 	}
 	if len(children) != 1 || children[0].Name() != terminalReceiptName {
-		return false, nil
+		return ControlStateInvalid, nil
 	}
 	receipt, err := loadTerminalReceipt(root, path)
 	if err != nil {
-		return false, err
+		return ControlStateInvalid, err
 	}
-	return receipt.TransactionID == terminal.TransactionID && receipt.State == terminal.State, nil
+	if receipt.TransactionID != terminal.TransactionID || receipt.State != terminal.State {
+		return ControlStateInvalid, nil
+	}
+	return ControlStateClean, nil
 }
 
 func controlInspectionOperationalError(err error) error {

@@ -9,6 +9,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -22,6 +24,51 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/projectfixture"
 )
 
+const graphCodeSourcesDefinition = "proofkit.requirement-traceability-graph.input.v3.json-schema"
+
+func TestGraphCodeSourcesContractMatchesNativeCLI(t *testing.T) {
+	fixture := projectfixture.New(t)
+	inspection, err := projectstatus.InspectProject(t.Context(), fixture.Root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := requirementcontext.FromProject(inspection.Project, inspection.ManifestContentDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := map[string]any{"schemaVersion": json.Number("3"), "graphId": "project.optional-sources", "context": requirementcontext.SnapshotValue(snapshot)}
+	args := []string{"requirement-traceability-graph", "--input", "-"}
+	baseline := runAppJSON(t, args, input)
+	if len(baseline["nodes"].([]any)) != 7 || len(baseline["edges"].([]any)) != 6 {
+		t.Fatal("optional-source witness needs the complete nonempty project graph")
+	}
+	if _, err := requirementgraph.AdmitOutput(baseline, baseline["snapshotId"].(string)); err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []any{nil, []any{}} {
+		input["codeSources"] = value
+		if actual := runAppJSON(t, args, input); !reflect.DeepEqual(actual, baseline) {
+			t.Fatal("empty codeSources changed the complete graph")
+		}
+	}
+	for _, value := range []any{true, "source", map[string]any{}, []any{map[string]any{"path": "src/example.go"}}} {
+		input["codeSources"] = value
+		code, stdout, stderr := executeAgentWorkflowCLI(t, args, bytes.NewReader(adoptionHelpJSON(t, input)), PresentationCapabilities{})
+		if code != 1 || stdout != "" || stderr == "" {
+			t.Fatal("mistyped codeSources did not fail input admission")
+		}
+	}
+	definitions := cliContractDefinitionMap(t, readCLIContract(t).ContractDefinitions)
+	variant := definitions[graphCodeSourcesDefinition]["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
+	if !slices.Equal(stringsFromAny(variant["allowedFields"].([]any)), []string{"codeSources", "codeTopology", "context", "graphId", "schemaVersion"}) ||
+		!slices.Equal(stringsFromAny(variant["requiredFields"].([]any)), []string{"context", "graphId", "schemaVersion"}) {
+		t.Fatal("graph root definition contradicts native optional codeSources admission")
+	}
+	if !reflect.DeepEqual(canonicalJSONValue(t, variant["schema"]), canonicalJSONValue(t, requirementgraph.InputStructure())) {
+		t.Fatal("graph structural definition differs from native input owner")
+	}
+}
+
 func TestProjectContextConsumersThroughWholeCLI(t *testing.T) {
 	fixture := projectfixture.New(t)
 	inspection, err := projectstatus.InspectProject(t.Context(), fixture.Root)
@@ -34,7 +81,7 @@ func TestProjectContextConsumersThroughWholeCLI(t *testing.T) {
 	}
 	context := requirementcontext.SnapshotValue(snapshot)
 	slice := runAppJSON(t, []string{"requirement-context-slice", "--input", "-"}, map[string]any{
-		"schemaVersion": json.Number("1"), "sliceId": "project.slice", "context": context,
+		"schemaVersion": json.Number("2"), "sliceId": "project.slice", "context": context,
 		"query": map[string]any{"profile": "review", "requirementIds": []any{"REQ-WIRE-001"}},
 	})
 	if slice["state"] != "selected" || slice["snapshotId"] != context["snapshotId"] {
@@ -50,7 +97,7 @@ func TestProjectContextConsumersThroughWholeCLI(t *testing.T) {
 		t.Fatal("CLI lost the selected source identity or limitations")
 	}
 	graph := runAppJSON(t, []string{"requirement-traceability-graph", "--input", "-"}, map[string]any{
-		"schemaVersion": json.Number("2"), "graphId": "project.graph", "context": context,
+		"schemaVersion": json.Number("3"), "graphId": "project.graph", "context": context,
 	})
 	if _, err := requirementgraph.AdmitOutput(graph, context["snapshotId"].(string)); err != nil || len(graph["nodes"].([]any)) != 7 || len(graph["edges"].([]any)) != 6 {
 		t.Fatalf("CLI project graph is not reference-closed: %v", err)
@@ -77,12 +124,12 @@ func TestRequirementContextCommandsComposeThroughWholeCLI(t *testing.T) {
 	}
 	requirementSource := cliRequirementSource("The CLI composes the baseline requirement context.")
 	writeCLIJSONFixture(t, root, "proofkit/spec-tree.json", tree)
-	writeCLIJSONFixture(t, root, "docs/specs/consumer/requirements.v1.json", requirementSource)
+	writeCLIJSONFixture(t, root, "docs/specs/consumer/requirements.v2.json", requirementSource)
 	catalog := map[string]any{
-		"schemaVersion": json.Number("1"), "catalogId": "consumer.context",
+		"schemaVersion": json.Number("2"), "catalogId": "consumer.context",
 		"specTree": map[string]any{"path": "proofkit/spec-tree.json"},
 		"requirementSources": []any{map[string]any{
-			"nodeId": "consumer.root", "path": "docs/specs/consumer/requirements.v1.json",
+			"nodeId": "consumer.root", "path": "docs/specs/consumer/requirements.v2.json",
 		}},
 	}
 
@@ -90,53 +137,50 @@ func TestRequirementContextCommandsComposeThroughWholeCLI(t *testing.T) {
 	if _, err := requirementcontext.AdmitSnapshot(base); err != nil {
 		t.Fatalf("whole-CLI context output failed owner admission: %v", err)
 	}
-	if base["schemaVersion"] != json.Number("2") || base["expectedDigestCoverage"] != "none" || base["baselineVerification"] != nil {
-		t.Fatalf("whole-CLI context output did not use the v2 digest-coverage contract: %#v", base)
+	if base["schemaVersion"] != json.Number("4") || base["expectedDigestCoverage"] != "none" || base["baselineVerification"] != nil {
+		t.Fatalf("whole-CLI context output did not use the v4 source contract: %#v", base)
 	}
 	slice := runAppJSON(t, []string{"requirement-context-slice", "--input", "-"}, map[string]any{
-		"schemaVersion": json.Number("1"), "sliceId": "consumer.context.slice", "context": base,
+		"schemaVersion": json.Number("2"), "sliceId": "consumer.context.slice", "context": base,
 		"query": map[string]any{"profile": "specification", "requirementIds": []any{"REQ-CONSUMER-001"}},
 	})
 	if slice["contextKind"] != "proofkit.requirement-context-slice" || slice["state"] != "selected" || slice["snapshotId"] != base["snapshotId"] {
 		t.Fatalf("unexpected whole-CLI context slice: %#v", slice)
 	}
 
-	requirementSource["requirements"].([]any)[0].(map[string]any)["invariant"] = "The CLI composes the current requirement context."
-	writeCLIJSONFixture(t, root, "docs/specs/consumer/requirements.v1.json", requirementSource)
+	requirementSource["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "The CLI composes the current requirement context."
+	writeCLIJSONFixture(t, root, "docs/specs/consumer/requirements.v2.json", requirementSource)
 	current := runAppJSON(t, []string{"requirement-context-compose", "--input", "-", "--repo-root", root}, catalog)
 	diff := runAppJSON(t, []string{"requirement-semantic-diff", "--input", "-"}, map[string]any{
-		"schemaVersion": json.Number("2"), "diffId": "consumer.requirement.diff",
+		"schemaVersion": json.Number("3"), "diffId": "consumer.requirement.diff",
 		"baseContext": base, "currentContext": current,
 	})
 	if diff["changeCount"] != json.Number("1") {
 		t.Fatalf("whole-CLI semantic diff changeCount=%v, want 1", diff["changeCount"])
 	}
-	if diff["schemaVersion"] != json.Number("2") || diff["baseExpectedDigestCoverage"] != "none" || diff["currentExpectedDigestCoverage"] != "none" || diff["baseBaselineVerification"] != nil || diff["currentBaselineVerification"] != nil {
-		t.Fatalf("whole-CLI semantic diff did not use the v2 digest-coverage contract: %#v", diff)
+	if diff["schemaVersion"] != json.Number("3") || diff["baseExpectedDigestCoverage"] != "none" || diff["currentExpectedDigestCoverage"] != "none" || diff["baseBaselineVerification"] != nil || diff["currentBaselineVerification"] != nil {
+		t.Fatalf("whole-CLI semantic diff did not use the v3 source contract: %#v", diff)
 	}
 	if _, err := requirementdiff.AdmitOutput(diff, current["snapshotId"].(string)); err != nil {
 		t.Fatalf("whole-CLI semantic diff failed owner admission: %v", err)
 	}
 
 	graph := runAppJSON(t, []string{"requirement-traceability-graph", "--input", "-"}, map[string]any{
-		"schemaVersion": json.Number("2"), "graphId": "consumer.requirement.graph", "context": current,
+		"schemaVersion": json.Number("3"), "graphId": "consumer.requirement.graph", "context": current,
 	})
 	if _, err := requirementgraph.AdmitOutput(graph, current["snapshotId"].(string)); err != nil {
 		t.Fatalf("whole-CLI traceability graph failed owner admission: %v", err)
 	}
 }
 
-func TestLegacyDigestVocabularyConfinedToV1AdaptersAndFixtures(t *testing.T) {
+func TestLegacyDigestVocabularyConfinedToRejectionFixtures(t *testing.T) {
 	repoRoot := filepath.Clean(filepath.Join("..", ".."))
 	allowed := map[string]struct{}{
 		"internal/app/requirement_context_cli_test.go":                           {},
-		"internal/command/requirementbrowser/v1_adapter.go":                      {},
 		"internal/command/requirementbrowser/workspace_test.go":                  {},
 		"internal/command/requirementcontext/context_wire_compatibility_test.go": {},
 		"internal/command/requirementcontext/requirementcontext_test.go":         {},
-		"internal/command/requirementcontext/v1_adapter.go":                      {},
 		"internal/command/requirementdiff/requirementdiff_test.go":               {},
-		"internal/command/requirementdiff/v1_adapter.go":                         {},
 		"internal/command/requirementgraph/requirementgraph_test.go":             {},
 	}
 	legacy := []string{
@@ -359,7 +403,7 @@ func cliWitnessPlanProjectionInput() map[string]any {
 				"ownerId":       "proofkit.witnessplan",
 				"proofState":    "witness_backed",
 				"requirementId": "REQ-PROOFKIT-WITNESSPLAN-001",
-				"specPath":      "docs/specs/proofkit-witnessplan/requirements.v1.json",
+				"specPath":      "docs/specs/proofkit-witnessplan/requirements.v2.json",
 			}},
 			"bindings": []any{map[string]any{
 				"commandIds":         []any{"proofkit.test-command"},
@@ -434,19 +478,19 @@ func cliWitnessPlanVocabulary() map[string]any {
 
 func cliRequirementSource(invariant string) map[string]any {
 	return map[string]any{
-		"schemaVersion": json.Number("1"), "sourceId": "consumer.requirements",
-		"specPackagePath": "docs/specs/consumer", "overviewPath": "docs/specs/consumer/overview.md",
-		"requirementsPath": "docs/specs/consumer/requirements.v1.json",
-		"requirements": []any{map[string]any{
-			"requirementId": "REQ-CONSUMER-001", "ownerId": "consumer.owner", "invariant": invariant,
-			"claimLevel": "blocking", "riskClass": "high",
-			"proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{"NC-CONSUMER-001"},
-			"nonClaims":    []any{"This requirement does not approve merge."},
-			"lifecycle":    map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
-			"deferral":     nil,
-			"updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true},
-		}},
-		"nonClaims": []any{"This source does not execute proof witnesses."},
+		"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": "consumer.requirements",
+		"specPackagePath": "docs/specs/consumer",
+		"groups": []any{map[string]any{"groupId": "RGRP-CONSUMER", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+			"members": []any{map[string]any{"requirementId": "REQ-CONSUMER-001", "statementCompletion": invariant, "fields": map[string]any{
+				"ownerId":    "consumer.owner",
+				"claimLevel": "blocking", "riskClass": "high",
+				"proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "nonClaimRefs": []any{}, "externalNonClaimRefs": []any{"NC-CONSUMER-001"},
+				"nonClaims":    []any{"This requirement does not approve merge."},
+				"lifecycle":    map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
+				"deferral":     nil,
+				"updatePolicy": map[string]any{"reviewOwnerId": "consumer.owner", "requiresImpactDeclaration": true, "requiresProofBindingReview": true},
+			}}}}},
+		"sourceNonClaims": []any{"This source does not execute proof witnesses."},
 	}
 }
 

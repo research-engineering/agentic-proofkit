@@ -194,13 +194,22 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 	assertCurrentChangeRecordNotesRejected(t, "appended duplicate change section", record, notes+"## Breaking Contract Changes\n\n- `proofkit.surplus.section`: Surplus section.\n")
 }
 
-var currentBreakingChanges = []Change{}
-
-var currentAdditions = []Change{
-	{ChangeID: "proofkit.source-codec.rejected-index-retention", Summary: "Avoid retaining descendant values and raw lexical paths beneath structurally rejected private requirement-source branches while preserving full lexical validation, duplicate detection, nesting limits, exact diagnostics and admitted source maps. Add retention, failure-isolation and recovery tests; make valid fuzz seed construction fail explicitly. Public source formats, CLI semantics, resource limits, dependencies and supported platforms remain unchanged."},
+var currentBreakingChanges = []Change{
+	{ChangeID: "proofkit.requirement-source.grouped-v2", Summary: "Public requirement sources use schemaVersion 2 grouped records and requirements.v2.json paths. The previous flat source identity and active v1 reader are retired; stable requirement and scenario IDs remain independent of group positions."},
+	{ChangeID: "proofkit.source-dependent-contracts.v2", Summary: "Source-dependent authoring, materialization, context, coverage, semantic diff, graph and browser contracts use their declared new wire identities. Coverage output binds its exact admitted requirement source by sourceDigest, and context rejects stale or foreign coverage rows. Installed CLI contract records expose the changed input and output structures and retain explicit native semantic admission."},
 }
 
-var currentMigrationSteps = []string{}
+var currentAdditions = []Change{
+	{ChangeID: "proofkit.source-review-dependency-linkage", Summary: "Derived requirement records expose a sourceReviewDigest over referenced source-level boundaries, named non-claims, scenario bodies, vocabulary and derivation facts; semantic diff and impact detect changes to that admitted dependency closure. Source scenario IDs may also use the compact surface_id::stable_anchor form, and compositions reject a declared scenario bound to the wrong requirement while preserving reference-only routes. These digests are review signals, not execution or freshness evidence."},
+	{ChangeID: "proofkit.source-v2.structural-contracts", Summary: "Expose closed machine-readable structures for changed source paths and affected commands, including separate compact and structured proof reports and the agent-envelope output mode. Preserve native canonicalization and semantic replay as independent obligations."},
+	{ChangeID: "proofkit.diagnostic-json-redaction", Summary: "Go report admission, repository-owned JavaScript diagnostics and the generated TypeScript adapter reject or redact secret-shaped JSON pairs after repeated quote, whitespace, Unicode-letter, surrogate-pair or nested backslash escaping; decoding beyond the bounded budget redacts the entire value."},
+}
+
+var currentMigrationSteps = []string{
+	"Keep existing consumers pinned to 0.14.21 until their tracked requirement sources and repository-owned checks are ready for the grouped source format.",
+	"Convert each active requirements.v1.json source into one requirements.v2.json grouped source while preserving stable requirement IDs, scenario IDs, lifecycle facts, non-claims and proof routes; inspect the semantic diff before replacing the editable source.",
+	"Update tree references, binding and inventory inputs, affected context and coverage producers, and source path selectors to the new contract identities; rerun native witnesses and installed CLI smoke before changing the consumer pin.",
+}
 
 func validateCurrentChangeRecord(record Record, notes string) error {
 	if !slices.Equal(record.BreakingChanges, currentBreakingChanges) {
@@ -220,7 +229,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.14.21",
+		"# @research-engineering/agentic-proofkit 0.15.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -242,7 +251,8 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Migration",
 		"",
-		"No consumer migration is required.",
+		"Migration is required:",
+		"",
 	)
 	for _, step := range currentMigrationSteps {
 		lines = append(lines, "- "+step)
@@ -259,10 +269,10 @@ func currentExpectedReleaseNotes() string {
 		"- Transactional materialization writes only owner-admitted candidate artifacts under one explicit repository root; it does not infer requirement meaning, execute native evidence, approve merge or release, provide filesystem-wide atomic visibility to concurrent readers, or protect its private namespace from a hostile same-user process.",
 		"- Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
 		"- Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
-		"- Complete nested public structural contracts remain blocked under SCHEMA-01; current CLI contracts own exact root variants only.",
+		"- Changed source paths expose their closed structural definitions. Complete nested structures for unchanged public directions remain open under SCHEMA-01, and native semantic admission remains authoritative for cross-field meaning.",
 		"- Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
 		"- View requires an explicitly selected complete materialized project. It neither scans source files nor writes project records or executes native witnesses. Its graph contains declared relations only; coverage and diff remain unavailable. The captured snapshot does not claim filesystem freshness after inspection.",
-		"- The selected requirement-source v2 codec remains internal; current requirement sources are not migrated and no source cutover is claimed.",
+		"- The grouped source cutover does not infer native witness adequacy, consumer rollout or production readiness from format conversion alone.",
 		"- TSX source parsing remains unsupported.",
 		"- Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
 		"- Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts.",
@@ -273,7 +283,7 @@ func currentExpectedReleaseNotes() string {
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.21",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.15.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -285,7 +295,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.20 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.20`.",
+		"- Pin npm consumers to the previous admitted version 0.14.21 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.21`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

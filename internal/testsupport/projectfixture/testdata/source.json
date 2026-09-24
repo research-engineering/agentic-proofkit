@@ -1,20 +1,26 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
   "sourceId": "wire.requirements",
   "specPackagePath": "docs/specs/wire",
-  "overviewPath": "docs/specs/wire/overview.md",
-  "requirementsPath": "docs/specs/wire/requirements.v1.json",
-  "requirements": [{
+  "groups": [{
+    "groupId": "RGRP-WIRE", "profileId": "", "statementStem": "", "sharedPremises": [],
+    "members": [{
     "requirementId": "REQ-WIRE-001",
+    "statementCompletion": "A bounded context preserves its admitted requirement identity.",
+    "fields": {
     "ownerId": "wire.owner",
-    "invariant": "A bounded context preserves its admitted requirement identity.",
     "claimLevel": "blocking",
     "riskClass": "high",
     "lifecycle": {"state": "active", "replacementRequirementIds": [], "evidenceRefs": []},
     "proofBindingRefs": ["proofkit/bindings.json"],
     "nonClaimRefs": [],
+    "externalNonClaimRefs": [],
+    "deferral": null,
     "nonClaims": ["This fixture does not establish execution evidence."],
     "updatePolicy": {"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "wire.owner"}
+    }
+    }]
   }],
-  "nonClaims": ["Wire compatibility is not consumer readiness."]
+  "sourceNonClaims": ["Wire compatibility is not consumer readiness."]
 }

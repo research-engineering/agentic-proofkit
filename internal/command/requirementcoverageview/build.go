@@ -60,9 +60,21 @@ func build(raw any) (map[string]any, error) {
 	}
 	nonClaims := append([]string{}, defaultNonClaims...)
 	nonClaims = append(nonClaims, input.CoverageUniverse.NonClaims...)
-	nonClaims = append(nonClaims, input.Source.NonClaims...)
+	nonClaims = append(nonClaims, input.Source.NonClaims()...)
 	if input.Inventory != nil {
 		nonClaims = append(nonClaims, anyStrings(input.Inventory.Report.NonClaims)...)
+	}
+	refs := []string{}
+	for _, requirement := range scopedSourceRequirements(input.Source, ownerSet) {
+		refs = append(refs, requirement.NonClaimRefs...)
+	}
+	definitions, err := input.Source.NonClaimDefinitions().Select(refs)
+	if err != nil {
+		return nil, err
+	}
+	sourceDigest, err := requirementsourceadmission.SourceDigest(input.Source)
+	if err != nil {
+		return nil, err
 	}
 	output := map[string]any{
 		"authority":                   "lookup_only",
@@ -79,14 +91,16 @@ func build(raw any) (map[string]any, error) {
 		"failures":                    admit.StringSliceToAny(failures),
 		"guidanceSummary":             guidanceSummary(state, failures, warnings),
 		"nonClaims":                   admit.StringSliceToAny(sortedUnique(nonClaims)),
+		"nonClaimDefinitions":         definitions.Value(),
 		"ownerInvariantCoverage":      mapsToAny(ownerInvariantCoverage),
 		"ownerInvariantCoverageCount": len(ownerInvariantCoverage),
 		"ownerInvariantRegistryId":    input.OwnerInvariantRegistry.RegistryID,
 		"proofMode":                   input.Proof.Mode,
 		"requirementCoverage":         mapsToAny(requirements),
 		"requirementCoverageCount":    len(requirements),
-		"schemaVersion":               3,
-		"sourceId":                    input.Source.SourceID,
+		"schemaVersion":               4,
+		"sourceId":                    input.Source.SourceID(),
+		"sourceDigest":                sourceDigest,
 		"state":                       state,
 		"testInventoryId":             inventoryID(input.Inventory),
 		"unmappedTests":               testEntriesToAny(unmappedTests),
@@ -95,6 +109,9 @@ func build(raw any) (map[string]any, error) {
 		"warningClassifications":      mapsToAny(diagnosticClassifications(warnings, "warning")),
 		"warningCount":                len(warnings),
 		"warnings":                    admit.StringSliceToAny(warnings),
+	}
+	if err := coverageOutputShape.CheckGenerated(output, "requirement coverage output"); err != nil {
+		return nil, err
 	}
 	if err := validateCoverageOutputSemantics(output); err != nil {
 		return nil, err
@@ -172,23 +189,26 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 		requirementFailures = sortedUnique(requirementFailures)
 		*failures = append(*failures, requirementFailures...)
 		row := map[string]any{
-			"claimLevel":         requirement.ClaimLevel,
-			"commandIds":         admit.StringSliceToAny(commandIDs),
-			"coverageState":      state,
-			"evidenceClass":      evidenceClass,
-			"environmentClasses": admit.StringSliceToAny(proof.EnvironmentClasses),
-			"failures":           admit.StringSliceToAny(requirementFailures),
-			"invariant":          requirement.Invariant,
-			"lifecycleState":     requirement.Lifecycle.State,
-			"nonClaims":          admit.StringSliceToAny(requirement.NonClaims),
-			"ownerId":            requirement.OwnerID,
-			"requirementId":      requirement.RequirementID,
-			"scenarioCount":      len(scenarios),
-			"scenarios":          scenariosToAny(scenarios, input.Proof.Mode),
-			"specPath":           input.Source.RequirementsPath,
-			"testIds":            admit.StringSliceToAny(entryIDs(entriesForRequirement)),
-			"tests":              testEntriesToAny(entriesForRequirement),
-			"verifyCommands":     admit.StringSliceToAny(proof.VerifyCommands),
+			"claimLevel":           requirement.ClaimLevel,
+			"commandIds":           admit.StringSliceToAny(commandIDs),
+			"coverageState":        state,
+			"evidenceClass":        evidenceClass,
+			"environmentClasses":   admit.StringSliceToAny(proof.EnvironmentClasses),
+			"failures":             admit.StringSliceToAny(requirementFailures),
+			"invariant":            requirement.Invariant,
+			"sharedPremises":       admit.StringSliceToAny(requirement.SharedPremises),
+			"nonClaimRefs":         admit.StringSliceToAny(requirement.NonClaimRefs),
+			"externalNonClaimRefs": admit.StringSliceToAny(requirement.ExternalNonClaimRefs),
+			"lifecycleState":       requirement.Lifecycle.State,
+			"nonClaims":            admit.StringSliceToAny(requirement.NonClaims),
+			"ownerId":              requirement.OwnerID,
+			"requirementId":        requirement.RequirementID,
+			"scenarioCount":        len(scenarios),
+			"scenarios":            scenariosToAny(scenarios, input.Proof.Mode),
+			"specPath":             input.Source.RequirementsPath(),
+			"testIds":              admit.StringSliceToAny(entryIDs(entriesForRequirement)),
+			"tests":                testEntriesToAny(entriesForRequirement),
+			"verifyCommands":       admit.StringSliceToAny(proof.VerifyCommands),
 		}
 		if input.Proof.Mode == "compact" {
 			row["declaredWitnessRoutes"] = declaredWitnessRoutesToAny(proof.DeclaredWitnessRoutes)
@@ -198,14 +218,13 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 		}
 		result = append(result, row)
 	}
+	knownIDs := map[string]struct{}{}
+	for _, requirement := range input.Source.Requirements() {
+		knownIDs[requirement.RequirementID] = struct{}{}
+	}
 	for requirementID := range input.Proof.Requirements {
-		requirement, ok := sourceRequirementByID(input.Source, requirementID)
-		if !ok {
+		if _, known := knownIDs[requirementID]; !known {
 			*failures = append(*failures, "proof_binding_unknown_requirement:"+requirementID)
-			continue
-		}
-		if !inOwnerScope(requirement.OwnerID, ownerSet) {
-			continue
 		}
 	}
 	return result
@@ -277,7 +296,7 @@ func deadZoneDiagnostics(prefix string, deadZones []map[string]any) []string {
 func ownerScopeFailures(input compositeInput, ownerSet map[string]struct{}) []string {
 	failures := []string{}
 	if input.CoverageUniverse.CompletenessDeclaration == "full_repository" {
-		for _, requirement := range input.Source.Requirements {
+		for _, requirement := range input.Source.Requirements() {
 			if !inOwnerScope(requirement.OwnerID, ownerSet) {
 				failures = append(failures, "full_repository_source_requirement_outside_owner_scope:"+requirement.RequirementID)
 			}
@@ -294,8 +313,8 @@ func ownerScopeFailures(input compositeInput, ownerSet map[string]struct{}) []st
 }
 
 func scopedSourceRequirements(source requirementsourceadmission.Source, ownerSet map[string]struct{}) []requirementsourceadmission.Requirement {
-	result := make([]requirementsourceadmission.Requirement, 0, len(source.Requirements))
-	for _, requirement := range source.Requirements {
+	result := make([]requirementsourceadmission.Requirement, 0, source.RequirementCount())
+	for _, requirement := range source.Requirements() {
 		if inOwnerScope(requirement.OwnerID, ownerSet) {
 			result = append(result, requirement)
 		}
@@ -304,7 +323,7 @@ func scopedSourceRequirements(source requirementsourceadmission.Source, ownerSet
 }
 
 func scopedSourceRequirementIDs(source requirementsourceadmission.Source, ownerSet map[string]struct{}) []string {
-	result := make([]string, 0, len(source.Requirements))
+	result := make([]string, 0, source.RequirementCount())
 	for _, requirement := range scopedSourceRequirements(source, ownerSet) {
 		result = append(result, requirement.RequirementID)
 	}
@@ -336,15 +355,6 @@ func scopedProofWitnessRefs(input compositeInput, ownerSet map[string]struct{}) 
 		}
 	}
 	return sortedUnique(result)
-}
-
-func sourceRequirementByID(source requirementsourceadmission.Source, requirementID string) (requirementsourceadmission.Requirement, bool) {
-	for _, requirement := range source.Requirements {
-		if requirement.RequirementID == requirementID {
-			return requirement, true
-		}
-	}
-	return requirementsourceadmission.Requirement{}, false
 }
 
 func inOwnerScope(ownerID string, ownerSet map[string]struct{}) bool {

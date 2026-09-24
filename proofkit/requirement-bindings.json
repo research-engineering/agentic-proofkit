@@ -5,7 +5,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-001",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -15,7 +15,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -25,7 +25,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-003",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -35,7 +35,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-004",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -45,7 +45,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-005",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -55,7 +55,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-006",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -65,7 +65,7 @@
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-007",
       "ownerId": "proofkit.package-boundary",
-      "specPath": "docs/specs/proofkit-package-boundary/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-package-boundary/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -75,7 +75,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-001",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -85,7 +85,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-002",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -95,7 +95,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-003",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -105,7 +105,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-004",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -115,7 +115,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-005",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -125,7 +125,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-006",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -135,7 +135,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-007",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -145,7 +145,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-008",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -155,7 +155,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-009",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -165,7 +165,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-010",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -175,7 +175,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-011",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -185,7 +185,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-012",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -195,7 +195,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-013",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -205,7 +205,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-014",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -215,7 +215,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-015",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -225,7 +225,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-016",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -235,7 +235,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RECEIPT-001",
       "ownerId": "proofkit.receipt-authority",
-      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -245,7 +245,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RECEIPT-002",
       "ownerId": "proofkit.receipt-authority",
-      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -255,7 +255,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RECEIPT-003",
       "ownerId": "proofkit.receipt-authority",
-      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -265,7 +265,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RECEIPT-004",
       "ownerId": "proofkit.receipt-authority",
-      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-receipt-authority/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -275,7 +275,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-001",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -285,7 +285,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-002",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -295,7 +295,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-003",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -305,7 +305,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-004",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -315,7 +315,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-005",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -325,7 +325,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-006",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -335,7 +335,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-007",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -345,7 +345,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-008",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -355,7 +355,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-009",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -365,7 +365,7 @@
     {
       "requirementId": "REQ-PROOFKIT-RETIRE-010",
       "ownerId": "proofkit.consumer-infra-retirement",
-      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -375,7 +375,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-001",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -385,7 +385,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-002",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -395,7 +395,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-003",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -405,7 +405,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-004",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -415,7 +415,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-005",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -425,7 +425,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-006",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -435,7 +435,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-007",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -445,7 +445,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-008",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -455,7 +455,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-009",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -465,7 +465,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-010",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -475,7 +475,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-011",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -485,7 +485,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-012",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -495,7 +495,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-013",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -505,7 +505,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-014",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -515,7 +515,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-015",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -525,7 +525,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-016",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -535,7 +535,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-017",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -545,7 +545,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-018",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -555,7 +555,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-019",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -565,7 +565,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-020",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -575,7 +575,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-021",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This requirement does not change canonical source storage, semantic selection, stable identity, text output, help output, browser sessions, merge approval, release approval, or rollout readiness."]
@@ -583,7 +583,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-022",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This requirement does not claim full WCAG 2.2 conformance, branded Safari behavior, complete screen-reader interoperability, every operating-system theme, 400-percent zoom behavior, continuous screenshot evidence, guaranteed capture of the best-effort failure screenshot, provider CI ingestion, registry publication, release approval, rollout approval, or production readiness."]
@@ -591,7 +591,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-023",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This requirement does not claim execution on every accepted operating-system version, legal approval, registry publication, release approval, rollout approval, or production readiness."]
@@ -599,7 +599,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-024",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This requirement does not infer change-record completeness from source changes, reconstruct release-history migration data before the declared support baseline, claim a cumulative release-history planner, make release notes approval authority, or prove provider publication, attestation authenticity, consumer adoption, rollout approval, or production readiness."]
@@ -607,7 +607,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-025",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This requirement does not claim external action safety, tag equivalence, provider execution, branch-protection configuration, release publication, or provider-side asset immutability."]
@@ -615,7 +615,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-026",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This bounded encoding policy does not prove terminal-rendering equivalence or safety of arbitrary downstream decoders."]
@@ -623,7 +623,7 @@
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-027",
       "ownerId": "proofkit.supply-chain-quality",
-      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This bounded diagnostic taxonomy does not prove confidentiality of values outside its admitted secret and control classes or claim that every repository-internal tool invocation uses the installed-carrier timeout policy."]
@@ -631,7 +631,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-017",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -641,7 +641,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-018",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -651,7 +651,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-019",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Expected-digest coverage records only equality between caller-supplied expected digests and admitted current bytes; it does not authenticate a producer, baseline, checkout, or freshness and does not claim ambient repository discovery, requirement meaning, proof adequacy, native witness execution, merge approval, release approval, rollout approval, or production readiness."]
@@ -659,7 +659,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-020",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This requirement does not claim source completeness outside the admitted snapshot, product meaning, proof freshness, native execution, merge approval, release approval, rollout approval, or production readiness."]
@@ -667,7 +667,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-021",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; successful launcher invocation does not prove browser rendering; this requirement also does not authenticate the surrounding browser profile or operating-system user and does not claim remote access, annotation persistence, agent execution, provider delivery, complete screen-reader interoperability, full WCAG 2.2 conformance, every operating-system theme, 400-percent zoom behavior, merge approval, release approval, rollout approval, branded Safari behavior, or production readiness."]
@@ -675,15 +675,15 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-022",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; this requirement also does not claim textual equivalence, inferred moves, product meaning, merge approval, release approval, rollout approval, or production readiness."]
+      "nonClaims": ["Expected-digest coverage and source-review digests do not authenticate a producer, baseline, checkout, or freshness; this requirement also does not claim textual equivalence, inferred moves, product meaning, merge approval, release approval, rollout approval, or production readiness."]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-023",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; this requirement also does not infer code topology, line or branch coverage, native execution, merge approval, release approval, rollout approval, or production readiness."]
@@ -691,7 +691,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-024",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This private single-source model does not select or expose a source codec, parse or serialize a persisted source, retain a normalized mirror, establish cross-source requirement identity, authenticate derivation objects, digests, selectors, or freshness, authenticate a caller-declared sourceKind or prove its author's authority or trust class, cut over any current requirement consumer, prove requirement meaning or implementation correctness, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
@@ -699,7 +699,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-025",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["This private codec does not migrate or rewrite current requirement sources, expose a public source extension or CLI command, retain a normalized mirror, authenticate requirement meaning or derivation provenance, generalize the frozen formatter screen beyond its byte-bound corpus, prove the open-world absence of undeclared semantically equivalent parsers, prevent a future owner-approved grammar from being added, execute native witnesses, approve merge or release, or establish rollout or production readiness."]
@@ -707,7 +707,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-026",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The 3072-byte packet bound and stable source-report digest do not prove provider token consumption, semantic sufficiency, source freshness, command execution, native witness truth, or policy approval; detail retrieval requires the caller to retain the original admitted input and launcher context."]
@@ -715,7 +715,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-027",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The adoption front door does not write files, execute commands or native witnesses, promote candidate artifacts, authenticate freshness, approve merge or release, or establish rollout or production readiness."]
@@ -723,7 +723,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-028",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Repository inventory does not inspect arbitrary source semantics, infer repository intent or stack identity, authenticate checkout freshness, or establish code correctness."]
@@ -731,7 +731,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-029",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The adoption plan does not make candidate requirements, contracts, bindings, or tests authoritative and does not authenticate evidence, execute witnesses, or approve a change."]
@@ -739,7 +739,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-030",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The text projection is a human view, not requirement, proof, execution, merge, release, rollout, deployment, or readiness authority."]
@@ -747,7 +747,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-031",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A source-bound version edge does not authenticate Git history, registry publication, provider ingestion, consumer migration, rollout, or production readiness."]
@@ -755,7 +755,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-032",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Materialization does not infer requirement meaning, authenticate witness truth or freshness, execute native witnesses, approve merge or release, establish rollout or production readiness, or make its routing manifest a second semantic owner."]
@@ -763,7 +763,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-033",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Repository transactions do not provide multi-file atomic visibility to concurrent arbitrary readers, distributed transactions, protection from a hostile same-user process, or stronger power-loss durability than the admitted filesystem synchronization operations."]
@@ -771,7 +771,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-034",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer adoption, native witness truth, rollout, or production readiness."]
@@ -779,7 +779,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-035",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A source-bound version edge does not authenticate registry publication, provider ingestion, consumer migration, native witness truth, rollout, or production readiness."]
@@ -787,7 +787,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-036",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Lookup fragments do not establish source completeness outside the admitted snapshot, lifecycle-closed context, proof coverage, native execution, provider freshness, merge approval, or production readiness. Private browser HTTP routes are not a separately supported public SDK."]
@@ -795,7 +795,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-037",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Browser runtime witnesses cover the admitted Playwright Chromium, Firefox, and WebKit scenarios, not all browser preferences, assistive technologies, operating-system themes, branded Safari behavior, complete WCAG conformance, annotation persistence, agent execution, or provider delivery."]
@@ -803,7 +803,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-038",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Coverage presentation does not execute witnesses, authenticate declared evidence, infer a verdict for absent rows, or approve merge, release, rollout or production readiness."]
@@ -811,7 +811,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-039",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A displayed topology, local filter or layout is not evidence of source completeness, proof truth, native execution, publication, rollout or production readiness. Browser-emulated mobile interaction does not certify physical devices or operating-system behavior."]
@@ -819,7 +819,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-040",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A question packet does not establish live checkout freshness, native witness execution, agent delivery, annotation persistence, merge approval or production readiness. Already exported bytes are not revoked by later view changes."]
@@ -827,7 +827,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-041",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Diff counts, risk labels and presentation do not determine compatibility, source authenticity, witness truth, merge approval, publication or production readiness."]
@@ -835,7 +835,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-001",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The planner does not authenticate caller assertions or prove that a planned action was executed, correct, reviewed, or completed."]
@@ -843,7 +843,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-002",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Stage ordering does not prove the semantic adequacy of any architecture, design, plan, implementation, verification, pull request, or closeout artifact."]
@@ -851,7 +851,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-003",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The snapshot relation does not own pending work, elapsed time, predecessor history, waiver, abort, reopen, or external task-state transitions."]
@@ -859,7 +859,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-004",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Digest equality proves only internal equality of caller-declared identity fields and does not bind actual bytes, authenticate the reviewer, establish currentness or trust, or prove assessment quality."]
@@ -867,7 +867,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-005",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Structural least closure relative to caller-declared seeds and edges does not prove context truth, freshness, semantic sufficiency, global minimality, or provider token usage."]
@@ -875,7 +875,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-006",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Explicit caller input does not establish repository identity, policy, source meaning, authorization to mutate, or the truth of observations made outside Proofkit."]
@@ -883,7 +883,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-007",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["The template does not generate, execute, approve, authenticate, or prove adequacy of a consuming repository's script, witness, oracle, receipt, policy, or cleanup implementation."]
@@ -891,7 +891,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-008",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Bounded nondisclosure admission does not prove absence of every possible sensitive value or every terminal interpretation."]
@@ -899,7 +899,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-009",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Terminal styling is presentation only and does not claim identical rendering across terminal emulators."]
@@ -907,7 +907,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-010",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Structural minimality does not prove universal usability, open-world optimality, lower provider token use, or lower cognitive cost for every user and repository."]
@@ -915,7 +915,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-011",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Public-surface closure does not claim wheel documentation parity and does not prove registry publication, provider ingestion, compatibility on untested platforms, native witness truth, merge approval, rollout, or production readiness."]
@@ -923,7 +923,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-012",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["Project status classifies the observed materialized-project snapshot and can become stale immediately after emission; it does not prove native witness execution or complete any declared proof scope."]
@@ -931,7 +931,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-013",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A coherent read snapshot does not prevent later filesystem mutation, authenticate repository ownership, provide power-loss or multi-reader atomicity, exclude a same-user writer that bypasses the repository transaction owner, identify unread out-of-bound record bytes beyond their normalized invalid class, or prevent the filesystem from updating read-side metadata such as access time."]
@@ -939,7 +939,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-014",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": ["A next-action packet is derived guidance; it does not execute, authorize, or prove the proposed action."]
@@ -947,7 +947,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-015",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -959,7 +959,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-016",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -971,7 +971,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-017",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -982,7 +982,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-018",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -995,7 +995,7 @@
     {
       "requirementId": "REQ-PROOFKIT-WORKFLOW-019",
       "ownerId": "proofkit.agent-workflow",
-      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-agent-workflow/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -1007,7 +1007,7 @@
     {
       "requirementId": "REQ-PROOFKIT-SPEC-042",
       "ownerId": "proofkit.spec-proof-core",
-      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v1.json",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
       "nonClaims": [
@@ -2825,8 +2825,8 @@
           "command": "go test ./internal/app -run '^TestConditionSensitiveProofCommandsUseExactRootVariants$'"
         },
         {
-          "selector": "TestLegacyDigestVocabularyConfinedToV1AdaptersAndFixtures",
-          "command": "go test ./internal/app -run '^TestLegacyDigestVocabularyConfinedToV1AdaptersAndFixtures$'"
+          "selector": "TestLegacyDigestVocabularyConfinedToRejectionFixtures",
+          "command": "go test ./internal/app -run '^TestLegacyDigestVocabularyConfinedToRejectionFixtures$'"
         }
       ],
       "commandIds": [
@@ -4598,8 +4598,8 @@
       "witnessPath": "internal/command/requirementcontext/requirementcontext_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestV1DigestCoverageAdapters",
-          "command": "go test ./internal/command/requirementcontext -run '^TestV1DigestCoverageAdapters$'"
+          "selector": "TestDigestCoverageAndRetiredSnapshotIdentities",
+          "command": "go test ./internal/command/requirementcontext -run '^TestDigestCoverageAndRetiredSnapshotIdentities$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4681,8 +4681,8 @@
       "witnessPath": "internal/command/requirementbrowser/workspace_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestV2DigestCoverageProjections",
-          "command": "go test ./internal/command/requirementbrowser -run '^TestV2DigestCoverageProjections$'"
+          "selector": "TestCurrentDigestCoverageProjectionsRejectRetiredIdentities",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestCurrentDigestCoverageProjectionsRejectRetiredIdentities$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -4723,8 +4723,8 @@
       "witnessPath": "internal/command/requirementdiff/requirementdiff_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestDigestCoverageAdaptersPreserveSemanticDiffV2",
-          "command": "go test ./internal/command/requirementdiff -run '^TestDigestCoverageAdaptersPreserveSemanticDiffV2$'"
+          "selector": "TestCurrentDiffIdentityRejectsRetiredContracts",
+          "command": "go test ./internal/command/requirementdiff -run '^TestCurrentDiffIdentityRejectsRetiredContracts$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5500,8 +5500,8 @@
       "witnessPath": "internal/command/requirementgraph/requirementgraph_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestBuildConsumesNormalizedV1AndV2ContextSnapshots",
-          "command": "go test ./internal/command/requirementgraph -run '^TestBuildConsumesNormalizedV1AndV2ContextSnapshots$'"
+          "selector": "TestBuildRejectsRetiredContextSnapshotIdentities",
+          "command": "go test ./internal/command/requirementgraph -run '^TestBuildRejectsRetiredContextSnapshotIdentities$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],
@@ -7878,8 +7878,8 @@
       "witnessPath": "internal/command/requirementcontext/context_wire_compatibility_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestContextPredecessorWireIdentity",
-          "command": "go test ./internal/command/requirementcontext -run '^TestContextPredecessorWireIdentity$'"
+          "selector": "TestContextRejectsPredecessorFlatSourceWire",
+          "command": "go test ./internal/command/requirementcontext -run '^TestContextRejectsPredecessorFlatSourceWire$'"
         }
       ],
       "commandIds": [

@@ -172,28 +172,28 @@ func TestBuildRejectsSourceRefAdmissionAndSemanticFalsifiers(t *testing.T) {
 			mutate: func(input map[string]any) {
 				sourceRefMap(input, "meta", "source.meta")["sourcePath"] = "docs/specs/meta/requirements.v1.json"
 			},
-			wantErr: "source_id must not include path or digest fields",
+			wantErr: ".sourceRefs[0] contains an unsupported field",
 		},
 		{
 			name: "source id with recorded digest surplus",
 			mutate: func(input map[string]any) {
 				sourceRefMap(input, "meta", "source.meta")["recordedSourceDigest"] = digestA()
 			},
-			wantErr: "source_id must not include path or digest fields",
+			wantErr: ".sourceRefs[0] contains an unsupported field",
 		},
 		{
 			name: "source id with current digest surplus",
 			mutate: func(input map[string]any) {
 				sourceRefMap(input, "meta", "source.meta")["currentSourceDigest"] = digestA()
 			},
-			wantErr: "source_id must not include path or digest fields",
+			wantErr: ".sourceRefs[0] contains an unsupported field",
 		},
 		{
 			name: "source id with algorithm surplus",
 			mutate: func(input map[string]any) {
 				sourceRefMap(input, "meta", "source.meta")["digestAlgorithm"] = "sha256"
 			},
-			wantErr: "source_id must not include path or digest fields",
+			wantErr: ".sourceRefs[0] contains an unsupported field",
 		},
 		{
 			name: "unsupported source ref kind",
@@ -242,7 +242,7 @@ func TestBuildRejectsSourceRefAdmissionAndSemanticFalsifiers(t *testing.T) {
 			mutate: func(input map[string]any) {
 				sourceRefMap(input, "submodule", "source.submodule")["sourceId"] = "spec.submodule"
 			},
-			wantErr: "path_digest must not include sourceId",
+			wantErr: ".sourceRefs[0] contains an unsupported field",
 		},
 		{
 			name: "invalid digest",
@@ -447,9 +447,9 @@ func TestBuildRejectsTreeCollectionsBeyondResourceBudget(t *testing.T) {
 		limit int
 		want  string
 	}{
-		{field: "nodes", limit: maxSpecTreeNodes, want: "node limit"},
-		{field: "edges", limit: maxSpecTreeEdges, want: "edge limit"},
-		{field: "overlays", limit: maxSpecTreeOverlays, want: "overlay limit"},
+		{field: "nodes", limit: maxSpecTreeNodes, want: ".nodes must contain at most 4096 items"},
+		{field: "edges", limit: maxSpecTreeEdges, want: ".edges must contain at most 8192 items"},
+		{field: "overlays", limit: maxSpecTreeOverlays, want: ".overlays must contain at most 4096 items"},
 	}
 	for _, item := range cases {
 		t.Run(item.field, func(t *testing.T) {

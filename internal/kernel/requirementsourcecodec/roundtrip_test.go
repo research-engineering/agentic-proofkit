@@ -44,8 +44,17 @@ func TestRequirementFreeSourceWireRoundTrip(t *testing.T) {
 	if _, ok := result.SourceMap.Location("/groups/0"); ok {
 		t.Fatal("source map invented a group")
 	}
+	const canonical = `{
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
+  "sourceId": "proofkit.empty.source",
+  "specPackagePath": "docs/specs/empty",
+  "sourceNonClaims": ["Source admission does not prove coverage."],
+  "groups": []
+}
+`
 	formatted, err := Format(result.Model)
-	if err != nil || !bytes.Equal(formatted, []byte(source)) {
+	if err != nil || !bytes.Equal(formatted, []byte(canonical)) {
 		t.Fatalf("canonical empty source differs from independent wire fixture: %v", err)
 	}
 	readmitted, err := Parse(formatted)
@@ -106,12 +115,28 @@ func TestRequirementFreeSourceReferencedDenialRoundTrip(t *testing.T) {
   "scenarios": []
 }
 `
+	const canonical = `{
+  "schemaVersion": 2,
+  "kind": "proofkit.requirement-source",
+  "sourceId": "proofkit.empty.source",
+  "specPackagePath": "docs/specs/empty",
+  "sourceNonClaims": [],
+  "sourceNonClaimRefs": ["NCL-EMPTY"],
+  "nonClaimDefinitions": [
+    {"nonClaimId":"NCL-EMPTY","statement":"Source admission does not prove coverage."}
+  ],
+  "groups": []
+}
+`
 	for _, test := range []struct {
-		name, wire string
-		nonClaims  []string
+		name, wire, canonical string
+		nonClaims             []string
 	}{
-		{name: "referenced only", wire: source},
-		{name: "inline and referenced", wire: string(bytes.Replace([]byte(source), []byte(`"sourceNonClaims": []`), []byte(`"sourceNonClaims": ["No implementation correctness is established."]`), 1)), nonClaims: []string{"No implementation correctness is established."}},
+		{name: "referenced only", wire: source, canonical: canonical},
+		{name: "inline and referenced",
+			wire:      string(bytes.Replace([]byte(source), []byte(`"sourceNonClaims": []`), []byte(`"sourceNonClaims": ["No implementation correctness is established."]`), 1)),
+			canonical: string(bytes.Replace([]byte(canonical), []byte(`"sourceNonClaims": []`), []byte(`"sourceNonClaims": ["No implementation correctness is established."]`), 1)),
+			nonClaims: []string{"No implementation correctness is established."}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			result, err := Parse([]byte(test.wire))
@@ -137,7 +162,7 @@ func TestRequirementFreeSourceReferencedDenialRoundTrip(t *testing.T) {
 				t.Fatal("referenced denial lost its source coordinate")
 			}
 			formatted, err := Format(result.Model)
-			if err != nil || string(formatted) != test.wire {
+			if err != nil || string(formatted) != test.canonical {
 				t.Fatalf("Format(empty referenced source) differs from independent bytes: %v", err)
 			}
 			readmitted, err := Parse(formatted)

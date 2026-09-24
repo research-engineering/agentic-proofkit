@@ -396,12 +396,12 @@ func TestAdmitOutputReplaysFullRepositorySourceOwnerScopeFailures(t *testing.T) 
 	universe := input["coverageUniverse"].(map[string]any)
 	universe["completenessDeclaration"] = "full_repository"
 	source := input["requirementSource"].(map[string]any)
-	requirements := source["requirements"].([]any)
+	requirements := coverageSourceGroup(source)["members"].([]any)
 	outOfScope := cloneCoverageJSONValue(requirements[0]).(map[string]any)
 	outOfScope["requirementId"] = "REQ-PROOFKIT-COVERAGE-002"
-	outOfScope["ownerId"] = "proofkit.other"
-	outOfScope["updatePolicy"].(map[string]any)["reviewOwnerId"] = "proofkit.other"
-	source["requirements"] = append(requirements, outOfScope)
+	outOfScope["fields"].(map[string]any)["ownerId"] = "proofkit.other"
+	outOfScope["fields"].(map[string]any)["updatePolicy"].(map[string]any)["reviewOwnerId"] = "proofkit.other"
+	coverageSourceGroup(source)["members"] = append(requirements, outOfScope)
 
 	view, _, err := BuildJSON(input, Options{})
 	if err != nil {
@@ -542,7 +542,7 @@ func coverageRecordWithOwnerInvariant(t *testing.T) map[string]any {
 		"schemaVersion": json.Number("1"), "registryId": "proofkit.coverage.owner-invariants",
 		"invariants": []any{map[string]any{
 			"ownerInvariantId": "invariant.coverage.semantic", "ownerId": "proofkit.coverage",
-			"sourcePath": "docs/specs/proofkit-coverage/requirements.v1.json",
+			"sourcePath": "docs/specs/proofkit-coverage/requirements.v2.json",
 			"summary":    "Coverage owner invariant fixture.", "nonClaims": []any{"Fixture does not claim execution."},
 		}},
 		"nonClaims": []any{"Registry fixture is caller-owned."},

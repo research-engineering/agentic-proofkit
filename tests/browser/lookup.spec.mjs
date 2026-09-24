@@ -59,7 +59,7 @@ test("native lookup searches the full cohort, intersects scope, and preserves or
   await page.getByRole("button", {name: "Create handoff packet", exact: true}).click();
   await expect(page.locator("#handoff-status")).toHaveText("Handoff packet created.");
   const packet = JSON.parse(await page.locator("#handoff-packet").textContent());
-  expect(packet.annotations[0]).toMatchObject({anchor: {anchorId: "requirement:REQ-B-129:invariant", requirementId: "REQ-B-129", jsonPointer: "/projections/requirementSources/1/requirements/129/invariant"}, exactQuote: "State \u{1f9ed} e\u0301 keeps source identity."});
+  expect(packet.annotations[0]).toMatchObject({anchor: {anchorId: "requirement:REQ-B-129:invariant", requirementId: "REQ-B-129", sourceId: "consumer.b", coordinateSpace: "resolved_requirement", jsonPointer: "/invariant"}, exactQuote: "State \u{1f9ed} e\u0301 keeps source identity."});
 
   await page.getByRole("searchbox").fill("\u00e9");
   await page.getByRole("button", {name: "Search requirements", exact: true}).click();
@@ -67,6 +67,27 @@ test("native lookup searches the full cohort, intersects scope, and preserves or
   await expect(page.locator("#workspace-content [role=status]")).toHaveAttribute("data-state", "no-match");
   await expect(page.locator("#selected-context li")).toHaveCount(0);
   await expect(page.getByRole("textbox", {name: "Question", exact: true})).toHaveValue("Does the original source identity survive lookup?");
+});
+
+test("grouped source stem and completion remain one selectable resolved invariant", async ({lookupURL, page}) => {
+  await openWorkspace(page, lookupURL);
+  await page.getByRole("searchbox").fill("REQ-B-128");
+  await page.getByRole("button", {name: "Search requirements", exact: true}).click();
+  await expectRows(page, ["REQ-B-128"]);
+  await expect(page.locator('[data-requirement-id="REQ-B-128"] [data-anchor-id]')).toHaveText("Capability 128 remains explicit.");
+  await expect(page.getByRole("list", {name: "Shared premises", exact: true})).toHaveText("Only the selected caller scope applies.");
+  await page.getByRole("button", {name: "Select invariant", exact: true}).click();
+  await page.getByRole("textbox", {name: "Question", exact: true}).fill("Does this shared statement remain explicit?");
+  await page.getByRole("button", {name: "Create handoff packet", exact: true}).click();
+  await expect(page.locator("#handoff-status")).toHaveText("Handoff packet created.");
+  const packet = JSON.parse(await page.locator("#handoff-packet").textContent());
+  expect(packet.schemaVersion).toBe(2);
+  expect(packet.annotations[0]).toMatchObject({anchor: {sourceId: "consumer.b", requirementId: "REQ-B-128", coordinateSpace: "resolved_requirement", jsonPointer: "/invariant"}, exactQuote: "Capability 128 remains explicit.", startCodePoint: 0, endCodePoint: 32});
+  const sources = packet.context.projections.requirementSources.filter(source => source.sourceId === "consumer.b");
+  expect(sources).toHaveLength(1);
+  const requirements = sources[0].requirements.filter(requirement => requirement.requirementId === "REQ-B-128");
+  expect(requirements).toHaveLength(1);
+  expect(requirements[0].invariant).toBe(packet.annotations[0].exactQuote);
 });
 
 test("navigation pages retain parent scope and overview-only nodes select no requirements", async ({lookupURL, page}) => {

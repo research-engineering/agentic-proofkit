@@ -38,7 +38,7 @@ const inputGuide = `Declaration coverage input guide:
 
 Coverage template (required null operands deliberately reject admission):
 ` + "```json\n" + `{
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "composerInputId": null,
   "viewInputId": null,
   "selectedOwnerIds": null,

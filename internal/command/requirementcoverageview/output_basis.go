@@ -25,7 +25,7 @@ func buildCoverageBasis(input compositeInput, entries []testevidenceinventory.En
 	ownerSet := mapSet(input.CoverageUniverse.OwnerIDs)
 	outOfScope := []any{}
 	if input.CoverageUniverse.CompletenessDeclaration == "full_repository" {
-		requirements := slices.Clone(input.Source.Requirements)
+		requirements := slices.Clone(input.Source.Requirements())
 		sort.Slice(requirements, func(left, right int) bool {
 			return requirements[left].RequirementID < requirements[right].RequirementID
 		})

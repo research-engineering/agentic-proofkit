@@ -594,17 +594,17 @@ func allowedRootEntry(path string) bool {
 		"package/proofkit/requirement-bindings.json":                                 {},
 		"package/proofkit/witness-plan.json":                                         {},
 		"package/docs/specs/proofkit-agent-workflow/overview.md":                     {},
-		"package/docs/specs/proofkit-agent-workflow/requirements.v1.json":            {},
+		"package/docs/specs/proofkit-agent-workflow/requirements.v2.json":            {},
 		"package/docs/specs/proofkit-consumer-infra-retirement/overview.md":          {},
-		"package/docs/specs/proofkit-consumer-infra-retirement/requirements.v1.json": {},
+		"package/docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json": {},
 		"package/docs/specs/proofkit-package-boundary/overview.md":                   {},
-		"package/docs/specs/proofkit-package-boundary/requirements.v1.json":          {},
+		"package/docs/specs/proofkit-package-boundary/requirements.v2.json":          {},
 		"package/docs/specs/proofkit-receipt-authority/overview.md":                  {},
-		"package/docs/specs/proofkit-receipt-authority/requirements.v1.json":         {},
+		"package/docs/specs/proofkit-receipt-authority/requirements.v2.json":         {},
 		"package/docs/specs/proofkit-spec-proof-core/overview.md":                    {},
-		"package/docs/specs/proofkit-spec-proof-core/requirements.v1.json":           {},
+		"package/docs/specs/proofkit-spec-proof-core/requirements.v2.json":           {},
 		"package/docs/specs/proofkit-supply-chain-quality/overview.md":               {},
-		"package/docs/specs/proofkit-supply-chain-quality/requirements.v1.json":      {},
+		"package/docs/specs/proofkit-supply-chain-quality/requirements.v2.json":      {},
 	}
 	if _, ok := allowedExact[path]; ok {
 		return true
@@ -933,7 +933,7 @@ func verifyPackagePublicReferenceClosure(artifact rootPackageArtifact, entries m
 		if !strings.HasSuffix(entry, ".json") {
 			continue
 		}
-		if strings.HasPrefix(entry, "package/docs/specs/") && strings.HasSuffix(entry, "/requirements.v1.json") {
+		if strings.HasPrefix(entry, "package/docs/specs/") && strings.HasSuffix(entry, "/requirements.v2.json") {
 			if err := verifyRequirementSourceReferences(entry, content, entries); err != nil {
 				return err
 			}
@@ -1000,63 +1000,6 @@ func verifyMarkdownDestinations(entry, content string, entries map[string]struct
 		}
 		if _, ok := entries[resolved]; !ok {
 			return fmt.Errorf("%s contains dangling package-public Markdown destination %s", entry, destination)
-		}
-	}
-	return nil
-}
-
-func verifyRequirementSourceReferences(entry, content string, entries map[string]struct{}) error {
-	value, err := decodePackageJSONObject(content, entry)
-	if err != nil {
-		return err
-	}
-	if err := verifyClosedReferenceInventory(entry, value, map[string]string{
-		"/specPackagePath":                       "package_public_directory",
-		"/overviewPath":                          "package_public",
-		"/requirementsPath":                      "package_public",
-		"/requirements/*/proofBindingRefs":       "package_public",
-		"/requirements/*/nonClaimRefs":           "non_claim_identifier",
-		"/requirements/*/lifecycle/evidenceRefs": "package_public_or_evidence_identifier",
-	}); err != nil {
-		return err
-	}
-	specPackagePath := stringField(value, "specPackagePath")
-	if err := requireShippedRootPrefix(entry+" specPackagePath", specPackagePath, entries); err != nil {
-		return err
-	}
-	for _, field := range []string{"overviewPath", "requirementsPath"} {
-		if err := requireShippedRootReference(entry+" "+field, stringField(value, field), entries); err != nil {
-			return err
-		}
-	}
-	requirements, ok := value["requirements"].([]any)
-	if !ok {
-		return fmt.Errorf("package %s requirements must be an array", entry)
-	}
-	for _, raw := range requirements {
-		requirement, ok := raw.(map[string]any)
-		if !ok {
-			return fmt.Errorf("package %s requirement must be an object", entry)
-		}
-		for _, reference := range stringArrayField(requirement, "proofBindingRefs") {
-			if err := requireShippedRootReference(entry+" proofBindingRef", reference, entries); err != nil {
-				return err
-			}
-		}
-		for _, reference := range stringArrayField(requirement, "nonClaimRefs") {
-			if !strings.HasPrefix(reference, "NC-") {
-				return fmt.Errorf("package %s nonClaimRef must be an NC-* identifier", entry)
-			}
-		}
-		lifecycle, _ := requirement["lifecycle"].(map[string]any)
-		for _, reference := range stringArrayField(lifecycle, "evidenceRefs") {
-			if looksLikeRepositoryPath(reference) {
-				if err := requireShippedRootReference(entry+" lifecycle evidenceRef", reference, entries); err != nil {
-					return err
-				}
-			} else if reference == "" {
-				return fmt.Errorf("package %s lifecycle evidenceRef must be non-empty", entry)
-			}
 		}
 	}
 	return nil
@@ -1325,6 +1268,7 @@ func verifyCLIContractSourceClassifications(content string, entries map[string]s
 		"/commands/*/inputContract/fields/availableInputs/item/ref":                    "runtime_field",
 		"/commands/*/inputContract/fields/knownChangedPaths":                           "runtime_field",
 		"/commands/*/inputContract/fields/observedReports/item/ref":                    "runtime_field",
+		"/commands/*/inputContract/childDefinitionBindings/*/definitionRef":            "schema_identifier",
 		"/commands/*/inputContract/nativeAdmissionWitnessSelector":                     "source_checkout_selector",
 		"/commands/*/inputContract/nativeAdmissionWitnessSelector/path":                "source_checkout",
 		"/commands/*/inputContract/nativeSource/path":                                  "source_checkout",
@@ -1341,8 +1285,10 @@ func verifyCLIContractSourceClassifications(content string, entries map[string]s
 		"/commands/*/outputContract/briefPacketContract/fieldRules/contextRefs":        "contract_field_description",
 		"/commands/*/outputContract/qualityFindingFields/evidenceRefs":                 "runtime_field",
 		"/commands/*/outputContract/records/dependencyRef":                             "runtime_field",
+		"/commands/*/outputContract/childDefinitionBindings/*/definitionRef":           "schema_identifier",
 		"/commands/*/outputContract/rootDefinitionRef":                                 "schema_identifier",
 		"/contractDefinitions/*/definitionRefs":                                        "schema_identifier",
+		"/contractDefinitions/*/fieldTree":                                             "structural_schema",
 	}); err != nil {
 		return err
 	}
@@ -1424,22 +1370,15 @@ func verifyCLIContractBoundaryPolicyClosure(content string, textEntries map[stri
 	}
 	requirementIDCounts := map[string]int{}
 	for entry, source := range textEntries {
-		if !strings.HasPrefix(entry, "package/docs/specs/") || !strings.HasSuffix(entry, "/requirements.v1.json") {
+		if !strings.HasPrefix(entry, "package/docs/specs/") || !strings.HasSuffix(entry, "/requirements.v2.json") {
 			continue
 		}
-		value, err := decodePackageJSONObject(source, entry)
+		admitted, err := admitPackagedRequirementSource(entry, source)
 		if err != nil {
 			return err
 		}
-		requirements, _ := value["requirements"].([]any)
-		for _, rawRequirement := range requirements {
-			requirement, ok := rawRequirement.(map[string]any)
-			if !ok {
-				return fmt.Errorf("package %s requirement must be an object", entry)
-			}
-			if requirementID, _ := requirement["requirementId"].(string); requirementID != "" {
-				requirementIDCounts[requirementID]++
-			}
+		for _, requirement := range admitted.Requirements() {
+			requirementIDCounts[requirement.RequirementID]++
 		}
 	}
 	commands, _ := contract["commands"].([]any)
@@ -1469,56 +1408,6 @@ func verifyCLIContractBoundaryPolicyClosure(content string, textEntries map[stri
 		return fmt.Errorf("package CLI contract must contain exactly one agent-route command")
 	}
 	return nil
-}
-
-func verifyClosedReferenceInventory(label string, value any, classifications map[string]string) error {
-	var walk func(any, []string) error
-	walk = func(current any, route []string) error {
-		switch typed := current.(type) {
-		case map[string]any:
-			keys := make([]string, 0, len(typed))
-			for key := range typed {
-				keys = append(keys, key)
-			}
-			sort.Strings(keys)
-			for _, key := range keys {
-				fieldRoute := append(append([]string{}, route...), key)
-				if referenceBearingField(key) {
-					pointer := "/" + strings.Join(fieldRoute, "/")
-					if _, admitted := classifications[pointer]; !admitted {
-						return fmt.Errorf("package %s contains unclassified reference-bearing field %s", label, pointer)
-					}
-				}
-				if err := walk(typed[key], fieldRoute); err != nil {
-					return err
-				}
-			}
-		case []any:
-			for _, item := range typed {
-				if err := walk(item, append(append([]string{}, route...), "*")); err != nil {
-					return err
-				}
-			}
-		}
-		return nil
-	}
-	return walk(value, nil)
-}
-
-func referenceBearingField(key string) bool {
-	if key == "helpCatalogFormsSource" {
-		return true
-	}
-	lower := strings.ToLower(key)
-	if lower == "cwd" {
-		return true
-	}
-	for _, suffix := range []string{"path", "paths", "ref", "refs", "selector", "selectors"} {
-		if strings.HasSuffix(lower, suffix) {
-			return true
-		}
-	}
-	return false
 }
 
 func requireSourceCheckoutReference(context, reference string) error {
@@ -2644,7 +2533,7 @@ func verifyInstalledJSONABI(consumer string) error {
 }
 
 func verifyInstalledAgentRouteEnvelopeModes(consumer string) error {
-	input := []byte(`{"schemaVersion":1,"routeId":"proofkit.package-smoke.agent-route","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/example/requirements.v1.json"}]}` + "\n")
+	input := []byte(`{"schemaVersion":1,"routeId":"proofkit.package-smoke.agent-route","goal":"validate_requirement_source","mode":"observe","availableInputs":[{"kind":"requirement_source","ref":"docs/specs/example/requirements.v2.json"}]}` + "\n")
 	bareBrief, err := runInstalledWithInput(consumer, input, "agent-route", "--input", "-", "--agent-envelope")
 	if err != nil {
 		return fmt.Errorf("outside consumer bare agent-route brief smoke failed to run: %w", err)

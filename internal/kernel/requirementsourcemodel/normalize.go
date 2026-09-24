@@ -7,83 +7,95 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
+// Normalize admits a detached model. Callers must not mutate draft's shared
+// slices or maps until this call returns.
 func Normalize(draft Draft) (Model, error) {
 	return NormalizeWithLimits(draft, DefaultLimits())
 }
 
+// NormalizeWithLimits uses the same borrowed-input contract as Normalize.
 func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
-	if err := ValidateLimits(limits); err != nil {
+	assessment, err := normalizeSource(draft, limits, false)
+	if err != nil {
 		return Model{}, err
 	}
+	return assessment.model, nil
+}
+
+func normalizeSource(draft Draft, limits Limits, collectPolicyFailures bool) (Assessment, error) {
+	if err := ValidateLimits(limits); err != nil {
+		return Assessment{}, err
+	}
 	if err := preflight(draft, limits); err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	snapshot := cloneDraft(draft)
 	if err := preflight(snapshot, limits); err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 
 	sourceID, err := canonicalExternalID(snapshot.SourceID, "sourceId")
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	specPackagePath, err := canonicalPath(snapshot.SpecPackagePath, "specPackagePath")
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	sourceNonClaimRefs, err := normalizeIDs(snapshot.SourceNonClaimRefs, "NCL-", "sourceNonClaimRefs", true)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	sourceNonClaims, err := normalizeTexts(snapshot.SourceNonClaims, "sourceNonClaims", true, false)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	if len(sourceNonClaims) == 0 && len(sourceNonClaimRefs) == 0 {
-		return Model{}, invalid("empty_source_nonclaims", "sourceNonClaims")
+		return Assessment{}, invalid("empty_source_nonclaims", "sourceNonClaims")
 	}
 
 	definitions, definitionIDs, err := normalizeDefinitions(snapshot.NonClaimDefinitions)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	vocabulary, vocabularyIDs, err := normalizeVocabulary(snapshot.Vocabulary)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	profiles, profilesByID, err := normalizeProfiles(snapshot.Profiles)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	groups, requirements, origins, profileUses, err := normalizeGroups(snapshot.Groups, profilesByID)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	if err := validateProfileUses(profiles, profileUses); err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	requirementsByID := make(map[string]AtomicRequirement, len(requirements))
 	for _, requirement := range requirements {
 		requirementsByID[requirement.RequirementID] = requirement
 	}
-	if err := validateRequirementLifecycles(requirements, requirementsByID); err != nil {
-		return Model{}, err
+	violations := requirementLifecycleViolations(requirements, requirementsByID)
+	if !collectPolicyFailures && len(violations) != 0 {
+		return Assessment{}, invalid(violations[0].Code, violations[0].Path)
 	}
 
 	scenarios, err := normalizeScenarios(snapshot.Scenarios, requirementsByID, vocabularyIDs)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	derivations, err := normalizeDerivations(snapshot.Derivations, requirementsByID)
 	if err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	edges := buildReferenceEdges(sourceID, sourceNonClaimRefs, groups, requirements, scenarios, derivations)
 	if err := validateReferenceClosure(definitionIDs, vocabularyIDs, edges); err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 	if err := validateNonClaimScopes(sourceNonClaims, sourceNonClaimRefs, definitions, requirements); err != nil {
-		return Model{}, err
+		return Assessment{}, err
 	}
 
 	atomic := AtomicProjection{
@@ -100,11 +112,15 @@ func NormalizeWithLimits(draft Draft, limits Limits) (Model, error) {
 	references := ReferenceProjection{SourceID: sourceID, Derivations: derivations, Edges: edges}
 	// Atomic and layout values belong to this detached snapshot; accessors copy
 	// them on exit. Reference cloning also trims its append-built edge storage.
-	return Model{
+	model := Model{
 		atomic:     atomic,
 		layout:     layout,
 		references: cloneReferenceProjection(references),
-	}, nil
+	}
+	if !collectPolicyFailures {
+		return Assessment{model: model, admitted: true}, nil
+	}
+	return sourceAssessment(model, violations), nil
 }
 
 func normalizeDefinitions(values []NonClaimDefinition) ([]NonClaimDefinition, map[string]struct{}, error) {

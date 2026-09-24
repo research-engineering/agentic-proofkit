@@ -52,7 +52,7 @@ func TestInspectClassifiesMaterializedProjectWithoutApplicationWrites(t *testing
 		t.Fatalf("Inspect() = %#v", status)
 	}
 
-	sourcePath := filepath.Join(root, "docs", "specs", "pilot", "requirements.v1.json")
+	sourcePath := filepath.Join(root, "docs", "specs", "pilot", "requirements.v2.json")
 	if err := os.WriteFile(sourcePath, []byte("{}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +217,7 @@ func TestInspectCohortValidationClosesCleanEpochABA(t *testing.T) {
 	if reads != 4 {
 		t.Fatalf("read count = %d, want two complete two-pass attempts", reads)
 	}
-	for _, changedPath := range []string{adoptionmaterialization.ProjectManifestPath, "docs/specs/pilot/requirements.v1.json"} {
+	for _, changedPath := range []string{adoptionmaterialization.ProjectManifestPath, "docs/specs/pilot/requirements.v2.json"} {
 		for _, changeDigest := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/digest-change=%t", changedPath, changeDigest), func(t *testing.T) {
 				root := t.TempDir()
@@ -629,25 +629,25 @@ func materializeTestProject(t *testing.T, root string) {
 	}
 	nonClaims := []any{"Pilot requirement fixture does not prove rollout."}
 	request := map[string]any{
-		"schemaVersion": json.Number("1"), "requestKind": adoptionmaterialization.RequestKind,
+		"schemaVersion": json.Number("2"), "requestKind": adoptionmaterialization.RequestKind,
 		"requestId": "pilot.materialization.request", "projectId": "pilot.project", "sourcePlan": sourcePlan.JSONValue(),
 		"requirementSources": []any{map[string]any{
-			"schemaVersion": json.Number("1"), "sourceId": "pilot.requirements", "specPackagePath": "docs/specs/pilot",
-			"overviewPath": "docs/specs/pilot/overview.md", "requirementsPath": "docs/specs/pilot/requirements.v1.json",
-			"nonClaims": []any{"Pilot source fixture does not prove production readiness."},
-			"requirements": []any{map[string]any{
-				"claimLevel": "blocking", "deferral": nil, "invariant": "Pilot materialization preserves admitted requirement meaning.",
-				"lifecycle":    map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
-				"nonClaimRefs": []any{}, "nonClaims": nonClaims, "ownerId": "pilot.owner",
-				"proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "requirementId": "REQ-PILOT-001", "riskClass": "high",
-				"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "pilot.owner"},
-			}},
+			"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"), "sourceId": "pilot.requirements", "specPackagePath": "docs/specs/pilot",
+			"sourceNonClaims": []any{"Pilot source fixture does not prove production readiness."},
+			"groups": []any{map[string]any{"groupId": "RGRP-PILOT", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+				"members": []any{map[string]any{"requirementId": "REQ-PILOT-001", "statementCompletion": "Pilot materialization preserves admitted requirement meaning.", "fields": map[string]any{
+					"claimLevel": "blocking", "deferral": nil,
+					"lifecycle":    map[string]any{"evidenceRefs": []any{}, "replacementRequirementIds": []any{}, "state": "active"},
+					"nonClaimRefs": []any{}, "externalNonClaimRefs": []any{}, "nonClaims": nonClaims, "ownerId": "pilot.owner",
+					"proofBindingRefs": []any{"proofkit/requirement-bindings.json"}, "riskClass": "high",
+					"updatePolicy": map[string]any{"requiresImpactDeclaration": true, "requiresProofBindingReview": true, "reviewOwnerId": "pilot.owner"},
+				}}}}},
 		}},
 		"requirementProofBinding": map[string]any{
 			"path": "proofkit/requirement-bindings.json",
 			"record": map[string]any{
 				"schemaVersion": json.Number("1"), "bindingId": "pilot.bindings",
-				"requirements":    []any{map[string]any{"claimLevel": "blocking", "nonClaims": nonClaims, "ownerId": "pilot.owner", "proofState": "witness_backed", "requirementId": "REQ-PILOT-001", "specPath": "docs/specs/pilot/requirements.v1.json"}},
+				"requirements":    []any{map[string]any{"claimLevel": "blocking", "nonClaims": nonClaims, "ownerId": "pilot.owner", "proofState": "witness_backed", "requirementId": "REQ-PILOT-001", "specPath": "docs/specs/pilot/requirements.v2.json"}},
 				"bindings":        []any{map[string]any{"commandIds": []any{"pilot.command.test"}, "environmentClasses": []any{"local-go"}, "requirementId": "REQ-PILOT-001", "scenarioId": "pilot.scenario.materialization", "witnessId": "pilot.witness.materialization", "witnessKind": "contract", "witnessPath": "internal/pilot/materialization_test.go"}},
 				"witnessCommands": []any{map[string]any{"command": "go test ./internal/pilot", "commandId": "pilot.command.test", "environmentClasses": []any{"local-go"}}},
 				"selection":       map[string]any{"changedPaths": []any{}, "ownerIds": []any{}, "requirementIds": []any{}},

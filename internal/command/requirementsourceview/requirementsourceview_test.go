@@ -10,8 +10,8 @@ import (
 
 func TestHTMLModesShareCompleteRequirementSearch(t *testing.T) {
 	input := validRequirementSource()
-	requirement := input["requirements"].([]any)[0].(map[string]any)
-	requirement["nonClaimRefs"] = []any{"NC-RENDERING-001"}
+	requirement := viewTestFields(input)
+	requirement["externalNonClaimRefs"] = []any{"NC-RENDERING-001"}
 	requirement["lifecycle"].(map[string]any)["evidenceRefs"] = []any{"review.rendering"}
 	output, code, err := BuildHTML(input)
 	if err != nil || code != 0 {
@@ -36,15 +36,16 @@ func TestHTMLModesShareCompleteRequirementSearch(t *testing.T) {
 
 func TestHTMLModesSearchReplacementReferences(t *testing.T) {
 	input := validRequirementSource()
-	requirement := input["requirements"].([]any)[0].(map[string]any)
-	replacement := validRequirementSource()["requirements"].([]any)[0].(map[string]any)
+	requirement := viewTestFields(input)
+	replacement := viewTestMember(validRequirementSource())
 	replacement["requirementId"] = "REQ-PROOFKIT-VIEW-002"
 	requirement["claimLevel"] = "advisory"
 	requirement["lifecycle"] = map[string]any{
 		"state": "superseded", "evidenceRefs": []any{"review.replacement"},
 		"replacementRequirementIds": []any{"REQ-PROOFKIT-VIEW-002"},
 	}
-	input["requirements"] = append(input["requirements"].([]any), replacement)
+	group := input["groups"].([]any)[0].(map[string]any)
+	group["members"] = append(group["members"].([]any), replacement)
 	output, code, err := BuildHTML(input)
 	if err != nil || code != 0 {
 		t.Fatalf("BuildHTML() code=%d error=%v", code, err)
@@ -67,10 +68,8 @@ func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.115603095301227499403457054570913397276777831949518460396011319173029743458113")
 	input := validRequirementSource()
 	input["specPackagePath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`"
-	input["overviewPath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`/overview.md"
-	input["requirementsPath"] = "docs/specs/proofkit-`<img src=x onerror=alert(1)>`/requirements.v1.json"
-	requirement := input["requirements"].([]any)[0].(map[string]any)
-	requirement["invariant"] = "Renderer must not emit <img src=x onerror=alert(1)> as raw Markdown HTML.\n# forged heading\n![x](https://example.test/x)\n| a | b |"
+	requirement := viewTestFields(input)
+	viewTestMember(input)["statementCompletion"] = "Renderer must not emit <img src=x onerror=alert(1)> as raw Markdown HTML.\n# forged heading\n![x](https://example.test/x)\n| a | b |"
 	requirement["nonClaims"] = []any{"Non-claim contains <script>alert(1)</script> and must be escaped."}
 	requirement["proofBindingRefs"] = []any{"docs/contracts/`<img src=x onerror=alert(1)>`.json"}
 
@@ -101,7 +100,7 @@ func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
 	for _, want := range []string{
 		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;```",
 		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;`/overview.md``",
-		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;`/requirements.v1.json``",
+		"``docs/specs/proofkit-`&lt;img src=x onerror=alert(1)&gt;`/requirements.v2.json``",
 	} {
 		if !strings.Contains(output, want) {
 			t.Fatalf("Markdown output did not safely render caller-controlled path %q: %s", want, output)
@@ -111,36 +110,49 @@ func TestBuildMarkdownEscapesCallerControlledText(t *testing.T) {
 
 func validRequirementSource() map[string]any {
 	return map[string]any{
-		"schemaVersion":    json.Number("1"),
-		"sourceId":         "proofkit.test.requirements",
-		"specPackagePath":  "docs/specs/proofkit-test",
-		"overviewPath":     "docs/specs/proofkit-test/overview.md",
-		"requirementsPath": "docs/specs/proofkit-test/requirements.v1.json",
-		"nonClaims":        []any{"Requirement source view test input does not claim merge readiness."},
-		"requirements": []any{
-			map[string]any{
-				"claimLevel": "blocking",
-				"deferral":   nil,
-				"invariant":  "Renderer must preserve caller-controlled text safely.",
-				"lifecycle": map[string]any{
-					"evidenceRefs":              []any{},
-					"replacementRequirementIds": []any{},
-					"state":                     "active",
-				},
-				"nonClaimRefs": []any{},
-				"nonClaims":    []any{"This test requirement does not execute native witnesses."},
-				"ownerId":      "proofkit.test",
-				"proofBindingRefs": []any{
-					"docs/contracts/requirement-proof-binding-sources.v1.json",
-				},
-				"requirementId": "REQ-PROOFKIT-VIEW-001",
-				"riskClass":     "medium",
-				"updatePolicy": map[string]any{
-					"requiresImpactDeclaration":  true,
-					"requiresProofBindingReview": true,
-					"reviewOwnerId":              "proofkit.test",
+		"schemaVersion":   json.Number("2"),
+		"kind":            "proofkit.requirement-source",
+		"sourceId":        "proofkit.test.requirements",
+		"specPackagePath": "docs/specs/proofkit-test",
+		"sourceNonClaims": []any{"Requirement source view test input does not claim merge readiness."},
+		"groups": []any{map[string]any{
+			"groupId": "RGRP-VIEW", "profileId": "", "statementStem": "", "sharedPremises": []any{},
+			"members": []any{
+				map[string]any{
+					"requirementId":       "REQ-PROOFKIT-VIEW-001",
+					"statementCompletion": "Renderer must preserve caller-controlled text safely.",
+					"fields": map[string]any{
+						"claimLevel": "blocking",
+						"deferral":   nil,
+						"lifecycle": map[string]any{
+							"evidenceRefs":              []any{},
+							"replacementRequirementIds": []any{},
+							"state":                     "active",
+						},
+						"nonClaimRefs":         []any{},
+						"externalNonClaimRefs": []any{},
+						"nonClaims":            []any{"This test requirement does not execute native witnesses."},
+						"ownerId":              "proofkit.test",
+						"proofBindingRefs": []any{
+							"docs/contracts/requirement-proof-binding-sources.v1.json",
+						},
+						"riskClass": "medium",
+						"updatePolicy": map[string]any{
+							"requiresImpactDeclaration":  true,
+							"requiresProofBindingReview": true,
+							"reviewOwnerId":              "proofkit.test",
+						},
+					},
 				},
 			},
-		},
+		}},
 	}
+}
+
+func viewTestMember(input map[string]any) map[string]any {
+	return input["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)
+}
+
+func viewTestFields(input map[string]any) map[string]any {
+	return viewTestMember(input)["fields"].(map[string]any)
 }

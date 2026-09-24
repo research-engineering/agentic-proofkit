@@ -95,6 +95,9 @@ func AdmitEvidencePlan(raw any) (EvidencePlanProjection, error) {
 	if err != nil {
 		return EvidencePlanProjection{}, err
 	}
+	if err := validateOutputRelations(state, failures, commands, scanObligation, fallbackCoverage, unknownEdges); err != nil {
+		return EvidencePlanProjection{}, err
+	}
 	normalized := map[string]any{}
 	for key, value := range record {
 		normalized[key] = value

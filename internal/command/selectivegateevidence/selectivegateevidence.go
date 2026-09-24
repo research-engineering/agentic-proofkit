@@ -55,6 +55,7 @@ type Result struct {
 	DuplicateReceipts         []commandKey
 	ProducerAdmissionFailures []string
 	ExitCode                  int
+	producerReceipts          []receiptproduceradmission.ReceiptProjection
 }
 
 func Build(raw any) (Result, error) {
@@ -183,6 +184,7 @@ func buildEvidence(input evidenceInput) (Result, error) {
 	producerFailures := []string{}
 	producerState := "not_provided"
 	producerReceiptCount := 0
+	var producerReceipts []receiptproduceradmission.ReceiptProjection
 	if input.ProducerAdmissionRaw != nil {
 		projection, record, _, err := receiptproduceradmission.Evaluate(input.ProducerAdmissionRaw)
 		if err != nil {
@@ -193,6 +195,7 @@ func buildEvidence(input evidenceInput) (Result, error) {
 			producerReceiptCount = value
 		}
 		producerFailures = validateProducerAdmission(input.Receipts, expected, record, projection)
+		producerReceipts = projection.Receipts
 	}
 	if input.EvidenceClass == "merge_satisfying" && input.ProducerAdmissionRaw == nil {
 		producerFailures = append(producerFailures, "merge_satisfying evidence requires producerAdmission")
@@ -272,7 +275,7 @@ func buildEvidence(input evidenceInput) (Result, error) {
 	if state == "passed" {
 		exitCode = 0
 	}
-	return Result{Report: record, PlanHash: planHash, MissingReceipts: missing, FailedReceipts: failed, BlockedReceipts: blocked, NotRunReceipts: notRun, UnexpectedReceipts: unexpected, DuplicateReceipts: duplicates, ProducerAdmissionFailures: producerFailures, ExitCode: exitCode}, nil
+	return Result{Report: record, PlanHash: planHash, MissingReceipts: missing, FailedReceipts: failed, BlockedReceipts: blocked, NotRunReceipts: notRun, UnexpectedReceipts: unexpected, DuplicateReceipts: duplicates, ProducerAdmissionFailures: producerFailures, ExitCode: exitCode, producerReceipts: producerReceipts}, nil
 }
 
 func mergeEvidenceSummary(evidenceClass string, producerState string, producerProvided bool, producerFailuresAbsent bool) map[string]any {

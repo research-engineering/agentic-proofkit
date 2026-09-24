@@ -573,7 +573,7 @@ func printMetricsSummary(out metrics) {
 }
 
 func readRequirements() ([]requirementRecord, error) {
-	paths, err := filepath.Glob("docs/specs/*/requirements.v1.json")
+	paths, err := filepath.Glob("docs/specs/*/requirements.v2.json")
 	if err != nil {
 		return nil, err
 	}
@@ -594,10 +594,10 @@ func readRequirements() ([]requirementRecord, error) {
 		if result.ExitCode != 0 {
 			return nil, fmt.Errorf("%s requirement source admission failed: %v", path, result.Failures)
 		}
-		if filepath.ToSlash(path) != result.Source.RequirementsPath {
+		if filepath.ToSlash(path) != result.Source.RequirementsPath() {
 			return nil, fmt.Errorf("%s requirement source requirementsPath must match the source file path", path)
 		}
-		for _, requirement := range result.Source.Requirements {
+		for _, requirement := range result.Source.Requirements() {
 			out = append(out, requirementRecord{
 				ClaimLevel:    requirement.ClaimLevel,
 				Lifecycle:     lifecycle{State: requirement.Lifecycle.State},
@@ -769,7 +769,7 @@ func requireNoLinkageDeadZones(metrics deadZoneMetrics) error {
 }
 
 func requirementSourceCount() int {
-	paths, err := filepath.Glob("docs/specs/*/requirements.v1.json")
+	paths, err := filepath.Glob("docs/specs/*/requirements.v2.json")
 	if err != nil {
 		return 0
 	}

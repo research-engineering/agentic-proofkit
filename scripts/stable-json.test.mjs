@@ -130,6 +130,66 @@ test("diagnostic whole-value redaction", () => {
   assert.equal(redactDiagnosticValue("safe diagnostic"), "safe diagnostic");
   assert.equal(redactDiagnosticValue("x".repeat(520)), "x".repeat(512) + "...<truncated-diagnostic>");
   assert.equal(redactDiagnosticValue("\ud800"), fixed);
+  for (const key of ['"password"', '\\"password\\"', "'api_key'"]) {
+    assert.equal(redactDiagnosticValue(`input rejected: {${key}:"synthetic-fixture-value"}`), fixed);
+  }
+  for (const count of [2, 3]) {
+    const key = `password${"\\".repeat(count)}"`;
+    assert.equal(redactDiagnosticValue(`input rejected: {${key}:"synthetic-fixture-value"}`), fixed);
+    const authorization = `authorization${"\\".repeat(count)}"`;
+    assert.equal(redactDiagnosticValue(`input rejected: {${authorization}:"Basic synthetic-fixture-value"}`), fixed);
+  }
+  for (const separator of ["\n", "\t", "\r", "\u000b"]) {
+    let serialized = `{"password"${separator}:"synthetic-fixture-value"}`;
+    for (let depth = 1; depth <= 3; depth++) {
+      serialized = JSON.stringify(serialized);
+      assert.equal(redactDiagnosticValue(serialized), fixed, `serialized whitespace depth ${depth}`);
+    }
+  }
+  for (const separator of ["\t", "\n", "\r", "\u000b", "\u200b"]) {
+    let serialized = `api_${separator}key=synthetic-fixture-value`;
+    assert.equal(redactDiagnosticValue(serialized), fixed);
+    for (let depth = 1; depth <= 4; depth++) {
+      serialized = JSON.stringify(serialized);
+      assert.equal(redactDiagnosticValue(serialized), fixed, `control split depth ${depth}`);
+    }
+  }
+  let escapedUnicodeSpace = String.raw`\"Authorization\"\u202f:"Basic synthetic-fixture-value"`;
+  for (let depth = 0; depth <= 3; depth++) {
+    assert.equal(redactDiagnosticValue(escapedUnicodeSpace), fixed, `escaped Unicode space depth ${depth}`);
+    escapedUnicodeSpace = JSON.stringify(escapedUnicodeSpace);
+  }
+  for (const initial of [
+    String.raw`{"passw\u006frd":"synthetic-fixture-value"}`,
+    String.raw`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
+    String.raw`{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`,
+    String.raw`api_\uDB40\uDC01key=synthetic-fixture-value`,
+    String.raw`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
+    String.raw`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
+  ]) {
+    let serialized = initial;
+    for (let depth = 0; depth <= 4; depth++) {
+      assert.equal(redactDiagnosticValue(serialized), fixed, `Unicode escape depth ${depth}`);
+      serialized = JSON.stringify(serialized);
+    }
+  }
+  let nested = JSON.stringify(String.raw`{"passw\u006frd":"synthetic-fixture-value"}`).replace("u006f", String.raw`\u0075006f`);
+  for (let depth = 0; depth <= 4; depth++) {
+    assert.equal(redactDiagnosticValue(nested), fixed, `nested JSON slash parity depth ${depth}`);
+    nested = JSON.stringify(nested);
+  }
+  const started = performance.now();
+  assert.equal(redactDiagnosticValue("\\".repeat(65536)), "\\".repeat(512) + "...<truncated-diagnostic>");
+  assert(performance.now() - started < 2000, "diagnostic escaping must stay linear in slash-run length");
+  const beyondBudget = String.raw`passw\u005c` + "u005c".repeat(17) + "u006frd=synthetic-fixture-value";
+  assert.equal(redactDiagnosticValue(beyondBudget), fixed);
+  const regexStarted = performance.now();
+  assert.equal(redactDiagnosticValue("a".repeat(8192) + beyondBudget), fixed);
+  assert(performance.now() - regexStarted < 2000, "repeated decoding must not amplify URL matching cost");
+  const guardedURLStart = performance.now();
+  assert.equal(redactDiagnosticValue("a".repeat(8192) + "://safe " + beyondBudget), fixed);
+  assert(performance.now() - guardedURLStart < 2000, "URL candidate scanning must remain bounded across decode passes");
+  assert.equal(redactDiagnosticValue("123https://user:password@example.test"), fixed);
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

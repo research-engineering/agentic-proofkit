@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path"
 	"sort"
-	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -131,6 +132,9 @@ func AdmitManifest(raw any) (Manifest, error) {
 	if err != nil || !bytes.Equal(actual, expected) {
 		return Manifest{}, fmt.Errorf("project routing manifest is not canonical")
 	}
+	if err := manifestShape.CheckGenerated(manifest.JSONValue(), "project routing manifest"); err != nil {
+		return Manifest{}, err
+	}
 	return manifest, nil
 }
 
@@ -176,7 +180,7 @@ func admitRoutes(raw any) ([]Route, error) {
 		}
 		artifactIDs[artifactID] = struct{}{}
 		kindCounts[kind]++
-		if kind == ArtifactRequirementSource && !strings.HasSuffix(targetPath, "/requirements.v1.json") {
+		if kind == ArtifactRequirementSource && targetPath != requirementsourceadmission.RequirementsPath(path.Dir(targetPath)) {
 			return nil, fmt.Errorf("project routing manifest requirement-source path is outside the producer language")
 		}
 		role := roleRequirementSource

@@ -50,8 +50,8 @@ func TestProjectContextCaptureWireAdmissionAndSlice(t *testing.T) {
 	for _, test := range []struct {
 		id, text, pointer, path string
 	}{
-		{"REQ-WIRE-001", "Collection \U0001f9ed A preserves its explicit invariant.", "/projections/requirementSources/1/requirements/0/invariant", "docs/specs/a/requirements.v1.json"},
-		{"REQ-WIRE-002", "Collection E\u0301 Z preserves its explicit invariant.", "/projections/requirementSources/0/requirements/0/invariant", "docs/specs/z/requirements.v1.json"},
+		{"REQ-WIRE-001", "Collection \U0001f9ed A preserves its explicit invariant.", "/projections/requirementSources/1/groups/0/members/0/statementCompletion", "docs/specs/a/requirements.v2.json"},
+		{"REQ-WIRE-002", "Collection E\u0301 Z preserves its explicit invariant.", "/projections/requirementSources/0/groups/0/members/0/statementCompletion", "docs/specs/z/requirements.v2.json"},
 	} {
 		t.Run(test.id, func(t *testing.T) {
 			pointer, err := jsonpointer.Parse(test.pointer)
@@ -72,14 +72,29 @@ func TestProjectContextCaptureWireAdmissionAndSlice(t *testing.T) {
 			}
 			fragment := fragments[0].(map[string]any)
 			original := predecessorRecord(t, fixture.files[test.path])
-			if !reflect.DeepEqual(fragment["nonClaims"], original["nonClaims"]) {
+			if !reflect.DeepEqual(fragment["nonClaims"], original["sourceNonClaims"]) {
 				t.Fatal("source-level restrictions were lost or taken from a different source")
 			}
 			requirements := fragment["requirements"].([]any)
-			if len(requirements) != 1 || !reflect.DeepEqual(requirements[0], original["requirements"].([]any)[0]) {
+			members := original["groups"].([]any)[0].(map[string]any)["members"].([]any)
+			if len(requirements) != 1 {
 				t.Fatal("selected invariant or its separate metadata was lost")
 			}
-			if fragment["omittedRequirementCount"] != len(original["requirements"].([]any))-1 {
+			projected := requirements[0].(map[string]any)
+			reviewDigest, ok := projected["sourceReviewDigest"].(string)
+			if !ok || !strings.HasPrefix(reviewDigest, "sha256:") || len(reviewDigest) != len("sha256:")+64 {
+				t.Fatal("selected invariant lost its source-bound review digest")
+			}
+			withoutDigest := make(map[string]any, len(projected)-1)
+			for key, value := range projected {
+				if key != "sourceReviewDigest" {
+					withoutDigest[key] = value
+				}
+			}
+			if !reflect.DeepEqual(withoutDigest, expectedProjectRequirement(members[0].(map[string]any))) {
+				t.Fatal("selected invariant or its separate metadata was lost")
+			}
+			if fragment["omittedRequirementCount"] != len(members)-1 {
 				t.Fatal("source omissions differ from the original source")
 			}
 			matched := 0
@@ -117,7 +132,7 @@ func TestProjectContextRejectsInvalidOriginAndSourcePartition(t *testing.T) {
 	base := expectedProjectContext(t, newProjectContextFixture(t))
 	for name, mutate := range map[string]func(map[string]any){
 		"old version":                   func(v map[string]any) { v["schemaVersion"] = json.Number("2") },
-		"future version":                func(v map[string]any) { v["schemaVersion"] = json.Number("4") },
+		"future version":                func(v map[string]any) { v["schemaVersion"] = json.Number("5") },
 		"wrong kind":                    func(v map[string]any) { v["contextKind"] = "different.context" },
 		"missing origin":                func(v map[string]any) { delete(v, "projectOrigin") },
 		"missing inventory":             func(v map[string]any) { delete(v["projectOrigin"].(map[string]any), "testEvidenceInventory") },
@@ -196,9 +211,22 @@ func TestProjectContextRejectsZeroProjectAndOversizeBeforeReplay(t *testing.T) {
 		}
 	}
 	base := expectedProjectContext(t, newProjectContextFixture(t))
-	base["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["requirements"].([]any)[0].(map[string]any)["invariant"] = strings.Repeat("a", maxSnapshotBytes)
+	base["projections"].(map[string]any)["requirementSources"].([]any)[0].(map[string]any)["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)["statementCompletion"] = strings.Repeat("a", maxSnapshotBytes)
 	if _, err := AdmitSnapshot(base); err == nil || !strings.Contains(err.Error(), "byte boundary") {
 		t.Fatalf("oversize input reached child replay: %v", err)
+	}
+}
+
+// The fixture has no shared profile, premise, or named denial. Expected atomic
+// values are authored here independently of the production source projector.
+func expectedProjectRequirement(member map[string]any) map[string]any {
+	fields := member["fields"].(map[string]any)
+	return map[string]any{
+		"requirementId": member["requirementId"], "invariant": member["statementCompletion"], "sharedPremises": []any{},
+		"ownerId": fields["ownerId"], "claimLevel": fields["claimLevel"], "riskClass": fields["riskClass"],
+		"proofBindingRefs": fields["proofBindingRefs"], "nonClaimRefs": []any{}, "externalNonClaimRefs": fields["externalNonClaimRefs"],
+		"nonClaims": fields["nonClaims"], "updatePolicy": fields["updatePolicy"],
+		"lifecycle": map[string]any{"state": "active", "replacementRequirementIds": []any{}, "evidenceRefs": []any{}},
 	}
 }
 
@@ -225,8 +253,8 @@ func expectedProjectContext(t *testing.T, fixture projectContextFixture) map[str
 	for _, row := range []struct{ kind, id, path string }{
 		{"project_manifest", "shared.identity", adoptionmaterialization.ProjectManifestPath},
 		{"proof_binding", "shared.identity", "proofkit/bindings.json"},
-		{"requirement_source", "shared.identity", "docs/specs/z/requirements.v1.json"},
-		{"requirement_source", "zeta.source", "docs/specs/a/requirements.v1.json"},
+		{"requirement_source", "shared.identity", "docs/specs/z/requirements.v2.json"},
+		{"requirement_source", "zeta.source", "docs/specs/a/requirements.v2.json"},
 		{"test_inventory", "shared.identity", "proofkit/tests.json"},
 	} {
 		value := map[string]any{"kind": row.kind, "sourceRef": row.id, "path": row.path, "currentDigest": projectTestDigest(fixture.files[row.path])}
@@ -243,7 +271,7 @@ func expectedProjectContext(t *testing.T, fixture projectContextFixture) map[str
 		t.Fatal(err)
 	}
 	result := map[string]any{
-		"schemaVersion": json.Number("3"), "contextKind": "proofkit.requirement-context", "catalogId": "shared.identity",
+		"schemaVersion": json.Number("4"), "contextKind": "proofkit.requirement-context", "catalogId": "shared.identity",
 		"expectedDigestCoverage": "partial", "nonClaims": predecessorRecord(t, old)["nonClaims"],
 		"projectOrigin": map[string]any{"manifest": fixture.original["manifest"], "testEvidenceInventory": fixture.original["testEvidenceInventory"]},
 		"projections":   projections, "sources": physical,
@@ -270,7 +298,7 @@ func resignProjectContext(t *testing.T, record map[string]any) {
 		return a["sourceRef"].(string) < b["sourceRef"].(string)
 	})
 	record["snapshotId"] = projectTestDigest(projectTestJSON(t, map[string]any{
-		"schemaVersion": json.Number("3"), "catalogId": record["catalogId"], "projectOrigin": record["projectOrigin"],
+		"schemaVersion": json.Number("4"), "catalogId": record["catalogId"], "projectOrigin": record["projectOrigin"],
 		"projections": record["projections"], "sources": sources,
 	}))
 }

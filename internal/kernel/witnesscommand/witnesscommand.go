@@ -238,13 +238,11 @@ func AdmitWithVocabulary(raw any, vocabulary Vocabulary) (Command, error) {
 }
 
 func AdmitVocabulary(raw any) (Vocabulary, error) {
-	record, ok := raw.(map[string]any)
-	if !ok {
-		return Vocabulary{}, fmt.Errorf("witness vocabulary must be an object")
-	}
-	if err := admit.KnownKeys(record, []string{"artifactKinds", "credentialClasses", "environmentClasses", "environmentClassPolicies", "maxTimeoutMs", "nonCacheableCredentialClasses", "parallelGroups"}, "witness vocabulary"); err != nil {
-		return Vocabulary{}, err
-	}
+	vocabulary, _, err := AdmitVocabularySnapshot(raw)
+	return vocabulary, err
+}
+
+func admitVocabulary(record map[string]any) (Vocabulary, error) {
 	credentialClasses, err := sortedUniqueStringArray(record["credentialClasses"], "witness vocabulary credentialClasses", true)
 	if err != nil {
 		return Vocabulary{}, err
@@ -322,19 +320,10 @@ func environmentClassPolicies(raw any, environmentClasses []string, credentialCl
 	if raw == nil {
 		return []EnvironmentClassPolicy{}, nil
 	}
-	values, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("witness vocabulary environmentClassPolicies must be an array")
-	}
+	values := raw.([]any)
 	policies := make([]EnvironmentClassPolicy, 0, len(values))
 	for index, value := range values {
-		record, ok := value.(map[string]any)
-		if !ok {
-			return nil, fmt.Errorf("witness vocabulary environmentClassPolicies[%d] must be an object", index)
-		}
-		if err := admit.KnownKeys(record, []string{"cachePolicies", "credentialClasses", "environmentClass", "networkPolicies"}, fmt.Sprintf("witness vocabulary environmentClassPolicies[%d]", index)); err != nil {
-			return nil, err
-		}
+		record := value.(map[string]any)
 		environmentClass, err := vocabularyValue(record["environmentClass"], environmentClasses, fmt.Sprintf("witness vocabulary environmentClassPolicies[%d].environmentClass", index))
 		if err != nil {
 			return nil, err

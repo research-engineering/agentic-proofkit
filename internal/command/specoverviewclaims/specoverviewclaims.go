@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"sort"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
@@ -250,8 +251,8 @@ func boundaryFailures(input boundary) []string {
 	if input.OverviewPath != input.SpecPackagePath+"/overview.md" {
 		failures = append(failures, "overviewPath must equal specPackagePath/overview.md")
 	}
-	if input.RequirementsPath != input.SpecPackagePath+"/requirements.v1.json" {
-		failures = append(failures, "requirementsPath must equal specPackagePath/requirements.v1.json")
+	if input.RequirementsPath != requirementsourceadmission.RequirementsPath(input.SpecPackagePath) {
+		failures = append(failures, "requirementsPath must equal specPackagePath/requirements.v2.json")
 	}
 	return failures
 }

@@ -138,7 +138,7 @@ Pre-spec trust modes:
 
 | Trust mode | Use case | Proofkit role | Required next owner step |
 |---|---|---|---|
-| `code_baseline` | no specs exist and maintainers intentionally freeze current behavior | admit caller-owned capability observations and emit bounded candidate requirement/proof-binding seeds only when scenarios have candidate ids and executable anchors | review seeds, materialize accepted `requirements.v1.json` and proof bindings, then run source, binding, inventory, and coverage gates |
+| `code_baseline` | no specs exist and maintainers intentionally freeze current behavior | admit caller-owned capability observations and emit bounded candidate requirement/proof-binding seeds only when scenarios have candidate ids and executable anchors | review seeds, materialize accepted `requirements.v2.json` and proof bindings, then run source, binding, inventory, and coverage gates |
 | `audit_from_code` | no specs exist and maintainers do not trust current behavior | admit caller-owned observations as hypotheses, keep missing anchors as owner actions, and emit questions without failing solely on missing anchors | answer owner questions, add falsification witnesses, then materialize only accepted requirements |
 
 `capability-map-admission` owns this pre-spec transition artifact. It does not
@@ -146,7 +146,7 @@ replace `requirement-authoring-plan`: capability maps produce seeds from
 observed capabilities, while authoring plans compose owner-reviewed candidate
 updates into a non-authoritative requirement-source preview and transition
 check. Durable truth still starts only after the consumer commits and admits
-`requirements.v1.json`.
+`requirements.v2.json`.
 
 Before authoring a capability map, run `agentic-proofkit capability-map-admission --help`.
 The same command in npm and Python installations provides complete synthetic
@@ -289,21 +289,22 @@ Removing a file does not revoke instructions already loaded into host context.
 ## Requirement, Contract, And Test Order
 
 The durable semantic source is the repository-owned requirement package:
-human context in `overview.md` plus machine-admissible `requirements.v1.json`
+human context in `overview.md` plus machine-admissible `requirements.v2.json`
 records. The overview explains context; it does not create uncited durable
 truth.
 
-The public source contract still requires `schemaVersion: 1` and the matching
-`specPackagePath/overview.md` and `specPackagePath/requirements.v1.json` paths.
-The internal grouped v2 model and codec are not an alternative public reader.
-Changing a version number or filename does not migrate a source or its bindings.
+The public source contract requires `schemaVersion: 2`, grouped requirement
+records, and the matching `specPackagePath/overview.md` and
+`specPackagePath/requirements.v2.json` paths. The former flat v1 source is not
+an active public reader. Changing a version number or filename alone does not
+migrate a source, its references, or its proof bindings.
 
 Canonical field correspondence and accepted input domains are separate checks.
-The current public byte limit does not imply that a source fits the private
-model's member and expanded-projection budgets. A future source transition must
-declare its versioned limits and qualify every affected consumer; it must not
-silently narrow current admission or infer scenario bodies from binding IDs.
-Keep the public v1 source active until that transition is explicitly admitted.
+The v2 source and its expanded projections each have explicit resource bounds.
+Admission of source bytes does not imply that every derived view or browser
+response fits its own bound. A consumer migration must check those limits and
+all affected commands; binding IDs alone do not supply scenario bodies or
+native test results.
 
 Proof bindings are verification-route contracts. They answer which scenario,
 witness, command, environment class, and receipt policy can falsify or support
@@ -441,7 +442,7 @@ document layer:
 | Candidate | Appropriate boundary | Cost or limitation to review |
 |---|---|---|
 | Separate scenario document | Independently meaningful portable conditions or examples with their own review lifecycle. | Another normative artifact, reference closure and freshness policy; do not repeat the same promise. |
-| Scenarios inside the specification | Portable scenario meaning owned with the requirement. | Public source v1 has no typed scenario-body field; do not add unadmitted keys or describe a private candidate as public. |
+| Scenarios inside the specification | Portable scenario meaning owned with the requirement. | Public grouped source v2 admits typed scenario bodies and requirement membership; a reference-only binding without a source body does not gain portable behavior, execution, or assertion authority. |
 | Structured native declarations | Stable references, parameter instances and executable expected observations near the native check. | Derive the inventory and require review when assertions or qualified links change; native expectations cannot silently redefine intent. |
 | Test-adjacent annotations | References attached to a framework-owned test declaration. | Parse the actual native declaration association; comments alone do not prove discovery, execution or assertion quality. |
 
