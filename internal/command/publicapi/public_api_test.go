@@ -670,6 +670,7 @@ func TestCollectExportsSeparatesSemicolonlessLocalDeclarations(t *testing.T) {
 		"export const A = 1\ndeclare const B: number, C: number;",
 		"export const A = 1\nusing B = null, C = null;",
 		"function local() {}\nlet C = 0;\nexport const A = 1\nlocal(), C = 3;",
+		"let C = 0;\nexport const A = 1\n'lit'.trim(), C = 3;",
 	} {
 		runtimeExports, typeExports, err := CollectExports(source)
 		if err != nil {
@@ -694,6 +695,11 @@ func TestCollectExportsPreservesSemicolonlessExpressionContinuation(t *testing.T
 		{source: "export const A =\nfunction() {};", want: []string{"A"}},
 		{source: "export const A = 1 as\nconst, B = 2;", want: []string{"A", "B"}},
 		{source: "export const A = n++\nconst B = 2, C = 3;", want: []string{"A"}},
+		{source: "function tag(strings) { return strings[0]; }\nexport const A = tag\n`lit`, B = 2;", want: []string{"A", "B"}},
+		{source: "export const\nA = 1, B = 2;", want: []string{"A", "B"}},
+		{source: "export function\nA() { return 1; }", want: []string{"A"}},
+		{source: "export const A = function\nnamed() {}, B = 2;", want: []string{"A", "B"}},
+		{source: "export const A = class\nNamed {}, B = 2;", want: []string{"A", "B"}},
 	} {
 		runtimeExports, _, err := CollectExports(item.source)
 		if err != nil {
@@ -720,6 +726,7 @@ func TestVerifyTypeScriptPublicAPIRejectsExportsFromFollowingLocalDeclaration(t 
 		{name: "declare", source: "export const A = 1\ndeclare const B: number, C: number;"},
 		{name: "using", source: "export const A = 1\nusing B = null, C = null;"},
 		{name: "expression", source: "function local() {}\nlet C = 0;\nexport const A = 1\nlocal(), C = 3;"},
+		{name: "string expression", source: "let C = 0;\nexport const A = 1\n'lit'.trim(), C = 3;"},
 	} {
 		t.Run(item.name, func(t *testing.T) {
 			repoRoot := writeTypeScriptPackageFixture(t)
@@ -803,6 +810,12 @@ func TestTypeScriptCompilerOracleForSemicolonlessBoundaries(t *testing.T) {
 		{name: "as const continuation", source: "export const A = 1 as\nconst, B = 2;"},
 		{name: "postfix increment boundary", source: "let n = 1;\nexport const A = n++\nconst B = 2, C = 3;"},
 		{name: "local expression statement", source: "function local() {}\nlet C = 0;\nexport const A = 1\nlocal(), C = 3;"},
+		{name: "local string expression", source: "let C = 0;\nexport const A = 1\n'lit'.trim(), C = 3;"},
+		{name: "tagged template continuation", source: "function tag(strings: TemplateStringsArray) { return strings[0]; }\nexport const A = tag\n`lit`, B = 2;"},
+		{name: "declaration keyword continuation", source: "export const\nA = 1, B = 2;"},
+		{name: "function name continuation", source: "export function\nA() { return 1; }"},
+		{name: "function expression name", source: "export const A = function\nnamed() {}, B = 2;"},
+		{name: "class expression name", source: "export const A = class\nNamed {}, B = 2;"},
 	} {
 		t.Run(item.name, func(t *testing.T) {
 			runtimeExports, _, err := CollectExports(item.source)
@@ -881,6 +894,8 @@ func TestCollectExportsRejectsLexicallyAmbiguousOrOutOfGrammarSources(t *testing
 		{name: "division and regex", source: "const ratio = 1 / /\\{/.test(\"{\") ? 1 : 2; export const Public = 3;"},
 		{name: "unicode code identifier", source: "const \u03c0 = 1; export const Public = 3;"},
 		{name: "template interpolation", source: "const value = `prefix ${1}`; export const Public = 3;"},
+		{name: "escaped unicode line separator before template interpolation", source: "const local = `\\\u2028${`export const Ghost = 2;`}`; export const Public = 3;"},
+		{name: "escaped unicode paragraph separator before template interpolation", source: "const local = `\\\u2029${`export const Ghost = 2;`}`; export const Public = 3;"},
 		{name: "escaped code identifier", source: "const \\u0061 = 1; export const Public = 3;"},
 		{name: "top-level angle syntax", source: "export const values: Array<string> = [];"},
 		{name: "unterminated block comment", source: "/* hidden export const Ghost = 1;"},

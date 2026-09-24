@@ -183,6 +183,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 		case typeScriptTemplateQuoted:
 			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
 				masked[index], masked[index+1], masked[index+2] = '\n', ' ', ' '
+				escaped = false
 				index += width - 1
 				continue
 			}
@@ -320,7 +321,9 @@ func exportStatementEnd(masked string, start int, limit int) (int, error) {
 					nextNonSpace++
 				}
 				nextToken = ""
-				if nextNonSpace < limit && isASCIITypeScriptIdentifierByte(masked[nextNonSpace]) {
+				if nextNonSpace < limit && (masked[nextNonSpace] == '\'' || masked[nextNonSpace] == '"') {
+					nextToken = masked[nextNonSpace : nextNonSpace+1]
+				} else if nextNonSpace < limit && isASCIITypeScriptIdentifierByte(masked[nextNonSpace]) {
 					tokenEnd := nextNonSpace + 1
 					for tokenEnd < limit && isASCIITypeScriptIdentifierByte(masked[tokenEnd]) {
 						tokenEnd++
@@ -361,7 +364,7 @@ func mayTerminateExportStatement(masked string, last int) bool {
 	if !isASCIITypeScriptIdentifierByte(masked[last]) {
 		return strings.ContainsRune(")]}\"'`", rune(masked[last]))
 	}
-	for _, incomplete := range []string{"void", "new", "typeof", "delete", "await", "yield", "instanceof", "in", "as", "satisfies"} {
+	for _, incomplete := range []string{"void", "new", "typeof", "delete", "await", "yield", "instanceof", "in", "as", "satisfies", "const", "let", "var", "function", "class", "enum", "interface", "type"} {
 		if hasTrailingTypeScriptToken(masked, last, incomplete) {
 			return false
 		}
