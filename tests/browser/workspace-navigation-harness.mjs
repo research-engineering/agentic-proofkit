@@ -1,4 +1,5 @@
 import {expect} from "@playwright/test";
+import {randomUUID} from "node:crypto";
 
 const workspaceNavigationToken = "proofkit.workspace-navigation.scheduled";
 
@@ -28,9 +29,14 @@ export function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame
 export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace") {
   const controller = new AbortController();
   const mainFrame = page.mainFrame();
-  const navigationPromise = page.waitForNavigation({
-    url: workspaceURL,
-    waitUntil: "domcontentloaded",
+  const documentMarker = randomUUID();
+  await page.evaluate((marker) => { document.documentElement.dataset.proofkitNavigationMarker = marker; }, documentMarker);
+  const responsePromise = page.waitForResponse(
+    (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
+    {signal: controller.signal},
+  );
+  const navigationPromise = page.waitForEvent("framenavigated", {
+    predicate: (frame) => frame === mainFrame && frame.url() === workspaceURL,
     signal: controller.signal,
   });
   try {
@@ -38,16 +44,18 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     if (token !== workspaceNavigationToken) {
       throw new Error("Workspace navigation trigger token is invalid");
     }
-    const response = await navigationPromise;
-    if (!response || !isWorkspaceNavigationResponse(response, workspaceURL, mainFrame) || !response.ok()) {
-      throw new Error(responseError);
-    }
+    const response = await responsePromise;
+    if (!response.ok()) throw new Error(responseError);
+    await navigationPromise;
+    await mainFrame.waitForLoadState("domcontentloaded");
+    const oldDocumentRetained = await page.evaluate((marker) => document.documentElement.dataset.proofkitNavigationMarker === marker, documentMarker);
+    if (oldDocumentRetained) throw new Error(responseError);
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
   } catch (error) {
     controller.abort();
-    await navigationPromise.catch(() => undefined);
+    await Promise.all([responsePromise.catch(() => undefined), navigationPromise.catch(() => undefined)]);
     throw error;
   }
 }

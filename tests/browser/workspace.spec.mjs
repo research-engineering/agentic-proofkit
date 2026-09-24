@@ -402,9 +402,10 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   };
   const cleanupPage = {
     mainFrame: () => cleanupFrame,
-    waitForNavigation: ({url, waitUntil, signal}) => {
-      expect(url).toBe(workspaceURL);
-      expect(waitUntil).toBe("domcontentloaded");
+    evaluate: async () => undefined,
+    waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
+    waitForEvent: (event, {signal}) => {
+      expect(event).toBe("framenavigated");
       return pendingWaiter("navigation", signal);
     },
   };
@@ -417,12 +418,15 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     },
     "Workspace navigation fallback response was admitted",
   )).rejects.toThrow("Workspace navigation trigger token is invalid");
-  expect([...cleanupAborted]).toEqual(["navigation"]);
-  expect([...cleanupConsumed]).toEqual(["navigation"]);
+  expect([...cleanupAborted].sort()).toEqual(["navigation", "response"]);
+  expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
   expect(cleanupEvents).toEqual([
+    "response-armed",
     "navigation-armed",
     "trigger-called",
+    "response-aborted",
     "navigation-aborted",
+    "response-consumed",
     "navigation-consumed",
   ]);
 });
@@ -430,13 +434,20 @@ test("workspace navigation admits the exact base and ignores response decoys", a
 test("same-document URL change cannot satisfy workspace navigation", async ({baseURL, page}) => {
   await openWorkspace(page, baseURL);
   const workspaceURL = admittedWorkspaceURL(baseURL);
+  await page.route((url) => url.href === workspaceURL, async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({response, headers: {...response.headers(), "content-disposition": "attachment; filename=workspace.html"}});
+  });
   await expect(navigateWorkspace(
     page,
     workspaceURL,
-    (token) => page.evaluate((value) => {
-      window.setTimeout(() => window.history.pushState({}, "", window.location.href), 0);
+    (token) => page.evaluate(({target, value}) => {
+      window.setTimeout(() => {
+        window.history.pushState({}, "", window.location.href);
+        window.location.assign(target);
+      }, 0);
       return value;
-    }, token),
+    }, {target: workspaceURL, value: token}),
     "Workspace navigation did not return a document response",
   )).rejects.toThrow("Workspace navigation did not return a document response");
 });
