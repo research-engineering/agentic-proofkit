@@ -265,6 +265,8 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 		{".mts", "export const id = <T = Array<string>,>(value: T) => value;", true},
 		{".mts", "export const id = <T extends unknown>(value: T) => value;", true},
 		{".mts", "export const id = <T extends Array<string>>(value: T) => value;", true},
+		{".mts", "export const id: <T>(value: T) => T = value => value;", true},
+		{".mts", "export type Fn = <T>(value: T) => T;", true},
 	} {
 		path := filepath.Join(t.TempDir(), "entry"+test.extension)
 		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
@@ -279,9 +281,39 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 	}
 }
 
+func TestGenericConstraintSyntaxMatchesCompiler(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	for _, test := range []struct {
+		source string
+		valid  bool
+	}{
+		{`export const id = <T extends string ? string : never>(x: T) => x;`, false},
+		{`export const id = <T extends (string extends string ? string : never)>(x: T) => x;`, true},
+	} {
+		for _, extension := range []string{".ts", ".mts"} {
+			path := filepath.Join(t.TempDir(), "entry"+extension)
+			if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			output, compilerErr := exec.Command(compiler, "--noEmit", "--pretty", "false", "--module", "nodenext", "--moduleResolution", "nodenext", path).CombinedOutput()
+			_, _, admissionErr := collectExportsWithExtension(test.source, extension)
+			if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
+				t.Fatalf("extension=%s source=%q compilerError=%v output=%s admissionError=%v valid=%t", extension, test.source, compilerErr, output, admissionErr, test.valid)
+			}
+		}
+	}
+}
+
 func TestMTSGenericAngleNestingBound(t *testing.T) {
-	source := "export const id = <T = " + strings.Repeat("Array<", maxMTSAngleNesting) + "string" + strings.Repeat(">", maxMTSAngleNesting) + ">(value: T) => value;"
-	if _, _, err := collectExportsWithExtension(source, ".mts"); err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
+	source := "export const id = <T = " + strings.Repeat("Array<", maxGenericAngleNesting) + "string" + strings.Repeat(">", maxGenericAngleNesting) + ">(value: T) => value;"
+	if _, _, err := collectExportsWithExtension(source, ".mts"); err == nil || !strings.Contains(err.Error(), "generic angle nesting") {
 		t.Fatalf("collectExportsWithExtension() error=%v, want bounded grammar rejection", err)
 	}
 }
@@ -349,6 +381,34 @@ func TestTypeOnlyReexportAttributesMatchCompiler(t *testing.T) {
 		_, _, admissionErr := CollectExports(test.source)
 		if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
 			t.Fatalf("source=%q compilerError=%v output=%s admissionError=%v, valid=%t", test.source, compilerErr, output, admissionErr, test.valid)
+		}
+	}
+}
+
+func TestConfusingTypeScriptCastMatchesCompilerRejection(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	for _, test := range []struct {
+		source string
+		valid  bool
+	}{
+		{`export const A: Array<number> = [1 + 2 as number * 3];`, false},
+		{`export const A: Array<number> = [(1 + 2 as number) * 3];`, true},
+	} {
+		path := filepath.Join(t.TempDir(), "entry.ts")
+		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		output, compilerErr := exec.Command(compiler, "--noEmit", "--pretty", "false", path).CombinedOutput()
+		_, _, admissionErr := CollectExports(test.source)
+		if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
+			t.Fatalf("source=%q compilerError=%v output=%s admissionError=%v valid=%t", test.source, compilerErr, output, admissionErr, test.valid)
 		}
 	}
 }

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "a7653949a28903909e90d6bf8d4d3871ccddacda44957925be68abdf8e3ac4fc"
+	cliContractPublicABISHA256               = "8f4c8f9e4555856af5553a4d2eac857047a6647e69f06b667faedf7bf5fac33c"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2081,13 +2081,13 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	if grammar["moduleSemantics"] != "static_esm_declarations_only" {
 		t.Fatalf("TypeScript public API module semantics drifted: %#v", grammar)
 	}
-	if grammar["maxMTSAngleNesting"] != float64(128) {
-		t.Fatalf("TypeScript public API .mts nesting budget drifted: %#v", grammar["maxMTSAngleNesting"])
+	if grammar["maxGenericAngleNesting"] != float64(128) {
+		t.Fatalf("TypeScript public API generic nesting budget drifted: %#v", grammar["maxGenericAngleNesting"])
 	}
 	assertStringSet(t, stringsFromAny(grammar["supportedExtensions"].([]any)), []string{".mts", ".ts"}, "TypeScript public API source extensions")
 	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
-	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") {
-		t.Fatalf("TypeScript public API source grammar omits parser-backed typed variables: %s", admitted)
+	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") || !strings.Contains(admitted, "literal-only enum declarations") {
+		t.Fatalf("TypeScript public API source grammar omits typed-variable or literal-enum admission: %s", admitted)
 	}
 	if !strings.Contains(admitted, "explicit inline type-only re-exports") || strings.Contains(admitted, "named runtime re-exports") {
 		t.Fatalf("TypeScript public API source grammar misstates re-export authority: %s", admitted)
@@ -2101,9 +2101,10 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"inline type-only re-export import attributes",
 		"legacy assert import attributes",
 		"type-only import attributes after a line terminator",
+		"computed enum initializers require a native compiler witness",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "ambiguous bare or default single-parameter angle form", "compiler-invalid nested default single-parameter angle form", ".mts angle nesting deeper than 128", "CommonJS-ambiguity guards"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "ambiguous bare or default single-parameter angle form", "compiler-invalid nested default single-parameter angle form", "generic angle nesting deeper than 128", "unparenthesized conditional generic constraints", "CommonJS-ambiguity guards"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}

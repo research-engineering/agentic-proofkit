@@ -660,35 +660,40 @@ func TestVerifyTypeScriptPublicAPIRejectsCTSPath(t *testing.T) {
 }
 
 func TestVerifyTypeScriptPublicAPIUsesMTSGrammar(t *testing.T) {
-	repoRoot := writeTypeScriptPackageFixture(t)
-	packageRoot := filepath.Join(repoRoot, "packages", "alpha")
-	writeJSON(t, filepath.Join(packageRoot, "package.json"), map[string]any{
-		"name": "@example/alpha",
-		"exports": map[string]any{
-			".":          map[string]any{"import": "./src/index.mts", "types": "./src/index.mts"},
-			"./internal": nil,
-		},
-	})
-	input := publicAPIManifest()
-	entry := input["entries"].([]any)[0].(map[string]any)
-	entry["exportConditions"] = []any{
-		map[string]any{"condition": "import", "path": "./src/index.mts", "sourcePath": "packages/alpha/src/index.mts"},
-		map[string]any{"condition": "types", "path": "./src/index.mts", "sourcePath": "packages/alpha/src/index.mts"},
-	}
-	entry["runtimeExports"] = []any{"id"}
-	entry["typeExports"] = []any{}
-	sourcePath := filepath.Join(packageRoot, "src", "index.mts")
-	if err := os.WriteFile(sourcePath, []byte("export const id = <T>(value: T) => value;"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
-		t.Fatalf("Verify(ambiguous .mts) exit=%d error=%v, want grammar rejection", exitCode, err)
-	}
-	if err := os.WriteFile(sourcePath, []byte("export const id = <T,>(value: T) => value;"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 0 || err != nil {
-		t.Fatalf("Verify(valid .mts) exit=%d error=%v, want passed", exitCode, err)
+	for _, extension := range []string{".mts", ".MTS", ".Mts"} {
+		t.Run(extension, func(t *testing.T) {
+			repoRoot := writeTypeScriptPackageFixture(t)
+			packageRoot := filepath.Join(repoRoot, "packages", "alpha")
+			relativePath := "./src/index" + extension
+			writeJSON(t, filepath.Join(packageRoot, "package.json"), map[string]any{
+				"name": "@example/alpha",
+				"exports": map[string]any{
+					".":          map[string]any{"import": relativePath, "types": relativePath},
+					"./internal": nil,
+				},
+			})
+			input := publicAPIManifest()
+			entry := input["entries"].([]any)[0].(map[string]any)
+			entry["exportConditions"] = []any{
+				map[string]any{"condition": "import", "path": relativePath, "sourcePath": "packages/alpha/src/index" + extension},
+				map[string]any{"condition": "types", "path": relativePath, "sourcePath": "packages/alpha/src/index" + extension},
+			}
+			entry["runtimeExports"] = []any{"id"}
+			entry["typeExports"] = []any{}
+			sourcePath := filepath.Join(packageRoot, "src", "index"+extension)
+			if err := os.WriteFile(sourcePath, []byte("export const id = <T>(value: T) => value;"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
+				t.Fatalf("Verify(ambiguous %s) exit=%d error=%v, want grammar rejection", extension, exitCode, err)
+			}
+			if err := os.WriteFile(sourcePath, []byte("export const id = <T,>(value: T) => value;"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 0 || err != nil {
+				t.Fatalf("Verify(valid %s) exit=%d error=%v, want passed", extension, exitCode, err)
+			}
+		})
 	}
 }
 

@@ -65,6 +65,7 @@ func buildRuntimeExportInventory(source string, extension string) api.BuildResul
 		Bundle:           false,
 		Format:           api.FormatESModule,
 		LogLevel:         api.LogLevelSilent,
+		LogOverride:      map[string]api.LogLevel{"confusing-typescript-cast": api.LogLevelError},
 		Metafile:         true,
 		MinifyWhitespace: true,
 		Outfile:          "entry.js",

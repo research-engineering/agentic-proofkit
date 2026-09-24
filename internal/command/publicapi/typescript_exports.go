@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const maxMTSAngleNesting = 128
+const maxGenericAngleNesting = 128
 
 var (
 	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
@@ -18,6 +18,7 @@ var (
 	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
+	genericTypePosition    = regexp.MustCompile(`^export[[:space:]]+(?:(?:const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*:|type[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=)[[:space:]]*$`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
@@ -25,6 +26,7 @@ func CollectExports(source string) ([]string, []string, error) {
 }
 
 func collectExportsWithExtension(source string, extension string) ([]string, []string, error) {
+	extension = strings.ToLower(extension)
 	scan, err := scanTypeScriptSource(source)
 	if err != nil {
 		return nil, nil, err
@@ -32,8 +34,11 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 	if commonJSBindingPattern.MatchString(scan.masked) {
 		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
-	if extension == ".mts" && hasAmbiguousMTSGeneric(scan.masked) {
-		return nil, nil, unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
+	if err := admitBoundedEnumInitializers(scan.masked); err != nil {
+		return nil, nil, err
+	}
+	if err := admitGenericAngleSyntax(scan, extension); err != nil {
+		return nil, nil, err
 	}
 	runtimeExports, err := collectRuntimeExports(runtimeParserSource(source, scan), extension)
 	if err != nil {
@@ -193,10 +198,16 @@ func readTypeScriptAttributeString(source string, index int) (string, int, bool)
 	return "", index, false
 }
 
-func hasAmbiguousMTSGeneric(masked string) bool {
+func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error {
+	masked := scan.masked
+	exportIndex, latestExport := 0, -1
 	for start := 0; start < len(masked); start++ {
 		if masked[start] != '<' {
 			continue
+		}
+		for exportIndex < len(scan.topLevelExportOffsets) && scan.topLevelExportOffsets[exportIndex] <= start {
+			latestExport = scan.topLevelExportOffsets[exportIndex]
+			exportIndex++
 		}
 		index := start + 1
 		for index < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[index])) {
@@ -206,14 +217,13 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 			continue
 		}
 		angle, square, round, curly := 1, 0, 0, 0
-		separated := false
-		defaultSeen := false
+		separated, defaultSeen, constraintSeen := false, false, false
 		for ; index < len(masked); index++ {
 			switch masked[index] {
 			case '<':
 				angle++
-				if angle > maxMTSAngleNesting {
-					return true
+				if angle > maxGenericAngleNesting {
+					return unsupportedTypeScriptSourceGrammar("generic angle nesting exceeds 128")
 				}
 			case '>':
 				if index > 0 && masked[index-1] == '=' {
@@ -225,8 +235,8 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 					for after < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[after])) {
 						after++
 					}
-					if after < len(masked) && masked[after] == '(' && !separated {
-						return true
+					if extension == ".mts" && after < len(masked) && masked[after] == '(' && !separated && (latestExport < 0 || !genericTypePosition.MatchString(masked[latestExport:start])) {
+						return unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
 					}
 					goto nextCandidate
 				}
@@ -245,22 +255,28 @@ func hasAmbiguousMTSGeneric(masked string) bool {
 			case ',':
 				if angle == 1 && square == 0 && round == 0 && curly == 0 {
 					separated = true
+					defaultSeen, constraintSeen = false, false
 				}
 			case '=':
 				if angle == 1 && square == 0 && round == 0 && curly == 0 && (index+1 == len(masked) || masked[index+1] != '>') {
 					defaultSeen = true
+				}
+			case '?':
+				if angle == 1 && square == 0 && round == 0 && curly == 0 && constraintSeen && !defaultSeen {
+					return unsupportedTypeScriptSourceGrammar("conditional generic constraints require parentheses")
 				}
 			}
 			if !defaultSeen && angle == 1 && square == 0 && round == 0 && curly == 0 && strings.HasPrefix(masked[index:], "extends") && (index == 0 || !isASCIITypeScriptIdentifierByte(masked[index-1])) {
 				end := index + len("extends")
 				if end == len(masked) || !isASCIITypeScriptIdentifierByte(masked[end]) {
 					separated = true
+					constraintSeen = true
 				}
 			}
 		}
 	nextCandidate:
 	}
-	return false
+	return nil
 }
 
 // Only erased interface names are substituted for esbuild; original bytes own type names and offsets.

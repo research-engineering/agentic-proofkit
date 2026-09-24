@@ -499,7 +499,7 @@ func (scan *scanCache) collectSourceExports(filePath string, pkg packageSnapshot
 		}
 		return append([]string(nil), snapshot.runtimeExports...), append([]string(nil), snapshot.typeExports...), nil
 	}
-	runtimeExports, typeExports, err := collectExportsWithExtension(admitted.content, filepath.Ext(admitted.canonical))
+	runtimeExports, typeExports, err := collectExportsWithExtension(admitted.content, strings.ToLower(filepath.Ext(admitted.canonical)))
 	if err != nil {
 		return nil, nil, err
 	}
