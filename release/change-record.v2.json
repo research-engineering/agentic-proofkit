@@ -18,7 +18,7 @@
     },
     {
       "changeId": "proofkit.typescript-public-api.exports",
-      "summary": "TypeScript public API verification preserves the dollar suffix in exported function and type identifiers. Manifests that previously claimed a truncated name now fail comparison with the full source identifier. The declared export-subset grammar and extension support are unchanged."
+      "summary": "TypeScript public API verification separates a semicolonless exported variable declaration from a following local declaration and preserves dollar suffixes in exported identifiers. Manifests claiming a following local name or a truncated identifier now fail comparison with actual exports. The declared export-subset grammar and extension support are unchanged."
     }
   ],
   "additions": [
@@ -31,7 +31,7 @@
     "required": true,
     "steps": [
       "Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
-      "Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names.",
+      "Remove duplicate selected profileIds and correct TypeScript public API manifests that claimed following local declarations or truncated dollar-suffixed names.",
       "Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
       "Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality."
     ]

@@ -95,7 +95,10 @@ func exportStatements(source string) ([]string, error) {
 		if index+1 < len(scan.topLevelExportOffsets) {
 			limit = scan.topLevelExportOffsets[index+1]
 		}
-		end := exportStatementEnd(scan.masked, start, limit)
+		end, err := exportStatementEnd(scan.masked, start, limit)
+		if err != nil {
+			return nil, err
+		}
 		statement := strings.Join(strings.Fields(scan.masked[start:end]), " ")
 		if statement != "" {
 			statements = append(statements, statement)
@@ -264,7 +267,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts}, nil
 }
 
-func exportStatementEnd(masked string, start int, limit int) int {
+func exportStatementEnd(masked string, start int, limit int) (int, error) {
 	parenDepth := 0
 	bracketDepth := 0
 	braceDepth := 0
@@ -290,11 +293,33 @@ func exportStatementEnd(masked string, start int, limit int) int {
 			}
 		case ';':
 			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				return index + 1
+				return index + 1, nil
+			}
+		case '\n', '\r':
+			if parenDepth != 0 || bracketDepth != 0 || braceDepth != 0 {
+				continue
+			}
+			prefix := strings.TrimSpace(masked[start:index])
+			if prefix == "export" {
+				continue
+			}
+			next := strings.TrimLeft(masked[index+1:limit], " \t\r\n")
+			for _, keyword := range []string{"const", "let", "var", "function", "class", "interface", "type", "enum", "import"} {
+				if !strings.HasPrefix(next, keyword) || len(next) > len(keyword) && isASCIITypeScriptIdentifierByte(next[len(keyword)]) {
+					continue
+				}
+				if prefix == "" || !mayTerminateExportStatement(prefix[len(prefix)-1]) {
+					return 0, unsupportedTypeScriptSourceGrammar("ambiguous semicolonless export boundary")
+				}
+				return index, nil
 			}
 		}
 	}
-	return limit
+	return limit, nil
+}
+
+func mayTerminateExportStatement(last byte) bool {
+	return isASCIITypeScriptIdentifierByte(last) || strings.ContainsRune(")]}\"'`", rune(last))
 }
 
 func isASCIITypeScriptIdentifierByte(value byte) bool {
