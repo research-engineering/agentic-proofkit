@@ -54,6 +54,10 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		{"export function f() { type as = number; }", "", ""},
 		{"const obj = { interface: { value: 1 } }; export const a = obj.interface as { value: number };", "", ""},
 		{"const obj = { interface: { value: 1 } }; export const a = obj.interface satisfies { value: number };", "", ""},
+		{"export class C { #interface = { value: 1 }; get() { return this.#interface as { value: number }; } }", "", ""},
+		{"export class C { #interface = { value: 1 }; get() { return this.#interface satisfies { value: number }; } }", "", ""},
+		{"const obj = { enum: { value: 1 } }; export const A = obj.enum as { value: number };", "", ""},
+		{"const obj = { namespace: { value: 1 } }; export const A = obj.namespace satisfies { value: number };", "", ""},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")

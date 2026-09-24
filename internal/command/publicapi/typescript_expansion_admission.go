@@ -20,6 +20,9 @@ func admitNoExpandingDeclarations(masked string) error {
 			if !strings.HasPrefix(masked[index:], keyword) {
 				continue
 			}
+			if hasTypeScriptMemberAccessPrefix(masked, index) {
+				continue
+			}
 			end := index + len(keyword)
 			if end < len(masked) && isASCIITypeScriptIdentifierByte(masked[end]) {
 				continue

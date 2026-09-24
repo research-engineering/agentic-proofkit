@@ -198,11 +198,7 @@ func runtimeParserSource(source string, scan typeScriptLexicalScan) string {
 	for _, pattern := range []*regexp.Regexp{erasedInterfaceName, erasedTypeAliasName} {
 		for _, indices := range pattern.FindAllStringSubmatchIndex(scan.masked, -1) {
 			keywordStart := indices[2]
-			before := keywordStart - 1
-			for before >= 0 && strings.ContainsRune(" \t\r\n\v\f", rune(scan.masked[before])) {
-				before--
-			}
-			if before >= 0 && scan.masked[before] == '.' {
+			if hasTypeScriptMemberAccessPrefix(scan.masked, keywordStart) {
 				continue
 			}
 			nameStart, nameEnd := indices[4], indices[5]
@@ -219,6 +215,14 @@ func runtimeParserSource(source string, scan typeScriptLexicalScan) string {
 		return source
 	}
 	return string(rewritten)
+}
+
+func hasTypeScriptMemberAccessPrefix(masked string, keywordStart int) bool {
+	before := keywordStart - 1
+	for before >= 0 && strings.ContainsRune(" \t\r\n\v\f", rune(masked[before])) {
+		before--
+	}
+	return before >= 0 && (masked[before] == '.' || masked[before] == '#')
 }
 
 func invalidTypeDeclarationName(kind string, name string) bool {
