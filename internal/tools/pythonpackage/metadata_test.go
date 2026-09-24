@@ -129,8 +129,6 @@ func TestRepositoryLicenseRetainsBundledRuntimeNotices(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, notice := range []string{
-		"Copyright (c) 2020 Evan Wallace (esbuild)",
-		"Copyright (c) 2016 Caleb Spare (esbuild/internal/xxhash)",
 		"Copyright 2009 The Go Authors.",
 	} {
 		if !bytes.Contains(content, []byte(notice)) {

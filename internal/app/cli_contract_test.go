@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "f033ff70f3281e4c8cdb33fc7628653d958330eba0faee3a9f74e26e8e37088f"
+	cliContractPublicABISHA256               = "16e1246333e2d8662baa0387d6f92be6482365706f656684966e10a7edfaf41a"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2061,8 +2061,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"typeExports",
 	}, "TypeScript public API required fields")
 	pathAuthority := item["pathAuthority"].(string)
-	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") || !strings.Contains(pathAuthority, "canonical resolved source target") ||
-		!strings.Contains(pathAuthority, ".ts or .mts") || strings.Contains(pathAuthority, ".cts") {
+	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") || !strings.Contains(pathAuthority, "canonical resolved source target") {
 		t.Fatalf("TypeScript public API path authority is incomplete: %q", pathAuthority)
 	}
 	if rule := item["exportConditionsRule"]; rule != "non-empty and sorted unique by condition" {
@@ -2071,56 +2070,22 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	budgets := inputContract["resourceBudgets"].(map[string]any)
 	if budgets["maxSourceFileBytes"] != float64(maxSourceFileBytesForContractTest) ||
 		budgets["maxPackageManifestBytes"] != float64(maxPackageManifestBytesForContractTest) ||
-		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) ||
-		budgets["maxStringFoldWorkEstimateBytes"] != float64(64<<20) {
+		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) {
 		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
 	}
 	grammar := inputContract["sourceGrammar"].(map[string]any)
-	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v2" || grammar["mode"] != "fail_closed" {
+	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v1" || grammar["mode"] != "fail_closed" {
 		t.Fatalf("TypeScript public API source grammar is not fail-closed: %#v", grammar)
 	}
-	if grammar["moduleSemantics"] != "static_esm_declarations_only" {
-		t.Fatalf("TypeScript public API module semantics drifted: %#v", grammar)
-	}
-	if grammar["extensionCase"] != "exact_lowercase" {
-		t.Fatalf("TypeScript public API extension spelling drifted: %#v", grammar["extensionCase"])
-	}
-	if !strings.Contains(grammar["syntaxAuthority"].(string), "pinned TypeScript compiler syntax and type validity are non-claims") {
-		t.Fatalf("TypeScript public API syntax authority drifted: %#v", grammar["syntaxAuthority"])
-	}
-	assertStringSet(t, stringsFromAny(grammar["supportedExtensions"].([]any)), []string{".mts", ".ts"}, "TypeScript public API source extensions")
-	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
-	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") || strings.Contains(admitted, "enum declarations") {
-		t.Fatalf("TypeScript public API source grammar misstates typed-variable or enum admission: %s", admitted)
-	}
-	if !strings.Contains(admitted, "explicit inline type-only re-exports") || strings.Contains(admitted, "named runtime re-exports") {
-		t.Fatalf("TypeScript public API source grammar misstates re-export authority: %s", admitted)
-	}
-	assertStringSet(t, stringsFromAny(grammar["rejectedExportForms"].([]any)), []string{
-		"unresolved named runtime re-exports",
-		"compiler-invalid type and interface declaration names",
-		"duplicate type-only re-export modifier",
-		"type-only re-export attributes other than resolution-mode",
-		"inline type-only re-export import attributes",
-		"legacy assert import attributes",
-		"type-only import attributes after a line terminator",
-		"enum and namespace declarations require a native compiler witness",
-	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "CommonJS-ambiguity guards", "string-fold work estimate above 64 MiB"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}
 	}
-	if strings.Contains(rejected, "angle-bracket syntax") {
-		t.Fatalf("TypeScript public API grammar still rejects admitted typed variables: %s", rejected)
-	}
-	if !strings.Contains(strings.Join(stringsFromAny(inputContract["nonClaims"].([]any)), " "), "does not resolve re-export target symbols") {
-		t.Fatal("TypeScript public API contract omits target-resolution non-claim")
-	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "pinned compiler witness") || !strings.Contains(joinedNonClaims, "not a hard bound on esbuild allocations") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }

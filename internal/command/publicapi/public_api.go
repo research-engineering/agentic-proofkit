@@ -152,12 +152,8 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 		"nonClaims": []any{
 			"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
 			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
-			"runtimeExports compares static ESM declarations in admitted source, not the export inventory of a built module or CommonJS execution.",
 			"TypeScript public API verification does not parse JSX or admit TSX source files.",
 			"TypeScript public API verification admits a documented fail-closed export grammar subset; it does not parse unrestricted TypeScript.",
-			"A passing static export inventory does not prove TypeScript compiler syntax or type validity; run a repository-owned pinned compiler witness.",
-			"The string-fold work estimate is a conservative pre-build guard, not a hard bound on parser allocations or execution time.",
-			"Explicit type-only re-exports are declarative; this command does not resolve target symbols and rejects unresolved runtime re-exports.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},
 	}, exitCode, nil
@@ -501,7 +497,7 @@ func (scan *scanCache) collectSourceExports(filePath string, pkg packageSnapshot
 		}
 		return append([]string(nil), snapshot.runtimeExports...), append([]string(nil), snapshot.typeExports...), nil
 	}
-	runtimeExports, typeExports, err := collectExportsWithExtension(admitted.content, filepath.Ext(admitted.canonical))
+	runtimeExports, typeExports, err := CollectExports(admitted.content)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -615,11 +611,11 @@ func safeTypeScriptSourcePath(raw any, context string) (string, error) {
 }
 
 func requireTypeScriptSourceExtension(path string, context string) error {
-	switch filepath.Ext(filepath.FromSlash(path)) {
-	case ".ts", ".mts":
+	switch strings.ToLower(filepath.Ext(filepath.FromSlash(path))) {
+	case ".ts", ".mts", ".cts":
 		return nil
 	default:
-		return fmt.Errorf("%s must identify a non-JSX TypeScript source with ESM semantics (.ts or .mts)", context)
+		return fmt.Errorf("%s must identify a non-JSX TypeScript source (.ts, .mts, or .cts)", context)
 	}
 }
 

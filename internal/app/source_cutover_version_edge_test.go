@@ -45,21 +45,15 @@ var sourceCutoverDirectionDeltas = []string{
 	"view/output:compatibilitySummary,contractId,handoffClauses",
 }
 
-var nativeBoundaryDirectionDeltas = []string{
-	"typescript-public-api-surfaces/input:compatibilitySummary,fields,nonClaims,resourceBudgets,sourceGrammar",
-}
-
-func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
+func TestSourceV2VersionEdgeClosesPublicDirectionDelta(t *testing.T) {
 	previous := readArchivedSourceCutoverPredecessor(t)
 	current := readCLIContractRaw(t)
 	got, err := sourceCutoverDirectionDelta(previous, current)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := append(slices.Clone(sourceCutoverDirectionDeltas), nativeBoundaryDirectionDeltas...)
-	slices.Sort(want)
-	if !slices.Equal(got, want) {
-		t.Fatalf("undeclared public direction delta\n got: %v\nwant: %v", got, want)
+	if !slices.Equal(got, sourceCutoverDirectionDeltas) {
+		t.Fatalf("undeclared public direction delta\n got: %v\nwant: %v", got, sourceCutoverDirectionDeltas)
 	}
 	previousDefinitions, _, err := indexPublicABIRecords(previous["contractDefinitions"], "definitionId")
 	if err != nil {

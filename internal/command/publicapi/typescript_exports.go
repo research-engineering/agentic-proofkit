@@ -7,43 +7,23 @@ import (
 )
 
 var (
-	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	typeExportPattern      = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	runtimeDeclPattern     = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	typeDeclPattern        = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	varDeclStartPattern    = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
-	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
-	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
-	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
-	erasedInterfaceName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])(interface)[[:space:]]+(as|satisfies)[[:space:]]*(?:\{|<|extends[[:space:]])`)
-	erasedTypeAliasName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])(type)[[:space:]]+(as)[[:space:]]*=`)
+	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
+	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
+	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:[^A-Za-z0-9_$]|$)`)
+	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:[^A-Za-z0-9_$]|$)`)
+	varDeclPattern        = regexp.MustCompile(`^export\s+(?:const|let|var)\s+(.+?);?$`)
+	exportClauseNameRegex = regexp.MustCompile(`\bas\s+([A-Za-z_$][A-Za-z0-9_$]*)$`)
+	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
-	return collectExportsWithExtension(source, ".ts")
-}
-
-func collectExportsWithExtension(source string, extension string) ([]string, []string, error) {
-	scan, err := scanTypeScriptSource(source)
-	if err != nil {
-		return nil, nil, err
-	}
-	if commonJSBindingPattern.MatchString(scan.masked) {
-		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
-	}
-	if err := admitNoExpandingDeclarations(scan.masked); err != nil {
-		return nil, nil, err
-	}
-	if err := admitStringFoldEstimate(scan); err != nil {
-		return nil, nil, err
-	}
-	runtimeExports, err := collectRuntimeExports(runtimeParserSource(source, scan), extension)
-	if err != nil {
-		return nil, nil, err
-	}
+	runtimeExports := map[string]struct{}{}
 	typeExports := map[string]struct{}{}
-	for _, start := range scan.topLevelExportOffsets {
-		statement := scan.masked[start:]
+	statements, err := exportStatements(source)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, statement := range statements {
 		if strings.HasPrefix(statement, "export *") {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use export *")
 		}
@@ -53,188 +33,39 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 		if strings.HasPrefix(statement, "export declare") {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
 		}
-		if match := typeExportPattern.FindStringSubmatchIndex(statement); match != nil {
-			if err := admitTypeReexportAttributes(source[start+match[1]:], true); err != nil {
-				return nil, nil, err
-			}
-			if err := addTypeClauseExports(statement[match[2]:match[3]], typeExports); err != nil {
+		if match := typeExportPattern.FindStringSubmatch(statement); match != nil {
+			if err := addTypeClauseExports(match[1], typeExports); err != nil {
 				return nil, nil, err
 			}
 			continue
 		}
-		if match := namedExportPattern.FindStringSubmatchIndex(statement); match != nil {
-			if err := admitTypeReexportAttributes(source[start+match[1]:], false); err != nil {
-				return nil, nil, err
-			}
-			if err := addNamedClauseTypeExports(statement[match[2]:match[3]], typeExports); err != nil {
+		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
+			if err := addNamedClauseExports(match[1], runtimeExports, typeExports); err != nil {
 				return nil, nil, err
 			}
 			continue
 		}
-		if runtimeDeclPattern.MatchString(statement) {
+		if match := runtimeDeclPattern.FindStringSubmatch(statement); match != nil {
+			runtimeExports[match[1]] = struct{}{}
 			continue
 		}
 		if match := typeDeclPattern.FindStringSubmatch(statement); match != nil {
-			if invalidTypeDeclarationName(match[1], match[2]) {
-				return nil, nil, unsupportedTypeScriptSourceGrammar("type declaration name is not admitted")
-			}
-			typeExports[match[2]] = struct{}{}
+			typeExports[match[1]] = struct{}{}
 			continue
 		}
-		if varDeclStartPattern.MatchString(statement) {
+		if match := varDeclPattern.FindStringSubmatch(statement); match != nil {
+			names, err := variableExportNames(match[1])
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, name := range names {
+				runtimeExports[name] = struct{}{}
+			}
 			continue
 		}
 		return nil, nil, fmt.Errorf("unsupported public export statement")
 	}
-	for _, name := range runtimeExports {
-		if name == "default" {
-			return nil, nil, unsupportedTypeScriptSourceGrammar("default exports are not admitted")
-		}
-	}
-	return runtimeExports, sortedSet(typeExports), nil
-}
-
-func admitTypeReexportAttributes(rawTail string, topLevelType bool) error {
-	index, crossedLine := scanTypeScriptTrivia(rawTail, 0)
-	if strings.HasPrefix(rawTail[index:], "assert") && (index+6 == len(rawTail) || !isASCIITypeScriptIdentifierByte(rawTail[index+6])) {
-		return unsupportedTypeScriptSourceGrammar("legacy assert import attributes are not admitted")
-	}
-	if !strings.HasPrefix(rawTail[index:], "with") || index+4 < len(rawTail) && isASCIITypeScriptIdentifierByte(rawTail[index+4]) {
-		return nil
-	}
-	if crossedLine {
-		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must follow the module specifier on the same line")
-	}
-	if !topLevelType {
-		return unsupportedTypeScriptSourceGrammar("inline type-only re-exports cannot use import attributes")
-	}
-	index = skipTypeScriptTrivia(rawTail, index+4)
-	if index >= len(rawTail) || rawTail[index] != '{' {
-		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
-	}
-	key, next, ok := readTypeScriptAttributeString(rawTail, skipTypeScriptTrivia(rawTail, index+1))
-	if !ok || key != "resolution-mode" {
-		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
-	}
-	index = skipTypeScriptTrivia(rawTail, next)
-	if index >= len(rawTail) || rawTail[index] != ':' {
-		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
-	}
-	value, next, ok := readTypeScriptAttributeString(rawTail, skipTypeScriptTrivia(rawTail, index+1))
-	if !ok || value != "import" && value != "require" {
-		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
-	}
-	index = skipTypeScriptTrivia(rawTail, next)
-	if index < len(rawTail) && rawTail[index] == ',' {
-		index = skipTypeScriptTrivia(rawTail, index+1)
-	}
-	if index >= len(rawTail) || rawTail[index] != '}' {
-		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
-	}
-	return nil
-}
-
-func skipTypeScriptTrivia(source string, index int) int {
-	index, _ = scanTypeScriptTrivia(source, index)
-	return index
-}
-
-func scanTypeScriptTrivia(source string, index int) (int, bool) {
-	crossedLine := false
-	for index < len(source) {
-		if width := unicodeLineTerminatorWidth(source, index); width != 0 {
-			index += width
-			crossedLine = true
-			continue
-		}
-		if strings.ContainsRune(" \t\r\n\v\f", rune(source[index])) {
-			if source[index] == '\r' || source[index] == '\n' {
-				crossedLine = true
-			}
-			index++
-			continue
-		}
-		if strings.HasPrefix(source[index:], "//") {
-			for index < len(source) && source[index] != '\n' && source[index] != '\r' && unicodeLineTerminatorWidth(source, index) == 0 {
-				index++
-			}
-			continue
-		}
-		if strings.HasPrefix(source[index:], "/*") {
-			if end := strings.Index(source[index+2:], "*/"); end >= 0 {
-				body := source[index+2 : index+2+end]
-				if strings.ContainsAny(body, "\r\n") || strings.ContainsRune(body, '\u2028') || strings.ContainsRune(body, '\u2029') {
-					crossedLine = true
-				}
-				index += end + 4
-				continue
-			}
-		}
-		break
-	}
-	return index, crossedLine
-}
-
-func readTypeScriptAttributeString(source string, index int) (string, int, bool) {
-	if index >= len(source) || source[index] != '\'' && source[index] != '"' {
-		return "", index, false
-	}
-	quote := source[index]
-	start := index + 1
-	for index = start; index < len(source); index++ {
-		if source[index] == '\\' {
-			return "", index, false
-		}
-		if source[index] == quote {
-			return source[start:index], index + 1, true
-		}
-	}
-	return "", index, false
-}
-
-// Only erased declaration names are substituted for esbuild; original bytes own type names and offsets.
-func runtimeParserSource(source string, scan typeScriptLexicalScan) string {
-	var rewritten []byte
-	for _, pattern := range []*regexp.Regexp{erasedInterfaceName, erasedTypeAliasName} {
-		for _, indices := range pattern.FindAllStringSubmatchIndex(scan.masked, -1) {
-			keywordStart := indices[2]
-			if hasTypeScriptMemberAccessPrefix(scan.masked, keywordStart) {
-				continue
-			}
-			nameStart, nameEnd := indices[4], indices[5]
-			if rewritten == nil {
-				rewritten = []byte(source)
-			}
-			rewritten[nameStart] = '_'
-			for index := nameStart + 1; index < nameEnd; index++ {
-				rewritten[index] = 'x'
-			}
-		}
-	}
-	if rewritten == nil {
-		return source
-	}
-	return string(rewritten)
-}
-
-func hasTypeScriptMemberAccessPrefix(masked string, keywordStart int) bool {
-	before := keywordStart - 1
-	for before >= 0 && strings.ContainsRune(" \t\r\n\v\f", rune(masked[before])) {
-		before--
-	}
-	return before >= 0 && (masked[before] == '.' || masked[before] == '#')
-}
-
-func invalidTypeDeclarationName(kind string, name string) bool {
-	if kind == "type" && name == "as" {
-		return true
-	}
-	switch name {
-	case "any", "await", "bigint", "boolean", "implements", "interface", "let", "never", "number", "object", "package", "private", "protected", "public", "static", "string", "symbol", "undefined", "unknown", "yield":
-		return true
-	default:
-		return false
-	}
+	return sortedSet(runtimeExports), sortedSet(typeExports), nil
 }
 
 type typeScriptLexicalState uint8
@@ -251,8 +82,26 @@ const (
 type typeScriptLexicalScan struct {
 	masked                string
 	topLevelExportOffsets []int
-	literalBytes          uint64
-	plusTokens            uint64
+}
+
+func exportStatements(source string) ([]string, error) {
+	scan, err := scanTypeScriptSource(source)
+	if err != nil {
+		return nil, err
+	}
+	statements := make([]string, 0, len(scan.topLevelExportOffsets))
+	for index, start := range scan.topLevelExportOffsets {
+		limit := len(source)
+		if index+1 < len(scan.topLevelExportOffsets) {
+			limit = scan.topLevelExportOffsets[index+1]
+		}
+		end := exportStatementEnd(scan.masked, start, limit)
+		statement := strings.Join(strings.Fields(scan.masked[start:end]), " ")
+		if statement != "" {
+			statements = append(statements, statement)
+		}
+	}
+	return statements, nil
 }
 
 func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
@@ -263,7 +112,6 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 	braceDepth := 0
 	bracketDepth := 0
 	parenDepth := 0
-	var literalBytes, plusTokens uint64
 	for index := 0; index < len(source); index++ {
 		current := source[index]
 		next := byte(0)
@@ -273,10 +121,6 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 		switch state {
 		case typeScriptLineComment:
 			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
-				masked[index] = '\n'
-				for offset := 1; offset < width; offset++ {
-					masked[index+offset] = ' '
-				}
 				state = typeScriptCode
 				index += width - 1
 				continue
@@ -288,24 +132,15 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptBlockComment:
-			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
-				masked[index] = '\n'
-				for offset := 1; offset < width; offset++ {
-					masked[index+offset] = ' '
-				}
-				index += width - 1
-				continue
-			}
 			if current == '*' && next == '/' {
 				masked[index], masked[index+1] = ' ', ' '
 				state = typeScriptCode
 				index++
-			} else if current != '\n' && current != '\r' {
+			} else if current != '\n' {
 				masked[index] = ' '
 			}
 			continue
 		case typeScriptSingleQuoted, typeScriptDoubleQuoted:
-			literalBytes++
 			closing := byte('\'')
 			if state == typeScriptDoubleQuoted {
 				closing = '"'
@@ -316,13 +151,11 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			if escaped {
 				if unicodeLineWidth > 0 {
-					literalBytes += uint64(unicodeLineWidth - 1)
 					escaped = false
 					index += unicodeLineWidth - 1
 					continue
 				}
 				if current == '\r' && next == '\n' {
-					literalBytes++
 					escaped = false
 					index++
 					continue
@@ -341,7 +174,6 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptTemplateQuoted:
-			literalBytes++
 			if current != '\n' {
 				masked[index] = ' '
 			}
@@ -352,7 +184,6 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			} else if current == '$' && next == '{' {
 				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("template interpolation is not admitted")
 			} else if current == '`' {
-				masked[index] = '`'
 				state = typeScriptCode
 			}
 			continue
@@ -374,23 +205,17 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 		case current == '/':
 			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("slash tokens outside comments are not admitted")
 		case current == '\'':
-			literalBytes++
 			state = typeScriptSingleQuoted
 			continue
 		case current == '"':
-			literalBytes++
 			state = typeScriptDoubleQuoted
 			continue
 		case current == '`':
-			literalBytes++
 			masked[index] = ' '
 			state = typeScriptTemplateQuoted
 			continue
 		case current == '\\':
 			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("escaped code identifiers are not admitted")
-		}
-		if current == '+' {
-			plusTokens++
 		}
 		if braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 && strings.HasPrefix(source[index:], "export") {
 			beforeOK := index == 0 || !isASCIITypeScriptIdentifierByte(source[index-1]) && source[index-1] != '.'
@@ -436,7 +261,40 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 	if braceDepth != 0 || bracketDepth != 0 || parenDepth != 0 {
 		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("delimiters must be balanced")
 	}
-	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts, literalBytes: literalBytes, plusTokens: plusTokens}, nil
+	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts}, nil
+}
+
+func exportStatementEnd(masked string, start int, limit int) int {
+	parenDepth := 0
+	bracketDepth := 0
+	braceDepth := 0
+	for index := start; index < limit; index++ {
+		switch masked[index] {
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case ';':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
+				return index + 1
+			}
+		}
+	}
+	return limit
 }
 
 func isASCIITypeScriptIdentifierByte(value byte) bool {
@@ -458,25 +316,22 @@ func unsupportedTypeScriptSourceGrammar(reason string) error {
 }
 
 func addTypeClauseExports(clause string, target map[string]struct{}) error {
-	return addClauseExports(clause, target, true)
+	return addClauseExports(clause, nil, target, true)
 }
 
-func addNamedClauseTypeExports(clause string, target map[string]struct{}) error {
-	return addClauseExports(clause, target, false)
+func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) error {
+	return addClauseExports(clause, runtimeTarget, typeTarget, false)
 }
 
-func addClauseExports(clause string, target map[string]struct{}, typeClause bool) error {
+func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) error {
 	body := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(clause), "{"), "}")
 	for _, rawPart := range strings.Split(body, ",") {
-		part := strings.Join(strings.Fields(rawPart), " ")
+		part := strings.TrimSpace(rawPart)
 		if part == "" {
 			continue
 		}
 		typeOnly := typeClause
 		if isInlineTypeOnlyReexport(part) {
-			if typeClause {
-				return unsupportedTypeScriptSourceGrammar("duplicate type-only re-export modifier")
-			}
 			typeOnly = true
 			part = strings.TrimSpace(strings.TrimPrefix(part, "type "))
 		}
@@ -490,10 +345,11 @@ func addClauseExports(clause string, target map[string]struct{}, typeClause bool
 		if !identifierRegex.MatchString(name) {
 			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
 		}
-		if !typeOnly {
-			return fmt.Errorf("TypeScript public API unresolved runtime re-exports are not admitted")
+		if typeOnly {
+			typeTarget[name] = struct{}{}
+			continue
 		}
-		target[name] = struct{}{}
+		runtimeTarget[name] = struct{}{}
 	}
 	return nil
 }
@@ -503,11 +359,70 @@ func isInlineTypeOnlyReexport(part string) bool {
 		return false
 	}
 	rest := strings.TrimSpace(strings.TrimPrefix(part, "type "))
-	if rest == "" {
-		return false
+	return rest != "" && !strings.HasPrefix(rest, "as ")
+}
+
+func variableExportNames(declarations string) ([]string, error) {
+	names := []string{}
+	parts, err := splitTopLevelComma(declarations)
+	if err != nil {
+		return nil, err
 	}
-	if strings.HasPrefix(rest, "as ") {
-		return strings.HasPrefix(rest, "as as ")
+	for _, rawPart := range parts {
+		part := strings.TrimSpace(rawPart)
+		if equals := strings.Index(part, "="); equals >= 0 {
+			part = strings.TrimSpace(part[:equals])
+		}
+		if colon := strings.Index(part, ":"); colon >= 0 {
+			part = strings.TrimSpace(part[:colon])
+		}
+		if !identifierRegex.MatchString(part) {
+			return nil, fmt.Errorf("TypeScript public API variable exports must use identifier declarations")
+		}
+		names = append(names, part)
 	}
-	return true
+	return names, nil
+}
+
+func splitTopLevelComma(value string) ([]string, error) {
+	parts := []string{}
+	start := 0
+	parenDepth := 0
+	bracketDepth := 0
+	braceDepth := 0
+	for index, char := range value {
+		switch char {
+		case '(':
+			parenDepth++
+		case ')':
+			if parenDepth > 0 {
+				parenDepth--
+			}
+		case '[':
+			bracketDepth++
+		case ']':
+			if bracketDepth > 0 {
+				bracketDepth--
+			}
+		case '{':
+			braceDepth++
+		case '}':
+			if braceDepth > 0 {
+				braceDepth--
+			}
+		case '<', '>':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
+				if char != '>' || index == 0 || value[index-1] != '=' {
+					return nil, unsupportedTypeScriptSourceGrammar("top-level angle-bracket syntax in variable exports is not admitted")
+				}
+			}
+		case ',':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
+				parts = append(parts, value[start:index])
+				start = index + len(string(char))
+			}
+		}
+	}
+	parts = append(parts, value[start:])
+	return parts, nil
 }

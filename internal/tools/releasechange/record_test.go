@@ -198,19 +198,17 @@ var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.native-admission.branch-version", Summary: "Branch authority rejects names outside the Git branch shorthand grammar, and five package, registry, release, and consumer commands enforce full SemVer 2.0.0 after their existing field-specific text admission. Inputs previously accepted only because of incomplete local predicates now fail admission."},
 	{ChangeID: "proofkit.conformance-profile.ambiguous-id", Summary: "Conformance profile selection rejects duplicate records with the selected profileId instead of choosing whichever appears first. The full-manifest verification command continues to report duplicate IDs."},
 	{ChangeID: "proofkit.deployment-endpoint.admission", Summary: "Stable endpoints using case, trailing-root-dot or IDNA-equivalent variants of a declared temporary DNS suffix, endpoints matching caller-owned local indicators across Unicode, punycode, root-dot or equivalent IPv6 spellings, and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. Local indicators that erase under IDNA normalization are rejected instead of becoming wildcards. Equivalent Unicode host spellings now receive the same local-indicator decision. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches; announced historical leap seconds remain valid."},
-	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API verification now compares static ESM source declarations in a restricted, case-sensitive lowercase .ts/.mts subset; CommonJS .cts and enum or namespace declarations need repository-owned native witnesses. Manifests claiming truncated dollar-suffixed names or exports from a later local declaration fail. Unresolved runtime re-exports, code identifiers module/exports, invalid type names, duplicate type-only modifiers, unsupported type-only import attributes, and excessive string-fold work estimates fail closed; direct semicolonless and generic exports remain supported. A passing inventory does not prove pinned TypeScript compiler syntax or type validity. The sourceGrammar marker advances to v2."},
+	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API verification preserves the dollar suffix in exported function and type identifiers. Manifests that previously claimed a truncated name now fail comparison with the full source identifier. The declared export-subset grammar and extension support are unchanged."},
 }
 
 var currentAdditions = []Change{
-	{ChangeID: "proofkit.distribution-license-closure", Summary: "npm and wheel license expressions identify the MIT and bundled BSD-3-Clause code in their distribution archives; CycloneDX records the compound SPDX expression, and the bundled xxhash copyright notice is retained."},
-	{ChangeID: "proofkit.typescript-public-api.typed-variable", Summary: "The TypeScript public API scanner admits exported variable declarations with generic type annotations through an in-process TypeScript parser instead of rejecting valid angle-bracket syntax."},
+	{ChangeID: "proofkit.distribution-license-closure", Summary: "npm and wheel license expressions identify the MIT and bundled BSD-3-Clause code in their distribution archives; CycloneDX records the compound SPDX expression, and bundled Go module notices are retained."},
 }
 
 var currentMigrationSteps = []string{
 	"Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
-	"Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names or exports borrowed from a later local declaration.",
+	"Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names.",
 	"Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
-	"Use a repository-owned pinned compiler witness for .cts, enum or namespace declarations, complete syntax and type validity, or built-module export claims. Use exact lowercase .ts/.mts source extensions; refactor large literal-concatenation chains that exceed the conservative 64 MiB string-fold estimate. Replace unsupported runtime re-exports and code identifiers module/exports with direct ESM declarations, and retain separate target-symbol evidence for type-only re-exports.",
 	"Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality.",
 }
 
@@ -271,8 +269,7 @@ func currentExpectedReleaseNotes() string {
 		"- Branch authority admits caller-owned branch facts but does not query Git refs or repository protection settings.",
 		"- Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
 		"- The UTC leap-second validator admits IERS-announced positive leap dates through 2016 and fails closed on unannounced future insertions until its source is updated.",
-		"- The TypeScript public API scanner supports only its declared non-JSX .ts/.mts ESM source subset; TSX, CommonJS .cts, arbitrary TypeScript syntax, and built-module runtime export claims are not admitted.",
-		"- Named runtime re-exports, code identifiers module/exports, and const enum declarations are not admitted; explicit type-only re-exports do not prove target-symbol existence.",
+		"- The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it does not parse unrestricted TypeScript or prove built-module runtime exports.",
 		"- Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints.",
 		"",
 		"## Install",

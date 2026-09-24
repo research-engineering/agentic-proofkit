@@ -11,7 +11,6 @@ tool (
 )
 
 require (
-	github.com/evanw/esbuild v0.28.2
 	github.com/mattn/go-isatty v0.0.24
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/mod v0.41.0

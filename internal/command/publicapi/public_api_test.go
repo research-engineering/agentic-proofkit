@@ -25,9 +25,32 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 	if output["entryCount"] != 1 {
 		t.Fatalf("entryCount=%v want 1", output["entryCount"])
 	}
-	claims, ok := output["nonClaims"].([]any)
-	if !ok || !strings.Contains(fmt.Sprint(claims), "does not prove TypeScript compiler syntax or type validity") || !strings.Contains(fmt.Sprint(claims), "not a hard bound on parser allocations") {
-		t.Fatalf("passing static inventory omitted compiler or resource non-claim: %#v", output["nonClaims"])
+}
+
+func TestVerifyTypeScriptPublicAPIPreservesDollarSuffixedIdentifiers(t *testing.T) {
+	const source = "export function public$() { return 1; }\nexport class Class$ {}\nexport enum Enum$ { First }\nexport interface Interface$ { value: string }\nexport type Shape$ = { value: string };\n"
+	runtime, types, err := CollectExports(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStringSlice(t, runtime, []string{"Class$", "Enum$", "public$"})
+	assertStringSlice(t, types, []string{"Interface$", "Shape$"})
+
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	if err := os.WriteFile(sourcePath, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["runtimeExports"] = []any{"Class$", "Enum$", "public$"}
+	entry["typeExports"] = []any{"Interface$", "Shape$"}
+	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode != 0 {
+		t.Fatalf("Verify(full names) exit=%d error=%v output=%#v", exitCode, err, output)
+	}
+	entry["runtimeExports"] = []any{"Class$", "Enum$", "public"}
+	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode == 0 {
+		t.Fatalf("Verify(truncated name) exit=%d error=%v output=%#v, want mismatch", exitCode, err, output)
 	}
 }
 
@@ -563,8 +586,12 @@ func TestVerifyTypeScriptPackagePublicAPIRejectsDuplicatePackageIdentity(t *test
 	}
 }
 
-func TestCollectExportsAcceptsMultilineTypeReexports(t *testing.T) {
+func TestCollectExportsAcceptsMultilineReexports(t *testing.T) {
 	source := strings.Join([]string{
+		"export {",
+		"  VALUE,",
+		"  makeThing,",
+		"} from \"./thing.js\";",
 		"export type {",
 		"  Mode,",
 		"  Thing,",
@@ -575,150 +602,26 @@ func TestCollectExportsAcceptsMultilineTypeReexports(t *testing.T) {
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{})
+	assertStringSlice(t, runtimeExports, []string{"VALUE", "makeThing"})
 	assertStringSlice(t, typeExports, []string{"Mode", "Thing"})
 }
 
 func TestCollectExportsClassifiesInlineTypeReexports(t *testing.T) {
 	source := strings.Join([]string{
-		"export { type Mode, type Thing as PublicThing } from \"./thing.js\";",
+		"export { type Mode, VALUE, type Thing as PublicThing } from \"./thing.js\";",
+		"export { type as runtimeType } from \"./named-type.js\";",
 		"export {",
-		"  type\nOptions,",
+		"  type Options,",
+		"  makeThing,",
 		"} from \"./more.js\";",
-		"export { type as as PublicAs } from \"./other.js\";",
 	}, "\n")
 
 	runtimeExports, typeExports, err := CollectExports(source)
 	if err != nil {
 		t.Fatalf("collect exports: %v", err)
 	}
-	assertStringSlice(t, runtimeExports, []string{})
-	assertStringSlice(t, typeExports, []string{"Mode", "Options", "PublicAs", "PublicThing"})
-}
-
-func TestCollectExportsRejectsUnresolvedRuntimeReexportsAndConstEnum(t *testing.T) {
-	for _, source := range []string{
-		`export { VALUE } from "./thing.js";`,
-		`export { type Mode, VALUE } from "./thing.js";`,
-		"export { type as\nPublic } from './thing.js';",
-		`export const enum E { A, B }`,
-	} {
-		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "not admitted") {
-			t.Fatalf("CollectExports(%q) error=%v, want unresolved export rejection", source, err)
-		}
-	}
-}
-
-func TestCollectExportsRejectsCommonJSSyntheticExports(t *testing.T) {
-	for _, source := range []string{
-		"declare var module: {exports: unknown}; module.exports = { A: 1 };",
-		"declare var exports: {Public: number}; exports.Public = 1;",
-		"declare var exports: {Public: number}; exports.Public = 1; export type Shape = string;",
-		"declare var exports: {Public: number}; export const A = 1; exports.Public = 1; export type Shape = string;",
-	} {
-		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS binding identifiers are not admitted") {
-			t.Fatalf("CollectExports(%q) error=%v, want CommonJS rejection", source, err)
-		}
-	}
-}
-
-func TestCollectExportsAdmitsEmptyESMScript(t *testing.T) {
-	runtimeExports, typeExports, err := CollectExports("const privateValue = 1;")
-	if err != nil {
-		t.Fatal(err)
-	}
-	assertStringSlice(t, runtimeExports, []string{})
-	assertStringSlice(t, typeExports, []string{})
-}
-
-func TestCollectExportsReturnsStaticInventoryAcrossModuleExtensions(t *testing.T) {
-	for _, test := range []struct{ extension, source string }{
-		{".ts", "export const id = <T>(value: T) => value;"},
-		{".mts", "export const id = <T,>(value: T) => value;"},
-	} {
-		runtime, _, err := collectExportsWithExtension(test.source, test.extension)
-		if err != nil {
-			t.Fatalf("%s exports=%v error=%v, want id", test.extension, runtime, err)
-		}
-		assertStringSlice(t, runtime, []string{"id"})
-	}
-}
-
-func TestVerifyTypeScriptPublicAPIRejectsCTSPath(t *testing.T) {
-	input := publicAPIManifest()
-	entry := input["entries"].([]any)[0].(map[string]any)
-	entry["exportConditions"] = []any{map[string]any{
-		"condition": "import", "path": "./src/index.cts", "sourcePath": "packages/alpha/src/index.cts",
-	}}
-	_, exitCode, err := Verify(input, Options{RepoRoot: writeTypeScriptPackageFixture(t)})
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source with ESM semantics") {
-		t.Fatalf("Verify(.cts) exit=%d error=%v, want CommonJS source rejection", exitCode, err)
-	}
-}
-
-func TestVerifyTypeScriptPublicAPIRequiresExactLowercaseMTSExtension(t *testing.T) {
-	for _, extension := range []string{".mts", ".MTS", ".Mts"} {
-		t.Run(extension, func(t *testing.T) {
-			repoRoot := writeTypeScriptPackageFixture(t)
-			packageRoot := filepath.Join(repoRoot, "packages", "alpha")
-			relativePath := "./src/index" + extension
-			writeJSON(t, filepath.Join(packageRoot, "package.json"), map[string]any{
-				"name": "@example/alpha",
-				"exports": map[string]any{
-					".":          map[string]any{"import": relativePath, "types": relativePath},
-					"./internal": nil,
-				},
-			})
-			input := publicAPIManifest()
-			entry := input["entries"].([]any)[0].(map[string]any)
-			entry["exportConditions"] = []any{
-				map[string]any{"condition": "import", "path": relativePath, "sourcePath": "packages/alpha/src/index" + extension},
-				map[string]any{"condition": "types", "path": relativePath, "sourcePath": "packages/alpha/src/index" + extension},
-			}
-			entry["runtimeExports"] = []any{"id"}
-			entry["typeExports"] = []any{}
-			sourcePath := filepath.Join(packageRoot, "src", "index"+extension)
-			if err := os.WriteFile(sourcePath, []byte("export const id = <T,>(value: T) => value;"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			if extension != ".mts" {
-				if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source") {
-					t.Fatalf("Verify(%s) exit=%d error=%v, want exact-extension refusal", extension, exitCode, err)
-				}
-				return
-			}
-			if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 0 || err != nil {
-				t.Fatalf("Verify(%s) exit=%d error=%v, want static inventory match", extension, exitCode, err)
-			}
-		})
-	}
-}
-
-func TestCollectExportsRejectsInvalidTypeAliasNamedAs(t *testing.T) {
-	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type declaration name is not admitted") {
-		t.Fatalf("CollectExports() error=%v, want contextual keyword rejection", err)
-	}
-}
-
-func TestCollectExportsRejectsDuplicateTypeOnlyModifier(t *testing.T) {
-	source := `export type { type Shape as Public } from "./other";`
-	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "duplicate type-only re-export modifier") {
-		t.Fatalf("CollectExports() error=%v, want duplicate modifier rejection", err)
-	}
-}
-
-func TestCollectExportsAdmitsOnlyResolutionModeTypeAttributes(t *testing.T) {
-	invalid := `export type { T } from "./other.js" with { type: "json" };`
-	if _, _, err := CollectExports(invalid); err == nil || !strings.Contains(err.Error(), "attributes must use resolution-mode") {
-		t.Fatalf("CollectExports(invalid attributes) error=%v, want rejection", err)
-	}
-	valid := `export type { T } from "./other.js" with { "resolution-mode": "import" };`
-	runtimeExports, typeExports, err := CollectExports(valid)
-	if err != nil {
-		t.Fatalf("CollectExports(valid attributes) error=%v", err)
-	}
-	assertStringSlice(t, runtimeExports, []string{})
-	assertStringSlice(t, typeExports, []string{"T"})
+	assertStringSlice(t, runtimeExports, []string{"VALUE", "makeThing", "runtimeType"})
+	assertStringSlice(t, typeExports, []string{"Mode", "Options", "PublicThing"})
 }
 
 func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testing.T) {
@@ -751,180 +654,6 @@ func TestCollectExportsFindsMultipleTopLevelExportsOnOneLine(t *testing.T) {
 	}
 	assertStringSlice(t, runtimeExports, []string{"A", "B"})
 	assertStringSlice(t, typeExports, []string{})
-}
-
-func TestCollectExportsEndsSemicolonlessDeclarationBeforeLocalStatement(t *testing.T) {
-	source := "export const A = 1\nconst B = 2, C = 3;\nexport const D = 4;"
-	runtimeExports, typeExports, err := CollectExports(source)
-	if err != nil {
-		t.Fatalf("CollectExports() error=%v", err)
-	}
-	assertStringSlice(t, runtimeExports, []string{"A", "D"})
-	assertStringSlice(t, typeExports, []string{})
-}
-
-func BenchmarkCollectExportsLongBlankRun(b *testing.B) {
-	source := "export const A = 1\n" + strings.Repeat("\n", 80_000)
-	for b.Loop() {
-		if _, _, err := CollectExports(source); err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func TestVerifyTypeScriptPublicAPIUsesFullDollarIdentifiersAndSemanticStatementEnd(t *testing.T) {
-	repoRoot := writeTypeScriptPackageFixture(t)
-	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
-	source := "export const A = 1\nconst B = 2, C = 3;\nexport function public$() { return 1; }\nexport type Shape$ = { value: string };"
-	if err := os.WriteFile(sourcePath, []byte(source), 0o600); err != nil {
-		t.Fatalf("write source: %v", err)
-	}
-	input := publicAPIManifest()
-	entry := input["entries"].([]any)[0].(map[string]any)
-	entry["runtimeExports"] = []any{"A", "public$"}
-	entry["typeExports"] = []any{"Shape$"}
-	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-	if err != nil || exitCode != 0 {
-		t.Fatalf("Verify(correct manifest) output=%#v exit=%d error=%v", output, exitCode, err)
-	}
-	for _, runtimeNames := range [][]any{{"A", "C", "public$"}, {"A", "public"}} {
-		entry["runtimeExports"] = runtimeNames
-		output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-		if err != nil || exitCode != 1 {
-			t.Fatalf("Verify(wrong runtime manifest %v) output=%#v exit=%d error=%v", runtimeNames, output, exitCode, err)
-		}
-	}
-	entry["runtimeExports"] = []any{"A", "public$"}
-	entry["typeExports"] = []any{"Shape"}
-	output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
-	if err != nil || exitCode != 1 {
-		t.Fatalf("Verify(truncated type identifier) output=%#v exit=%d error=%v", output, exitCode, err)
-	}
-}
-
-func TestVerifyTypeScriptPublicAPITracksContinuationAndTemplateASI(t *testing.T) {
-	for _, test := range []struct {
-		source string
-		actual []any
-		wrong  []any
-	}{
-		{"export const A = true &&\nfunction () {}, B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"export const A = `x`\nconst B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
-		{"let i = 0; export const A = i++\nconst B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
-		{"let x = 1; export const A = x!\nconst B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
-		{"const async = 2;\nexport const A = 1 |\nasync, B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"export const A = 1/*\r*/const B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
-		{"export const A = 1 // comment\u2028const B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
-		{"let C = 0;\nexport const A = 1\nC = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
-		{"export function\nasync() { return 1; }", []any{"async"}, []any{}},
-		{"export const\nasync = 1;", []any{"async"}, []any{}},
-		{"export const values: Array<string> = [];", []any{"values"}, []any{}},
-		{"export const enum$ = 1;", []any{"enum$"}, []any{}},
-		{"const x = 1; export const A = typeof\nx, B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"class X {} export const A = new\nX(), B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"export const A = void\n0, B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"const tag = (parts: TemplateStringsArray) => parts[0]; export const A = tag\n`x`, B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"export const A = \"hello\\\nthere\", B = 2;", []any{"A", "B"}, []any{"A"}},
-		{"let B = 0, i = 0; export const A = 1\n++i, B = 2;", []any{"A"}, []any{"A", "B"}},
-	} {
-		repoRoot := writeTypeScriptPackageFixture(t)
-		sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
-		if err := os.WriteFile(sourcePath, []byte(test.source), 0o600); err != nil {
-			t.Fatalf("write source: %v", err)
-		}
-		input := publicAPIManifest()
-		entry := input["entries"].([]any)[0].(map[string]any)
-		entry["runtimeExports"] = test.actual
-		entry["typeExports"] = []any{}
-		output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-		if err != nil || exitCode != 0 {
-			t.Fatalf("Verify(correct manifest) output=%#v exit=%d error=%v", output, exitCode, err)
-		}
-		entry["runtimeExports"] = test.wrong
-		output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
-		if err != nil || exitCode != 1 {
-			t.Fatalf("Verify(wrong manifest) output=%#v exit=%d error=%v", output, exitCode, err)
-		}
-	}
-}
-
-func TestVerifyTypeScriptPublicAPIAdmitsMultilineTypeReexports(t *testing.T) {
-	for _, test := range []struct {
-		source       string
-		runtimeNames []any
-		typeNames    []any
-	}{
-		{"export type { Shape$ }\nfrom './other';", []any{}, []any{"Shape$"}},
-		{"export { type\nShape$ as Public } from './other';", []any{}, []any{"Public"}},
-	} {
-		repoRoot := writeTypeScriptPackageFixture(t)
-		sourceDir := filepath.Join(repoRoot, "packages", "alpha", "src")
-		if err := os.WriteFile(filepath.Join(sourceDir, "index.ts"), []byte(test.source), 0o600); err != nil {
-			t.Fatalf("write source: %v", err)
-		}
-		if err := os.WriteFile(filepath.Join(sourceDir, "other.ts"), []byte("export const A = 1; export type Shape$ = { value: string };"), 0o600); err != nil {
-			t.Fatalf("write re-export source: %v", err)
-		}
-		input := publicAPIManifest()
-		entry := input["entries"].([]any)[0].(map[string]any)
-		entry["runtimeExports"] = test.runtimeNames
-		entry["typeExports"] = test.typeNames
-		output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-		if err != nil || exitCode != 0 {
-			t.Fatalf("Verify(correct re-export manifest) output=%#v exit=%d error=%v", output, exitCode, err)
-		}
-		entry["runtimeExports"] = []any{}
-		entry["typeExports"] = []any{}
-		output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
-		if err != nil || exitCode != 1 {
-			t.Fatalf("Verify(omitted re-export manifest) output=%#v exit=%d error=%v", output, exitCode, err)
-		}
-	}
-}
-
-func TestVerifyTypeScriptPublicAPIRejectsUnresolvedRuntimeReexport(t *testing.T) {
-	repoRoot := writeTypeScriptPackageFixture(t)
-	sourceDir := filepath.Join(repoRoot, "packages", "alpha", "src")
-	if err := os.WriteFile(filepath.Join(sourceDir, "index.ts"), []byte("export { T }\nfrom './other';"), 0o600); err != nil {
-		t.Fatalf("write source: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(sourceDir, "other.ts"), []byte("export type T = string;"), 0o600); err != nil {
-		t.Fatalf("write type-only target: %v", err)
-	}
-	for _, names := range [][]any{{}, {"T"}} {
-		input := publicAPIManifest()
-		entry := input["entries"].([]any)[0].(map[string]any)
-		entry["runtimeExports"] = names
-		entry["typeExports"] = []any{}
-		_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-		if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "unresolved runtime re-exports") {
-			t.Fatalf("Verify(runtimeExports=%v) exit=%d error=%v, want fail-closed re-export", names, exitCode, err)
-		}
-	}
-}
-
-func TestVerifyTypeScriptPublicAPIRejectsCommonJSWithTypeOnlyExport(t *testing.T) {
-	repoRoot := writeTypeScriptPackageFixture(t)
-	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
-	for _, test := range []struct {
-		source       string
-		runtimeNames []any
-	}{
-		{"declare var exports: {Public: number}; exports.Public = 1; export type Shape = string;", []any{}},
-		{"declare var exports: {Public: number}; export const A = 1; exports.Public = 1; export type Shape = string;", []any{"A"}},
-	} {
-		if err := os.WriteFile(sourcePath, []byte(test.source), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		input := publicAPIManifest()
-		entry := input["entries"].([]any)[0].(map[string]any)
-		entry["runtimeExports"] = test.runtimeNames
-		entry["typeExports"] = []any{"Shape"}
-		_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
-		if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "CommonJS binding identifiers are not admitted") {
-			t.Fatalf("Verify(%q) exit=%d error=%v, want CommonJS rejection", test.source, exitCode, err)
-		}
-	}
 }
 
 func TestCollectExportsRecognizesAllLineCommentTerminators(t *testing.T) {
@@ -978,6 +707,7 @@ func TestCollectExportsRejectsLexicallyAmbiguousOrOutOfGrammarSources(t *testing
 		{name: "unicode code identifier", source: "const \u03c0 = 1; export const Public = 3;"},
 		{name: "template interpolation", source: "const value = `prefix ${1}`; export const Public = 3;"},
 		{name: "escaped code identifier", source: "const \\u0061 = 1; export const Public = 3;"},
+		{name: "top-level angle syntax", source: "export const values: Array<string> = [];"},
 		{name: "unterminated block comment", source: "/* hidden export const Ghost = 1;"},
 		{name: "unbalanced delimiter", source: "if (true) { export const Nested = 1;"},
 	}
