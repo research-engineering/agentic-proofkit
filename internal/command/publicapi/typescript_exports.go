@@ -6,18 +6,18 @@ import (
 	"strings"
 )
 
+const maxMTSAngleNesting = 128
+
 var (
-	namedExportPattern      = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	typeExportPattern       = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	runtimeDeclPattern      = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	typeDeclPattern         = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	constEnumPattern        = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
-	varDeclStartPattern     = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
-	exportClauseNameRegex   = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
-	identifierRegex         = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
-	commonJSBindingPattern  = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
-	ambiguousMTSGeneric     = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:async[[:space:]]*)?<[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*(?:[[:space:]]*=[^<>,]+)?[[:space:]]*>[[:space:]]*\(`)
-	resolutionModeAttribute = regexp.MustCompile(`^with[[:space:]]*\{[[:space:]]*["']resolution-mode["'][[:space:]]*:[[:space:]]*["'](?:import|require)["'][[:space:]]*\}`)
+	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	typeExportPattern      = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	runtimeDeclPattern     = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	typeDeclPattern        = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	constEnumPattern       = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
+	varDeclStartPattern    = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
+	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
+	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
@@ -32,7 +32,7 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 	if commonJSBindingPattern.MatchString(scan.masked) {
 		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
-	if extension == ".mts" && ambiguousMTSGeneric.MatchString(scan.masked) {
+	if extension == ".mts" && hasAmbiguousMTSGeneric(scan.masked) {
 		return nil, nil, unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
 	}
 	runtimeExports, err := collectRuntimeExports(runtimeParserSource(source, scan), extension)
@@ -52,7 +52,7 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
 		}
 		if match := typeExportPattern.FindStringSubmatchIndex(statement); match != nil {
-			if err := admitTypeReexportAttributes(source[start+match[1]:]); err != nil {
+			if err := admitTypeReexportAttributes(source[start+match[1]:], true); err != nil {
 				return nil, nil, err
 			}
 			if err := addTypeClauseExports(statement[match[2]:match[3]], typeExports); err != nil {
@@ -61,7 +61,7 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 			continue
 		}
 		if match := namedExportPattern.FindStringSubmatchIndex(statement); match != nil {
-			if err := admitTypeReexportAttributes(source[start+match[1]:]); err != nil {
+			if err := admitTypeReexportAttributes(source[start+match[1]:], false); err != nil {
 				return nil, nil, err
 			}
 			if err := addNamedClauseTypeExports(statement[match[2]:match[3]], typeExports); err != nil {
@@ -95,14 +95,143 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 	return runtimeExports, sortedSet(typeExports), nil
 }
 
-func admitTypeReexportAttributes(rawTail string) error {
-	tail := strings.TrimLeft(rawTail, " \t\r\n\v\f")
-	if strings.HasPrefix(tail, "with") && (len(tail) == len("with") || !isASCIITypeScriptIdentifierByte(tail[len("with")])) {
-		if !resolutionModeAttribute.MatchString(tail) {
-			return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
-		}
+func admitTypeReexportAttributes(rawTail string, topLevelType bool) error {
+	index := skipTypeScriptTrivia(rawTail, 0)
+	if !strings.HasPrefix(rawTail[index:], "with") || index+4 < len(rawTail) && isASCIITypeScriptIdentifierByte(rawTail[index+4]) {
+		return nil
+	}
+	if !topLevelType {
+		return unsupportedTypeScriptSourceGrammar("inline type-only re-exports cannot use import attributes")
+	}
+	index = skipTypeScriptTrivia(rawTail, index+4)
+	if index >= len(rawTail) || rawTail[index] != '{' {
+		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
+	}
+	key, next, ok := readTypeScriptAttributeString(rawTail, skipTypeScriptTrivia(rawTail, index+1))
+	if !ok || key != "resolution-mode" {
+		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
+	}
+	index = skipTypeScriptTrivia(rawTail, next)
+	if index >= len(rawTail) || rawTail[index] != ':' {
+		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
+	}
+	value, next, ok := readTypeScriptAttributeString(rawTail, skipTypeScriptTrivia(rawTail, index+1))
+	if !ok || value != "import" && value != "require" {
+		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
+	}
+	index = skipTypeScriptTrivia(rawTail, next)
+	if index < len(rawTail) && rawTail[index] == ',' {
+		index = skipTypeScriptTrivia(rawTail, index+1)
+	}
+	if index >= len(rawTail) || rawTail[index] != '}' {
+		return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
 	}
 	return nil
+}
+
+func skipTypeScriptTrivia(source string, index int) int {
+	for index < len(source) {
+		if strings.ContainsRune(" \t\r\n\v\f", rune(source[index])) {
+			index++
+			continue
+		}
+		if strings.HasPrefix(source[index:], "//") {
+			for index < len(source) && source[index] != '\n' && source[index] != '\r' {
+				index++
+			}
+			continue
+		}
+		if strings.HasPrefix(source[index:], "/*") {
+			if end := strings.Index(source[index+2:], "*/"); end >= 0 {
+				index += end + 4
+				continue
+			}
+		}
+		break
+	}
+	return index
+}
+
+func readTypeScriptAttributeString(source string, index int) (string, int, bool) {
+	if index >= len(source) || source[index] != '\'' && source[index] != '"' {
+		return "", index, false
+	}
+	quote := source[index]
+	start := index + 1
+	for index = start; index < len(source); index++ {
+		if source[index] == '\\' {
+			return "", index, false
+		}
+		if source[index] == quote {
+			return source[start:index], index + 1, true
+		}
+	}
+	return "", index, false
+}
+
+func hasAmbiguousMTSGeneric(masked string) bool {
+	for start := 0; start < len(masked); start++ {
+		if masked[start] != '<' {
+			continue
+		}
+		index := start + 1
+		for index < len(masked) && strings.ContainsRune(" \t\r\n", rune(masked[index])) {
+			index++
+		}
+		if index >= len(masked) || !isASCIITypeScriptIdentifierByte(masked[index]) {
+			continue
+		}
+		angle, square, round, curly := 1, 0, 0, 0
+		separated := false
+		for ; index < len(masked); index++ {
+			switch masked[index] {
+			case '<':
+				angle++
+				if angle > maxMTSAngleNesting {
+					return true
+				}
+			case '>':
+				if index > 0 && masked[index-1] == '=' {
+					continue
+				}
+				angle--
+				if angle == 0 {
+					after := index + 1
+					for after < len(masked) && strings.ContainsRune(" \t\r\n", rune(masked[after])) {
+						after++
+					}
+					if after < len(masked) && masked[after] == '(' && !separated {
+						return true
+					}
+					goto nextCandidate
+				}
+			case '[':
+				square++
+			case ']':
+				square--
+			case '(':
+				round++
+			case ')':
+				round--
+			case '{':
+				curly++
+			case '}':
+				curly--
+			case ',':
+				if angle == 1 && square == 0 && round == 0 && curly == 0 {
+					separated = true
+				}
+			}
+			if angle == 1 && square == 0 && round == 0 && curly == 0 && strings.HasPrefix(masked[index:], "extends") && (index == 0 || !isASCIITypeScriptIdentifierByte(masked[index-1])) {
+				end := index + len("extends")
+				if end == len(masked) || !isASCIITypeScriptIdentifierByte(masked[end]) {
+					separated = true
+				}
+			}
+		}
+	nextCandidate:
+	}
+	return false
 }
 
 // Only erased interface names are substituted for esbuild; original bytes own type names and offsets.

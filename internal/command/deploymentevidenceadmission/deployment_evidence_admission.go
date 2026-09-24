@@ -446,7 +446,7 @@ func validateEndpoint(endpoint map[string]any, context string, policy policy, bl
 		*failures = append(*failures, context+".url must have a valid DNS or IP host")
 		return
 	}
-	if isLocalEndpointHost(parsed.Hostname(), hostname, policy) {
+	if isLocalEndpointHost(hostname, policy) {
 		*failures = append(*failures, context+".url must not be local or loopback")
 	}
 	if endpointKind != nil && *endpointKind == "stable" && hasTemporaryEndpointSuffix(hostname, policy) {
@@ -664,16 +664,13 @@ func isLocalRef(value string, policy policy) bool {
 	return false
 }
 
-func isLocalEndpointHost(rawHost string, canonicalHost string, policy policy) bool {
-	if isLocalRef(rawHost, policy) {
-		return true
-	}
+func isLocalEndpointHost(canonicalHost string, policy policy) bool {
 	unicodeHost, err := idna.Lookup.ToUnicode(canonicalHost)
 	if err != nil {
 		unicodeHost = canonicalHost
 	}
 	asciiWithRoot := strings.ToLower(canonicalHost + ".")
-	unicodeWithRoot := strings.ToLower(unicodeHost + ".")
+	unicodeWithRoot := strings.ToLower(norm.NFC.String(unicodeHost) + ".")
 	for _, indicator := range policy.LocalRefIndicators {
 		normalized := normalizeLocalHostIndicator(indicator)
 		if strings.Contains(asciiWithRoot, strings.ToLower(normalized)) || strings.Contains(unicodeWithRoot, strings.ToLower(normalized)) {
@@ -692,9 +689,6 @@ func normalizeLocalHostIndicator(indicator string) string {
 			return character
 		}
 	}, indicator)
-	if !strings.ContainsFunc(mapped, func(character rune) bool { return character > 127 }) {
-		return mapped
-	}
 	rootDot := strings.HasSuffix(mapped, ".")
 	core := strings.TrimSuffix(mapped, ".")
 	unicodeValue, err := idna.Lookup.ToUnicode(core)
@@ -702,9 +696,9 @@ func normalizeLocalHostIndicator(indicator string) string {
 		return norm.NFC.String(mapped)
 	}
 	if rootDot {
-		return unicodeValue + "."
+		return norm.NFC.String(unicodeValue) + "."
 	}
-	return unicodeValue
+	return norm.NFC.String(unicodeValue)
 }
 
 func hasTemporaryEndpointSuffix(value string, policy policy) bool {

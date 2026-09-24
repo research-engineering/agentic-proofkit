@@ -250,9 +250,16 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 		{".mts", "export const id = <T>(value: T) => value;", false},
 		{".mts", "export const id = async<T>(value: T) => value;", false},
 		{".mts", "export const id = <T = unknown>(value: T) => value;", false},
+		{".mts", "export const id = <T = Array<string>>(value: T) => value;", false},
+		{".mts", "export const id = <T = [string, number]>(value: T) => value;", false},
+		{".mts", "export const id = (<T>(value: T) => value);", false},
+		{".mts", "export function id() { return <T>(value: T) => value; }", false},
+		{".mts", "export const id = <\tT\t>(value: T) => value;", false},
 		{".mts", "export const id = <T,>(value: T) => value;", true},
 		{".mts", "export const id = <T = unknown,>(value: T) => value;", true},
+		{".mts", "export const id = <T = Array<string>,>(value: T) => value;", true},
 		{".mts", "export const id = <T extends unknown>(value: T) => value;", true},
+		{".mts", "export const id = <T extends Array<string>>(value: T) => value;", true},
 	} {
 		path := filepath.Join(t.TempDir(), "entry"+test.extension)
 		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
@@ -264,6 +271,13 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 		if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
 			t.Fatalf("%s source=%q compilerError=%v output=%s admissionError=%v, valid=%t", test.extension, test.source, compilerErr, output, admissionErr, test.valid)
 		}
+	}
+}
+
+func TestMTSGenericAngleNestingBound(t *testing.T) {
+	source := "export const id = <T = " + strings.Repeat("Array<", maxMTSAngleNesting) + "string" + strings.Repeat(">", maxMTSAngleNesting) + ">(value: T) => value;"
+	if _, _, err := collectExportsWithExtension(source, ".mts"); err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
+		t.Fatalf("collectExportsWithExtension() error=%v, want bounded grammar rejection", err)
 	}
 }
 
@@ -311,7 +325,11 @@ func TestTypeOnlyReexportAttributesMatchCompiler(t *testing.T) {
 		valid  bool
 	}{
 		{`export type { T } from "./other.js" with { type: "json" };`, false},
+		{`export type { T } from "./other.js" /*trivia*/ with { type: "json" };`, false},
 		{`export type { T } from "./other.js" with { "resolution-mode": "import" };`, true},
+		{`export type { T } from "./other.js" /*trivia*/ with { /*a*/ "resolution-mode" /*b*/ : /*c*/ "import" /*d*/ };`, true},
+		{`export type { T } from "./other.js" with { "resolution-mode": "import", };`, true},
+		{`export { type T } from "./other.js" with { "resolution-mode": "import" };`, false},
 	} {
 		path := filepath.Join(folder, "entry.ts")
 		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
