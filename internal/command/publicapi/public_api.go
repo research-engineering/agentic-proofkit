@@ -155,6 +155,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 			"runtimeExports compares static ESM declarations in admitted source, not the export inventory of a built module or CommonJS execution.",
 			"TypeScript public API verification does not parse JSX or admit TSX source files.",
 			"TypeScript public API verification admits a documented fail-closed export grammar subset; it does not parse unrestricted TypeScript.",
+			"A passing static export inventory does not prove TypeScript compiler syntax or type validity; run a repository-owned pinned compiler witness.",
 			"Explicit type-only re-exports are declarative; this command does not resolve target symbols and rejects unresolved runtime re-exports.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "8f4c8f9e4555856af5553a4d2eac857047a6647e69f06b667faedf7bf5fac33c"
+	cliContractPublicABISHA256               = "a852beccd5c58982238f2ad3dfc14369d383e66ee3017091f51e82fcc43653a3"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2081,19 +2081,21 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	if grammar["moduleSemantics"] != "static_esm_declarations_only" {
 		t.Fatalf("TypeScript public API module semantics drifted: %#v", grammar)
 	}
+	if !strings.Contains(grammar["syntaxAuthority"].(string), "pinned TypeScript compiler syntax and type validity are non-claims") {
+		t.Fatalf("TypeScript public API syntax authority drifted: %#v", grammar["syntaxAuthority"])
+	}
 	if grammar["maxGenericAngleNesting"] != float64(128) {
 		t.Fatalf("TypeScript public API generic nesting budget drifted: %#v", grammar["maxGenericAngleNesting"])
 	}
 	assertStringSet(t, stringsFromAny(grammar["supportedExtensions"].([]any)), []string{".mts", ".ts"}, "TypeScript public API source extensions")
 	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
-	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") || !strings.Contains(admitted, "literal-only enum declarations") {
-		t.Fatalf("TypeScript public API source grammar omits typed-variable or literal-enum admission: %s", admitted)
+	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") || strings.Contains(admitted, "enum declarations") {
+		t.Fatalf("TypeScript public API source grammar misstates typed-variable or enum admission: %s", admitted)
 	}
 	if !strings.Contains(admitted, "explicit inline type-only re-exports") || strings.Contains(admitted, "named runtime re-exports") {
 		t.Fatalf("TypeScript public API source grammar misstates re-export authority: %s", admitted)
 	}
 	assertStringSet(t, stringsFromAny(grammar["rejectedExportForms"].([]any)), []string{
-		"const enum exports",
 		"unresolved named runtime re-exports",
 		"compiler-invalid type and interface declaration names",
 		"duplicate type-only re-export modifier",
@@ -2101,7 +2103,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"inline type-only re-export import attributes",
 		"legacy assert import attributes",
 		"type-only import attributes after a line terminator",
-		"computed enum initializers require a native compiler witness",
+		"enum and namespace declarations require a native compiler witness",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
 	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "ambiguous bare or default single-parameter angle form", "compiler-invalid nested default single-parameter angle form", "generic angle nesting deeper than 128", "unparenthesized conditional generic constraints", "CommonJS-ambiguity guards"} {
@@ -2117,7 +2119,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "native compiler witness") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "pinned compiler witness") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }

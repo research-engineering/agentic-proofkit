@@ -22,7 +22,7 @@ func TestRuntimeExportInventoryDoesNotAmplifyNestedWhitespace(t *testing.T) {
 	}
 }
 
-func TestComputedEnumExpansionFailsBeforeRuntimeBuild(t *testing.T) {
+func TestExpandingDeclarationsFailBeforeRuntimeBuild(t *testing.T) {
 	var source strings.Builder
 	source.WriteString(`export enum E { A0 = "x"`)
 	for index := 1; index <= 22; index++ {
@@ -30,16 +30,28 @@ func TestComputedEnumExpansionFailsBeforeRuntimeBuild(t *testing.T) {
 		fmt.Fprintf(&source, ", A%d = A%d + A%d", index, previous, previous)
 	}
 	source.WriteString(" }")
-	if _, _, err := CollectExports(source.String()); err == nil || !strings.Contains(err.Error(), "computed enum initializers") {
+	if _, _, err := CollectExports(source.String()); err == nil || !strings.Contains(err.Error(), "enum declarations are not admitted") {
 		t.Fatalf("CollectExports(computed enum) error=%v, want pre-build refusal", err)
 	}
-	for _, admitted := range []string{
+	for _, rejected := range []string{
 		`export enum E { A, B, C }`,
 		`export enum E { A = "x", B = "y" }`,
 		`export enum E { A = 1, B = -2, C = 0x10 }`,
+		`const enum E { A = 1 }; export const A = E.A;`,
+		`export enum E { A = "` + strings.Repeat("x", 4096) + `" }; export const xs = [` + strings.Repeat("E.A,", 4096) + `];`,
+		`namespace VeryLongName { export const A = 1; } export const id = VeryLongName.A;`,
 	} {
-		if runtime, _, err := CollectExports(admitted); err != nil || len(runtime) != 1 || runtime[0] != "E" {
-			t.Fatalf("CollectExports(%q) runtime=%v error=%v, want literal enum admission", admitted, runtime, err)
+		if _, _, err := CollectExports(rejected); err == nil || !strings.Contains(err.Error(), "declarations are not admitted") {
+			t.Fatalf("CollectExports(expanding declaration) error=%v, want pre-build refusal", err)
 		}
+	}
+	if runtime, _, err := CollectExports(`export const record = { enum: 1 };`); err != nil || len(runtime) != 1 || runtime[0] != "record" {
+		t.Fatalf("CollectExports(object property) runtime=%v error=%v, want passed", runtime, err)
+	}
+	if runtime, _, err := CollectExports(`export class C { enum() { return 1; } }`); err != nil || len(runtime) != 1 || runtime[0] != "C" {
+		t.Fatalf("CollectExports(class method) runtime=%v error=%v, want passed", runtime, err)
+	}
+	if runtime, _, err := CollectExports(`export const record = { namespace: 1 };`); err != nil || len(runtime) != 1 || runtime[0] != "record" {
+		t.Fatalf("CollectExports(namespace property) runtime=%v error=%v, want passed", runtime, err)
 	}
 }

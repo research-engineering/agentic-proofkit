@@ -50,6 +50,8 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		{"export { type as as Public } from './other';", "export { type as as Public }", "Public"},
 		{"export interface as { value: number }", "export interface as", "as"},
 		{"export interface satisfies { value: number }; export const A = 1;", "export interface satisfies", "satisfies"},
+		{"export function f() { interface as {} }", "", ""},
+		{"export function f() { type as = number; }", "", ""},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")
@@ -267,6 +269,9 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 		{".mts", "export const id = <T extends Array<string>>(value: T) => value;", true},
 		{".mts", "export const id: <T>(value: T) => T = value => value;", true},
 		{".mts", "export type Fn = <T>(value: T) => T;", true},
+		{".mts", "export function id<T>(value: T) { return value; }", true},
+		{".mts", "export type Shape = { id: <T>(value: T) => T };", true},
+		{".mts", "function id<T>(x: T) { return x; } export const value = id<number>(1);", true},
 	} {
 		path := filepath.Join(t.TempDir(), "entry"+test.extension)
 		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
@@ -296,6 +301,7 @@ func TestGenericConstraintSyntaxMatchesCompiler(t *testing.T) {
 	}{
 		{`export const id = <T extends string ? string : never>(x: T) => x;`, false},
 		{`export const id = <T extends (string extends string ? string : never)>(x: T) => x;`, true},
+		{`export const xs: Array<string extends string ? string : never> = [];`, true},
 	} {
 		for _, extension := range []string{".ts", ".mts"} {
 			path := filepath.Join(t.TempDir(), "entry"+extension)

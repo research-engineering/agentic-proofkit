@@ -11,14 +11,16 @@ const maxGenericAngleNesting = 128
 var (
 	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
 	typeExportPattern      = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	runtimeDeclPattern     = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	runtimeDeclPattern     = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
 	typeDeclPattern        = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	constEnumPattern       = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
 	varDeclStartPattern    = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
 	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
 	genericTypePosition    = regexp.MustCompile(`^export[[:space:]]+(?:(?:const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*:|type[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=)[[:space:]]*$`)
+	typeAliasPrefix        = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=`)
+	erasedInterfaceName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])interface[[:space:]]+(as|satisfies)[[:space:]]*(?:\{|<|extends[[:space:]])`)
+	erasedTypeAliasName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])type[[:space:]]+(as)[[:space:]]*=`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
@@ -34,7 +36,7 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 	if commonJSBindingPattern.MatchString(scan.masked) {
 		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
-	if err := admitBoundedEnumInitializers(scan.masked); err != nil {
+	if err := admitNoExpandingDeclarations(scan.masked); err != nil {
 		return nil, nil, err
 	}
 	if err := admitGenericAngleSyntax(scan, extension); err != nil {
@@ -83,9 +85,6 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 			}
 			typeExports[match[2]] = struct{}{}
 			continue
-		}
-		if constEnumPattern.MatchString(statement) {
-			return nil, nil, fmt.Errorf("TypeScript public API const enum exports are not admitted")
 		}
 		if varDeclStartPattern.MatchString(statement) {
 			continue
@@ -217,7 +216,7 @@ func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error
 			continue
 		}
 		angle, square, round, curly := 1, 0, 0, 0
-		separated, defaultSeen, constraintSeen := false, false, false
+		separated, defaultSeen, constraintSeen, malformedConstraint := false, false, false, false
 		for ; index < len(masked); index++ {
 			switch masked[index] {
 			case '<':
@@ -235,8 +234,13 @@ func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error
 					for after < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[after])) {
 						after++
 					}
-					if extension == ".mts" && after < len(masked) && masked[after] == '(' && !separated && (latestExport < 0 || !genericTypePosition.MatchString(masked[latestExport:start])) {
-						return unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
+					if after < len(masked) && masked[after] == '(' && !angleInTypeContext(masked, start, latestExport) {
+						if malformedConstraint {
+							return unsupportedTypeScriptSourceGrammar("conditional generic constraints require parentheses")
+						}
+						if extension == ".mts" && !separated {
+							return unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
+						}
 					}
 					goto nextCandidate
 				}
@@ -263,7 +267,7 @@ func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error
 				}
 			case '?':
 				if angle == 1 && square == 0 && round == 0 && curly == 0 && constraintSeen && !defaultSeen {
-					return unsupportedTypeScriptSourceGrammar("conditional generic constraints require parentheses")
+					malformedConstraint = true
 				}
 			}
 			if !defaultSeen && angle == 1 && square == 0 && round == 0 && curly == 0 && strings.HasPrefix(masked[index:], "extends") && (index == 0 || !isASCIITypeScriptIdentifierByte(masked[index-1])) {
@@ -279,25 +283,47 @@ func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error
 	return nil
 }
 
-// Only erased interface names are substituted for esbuild; original bytes own type names and offsets.
+func angleInTypeContext(masked string, start int, latestExport int) bool {
+	if latestExport >= 0 {
+		prefix := masked[latestExport:start]
+		if genericTypePosition.MatchString(prefix) || typeAliasPrefix.MatchString(prefix) {
+			return true
+		}
+	}
+	end := start
+	for end > 0 && strings.ContainsRune(" \t\r\n\v\f", rune(masked[end-1])) {
+		end--
+	}
+	if end == 0 {
+		return false
+	}
+	if masked[end-1] == ':' {
+		return true
+	}
+	if !isASCIITypeScriptIdentifierByte(masked[end-1]) {
+		return false
+	}
+	begin := end - 1
+	for begin > 0 && isASCIITypeScriptIdentifierByte(masked[begin-1]) {
+		begin--
+	}
+	word := masked[begin:end]
+	return word != "async" && word != "return"
+}
+
+// Only erased declaration names are substituted for esbuild; original bytes own type names and offsets.
 func runtimeParserSource(source string, scan typeScriptLexicalScan) string {
 	var rewritten []byte
-	for _, start := range scan.topLevelExportOffsets {
-		indices := typeDeclPattern.FindStringSubmatchIndex(scan.masked[start:])
-		if indices == nil || scan.masked[start+indices[2]:start+indices[3]] != "interface" {
-			continue
-		}
-		nameStart, nameEnd := start+indices[4], start+indices[5]
-		name := scan.masked[nameStart:nameEnd]
-		if name != "as" && name != "satisfies" {
-			continue
-		}
-		if rewritten == nil {
-			rewritten = []byte(source)
-		}
-		rewritten[nameStart] = '_'
-		for index := nameStart + 1; index < nameEnd; index++ {
-			rewritten[index] = 'x'
+	for _, pattern := range []*regexp.Regexp{erasedInterfaceName, erasedTypeAliasName} {
+		for _, indices := range pattern.FindAllStringSubmatchIndex(scan.masked, -1) {
+			nameStart, nameEnd := indices[2], indices[3]
+			if rewritten == nil {
+				rewritten = []byte(source)
+			}
+			rewritten[nameStart] = '_'
+			for index := nameStart + 1; index < nameEnd; index++ {
+				rewritten[index] = 'x'
+			}
 		}
 	}
 	if rewritten == nil {
