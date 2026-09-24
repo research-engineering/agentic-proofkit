@@ -234,7 +234,7 @@ func TestInterfaceKeywordAdmissionDoesNotExceedCompiler(t *testing.T) {
 	}
 }
 
-func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
+func TestStaticInventoryAdmitsCompilerValidGenericPositions(t *testing.T) {
 	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
 	if err != nil {
 		t.Fatal(err)
@@ -243,88 +243,29 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 	if _, err := os.Stat(compiler); err != nil {
 		t.Skip("locked TypeScript compiler is not installed")
 	}
-	for _, test := range []struct {
-		extension string
-		source    string
-		valid     bool
-	}{
-		{".ts", "export const id = <T>(value: T) => value;", true},
-		{".mts", "export const id = <T>(value: T) => value;", false},
-		{".mts", "export const id = async<T>(value: T) => value;", false},
-		{".mts", "export const id = <T = unknown>(value: T) => value;", false},
-		{".mts", "export const id = <T = Array<string>>(value: T) => value;", false},
-		{".mts", "export const id = <T = [string, number]>(value: T) => value;", false},
-		{".mts", "export const id = <T = string extends string ? string : never>(value: T) => value;", false},
-		{".mts", "export const id = (<T>(value: T) => value);", false},
-		{".mts", "export function id() { return <T>(value: T) => value; }", false},
-		{".mts", "export function id() { return " + strings.Repeat(" ", 512) + "<T>(value: T) => value; }", false},
-		{".mts", "export function id() { return async<T>(value: T) => value; }", false},
-		{".mts", "export const id = <\tT\t>(value: T) => value;", false},
-		{".mts", "export const id = <\vT>(value: T) => value;", false},
-		{".mts", "export const id = <\fT>(value: T) => value;", false},
-		{".mts", "export const id = <T>\v(value: T) => value;", false},
-		{".mts", "export const id = <T>\f(value: T) => value;", false},
-		{".mts", "export const id = <T,>(value: T) => value;", true},
-		{".mts", "export const id = <T = unknown,>(value: T) => value;", true},
-		{".mts", "export const id = <T = Array<string>,>(value: T) => value;", true},
-		{".mts", "export const id = <T extends unknown>(value: T) => value;", true},
-		{".mts", "export const id = <T extends Array<string>>(value: T) => value;", true},
-		{".mts", "export const id: <T>(value: T) => T = value => value;", true},
-		{".mts", "export const fn: (<T>(x: T) => T) = x => x;", true},
-		{".mts", "export type Fn = <T>(value: T) => T;", true},
-		{".mts", "export function id<T>(value: T) { return value; }", true},
-		{".mts", "export type Shape = { id: <T>(value: T) => T };", true},
-		{".mts", "export interface Shape { <T>(value: T): T }", true},
-		{".mts", "function id<T>(x: T) { return x; } export const value = id<number>(1);", true},
+	for _, test := range []struct{ extension, source string }{
+		{".ts", "export const id = <T>(value: T) => value;"},
+		{".mts", "export const id = <T,>(value: T) => value;"},
+		{".mts", "export const id = <T = Array<string>,>(value: T) => value;"},
+		{".mts", "export const id: <T>(value: T) => T = value => value;"},
+		{".mts", "export const fn: (<T>(x: T) => T) = x => x;"},
+		{".mts", "export type Fn = <T>(value: T) => T;"},
+		{".mts", "export function id<T>(value: T) { return value; }"},
+		{".mts", "export type Shape = { id: <T>(value: T) => T };"},
+		{".mts", "export interface Shape { <T>(value: T): T; return<U>(value: U): U }"},
+		{".mts", "export class Api { return<T>(x: T) { return x; } }"},
+		{".mts", "function id<T>(x: T) { return x; } export const value = id<number>(1);"},
+		{".ts", "export const xs: Array<string extends string ? string : never> = [];"},
 	} {
 		path := filepath.Join(t.TempDir(), "entry"+test.extension)
 		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		command := exec.Command(compiler, "--noEmit", "--module", "nodenext", "--moduleResolution", "nodenext", path)
-		output, compilerErr := command.CombinedOutput()
+		output, compilerErr := exec.Command(compiler, "--noEmit", "--pretty", "false", "--module", "nodenext", "--moduleResolution", "nodenext", path).CombinedOutput()
 		_, _, admissionErr := collectExportsWithExtension(test.source, test.extension)
-		if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
-			t.Fatalf("%s source=%q compilerError=%v output=%s admissionError=%v, valid=%t", test.extension, test.source, compilerErr, output, admissionErr, test.valid)
+		if compilerErr != nil || admissionErr != nil {
+			t.Fatalf("extension=%s source=%q compilerError=%v output=%s admissionError=%v", test.extension, test.source, compilerErr, output, admissionErr)
 		}
-	}
-}
-
-func TestGenericConstraintSyntaxMatchesCompiler(t *testing.T) {
-	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
-	if err != nil {
-		t.Fatal(err)
-	}
-	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
-	if _, err := os.Stat(compiler); err != nil {
-		t.Skip("locked TypeScript compiler is not installed")
-	}
-	for _, test := range []struct {
-		source string
-		valid  bool
-	}{
-		{`export const id = <T extends string ? string : never>(x: T) => x;`, false},
-		{`export const id = <T extends (string extends string ? string : never)>(x: T) => x;`, true},
-		{`export const xs: Array<string extends string ? string : never> = [];`, true},
-	} {
-		for _, extension := range []string{".ts", ".mts"} {
-			path := filepath.Join(t.TempDir(), "entry"+extension)
-			if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			output, compilerErr := exec.Command(compiler, "--noEmit", "--pretty", "false", "--module", "nodenext", "--moduleResolution", "nodenext", path).CombinedOutput()
-			_, _, admissionErr := collectExportsWithExtension(test.source, extension)
-			if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
-				t.Fatalf("extension=%s source=%q compilerError=%v output=%s admissionError=%v valid=%t", extension, test.source, compilerErr, output, admissionErr, test.valid)
-			}
-		}
-	}
-}
-
-func TestMTSGenericAngleNestingBound(t *testing.T) {
-	source := "export const id = <T = " + strings.Repeat("Array<", maxGenericAngleNesting) + "string" + strings.Repeat(">", maxGenericAngleNesting) + ">(value: T) => value;"
-	if _, _, err := collectExportsWithExtension(source, ".mts"); err == nil || !strings.Contains(err.Error(), "generic angle nesting") {
-		t.Fatalf("collectExportsWithExtension() error=%v, want bounded grammar rejection", err)
 	}
 }
 

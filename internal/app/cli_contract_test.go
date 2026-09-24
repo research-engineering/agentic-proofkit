@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "63191b148e88d1a7860d2d088bb8e3252fa81a2892381eef5e7561ca449cc479"
+	cliContractPublicABISHA256               = "c9fd0824f826a22c50ef78bbc4f81e3f84d5c87e516cc814a203f5b38eb6e8ef"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2087,13 +2087,6 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	if !strings.Contains(grammar["syntaxAuthority"].(string), "pinned TypeScript compiler syntax and type validity are non-claims") {
 		t.Fatalf("TypeScript public API syntax authority drifted: %#v", grammar["syntaxAuthority"])
 	}
-	if grammar["maxGenericAngleNesting"] != float64(128) {
-		t.Fatalf("TypeScript public API generic nesting budget drifted: %#v", grammar["maxGenericAngleNesting"])
-	}
-	assertStringSet(t, stringsFromAny(grammar["recognizedAngleExpressionContexts"].([]any)), []string{
-		"direct untyped exported const, let, or var initializer",
-		"return expression with optional parentheses or async",
-	}, "TypeScript public API guarded angle expression contexts")
 	assertStringSet(t, stringsFromAny(grammar["supportedExtensions"].([]any)), []string{".mts", ".ts"}, "TypeScript public API source extensions")
 	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
 	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") || strings.Contains(admitted, "enum declarations") {
@@ -2113,7 +2106,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"enum and namespace declarations require a native compiler witness",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "ambiguous bare or default single-parameter angle form", "compiler-invalid nested default single-parameter angle form", "generic angle nesting deeper than 128", "unparenthesized conditional generic constraints", "CommonJS-ambiguity guards"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "CommonJS-ambiguity guards"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}

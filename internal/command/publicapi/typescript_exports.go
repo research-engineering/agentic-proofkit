@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-const maxGenericAngleNesting = 128
-
 var (
 	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
 	typeExportPattern      = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
@@ -17,7 +15,6 @@ var (
 	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
-	directInitializerAngle = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*\(*[[:space:]]*(?:async[[:space:]]*)?$`)
 	erasedInterfaceName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])interface[[:space:]]+(as|satisfies)[[:space:]]*(?:\{|<|extends[[:space:]])`)
 	erasedTypeAliasName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])type[[:space:]]+(as)[[:space:]]*=`)
 )
@@ -35,9 +32,6 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
 	if err := admitNoExpandingDeclarations(scan.masked); err != nil {
-		return nil, nil, err
-	}
-	if err := admitGenericAngleSyntax(scan, extension); err != nil {
 		return nil, nil, err
 	}
 	runtimeExports, err := collectRuntimeExports(runtimeParserSource(source, scan), extension)
@@ -193,117 +187,6 @@ func readTypeScriptAttributeString(source string, index int) (string, int, bool)
 		}
 	}
 	return "", index, false
-}
-
-func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error {
-	masked := scan.masked
-	exportIndex, latestExport := 0, -1
-	returnEligible := false
-	directCandidateChecked := false
-	for start := 0; start < len(masked); start++ {
-		if strings.HasPrefix(masked[start:], "return") && (start == 0 || !isASCIITypeScriptIdentifierByte(masked[start-1]) && masked[start-1] != '.') && (start+6 == len(masked) || !isASCIITypeScriptIdentifierByte(masked[start+6])) {
-			returnEligible = true
-			start += len("return") - 1
-			continue
-		}
-		if returnEligible && strings.HasPrefix(masked[start:], "async") && (start+5 == len(masked) || !isASCIITypeScriptIdentifierByte(masked[start+5])) {
-			start += len("async") - 1
-			continue
-		}
-		if masked[start] != '<' {
-			if returnEligible && !strings.ContainsRune(" \t\r\n\v\f(", rune(masked[start])) {
-				returnEligible = false
-			}
-			continue
-		}
-		recognizedReturn := returnEligible
-		returnEligible = false
-		for exportIndex < len(scan.topLevelExportOffsets) && scan.topLevelExportOffsets[exportIndex] <= start {
-			latestExport = scan.topLevelExportOffsets[exportIndex]
-			exportIndex++
-			directCandidateChecked = false
-		}
-		index := start + 1
-		for index < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[index])) {
-			index++
-		}
-		if index >= len(masked) || !isASCIITypeScriptIdentifierByte(masked[index]) {
-			continue
-		}
-		angle, square, round, curly := 1, 0, 0, 0
-		separated, defaultSeen, constraintSeen, malformedConstraint := false, false, false, false
-		for ; index < len(masked); index++ {
-			switch masked[index] {
-			case '<':
-				angle++
-				if angle > maxGenericAngleNesting {
-					return unsupportedTypeScriptSourceGrammar("generic angle nesting exceeds 128")
-				}
-			case '>':
-				if index > 0 && masked[index-1] == '=' {
-					continue
-				}
-				angle--
-				if angle == 0 {
-					after := index + 1
-					for after < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[after])) {
-						after++
-					}
-					if after < len(masked) && masked[after] == '(' {
-						directInitializer := false
-						if !directCandidateChecked && latestExport >= 0 {
-							directInitializer = directInitializerAngle.MatchString(masked[latestExport:start])
-							directCandidateChecked = true
-						}
-						if !recognizedReturn && !directInitializer {
-							goto nextCandidate
-						}
-						if malformedConstraint {
-							return unsupportedTypeScriptSourceGrammar("conditional generic constraints require parentheses")
-						}
-						if extension == ".mts" && !separated {
-							return unsupportedTypeScriptSourceGrammar("ambiguous .mts generic syntax is not admitted")
-						}
-					}
-					goto nextCandidate
-				}
-			case '[':
-				square++
-			case ']':
-				square--
-			case '(':
-				round++
-			case ')':
-				round--
-			case '{':
-				curly++
-			case '}':
-				curly--
-			case ',':
-				if angle == 1 && square == 0 && round == 0 && curly == 0 {
-					separated = true
-					defaultSeen, constraintSeen = false, false
-				}
-			case '=':
-				if angle == 1 && square == 0 && round == 0 && curly == 0 && (index+1 == len(masked) || masked[index+1] != '>') {
-					defaultSeen = true
-				}
-			case '?':
-				if angle == 1 && square == 0 && round == 0 && curly == 0 && constraintSeen && !defaultSeen {
-					malformedConstraint = true
-				}
-			}
-			if !defaultSeen && angle == 1 && square == 0 && round == 0 && curly == 0 && strings.HasPrefix(masked[index:], "extends") && (index == 0 || !isASCIITypeScriptIdentifierByte(masked[index-1])) {
-				end := index + len("extends")
-				if end == len(masked) || !isASCIITypeScriptIdentifierByte(masked[end]) {
-					separated = true
-					constraintSeen = true
-				}
-			}
-		}
-	nextCandidate:
-	}
-	return nil
 }
 
 // Only erased declaration names are substituted for esbuild; original bytes own type names and offsets.

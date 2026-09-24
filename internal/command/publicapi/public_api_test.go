@@ -25,6 +25,10 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 	if output["entryCount"] != 1 {
 		t.Fatalf("entryCount=%v want 1", output["entryCount"])
 	}
+	claims, ok := output["nonClaims"].([]any)
+	if !ok || !strings.Contains(fmt.Sprint(claims), "does not prove TypeScript compiler syntax or type validity") {
+		t.Fatalf("passing static inventory omitted compiler non-claim: %#v", output["nonClaims"])
+	}
 }
 
 func TestVerifyTypeScriptRootPackagePublicAPISurfaces(t *testing.T) {
@@ -627,23 +631,16 @@ func TestCollectExportsAdmitsEmptyESMScript(t *testing.T) {
 	assertStringSlice(t, typeExports, []string{})
 }
 
-func TestCollectExportsUsesModuleExtensionGrammar(t *testing.T) {
-	ambiguous := "export const id = <T>(value: T) => value;"
-	if runtime, _, err := collectExportsWithExtension(ambiguous, ".ts"); err != nil {
-		t.Fatalf(".ts exports=%v error=%v, want id", runtime, err)
-	} else {
+func TestCollectExportsReturnsStaticInventoryAcrossModuleExtensions(t *testing.T) {
+	for _, test := range []struct{ extension, source string }{
+		{".ts", "export const id = <T>(value: T) => value;"},
+		{".mts", "export const id = <T,>(value: T) => value;"},
+	} {
+		runtime, _, err := collectExportsWithExtension(test.source, test.extension)
+		if err != nil {
+			t.Fatalf("%s exports=%v error=%v, want id", test.extension, runtime, err)
+		}
 		assertStringSlice(t, runtime, []string{"id"})
-	}
-	for _, extension := range []string{".mts"} {
-		if _, _, err := collectExportsWithExtension(ambiguous, extension); err == nil {
-			t.Fatalf("%s admitted ambiguous generic-arrow grammar", extension)
-		}
-		valid := "export const id = <T,>(value: T) => value;"
-		if runtime, _, err := collectExportsWithExtension(valid, extension); err != nil {
-			t.Fatalf("%s exports=%v error=%v, want id", extension, runtime, err)
-		} else {
-			assertStringSlice(t, runtime, []string{"id"})
-		}
 	}
 }
 
@@ -659,7 +656,7 @@ func TestVerifyTypeScriptPublicAPIRejectsCTSPath(t *testing.T) {
 	}
 }
 
-func TestVerifyTypeScriptPublicAPIUsesMTSGrammar(t *testing.T) {
+func TestVerifyTypeScriptPublicAPIRequiresExactLowercaseMTSExtension(t *testing.T) {
 	for _, extension := range []string{".mts", ".MTS", ".Mts"} {
 		t.Run(extension, func(t *testing.T) {
 			repoRoot := writeTypeScriptPackageFixture(t)
@@ -681,7 +678,7 @@ func TestVerifyTypeScriptPublicAPIUsesMTSGrammar(t *testing.T) {
 			entry["runtimeExports"] = []any{"id"}
 			entry["typeExports"] = []any{}
 			sourcePath := filepath.Join(packageRoot, "src", "index"+extension)
-			if err := os.WriteFile(sourcePath, []byte("export const id = <T>(value: T) => value;"), 0o600); err != nil {
+			if err := os.WriteFile(sourcePath, []byte("export const id = <T,>(value: T) => value;"), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			if extension != ".mts" {
@@ -690,14 +687,8 @@ func TestVerifyTypeScriptPublicAPIUsesMTSGrammar(t *testing.T) {
 				}
 				return
 			}
-			if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
-				t.Fatalf("Verify(ambiguous %s) exit=%d error=%v, want grammar rejection", extension, exitCode, err)
-			}
-			if err := os.WriteFile(sourcePath, []byte("export const id = <T,>(value: T) => value;"), 0o600); err != nil {
-				t.Fatal(err)
-			}
 			if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 0 || err != nil {
-				t.Fatalf("Verify(valid %s) exit=%d error=%v, want passed", extension, exitCode, err)
+				t.Fatalf("Verify(%s) exit=%d error=%v, want static inventory match", extension, exitCode, err)
 			}
 		})
 	}

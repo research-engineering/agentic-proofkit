@@ -18,7 +18,7 @@
     },
     {
       "changeId": "proofkit.typescript-public-api.exports",
-      "summary": "TypeScript public API verification now compares static ESM source declarations in a restricted, case-sensitive lowercase .ts/.mts subset; CommonJS .cts and enum or namespace declarations need repository-owned native witnesses. Manifests claiming truncated dollar-suffixed names or exports from a later local declaration fail. Unresolved runtime re-exports, code identifiers module/exports, invalid type names, duplicate type-only modifiers, unsupported type-only import attributes, and ambiguous .mts expression-arrow syntax fail closed; direct semicolonless exports remain supported. A passing inventory does not prove pinned TypeScript compiler syntax or type validity. The sourceGrammar marker advances to v2."
+      "summary": "TypeScript public API verification now compares static ESM source declarations in a restricted, case-sensitive lowercase .ts/.mts subset; CommonJS .cts and enum or namespace declarations need repository-owned native witnesses. Manifests claiming truncated dollar-suffixed names or exports from a later local declaration fail. Unresolved runtime re-exports, code identifiers module/exports, invalid type names, duplicate type-only modifiers, and unsupported type-only import attributes fail closed; direct semicolonless and generic exports remain supported. A passing inventory does not prove pinned TypeScript compiler syntax or type validity. The sourceGrammar marker advances to v2."
     }
   ],
   "additions": [
@@ -37,7 +37,7 @@
       "Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
       "Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names or exports borrowed from a later local declaration.",
       "Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
-      "Use a repository-owned pinned compiler witness for .cts, enum or namespace declarations, complete syntax and type validity, or built-module export claims. Use exact lowercase .ts/.mts source extensions, replace unsupported runtime re-exports and code identifiers module/exports with direct ESM declarations, use unambiguous .mts expression-arrow syntax, and retain separate target-symbol evidence for type-only re-exports.",
+      "Use a repository-owned pinned compiler witness for .cts, enum or namespace declarations, complete syntax and type validity, or built-module export claims. Use exact lowercase .ts/.mts source extensions, replace unsupported runtime re-exports and code identifiers module/exports with direct ESM declarations, and retain separate target-symbol evidence for type-only re-exports.",
       "Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality."
     ]
   },
