@@ -13,7 +13,7 @@ import (
 
 const (
 	secretWhitespaceClassSource      = `\t\n\v\f\r \x85\p{Zs}\p{Zl}\p{Zp}`
-	secretWhitespacePatternSource    = `[` + secretWhitespaceClassSource + `]`
+	secretWhitespacePatternSource    = `(?:[` + secretWhitespaceClassSource + `]|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|00a0|202[89]))`
 	secretNonWhitespacePatternSource = `[^` + secretWhitespaceClassSource + `]`
 	secretKeyQuotePatternSource      = `(?:\\*["'])?`
 	secretContextPatternSource       = `authorization` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
@@ -73,6 +73,9 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "token_escaped_json_key", Input: `\"token\": \"synthetic-fixture-value\"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_double_escaped_json_key", Input: `password\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_triple_escaped_json_key", Input: `password\\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_json_escaped_newline", Input: `"password"\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_double_json_escaped_newline", Input: `"password"\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_triple_json_escaped_newline", Input: `"password"\\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "github_pat", Input: githubPAT, SensitiveNeedles: []string{githubPAT}},
 		{Name: "github_ghp", Input: githubToken, SensitiveNeedles: []string{githubToken}},
 		{Name: "openai_key", Input: openAIKey, SensitiveNeedles: []string{"abcdefghijklmnop"}},

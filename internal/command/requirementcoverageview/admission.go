@@ -47,7 +47,7 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 	if err != nil {
 		return compositeInput{}, err
 	}
-	proof, err := buildProofProjection(record["requirementProofBinding"], record["compactProofContract"], policy)
+	proof, err := buildProofProjection(record["requirementProofBinding"], record["compactProofContract"], policy, sourceResult.Source)
 	if err != nil {
 		return compositeInput{}, err
 	}
@@ -84,7 +84,7 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 	}, nil
 }
 
-func buildProofProjection(structured any, compact any, policy *localEnvironmentPolicy) (proofProjection, error) {
+func buildProofProjection(structured any, compact any, policy *localEnvironmentPolicy, source requirementsourceadmission.Source) (proofProjection, error) {
 	if (structured == nil && compact == nil) || (structured != nil && compact != nil) {
 		return proofProjection{}, fmt.Errorf("requirement coverage view requires exactly one of requirementProofBinding or compactProofContract")
 	}
@@ -95,6 +95,16 @@ func buildProofProjection(structured any, compact any, policy *localEnvironmentP
 		}
 		if result.Record.State != "passed" {
 			return proofProjection{}, fmt.Errorf("cannot build requirement coverage view from failed requirement proof bindings")
+		}
+		links := make([]requirementsourceadmission.BindingRequirementLink, 0, len(result.Input.Requirements))
+		for _, requirement := range result.Input.Requirements {
+			links = append(links, requirementsourceadmission.BindingRequirementLink{
+				RequirementID: requirement.RequirementID, OwnerID: requirement.OwnerID,
+				ClaimLevel: requirement.ClaimLevel, SpecPath: requirement.SpecPath,
+			})
+		}
+		if err := requirementsourceadmission.AdmitBindingRequirementLinks([]requirementsourceadmission.Source{source}, links); err != nil {
+			return proofProjection{}, fmt.Errorf("requirement coverage view proof binding: %w", err)
 		}
 		return structuredProofProjection(result.Graph), nil
 	}

@@ -159,11 +159,16 @@ function containsUnsafeScalar(value) {
 	return false;
 }
 
+const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|00a0|202[89]))`;
+const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
+const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
+const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
+
 function containsSecretLikeValue(value) {
 	return [
-		/authorization(?:\\*["'])?\s*:\s*[^\r\n]+/iu,
-		/bearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,
-		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?\s*[=:]\s*\S+/iu,
+		authorizationPattern,
+		bearerPattern,
+		namedSecretPattern,
 		/github_pat_[A-Za-z0-9_]+/iu,
 		/gh[pousr]_[A-Za-z0-9_]+/iu,
 		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,

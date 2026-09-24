@@ -139,6 +139,13 @@ test("diagnostic whole-value redaction", () => {
     const authorization = `authorization${"\\".repeat(count)}"`;
     assert.equal(redactDiagnosticValue(`input rejected: {${authorization}:"Basic synthetic-fixture-value"}`), fixed);
   }
+  for (const separator of ["\n", "\t", "\r", "\u000b"]) {
+    let serialized = `{"password"${separator}:"synthetic-fixture-value"}`;
+    for (let depth = 1; depth <= 3; depth++) {
+      serialized = JSON.stringify(serialized);
+      assert.equal(redactDiagnosticValue(serialized), fixed, `serialized whitespace depth ${depth}`);
+    }
+  }
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

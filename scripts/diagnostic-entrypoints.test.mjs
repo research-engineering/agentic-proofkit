@@ -39,6 +39,13 @@ test("diagnostic entrypoint redacts quoted JSON secret-shaped input", async () =
         assert.equal(process.exitCode, 1);
       }
     }
+    let serialized = '{"password"\n:"synthetic-fixture-value"}';
+    for (let depth = 1; depth <= 3; depth++) {
+      serialized = JSON.stringify(serialized);
+      let output = "";
+      await runDiagnosticEntrypoint(async () => { throw new Error(serialized); }, {write(value) { output += value; }});
+      assert.equal(output, "<redacted-diagnostic-value>\n");
+    }
   } finally {
     process.exitCode = previousExitCode;
   }

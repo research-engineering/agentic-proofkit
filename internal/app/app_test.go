@@ -716,27 +716,30 @@ func TestCLIDiagnosticsRedactSecretLikeCallerLabels(t *testing.T) {
 
 func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclosure(t *testing.T) {
 	secret := "synthetic-fixture-value"
-	inner, err := json.Marshal(map[string]string{"password": secret})
-	if err != nil {
-		t.Fatal(err)
-	}
-	outer, err := json.Marshal(string(inner))
-	if err != nil {
-		t.Fatal(err)
-	}
 	source := map[string]any{
 		"kind": "proofkit.requirement-source", "schemaVersion": json.Number("2"),
 		"sourceId": "proofkit.synthetic.source", "specPackagePath": "docs/specs/synthetic",
-		"sourceNonClaims": []any{string(outer)}, "groups": []any{},
+		"groups": []any{},
 	}
-	encoded, err := json.Marshal(source)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var stdout, stderr bytes.Buffer
-	status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(encoded), &stdout, &stderr)
-	if status != 1 || strings.Contains(stdout.String(), secret) || strings.Contains(stderr.String(), secret) {
-		t.Fatalf("repeatedly escaped secret-shaped caller text leaked: status=%d stdout=%q stderr=%q", status, stdout.String(), stderr.String())
+	for _, separator := range []string{"\n", "\t", "\r"} {
+		serialized := `{"password"` + separator + `:"` + secret + `"}`
+		for depth := 1; depth <= 3; depth++ {
+			text, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(text)
+			source["sourceNonClaims"] = []any{serialized}
+			encoded, err := json.Marshal(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var stdout, stderr bytes.Buffer
+			status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(encoded), &stdout, &stderr)
+			if status != 1 || strings.Contains(stdout.String(), secret) || strings.Contains(stderr.String(), secret) {
+				t.Fatalf("escaped whitespace passed at depth %d: status=%d stdout=%q stderr=%q", depth, status, stdout.String(), stderr.String())
+			}
+		}
 	}
 }
 

@@ -32,6 +32,10 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
     {signal: controller.signal},
   );
+  const navigationPromise = page.waitForEvent("framenavigated", {
+    predicate: (frame) => frame === mainFrame && frame.url() === workspaceURL,
+    signal: controller.signal,
+  });
   try {
     const token = await trigger(workspaceNavigationToken);
     if (token !== workspaceNavigationToken) {
@@ -39,12 +43,14 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     }
     const response = await responsePromise;
     if (!response.ok()) throw new Error(responseError);
+    await navigationPromise;
+    await mainFrame.waitForLoadState("domcontentloaded");
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
   } catch (error) {
     controller.abort();
-    await responsePromise.catch(() => undefined);
+    await Promise.all([responsePromise.catch(() => undefined), navigationPromise.catch(() => undefined)]);
     throw error;
   }
 }

@@ -6,6 +6,22 @@ import (
 	"testing"
 )
 
+func TestSecretLikeValueSurvivesJSONWhitespaceEscaping(t *testing.T) {
+	for _, separator := range []string{"\n", "\t", "\r", "\v", "\u2028"} {
+		serialized := `{"password"` + separator + `:"synthetic-fixture-value"}`
+		for depth := 1; depth <= 3; depth++ {
+			encoded, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(encoded)
+			if !ContainsSecretLikeValue(serialized) {
+				t.Fatalf("secret-shaped JSON pair with escaped whitespace passed at depth %d", depth)
+			}
+		}
+	}
+}
+
 func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	t.Parallel()
 

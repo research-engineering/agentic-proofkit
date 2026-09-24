@@ -35,6 +35,24 @@ func TestBuildJSONBuildsDeclaredRequirementAndCommandRouteMapping(t *testing.T) 
 	}
 }
 
+func TestStructuredCoverageRejectsBindingFieldsThatDisagreeWithSource(t *testing.T) {
+	for _, item := range []struct{ field, value string }{
+		{"ownerId", "another.owner"},
+		{"claimLevel", "advisory"},
+		{"specPath", "docs/specs/other/requirements.v2.json"},
+	} {
+		t.Run(item.field, func(t *testing.T) {
+			input := validCoverageInput(t).(map[string]any)
+			requirement := input["requirementProofBinding"].(map[string]any)["requirements"].([]any)[0].(map[string]any)
+			requirement[item.field] = item.value
+			output, exit, err := BuildJSON(input, Options{})
+			if err == nil || exit != 1 || !strings.Contains(err.Error(), "source-owned requirement fields") || output != nil {
+				t.Fatalf("inconsistent %s admitted: exit=%d err=%v output=%#v", item.field, exit, err, output)
+			}
+		})
+	}
+}
+
 func TestBuildJSONMissingSelectorRemainsMappingOnly(t *testing.T) {
 	input := validCoverageInput(t)
 	entry := inventoryEntry(input)
