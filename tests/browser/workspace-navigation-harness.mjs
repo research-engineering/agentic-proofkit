@@ -29,8 +29,8 @@ export function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame
 export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace") {
   const controller = new AbortController();
   const mainFrame = page.mainFrame();
-  const documentMarker = randomUUID();
-  await page.evaluate((marker) => { document.documentElement.dataset.proofkitNavigationMarker = marker; }, documentMarker);
+  const documentMarker = `proofkitNavigationMarker_${randomUUID()}`;
+  await page.evaluate((marker) => { Object.defineProperty(document, marker, {value: true}); }, documentMarker);
   const responsePromise = page.waitForResponse(
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
     {signal: controller.signal},
@@ -48,7 +48,7 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     if (!response.ok()) throw new Error(responseError);
     await navigationPromise;
     await mainFrame.waitForLoadState("domcontentloaded");
-    const oldDocumentRetained = await page.evaluate((marker) => document.documentElement.dataset.proofkitNavigationMarker === marker, documentMarker);
+    const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
     if (oldDocumentRetained) throw new Error(responseError);
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),

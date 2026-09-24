@@ -431,25 +431,39 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   ]);
 });
 
-test("same-document URL change cannot satisfy workspace navigation", async ({baseURL, page}) => {
+for (const mutation of ["history", "document-open", "replace-root"]) test(`same-document ${mutation} cannot satisfy workspace navigation`, async ({baseURL, page}) => {
   await openWorkspace(page, baseURL);
   const workspaceURL = admittedWorkspaceURL(baseURL);
+  const originalDocument = await page.evaluateHandle(() => document);
+  let attachmentStatus = 0;
   await page.route((url) => url.href === workspaceURL, async (route) => {
     const response = await route.fetch();
+    attachmentStatus = response.status();
     await route.fulfill({response, headers: {...response.headers(), "content-disposition": "attachment; filename=workspace.html"}});
   });
   await expect(navigateWorkspace(
     page,
     workspaceURL,
-    (token) => page.evaluate(({target, value}) => {
+    (token) => page.evaluate(({target, value, mutation}) => {
       window.setTimeout(() => {
+        if (mutation === "document-open") {
+          document.open();
+          document.write("<html><body><h1>browser.fixture.workspace</h1></body></html>");
+          document.close();
+        } else if (mutation === "replace-root") {
+          const replacement = document.createElement("html");
+          replacement.innerHTML = "<body><h1>browser.fixture.workspace</h1></body>";
+          document.replaceChild(replacement, document.documentElement);
+        }
         window.history.pushState({}, "", window.location.href);
         window.location.assign(target);
       }, 0);
       return value;
-    }, {target: workspaceURL, value: token}),
+    }, {target: workspaceURL, value: token, mutation}),
     "Workspace navigation did not return a document response",
   )).rejects.toThrow("Workspace navigation did not return a document response");
+  expect(attachmentStatus).toBe(200);
+  expect(await originalDocument.evaluate((previous) => previous === document)).toBe(true);
 });
 
 axeTest("combined axe negative control proves default and target-size sensitivity", async ({axePage: page}) => {
