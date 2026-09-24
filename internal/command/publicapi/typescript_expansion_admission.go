@@ -20,7 +20,7 @@ func admitNoExpandingDeclarations(masked string) error {
 			if !strings.HasPrefix(masked[index:], keyword) {
 				continue
 			}
-			if hasTypeScriptMemberAccessPrefix(masked, index) {
+			if hasTypeScriptMemberAccessPrefix(masked, index) || !isTypeScriptDeclarationPosition(masked, index, keyword) {
 				continue
 			}
 			end := index + len(keyword)
@@ -41,6 +41,35 @@ func admitNoExpandingDeclarations(masked string) error {
 		}
 	}
 	return nil
+}
+
+func isTypeScriptDeclarationPosition(masked string, keywordStart int, keyword string) bool {
+	before := keywordStart - 1
+	crossedLine := false
+	for before >= 0 && strings.ContainsRune(" \t\r\n\v\f", rune(masked[before])) {
+		crossedLine = crossedLine || masked[before] == '\r' || masked[before] == '\n'
+		before--
+	}
+	if before < 0 {
+		return true
+	}
+	switch masked[before] {
+	case ';', '{', '}':
+		return true
+	case '=', '.', ':', ',', '(', '[':
+		return false
+	}
+	if isASCIITypeScriptIdentifierByte(masked[before]) {
+		start := before
+		for start > 0 && isASCIITypeScriptIdentifierByte(masked[start-1]) {
+			start--
+		}
+		previous := masked[start : before+1]
+		if previous == "export" || previous == "declare" || keyword == "enum" && previous == "const" {
+			return true
+		}
+	}
+	return crossedLine
 }
 
 func skipMaskedWhitespace(source string, index int) int {

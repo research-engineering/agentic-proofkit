@@ -47,6 +47,7 @@ func TestExpandingDeclarationsFailBeforeRuntimeBuild(t *testing.T) {
 		`export enum E { A = "` + strings.Repeat("x", 4096) + `" }; export const xs = [` + strings.Repeat("E.A,", 4096) + `];`,
 		`namespace VeryLongName { export const A = 1; } export const id = VeryLongName.A;`,
 		`namespace VeryLongName.Inner { export const A = 1; } export const id = VeryLongName.Inner.A;`,
+		"const x = 1\nnamespace N { export const y = 1 } export const id = N.y;",
 		qualifiedNamespace.String(),
 	} {
 		if _, _, err := CollectExports(rejected); err == nil || !strings.Contains(err.Error(), "declarations are not admitted") {
