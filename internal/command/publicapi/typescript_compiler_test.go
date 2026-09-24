@@ -25,6 +25,16 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 	}{
 		{"export const A = 1\nconst B = 2, C = 3;\nexport function public$() { return 1; }\nexport type Shape$ = { value: string };", "export type Shape$", "Shape$"},
 		{"export const A = 1,\n B = 2;\nexport interface public$ { value: number }", "export interface public$", "public$"},
+		{"export const A = true &&\nfunction () {}, B = 2;", "", ""},
+		{"export const A = `x`\nconst B = 2, C = 3;", "", ""},
+		{"let i = 0; export const A = i++\nconst B = 2, C = 3;", "", ""},
+		{"let x = 1; export const A = x!\nconst B = 2, C = 3;", "", ""},
+		{"const async = 2;\nexport const A = 1 |\nasync, B = 2;", "", ""},
+		{"export const A = 1/*\r*/const B = 2, C = 3;", "", ""},
+		{"export const A = 1 // comment\u2028const B = 2, C = 3;", "", ""},
+		{"let C = 0;\nexport const A = 1\nC = 2, C = 3;", "", ""},
+		{"export function\nasync() { return 1; }", "", ""},
+		{"export const\nasync = 1;", "", ""},
 	} {
 		folder := t.TempDir()
 		sourcePath := filepath.Join(folder, "index.ts")
@@ -40,7 +50,7 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read compiler declaration: %v", err)
 		}
-		if !strings.Contains(string(declaration), test.typeDeclaration) {
+		if test.typeDeclaration != "" && !strings.Contains(string(declaration), test.typeDeclaration) {
 			t.Fatalf("compiler declaration %q does not contain %q", declaration, test.typeDeclaration)
 		}
 		command = exec.Command("node", "-e", `process.stdout.write(JSON.stringify(Object.keys(require(process.argv[1])).sort()))`, filepath.Join(folder, "index.js"))
@@ -57,7 +67,7 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 			t.Fatalf("CollectExports() error=%v", err)
 		}
 		assertStringSlice(t, runtimeExports, compiledExports)
-		if len(typeExports) != 1 || typeExports[0] != test.typeName {
+		if test.typeName == "" && len(typeExports) != 0 || test.typeName != "" && (len(typeExports) != 1 || typeExports[0] != test.typeName) {
 			t.Fatalf("CollectExports() type exports=%v, compiler declaration=%q", typeExports, declaration)
 		}
 	}

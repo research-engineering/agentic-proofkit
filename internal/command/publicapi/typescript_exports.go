@@ -121,6 +121,10 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 		switch state {
 		case typeScriptLineComment:
 			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
+				masked[index] = '\n'
+				for offset := 1; offset < width; offset++ {
+					masked[index+offset] = ' '
+				}
 				state = typeScriptCode
 				index += width - 1
 				continue
@@ -132,11 +136,19 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			}
 			continue
 		case typeScriptBlockComment:
+			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
+				masked[index] = '\n'
+				for offset := 1; offset < width; offset++ {
+					masked[index+offset] = ' '
+				}
+				index += width - 1
+				continue
+			}
 			if current == '*' && next == '/' {
 				masked[index], masked[index+1] = ' ', ' '
 				state = typeScriptCode
 				index++
-			} else if current != '\n' {
+			} else if current != '\n' && current != '\r' {
 				masked[index] = ' '
 			}
 			continue
@@ -184,6 +196,7 @@ func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
 			} else if current == '$' && next == '{' {
 				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("template interpolation is not admitted")
 			} else if current == '`' {
+				masked[index] = '`'
 				state = typeScriptCode
 			}
 			continue
@@ -268,8 +281,26 @@ func exportStatementEnd(masked string, start int, limit int) int {
 	parenDepth := 0
 	bracketDepth := 0
 	braceDepth := 0
+	lastTokenByte := byte(0)
+	lastTokenIndex := -1
+	nextToken := start
+	wordStart := -1
+	identifierCount := 0
+	lastWord := ""
 	for index := start; index < limit; index++ {
-		switch masked[index] {
+		current := masked[index]
+		if isASCIITypeScriptIdentifierByte(current) {
+			if wordStart < 0 {
+				wordStart = index
+				if identifierCount < 5 {
+					identifierCount++
+				}
+			}
+		} else if wordStart >= 0 {
+			lastWord = masked[wordStart:index]
+			wordStart = -1
+		}
+		switch current {
 		case '(':
 			parenDepth++
 		case ')':
@@ -293,31 +324,64 @@ func exportStatementEnd(masked string, start int, limit int) int {
 				return index + 1
 			}
 		case '\n', '\r':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 &&
-				canEndBeforeLine(masked[start:index]) && startsTopLevelDeclaration(masked[index+1:limit]) {
-				return index
+			priorByte := byte(0)
+			if lastTokenIndex > start {
+				priorByte = masked[lastTokenIndex-1]
 			}
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 &&
+				canEndAfter(lastTokenByte, priorByte) && !incompleteExportHeader(lastWord, identifierCount) {
+				if nextToken <= index {
+					nextToken = index + 1
+					for nextToken < limit && isLineSpace(masked[nextToken]) {
+						nextToken++
+					}
+				}
+				if startsNewTopLevelStatement(masked[nextToken:limit]) {
+					return index
+				}
+			}
+		}
+		if !isLineSpace(current) {
+			lastTokenByte = current
+			lastTokenIndex = index
 		}
 	}
 	return limit
 }
 
-func canEndBeforeLine(statement string) bool {
-	statement = strings.TrimRight(statement, " \t\r\n")
-	if statement == "" {
-		return false
+func canEndAfter(last byte, prior byte) bool {
+	if last == '+' || last == '-' {
+		return prior == last
 	}
-	return !strings.ContainsRune("=,+-*/?:.([{", rune(statement[len(statement)-1]))
+	return last != 0 && !strings.ContainsRune("=,*/?:.([{&|<>%^~", rune(last))
 }
 
-func startsTopLevelDeclaration(rest string) bool {
-	rest = strings.TrimLeft(rest, " \t\r\n")
-	for _, keyword := range []string{"const", "let", "var", "function", "class", "interface", "type", "enum", "import", "export", "async", "abstract", "declare", "namespace", "module"} {
-		if strings.HasPrefix(rest, keyword) && (len(rest) == len(keyword) || !isASCIITypeScriptIdentifierByte(rest[len(keyword)])) {
-			return true
-		}
+func isLineSpace(value byte) bool {
+	return value == ' ' || value == '\t' || value == '\r' || value == '\n'
+}
+
+func incompleteExportHeader(lastWord string, identifierCount int) bool {
+	if identifierCount > 3 {
+		return false
+	}
+	switch lastWord {
+	case "export", "abstract", "async", "const", "let", "var", "function", "class", "enum", "interface", "type":
+		return true
 	}
 	return false
+}
+
+func startsNewTopLevelStatement(rest string) bool {
+	if rest == "" {
+		return false
+	}
+	for _, continuation := range []string{"as", "satisfies", "instanceof", "in"} {
+		if strings.HasPrefix(rest, continuation) && (len(rest) == len(continuation) || !isASCIITypeScriptIdentifierByte(rest[len(continuation)])) {
+			return false
+		}
+	}
+	first := rest[0]
+	return isASCIITypeScriptIdentifierByte(first) || first == '\'' || first == '"' || first == '`' || first == '{'
 }
 
 func isASCIITypeScriptIdentifierByte(value byte) bool {

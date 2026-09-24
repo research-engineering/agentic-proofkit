@@ -2,7 +2,6 @@ package branchauthority
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -11,8 +10,6 @@ import (
 )
 
 const reportKind = "proofkit.branch-authority"
-
-var unsafeBranchPattern = regexp.MustCompile(`[ \t\r\n~^:?*\[\]\\]`)
 
 var refKinds = map[string]struct{}{
 	"branch_protection":     {},
@@ -233,15 +230,17 @@ func branchName(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if strings.HasPrefix(value, "-") ||
+	if original, ok := raw.(string); !ok || original != value {
+		return "", fmt.Errorf("%s must be a safe branch ref", context)
+	}
+	if value == "HEAD" ||
+		strings.HasPrefix(value, "-") ||
 		strings.HasSuffix(value, ".") ||
 		strings.Contains(value, "@{") ||
 		strings.Contains(value, "..") ||
 		strings.Contains(value, "//") ||
-		strings.Contains(value, `\`) ||
 		strings.HasPrefix(value, "/") ||
-		strings.HasSuffix(value, "/") ||
-		unsafeBranchPattern.MatchString(value) {
+		strings.HasSuffix(value, "/") {
 		return "", fmt.Errorf("%s must be a safe branch ref", context)
 	}
 	for _, component := range strings.Split(value, "/") {
@@ -250,7 +249,7 @@ func branchName(raw any, context string) (string, error) {
 		}
 	}
 	for _, character := range value {
-		if character < 0x20 || character == 0x7f {
+		if character < 0x20 || character == 0x7f || strings.ContainsRune(" ~^:?*[\\", character) {
 			return "", fmt.Errorf("%s must be a safe branch ref", context)
 		}
 	}

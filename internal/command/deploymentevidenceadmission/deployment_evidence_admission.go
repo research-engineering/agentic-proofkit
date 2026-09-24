@@ -2,11 +2,13 @@ package deploymentevidenceadmission
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"regexp"
 	"sort"
 	"strings"
-	"time"
+
+	"golang.org/x/net/idna"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
@@ -21,6 +23,7 @@ var (
 	shaPinnedImageRegexp = regexp.MustCompile(`@sha256:[a-f0-9]{64}$`)
 	commitRegexp         = regexp.MustCompile(`^[a-f0-9]{40}$`)
 	rfc3339UTCRegexp     = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$`)
+	endpointIDNAProfile  = idna.New(idna.MapForLookup(), idna.ValidateLabels(true), idna.VerifyDNSLength(true))
 	boundaryNonClaims    = []string{
 		"Deployment evidence admission reports do not authenticate evidence refs or producer identity.",
 		"Deployment evidence admission reports do not decide consumer environment, credential, endpoint, or merge policy.",
@@ -258,6 +261,19 @@ func admitPolicy(raw any) (policy, error) {
 	if err != nil {
 		return policy{}, err
 	}
+	for index, suffix := range temporaryEndpointHostSuffixes {
+		canonical, err := canonicalEndpointHost(strings.TrimPrefix(suffix, "."))
+		if err != nil {
+			return policy{}, fmt.Errorf("deployment evidence temporaryEndpointHostSuffixes must contain valid DNS hosts")
+		}
+		temporaryEndpointHostSuffixes[index] = canonical
+	}
+	sort.Strings(temporaryEndpointHostSuffixes)
+	for index := 1; index < len(temporaryEndpointHostSuffixes); index++ {
+		if temporaryEndpointHostSuffixes[index-1] == temporaryEndpointHostSuffixes[index] {
+			return policy{}, fmt.Errorf("deployment evidence temporaryEndpointHostSuffixes must be unique after DNS normalization")
+		}
+	}
 	requireDigestPinnedImageRefs, err := boolValue(record["requireDigestPinnedImageRefs"], "deployment evidence requireDigestPinnedImageRefs")
 	if err != nil {
 		return policy{}, err
@@ -419,10 +435,15 @@ func validateEndpoint(endpoint map[string]any, context string, policy policy, bl
 	if parsed.User != nil {
 		*failures = append(*failures, context+".url must not contain URL credentials")
 	}
-	if isLocalRef(parsed.Hostname(), policy) {
+	hostname, err := canonicalEndpointHost(parsed.Hostname())
+	if err != nil {
+		*failures = append(*failures, context+".url must have a valid DNS or IP host")
+		return
+	}
+	if isLocalRef(hostname, policy) {
 		*failures = append(*failures, context+".url must not be local or loopback")
 	}
-	if endpointKind != nil && *endpointKind == "stable" && hasTemporaryEndpointSuffix(parsed.Hostname(), policy) {
+	if endpointKind != nil && *endpointKind == "stable" && hasTemporaryEndpointSuffix(hostname, policy) {
 		*failures = append(*failures, context+".url stable endpoint must not use a temporary endpoint host")
 	}
 	if endpointKind != nil && *endpointKind == "stable" {
@@ -436,12 +457,8 @@ func validateEndpoint(endpoint map[string]any, context string, policy policy, bl
 		requireNonLocalRef(stringField(endpoint, "temporaryEndpointApprovalRef", context, blockedReasons), context+".temporaryEndpointApprovalRef", policy, failures)
 		requireNonLocalRef(stringField(endpoint, "replacementPlanRef", context, blockedReasons), context+".replacementPlanRef", policy, failures)
 		expiresAt := stringField(endpoint, "expiresAt", context, blockedReasons)
-		if expiresAt != nil {
-			if !rfc3339UTCRegexp.MatchString(*expiresAt) {
-				*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
-			} else if _, err := time.Parse(time.RFC3339Nano, *expiresAt); err != nil {
-				*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
-			}
+		if expiresAt != nil && !validRFC3339UTC(*expiresAt) {
+			*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
 		}
 	}
 }
@@ -642,14 +659,31 @@ func isLocalRef(value string, policy policy) bool {
 }
 
 func hasTemporaryEndpointSuffix(value string, policy policy) bool {
-	host := strings.TrimSuffix(strings.ToLower(value), ".")
 	for _, suffix := range policy.TemporaryEndpointHostSuffixes {
-		candidate := strings.TrimSuffix(strings.ToLower(strings.TrimPrefix(suffix, ".")), ".")
-		if host == candidate || strings.HasSuffix(host, "."+candidate) {
+		if value == suffix || strings.HasSuffix(value, "."+suffix) {
 			return true
 		}
 	}
 	return false
+}
+
+func canonicalEndpointHost(host string) (string, error) {
+	if net.ParseIP(host) != nil {
+		return strings.ToLower(host), nil
+	}
+	mapped, err := idna.Lookup.ToASCII(host)
+	if err != nil {
+		return "", fmt.Errorf("invalid DNS hostname")
+	}
+	mapped = strings.TrimSuffix(mapped, ".")
+	if mapped == "" {
+		return "", fmt.Errorf("invalid DNS hostname")
+	}
+	canonical, err := endpointIDNAProfile.ToASCII(mapped)
+	if err != nil || canonical == "" {
+		return "", fmt.Errorf("invalid DNS hostname")
+	}
+	return strings.ToLower(canonical), nil
 }
 
 func scanForbiddenValueIndicators(value any, path string, policy policy, failures *[]string) {

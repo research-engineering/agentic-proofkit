@@ -639,6 +639,15 @@ func TestCollectExportsEndsSemicolonlessDeclarationBeforeLocalStatement(t *testi
 	assertStringSlice(t, typeExports, []string{})
 }
 
+func BenchmarkCollectExportsLongBlankRun(b *testing.B) {
+	source := "export const A = 1\n" + strings.Repeat("\n", 80_000)
+	for b.Loop() {
+		if _, _, err := CollectExports(source); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 func TestVerifyTypeScriptPublicAPIUsesFullDollarIdentifiersAndSemanticStatementEnd(t *testing.T) {
 	repoRoot := writeTypeScriptPackageFixture(t)
 	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
@@ -666,6 +675,44 @@ func TestVerifyTypeScriptPublicAPIUsesFullDollarIdentifiersAndSemanticStatementE
 	output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
 	if err != nil || exitCode != 1 {
 		t.Fatalf("Verify(truncated type identifier) output=%#v exit=%d error=%v", output, exitCode, err)
+	}
+}
+
+func TestVerifyTypeScriptPublicAPITracksContinuationAndTemplateASI(t *testing.T) {
+	for _, test := range []struct {
+		source string
+		actual []any
+		wrong  []any
+	}{
+		{"export const A = true &&\nfunction () {}, B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"export const A = `x`\nconst B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
+		{"let i = 0; export const A = i++\nconst B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
+		{"let x = 1; export const A = x!\nconst B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
+		{"const async = 2;\nexport const A = 1 |\nasync, B = 2;", []any{"A", "B"}, []any{"A"}},
+		{"export const A = 1/*\r*/const B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
+		{"export const A = 1 // comment\u2028const B = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
+		{"let C = 0;\nexport const A = 1\nC = 2, C = 3;", []any{"A"}, []any{"A", "C"}},
+		{"export function\nasync() { return 1; }", []any{"async"}, []any{}},
+		{"export const\nasync = 1;", []any{"async"}, []any{}},
+	} {
+		repoRoot := writeTypeScriptPackageFixture(t)
+		sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+		if err := os.WriteFile(sourcePath, []byte(test.source), 0o600); err != nil {
+			t.Fatalf("write source: %v", err)
+		}
+		input := publicAPIManifest()
+		entry := input["entries"].([]any)[0].(map[string]any)
+		entry["runtimeExports"] = test.actual
+		entry["typeExports"] = []any{}
+		output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+		if err != nil || exitCode != 0 {
+			t.Fatalf("Verify(correct manifest) output=%#v exit=%d error=%v", output, exitCode, err)
+		}
+		entry["runtimeExports"] = test.wrong
+		output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
+		if err != nil || exitCode != 1 {
+			t.Fatalf("Verify(wrong manifest) output=%#v exit=%d error=%v", output, exitCode, err)
+		}
 	}
 }
 

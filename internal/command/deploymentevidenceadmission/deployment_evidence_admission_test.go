@@ -96,6 +96,10 @@ func TestBuildClassifiesTemporaryEndpointHosts(t *testing.T) {
 		{"demo.trycloudflare.com", true},
 		{"demo.TRYCLOUDFLARE.COM", true},
 		{"demo.trycloudflare.com.", true},
+		{"demo.trycloudflare\u3002com", true},
+		{"demo.trycloudflare\u3002com\u3002", true},
+		{"demo.trycloudflare\uff0ecom", true},
+		{"demo.\uff54\uff52\uff59cloudflare.com", true},
 		{"nottrycloudflare.com", false},
 		{"trycloudflare.com.example.test", false},
 	} {
@@ -113,6 +117,51 @@ func TestBuildClassifiesTemporaryEndpointHosts(t *testing.T) {
 		if (exitCode != 0) != test.temporary {
 			t.Fatalf("Build(%q) exit=%d state=%s, temporary=%t", test.host, exitCode, record.State, test.temporary)
 		}
+		if test.temporary {
+			encoded, err := json.Marshal(record)
+			if err != nil || !strings.Contains(string(encoded), "stable endpoint must not use a temporary endpoint host") {
+				t.Fatalf("Build(%q) did not identify the temporary host: %s, error=%v", test.host, encoded, err)
+			}
+		}
+	}
+}
+
+func TestCanonicalEndpointHostRejectsInvalidDNSLabels(t *testing.T) {
+	for _, host := range []string{".", "bad..example.test"} {
+		if value, err := canonicalEndpointHost(host); err == nil {
+			t.Fatalf("canonicalEndpointHost(%q)=%q, want invalid host", host, value)
+		}
+	}
+}
+
+func TestPolicyRejectsDuplicateCanonicalTemporarySuffixes(t *testing.T) {
+	for _, suffixes := range [][]any{
+		{"TRYCLOUDFLARE.COM", "trycloudflare.com"},
+		{"trycloudflare.com", "trycloudflare\u3002com"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["temporaryEndpointHostSuffixes"] = suffixes
+		if _, err := admitPolicy(input["policy"]); err == nil || !strings.Contains(err.Error(), "unique after DNS normalization") {
+			t.Fatalf("admitPolicy(%v) error=%v, want canonical duplicate rejection", suffixes, err)
+		}
+	}
+}
+
+func TestBuildRejectsIDNAEquivalentLocalHost(t *testing.T) {
+	input := validDeploymentEvidenceInput()
+	fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+	fact["urls"] = []any{map[string]any{
+		"endpointId":   "proofkit.test.endpoint",
+		"endpointKind": "stable",
+		"url":          "https://\uff4c\uff4f\uff43\uff41\uff4c\uff48\uff4f\uff53\uff54/proof",
+	}}
+	record, exitCode, err := Build(input)
+	if err != nil || exitCode == 0 {
+		t.Fatalf("Build() exit=%d error=%v, want local-host denial", exitCode, err)
+	}
+	encoded, err := json.Marshal(record)
+	if err != nil || !strings.Contains(string(encoded), ".url must not be local or loopback") {
+		t.Fatalf("Build() did not classify IDNA-equivalent localhost: %s, error=%v", encoded, err)
 	}
 }
 
@@ -122,7 +171,12 @@ func TestBuildAdmitsOnlyCalendarValidUTCExpiry(t *testing.T) {
 		valid     bool
 	}{
 		{"2024-02-29T23:59:59Z", true},
+		{"1990-12-31T23:59:60Z", true},
+		{"2016-12-31T23:59:60.5Z", true},
 		{"2025-02-29T23:59:59Z", false},
+		{"1990-12-30T23:59:60Z", false},
+		{"1990-12-31T22:59:60Z", false},
+		{"2026-12-31T23:59:60Z", false},
 		{"2026-02-31T25:61:61Z", false},
 		{"2026-01-01T00:00:00+00:00", false},
 	} {
@@ -142,6 +196,12 @@ func TestBuildAdmitsOnlyCalendarValidUTCExpiry(t *testing.T) {
 		}
 		if (exitCode == 0) != test.valid {
 			t.Fatalf("Build(%q) exit=%d state=%s, valid=%t", test.expiresAt, exitCode, record.State, test.valid)
+		}
+		if !test.valid {
+			encoded, err := json.Marshal(record)
+			if err != nil || !strings.Contains(string(encoded), ".expiresAt must be an RFC3339 UTC timestamp") {
+				t.Fatalf("Build(%q) did not identify the invalid timestamp: %s, error=%v", test.expiresAt, encoded, err)
+			}
 		}
 	}
 }
