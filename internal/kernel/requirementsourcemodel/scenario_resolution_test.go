@@ -110,3 +110,22 @@ func TestScenarioResolutionAdmitsReferencesBeforeLookupWithoutDisclosure(t *test
 		t.Fatalf("zero model authorized a lookup: %v", err)
 	}
 }
+
+func TestScenarioReferenceAdmissionMatchesResolutionWithoutMaterializingBodies(t *testing.T) {
+	source, err := Normalize(validDraft())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, reference := range []ScenarioReference{
+		{SourceID: source.Atomic().SourceID, RequirementID: "REQ-MODEL-001", ScenarioID: "SCN-MODEL-REQUEST"},
+		{SourceID: source.Atomic().SourceID, RequirementID: "REQ-MODEL-001", ScenarioID: "scenario.reference-only"},
+		{SourceID: source.Atomic().SourceID, RequirementID: "REQ-MODEL-002", ScenarioID: "SCN-MODEL-REQUEST"},
+		{SourceID: "another.source", RequirementID: "REQ-MODEL-001", ScenarioID: "SCN-MODEL-REQUEST"},
+	} {
+		_, lookupErr := ResolveScenario(source, reference)
+		admitErr := AdmitScenarioReference(source, reference)
+		if ErrorCode(lookupErr) != ErrorCode(admitErr) {
+			t.Fatalf("reference %+v: lookup=%v admission=%v", reference, lookupErr, admitErr)
+		}
+	}
+}

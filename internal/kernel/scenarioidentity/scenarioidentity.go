@@ -15,10 +15,14 @@ var sourcePattern = regexp.MustCompile(`\A` + sourcePatternBody + `\z`)
 func SourcePatternBody() string { return sourcePatternBody }
 
 func AdmitSourceID(value string, context string) (string, error) {
-	if _, err := admit.NonEmptyText(value, context); err != nil || !sourcePattern.MatchString(value) {
+	if !sourcePattern.MatchString(value) {
 		return "", fmt.Errorf("%s must use a rule id or surface_id::stable_anchor scenario identity", context)
 	}
-	return value, nil
+	if strings.Contains(value, "::") {
+		canonical, _, err := AdmitScoped(value, context)
+		return canonical, err
+	}
+	return admit.RuleID(value, context)
 }
 
 // AdmitScoped preserves the exact surface_id::stable_anchor identity shared

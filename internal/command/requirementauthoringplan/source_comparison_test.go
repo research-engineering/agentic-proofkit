@@ -193,6 +193,32 @@ func TestGroupedAuthoringSourcePlaneInventoryIsComplete(t *testing.T) {
 	}
 }
 
+func TestSourceBoundaryChangeDoesNotRequireUpdateToRemovedRequirement(t *testing.T) {
+	removed := activeExistingRequirement()
+	removed["claimLevel"] = "advisory"
+	removed["lifecycle"].(map[string]any)["state"] = "removed"
+	removed["lifecycle"].(map[string]any)["evidenceRefs"] = []any{"proof/removed.json"}
+	input := validInput()
+	base := groupedTestSource(removed)
+	candidate := cloneObject(base)
+	candidate["sourceNonClaims"] = []any{"The changed source boundary still grants no authority."}
+	input["currentRequirementSource"] = base
+	input["candidateRequirementSource"] = candidate
+	input["candidateUpdates"] = []any{}
+	output, exit, err := Build(input)
+	if err != nil || exit != 0 {
+		t.Fatalf("source-only change with retained removed requirement: exit=%d err=%v output=%#v", exit, err, output)
+	}
+	assertStableJSONEqual(t, "reviewed source boundary", []any{"source_nonclaims"}, output["changedSourcePlanes"])
+	if len(output["candidateChangeSet"].([]any)) != 0 || output["wholeCandidateOwnerReviewRequired"] != true {
+		t.Fatalf("source boundary review was converted into a requirement edit: %#v", output)
+	}
+	candidate["groups"].([]any)[0].(map[string]any)["members"].([]any)[0].(map[string]any)["statementCompletion"] = "A removed invariant was rewritten."
+	if _, exit, err := Build(input); err != nil || exit != 1 {
+		t.Fatalf("terminal requirement mutation admitted: exit=%d err=%v", exit, err)
+	}
+}
+
 func sharedOwnerInput() map[string]any {
 	input := validInput()
 	source := expectedNextSource()

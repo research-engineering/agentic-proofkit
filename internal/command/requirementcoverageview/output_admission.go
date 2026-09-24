@@ -18,7 +18,7 @@ var outputKeys = []string{
 	"failureClassifications", "failureCount", "failures", "guidanceSummary",
 	"nonClaimDefinitions", "nonClaims", "ownerInvariantCoverage", "ownerInvariantCoverageCount",
 	"ownerInvariantRegistryId", "proofMode", "requirementCoverage",
-	"requirementCoverageCount", "schemaVersion", "sourceId", "state",
+	"requirementCoverageCount", "schemaVersion", "sourceDigest", "sourceId", "state",
 	"testInventoryId", "unmappedTests", "viewInputId", "viewKind", "warningClassifications",
 	"warningCount", "warnings",
 }
@@ -65,6 +65,9 @@ func AdmitOutput(raw any) (map[string]any, error) {
 		if err := requireCanonicalWireString(record[key], canonical, "requirement coverage output "+key); err != nil {
 			return nil, err
 		}
+	}
+	if _, err := admit.SHA256Ref(record["sourceDigest"], "requirement coverage output sourceDigest"); err != nil {
+		return nil, err
 	}
 	nonClaims, err := admit.PreserveSortedTextArray(record["nonClaims"], "requirement coverage output nonClaims", false)
 	if err != nil {

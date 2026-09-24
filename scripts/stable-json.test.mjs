@@ -130,6 +130,9 @@ test("diagnostic whole-value redaction", () => {
   assert.equal(redactDiagnosticValue("safe diagnostic"), "safe diagnostic");
   assert.equal(redactDiagnosticValue("x".repeat(520)), "x".repeat(512) + "...<truncated-diagnostic>");
   assert.equal(redactDiagnosticValue("\ud800"), fixed);
+  for (const key of ['"password"', '\\"password\\"', "'api_key'"]) {
+    assert.equal(redactDiagnosticValue(`input rejected: {${key}:"synthetic-fixture-value"}`), fixed);
+  }
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

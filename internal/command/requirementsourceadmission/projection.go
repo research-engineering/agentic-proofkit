@@ -1,6 +1,7 @@
 package requirementsourceadmission
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
 )
@@ -39,6 +40,14 @@ func SourceBytes(source Source) ([]byte, error) {
 		return nil, fmt.Errorf("requirement source has no admitted model")
 	}
 	return requirementsourcecodec.Format(source.model)
+}
+
+func SourceDigest(source Source) (string, error) {
+	encoded, err := SourceBytes(source)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(encoded)), nil
 }
 
 func RequirementValue(requirement Requirement) map[string]any {

@@ -19,6 +19,17 @@ type ScenarioResolution struct {
 // ResolveScenario preserves source scope and requirement membership while
 // leaving witness selection and execution authority with their own owners.
 func ResolveScenario(source Model, reference ScenarioReference) (ScenarioResolution, error) {
+	return resolveScenario(source, reference, true)
+}
+
+// AdmitScenarioReference checks the same identity and membership without
+// copying a body the caller will not use.
+func AdmitScenarioReference(source Model, reference ScenarioReference) error {
+	_, err := resolveScenario(source, reference, false)
+	return err
+}
+
+func resolveScenario(source Model, reference ScenarioReference, includeBody bool) (ScenarioResolution, error) {
 	for _, field := range []struct{ value, path, prefix string }{
 		{reference.SourceID, "reference.sourceId", ""},
 		{reference.RequirementID, "reference.requirementId", "REQ-"},
@@ -53,6 +64,9 @@ func ResolveScenario(source Model, reference ScenarioReference) (ScenarioResolut
 	memberIndex := sort.SearchStrings(scenario.RequirementIDs, reference.RequirementID)
 	if memberIndex == len(scenario.RequirementIDs) || scenario.RequirementIDs[memberIndex] != reference.RequirementID {
 		return ScenarioResolution{}, invalid("scenario_requirement_mismatch", "reference.requirementId")
+	}
+	if !includeBody {
+		return ScenarioResolution{Reference: reference}, nil
 	}
 	body := cloneScenarios(scenarios[scenarioIndex : scenarioIndex+1])[0]
 	return ScenarioResolution{Reference: reference, Body: &body}, nil

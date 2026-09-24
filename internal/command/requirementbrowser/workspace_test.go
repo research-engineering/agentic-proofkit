@@ -125,7 +125,7 @@ func TestCurrentDigestCoverageProjectionsRejectRetiredIdentities(t *testing.T) {
 	handle, capability := startWorkspaceTestServer(t, fixture, false)
 	manifest := getWorkspaceJSON(t, handle.URL+"api/v1/manifest", capability)
 	if manifest["schemaVersion"] != json.Number("3") || manifest["expectedDigestCoverage"] != "none" || manifest["baselineVerification"] != nil {
-		t.Fatalf("workspace manifest is not a clean v2 projection: %#v", manifest)
+		t.Fatalf("workspace manifest is not a clean v3 projection: %#v", manifest)
 	}
 	for _, path := range []string{"requirements", "diff", "graph"} {
 		response := postWorkspaceJSON(t, handle.URL+"api/v1/"+path, capability, map[string]any{
@@ -137,7 +137,7 @@ func TestCurrentDigestCoverageProjectionsRejectRetiredIdentities(t *testing.T) {
 		if path == "diff" {
 			projection := response["projection"].(map[string]any)
 			if projection["baseExpectedDigestCoverage"] != "none" || projection["currentExpectedDigestCoverage"] != "none" || projection["baseBaselineVerification"] != nil || projection["currentBaselineVerification"] != nil {
-				t.Fatalf("diff API projection is not clean v2: %#v", projection)
+				t.Fatalf("diff API projection is not clean v3: %#v", projection)
 			}
 		}
 	}

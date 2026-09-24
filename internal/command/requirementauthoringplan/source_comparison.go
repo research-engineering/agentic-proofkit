@@ -21,7 +21,7 @@ func compareCandidateSource(input input) ([]candidateUpdate, []string, []string)
 	failures := []string{}
 	for id, requirement := range after {
 		previous, exists := before[id]
-		if !exists || !reflect.DeepEqual(previous, requirement) {
+		if !exists || authoringRequirementChanged(previous, requirement) {
 			changed[id] = true
 		}
 	}
@@ -68,6 +68,17 @@ func compareCandidateSource(input input) ([]candidateUpdate, []string, []string)
 	}
 	sort.Strings(failures)
 	return updates, planes, failures
+}
+
+func authoringRequirementChanged(previous, next requirementsourceadmission.Requirement) bool {
+	if previous.Lifecycle.State != next.Lifecycle.State || previous.Lifecycle.State != "removed" && previous.Lifecycle.State != "superseded" {
+		return !reflect.DeepEqual(previous, next)
+	}
+	before := requirementsourceadmission.RequirementValue(previous)
+	after := requirementsourceadmission.RequirementValue(next)
+	delete(before, "sourceReviewDigest")
+	delete(after, "sourceReviewDigest")
+	return !reflect.DeepEqual(before, after)
 }
 
 func requirementIndex(source requirementsourceadmission.Source) map[string]requirementsourceadmission.Requirement {

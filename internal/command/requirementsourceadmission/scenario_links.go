@@ -31,7 +31,7 @@ func AdmitScenarioLinks(sources []Source, links []ScenarioLink) error {
 		if !exists {
 			return fmt.Errorf("scenario link references a requirement outside admitted sources")
 		}
-		_, err := requirementsourcemodel.ResolveScenario(source.model, requirementsourcemodel.ScenarioReference{
+		err := requirementsourcemodel.AdmitScenarioReference(source.model, requirementsourcemodel.ScenarioReference{
 			SourceID: source.SourceID(), RequirementID: link.RequirementID, ScenarioID: link.ScenarioID,
 		})
 		if err != nil {

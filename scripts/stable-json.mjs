@@ -163,7 +163,7 @@ function containsSecretLikeValue(value) {
 	return [
 		/authorization\s*:\s*[^\r\n]+/iu,
 		/bearer\s+[A-Za-z0-9._~+/=-]{8,}/iu,
-		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)\s*[=:]\s*\S+/iu,
+		/(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\?["'])?\s*[=:]\s*\S+/iu,
 		/github_pat_[A-Za-z0-9_]+/iu,
 		/gh[pousr]_[A-Za-z0-9_]+/iu,
 		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,

@@ -196,12 +196,13 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 
 var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.requirement-source.grouped-v2", Summary: "Public requirement sources use schemaVersion 2 grouped records and requirements.v2.json paths. The previous flat source identity and active v1 reader are retired; stable requirement and scenario IDs remain independent of group positions."},
-	{ChangeID: "proofkit.source-dependent-contracts.v2", Summary: "Source-dependent authoring, materialization, context, coverage, semantic diff, graph and browser contracts use their declared new wire identities. Installed CLI contract records expose the changed input and output structures and retain explicit native semantic admission."},
+	{ChangeID: "proofkit.source-dependent-contracts.v2", Summary: "Source-dependent authoring, materialization, context, coverage, semantic diff, graph and browser contracts use their declared new wire identities. Coverage output binds its exact admitted requirement source by sourceDigest, and context rejects stale or foreign coverage rows. Installed CLI contract records expose the changed input and output structures and retain explicit native semantic admission."},
 }
 
 var currentAdditions = []Change{
 	{ChangeID: "proofkit.source-review-dependency-linkage", Summary: "Derived requirement records expose a sourceReviewDigest over referenced source-level boundaries, named non-claims, scenario bodies, vocabulary and derivation facts; semantic diff and impact detect changes to that admitted dependency closure. Source scenario IDs may also use the compact surface_id::stable_anchor form, and compositions reject a declared scenario bound to the wrong requirement while preserving reference-only routes. These digests are review signals, not execution or freshness evidence."},
 	{ChangeID: "proofkit.source-v2.structural-contracts", Summary: "Expose closed machine-readable structures for changed source paths and affected commands, including separate compact and structured proof reports and the agent-envelope output mode. Preserve native canonicalization and semantic replay as independent obligations."},
+	{ChangeID: "proofkit.diagnostic-json-redaction", Summary: "Repository-owned JavaScript diagnostic entrypoints redact secret-shaped quoted JSON pairs before writing stderr."},
 }
 
 var currentMigrationSteps = []string{

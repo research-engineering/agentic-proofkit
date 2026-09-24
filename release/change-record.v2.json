@@ -10,7 +10,7 @@
     },
     {
       "changeId": "proofkit.source-dependent-contracts.v2",
-      "summary": "Source-dependent authoring, materialization, context, coverage, semantic diff, graph and browser contracts use their declared new wire identities. Installed CLI contract records expose the changed input and output structures and retain explicit native semantic admission."
+      "summary": "Source-dependent authoring, materialization, context, coverage, semantic diff, graph and browser contracts use their declared new wire identities. Coverage output binds its exact admitted requirement source by sourceDigest, and context rejects stale or foreign coverage rows. Installed CLI contract records expose the changed input and output structures and retain explicit native semantic admission."
     }
   ],
   "additions": [
@@ -21,6 +21,10 @@
     {
       "changeId": "proofkit.source-v2.structural-contracts",
       "summary": "Expose closed machine-readable structures for changed source paths and affected commands, including separate compact and structured proof reports and the agent-envelope output mode. Preserve native canonicalization and semantic replay as independent obligations."
+    },
+    {
+      "changeId": "proofkit.diagnostic-json-redaction",
+      "summary": "Repository-owned JavaScript diagnostic entrypoints redact secret-shaped quoted JSON pairs before writing stderr."
     }
   ],
   "migration": {

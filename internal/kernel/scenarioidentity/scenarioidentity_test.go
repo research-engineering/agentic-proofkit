@@ -1,6 +1,9 @@
 package scenarioidentity
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestAdmitScopedRequiresOneCanonicalSurfaceAndAnchor(t *testing.T) {
 	for _, item := range []struct {
@@ -29,6 +32,8 @@ func TestAdmitSourceIDUsesOnlyGenericOrScopedGrammar(t *testing.T) {
 		{"scenario.one", true}, {"proofkit.test.surface::scenario_one", true},
 		{"surface::", false}, {"surface::anchor::extra", false},
 		{"scenario.one\n", false}, {"not a scenario", false},
+		{"scenario_20260924", false}, {"surface::anchor_20260924", false},
+		{strings.Repeat("a", 257), false}, {"surface::" + strings.Repeat("a", 257), false},
 	} {
 		actual, err := AdmitSourceID(item.value, "scenario")
 		if (err == nil) != item.valid || (item.valid && actual != item.value) {

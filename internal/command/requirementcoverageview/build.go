@@ -72,6 +72,10 @@ func build(raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	sourceDigest, err := requirementsourceadmission.SourceDigest(input.Source)
+	if err != nil {
+		return nil, err
+	}
 	output := map[string]any{
 		"authority":                   "lookup_only",
 		"bindingId":                   input.Proof.BindingID,
@@ -96,6 +100,7 @@ func build(raw any) (map[string]any, error) {
 		"requirementCoverageCount":    len(requirements),
 		"schemaVersion":               4,
 		"sourceId":                    input.Source.SourceID(),
+		"sourceDigest":                sourceDigest,
 		"state":                       state,
 		"testInventoryId":             inventoryID(input.Inventory),
 		"unmappedTests":               testEntriesToAny(unmappedTests),

@@ -271,6 +271,22 @@ func validateProjectionSources(tree requirementspectree.Tree, requirementSources
 		}
 	}
 	if coverage != nil {
+		var coverageSource *requirementsourceadmission.Source
+		for index := range requirementSources {
+			if requirementSources[index].SourceID() == coverage["sourceId"] {
+				coverageSource = &requirementSources[index]
+				break
+			}
+		}
+		if coverageSource == nil {
+			if len(coverage["requirementCoverage"].([]any)) != 0 {
+				return fmt.Errorf("requirement context coverage source is outside the context")
+			}
+		} else {
+			if err := requirementcoverageview.AdmitSourceLink(coverage, *coverageSource); err != nil {
+				return err
+			}
+		}
 		for _, raw := range coverage["requirementCoverage"].([]any) {
 			if _, ok := knownRequirements[raw.(map[string]any)["requirementId"].(string)]; !ok {
 				return fmt.Errorf("requirement context coverage references a requirement outside the context")

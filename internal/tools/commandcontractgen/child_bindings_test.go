@@ -16,7 +16,13 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 		t.Fatal(err)
 	}
 	seen := 0
+	checked := map[string]struct{}{}
 	for _, owner := range nativeChildBindings() {
+		key := owner.command + "/" + owner.direction
+		if _, duplicate := checked[key]; duplicate {
+			continue
+		}
+		checked[key] = struct{}{}
 		command := commandAt(contract, owner.command)
 		direction := command[owner.direction+"Contract"].(map[string]any)
 		root := definitions[direction["rootDefinitionRef"].(string)]
@@ -24,11 +30,12 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 			t.Fatal(err)
 		}
 		bindings := direction["childDefinitionBindings"].([]any)
-		if len(bindings) != len(owner.paths) {
+		expected, err := childBindingValues(owner.command, owner.direction, definitions)
+		if err != nil || len(bindings) != len(expected) {
 			t.Fatalf("%s %s omitted changed child paths", owner.command, owner.direction)
 		}
 		seen += len(bindings)
-		for _, mutation := range []string{"missing", "wrong-path", "wrong-ref", "wrong-digest"} {
+		for _, mutation := range []string{"missing", "wrong-path", "wrong-ref", "wrong-digest", "wrong-variant"} {
 			t.Run(owner.command+"/"+owner.direction+"/"+mutation, func(t *testing.T) {
 				candidate := cloneRecord(direction)
 				copyBindings := make([]any, len(bindings))
@@ -46,6 +53,8 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 					first["definitionRef"] = root.ID
 				case "wrong-digest":
 					first["definitionDigest"] = root.Digest
+				case "wrong-variant":
+					first["variantId"] = "nonexistent-variant"
 				}
 				if reflect.DeepEqual(candidate, direction) || admitChildBindings(owner.command, owner.direction, candidate, root, definitions) == nil {
 					t.Fatal("changed source-child relation lost its guard")
@@ -53,7 +62,7 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 			})
 		}
 	}
-	if seen != 7 {
-		t.Fatalf("changed source-child path count=%d, want 7", seen)
+	if seen != 18 {
+		t.Fatalf("changed source-child path count=%d, want 18", seen)
 	}
 }

@@ -38,7 +38,7 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 		"NonClaimDefinition", "Normalize", "NormalizeNonClaimDefinitions", "NormalizeWithLimits",
 		"ObjectFormat", "ObjectSHA1", "ObjectSHA256", "Origin", "Own", "PolicyViolation", "Profile",
 		"ReferenceDerivationNonClaim", "ReferenceDerivationRequirement", "ReferenceEdge", "ReferenceEndpoint", "ReferenceGroupMember", "ReferenceGroupProfile", "ReferenceKind", "ReferenceLifecycleReplacement", "ReferenceProjection", "ReferenceRequirementNonClaim", "ReferenceScenarioNonClaim", "ReferenceScenarioRequirement", "ReferenceScenarioVocabulary", "ReferenceSourceNonClaim",
-		"ResolveScenario", "RiskClass", "RiskCritical", "RiskHigh", "RiskLow", "RiskMedium",
+		"AdmitScenarioReference", "ResolveScenario", "RiskClass", "RiskCritical", "RiskHigh", "RiskLow", "RiskMedium",
 		"Scenario", "ScenarioReference", "ScenarioResolution", "ScenarioValue", "SourceClarification", "SourceCodeSnapshot", "SourceDesign", "SourceKind", "SourceOwnerDecision", "SourcePlan",
 		"TermAction", "TermKind", "TermObservable", "TermState", "TermSubject", "TermValue",
 		"UpdatePolicy", "ValidateLimits", "ValidateResolvedNonClaimScope", "ValidationError", "VocabularyTerm",

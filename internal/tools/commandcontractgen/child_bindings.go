@@ -13,17 +13,27 @@ type nativeChildBinding struct {
 	direction  string
 	definition string
 	paths      [][]string
+	variant    string
 }
 
 // These are ownership links, not copies of the child schema or native policy.
 func nativeChildBindings() []nativeChildBinding {
 	return []nativeChildBinding{
-		{"adopt-materialize-apply", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}},
-		{"adopt-materialize-plan", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}},
-		{"requirement-coverage-input-compose", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}},
-		{"requirement-coverage-input-compose", "output", sourceV2DefinitionID, [][]string{{"requirementSource"}}},
-		{"requirement-coverage-view", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}},
-		{"requirement-impact-input-compose", "input", sourceV2DefinitionID, [][]string{{"baseRequirementSources", "*"}, {"currentRequirementSources", "*"}}},
+		{"adopt-materialize-apply", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}, ""},
+		{"adopt-materialize-plan", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}, ""},
+		{"requirement-coverage-input-compose", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},
+		{"requirement-coverage-input-compose", "output", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},
+		{"requirement-coverage-view", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},
+		{"requirement-impact-input-compose", "input", sourceV2DefinitionID, [][]string{{"baseRequirementSources", "*"}, {"currentRequirementSources", "*"}}, ""},
+		{"requirement-authoring-plan", "input", sourceV2DefinitionID, [][]string{{"currentRequirementSource"}, {"candidateRequirementSource"}}, ""},
+		{"requirement-authoring-plan", "output", sourceV2DefinitionID, [][]string{{"nonAuthoritativeAdmissionPreview", "requirementSourcePreview"}}, ""},
+		{"requirement-source-transition", "input", sourceV2DefinitionID, [][]string{{"previous"}, {"next"}}, ""},
+		{"test-evidence-inventory", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, "03-proof-binding-derived"},
+		{"requirement-context-compose", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}, ""},
+		{"requirement-context-compose", "output", sourceV2DefinitionID, [][]string{{"projections", "requirementSources", "*"}}, ""},
+		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},
+		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{"context", "projections", "requirementSources", "*"}}, "07-workspace"},
+		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{}}, "05-source"},
 	}
 }
 
@@ -42,10 +52,14 @@ func childBindingValues(command, direction string, definitions map[string]defini
 			for index, segment := range path {
 				segments[index] = segment
 			}
-			result = append(result, map[string]any{
+			binding := map[string]any{
 				"relationKind": "nested_definition", "pathSegments": segments,
 				"definitionRef": owner.definition, "definitionDigest": definition.Digest,
-			})
+			}
+			if owner.variant != "" {
+				binding["variantId"] = owner.variant
+			}
+			result = append(result, binding)
 		}
 	}
 	return result, nil
@@ -69,11 +83,21 @@ func admitChildBindings(command, direction string, contract map[string]any, root
 	variants := root.Content["fieldTree"].(map[string]any)["variants"].([]any)
 	for _, raw := range expected {
 		path := raw.(map[string]any)["pathSegments"].([]any)
-		field := path[0].(string)
 		found := false
 		for _, variant := range variants {
-			allowed := variant.(map[string]any)["allowedFields"].([]any)
-			if slices.Contains(allowed, any(field)) {
+			variantRecord := variant.(map[string]any)
+			if variantID, scoped := raw.(map[string]any)["variantId"]; scoped && variantRecord["variantId"] != variantID {
+				continue
+			}
+			allowed := variantRecord["allowedFields"].([]any)
+			if len(path) == 0 {
+				childVariants := definitions[raw.(map[string]any)["definitionRef"].(string)].Content["fieldTree"].(map[string]any)["variants"].([]any)
+				if len(childVariants) != 1 || !reflect.DeepEqual(allowed, childVariants[0].(map[string]any)["allowedFields"]) ||
+					!reflect.DeepEqual(variantRecord["requiredFields"], childVariants[0].(map[string]any)["requiredFields"]) {
+					return fmt.Errorf("%s %s root child binding differs from its source owner", command, direction)
+				}
+				found = true
+			} else if slices.Contains(allowed, any(path[0].(string))) {
 				found = true
 			}
 		}

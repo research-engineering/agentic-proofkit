@@ -132,6 +132,8 @@ func currentCompactContextChainObservations(t *testing.T) map[string]any {
 	members := requirementSource["groups"].([]any)[0].(map[string]any)["members"].([]any)
 	members[0].(map[string]any)["statementCompletion"] = "Compact context fixture changed invariant."
 	writeCLIJSONFixture(t, root, "docs/specs/compact/requirements.v2.json", requirementSource)
+	currentCoverageInput := runCLIForJSON(t, []string{"requirement-coverage-input-compose", "--input", "-"}, cliJSON(coverageCompose))
+	writeCLIJSONFixture(t, root, "proofkit/coverage-input.json", currentCoverageInput)
 	current := runAppJSON(t, []string{"requirement-context-compose", "--input", "-", "--repo-root", root}, catalog)
 	diffInput := map[string]any{
 		"schemaVersion": json.Number("3"), "diffId": "proofkit.compact.context.diff",

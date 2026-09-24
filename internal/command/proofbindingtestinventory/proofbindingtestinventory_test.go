@@ -90,6 +90,38 @@ func TestBuildRejectsMissingRequirementOwner(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsScenarioDeclaredForAnotherRequirement(t *testing.T) {
+	input := validInput()
+	source := input["requirementSource"].(map[string]any)
+	group := source["groups"].([]any)[0].(map[string]any)
+	first := group["members"].([]any)[0].(map[string]any)
+	second := map[string]any{"requirementId": "REQ-PROOFKIT-COMPACT-002", "statementCompletion": first["statementCompletion"], "fields": first["fields"]}
+	group["members"] = append(group["members"].([]any), second)
+	source["scenarios"] = []any{map[string]any{
+		"scenarioId": "proofkit.surface::scenario.compact", "requirementIds": []any{"REQ-PROOFKIT-COMPACT-002"},
+		"parameters": []any{}, "preconditions": []any{"A request is ready."},
+		"actionSequence": []any{"Submit the request."}, "expectedObservations": []any{"The response is accepted."},
+		"forbiddenObservations": []any{}, "examples": []any{}, "vocabularyRefs": []any{}, "nonClaimRefs": []any{},
+	}}
+	for _, build := range []struct {
+		name string
+		run  func(any) (int, error)
+	}{
+		{"projection", func(value any) (int, error) { _, exit, err := Build(value); return exit, err }},
+		{"normalized", func(value any) (int, error) { _, exit, err := BuildNormalized(value); return exit, err }},
+	} {
+		t.Run(build.name, func(t *testing.T) {
+			if exit, err := build.run(input); exit != 1 || err == nil || !strings.Contains(err.Error(), "scenario link disagrees") {
+				t.Fatalf("wrong scenario member: exit=%d err=%v", exit, err)
+			}
+		})
+	}
+	source["scenarios"].([]any)[0].(map[string]any)["requirementIds"] = []any{"REQ-PROOFKIT-COMPACT-001", "REQ-PROOFKIT-COMPACT-002"}
+	if _, exit, err := Build(input); exit != 0 || err != nil {
+		t.Fatalf("shared scenario member rejected: exit=%d err=%v", exit, err)
+	}
+}
+
 func TestBuildPreservesTwoScenarioRoutesForOneRequirement(t *testing.T) {
 	input := validInput()
 	contract := input["compactProofContract"].(map[string]any)
