@@ -163,17 +163,33 @@ const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|
 const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
 const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
 const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
-const escapedSecretSequence = /\\+(?:[ntrfvb/"]|u[0-9a-fA-F]{4})/gu;
+const escapedSecretSequence = /\\+(?:u[0-9a-fA-F]{4}\\+u[0-9a-fA-F]{4}|u[0-9a-fA-F]{4}|[ntrfvb/"])/gu;
 const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
 
 function decodeEscapedSecretText(value) {
   return value.replace(escapedSecretSequence, (sequence) => {
+    const unicodeStart = sequence.indexOf("u");
+    if (unicodeStart >= 0) {
+      const first = Number.parseInt(sequence.slice(unicodeStart + 1, unicodeStart + 5), 16);
+      if (sequence.length > unicodeStart + 5) {
+        const second = Number.parseInt(sequence.slice(-4), 16);
+        if (first >= 0xd800 && first <= 0xdbff && second >= 0xdc00 && second <= 0xdfff) {
+          return String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + second - 0xdc00);
+        }
+        return decodeSecretUnicodeScalar(first, sequence.slice(0, unicodeStart + 5)) +
+          decodeSecretUnicodeScalar(second, sequence.slice(unicodeStart + 5));
+      }
+      return decodeSecretUnicodeScalar(first, sequence);
+    }
     const suffix = sequence.at(-1);
     if (suffix in escapedSecretControls) return escapedSecretControls[suffix];
     if (suffix === "/" || suffix === '"') return suffix;
-    const code = Number.parseInt(sequence.slice(-4), 16);
-    return code >= 0xd800 && code <= 0xdfff ? sequence : String.fromCharCode(code);
+    return sequence;
   });
+}
+
+function decodeSecretUnicodeScalar(value, original) {
+  return value >= 0xd800 && value <= 0xdfff ? original : String.fromCodePoint(value);
 }
 
 function containsSecretLikeValue(value) {

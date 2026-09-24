@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf16"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
 )
@@ -34,7 +35,7 @@ var (
 	driveLikePathPattern         = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
 	schemeLikePathPattern        = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
 	secretValuePattern           = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
-	secretEscapedSequencePattern = regexp.MustCompile(`\\+(?:[ntrfvb/"]|u[0-9a-fA-F]{4})`)
+	secretEscapedSequencePattern = regexp.MustCompile(`\\+(?:u[0-9a-fA-F]{4}\\+u[0-9a-fA-F]{4}|u[0-9a-fA-F]{4}|[ntrfvb/"])`)
 	secretPathContextPattern     = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
 	secretPathTokenPattern       = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
 	urlUserInfoPattern           = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
@@ -72,6 +73,8 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "api_key_control_split", Input: "api_\u200bkey=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "api_key_json_escaped_control_split", Input: `api_\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "api_key_double_json_escaped_control_split", Input: `api_\\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_unicode_letter", Input: `api_k\\u0065y=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_escaped_supplementary_control", Input: `api_\\uDB40\\uDC01key=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
@@ -227,6 +230,17 @@ func matchesNormalizedSecret(value string, matches func(string) bool) bool {
 
 func decodeEscapedSecretText(value string) string {
 	return secretEscapedSequencePattern.ReplaceAllStringFunc(value, func(sequence string) string {
+		if start := strings.IndexByte(sequence, 'u'); start >= 0 {
+			first := decodeSecretUnicodeUnit(sequence[start+1 : start+5])
+			if len(sequence) > start+5 {
+				second := decodeSecretUnicodeUnit(sequence[len(sequence)-4:])
+				if first >= 0xd800 && first <= 0xdbff && second >= 0xdc00 && second <= 0xdfff {
+					return string(utf16.DecodeRune(first, second))
+				}
+				return decodeSecretUnicodeScalar(first, sequence[:start+5]) + decodeSecretUnicodeScalar(second, sequence[start+5:])
+			}
+			return decodeSecretUnicodeScalar(first, sequence)
+		}
 		switch sequence[len(sequence)-1] {
 		case 'n':
 			return "\n"
@@ -243,13 +257,21 @@ func decodeEscapedSecretText(value string) string {
 		case '/', '"':
 			return sequence[len(sequence)-1:]
 		default:
-			code, err := strconv.ParseUint(sequence[len(sequence)-4:], 16, 16)
-			if err != nil || code >= 0xd800 && code <= 0xdfff {
-				return sequence
-			}
-			return string(rune(code))
+			return sequence
 		}
 	})
+}
+
+func decodeSecretUnicodeUnit(hex string) rune {
+	value, _ := strconv.ParseUint(hex, 16, 16)
+	return rune(value)
+}
+
+func decodeSecretUnicodeScalar(value rune, original string) string {
+	if value >= 0xd800 && value <= 0xdfff {
+		return original
+	}
+	return string(value)
 }
 
 func RedactSecretLikeValue(value string) string {

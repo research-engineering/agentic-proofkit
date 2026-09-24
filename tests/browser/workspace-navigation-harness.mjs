@@ -28,12 +28,9 @@ export function isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame
 export async function navigateWorkspace(page, workspaceURL, trigger, responseError, heading = "browser.fixture.workspace") {
   const controller = new AbortController();
   const mainFrame = page.mainFrame();
-  const responsePromise = page.waitForResponse(
-    (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
-    {signal: controller.signal},
-  );
-  const navigationPromise = page.waitForEvent("framenavigated", {
-    predicate: (frame) => frame === mainFrame && frame.url() === workspaceURL,
+  const navigationPromise = page.waitForNavigation({
+    url: workspaceURL,
+    waitUntil: "domcontentloaded",
     signal: controller.signal,
   });
   try {
@@ -41,16 +38,16 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     if (token !== workspaceNavigationToken) {
       throw new Error("Workspace navigation trigger token is invalid");
     }
-    const response = await responsePromise;
-    if (!response.ok()) throw new Error(responseError);
-    await navigationPromise;
-    await mainFrame.waitForLoadState("domcontentloaded");
+    const response = await navigationPromise;
+    if (!response || !isWorkspaceNavigationResponse(response, workspaceURL, mainFrame) || !response.ok()) {
+      throw new Error(responseError);
+    }
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
   } catch (error) {
     controller.abort();
-    await Promise.all([responsePromise.catch(() => undefined), navigationPromise.catch(() => undefined)]);
+    await navigationPromise.catch(() => undefined);
     throw error;
   }
 }

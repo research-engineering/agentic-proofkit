@@ -721,6 +721,15 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 		"sourceId": "proofkit.synthetic.source", "specPackagePath": "docs/specs/synthetic",
 		"groups": []any{},
 	}
+	source["sourceNonClaims"] = []any{"Synthetic non-claim for admission control."}
+	baseline, err := json.Marshal(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var baselineStdout, baselineStderr bytes.Buffer
+	if status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(baseline), &baselineStdout, &baselineStderr); status != 0 {
+		t.Fatalf("benign source must be admitted before redaction falsifiers: status=%d stderr=%q", status, baselineStderr.String())
+	}
 	check := func(serialized string, label string, depth int) {
 		t.Helper()
 		source["sourceNonClaims"] = []any{serialized}
@@ -754,6 +763,20 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 			}
 			serialized = string(text)
 			check(serialized, "serialized control split", depth)
+		}
+	}
+	for _, initial := range []string{
+		`{"passw\u006frd":"synthetic-fixture-value"}`,
+		`api_\uDB40\uDC01key=synthetic-fixture-value`,
+	} {
+		serialized := initial
+		for depth := 0; depth <= 4; depth++ {
+			check(serialized, "escaped Unicode", depth)
+			text, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(text)
 		}
 	}
 }

@@ -460,17 +460,33 @@ function containsProofkitUnsafeScalar(value: string): boolean {
 }
 
 const proofkitSecretPatterns = __PROOFKIT_SECRET_PATTERNS__.map((source) => new RegExp(source, "iu"));
-const proofkitEscapedSecretSequence = /\\+(?:[ntrfvb/"]|u[0-9a-fA-F]{4})/gu;
+const proofkitEscapedSecretSequence = /\\+(?:u[0-9a-fA-F]{4}\\+u[0-9a-fA-F]{4}|u[0-9a-fA-F]{4}|[ntrfvb/"])/gu;
 const proofkitEscapedSecretControls: Record<string, string> = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
 
 function decodeProofkitEscapedSecretText(value: string): string {
 	return value.replace(proofkitEscapedSecretSequence, (sequence) => {
+		const unicodeStart = sequence.indexOf("u");
+		if (unicodeStart >= 0) {
+			const first = Number.parseInt(sequence.slice(unicodeStart + 1, unicodeStart + 5), 16);
+			if (sequence.length > unicodeStart + 5) {
+				const second = Number.parseInt(sequence.slice(-4), 16);
+				if (first >= 0xd800 && first <= 0xdbff && second >= 0xdc00 && second <= 0xdfff) {
+					return String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + second - 0xdc00);
+				}
+				return decodeProofkitSecretUnicodeScalar(first, sequence.slice(0, unicodeStart + 5)) +
+					decodeProofkitSecretUnicodeScalar(second, sequence.slice(unicodeStart + 5));
+			}
+			return decodeProofkitSecretUnicodeScalar(first, sequence);
+		}
 		const suffix = sequence[sequence.length - 1];
 		if (suffix in proofkitEscapedSecretControls) return proofkitEscapedSecretControls[suffix];
 		if (suffix === "/" || suffix === '"') return suffix;
-		const code = Number.parseInt(sequence.slice(-4), 16);
-		return code >= 0xd800 && code <= 0xdfff ? sequence : String.fromCharCode(code);
+		return sequence;
 	});
+}
+
+function decodeProofkitSecretUnicodeScalar(value: number, original: string): string {
+	return value >= 0xd800 && value <= 0xdfff ? original : String.fromCodePoint(value);
 }
 
 function containsProofkitSecretLikeValue(value: string): boolean {

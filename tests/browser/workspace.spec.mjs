@@ -402,9 +402,9 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   };
   const cleanupPage = {
     mainFrame: () => cleanupFrame,
-    waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
-    waitForEvent: (event, {signal}) => {
-      expect(event).toBe("framenavigated");
+    waitForNavigation: ({url, waitUntil, signal}) => {
+      expect(url).toBe(workspaceURL);
+      expect(waitUntil).toBe("domcontentloaded");
       return pendingWaiter("navigation", signal);
     },
   };
@@ -417,17 +417,28 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     },
     "Workspace navigation fallback response was admitted",
   )).rejects.toThrow("Workspace navigation trigger token is invalid");
-  expect([...cleanupAborted].sort()).toEqual(["navigation", "response"]);
-  expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
+  expect([...cleanupAborted]).toEqual(["navigation"]);
+  expect([...cleanupConsumed]).toEqual(["navigation"]);
   expect(cleanupEvents).toEqual([
-    "response-armed",
     "navigation-armed",
     "trigger-called",
-    "response-aborted",
     "navigation-aborted",
-    "response-consumed",
     "navigation-consumed",
   ]);
+});
+
+test("same-document URL change cannot satisfy workspace navigation", async ({baseURL, page}) => {
+  await openWorkspace(page, baseURL);
+  const workspaceURL = admittedWorkspaceURL(baseURL);
+  await expect(navigateWorkspace(
+    page,
+    workspaceURL,
+    (token) => page.evaluate((value) => {
+      window.setTimeout(() => window.history.pushState({}, "", window.location.href), 0);
+      return value;
+    }, token),
+    "Workspace navigation did not return a document response",
+  )).rejects.toThrow("Workspace navigation did not return a document response");
 });
 
 axeTest("combined axe negative control proves default and target-size sensitivity", async ({axePage: page}) => {

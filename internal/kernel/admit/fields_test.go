@@ -55,6 +55,28 @@ func TestSecretLikeValueSurvivesEscapedUnicodeWhitespace(t *testing.T) {
 	}
 }
 
+func TestSecretLikeValueSurvivesEscapedUnicodeLetterAndSurrogatePair(t *testing.T) {
+	for _, initial := range []string{
+		`{"passw\u006frd":"synthetic-fixture-value"}`,
+		`api_\uDB40\uDC01key=synthetic-fixture-value`,
+	} {
+		serialized := initial
+		for depth := 0; depth <= 4; depth++ {
+			if !ContainsSecretLikeValue(serialized) {
+				t.Fatalf("escaped secret passed at depth %d", depth)
+			}
+			encoded, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(encoded)
+		}
+	}
+	if !ContainsSecretLikeValue("api_" + string(rune(0xe0001)) + "key=synthetic-fixture-value") {
+		t.Fatal("literal supplementary control split passed")
+	}
+}
+
 func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	t.Parallel()
 

@@ -24,7 +24,7 @@
     },
     {
       "changeId": "proofkit.diagnostic-json-redaction",
-      "summary": "Go report admission, repository-owned JavaScript diagnostics and the generated TypeScript adapter reject or redact secret-shaped JSON pairs after repeated quote, whitespace or control-split escaping before emitting output."
+      "summary": "Go report admission, repository-owned JavaScript diagnostics and the generated TypeScript adapter reject or redact secret-shaped JSON pairs after repeated quote, whitespace, Unicode-letter or surrogate-pair control-split escaping before emitting output."
     }
   ],
   "migration": {

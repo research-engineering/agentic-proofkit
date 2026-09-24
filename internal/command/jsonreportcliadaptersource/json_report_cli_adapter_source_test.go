@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:9f7b2b7a876168306af5a8325c1982ee257546adb5e0a2b1f6fecf27c0970e0c"
+const expectedTypeScriptSourceSha256 = "sha256:72713172aab80c7b6722796b5b933f701f3950867d4aaab76e4d7834f4d104ad"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {

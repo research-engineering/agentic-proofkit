@@ -159,6 +159,16 @@ test("diagnostic whole-value redaction", () => {
     assert.equal(redactDiagnosticValue(escapedUnicodeSpace), fixed, `escaped Unicode space depth ${depth}`);
     escapedUnicodeSpace = JSON.stringify(escapedUnicodeSpace);
   }
+  for (const initial of [
+    String.raw`{"passw\u006frd":"synthetic-fixture-value"}`,
+    String.raw`api_\uDB40\uDC01key=synthetic-fixture-value`,
+  ]) {
+    let serialized = initial;
+    for (let depth = 0; depth <= 4; depth++) {
+      assert.equal(redactDiagnosticValue(serialized), fixed, `Unicode escape depth ${depth}`);
+      serialized = JSON.stringify(serialized);
+    }
+  }
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {
