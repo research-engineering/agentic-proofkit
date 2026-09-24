@@ -271,6 +271,7 @@ func exportStatementEnd(masked string, start int, limit int) (int, error) {
 	parenDepth := 0
 	bracketDepth := 0
 	braceDepth := 0
+	nextNonSpace := start
 	for index := start; index < limit; index++ {
 		switch masked[index] {
 		case '(':
@@ -299,14 +300,20 @@ func exportStatementEnd(masked string, start int, limit int) (int, error) {
 			if parenDepth != 0 || bracketDepth != 0 || braceDepth != 0 {
 				continue
 			}
-			prefix := strings.TrimSpace(masked[start:index])
-			if prefix == "export" {
-				continue
+			if nextNonSpace <= index {
+				nextNonSpace = index + 1
+				for nextNonSpace < limit && strings.ContainsRune(" \t\r\n", rune(masked[nextNonSpace])) {
+					nextNonSpace++
+				}
 			}
-			next := strings.TrimLeft(masked[index+1:limit], " \t\r\n")
+			next := masked[nextNonSpace:limit]
 			for _, keyword := range []string{"const", "let", "var", "function", "class", "interface", "type", "enum", "import"} {
 				if !strings.HasPrefix(next, keyword) || len(next) > len(keyword) && isASCIITypeScriptIdentifierByte(next[len(keyword)]) {
 					continue
+				}
+				prefix := strings.TrimSpace(masked[start:index])
+				if prefix == "export" {
+					break
 				}
 				if prefix == "" || !mayTerminateExportStatement(prefix[len(prefix)-1]) {
 					return 0, unsupportedTypeScriptSourceGrammar("ambiguous semicolonless export boundary")
