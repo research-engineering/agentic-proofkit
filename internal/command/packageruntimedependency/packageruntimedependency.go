@@ -8,13 +8,13 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 )
 
 const reportKind = "proofkit.package-runtime-dependency-admission"
 
 var (
 	packageNamePattern       = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
-	packageVersionPattern    = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 	lockfileIntegrityPattern = regexp.MustCompile(`^sha(?:256|384|512)-[A-Za-z0-9+/]+={0,2}$`)
 	secretLikeTextPattern    = regexp.MustCompile(`(?i)(?:authorization\s*:|bearer\s+[A-Za-z0-9._~+/=-]{8,}|(?:access_?token|api_?key|password|secret|token)\s*[=:]\s*\S+|github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|sk-(?:proj-)?[A-Za-z0-9_-]{10,}|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)`)
 )
@@ -373,7 +373,7 @@ func packageVersion(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !packageVersionPattern.MatchString(text) {
+	if !semversion.IsExact(text) {
 		return "", fmt.Errorf("%s must be an exact semantic version", context)
 	}
 	return text, nil

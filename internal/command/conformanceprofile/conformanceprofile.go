@@ -148,8 +148,10 @@ func BuildProfile(raw any, profileID string) (Result, error) {
 	var selected *Profile
 	for index := range input.Manifest.Profiles {
 		if input.Manifest.Profiles[index].ProfileID == selectedProfileID {
+			if selected != nil {
+				return Result{}, fmt.Errorf("duplicate conformance profile %s", selectedProfileID)
+			}
 			selected = &input.Manifest.Profiles[index]
-			break
 		}
 	}
 	if selected == nil {

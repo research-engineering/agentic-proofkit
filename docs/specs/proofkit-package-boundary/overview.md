@@ -29,8 +29,11 @@ denial, and package artifact behavior only.
   last-write-wins routing, then generates private help and preset projections
   without claiming nested shape or type parity.
   Explicit scanners consume only caller-named bounded canonical files under
-  documented fail-closed grammars, pin each referenced package sub-root before
-  reading its manifest and sources, bind every alias of one canonical source
+  documented grammars with explicit proof limits. The TypeScript public API
+  lexical inventory is advisory for semicolonless source until a
+  repository-owned compiler witness is provided. The scanners pin each
+  referenced package sub-root before reading its manifest and sources, bind
+  every alias of one canonical source
   to its first immutable identity, digest, and parsed result, and reject later
   alias drift rather than guessing layouts or silently accepting unsupported
   syntax. Explicit loopback browser opening accepts only the exact root URL and

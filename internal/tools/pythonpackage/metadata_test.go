@@ -87,7 +87,7 @@ func TestReadPackageJSONRejectsUnsafeWheelMetadata(t *testing.T) {
 		{
 			name:    "license expression disagrees with repository license",
 			content: `{"name":"@research-engineering/agentic-proofkit","version":"1.2.3","description":"Proofkit CLI","license":"Apache-2.0","repository":{"url":"https://example.test/repo"}}`,
-			want:    "license must be MIT",
+			want:    "license must be MIT AND BSD-3-Clause",
 		},
 	}
 	for _, item := range cases {
@@ -111,7 +111,7 @@ func TestMetadataUsesCoreMetadata24LicenseFields(t *testing.T) {
 	content := metadata(testPackageManifest("1.2.3"))
 	for _, required := range []string{
 		"Metadata-Version: 2.4\n",
-		"License-Expression: MIT\n",
+		"License-Expression: MIT AND BSD-3-Clause\n",
 		"License-File: LICENSE\n",
 	} {
 		if !strings.Contains(content, required) {
@@ -120,6 +120,20 @@ func TestMetadataUsesCoreMetadata24LicenseFields(t *testing.T) {
 	}
 	if strings.Contains(content, "\nLicense: ") {
 		t.Fatalf("metadata() retained deprecated License field:\n%s", content)
+	}
+}
+
+func TestRepositoryLicenseRetainsBundledRuntimeNotices(t *testing.T) {
+	content, err := os.ReadFile(filepath.Join("..", "..", "..", "LICENSE"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, notice := range []string{
+		"Copyright 2009 The Go Authors.",
+	} {
+		if !bytes.Contains(content, []byte(notice)) {
+			t.Fatalf("LICENSE is missing bundled runtime notice %q", notice)
+		}
 	}
 }
 
@@ -536,7 +550,7 @@ func writeMinimalWheelFixture(t *testing.T, path string, version string, wheel s
 func testPackageManifest(version string) packageJSON {
 	return packageJSON{
 		Description: "Proofkit CLI",
-		License:     "MIT",
+		License:     "MIT AND BSD-3-Clause",
 		Name:        npmPackageName,
 		Repository: repositoryJSON{
 			URL: "git+https://example.test/proofkit.git",

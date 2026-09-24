@@ -3,6 +3,7 @@ package branchauthority
 import (
 	"encoding/json"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"os/exec"
 	"strings"
 	"testing"
 )
@@ -24,6 +25,43 @@ func TestBuildAdmitsAlignedRequiredBranchAndRejectsRequiredDrift(t *testing.T) {
 	encoded, _ := json.Marshal(record)
 	if exitCode == 0 || record.State != "failed" || !strings.Contains(string(encoded), "proofkit.test.default") || !strings.Contains(string(encoded), "drifted") {
 		t.Fatalf("Build() accepted required branch drift: exitCode=%d record=%s", exitCode, string(encoded))
+	}
+}
+
+func TestBranchAdmissionMatchesGitShorthandGrammar(t *testing.T) {
+	for _, test := range []struct {
+		name  string
+		valid bool
+	}{
+		{"main", true},
+		{"foo./bar", true},
+		{"foo@bar", true},
+		{"topic/-bar", true},
+		{"@", true},
+		{"Head", true},
+		{"topic]", true},
+		{"HEAD", false},
+		{" main", false},
+		{"main\n", false},
+		{"main.", false},
+		{".hidden", false},
+		{"topic/.hidden", false},
+		{"topic.lock/sub", false},
+		{"main@{1}", false},
+		{"-danger", false},
+		{"topic\x01bad", false},
+	} {
+		_, err := branchName(test.name, "branch")
+		if (err == nil) != test.valid {
+			t.Fatalf("branchName(%q) error=%v, valid=%t", test.name, err, test.valid)
+		}
+		if err := exec.Command("git", "check-ref-format", "--branch", test.name).Run(); (err == nil) != test.valid {
+			t.Fatalf("git check-ref-format --branch %q error=%v, valid=%t", test.name, err, test.valid)
+		}
+		_, _, err = Build(validBranchAuthorityInput(test.name))
+		if (err == nil) != test.valid {
+			t.Fatalf("Build(observedBranch=%q) error=%v, valid=%t", test.name, err, test.valid)
+		}
 	}
 }
 

@@ -27,6 +27,35 @@ func TestVerifyTypeScriptPackagePublicAPISurfaces(t *testing.T) {
 	}
 }
 
+func TestVerifyTypeScriptPublicAPIPreservesDollarSuffixedIdentifiers(t *testing.T) {
+	const source = "export function public$() { return 1; }\nexport class Class$ {}\nexport enum Enum$ { First }\nexport interface Interface$ { value: string }\nexport type Shape$ = { value: string };\n"
+	runtimeExports, typeExports, err := CollectExports(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"Class$", "Enum$", "public$"})
+	assertStringSlice(t, typeExports, []string{"Interface$", "Shape$"})
+
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	if err := os.WriteFile(sourcePath, []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["runtimeExports"] = []any{"Class$", "Enum$", "public$"}
+	entry["typeExports"] = []any{"Interface$", "Shape$"}
+	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode != 0 {
+		t.Fatalf("Verify(full names) exit=%d error=%v output=%#v", exitCode, err, output)
+	} else if !strings.Contains(fmt.Sprint(output["nonClaims"]), "TYPESCRIPT-ASI-01") {
+		t.Fatalf("Verify(full names) omits semicolonless boundary non-claim: %#v", output)
+	}
+	entry["runtimeExports"] = []any{"Class$", "Enum$", "public"}
+	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode == 0 {
+		t.Fatalf("Verify(truncated name) exit=%d error=%v output=%#v, want mismatch", exitCode, err, output)
+	}
+}
+
 func TestVerifyTypeScriptRootPackagePublicAPISurfaces(t *testing.T) {
 	repoRoot := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(repoRoot, "src"), 0o755); err != nil {

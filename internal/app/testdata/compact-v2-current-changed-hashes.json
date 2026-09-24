@@ -1,5 +1,6 @@
 {
-  "conformance-profile|output|union": "sha256:be0cd27276378133f7977c38e849d14d38b6e45a62ed7fd15260ee7d10135e41",
+  "conformance-profile|input|union": "sha256:a300ebf2a91bcb923702a35d8ad97553d84934744fee467dba5cd3b9e84a89f6",
+  "conformance-profile|output|union": "sha256:51eb656396b84a03f5fff0ca67481d3c6bbe938875f17468c67655a484402f80",
   "evidence-graph|input|union": "sha256:a44e528ed630c82b99f5d1a2bb4f317719b5f10a8588ab86ac01c9354a912119",
   "evidence-graph|output|union": "sha256:c4c6972ad53781cf6b63b2f73fba1e23dc99c6627a0a88b9f155d06bf9669d50",
   "impact|input|direct": "sha256:535ad6c4a1e0a8e741d86e17b6bd76146a66e895d77f3af17ea3194c078b273c",

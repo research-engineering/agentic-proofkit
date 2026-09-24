@@ -85,7 +85,7 @@ jobs:
           test "$repository_url" = "git+https://github.com/research-engineering/agentic-proofkit.git"
           test "$publish_registry" = "$REGISTRY_URL"
           test "$publish_access" = "public"
-          test "$license" = "MIT"
+          test "$license" = "MIT AND BSD-3-Clause"
           test -z "$private_value"
           if [ -n "$EXPECTED_VERSION" ]; then
             test "$version" = "$EXPECTED_VERSION"

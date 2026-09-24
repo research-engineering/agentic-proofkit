@@ -137,7 +137,7 @@ func TestCompactV2WireDeltasResolveAgainstFrozenVersionEdgeObservations(t *testi
 func TestCurrentCompactV2WireSemanticsMatchFrozenVersionEdge(t *testing.T) {
 	frozen := readCompactV2WireObservations(t)
 	current := currentCompactV2WireObservations(t)
-	changedBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "internal/app/testdata/source-v2-compact-changed-hashes.json"))
+	changedBytes, err := os.ReadFile(filepath.Join(repoRoot(t), "internal/app/testdata/compact-v2-current-changed-hashes.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,19 +157,24 @@ func TestCurrentCompactV2WireSemanticsMatchFrozenVersionEdge(t *testing.T) {
 			continue
 		}
 		if !recorded {
-			t.Fatalf("unlisted compact observation changed under source cutover: %s", key)
+			encoded, err := stablejson.Marshal(current[key])
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("unlisted current compact observation change: %s=%s", key, digest.SHA256BytesRef(encoded))
+			continue
 		}
 		encoded, err := stablejson.Marshal(current[key])
 		if err != nil {
 			t.Fatal(err)
 		}
 		if got := digest.SHA256BytesRef(encoded); got != wantHash {
-			t.Fatalf("source cutover observation %s hash drifted: got %s want %s", key, got, wantHash)
+			t.Fatalf("current compact observation %s hash drifted: got %s want %s", key, got, wantHash)
 		}
 		observedChanges++
 	}
 	if observedChanges != len(changed) {
-		t.Fatalf("declared source cutover observations=%d, observed=%d", len(changed), observedChanges)
+		t.Fatalf("declared current compact observations=%d, observed=%d", len(changed), observedChanges)
 	}
 }
 

@@ -87,6 +87,240 @@ func TestBuildRejectsSecretLikeNestedEvidenceThroughSharedScanner(t *testing.T) 
 	}
 }
 
+func TestBuildClassifiesTemporaryEndpointHosts(t *testing.T) {
+	for _, test := range []struct {
+		host      string
+		temporary bool
+	}{
+		{"trycloudflare.com", true},
+		{"demo.trycloudflare.com", true},
+		{"demo.TRYCLOUDFLARE.COM", true},
+		{"demo.trycloudflare.com.", true},
+		{"demo.trycloudflare\u3002com", true},
+		{"demo.trycloudflare\u3002com\u3002", true},
+		{"demo.trycloudflare\uff0ecom", true},
+		{"demo.\uff54\uff52\uff59cloudflare.com", true},
+		{"nottrycloudflare.com", false},
+		{"trycloudflare.com.example.test", false},
+	} {
+		input := validDeploymentEvidenceInput()
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId":   "proofkit.test.endpoint",
+			"endpointKind": "stable",
+			"url":          "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil {
+			t.Fatalf("Build(%q) error=%v", test.host, err)
+		}
+		if (exitCode != 0) != test.temporary {
+			t.Fatalf("Build(%q) exit=%d state=%s, temporary=%t", test.host, exitCode, record.State, test.temporary)
+		}
+		if test.temporary {
+			encoded, err := json.Marshal(record)
+			if err != nil || !strings.Contains(string(encoded), "stable endpoint must not use a temporary endpoint host") {
+				t.Fatalf("Build(%q) did not identify the temporary host: %s, error=%v", test.host, encoded, err)
+			}
+		}
+	}
+}
+
+func TestCanonicalEndpointHostRejectsInvalidDNSLabels(t *testing.T) {
+	for _, host := range []string{".", "bad..example.test"} {
+		if value, err := canonicalEndpointHost(host); err == nil {
+			t.Fatalf("canonicalEndpointHost(%q)=%q, want invalid host", host, value)
+		}
+	}
+}
+
+func TestPolicyRejectsDuplicateCanonicalTemporarySuffixes(t *testing.T) {
+	for _, suffixes := range [][]any{
+		{"TRYCLOUDFLARE.COM", "trycloudflare.com"},
+		{"trycloudflare.com", "trycloudflare\u3002com"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["temporaryEndpointHostSuffixes"] = suffixes
+		if _, err := admitPolicy(input["policy"]); err == nil || !strings.Contains(err.Error(), "unique after DNS normalization") {
+			t.Fatalf("admitPolicy(%v) error=%v, want canonical duplicate rejection", suffixes, err)
+		}
+	}
+}
+
+func TestBuildRejectsIDNAEquivalentLocalHost(t *testing.T) {
+	input := validDeploymentEvidenceInput()
+	fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+	fact["urls"] = []any{map[string]any{
+		"endpointId":   "proofkit.test.endpoint",
+		"endpointKind": "stable",
+		"url":          "https://\uff4c\uff4f\uff43\uff41\uff4c\uff48\uff4f\uff53\uff54/proof",
+	}}
+	record, exitCode, err := Build(input)
+	if err != nil || exitCode == 0 {
+		t.Fatalf("Build() exit=%d error=%v, want local-host denial", exitCode, err)
+	}
+	encoded, err := json.Marshal(record)
+	if err != nil || !strings.Contains(string(encoded), ".url must not be local or loopback") {
+		t.Fatalf("Build() did not classify IDNA-equivalent localhost: %s, error=%v", encoded, err)
+	}
+}
+
+func TestBuildRejectsCallerLocalIndicatorsAcrossDNSRepresentations(t *testing.T) {
+	for _, test := range []struct {
+		indicator string
+		host      string
+	}{
+		{"b\u00fcro.example", "b\u00fcro.example"},
+		{"b\u00fcro.example", "xn--bro-hoa.example"},
+		{"b\u00fcro", "xn--meinbro-r2a.example"},
+		{"xn--bro-hoa", "xn--meinbro-r2a.example"},
+		{"bu\u0308ro", "xn--meinbro-r2a.example"},
+		{"b\u00fcro.example.", "xn--meinbro-r2a.example."},
+		{"b\u00fcro.example\u3002", "xn--meinbro-r2a.example."},
+		{"xn--bro-hoa.example", "b\u00fcro.example"},
+		{"internal.example.", "internal.example"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{test.indicator}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode == 0 {
+			t.Fatalf("Build(%q, %q) exit=%d error=%v, want local-host denial", test.indicator, test.host, exitCode, err)
+		}
+		encoded, err := json.Marshal(record)
+		if err != nil || !strings.Contains(string(encoded), ".url must not be local or loopback") {
+			t.Fatalf("Build(%q, %q) failed for wrong reason: %s, error=%v", test.indicator, test.host, encoded, err)
+		}
+	}
+}
+
+func TestBuildDoesNotExpandRootDotIndicatorAcrossLabelBoundary(t *testing.T) {
+	for _, test := range []struct {
+		indicator string
+		host      string
+	}{
+		{"internal.example.", "internal.examplez"},
+		{"internal.example\u3002", "internal.examplez"},
+		{"internal.example\uff0e", "internal.examplez"},
+		{"internal.example\uff61", "internal.examplez"},
+		{"b\u00fcro.example.", "xn--bro-hoa.examplez"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{test.indicator}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 0 || record.State != "passed" {
+			t.Fatalf("Build(%q, %q) exit=%d state=%s error=%v, want passed", test.indicator, test.host, exitCode, record.State, err)
+		}
+	}
+}
+
+func TestBuildLocalIndicatorIsInvariantAcrossEquivalentHostRepresentations(t *testing.T) {
+	for _, host := range []string{"bu\u0308ro.example", "b\u00fcro.example", "xn--bro-hoa.example"} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{"bu"}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 0 || record.State != "passed" {
+			t.Fatalf("Build(%q) exit=%d state=%s error=%v, want passed", host, exitCode, record.State, err)
+		}
+	}
+}
+
+func TestBuildLocalIndicatorIsInvariantAcrossIPv6Spellings(t *testing.T) {
+	for _, test := range []struct{ indicator, host string }{
+		{"::1", "[0:0:0:0:0:0:0:1]"},
+		{"0:0:0:0:0:0:0:1", "[::1]"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{test.indicator}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode == 0 || record.State != "failed" {
+			t.Fatalf("Build(%q, %q) exit=%d state=%s error=%v, want local-host denial", test.indicator, test.host, exitCode, record.State, err)
+		}
+	}
+}
+
+func TestPolicyRejectsLocalIndicatorThatNormalizesToEmpty(t *testing.T) {
+	for _, indicator := range []string{"\u00ad", "\u200b"} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{indicator}
+		_, err := admitPolicy(input["policy"])
+		if err == nil || !strings.Contains(err.Error(), "must not normalize to empty") || strings.Contains(err.Error(), indicator) {
+			t.Fatalf("admitPolicy() error=%v, want non-disclosing empty-normalization rejection", err)
+		}
+	}
+	input := validDeploymentEvidenceInput()
+	input["policy"].(map[string]any)["localRefIndicators"] = []any{"\u00adnot-local"}
+	fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+	fact["urls"] = []any{map[string]any{
+		"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+		"url": "https://public.example/proof",
+	}}
+	record, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build(nonempty normalized indicator) exit=%d state=%s error=%v, want passed", exitCode, record.State, err)
+	}
+}
+
+func TestBuildAdmitsOnlyCalendarValidUTCExpiry(t *testing.T) {
+	for _, test := range []struct {
+		expiresAt string
+		valid     bool
+	}{
+		{"2024-02-29T23:59:59Z", true},
+		{"1990-12-31T23:59:60Z", true},
+		{"2016-12-31T23:59:60.5Z", true},
+		{"2025-02-29T23:59:59Z", false},
+		{"1990-12-30T23:59:60Z", false},
+		{"1990-12-31T22:59:60Z", false},
+		{"2026-12-31T23:59:60Z", false},
+		{"2026-02-31T25:61:61Z", false},
+		{"2026-01-01T00:00:00+00:00", false},
+	} {
+		input := validDeploymentEvidenceInput()
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId":                   "proofkit.test.endpoint",
+			"endpointKind":                 "temporary",
+			"url":                          "https://demo.trycloudflare.com/proof",
+			"expiresAt":                    test.expiresAt,
+			"temporaryEndpointApprovalRef": "proofkit.test.approval",
+			"replacementPlanRef":           "proofkit.test.replacement",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil {
+			t.Fatalf("Build(%q) error=%v", test.expiresAt, err)
+		}
+		if (exitCode == 0) != test.valid {
+			t.Fatalf("Build(%q) exit=%d state=%s, valid=%t", test.expiresAt, exitCode, record.State, test.valid)
+		}
+		if !test.valid {
+			encoded, err := json.Marshal(record)
+			if err != nil || !strings.Contains(string(encoded), ".expiresAt must be an RFC3339 UTC timestamp") {
+				t.Fatalf("Build(%q) did not identify the invalid timestamp: %s, error=%v", test.expiresAt, encoded, err)
+			}
+		}
+	}
+}
+
 func validDeploymentEvidenceInput() map[string]any {
 	nonClaim := "Deployment evidence test fixture does not prove live deployment."
 	return map[string]any{

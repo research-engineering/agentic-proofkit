@@ -12,6 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/witnesscommand"
 )
@@ -25,10 +26,9 @@ var boundaryNonClaims = []string{
 }
 
 var (
-	hexSHA1Pattern       = regexp.MustCompile(`^[0-9a-f]{40}$`)
-	hexSHA256Pattern     = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	decimalTextPattern   = regexp.MustCompile(`^\d+$`)
-	packageVersionRegexp = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
+	hexSHA1Pattern     = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	hexSHA256Pattern   = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	decimalTextPattern = regexp.MustCompile(`^\d+$`)
 )
 
 var requiredPackedFiles = []string{
@@ -937,7 +937,7 @@ func versionText(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !packageVersionRegexp.MatchString(value) {
+	if !semversion.IsExact(value) {
 		return "", fmt.Errorf("%s must be an exact npm version", context)
 	}
 	return value, nil

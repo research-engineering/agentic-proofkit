@@ -12,6 +12,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -54,7 +55,6 @@ var sourceRepositoryVisibilities = map[string]struct{}{
 var (
 	npmPackageNamePattern       = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
 	packageScopePattern         = regexp.MustCompile(`^@[a-z0-9][a-z0-9._-]*$`)
-	packageVersionPattern       = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 	httpsURLPattern             = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~/-]*)?$`)
 	githubOwnerPattern          = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,37}[a-z0-9])?$`)
 	githubRepositoryNamePattern = regexp.MustCompile(`^[a-z0-9._-]+$`)
@@ -492,7 +492,7 @@ func admitPackage(raw any) (releasePackage, error) {
 	if err != nil {
 		return releasePackage{}, err
 	}
-	if !packageVersionPattern.MatchString(version) {
+	if !semversion.IsExact(version) {
 		return releasePackage{}, fmt.Errorf("package version must be an exact npm version")
 	}
 	publishConfigRegistry, err := nullableHTTPSURL(record["publishConfigRegistry"], "package publishConfigRegistry")

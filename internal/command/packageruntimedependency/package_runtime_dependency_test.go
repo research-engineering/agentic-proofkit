@@ -47,6 +47,17 @@ func TestBuildRejectsLockfileIntegrityDrift(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsNonSemVerPackageVersions(t *testing.T) {
+	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
+		input := validPackageRuntimeDependencyInput()
+		input["expectedPackageVersion"] = version
+		_, exitCode, err := Build(input)
+		if exitCode == 0 || err == nil {
+			t.Fatalf("Build(expectedPackageVersion=%q) exit=%d error=%v, want rejection", version, exitCode, err)
+		}
+	}
+}
+
 func TestBuildRejectsSecretLikeReportVisibleText(t *testing.T) {
 	secret := "Authorization: Bearer abcdefghijklmnop"
 	input := validPackageRuntimeDependencyInput()

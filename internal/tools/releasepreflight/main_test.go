@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
@@ -9,8 +10,57 @@ import (
 	"strings"
 	"testing"
 
+	"go.yaml.in/yaml/v3"
+
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
+
+func TestReleaseWorkflowAdmitsCurrentPackageLicense(t *testing.T) {
+	root := filepath.Join("..", "..", "..")
+	manifestBytes, err := os.ReadFile(filepath.Join(root, "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	manifest, err := admission.DecodeTypedJSON[struct {
+		License string `json:"license"`
+	}](bytes.NewReader(manifestBytes), 1<<20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workflowBytes, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow struct {
+		Jobs map[string]struct {
+			Steps []struct {
+				Name string `yaml:"name"`
+				Run  string `yaml:"run"`
+			} `yaml:"steps"`
+		} `yaml:"jobs"`
+	}
+	if err := yaml.Unmarshal(workflowBytes, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	identitySteps := 0
+	for _, step := range workflow.Jobs["candidate"].Steps {
+		if step.Name != "Verify source package identity" {
+			continue
+		}
+		identitySteps++
+		expected := `test "$license" = "` + manifest.License + `"`
+		if strings.Count(step.Run, expected) != 1 {
+			t.Fatalf("release identity preflight must test exact package license %q", manifest.License)
+		}
+		if strings.Contains(step.Run, `test "$license" = "MIT"`) {
+			t.Fatal("release identity preflight still admits stale MIT-only metadata")
+		}
+	}
+	if identitySteps != 1 {
+		t.Fatalf("release identity preflight step count=%d, want 1", identitySteps)
+	}
+}
 
 func TestRetainedEvidenceCommandWritesArtifactRootManifest(t *testing.T) {
 	root := t.TempDir()
