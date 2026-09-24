@@ -153,7 +153,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 			"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
 			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
 			"TypeScript public API verification does not parse JSX or admit TSX source files.",
-			"TypeScript public API verification admits a documented fail-closed export grammar subset; it does not parse unrestricted TypeScript.",
+			"The TypeScript public API scanner does not parse unrestricted TypeScript; it is a bounded lexical inventory, not a compiler proof. Semicolonless statement boundaries require a repository-owned compiler witness until TYPESCRIPT-ASI-01 is closed.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},
 	}, exitCode, nil

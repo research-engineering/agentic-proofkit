@@ -198,7 +198,7 @@ var currentBreakingChanges = []Change{
 	{ChangeID: "proofkit.native-admission.branch-version", Summary: "Branch authority rejects names outside the Git branch shorthand grammar, and five package, registry, release, and consumer commands enforce full SemVer 2.0.0 after their existing field-specific text admission. Inputs previously accepted only because of incomplete local predicates now fail admission."},
 	{ChangeID: "proofkit.conformance-profile.ambiguous-id", Summary: "Conformance profile selection rejects duplicate records with the selected profileId instead of choosing whichever appears first. The full-manifest verification command continues to report duplicate IDs."},
 	{ChangeID: "proofkit.deployment-endpoint.admission", Summary: "Stable endpoints using case, trailing-root-dot or IDNA-equivalent variants of a declared temporary DNS suffix, endpoints matching caller-owned local indicators across Unicode, punycode, root-dot or equivalent IPv6 spellings, and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. Local indicators that erase under IDNA normalization are rejected instead of becoming wildcards. Equivalent Unicode host spellings now receive the same local-indicator decision. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches; announced historical leap seconds remain valid."},
-	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API verification separates a semicolonless exported variable declaration from a following local declaration and preserves dollar suffixes in exported identifiers. Manifests claiming a following local name or a truncated identifier now fail comparison with actual exports. The declared export-subset grammar and extension support are unchanged."},
+	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API verification preserves dollar suffixes in exported identifiers. Manifests claiming a truncated identifier now fail comparison with the source inventory. The machine contract and report narrow scanner authority to a bounded lexical inventory; semicolonless statement boundaries require a repository-owned compiler witness."},
 }
 
 var currentAdditions = []Change{
@@ -207,7 +207,7 @@ var currentAdditions = []Change{
 
 var currentMigrationSteps = []string{
 	"Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
-	"Remove duplicate selected profileIds and correct TypeScript public API manifests that claimed following local declarations or truncated dollar-suffixed names.",
+	"Remove duplicate selected profileIds and correct TypeScript public API manifests that claimed truncated dollar-suffixed names.",
 	"Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
 	"Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality.",
 }
@@ -269,7 +269,7 @@ func currentExpectedReleaseNotes() string {
 		"- Branch authority admits caller-owned branch facts but does not query Git refs or repository protection settings.",
 		"- Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
 		"- The UTC leap-second validator admits IERS-announced positive leap dates through 2016 and fails closed on unannounced future insertions until its source is updated.",
-		"- The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it does not parse unrestricted TypeScript or prove built-module runtime exports.",
+		"- The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it does not parse unrestricted TypeScript or prove built-module runtime exports. Semicolonless statement boundaries can misclassify local names until TYPESCRIPT-ASI-01 is closed; require a repository-owned compiler witness for such sources.",
 		"- Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints.",
 		"",
 		"## Install",

@@ -18,7 +18,7 @@
     },
     {
       "changeId": "proofkit.typescript-public-api.exports",
-      "summary": "TypeScript public API verification separates a semicolonless exported variable declaration from a following local declaration and preserves dollar suffixes in exported identifiers. Manifests claiming a following local name or a truncated identifier now fail comparison with actual exports. The declared export-subset grammar and extension support are unchanged."
+      "summary": "TypeScript public API verification preserves dollar suffixes in exported identifiers. Manifests claiming a truncated identifier now fail comparison with the source inventory. The machine contract and report narrow scanner authority to a bounded lexical inventory; semicolonless statement boundaries require a repository-owned compiler witness."
     }
   ],
   "additions": [
@@ -31,7 +31,7 @@
     "required": true,
     "steps": [
       "Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
-      "Remove duplicate selected profileIds and correct TypeScript public API manifests that claimed following local declarations or truncated dollar-suffixed names.",
+      "Remove duplicate selected profileIds and correct TypeScript public API manifests that claimed truncated dollar-suffixed names.",
       "Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
       "Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality."
     ]
@@ -43,7 +43,7 @@
     "Branch authority admits caller-owned branch facts but does not query Git refs or repository protection settings.",
     "Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
     "The UTC leap-second validator admits IERS-announced positive leap dates through 2016 and fails closed on unannounced future insertions until its source is updated.",
-    "The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it does not parse unrestricted TypeScript or prove built-module runtime exports.",
+    "The TypeScript public API scanner supports only the declared non-JSX export subset in .ts, .mts, and .cts files; it does not parse unrestricted TypeScript or prove built-module runtime exports. Semicolonless statement boundaries can misclassify local names until TYPESCRIPT-ASI-01 is closed; require a repository-owned compiler witness for such sources.",
     "Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints."
   ],
   "rollback": {

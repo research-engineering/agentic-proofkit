@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "4d52e7e7db9becabba2dd1fadddfb21bb8330a68c4382d2e3bff3042a04c9733"
+	cliContractPublicABISHA256               = "aee4f2d23d4bd31451140a5cffb78b6bdabfa5c589e410d5f3d6334982b1ca99"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2074,8 +2074,8 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
 	}
 	grammar := inputContract["sourceGrammar"].(map[string]any)
-	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v1" || grammar["mode"] != "fail_closed" {
-		t.Fatalf("TypeScript public API source grammar is not fail-closed: %#v", grammar)
+	if grammar["grammarId"] != "proofkit.typescript-public-api.export-subset.v1" || grammar["mode"] != "lexical_advisory" {
+		t.Fatalf("TypeScript public API source grammar overstates its authority: %#v", grammar)
 	}
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
 	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax"} {
@@ -2085,7 +2085,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "TYPESCRIPT-ASI-01") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }
