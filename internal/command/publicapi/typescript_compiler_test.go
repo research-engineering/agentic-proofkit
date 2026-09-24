@@ -25,6 +25,7 @@ func TestCollectExportsMatchesTypeScriptCompiler(t *testing.T) {
 	}{
 		{"export const A = 1\nconst B = 2, C = 3;\nexport function public$() { return 1; }\nexport type Shape$ = { value: string };", "export type Shape$", "Shape$"},
 		{"export\vconst A = 1;", "", ""},
+		{"const privateValue = 1;", "", ""},
 		{"export const A = 1,\n B = 2;\nexport interface public$ { value: number }", "export interface public$", "public$"},
 		{"export const A = true &&\nfunction () {}, B = 2;", "", ""},
 		{"export const A = `x`\nconst B = 2, C = 3;", "", ""},
@@ -98,21 +99,105 @@ func TestCommonJSSourceIsNotAnESMExportInventory(t *testing.T) {
 		t.Skip("locked TypeScript compiler is not installed")
 	}
 	folder := t.TempDir()
-	source := "declare var exports: {Public: number}; exports.Public = 1;"
-	path := filepath.Join(folder, "entry.cts")
-	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+	for _, source := range []string{
+		"declare var exports: {Public: number}; exports.Public = 1;",
+		"declare var exports: {Public: number}; exports.Public = 1; export type Shape = string;",
+	} {
+		path := filepath.Join(folder, "entry.cts")
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(compiler, "--target", "es2022", "--module", "nodenext", "--moduleResolution", "nodenext", "--outDir", folder, path)
+		if output, err := command.CombinedOutput(); err != nil {
+			t.Fatalf("TypeScript compiler error=%v: %s", err, output)
+		}
+		command = exec.Command("node", "-e", `process.stdout.write(JSON.stringify(Object.keys(require(process.argv[1])).sort()))`, filepath.Join(folder, "entry.cjs"))
+		output, err := command.CombinedOutput()
+		if err != nil || string(output) != `["Public"]` {
+			t.Fatalf("CommonJS export names=%s, error=%v, want Public", output, err)
+		}
+		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS binding identifiers are not admitted") {
+			t.Fatalf("CollectExports() error=%v, want CommonJS rejection", err)
+		}
+	}
+}
+
+func TestEmptyMTSModuleHasNoRuntimeExports(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	folder := t.TempDir()
+	path := filepath.Join(folder, "entry.mts")
+	if err := os.WriteFile(path, []byte("const privateValue = 1;"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	command := exec.Command(compiler, "--target", "es2022", "--module", "nodenext", "--moduleResolution", "nodenext", "--outDir", folder, path)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("TypeScript compiler error=%v: %s", err, output)
 	}
-	command = exec.Command("node", "-e", `process.stdout.write(JSON.stringify(Object.keys(require(process.argv[1])).sort()))`, filepath.Join(folder, "entry.cjs"))
+	command = exec.Command("node", "-e", `import(process.argv[1]).then(module => process.stdout.write(JSON.stringify(Object.keys(module).sort())))`, filepath.Join(folder, "entry.mjs"))
 	output, err := command.CombinedOutput()
-	if err != nil || string(output) != `["Public"]` {
-		t.Fatalf("CommonJS export names=%s, error=%v, want Public", output, err)
+	if err != nil || string(output) != "[]" {
+		t.Fatalf("ESM export names=%s, error=%v, want empty", output, err)
 	}
-	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS source is not admitted") {
-		t.Fatalf("CollectExports() error=%v, want CommonJS rejection", err)
+	runtimeExports, typeExports, err := CollectExports("const privateValue = 1;")
+	if err != nil || len(runtimeExports) != 0 || len(typeExports) != 0 {
+		t.Fatalf("CollectExports() runtime=%v type=%v error=%v, want empty", runtimeExports, typeExports, err)
+	}
+}
+
+func TestInvalidContextualTypeAliasMatchesCompilerRejection(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	path := filepath.Join(t.TempDir(), "entry.ts")
+	if err := os.WriteFile(path, []byte("export type as = number;"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	command := exec.Command(compiler, "--noEmit", path)
+	if output, err := command.CombinedOutput(); err == nil || !strings.Contains(string(output), "TS1005") {
+		t.Fatalf("TypeScript compiler error=%v output=%s, want syntax rejection", err, output)
+	}
+	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type alias name is not admitted") {
+		t.Fatalf("CollectExports() error=%v, want syntax rejection", err)
+	}
+}
+
+func TestTypeAliasKeywordAdmissionDoesNotExceedCompiler(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	path := filepath.Join(t.TempDir(), "entry.ts")
+	for _, name := range []string{
+		"as", "from", "type", "default", "interface", "enum", "namespace", "abstract", "readonly", "satisfies", "infer", "keyof", "await", "yield",
+		"break", "case", "catch", "class", "const", "continue", "debugger", "delete", "do", "else", "export", "extends", "false", "finally",
+		"for", "function", "if", "import", "in", "instanceof", "new", "null", "return", "super", "switch", "this", "throw", "true", "try",
+		"typeof", "var", "void", "while", "with", "implements", "private", "protected", "public", "static", "let", "package", "arguments", "eval",
+	} {
+		source := "export type " + name + " = number;"
+		if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(compiler, "--noEmit", "--pretty", "false", path)
+		output, compilerErr := command.CombinedOutput()
+		_, _, admissionErr := CollectExports(source)
+		if compilerErr != nil && admissionErr == nil {
+			t.Errorf("CollectExports(%q) accepted compiler-invalid source: %s", source, output)
+		}
 	}
 }

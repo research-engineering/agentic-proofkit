@@ -172,6 +172,8 @@ func TestBuildRejectsCallerLocalIndicatorsAcrossDNSRepresentations(t *testing.T)
 	}{
 		{"b\u00fcro.example", "b\u00fcro.example"},
 		{"b\u00fcro.example", "xn--bro-hoa.example"},
+		{"b\u00fcro", "xn--meinbro-r2a.example"},
+		{"bu\u0308ro", "xn--meinbro-r2a.example"},
 		{"xn--bro-hoa.example", "b\u00fcro.example"},
 		{"internal.example.", "internal.example"},
 	} {
@@ -189,6 +191,28 @@ func TestBuildRejectsCallerLocalIndicatorsAcrossDNSRepresentations(t *testing.T)
 		encoded, err := json.Marshal(record)
 		if err != nil || !strings.Contains(string(encoded), ".url must not be local or loopback") {
 			t.Fatalf("Build(%q, %q) failed for wrong reason: %s, error=%v", test.indicator, test.host, encoded, err)
+		}
+	}
+}
+
+func TestBuildDoesNotExpandRootDotIndicatorAcrossLabelBoundary(t *testing.T) {
+	for _, test := range []struct {
+		indicator string
+		host      string
+	}{
+		{"internal.example.", "internal.examplez"},
+		{"b\u00fcro.example.", "xn--bro-hoa.examplez"},
+	} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{test.indicator}
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+			"url": "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 0 || record.State != "passed" {
+			t.Fatalf("Build(%q, %q) exit=%d state=%s error=%v, want passed", test.indicator, test.host, exitCode, record.State, err)
 		}
 	}
 }

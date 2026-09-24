@@ -18,7 +18,7 @@
     },
     {
       "changeId": "proofkit.typescript-public-api.exports",
-      "summary": "TypeScript public API manifests that truncate dollar-suffixed identifiers or claim exports from a later local declaration now fail verification. Unresolved named runtime re-exports, CommonJS source forms with synthetic ESM exports, and const enums fail closed; valid direct semicolonless exports remain supported. The machine-readable sourceGrammar marker advances to v2."
+      "summary": "TypeScript public API manifests that truncate dollar-suffixed identifiers or claim exports from a later local declaration now fail verification. Unresolved named runtime re-exports, code identifiers module/exports, const enums, and compiler-invalid contextual type alias names fail closed; valid direct semicolonless exports and empty export inventories remain supported. The machine-readable sourceGrammar marker advances to v2."
     }
   ],
   "additions": [
@@ -37,7 +37,7 @@
       "Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
       "Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names or exports borrowed from a later local declaration.",
       "Review stable endpoint hostnames after IDNA lookup against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
-      "Replace unresolved named runtime re-exports or CommonJS source forms with direct ESM exports, or defer adoption until an owner-admitted target resolver exists; use explicit type-only re-exports only with separate target-symbol evidence.",
+      "Replace unresolved named runtime re-exports or code identifiers module/exports with direct ESM exports, or defer adoption until an owner-admitted target resolver exists; use explicit type-only re-exports only with separate target-symbol evidence.",
       "Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality."
     ]
   },
@@ -49,7 +49,7 @@
     "Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
     "The UTC leap-second validator admits IERS-announced positive leap dates through 2016 and fails closed on unannounced future insertions until its source is updated.",
     "The TypeScript public API scanner supports its declared non-JSX lexical subset; TSX and arbitrary TypeScript syntax are not admitted.",
-    "Named runtime re-exports, CommonJS source forms, and const enum declarations are not admitted; explicit type-only re-exports do not prove target-symbol existence.",
+    "Named runtime re-exports, code identifiers module/exports, and const enum declarations are not admitted; explicit type-only re-exports do not prove target-symbol existence.",
     "Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints."
   ],
   "rollback": {

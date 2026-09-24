@@ -609,10 +609,27 @@ func TestCollectExportsRejectsCommonJSSyntheticExports(t *testing.T) {
 	for _, source := range []string{
 		"declare var module: {exports: unknown}; module.exports = { A: 1 };",
 		"declare var exports: {Public: number}; exports.Public = 1;",
+		"declare var exports: {Public: number}; exports.Public = 1; export type Shape = string;",
+		"declare var exports: {Public: number}; export const A = 1; exports.Public = 1; export type Shape = string;",
 	} {
-		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS source is not admitted") {
+		if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "CommonJS binding identifiers are not admitted") {
 			t.Fatalf("CollectExports(%q) error=%v, want CommonJS rejection", source, err)
 		}
+	}
+}
+
+func TestCollectExportsAdmitsEmptyESMScript(t *testing.T) {
+	runtimeExports, typeExports, err := CollectExports("const privateValue = 1;")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStringSlice(t, runtimeExports, []string{})
+	assertStringSlice(t, typeExports, []string{})
+}
+
+func TestCollectExportsRejectsInvalidTypeAliasNamedAs(t *testing.T) {
+	if _, _, err := CollectExports("export type as = number;"); err == nil || !strings.Contains(err.Error(), "type alias name is not admitted") {
+		t.Fatalf("CollectExports() error=%v, want contextual keyword rejection", err)
 	}
 }
 
@@ -794,6 +811,30 @@ func TestVerifyTypeScriptPublicAPIRejectsUnresolvedRuntimeReexport(t *testing.T)
 		_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
 		if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "unresolved runtime re-exports") {
 			t.Fatalf("Verify(runtimeExports=%v) exit=%d error=%v, want fail-closed re-export", names, exitCode, err)
+		}
+	}
+}
+
+func TestVerifyTypeScriptPublicAPIRejectsCommonJSWithTypeOnlyExport(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	for _, test := range []struct {
+		source       string
+		runtimeNames []any
+	}{
+		{"declare var exports: {Public: number}; exports.Public = 1; export type Shape = string;", []any{}},
+		{"declare var exports: {Public: number}; export const A = 1; exports.Public = 1; export type Shape = string;", []any{"A"}},
+	} {
+		if err := os.WriteFile(sourcePath, []byte(test.source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		input := publicAPIManifest()
+		entry := input["entries"].([]any)[0].(map[string]any)
+		entry["runtimeExports"] = test.runtimeNames
+		entry["typeExports"] = []any{"Shape"}
+		_, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+		if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "CommonJS binding identifiers are not admitted") {
+			t.Fatalf("Verify(%q) exit=%d error=%v, want CommonJS rejection", test.source, exitCode, err)
 		}
 	}
 }

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "34409e3c806ec09e3977087308e4a68b26847aca4c6d9667cb5984bed77a8d71"
+	cliContractPublicABISHA256               = "be875acbe788aef287c5a19237fc0a99007a117dddffe4d847d8c37be19f14ed"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2087,7 +2087,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	assertStringSet(t, stringsFromAny(grammar["rejectedExportForms"].([]any)), []string{
 		"const enum exports",
 		"unresolved named runtime re-exports",
-		"CommonJS source forms with synthetic ESM exports",
+		"compiler-invalid contextual type alias names",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
 	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters"} {

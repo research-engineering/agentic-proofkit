@@ -7,20 +7,24 @@ import (
 )
 
 var (
-	namedExportPattern    = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	typeExportPattern     = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	runtimeDeclPattern    = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	typeDeclPattern       = regexp.MustCompile(`^export[[:space:]]+(?:interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	constEnumPattern      = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
-	varDeclStartPattern   = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
-	exportClauseNameRegex = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
-	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	typeExportPattern      = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	runtimeDeclPattern     = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	typeDeclPattern        = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	constEnumPattern       = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
+	varDeclStartPattern    = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
+	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
+	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
 	scan, err := scanTypeScriptSource(source)
 	if err != nil {
 		return nil, nil, err
+	}
+	if commonJSBindingPattern.MatchString(scan.masked) {
+		return nil, nil, unsupportedTypeScriptSourceGrammar("CommonJS binding identifiers are not admitted")
 	}
 	runtimeExports, err := collectRuntimeExports(source)
 	if err != nil {
@@ -54,7 +58,10 @@ func CollectExports(source string) ([]string, []string, error) {
 			continue
 		}
 		if match := typeDeclPattern.FindStringSubmatch(statement); match != nil {
-			typeExports[match[1]] = struct{}{}
+			if match[1] == "type" && invalidTypeAliasName(match[2]) {
+				return nil, nil, unsupportedTypeScriptSourceGrammar("type alias name is not admitted")
+			}
+			typeExports[match[2]] = struct{}{}
 			continue
 		}
 		if constEnumPattern.MatchString(statement) {
@@ -71,6 +78,15 @@ func CollectExports(source string) ([]string, []string, error) {
 		}
 	}
 	return runtimeExports, sortedSet(typeExports), nil
+}
+
+func invalidTypeAliasName(name string) bool {
+	switch name {
+	case "as", "await", "implements", "interface", "let", "package", "private", "protected", "public", "static", "yield":
+		return true
+	default:
+		return false
+	}
 }
 
 type typeScriptLexicalState uint8

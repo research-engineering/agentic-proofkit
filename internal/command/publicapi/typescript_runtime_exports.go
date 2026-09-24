@@ -42,12 +42,19 @@ func collectRuntimeExports(source string) ([]string, error) {
 	if err := json.Unmarshal([]byte(result.Metafile), &metadata); err != nil || len(metadata.Outputs) != 1 {
 		return nil, fmt.Errorf("TypeScript public API parser did not produce one export inventory")
 	}
-	if len(metadata.Inputs) != 1 || metadata.Inputs["entry.ts"].Format != "esm" {
-		return nil, unsupportedTypeScriptSourceGrammar("CommonJS source is not admitted")
+	if len(metadata.Inputs) != 1 {
+		return nil, fmt.Errorf("TypeScript public API parser input inventory is invalid")
 	}
+	inputFormat := metadata.Inputs["entry.ts"].Format
 	for _, output := range metadata.Outputs {
 		if output.EntryPoint != "entry.ts" {
 			return nil, fmt.Errorf("TypeScript public API parser output has an unexpected entrypoint")
+		}
+		if (inputFormat == "" || inputFormat == "cjs") && (len(output.Exports) == 0 || len(output.Exports) == 1 && output.Exports[0] == "default") {
+			return []string{}, nil
+		}
+		if inputFormat != "esm" {
+			return nil, unsupportedTypeScriptSourceGrammar("unsupported module format")
 		}
 		names := append([]string{}, output.Exports...)
 		sort.Strings(names)

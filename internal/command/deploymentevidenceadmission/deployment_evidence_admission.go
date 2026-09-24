@@ -662,13 +662,31 @@ func isLocalEndpointHost(rawHost string, canonicalHost string, policy policy) bo
 	if isLocalRef(rawHost, policy) || isLocalRef(canonicalHost, policy) {
 		return true
 	}
+	unicodeHost, err := idna.Lookup.ToUnicode(canonicalHost)
+	if err == nil && isLocalRef(unicodeHost, policy) {
+		return true
+	}
 	for _, indicator := range policy.LocalRefIndicators {
 		canonicalIndicator, err := canonicalEndpointHost(indicator)
-		if err == nil && strings.Contains(canonicalHost, canonicalIndicator) {
+		if err != nil {
+			continue
+		}
+		unicodeIndicator, err := idna.Lookup.ToUnicode(canonicalIndicator)
+		if strings.HasSuffix(indicator, ".") {
+			if dnsSuffixMatch(canonicalHost, canonicalIndicator) || err == nil && dnsSuffixMatch(strings.ToLower(unicodeHost), strings.ToLower(unicodeIndicator)) {
+				return true
+			}
+			continue
+		}
+		if strings.Contains(canonicalHost, canonicalIndicator) || err == nil && strings.Contains(strings.ToLower(unicodeHost), strings.ToLower(unicodeIndicator)) {
 			return true
 		}
 	}
 	return false
+}
+
+func dnsSuffixMatch(host string, suffix string) bool {
+	return host == suffix || strings.HasSuffix(host, "."+suffix)
 }
 
 func hasTemporaryEndpointSuffix(value string, policy policy) bool {
