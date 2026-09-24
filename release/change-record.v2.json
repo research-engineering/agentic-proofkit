@@ -24,7 +24,7 @@
     },
     {
       "changeId": "proofkit.diagnostic-json-redaction",
-      "summary": "Repository-owned JavaScript diagnostic entrypoints redact secret-shaped quoted JSON pairs before writing stderr."
+      "summary": "Go report admission, repository-owned JavaScript diagnostics and the generated TypeScript adapter reject or redact secret-shaped quoted JSON pairs with repeated escaping before emitting output."
     }
   ],
   "migration": {

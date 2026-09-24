@@ -133,6 +133,12 @@ test("diagnostic whole-value redaction", () => {
   for (const key of ['"password"', '\\"password\\"', "'api_key'"]) {
     assert.equal(redactDiagnosticValue(`input rejected: {${key}:"synthetic-fixture-value"}`), fixed);
   }
+  for (const count of [2, 3]) {
+    const key = `password${"\\".repeat(count)}"`;
+    assert.equal(redactDiagnosticValue(`input rejected: {${key}:"synthetic-fixture-value"}`), fixed);
+    const authorization = `authorization${"\\".repeat(count)}"`;
+    assert.equal(redactDiagnosticValue(`input rejected: {${authorization}:"Basic synthetic-fixture-value"}`), fixed);
+  }
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

@@ -62,7 +62,33 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 			})
 		}
 	}
-	if seen != 18 {
-		t.Fatalf("changed source-child path count=%d, want 18", seen)
+	if seen != 17 {
+		t.Fatalf("changed source-child path count=%d, want 17", seen)
+	}
+}
+
+func TestContextCatalogPathIsAFileReferenceNotAnInlineSource(t *testing.T) {
+	_, contract, err := readContract(filepath.Join("..", "..", "..", cliContractPath))
+	if err != nil {
+		t.Fatal(err)
+	}
+	definitions, err := admitDefinitions(contract)
+	if err != nil {
+		t.Fatal(err)
+	}
+	command := commandAt(contract, "requirement-context-compose")
+	input := command["inputContract"].(map[string]any)
+	root := definitions[input["rootDefinitionRef"].(string)]
+	schema := root.Content["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
+	leaf, err := schemaChildAtPath(schema, []any{"requirementSources", "*"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	child := definitions[sourceV2DefinitionID].Content["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
+	if equalSchemaIgnoringDialect(leaf, child) || leaf["properties"].(map[string]any)["path"] == nil {
+		t.Fatal("catalog path reference was promoted to inline source content")
+	}
+	if _, claimed := input["childDefinitionBindings"]; claimed {
+		t.Fatal("catalog input claims an inline source child")
 	}
 }

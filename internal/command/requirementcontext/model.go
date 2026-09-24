@@ -242,13 +242,15 @@ func validateProjectionSources(tree requirementspectree.Tree, requirementSources
 	if len(seen) != len(expected) {
 		return fmt.Errorf("requirement context source inventory does not match requirement projections")
 	}
-	knownRequirements := map[string]struct{}{}
+	knownRequirements := map[string]requirementsourceadmission.Requirement{}
+	requirementPaths := map[string]string{}
 	for _, source := range requirementSources {
 		if _, ok := requirementNodes[source.SourceID()]; !ok {
 			return fmt.Errorf("requirement context requirement projection is not referenced by the specification tree")
 		}
 		for _, requirement := range source.Requirements() {
-			knownRequirements[requirement.RequirementID] = struct{}{}
+			knownRequirements[requirement.RequirementID] = requirement
+			requirementPaths[requirement.RequirementID] = source.RequirementsPath()
 		}
 	}
 	if proofBinding != nil {
@@ -260,8 +262,12 @@ func validateProjectionSources(tree requirementspectree.Tree, requirementSources
 			return err
 		}
 		for _, requirement := range proofBinding.Requirements {
-			if _, ok := knownRequirements[requirement.RequirementID]; !ok {
+			sourceRequirement, ok := knownRequirements[requirement.RequirementID]
+			if !ok {
 				return fmt.Errorf("requirement context proof binding references a requirement outside the context")
+			}
+			if requirement.OwnerID != sourceRequirement.OwnerID || requirement.ClaimLevel != sourceRequirement.ClaimLevel || requirement.SpecPath != requirementPaths[requirement.RequirementID] {
+				return fmt.Errorf("requirement context proof binding disagrees with source-owned requirement fields")
 			}
 		}
 		for _, binding := range proofBinding.Bindings {

@@ -1,6 +1,7 @@
 package requirementcontext
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
@@ -43,6 +44,19 @@ func TestContextCompositionChecksSourceQualifiedScenarioMembership(t *testing.T)
 	}
 	if err := check(); err != nil {
 		t.Fatalf("reference-only baseline rejected: %v", err)
+	}
+	proofRequirement := project["proofBinding"].(map[string]any)["requirements"].([]any)[0].(map[string]any)
+	for _, mismatch := range []struct{ field, value string }{
+		{"ownerId", "another.owner"},
+		{"claimLevel", "advisory"},
+		{"specPath", "docs/specs/other/requirements.v2.json"},
+	} {
+		original := proofRequirement[mismatch.field]
+		proofRequirement[mismatch.field] = mismatch.value
+		if err := check(); err == nil || !strings.Contains(err.Error(), "source-owned requirement fields") {
+			t.Fatalf("%s mismatch admitted: %v", mismatch.field, err)
+		}
+		proofRequirement[mismatch.field] = original
 	}
 	second := sources[1].(map[string]any)
 	scenario := map[string]any{

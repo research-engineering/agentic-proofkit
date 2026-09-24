@@ -26,13 +26,19 @@ test("repository-owned JavaScript entrypoints use the diagnostic boundary", () =
 
 test("diagnostic entrypoint redacts quoted JSON secret-shaped input", async () => {
   const previousExitCode = process.exitCode;
-  let output = "";
   try {
-    await runDiagnosticEntrypoint(async () => {
-      throw new Error('input rejected: {"password":"synthetic-fixture-value"}');
-    }, {write(value) { output += value; }});
-    assert.equal(output, "<redacted-diagnostic-value>\n");
-    assert.equal(process.exitCode, 1);
+    for (const count of [0, 2, 3]) {
+      for (const label of ["password", "authorization"]) {
+        let output = "";
+        const key = `${label}${"\\".repeat(count)}"`;
+        const value = label === "authorization" ? "Basic synthetic-fixture-value" : "synthetic-fixture-value";
+        await runDiagnosticEntrypoint(async () => {
+          throw new Error(`input rejected: {${key}:"${value}"}`);
+        }, {write(value) { output += value; }});
+        assert.equal(output, "<redacted-diagnostic-value>\n");
+        assert.equal(process.exitCode, 1);
+      }
+    }
   } finally {
     process.exitCode = previousExitCode;
   }

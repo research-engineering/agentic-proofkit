@@ -20,7 +20,7 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-bindings/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-browser-server/input:childDefinitionBindings,compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-browser-server/output:compatibilitySummary,contractId,handoffClauses,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-context-compose/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-context-compose/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-compose/output:childDefinitionBindings,compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",

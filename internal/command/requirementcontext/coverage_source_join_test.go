@@ -19,6 +19,18 @@ func TestContextRejectsCoverageFromAnotherSourceRevision(t *testing.T) {
 	}
 	projections := context["projections"].(map[string]any)
 	coverage := projections["coverage"].(map[string]any)
+	originalNonClaims := coverage["nonClaims"].([]any)
+	withoutSourceBoundary := []any{}
+	for _, raw := range originalNonClaims {
+		if raw != "Coverage browser source fixture does not own native tests." {
+			withoutSourceBoundary = append(withoutSourceBoundary, raw)
+		}
+	}
+	coverage["nonClaims"] = withoutSourceBoundary
+	if _, err := requirementcontext.AdmitSnapshot(context); err == nil || !strings.Contains(err.Error(), "source non-claim") {
+		t.Fatalf("coverage without source boundary admitted: %v", err)
+	}
+	coverage["nonClaims"] = originalNonClaims
 	coverage["sourceId"] = "another.admitted.source"
 	if _, err := requirementcontext.AdmitSnapshot(context); err == nil || !strings.Contains(err.Error(), "coverage source is outside") {
 		t.Fatalf("unrelated coverage source admitted: %v", err)

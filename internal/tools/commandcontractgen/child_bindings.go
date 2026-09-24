@@ -29,7 +29,6 @@ func nativeChildBindings() []nativeChildBinding {
 		{"requirement-authoring-plan", "output", sourceV2DefinitionID, [][]string{{"nonAuthoritativeAdmissionPreview", "requirementSourcePreview"}}, ""},
 		{"requirement-source-transition", "input", sourceV2DefinitionID, [][]string{{"previous"}, {"next"}}, ""},
 		{"test-evidence-inventory", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, "03-proof-binding-derived"},
-		{"requirement-context-compose", "input", sourceV2DefinitionID, [][]string{{"requirementSources", "*"}}, ""},
 		{"requirement-context-compose", "output", sourceV2DefinitionID, [][]string{{"projections", "requirementSources", "*"}}, ""},
 		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},
 		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{"context", "projections", "requirementSources", "*"}}, "07-workspace"},
@@ -100,10 +99,79 @@ func admitChildBindings(command, direction string, contract map[string]any, root
 			} else if slices.Contains(allowed, any(path[0].(string))) {
 				found = true
 			}
+			if found {
+				if schema, complete := variantRecord["schema"].(map[string]any); complete {
+					child := definitions[raw.(map[string]any)["definitionRef"].(string)].Content["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
+					leaf, err := schemaChildAtPath(schema, path)
+					if err != nil || !equalSchemaIgnoringDialect(leaf, child) {
+						return fmt.Errorf("%s %s child binding path does not contain its source definition", command, direction)
+					}
+				}
+			}
 		}
 		if !found {
 			return fmt.Errorf("%s %s child binding root field is absent", command, direction)
 		}
 	}
 	return nil
+}
+
+func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error) {
+	current := schema
+	for _, raw := range path {
+		if alternatives, wrapped := current["anyOf"].([]any); wrapped {
+			var nonNull map[string]any
+			for _, alternative := range alternatives {
+				candidate := alternative.(map[string]any)
+				if candidate["type"] == "null" {
+					continue
+				}
+				if nonNull != nil {
+					return nil, fmt.Errorf("ambiguous child schema union")
+				}
+				nonNull = candidate
+			}
+			if nonNull == nil {
+				return nil, fmt.Errorf("child schema union has no value")
+			}
+			current = nonNull
+		}
+		segment := raw.(string)
+		if segment == "*" {
+			item, ok := current["items"].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("child schema path does not enter an array")
+			}
+			current = item
+			continue
+		}
+		properties, ok := current["properties"].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("child schema path does not enter an object")
+		}
+		child, ok := properties[segment].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("child schema path is absent")
+		}
+		current = child
+	}
+	return current, nil
+}
+
+func equalSchemaIgnoringDialect(left, right map[string]any) bool {
+	if left == nil || right == nil {
+		return false
+	}
+	a, b := map[string]any{}, map[string]any{}
+	for key, value := range left {
+		if key != "$schema" {
+			a[key] = value
+		}
+	}
+	for key, value := range right {
+		if key != "$schema" {
+			b[key] = value
+		}
+	}
+	return reflect.DeepEqual(a, b)
 }

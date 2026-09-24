@@ -15,7 +15,7 @@ const (
 	secretWhitespaceClassSource      = `\t\n\v\f\r \x85\p{Zs}\p{Zl}\p{Zp}`
 	secretWhitespacePatternSource    = `[` + secretWhitespaceClassSource + `]`
 	secretNonWhitespacePatternSource = `[^` + secretWhitespaceClassSource + `]`
-	secretKeyQuotePatternSource      = `(?:\\?["'])?`
+	secretKeyQuotePatternSource      = `(?:\\*["'])?`
 	secretContextPatternSource       = `authorization` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*:` + secretWhitespacePatternSource + `*[^\r\n]+|bearer` + secretWhitespacePatternSource + `+[A-Za-z0-9._~+/=-]{8,}|(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)` + secretKeyQuotePatternSource + secretWhitespacePatternSource + `*[=:]` + secretWhitespacePatternSource + `*` + secretNonWhitespacePatternSource + `+|-----BEGIN [A-Z ]*PRIVATE KEY-----`
 	secretSharedTokenPatternSource   = `github_pat_[A-Za-z0-9_]+|gh[pousr]_[A-Za-z0-9_]+|xox[abprs]-[A-Za-z0-9-]+|glpat-[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`
 	secretScalarTokenPatternSource   = secretSharedTokenPatternSource + `|sk-(?:proj-)?[A-Za-z0-9_-]{10,}`
@@ -62,6 +62,7 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 	jwtLike := secretFixtureText("eyJhbGciOiJIUzI1NiJ9", ".", "eyJzdWIiOiIxMjMifQ", ".", "signature")
 	return []RedactionFixture{
 		{Name: "authorization_header", Input: "request failed: Authorization: Basic YWxpY2U6c2VjcmV0", SensitiveNeedles: []string{"Authorization", "Basic", "YWxpY2U6c2VjcmV0"}},
+		{Name: "authorization_double_escaped_json_key", Input: `authorization\\": "Basic synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "bearer_token", Input: "Bearer abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "api_key_label", Input: "api_key=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "api_key_unicode_whitespace", Input: "api_key\u00a0=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
@@ -70,6 +71,8 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "token_escaped_json_key", Input: `\"token\": \"synthetic-fixture-value\"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_double_escaped_json_key", Input: `password\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_triple_escaped_json_key", Input: `password\\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "github_pat", Input: githubPAT, SensitiveNeedles: []string{githubPAT}},
 		{Name: "github_ghp", Input: githubToken, SensitiveNeedles: []string{githubToken}},
 		{Name: "openai_key", Input: openAIKey, SensitiveNeedles: []string{"abcdefghijklmnop"}},

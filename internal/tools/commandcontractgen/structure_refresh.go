@@ -173,10 +173,18 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 			}
 			relations, contractID := expectedPathRelations(name, direction)
 			clauses := expectedHandoffClauses(name, direction)
+			key := direction + "Contract"
 			if len(bindings) == 0 && len(relations) == 0 && len(clauses) == 0 {
+				if current, ok := command[key].(map[string]any); ok {
+					if _, stale := current["childDefinitionBindings"]; stale {
+						command, current = cloneRecord(command), cloneRecord(current)
+						delete(current, "childDefinitionBindings")
+						command[key] = current
+						changed = true
+					}
+				}
 				continue
 			}
-			key := direction + "Contract"
 			contract, ok := command[key].(map[string]any)
 			if !ok {
 				return nil, fmt.Errorf("%s has no %s for child bindings", name, key)

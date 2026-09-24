@@ -20,6 +20,15 @@ func AdmitSourceLink(output map[string]any, source requirementsourceadmission.So
 	if output["sourceDigest"] != digest {
 		return fmt.Errorf("requirement coverage source digest disagrees with the admitted source")
 	}
+	retainedNonClaims := map[string]struct{}{}
+	for _, raw := range output["nonClaims"].([]any) {
+		retainedNonClaims[raw.(string)] = struct{}{}
+	}
+	for _, boundary := range source.NonClaims() {
+		if _, retained := retainedNonClaims[boundary]; !retained {
+			return fmt.Errorf("requirement coverage dropped an admitted source non-claim")
+		}
+	}
 	byID := map[string]requirementsourceadmission.Requirement{}
 	for _, requirement := range source.Requirements() {
 		byID[requirement.RequirementID] = requirement

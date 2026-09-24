@@ -37,6 +37,32 @@ func TestCoverageSourceLinkRejectsStaleAndForgedRequirements(t *testing.T) {
 	}
 }
 
+func TestCoverageSourceLinkPreservesSourceLevelNonClaims(t *testing.T) {
+	input := validCoverageInput(t).(map[string]any)
+	output, err := build(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	admitted, err := requirementsourceadmission.Evaluate(input["requirementSource"])
+	if err != nil || admitted.ExitCode != 0 {
+		t.Fatalf("source admission: %v", err)
+	}
+	if err := AdmitSourceLink(output, admitted.Source); err != nil {
+		t.Fatalf("source boundary rejected: %v", err)
+	}
+	removed := admitted.Source.NonClaims()[0]
+	retained := []any{}
+	for _, raw := range output["nonClaims"].([]any) {
+		if raw != removed {
+			retained = append(retained, raw)
+		}
+	}
+	output["nonClaims"] = retained
+	if err := AdmitSourceLink(output, admitted.Source); err == nil || !strings.Contains(err.Error(), "source non-claim") {
+		t.Fatalf("missing source boundary admitted: %v", err)
+	}
+}
+
 func TestCoverageSourceLinkChecksScenarioMembershipWithoutProofBinding(t *testing.T) {
 	input := validCoverageInput(t).(map[string]any)
 	output, err := build(input)
