@@ -186,6 +186,10 @@ test("diagnostic whole-value redaction", () => {
   const regexStarted = performance.now();
   assert.equal(redactDiagnosticValue("a".repeat(8192) + beyondBudget), fixed);
   assert(performance.now() - regexStarted < 2000, "repeated decoding must not amplify URL matching cost");
+  const guardedURLStart = performance.now();
+  assert.equal(redactDiagnosticValue("a".repeat(8192) + "://safe " + beyondBudget), fixed);
+  assert(performance.now() - guardedURLStart < 2000, "URL candidate scanning must remain bounded across decode passes");
+  assert.equal(redactDiagnosticValue("123https://user:password@example.test"), fixed);
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

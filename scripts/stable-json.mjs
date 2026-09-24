@@ -163,7 +163,7 @@ const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|
 const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
 const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
 const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
-const urlCredentialPattern = /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu;
+const urlCredentialPattern = /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iuy;
 const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
 const maxSecretDecodePasses = 16;
 
@@ -256,8 +256,32 @@ function containsSecretLikeValue(value) {
 	return true;
 
 	function matchesSecretPattern(text) {
-		return patterns.some((pattern) => pattern.test(text)) || (text.includes("://") && urlCredentialPattern.test(text));
+		return patterns.some((pattern) => pattern.test(text)) || hasURLCredential(text);
 	}
+}
+
+function hasURLCredential(value) {
+	for (let search = 0; search < value.length;) {
+		const separator = value.indexOf("://", search);
+		if (separator < 0) return false;
+		let start = separator;
+		while (start > 0 && isSchemeCode(value.charCodeAt(start - 1))) start--;
+		while (start < separator && !isASCIILetterCode(value.charCodeAt(start))) start++;
+		if (start < separator) {
+			urlCredentialPattern.lastIndex = start;
+			if (urlCredentialPattern.test(value)) return true;
+		}
+		search = separator + 3;
+	}
+	return false;
+}
+
+function isASCIILetterCode(code) {
+	return code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+
+function isSchemeCode(code) {
+	return isASCIILetterCode(code) || code >= 48 && code <= 57 || code === 43 || code === 45 || code === 46;
 }
 
 function unicodeEscape(value) {

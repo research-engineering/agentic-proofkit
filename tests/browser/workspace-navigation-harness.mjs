@@ -2,6 +2,7 @@ import {expect} from "@playwright/test";
 import {randomUUID} from "node:crypto";
 
 const workspaceNavigationToken = "proofkit.workspace-navigation.scheduled";
+const workspaceCSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 export function admittedWorkspaceURL(baseURL) {
   if (typeof baseURL !== "string") throw new Error("Workspace base URL is unavailable");
@@ -62,8 +63,9 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
     const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
-    const disposition = response.headers()["content-disposition"]?.split(";", 1)[0].trim().toLowerCase();
-    if (oldDocumentRetained || downloadObserved || disposition === "attachment" || navigationRequests.length !== 1 || navigationRequests[0] !== response.request() || page.url() !== workspaceURL) {
+    const headers = response.headers();
+    const disposition = headers["content-disposition"]?.split(";", 1)[0].trim().toLowerCase();
+    if (oldDocumentRetained || downloadObserved || disposition === "attachment" || navigationRequests.length !== 1 || navigationRequests[0] !== response.request() || page.url() !== workspaceURL || headers["content-security-policy"] !== workspaceCSP || headers["x-content-type-options"] !== "nosniff") {
       throw new Error(responseError);
     }
   } catch (error) {

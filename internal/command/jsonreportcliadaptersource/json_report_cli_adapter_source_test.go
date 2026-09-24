@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:e557bf01d06f3116f3f45e688f71c7ab9023fe6bbd3efa95e2e7bf84a18024e6"
+const expectedTypeScriptSourceSha256 = "sha256:e9089d40688aa25c2565633825244c55bcadab85b65c74242ef871cedc2c6533"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -716,6 +716,10 @@ runProofkitJsonReportCliMain({
 	const regexStart = performance.now();
 	assert.equal(formatProofkitCliError("a".repeat(8192) + beyondDecodeBudget), fixedDiagnostic);
 	assert(performance.now() - regexStart < 2000, "generated repeated decoding must not amplify URL matching cost");
+	const guardedURLStart = performance.now();
+	assert.equal(formatProofkitCliError("a".repeat(8192) + "://safe " + beyondDecodeBudget), fixedDiagnostic);
+	assert(performance.now() - guardedURLStart < 2000, "generated URL candidate scanning must remain bounded");
+	assert.equal(formatProofkitCliError("123https://user:password@example.test"), fixedDiagnostic);
 
 console.log("generated adapter semantics ok");
 `

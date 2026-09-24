@@ -536,7 +536,8 @@ test("download response cannot certify a script-created document", async ({page}
   await once(server, "listening");
   const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
   try {
-    await openWorkspace(page, workspaceURL);
+    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
+    await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
     attachment = true;
     let scriptDocumentObserved = false;
     page.once("download", () => {

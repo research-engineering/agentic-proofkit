@@ -459,7 +459,8 @@ function containsProofkitUnsafeScalar(value: string): boolean {
 	return false;
 }
 
-const proofkitSecretPatterns = __PROOFKIT_SECRET_PATTERNS__.map((source) => new RegExp(source, "iu"));
+const proofkitSecretPattern = new RegExp(__PROOFKIT_SECRET_PATTERNS__[0], "iu");
+const proofkitURLCredentialPattern = new RegExp(__PROOFKIT_SECRET_PATTERNS__[1], "iuy");
 const proofkitEscapedSecretControls: Record<string, string> = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
 const proofkitMaxSecretDecodePasses = 16;
 
@@ -541,8 +542,31 @@ function containsProofkitSecretLikeValue(value: string): boolean {
 }
 
 function matchesProofkitSecretPattern(value: string): boolean {
-	return proofkitSecretPatterns[0].test(value) ||
-		(value.includes("://") && proofkitSecretPatterns[1].test(value));
+	return proofkitSecretPattern.test(value) || hasProofkitURLCredential(value);
+}
+
+function hasProofkitURLCredential(value: string): boolean {
+	for (let search = 0; search < value.length;) {
+		const separator = value.indexOf("://", search);
+		if (separator < 0) return false;
+		let start = separator;
+		while (start > 0 && isProofkitSchemeCode(value.charCodeAt(start - 1))) start--;
+		while (start < separator && !isProofkitASCIILetterCode(value.charCodeAt(start))) start++;
+		if (start < separator) {
+			proofkitURLCredentialPattern.lastIndex = start;
+			if (proofkitURLCredentialPattern.test(value)) return true;
+		}
+		search = separator + 3;
+	}
+	return false;
+}
+
+function isProofkitASCIILetterCode(code: number): boolean {
+	return code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+
+function isProofkitSchemeCode(code: number): boolean {
+	return isProofkitASCIILetterCode(code) || code >= 48 && code <= 57 || code === 43 || code === 45 || code === 46;
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(
