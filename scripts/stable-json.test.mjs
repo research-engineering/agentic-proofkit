@@ -146,6 +146,19 @@ test("diagnostic whole-value redaction", () => {
       assert.equal(redactDiagnosticValue(serialized), fixed, `serialized whitespace depth ${depth}`);
     }
   }
+  for (const separator of ["\t", "\n", "\r", "\u000b", "\u200b"]) {
+    let serialized = `api_${separator}key=synthetic-fixture-value`;
+    assert.equal(redactDiagnosticValue(serialized), fixed);
+    for (let depth = 1; depth <= 4; depth++) {
+      serialized = JSON.stringify(serialized);
+      assert.equal(redactDiagnosticValue(serialized), fixed, `control split depth ${depth}`);
+    }
+  }
+  let escapedUnicodeSpace = String.raw`\"Authorization\"\u202f:"Basic synthetic-fixture-value"`;
+  for (let depth = 0; depth <= 3; depth++) {
+    assert.equal(redactDiagnosticValue(escapedUnicodeSpace), fixed, `escaped Unicode space depth ${depth}`);
+    escapedUnicodeSpace = JSON.stringify(escapedUnicodeSpace);
+  }
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

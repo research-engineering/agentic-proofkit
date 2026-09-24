@@ -721,6 +721,19 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 		"sourceId": "proofkit.synthetic.source", "specPackagePath": "docs/specs/synthetic",
 		"groups": []any{},
 	}
+	check := func(serialized string, label string, depth int) {
+		t.Helper()
+		source["sourceNonClaims"] = []any{serialized}
+		encoded, err := json.Marshal(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stdout, stderr bytes.Buffer
+		status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(encoded), &stdout, &stderr)
+		if status != 1 || strings.Contains(stdout.String(), secret) || strings.Contains(stderr.String(), secret) {
+			t.Fatalf("%s passed at depth %d: status=%d stdout=%q stderr=%q", label, depth, status, stdout.String(), stderr.String())
+		}
+	}
 	for _, separator := range []string{"\n", "\t", "\r"} {
 		serialized := `{"password"` + separator + `:"` + secret + `"}`
 		for depth := 1; depth <= 3; depth++ {
@@ -729,16 +742,18 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 				t.Fatal(err)
 			}
 			serialized = string(text)
-			source["sourceNonClaims"] = []any{serialized}
-			encoded, err := json.Marshal(source)
+			check(serialized, "escaped whitespace", depth)
+		}
+	}
+	for _, separator := range []string{"\t", "\n", "\r", "\u000b", "\u200b"} {
+		serialized := "api_" + separator + "key=" + secret
+		for depth := 1; depth <= 4; depth++ {
+			text, err := json.Marshal(serialized)
 			if err != nil {
 				t.Fatal(err)
 			}
-			var stdout, stderr bytes.Buffer
-			status := Run(t.Context(), []string{"requirement-source-admission", "--input", "-"}, bytes.NewReader(encoded), &stdout, &stderr)
-			if status != 1 || strings.Contains(stdout.String(), secret) || strings.Contains(stderr.String(), secret) {
-				t.Fatalf("escaped whitespace passed at depth %d: status=%d stdout=%q stderr=%q", depth, status, stdout.String(), stderr.String())
-			}
+			serialized = string(text)
+			check(serialized, "serialized control split", depth)
 		}
 	}
 }

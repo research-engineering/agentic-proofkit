@@ -163,9 +163,21 @@ const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|
 const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
 const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
 const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
+const escapedSecretSequence = /\\+(?:[ntrfvb/"]|u[0-9a-fA-F]{4})/gu;
+const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
+
+function decodeEscapedSecretText(value) {
+  return value.replace(escapedSecretSequence, (sequence) => {
+    const suffix = sequence.at(-1);
+    if (suffix in escapedSecretControls) return escapedSecretControls[suffix];
+    if (suffix === "/" || suffix === '"') return suffix;
+    const code = Number.parseInt(sequence.slice(-4), 16);
+    return code >= 0xd800 && code <= 0xdfff ? sequence : String.fromCharCode(code);
+  });
+}
 
 function containsSecretLikeValue(value) {
-	return [
+	const patterns = [
 		authorizationPattern,
 		bearerPattern,
 		namedSecretPattern,
@@ -177,7 +189,13 @@ function containsSecretLikeValue(value) {
 		/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu,
 		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
 		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
-	].some((pattern) => pattern.test(value));
+	];
+	for (const candidate of [value, decodeEscapedSecretText(value)]) {
+		if (patterns.some((pattern) => pattern.test(candidate))) return true;
+		const withoutUnsafe = [...candidate].filter((character) => !isUnsafeScalar(character.codePointAt(0))).join("");
+		if (withoutUnsafe !== candidate && patterns.some((pattern) => pattern.test(withoutUnsafe))) return true;
+	}
+	return false;
 }
 
 function unicodeEscape(value) {

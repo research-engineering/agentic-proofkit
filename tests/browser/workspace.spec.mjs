@@ -377,30 +377,35 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   expect(decoyDelivered).toBe(true);
 
   const cleanupFrame = {};
-  let cleanupAbortObserved = false;
-  let cleanupConsumptionObserved = false;
+  const cleanupAborted = new Set();
+  const cleanupConsumed = new Set();
   const cleanupEvents = [];
+  const pendingWaiter = (name, signal) => {
+    cleanupEvents.push(`${name}-armed`);
+    let fallback;
+    const pending = new Promise((resolve, reject) => {
+      fallback = setTimeout(() => resolve({ok: () => false}), 25);
+      signal.addEventListener("abort", () => {
+        clearTimeout(fallback);
+        cleanupAborted.add(name);
+        cleanupEvents.push(`${name}-aborted`);
+        reject(new Error(`Workspace ${name} waiter aborted`));
+      }, {once: true});
+    });
+    const consume = pending.catch.bind(pending);
+    pending.catch = (...args) => {
+      cleanupConsumed.add(name);
+      cleanupEvents.push(`${name}-consumed`);
+      return consume(...args);
+    };
+    return pending;
+  };
   const cleanupPage = {
     mainFrame: () => cleanupFrame,
-    waitForResponse: (_predicate, {signal}) => {
-      cleanupEvents.push("waiter-armed");
-      let fallback;
-      const pending = new Promise((resolve, reject) => {
-        fallback = setTimeout(() => resolve({ok: () => false}), 25);
-        signal.addEventListener("abort", () => {
-          clearTimeout(fallback);
-          cleanupAbortObserved = true;
-          cleanupEvents.push("waiter-aborted");
-          reject(new Error("Workspace navigation waiter aborted"));
-        }, {once: true});
-      });
-      const consume = pending.catch.bind(pending);
-      pending.catch = (...args) => {
-        cleanupConsumptionObserved = true;
-        cleanupEvents.push("waiter-consumed");
-        return consume(...args);
-      };
-      return pending;
+    waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
+    waitForEvent: (event, {signal}) => {
+      expect(event).toBe("framenavigated");
+      return pendingWaiter("navigation", signal);
     },
   };
   await expect(navigateWorkspace(
@@ -412,13 +417,16 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     },
     "Workspace navigation fallback response was admitted",
   )).rejects.toThrow("Workspace navigation trigger token is invalid");
-  expect(cleanupAbortObserved).toBe(true);
-  expect(cleanupConsumptionObserved).toBe(true);
+  expect([...cleanupAborted].sort()).toEqual(["navigation", "response"]);
+  expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
   expect(cleanupEvents).toEqual([
-    "waiter-armed",
+    "response-armed",
+    "navigation-armed",
     "trigger-called",
-    "waiter-aborted",
-    "waiter-consumed",
+    "response-aborted",
+    "navigation-aborted",
+    "response-consumed",
+    "navigation-consumed",
   ]);
 });
 

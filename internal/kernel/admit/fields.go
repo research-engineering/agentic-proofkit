@@ -6,6 +6,7 @@ import (
 	"path"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
@@ -25,19 +26,20 @@ const (
 const RuleIDPatternBody = `[A-Za-z][A-Za-z0-9_]*(?:[._:-][A-Za-z0-9_]+)*`
 
 var (
-	ruleIDPattern              = regexp.MustCompile(`^` + RuleIDPatternBody + `$`)
-	ruleIDSeparatorPattern     = regexp.MustCompile(`[._:-]`)
-	timestampLikePattern       = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
-	isoDateComponentPattern    = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
-	compactDateComponentRegexp = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
-	driveLikePathPattern       = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
-	schemeLikePathPattern      = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
-	secretValuePattern         = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
-	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
-	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
-	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
-	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
-	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
+	ruleIDPattern                = regexp.MustCompile(`^` + RuleIDPatternBody + `$`)
+	ruleIDSeparatorPattern       = regexp.MustCompile(`[._:-]`)
+	timestampLikePattern         = regexp.MustCompile(`\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?|\d{8}(?:T?\d{6}Z?)?`)
+	isoDateComponentPattern      = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}(?:T\d{2}:?\d{2}:?\d{2}(?:\.\d+)?Z?)?$`)
+	compactDateComponentRegexp   = regexp.MustCompile(`^\d{8}(?:T?\d{6}Z?)?$`)
+	driveLikePathPattern         = regexp.MustCompile(`^[A-Za-z]:(?:$|/)`)
+	schemeLikePathPattern        = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9+.-]*:`)
+	secretValuePattern           = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `|` + secretScalarTokenPatternSource + `)`)
+	secretEscapedSequencePattern = regexp.MustCompile(`\\+(?:[ntrfvb/"]|u[0-9a-fA-F]{4})`)
+	secretPathContextPattern     = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
+	secretPathTokenPattern       = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
+	urlUserInfoPattern           = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
+	controlRunePattern           = regexp.MustCompile(`[\x00-\x1f\x7f]`)
+	shellControlTokenPattern     = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
 
 const (
@@ -63,10 +65,13 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 	return []RedactionFixture{
 		{Name: "authorization_header", Input: "request failed: Authorization: Basic YWxpY2U6c2VjcmV0", SensitiveNeedles: []string{"Authorization", "Basic", "YWxpY2U6c2VjcmV0"}},
 		{Name: "authorization_double_escaped_json_key", Input: `authorization\\": "Basic synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "authorization_json_escaped_unicode_space", Input: `\"Authorization\"\u202f:"Basic synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "bearer_token", Input: "Bearer abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "api_key_label", Input: "api_key=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "api_key_unicode_whitespace", Input: "api_key\u00a0=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
 		{Name: "api_key_control_split", Input: "api_\u200bkey=abc123456789", SensitiveNeedles: []string{"abc123456789"}},
+		{Name: "api_key_json_escaped_control_split", Input: `api_\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "api_key_double_json_escaped_control_split", Input: `api_\\tkey=synthetic-fixture-value`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "access_token_label", Input: "access-token=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_label", Input: "passwd=abcdefghijklmnopqrstuvwxyz", SensitiveNeedles: []string{"abcdefghijklmnopqrstuvwxyz"}},
 		{Name: "password_quoted_json_key", Input: `"password": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
@@ -208,11 +213,43 @@ func SecretLikeValuePatternSources() []string {
 }
 
 func matchesNormalizedSecret(value string, matches func(string) bool) bool {
-	if matches(value) {
-		return true
+	for _, candidate := range []string{value, decodeEscapedSecretText(value)} {
+		if matches(candidate) {
+			return true
+		}
+		withoutUnsafe := withoutUnsafeScalars(candidate)
+		if withoutUnsafe != candidate && matches(withoutUnsafe) {
+			return true
+		}
 	}
-	withoutUnsafe := withoutUnsafeScalars(value)
-	return withoutUnsafe != value && matches(withoutUnsafe)
+	return false
+}
+
+func decodeEscapedSecretText(value string) string {
+	return secretEscapedSequencePattern.ReplaceAllStringFunc(value, func(sequence string) string {
+		switch sequence[len(sequence)-1] {
+		case 'n':
+			return "\n"
+		case 't':
+			return "\t"
+		case 'r':
+			return "\r"
+		case 'f':
+			return "\f"
+		case 'v':
+			return "\v"
+		case 'b':
+			return "\b"
+		case '/', '"':
+			return sequence[len(sequence)-1:]
+		default:
+			code, err := strconv.ParseUint(sequence[len(sequence)-4:], 16, 16)
+			if err != nil || code >= 0xd800 && code <= 0xdfff {
+				return sequence
+			}
+			return string(rune(code))
+		}
+	})
 }
 
 func RedactSecretLikeValue(value string) string {

@@ -46,6 +46,13 @@ test("diagnostic entrypoint redacts quoted JSON secret-shaped input", async () =
       await runDiagnosticEntrypoint(async () => { throw new Error(serialized); }, {write(value) { output += value; }});
       assert.equal(output, "<redacted-diagnostic-value>\n");
     }
+    let splitKey = "api_\tkey=synthetic-fixture-value";
+    for (let depth = 1; depth <= 4; depth++) {
+      splitKey = JSON.stringify(splitKey);
+      let output = "";
+      await runDiagnosticEntrypoint(async () => { throw new Error(splitKey); }, {write(value) { output += value; }});
+      assert.equal(output, "<redacted-diagnostic-value>\n");
+    }
   } finally {
     process.exitCode = previousExitCode;
   }

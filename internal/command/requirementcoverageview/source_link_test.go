@@ -72,8 +72,19 @@ func TestCoverageSourceLinkChecksScenarioMembershipWithoutProofBinding(t *testin
 	source := input["requirementSource"].(map[string]any)
 	group := source["groups"].([]any)[0].(map[string]any)
 	first := group["members"].([]any)[0].(map[string]any)
+	secondFields := map[string]any{}
+	for key, value := range first["fields"].(map[string]any) {
+		secondFields[key] = value
+	}
+	secondFields["ownerId"] = "another.owner"
+	secondPolicy := map[string]any{}
+	for key, value := range secondFields["updatePolicy"].(map[string]any) {
+		secondPolicy[key] = value
+	}
+	secondPolicy["reviewOwnerId"] = "another.owner"
+	secondFields["updatePolicy"] = secondPolicy
 	group["members"] = append(group["members"].([]any), map[string]any{
-		"requirementId": "REQ-PROOFKIT-COVERAGE-002", "statementCompletion": first["statementCompletion"], "fields": first["fields"],
+		"requirementId": "REQ-PROOFKIT-COVERAGE-002", "statementCompletion": first["statementCompletion"], "fields": secondFields,
 	})
 	source["scenarios"] = []any{map[string]any{
 		"scenarioId": "proofkit.coverage.scenario", "requirementIds": []any{"REQ-PROOFKIT-COVERAGE-002"},
@@ -126,5 +137,37 @@ func TestCoverageSourceLinkRejectsForgedNonClaimDefinition(t *testing.T) {
 	output["nonClaimDefinitions"].([]any)[0].(map[string]any)["statement"] = "A forged interpretation of the source denial."
 	if err := AdmitSourceLink(output, admitted.Source); err == nil || !strings.Contains(err.Error(), "non-claim definitions") {
 		t.Fatalf("forged definition admitted: %v", err)
+	}
+}
+
+func TestCoverageSourceLinkRequiresEverySelectedOwnerRequirement(t *testing.T) {
+	input := validCoverageInput(t).(map[string]any)
+	old, err := build(input)
+	if err != nil || old["state"] != "passed" {
+		t.Fatalf("baseline coverage: %v %#v", err, old)
+	}
+	source := input["requirementSource"].(map[string]any)
+	group := source["groups"].([]any)[0].(map[string]any)
+	first := group["members"].([]any)[0].(map[string]any)
+	group["members"] = append(group["members"].([]any), map[string]any{
+		"requirementId": "REQ-PROOFKIT-COVERAGE-002", "statementCompletion": "A new blocking requirement needs its own coverage row.", "fields": first["fields"],
+	})
+	admitted, err := requirementsourceadmission.Evaluate(source)
+	if err != nil || admitted.ExitCode != 0 {
+		t.Fatalf("expanded source admission: %v", err)
+	}
+	old["sourceDigest"], err = requirementsourceadmission.SourceDigest(admitted.Source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := AdmitSourceLink(old, admitted.Source); err == nil || !strings.Contains(err.Error(), "omit an admitted in-scope requirement") {
+		t.Fatalf("passed report omitted new blocking requirement: %v", err)
+	}
+	current, err := build(input)
+	if err != nil || current["state"] != "failed" || len(current["requirementCoverage"].([]any)) != 2 {
+		t.Fatalf("current builder did not expose the missing route: %v %#v", err, current)
+	}
+	if err := AdmitSourceLink(current, admitted.Source); err != nil {
+		t.Fatalf("complete failed report rejected: %v", err)
 	}
 }

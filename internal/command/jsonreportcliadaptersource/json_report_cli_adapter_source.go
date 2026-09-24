@@ -460,9 +460,26 @@ function containsProofkitUnsafeScalar(value: string): boolean {
 }
 
 const proofkitSecretPatterns = __PROOFKIT_SECRET_PATTERNS__.map((source) => new RegExp(source, "iu"));
+const proofkitEscapedSecretSequence = /\\+(?:[ntrfvb/"]|u[0-9a-fA-F]{4})/gu;
+const proofkitEscapedSecretControls: Record<string, string> = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
+
+function decodeProofkitEscapedSecretText(value: string): string {
+	return value.replace(proofkitEscapedSecretSequence, (sequence) => {
+		const suffix = sequence[sequence.length - 1];
+		if (suffix in proofkitEscapedSecretControls) return proofkitEscapedSecretControls[suffix];
+		if (suffix === "/" || suffix === '"') return suffix;
+		const code = Number.parseInt(sequence.slice(-4), 16);
+		return code >= 0xd800 && code <= 0xdfff ? sequence : String.fromCharCode(code);
+	});
+}
 
 function containsProofkitSecretLikeValue(value: string): boolean {
-	return proofkitSecretPatterns.some((pattern) => pattern.test(value));
+	for (const candidate of [value, decodeProofkitEscapedSecretText(value)]) {
+		if (proofkitSecretPatterns.some((pattern) => pattern.test(candidate))) return true;
+		const withoutUnsafe = [...candidate].filter((character) => !isProofkitUnsafeScalar(character.codePointAt(0) as number)).join("");
+		if (withoutUnsafe !== candidate && proofkitSecretPatterns.some((pattern) => pattern.test(withoutUnsafe))) return true;
+	}
+	return false;
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(

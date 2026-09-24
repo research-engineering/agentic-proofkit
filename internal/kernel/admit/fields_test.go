@@ -22,6 +22,39 @@ func TestSecretLikeValueSurvivesJSONWhitespaceEscaping(t *testing.T) {
 	}
 }
 
+func TestSecretLikeValueSurvivesSerializedControlSplit(t *testing.T) {
+	for _, separator := range []string{"\t", "\n", "\r", "\u000b", "\u200b"} {
+		serialized := "api_" + separator + "key=synthetic-fixture-value"
+		if !ContainsSecretLikeValue(serialized) {
+			t.Fatal("unserialized control split was not detected")
+		}
+		for depth := 1; depth <= 4; depth++ {
+			encoded, err := json.Marshal(serialized)
+			if err != nil {
+				t.Fatal(err)
+			}
+			serialized = string(encoded)
+			if !ContainsSecretLikeValue(serialized) {
+				t.Fatalf("serialized control split passed at depth %d", depth)
+			}
+		}
+	}
+}
+
+func TestSecretLikeValueSurvivesEscapedUnicodeWhitespace(t *testing.T) {
+	serialized := `\"Authorization\"\u202f:"Basic synthetic-fixture-value"`
+	for depth := 0; depth <= 3; depth++ {
+		if !ContainsSecretLikeValue(serialized) {
+			t.Fatalf("escaped Unicode whitespace passed at depth %d", depth)
+		}
+		encoded, err := json.Marshal(serialized)
+		if err != nil {
+			t.Fatal(err)
+		}
+		serialized = string(encoded)
+	}
+}
+
 func TestRuleIDRejectsUnstableIdentity(t *testing.T) {
 	t.Parallel()
 

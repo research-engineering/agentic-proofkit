@@ -3,6 +3,7 @@ package requirementcoverageview
 import (
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 )
@@ -30,14 +31,38 @@ func AdmitSourceLink(output map[string]any, source requirementsourceadmission.So
 		}
 	}
 	byID := map[string]requirementsourceadmission.Requirement{}
+	ownerSet := map[string]struct{}{}
+	for _, raw := range output["coverageBasis"].(map[string]any)["ownerIds"].([]any) {
+		ownerSet[raw.(string)] = struct{}{}
+	}
+	expectedRows := map[string]struct{}{}
+	expectedOutOfScope := []any{}
 	for _, requirement := range source.Requirements() {
 		byID[requirement.RequirementID] = requirement
+		if _, selected := ownerSet[requirement.OwnerID]; selected {
+			expectedRows[requirement.RequirementID] = struct{}{}
+		} else if output["completenessDeclaration"] == "full_repository" {
+			expectedOutOfScope = append(expectedOutOfScope, map[string]any{
+				"ownerId": requirement.OwnerID, "requirementId": requirement.RequirementID,
+			})
+		}
+	}
+	sort.Slice(expectedOutOfScope, func(left, right int) bool {
+		return expectedOutOfScope[left].(map[string]any)["requirementId"].(string) < expectedOutOfScope[right].(map[string]any)["requirementId"].(string)
+	})
+	if !reflect.DeepEqual(output["coverageBasis"].(map[string]any)["fullRepositoryOutOfScopeSourceRequirements"], expectedOutOfScope) {
+		return fmt.Errorf("requirement coverage out-of-scope source requirements disagree with the admitted source")
 	}
 	links := []requirementsourceadmission.ScenarioLink{}
 	definitionRefs := []string{}
+	seenRows := map[string]struct{}{}
 	for _, raw := range output["requirementCoverage"].([]any) {
 		row := raw.(map[string]any)
 		id := row["requirementId"].(string)
+		if _, selected := expectedRows[id]; !selected {
+			return fmt.Errorf("requirement coverage row is outside the admitted owner scope")
+		}
+		seenRows[id] = struct{}{}
 		requirement, exists := byID[id]
 		if !exists {
 			return fmt.Errorf("requirement coverage row is outside its admitted source")
@@ -56,6 +81,9 @@ func AdmitSourceLink(output map[string]any, source requirementsourceadmission.So
 			scenario := rawScenario.(map[string]any)
 			links = append(links, requirementsourceadmission.ScenarioLink{RequirementID: id, ScenarioID: scenario["scenarioId"].(string)})
 		}
+	}
+	if len(seenRows) != len(expectedRows) {
+		return fmt.Errorf("requirement coverage rows omit an admitted in-scope requirement")
 	}
 	if err := requirementsourceadmission.AdmitScenarioLinks([]requirementsourceadmission.Source{source}, links); err != nil {
 		return fmt.Errorf("requirement coverage scenario disagrees with its admitted source: %w", err)
