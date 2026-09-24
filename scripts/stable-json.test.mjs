@@ -162,6 +162,7 @@ test("diagnostic whole-value redaction", () => {
   for (const initial of [
     String.raw`{"passw\u006frd":"synthetic-fixture-value"}`,
     String.raw`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
+    String.raw`{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`,
     String.raw`api_\uDB40\uDC01key=synthetic-fixture-value`,
     String.raw`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
     String.raw`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
@@ -172,11 +173,19 @@ test("diagnostic whole-value redaction", () => {
       serialized = JSON.stringify(serialized);
     }
   }
+  let nested = JSON.stringify(String.raw`{"passw\u006frd":"synthetic-fixture-value"}`).replace("u006f", String.raw`\u0075006f`);
+  for (let depth = 0; depth <= 4; depth++) {
+    assert.equal(redactDiagnosticValue(nested), fixed, `nested JSON slash parity depth ${depth}`);
+    nested = JSON.stringify(nested);
+  }
   const started = performance.now();
   assert.equal(redactDiagnosticValue("\\".repeat(65536)), "\\".repeat(512) + "...<truncated-diagnostic>");
   assert(performance.now() - started < 2000, "diagnostic escaping must stay linear in slash-run length");
   const beyondBudget = String.raw`passw\u005c` + "u005c".repeat(17) + "u006frd=synthetic-fixture-value";
   assert.equal(redactDiagnosticValue(beyondBudget), fixed);
+  const regexStarted = performance.now();
+  assert.equal(redactDiagnosticValue("a".repeat(8192) + beyondBudget), fixed);
+  assert(performance.now() - regexStarted < 2000, "repeated decoding must not amplify URL matching cost");
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

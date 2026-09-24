@@ -399,12 +399,13 @@ test("workspace navigation excludes provider-falsified lifecycle waits", () => {
 });
 
 test("workspace navigation owns waiter rejection before a delayed trigger", async () => {
-  let disarmed = 0;
+  const armed = [];
+  const disarmed = [];
   const page = {
     mainFrame: () => ({}),
     evaluate: async () => undefined,
-    on: () => undefined,
-    off: () => { disarmed++; },
+    on: (event) => { armed.push(event); },
+    off: (event) => { disarmed.push(event); },
     waitForResponse: () => Promise.reject(new Error("early response rejection")),
     waitForEvent: () => Promise.reject(new Error("early navigation rejection")),
   };
@@ -412,7 +413,8 @@ test("workspace navigation owns waiter rejection before a delayed trigger", asyn
     await new Promise((resolve) => setTimeout(resolve, 50));
     return token;
   }, "unexpected navigation response"), /early response rejection/);
-  assert.equal(disarmed, 1);
+  assert.deepEqual(armed, ["request", "download"]);
+  assert.deepEqual(disarmed, armed);
 });
 
 test("every local JavaScript import is content-bound by the owner resolution", () => {

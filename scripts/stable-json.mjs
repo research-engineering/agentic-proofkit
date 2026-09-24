@@ -163,6 +163,7 @@ const secretWhitespace = String.raw`(?:\s|\\+[ntrfv]|\\+u(?:000[9a-d]|0020|0085|
 const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${secretWhitespace}*:${secretWhitespace}*[^\r\n]+`, "iu");
 const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
 const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
+const urlCredentialPattern = /[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu;
 const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
 const maxSecretDecodePasses = 16;
 
@@ -177,26 +178,29 @@ function decodeEscapedSecretText(value) {
     if (start > index) parts.push(value.slice(index, start));
     let cursor = start;
     while (cursor < value.length && value[cursor] === "\\") cursor++;
+    parts.push("\\".repeat(Math.floor((cursor - start) / 2)));
+    if ((cursor - start) % 2 === 0) {
+      index = cursor;
+      continue;
+    }
     if (cursor === value.length) {
-      parts.push(value.slice(start));
+      parts.push("\\");
       break;
     }
     if (hasSecretUnicodeUnit(value, cursor)) {
       const first = Number.parseInt(value.slice(cursor + 1, cursor + 5), 16);
       if (first >= 0xd800 && first <= 0xdbff) {
-        let second = cursor + 5;
-        const secondStart = second;
-        while (second < value.length && value[second] === "\\") second++;
-        if (second > secondStart && hasSecretUnicodeUnit(value, second)) {
-          const low = Number.parseInt(value.slice(second + 1, second + 5), 16);
+        const second = cursor + 5;
+        if (value[second] === "\\" && hasSecretUnicodeUnit(value, second + 1)) {
+          const low = Number.parseInt(value.slice(second + 2, second + 6), 16);
           if (low >= 0xdc00 && low <= 0xdfff) {
             parts.push(String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + low - 0xdc00));
-            index = second + 5;
+            index = second + 6;
             continue;
           }
         }
       }
-      parts.push(decodeSecretUnicodeScalar(first, value.slice(start, cursor + 5)));
+      parts.push(decodeSecretUnicodeScalar(first, value.slice(cursor - 1, cursor + 5)));
       index = cursor + 5;
       continue;
     }
@@ -204,7 +208,7 @@ function decodeEscapedSecretText(value) {
     if (Object.hasOwn(escapedSecretControls, suffix)) parts.push(escapedSecretControls[suffix]);
     else if (suffix === "/" || suffix === '"') parts.push(suffix);
     else {
-      parts.push(value.slice(start, cursor));
+      parts.push("\\");
       index = cursor;
       continue;
     }
@@ -236,21 +240,24 @@ function containsSecretLikeValue(value) {
 		/sk-(?:proj-)?[A-Za-z0-9_-]{10,}/iu,
 		/xox[abprs]-[A-Za-z0-9-]+/iu,
 		/glpat-[A-Za-z0-9_-]+/iu,
-		/[A-Za-z][A-Za-z0-9+.-]*:\/\/[^/\s:@]+:[^/\s@]+@/iu,
 		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
 		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
 	];
 	let candidate = value;
 	for (let depth = 0; depth <= maxSecretDecodePasses; depth++) {
-		if (patterns.some((pattern) => pattern.test(candidate))) return true;
+		if (matchesSecretPattern(candidate)) return true;
 		const withoutUnsafe = [...candidate].filter((character) => !isUnsafeScalar(character.codePointAt(0))).join("");
-		if (withoutUnsafe !== candidate && patterns.some((pattern) => pattern.test(withoutUnsafe))) return true;
-		const decoded = decodeEscapedSecretText(candidate);
+		if (withoutUnsafe !== candidate && matchesSecretPattern(withoutUnsafe)) return true;
+		const decoded = decodeEscapedSecretText(withoutUnsafe);
 		if (decoded === candidate) return false;
 		if (depth === maxSecretDecodePasses) return true;
 		candidate = decoded;
 	}
 	return true;
+
+	function matchesSecretPattern(text) {
+		return patterns.some((pattern) => pattern.test(text)) || (text.includes("://") && urlCredentialPattern.test(text));
+	}
 }
 
 function unicodeEscape(value) {

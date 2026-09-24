@@ -474,26 +474,29 @@ function decodeProofkitEscapedSecretText(value: string): string {
 		if (start > index) parts.push(value.slice(index, start));
 		let cursor = start;
 		while (cursor < value.length && value[cursor] === "\\") cursor++;
+		parts.push("\\".repeat(Math.floor((cursor - start) / 2)));
+		if ((cursor - start) % 2 === 0) {
+			index = cursor;
+			continue;
+		}
 		if (cursor === value.length) {
-			parts.push(value.slice(start));
+			parts.push("\\");
 			break;
 		}
 		if (hasProofkitSecretUnicodeUnit(value, cursor)) {
 			const first = Number.parseInt(value.slice(cursor + 1, cursor + 5), 16);
 			if (first >= 0xd800 && first <= 0xdbff) {
-				let second = cursor + 5;
-				const secondStart = second;
-				while (second < value.length && value[second] === "\\") second++;
-				if (second > secondStart && hasProofkitSecretUnicodeUnit(value, second)) {
-					const low = Number.parseInt(value.slice(second + 1, second + 5), 16);
+				const second = cursor + 5;
+				if (value[second] === "\\" && hasProofkitSecretUnicodeUnit(value, second + 1)) {
+					const low = Number.parseInt(value.slice(second + 2, second + 6), 16);
 					if (low >= 0xdc00 && low <= 0xdfff) {
 						parts.push(String.fromCodePoint(0x10000 + ((first - 0xd800) << 10) + low - 0xdc00));
-						index = second + 5;
+						index = second + 6;
 						continue;
 					}
 				}
 			}
-			parts.push(decodeProofkitSecretUnicodeScalar(first, value.slice(start, cursor + 5)));
+			parts.push(decodeProofkitSecretUnicodeScalar(first, value.slice(cursor - 1, cursor + 5)));
 			index = cursor + 5;
 			continue;
 		}
@@ -501,7 +504,7 @@ function decodeProofkitEscapedSecretText(value: string): string {
 		if (Object.hasOwn(proofkitEscapedSecretControls, suffix)) parts.push(proofkitEscapedSecretControls[suffix]);
 		else if (suffix === "/" || suffix === '"') parts.push(suffix);
 		else {
-			parts.push(value.slice(start, cursor));
+			parts.push("\\");
 			index = cursor;
 			continue;
 		}
@@ -526,15 +529,20 @@ function decodeProofkitSecretUnicodeScalar(value: number, original: string): str
 function containsProofkitSecretLikeValue(value: string): boolean {
 	let candidate = value;
 	for (let depth = 0; depth <= proofkitMaxSecretDecodePasses; depth++) {
-		if (proofkitSecretPatterns.some((pattern) => pattern.test(candidate))) return true;
+		if (matchesProofkitSecretPattern(candidate)) return true;
 		const withoutUnsafe = [...candidate].filter((character) => !isProofkitUnsafeScalar(character.codePointAt(0) as number)).join("");
-		if (withoutUnsafe !== candidate && proofkitSecretPatterns.some((pattern) => pattern.test(withoutUnsafe))) return true;
-		const decoded = decodeProofkitEscapedSecretText(candidate);
+		if (withoutUnsafe !== candidate && matchesProofkitSecretPattern(withoutUnsafe)) return true;
+		const decoded = decodeProofkitEscapedSecretText(withoutUnsafe);
 		if (decoded === candidate) return false;
 		if (depth === proofkitMaxSecretDecodePasses) return true;
 		candidate = decoded;
 	}
 	return true;
+}
+
+function matchesProofkitSecretPattern(value: string): boolean {
+	return proofkitSecretPatterns[0].test(value) ||
+		(value.includes("://") && proofkitSecretPatterns[1].test(value));
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(

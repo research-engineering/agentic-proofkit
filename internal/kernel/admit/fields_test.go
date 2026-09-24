@@ -59,6 +59,7 @@ func TestSecretLikeValueSurvivesEscapedUnicodeLetterAndSurrogatePair(t *testing.
 	for _, initial := range []string{
 		`{"passw\u006frd":"synthetic-fixture-value"}`,
 		`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`,
 		`api_\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
@@ -77,6 +78,25 @@ func TestSecretLikeValueSurvivesEscapedUnicodeLetterAndSurrogatePair(t *testing.
 	}
 	if !ContainsSecretLikeValue("api_" + string(rune(0xe0001)) + "key=synthetic-fixture-value") {
 		t.Fatal("literal supplementary control split passed")
+	}
+}
+
+func TestSecretLikeValuePreservesNestedJSONSlashParity(t *testing.T) {
+	base := `{"passw\u006frd":"synthetic-fixture-value"}`
+	encoded, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nested := strings.Replace(string(encoded), "u006f", `\u0075006f`, 1)
+	for depth := 0; depth <= 4; depth++ {
+		if !ContainsSecretLikeValue(nested) {
+			t.Fatalf("nested JSON slash parity passed at depth %d", depth)
+		}
+		encoded, err = json.Marshal(nested)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nested = string(encoded)
 	}
 }
 

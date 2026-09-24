@@ -406,12 +406,12 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     mainFrame: () => cleanupFrame,
     evaluate: async () => undefined,
     on: (event) => {
-      expect(event).toBe("request");
-      cleanupEvents.push("request-armed");
+      expect(["request", "download"]).toContain(event);
+      cleanupEvents.push(`${event}-armed`);
     },
     off: (event) => {
-      expect(event).toBe("request");
-      cleanupEvents.push("request-disarmed");
+      expect(["request", "download"]).toContain(event);
+      cleanupEvents.push(`${event}-disarmed`);
     },
     waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
     waitForEvent: (event, {signal}) => {
@@ -432,6 +432,7 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
   expect(cleanupEvents).toEqual([
     "request-armed",
+    "download-armed",
     "response-armed",
     "navigation-armed",
     "response-consumed",
@@ -440,6 +441,7 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     "response-aborted",
     "navigation-aborted",
     "request-disarmed",
+    "download-disarmed",
   ]);
 });
 
@@ -511,6 +513,69 @@ test("download response cannot certify a later failed document", async ({baseURL
       }, {target: workspaceURL, value: token}),
       "A download response cannot certify the workspace document",
     )).rejects.toThrow("A download response cannot certify the workspace document");
+    expect(statuses).toEqual([200, 503]);
+    await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("download response cannot certify a script-created document", async ({page}) => {
+  let attachment = false;
+  const server = createServer((request, response) => {
+    if (request.url !== "/") {
+      response.writeHead(404).end();
+      return;
+    }
+    response.setHeader("Content-Type", "text/html");
+    if (attachment) response.setHeader("Content-Disposition", "attachment; filename=workspace.html");
+    response.end("<h1>browser.fixture.workspace</h1>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  try {
+    await openWorkspace(page, workspaceURL);
+    attachment = true;
+    let scriptDocumentObserved = false;
+    page.once("download", () => {
+      void page.evaluate(() => window.location.assign("javascript:'<h1>browser.fixture.workspace</h1><i id=script-document></i>'"))
+        .then(async () => {
+          await page.locator("#script-document").waitFor({state: "attached"});
+          scriptDocumentObserved = true;
+          await page.evaluate(() => window.history.pushState({}, "", window.location.href));
+        }).catch(() => undefined);
+    });
+    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
+    expect(scriptDocumentObserved).toBe(true);
+    await expect(page.locator("#script-document")).toHaveCount(1);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("a later failed reload cannot complete an earlier successful navigation", async ({page}) => {
+  const statuses = [];
+  const server = createServer((request, response) => {
+    if (request.url !== "/") {
+      response.writeHead(404).end();
+      return;
+    }
+    const status = statuses.length === 0 ? 200 : 503;
+    statuses.push(status);
+    response.statusCode = status;
+    response.setHeader("Content-Type", "text/html");
+    response.end(status === 200
+      ? "<p>loading</p><script>setTimeout(() => location.reload(), 250)</script>"
+      : "<h1>browser.fixture.workspace</h1>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  try {
+    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
     expect(statuses).toEqual([200, 503]);
     await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
   } finally {

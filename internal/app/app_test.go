@@ -768,6 +768,7 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 	for _, initial := range []string{
 		`{"passw\u006frd":"synthetic-fixture-value"}`,
 		`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`,
 		`api_\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
@@ -781,6 +782,20 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 			}
 			serialized = string(text)
 		}
+	}
+	base := `{"passw\u006frd":"synthetic-fixture-value"}`
+	encoded, err := json.Marshal(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nested := strings.Replace(string(encoded), "u006f", `\u0075006f`, 1)
+	for depth := 0; depth <= 4; depth++ {
+		check(nested, "nested JSON slash parity", depth)
+		encoded, err = json.Marshal(nested)
+		if err != nil {
+			t.Fatal(err)
+		}
+		nested = string(encoded)
 	}
 }
 

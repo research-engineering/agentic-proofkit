@@ -84,6 +84,7 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "password_double_escaped_json_key", Input: `password\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_triple_escaped_json_key", Input: `password\\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_nested_unicode_escape", Input: `{"passw\\u005cu006frd":"synthetic-fixture-value"}`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_control_before_nested_unicode", Input: `{"passw\u005c\u200bu006frd":"synthetic-fixture-value"}`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_json_escaped_newline", Input: `"password"\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_double_json_escaped_newline", Input: `"password"\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_triple_json_escaped_newline", Input: `"password"\\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
@@ -228,8 +229,8 @@ func matchesNormalizedSecret(value string, matches func(string) bool) bool {
 		if withoutUnsafe != candidate && matches(withoutUnsafe) {
 			return true
 		}
-		decoded := decodeEscapedSecretText(candidate)
-		if decoded == candidate {
+		decoded := decodeEscapedSecretText(withoutUnsafe)
+		if decoded == withoutUnsafe {
 			return false
 		}
 		if depth == maxSecretDecodePasses {
@@ -253,28 +254,30 @@ func decodeEscapedSecretText(value string) string {
 		for index < len(value) && value[index] == '\\' {
 			index++
 		}
+		for count := (index - start) / 2; count > 0; count-- {
+			result.WriteByte('\\')
+		}
+		if (index-start)%2 == 0 {
+			continue
+		}
 		if index >= len(value) {
-			result.WriteString(value[start:index])
+			result.WriteByte('\\')
 			break
 		}
 		if value[index] == 'u' && hasSecretUnicodeUnit(value, index) {
 			first := decodeSecretUnicodeUnit(value[index+1 : index+5])
 			next := index + 5
-			if first >= 0xd800 && first <= 0xdbff {
-				secondStart := next
-				for next < len(value) && value[next] == '\\' {
-					next++
-				}
-				if next > secondStart && next < len(value) && value[next] == 'u' && hasSecretUnicodeUnit(value, next) {
-					second := decodeSecretUnicodeUnit(value[next+1 : next+5])
+			if first >= 0xd800 && first <= 0xdbff && next+1 < len(value) && value[next] == '\\' {
+				if hasSecretUnicodeUnit(value, next+1) {
+					second := decodeSecretUnicodeUnit(value[next+2 : next+6])
 					if second >= 0xdc00 && second <= 0xdfff {
 						result.WriteRune(utf16.DecodeRune(first, second))
-						index = next + 5
+						index = next + 6
 						continue
 					}
 				}
 			}
-			result.WriteString(decodeSecretUnicodeScalar(first, value[start:index+5]))
+			result.WriteString(decodeSecretUnicodeScalar(first, value[index-1:index+5]))
 			index += 5
 			continue
 		}
@@ -294,7 +297,7 @@ func decodeEscapedSecretText(value string) string {
 		case '/', '"':
 			result.WriteByte(value[index])
 		default:
-			result.WriteString(value[start:index])
+			result.WriteByte('\\')
 			continue
 		}
 		index++

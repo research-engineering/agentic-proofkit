@@ -32,10 +32,13 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
   const documentMarker = `proofkitNavigationMarker_${randomUUID()}`;
   await page.evaluate((marker) => { Object.defineProperty(document, marker, {value: true}); }, documentMarker);
   const navigationRequests = [];
+  let downloadObserved = false;
   const recordNavigationRequest = (request) => {
     if (request.isNavigationRequest() && request.frame() === mainFrame) navigationRequests.push(request);
   };
+  const recordDownload = () => { downloadObserved = true; };
   page.on("request", recordNavigationRequest);
+  page.on("download", recordDownload);
   const responsePromise = page.waitForResponse(
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
     {signal: controller.signal},
@@ -55,19 +58,21 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     if (!response.ok()) throw new Error(responseError);
     await navigationPromise;
     await mainFrame.waitForLoadState("domcontentloaded");
-    const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
-    if (oldDocumentRetained || navigationRequests.length !== 1 || navigationRequests[0] !== response.request()) {
-      throw new Error(responseError);
-    }
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
+    const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
+    const disposition = response.headers()["content-disposition"]?.split(";", 1)[0].trim().toLowerCase();
+    if (oldDocumentRetained || downloadObserved || disposition === "attachment" || navigationRequests.length !== 1 || navigationRequests[0] !== response.request() || page.url() !== workspaceURL) {
+      throw new Error(responseError);
+    }
   } catch (error) {
     controller.abort();
     await Promise.all([responseSettled, navigationSettled]);
     throw error;
   } finally {
     page.off("request", recordNavigationRequest);
+    page.off("download", recordDownload);
   }
 }
 

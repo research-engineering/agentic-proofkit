@@ -18,7 +18,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
 )
 
-const expectedTypeScriptSourceSha256 = "sha256:093c9172f61cabbbec0b67cbb4a80efc98e82ae9fbb4b34354cf52586387f20b"
+const expectedTypeScriptSourceSha256 = "sha256:e557bf01d06f3116f3f45e688f71c7ab9023fe6bbd3efa95e2e7bf84a18024e6"
 
 func TestBuildEmitsDeterministicTypeScriptSourceBundle(t *testing.T) {
 	if !slices.IsSorted(exportedSymbols) {
@@ -708,6 +708,14 @@ runProofkitJsonReportCliMain({
 	assert(performance.now() - slashRunStart < 2000, "generated diagnostic escaping must remain linear");
 	const beyondDecodeBudget = "passw\\u005c" + "u005c".repeat(17) + "u006frd=synthetic-fixture-value";
 	assert.equal(formatProofkitCliError(beyondDecodeBudget), fixedDiagnostic);
+	let nestedJSON = JSON.stringify('{"passw\\u006frd":"synthetic-fixture-value"}').replace("u006f", "\\u0075006f");
+	for (let depth = 0; depth <= 4; depth++) {
+		assert.equal(formatProofkitCliError(nestedJSON), fixedDiagnostic);
+		nestedJSON = JSON.stringify(nestedJSON);
+	}
+	const regexStart = performance.now();
+	assert.equal(formatProofkitCliError("a".repeat(8192) + beyondDecodeBudget), fixedDiagnostic);
+	assert(performance.now() - regexStart < 2000, "generated repeated decoding must not amplify URL matching cost");
 
 console.log("generated adapter semantics ok");
 `
