@@ -164,6 +164,7 @@ const authorizationPattern = new RegExp(String.raw`authorization(?:\\*["'])?${se
 const bearerPattern = new RegExp(String.raw`bearer${secretWhitespace}+[A-Za-z0-9._~+/=-]{8,}`, "iu");
 const namedSecretPattern = new RegExp(String.raw`(?:access[-_]?token|api[-_]?key|pass(?:word|wd)|secret|token)(?:\\*["'])?${secretWhitespace}*[=:]${secretWhitespace}*\S+`, "iu");
 const escapedSecretControls = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
+const maxSecretDecodePasses = 16;
 
 function decodeEscapedSecretText(value) {
   const parts = [];
@@ -239,12 +240,17 @@ function containsSecretLikeValue(value) {
 		/-----BEGIN [A-Z ]*PRIVATE KEY-----/iu,
 		/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/u,
 	];
-	for (const candidate of [value, decodeEscapedSecretText(value)]) {
+	let candidate = value;
+	for (let depth = 0; depth <= maxSecretDecodePasses; depth++) {
 		if (patterns.some((pattern) => pattern.test(candidate))) return true;
 		const withoutUnsafe = [...candidate].filter((character) => !isUnsafeScalar(character.codePointAt(0))).join("");
 		if (withoutUnsafe !== candidate && patterns.some((pattern) => pattern.test(withoutUnsafe))) return true;
+		const decoded = decodeEscapedSecretText(candidate);
+		if (decoded === candidate) return false;
+		if (depth === maxSecretDecodePasses) return true;
+		candidate = decoded;
 	}
-	return false;
+	return true;
 }
 
 function unicodeEscape(value) {

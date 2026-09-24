@@ -58,6 +58,7 @@ func TestSecretLikeValueSurvivesEscapedUnicodeWhitespace(t *testing.T) {
 func TestSecretLikeValueSurvivesEscapedUnicodeLetterAndSurrogatePair(t *testing.T) {
 	for _, initial := range []string{
 		`{"passw\u006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
 		`api_\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
@@ -76,6 +77,13 @@ func TestSecretLikeValueSurvivesEscapedUnicodeLetterAndSurrogatePair(t *testing.
 	}
 	if !ContainsSecretLikeValue("api_" + string(rune(0xe0001)) + "key=synthetic-fixture-value") {
 		t.Fatal("literal supplementary control split passed")
+	}
+}
+
+func TestSecretLikeValueFailsClosedAfterDecodeBudget(t *testing.T) {
+	value := `passw\u005c` + strings.Repeat("u005c", maxSecretDecodePasses+1) + "u006frd=synthetic-fixture-value"
+	if !ContainsSecretLikeValue(value) {
+		t.Fatal("nested escape beyond the decode budget passed")
 	}
 }
 

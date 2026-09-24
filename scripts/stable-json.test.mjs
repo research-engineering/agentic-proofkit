@@ -161,6 +161,7 @@ test("diagnostic whole-value redaction", () => {
   }
   for (const initial of [
     String.raw`{"passw\u006frd":"synthetic-fixture-value"}`,
+    String.raw`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
     String.raw`api_\uDB40\uDC01key=synthetic-fixture-value`,
     String.raw`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
     String.raw`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,
@@ -174,6 +175,8 @@ test("diagnostic whole-value redaction", () => {
   const started = performance.now();
   assert.equal(redactDiagnosticValue("\\".repeat(65536)), "\\".repeat(512) + "...<truncated-diagnostic>");
   assert(performance.now() - started < 2000, "diagnostic escaping must stay linear in slash-run length");
+  const beyondBudget = String.raw`passw\u005c` + "u005c".repeat(17) + "u006frd=synthetic-fixture-value";
+  assert.equal(redactDiagnosticValue(beyondBudget), fixed);
 });
 
 test("decodeUTF8Strict rejects malformed bytes without exposing them", () => {

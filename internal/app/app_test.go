@@ -767,6 +767,7 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 	}
 	for _, initial := range []string{
 		`{"passw\u006frd":"synthetic-fixture-value"}`,
+		`{"passw\u005cu006frd":"synthetic-fixture-value"}`,
 		`api_\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u200b\uDB40\uDC01key=synthetic-fixture-value`,
 		`api_\u006b\uDB40\uDC01ey=synthetic-fixture-value`,

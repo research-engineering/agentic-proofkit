@@ -461,6 +461,7 @@ function containsProofkitUnsafeScalar(value: string): boolean {
 
 const proofkitSecretPatterns = __PROOFKIT_SECRET_PATTERNS__.map((source) => new RegExp(source, "iu"));
 const proofkitEscapedSecretControls: Record<string, string> = {n: "\n", t: "\t", r: "\r", f: "\f", v: "\v", b: "\b"};
+const proofkitMaxSecretDecodePasses = 16;
 
 function decodeProofkitEscapedSecretText(value: string): string {
 	const parts: string[] = [];
@@ -523,12 +524,17 @@ function decodeProofkitSecretUnicodeScalar(value: number, original: string): str
 }
 
 function containsProofkitSecretLikeValue(value: string): boolean {
-	for (const candidate of [value, decodeProofkitEscapedSecretText(value)]) {
+	let candidate = value;
+	for (let depth = 0; depth <= proofkitMaxSecretDecodePasses; depth++) {
 		if (proofkitSecretPatterns.some((pattern) => pattern.test(candidate))) return true;
 		const withoutUnsafe = [...candidate].filter((character) => !isProofkitUnsafeScalar(character.codePointAt(0) as number)).join("");
 		if (withoutUnsafe !== candidate && proofkitSecretPatterns.some((pattern) => pattern.test(withoutUnsafe))) return true;
+		const decoded = decodeProofkitEscapedSecretText(candidate);
+		if (decoded === candidate) return false;
+		if (depth === proofkitMaxSecretDecodePasses) return true;
+		candidate = decoded;
 	}
-	return false;
+	return true;
 }
 
 export function parseProofkitJsonReportCli<Key extends string>(

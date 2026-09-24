@@ -31,6 +31,11 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
   const mainFrame = page.mainFrame();
   const documentMarker = `proofkitNavigationMarker_${randomUUID()}`;
   await page.evaluate((marker) => { Object.defineProperty(document, marker, {value: true}); }, documentMarker);
+  const navigationRequests = [];
+  const recordNavigationRequest = (request) => {
+    if (request.isNavigationRequest() && request.frame() === mainFrame) navigationRequests.push(request);
+  };
+  page.on("request", recordNavigationRequest);
   const responsePromise = page.waitForResponse(
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
     {signal: controller.signal},
@@ -39,6 +44,8 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     predicate: (frame) => frame === mainFrame && frame.url() === workspaceURL,
     signal: controller.signal,
   });
+  const responseSettled = responsePromise.catch(() => undefined);
+  const navigationSettled = navigationPromise.catch(() => undefined);
   try {
     const token = await trigger(workspaceNavigationToken);
     if (token !== workspaceNavigationToken) {
@@ -49,14 +56,18 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     await navigationPromise;
     await mainFrame.waitForLoadState("domcontentloaded");
     const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
-    if (oldDocumentRetained) throw new Error(responseError);
+    if (oldDocumentRetained || navigationRequests.length !== 1 || navigationRequests[0] !== response.request()) {
+      throw new Error(responseError);
+    }
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
   } catch (error) {
     controller.abort();
-    await Promise.all([responsePromise.catch(() => undefined), navigationPromise.catch(() => undefined)]);
+    await Promise.all([responseSettled, navigationSettled]);
     throw error;
+  } finally {
+    page.off("request", recordNavigationRequest);
   }
 }
 

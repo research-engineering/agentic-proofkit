@@ -1,4 +1,6 @@
 import {expect} from "@playwright/test";
+import {once} from "node:events";
+import {createServer} from "node:http";
 import {test} from "./workspace-test-harness.mjs";
 
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
@@ -403,6 +405,14 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   const cleanupPage = {
     mainFrame: () => cleanupFrame,
     evaluate: async () => undefined,
+    on: (event) => {
+      expect(event).toBe("request");
+      cleanupEvents.push("request-armed");
+    },
+    off: (event) => {
+      expect(event).toBe("request");
+      cleanupEvents.push("request-disarmed");
+    },
     waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
     waitForEvent: (event, {signal}) => {
       expect(event).toBe("framenavigated");
@@ -421,13 +431,15 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   expect([...cleanupAborted].sort()).toEqual(["navigation", "response"]);
   expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
   expect(cleanupEvents).toEqual([
+    "request-armed",
     "response-armed",
     "navigation-armed",
+    "response-consumed",
+    "navigation-consumed",
     "trigger-called",
     "response-aborted",
     "navigation-aborted",
-    "response-consumed",
-    "navigation-consumed",
+    "request-disarmed",
   ]);
 });
 
@@ -464,6 +476,47 @@ for (const mutation of ["history", "document-open", "replace-root"]) test(`same-
   )).rejects.toThrow("Workspace navigation did not return a document response");
   expect(attachmentStatus).toBe(200);
   expect(await originalDocument.evaluate((previous) => previous === document)).toBe(true);
+});
+
+test("download response cannot certify a later failed document", async ({baseURL, page}) => {
+  await openWorkspace(page, baseURL);
+  let failing = false;
+  const statuses = [];
+  const server = createServer((request, response) => {
+    if (request.url !== "/") {
+      response.writeHead(404).end();
+      return;
+    }
+    const status = failing ? 503 : 200;
+    statuses.push(status);
+    response.statusCode = status;
+    response.setHeader("Content-Type", "text/html");
+    if (!failing) response.setHeader("Content-Disposition", "attachment; filename=workspace.html");
+    response.end("<h1>browser.fixture.workspace</h1>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  try {
+    page.once("download", () => {
+      failing = true;
+      void page.evaluate((target) => window.location.assign(target), workspaceURL).catch(() => undefined);
+    });
+    await expect(navigateWorkspace(
+      page,
+      workspaceURL,
+      (token) => page.evaluate(({target, value}) => {
+        window.setTimeout(() => window.location.assign(target), 0);
+        return value;
+      }, {target: workspaceURL, value: token}),
+      "A download response cannot certify the workspace document",
+    )).rejects.toThrow("A download response cannot certify the workspace document");
+    expect(statuses).toEqual([200, 503]);
+    await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
 });
 
 axeTest("combined axe negative control proves default and target-size sensitivity", async ({axePage: page}) => {

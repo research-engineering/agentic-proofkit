@@ -43,9 +43,10 @@ var (
 )
 
 const (
-	maxDiagnosticRunes = 512
-	maxRuleIDBytes     = 256
-	redactedValueLabel = "<redacted-diagnostic-value>"
+	maxDiagnosticRunes    = 512
+	maxSecretDecodePasses = 16
+	maxRuleIDBytes        = 256
+	redactedValueLabel    = "<redacted-diagnostic-value>"
 )
 
 type RedactionFixture struct {
@@ -82,6 +83,7 @@ func ReportVisibleRedactionFixtures() []RedactionFixture {
 		{Name: "token_escaped_json_key", Input: `\"token\": \"synthetic-fixture-value\"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_double_escaped_json_key", Input: `password\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_triple_escaped_json_key", Input: `password\\\": "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
+		{Name: "password_nested_unicode_escape", Input: `{"passw\\u005cu006frd":"synthetic-fixture-value"}`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_json_escaped_newline", Input: `"password"\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_double_json_escaped_newline", Input: `"password"\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
 		{Name: "password_triple_json_escaped_newline", Input: `"password"\\\n: "synthetic-fixture-value"`, SensitiveNeedles: []string{"synthetic-fixture-value"}},
@@ -217,7 +219,8 @@ func SecretLikeValuePatternSources() []string {
 }
 
 func matchesNormalizedSecret(value string, matches func(string) bool) bool {
-	for _, candidate := range []string{value, decodeEscapedSecretText(value)} {
+	candidate := value
+	for depth := 0; depth <= maxSecretDecodePasses; depth++ {
 		if matches(candidate) {
 			return true
 		}
@@ -225,8 +228,16 @@ func matchesNormalizedSecret(value string, matches func(string) bool) bool {
 		if withoutUnsafe != candidate && matches(withoutUnsafe) {
 			return true
 		}
+		decoded := decodeEscapedSecretText(candidate)
+		if decoded == candidate {
+			return false
+		}
+		if depth == maxSecretDecodePasses {
+			return true
+		}
+		candidate = decoded
 	}
-	return false
+	return true
 }
 
 func decodeEscapedSecretText(value string) string {

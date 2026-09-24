@@ -7,6 +7,7 @@ import test from "node:test";
 import {createScanner, LanguageVariant, SyntaxKind} from "typescript/unstable/ast";
 
 import {analyzeAxe, assertAxeTestComplete, axeConfigureOptions, axeDistributionSource, axeDistributionVersion, axeRunOptions, initializeAxe} from "../tests/browser/axe-harness.mjs";
+import {navigateWorkspace} from "../tests/browser/workspace-navigation-harness.mjs";
 import {executeBrowserProof} from "./browser-proof-execution.mjs";
 import {assertInputSnapshotUnchanged, browserProofInputManifestPath, loadBrowserProofInputResolution, materializeInputSnapshot, snapshotInputAssets} from "./browser-proof-inputs.mjs";
 
@@ -395,6 +396,23 @@ test("workspace navigation excludes provider-falsified lifecycle waits", () => {
   )].map((match) => match[1]);
   assert.deepEqual(lifecycleMethods, ["goto"]);
   assert.equal(source.match(/\bpage\.goto\("about:blank"\);/g)?.length, 1);
+});
+
+test("workspace navigation owns waiter rejection before a delayed trigger", async () => {
+  let disarmed = 0;
+  const page = {
+    mainFrame: () => ({}),
+    evaluate: async () => undefined,
+    on: () => undefined,
+    off: () => { disarmed++; },
+    waitForResponse: () => Promise.reject(new Error("early response rejection")),
+    waitForEvent: () => Promise.reject(new Error("early navigation rejection")),
+  };
+  await assert.rejects(navigateWorkspace(page, "http://127.0.0.1:41001/", async (token) => {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    return token;
+  }, "unexpected navigation response"), /early response rejection/);
+  assert.equal(disarmed, 1);
 });
 
 test("every local JavaScript import is content-bound by the owner resolution", () => {
