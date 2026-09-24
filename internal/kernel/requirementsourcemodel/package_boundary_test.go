@@ -57,6 +57,7 @@ func TestRepresentationNeutralPackageBoundaryIsExact(t *testing.T) {
 	expectedImports := []string{
 		"fmt",
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/admit",
+		"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity",
 		"reflect",
 		"regexp",
 		"slices",

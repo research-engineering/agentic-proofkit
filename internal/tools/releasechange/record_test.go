@@ -200,6 +200,7 @@ var currentBreakingChanges = []Change{
 }
 
 var currentAdditions = []Change{
+	{ChangeID: "proofkit.source-review-dependency-linkage", Summary: "Derived requirement records expose a sourceReviewDigest over referenced source-level boundaries, named non-claims, scenario bodies, vocabulary and derivation facts; semantic diff and impact detect changes to that admitted dependency closure. Source scenario IDs may also use the compact surface_id::stable_anchor form, and compositions reject a declared scenario bound to the wrong requirement while preserving reference-only routes. These digests are review signals, not execution or freshness evidence."},
 	{ChangeID: "proofkit.source-v2.structural-contracts", Summary: "Expose closed machine-readable structures for changed source paths and affected commands, including separate compact and structured proof reports and the agent-envelope output mode. Preserve native canonicalization and semantic replay as independent obligations."},
 }
 

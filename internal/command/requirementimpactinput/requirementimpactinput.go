@@ -122,17 +122,20 @@ func admitInput(raw any) (input, error) {
 	if err != nil {
 		return input{}, err
 	}
-	currentRequirements, err := admitRequirementSources(record["currentRequirementSources"], "currentRequirementSources", false)
+	currentRequirements, currentSources, err := admitRequirementSources(record["currentRequirementSources"], "currentRequirementSources", false)
 	if err != nil {
 		return input{}, err
 	}
 	baseSourcesPresent := record["baseRequirementSources"] != nil
-	baseRequirements, err := admitRequirementSources(record["baseRequirementSources"], "baseRequirementSources", true)
+	baseRequirements, baseSources, err := admitRequirementSources(record["baseRequirementSources"], "baseRequirementSources", true)
 	if err != nil {
 		return input{}, err
 	}
 	currentContract, err := compactproofcontract.Admit(record["currentCompactProofContract"])
 	if err != nil {
+		return input{}, err
+	}
+	if err := requirementsourceadmission.AdmitScenarioLinks(currentSources, impactScenarioLinks(currentContract, currentRequirements)); err != nil {
 		return input{}, err
 	}
 	var baseContract *compactproofcontract.Contract
@@ -142,6 +145,9 @@ func admitInput(raw any) (input, error) {
 			return input{}, err
 		}
 		baseContract = &contract
+		if err := requirementsourceadmission.AdmitScenarioLinks(baseSources, impactScenarioLinks(contract, baseRequirements)); err != nil {
+			return input{}, err
+		}
 	}
 	if baseSourcesPresent != (baseContract != nil) {
 		return input{}, fmt.Errorf("requirement impact input compose baseRequirementSources and baseCompactProofContract must both be present or both be null for new-adoption baselines")
@@ -301,31 +307,47 @@ func compose(input input) (map[string]any, error) {
 	return output, nil
 }
 
-func admitRequirementSources(raw any, context string, nullable bool) (map[string]requirementsourceadmission.Requirement, error) {
+func admitRequirementSources(raw any, context string, nullable bool) (map[string]requirementsourceadmission.Requirement, []requirementsourceadmission.Source, error) {
 	if raw == nil && nullable {
-		return map[string]requirementsourceadmission.Requirement{}, nil
+		return map[string]requirementsourceadmission.Requirement{}, nil, nil
 	}
 	values, ok := raw.([]any)
 	if !ok || len(values) == 0 {
-		return nil, fmt.Errorf("requirement impact input compose %s must be a non-empty array", context)
+		return nil, nil, fmt.Errorf("requirement impact input compose %s must be a non-empty array", context)
 	}
 	byID := map[string]requirementsourceadmission.Requirement{}
+	sources := make([]requirementsourceadmission.Source, 0, len(values))
 	for index, value := range values {
 		result, err := requirementsourceadmission.Evaluate(value)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if result.ExitCode != 0 {
-			return nil, fmt.Errorf("requirement impact input compose %s item %d must pass requirement source admission", context, index+1)
+			return nil, nil, fmt.Errorf("requirement impact input compose %s item %d must pass requirement source admission", context, index+1)
 		}
+		sources = append(sources, result.Source)
 		for _, requirement := range result.Source.Requirements() {
 			if _, exists := byID[requirement.RequirementID]; exists {
-				return nil, fmt.Errorf("requirement impact input compose duplicate requirementId across %s: %s", context, requirement.RequirementID)
+				return nil, nil, fmt.Errorf("requirement impact input compose duplicate requirementId across %s: %s", context, requirement.RequirementID)
 			}
 			byID[requirement.RequirementID] = requirement
 		}
 	}
-	return byID, nil
+	return byID, sources, nil
+}
+
+func impactScenarioLinks(contract compactproofcontract.Contract, requirements map[string]requirementsourceadmission.Requirement) []requirementsourceadmission.ScenarioLink {
+	bindings := contract.Bindings()
+	links := make([]requirementsourceadmission.ScenarioLink, 0, len(bindings))
+	for _, binding := range bindings {
+		if _, known := requirements[binding.RequirementID()]; !known {
+			continue
+		}
+		links = append(links, requirementsourceadmission.ScenarioLink{
+			RequirementID: binding.RequirementID(), ScenarioID: binding.ScenarioID(),
+		})
+	}
+	return links
 }
 
 func changedPathSources(raw any) ([]changedpathset.SourceInput, error) {

@@ -150,6 +150,68 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 			replacements[id] = wire.ContractDefinitions[i]
 		}
 	}
+	definitionRecords := make(map[string]definitionRecord, len(replacements))
+	for id, encoded := range replacements {
+		var record map[string]any
+		if err := json.Unmarshal(encoded, &record); err != nil {
+			return nil, err
+		}
+		digest, ok := record["canonicalDigest"].(string)
+		if !ok {
+			return nil, fmt.Errorf("CLI contract definition has no digest")
+		}
+		definitionRecords[id] = definitionRecord{ID: id, Digest: digest}
+	}
+	for index, raw := range commands {
+		command := raw.(map[string]any)
+		name := command["command"].(string)
+		changed := false
+		for _, direction := range []string{"input", "output"} {
+			bindings, err := childBindingValues(name, direction, definitionRecords)
+			if err != nil {
+				return nil, err
+			}
+			relations, contractID := expectedPathRelations(name, direction)
+			clauses := expectedHandoffClauses(name, direction)
+			if len(bindings) == 0 && len(relations) == 0 && len(clauses) == 0 {
+				continue
+			}
+			key := direction + "Contract"
+			contract, ok := command[key].(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("%s has no %s for child bindings", name, key)
+			}
+			command, contract = cloneRecord(command), cloneRecord(contract)
+			if len(bindings) != 0 {
+				contract["childDefinitionBindings"] = bindings
+			}
+			if len(relations) != 0 {
+				contract["contractId"] = contractID
+				contract["pathRelations"] = relations
+				contract["compatibilitySummary"] = []any{
+					"schemaVersion=1",
+					"root-shape-only definition " + contract["rootDefinitionRef"].(string) + "; nested fields, types, and cardinalities are non-claims",
+					"requirementsPath equals specPackagePath plus the requirement-source filename suffix",
+				}
+			}
+			if len(clauses) != 0 {
+				if err := refreshHandoffClauses(name, contract); err != nil {
+					return nil, err
+				}
+			}
+			command[key] = contract
+			changed = true
+		}
+		if !changed {
+			continue
+		}
+		commands[index] = command
+		var err error
+		wire.Commands[index], err = encodeContractSource(command)
+		if err != nil {
+			return nil, err
+		}
+	}
 	keys := sortedKeys(replacements)
 	wire.ContractDefinitions = make([]json.RawMessage, 0, len(keys))
 	for _, id := range keys {

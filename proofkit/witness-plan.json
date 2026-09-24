@@ -792,6 +792,7 @@
         "internal/kernel/requirementsourcecodec",
         "internal/kernel/requirementsourcemodel",
         "internal/kernel/rootpath",
+        "internal/kernel/scenarioidentity",
         "internal/kernel/secretjson",
         "internal/kernel/stablejson",
         "internal/kernel/unicodepolicy",

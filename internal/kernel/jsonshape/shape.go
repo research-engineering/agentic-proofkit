@@ -3,6 +3,7 @@
 package jsonshape
 
 import (
+	"regexp"
 	"slices"
 )
 
@@ -18,6 +19,8 @@ const (
 	tupleKind
 	booleanKind
 	stringLiteralKind
+	stringSuffixKind
+	stringGrammarKind
 	decimalIntegerKind
 	stringMapKind
 	oneOfKind
@@ -40,6 +43,7 @@ type node struct {
 	integer       int64
 	tuple         []Shape
 	text          string
+	grammar       *regexp.Regexp
 	boolean       *bool
 	alternatives  []Shape
 	discriminator string
@@ -86,6 +90,24 @@ func Object(properties ...Property) Shape {
 }
 
 func String() Shape { return Shape{node: &node{kind: stringKind}} }
+
+func StringSuffix(suffix string) Shape {
+	if suffix == "" {
+		panic("JSON string suffix must be non-empty")
+	}
+	return Shape{node: &node{kind: stringSuffixKind, text: suffix}}
+}
+
+func StringGrammar(body string) Shape {
+	if body == "" {
+		panic("JSON string grammar must be non-empty")
+	}
+	grammar, err := regexp.Compile(`\A(?:` + body + `)\z`)
+	if err != nil {
+		panic("invalid JSON string grammar declaration")
+	}
+	return Shape{node: &node{kind: stringGrammarKind, text: body, grammar: grammar}}
+}
 
 func Boolean() Shape { return Shape{node: &node{kind: booleanKind}} }
 

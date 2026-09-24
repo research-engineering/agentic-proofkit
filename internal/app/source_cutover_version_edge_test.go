@@ -11,24 +11,24 @@ import (
 // This inventory is reviewed against the archived 0.14.21 public contract.
 // Native source byte digests are freshness evidence, not wire semantics.
 var sourceCutoverDirectionDeltas = []string{
-	"adopt-materialize-apply/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"adopt-materialize-plan/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"adopt-materialize-apply/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"adopt-materialize-plan/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"evidence-graph/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"proof-slice/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-authoring-plan/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-authoring-plan/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-bindings/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-browser-server/input:compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-browser-server/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-browser-server/output:compatibilitySummary,contractId,handoffClauses,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-compose/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-compose/output:compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-coverage-input-compose/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-coverage-input-compose/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-coverage-view/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-coverage-input-compose/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-coverage-input-compose/output:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-coverage-view/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-view/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-impact-input-compose/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-impact-input-compose/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-semantic-diff/input:compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-semantic-diff/output:compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-source-admission/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
@@ -40,7 +40,9 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-spec-tree-view/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-spec-tree/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-traceability-graph/input:compatibilitySummary,contractId,nativeAdmissionWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"spec-overview-claims/input:compatibilitySummary,contractId,pathRelations",
 	"test-evidence-inventory/input:compatibilitySummary,contractId,projectionVariants,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"view/output:compatibilitySummary,contractId,handoffClauses",
 }
 
 func TestSourceV2VersionEdgeClosesPublicDirectionDelta(t *testing.T) {

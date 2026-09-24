@@ -2,10 +2,12 @@ package requirementsourceadmission
 
 import "github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 
+const RequirementsFileSuffix = "/requirements.v2.json"
+
 func OverviewPath(specPackagePath string) string { return specPackagePath + "/overview.md" }
 
 func RequirementsPath(specPackagePath string) string {
-	return specPackagePath + "/requirements.v2.json"
+	return specPackagePath + RequirementsFileSuffix
 }
 
 func (source Source) SourceID() string { return source.model.SourceID() }
@@ -50,6 +52,7 @@ func (source Source) Requirements() []Requirement {
 			NonClaimRefs: value.NonClaimRefs, NonClaims: value.NonClaims, ExternalNonClaimRefs: value.ExternalNonClaimRefs,
 			SharedPremises: value.SharedPremises, OwnerID: value.OwnerID, ProofBindingRefs: value.ProofBindingRefs,
 			RequirementID: value.RequirementID, RiskClass: string(value.RiskClass),
+			sourceReviewDigest: source.reviewDigests[value.RequirementID],
 			UpdatePolicy: UpdatePolicy{RequiresImpactDeclaration: value.UpdatePolicy.RequiresImpactDeclaration,
 				RequiresProofBindingReview: value.UpdatePolicy.RequiresProofBindingReview, ReviewOwnerID: value.UpdatePolicy.ReviewOwnerID},
 		}

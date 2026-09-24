@@ -442,7 +442,7 @@ document layer:
 | Candidate | Appropriate boundary | Cost or limitation to review |
 |---|---|---|
 | Separate scenario document | Independently meaningful portable conditions or examples with their own review lifecycle. | Another normative artifact, reference closure and freshness policy; do not repeat the same promise. |
-| Scenarios inside the specification | Portable scenario meaning owned with the requirement. | Public source v1 has no typed scenario-body field; do not add unadmitted keys or describe a private candidate as public. |
+| Scenarios inside the specification | Portable scenario meaning owned with the requirement. | Public grouped source v2 admits typed scenario bodies and requirement membership; a reference-only binding without a source body does not gain portable behavior, execution, or assertion authority. |
 | Structured native declarations | Stable references, parameter instances and executable expected observations near the native check. | Derive the inventory and require review when assertions or qualified links change; native expectations cannot silently redefine intent. |
 | Test-adjacent annotations | References attached to a framework-owned test declaration. | Parse the actual native declaration association; comments alone do not prove discovery, execution or assertion quality. |
 

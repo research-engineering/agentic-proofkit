@@ -252,6 +252,13 @@ func validateProjectionSources(tree requirementspectree.Tree, requirementSources
 		}
 	}
 	if proofBinding != nil {
+		links := make([]requirementsourceadmission.ScenarioLink, 0, len(proofBinding.Bindings))
+		for _, binding := range proofBinding.Bindings {
+			links = append(links, requirementsourceadmission.ScenarioLink{RequirementID: binding.RequirementID, ScenarioID: binding.ScenarioID})
+		}
+		if err := requirementsourceadmission.AdmitScenarioLinks(requirementSources, links); err != nil {
+			return err
+		}
 		for _, requirement := range proofBinding.Requirements {
 			if _, ok := knownRequirements[requirement.RequirementID]; !ok {
 				return fmt.Errorf("requirement context proof binding references a requirement outside the context")

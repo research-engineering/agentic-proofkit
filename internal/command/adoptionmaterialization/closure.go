@@ -49,8 +49,15 @@ func validateClosure(request Request) error {
 		}
 		pathUses = append(pathUses, pathUse{Path: bindingRequirement.SpecPath, Role: roleRequirementSpecRef})
 	}
+	links := make([]requirementsourceadmission.ScenarioLink, 0, len(request.Binding.Bindings))
 	for _, binding := range request.Binding.Bindings {
+		links = append(links, requirementsourceadmission.ScenarioLink{
+			RequirementID: binding.RequirementID, ScenarioID: binding.ScenarioID,
+		})
 		pathUses = append(pathUses, pathUse{Path: binding.WitnessPath, Role: roleWitnessSourceReference})
+	}
+	if err := requirementsourceadmission.AdmitScenarioLinks(request.Sources, links); err != nil {
+		return err
 	}
 	for _, entry := range request.Inventory.Entries {
 		pathUses = append(pathUses, pathUse{Path: entry.SourcePath, Role: roleTestSourceReference})

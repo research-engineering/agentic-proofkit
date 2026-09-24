@@ -59,6 +59,7 @@ type Requirement struct {
 	ProofBindingRefs     []string
 	RequirementID        string
 	RiskClass            string
+	sourceReviewDigest   string
 	UpdatePolicy         UpdatePolicy
 }
 
@@ -84,8 +85,9 @@ type UpdatePolicy struct {
 }
 
 type Source struct {
-	model    requirementsourcemodel.Model
-	admitted bool
+	model         requirementsourcemodel.Model
+	reviewDigests map[string]string
+	admitted      bool
 }
 
 type Result struct {
@@ -153,7 +155,11 @@ func Evaluate(raw any) (Result, error) {
 	}
 	var source Source
 	if model, ok := assessment.Model(); ok {
-		source = Source{model: model, admitted: true}
+		reviewDigests, err := reviewDependencyDigests(model)
+		if err != nil {
+			return Result{}, err
+		}
+		source = Source{model: model, reviewDigests: reviewDigests, admitted: true}
 	}
 	return Result{ExitCode: exitCode, Failures: failures, Report: record, Source: source, Summary: summary}, nil
 }

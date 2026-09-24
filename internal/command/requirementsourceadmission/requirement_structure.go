@@ -45,6 +45,7 @@ func atomicRequirementStructure() jsonshape.Shape {
 	fields := []jsonshape.Property{
 		jsonshape.Required("requirementId", structureProperty(member, "requirementId")),
 		jsonshape.Required("invariant", jsonshape.String()),
+		jsonshape.Required("sourceReviewDigest", jsonshape.StringGrammar(`sha256:[0-9a-f]{64}`)),
 		jsonshape.Required("sharedPremises", structureProperty(group, "sharedPremises")),
 		jsonshape.Required("lifecycle", jsonshape.Object(
 			jsonshape.Required("state", structureProperty(lifecycle, "state")),

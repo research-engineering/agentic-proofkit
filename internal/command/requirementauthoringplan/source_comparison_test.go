@@ -176,8 +176,17 @@ func TestGroupedAuthoringSourcePlaneInventoryIsComplete(t *testing.T) {
 				candidate["derivations"].([]any)[0].(map[string]any)["selector"].(map[string]any)["end"] = "13"
 			}
 			output, exit, err := Build(input)
+			if err != nil || exit != 1 || output["nonAuthoritativeAdmissionPreview"] != nil {
+				t.Fatalf("source dependency change lacked required owner review: %v %#v", err, output)
+			}
+			updates := sharedOwnerInput()["candidateUpdates"].([]any)
+			if plane != "source_nonclaims" && plane != "nonclaim_definitions" {
+				updates = updates[:1]
+			}
+			input["candidateUpdates"] = updates
+			output, exit, err = Build(input)
 			if err != nil || exit != 0 {
-				t.Fatalf("source boundary update failed: %v %#v", err, output)
+				t.Fatalf("reviewed source dependency update failed: %v %#v", err, output)
 			}
 			assertStableJSONEqual(t, "source denial plane", []any{plane}, output["changedSourcePlanes"])
 		})

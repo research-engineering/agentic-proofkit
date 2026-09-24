@@ -2,6 +2,7 @@ package jsonshape
 
 import (
 	"encoding/json"
+	"regexp"
 	"strconv"
 )
 
@@ -92,6 +93,10 @@ func (shape Shape) schemaValue() map[string]any {
 		}
 	case stringLiteralKind:
 		value["type"], value["const"] = "string", n.text
+	case stringSuffixKind:
+		value["type"], value["pattern"] = "string", regexp.QuoteMeta(n.text)+`(?![\s\S])`
+	case stringGrammarKind:
+		value["type"], value["pattern"] = "string", "^(?:"+n.text+`)(?![\s\S])`
 	case decimalIntegerKind:
 		value["type"], value["x-proofkit-number-encoding"] = "string", "decimal-int64"
 	case integerLiteralKind:

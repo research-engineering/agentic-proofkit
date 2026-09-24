@@ -201,7 +201,7 @@ func sameStringSet(left, right map[string]struct{}) bool {
 
 func anchorValue(anchor workspaceAnchor) map[string]any {
 	return map[string]any{
-		"anchorId": anchor.AnchorID, "coordinateSpace": "resolved_requirement", "jsonPointer": anchor.JSONPointer,
+		"anchorId": anchor.AnchorID, "coordinateSpace": resolvedRequirementCoordinateSpace, "jsonPointer": anchor.JSONPointer,
 		"requirementId": anchor.RequirementID, "sourceId": anchor.SourceID, "sourceDigest": anchor.SourceDigest,
 	}
 }

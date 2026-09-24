@@ -5,6 +5,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity"
 )
 
 // InputStructure describes structural admission only. Raw framing, aggregate
@@ -28,6 +29,10 @@ func InputShape(limits requirementsourcemodel.Limits) (jsonshape.Shape, error) {
 }
 
 func sourceValueShape(expected *shape) (jsonshape.Shape, error) {
+	return sourceValueShapeAt(expected, "")
+}
+
+func sourceValueShapeAt(expected *shape, path string) (jsonshape.Shape, error) {
 	if expected == nil {
 		return jsonshape.Shape{}, fmt.Errorf("missing source shape declaration")
 	}
@@ -47,7 +52,7 @@ func sourceValueShape(expected *shape) (jsonshape.Shape, error) {
 		fields := make([]jsonshape.Property, 0, len(expected.fields))
 		for _, key := range sortedShapeFieldKeys(expected.fields) {
 			field := expected.fields[key]
-			child, err := sourceValueShape(field.shape)
+			child, err := sourceValueShapeAt(field.shape, path+"/"+key)
 			if err != nil {
 				return jsonshape.Shape{}, err
 			}
@@ -59,7 +64,7 @@ func sourceValueShape(expected *shape) (jsonshape.Shape, error) {
 		}
 		value = jsonshape.Object(fields...)
 	case shapeArray:
-		child, err := sourceValueShape(expected.element)
+		child, err := sourceValueShapeAt(expected.element, path+"/*")
 		if err != nil {
 			return jsonshape.Shape{}, err
 		}
@@ -69,6 +74,9 @@ func sourceValueShape(expected *shape) (jsonshape.Shape, error) {
 		value = jsonshape.BoundedArray(child, 0, expected.maxItems)
 	case shapeString:
 		value = jsonshape.String()
+		if path == "/scenarios/*/scenarioId" {
+			value = jsonshape.StringGrammar(scenarioidentity.SourcePatternBody())
+		}
 		if expected.exactString != "" {
 			value = jsonshape.StringLiteral(expected.exactString)
 		}

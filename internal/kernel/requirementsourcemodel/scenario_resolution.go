@@ -22,12 +22,14 @@ func ResolveScenario(source Model, reference ScenarioReference) (ScenarioResolut
 	for _, field := range []struct{ value, path, prefix string }{
 		{reference.SourceID, "reference.sourceId", ""},
 		{reference.RequirementID, "reference.requirementId", "REQ-"},
-		{reference.ScenarioID, "reference.scenarioId", ""},
 	} {
 		value, err := canonicalID(field.value, field.prefix, field.path)
 		if err != nil || value != field.value {
 			return ScenarioResolution{}, invalid("invalid_id", field.path)
 		}
+	}
+	if value, err := canonicalScenarioID(reference.ScenarioID, "reference.scenarioId"); err != nil || value != reference.ScenarioID {
+		return ScenarioResolution{}, invalid("invalid_id", "reference.scenarioId")
 	}
 	if reference.SourceID != source.atomic.SourceID {
 		return ScenarioResolution{}, invalid("scenario_source_mismatch", "reference.sourceId")

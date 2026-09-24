@@ -17,6 +17,7 @@ func TestProductionPackageHasOneCodecAndNoSyntaxDependency(t *testing.T) {
 	allowedOwners := map[string]struct{}{
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/admit":                  {},
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel": {},
+		"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity":       {},
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape":              {},
 		"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy":          {},
 	}

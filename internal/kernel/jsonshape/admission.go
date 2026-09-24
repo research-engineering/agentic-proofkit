@@ -205,6 +205,18 @@ func (shape Shape) admit(raw any, mode admissionMode) (any, *violation) {
 			return nil, invalid("must be the declared text literal")
 		}
 		return raw, nil
+	case stringSuffixKind:
+		value, ok := raw.(string)
+		if !ok || !strings.HasSuffix(value, n.text) {
+			return nil, invalid("must have the declared text suffix")
+		}
+		return raw, nil
+	case stringGrammarKind:
+		value, ok := raw.(string)
+		if !ok || !n.grammar.MatchString(value) {
+			return nil, invalid("must match the declared text grammar")
+		}
+		return raw, nil
 	case decimalIntegerKind:
 		value, ok := raw.(string)
 		if !ok || len(value) > 20 {

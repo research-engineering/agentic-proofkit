@@ -20,14 +20,13 @@ func TestFingerprintDependsOnEveryEffectiveRequirementOperand(t *testing.T) {
 	// Fingerprinting is a projection, not admission; a populated pointer lets the
 	// independent field walk also exercise every nested deferral operand.
 	base.Deferral = &requirementsourceadmission.Deferral{}
-	encoded, err := json.Marshal(base)
-	if err != nil {
-		t.Fatal(err)
-	}
 	var visit func(reflect.Type, []int, string)
 	visit = func(typ reflect.Type, indexes []int, path string) {
 		for i := range typ.NumField() {
 			field := typ.Field(i)
+			if !field.IsExported() {
+				continue
+			}
 			index := append(append([]int{}, indexes...), i)
 			name := path + "/" + field.Name
 			child := field.Type
@@ -39,9 +38,10 @@ func TestFingerprintDependsOnEveryEffectiveRequirementOperand(t *testing.T) {
 				continue
 			}
 			t.Run(name, func(t *testing.T) {
-				var mutated requirementsourceadmission.Requirement
-				if err := json.Unmarshal(encoded, &mutated); err != nil {
-					t.Fatal(err)
+				mutated := base
+				if base.Deferral != nil {
+					copy := *base.Deferral
+					mutated.Deferral = &copy
 				}
 				value := reflect.ValueOf(&mutated).Elem()
 				for _, n := range index {

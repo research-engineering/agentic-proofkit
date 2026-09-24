@@ -54,6 +54,7 @@ func RequirementValue(requirement Requirement) map[string]any {
 		"proofBindingRefs":     stringValues(requirement.ProofBindingRefs),
 		"requirementId":        requirement.RequirementID,
 		"riskClass":            requirement.RiskClass,
+		"sourceReviewDigest":   requirement.sourceReviewDigest,
 		"updatePolicy": map[string]any{
 			"requiresImpactDeclaration":  requirement.UpdatePolicy.RequiresImpactDeclaration,
 			"requiresProofBindingReview": requirement.UpdatePolicy.RequiresProofBindingReview,
@@ -89,6 +90,7 @@ func ComparisonFields(requirement Requirement) []ComparisonField {
 		{Name: "proofBindingRefs", Class: "set", Value: value["proofBindingRefs"]},
 		{Name: "riskClass", Class: "scalar", Value: value["riskClass"]},
 		{Name: "sharedPremises", Class: "set", Value: value["sharedPremises"]},
+		{Name: "sourceReviewDigest", Class: "scalar", Value: value["sourceReviewDigest"]},
 		{Name: "updatePolicy", Class: "map", Value: value["updatePolicy"]},
 	}
 }

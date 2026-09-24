@@ -635,6 +635,15 @@ func admitCommandContract(root string, command string, direction string, contrac
 	if contract["rootType"] != definition.Content["rootType"] {
 		return "", nil, fmt.Errorf("%s rootType does not match definition %s", context, definitionID)
 	}
+	if err := admitChildBindings(command, direction, contract, definition, definitions); err != nil {
+		return "", nil, err
+	}
+	if err := admitPathRelations(command, direction, contract, definition); err != nil {
+		return "", nil, err
+	}
+	if err := admitHandoffClauses(command, direction, contract, definition); err != nil {
+		return "", nil, err
+	}
 	if err := admitConditionModelFlags(command, direction, definitionID, definition.Content, allowedFlags); err != nil {
 		return "", nil, err
 	}

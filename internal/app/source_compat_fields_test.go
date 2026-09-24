@@ -15,7 +15,7 @@ func TestSourceCompatibilityCanonicalFieldInventory(t *testing.T) {
 		value  any
 		fields string
 	}{
-		{sourceowner.Requirement{}, "ClaimLevel Deferral ExternalNonClaimRefs Invariant Lifecycle NonClaimRefs NonClaims OwnerID ProofBindingRefs RequirementID RiskClass SharedPremises UpdatePolicy"},
+		{sourceowner.Requirement{}, "ClaimLevel Deferral ExternalNonClaimRefs Invariant Lifecycle NonClaimRefs NonClaims OwnerID ProofBindingRefs RequirementID RiskClass SharedPremises UpdatePolicy sourceReviewDigest"},
 		{sourceowner.Lifecycle{}, "EvidenceRefs ReplacementRequirementIDs State"},
 		{sourceowner.Deferral{}, "EvidenceRefs ExpiryRef MergePolicy OwnerID ReviewCondition RiskAcceptedBy"},
 		{sourceowner.UpdatePolicy{}, "RequiresImpactDeclaration RequiresProofBindingReview ReviewOwnerID"},

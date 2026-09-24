@@ -37,7 +37,7 @@ func sourceViewStructure() jsonshape.Shape {
 		jsonshape.Required("updatePolicy", shapeProperty(atomic, "updatePolicy")),
 		jsonshape.Required("deferral", jsonshape.Nullable(shapeProperty(atomic, "deferral"))),
 	}
-	for _, key := range []string{"claimLevel", "externalNonClaimRefs", "nonClaimRefs", "nonClaims", "ownerId", "proofBindingRefs", "riskClass"} {
+	for _, key := range []string{"claimLevel", "externalNonClaimRefs", "nonClaimRefs", "nonClaims", "ownerId", "proofBindingRefs", "riskClass", "sourceReviewDigest"} {
 		fields = append(fields, jsonshape.Required(key, shapeProperty(atomic, key)))
 	}
 	properties := []jsonshape.Property{
@@ -57,7 +57,7 @@ func sourceViewStructure() jsonshape.Shape {
 			jsonshape.Required("requirementIds", jsonshape.BoundedArray(shapeProperty(member, "requirementId"), 1, limits.MaxMembersPerGroup)),
 		), 0, limits.MaxGroups)),
 		jsonshape.Required("overviewPath", text),
-		jsonshape.Required("requirementsPath", text),
+		jsonshape.Required("requirementsPath", jsonshape.StringSuffix(requirementsourceadmission.RequirementsFileSuffix)),
 	}
 	for _, key := range []string{"sourceId", "specPackagePath", "sourceNonClaimRefs", "nonClaimDefinitions", "vocabulary", "scenarios", "derivations"} {
 		properties = append(properties, jsonshape.Required(key, shapeProperty(source, key)))

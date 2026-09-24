@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity"
 )
 
 var placeholderPattern = regexp.MustCompile(`(?i)\b(?:fixme|todo|tbd)\b`)
@@ -66,6 +67,13 @@ func canonicalExternalID(value string, path string) (string, error) {
 		return "", invalid("invalid_id", path)
 	}
 	return admitted, nil
+}
+
+func canonicalScenarioID(value string, path string) (string, error) {
+	if admitted, err := scenarioidentity.AdmitSourceID(value, path); err == nil {
+		return admitted, nil
+	}
+	return "", invalid("invalid_id", path)
 }
 
 func canonicalText(value string, path string, allowEmpty bool, rejectPlaceholders bool) (string, error) {

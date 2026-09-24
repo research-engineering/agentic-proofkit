@@ -84,6 +84,13 @@ func TestBuildRejectsPathDrift(t *testing.T) {
 			},
 			message: "requirementsPath must equal specPackagePath/requirements.v2.json",
 		},
+		{
+			name: "retired requirements path",
+			mutate: func(input map[string]any) {
+				input["requirementsPath"] = "docs/specs/proofkit-test/requirements.v1.json"
+			},
+			message: "requirementsPath must equal specPackagePath/requirements.v2.json",
+		},
 	}
 	for _, item := range cases {
 		t.Run(item.name, func(t *testing.T) {

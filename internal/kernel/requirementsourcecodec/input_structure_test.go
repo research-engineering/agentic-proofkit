@@ -41,12 +41,51 @@ func TestInputStructureMatchesIndependentFieldManifest(t *testing.T) {
 	if err := decoder.Decode(&wire); err != nil {
 		t.Fatal(err)
 	}
+	scenarios := wire["properties"].(map[string]any)["scenarios"].(map[string]any)
+	scenario := scenarios["items"].(map[string]any)
+	scenarioID := scenario["properties"].(map[string]any)["scenarioId"].(map[string]any)
+	if pattern, ok := scenarioID["pattern"].(string); !ok || pattern == "" {
+		t.Fatal("changed scenario identity grammar is absent from the machine structure")
+	}
+	delete(scenarioID, "pattern") // The independent manifest owns fields and bounds, not native ID grammar.
 	if !reflect.DeepEqual(wire, want) {
 		t.Fatal("source schema differs from the independent complete field/limit manifest")
 	}
 	again, err := InputStructure(limits)
 	if err != nil || !reflect.DeepEqual(again, got) {
 		t.Fatalf("nondeterministic schema: %v", err)
+	}
+}
+
+func TestInputStructureScenarioIdentityMatchesBothAdmittedLanguages(t *testing.T) {
+	shape, err := InputShape(requirementsourcemodel.DefaultLimits())
+	if err != nil {
+		t.Fatal(err)
+	}
+	scenarios, ok := shape.Property("scenarios")
+	if !ok {
+		t.Fatal("source structure lost scenarios")
+	}
+	scenario, ok := scenarios.Element()
+	if !ok {
+		t.Fatal("source scenario item is absent")
+	}
+	id, ok := scenario.Property("scenarioId")
+	if !ok {
+		t.Fatal("source scenario identity is absent")
+	}
+	for _, item := range []struct {
+		value string
+		valid bool
+	}{
+		{"scenario.one", true}, {"proofkit.surface::scenario_one", true},
+		{"proofkit.surface::", false}, {"proofkit.surface::scenario::extra", false},
+		{"scenario.one\n", false},
+	} {
+		_, err := id.Admit(item.value, "scenarioId")
+		if (err == nil) != item.valid {
+			t.Fatalf("%q: structural error=%v, want valid=%t", item.value, err, item.valid)
+		}
 	}
 }
 

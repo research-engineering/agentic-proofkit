@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/scenarioidentity"
 )
 
 const (
@@ -841,19 +842,7 @@ func admitScopedScenarioID(value string, surfaceID string, context string) (stri
 // AdmitScenarioID preserves the compact-contract owner for the encoded
 // surface_id::stable_anchor scenario identity used by child projections.
 func AdmitScenarioID(value string, context string) (string, string, error) {
-	parts := strings.Split(value, "::")
-	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-		return "", "", fmt.Errorf("%s must use surface_id::stable_anchor scenario identity", context)
-	}
-	scenarioSurfaceID, err := admit.RuleID(parts[0], context+" surface_id")
-	if err != nil {
-		return "", "", err
-	}
-	anchor, err := admit.RuleID(parts[1], context+" anchor")
-	if err != nil {
-		return "", "", err
-	}
-	return scenarioSurfaceID + "::" + anchor, scenarioSurfaceID, nil
+	return scenarioidentity.AdmitScoped(value, context)
 }
 
 // AdmitWitnessSelector preserves the compact-contract owner for selector

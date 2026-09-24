@@ -10,7 +10,7 @@ func normalizeScenarios(values []Scenario, requirements map[string]AtomicRequire
 	ids := make(map[string]struct{}, len(values))
 	for index, value := range values {
 		path := indexed("scenarios", index, "")
-		scenarioID, err := canonicalExternalID(value.ScenarioID, path+"scenarioId")
+		scenarioID, err := canonicalScenarioID(value.ScenarioID, path+"scenarioId")
 		if err != nil {
 			return nil, err
 		}

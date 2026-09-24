@@ -678,7 +678,7 @@
       "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
       "claimLevel": "blocking",
       "proofState": "witness_backed",
-      "nonClaims": ["Expected-digest coverage does not authenticate a producer, baseline, checkout, or freshness; this requirement also does not claim textual equivalence, inferred moves, product meaning, merge approval, release approval, rollout approval, or production readiness."]
+      "nonClaims": ["Expected-digest coverage and source-review digests do not authenticate a producer, baseline, checkout, or freshness; this requirement also does not claim textual equivalence, inferred moves, product meaning, merge approval, release approval, rollout approval, or production readiness."]
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-023",

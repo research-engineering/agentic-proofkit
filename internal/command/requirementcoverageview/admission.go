@@ -51,6 +51,15 @@ func admitCompositeInput(raw any) (compositeInput, error) {
 	if err != nil {
 		return compositeInput{}, err
 	}
+	links := []requirementsourceadmission.ScenarioLink{}
+	for requirementID, requirement := range proof.Requirements {
+		for _, scenario := range requirement.Scenarios {
+			links = append(links, requirementsourceadmission.ScenarioLink{RequirementID: requirementID, ScenarioID: scenario.ScenarioID})
+		}
+	}
+	if err := requirementsourceadmission.AdmitScenarioLinks([]requirementsourceadmission.Source{sourceResult.Source}, links); err != nil {
+		return compositeInput{}, err
+	}
 	var inventoryResult *testevidenceinventory.Result
 	if record["testEvidenceInventory"] != nil {
 		result, err := testevidenceinventory.Evaluate(record["testEvidenceInventory"])

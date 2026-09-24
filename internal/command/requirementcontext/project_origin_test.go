@@ -77,7 +77,21 @@ func TestProjectContextCaptureWireAdmissionAndSlice(t *testing.T) {
 			}
 			requirements := fragment["requirements"].([]any)
 			members := original["groups"].([]any)[0].(map[string]any)["members"].([]any)
-			if len(requirements) != 1 || !reflect.DeepEqual(requirements[0], expectedProjectRequirement(members[0].(map[string]any))) {
+			if len(requirements) != 1 {
+				t.Fatal("selected invariant or its separate metadata was lost")
+			}
+			projected := requirements[0].(map[string]any)
+			reviewDigest, ok := projected["sourceReviewDigest"].(string)
+			if !ok || !strings.HasPrefix(reviewDigest, "sha256:") || len(reviewDigest) != len("sha256:")+64 {
+				t.Fatal("selected invariant lost its source-bound review digest")
+			}
+			withoutDigest := make(map[string]any, len(projected)-1)
+			for key, value := range projected {
+				if key != "sourceReviewDigest" {
+					withoutDigest[key] = value
+				}
+			}
+			if !reflect.DeepEqual(withoutDigest, expectedProjectRequirement(members[0].(map[string]any))) {
 				t.Fatal("selected invariant or its separate metadata was lost")
 			}
 			if fragment["omittedRequirementCount"] != len(members)-1 {
