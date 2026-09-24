@@ -7,6 +7,9 @@ import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mj
 
 import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace} from "./workspace-navigation-harness.mjs";
 
+const fixtureWorkspaceCSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const fixtureStaticViewCSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 test("requirement boundary resolves its named source restriction and labels external references", async ({baseURL, page}) => {
   await openWorkspace(page, baseURL);
   const boundary = page.locator('.requirement-boundary');
@@ -491,6 +494,8 @@ test("download response cannot certify a later failed document", async ({baseURL
     statuses.push(status);
     response.statusCode = status;
     response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureWorkspaceCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
     if (!failing) response.setHeader("Content-Disposition", "attachment; filename=workspace.html");
     response.end("<h1>browser.fixture.workspace</h1>");
   });
@@ -530,6 +535,8 @@ test("download response cannot certify a script-created or unchanged document", 
       return;
     }
     response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
     if (attachment) {
       attachmentRequestCount++;
       response.setHeader("Content-Disposition", "attachment; filename=workspace.html");
@@ -540,7 +547,7 @@ test("download response cannot certify a script-created or unchanged document", 
   await once(server, "listening");
   const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
   try {
-    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
+    await openWorkspace(page, workspaceURL, undefined, "static-view");
     await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
     attachment = true;
     let scriptDocumentObserved = false;
@@ -552,7 +559,7 @@ test("download response cannot certify a script-created or unchanged document", 
           await page.evaluate(() => window.history.pushState({}, "", window.location.href));
         }).catch(() => undefined);
     });
-    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
+    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
     expect(attachmentRequestCount).toBeGreaterThan(0);
     // The attachment rejection is required in every engine; script replacement is required where delivery is stable.
     if (browserName !== "webkit") expect(scriptDocumentObserved).toBe(true);
@@ -574,6 +581,8 @@ test("a later failed reload cannot complete an earlier successful navigation", a
     statuses.push(status);
     response.statusCode = status;
     response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
     response.end(status === 200
       ? "<p>loading</p><script>setTimeout(() => location.reload(), 250)</script>"
       : "<h1>browser.fixture.workspace</h1>");
@@ -582,7 +591,7 @@ test("a later failed reload cannot complete an earlier successful navigation", a
   await once(server, "listening");
   const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
   try {
-    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
+    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
     expect(statuses).toEqual([200, 503]);
     await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
   } finally {
