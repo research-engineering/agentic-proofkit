@@ -11,13 +11,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/releaseauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 )
 
 const compositionKind = "proofkit.registry-consumer-proof-input-compose"
 
 var (
 	packageNamePattern        = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
-	packageVersionPattern     = regexp.MustCompile(`^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$`)
 	registryURLPattern        = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)?$`)
 	tarballNamePattern        = regexp.MustCompile(`^[A-Za-z0-9._@-]+-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\.tgz$`)
 	hexSHA1Pattern            = regexp.MustCompile(`^[0-9a-f]{40}$`)
@@ -708,7 +708,7 @@ func packageVersion(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !packageVersionPattern.MatchString(value) {
+	if !semversion.IsExact(value) {
 		return "", fmt.Errorf("%s must be an exact npm package version", context)
 	}
 	return value, nil
@@ -735,7 +735,7 @@ func registryVersionPin(raw any, expectedPackageName string, context string) (st
 		return "", fmt.Errorf("%s must point to the same package name", context)
 	}
 	version := strings.TrimPrefix(value, marker)
-	if !packageVersionPattern.MatchString(version) {
+	if !semversion.IsExact(version) {
 		return "", fmt.Errorf("%s must be an exact registry package version pin", context)
 	}
 	return value, nil

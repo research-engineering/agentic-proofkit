@@ -23,6 +23,14 @@ func TestRegistryConsumerAcceptsRegistryReleaseProof(t *testing.T) {
 	assertRuleMessage(t, record.RuleResults, "proofkit.registry-consumer.accepted", "registry consumer install proof accepted")
 }
 
+func TestPackageVersionRejectsNonSemVer(t *testing.T) {
+	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
+		if _, err := packageVersion(version, "package version"); err == nil {
+			t.Fatalf("packageVersion(%q) accepted invalid semantic version", version)
+		}
+	}
+}
+
 func TestRegistryConsumerAddsMandatoryBoundaryNonClaims(t *testing.T) {
 	record, exitCode, err := Build(validRegistryConsumerInput(t))
 	if err != nil {

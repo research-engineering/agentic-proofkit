@@ -629,6 +629,46 @@ func TestCollectExportsFindsMultipleTopLevelExportsOnOneLine(t *testing.T) {
 	assertStringSlice(t, typeExports, []string{})
 }
 
+func TestCollectExportsEndsSemicolonlessDeclarationBeforeLocalStatement(t *testing.T) {
+	source := "export const A = 1\nconst B = 2, C = 3;\nexport const D = 4;"
+	runtimeExports, typeExports, err := CollectExports(source)
+	if err != nil {
+		t.Fatalf("CollectExports() error=%v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{"A", "D"})
+	assertStringSlice(t, typeExports, []string{})
+}
+
+func TestVerifyTypeScriptPublicAPIUsesFullDollarIdentifiersAndSemanticStatementEnd(t *testing.T) {
+	repoRoot := writeTypeScriptPackageFixture(t)
+	sourcePath := filepath.Join(repoRoot, "packages", "alpha", "src", "index.ts")
+	source := "export const A = 1\nconst B = 2, C = 3;\nexport function public$() { return 1; }\nexport type Shape$ = { value: string };"
+	if err := os.WriteFile(sourcePath, []byte(source), 0o600); err != nil {
+		t.Fatalf("write source: %v", err)
+	}
+	input := publicAPIManifest()
+	entry := input["entries"].([]any)[0].(map[string]any)
+	entry["runtimeExports"] = []any{"A", "public$"}
+	entry["typeExports"] = []any{"Shape$"}
+	output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("Verify(correct manifest) output=%#v exit=%d error=%v", output, exitCode, err)
+	}
+	for _, runtimeNames := range [][]any{{"A", "C", "public$"}, {"A", "public"}} {
+		entry["runtimeExports"] = runtimeNames
+		output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot})
+		if err != nil || exitCode != 1 {
+			t.Fatalf("Verify(wrong runtime manifest %v) output=%#v exit=%d error=%v", runtimeNames, output, exitCode, err)
+		}
+	}
+	entry["runtimeExports"] = []any{"A", "public$"}
+	entry["typeExports"] = []any{"Shape"}
+	output, exitCode, err = Verify(input, Options{RepoRoot: repoRoot})
+	if err != nil || exitCode != 1 {
+		t.Fatalf("Verify(truncated type identifier) output=%#v exit=%d error=%v", output, exitCode, err)
+	}
+}
+
 func TestCollectExportsRecognizesAllLineCommentTerminators(t *testing.T) {
 	for _, source := range []string{
 		"// comment terminated by CR\rexport const Public = 3;",

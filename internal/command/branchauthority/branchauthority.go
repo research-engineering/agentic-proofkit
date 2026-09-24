@@ -233,14 +233,26 @@ func branchName(raw any, context string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if strings.Contains(value, "..") ||
+	if strings.HasPrefix(value, "-") ||
+		strings.HasSuffix(value, ".") ||
+		strings.Contains(value, "@{") ||
+		strings.Contains(value, "..") ||
 		strings.Contains(value, "//") ||
 		strings.Contains(value, `\`) ||
 		strings.HasPrefix(value, "/") ||
 		strings.HasSuffix(value, "/") ||
-		strings.HasSuffix(value, ".lock") ||
 		unsafeBranchPattern.MatchString(value) {
 		return "", fmt.Errorf("%s must be a safe branch ref", context)
+	}
+	for _, component := range strings.Split(value, "/") {
+		if strings.HasPrefix(component, ".") || strings.HasSuffix(component, ".lock") {
+			return "", fmt.Errorf("%s must be a safe branch ref", context)
+		}
+	}
+	for _, character := range value {
+		if character < 0x20 || character == 0x7f {
+			return "", fmt.Errorf("%s must be a safe branch ref", context)
+		}
 	}
 	return value, nil
 }

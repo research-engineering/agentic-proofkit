@@ -34,6 +34,14 @@ func TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock(t *testing.T) {
 	}
 }
 
+func TestVersionTextRejectsNonSemVer(t *testing.T) {
+	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
+		if _, err := versionText(version, "package version"); err == nil {
+			t.Fatalf("versionText(%q) accepted invalid semantic version", version)
+		}
+	}
+}
+
 func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
 	record, exitCode, err := Build(validExternalConsumerInput(t))
 	if err != nil {

@@ -87,6 +87,65 @@ func TestBuildRejectsSecretLikeNestedEvidenceThroughSharedScanner(t *testing.T) 
 	}
 }
 
+func TestBuildClassifiesTemporaryEndpointHosts(t *testing.T) {
+	for _, test := range []struct {
+		host      string
+		temporary bool
+	}{
+		{"trycloudflare.com", true},
+		{"demo.trycloudflare.com", true},
+		{"demo.TRYCLOUDFLARE.COM", true},
+		{"demo.trycloudflare.com.", true},
+		{"nottrycloudflare.com", false},
+		{"trycloudflare.com.example.test", false},
+	} {
+		input := validDeploymentEvidenceInput()
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId":   "proofkit.test.endpoint",
+			"endpointKind": "stable",
+			"url":          "https://" + test.host + "/proof",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil {
+			t.Fatalf("Build(%q) error=%v", test.host, err)
+		}
+		if (exitCode != 0) != test.temporary {
+			t.Fatalf("Build(%q) exit=%d state=%s, temporary=%t", test.host, exitCode, record.State, test.temporary)
+		}
+	}
+}
+
+func TestBuildAdmitsOnlyCalendarValidUTCExpiry(t *testing.T) {
+	for _, test := range []struct {
+		expiresAt string
+		valid     bool
+	}{
+		{"2024-02-29T23:59:59Z", true},
+		{"2025-02-29T23:59:59Z", false},
+		{"2026-02-31T25:61:61Z", false},
+		{"2026-01-01T00:00:00+00:00", false},
+	} {
+		input := validDeploymentEvidenceInput()
+		fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+		fact["urls"] = []any{map[string]any{
+			"endpointId":                   "proofkit.test.endpoint",
+			"endpointKind":                 "temporary",
+			"url":                          "https://demo.trycloudflare.com/proof",
+			"expiresAt":                    test.expiresAt,
+			"temporaryEndpointApprovalRef": "proofkit.test.approval",
+			"replacementPlanRef":           "proofkit.test.replacement",
+		}}
+		record, exitCode, err := Build(input)
+		if err != nil {
+			t.Fatalf("Build(%q) error=%v", test.expiresAt, err)
+		}
+		if (exitCode == 0) != test.valid {
+			t.Fatalf("Build(%q) exit=%d state=%s, valid=%t", test.expiresAt, exitCode, record.State, test.valid)
+		}
+	}
+}
+
 func validDeploymentEvidenceInput() map[string]any {
 	nonClaim := "Deployment evidence test fixture does not prove live deployment."
 	return map[string]any{

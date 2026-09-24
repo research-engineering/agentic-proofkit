@@ -43,6 +43,14 @@ func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
 	}
 }
 
+func TestPackageVersionRejectsNonSemVer(t *testing.T) {
+	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
+		if _, err := packageVersion(version, "package version"); err == nil {
+			t.Fatalf("packageVersion(%q) accepted invalid semantic version", version)
+		}
+	}
+}
+
 func TestBuildBlocksUnavailableRequiredPreconditionsWithoutAcceptedInput(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.013575457214699883334108189665727805186537481376269434889166294251758361114827")
 	for _, preconditionID := range testRequiredPreconditionIDs {

@@ -22,6 +22,17 @@ func TestBuildAcceptsPrivateSourceTrustedPublisherRelease(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsNonSemVerPackageVersions(t *testing.T) {
+	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
+		input := validRegistryReleaseInput("npm_trusted_publishing", "public")
+		input["package"].(map[string]any)["version"] = version
+		_, exitCode, err := Build(input)
+		if exitCode == 0 || err == nil {
+			t.Fatalf("Build(package.version=%q) exit=%d error=%v, want rejection", version, exitCode, err)
+		}
+	}
+}
+
 func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
 	input := validRegistryReleaseInput("npm_trusted_publishing", "private")
 

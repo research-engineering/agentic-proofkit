@@ -195,20 +195,19 @@ func TestCurrentChangeRecordNamesReviewedSemanticChanges(t *testing.T) {
 }
 
 var currentBreakingChanges = []Change{
-	{ChangeID: "proofkit.requirement-source.grouped-v2", Summary: "Public requirement sources use schemaVersion 2 grouped records and requirements.v2.json paths. The previous flat source identity and active v1 reader are retired; stable requirement and scenario IDs remain independent of group positions."},
-	{ChangeID: "proofkit.source-dependent-contracts.v2", Summary: "Source-dependent authoring, materialization, context, coverage, semantic diff, graph and browser contracts use their declared new wire identities. Coverage output binds its exact admitted requirement source by sourceDigest, and context rejects stale or foreign coverage rows. Installed CLI contract records expose the changed input and output structures and retain explicit native semantic admission."},
+	{ChangeID: "proofkit.native-admission.branch-version", Summary: "Branch authority rejects names outside the Git branch shorthand grammar, and five package, registry, release, and consumer commands reject versions outside full SemVer 2.0.0. Inputs previously accepted only because of incomplete local predicates now fail admission."},
+	{ChangeID: "proofkit.conformance-profile.ambiguous-id", Summary: "Conformance profile selection rejects duplicate records with the selected profileId instead of choosing whichever appears first. The full-manifest verification command continues to report duplicate IDs."},
+	{ChangeID: "proofkit.deployment-endpoint.admission", Summary: "Stable endpoints using case or trailing-root-dot variants of a declared temporary DNS suffix and temporary endpoints with impossible RFC3339 UTC calendar values now fail admission. An unrelated hostname ending in the same text without a DNS label boundary no longer falsely matches."},
+	{ChangeID: "proofkit.typescript-public-api.exports", Summary: "TypeScript public API manifests that truncate dollar-suffixed identifiers or claim exports from a later local declaration now fail verification. Valid full identifiers and semicolonless exports in the declared non-JSX subset are recognized."},
 }
 
-var currentAdditions = []Change{
-	{ChangeID: "proofkit.source-review-dependency-linkage", Summary: "Derived requirement records expose a sourceReviewDigest over referenced source-level boundaries, named non-claims, scenario bodies, vocabulary and derivation facts; semantic diff and impact detect changes to that admitted dependency closure. Source scenario IDs may also use the compact surface_id::stable_anchor form, and compositions reject a declared scenario bound to the wrong requirement while preserving reference-only routes. These digests are review signals, not execution or freshness evidence."},
-	{ChangeID: "proofkit.source-v2.structural-contracts", Summary: "Expose closed machine-readable structures for changed source paths and affected commands, including separate compact and structured proof reports and the agent-envelope output mode. Preserve native canonicalization and semantic replay as independent obligations."},
-	{ChangeID: "proofkit.diagnostic-json-redaction", Summary: "Go report admission, repository-owned JavaScript diagnostics and the generated TypeScript adapter reject or redact secret-shaped JSON pairs after repeated quote, whitespace, Unicode-letter, surrogate-pair or nested backslash escaping; decoding beyond the bounded budget redacts the entire value."},
-}
+var currentAdditions = []Change{}
 
 var currentMigrationSteps = []string{
-	"Keep existing consumers pinned to 0.14.21 until their tracked requirement sources and repository-owned checks are ready for the grouped source format.",
-	"Convert each active requirements.v1.json source into one requirements.v2.json grouped source while preserving stable requirement IDs, scenario IDs, lifecycle facts, non-claims and proof routes; inspect the semantic diff before replacing the editable source.",
-	"Update tree references, binding and inventory inputs, affected context and coverage producers, and source path selectors to the new contract identities; rerun native witnesses and installed CLI smoke before changing the consumer pin.",
+	"Replace caller-provided branch names that Git cannot use as branch shorthand and replace non-SemVer exact package versions before updating the CLI pin.",
+	"Remove duplicate selected profileIds and correct TypeScript public API manifests that encoded truncated dollar-suffixed names or exports borrowed from a later local declaration.",
+	"Review stable endpoint hostnames against declared temporary DNS suffixes and replace impossible temporary expiry timestamps with real RFC3339 UTC calendar values.",
+	"Rerun the repository-owned native evidence and installed CLI smoke after updating the package pin; derived reports do not themselves prove native witness quality.",
 }
 
 func validateCurrentChangeRecord(record Record, notes string) error {
@@ -229,7 +228,7 @@ func validateCurrentChangeRecord(record Record, notes string) error {
 
 func currentExpectedReleaseNotes() string {
 	lines := []string{
-		"# @research-engineering/agentic-proofkit 0.15.0",
+		"# @research-engineering/agentic-proofkit 0.16.0",
 		"",
 		"## Breaking Contract Changes",
 		"",
@@ -265,25 +264,17 @@ func currentExpectedReleaseNotes() string {
 		"",
 		"## Known Limitations",
 		"",
-		"- Adopt plan inventories only a fixed root-file catalog; it does not infer stack identity, inspect arbitrary source semantics, generate requirements, write files, or execute native evidence.",
-		"- Transactional materialization writes only owner-admitted candidate artifacts under one explicit repository root; it does not infer requirement meaning, execute native evidence, approve merge or release, provide filesystem-wide atomic visibility to concurrent readers, or protect its private namespace from a hostile same-user process.",
-		"- Agent workflow plans, prompts, text, and envelopes are derived guidance and do not execute agents, repository mutations, native witnesses, CI, release, rollout, or production operations.",
-		"- Brief agent-route packets cap pretty JSON at 3072 bytes and may defer oversized argv to explicit full detail; the bound does not claim tokenizer-specific token counts.",
-		"- Changed source paths expose their closed structural definitions. Complete nested structures for unchanged public directions remain open under SCHEMA-01, and native semantic admission remains authoritative for cross-field meaning.",
-		"- Project status and next classify materialized repository structure only; they do not execute native verification, validate receipt currentness or trust, or declare workflow completion.",
-		"- View requires an explicitly selected complete materialized project. It neither scans source files nor writes project records or executes native witnesses. Its graph contains declared relations only; coverage and diff remain unavailable. The captured snapshot does not claim filesystem freshness after inspection.",
-		"- The grouped source cutover does not infer native witness adequacy, consumer rollout or production readiness from format conversion alone.",
-		"- TSX source parsing remains unsupported.",
-		"- Managed integration baselines are cooperative byte/mode bookkeeping, not authenticated origin or protection against coordinated same-user edits. File lifecycle does not prove native host discovery, instruction loading, or approved-launcher invocation.",
-		"- Desired-absence journals and newly retained terminal receipts use schema v2. Earlier binaries reject these records without effects. Present-only v1 plan/journal bytes and historical recovery remain supported; finishing recovery does not enable downgrade of retained v2 receipts.",
-		"- Browser lookup, coverage, diff and graph fragments are derived presentation, not authenticated evidence, proof execution or an external HTTP SDK. Local graph filters apply only to the returned page; absent coverage is not a verdict. Exact numeric observation requires native JSON source-token and raw-value support; unsupported clients show unavailable instead of rounded coordinates. Annotations are session-bound and exported bytes are not revoked by later navigation; browser controls do not edit specifications or execute agents.",
+		"- Branch authority admits caller-owned branch facts but does not query Git refs or repository protection settings.",
+		"- Deployment evidence admission checks declared endpoint facts but does not connect to endpoints, authenticate evidence, or prove rollout readiness.",
+		"- The TypeScript public API scanner supports its declared non-JSX lexical subset; TSX and arbitrary TypeScript syntax are not admitted.",
+		"- Complete nested structural contracts for unchanged public directions remain open under SCHEMA-01; native admission remains authoritative for semantic constraints.",
 		"",
 		"## Install",
 		"",
 		"Primary npm channel:",
 		"",
 		"```bash",
-		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.15.0",
+		"npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.16.0",
 		"```",
 		"",
 		"Pre-1.0 npm consumers must keep this dependency exact-pinned.",
@@ -295,7 +286,7 @@ func currentExpectedReleaseNotes() string {
 		"## Rollback",
 		"",
 		"- First follow the migration and persistent-state compatibility restrictions above; changing a package pin does not roll back repository state.",
-		"- Pin npm consumers to the previous admitted version 0.14.21 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.14.21`.",
+		"- Pin npm consumers to the previous admitted version 0.15.0 with `npm install --save-dev --save-exact @research-engineering/agentic-proofkit@0.15.0`.",
 		"- Treat local package artifacts as candidates until registry identity is proven.",
 	)
 	return strings.Join(lines, "\n") + "\n"

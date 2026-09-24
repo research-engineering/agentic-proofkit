@@ -149,6 +149,28 @@ func TestBuildVerificationRejectsDuplicateProfiles(t *testing.T) {
 	assertRuleDiagnosticContains(t, record.RuleResults, "duplicate profileId=local")
 }
 
+func TestBuildProfileRejectsAmbiguousSelectedID(t *testing.T) {
+	for _, reverse := range []bool{false, true} {
+		input := validConformanceProfileInput()
+		manifest := input["manifest"].(map[string]any)
+		first := manifest["profiles"].([]any)[0].(map[string]any)
+		second := map[string]any{}
+		for key, value := range first {
+			second[key] = value
+		}
+		second["purpose"] = "Different purpose"
+		profiles := []any{first, second}
+		if reverse {
+			profiles[0], profiles[1] = profiles[1], profiles[0]
+		}
+		manifest["profiles"] = profiles
+		_, err := BuildProfile(input, "local")
+		if err == nil || !strings.Contains(err.Error(), "duplicate conformance profile local") {
+			t.Fatalf("BuildProfile(reverse=%t) error=%v, want ambiguous ID rejection", reverse, err)
+		}
+	}
+}
+
 func TestBuildVerificationRejectsSecretLikeReportVisibleText(t *testing.T) {
 	secret := "Authorization: Bearer abcdefghijklmnop"
 	input := validConformanceProfileInput()

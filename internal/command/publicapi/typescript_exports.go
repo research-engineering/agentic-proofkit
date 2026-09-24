@@ -9,8 +9,8 @@ import (
 var (
 	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
 	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
-	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b`)
-	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)\b`)
+	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s|[({<;=]|$)`)
+	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:\s|[({<;=]|$)`)
 	varDeclPattern        = regexp.MustCompile(`^export\s+(?:const|let|var)\s+(.+?);?$`)
 	exportClauseNameRegex = regexp.MustCompile(`\bas\s+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
@@ -292,9 +292,32 @@ func exportStatementEnd(masked string, start int, limit int) int {
 			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
 				return index + 1
 			}
+		case '\n', '\r':
+			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 &&
+				canEndBeforeLine(masked[start:index]) && startsTopLevelDeclaration(masked[index+1:limit]) {
+				return index
+			}
 		}
 	}
 	return limit
+}
+
+func canEndBeforeLine(statement string) bool {
+	statement = strings.TrimRight(statement, " \t\r\n")
+	if statement == "" {
+		return false
+	}
+	return !strings.ContainsRune("=,+-*/?:.([{", rune(statement[len(statement)-1]))
+}
+
+func startsTopLevelDeclaration(rest string) bool {
+	rest = strings.TrimLeft(rest, " \t\r\n")
+	for _, keyword := range []string{"const", "let", "var", "function", "class", "interface", "type", "enum", "import", "export", "async", "abstract", "declare", "namespace", "module"} {
+		if strings.HasPrefix(rest, keyword) && (len(rest) == len(keyword) || !isASCIITypeScriptIdentifierByte(rest[len(keyword)])) {
+			return true
+		}
+	}
+	return false
 }
 
 func isASCIITypeScriptIdentifierByte(value byte) bool {

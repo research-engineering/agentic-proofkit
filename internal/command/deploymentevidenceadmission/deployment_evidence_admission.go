@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
@@ -435,8 +436,12 @@ func validateEndpoint(endpoint map[string]any, context string, policy policy, bl
 		requireNonLocalRef(stringField(endpoint, "temporaryEndpointApprovalRef", context, blockedReasons), context+".temporaryEndpointApprovalRef", policy, failures)
 		requireNonLocalRef(stringField(endpoint, "replacementPlanRef", context, blockedReasons), context+".replacementPlanRef", policy, failures)
 		expiresAt := stringField(endpoint, "expiresAt", context, blockedReasons)
-		if expiresAt != nil && !rfc3339UTCRegexp.MatchString(*expiresAt) {
-			*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
+		if expiresAt != nil {
+			if !rfc3339UTCRegexp.MatchString(*expiresAt) {
+				*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
+			} else if _, err := time.Parse(time.RFC3339Nano, *expiresAt); err != nil {
+				*failures = append(*failures, context+".expiresAt must be an RFC3339 UTC timestamp")
+			}
 		}
 	}
 }
@@ -637,8 +642,10 @@ func isLocalRef(value string, policy policy) bool {
 }
 
 func hasTemporaryEndpointSuffix(value string, policy policy) bool {
+	host := strings.TrimSuffix(strings.ToLower(value), ".")
 	for _, suffix := range policy.TemporaryEndpointHostSuffixes {
-		if strings.HasSuffix(value, suffix) {
+		candidate := strings.TrimSuffix(strings.ToLower(strings.TrimPrefix(suffix, ".")), ".")
+		if host == candidate || strings.HasSuffix(host, "."+candidate) {
 			return true
 		}
 	}
