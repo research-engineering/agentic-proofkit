@@ -257,6 +257,8 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 		{".mts", "export const id = <T = string extends string ? string : never>(value: T) => value;", false},
 		{".mts", "export const id = (<T>(value: T) => value);", false},
 		{".mts", "export function id() { return <T>(value: T) => value; }", false},
+		{".mts", "export function id() { return " + strings.Repeat(" ", 512) + "<T>(value: T) => value; }", false},
+		{".mts", "export function id() { return async<T>(value: T) => value; }", false},
 		{".mts", "export const id = <\tT\t>(value: T) => value;", false},
 		{".mts", "export const id = <\vT>(value: T) => value;", false},
 		{".mts", "export const id = <\fT>(value: T) => value;", false},
@@ -268,9 +270,11 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 		{".mts", "export const id = <T extends unknown>(value: T) => value;", true},
 		{".mts", "export const id = <T extends Array<string>>(value: T) => value;", true},
 		{".mts", "export const id: <T>(value: T) => T = value => value;", true},
+		{".mts", "export const fn: (<T>(x: T) => T) = x => x;", true},
 		{".mts", "export type Fn = <T>(value: T) => T;", true},
 		{".mts", "export function id<T>(value: T) { return value; }", true},
 		{".mts", "export type Shape = { id: <T>(value: T) => T };", true},
+		{".mts", "export interface Shape { <T>(value: T): T }", true},
 		{".mts", "function id<T>(x: T) { return x; } export const value = id<number>(1);", true},
 	} {
 		path := filepath.Join(t.TempDir(), "entry"+test.extension)

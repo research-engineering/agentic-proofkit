@@ -500,7 +500,7 @@ func (scan *scanCache) collectSourceExports(filePath string, pkg packageSnapshot
 		}
 		return append([]string(nil), snapshot.runtimeExports...), append([]string(nil), snapshot.typeExports...), nil
 	}
-	runtimeExports, typeExports, err := collectExportsWithExtension(admitted.content, strings.ToLower(filepath.Ext(admitted.canonical)))
+	runtimeExports, typeExports, err := collectExportsWithExtension(admitted.content, filepath.Ext(admitted.canonical))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -614,7 +614,7 @@ func safeTypeScriptSourcePath(raw any, context string) (string, error) {
 }
 
 func requireTypeScriptSourceExtension(path string, context string) error {
-	switch strings.ToLower(filepath.Ext(filepath.FromSlash(path))) {
+	switch filepath.Ext(filepath.FromSlash(path)) {
 	case ".ts", ".mts":
 		return nil
 	default:

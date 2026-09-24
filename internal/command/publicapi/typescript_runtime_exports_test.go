@@ -33,6 +33,12 @@ func TestExpandingDeclarationsFailBeforeRuntimeBuild(t *testing.T) {
 	if _, _, err := CollectExports(source.String()); err == nil || !strings.Contains(err.Error(), "enum declarations are not admitted") {
 		t.Fatalf("CollectExports(computed enum) error=%v, want pre-build refusal", err)
 	}
+	var qualifiedNamespace strings.Builder
+	qualifiedNamespace.WriteString("namespace Root." + strings.Repeat("N", 4096) + " {")
+	for index := 0; index < 1024; index++ {
+		fmt.Fprintf(&qualifiedNamespace, "export const v%d=1;", index)
+	}
+	qualifiedNamespace.WriteString("} export const api=Root;")
 	for _, rejected := range []string{
 		`export enum E { A, B, C }`,
 		`export enum E { A = "x", B = "y" }`,
@@ -40,6 +46,8 @@ func TestExpandingDeclarationsFailBeforeRuntimeBuild(t *testing.T) {
 		`const enum E { A = 1 }; export const A = E.A;`,
 		`export enum E { A = "` + strings.Repeat("x", 4096) + `" }; export const xs = [` + strings.Repeat("E.A,", 4096) + `];`,
 		`namespace VeryLongName { export const A = 1; } export const id = VeryLongName.A;`,
+		`namespace VeryLongName.Inner { export const A = 1; } export const id = VeryLongName.Inner.A;`,
+		qualifiedNamespace.String(),
 	} {
 		if _, _, err := CollectExports(rejected); err == nil || !strings.Contains(err.Error(), "declarations are not admitted") {
 			t.Fatalf("CollectExports(expanding declaration) error=%v, want pre-build refusal", err)

@@ -23,7 +23,7 @@ func admitNoExpandingDeclarations(masked string) error {
 				cursor++
 			}
 			cursor = skipMaskedWhitespace(masked, cursor)
-			if cursor < len(masked) && masked[cursor] == '{' {
+			if cursor < len(masked) && (masked[cursor] == '{' || keyword == "namespace" && masked[cursor] == '.') {
 				return unsupportedTypeScriptSourceGrammar(keyword + " declarations are not admitted without a native compiler witness")
 			}
 		}

@@ -684,6 +684,12 @@ func TestVerifyTypeScriptPublicAPIUsesMTSGrammar(t *testing.T) {
 			if err := os.WriteFile(sourcePath, []byte("export const id = <T>(value: T) => value;"), 0o600); err != nil {
 				t.Fatal(err)
 			}
+			if extension != ".mts" {
+				if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "non-JSX TypeScript source") {
+					t.Fatalf("Verify(%s) exit=%d error=%v, want exact-extension refusal", extension, exitCode, err)
+				}
+				return
+			}
 			if _, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); exitCode != 1 || err == nil || !strings.Contains(err.Error(), "ambiguous .mts generic syntax") {
 				t.Fatalf("Verify(ambiguous %s) exit=%d error=%v, want grammar rejection", extension, exitCode, err)
 			}

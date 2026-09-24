@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "a852beccd5c58982238f2ad3dfc14369d383e66ee3017091f51e82fcc43653a3"
+	cliContractPublicABISHA256               = "63191b148e88d1a7860d2d088bb8e3252fa81a2892381eef5e7561ca449cc479"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2081,12 +2081,19 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	if grammar["moduleSemantics"] != "static_esm_declarations_only" {
 		t.Fatalf("TypeScript public API module semantics drifted: %#v", grammar)
 	}
+	if grammar["extensionCase"] != "exact_lowercase" {
+		t.Fatalf("TypeScript public API extension spelling drifted: %#v", grammar["extensionCase"])
+	}
 	if !strings.Contains(grammar["syntaxAuthority"].(string), "pinned TypeScript compiler syntax and type validity are non-claims") {
 		t.Fatalf("TypeScript public API syntax authority drifted: %#v", grammar["syntaxAuthority"])
 	}
 	if grammar["maxGenericAngleNesting"] != float64(128) {
 		t.Fatalf("TypeScript public API generic nesting budget drifted: %#v", grammar["maxGenericAngleNesting"])
 	}
+	assertStringSet(t, stringsFromAny(grammar["recognizedAngleExpressionContexts"].([]any)), []string{
+		"direct untyped exported const, let, or var initializer",
+		"return expression with optional parentheses or async",
+	}, "TypeScript public API guarded angle expression contexts")
 	assertStringSet(t, stringsFromAny(grammar["supportedExtensions"].([]any)), []string{".mts", ".ts"}, "TypeScript public API source extensions")
 	admitted := strings.Join(stringsFromAny(grammar["admittedExportForms"].([]any)), " ")
 	if !strings.Contains(admitted, "generic type annotations in exported variable declarations") || strings.Contains(admitted, "enum declarations") {

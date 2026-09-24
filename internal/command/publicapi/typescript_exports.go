@@ -17,8 +17,7 @@ var (
 	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
 	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
 	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
-	genericTypePosition    = regexp.MustCompile(`^export[[:space:]]+(?:(?:const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*:|type[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=)[[:space:]]*$`)
-	typeAliasPrefix        = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=`)
+	directInitializerAngle = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*=[[:space:]]*\(*[[:space:]]*(?:async[[:space:]]*)?$`)
 	erasedInterfaceName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])interface[[:space:]]+(as|satisfies)[[:space:]]*(?:\{|<|extends[[:space:]])`)
 	erasedTypeAliasName    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$])type[[:space:]]+(as)[[:space:]]*=`)
 )
@@ -28,7 +27,6 @@ func CollectExports(source string) ([]string, []string, error) {
 }
 
 func collectExportsWithExtension(source string, extension string) ([]string, []string, error) {
-	extension = strings.ToLower(extension)
 	scan, err := scanTypeScriptSource(source)
 	if err != nil {
 		return nil, nil, err
@@ -200,13 +198,30 @@ func readTypeScriptAttributeString(source string, index int) (string, int, bool)
 func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error {
 	masked := scan.masked
 	exportIndex, latestExport := 0, -1
+	returnEligible := false
+	directCandidateChecked := false
 	for start := 0; start < len(masked); start++ {
-		if masked[start] != '<' {
+		if strings.HasPrefix(masked[start:], "return") && (start == 0 || !isASCIITypeScriptIdentifierByte(masked[start-1]) && masked[start-1] != '.') && (start+6 == len(masked) || !isASCIITypeScriptIdentifierByte(masked[start+6])) {
+			returnEligible = true
+			start += len("return") - 1
 			continue
 		}
+		if returnEligible && strings.HasPrefix(masked[start:], "async") && (start+5 == len(masked) || !isASCIITypeScriptIdentifierByte(masked[start+5])) {
+			start += len("async") - 1
+			continue
+		}
+		if masked[start] != '<' {
+			if returnEligible && !strings.ContainsRune(" \t\r\n\v\f(", rune(masked[start])) {
+				returnEligible = false
+			}
+			continue
+		}
+		recognizedReturn := returnEligible
+		returnEligible = false
 		for exportIndex < len(scan.topLevelExportOffsets) && scan.topLevelExportOffsets[exportIndex] <= start {
 			latestExport = scan.topLevelExportOffsets[exportIndex]
 			exportIndex++
+			directCandidateChecked = false
 		}
 		index := start + 1
 		for index < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[index])) {
@@ -234,7 +249,15 @@ func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error
 					for after < len(masked) && strings.ContainsRune(" \t\r\n\v\f", rune(masked[after])) {
 						after++
 					}
-					if after < len(masked) && masked[after] == '(' && !angleInTypeContext(masked, start, latestExport) {
+					if after < len(masked) && masked[after] == '(' {
+						directInitializer := false
+						if !directCandidateChecked && latestExport >= 0 {
+							directInitializer = directInitializerAngle.MatchString(masked[latestExport:start])
+							directCandidateChecked = true
+						}
+						if !recognizedReturn && !directInitializer {
+							goto nextCandidate
+						}
 						if malformedConstraint {
 							return unsupportedTypeScriptSourceGrammar("conditional generic constraints require parentheses")
 						}
@@ -281,34 +304,6 @@ func admitGenericAngleSyntax(scan typeScriptLexicalScan, extension string) error
 	nextCandidate:
 	}
 	return nil
-}
-
-func angleInTypeContext(masked string, start int, latestExport int) bool {
-	if latestExport >= 0 {
-		prefix := masked[latestExport:start]
-		if genericTypePosition.MatchString(prefix) || typeAliasPrefix.MatchString(prefix) {
-			return true
-		}
-	}
-	end := start
-	for end > 0 && strings.ContainsRune(" \t\r\n\v\f", rune(masked[end-1])) {
-		end--
-	}
-	if end == 0 {
-		return false
-	}
-	if masked[end-1] == ':' {
-		return true
-	}
-	if !isASCIITypeScriptIdentifierByte(masked[end-1]) {
-		return false
-	}
-	begin := end - 1
-	for begin > 0 && isASCIITypeScriptIdentifierByte(masked[begin-1]) {
-		begin--
-	}
-	word := masked[begin:end]
-	return word != "async" && word != "return"
 }
 
 // Only erased declaration names are substituted for esbuild; original bytes own type names and offsets.
