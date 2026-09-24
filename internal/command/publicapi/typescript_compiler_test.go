@@ -248,7 +248,11 @@ func TestMTSGenericArrowAdmissionMatchesCompiler(t *testing.T) {
 	}{
 		{".ts", "export const id = <T>(value: T) => value;", true},
 		{".mts", "export const id = <T>(value: T) => value;", false},
+		{".mts", "export const id = async<T>(value: T) => value;", false},
+		{".mts", "export const id = <T = unknown>(value: T) => value;", false},
 		{".mts", "export const id = <T,>(value: T) => value;", true},
+		{".mts", "export const id = <T = unknown,>(value: T) => value;", true},
+		{".mts", "export const id = <T extends unknown>(value: T) => value;", true},
 	} {
 		path := filepath.Join(t.TempDir(), "entry"+test.extension)
 		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
@@ -286,5 +290,38 @@ func TestDuplicateTypeOnlyModifierMatchesCompilerRejection(t *testing.T) {
 	}
 	if _, _, err := CollectExports(source); err == nil || !strings.Contains(err.Error(), "duplicate type-only re-export modifier") {
 		t.Fatalf("CollectExports() error=%v, want duplicate modifier rejection", err)
+	}
+}
+
+func TestTypeOnlyReexportAttributesMatchCompiler(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiler := filepath.Join(repoRoot, "node_modules", ".bin", "tsc")
+	if _, err := os.Stat(compiler); err != nil {
+		t.Skip("locked TypeScript compiler is not installed")
+	}
+	folder := t.TempDir()
+	if err := os.WriteFile(filepath.Join(folder, "other.ts"), []byte("export type T = number;"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		source string
+		valid  bool
+	}{
+		{`export type { T } from "./other.js" with { type: "json" };`, false},
+		{`export type { T } from "./other.js" with { "resolution-mode": "import" };`, true},
+	} {
+		path := filepath.Join(folder, "entry.ts")
+		if err := os.WriteFile(path, []byte(test.source), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		command := exec.Command(compiler, "--noEmit", "--module", "nodenext", "--moduleResolution", "nodenext", path)
+		output, compilerErr := command.CombinedOutput()
+		_, _, admissionErr := CollectExports(test.source)
+		if (compilerErr == nil) != test.valid || (admissionErr == nil) != test.valid {
+			t.Fatalf("source=%q compilerError=%v output=%s admissionError=%v, valid=%t", test.source, compilerErr, output, admissionErr, test.valid)
+		}
 	}
 }

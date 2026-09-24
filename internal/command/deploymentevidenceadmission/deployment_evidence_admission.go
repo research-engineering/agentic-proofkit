@@ -254,6 +254,11 @@ func admitPolicy(raw any) (policy, error) {
 	if err != nil {
 		return policy{}, err
 	}
+	for _, indicator := range localRefIndicators {
+		if normalizeLocalHostIndicator(indicator) == "" {
+			return policy{}, fmt.Errorf("deployment evidence localRefIndicators must not normalize to empty")
+		}
+	}
 	forbiddenValueIndicators, err := sortedText(record["forbiddenValueIndicators"], "deployment evidence forbiddenValueIndicators", true)
 	if err != nil {
 		return policy{}, err

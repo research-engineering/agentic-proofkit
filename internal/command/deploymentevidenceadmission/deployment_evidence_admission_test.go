@@ -222,6 +222,28 @@ func TestBuildDoesNotExpandRootDotIndicatorAcrossLabelBoundary(t *testing.T) {
 	}
 }
 
+func TestPolicyRejectsLocalIndicatorThatNormalizesToEmpty(t *testing.T) {
+	for _, indicator := range []string{"\u00ad", "\u200b"} {
+		input := validDeploymentEvidenceInput()
+		input["policy"].(map[string]any)["localRefIndicators"] = []any{indicator}
+		_, err := admitPolicy(input["policy"])
+		if err == nil || !strings.Contains(err.Error(), "must not normalize to empty") || strings.Contains(err.Error(), indicator) {
+			t.Fatalf("admitPolicy() error=%v, want non-disclosing empty-normalization rejection", err)
+		}
+	}
+	input := validDeploymentEvidenceInput()
+	input["policy"].(map[string]any)["localRefIndicators"] = []any{"\u00adnot-local"}
+	fact := input["evidence"].(map[string]any)["facts"].([]any)[0].(map[string]any)
+	fact["urls"] = []any{map[string]any{
+		"endpointId": "proofkit.test.endpoint", "endpointKind": "stable",
+		"url": "https://public.example/proof",
+	}}
+	record, exitCode, err := Build(input)
+	if err != nil || exitCode != 0 || record.State != "passed" {
+		t.Fatalf("Build(nonempty normalized indicator) exit=%d state=%s error=%v, want passed", exitCode, record.State, err)
+	}
+}
+
 func TestBuildAdmitsOnlyCalendarValidUTCExpiry(t *testing.T) {
 	for _, test := range []struct {
 		expiresAt string

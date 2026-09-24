@@ -7,16 +7,17 @@ import (
 )
 
 var (
-	namedExportPattern     = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	typeExportPattern      = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
-	runtimeDeclPattern     = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	typeDeclPattern        = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
-	constEnumPattern       = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
-	varDeclStartPattern    = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
-	exportClauseNameRegex  = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
-	identifierRegex        = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
-	commonJSBindingPattern = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
-	ambiguousMTSGeneric    = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])<[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*>[[:space:]]*\(`)
+	namedExportPattern      = regexp.MustCompile(`^export[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	typeExportPattern       = regexp.MustCompile(`^export[[:space:]]+type[[:space:]]+(\{[^}]+\})[[:space:]]+from[[:space:]]+["'][^"']+["']`)
+	runtimeDeclPattern      = regexp.MustCompile(`^export[[:space:]]+(?:abstract[[:space:]]+)?(?:async[[:space:]]+)?(?:function|class|enum)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	typeDeclPattern         = regexp.MustCompile(`^export[[:space:]]+(interface|type)[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)(?:[[:space:]]|[({<;=]|$)`)
+	constEnumPattern        = regexp.MustCompile(`^export[[:space:]]+const[[:space:]]+enum[[:space:]]+`)
+	varDeclStartPattern     = regexp.MustCompile(`^export[[:space:]]+(?:const|let|var)[[:space:]]+`)
+	exportClauseNameRegex   = regexp.MustCompile(`\bas[[:space:]]+([A-Za-z_$][A-Za-z0-9_$]*)$`)
+	identifierRegex         = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
+	commonJSBindingPattern  = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:exports|module)(?:$|[^A-Za-z0-9_$])`)
+	ambiguousMTSGeneric     = regexp.MustCompile(`(?:^|[^A-Za-z0-9_$.])(?:async[[:space:]]*)?<[[:space:]]*[A-Za-z_$][A-Za-z0-9_$]*(?:[[:space:]]*=[^<>,]+)?[[:space:]]*>[[:space:]]*\(`)
+	resolutionModeAttribute = regexp.MustCompile(`^with[[:space:]]*\{[[:space:]]*["']resolution-mode["'][[:space:]]*:[[:space:]]*["'](?:import|require)["'][[:space:]]*\}`)
 )
 
 func CollectExports(source string) ([]string, []string, error) {
@@ -50,14 +51,20 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 		if strings.HasPrefix(statement, "export declare") {
 			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
 		}
-		if match := typeExportPattern.FindStringSubmatch(statement); match != nil {
-			if err := addTypeClauseExports(match[1], typeExports); err != nil {
+		if match := typeExportPattern.FindStringSubmatchIndex(statement); match != nil {
+			if err := admitTypeReexportAttributes(source[start+match[1]:]); err != nil {
+				return nil, nil, err
+			}
+			if err := addTypeClauseExports(statement[match[2]:match[3]], typeExports); err != nil {
 				return nil, nil, err
 			}
 			continue
 		}
-		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
-			if err := addNamedClauseTypeExports(match[1], typeExports); err != nil {
+		if match := namedExportPattern.FindStringSubmatchIndex(statement); match != nil {
+			if err := admitTypeReexportAttributes(source[start+match[1]:]); err != nil {
+				return nil, nil, err
+			}
+			if err := addNamedClauseTypeExports(statement[match[2]:match[3]], typeExports); err != nil {
 				return nil, nil, err
 			}
 			continue
@@ -86,6 +93,16 @@ func collectExportsWithExtension(source string, extension string) ([]string, []s
 		}
 	}
 	return runtimeExports, sortedSet(typeExports), nil
+}
+
+func admitTypeReexportAttributes(rawTail string) error {
+	tail := strings.TrimLeft(rawTail, " \t\r\n\v\f")
+	if strings.HasPrefix(tail, "with") && (len(tail) == len("with") || !isASCIITypeScriptIdentifierByte(tail[len("with")])) {
+		if !resolutionModeAttribute.MatchString(tail) {
+			return unsupportedTypeScriptSourceGrammar("type-only re-export attributes must use resolution-mode")
+		}
+	}
+	return nil
 }
 
 // Only erased interface names are substituted for esbuild; original bytes own type names and offsets.

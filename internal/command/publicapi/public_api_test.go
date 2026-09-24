@@ -705,6 +705,20 @@ func TestCollectExportsRejectsDuplicateTypeOnlyModifier(t *testing.T) {
 	}
 }
 
+func TestCollectExportsAdmitsOnlyResolutionModeTypeAttributes(t *testing.T) {
+	invalid := `export type { T } from "./other.js" with { type: "json" };`
+	if _, _, err := CollectExports(invalid); err == nil || !strings.Contains(err.Error(), "attributes must use resolution-mode") {
+		t.Fatalf("CollectExports(invalid attributes) error=%v, want rejection", err)
+	}
+	valid := `export type { T } from "./other.js" with { "resolution-mode": "import" };`
+	runtimeExports, typeExports, err := CollectExports(valid)
+	if err != nil {
+		t.Fatalf("CollectExports(valid attributes) error=%v", err)
+	}
+	assertStringSlice(t, runtimeExports, []string{})
+	assertStringSlice(t, typeExports, []string{"T"})
+}
+
 func TestCollectExportsDoesNotInventExportsFromCommaBearingInitializers(t *testing.T) {
 	source := strings.Join([]string{
 		"export const a = {x: 1, b: 2}, c = [\"x\", \"y\"];",

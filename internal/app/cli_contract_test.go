@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "182477df0a78c31404a0d119e61f15bbb32fd8fb75d4e988b0f9fd9493cbad7d"
+	cliContractPublicABISHA256               = "c8539285af974f8d10c15f6b618f0ca07ee2af734bff78df0b4936239f76a2d7"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2061,7 +2061,8 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"typeExports",
 	}, "TypeScript public API required fields")
 	pathAuthority := item["pathAuthority"].(string)
-	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") || !strings.Contains(pathAuthority, "canonical resolved source target") {
+	if !strings.Contains(pathAuthority, "packageManifestPath") || !strings.Contains(pathAuthority, "sourcePath") || !strings.Contains(pathAuthority, "canonical resolved source target") ||
+		!strings.Contains(pathAuthority, ".ts or .mts") || strings.Contains(pathAuthority, ".cts") {
 		t.Fatalf("TypeScript public API path authority is incomplete: %q", pathAuthority)
 	}
 	if rule := item["exportConditionsRule"]; rule != "non-empty and sorted unique by condition" {
@@ -2093,9 +2094,10 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		"unresolved named runtime re-exports",
 		"compiler-invalid type and interface declaration names",
 		"duplicate type-only re-export modifier",
+		"type-only re-export attributes other than resolution-mode",
 	}, "TypeScript public API rejected export forms")
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "bare single-identifier angle bracket before parenthesis in .mts", "CommonJS-ambiguity guards"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "ambiguous bare or default single-parameter angle form", "CommonJS-ambiguity guards"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}
@@ -2108,7 +2110,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "native compiler witness") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }
