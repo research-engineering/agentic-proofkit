@@ -1217,6 +1217,7 @@ func TestBuildJSONClassifiesRemovedRequirementAsNotApplicableWarning(t *testing.
 		"replacementRequirementIds": []any{},
 		"state":                     "removed",
 	}
+	record["requirementProofBinding"].(map[string]any)["requirements"].([]any)[0].(map[string]any)["claimLevel"] = "advisory"
 	record["coverageUniverse"].(map[string]any)["completenessDeclaration"] = "selected_paths_advisory"
 
 	view, exitCode, err := BuildJSON(input, Options{})
@@ -1262,7 +1263,7 @@ func TestBuildJSONScopesSelectedOwnersWithoutBlockingOutOfScopeRequirements(t *t
 		"ownerId":       "proofkit.other",
 		"proofState":    "witness_backed",
 		"requirementId": "REQ-PROOFKIT-COVERAGE-999",
-		"specPath":      "docs/specs/proofkit-other/requirements.v2.json",
+		"specPath":      "docs/specs/proofkit-coverage/requirements.v2.json",
 	})
 	binding["bindings"] = append(binding["bindings"].([]any), map[string]any{
 		"commandIds":         []any{"proofkit.other.command"},
