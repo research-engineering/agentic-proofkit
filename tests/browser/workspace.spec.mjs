@@ -551,18 +551,31 @@ test("download response cannot certify a script-created or unchanged document", 
     await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
     attachment = true;
     let scriptDocumentObserved = false;
+    let releaseObservation;
+    const observationBarrier = new Promise((resolve) => { releaseObservation = resolve; });
+    let finishScriptAction;
+    const scriptAction = new Promise((resolve) => { finishScriptAction = resolve; });
     page.once("download", () => {
       void page.evaluate(() => window.location.assign("javascript:'<h1>browser.fixture.workspace</h1><i id=script-document></i>'"))
         .then(async () => {
           await page.locator("#script-document").waitFor({state: "attached"});
+          await page.evaluate(() => window.history.pushState({}, "", window.location.href)).catch(() => undefined);
+          await observationBarrier;
           scriptDocumentObserved = true;
-          await page.evaluate(() => window.history.pushState({}, "", window.location.href));
-        }).catch(() => undefined);
+        }).catch(() => undefined).finally(finishScriptAction);
     });
-    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
-    expect(attachmentRequestCount).toBeGreaterThan(0);
+    try {
+      await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+      expect(attachmentRequestCount).toBeGreaterThan(0);
+      if (browserName !== "webkit") expect(scriptDocumentObserved).toBe(false);
+    } finally {
+      releaseObservation();
+    }
     // The attachment rejection is required in every engine; script replacement is required where delivery is stable.
-    if (browserName !== "webkit") expect(scriptDocumentObserved).toBe(true);
+    if (browserName !== "webkit") {
+      await scriptAction;
+      expect(scriptDocumentObserved).toBe(true);
+    }
     if (scriptDocumentObserved) await expect(page.locator("#script-document")).toHaveCount(1);
   } finally {
     server.closeAllConnections();
