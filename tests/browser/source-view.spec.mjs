@@ -6,7 +6,7 @@ const requirementId = "REQ-CONSUMER-001";
 const sourceHeading = "Requirement Source View: browser.fixture.requirements";
 
 test("source view renders declared scenarios and provenance without granting execution authority", async ({sourceViewURL, page}) => {
-  await openWorkspace(page, sourceViewURL, sourceHeading);
+  await openWorkspace(page, sourceViewURL, sourceHeading, "static-view");
   const summary = page.locator(".summary");
   for (const [section, record] of [["Vocabulary", "TERM-BROWSER"], ["Declared Scenarios", "SCN-BROWSER"], ["Declared Derivations", "DRV-BROWSER"]]) {
     await summary.locator("summary").filter({hasText: new RegExp(`^${section}$`)}).click();
@@ -27,7 +27,7 @@ test("source view renders declared scenarios and provenance without granting exe
 });
 
 test("source search preserves the record set and count across cards and table", async ({sourceViewURL, page}) => {
-  await openWorkspace(page, sourceViewURL, sourceHeading);
+  await openWorkspace(page, sourceViewURL, sourceHeading, "static-view");
   for (const [query, ids] of [["does not approve", [requirementId]], [requirementId, [requirementId]], ["no-such-record", []]]) {
     await page.getByRole("searchbox").fill(query);
     for (const mode of ["cards", "table", "cards"]) {
@@ -46,14 +46,14 @@ test("source search preserves the record set and count across cards and table", 
 });
 
 test("source navigation rejects an incorrect view identity", async ({sourceViewURL, page}) => {
-  await expect(openWorkspace(page, sourceViewURL, "Requirement Source View: missing.source")).rejects.toThrow();
+  await expect(openWorkspace(page, sourceViewURL, "Requirement Source View: missing.source", "static-view")).rejects.toThrow();
   await expect(page.getByRole("heading", {name: sourceHeading, exact: true})).toBeVisible();
 });
 
 for (const width of [390, 1280]) {
   test(`source select labels stay grouped at ${width}px`, async ({sourceViewURL, page}) => {
     await page.setViewportSize({width, height: 900});
-    await openWorkspace(page, sourceViewURL, sourceHeading);
+    await openWorkspace(page, sourceViewURL, sourceHeading, "static-view");
     await expect(page.getByRole("searchbox", {name: "Search", exact: true})).toBeVisible();
     for (const id of ["proofkit-view-mode", "proofkit-filter-owner", "proofkit-filter-claim-level", "proofkit-filter-risk-class", "proofkit-filter-lifecycle"]) {
       const label = page.locator(`label[for="${id}"]`);
@@ -71,7 +71,7 @@ for (const width of [390, 1280]) {
 
   test(`source paths remain readable without overflow at ${width}px`, async ({sourceViewURL, page}) => {
     await page.setViewportSize({width, height: 900});
-    await openWorkspace(page, sourceViewURL, sourceHeading);
+    await openWorkspace(page, sourceViewURL, sourceHeading, "static-view");
     const sourcePath = page.locator(".summary dt").filter({hasText: /^Requirements source$/}).locator("xpath=following-sibling::dd[1]").locator("code");
     await expect(sourcePath).toHaveText(`docs/specs/${"source".repeat(20)}/requirements.v2.json`);
     const layout = await page.evaluate(() => ({width: innerWidth, scrollWidth: document.documentElement.scrollWidth}));
