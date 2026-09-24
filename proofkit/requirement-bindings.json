@@ -1247,10 +1247,20 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
-      "scenarioId": "proofkit.package-boundary.typescript-fail-closed-source-grammar",
-      "witnessId": "proofkit.typescript-public-api.fail-closed-source-grammar",
+      "scenarioId": "proofkit.package-boundary.typescript-lexical-guardrails",
+      "witnessId": "proofkit.typescript-public-api.lexical-guardrails",
       "witnessKind": "contract",
       "witnessPath": "internal/command/publicapi/public_api_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyTypeScriptPublicAPIPreservesDollarSuffixedIdentifiers",
+          "command": "go test ./internal/command/publicapi -run '^TestVerifyTypeScriptPublicAPIPreservesDollarSuffixedIdentifiers$'"
+        },
+        {
+          "selector": "TestCollectExportsRejectsLexicallyAmbiguousOrOutOfGrammarSources",
+          "command": "go test ./internal/command/publicapi -run '^TestCollectExportsRejectsLexicallyAmbiguousOrOutOfGrammarSources$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],
