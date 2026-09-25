@@ -16,7 +16,7 @@ type privateJSONValue struct {
 	privateJSONFields
 }
 
-func checkJSONFieldDecode[T any](t *testing.T, input string, want T, reject bool) {
+func checkJSONFieldDecode[T any](t *testing.T, input string, want T, reject bool) T {
 	t.Helper()
 	var native T
 	if err := json.Unmarshal([]byte(input), &native); err != nil {
@@ -30,11 +30,12 @@ func checkJSONFieldDecode[T any](t *testing.T, input string, want T, reject bool
 		if err == nil || !strings.Contains(err.Error(), "exact declared field") {
 			t.Fatalf("admission error = %v, want exact-case rejection; stdlib populated %#v", err, native)
 		}
-		return
+		return got
 	}
 	if err != nil || !reflect.DeepEqual(got, native) {
 		t.Fatalf("admission decoded %#v, error = %v; stdlib decoded %#v", got, err, native)
 	}
+	return got
 }
 
 func TestJSONFieldsPrivateValuePromotion(t *testing.T) {
@@ -154,8 +155,11 @@ func TestJSONFieldsIgnoredAndExtensionKeys(t *testing.T) {
 		Ignored           string `json:"-"`
 		privateJSONFields
 	}
-	checkJSONFieldDecode(t, `{"HIDDEN":"x","PRIVATE":"x","IGNORED":"x","extension":{"VALUE":1},"value":"set"}`,
+	got := checkJSONFieldDecode(t, `{"HIDDEN":"x","PRIVATE":"x","IGNORED":"x","extension":{"VALUE":1},"value":"set"}`,
 		record{privateJSONFields: privateJSONFields{Value: "set"}}, false)
+	if got.private != "" || got.privateJSONScalar != "" {
+		t.Fatal("native-ignored fields were populated")
+	}
 }
 
 type jsonLeftPayload struct {
@@ -331,6 +335,7 @@ func TestJSONFieldsTaggedEmbedding(t *testing.T) {
 	checkJSONFieldDecode(t, `{"payload":{"VALUE":"set"}}`, want, true)
 
 	type dashName struct {
+		//lint:ignore SA5008 Deliberately distinguish the literal dash name from an ignored field.
 		Value   string `json:"-,omitempty"`
 		Ignored string `json:"-"`
 	}
@@ -348,18 +353,22 @@ func checkUnsupportedJSONTarget[T any](t *testing.T, input string) {
 
 func TestJSONFieldsUnsupportedTagDeclarations(t *testing.T) {
 	type leading struct {
+		//lint:ignore SA5008 Deliberately malformed target tag tests fail-closed schema admission.
 		Value string `json:"\\private-marker"`
 	}
 	type prefix struct {
+		//lint:ignore SA5008 Deliberately malformed target tag tests fail-closed schema admission.
 		Value string `json:"private-marker\\name"`
 	}
 	type quoted struct {
 		Value string `json:"'private-marker'"`
 	}
 	type doubleQuoted struct {
+		//lint:ignore SA5008 Deliberately malformed target tag tests fail-closed schema admission.
 		Value string `json:"\"private-marker\""`
 	}
 	type backtick struct {
+		//lint:ignore SA5008 Deliberately malformed target tag tests fail-closed schema admission.
 		Value string `json:"\x60private-marker"`
 	}
 	for _, input := range []string{`{}`, `{"Value":"set"}`, `{"VALUE":"set"}`, `{"extension":true}`} {
@@ -379,6 +388,7 @@ func TestJSONFieldsUnsupportedTagDeclarations(t *testing.T) {
 	checkJSONFieldDecode(t, `null`, doubleQuoted{}, false)
 	checkJSONFieldDecode(t, `null`, backtick{}, false)
 	type embedded struct {
+		//lint:ignore SA5008 Deliberately malformed embedded tag must not become an admitted field.
 		privateJSONFields `json:"\\private-marker"`
 	}
 	checkUnsupportedJSONTarget[embedded](t, `{}`)
@@ -439,14 +449,20 @@ func TestJSONFieldsUnsupportedTagsRespectIgnoredAndOpaqueBoundaries(t *testing.T
 	type ignored struct {
 		private string
 		Hidden  struct {
+			//lint:ignore SA5008 Ignored parent must not expose this deliberately malformed child tag.
 			Value string `json:"\\private-marker"`
 		} `json:"-"`
+		//lint:ignore SA5008 Ignored private scalar must be pruned before this malformed tag is inspected.
 		privateJSONScalar `json:"\\scalar-marker"`
 	}
-	checkJSONFieldDecode(t, `{"extension":true}`, ignored{}, false)
+	got := checkJSONFieldDecode(t, `{"extension":true}`, ignored{}, false)
+	if got.private != "" || got.privateJSONScalar != "" {
+		t.Fatal("native-ignored fields were populated")
+	}
 
 	type opaque struct {
 		jsonOpaqueFields
+		//lint:ignore SA5008 Custom JSON decoding must own even a deliberately malformed internal tag.
 		Invalid string `json:"\\private-marker"`
 	}
 	input := `{"VALUE":"owned by unmarshaler"}`

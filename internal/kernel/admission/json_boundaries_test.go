@@ -80,7 +80,10 @@ func checkJSONPointerBoundary[T any](t *testing.T, mode string) {
 			hidden T
 			Value  string `json:"value"`
 		}
-		checkJSONFieldDecode(t, `{"hidden":{},"HIDDEN":{},"value":"ok"}`, private{Value: "ok"}, false)
+		got := checkJSONFieldDecode(t, `{"hidden":{},"HIDDEN":{},"value":"ok"}`, private{Value: "ok"}, false)
+		if !reflect.ValueOf(&got.hidden).Elem().IsZero() {
+			t.Fatal("native-ignored pointer cycle was populated")
+		}
 	case "absent":
 		checkJSONFieldDecode(t, `{"value":"ok"}`, record{Value: "ok"}, false)
 	case "null":
@@ -122,6 +125,7 @@ func checkJSONPointerBoundary[T any](t *testing.T, mode string) {
 }
 
 type jsonFromFields struct {
+	//lint:ignore SA5008 JSONFrom owns its representation despite this deliberately malformed internal tag.
 	Invalid string `json:"\\reserved"`
 	Raw     string
 }
@@ -133,6 +137,7 @@ func (value *jsonFromFields) UnmarshalJSONFrom(decoder *jsontext.Decoder) error 
 }
 
 type jsonTextFields struct {
+	//lint:ignore SA5008 Text decoding owns string values despite this deliberately malformed internal tag.
 	Invalid string `json:"\\reserved"`
 	Raw     string
 }
@@ -388,6 +393,7 @@ func TestJSONFieldsMarshalOnlyStillChecksObjectsAndPromotion(t *testing.T) {
 
 func TestJSONFieldsTablesAreValueDirected(t *testing.T) {
 	type unused struct {
+		//lint:ignore SA5008 An absent child must not inspect this deliberately malformed target tag.
 		Invalid string `json:"\\reserved"`
 	}
 	type record struct {
