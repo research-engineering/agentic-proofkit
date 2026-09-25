@@ -27,11 +27,11 @@ npm exec --offline -- agentic-proofkit adopt plan --repo-root . --mode audit-fro
 ```
 <!-- proofkit:first-action:end -->
 
-The plan returns authoring tasks and owner questions. It reads only a fixed
-root-file catalog; it does not analyze arbitrary source semantics, write a
-specification or run tests. An agent must inspect the selected code and design
-repo-specific checks with the owner. `--repo-root .` selects the repository;
-`--offline` resolves the already-installed dependency.
+The plan returns authoring tasks and a guidance reference for owner clarification.
+It reads only a fixed root-file catalog; it does not analyze arbitrary source
+semantics, write a specification or run tests. An agent must inspect the selected
+code and design repo-specific checks with the owner. `--repo-root .` selects the
+repository; `--offline` resolves the already-installed dependency.
 
 Before opening a project in the browser, review the candidate artifacts and
 follow the separate [materialization workflow](docs/proofkit-contract-map.md#agent-decision-procedure):

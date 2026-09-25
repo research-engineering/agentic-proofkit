@@ -111,6 +111,60 @@ func TestInstalledWheelContinuationUsesExactPythonModuleProfileWithoutNPM(t *tes
 	})
 }
 
+func TestInstalledWheelOnboardingHelpWithoutNPM(t *testing.T) {
+	repositoryRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	withWorkingDirectory(t, repositoryRoot, func() {
+		fixture := prepareInstalledWheelFixture(t, repositoryRoot)
+		if err := installPythonWheel(fixture.venvPython, fixture.wheelPath, fixture.environment); err != nil {
+			t.Fatal(err)
+		}
+		environment := pythonVerificationEnvironment(fixture.environment, map[string]string{
+			"PATH":                              t.TempDir(),
+			cliexec.LauncherProfileEnvironment:  cliexec.ProfileNPMOffline,
+			cliexec.PythonExecutableEnvironment: filepath.Join(fixture.consumer, "wrong-python"),
+		})
+		output, err := runCommandWithEnvironment(fixture.consumer, environment, fixture.venvPython, "-c", "import sys; print(sys.executable)")
+		if err != nil {
+			t.Fatalf("resolve actual interpreter: %v\n%s", err, output)
+		}
+		pythonExecutable := strings.TrimSuffix(string(output), "\n")
+		if !filepath.IsAbs(pythonExecutable) || string(output) != pythonExecutable+"\n" {
+			t.Fatalf("invalid actual interpreter identity: %q", output)
+		}
+		renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfilePythonModule, pythonExecutable)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, command := range []string{"stack-preset", "requirement-source-admission"} {
+			t.Run(command, func(t *testing.T) {
+				for _, args := range [][]string{{command, "--help"}, {command, "-h"}, {"help", command}} {
+					output, err := runArgvWithEnvironment(fixture.consumer, environment, renderer.Argv(args...))
+					if err != nil {
+						t.Fatalf("installed wheel help failed without npm: %v\n%s", err, output)
+					}
+					help := string(output)
+					for _, forbidden := range []string{"npm", "node_modules", "Connected request template", "https://", "http://"} {
+						if strings.Contains(help, forbidden) {
+							t.Errorf("installed wheel help contains %q", forbidden)
+						}
+					}
+					if strings.Count(help, "  "+renderer.DisplayCommand("adopt", "materialize", "plan", "--help")+"\n") != 1 {
+						t.Error("installed wheel help lost its actual-interpreter continuation")
+					}
+				}
+			})
+		}
+		output, err = runArgvWithEnvironment(fixture.consumer, environment, renderer.Argv("adopt", "materialize", "plan", "--help"))
+		if err != nil || strings.Count(string(output), "Connected request template") != 1 ||
+			!strings.Contains(string(output), renderer.DisplayCommand("requirement-source-admission")+" --input <packet> --input-pointer /requirementSources/0") {
+			t.Fatalf("installed wheel guide continuation failed without npm: %v\n%s", err, output)
+		}
+	})
+}
+
 func TestInstalledPythonCarrierRejectsContractReplacementRemovalAndSymlink(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Fatal("Windows wheels are not supported")

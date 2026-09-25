@@ -886,6 +886,23 @@ func TestExactTarballOnboardingTrace(t *testing.T) {
 		if err := verifyInstalledOnboardingTraceWithCarrier(consumer, snapshot.Contract, snapshot.Readme, runInstalledWithInput, runInstalledBinaryWithInput); err != nil {
 			return err
 		}
+		args, err := installedREADMEWorkflowRoutes(string(snapshot.Readme))
+		if err != nil {
+			return err
+		}
+		result, err := runInstalledWithInput(consumer, nil, args...)
+		if err != nil || result.ExitCode != 0 || len(result.Stderr) != 0 {
+			t.Fatalf("installed README first action failed: result=%+v error=%v", result, err)
+		}
+		text := string(result.Stdout)
+		for _, prefix := range []string{"Next 1: ", "Next 2: ", "Next 3: ", "Next 4: ", "Evidence template: native-evidence-guidance\n"} {
+			if strings.Count(text, "\n"+prefix) != 1 {
+				t.Fatalf("installed README first action lost ordered authoring tasks or guidance: %q", prefix)
+			}
+		}
+		if strings.Contains(text, "Owner questions:") {
+			t.Fatal("installed README first action inferred concrete owner questions")
+		}
 		return verifyInstalledREADMEWorkflow(consumer)
 	}); err != nil {
 		t.Fatalf("exact tarball onboarding trace failed: %v", err)

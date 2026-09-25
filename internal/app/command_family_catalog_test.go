@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/stackpreset"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 )
 
 func TestCommandFamilyCatalogMatchesDescriptors(t *testing.T) {
@@ -104,7 +105,11 @@ func TestStackPresetVocabularyProjectsFromOneOwner(t *testing.T) {
 	if !slices.Equal(descriptor.flagValueChoices["--preset"], choices) {
 		t.Fatalf("descriptor preset choices=%v contract choices=%v", descriptor.flagValueChoices["--preset"], choices)
 	}
-	help := commandUsage(descriptor)
+	renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfileNPMOffline, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	help := commandUsageWithRenderer(descriptor, renderer)
 	const prefix = "agentic-proofkit stack-preset --preset <"
 	start := strings.Index(help, prefix)
 	if start < 0 {
@@ -168,8 +173,65 @@ func TestExistingHelpEntrypointsRemainCompatible(t *testing.T) {
 	if !ok {
 		t.Fatal("requirement-source-admission descriptor missing")
 	}
-	if strings.Count(commandUsage(requirementSource), "Path: node_modules/@research-engineering/agentic-proofkit/README.md") != 1 {
+	renderer, err := cliexec.AdmitLauncherProfile(cliexec.ProfileNPMOffline, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(commandUsageWithRenderer(requirementSource, renderer), "Path: node_modules/@research-engineering/agentic-proofkit/README.md") != 1 {
 		t.Fatal("requirement-source-admission help does not expose exactly one installed README continuation")
+	}
+}
+
+func TestOnboardingHelpCarrierDocumentation(t *testing.T) {
+	for _, carrier := range []struct{ profile, python string }{
+		{cliexec.ProfilePath, ""},
+		{cliexec.ProfileNPMOffline, ""},
+		{cliexec.ProfilePythonModule, "/example/python 3"},
+	} {
+		t.Run(carrier.profile, func(t *testing.T) {
+			renderer, err := cliexec.AdmitLauncherProfile(carrier.profile, carrier.python)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, command := range []string{"stack-preset", "requirement-source-admission"} {
+				t.Run(command, func(t *testing.T) {
+					var canonical string
+					for _, args := range [][]string{{command, "--help"}, {command, "-h"}, {"help", command}} {
+						var stdout, stderr bytes.Buffer
+						status := RunWithRenderer(t.Context(), args, panicReader{}, &stdout, &stderr, renderer)
+						help := stdout.String()
+						if status != 0 || stderr.Len() != 0 || (canonical != "" && help != canonical) {
+							t.Fatalf("help aliases disagree or fail: args=%v status=%d stderr=%q", args, status, stderr.String())
+						}
+						canonical = help
+						wantPointers := 0
+						if carrier.profile == cliexec.ProfileNPMOffline {
+							wantPointers = 1
+						}
+						for _, pointer := range []string{
+							"Optional human first-input example for a local npm install (CLI guidance is available below):",
+							"Path: node_modules/@research-engineering/agentic-proofkit/README.md",
+						} {
+							if strings.Count(help, pointer) != wantPointers {
+								t.Errorf("help pointer %q count=%d, want %d", pointer, strings.Count(help, pointer), wantPointers)
+							}
+						}
+						continuation := "  " + renderer.DisplayCommand("adopt", "materialize", "plan", "--help") + "\n"
+						if strings.Count(help, continuation) != 1 {
+							t.Error("help lost the exact carrier-specific CLI continuation")
+						}
+						for _, forbidden := range []string{"Connected request template", "https://", "http://"} {
+							if strings.Contains(help, forbidden) {
+								t.Errorf("help contains duplicated input or a web dependency: %q", forbidden)
+							}
+						}
+						if carrier.profile != cliexec.ProfileNPMOffline && (strings.Contains(help, "npm") || strings.Contains(help, "node_modules")) {
+							t.Error("non-npm help contains npm documentation or commands")
+						}
+					}
+				})
+			}
+		})
 	}
 }
 

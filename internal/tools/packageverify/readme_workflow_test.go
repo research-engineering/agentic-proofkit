@@ -15,6 +15,10 @@ func TestREADMEWorkflowRoutes(t *testing.T) {
 		t.Fatal(err)
 	}
 	readme := string(content)
+	if !strings.Contains(readme, "The plan returns authoring tasks and a guidance reference for owner clarification.") ||
+		strings.Contains(readme, "The plan returns authoring tasks and owner questions.") {
+		t.Error("README must describe authoring tasks and guidance, not generated owner questions")
+	}
 	args, err := installedREADMEWorkflowRoutes(readme)
 	if err != nil {
 		t.Fatal(err)
