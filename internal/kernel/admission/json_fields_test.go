@@ -150,7 +150,7 @@ type privateJSONScalar string
 func TestJSONFieldsIgnoredAndExtensionKeys(t *testing.T) {
 	type record struct {
 		privateJSONScalar `json:"hidden"`
-		private           string `json:"private"`
+		private           string
 		Ignored           string `json:"-"`
 		privateJSONFields
 	}
@@ -180,13 +180,39 @@ func TestJSONFieldsSiblingAmbiguity(t *testing.T) {
 		jsonLeftFields
 		jsonRightFields
 	}
-	type tagged struct {
-		jsonTaggedFields
-		jsonOtherTaggedFields
-	}
+	// Build the intentionally ambiguous schema at runtime: its duplicate tags
+	// are the test input, not an accidental declaration to exempt from go vet.
+	tagged := reflect.StructOf([]reflect.StructField{
+		{Name: "Left", Type: reflect.TypeFor[jsonTaggedFields](), Anonymous: true},
+		{Name: "Right", Type: reflect.TypeFor[jsonOtherTaggedFields](), Anonymous: true},
+	})
 	for _, input := range []string{`{"Value":{"LEFT":"set"}}`, `{"VALUE":{"RIGHT":"set"}}`} {
 		checkJSONFieldDecode(t, input, plain{}, false)
-		checkJSONFieldDecode(t, input, tagged{}, false)
+		checkJSONRuntimeFieldsIgnored(t, input, tagged)
+	}
+}
+
+func checkJSONRuntimeFieldsIgnored(t *testing.T, input string, target reflect.Type) {
+	t.Helper()
+	native := reflect.New(target)
+	if err := json.Unmarshal([]byte(input), native.Interface()); err != nil || !native.Elem().IsZero() {
+		t.Fatalf("native ignored-field control: %v, %#v", err, native.Interface())
+	}
+	value, err := DecodeJSON(strings.NewReader(input), int64(len(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := rejectCaseFoldedTypedKeys(value, target); err != nil {
+		t.Fatalf("ignored native fields became known: %v", err)
+	}
+}
+
+func TestJSONFieldsIgnoredRuntimeTags(t *testing.T) {
+	for _, tag := range []string{`json:"private"`, `json:"\\private-marker"`} {
+		target := reflect.StructOf([]reflect.StructField{
+			{Name: "private", PkgPath: reflect.TypeFor[privateJSONFields]().PkgPath(), Type: reflect.TypeFor[string](), Tag: reflect.StructTag(tag)},
+		})
+		checkJSONRuntimeFieldsIgnored(t, `{"private":"x","PRIVATE":"x","extension":true}`, target)
 	}
 }
 
@@ -411,11 +437,11 @@ func TestJSONFieldsOpaqueUnmarshalerBoundaries(t *testing.T) {
 
 func TestJSONFieldsUnsupportedTagsRespectIgnoredAndOpaqueBoundaries(t *testing.T) {
 	type ignored struct {
-		private string `json:"\\private-marker"`
+		private string
 		Hidden  struct {
 			Value string `json:"\\private-marker"`
 		} `json:"-"`
-		privateJSONScalar `json:"\\private-marker"`
+		privateJSONScalar `json:"\\scalar-marker"`
 	}
 	checkJSONFieldDecode(t, `{"extension":true}`, ignored{}, false)
 

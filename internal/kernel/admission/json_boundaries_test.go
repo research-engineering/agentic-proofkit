@@ -77,7 +77,7 @@ func checkJSONPointerBoundary[T any](t *testing.T, mode string) {
 		checkJSONFieldDecode(t, `{"Hidden":{},"HIDDEN":{},"value":"ok"}`, ignored{Value: "ok"}, false)
 	case "private":
 		type private struct {
-			hidden T      `json:"hidden"`
+			hidden T
 			Value  string `json:"value"`
 		}
 		checkJSONFieldDecode(t, `{"hidden":{},"HIDDEN":{},"value":"ok"}`, private{Value: "ok"}, false)
