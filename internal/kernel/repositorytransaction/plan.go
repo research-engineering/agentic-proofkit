@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path"
 	"sort"
 	"strings"
@@ -38,21 +39,62 @@ func RecoveryTransactionID(err error) (string, bool) {
 }
 
 func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, error) {
+	return buildPlanWithDependencies(ctx, rootPath, targets, nativePlanDependencies())
+}
+
+type planDependencies struct {
+	openLease     func(context.Context, string) (*InspectionLease, error)
+	inspectTarget func(*os.Root, string, int64) (Snapshot, []byte, error)
+	closeLease    func(*InspectionLease) error
+}
+
+func nativePlanDependencies() planDependencies {
+	return planDependencies{openLease: OpenInspectionLease, inspectTarget: inspectTarget, closeLease: (*InspectionLease).Close}
+}
+
+func buildPlanWithDependencies(ctx context.Context, rootPath string, targets []Target, dependencies planDependencies) (plan Plan, returnErr error) {
 	if err := ctx.Err(); err != nil {
 		return Plan{}, fmt.Errorf("repository transaction planning interrupted: %w", err)
 	}
 	if len(targets) == 0 || len(targets) > MaximumOperations {
 		return Plan{}, fmt.Errorf("repository transaction target count must be between 1 and %d", MaximumOperations)
 	}
-	root, rootID, err := openRepository(rootPath)
+	// Finalize cancellation after any admitted lease has been closed, including
+	// failed admission. Operational cleanup errors must not become retry guidance.
+	defer func() {
+		if err := ctx.Err(); err != nil {
+			plan = Plan{}
+			if isReadCleanup(returnErr) {
+				returnErr = errors.Join(returnErr, err)
+			} else {
+				returnErr = fmt.Errorf("repository transaction planning interrupted: %w", err)
+			}
+		}
+	}()
+	lease, err := dependencies.openLease(ctx, rootPath)
 	if err != nil {
 		return Plan{}, err
 	}
-	defer root.Close()
-	if pending, err := pendingTransactionState(root); err != nil {
-		return Plan{}, err
-	} else if pending.Exists {
-		return Plan{}, &RecoveryRequiredError{TransactionID: pending.TransactionID}
+	defer func() {
+		if closeErr := dependencies.closeLease(lease); closeErr != nil {
+			plan = Plan{}
+			returnErr = closeErr
+		}
+	}()
+	root := lease.root
+	// Without an existing namespace there is no cooperative lock. Do not read
+	// pending state unlocked; final identity validation rejects its appearance.
+	if lease.controlNamespace {
+		pending, err := pendingTransactionState(root)
+		if err != nil {
+			return Plan{}, err
+		}
+		if err := lease.VerifyRootIdentity(); err != nil {
+			return Plan{}, err
+		}
+		if pending.Exists {
+			return Plan{}, &RecoveryRequiredError{TransactionID: pending.TransactionID}
+		}
 	}
 
 	ordered := make([]Target, len(targets))
@@ -61,7 +103,7 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 		ordered[index].Content = append([]byte(nil), target.Content...)
 	}
 	sort.Slice(ordered, func(left, right int) bool { return ordered[left].Path < ordered[right].Path })
-	plan := Plan{RootID: rootID}
+	plan = Plan{RootID: lease.rootID}
 	directories := map[string]struct{}{}
 	prefixSpellings := map[string]string{}
 	var aggregate int64
@@ -104,7 +146,7 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 				directories[directory] = struct{}{}
 			}
 		}
-		before, beforeContent, err := inspectTarget(root, targetPath, MaximumFileBytes)
+		before, beforeContent, err := dependencies.inspectTarget(root, targetPath, MaximumFileBytes)
 		if err != nil {
 			return Plan{}, err
 		}
@@ -153,6 +195,9 @@ func BuildPlan(ctx context.Context, rootPath string, targets []Target) (Plan, er
 		return Plan{}, fmt.Errorf("admit repository transaction plan output: %w", err)
 	}
 	plan.constructedTransactionID = plan.TransactionID
+	if err := lease.VerifyRootIdentity(); err != nil {
+		return Plan{}, err
+	}
 	return plan, nil
 }
 

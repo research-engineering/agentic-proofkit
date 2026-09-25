@@ -117,6 +117,18 @@ func hasPendingTransactionState(root *os.Root) (bool, error) {
 }
 
 func pendingTransactionState(root *os.Root) (pendingState, error) {
+	return pendingTransactionStateWithReaders(root, pendingStateReaders{
+		journal: loadJournal, preparingJournal: loadPreparingJournal, terminalReceipt: loadTerminalReceipt,
+	})
+}
+
+type pendingStateReaders struct {
+	journal          func(*os.Root) (Plan, error)
+	preparingJournal func(*os.Root) (Plan, bool, error)
+	terminalReceipt  func(*os.Root, string) (terminalReceipt, error)
+}
+
+func pendingTransactionStateWithReaders(root *os.Root, readers pendingStateReaders) (pendingState, error) {
 	exists, err := controlNamespaceExists(root)
 	if err != nil || !exists {
 		return pendingState{}, err
@@ -145,11 +157,19 @@ func pendingTransactionState(root *os.Root) (pendingState, error) {
 		if err := validatePrivateDirectory(root, activeDirectory, 0o700); err != nil {
 			return pendingState{}, err
 		}
-		if plan, loadErr := loadJournal(root); loadErr == nil {
+		plan, loadErr := readers.journal(root)
+		if isReadCleanup(loadErr) {
+			return pendingState{}, loadErr
+		}
+		if loadErr == nil {
 			pending.TransactionID = plan.TransactionID
 			return pending, nil
 		}
-		if plan, admitted, inspectErr := loadPreparingJournal(root); inspectErr == nil && admitted {
+		plan, admitted, inspectErr := readers.preparingJournal(root)
+		if isReadCleanup(inspectErr) {
+			return pendingState{}, inspectErr
+		}
+		if inspectErr == nil && admitted {
 			pending.TransactionID = plan.TransactionID
 		}
 		return pending, nil
@@ -167,7 +187,10 @@ func pendingTransactionState(root *os.Root) (pendingState, error) {
 			return pendingState{}, nil
 		}
 		if len(children) == 1 && children[0].Name() == terminalReceiptName {
-			receipt, receiptErr := loadTerminalReceipt(root, ControlDirectory+"/"+entry.Name())
+			receipt, receiptErr := readers.terminalReceipt(root, ControlDirectory+"/"+entry.Name())
+			if isReadCleanup(receiptErr) {
+				return pendingState{}, receiptErr
+			}
 			if receiptErr == nil && receipt.TransactionID == transactionID && receipt.State == state {
 				return pendingState{}, nil
 			}
@@ -189,7 +212,21 @@ func controlEntries(root *os.Root) ([]fs.DirEntry, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open repository transaction control directory")
 	}
-	defer directory.Close()
+	return readControlEntries(directory)
+}
+
+type controlDirectoryReader interface {
+	ReadDir(int) ([]fs.DirEntry, error)
+	Close() error
+}
+
+func readControlEntries(directory controlDirectoryReader) (entries []fs.DirEntry, returnErr error) {
+	defer func() {
+		if closeErr := closeReadResource(directory, "control directory"); closeErr != nil {
+			entries = nil
+			returnErr = closeErr
+		}
+	}()
 	entries, err := directory.ReadDir(4)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, fmt.Errorf("read repository transaction control directory")

@@ -23,7 +23,7 @@ func openNoFollow(*os.Root, string) (*os.File, error) {
 	return nil, fmt.Errorf("repository transactions require darwin or linux")
 }
 
-func lockDirectory(*os.File) error {
+func lockDirectory(*os.File, transactionLockMode) error {
 	return fmt.Errorf("repository transactions require darwin or linux")
 }
 

@@ -38,9 +38,10 @@ func build(raw any) (map[string]any, error) {
 		entries = input.Inventory.Inventory.Entries
 		failures = append(failures, unknownInventoryRefs(entries, knownRequirementIDs, knownOwnerInvariantIDs, knownCommandIDs, knownWitnessRefs)...)
 	}
-	requirements := buildRequirementCoverage(input, entries, input.Inventory, &failures, &warnings)
-	ownerInvariantCoverage := buildOwnerInvariantCoverage(input, entries, input.Inventory, &warnings)
-	commandCoverage := buildCommandCoverage(input, entries, &failures, &warnings)
+	relations := indexInventoryRelations(entries, knownRequirementIDs, knownOwnerInvariantIDs, knownCommandIDs)
+	requirements := buildRequirementCoverage(input, relations.byRequirement, input.Inventory, &failures, &warnings)
+	ownerInvariantCoverage := buildOwnerInvariantCoverage(input, relations.byOwnerInvariant, input.Inventory, &warnings)
+	commandCoverage := buildCommandCoverage(input, relations.byCommand, &failures, &warnings)
 	unmappedTests := unprojectedTestEntries(entries, requirements, ownerInvariantCoverage, commandCoverage)
 	coverageBasis, err := buildCoverageBasis(input, entries)
 	if err != nil {
@@ -119,7 +120,7 @@ func build(raw any) (map[string]any, error) {
 	return output, nil
 }
 
-func buildOwnerInvariantCoverage(input compositeInput, entries []testevidenceinventory.Entry, inventory *testevidenceinventory.Result, warnings *[]string) []map[string]any {
+func buildOwnerInvariantCoverage(input compositeInput, entriesByInvariant map[string][]testevidenceinventory.Entry, inventory *testevidenceinventory.Result, warnings *[]string) []map[string]any {
 	ownerSet := mapSet(input.CoverageUniverse.OwnerIDs)
 	invariants := make([]ownerInvariant, 0, len(input.OwnerInvariantRegistry.Invariants))
 	for _, invariant := range input.OwnerInvariantRegistry.Invariants {
@@ -132,7 +133,7 @@ func buildOwnerInvariantCoverage(input compositeInput, entries []testevidenceinv
 	})
 	result := make([]map[string]any, 0, len(invariants))
 	for _, invariant := range invariants {
-		matches := entriesReferencingOwnerInvariant(entries, invariant.OwnerInvariantID)
+		matches := entriesByInvariant[invariant.OwnerInvariantID]
 		state := "missing_test_inventory"
 		evidenceClass := ""
 		if inventory != nil && inventory.Report.State == "passed" {
@@ -159,7 +160,7 @@ func buildOwnerInvariantCoverage(input compositeInput, entries []testevidenceinv
 	}
 	return result
 }
-func buildRequirementCoverage(input compositeInput, entries []testevidenceinventory.Entry, inventory *testevidenceinventory.Result, failures *[]string, warnings *[]string) []map[string]any {
+func buildRequirementCoverage(input compositeInput, entriesByRequirement map[string][]testevidenceinventory.Entry, inventory *testevidenceinventory.Result, failures *[]string, warnings *[]string) []map[string]any {
 	ownerSet := mapSet(input.CoverageUniverse.OwnerIDs)
 	sourceRequirements := scopedSourceRequirements(input.Source, ownerSet)
 	sort.Slice(sourceRequirements, func(left, right int) bool {
@@ -169,7 +170,7 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 	for _, requirement := range sourceRequirements {
 		proof, hasProof := input.Proof.Requirements[requirement.RequirementID]
 		hasProofRoute := hasProof && (input.Proof.Mode == "compact" && len(proof.Scenarios) > 0 || input.Proof.Mode == "structured" && proof.ProofState == "witness_backed")
-		entriesForRequirement := entriesReferencingRequirement(entries, requirement.RequirementID)
+		entriesForRequirement := entriesByRequirement[requirement.RequirementID]
 		commandIDs := proof.CommandIDs
 		if hasProof && input.Proof.Mode == "compact" && len(commandIDs) == 0 {
 			commandIDs = entryCommandRefs(entriesForRequirement)
@@ -229,12 +230,12 @@ func buildRequirementCoverage(input compositeInput, entries []testevidenceinvent
 	}
 	return result
 }
-func buildCommandCoverage(input compositeInput, entries []testevidenceinventory.Entry, failures *[]string, warnings *[]string) []map[string]any {
+func buildCommandCoverage(input compositeInput, entriesByCommand map[string][]testevidenceinventory.Entry, failures *[]string, warnings *[]string) []map[string]any {
 	ownerSet := mapSet(input.CoverageUniverse.OwnerIDs)
 	commands := sortedUnique(append(scopedProofCommandIDs(input, ownerSet), input.CoverageUniverse.CommandRefs...))
 	result := make([]map[string]any, 0, len(commands))
 	for _, commandID := range commands {
-		matches := entriesReferencingCommand(entries, commandID)
+		matches := entriesByCommand[commandID]
 		state := commandState(matches)
 		commandFailures, commandWarnings := commandCoverageDiagnostics(commandID, state, input.CoverageUniverse.CompletenessDeclaration)
 		*failures = append(*failures, commandFailures...)
@@ -411,35 +412,40 @@ func unknownRefs(testID string, kind string, refs []string, known map[string]str
 	}
 	return failures
 }
-func entriesReferencingRequirement(entries []testevidenceinventory.Entry, requirementID string) []testevidenceinventory.Entry {
-	result := []testevidenceinventory.Entry{}
-	for _, entry := range entries {
-		if containsString(entry.RequirementRefs, requirementID) {
-			result = append(result, entry)
-		}
-	}
-	sort.Slice(result, func(left, right int) bool { return result[left].TestID < result[right].TestID })
-	return result
+
+type inventoryRelationIndex struct {
+	byRequirement    map[string][]testevidenceinventory.Entry
+	byOwnerInvariant map[string][]testevidenceinventory.Entry
+	byCommand        map[string][]testevidenceinventory.Entry
 }
-func entriesReferencingOwnerInvariant(entries []testevidenceinventory.Entry, invariantID string) []testevidenceinventory.Entry {
-	result := []testevidenceinventory.Entry{}
+
+func indexInventoryRelations(entries []testevidenceinventory.Entry, requirements, invariants, commands map[string]struct{}) inventoryRelationIndex {
+	index := inventoryRelationIndex{
+		byRequirement:    map[string][]testevidenceinventory.Entry{},
+		byOwnerInvariant: map[string][]testevidenceinventory.Entry{},
+		byCommand:        map[string][]testevidenceinventory.Entry{},
+	}
+	// Inventory admission sorts unique TestIDs and rejects repeated refs per
+	// entry. Appending in that order preserves each many-to-many projection.
+	// Only projection domains need buckets; diagnostics still use all entries.
 	for _, entry := range entries {
-		if containsString(entry.OwnerInvariantRefs, invariantID) {
-			result = append(result, entry)
+		for _, ref := range entry.RequirementRefs {
+			if _, queried := requirements[ref]; queried {
+				index.byRequirement[ref] = append(index.byRequirement[ref], entry)
+			}
+		}
+		for _, ref := range entry.OwnerInvariantRefs {
+			if _, queried := invariants[ref]; queried {
+				index.byOwnerInvariant[ref] = append(index.byOwnerInvariant[ref], entry)
+			}
+		}
+		for _, ref := range entry.CommandRefs {
+			if _, queried := commands[ref]; queried {
+				index.byCommand[ref] = append(index.byCommand[ref], entry)
+			}
 		}
 	}
-	sort.Slice(result, func(left, right int) bool { return result[left].TestID < result[right].TestID })
-	return result
-}
-func entriesReferencingCommand(entries []testevidenceinventory.Entry, commandID string) []testevidenceinventory.Entry {
-	result := []testevidenceinventory.Entry{}
-	for _, entry := range entries {
-		if containsString(entry.CommandRefs, commandID) {
-			result = append(result, entry)
-		}
-	}
-	sort.Slice(result, func(left, right int) bool { return result[left].TestID < result[right].TestID })
-	return result
+	return index
 }
 func guidanceSummary(state string, failures []string, warnings []string) map[string]any {
 	nextAction := "Inspect caller-owned coverage classifications before making repository policy decisions."
