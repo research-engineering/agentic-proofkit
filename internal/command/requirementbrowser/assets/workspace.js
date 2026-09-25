@@ -609,7 +609,8 @@ for (const control of [questionInput, submit]) {
 clearSelectionButton.addEventListener("click", clearSelection);
 submit.addEventListener("click", async () => {
   if (submit.disabled || handoffUnavailable()) return;
-  const question = questionInput.value.trim();
+  // Preserve the old JS trim before applying Go TrimSpace's whitespace set.
+  const question = questionInput.value.trim().replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "");
   if (selectionState.targets.length === 0 || !question) {
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");

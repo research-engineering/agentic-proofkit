@@ -75,6 +75,60 @@ func TestHandoffQuestionUTF8ByteBoundaries(t *testing.T) {
 	}
 }
 
+func TestHandoffQuestionTrimSpaceByteBoundaries(t *testing.T) {
+	session := workspaceSessionForInvariant(t, "q")
+	for _, item := range []struct{ name, left, right, retainedLeft, retainedRight string }{
+		{name: "leading NEL", left: "\u0085"},
+		{name: "trailing NEL", right: "\u0085"},
+		{name: "both-edge NEL", left: "\u0085", right: "\u0085"},
+		{name: "mixed whitespace", left: " \t\u00a0\u0085\u2003", right: "\u2009\u0085\u202f\n "},
+		{name: "BOM is not server whitespace", left: "\ufeff", right: "\ufeff", retainedLeft: "\ufeff", retainedRight: "\ufeff"},
+		{name: "BOM hidden by NEL", left: "\u0085\ufeff", right: "\ufeff\u0085", retainedLeft: "\ufeff", retainedRight: "\ufeff"},
+		{name: "whitespace inside BOM is retained", left: "\u0085\ufeff \u0085", right: "\u0085 \ufeff\u0085", retainedLeft: "\ufeff \u0085", retainedRight: "\u0085 \ufeff"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			coreBytes := maxHandoffQuestionBytes - len(item.retainedLeft) - len(item.retainedRight)
+			core := strings.Repeat("\U0001f9ed", coreBytes/4) + strings.Repeat("a", coreBytes%4)
+			exact := item.retainedLeft + core + item.retainedRight
+			packet, err := buildHandoffPacket(handoffRequest(t, []any{handoffAnnotation(0, 1, "q", item.left+core+item.right)}), session)
+			if err != nil {
+				t.Fatalf("canonical question at byte limit was rejected: %v", err)
+			}
+			annotation := packet["annotations"].([]any)[0].(map[string]any)
+			if packet["state"] != "submitted" || annotation["question"] != exact || len(exact) != maxHandoffQuestionBytes {
+				t.Fatal("packet must retain the exact server-trimmed question at the byte limit")
+			}
+			if _, err := buildHandoffPacket(handoffRequest(t, []any{handoffAnnotation(0, 1, "q", item.left+core+"b"+item.right)}), session); err == nil || !strings.Contains(err.Error(), "question exceeds byte limit") {
+				t.Fatalf("canonical question one byte over limit was not rejected: %v", err)
+			}
+		})
+	}
+}
+
+func TestHandoffQuestionTrimSpaceNonEmptyControls(t *testing.T) {
+	session := workspaceSessionForInvariant(t, "q")
+	for _, item := range []struct{ name, question, want string }{
+		{"empty whitespace", "\u0085 \t\u0085", ""},
+		{"BOM only", "\ufeff", "\ufeff"},
+		{"NEL-hidden BOM", "\u0085\ufeff\u0085", "\ufeff"},
+		{"BOM outside NEL", "\ufeff\u0085\ufeff", "\ufeff\u0085\ufeff"},
+		{"internal whitespace and normalization forms", "\u0085e\u0301 \u0085\ufeff \u00e9\u0085", "e\u0301 \u0085\ufeff \u00e9"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			annotation, err := admitAnnotation(handoffAnnotation(0, 1, "q", item.question), session)
+			if item.want == "" {
+				if err == nil || !strings.Contains(err.Error(), "must be non-empty text") {
+					t.Fatalf("Go-whitespace-only question was not rejected as empty: %v", err)
+				}
+				return
+			}
+			if err != nil || annotation["question"] != item.want {
+				t.Fatalf("server-only trimming changed question: %v", err)
+			}
+		})
+	}
+}
+
 func TestHandoffDerivedContextByteBoundary(t *testing.T) {
 	session := workspaceSessionForInvariant(t, strings.Repeat("c", maxHandoffContextBytes))
 	if _, err := buildHandoffPacket(handoffRequest(t, []any{handoffAnnotation(0, 1, "c", "Why?")}), session); err == nil || !strings.Contains(err.Error(), "review context exceeds byte limit") {

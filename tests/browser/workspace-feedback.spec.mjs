@@ -51,7 +51,16 @@ for (const statusCode of [409, 410]) {
   });
 }
 
-for (const [name, unit] of [["ASCII", "a"], ["CJK", "\u754c"], ["astral", "\u{1f9ed}"], ["combining", "e\u0301"]]) {
+for (const [name, unit, left = " \n", right = "\n ", retainedLeft = "", retainedRight = ""] of [
+  ["ASCII", "a"], ["CJK", "\u754c"], ["astral", "\u{1f9ed}"], ["combining", "e\u0301"],
+  ["leading NEL", "\u{1f9ed}", "\u0085", ""],
+  ["trailing NEL", "\u{1f9ed}", "", "\u0085"],
+  ["both-edge NEL", "\u{1f9ed}", "\u0085", "\u0085"],
+  ["mixed whitespace", "e\u0301", " \t\u00a0\u0085\u2003", "\u2009\u0085\u202f\n "],
+  ["BOM outside NEL", "\u{1f9ed}", "\ufeff\u0085", "\u0085\ufeff"],
+  ["BOM hidden by NEL", "e\u0301", "\u0085\ufeff", "\ufeff\u0085", "\ufeff", "\ufeff"],
+  ["nested BOM and NEL", "a", "\ufeff\u0085\ufeff \u0085", "\u0085 \ufeff\u0085\ufeff", "\ufeff \u0085", "\u0085 \ufeff"],
+]) {
   test(`${name} question UTF-8 limit rejects overflow before fetch and retains exact draft`, async ({lookupURL, page}) => {
     await page.addInitScript(() => {
       const nativeFetch = window.fetch;
@@ -72,12 +81,14 @@ for (const [name, unit] of [["ASCII", "a"], ["CJK", "\u754c"], ["astral", "\u{1f
     expect(limit).toBe(4096);
     expect(await question.getAttribute("maxlength")).toBeNull();
     const unitBytes = Buffer.byteLength(unit, "utf8");
-    const exact = unit.repeat(Math.floor(limit / unitBytes)) + "a".repeat(limit % unitBytes);
+    const coreBytes = limit - Buffer.byteLength(retainedLeft + retainedRight, "utf8");
+    const core = unit.repeat(Math.floor(coreBytes / unitBytes)) + "a".repeat(coreBytes % unitBytes);
+    const exact = retainedLeft + core + retainedRight;
     expect(Buffer.byteLength(exact, "utf8")).toBe(limit);
-    await question.fill(exact);
+    await question.fill(left + core);
     await question.press("End");
-    await page.keyboard.insertText("b");
-    const overflow = `${exact}b`;
+    await page.keyboard.insertText("b" + right);
+    const overflow = `${left}${core}b${right}`;
     await expect(question).toHaveValue(overflow);
     await page.getByRole("button", {name: "Create handoff packet", exact: true}).click();
     const status = page.locator("#handoff-status");
@@ -88,7 +99,7 @@ for (const [name, unit] of [["ASCII", "a"], ["CJK", "\u754c"], ["astral", "\u{1f
     expect(sent).toHaveLength(0);
     await expect(question).toHaveValue(overflow);
     await expect(page.locator("#selected-context li")).toHaveCount(1);
-    const draft = ` \n${exact}\n `;
+    const draft = left + core + right;
     await question.fill(draft);
     await page.getByRole("button", {name: "Create handoff packet", exact: true}).click();
     await expect(status).toHaveText("Handoff packet created.");
@@ -98,7 +109,49 @@ for (const [name, unit] of [["ASCII", "a"], ["CJK", "\u754c"], ["astral", "\u{1f
     expect(sent).toHaveLength(1);
     expect(sent[0].annotations[0].question).toBe(exact);
     const packet = JSON.parse(await page.locator("#handoff-packet").textContent());
+    expect(packet.handoffKind).toBe("proofkit.requirement-browser-question");
+    expect(packet.state).toBe("submitted");
+    expect(packet.annotations).toHaveLength(1);
     expect(packet.annotations[0].question).toBe(exact);
     await expect(question).toHaveValue(draft);
   });
 }
+
+test("question canonicalization distinguishes empty whitespace from NEL-hidden BOM", async ({lookupURL, page}) => {
+  await openWorkspace(page, lookupURL);
+  await page.getByRole("button", {name: "Select invariant", exact: true}).first().click();
+  const question = page.getByRole("textbox", {name: "Question", exact: true});
+  const submit = page.getByRole("button", {name: "Create handoff packet", exact: true});
+  const status = page.locator("#handoff-status");
+  const sent = [];
+  page.on("request", request => {
+    if (new URL(request.url()).pathname === "/api/v1/handoff") sent.push(request.postDataJSON());
+  });
+  for (const draft of ["\u0085 \t\u0085", "\ufeff\u0085\ufeff"]) {
+    await question.fill(draft);
+    await submit.click();
+    await expect(status).toHaveText("Select invariant text and enter a question.");
+    await expect(status).toHaveAttribute("role", "status");
+    await expect(status).toHaveAttribute("aria-live", "polite");
+    await expect(question).toHaveValue(draft);
+    expect(sent).toHaveLength(0);
+  }
+  for (const [draft, exact] of [
+    ["\u0085\ufeff\u0085", "\ufeff"],
+    ["\ufeffq\ufeff", "q"],
+    ["\u0085e\u0301 \u0085\ufeff \u00e9\u0085", "e\u0301 \u0085\ufeff \u00e9"],
+  ]) {
+    const count = sent.length;
+    await question.fill(draft);
+    const response = page.waitForResponse(candidate => new URL(candidate.url()).pathname === "/api/v1/handoff");
+    await submit.click();
+    expect((await response).status()).toBe(200);
+    await expect(status).toHaveText("Handoff packet created.");
+    expect(sent).toHaveLength(count + 1);
+    expect(sent[count].annotations[0].question).toBe(exact);
+    const packet = JSON.parse(await page.locator("#handoff-packet").textContent());
+    expect(packet.state).toBe("submitted");
+    expect(packet.annotations[0].question).toBe(exact);
+    await expect(question).toHaveValue(draft);
+  }
+});
