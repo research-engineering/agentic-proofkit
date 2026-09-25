@@ -4,6 +4,7 @@ package publicapi
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestScanRejectsFIFOWithoutWriter(t *testing.T) {
-	for _, scenario := range []string{"direct", "symlink", "kind-swap", "canonical-swap"} {
+	for _, scenario := range []string{"direct", "symlink", "kind-swap", "canonical-swap", "repository-root", "repository-root-symlink", "package-root", "package-root-symlink"} {
 		t.Run(scenario, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
@@ -46,16 +47,28 @@ func TestScanFIFOChild(t *testing.T) {
 		}
 	}
 	lexical := "source.ts"
-	if scenario == "direct" || scenario == "symlink" {
+	directoryScenario := strings.HasPrefix(scenario, "repository-root") || strings.HasPrefix(scenario, "package-root")
+	if scenario == "direct" || scenario == "symlink" || directoryScenario {
 		makeFIFO()
 	} else if err := os.WriteFile(source, []byte("export const value = 1;"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if scenario == "symlink" || scenario == "canonical-swap" {
+	if scenario == "symlink" || scenario == "canonical-swap" || strings.HasSuffix(scenario, "-symlink") {
 		lexical = "alias.ts"
 		if err := os.Symlink("source.ts", filepath.Join(root, lexical)); err != nil {
 			t.Fatal(err)
 		}
+	}
+	if strings.HasPrefix(scenario, "repository-root") {
+		scan := newScanCache(filepath.Join(root, lexical), 4096)
+		if scan.root != nil {
+			scan.root.Close()
+			t.Fatal("FIFO was admitted as a repository root")
+		}
+		if !errors.Is(scan.initErr, unix.ENOTDIR) {
+			t.Fatalf("expected repository directory rejection, got %v", scan.initErr)
+		}
+		return
 	}
 	swapped := false
 	if scenario == "kind-swap" || scenario == "canonical-swap" {
@@ -85,6 +98,20 @@ func TestScanFIFOChild(t *testing.T) {
 		t.Fatal(scan.initErr)
 	}
 	defer scan.root.Close()
+	if strings.HasPrefix(scenario, "package-root") {
+		_, _, _, packageRoot, err := readPackageManifest(scan, filepath.Join(lexical, "package.json"))
+		if packageRoot != nil {
+			packageRoot.Close()
+			t.Fatal("FIFO was admitted as a package root")
+		}
+		if !errors.Is(err, unix.ENOTDIR) || !strings.Contains(err.Error(), "open referenced package root") {
+			t.Fatalf("expected package directory rejection, got %v", err)
+		}
+		if scan.bytesRead != 0 || len(scan.files) != 0 {
+			t.Fatal("invalid package root caused reads or caching")
+		}
+		return
+	}
 	_, err := scan.readFileSnapshot(lexical, "FIFO source", 4096)
 	if err == nil || !strings.Contains(err.Error(), "regular file") {
 		t.Fatalf("expected regular-file rejection, got %v", err)
@@ -94,5 +121,23 @@ func TestScanFIFOChild(t *testing.T) {
 	}
 	if scan.bytesRead != 0 || len(scan.files) != 0 {
 		t.Fatal("rejected FIFO was read or cached")
+	}
+}
+
+func TestScanDirectoryRootPreservesEmptyAndTrailingSeparator(t *testing.T) {
+	empty := newScanCache("", 4096)
+	if empty.root != nil {
+		empty.root.Close()
+		t.Fatal("empty root implicitly selected a directory")
+	}
+	if empty.initErr == nil {
+		t.Fatal("empty root was admitted")
+	}
+	scan := newScanCache(t.TempDir()+string(os.PathSeparator), 4096)
+	if scan.initErr != nil {
+		t.Fatal(scan.initErr)
+	}
+	if err := scan.root.Close(); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -311,7 +311,7 @@ func readPackageManifest(scan *scanCache, path string) (_ map[string]any, _ admi
 		return nil, admittedFileSnapshot{}, "", nil, err
 	}
 	packageDir := pathpkg.Dir(lexical)
-	root, err := scan.root.OpenRoot(filepath.FromSlash(packageDir))
+	root, err := scan.root.OpenRoot(directoryOnlyPath(filepath.FromSlash(packageDir)))
 	if err != nil {
 		return nil, admittedFileSnapshot{}, "", nil, fmt.Errorf("open referenced package root %s: %w", packageDir, err)
 	}
@@ -351,7 +351,7 @@ func closePackageRoots(packages map[string]packageSnapshot) {
 }
 
 func newScanCache(repoRoot string, maxBytes int64) *scanCache {
-	root, err := os.OpenRoot(repoRoot)
+	root, err := os.OpenRoot(directoryOnlyPath(repoRoot))
 	return &scanCache{
 		root:          root,
 		repoRoot:      repoRoot,
@@ -360,6 +360,18 @@ func newScanCache(repoRoot string, maxBytes int64) *scanCache {
 		files:         map[string]admittedFileSnapshot{},
 		sourceExports: map[string]sourceExportSnapshot{},
 	}
+}
+
+func directoryOnlyPath(name string) string {
+	if name == "" {
+		return ""
+	}
+	// Retain the terminal dot: directory traversal rejects a FIFO before
+	// OpenRoot's final open. Cleaning this path would remove that protection.
+	if os.IsPathSeparator(name[len(name)-1]) {
+		return name + "."
+	}
+	return name + string(os.PathSeparator) + "."
 }
 
 func (scan *scanCache) readFile(filePath string, context string, maxFileBytes int64) (string, string, error) {
