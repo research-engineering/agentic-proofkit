@@ -12,7 +12,7 @@
   "proof-slice|output|union": "sha256:1fdf18d93b875f2f7950aad1045d37cfc33914de9fb0b60b5c62b1f5acf36dcf",
   "requirement-bindings|input|union": "sha256:461c7f181c593a2737eb4ea4e824ed96f1c19037ef9aaf705b5ff37e1a3862a0",
   "requirement-bindings|output|union": "sha256:ac58939d1e81375f5dae9047d4580dcc207d70b03083865df03e65cd862945b4",
-  "requirement-browser-server|input|union": "sha256:ecb44ef1754a6ae6023ac6acc89e7079fe9f0ba87404edc418b3ff3acf3c6fc9",
+  "requirement-browser-server|input|union": "sha256:ec6689f132e993571cb4d9d35e5d18b28b6e1dece1f9409457d56e8aa31a9d4f",
   "requirement-browser-server|output|workspace-runtime": "sha256:56ffc222bea02d9de2844512a41e46e6e5b6849472b8a88d84624656c3957486",
   "requirement-context-compose|output|coverage-runtime": "sha256:a46601bc9eda70bef7fdb434d55fe2ae443355459e623de4856d431e802b4911",
   "requirement-context-slice|output|coverage-runtime": "sha256:b069fbfa92f69dc4b4a56d479e6769abee9915536c225ddae7c442b675a326c3",

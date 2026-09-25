@@ -59,6 +59,7 @@ func TestProjectBrowserCapturesAndHandsOffExactSourceFacts(t *testing.T) {
 			if err != nil || exit != 0 || len(plan) != 12 || plan["view"] != "workspace" || plan["url"] != nil || plan["portSelection"] != "ephemeral" || plan["renderedAuthority"] != "presentation_adapter" || plan["planKind"] != "proofkit.requirement-browser-server-plan" {
 				t.Fatalf("project plan lost its bounded presentation contract: %v", err)
 			}
+			assertProjectPreparationNonClaims(t, plan)
 			prepared, _, err := prepareProject(t.Context(), fixture.Root, Options{})
 			if err != nil {
 				t.Fatal(err)
@@ -93,6 +94,7 @@ func TestProjectBrowserCapturesAndHandsOffExactSourceFacts(t *testing.T) {
 				t.Fatal(err)
 			}
 			manifest := projectHTTP(t, handle, capability, "manifest", nil, http.StatusOK)
+			assertProjectPreparationNonClaims(t, manifest)
 			if manifest["workspaceId"] != "shared.identity" || manifest["snapshotId"] != handle.SnapshotID || manifest["coverageAvailable"] != false || manifest["diffAvailable"] != false || manifest["graphAvailable"] != true || manifest["expectedDigestCoverage"] != "partial" || manifest["requirementCount"] != json.Number("3") {
 				t.Fatal("project manifest invented coverage, baseline or a different snapshot")
 			}
@@ -126,6 +128,7 @@ func TestProjectBrowserCapturesAndHandsOffExactSourceFacts(t *testing.T) {
 				annotations = append(annotations, map[string]any{"anchorId": anchor["anchorId"], "startCodePoint": json.Number("11"), "endCodePoint": json.Number(fmt.Sprint(item.end)), "exactQuote": item.quote, "question": "Does this remain source-bound?"})
 			}
 			packet := projectHTTP(t, handle, capability, "handoff", map[string]any{"annotations": annotations}, http.StatusOK)
+			assertProjectPreparationNonClaims(t, packet)
 			select {
 			case err := <-finished:
 				if err != nil {
@@ -162,6 +165,28 @@ func TestProjectBrowserCapturesAndHandsOffExactSourceFacts(t *testing.T) {
 				t.Fatal("successful terminal output left the listener open")
 			}
 		})
+	}
+}
+
+func assertProjectPreparationNonClaims(t *testing.T, record map[string]any) {
+	t.Helper()
+	claims, ok := record["nonClaims"].([]any)
+	if !ok {
+		t.Fatal("missing server non-claims")
+	}
+	preparation, witnesses := false, false
+	for _, claim := range claims {
+		switch claim {
+		case "Requirement browser servers do not scan repository state.":
+			t.Fatal("explicit project preparation contradicts blanket no-scan claim")
+		case "Explicit project preparation inspects repository state; serving the admitted immutable snapshot does not rescan it.":
+			preparation = true
+		case "Requirement browser servers do not execute native witnesses.":
+			witnesses = true
+		}
+	}
+	if !preparation || !witnesses {
+		t.Fatal("server non-claims lost preparation/serving or native-witness boundary")
 	}
 }
 

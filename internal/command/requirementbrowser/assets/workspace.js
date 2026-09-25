@@ -528,6 +528,8 @@ const selectedContextElement = document.querySelector("#selected-context");
 const clearSelectionElement = document.querySelector("#clear-selection");
 if (!(questionInputElement instanceof HTMLTextAreaElement) || !(statusElement instanceof HTMLElement) || !(packetElement instanceof HTMLElement) || !(previewElement instanceof HTMLElement) || !(submitElement instanceof HTMLButtonElement) || !(selectedContextElement instanceof HTMLUListElement) || !(clearSelectionElement instanceof HTMLButtonElement)) throw new Error("Missing handoff controls");
 const questionInput = /** @type {HTMLTextAreaElement} */ (questionInputElement);
+const maxQuestionBytes = Number(questionInput.dataset.maxQuestionBytes);
+if (!Number.isSafeInteger(maxQuestionBytes) || maxQuestionBytes <= 0) throw new Error("Missing question byte limit");
 const status = /** @type {HTMLElement} */ (statusElement);
 const packetView = /** @type {HTMLElement} */ (packetElement);
 const handoffPreview = initializeHandoffPreview(previewElement, packetView, status);
@@ -575,6 +577,8 @@ function announceSelection() {
   selectedContext.replaceChildren();
   appendTextItems(selectedContext, selectionState.targets.map((target) => target.exactQuote));
   clearSelectionButton.disabled = selectionState.targets.length === 0;
+  status.setAttribute("role", "status");
+  status.setAttribute("aria-live", "polite");
   status.textContent = selectionState.targets.length === 0 ? "No source-bound text selected." : `${selectionState.targets.length} source-bound target(s) selected.`;
 }
 
@@ -605,11 +609,19 @@ for (const control of [questionInput, submit]) {
 clearSelectionButton.addEventListener("click", clearSelection);
 submit.addEventListener("click", async () => {
   if (submit.disabled || handoffUnavailable()) return;
-  const question = questionInput.value.trim();
+  // Preserve the old JS trim before applying Go TrimSpace's whitespace set.
+  const question = questionInput.value.trim().replace(/^\p{White_Space}+|\p{White_Space}+$/gu, "");
   if (selectionState.targets.length === 0 || !question) {
     status.setAttribute("role", "status");
     status.setAttribute("aria-live", "polite");
     status.textContent = "Select invariant text and enter a question.";
+    return;
+  }
+  const questionBytes = new TextEncoder().encode(question).byteLength;
+  if (questionBytes > maxQuestionBytes) {
+    status.setAttribute("role", "alert");
+    status.setAttribute("aria-live", "assertive");
+    status.textContent = `Question exceeds the ${maxQuestionBytes}-byte UTF-8 limit (${questionBytes} bytes). Shorten it before submitting.`;
     return;
   }
   const submissionViewRequestId = activeRequestId;

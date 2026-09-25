@@ -36,6 +36,7 @@ export function workspaceFailure(error, optional = false) {
   if (status === 400) return {message: "The query could not be accepted. Check its fields and submit again.", action: "none", lock: false, kind: "correction"};
   if (status === 403) return {message: "Access to this workspace was denied.", action: "none", lock: true, kind: "denied"};
   if (status === 409) return {message: "The workspace snapshot has changed.", action: "reload", lock: true, kind: "stale"};
+  if (status === 410) return {message: "This one-shot session has already ended. No further handoff can be created.", action: "none", lock: true, kind: "terminal"};
   if (status === 0 || status === 429 || status >= 500 && status <= 599) return {message: "The workspace could not be reached. Try this request again.", action: "retry", lock: false, kind: "retryable"};
   if (status === 404 && optional) return {message: "This workspace view is unavailable.", action: "none", lock: false, kind: "optional-unavailable"};
   return {message: "The admitted workspace is unavailable.", action: "none", lock: false, kind: "unavailable"};

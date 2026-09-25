@@ -1,9 +1,73 @@
 package browserdoc
 
 import (
+	"encoding/base64"
+	"regexp"
 	"strings"
 	"testing"
 )
+
+func TestSearchTextPreservesOriginalUnicodeAndCase(t *testing.T) {
+	values := []string{"\u039f\u0394\u039f\u03a3", "\u0130stanbul", "ASCII", "Cafe\u0301", `<script>"&`}
+	want := strings.Join(values, " ")
+	if got := SearchText(values); got != want {
+		t.Fatalf("SearchText changed original text: got %q want %q", got, want)
+	}
+	output := HTML(Document{
+		Cards: []Card{{SearchText: want}},
+		Table: &Table{Rows: []Row{{SearchText: want}}},
+	})
+	if got := strings.Count(output, `data-search="`+Escape(want)+`"`); got != 2 {
+		t.Fatalf("card and table must preserve escaped original search text; got %d copies", got)
+	}
+}
+
+func TestFragmentIDRetainsExactKeyIdentity(t *testing.T) {
+	keys := []string{"", "module.a", "module-a", "A", "a", " a ", "\u00e9", "e\u0301", "\u039f\u0394\u039f\u03a3", "\U0001f680", `\"<>&/#?`, strings.Repeat("long/", 1000)}
+	seen := map[string]string{}
+	for _, key := range keys {
+		id := FragmentID(key)
+		if !regexp.MustCompile(`^proofkit-[A-Za-z0-9_-]*$`).MatchString(id) || safeHref("#"+id) != "#"+id {
+			t.Fatalf("unsafe fragment for %q: %q", key, id)
+		}
+		decoded, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(id, "proofkit-"))
+		if err != nil || string(decoded) != key {
+			t.Fatalf("fragment does not roundtrip exact key %q: %q, %v", key, decoded, err)
+		}
+		if previous, exists := seen[id]; exists {
+			t.Fatalf("distinct keys share fragment: %q and %q", previous, key)
+		}
+		seen[id] = key
+		if FragmentID(key) != id {
+			t.Fatal("equal inputs must retain identical fragments")
+		}
+	}
+}
+
+func TestFragmentIDSeparatesConcreteFNVCollisionAndHierarchyTargets(t *testing.T) {
+	keys := []string{strings.Repeat("a", 64) + "c505dab8819802af", strings.Repeat("a", 64) + "23792f9a63c822bf"}
+	if stableSuffix(keys[0]) != "a17402fc" || stableSuffix(keys[1]) != "a17402fc" {
+		t.Fatal("fixture must retain the concrete legacy FNV collision")
+	}
+	if FragmentID(keys[0]) == FragmentID(keys[1]) {
+		t.Fatalf("distinct keys collide: %s", FragmentID(keys[0]))
+	}
+	document := Document{HierarchySections: []HierarchySection{{Title: "Groups"}}}
+	for _, key := range keys {
+		document.Cards = append(document.Cards, Card{GroupID: key, GroupLabel: "Same label"})
+		document.HierarchySections[0].Items = append(document.HierarchySections[0].Items, HierarchyItem{Label: key, Href: "#" + FragmentID(key)})
+	}
+	output := HTML(document)
+	for _, key := range keys {
+		id := FragmentID(key)
+		if strings.Count(output, `id="`+id+`"`) != 1 || strings.Count(output, `href="#`+id+`"`) != 1 {
+			t.Fatalf("hierarchy key %q must resolve to exactly one target", key)
+		}
+	}
+	if HTML(document) != output {
+		t.Fatal("full links must be deterministic")
+	}
+}
 
 func TestHTMLUsesTypedFragmentsAndEscapesCallerText(t *testing.T) {
 	payload := `<script>alert(1)</script><img src=x onerror=alert(1)>`
@@ -120,8 +184,8 @@ func TestCardGroupsUseTotalOrderingWhenLabelsMatch(t *testing.T) {
 		},
 	}
 	output := HTML(document)
-	left := strings.Index(output, `id="proofkit-alpha-`)
-	right := strings.Index(output, `id="proofkit-zeta-`)
+	left := strings.Index(output, `id="`+FragmentID("alpha")+`"`)
+	right := strings.Index(output, `id="`+FragmentID("zeta")+`"`)
 	if left < 0 || right < 0 || left > right {
 		t.Fatalf("card groups are not sorted by label then stable group id:\n%s", output)
 	}

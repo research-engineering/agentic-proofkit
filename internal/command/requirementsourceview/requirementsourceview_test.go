@@ -28,7 +28,7 @@ func TestHTMLModesShareCompleteRequirementSearch(t *testing.T) {
 		"docs/contracts/requirement-proof-binding-sources.v1.json",
 		"This test requirement does not execute native witnesses.",
 	} {
-		if !strings.Contains(search[0][1], strings.ToLower(value)) {
+		if !strings.Contains(search[0][1], value) {
 			t.Fatalf("shared search omitted %q", value)
 		}
 	}
@@ -52,9 +52,9 @@ func TestHTMLModesSearchReplacementReferences(t *testing.T) {
 	}
 	matched := 0
 	for _, search := range regexp.MustCompile(`data-search="([^"]*)"`).FindAllStringSubmatch(output, -1) {
-		if strings.Contains(search[1], "req-proofkit-view-001") {
+		if strings.Contains(search[1], "REQ-PROOFKIT-VIEW-001") {
 			matched++
-			if !strings.Contains(search[1], "req-proofkit-view-002") {
+			if !strings.Contains(search[1], "REQ-PROOFKIT-VIEW-002") {
 				t.Fatal("superseded requirement search omitted its replacement reference")
 			}
 		}

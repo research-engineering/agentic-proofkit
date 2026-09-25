@@ -21,7 +21,7 @@ const (
 
 var serverNonClaims = []string{
 	"Requirement browser servers are local presentation adapters only.",
-	"Requirement browser servers do not scan repository state.",
+	"Explicit project preparation inspects repository state; serving the admitted immutable snapshot does not rescan it.",
 	"Requirement browser servers do not execute native witnesses.",
 	"Requirement browser servers do not prove receipt freshness, merge approval, or rollout readiness.",
 	"Requirement browser servers do not persist browser annotations into source files.",

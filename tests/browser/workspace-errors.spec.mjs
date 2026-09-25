@@ -6,6 +6,7 @@ const states = [
   {status: 400, message: "The query could not be accepted. Check its fields and submit again.", kind: "correction", action: null},
   {status: 403, message: "Access to this workspace was denied.", kind: "denied", action: null},
   {status: 409, message: "The workspace snapshot has changed.", kind: "stale", action: "Reload workspace"},
+  {status: 410, message: "This one-shot session has already ended. No further handoff can be created.", kind: "terminal", action: null},
   {status: 404, message: "The admitted workspace is unavailable.", kind: "unavailable", action: null},
 ];
 
@@ -43,7 +44,7 @@ for (const operation of ["requirements", "navigation"]) {
       await expect(page.locator("#selected-context li")).toHaveCount(operation === "requirements" ? 0 : 1);
       await expect(page.getByRole("textbox", {name: "Question", exact: true})).toHaveValue("Keep the draft after failure.");
 
-      if (failure.status === 403 || failure.status === 409) {
+      if (failure.status === 403 || failure.status === 409 || failure.status === 410) {
         const count = protectedCalls.length;
         const controls = page.locator("[data-protected-request]");
         expect(await controls.count()).toBeGreaterThan(8);
