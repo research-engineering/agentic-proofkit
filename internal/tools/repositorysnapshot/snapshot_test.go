@@ -3,11 +3,12 @@ package repositorysnapshot
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
 )
 
 func TestMaterializeBindsCopiedBytesAndRejectsLiveMutation(t *testing.T) {
@@ -215,8 +216,7 @@ func initializeRepository(t *testing.T) string {
 
 func runGit(t *testing.T, root string, args ...string) {
 	t.Helper()
-	command := exec.Command("git", args...)
-	command.Dir = root
+	command := gitfixture.Command(root, args...)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v\n%s", args, err, output)
 	}

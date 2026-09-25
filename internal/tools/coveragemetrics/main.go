@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -489,7 +490,7 @@ func validGoTestName(name string) bool {
 }
 
 func equalStrings(left, right []string) bool {
-	return len(left) == len(right) && strings.Join(left, "\x00") == strings.Join(right, "\x00")
+	return slices.Equal(left, right)
 }
 
 func bindCurrentSourceProvenance(out *metrics) error {

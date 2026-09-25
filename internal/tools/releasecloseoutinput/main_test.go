@@ -28,6 +28,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
@@ -40,17 +41,13 @@ const (
 	testPythonWheelName   = "agentic_proofkit-1.2.3-py3-none-any.whl"
 )
 
-var (
-	completeFixtureBaseErr  error
-	completeFixtureBaseOnce sync.Once
-	completeFixtureBaseRoot string
-)
+var completeFixtureBase completeFixtureCache
 
 func TestMain(m *testing.M) {
 	commandOracleValidateCurrent = func(context.Context, string, commandoracle.Evidence) error { return nil }
 	exitCode := m.Run()
-	if completeFixtureBaseRoot != "" {
-		_ = os.RemoveAll(completeFixtureBaseRoot)
+	if completeFixtureBase.root != "" {
+		_ = os.RemoveAll(completeFixtureBase.root)
 	}
 	os.Exit(exitCode)
 }
@@ -81,6 +78,117 @@ func TestCompleteFixtureCopiesAreIsolated(t *testing.T) {
 	if string(content) != "source-v1\n" {
 		t.Fatalf("fixture copy mutation leaked across tests: %q", content)
 	}
+}
+
+func TestCompleteFixtureCachePublishesOnceAndCopiesAreIsolated(t *testing.T) {
+	var cache completeFixtureCache
+	t.Cleanup(func() { _ = os.RemoveAll(cache.root) })
+	calls := 0
+	populate := func(root string) {
+		calls++
+		if cache.root != "" {
+			t.Fatal("base published before population completed")
+		}
+		writeFile(t, filepath.Join(root, "complete.txt"), "complete")
+	}
+	first := cache.copy(t, populate)
+	writeFile(t, filepath.Join(first, "complete.txt"), "changed")
+	second := cache.copy(t, populate)
+	if calls != 1 || first == second || cache.root == first || cache.root == second {
+		t.Fatalf("fixture initialization/copy identity differs: calls=%d", calls)
+	}
+	for _, root := range []string{cache.root, second} {
+		content, err := os.ReadFile(filepath.Join(root, "complete.txt"))
+		if err != nil || string(content) != "complete" {
+			t.Fatalf("complete base or copy changed: %q %v", content, err)
+		}
+	}
+}
+
+func TestCompleteFixtureCacheRejectsInterruptedInitialization(t *testing.T) {
+	for _, mode := range []string{"goexit", "panic"} {
+		t.Run(mode, func(t *testing.T) {
+			var cache completeFixtureCache
+			var partial string
+			returned := false
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				defer func() { _ = recover() }()
+				_, _ = cache.base(func(root string) {
+					partial = root
+					writeFile(t, filepath.Join(root, "partial.txt"), "partial")
+					if mode == "goexit" {
+						runtime.Goexit()
+					}
+					panic("injected fixture failure")
+				})
+				returned = true
+			}()
+			<-done
+			if returned || partial == "" {
+				t.Fatal("initialization did not exercise interrupted population")
+			}
+			assertFailedFixtureCache(t, &cache, partial)
+		})
+	}
+}
+
+func assertFailedFixtureCache(t *testing.T, cache *completeFixtureCache, partial string) {
+	t.Helper()
+	initialErr := cache.err
+	for range 2 {
+		root, err := cache.base(func(string) { t.Fatal("failed initialization retried") })
+		if root != "" || err == nil || err != initialErr {
+			t.Fatalf("failed base escaped or error changed: root=%q err=%v initial=%v", root, err, initialErr)
+		}
+	}
+	if _, err := os.Stat(partial); !os.IsNotExist(err) {
+		t.Fatalf("partial base was not removed: %v", err)
+	}
+}
+
+func TestCompleteFixtureCacheRetainsFatalFailure(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestCompleteFixtureCacheFatalHelper$", "-test.v", "--", "fixture-fatal-helper")
+	command.WaitDelay = time.Second
+	command.Env = append(os.Environ(), "GOCOVERDIR="+t.TempDir())
+	output, err := command.CombinedOutput()
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok || exitErr.ExitCode() != 1 ||
+		!bytes.Contains(output, []byte("injected fixture failure")) ||
+		!bytes.Contains(output, []byte("create complete fixture base: complete fixture initialization did not complete")) ||
+		!bytes.Contains(output, []byte("fatal failure retained; no partial copy returned")) {
+		t.Fatalf("fatal cache witness did not preserve first and repeated failures: %v\n%s", err, output)
+	}
+}
+
+func TestCompleteFixtureCacheFatalHelper(t *testing.T) {
+	if os.Args[len(os.Args)-1] != "fixture-fatal-helper" {
+		return
+	}
+	var cache completeFixtureCache
+	var partial string
+	if t.Run("initialization", func(t *testing.T) {
+		cache.copy(t, func(root string) {
+			partial = root
+			writeFile(t, filepath.Join(root, "partial.txt"), "partial")
+			t.Fatal("injected fixture failure")
+		})
+		t.Fatal("interrupted initialization returned a copy")
+	}) {
+		t.Fatal("first failure was suppressed")
+	}
+	assertFailedFixtureCache(t, &cache, partial)
+	returned := false
+	if t.Run("repeated-copy", func(t *testing.T) {
+		cache.copy(t, func(string) { t.Fatal("failed initialization retried") })
+		returned = true
+	}) || returned {
+		t.Fatal("repeated failed initialization returned a copy")
+	}
+	t.Log("fatal failure retained; no partial copy returned")
 }
 
 func TestBuildInputAdmitsGitHubActionsAdvisorySelfEvidence(t *testing.T) {
@@ -1341,18 +1449,45 @@ func mutateSelfEvidenceReceiptField(t *testing.T, root string, field string, val
 
 func completeFixture(t *testing.T) string {
 	t.Helper()
-	completeFixtureBaseOnce.Do(func() {
-		completeFixtureBaseRoot, completeFixtureBaseErr = os.MkdirTemp("", "proofkit-release-closeout-fixture-")
-		if completeFixtureBaseErr != nil {
+	return completeFixtureBase.copy(t, func(root string) { populateCompleteFixture(t, root) })
+}
+
+type completeFixtureCache struct {
+	once sync.Once
+	root string
+	err  error
+}
+
+func (cache *completeFixtureCache) base(populate func(string)) (string, error) {
+	cache.once.Do(func() {
+		root, err := os.MkdirTemp("", "proofkit-release-closeout-fixture-")
+		if err != nil {
+			cache.err = err
 			return
 		}
-		populateCompleteFixture(t, completeFixtureBaseRoot)
+		// Fatal/Goexit runs defers but consumes Once; never publish a partial base.
+		cache.err = fmt.Errorf("complete fixture initialization did not complete")
+		defer func() {
+			if cache.err != nil {
+				if err := os.RemoveAll(root); err != nil {
+					cache.err = fmt.Errorf("%w; remove partial fixture: %v", cache.err, err)
+				}
+			}
+		}()
+		populate(root)
+		cache.root, cache.err = root, nil
 	})
-	if completeFixtureBaseErr != nil {
-		t.Fatalf("create complete fixture base: %v", completeFixtureBaseErr)
+	return cache.root, cache.err
+}
+
+func (cache *completeFixtureCache) copy(t *testing.T, populate func(string)) string {
+	t.Helper()
+	base, err := cache.base(populate)
+	if err != nil {
+		t.Fatalf("create complete fixture base: %v", err)
 	}
 	root := t.TempDir()
-	if err := os.CopyFS(root, os.DirFS(completeFixtureBaseRoot)); err != nil {
+	if err := os.CopyFS(root, os.DirFS(base)); err != nil {
 		t.Fatalf("copy complete fixture base: %v", err)
 	}
 	return root
@@ -1548,8 +1683,7 @@ func readPackageArtifactExecutionFixture(t *testing.T, root string) packageartif
 
 func runFixtureGit(t *testing.T, root string, args ...string) {
 	t.Helper()
-	command := exec.Command("git", args...)
-	command.Dir = root
+	command := gitfixture.Command(root, args...)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v: %s", args, err, output)
 	}
