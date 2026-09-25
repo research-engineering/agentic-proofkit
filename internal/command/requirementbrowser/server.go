@@ -325,11 +325,19 @@ func openBrowserWithLauncher(ctx context.Context, goos, rawURL string, launch br
 
 func startBrowserProcess(ctx context.Context, command string, args ...string) error {
 	process := exec.CommandContext(ctx, command, args...)
+	_, err := startBrowserCommand(process)
+	return err
+}
+
+func startBrowserCommand(process *exec.Cmd) (<-chan error, error) {
 	if err := process.Start(); err != nil {
-		return fmt.Errorf("open browser: %w", err)
+		return nil, fmt.Errorf("open browser: %w", err)
 	}
-	if err := process.Process.Release(); err != nil {
-		return fmt.Errorf("open browser: release process: %w", err)
-	}
-	return nil
+	done := make(chan error, 1)
+	go func() {
+		// Wait owns both child reaping and CommandContext watcher completion.
+		done <- process.Wait()
+		close(done)
+	}()
+	return done, nil
 }

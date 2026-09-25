@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -311,7 +312,7 @@ func readPackageManifest(scan *scanCache, path string) (_ map[string]any, _ admi
 		return nil, admittedFileSnapshot{}, "", nil, err
 	}
 	packageDir := pathpkg.Dir(lexical)
-	root, err := scan.root.OpenRoot(filepath.FromSlash(packageDir))
+	root, err := scan.root.OpenRoot(directoryOnlyPath(filepath.FromSlash(packageDir)))
 	if err != nil {
 		return nil, admittedFileSnapshot{}, "", nil, fmt.Errorf("open referenced package root %s: %w", packageDir, err)
 	}
@@ -351,7 +352,7 @@ func closePackageRoots(packages map[string]packageSnapshot) {
 }
 
 func newScanCache(repoRoot string, maxBytes int64) *scanCache {
-	root, err := os.OpenRoot(repoRoot)
+	root, err := openScanRoot(repoRoot)
 	return &scanCache{
 		root:          root,
 		repoRoot:      repoRoot,
@@ -360,6 +361,31 @@ func newScanCache(repoRoot string, maxBytes int64) *scanCache {
 		files:         map[string]admittedFileSnapshot{},
 		sourceExports: map[string]sourceExportSnapshot{},
 	}
+}
+
+func openScanRoot(name string) (*os.Root, error) {
+	// Reject static non-directories before OpenRoot can block on a FIFO. This
+	// preflight does not make initial pathname acquisition atomic under mutation.
+	info, err := os.Stat(name)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOTDIR}
+	}
+	return os.OpenRoot(name)
+}
+
+func directoryOnlyPath(name string) string {
+	if name == "" {
+		return ""
+	}
+	// Retain the terminal dot: directory traversal rejects a FIFO before
+	// OpenRoot's final open. Cleaning this path would remove that protection.
+	if os.IsPathSeparator(name[len(name)-1]) {
+		return name + "."
+	}
+	return name + string(os.PathSeparator) + "."
 }
 
 func (scan *scanCache) readFile(filePath string, context string, maxFileBytes int64) (string, string, error) {
@@ -414,12 +440,12 @@ func (scan *scanCache) readRelativeFileSnapshot(root *os.Root, lexical string, r
 	if scanAdmissionBarrier != nil {
 		scanAdmissionBarrier("canonical_resolved", lexical)
 	}
-	file, err := root.Open(filepath.FromSlash(rootRelative))
+	file, err := openScanFile(root, filepath.FromSlash(rootRelative))
 	if err != nil {
 		return admittedFileSnapshot{}, err
 	}
 	defer file.Close()
-	canonicalFile, err := root.Open(filepath.FromSlash(canonicalRelative))
+	canonicalFile, err := openScanFile(root, filepath.FromSlash(canonicalRelative))
 	if err != nil {
 		return admittedFileSnapshot{}, err
 	}
@@ -434,7 +460,7 @@ func (scan *scanCache) readRelativeFileSnapshot(root *os.Root, lexical string, r
 	if err != nil {
 		return admittedFileSnapshot{}, err
 	}
-	if !before.Mode().IsRegular() {
+	if !before.Mode().IsRegular() || !canonicalInfo.Mode().IsRegular() {
 		return admittedFileSnapshot{}, fmt.Errorf("%s must identify a regular file", context)
 	}
 	if !os.SameFile(before, canonicalInfo) {
