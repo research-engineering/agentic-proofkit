@@ -441,7 +441,7 @@ func serveCancel(response http.ResponseWriter, request *http.Request, expectedOr
 	packet := map[string]any{"handoffKind": "proofkit.requirement-browser-question", "nonClaims": admit.StringSliceToAny(serverNonClaims), "schemaVersion": json.Number(fmt.Sprint(questionPacketSchemaVersion)), "snapshotRefs": []any{map[string]any{"role": "current", "snapshotId": session.SnapshotID}}, "state": "cancelled"}
 	if oneShot {
 		if !terminal.TryCommit(packet) {
-			response.WriteHeader(http.StatusConflict)
+			response.WriteHeader(http.StatusGone)
 			return
 		}
 	}
@@ -533,7 +533,7 @@ func serveHandoff(response http.ResponseWriter, request *http.Request, expectedO
 	}
 	if oneShot {
 		if !terminal.TryCommit(packet) {
-			response.WriteHeader(http.StatusConflict)
+			response.WriteHeader(http.StatusGone)
 			return
 		}
 	}

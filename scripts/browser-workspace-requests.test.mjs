@@ -105,6 +105,19 @@ test("HTTP status owns recovery before an unconsumed malformed body", async t =>
   });
 });
 
+test("HTTP 410 locks a consumed terminal without Retry or stale reload", async t => {
+  const fixture = await endpoint(t, response => {
+    response.writeHead(410, {"Content-Type": "application/json", "Content-Length": "200"});
+    response.write("private malformed terminal detail");
+  });
+  const error = await fetchWorkspaceJSON(fixture.url, {}).catch(error => error);
+  assert(error instanceof WorkspaceRequestError);
+  assert.equal(error.status, 410);
+  assert.deepEqual(workspaceFailure(error), {
+    message: "This one-shot session has already ended. No further handoff can be created.", action: "none", lock: true, kind: "terminal",
+  });
+});
+
 test("HTTP numeric observations retain exact tokens and native scalar branding", async t => {
   const body = '{"start":9007199254740992,"end":9007199254740993,"safe":9007199254740991,"zero":0,"string":"9007199254740993","nested":[1.0000000000000001,1e-400,-0,1e400,-9007199254740993,0.123456789012345678901],"unbranded":{"rawJSON":"17"}}';
   const fixture = await endpoint(t, response => response.end(body));

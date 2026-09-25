@@ -23,6 +23,17 @@ import (
 
 var capabilityPattern = regexp.MustCompile(`name="proofkit-browser-capability" content="([A-Za-z0-9_-]{43})"`)
 
+func TestWorkspaceQuestionLimitUsesServerBudget(t *testing.T) {
+	_, document, err := buildWorkspace(workspaceFixture(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := fmt.Sprintf(`<textarea id="annotation-question" data-max-question-bytes="%d"></textarea>`, maxHandoffQuestionBytes)
+	if !strings.Contains(document, want) || strings.Contains(document, "maxlength=") {
+		t.Fatal("question control must expose the server byte budget without UTF-16 truncation")
+	}
+}
+
 func TestWorkspaceServerEnforcesCapabilityAndBuildsSourceBoundHandoff(t *testing.T) {
 	handle, err := StartServer(workspaceFixture(t), Options{Host: "127.0.0.1", Port: 0, PortSet: true, View: "workspace"})
 	if err != nil {
@@ -386,8 +397,8 @@ func TestOneShotTerminalStateIsLinearizedAfterWinnerIsDrained(t *testing.T) {
 	_ = first.Body.Close()
 	<-handle.Handoff
 	second := postWorkspaceHandoff(t, handle.URL, capability)
-	if second.StatusCode != http.StatusConflict {
-		t.Fatalf("second handoff status=%d, want conflict", second.StatusCode)
+	if second.StatusCode != http.StatusGone {
+		t.Fatalf("second handoff status=%d, want gone", second.StatusCode)
 	}
 	_ = second.Body.Close()
 }

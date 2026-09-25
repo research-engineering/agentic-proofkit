@@ -20,10 +20,11 @@ func TestOneShotHandoffTrustBoundaryRejectsWithoutTerminalCommit(t *testing.T) {
 		capability  string
 		contentType string
 	}{
-		{name: "missing origin", contentType: "application/json"},
-		{name: "foreign origin", origin: "https://attacker.invalid", contentType: "application/json"},
+		{name: "missing origin", capability: "expected", contentType: "application/json"},
+		{name: "foreign origin", origin: "https://attacker.invalid", capability: "expected", contentType: "application/json"},
 		{name: "missing capability", origin: "expected", contentType: "application/json"},
 		{name: "wrong capability", origin: "expected", capability: strings.Repeat("A", 43), contentType: "application/json"},
+		{name: "missing content type", origin: "expected", capability: "expected"},
 		{name: "wrong content type", origin: "expected", capability: "expected", contentType: "text/plain"},
 	} {
 		t.Run(item.name, func(t *testing.T) {
@@ -91,8 +92,8 @@ func TestOneShotConcurrentHandoffsHaveExactlyOneWinner(t *testing.T) {
 	for status := range statuses {
 		counts[status]++
 	}
-	if counts[http.StatusOK] != 1 || counts[http.StatusConflict] != 1 {
-		t.Fatalf("concurrent handoff statuses=%v, want one success and one conflict", counts)
+	if counts[http.StatusOK] != 1 || counts[http.StatusGone] != 1 {
+		t.Fatalf("concurrent handoff statuses=%v, want one success and one gone", counts)
 	}
 	select {
 	case <-handle.Handoff:

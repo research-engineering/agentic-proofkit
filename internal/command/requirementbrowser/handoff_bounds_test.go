@@ -57,6 +57,24 @@ func TestHandoffQuoteAndQuestionByteBoundaries(t *testing.T) {
 	}
 }
 
+func TestHandoffQuestionUTF8ByteBoundaries(t *testing.T) {
+	session := workspaceSessionForInvariant(t, "q")
+	for _, item := range []struct{ name, unit string }{
+		{"ASCII", "a"}, {"CJK", "\u754c"}, {"astral", "\U0001f9ed"}, {"combining", "e\u0301"},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			question := strings.Repeat(item.unit, maxHandoffQuestionBytes/len(item.unit)) + strings.Repeat("a", maxHandoffQuestionBytes%len(item.unit))
+			annotation, err := admitAnnotation(handoffAnnotation(0, 1, "q", question), session)
+			if err != nil || annotation["question"] != question {
+				t.Fatalf("exact byte limit did not retain the original question: %v", err)
+			}
+			if _, err := admitAnnotation(handoffAnnotation(0, 1, "q", question+"b"), session); err == nil || !strings.Contains(err.Error(), "question exceeds byte limit") {
+				t.Fatalf("one byte over the question limit was not rejected: %v", err)
+			}
+		})
+	}
+}
+
 func TestHandoffDerivedContextByteBoundary(t *testing.T) {
 	session := workspaceSessionForInvariant(t, strings.Repeat("c", maxHandoffContextBytes))
 	if _, err := buildHandoffPacket(handoffRequest(t, []any{handoffAnnotation(0, 1, "c", "Why?")}), session); err == nil || !strings.Contains(err.Error(), "review context exceeds byte limit") {
