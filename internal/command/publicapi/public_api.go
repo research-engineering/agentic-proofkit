@@ -414,12 +414,12 @@ func (scan *scanCache) readRelativeFileSnapshot(root *os.Root, lexical string, r
 	if scanAdmissionBarrier != nil {
 		scanAdmissionBarrier("canonical_resolved", lexical)
 	}
-	file, err := root.Open(filepath.FromSlash(rootRelative))
+	file, err := openScanFile(root, filepath.FromSlash(rootRelative))
 	if err != nil {
 		return admittedFileSnapshot{}, err
 	}
 	defer file.Close()
-	canonicalFile, err := root.Open(filepath.FromSlash(canonicalRelative))
+	canonicalFile, err := openScanFile(root, filepath.FromSlash(canonicalRelative))
 	if err != nil {
 		return admittedFileSnapshot{}, err
 	}
@@ -434,7 +434,7 @@ func (scan *scanCache) readRelativeFileSnapshot(root *os.Root, lexical string, r
 	if err != nil {
 		return admittedFileSnapshot{}, err
 	}
-	if !before.Mode().IsRegular() {
+	if !before.Mode().IsRegular() || !canonicalInfo.Mode().IsRegular() {
 		return admittedFileSnapshot{}, fmt.Errorf("%s must identify a regular file", context)
 	}
 	if !os.SameFile(before, canonicalInfo) {

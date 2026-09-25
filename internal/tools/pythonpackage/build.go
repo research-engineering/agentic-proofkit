@@ -4,11 +4,13 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/flate"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io"
@@ -232,14 +234,43 @@ func recordContent(entries []wheelEntry, recordPath string) []byte {
 	return buffer.Bytes()
 }
 
-func writeWheel(path string, entries []wheelEntry) error {
-	file, err := os.Create(path)
+func writeWheel(path string, entries []wheelEntry) (err error) {
+	existing, err := os.Stat(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	mode := os.FileMode(0o666)
+	if existing != nil && existing.Mode().IsRegular() {
+		mode = existing.Mode().Perm()
+	}
+	temporaryPath := filepath.Join(filepath.Dir(path), ".wheel-"+rand.Text())
+	file, err := os.OpenFile(temporaryPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, mode)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, os.Remove(temporaryPath))
+		}
+	}()
+	if existing != nil && existing.Mode().IsRegular() {
+		if err := file.Chmod(existing.Mode().Perm()); err != nil {
+			return errors.Join(err, file.Close())
+		}
+	}
+	if err := writeWheelTo(file, entries); err != nil {
+		return err
+	}
+	return os.Rename(temporaryPath, path)
+}
+
+func writeWheelTo(file io.WriteCloser, entries []wheelEntry) (err error) {
 	writer := zip.NewWriter(file)
-	defer writer.Close()
+	defer func() {
+		zipErr := writer.Close()
+		fileErr := file.Close()
+		err = errors.Join(err, zipErr, fileErr)
+	}()
 	for _, entry := range entries {
 		if uint64(len(entry.Content)) > maxZip32Size {
 			return fmt.Errorf("wheel entry %s exceeds ZIP32 size limit", entry.Path)
