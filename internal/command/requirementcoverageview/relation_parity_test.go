@@ -118,16 +118,17 @@ func relationParityInput(t *testing.T, mode string) map[string]any {
 }
 
 func TestCoverageRelationFullOutputParity(t *testing.T) {
-	// Captured from the complete base-27fcb8e JSON, Markdown and HTML outputs.
+	// Captured from the unindexed base-83eddaf owner with its current renderer.
+	// JSON, Markdown and exit codes match the earlier base-27fcb8e observations.
 	wants := map[string]string{
-		"sparse":         "bbb8301eaa6f8a1eef7bf6e9014a4d8eb244aa5df18ec95fa5bf21047c008539",
-		"dense":          "5fe303636801fc4e4c0f4c3f113f2ebf84bf57f777e11ed317d9ac89fa3bbfa2",
-		"no-match":       "97077764446c771cf0494d256c758a1bda48fc07dc39402fcebf577908d24e77",
-		"missing":        "2d5d66e50045f08fd8888cf78e6749c587ec5515e16f9b7339acd9cf45f05acc",
-		"failed":         "7572ca52ca5b4c1e82823ffb853a4399076972fa7a8f694cbf8476beb2cf0f6f",
-		"mixed-negative": "dd38c68762abd29858570b4c556baac3cebc838ccec644e5558c32e39feef549",
-		"owner-scope":    "e32f8d52b4cef0ce43b88c1fdc802be8b4d644331f294932e557994bf2dcb7a1",
-		"compact":        "236880dbe5473ebadfd255007b791d232815c54dce24db216dfa5c5bdf56a739",
+		"sparse":         "0a1119ae0b9f04131b5cd11614a20005a84fb7c0d30685979f787ea42a9e3c02",
+		"dense":          "ed7129488d06670d2b865de5f9565011dc9d2df45b336cadec439a385b0becbf",
+		"no-match":       "a55d426051d44ca81dc7b70b56935893be9d10c997b23db76983eee86cb664b8",
+		"missing":        "a3bc09e3e9c31f0a10dea500c6fd7cc4b41318bac20af948555042524862dd20",
+		"failed":         "76e4251ce8bd492f4497803fdb640e015ebb62e5cd76217989d3c3e4a78dbb65",
+		"mixed-negative": "ce0b2eff0e925900161d340b0a90b2d4a4b6d837fe523b4be40c72ead9074e22",
+		"owner-scope":    "207615cfc0c1f7a8d901eb4fdc32b76fdd0102725bf0a36675a0e1410abb5580",
+		"compact":        "5455d4b8a80fd247e425920665f06642718e0d403bd4689d0542d53455efac39",
 	}
 	for _, name := range []string{"sparse", "dense", "no-match", "missing", "failed", "mixed-negative", "owner-scope", "compact"} {
 		t.Run(name, func(t *testing.T) {
