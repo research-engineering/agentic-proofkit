@@ -2,7 +2,6 @@ package publicapi
 
 import (
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
@@ -364,36 +364,16 @@ func newScanCache(repoRoot string, maxBytes int64) *scanCache {
 }
 
 func openScanRoot(name string) (*os.Root, error) {
-	if name == "" {
-		return os.OpenRoot(name)
-	}
-	// Resolve initial-root symlinks before confinement, including symlink/..
-	// traversal. The caller may select a root outside its lexical parent.
-	resolved, err := filepath.EvalSymlinks(name)
+	// Reject static non-directories before OpenRoot can block on a FIFO. This
+	// preflight does not make initial pathname acquisition atomic under mutation.
+	info, err := os.Stat(name)
 	if err != nil {
 		return nil, err
 	}
-	parent, base := filepath.Split(resolved)
-	if base == "" || base == "." || base == ".." {
-		return os.OpenRoot(resolved) // Native root/dot components denote directories.
+	if !info.IsDir() {
+		return nil, &os.PathError{Op: "open", Path: name, Err: syscall.ENOTDIR}
 	}
-	if parent == "" {
-		parent = "."
-	}
-	// Open the last component relative to a directory handle so the protective
-	// suffix does not lengthen a valid absolute pathname past the OS limit.
-	scope, err := os.OpenRoot(directoryOnlyPath(parent))
-	if err != nil {
-		return nil, err
-	}
-	root, err := scope.OpenRoot(directoryOnlyPath(base))
-	if closeErr := scope.Close(); closeErr != nil {
-		if root != nil {
-			closeErr = errors.Join(closeErr, root.Close())
-		}
-		return nil, errors.Join(err, closeErr)
-	}
-	return root, err
+	return os.OpenRoot(name)
 }
 
 func directoryOnlyPath(name string) string {
