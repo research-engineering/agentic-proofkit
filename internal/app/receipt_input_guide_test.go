@@ -127,7 +127,7 @@ func TestReceiptInputGuideExecutionAndBundleChain(t *testing.T) {
 				ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 				defer cancel()
 				process := exec.CommandContext(ctx, args[0], args[1:]...)
-				process.Dir, process.Env, process.WaitDelay = root, []string{}, time.Second
+				process.Dir, process.Env, process.WaitDelay = root, []string{"GOCOVERDIR=" + t.TempDir()}, time.Second
 				process.Stdout = &output
 				var diagnostic bytes.Buffer
 				process.Stderr = &diagnostic

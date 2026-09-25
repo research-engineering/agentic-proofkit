@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,6 +22,53 @@ func TestPOSIXWrapperExecPreservesProcessIdentityAndSignals(t *testing.T) {
 	if err != nil {
 		t.Fatalf("python3 is required for the POSIX wrapper lifecycle oracle: %v", err)
 	}
+	realPython := executedPython(t, python)
+	realPython, err = filepath.EvalSymlinks(realPython)
+	if err != nil {
+		t.Fatalf("resolve real interpreter: %v", err)
+	}
+	launchers := t.TempDir()
+	symlink := filepath.Join(launchers, "python-symlink")
+	if err := os.Symlink(realPython, symlink); err != nil {
+		t.Fatal(err)
+	}
+	shim := filepath.Join(launchers, "python-exec-shim")
+	if err := os.WriteFile(shim, []byte("#!/bin/sh\nexec '"+strings.ReplaceAll(realPython, "'", "'\"'\"'")+"' \"$@\"\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range []struct{ name, path string }{
+		{"selected", python}, {"real", realPython}, {"symlink", symlink}, {"exec-shim", shim},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			assertPOSIXWrapperLifecycle(t, item.path)
+		})
+	}
+}
+
+func executedPython(t *testing.T, launcher string) string {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, launcher, "-c", "import sys; print(sys.executable)")
+	command.WaitDelay = time.Second
+	output, err := command.Output()
+	if err != nil {
+		t.Fatalf("query executed interpreter: %v", err)
+	}
+	path := strings.TrimSpace(string(output))
+	if !filepath.IsAbs(path) {
+		t.Fatalf("executed interpreter=%q, want absolute path", path)
+	}
+	info, err := os.Stat(path)
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0o111 == 0 {
+		t.Fatalf("executed interpreter=%q is not an executable file: %v", path, err)
+	}
+	return path
+}
+
+func assertPOSIXWrapperLifecycle(t *testing.T, python string) {
+	t.Helper()
+	expectedPython := executedPython(t, python)
 	root := t.TempDir()
 	packageRoot := filepath.Join(root, "agentic_proofkit")
 	if err := os.MkdirAll(filepath.Join(packageRoot, "bin"), 0o755); err != nil {
@@ -94,12 +142,12 @@ while True:
 	if err != nil {
 		t.Fatalf("stat wrapper interpreter: %v", err)
 	}
-	invokedPython, err := os.Stat(python)
+	invokedPython, err := os.Stat(expectedPython)
 	if err != nil {
 		t.Fatalf("stat invoked interpreter: %v", err)
 	}
 	if !os.SameFile(wrapperPython, invokedPython) {
-		t.Fatalf("wrapper interpreter=%q does not identify invoked interpreter %q", profileLines[1], python)
+		t.Fatalf("wrapper interpreter=%q does not identify executed interpreter %q via %q", profileLines[1], expectedPython, python)
 	}
 	if err := command.Process.Signal(syscall.SIGTERM); err != nil {
 		t.Fatal(err)
