@@ -1,6 +1,7 @@
 package browserdoc
 
 import (
+	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
@@ -98,6 +99,9 @@ type ExportFile struct {
 
 var filterKeyPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
+//go:embed browser.js
+var browserScript string
+
 func HTML(input Document) string {
 	hasTable := input.Table != nil
 	parts := []string{
@@ -137,7 +141,7 @@ func HTML(input Document) string {
 		ListOrNone(input.NonClaims, false).html,
 		"</section>",
 		"</main>",
-		fmt.Sprintf("<script>%s</script>", script()),
+		fmt.Sprintf("<script>%s</script>", browserScript),
 		"</body>",
 		"</html>",
 		"",
@@ -211,7 +215,7 @@ func NewFilter(key string, label string, values []string) Filter {
 }
 
 func SearchText(values []string) string {
-	return strings.ToLower(strings.Join(values, " "))
+	return strings.Join(values, " ")
 }
 
 func TableCell(key string, value string, code bool) Cell {
@@ -279,28 +283,7 @@ func Escape(value string) string {
 }
 
 func FragmentID(value string) string {
-	builder := strings.Builder{}
-	lastDash := false
-	for _, char := range strings.ToLower(value) {
-		if (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') {
-			builder.WriteRune(char)
-			lastDash = false
-			continue
-		}
-		if !lastDash && builder.Len() > 0 {
-			builder.WriteByte('-')
-			lastDash = true
-		}
-	}
-	normalized := strings.Trim(builder.String(), "-")
-	if normalized == "" {
-		normalized = "section"
-	}
-	if len(normalized) > 64 {
-		normalized = normalized[:64]
-		normalized = strings.Trim(normalized, "-")
-	}
-	return "proofkit-" + normalized + "-" + stableSuffix(value)
+	return "proofkit-" + base64.RawURLEncoding.EncodeToString([]byte(value))
 }
 
 func hierarchy(sections []HierarchySection) string {
@@ -400,7 +383,7 @@ func cards(items []Card) string {
 func browserCard(card Card) string {
 	attributes := filterAttributes(card.FilterValues)
 	return strings.Join([]string{
-		fmt.Sprintf("<article class=\"card\" data-proofkit-card data-search=\"%s\"%s>", Escape(strings.ToLower(card.SearchText)), attributes),
+		fmt.Sprintf("<article class=\"card\" data-proofkit-card data-search=\"%s\"%s>", Escape(card.SearchText), attributes),
 		fmt.Sprintf("<h2><span class=\"proofkit-id\">%s</span><span class=\"proofkit-title\">%s</span></h2>", Escape(card.ID), Escape(card.Title)),
 		card.Body.html,
 		"</article>",
@@ -431,7 +414,7 @@ func tableRow(row Row, columns []Column) string {
 	for _, cell := range row.Cells {
 		cells[cell.Key] = cell.Value.html
 	}
-	parts := []string{fmt.Sprintf("<tr data-proofkit-table-row data-search=\"%s\"%s>", Escape(strings.ToLower(row.SearchText)), filterAttributes(row.FilterValues))}
+	parts := []string{fmt.Sprintf("<tr data-proofkit-table-row data-search=\"%s\"%s>", Escape(row.SearchText), filterAttributes(row.FilterValues))}
 	for _, column := range columns {
 		parts = append(parts, "<td>"+cells[column.Key]+"</td>")
 	}
@@ -549,11 +532,11 @@ func css() string {
 		".controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;align-items:end;padding:14px;margin-bottom:10px;position:sticky;top:0;z-index:1}",
 		".control{display:grid;gap:6px;min-width:0}",
 		".search-label{position:absolute;left:-10000px}",
-		"input[type=search],select{width:100%;box-sizing:border-box;border:1px solid #c9d1d9;border-radius:6px;padding:8px 10px;background:#fff;color:inherit}",
+		"input[type=search],select{width:100%;box-sizing:border-box;border:1px solid #768390;border-radius:6px;padding:8px 10px;background:#fff;color:inherit}",
 		".toggle{white-space:nowrap;font-size:.92rem}",
 		".exports{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:14px;margin-bottom:10px}",
 		".exports h2{font-size:.88rem;text-transform:uppercase;letter-spacing:0;color:#586069;margin:0 8px 0 0}",
-		"button{border:1px solid #c9d1d9;border-radius:6px;background:#f6f8fa;color:inherit;padding:8px 10px;cursor:pointer}button:hover{background:#eef2f6}",
+		"button{border:1px solid #768390;border-radius:6px;background:#f6f8fa;color:inherit;padding:8px 10px;cursor:pointer}button:hover{background:#eef2f6}",
 		".result-count{margin:12px 2px;color:#586069}",
 		".cards{display:grid;gap:18px}",
 		".cards[hidden]{display:none}",
@@ -573,68 +556,6 @@ func css() string {
 		".non-claims{margin-top:18px;padding:18px}",
 		"ul{margin:8px 0 0;padding-left:22px}",
 		"@media (max-width:720px){main{padding:24px 12px 40px}.controls{grid-template-columns:1fr;position:static}dl{grid-template-columns:1fr}.summary,.controls,.exports,.card,.non-claims{border-radius:6px}}",
-		"@media (prefers-color-scheme:dark){:root{background:#101418;color:#e6edf3}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:#161b22;border-color:#30363d}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:#9da7b1}input[type=search],select,th{background:#0d1117;border-color:#30363d}button{background:#21262d;border-color:#30363d}button:hover{background:#30363d}code{background:#0d1117}details,th,td,.card-group>h2{border-color:#30363d}a{color:#58a6ff}}",
-	}, "")
-}
-
-func script() string {
-	return strings.Join([]string{
-		"const search=document.getElementById('proofkit-search');",
-		"const showIds=document.getElementById('proofkit-show-ids');",
-		"const openDetails=document.getElementById('proofkit-open-details');",
-		"const viewMode=document.getElementById('proofkit-view-mode');",
-		"const count=document.getElementById('proofkit-visible-count');",
-		"const cards=Array.from(document.querySelectorAll('[data-proofkit-card]'));",
-		"const cardGroups=Array.from(document.querySelectorAll('[data-proofkit-card-group]'));",
-		"const cardSection=document.querySelector('[data-proofkit-card-section]');",
-		"const tableSection=document.querySelector('[data-proofkit-table-section]');",
-		"const rows=Array.from(document.querySelectorAll('[data-proofkit-table-row]'));",
-		"const filters=Array.from(document.querySelectorAll('[data-proofkit-filter]'));",
-		"function matchesFilters(item,query){",
-		"const matchesSearch=query===''||(item.getAttribute('data-search')||'').includes(query);",
-		"const matchesFieldFilters=filters.every((filter)=>{const value=filter.value;return value===''||(item.getAttribute('data-filter-'+filter.getAttribute('data-filter-key'))===value);});",
-		"return matchesSearch&&matchesFieldFilters;",
-		"}",
-		"function applyFilters(){",
-		"const query=(search.value||'').trim().toLowerCase();",
-		"let visible=0;",
-		"for(const card of cards){",
-		"const shown=matchesFilters(card,query);",
-		"card.hidden=!shown;",
-		"if(shown) visible+=1;",
-		"}",
-		"for(const row of rows){row.hidden=!matchesFilters(row,query);}",
-		"for(const group of cardGroups){group.hidden=Array.from(group.querySelectorAll('[data-proofkit-card]')).every((card)=>card.hidden);}",
-		"const mode=viewMode?viewMode.value:'cards';",
-		"if(cardSection) cardSection.hidden=mode==='table';",
-		"if(tableSection) tableSection.hidden=mode!=='table';",
-		"document.documentElement.dataset.showIds=showIds.checked?'true':'false';",
-		"for(const detail of document.querySelectorAll('details')) detail.open=openDetails.checked;",
-		"count.textContent=String(visible);",
-		"}",
-		"function installDownloads(){",
-		"for(const button of document.querySelectorAll('[data-proofkit-download]')){",
-		"button.addEventListener('click',()=>{",
-		"const binary=atob(button.getAttribute('data-download-content')||'');",
-		"const bytes=new Uint8Array(binary.length);",
-		"for(let index=0;index<binary.length;index++) bytes[index]=binary.charCodeAt(index);",
-		"const blob=new Blob([bytes],{type:'application/octet-stream'});",
-		"const link=document.createElement('a');",
-		"link.href=URL.createObjectURL(blob);",
-		"link.download=button.getAttribute('data-download-file')||'proofkit-rendered-view';",
-		"document.body.appendChild(link);",
-		"link.click();",
-		"link.remove();",
-		"URL.revokeObjectURL(link.href);",
-		"});",
-		"}",
-		"}",
-		"search.addEventListener('input',applyFilters);",
-		"showIds.addEventListener('change',applyFilters);",
-		"openDetails.addEventListener('change',applyFilters);",
-		"if(viewMode) viewMode.addEventListener('change',applyFilters);",
-		"for(const filter of filters) filter.addEventListener('change',applyFilters);",
-		"installDownloads();",
-		"applyFilters();",
+		"@media (prefers-color-scheme:dark){:root{background:#101418;color:#e6edf3}.summary,.hierarchy,.controls,.exports,.card,.table-view,.non-claims{background:#161b22;border-color:#30363d}.eyebrow,.result-count,dt,.hierarchy h2,.card-group>h2,.hierarchy span,.card-group>h2 span,th,.exports h2{color:#9da7b1}input[type=search],select,th{background:#0d1117}input[type=search],select,button{border-color:#8b949e}button{background:#21262d}button:hover{background:#30363d}code{background:#0d1117}details,th,td,.card-group>h2{border-color:#30363d}a{color:#58a6ff}}",
 	}, "")
 }

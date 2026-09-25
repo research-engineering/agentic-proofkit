@@ -26,6 +26,13 @@ export const sourceViewTest = test.extend({
   sourceViewURL: [async ({}, use) => { await withFixture("--source", use); }, {scope: "worker"}],
 });
 
+export const staticViewTest = test.extend({
+  staticViewURL: [async ({}, use) => { await withFixture("--static-source", use); }, {scope: "worker"}],
+  staticTreeURL: [async ({}, use) => { await withFixture("--static-tree", use); }, {scope: "worker"}],
+  staticProofURL: [async ({}, use) => { await withFixture("--static-proof", use); }, {scope: "worker"}],
+  staticCoverageURL: [async ({}, use) => { await withFixture("--static-coverage", use); }, {scope: "worker"}],
+});
+
 export const pagingTest = test.extend({
   pagingURL: [async ({}, use) => { await withFixture("--paging", use); }, {scope: "worker"}],
 });
