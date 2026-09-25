@@ -796,10 +796,11 @@ func buildGraph(input Input) map[string]any {
 
 func buildSlice(input Input, graph map[string]any) map[string]any {
 	requirements := graph["requirements"].([]any)
+	selection := indexRequirementSelection(input.Selection, input.Bindings)
 	selected := []any{}
 	for index, requirementValue := range requirements {
 		requirement := input.Requirements[index]
-		if isSelectedRequirement(requirement, input.Bindings, input.Selection) {
+		if isSelectedRequirement(requirement, &selection) {
 			selected = append(selected, requirementValue)
 		}
 	}
@@ -835,24 +836,60 @@ func buildSlice(input Input, graph map[string]any) map[string]any {
 	}
 }
 
-func isSelectedRequirement(requirement Requirement, bindings []Binding, selection Selection) bool {
-	if len(selection.ChangedPaths) == 0 && len(selection.OwnerIDs) == 0 && len(selection.RequirementIDs) == 0 {
+type requirementSelectionIndex struct {
+	all            bool
+	selection      Selection
+	bindings       []Binding
+	requirementIDs map[string]struct{}
+	ownerIDs       map[string]struct{}
+	changedPaths   map[string]struct{}
+}
+
+func indexRequirementSelection(selection Selection, bindings []Binding) requirementSelectionIndex {
+	// Retain only admitted, immutable input for this build's local queries.
+	return requirementSelectionIndex{
+		all:       len(selection.ChangedPaths) == 0 && len(selection.OwnerIDs) == 0 && len(selection.RequirementIDs) == 0,
+		selection: selection,
+		bindings:  bindings,
+	}
+}
+
+func isSelectedRequirement(requirement Requirement, index *requirementSelectionIndex) bool {
+	if index.all {
 		return true
 	}
-	if contains(selection.RequirementIDs, requirement.RequirementID) || contains(selection.OwnerIDs, requirement.OwnerID) {
-		return true
-	}
-	for _, changedPath := range selection.ChangedPaths {
-		if changedPath == requirement.SpecPath {
+	if index.requirementIDs == nil {
+		selection := index.selection
+		if containsSorted(selection.RequirementIDs, requirement.RequirementID) ||
+			containsSorted(selection.OwnerIDs, requirement.OwnerID) ||
+			containsSorted(selection.ChangedPaths, requirement.SpecPath) {
 			return true
 		}
-		for _, binding := range bindings {
-			if binding.RequirementID == requirement.RequirementID && changedPath == binding.WitnessPath {
-				return true
+		// No early predicate matched; build the original maps once, even on a miss.
+		index.requirementIDs = make(map[string]struct{}, len(selection.RequirementIDs))
+		index.ownerIDs = make(map[string]struct{}, len(selection.OwnerIDs))
+		index.changedPaths = make(map[string]struct{}, len(selection.ChangedPaths))
+		for _, id := range selection.RequirementIDs {
+			index.requirementIDs[id] = struct{}{}
+		}
+		for _, id := range selection.OwnerIDs {
+			index.ownerIDs[id] = struct{}{}
+		}
+		for _, changedPath := range selection.ChangedPaths {
+			index.changedPaths[changedPath] = struct{}{}
+		}
+		if len(index.changedPaths) > 0 {
+			for _, binding := range index.bindings {
+				if _, changed := index.changedPaths[binding.WitnessPath]; changed {
+					index.requirementIDs[binding.RequirementID] = struct{}{}
+				}
 			}
 		}
 	}
-	return false
+	_, byID := index.requirementIDs[requirement.RequirementID]
+	_, byOwner := index.ownerIDs[requirement.OwnerID]
+	_, bySpecPath := index.changedPaths[requirement.SpecPath]
+	return byID || byOwner || bySpecPath
 }
 
 func buildReport(input Input, graph map[string]any, slice map[string]any, failures []string) report.Record {
@@ -1074,4 +1111,10 @@ func contains(values []string, needle string) bool {
 		}
 	}
 	return false
+}
+
+// Selection admission sorts each operand before the local index is built.
+func containsSorted(values []string, needle string) bool {
+	index := sort.SearchStrings(values, needle)
+	return index < len(values) && values[index] == needle
 }

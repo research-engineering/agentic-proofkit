@@ -68,10 +68,10 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			lines = append(lines, "  "+renderer.DisplayCommand("stack-preset", "--preset", presetID))
 		}
 	}
-	if descriptor.name == "stack-preset" || descriptor.name == "requirement-source-admission" {
+	if renderer.Profile() == cliexec.ProfileNPMOffline && (descriptor.name == "stack-preset" || descriptor.name == "requirement-source-admission") {
 		lines = append(lines,
 			"",
-			"Optional human first-input example (CLI guidance is available below):",
+			"Optional human first-input example for a local npm install (CLI guidance is available below):",
 			"  Path: node_modules/@research-engineering/agentic-proofkit/README.md",
 		)
 	}

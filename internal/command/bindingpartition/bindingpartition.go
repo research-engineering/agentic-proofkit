@@ -106,6 +106,7 @@ func Build(raw any) (report.Record, int, error) {
 		surfacesByID[surface.SurfaceID] = surface
 	}
 	routeOwnersByRef := mapRouteOwners(input.RouteOwners)
+	relations := indexPartitionRelations(input)
 	referencesByRouteRef := groupReferencesByRouteRef(input.RouteReferences)
 	thresholdsBySurfaceID := map[string]thresholdInput{}
 	for _, threshold := range input.SurfaceThresholds {
@@ -124,18 +125,19 @@ func Build(raw any) (report.Record, int, error) {
 			routeOwnersByRef[proofRouteRef],
 			referencesByRouteRef[proofRouteRef],
 			surfacesByID,
+			relations.selectorsBySurface,
 			selectorOwners,
 			declaredProofRouteRefs,
 		))
 	}
 	delegationDiagnostics := make([]delegationDiagnostic, 0, len(input.RouteReferences))
 	for _, reference := range input.RouteReferences {
-		delegationDiagnostics = append(delegationDiagnostics, evaluateRouteReference(reference, routeOwnersByRef[reference.ProofRouteRef], input.Delegations, surfacesByID))
+		delegationDiagnostics = append(delegationDiagnostics, evaluateRouteReference(reference, routeOwnersByRef[reference.ProofRouteRef], relations.delegationsByRef, surfacesByID))
 	}
 	surfaceDiagnostics := make([]surfaceDiagnostic, 0, len(input.BindingSurfaces))
 	for _, surface := range input.BindingSurfaces {
 		threshold, ok := thresholdsBySurfaceID[surface.SurfaceID]
-		surfaceDiagnostics = append(surfaceDiagnostics, evaluateSurface(surface, input.RouteOwners, selectorOwners, threshold, ok))
+		surfaceDiagnostics = append(surfaceDiagnostics, evaluateSurface(surface, relations.ownersBySurface[surface.SurfaceID], selectorOwners, threshold, ok))
 	}
 	failedProofRouteRefs := sortedUnique(append(failedOwnershipRouteRefs(routeOwnerships), failedDelegationRouteRefs(delegationDiagnostics)...))
 	failedSurfaceIDs := failedSurfaceIDs(surfaceDiagnostics)
@@ -494,7 +496,38 @@ func threshold(record map[string]any) (thresholdInput, error) {
 	return result, nil
 }
 
-func evaluateRouteOwnership(proofRouteRef string, ownerRecords []routeOwnerInput, references []routeReferenceInput, surfacesByID map[string]surfaceInput, selectorOwners map[string][]string, declaredProofRouteRefs map[string]struct{}) routeOwnership {
+type partitionRelationIndex struct {
+	ownersBySurface    map[string][]routeOwnerInput
+	delegationsByRef   map[string]delegationInput
+	selectorsBySurface map[string]map[string]struct{}
+}
+
+func indexPartitionRelations(input admittedInput) partitionRelationIndex {
+	index := partitionRelationIndex{
+		ownersBySurface:    map[string][]routeOwnerInput{},
+		delegationsByRef:   make(map[string]delegationInput, len(input.Delegations)),
+		selectorsBySurface: make(map[string]map[string]struct{}, len(input.BindingSurfaces)),
+	}
+	// Route owners are not unique at admission: keep every record, including
+	// repeated ownership of the same route, for diagnostics and thresholds.
+	for _, owner := range input.RouteOwners {
+		index.ownersBySurface[owner.SurfaceID] = append(index.ownersBySurface[owner.SurfaceID], owner)
+	}
+	// Admission rejects duplicate delegation refs and surface IDs.
+	for _, delegation := range input.Delegations {
+		index.delegationsByRef[delegation.DelegationRef] = delegation
+	}
+	for _, surface := range input.BindingSurfaces {
+		selectors := make(map[string]struct{}, len(surface.SelectorRefs))
+		for _, ref := range surface.SelectorRefs {
+			selectors[ref] = struct{}{}
+		}
+		index.selectorsBySurface[surface.SurfaceID] = selectors
+	}
+	return index
+}
+
+func evaluateRouteOwnership(proofRouteRef string, ownerRecords []routeOwnerInput, references []routeReferenceInput, surfacesByID map[string]surfaceInput, selectorsBySurface map[string]map[string]struct{}, selectorOwners map[string][]string, declaredProofRouteRefs map[string]struct{}) routeOwnership {
 	findings := []string{}
 	if _, ok := declaredProofRouteRefs[proofRouteRef]; !ok {
 		findings = append(findings, fmt.Sprintf("proofRouteRef %s is not listed in proofRouteRefs", proofRouteRef))
@@ -508,7 +541,7 @@ func evaluateRouteOwnership(proofRouteRef string, ownerRecords []routeOwnerInput
 	referenceIDs := referenceIDs(references)
 	if len(ownerRecords) > 0 {
 		owner := ownerRecords[0]
-		findings = append(findings, routeOwnerFindings(owner, surfacesByID, selectorOwners)...)
+		findings = append(findings, routeOwnerFindings(owner, surfacesByID, selectorsBySurface, selectorOwners)...)
 		sort.Strings(findings)
 		return routeOwnership{
 			routeOwnerInput:    owner,
@@ -530,7 +563,7 @@ func evaluateRouteOwnership(proofRouteRef string, ownerRecords []routeOwnerInput
 	}
 }
 
-func routeOwnerFindings(owner routeOwnerInput, surfacesByID map[string]surfaceInput, selectorOwners map[string][]string) []string {
+func routeOwnerFindings(owner routeOwnerInput, surfacesByID map[string]surfaceInput, selectorsBySurface map[string]map[string]struct{}, selectorOwners map[string][]string) []string {
 	surface, ok := surfacesByID[owner.SurfaceID]
 	if !ok {
 		return []string{fmt.Sprintf("route owner surface %s is not declared", owner.SurfaceID)}
@@ -539,10 +572,7 @@ func routeOwnerFindings(owner routeOwnerInput, surfacesByID map[string]surfaceIn
 	if owner.OwnerID != surface.OwnerID {
 		findings = append(findings, fmt.Sprintf("route owner %s differs from surface owner %s", owner.OwnerID, surface.OwnerID))
 	}
-	surfaceSelectorRefs := map[string]struct{}{}
-	for _, selectorRef := range surface.SelectorRefs {
-		surfaceSelectorRefs[selectorRef] = struct{}{}
-	}
+	surfaceSelectorRefs := selectorsBySurface[owner.SurfaceID]
 	for _, selectorRef := range owner.SelectorRefs {
 		if _, ok := surfaceSelectorRefs[selectorRef]; !ok {
 			findings = append(findings, fmt.Sprintf("route selector %s is not declared by surface %s", selectorRef, owner.SurfaceID))
@@ -554,7 +584,7 @@ func routeOwnerFindings(owner routeOwnerInput, surfacesByID map[string]surfaceIn
 	return findings
 }
 
-func evaluateRouteReference(reference routeReferenceInput, ownerRecords []routeOwnerInput, delegations []delegationInput, surfacesByID map[string]surfaceInput) delegationDiagnostic {
+func evaluateRouteReference(reference routeReferenceInput, ownerRecords []routeOwnerInput, delegationsByRef map[string]delegationInput, surfacesByID map[string]surfaceInput) delegationDiagnostic {
 	var owner *routeOwnerInput
 	if len(ownerRecords) == 1 {
 		owner = &ownerRecords[0]
@@ -565,11 +595,8 @@ func evaluateRouteReference(reference routeReferenceInput, ownerRecords []routeO
 	matchedDelegationRefs := []string{}
 	if owner != nil {
 		for _, delegationRef := range reference.DelegationRefs {
-			for _, delegation := range delegations {
-				if delegationMatchesReference(delegation, reference, *owner, delegationRef) {
-					matchedDelegationRefs = append(matchedDelegationRefs, delegationRef)
-					break
-				}
+			if delegation, ok := delegationsByRef[delegationRef]; ok && delegationMatchesReference(delegation, reference, *owner, delegationRef) {
+				matchedDelegationRefs = append(matchedDelegationRefs, delegationRef)
 			}
 		}
 		sort.Strings(matchedDelegationRefs)
@@ -635,13 +662,7 @@ func delegationMatchesReference(delegation delegationInput, reference routeRefer
 		includes(delegation.ProofRouteRefs, reference.ProofRouteRef)
 }
 
-func evaluateSurface(surface surfaceInput, routeOwners []routeOwnerInput, selectorOwners map[string][]string, threshold thresholdInput, hasThreshold bool) surfaceDiagnostic {
-	ownedRoutes := []routeOwnerInput{}
-	for _, owner := range routeOwners {
-		if owner.SurfaceID == surface.SurfaceID {
-			ownedRoutes = append(ownedRoutes, owner)
-		}
-	}
+func evaluateSurface(surface surfaceInput, ownedRoutes []routeOwnerInput, selectorOwners map[string][]string, threshold thresholdInput, hasThreshold bool) surfaceDiagnostic {
 	ownedProofRouteRefs := routeOwnerRefs(ownedRoutes)
 	cohesionGroupIDs := sortedUnique(routeOwnerCohesionGroups(ownedRoutes))
 	findings := []string{}

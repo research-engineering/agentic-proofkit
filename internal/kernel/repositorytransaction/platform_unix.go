@@ -40,8 +40,16 @@ func openNoFollow(root *os.Root, name string) (*os.File, error) {
 	return root.OpenFile(name, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK, 0)
 }
 
-func lockDirectory(file *os.File) error {
-	if err := unix.Flock(int(file.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+func lockDirectory(file *os.File, mode transactionLockMode) error {
+	operation := unix.LOCK_EX
+	switch mode {
+	case transactionWriteLock:
+	case transactionReadLock:
+		operation = unix.LOCK_SH
+	default:
+		return fmt.Errorf("invalid repository transaction lock mode")
+	}
+	if err := unix.Flock(int(file.Fd()), operation|unix.LOCK_NB); err != nil {
 		if errors.Is(err, unix.EWOULDBLOCK) {
 			return ErrBusy
 		}

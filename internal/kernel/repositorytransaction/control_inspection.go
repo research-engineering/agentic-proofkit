@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/rootpath"
 )
 
 var ErrControlStateChanged = errors.New("repository transaction control state changed during inspection")
@@ -195,7 +194,7 @@ func terminalControlState(root *os.Root, terminal terminalControlIdentity) (stri
 }
 
 func controlInspectionOperationalError(err error) error {
-	if errors.Is(err, ErrReadCleanup) || errors.Is(err, rootpath.ErrTraversalCleanup) {
+	if isReadCleanup(err) {
 		return err
 	}
 	return nil

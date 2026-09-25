@@ -54,6 +54,10 @@ var (
 	ErrUnsafeInspectionRoute  = errors.New("repository inspection route is unsafe")
 )
 
+func isReadCleanup(err error) bool {
+	return errors.Is(err, ErrReadCleanup) || errors.Is(err, rootpath.ErrTraversalCleanup)
+}
+
 func closeReadResource(resource io.Closer, label string) error {
 	if err := resource.Close(); err != nil {
 		return fmt.Errorf("%w: %s", ErrReadCleanup, label)
@@ -62,17 +66,18 @@ func closeReadResource(resource io.Closer, label string) error {
 }
 
 // InspectionLease pins one repository root and, when the transaction control
-// namespace exists, holds its cooperative writer lock for the full read.
+// namespace exists, holds a shared cooperative lock for the full read.
 type InspectionLease struct {
 	absolute         string
 	controlNamespace bool
 	identity         os.FileInfo
+	controlIdentity  os.FileInfo
 	lock             *transactionLock
 	root             *os.Root
 	rootID           string
 }
 
-func OpenInspectionLease(ctx context.Context, rootPath string) (*InspectionLease, error) {
+func OpenInspectionLease(ctx context.Context, rootPath string) (lease *InspectionLease, returnErr error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("open repository inspection lease cancelled: %w", err)
 	}
@@ -80,25 +85,42 @@ func OpenInspectionLease(ctx context.Context, rootPath string) (*InspectionLease
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if returnErr != nil {
+			if closeErr := closeReadResource(root, "inspection root admission"); closeErr != nil {
+				returnErr = errors.Join(closeErr, ctx.Err())
+			}
+		}
+	}()
 	absolute, err := filepath.Abs(rootPath)
 	if err != nil {
-		root.Close()
 		return nil, fmt.Errorf("resolve repository inspection root")
 	}
 	identity, err := root.Stat(".")
 	if err != nil {
-		root.Close()
 		return nil, fmt.Errorf("inspect repository inspection root")
 	}
-	lock, exists, err := acquireExistingTransactionLock(root)
+	// Bind the control parent as well as the locked directory, so moving the
+	// same locked inode into a replacement parent cannot validate the route.
+	controlIdentity, controlErr := root.Lstat(filepath.FromSlash(ControlRoot))
+	if controlErr != nil && !errors.Is(controlErr, os.ErrNotExist) {
+		return nil, fmt.Errorf("inspect repository transaction control root")
+	}
+	lock, exists, err := acquireExistingLock(root, transactionReadLock)
 	if err != nil {
-		root.Close()
 		return nil, err
 	}
-	return &InspectionLease{
+	lease = &InspectionLease{
 		absolute: absolute, controlNamespace: exists, identity: identity,
-		lock: lock, root: root, rootID: rootID,
-	}, nil
+		controlIdentity: controlIdentity, lock: lock, root: root, rootID: rootID,
+	}
+	if err := errors.Join(lease.VerifyRootIdentity(), ctx.Err()); err != nil {
+		if closeErr := lock.releaseChecked(); closeErr != nil {
+			return nil, errors.Join(ErrReadCleanup, ctx.Err())
+		}
+		return nil, err
+	}
+	return lease, nil
 }
 
 // OpenExactRegularFile opens one exact repository-relative regular file
@@ -139,6 +161,28 @@ func (lease *InspectionLease) VerifyRootIdentity() error {
 	}
 	routeInfo, err := os.Lstat(lease.absolute)
 	if err != nil || routeInfo.Mode()&os.ModeSymlink != 0 || !routeInfo.IsDir() || !os.SameFile(lease.identity, routeInfo) {
+		return ErrControlStateChanged
+	}
+	exists, err := controlNamespaceExists(lease.root)
+	if err != nil {
+		return err
+	}
+	if exists != lease.controlNamespace {
+		return ErrControlStateChanged
+	}
+	if !exists {
+		return nil
+	}
+	parentInfo, err := lease.root.Lstat(filepath.FromSlash(ControlRoot))
+	if err != nil || lease.controlIdentity == nil || !os.SameFile(lease.controlIdentity, parentInfo) {
+		return ErrControlStateChanged
+	}
+	lockedInfo, err := lease.lock.directory.Stat()
+	if err != nil {
+		return ErrControlStateChanged
+	}
+	controlInfo, err := lease.root.Lstat(filepath.FromSlash(ControlDirectory))
+	if err != nil || !os.SameFile(lockedInfo, controlInfo) {
 		return ErrControlStateChanged
 	}
 	return nil
