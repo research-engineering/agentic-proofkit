@@ -1,40 +1,13 @@
 package admission
 
 import (
+	"encoding"
+	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"reflect"
 	"strings"
 )
-
-// Resolve the reachable non-opaque field tables before inspecting input keys.
-// Invalid target declarations must fail even for absent children or empty input
-// containers. The tables are local to one decode and reused for repeated types.
-func jsonTargetFields(target reflect.Type) (map[reflect.Type]map[string]reflect.Type, error) {
-	tables := map[reflect.Type]map[string]reflect.Type{}
-	seen := map[reflect.Type]bool{}
-	pending := []reflect.Type{target}
-	for index := 0; index < len(pending); index++ {
-		current := indirectJSONType(pending[index])
-		if current == nil || seen[current] || current.Kind() == reflect.Interface || isOpaqueJSONType(current) {
-			continue
-		}
-		seen[current] = true
-		switch current.Kind() {
-		case reflect.Struct:
-			fields, err := jsonStructFields(current)
-			if err != nil {
-				return nil, err
-			}
-			tables[current] = fields
-			for _, fieldType := range fields {
-				pending = append(pending, fieldType)
-			}
-		case reflect.Slice, reflect.Array, reflect.Map:
-			pending = append(pending, current.Elem())
-		}
-	}
-	return tables, nil
-}
 
 // jsonStructFields resolves exact JSON names, not Go selector visibility.
 // Match encoding/json's breadth-first type discovery and name dominance;
@@ -58,24 +31,51 @@ func jsonStructFields(target reflect.Type) (map[string]reflect.Type, error) {
 			visited[parent] = true
 			for index := 0; index < parent.NumField(); index++ {
 				field := parent.Field(index)
-				embedded := indirectJSONType(field.Type)
-				if !field.IsExported() && (!field.Anonymous || embedded.Kind() != reflect.Struct) {
-					continue
-				}
 				tag := field.Tag.Get("json")
-				if tag == "-" {
+				if tag == "-" || (!field.IsExported() && !field.Anonymous) {
 					continue
 				}
-				name, _, _ := strings.Cut(tag, ",")
+				// Only anonymous fields need type resolution for promotion.
+				// Ordinary child types stay untouched until their value occurs.
+				embedded := field.Type
+				if field.Anonymous {
+					var err error
+					embedded, err = indirectJSONType(field.Type)
+					if err != nil {
+						return nil, err
+					}
+					if !field.IsExported() && embedded.Kind() != reflect.Struct {
+						continue
+					}
+				}
+				name, options, hasOptions := strings.Cut(tag, ",")
 				// Reserved/quoted names are outside the supported target-tag
 				// contract; do not guess a stdlib-version-specific fallback.
 				if strings.ContainsAny(name, "\\'\"`") {
 					return nil, errors.New("invalid JSON target schema: unsupported field tag name")
 				}
+				omitzero := false
+				if hasOptions {
+					for _, option := range strings.Split(options, ",") {
+						switch option {
+						case "omitzero":
+							omitzero = true
+						case "omitempty", "string":
+						default:
+							return nil, errors.New("invalid JSON target schema: unsupported field tag option")
+						}
+					}
+				}
 				if field.Anonymous && name == "" && embedded.Kind() == reflect.Struct {
 					// Count repeated discoveries at this level, as encoding/json
 					// does; two suffice to mark the type's own fields ambiguous.
 					next[embedded] = min(2, next[embedded]+1)
+					continue
+				}
+				// Go 1.27's normal-field branch excludes inaccessible methods;
+				// its automatic struct-promotion branch still visits children.
+				if !field.IsExported() && (hasJSONSerializationMethod(embedded) ||
+					(omitzero && hasJSONMethod(embedded, reflect.TypeFor[interface{ IsZero() bool }]()))) {
 					continue
 				}
 				tagged := name != ""
@@ -105,4 +105,21 @@ func jsonStructFields(target reflect.Type) (map[string]reflect.Type, error) {
 		}
 	}
 	return fields, nil
+}
+
+func hasJSONSerializationMethod(target reflect.Type) bool {
+	return hasJSONMethod(target,
+		reflect.TypeFor[json.Marshaler](), reflect.TypeFor[jsonv2.MarshalerTo](),
+		reflect.TypeFor[json.Unmarshaler](), reflect.TypeFor[jsonv2.UnmarshalerFrom](),
+		reflect.TypeFor[encoding.TextMarshaler](), reflect.TypeFor[encoding.TextAppender](),
+		reflect.TypeFor[encoding.TextUnmarshaler]())
+}
+
+func hasJSONMethod(target reflect.Type, methods ...reflect.Type) bool {
+	for _, method := range methods {
+		if target.Implements(method) || reflect.PointerTo(target).Implements(method) {
+			return true
+		}
+	}
+	return false
 }

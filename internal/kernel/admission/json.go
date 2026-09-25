@@ -3,6 +3,7 @@ package admission
 import (
 	"bytes"
 	"encoding/json"
+	jsonv2 "encoding/json/v2"
 	"errors"
 	"fmt"
 	"io"
@@ -43,9 +44,10 @@ func decodeJSONSource(source []byte) (any, error) {
 
 // DecodeTypedJSON validates JSON syntax and exact spelling of known struct keys.
 // Unknown keys remain permitted; callers own closed-object admission. Target
-// field names containing backslash, apostrophe, double quote or backtick are
-// rejected instead of guessing version-specific tag syntax. Custom JSON
-// unmarshaler types own their nested field policy.
+// fields are inspected only for present ordinary struct-object values. Reserved
+// quote/backslash names and options other than omitempty, omitzero and string
+// are unsupported there. Custom JSON unmarshalers own their representations;
+// text-only unmarshalers do not bypass object-key checking.
 func DecodeTypedJSON[T any](reader io.Reader, maxBytes int64) (T, error) {
 	var out T
 	source, err := readBounded(reader, maxBytes)
@@ -68,15 +70,17 @@ func DecodeTypedJSON[T any](reader io.Reader, maxBytes int64) (T, error) {
 }
 
 func rejectCaseFoldedTypedKeys(value any, target reflect.Type) error {
-	fields, err := jsonTargetFields(target)
-	if err != nil {
-		return err
-	}
-	return rejectCaseFoldedKeys(value, target, fields)
+	return rejectCaseFoldedKeys(value, target, map[reflect.Type]map[string]reflect.Type{})
 }
 
 func rejectCaseFoldedKeys(value any, target reflect.Type, targetFields map[reflect.Type]map[string]reflect.Type) error {
-	target = indirectJSONType(target)
+	if value == nil {
+		return nil
+	}
+	target, err := indirectJSONType(target)
+	if err != nil {
+		return err
+	}
 	if target == nil || target.Kind() == reflect.Interface || isOpaqueJSONType(target) {
 		return nil
 	}
@@ -86,7 +90,14 @@ func rejectCaseFoldedKeys(value any, target reflect.Type, targetFields map[refle
 		if !ok {
 			return nil
 		}
-		fields := targetFields[target]
+		fields, found := targetFields[target]
+		if !found {
+			fields, err = jsonStructFields(target)
+			if err != nil {
+				return err
+			}
+			targetFields[target] = fields
+		}
 		for key, child := range record {
 			fieldType, exact := fields[key]
 			if !exact {
@@ -130,16 +141,20 @@ func rejectCaseFoldedKeys(value any, target reflect.Type, targetFields map[refle
 	return nil
 }
 
-func indirectJSONType(target reflect.Type) reflect.Type {
+func indirectJSONType(target reflect.Type) (reflect.Type, error) {
+	seen := map[reflect.Type]bool{}
 	for target != nil && target.Kind() == reflect.Pointer {
+		if seen[target] {
+			return nil, errors.New("invalid JSON target schema: unsupported pointer cycle")
+		}
+		seen[target] = true
 		target = target.Elem()
 	}
-	return target
+	return target, nil
 }
 
 func isOpaqueJSONType(target reflect.Type) bool {
-	unmarshaler := reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
-	return target.Implements(unmarshaler) || (target.Kind() != reflect.Pointer && reflect.PointerTo(target).Implements(unmarshaler))
+	return hasJSONMethod(target, reflect.TypeFor[json.Unmarshaler](), reflect.TypeFor[jsonv2.UnmarshalerFrom]())
 }
 
 func readBounded(reader io.Reader, maxBytes int64) ([]byte, error) {

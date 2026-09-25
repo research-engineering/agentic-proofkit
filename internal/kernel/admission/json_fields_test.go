@@ -336,10 +336,10 @@ func TestJSONFieldsUnsupportedTagDeclarations(t *testing.T) {
 	type backtick struct {
 		Value string `json:"\x60private-marker"`
 	}
-	for _, input := range []string{`{}`, `null`, `{"Value":"set"}`, `{"VALUE":"set"}`, `{"extension":true}`} {
+	for _, input := range []string{`{}`, `{"Value":"set"}`, `{"VALUE":"set"}`, `{"extension":true}`} {
 		t.Run(input, func(t *testing.T) {
-			// The declaration is unsupported regardless of how a particular
-			// stdlib version decodes it or whether the input names its field.
+			// This object needs a field table even if none of its keys match.
+			// Unsupported names are not interpreted as a partial tag grammar.
 			checkUnsupportedJSONTarget[leading](t, input)
 			checkUnsupportedJSONTarget[prefix](t, input)
 			checkUnsupportedJSONTarget[quoted](t, input)
@@ -347,6 +347,11 @@ func TestJSONFieldsUnsupportedTagDeclarations(t *testing.T) {
 			checkUnsupportedJSONTarget[backtick](t, input)
 		})
 	}
+	checkJSONFieldDecode(t, `null`, leading{}, false)
+	checkJSONFieldDecode(t, `null`, prefix{}, false)
+	checkJSONFieldDecode(t, `null`, quoted{}, false)
+	checkJSONFieldDecode(t, `null`, doubleQuoted{}, false)
+	checkJSONFieldDecode(t, `null`, backtick{}, false)
 	type embedded struct {
 		privateJSONFields `json:"\\private-marker"`
 	}
@@ -355,11 +360,17 @@ func TestJSONFieldsUnsupportedTagDeclarations(t *testing.T) {
 		Child *leading `json:"child"`
 		Next  *nested  `json:"next"`
 	}
-	checkUnsupportedJSONTarget[nested](t, `{}`)
-	checkUnsupportedJSONTarget[nested](t, `{"child":null}`)
-	checkUnsupportedJSONTarget[[]leading](t, `[]`)
-	checkUnsupportedJSONTarget[[0]leading](t, `[]`)
-	checkUnsupportedJSONTarget[map[string]leading](t, `{}`)
+	checkJSONFieldDecode(t, `{}`, nested{}, false)
+	checkJSONFieldDecode(t, `{"child":null}`, nested{}, false)
+	checkJSONFieldDecode(t, `[]`, []leading{}, false)
+	checkJSONFieldDecode(t, `[]`, [0]leading{}, false)
+	checkJSONFieldDecode(t, `{}`, map[string]leading{}, false)
+	checkJSONFieldDecode(t, `[null]`, []*leading{nil}, false)
+	checkJSONFieldDecode(t, `{"x":null}`, map[string]*leading{"x": nil}, false)
+	checkUnsupportedJSONTarget[nested](t, `{"child":{}}`)
+	checkUnsupportedJSONTarget[[]leading](t, `[{}]`)
+	checkUnsupportedJSONTarget[[1]leading](t, `[{}]`)
+	checkUnsupportedJSONTarget[map[string]leading](t, `{"x":{}}`)
 }
 
 func TestJSONFieldsOrdinaryTagNamesAndOptions(t *testing.T) {
@@ -368,6 +379,7 @@ func TestJSONFieldsOrdinaryTagNamesAndOptions(t *testing.T) {
 		Punctuation string `json:"name.!#$%&()*+-/:;<=>?@[]^_{|}~ "`
 		Number      int    `json:"number,string"`
 		Default     string `json:",omitempty"`
+		Zero        string `json:"zero,omitzero"`
 	}
 	want := record{Unicode: "u", Punctuation: "p", Number: 7, Default: "d"}
 	checkJSONFieldDecode(t, `{"caf\u00e9":"u","name.!#$%&()*+-/:;<=>?@[]^_{|}~ ":"p","number":"7","Default":"d"}`, want, false)
