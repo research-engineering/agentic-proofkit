@@ -2,6 +2,7 @@ package commandoracle
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -15,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
@@ -154,7 +156,7 @@ func runGoTests(ctx context.Context, root string, commands []ExecutionCommand, l
 	return nil
 }
 
-func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *eventLedger) error {
+func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *eventLedger) (result error) {
 	goExecutable, err := exec.LookPath(argv[0])
 	if err != nil {
 		return decision("process.go_executable_missing")
@@ -163,78 +165,153 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 	command.Dir = root
 	command.WaitDelay = processWaitDelay
 	processgroup.Configure(command)
+	var terminationFailed atomic.Bool
+	cancelCommand := command.Cancel
+	command.Cancel = func() error {
+		err := cancelCommand()
+		if err != nil && !errors.Is(err, os.ErrProcessDone) {
+			terminationFailed.Store(true)
+		}
+		return err
+	}
+	stderrReader, stderrWriter, err := os.Pipe()
+	if err != nil {
+		return decision("process.stderr_pipe_failed")
+	}
+	readerTransferred := false
+	writerClosed := false
+	defer func() {
+		if !readerTransferred {
+			if err := stderrReader.Close(); err != nil {
+				result = withCommandFailures(result, errors.New("command oracle stderr reader close failed"))
+			}
+		}
+		if !writerClosed {
+			if err := stderrWriter.Close(); err != nil {
+				result = withCommandFailures(result, errors.New("command oracle stderr writer close failed"))
+			}
+		}
+	}()
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		return decision("process.stdout_pipe_failed")
 	}
-	stderr, err := command.StderrPipe()
-	if err != nil {
-		return decision("process.stderr_pipe_failed")
-	}
+	// A direct file keeps Wait from truncating or waiting on this owned reader.
+	command.Stderr = stderrWriter
 	if err := command.Start(); err != nil {
 		return decision("process.start_failed")
 	}
-	stderrState := newBoundedDrain()
-	stderrDone := make(chan struct{})
-	go func() {
-		defer close(stderrDone)
-		_, _ = io.Copy(stderrState, stderr)
-	}()
+	var lifecycleErr error
+	writerClosed = true
+	if err := stderrWriter.Close(); err != nil {
+		lifecycleErr = errors.New("command oracle stderr writer close failed")
+	}
+	stderr := startCommandStderr(stderrReader)
+	readerTransferred = true
+	result = waitGoTestCommand(ctx, command, stdout, stderr, ledger, lifecycleErr, func() error {
+		return processgroup.Terminate(command)
+	})
+	if terminationFailed.Load() {
+		result = withCommandFailures(result, errors.New("command oracle process termination failed"))
+	}
+	return result
+}
+
+// waitGoTestCommand owns both readers and the sole Wait after a successful Start.
+// terminate represents only the local abort attempt, not Cmd.Cancel.
+func waitGoTestCommand(ctx context.Context, command *exec.Cmd, stdout io.ReadCloser, stderr *commandStderr, ledger *eventLedger, lifecycleErr error, terminate func() error) error {
 	parseDone := make(chan error, 1)
 	go func() { parseDone <- parseEvents(stdout, ledger) }()
+	stdoutClosed := false
+	closeStdout := func() {
+		if !stdoutClosed {
+			stdoutClosed = true
+			if err := stdout.Close(); err != nil {
+				lifecycleErr = errors.Join(lifecycleErr, errors.New("command oracle stdout reader close failed"))
+			}
+		}
+	}
+	operationAbortAttempted := false
+	abort := func() {
+		if !operationAbortAttempted {
+			// Stderr expiry closes its reader without attempting process termination.
+			operationAbortAttempted = true
+			stderr.aborted = true
+			if err := terminate(); err != nil {
+				lifecycleErr = errors.Join(lifecycleErr, errors.New("command oracle process termination failed"))
+			}
+			stderr.abort()
+			closeStdout()
+		}
+	}
+	if lifecycleErr != nil {
+		abort()
+	}
 
 	var parseErr error
-	overflowChannel := stderrState.Exceeded()
+	overflowChannel := stderr.bounded.Exceeded()
 	contextChannel := ctx.Done()
 	overflowed := false
+	observeOverflow := func() {
+		if !overflowed && stderr.bounded.Overflowed() {
+			overflowed = true
+			overflowChannel = nil
+			abort()
+		}
+	}
 	parseComplete := false
 	for !parseComplete {
 		select {
 		case parseErr = <-parseDone:
 			parseComplete = true
-			if parseErr != nil {
-				_ = processgroup.Terminate(command)
+			closeStdout()
+			if parseErr != nil || lifecycleErr != nil {
+				abort()
 			}
+		case err := <-stderr.done:
+			stderr.receive(err)
 		case <-overflowChannel:
-			overflowed = true
-			overflowChannel = nil
-			_ = processgroup.Terminate(command)
 		case <-contextChannel:
 			contextChannel = nil
-			_ = processgroup.Terminate(command)
+			abort()
 		}
+		observeOverflow()
 	}
 	waitDone := make(chan error, 1)
 	go func() { waitDone <- command.Wait() }()
 	var waitErr error
 	waitComplete := false
-	for !waitComplete {
+	for !waitComplete || stderr.done != nil {
 		select {
 		case waitErr = <-waitDone:
 			waitComplete = true
+			waitDone = nil
+			stderr.parentWaited()
+		case err := <-stderr.done:
+			stderr.receive(err)
+		case <-stderr.deadline:
+			stderr.expire()
 		case <-overflowChannel:
-			overflowed = true
-			overflowChannel = nil
-			_ = processgroup.Terminate(command)
 		case <-contextChannel:
 			contextChannel = nil
-			_ = processgroup.Terminate(command)
+			abort()
 		}
+		// Completion may win select while an overflow notification is also ready.
+		observeOverflow()
 	}
-	<-stderrDone
-	if overflowed || stderrState.Overflowed() {
-		return decision("process.stderr_exceeded")
+	stderr.close()
+	var result error
+	switch {
+	case overflowed || stderr.bounded.Overflowed():
+		result = decision("process.stderr_exceeded")
+	case ctx.Err() != nil:
+		result = decision("process.timeout")
+	case parseErr != nil:
+		result = parseErr
+	case waitErr != nil:
+		result = decision("process.suite_failed")
 	}
-	if ctx.Err() != nil {
-		return decision("process.timeout")
-	}
-	if parseErr != nil {
-		return parseErr
-	}
-	if waitErr != nil {
-		return decision("process.suite_failed")
-	}
-	return nil
+	return withCommandFailures(result, lifecycleErr, stderr.failure())
 }
 
 type boundedDrain struct {

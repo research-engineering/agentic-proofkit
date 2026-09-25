@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -8,6 +9,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +17,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -296,7 +299,13 @@ func validateRequiredBindingWitnessSelectors(bindings bindingFile) error {
 }
 
 func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bindingFile) error {
+	return validateBindingWitnessSelectorExecutabilityWithGoList(root, bindings, runGoWitnessList)
+}
+
+func validateBindingWitnessSelectorExecutabilityWithGoList(root string, bindings bindingFile, runList func(string, ...string) ([]byte, error)) error {
 	// Command shape does not depend on source discovery or the active Go build.
+	var packagePaths []string
+	seenPackages := map[string]struct{}{}
 	for _, binding := range bindings.Bindings {
 		packagePath := "./" + filepath.ToSlash(filepath.Dir(binding.WitnessPath))
 		for _, selector := range binding.WitnessSelectors {
@@ -305,8 +314,13 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 				return fmt.Errorf("binding %s selector command=%q, want %q", binding.ScenarioID, selector.Command, expectedCommand)
 			}
 		}
+		if _, seen := seenPackages[packagePath]; !seen && len(binding.WitnessSelectors) != 0 {
+			packagePaths = append(packagePaths, goListWitnessSelector(packagePath))
+			seenPackages[packagePath] = struct{}{}
+		}
 	}
 
+	var listedPackages map[string]goWitnessPackage
 	activeWitnessPackages := map[string]map[string]struct{}{}
 	packageFunctionScopes := map[string]map[string]*ast.FuncDecl{}
 	for _, binding := range bindings.Bindings {
@@ -341,7 +355,13 @@ func validateBindingWitnessSelectorExecutabilityAtRoot(root string, bindings bin
 		}
 		activeFiles, checked := activeWitnessPackages[packagePath]
 		if !checked {
-			activeFiles, err = activeGoTestFiles(root, packagePath)
+			if listedPackages == nil {
+				listedPackages, err = listGoWitnessPackages(root, packagePaths, runList)
+				if err != nil {
+					return fmt.Errorf("discover binding witness %s: %w", binding.WitnessPath, err)
+				}
+			}
+			activeFiles, err = activeGoTestFiles(packagePath, listedPackages[goListWitnessSelector(packagePath)])
 			if err != nil {
 				return fmt.Errorf("discover binding witness %s: %w", binding.WitnessPath, err)
 			}
@@ -401,20 +421,98 @@ func activePackageFunctions(activeFiles map[string]struct{}, packageName string)
 	return functions, nil
 }
 
-func activeGoTestFiles(root, packagePath string) (map[string]struct{}, error) {
-	command := exec.Command("go", "list", "-json", packagePath)
+type goWitnessPackage struct {
+	Dir          string
+	Match        []string
+	TestGoFiles  []string
+	XTestGoFiles []string
+	Error        *struct{}
+	DepsErrors   []struct{}
+	Incomplete   bool
+}
+
+func goListWitnessSelector(packagePath string) string {
+	// Go canonicalizes the root-directory pattern to "." in Match.
+	// Send that spelling explicitly, without changing the binding command contract.
+	if packagePath == "./." {
+		return "."
+	}
+	return packagePath
+}
+
+func runGoWitnessList(root string, args ...string) ([]byte, error) {
+	command := exec.Command("go", args...)
 	command.Dir = root
-	output, err := command.Output()
+	return command.Output()
+}
+
+func listGoWitnessPackages(root string, packagePaths []string, runList func(string, ...string) ([]byte, error)) (map[string]goWitnessPackage, error) {
+	listedPackages := make(map[string]goWitnessPackage, len(packagePaths))
+	if len(packagePaths) == 0 {
+		return listedPackages, nil
+	}
+	args := append([]string{"list", "-e", "-json=Dir,Match,TestGoFiles,XTestGoFiles,Error,DepsErrors,Incomplete"}, packagePaths...)
+	output, err := runList(root, args...)
 	if err != nil {
-		return nil, fmt.Errorf("go list %s: %w", packagePath, err)
+		// Only a failed native launch can justify splitting; never admit its stdout.
+		var launchError *os.PathError
+		if len(packagePaths) > 1 && errors.As(err, &launchError) && launchError.Op == "fork/exec" && errors.Is(launchError.Err, syscall.E2BIG) {
+			middle := len(packagePaths) / 2
+			left, err := listGoWitnessPackages(root, packagePaths[:middle], runList)
+			if err != nil {
+				return nil, err
+			}
+			right, err := listGoWitnessPackages(root, packagePaths[middle:], runList)
+			if err != nil {
+				return nil, err
+			}
+			for selector, listed := range right {
+				left[selector] = listed
+			}
+			return left, nil
+		}
+		return nil, errors.New("go list witness packages failed")
 	}
-	var listed struct {
-		Dir          string
-		TestGoFiles  []string
-		XTestGoFiles []string
+	requested := make(map[string]struct{}, len(packagePaths))
+	for _, selector := range packagePaths {
+		requested[selector] = struct{}{}
 	}
-	if err := json.Unmarshal(output, &listed); err != nil {
-		return nil, fmt.Errorf("decode go list %s: %w", packagePath, err)
+	decoder := json.NewDecoder(bytes.NewReader(output))
+	for {
+		var listed goWitnessPackage
+		if err := decoder.Decode(&listed); err == io.EOF {
+			break
+		} else if err != nil {
+			return nil, errors.New("decode go list witness packages: invalid JSON stream")
+		}
+		if len(listed.Match) == 0 {
+			return nil, errors.New("go list witness packages: missing selector match")
+		}
+		// go help list: Match contains the command-line patterns matching a package.
+		// Each explicit selector must map to exactly one object, independent of order;
+		// equivalent selectors may share that object. Publish only after complete EOF.
+		for _, selector := range listed.Match {
+			_, known := requested[selector]
+			_, duplicate := listedPackages[selector]
+			if !known || duplicate {
+				return nil, errors.New("go list witness packages: unknown or duplicate selector match")
+			}
+			listedPackages[selector] = listed
+		}
+	}
+	if len(listedPackages) != len(requested) {
+		return nil, errors.New("go list witness packages: missing selector match")
+	}
+	return listedPackages, nil
+}
+
+func activeGoTestFiles(packagePath string, listed goWitnessPackage) (map[string]struct{}, error) {
+	// -e records remain non-evidence at the original per-binding package check.
+	if listed.Error != nil || len(listed.DepsErrors) != 0 || listed.Incomplete {
+		return nil, fmt.Errorf("go list %s: package or dependency has errors", packagePath)
+	}
+	if !filepath.IsAbs(listed.Dir) {
+		return nil, fmt.Errorf("go list %s: missing absolute package directory", packagePath)
 	}
 	activeFiles := map[string]struct{}{}
 	for _, file := range append(listed.TestGoFiles, listed.XTestGoFiles...) {
