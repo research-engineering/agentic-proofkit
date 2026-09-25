@@ -141,3 +141,39 @@ func TestScanDirectoryRootPreservesEmptyAndTrailingSeparator(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestScanDirectoryRootPreservesInitialSymlinkTraversal(t *testing.T) {
+	root := writeTypeScriptPackageFixture(t)
+	if err := os.Mkdir(filepath.Join(root, "nested"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	aliases := t.TempDir()
+	alias := filepath.Join(aliases, "selected")
+	if err := os.Symlink(root, alias); err != nil {
+		t.Fatal(err)
+	}
+	nested := filepath.Join(aliases, "nested")
+	if err := os.Symlink(filepath.Join(root, "nested"), nested); err != nil {
+		t.Fatal(err)
+	}
+	// Joining would clean away the native symlink/.. traversal under test.
+	for _, selected := range []string{alias, nested + "/.."} {
+		output, code, err := Verify(publicAPIManifest(), Options{RepoRoot: selected})
+		if err != nil || code != 0 || output["entryCount"] != 1 {
+			t.Fatalf("initial root selection changed: code=%d err=%v output=%#v", code, err, output)
+		}
+	}
+	for _, selected := range []string{".", ".."} {
+		t.Run(selected, func(t *testing.T) {
+			working := root
+			if selected == ".." {
+				working = filepath.Join(root, "nested")
+			}
+			t.Chdir(working)
+			output, code, err := Verify(publicAPIManifest(), Options{RepoRoot: selected})
+			if err != nil || code != 0 || output["entryCount"] != 1 {
+				t.Fatalf("relative root selection changed: code=%d err=%v", code, err)
+			}
+		})
+	}
+}

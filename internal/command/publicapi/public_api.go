@@ -2,6 +2,7 @@ package publicapi
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -351,7 +352,7 @@ func closePackageRoots(packages map[string]packageSnapshot) {
 }
 
 func newScanCache(repoRoot string, maxBytes int64) *scanCache {
-	root, err := os.OpenRoot(directoryOnlyPath(repoRoot))
+	root, err := openScanRoot(repoRoot)
 	return &scanCache{
 		root:          root,
 		repoRoot:      repoRoot,
@@ -360,6 +361,39 @@ func newScanCache(repoRoot string, maxBytes int64) *scanCache {
 		files:         map[string]admittedFileSnapshot{},
 		sourceExports: map[string]sourceExportSnapshot{},
 	}
+}
+
+func openScanRoot(name string) (*os.Root, error) {
+	if name == "" {
+		return os.OpenRoot(name)
+	}
+	// Resolve initial-root symlinks before confinement, including symlink/..
+	// traversal. The caller may select a root outside its lexical parent.
+	resolved, err := filepath.EvalSymlinks(name)
+	if err != nil {
+		return nil, err
+	}
+	parent, base := filepath.Split(resolved)
+	if base == "" || base == "." || base == ".." {
+		return os.OpenRoot(resolved) // Native root/dot components denote directories.
+	}
+	if parent == "" {
+		parent = "."
+	}
+	// Open the last component relative to a directory handle so the protective
+	// suffix does not lengthen a valid absolute pathname past the OS limit.
+	scope, err := os.OpenRoot(directoryOnlyPath(parent))
+	if err != nil {
+		return nil, err
+	}
+	root, err := scope.OpenRoot(directoryOnlyPath(base))
+	if closeErr := scope.Close(); closeErr != nil {
+		if root != nil {
+			closeErr = errors.Join(closeErr, root.Close())
+		}
+		return nil, errors.Join(err, closeErr)
+	}
+	return root, err
 }
 
 func directoryOnlyPath(name string) string {
