@@ -41,6 +41,11 @@ func decodeJSONSource(source []byte) (any, error) {
 	return value, nil
 }
 
+// DecodeTypedJSON validates JSON syntax and exact spelling of known struct keys.
+// Unknown keys remain permitted; callers own closed-object admission. Target
+// field names containing backslash, apostrophe, double quote or backtick are
+// rejected instead of guessing version-specific tag syntax. Custom JSON
+// unmarshaler types own their nested field policy.
 func DecodeTypedJSON[T any](reader io.Reader, maxBytes int64) (T, error) {
 	var out T
 	source, err := readBounded(reader, maxBytes)
@@ -63,6 +68,14 @@ func DecodeTypedJSON[T any](reader io.Reader, maxBytes int64) (T, error) {
 }
 
 func rejectCaseFoldedTypedKeys(value any, target reflect.Type) error {
+	fields, err := jsonTargetFields(target)
+	if err != nil {
+		return err
+	}
+	return rejectCaseFoldedKeys(value, target, fields)
+}
+
+func rejectCaseFoldedKeys(value any, target reflect.Type, targetFields map[reflect.Type]map[string]reflect.Type) error {
 	target = indirectJSONType(target)
 	if target == nil || target.Kind() == reflect.Interface || isOpaqueJSONType(target) {
 		return nil
@@ -73,18 +86,23 @@ func rejectCaseFoldedTypedKeys(value any, target reflect.Type) error {
 		if !ok {
 			return nil
 		}
-		fields := jsonStructFields(target)
+		fields := targetFields[target]
 		for key, child := range record {
 			fieldType, exact := fields[key]
 			if !exact {
+				canonicalName := ""
 				for canonical := range fields {
-					if strings.EqualFold(key, canonical) {
-						return fmt.Errorf("invalid JSON input: object key must use exact declared field %q", canonical)
+					if strings.EqualFold(key, canonical) && (canonicalName == "" || canonical < canonicalName) {
+						canonicalName = canonical
 					}
+				}
+				// Pick a stable spelling without sorting fields for each child.
+				if canonicalName != "" {
+					return fmt.Errorf("invalid JSON input: object key must use exact declared field %q", canonicalName)
 				}
 				continue
 			}
-			if err := rejectCaseFoldedTypedKeys(child, fieldType); err != nil {
+			if err := rejectCaseFoldedKeys(child, fieldType, targetFields); err != nil {
 				return err
 			}
 		}
@@ -94,17 +112,17 @@ func rejectCaseFoldedTypedKeys(value any, target reflect.Type) error {
 			return nil
 		}
 		for _, child := range values {
-			if err := rejectCaseFoldedTypedKeys(child, target.Elem()); err != nil {
+			if err := rejectCaseFoldedKeys(child, target.Elem(), targetFields); err != nil {
 				return err
 			}
 		}
 	case reflect.Map:
 		record, ok := value.(map[string]any)
-		if !ok || target.Key().Kind() != reflect.String {
+		if !ok {
 			return nil
 		}
 		for _, child := range record {
-			if err := rejectCaseFoldedTypedKeys(child, target.Elem()); err != nil {
+			if err := rejectCaseFoldedKeys(child, target.Elem(), targetFields); err != nil {
 				return err
 			}
 		}
@@ -122,34 +140,6 @@ func indirectJSONType(target reflect.Type) reflect.Type {
 func isOpaqueJSONType(target reflect.Type) bool {
 	unmarshaler := reflect.TypeOf((*json.Unmarshaler)(nil)).Elem()
 	return target.Implements(unmarshaler) || (target.Kind() != reflect.Pointer && reflect.PointerTo(target).Implements(unmarshaler))
-}
-
-func jsonStructFields(target reflect.Type) map[string]reflect.Type {
-	fields := map[string]reflect.Type{}
-	for index := 0; index < target.NumField(); index++ {
-		field := target.Field(index)
-		if field.PkgPath != "" {
-			continue
-		}
-		tagName := strings.Split(field.Tag.Get("json"), ",")[0]
-		if tagName == "-" {
-			continue
-		}
-		if field.Anonymous && tagName == "" {
-			embedded := indirectJSONType(field.Type)
-			if embedded != nil && embedded.Kind() == reflect.Struct && !isOpaqueJSONType(embedded) {
-				for name, fieldType := range jsonStructFields(embedded) {
-					fields[name] = fieldType
-				}
-				continue
-			}
-		}
-		if tagName == "" {
-			tagName = field.Name
-		}
-		fields[tagName] = field.Type
-	}
-	return fields
 }
 
 func readBounded(reader io.Reader, maxBytes int64) ([]byte, error) {

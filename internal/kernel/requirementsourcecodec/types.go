@@ -1,6 +1,7 @@
 package requirementsourcecodec
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
@@ -85,7 +86,8 @@ func (err *Error) Diagnostic() Diagnostic {
 }
 
 func ErrorCode(err error) string {
-	if typed, ok := err.(*Error); ok {
+	var typed *Error
+	if errors.As(err, &typed) && typed != nil {
 		return typed.diagnostic.Code
 	}
 	return ""

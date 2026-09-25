@@ -1,6 +1,7 @@
 package requirementsourcemodel
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
@@ -39,7 +40,8 @@ func (err *ValidationError) Error() string {
 }
 
 func ErrorCode(err error) string {
-	if typed, ok := err.(*ValidationError); ok {
+	var typed *ValidationError
+	if errors.As(err, &typed) && typed != nil {
 		return typed.Code
 	}
 	return ""
