@@ -48,7 +48,7 @@ type declaredWitnessRoute struct {
 
 type generatedArtifactRule struct {
 	GeneratedPath      string
-	SourcePathPatterns []string
+	SourcePathPatterns []pathpattern.Pattern
 }
 
 type input struct {
@@ -642,7 +642,11 @@ func generatedArtifactRules(raw any) ([]generatedArtifactRule, error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, generatedArtifactRule{GeneratedPath: generatedPath, SourcePathPatterns: sourcePatterns})
+		compiled, err := pathpattern.CompileAll(sourcePatterns, "proof impact generated artifact sources")
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, generatedArtifactRule{GeneratedPath: generatedPath, SourcePathPatterns: compiled})
 	}
 	return result, nil
 }
@@ -671,7 +675,7 @@ func generatedMirrorFailures(rules []generatedArtifactRule, changedPaths []strin
 		sourceChanged := false
 		for _, changedPath := range changedPaths {
 			for _, pattern := range rule.SourcePathPatterns {
-				if pathpattern.Match(pattern, changedPath) {
+				if pattern.MatchAdmitted(changedPath) {
 					sourceChanged = true
 					break
 				}

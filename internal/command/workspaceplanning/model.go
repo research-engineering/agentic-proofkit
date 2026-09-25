@@ -1,5 +1,7 @@
 package workspaceplanning
 
+import "github.com/research-engineering/agentic-proofkit/internal/kernel/pathpattern"
+
 type dependencyNode struct {
 	Name                  string
 	WorkspaceDependencies []string
@@ -11,7 +13,7 @@ type packagePathNode struct {
 }
 
 type escalationRule struct {
-	Pattern string
+	Pattern pathpattern.Pattern
 	Reason  string
 }
 

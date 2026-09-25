@@ -399,6 +399,33 @@ func validImpactRoute() map[string]any {
 	}
 }
 
+func TestBuildMatchesUnicodeGeneratedArtifactSources(t *testing.T) {
+	for _, test := range []struct {
+		path     string
+		wantExit int
+	}{
+		{"docs/\u00e9clair.md", 0},
+		{"docs/zebra.md", 1},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			input := validImpactInput()
+			input["changedPaths"] = []any{"docs/generated.md", test.path}
+			input["generatedArtifactRules"] = []any{map[string]any{
+				"generatedPath":      "docs/generated.md",
+				"sourcePathPatterns": []any{"docs/\u00e9*"},
+			}}
+			result, exitCode, err := Build(input)
+			if err != nil || exitCode != test.wantExit {
+				t.Fatalf("Build() exit=%d error=%v report=%#v", exitCode, err, result)
+			}
+			failures := result["failures"].([]any)
+			if (len(failures) > 0) != (test.wantExit != 0) {
+				t.Fatalf("failures=%#v, want exit=%d", failures, test.wantExit)
+			}
+		})
+	}
+}
+
 func validImpactInput() map[string]any {
 	return map[string]any{
 		"schemaVersion":               json.Number("2"),

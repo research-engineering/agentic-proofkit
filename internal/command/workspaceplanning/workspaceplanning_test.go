@@ -3,6 +3,7 @@ package workspaceplanning
 import (
 	"encoding/json"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/commandcoverage"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -42,6 +43,44 @@ func TestChangedPackagePlanEscalatesToFullWorkspaceForMatchedRule(t *testing.T) 
 	reasons := plan["escalationReasons"].([]any)
 	if len(reasons) != 1 || reasons[0] != "workspace.global" {
 		t.Fatalf("escalationReasons=%#v, want workspace.global", reasons)
+	}
+}
+
+func TestChangedPackagePlanMatchesUnicodeEscalationPattern(t *testing.T) {
+	for _, test := range []struct {
+		path string
+		want bool
+	}{
+		{"docs/\u00e9clair.md", true},
+		{"docs/eclair.md", false},
+	} {
+		t.Run(test.path, func(t *testing.T) {
+			input := validChangedPackagePlanInput()
+			input["changedPaths"] = []any{test.path}
+			input["escalationRules"] = []any{map[string]any{"pattern": "docs/\u00e9*", "reason": "workspace.global"}}
+			plan, err := BuildChangedPackagePlan(input)
+			if err != nil || plan["fullWorkspace"] != test.want {
+				t.Fatalf("BuildChangedPackagePlan() plan=%#v error=%v, want fullWorkspace=%v", plan, err, test.want)
+			}
+			reasons := plan["escalationReasons"].([]any)
+			if test.want && (len(reasons) != 1 || reasons[0] != "workspace.global") || !test.want && len(reasons) != 0 {
+				t.Fatalf("escalationReasons=%#v, want matched=%v", reasons, test.want)
+			}
+			wantNames, wantRoots := []any{}, []any{}
+			if test.want {
+				wantNames = []any{"alpha", "beta"}
+				wantRoots = []any{
+					map[string]any{"dirName": "alpha", "name": "alpha", "workspaceDependencies": []any{}},
+					map[string]any{"dirName": "beta", "name": "beta", "workspaceDependencies": []any{"alpha"}},
+				}
+			}
+			if !reflect.DeepEqual(plan["rootPackageNames"], wantNames) || !reflect.DeepEqual(plan["roots"], wantRoots) {
+				t.Fatalf("selected names=%#v roots=%#v, want names=%#v roots=%#v", plan["rootPackageNames"], plan["roots"], wantNames, wantRoots)
+			}
+			if !reflect.DeepEqual(plan["directRootPackageNames"], []any{}) || !reflect.DeepEqual(plan["directRoots"], []any{}) {
+				t.Fatalf("non-package source selected direct roots: %#v", plan)
+			}
+		})
 	}
 }
 

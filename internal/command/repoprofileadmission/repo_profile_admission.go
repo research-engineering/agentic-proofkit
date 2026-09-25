@@ -815,12 +815,12 @@ func verifyCommandAdmission(input input) ([]string, error) {
 		}
 		packageNamePattern = compiled
 	}
-	validateMatchers(input.Profile.CommandMatchers, &failures)
+	compiledTestGlobs := validateMatchers(input.Profile.CommandMatchers, &failures)
 	validateEnvironmentDeclarations(input, &failures)
 
 	for _, pair := range input.Facts.CommandEnvironmentPairs {
 		matched := false
-		for _, matcher := range input.Profile.CommandMatchers {
+		for matcherIndex, matcher := range input.Profile.CommandMatchers {
 			if matcherAcceptsCommand(commandMatchInput{
 				Command:            pair.Command,
 				EnvironmentClasses: pair.EnvironmentClasses,
@@ -830,7 +830,7 @@ func verifyCommandAdmission(input input) ([]string, error) {
 				PackageScripts:     packageScripts,
 				RootScripts:        rootScripts,
 				TrackedFiles:       trackedFiles,
-				TestPathGlobs:      matcher.AllowedTestPathGlobs,
+				TestPathGlobs:      compiledTestGlobs[matcherIndex],
 			}) {
 				matched = true
 				break
@@ -844,7 +844,8 @@ func verifyCommandAdmission(input input) ([]string, error) {
 	return sortedUniqueFailures(failures), nil
 }
 
-func validateMatchers(matchers []commandMatcher, failures *[]string) {
+func validateMatchers(matchers []commandMatcher, failures *[]string) [][]pathpattern.Pattern {
+	compiled := make([][]pathpattern.Pattern, len(matchers))
 	ids := make([]string, 0, len(matchers))
 	for _, matcher := range matchers {
 		ids = append(ids, matcher.ID)
@@ -867,8 +868,11 @@ func validateMatchers(matchers []commandMatcher, failures *[]string) {
 		}
 		if matcher.HasAllowedTestGlobs {
 			for _, glob := range matcher.AllowedTestPathGlobs {
-				if err := pathpattern.Validate(glob, fmt.Sprintf("command matcher %s allowedTestPathGlobs entry", matcher.ID)); err != nil {
+				pattern, err := pathpattern.Compile(glob, fmt.Sprintf("command matcher %s allowedTestPathGlobs entry", matcher.ID))
+				if err != nil {
 					*failures = append(*failures, err.Error())
+				} else {
+					compiled[index] = append(compiled[index], pattern)
 				}
 			}
 		}
@@ -897,6 +901,7 @@ func validateMatchers(matchers []commandMatcher, failures *[]string) {
 			validateAllowedArgv(matcher, failures)
 		}
 	}
+	return compiled
 }
 
 func validateAllowedArgv(matcher commandMatcher, failures *[]string) {
@@ -943,7 +948,7 @@ type commandMatchInput struct {
 	PackageScripts     map[string]map[string]struct{}
 	RootScripts        map[string]struct{}
 	TrackedFiles       map[string]struct{}
-	TestPathGlobs      []string
+	TestPathGlobs      []pathpattern.Pattern
 }
 
 func matcherAcceptsCommand(input commandMatchInput) bool {
@@ -1000,7 +1005,14 @@ func matcherAcceptsCommand(input commandMatchInput) bool {
 			if _, tracked := input.TrackedFiles[safePath]; !tracked {
 				return false
 			}
-			if !pathpattern.MatchAny(input.TestPathGlobs, safePath) {
+			matched := false
+			for _, pattern := range input.TestPathGlobs {
+				if pattern.MatchAdmitted(safePath) {
+					matched = true
+					break
+				}
+			}
+			if !matched {
 				return false
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
@@ -15,13 +16,19 @@ type Pattern struct {
 }
 
 func Compile(pattern string, context string) (Pattern, error) {
+	if !utf8.ValidString(pattern) {
+		return Pattern{}, fmt.Errorf("%s must be valid UTF-8", context)
+	}
 	safePattern, err := admit.SafeRepoRelativePath(pattern, context)
 	if err != nil {
 		return Pattern{}, err
 	}
 	compiled := Pattern{source: safePattern}
 	if strings.Contains(safePattern, "*") {
-		compiled.regexp = globToRegexp(safePattern)
+		compiled.regexp, err = globToRegexp(safePattern)
+		if err != nil {
+			return Pattern{}, fmt.Errorf("%s exceeds the path-pattern compiler limits", context)
+		}
 	} else {
 		compiled.exactPrefix = strings.TrimSuffix(safePattern, "/")
 	}
@@ -78,7 +85,7 @@ func Validate(pattern string, context string) error {
 	return err
 }
 
-func globToRegexp(pattern string) *regexp.Regexp {
+func globToRegexp(pattern string) (*regexp.Regexp, error) {
 	var builder strings.Builder
 	builder.WriteByte('^')
 	for index := 0; index < len(pattern); index++ {
@@ -97,8 +104,12 @@ func globToRegexp(pattern string) *regexp.Regexp {
 			builder.WriteString("[^/]*")
 			continue
 		}
-		builder.WriteString(regexp.QuoteMeta(string(char)))
+		start := index
+		for index+1 < len(pattern) && pattern[index+1] != '*' {
+			index++
+		}
+		builder.WriteString(regexp.QuoteMeta(pattern[start : index+1]))
 	}
 	builder.WriteByte('$')
-	return regexp.MustCompile(builder.String())
+	return regexp.Compile(builder.String())
 }
