@@ -192,6 +192,10 @@ func tsInitializer(s *tsTokens) error {
 			continue
 		}
 		if !complete {
+			if text == "async" && !s.peek(1).lineBefore && s.text(s.peek(1)) == "function" {
+				s.take()
+				text = "function"
+			}
 			switch text {
 			case "+", "-", "!", "~", "++", "--", "typeof", "void", "delete", "await", "new":
 				s.take()
@@ -204,6 +208,11 @@ func tsInitializer(s *tsTokens) error {
 				}
 			case "class":
 				if err := tsClassValue(s); err != nil {
+					finish(err)
+					continue
+				}
+			case "@":
+				if err := tsDecoratedClassValue(s); err != nil {
 					finish(err)
 					continue
 				}
@@ -312,11 +321,6 @@ func tsInitializer(s *tsTokens) error {
 			}
 			assertionLimit = highest
 			complete, postfix, head, parameters, async = false, false, false, 0, false
-		case async && !t.lineBefore && text == "function":
-			if err := tsFunctionValue(s); err != nil {
-				finish(err)
-			}
-			parameters, async = 0, false
 		case async && !t.lineBefore && t.kind == tsWord && s.text(s.peek(1)) == "=>":
 			s.take()
 			async = false
@@ -324,6 +328,38 @@ func tsInitializer(s *tsTokens) error {
 			finish(nil)
 		}
 	}
+}
+
+func tsDecoratedClassValue(s *tsTokens) error {
+	for s.at("@") && s.err == nil {
+		s.take()
+		if s.at("(") {
+			s.region()
+		} else if s.take().kind != tsWord {
+			return unsupportedTypeScriptSourceGrammar("decorator requires an expression")
+		}
+		for s.err == nil {
+			if s.at("(") {
+				s.region()
+			} else if s.at(".") {
+				s.take()
+				if s.take().kind != tsWord {
+					return unsupportedTypeScriptSourceGrammar("decorator member requires an identifier")
+				}
+			} else if s.at("!") && !s.peek(0).lineBefore {
+				s.take()
+			} else {
+				break
+			}
+		}
+	}
+	if s.err != nil {
+		return s.err
+	}
+	if !s.at("class") {
+		return unsupportedTypeScriptSourceGrammar("decorated initializer requires a class")
+	}
+	return tsClassValue(s)
 }
 
 func tsAssignmentOperator(text string) bool {

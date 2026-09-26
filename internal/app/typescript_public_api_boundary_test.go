@@ -99,6 +99,15 @@ func TestTypeScriptBoundariesNativeCLI(t *testing.T) {
 		"completion-nonnull-lf-index-corrected": true, "completion-nonnull-lf-call-corrected": true,
 		"completion-nonnull-lf-template-corrected": true,
 		"postreview-nested-call-consequent":        true,
+		"primary-repair--initial-async-function":   true, "primary-repair--void-async-function": true,
+		"primary-repair--void-async-generator": true, "primary-repair--logical-async-function": true,
+		"primary-repair--logical-async-generator": true, "primary-repair--async-newline-private": true,
+		"primary-repair--decorated-class": true, "primary-repair--decorated-class-call": true,
+		"primary-repair--decorator-keyword-member": true, "primary-repair--decorator-parenthesized": true,
+		"primary-repair--decorator-nonnull": true, "primary-repair--decorator-multiple": true,
+		"primary-repair--decorator-grouped": true, "primary-repair--decorator-unary": true,
+		"primary-repair--decorator-binary":        true,
+		"primary-repair--async-linebreak-phantom": true,
 	}
 	for _, c := range corpus.Cases {
 		if !selected[c.ID] {

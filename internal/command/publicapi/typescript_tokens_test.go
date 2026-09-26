@@ -154,7 +154,7 @@ func TestTypeScriptTokensOwnTriviaAndMaximalMunch(t *testing.T) {
 }
 
 func TestCollectExportsRejectsLateLexicalErrorsWithoutPartialInventory(t *testing.T) {
-	for _, suffix := range []string{"/*", "([)]", "const x=`${1}`", "const x=1/2", "const \\u0061=1"} {
+	for _, suffix := range []string{"/*", "([)]", "const x=`${1}`", "const x=1/2", "const \\u0061=1", "export const bad=@;", "export const bad=@a.;", "export const bad=@a b;", "export const bad=@(a);"} {
 		runtime, types, err := CollectExports("export const a=1; " + suffix)
 		if err == nil || runtime != nil || types != nil {
 			t.Fatal("late lexical failure exposed a partial inventory")
@@ -209,6 +209,7 @@ func TestTypeScriptAssignmentFramesProgress(t *testing.T) {
 		{"c?", "1", ":1"},
 		{"c?(x):T=>", "1", ":1"},
 		{"c?(x):T=>", "1", ""},
+		{"@(x=>x) ", "class {}", ""},
 	} {
 		source := "const c=true,x=1; type T=any; export const f=" + strings.Repeat(parts[0], depth) + parts[1] + strings.Repeat(parts[2], depth) + ",b=2;"
 		runtime, types, err := CollectExports(source)
