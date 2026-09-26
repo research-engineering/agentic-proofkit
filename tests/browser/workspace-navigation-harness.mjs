@@ -38,12 +38,18 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
   const documentMarker = `proofkitNavigationMarker_${randomUUID()}`;
   await page.evaluate((marker) => { Object.defineProperty(document, marker, {value: true}); }, documentMarker);
   const navigationRequests = [];
+  const navigationResponses = [];
   let downloadObserved = false;
   const recordNavigationRequest = (request) => {
     if (request.isNavigationRequest() && request.frame() === mainFrame) navigationRequests.push(request);
   };
   const recordDownload = () => { downloadObserved = true; };
+  const recordNavigationResponse = (response) => {
+    const request = response.request();
+    if (request.isNavigationRequest() && request.frame() === mainFrame) navigationResponses.push(response);
+  };
   page.on("request", recordNavigationRequest);
+  page.on("response", recordNavigationResponse);
   page.on("download", recordDownload);
   const responsePromise = page.waitForResponse(
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
@@ -70,7 +76,17 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
     const headers = response.headers();
     const disposition = headers["content-disposition"]?.split(";", 1)[0].trim().toLowerCase();
-    if (oldDocumentRetained || downloadObserved || disposition === "attachment" || navigationRequests.length !== 1 || navigationRequests[0] !== response.request() || page.url() !== workspaceURL || headers["content-security-policy"] !== expectedCSP || headers["x-content-type-options"] !== "nosniff") {
+    // A provisional request may be restarted without a response. It cannot
+    // certify a document, nor may any later navigation borrow this response.
+    if (
+      oldDocumentRetained || downloadObserved || disposition === "attachment"
+      || navigationRequests.at(-1) !== response.request()
+      || navigationRequests.some((request) => request.url() !== workspaceURL)
+      || navigationResponses.length !== 1 || navigationResponses[0] !== response
+      || page.url() !== workspaceURL
+      || headers["content-security-policy"] !== expectedCSP
+      || headers["x-content-type-options"] !== "nosniff"
+    ) {
       throw new Error(responseError);
     }
   } catch (error) {
@@ -79,6 +95,7 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     throw error;
   } finally {
     page.off("request", recordNavigationRequest);
+    page.off("response", recordNavigationResponse);
     page.off("download", recordDownload);
   }
 }
