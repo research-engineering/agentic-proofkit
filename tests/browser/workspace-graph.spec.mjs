@@ -2,7 +2,7 @@ import {expect} from "@playwright/test";
 import {capacityTest, graphLayoutTest, test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
-import {assertGraphGeometry, assertGraphPaint, readGraphGeometry} from "./graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, readGraphGeometry} from "./graph-geometry-oracle.mjs";
 
 async function attachGraphScreenshot(page, testInfo, name) {
   const path = testInfo.outputPath(name);
@@ -123,10 +123,15 @@ graphLayoutTest("graph geometry preserves paint in dark and forced colors and de
     await assertRenderedGraph(page, graph);
     await attachGraphScreenshot(page, testInfo, `graph-${media.forcedColors === "active" ? "forced" : "dark"}.png`);
   }
-  await page.locator(".graph-canvas").evaluate(canvas => canvas.style.setProperty("--graph-card-width", "241px"));
+  const originalWidth = await page.locator(".graph-canvas").evaluate(canvas => {
+    const width = canvas.style.getPropertyValue("--graph-card-width");
+    canvas.style.setProperty("--graph-card-width", "241px");
+    return width;
+  });
   const drift = await readGraphGeometry(page);
   expect(drift.nodes.every(n => n.width === 241)).toBe(true);
   expect(() => assertGraphGeometry(graph, drift, true)).toThrow(/DOM card width/);
+  await page.locator(".graph-canvas").evaluate((canvas, width) => canvas.style.setProperty("--graph-card-width", width), originalWidth);
   await page.locator('.graph-records button[data-graph-select="spec:z"]').click();
   await assertRenderedGraph(page, graph);
   await page.locator(".graph-edge").first().evaluate(edge => { edge.style.fill = "currentColor"; });
@@ -228,14 +233,29 @@ capacityTest("maximum admitted graph page remains bounded, inspectable and below
   expect(await identities(page, "nodes")).toEqual(graph.nodes.map(node => node.nodeId));
   expect(await identities(page, "edges")).toEqual(graph.edges.map(edge => edge.edgeId));
   const viewport = page.getByRole("region", {name: "Traceability graph viewport"});
-  samples.push(Number(await viewport.getAttribute("data-commit-milliseconds")));
+  const topology = await page.evaluateHandle(() => [
+    document.querySelector(".graph-canvas"),
+    ...document.querySelectorAll(".graph-records > div > ul"),
+  ]);
+  const relation = page.getByRole("list", {name: "Admitted traceability edges"}).locator("details").first();
+  await relation.locator("summary").click();
+  samples.push(await viewport.getAttribute("data-commit-milliseconds"));
   for (const index of [0, 63, 128, 191]) {
     await page.locator(`.graph-records button[data-graph-select="${graph.nodes[index].nodeId}"]`).click();
     await expect(page.locator(".graph-inspector > dl dt")).toHaveText(Object.keys(graph.nodes[index]));
-    samples.push(Number(await viewport.getAttribute("data-commit-milliseconds")));
+    await expect(page.locator(".graph-inspector > dl dd")).toHaveText(Object.values(graph.nodes[index]).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+    expect(await topology.evaluate(elements => elements.every((element, i) => element !== null && element === [
+      document.querySelector(".graph-canvas"),
+      ...document.querySelectorAll(".graph-records > div > ul"),
+    ][i]))).toBe(true);
+    await expect(relation).toHaveAttribute("open", "");
+    await expect(page.locator('.graph-canvas > button[aria-pressed="true"]')).toHaveAttribute("data-graph-select", graph.nodes[index].nodeId);
+    await expect(page.locator('.graph-records > div > ul > li > button[aria-pressed="true"]')).toHaveAttribute("data-graph-select", graph.nodes[index].nodeId);
+    samples.push(await viewport.getAttribute("data-commit-milliseconds"));
   }
-  expect(samples.every(value => Number.isFinite(value) && value > 0 && value <= 100)).toBe(true);
-  await testInfo.attach("graph-page-commit-distribution.json", {body: JSON.stringify({nodes: 192, edges: 128, milliseconds: samples}), contentType: "application/json"});
+  await topology.dispose();
+  await testInfo.attach("graph-page-commit-distribution.json", {body: JSON.stringify({nodes: 192, edges: 128, rawMilliseconds: samples}), contentType: "application/json"});
+  for (const sample of samples) admitGraphCommitMilliseconds(sample);
 });
 
 capacityTest("Go-built unverified coordinates retain exact HTTP and DOM values or fail closed", async ({graphNumericURL, page}) => {

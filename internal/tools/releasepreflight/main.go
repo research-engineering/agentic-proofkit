@@ -22,6 +22,7 @@ import (
 )
 
 const maxReleaseJSONBytes = 8 << 20
+const maxNPMErrorJSONBytes = 64 << 10
 
 type npmCandidate struct {
 	Name      string `json:"name"`
@@ -119,9 +120,15 @@ func main() {
 
 func run(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("usage: releasepreflight <npm-existing|npm-lineage|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence|retained-evidence-verify>")
+		return fmt.Errorf("usage: releasepreflight <npm-absent|npm-existing|npm-lineage|npm-candidate-artifacts|pypi-existing|pypi-candidate-artifacts|github-tag|github-metadata|github-release|retained-evidence|retained-evidence-verify>")
 	}
 	switch args[0] {
+	case "npm-absent":
+		options, err := parseFlags(args[1:], "error-file")
+		if err != nil {
+			return fmt.Errorf("invalid npm absence arguments")
+		}
+		return admitNPMAbsence(options["error-file"])
 	case "npm-existing":
 		options, err := parseFlags(args[1:], "expected-json", "actual-file")
 		if err != nil {
@@ -251,6 +258,42 @@ func run(args []string) error {
 	default:
 		return fmt.Errorf("unknown releasepreflight command %s", args[0])
 	}
+}
+
+func admitNPMAbsence(path string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("cannot read npm view error report")
+	}
+	defer file.Close()
+	value, err := admission.DecodeJSON(file, maxNPMErrorJSONBytes)
+	if err != nil {
+		return fmt.Errorf("invalid npm view error report")
+	}
+	report, ok := value.(map[string]any)
+	if !ok || len(report) != 1 {
+		return fmt.Errorf("invalid npm view error report shape")
+	}
+	npmError, ok := report["error"].(map[string]any)
+	if !ok {
+		return fmt.Errorf("invalid npm view error report shape")
+	}
+	// Close the envelope; optional npm diagnostics are opaque, never authority.
+	for key := range npmError {
+		switch key {
+		case "code", "summary", "detail":
+		default:
+			return fmt.Errorf("invalid npm view error report shape")
+		}
+	}
+	code, ok := npmError["code"].(string)
+	if !ok {
+		return fmt.Errorf("npm view error report requires a string code")
+	}
+	if code != "E404" {
+		return fmt.Errorf("npm view error code is not E404")
+	}
+	return nil
 }
 
 func compareNPMExisting(expected npmCandidate, actual npmView) error {

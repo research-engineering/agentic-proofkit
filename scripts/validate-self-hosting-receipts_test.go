@@ -656,6 +656,7 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 		{name: "Verify text policy", runCommand: "npm run text-policy"},
 		{name: "Verify Mermaid diagrams", runCommand: "npm run mermaid:check"},
 		{name: "Verify Go formatting", runCommand: "npm run go:fmt"},
+		{name: "Verify Go dependency consistency", runCommand: "npm run go:deps"},
 		{name: "Verify generated command contracts", runCommand: "npm run command-contract:check"},
 		{name: "Verify generated command family catalog", runCommand: "npm run command-family:check"},
 		{name: "Run all Go tests", runCommand: "npm run go:test"},

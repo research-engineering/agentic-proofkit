@@ -680,6 +680,13 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestCIWorkflowDeclaresFailClosedRequiredAggregate",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.go-dependency-consistency-gates"}: {
+			witnessPath: "scripts/workflow_source_oracles_test.go",
+			selectors: []string{
+				"TestGoDependencyGateFailurePropagation",
+				"TestGoDependencyGateWiring",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}: {
 			witnessPath: "scripts/workflow_package_gate_oracle_test.go",
 			selectors: []string{
@@ -801,6 +808,14 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			selectors: []string{
 				"TestRunNPMLineageUsesAdmittedRecordAndProviderIdentity",
 				"TestValidateNPMReleaseLineage",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-absence"}: {
+			witnessPath: "internal/tools/releasepreflight/main_test.go",
+			selectors: []string{
+				"TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView",
+				"TestReleaseWorkflowExecutesNPMAbsenceBranches",
+				"TestRunNPMAbsenceAdmitsOnlyStructuredE404",
 			},
 		},
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage-workflow"}: {

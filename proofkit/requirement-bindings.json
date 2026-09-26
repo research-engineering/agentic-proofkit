@@ -3285,6 +3285,25 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "scenarioId": "proofkit.supply-chain-quality.go-dependency-consistency-gates",
+      "witnessId": "proofkit.ci.go-dependency-gate-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_source_oracles_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGoDependencyGateWiring",
+          "command": "go test ./scripts -run '^TestGoDependencyGateWiring$'"
+        },
+        {
+          "selector": "TestGoDependencyGateFailurePropagation",
+          "command": "go test ./scripts -run '^TestGoDependencyGateFailurePropagation$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-QUALITY-012",
       "scenarioId": "proofkit.supply-chain-quality.release-channel-authority-vocabulary",
       "witnessId": "proofkit.release-channel.authority-vocabulary",
@@ -4433,6 +4452,29 @@
         {
           "selector": "TestBuildInputFailsClosedForEachBlockingEvidenceClass",
           "command": "go test ./internal/tools/releasecloseoutinput -run '^TestBuildInputFailsClosedForEachBlockingEvidenceClass$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.npm-registry-absence",
+      "witnessId": "proofkit.release-preflight.npm-absence-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasepreflight/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunNPMAbsenceAdmitsOnlyStructuredE404",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestRunNPMAbsenceAdmitsOnlyStructuredE404$'"
+        },
+        {
+          "selector": "TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView$'"
+        },
+        {
+          "selector": "TestReleaseWorkflowExecutesNPMAbsenceBranches",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestReleaseWorkflowExecutesNPMAbsenceBranches$'"
         }
       ],
       "commandIds": ["proofkit.go-test"],

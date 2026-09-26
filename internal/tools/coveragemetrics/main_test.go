@@ -687,6 +687,7 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.cli-contract-topology",
 		"proofkit.supply-chain-quality.cli-output-witness-contract",
 		"proofkit.supply-chain-quality.codeql-permission-separation",
+		"proofkit.supply-chain-quality.go-dependency-consistency-gates",
 		"proofkit.supply-chain-quality.installed-package-json-abi-smoke",
 		"proofkit.supply-chain-quality.osv-permission-separation",
 		"proofkit.supply-chain-quality.python-wheel-platform-byte-compatibility",

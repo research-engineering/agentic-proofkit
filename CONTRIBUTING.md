@@ -22,18 +22,46 @@ admission, and rollout approval belong in consuming repositories.
 
 ## Local Checks
 
-Run before proposing a non-trivial change:
+Use a POSIX shell on a supported macOS or Linux host. Before running source
+checks, install these prerequisites from their canonical version owners:
+
+- Go: use the `toolchain` version in [go.mod](go.mod); the `go` directive is
+  the module's language minimum, not a replacement for the tested toolchain.
+- Node.js: use `source-quality` / `Setup Node` in
+  [.github/workflows/ci.yml](.github/workflows/ci.yml). A working npm is needed
+  to bootstrap the repository-pinned npm below.
+- npm: [package.json](package.json) `packageManager` owns the version. The
+  shell below exposes that npm to every nested `npm run` and `npx` invocation
+  without replacing a global installation. CI uses the separately
+  checksum-verified [setup action](.github/actions/setup-verified-npm/action.yml).
+- Python: provide `python3` on `PATH`, with `venv` and pip available inside a
+  new virtual environment. Use `source-quality` / `Setup Python` in
+  [.github/workflows/ci.yml](.github/workflows/ci.yml) for CI parity. The
+  [Python package consumer minimum](README.md) is not the source-check
+  toolchain pin: Go lifecycle tests need Python, and the
+  [wheel verifier](internal/tools/pythonpackage/verify.go) creates a venv
+  and installs the local wheel with pip.
+
+From the repository root, run before proposing a non-trivial change:
 
 ```bash
-npm ci --ignore-scripts
-npx playwright install chromium firefox webkit
-npm run check
+npm exec --yes --package="$(node -p "require('./package.json').packageManager")" -- sh -eu -c '
+  npm run npm:version
+  npm ci --ignore-scripts
+  npx playwright install chromium firefox webkit
+  npm run check
+'
 git diff --check
 ```
 
 The browser engine installation is a one-time prerequisite for the pinned
 rendered-runtime gate. CI installs the same engines with their Linux system
 dependencies before running that gate.
+
+The composed `go:check` and CI source job both run `npm run go:deps`:
+`go mod tidy -diff` rejects manifest drift without rewriting `go.mod` or
+`go.sum`, then `go mod verify` checks the downloaded module cache. These are
+dependency consistency checks, not vulnerability or release approval.
 
 If your local project uses Bun, `bun run check` is acceptable as a convenience
 runner only when it invokes the same scripts and leaves `npm run check`

@@ -178,7 +178,9 @@ vulnerability absence, or consumer rollout safety by itself.
   substituted, reordered, or surplus entries, and owns one independently
   authored byte-exact complete current release-note projection. Candidate
   preflight binds npm latest to `previousVersion` for an unpublished candidate
-  or to `version` only after exact existing-byte-match proof. One retained-
+  or to `version` only after exact existing-byte-match proof. Both release legs
+  admit absence only after failed npm view and strict bounded JSON admission
+  of exact `error.code == "E404"`, never from diagnostic prose. One retained-
   evidence owner builds and verifies checksums against exact
   downloadable artifact-relative paths without inferring change completeness
   from the source diff.

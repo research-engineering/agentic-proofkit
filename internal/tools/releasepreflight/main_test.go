@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"go.yaml.in/yaml/v3"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/releasechange"
 )
 
@@ -85,6 +87,165 @@ func TestRetainedEvidenceCommandWritesArtifactRootManifest(t *testing.T) {
 	if err := run([]string{"retained-evidence-verify", "--artifact-root", root}); err == nil {
 		t.Fatal("retained-evidence-verify accepted a stale manifest")
 	}
+}
+
+func TestRunNPMAbsenceAdmitsOnlyStructuredE404(t *testing.T) {
+	const minimal = `{"error":{"code":"E404"}}`
+	const invalid = "invalid npm view error report"
+	const shape = "invalid npm view error report shape"
+	const codeType = "npm view error report requires a string code"
+	const notAbsent = "npm view error code is not E404"
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{name: "minimal", content: minimal},
+		// Sanitized shape from the admitted npm 12.0.2 loopback probe.
+		{name: "native 404", content: `{"error":{"code":"E404","summary":"Not found","detail":"sanitized local probe"}}`},
+		{name: "native 403", content: `{"error":{"code":"E403","summary":"Not found","detail":"sanitized local probe"}}`, want: notAbsent},
+		{name: "native 500", content: `{"error":{"code":"E500","summary":"Not found","detail":"sanitized local probe"}}`, want: notAbsent},
+		{name: "opaque diagnostics", content: `{"error":{"code":"E404","summary":null,"detail":{"untrusted-diagnostic-marker":[false,401]}}}`},
+		{name: "diagnostic prose is not authority", content: `{"error":{"code":"E404","summary":"E403 forbidden","detail":500}}`},
+		{name: "escaped code", content: `{"error":{"code":"\u0045404"}}`},
+		{name: "exact byte limit", content: minimal + strings.Repeat(" ", maxNPMErrorJSONBytes-len(minimal))},
+		{name: "over byte limit", content: minimal + strings.Repeat(" ", maxNPMErrorJSONBytes-len(minimal)+1), want: invalid},
+		{name: "empty", want: invalid},
+		{name: "whitespace", content: " \n\t", want: invalid},
+		{name: "text diagnostic", content: "E404 Not found", want: invalid},
+		{name: "truncated", content: `{"error":{"code":"E404"}`, want: invalid},
+		{name: "trailing JSON", content: minimal + `{}`, want: invalid},
+		{name: "trailing text", content: minimal + "untrusted-diagnostic-marker", want: invalid},
+		{name: "invalid UTF8", content: `{"error":{"code":"E404","detail":"` + string([]byte{0xff}) + `"}}`, want: invalid},
+		{name: "unpaired surrogate", content: `{"error":{"code":"E404","detail":"\ud800"}}`, want: invalid},
+		{name: "excessive depth", content: `{"error":{"code":"E404","detail":` + strings.Repeat("[", 513) + "0" + strings.Repeat("]", 513) + `}}`, want: invalid},
+		{name: "duplicate error", content: `{"error":{"code":"E403"},"error":{"code":"E404"}}`, want: invalid},
+		{name: "duplicate code", content: `{"error":{"code":"E403","code":"E404"}}`, want: invalid},
+		{name: "escaped duplicate code", content: `{"error":{"code":"E403","\u0063ode":"E404"}}`, want: invalid},
+		{name: "duplicate diagnostic", content: `{"error":{"code":"E404","summary":"first","summary":"second"}}`, want: invalid},
+		{name: "duplicate opaque key", content: `{"error":{"code":"E404","detail":{"untrusted-diagnostic-marker":1,"untrusted-diagnostic-marker":2}}}`, want: invalid},
+		{name: "empty root", content: `{}`, want: shape},
+		{name: "null root", content: `null`, want: shape},
+		{name: "string root", content: `"E404"`, want: shape},
+		{name: "array root", content: `[{"error":{"code":"E404"}}]`, want: shape},
+		{name: "null error", content: `{"error":null}`, want: shape},
+		{name: "string error", content: `{"error":"E404"}`, want: shape},
+		{name: "array error", content: `{"error":[{"code":"E404"}]}`, want: shape},
+		{name: "wrong error case", content: `{"Error":{"code":"E404"}}`, want: shape},
+		{name: "unknown root key", content: `{"error":{"code":"E404"},"untrusted-diagnostic-marker":true}`, want: shape},
+		{name: "unknown error key", content: `{"error":{"code":"E404","untrusted-diagnostic-marker":true}}`, want: shape},
+		{name: "wrong code case", content: `{"error":{"Code":"E404"}}`, want: shape},
+		{name: "case alias", content: `{"error":{"code":"E404","Code":"E403"}}`, want: shape},
+		{name: "missing code", content: `{"error":{"summary":"E404 Not found"}}`, want: codeType},
+		{name: "null code", content: `{"error":{"code":null}}`, want: codeType},
+		{name: "numeric code", content: `{"error":{"code":404}}`, want: codeType},
+		{name: "boolean code", content: `{"error":{"code":true}}`, want: codeType},
+		{name: "array code", content: `{"error":{"code":["E404"]}}`, want: codeType},
+		{name: "object code", content: `{"error":{"code":{"value":"E404"}}}`, want: codeType},
+	}
+	for _, code := range []string{"", "E401", "E403", "E429", "E500", "ETIMEDOUT", "ECONNRESET", "ENOTFOUND", "UNKNOWN", "e404", "404", " E404", "E404 ", "E404 Not found"} {
+		tests = append(tests, struct {
+			name    string
+			content string
+			want    string
+		}{"non-absence " + code, fmt.Sprintf(`{"error":{"code":%q,"summary":"E404 404 Not Found Not found","detail":"untrusted-diagnostic-marker"}}`, code), notAbsent})
+	}
+	for _, item := range tests {
+		t.Run(item.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "npm-error.json")
+			writeFile(t, path, item.content)
+			err := run([]string{"npm-absent", "--error-file", path})
+			if item.want == "" {
+				if err != nil {
+					t.Fatalf("npm absence admission: %v", err)
+				}
+				return
+			}
+			if err == nil || err.Error() != item.want {
+				t.Fatalf("error=%v, want exact safe cause %q", err, item.want)
+			}
+			var stderr bytes.Buffer
+			diagnostic.WriteError(&stderr, err)
+			if stderr.String() != item.want+"\n" {
+				t.Fatalf("diagnostic=%q, want only fixed rejection cause", stderr.String())
+			}
+		})
+	}
+	t.Run("unreadable file", func(t *testing.T) {
+		err := run([]string{"npm-absent", "--error-file", filepath.Join(t.TempDir(), "untrusted-path-marker")})
+		if err == nil || err.Error() != "cannot read npm view error report" {
+			t.Fatalf("error=%v, want fixed read failure without path", err)
+		}
+	})
+	t.Run("invalid arguments", func(t *testing.T) {
+		for _, args := range [][]string{
+			{"npm-absent"},
+			{"npm-absent", "--error-file"},
+			{"npm-absent", "--untrusted-flag-marker", "untrusted-value-marker"},
+			{"npm-absent", "--error-file", "first", "--error-file", "second"},
+		} {
+			if err := run(args); err == nil || err.Error() != "invalid npm absence arguments" {
+				t.Fatalf("error=%v, want fixed argument failure", err)
+			}
+		}
+	})
+}
+
+// This is a structural wiring check, not proof of Bash failure propagation.
+func TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", ".github", "workflows", "release.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflow struct {
+		Jobs map[string]struct {
+			Steps []struct {
+				Name string `yaml:"name"`
+				Run  string `yaml:"run"`
+			} `yaml:"steps"`
+		} `yaml:"jobs"`
+	}
+	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Count(string(raw), "go run ./internal/tools/releasepreflight npm-absent") != 2 {
+		t.Fatal("workflow must have exactly two npm absence consumers")
+	}
+	for _, consumer := range []struct {
+		job    string
+		step   string
+		path   string
+		prefix string
+		indent string
+	}{
+		{"candidate", "Build publish dry-run evidence", "/tmp/proofkit-candidate-view", "  else\n", "    "},
+		{"publish", "Publish to npm", "/tmp/proofkit-npm-view", "    continue\n  fi\n", "  "},
+	} {
+		t.Run(consumer.job, func(t *testing.T) {
+			var runs []string
+			for _, step := range workflow.Jobs[consumer.job].Steps {
+				if step.Name == consumer.step {
+					runs = append(runs, step.Run)
+				}
+			}
+			if len(runs) != 1 {
+				t.Fatal("expected exactly one absence consumer step")
+			}
+			run := runs[0]
+			capture := `if npm view "${package_name}@${package_version}" name version dist --json --registry="${REGISTRY_URL}" >` + consumer.path + ".json 2>" + consumer.path + ".err; then\n"
+			branch := consumer.prefix + consumer.indent + "go run ./internal/tools/releasepreflight npm-absent \\\n" + consumer.indent + "  --error-file " + consumer.path + ".json\n" + consumer.indent + "npm publish "
+			if !strings.HasPrefix(run, "set -euo pipefail\n") || strings.Count(run, capture) != 1 || strings.Count(run, branch) != 1 {
+				t.Fatal("absence consumer must admit failed-view stdout before publish under errexit")
+			}
+			if strings.Count(run, consumer.path+".err") != 1 || strings.Contains(run, "grep -Eq") {
+				t.Fatal("absence consumer must not classify or echo stderr")
+			}
+		})
+	}
+}
+
+func TestReleaseWorkflowExecutesNPMAbsenceBranches(t *testing.T) {
+	testNPMAbsenceBranchExecution(t)
 }
 
 func TestCompareNPMExisting(t *testing.T) {

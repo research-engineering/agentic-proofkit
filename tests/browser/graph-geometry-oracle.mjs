@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 // Test-only observation contract, independent of the production router/constants.
 const planes = ["specification_coverage", "proof_coverage", "code_traceability", "native_execution_coverage"];
 
+export function admitGraphCommitMilliseconds(text) {
+  assert(typeof text === "string" && text.trim() !== "", "graph commit measurement must be present");
+  const value = Number(text);
+  assert(Number.isFinite(value) && value >= 0 && value <= 100, "graph commit measurement must be finite and within 0..100ms");
+  return value;
+}
+
 export function segmentIntersectsRectangle(a, b, r, inflate = 0) {
   let low = 0, high = 1;
   for (const [axis, min, max] of [[0, r.x - inflate, r.x + r.width + inflate], [1, r.y - inflate, r.y + r.height + inflate]]) {
