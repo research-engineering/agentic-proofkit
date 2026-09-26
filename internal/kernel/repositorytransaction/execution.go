@@ -142,22 +142,6 @@ func (runtime engine) finishPreparingFailure(root *os.Root, plan Plan, failureCl
 	return terminal, nil
 }
 
-func (runtime engine) abortPreparingFailure(root *os.Root, plan Plan) (Result, error) {
-	exists, err := pathExists(root, activeDirectory)
-	if err != nil {
-		return Result{FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
-	}
-	if exists {
-		if err := cleanupActive(root, &plan); err != nil {
-			if errors.Is(err, errCleanupDurabilityUnknown) {
-				return Result{FailureClass: "preparing_cleanup_durability_unknown", State: StateDurabilityUnknown, TransactionID: plan.TransactionID}, nil
-			}
-			return Result{FailureClass: "cleanup_failed", State: StateCleanupRequired, TransactionID: plan.TransactionID}, nil
-		}
-	}
-	return Result{}, fmt.Errorf("repository transaction journal preparation failed")
-}
-
 func removeInterruptedTemporary(root *os.Root, plan Plan) error {
 	for index, operation := range plan.Operations {
 		if operation.Action == ActionUnchanged {

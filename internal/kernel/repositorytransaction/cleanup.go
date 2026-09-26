@@ -9,10 +9,6 @@ import (
 
 var errCleanupDurabilityUnknown = errors.New("repository transaction cleanup durability is unknown")
 
-func cleanupActive(root *os.Root, plan *Plan) error {
-	return cleanupTransactionDirectory(root, activeDirectory, plan, false, nil)
-}
-
 func (runtime engine) archiveAndCleanupTerminal(root *os.Root, plan Plan, result Result) error {
 	tombstone, err := archiveTerminal(root, plan, result)
 	if err != nil {
@@ -152,31 +148,4 @@ func discardTerminalReceipt(root *os.Root) error {
 		return fmt.Errorf("remove previous repository transaction terminal receipt")
 	}
 	return syncDirectory(root, ControlDirectory)
-}
-
-func cleanupTransactionDirectory(root *os.Root, directory string, plan *Plan, allowPartialTerminal bool, afterRemoval func() error) error {
-	entries, err := transactionEntries(root, directory)
-	if err != nil {
-		return err
-	}
-	if err := validateTransactionEntries(entries, plan, allowPartialTerminal); err != nil {
-		return err
-	}
-	for _, entry := range entries {
-		if err := root.Remove(filepath.FromSlash(directory + "/" + entry.Name())); err != nil {
-			return fmt.Errorf("remove repository transaction artifact")
-		}
-	}
-	if err := root.Remove(filepath.FromSlash(directory)); err != nil {
-		return fmt.Errorf("remove repository transaction state")
-	}
-	if afterRemoval != nil {
-		if err := afterRemoval(); err != nil {
-			return fmt.Errorf("%w: %v", errCleanupDurabilityUnknown, err)
-		}
-	}
-	if err := syncDirectory(root, ControlDirectory); err != nil {
-		return fmt.Errorf("%w: %v", errCleanupDurabilityUnknown, err)
-	}
-	return nil
 }

@@ -21,29 +21,6 @@ const (
 	recoveryActionTemp = activeDirectory + "/recovery-action.tmp"
 )
 
-func prepareJournal(root *os.Root, plan Plan) error {
-	if err := validateActivePlan(plan); err != nil {
-		return err
-	}
-	if err := ensureDirectory(root, activeDirectory, 0o700); err != nil {
-		return err
-	}
-	content, err := stablejson.Marshal(journalValue(plan))
-	if err != nil {
-		return fmt.Errorf("encode repository transaction journal")
-	}
-	if len(content) > MaximumJournalBytes {
-		return fmt.Errorf("repository transaction journal exceeds the byte limit")
-	}
-	if err := writeOwnedFile(root, journalTemp, content, 0o600); err != nil {
-		return err
-	}
-	if err := root.Rename(filepath.FromSlash(journalTemp), filepath.FromSlash(journalPath)); err != nil {
-		return fmt.Errorf("publish repository transaction journal")
-	}
-	return syncDirectory(root, activeDirectory)
-}
-
 func publishPreparingJournal(root *os.Root) error {
 	if err := root.Rename(filepath.FromSlash(journalTemp), filepath.FromSlash(journalPath)); err != nil {
 		return fmt.Errorf("publish repository transaction preparing journal")

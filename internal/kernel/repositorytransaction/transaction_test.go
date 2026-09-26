@@ -859,7 +859,7 @@ func leaveInterruptedPrefix(t *testing.T, rootPath string, plan Plan, prefix int
 		t.Fatal(err)
 	}
 	defer lock.release()
-	if err := prepareJournal(root, plan); err != nil {
+	if _, err := (engine{}).prepareJournal(context.Background(), root, lock, plan); err != nil {
 		t.Fatal(err)
 	}
 	if err := stageObjects(root, plan); err != nil {

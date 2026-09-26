@@ -295,19 +295,47 @@ func syncDirectory(root *os.Root, relativePath string) (returnErr error) {
 }
 
 func writeOwnedFile(root *os.Root, relativePath string, content []byte, mode fs.FileMode) error {
+	return writeOwnedFileWithRetention(root, relativePath, content, mode, false, nil)
+}
+
+func writeOwnedFileWithRetention(root *os.Root, relativePath string, content []byte, mode fs.FileMode, retainOnError bool, fault func(failurePoint, int) error) error {
 	file, err := root.OpenFile(filepath.FromSlash(relativePath), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return fmt.Errorf("create repository transaction file")
 	}
 	remove := true
 	defer func() {
-		if remove {
+		if remove && !retainOnError {
 			_ = root.Remove(filepath.FromSlash(relativePath))
 		}
 	}()
-	if _, err := file.Write(content); err != nil {
+	// Only preparation supplies hooks; other writers keep their single write.
+	remaining := content
+	if fault != nil {
+		if err := fault(faultAfterPreparationFileCreate, -1); err != nil {
+			file.Close()
+			return err
+		}
+		middle := len(content) / 2
+		if _, err := file.Write(content[:middle]); err != nil {
+			file.Close()
+			return fmt.Errorf("write repository transaction file")
+		}
+		if err := fault(faultAfterPreparationPartialWrite, -1); err != nil {
+			file.Close()
+			return err
+		}
+		remaining = content[middle:]
+	}
+	if _, err := file.Write(remaining); err != nil {
 		file.Close()
 		return fmt.Errorf("write repository transaction file")
+	}
+	if fault != nil {
+		if err := fault(faultAfterPreparationFullWrite, -1); err != nil {
+			file.Close()
+			return err
+		}
 	}
 	if err := file.Chmod(mode); err != nil {
 		file.Close()
@@ -319,6 +347,11 @@ func writeOwnedFile(root *os.Root, relativePath string, content []byte, mode fs.
 	}
 	if err := file.Close(); err != nil {
 		return fmt.Errorf("close repository transaction file")
+	}
+	if fault != nil {
+		if err := fault(faultAfterPreparationFileSync, -1); err != nil {
+			return err
+		}
 	}
 	remove = false
 	return syncDirectory(root, path.Dir(relativePath))

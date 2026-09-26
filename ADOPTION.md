@@ -254,6 +254,17 @@ evidence; inspect current files separately. Desired-absence journals and new
 identity-bound terminal receipts use schema v2 and require this or a later
 supporting binary. Finishing recovery alone does not establish downgrade
 compatibility; no automatic downgrade or control-state deletion is supported.
+
+New transactions prepare their complete journal in a private
+`.agentic-proofkit/transaction-residue/preparing-*` directory before publishing
+the active transaction. Interrupted unpublished preparation is retained there,
+does not block a later plan and is never automatically resumed or removed.
+An error after active publication preserves the known journal for recovery.
+Older empty or incomplete active state may lack a recoverable transaction ID:
+preserve the control directory and escalate to its owner; do not invent an ID
+or delete unknown entries to bypass the failure. These operations do not prove
+power-loss durability or protect against non-cooperative same-user modification.
+
 Present-only v1 journals and historical v1 receipts remain readable. A legacy
 receipt does not bind its missing desired identity: replan before applying.
 Repeated apply checks that the retained applied transaction binds the exact

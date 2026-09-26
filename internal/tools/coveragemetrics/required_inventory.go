@@ -914,6 +914,21 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/kernel/repositorytransaction/output_admission_test.go",
 			selectors:   []string{"TestPlanAndResultOutputAdmissionRejectSemanticMutants"},
 		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-preparation-publication"}: {
+			witnessPath: "internal/kernel/repositorytransaction/preparation_test.go",
+			selectors: []string{
+				"TestPreparationAttemptsNeverReuseResidue",
+				"TestPreparationCancellationAfterRenameRetainsEvidence",
+				"TestPreparationErrorsPreserveEvidence",
+				"TestPreparationLockExcludesPlanningAtEachBoundary",
+				"TestPreparationParentSyncErrorsRetainPublishedIdentity",
+				"TestPreparationProcessDeath",
+				"TestPreparationRejectsExistingActive",
+				"TestPreparationRetainedResidueIsNotReusedByNextApply",
+				"TestPreparationRetentionDoesNotChangeOtherWriterCleanup",
+				"TestPreparationRevalidatesBeforePromotion",
+			},
+		},
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-native-construction"}: {
 			witnessPath: "internal/kernel/repositorytransaction/construction_test.go",
 			selectors: []string{
