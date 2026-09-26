@@ -159,6 +159,15 @@ export function renderGraphPage(container, graph, options) {
   const recordBody = document.createElement("div");
   records.append(recordBody);
   container.append(controls, counts, announcement, viewport, inspector, records);
+  /** @type {any[]} */
+  let renderedNodes = [];
+  /** @type {any[]} */
+  let renderedEdges = [];
+  /** @type {Map<string, HTMLButtonElement>} */
+  const nodeButtons = new Map();
+  /** @type {Map<string, HTMLButtonElement>} */
+  const recordButtons = new Map();
+  let topologyRendered = false;
 
   /** @param {string} id @param {boolean} [reveal] */
   function select(id, reveal = false) {
@@ -186,6 +195,61 @@ export function renderGraphPage(container, graph, options) {
     if (oldSelection !== null && selectedId === null) announcement.textContent = "Selection cleared by evidence-plane filters.";
     else announcement.textContent = selectedId === null ? "No node selected." : `Selected ${selectedId}.`;
     counts.textContent = `Available: ${graph.availableNodeCount} nodes, ${graph.availableEdgeCount} relations. Returned page: ${graph.primaryNodeCount} primary and ${graph.boundaryNodeCount} boundary nodes, ${graph.selectedEdgeCount} relations. Visible in this returned page: ${visible.nodes.length} nodes, ${visible.edges.length} relations.`;
+    // Selection does not change immutable page records or their layout.
+    if (!topologyRendered || !sameRecords(renderedNodes, visible.nodes) || !sameRecords(renderedEdges, visible.edges)) {
+      renderTopology(visible);
+      renderedNodes = visible.nodes;
+      renderedEdges = visible.edges;
+      topologyRendered = true;
+    }
+    for (const [id, button] of nodeButtons) button.setAttribute("aria-pressed", String(selectedId === id));
+    for (const [id, button] of recordButtons) button.setAttribute("aria-pressed", String(selectedId === id));
+    inspector.replaceChildren();
+    const selected = visible.nodes.find(node => node.nodeId === selectedId);
+    if (selected) {
+      const title = document.createElement("h3");
+      title.className = "caller-text";
+      title.textContent = selected.label;
+      const kind = document.createElement("p");
+      kind.textContent = primaryIDs.has(selected.nodeId) ? "Primary node" : "Endpoint boundary node";
+      inspector.append(title, kind, fields(selected));
+      appendReferences(inspector, "node", selected.nodeId, visible);
+      for (const [direction, key] of [["Incoming", "toNodeId"], ["Outgoing", "fromNodeId"]]) {
+        const heading = document.createElement("h4");
+        heading.textContent = `${direction} relations in this page`;
+        const list = document.createElement("ul");
+        for (const edge of graph.edges.filter((/** @type {any} */ edge) => edge[key] === selected.nodeId)) {
+          const item = document.createElement("li");
+          item.append(edgeRecord(edge, visible));
+          list.append(item);
+        }
+        if (!list.children.length) { const item = document.createElement("li"); item.textContent = "None returned"; list.append(item); }
+        inspector.append(heading, list);
+      }
+    } else {
+      const empty = document.createElement("p"); empty.textContent = "No node selected."; inspector.append(empty);
+    }
+    options.reconcile();
+    if (focusedNode) {
+      const replacement = nodeButtons.get(focusedNode);
+      const recordButton = recordButtons.get(focusedNode);
+      if (recordButton && (recordFocused || window.getComputedStyle(viewport).display === "none")) { records.open = true; recordButton.focus(); }
+      else if (replacement) replacement.focus();
+      else if (fallback?.isConnected) fallback.focus();
+      else recordBody.querySelector("button")?.focus();
+    }
+    viewport.dataset.commitMilliseconds = String(performance.now() - start);
+  }
+
+  /** @param {any[]} previous @param {any[]} current */
+  function sameRecords(previous, current) {
+    return previous.length === current.length && previous.every((record, index) => record === current[index]);
+  }
+
+  /** @param {ReturnType<typeof visibleGraphPage>} visible */
+  function renderTopology(visible) {
+    nodeButtons.clear();
+    recordButtons.clear();
     const {positions, columns, routes, width, height} = graphPagePositions(visible.nodes, visible.edges);
     const canvas = document.createElement("div");
     canvas.className = "graph-canvas";
@@ -223,8 +287,6 @@ export function renderGraphPage(container, graph, options) {
       svg.append(polyline);
     }
     canvas.append(svg);
-    /** @type {Map<string, HTMLButtonElement>} */
-    const nodeButtons = new Map();
     for (const node of visible.nodes) {
       const position = positions.get(node.nodeId);
       if (!position) throw new Error("Node position is unavailable");
@@ -234,7 +296,6 @@ export function renderGraphPage(container, graph, options) {
       button.style.top = `${position.y}px`;
       button.dataset.plane = node.evidencePlane;
       button.dataset.boundary = String(!primaryIDs.has(node.nodeId));
-      button.setAttribute("aria-pressed", String(selectedId === node.nodeId));
       nodeButtons.set(node.nodeId, button);
       canvas.append(button);
     }
@@ -246,7 +307,7 @@ export function renderGraphPage(container, graph, options) {
       const item = document.createElement("li");
       item.dataset.identity = node.nodeId;
       const button = nodeButton(node);
-      button.setAttribute("aria-pressed", String(selectedId === node.nodeId));
+      recordButtons.set(node.nodeId, button);
       item.append(button);
       nodes.append(item);
     }
@@ -259,41 +320,6 @@ export function renderGraphPage(container, graph, options) {
       edges.append(item);
     }
     recordBody.append(nodes, edges);
-    inspector.replaceChildren();
-    const selected = visible.nodes.find(node => node.nodeId === selectedId);
-    if (selected) {
-      const title = document.createElement("h3");
-      title.className = "caller-text";
-      title.textContent = selected.label;
-      const kind = document.createElement("p");
-      kind.textContent = primaryIDs.has(selected.nodeId) ? "Primary node" : "Endpoint boundary node";
-      inspector.append(title, kind, fields(selected));
-      appendReferences(inspector, "node", selected.nodeId, visible);
-      for (const [direction, key] of [["Incoming", "toNodeId"], ["Outgoing", "fromNodeId"]]) {
-        const heading = document.createElement("h4");
-        heading.textContent = `${direction} relations in this page`;
-        const list = document.createElement("ul");
-        for (const edge of graph.edges.filter((/** @type {any} */ edge) => edge[key] === selected.nodeId)) {
-          const item = document.createElement("li");
-          item.append(edgeRecord(edge, visible));
-          list.append(item);
-        }
-        if (!list.children.length) { const item = document.createElement("li"); item.textContent = "None returned"; list.append(item); }
-        inspector.append(heading, list);
-      }
-    } else {
-      const empty = document.createElement("p"); empty.textContent = "No node selected."; inspector.append(empty);
-    }
-    options.reconcile();
-    if (focusedNode) {
-      const replacement = nodeButtons.get(focusedNode);
-      const recordButton = [...recordBody.querySelectorAll("button")].find(button => button.dataset.graphSelect === focusedNode);
-      if (recordButton && (recordFocused || window.getComputedStyle(viewport).display === "none")) { records.open = true; recordButton.focus(); }
-      else if (replacement) replacement.focus();
-      else if (fallback?.isConnected) fallback.focus();
-      else recordBody.querySelector("button")?.focus();
-    }
-    viewport.dataset.commitMilliseconds = String(performance.now() - start);
   }
 
   /** @param {any} node */
