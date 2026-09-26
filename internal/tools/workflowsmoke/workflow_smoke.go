@@ -50,14 +50,13 @@ func Verify(ctx context.Context, run Runner) error {
 	if ctx == nil || run == nil {
 		return fmt.Errorf("workflow smoke requires a context and runner")
 	}
+	if err := VerifyCarrier(ctx, run); err != nil {
+		return err
+	}
 	input := []byte(workflowInput)
 	inputValue, err := admission.DecodeJSON(bytes.NewReader(input), int64(len(input)))
 	if err != nil {
 		return fmt.Errorf("decode workflow smoke fixture: %w", err)
-	}
-	expectedPlan, err := changeworkflowplan.Build(inputValue)
-	if err != nil {
-		return fmt.Errorf("build expected planner JSON: %w", err)
 	}
 	expectedEnvelope, err := changeworkflowplan.BuildAgentEnvelope(inputValue)
 	if err != nil {
@@ -77,25 +76,6 @@ func Verify(ctx context.Context, run Runner) error {
 	}
 	if err := verifyFailure(ctx, run, "retired flat planner route", unreadInvocation("change-workflow-plan", "--input", "-"), "unsupported command"); err != nil {
 		return err
-	}
-
-	plan, err := invoke(ctx, run, "planner JSON", bytesInvocation(input, "change", "plan", "--input", "-"))
-	if err != nil {
-		return err
-	}
-	if err := verifyExactJSONObject(plan, expectedPlan, "planner JSON"); err != nil {
-		return err
-	}
-
-	compact, err := invoke(ctx, run, "planner compact JSON", bytesInvocation(input, "--json-layout", "compact", "change", "plan", "--input", "-"))
-	if err != nil {
-		return err
-	}
-	if err := verifyExactJSONObject(compact, expectedPlan, "planner compact JSON"); err != nil {
-		return err
-	}
-	if err := verifyCanonicalCompactJSON(compact.Stdout, expectedPlan); err != nil {
-		return fmt.Errorf("planner compact JSON: %w", err)
 	}
 
 	envelope, err := invoke(ctx, run, "planner agent envelope", bytesInvocation(input, "change", "plan", "--input", "-", "--agent-envelope"))
@@ -164,6 +144,42 @@ func Verify(ctx context.Context, run Runner) error {
 		return err
 	}
 	return verifyIntegrations(ctx, run)
+}
+
+// VerifyCarrier is the finite installed-carrier floor: JSON, compact JSON and
+// rejected stdin. It retains command-owned expectations without the full
+// workflow, filesystem integration or continuation proof.
+func VerifyCarrier(ctx context.Context, run Runner) error {
+	if ctx == nil || run == nil {
+		return fmt.Errorf("carrier smoke requires a context and runner")
+	}
+	input := []byte(workflowInput)
+	value, err := admission.DecodeJSON(bytes.NewReader(input), int64(len(input)))
+	if err != nil {
+		return err
+	}
+	expected, err := changeworkflowplan.Build(value)
+	if err != nil {
+		return err
+	}
+	plan, err := invoke(ctx, run, "planner JSON", bytesInvocation(input, "change", "plan", "--input", "-"))
+	if err != nil {
+		return err
+	}
+	if err := verifyExactJSONObject(plan, expected, "planner JSON"); err != nil {
+		return err
+	}
+	compact, err := invoke(ctx, run, "planner compact JSON", bytesInvocation(input, "--json-layout", "compact", "change", "plan", "--input", "-"))
+	if err != nil {
+		return err
+	}
+	if err := verifyExactJSONObject(compact, expected, "planner compact JSON"); err != nil {
+		return err
+	}
+	if err := verifyCanonicalCompactJSON(compact.Stdout, expected); err != nil {
+		return fmt.Errorf("planner compact JSON: %w", err)
+	}
+	return verifyFailure(ctx, run, "malformed stdin", bytesInvocation([]byte("{"), "change", "plan", "--input", "-"), "invalid JSON input")
 }
 
 func bytesInvocation(input []byte, args ...string) Invocation {

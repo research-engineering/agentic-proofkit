@@ -392,7 +392,8 @@ func TestSelfHostingPackageGateReceiptKeepsAggregateEvidenceModel(t *testing.T) 
 	}
 	nonClaims := strings.Join(anyStrings(aggregatePackageGateNonClaims()), "\n")
 	if !strings.Contains(nonClaims, "aggregate Go and Python package-gate evidence") ||
-		!strings.Contains(nonClaims, "do not provide independent local-go and local-python receipt classes") {
+		!strings.Contains(nonClaims, "do not provide independent local-go and local-python receipt classes") ||
+		!strings.Contains(nonClaims, "do not prove the separate native minimum-Python Docker smoke") {
 		t.Fatalf("aggregate package gate nonClaims do not preserve split-readiness denial: %s", nonClaims)
 	}
 }
@@ -665,6 +666,7 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 		{name: "Run actionlint", runCommand: "npm run go:actionlint"},
 		{name: "Run govulncheck", runCommand: "npm run go:vulncheck"},
 		{name: "Build and verify package artifacts", runCommand: "npm run package:artifact"},
+		{name: "Verify Python 3.9.0 installed wheel", runCommand: "go run ./internal/tools/pythonpackage verify-minimum"},
 		{name: "Verify self-hosting receipts", runCommand: "npm run self:receipt"},
 		{name: "Verify self-hosting coverage", runCommand: "npm run self:coverage"},
 	}

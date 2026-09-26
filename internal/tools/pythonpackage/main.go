@@ -16,7 +16,7 @@ func main() {
 
 func run(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("usage: go run ./internal/tools/pythonpackage <build|build-current|verify|verify-current>")
+		return fmt.Errorf("usage: go run ./internal/tools/pythonpackage <build|build-current|verify|verify-current|verify-minimum|verify-minimum-installed>")
 	}
 	switch args[0] {
 	case "build":
@@ -27,6 +27,10 @@ func run(args []string) error {
 		return verifyPythonPackages()
 	case "verify-current":
 		return verifyCurrentPythonPackage()
+	case "verify-minimum":
+		return verifyMinimumPython()
+	case "verify-minimum-installed":
+		return verifyMinimumInstalledPython()
 	default:
 		return fmt.Errorf("unknown python package command %q", args[0])
 	}

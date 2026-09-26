@@ -146,6 +146,11 @@ Linux manylinux 2.17 or later is supported on arm64 or x64. Windows is unsupport
 runner requires Python 3.9 or later and wraps the same Go CLI; it is not a
 Python SDK.
 
+Linux wheel installation requires pip 20.3 or later for the manylinux tag.
+Use an installer compatible with the selected Python; the bounded Python 3.9.0
+compatibility smoke uses checksum-pinned pip 26.0.1. This is compatibility
+evidence, not a recommendation to use an obsolete interpreter.
+
 After an exact Python package version is available from an admitted channel,
 use one complete package-manager chain:
 

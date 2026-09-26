@@ -237,6 +237,7 @@ func packageGateEvidenceRefs() []any {
 func aggregatePackageGateNonClaims() []any {
 	return sortedStrings([]string{
 		"Self-hosting package receipts aggregate Go and Python package-gate evidence and do not provide independent local-go and local-python receipt classes.",
+		"Aggregate package-artifact receipts do not prove the separate native minimum-Python Docker smoke.",
 		"Self-hosting proof receipts do not authenticate the producer inside Proofkit.",
 		"Self-hosting proof receipts do not claim registry publication or consumer rollout.",
 		"Self-hosting proof receipts do not prove freshness after the bound local execution-record snapshot, external-provider freshness, or merge approval.",

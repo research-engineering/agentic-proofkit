@@ -56,8 +56,16 @@ func assertPythonFunctionCalls(t *testing.T, sourcePath string, functionName str
 			if !ok {
 				return true
 			}
-			callee, ok := call.Fun.(*ast.Ident)
-			if ok && callee.Name == calleeName {
+			name := ""
+			switch callee := call.Fun.(type) {
+			case *ast.Ident:
+				name = callee.Name
+			case *ast.SelectorExpr:
+				if owner, ok := callee.X.(*ast.Ident); ok {
+					name = owner.Name + "." + callee.Sel.Name
+				}
+			}
+			if name == calleeName {
 				calls++
 			}
 			return true
