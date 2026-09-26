@@ -69,7 +69,10 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 30 || len(added) != 26 {
+	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
+		t.Fatal(err)
+	}
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 30 || len(added) != 26+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
@@ -130,7 +133,15 @@ func sourceCutoverDirectionDelta(previous, current map[string]any) ([]string, er
 	if err != nil {
 		return nil, err
 	}
-	if !slices.Equal(priorOrder, nextOrder) {
+	expectedOrder := slices.Clone(priorOrder)
+	for _, addition := range residueCommandAdditions {
+		if _, exists := priorCommands[addition.command]; exists {
+			return nil, fmt.Errorf("declared added command already exists in predecessor")
+		}
+		expectedOrder = append(expectedOrder, addition.command)
+	}
+	slices.Sort(expectedOrder)
+	if !slices.Equal(expectedOrder, nextOrder) {
 		return nil, fmt.Errorf("public command inventory or order changed without declaration")
 	}
 	changed := []string{}
