@@ -807,6 +807,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/tools/releasepreflight/main_test.go",
 			selectors: []string{
 				"TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView",
+				"TestReleaseWorkflowExecutesNPMAbsenceBranches",
 				"TestRunNPMAbsenceAdmitsOnlyStructuredE404",
 			},
 		},

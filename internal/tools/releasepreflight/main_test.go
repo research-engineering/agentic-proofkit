@@ -191,6 +191,7 @@ func TestRunNPMAbsenceAdmitsOnlyStructuredE404(t *testing.T) {
 	})
 }
 
+// This is a structural wiring check, not proof of Bash failure propagation.
 func TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", "..", ".github", "workflows", "release.yml"))
 	if err != nil {
@@ -241,6 +242,10 @@ func TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestReleaseWorkflowExecutesNPMAbsenceBranches(t *testing.T) {
+	testNPMAbsenceBranchExecution(t)
 }
 
 func TestCompareNPMExisting(t *testing.T) {
