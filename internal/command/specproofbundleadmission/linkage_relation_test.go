@@ -51,6 +51,41 @@ func TestBundleReceiptEnvironmentIsBoundToItsWitnessCommand(t *testing.T) {
 	}
 }
 
+func TestMinimumRuntimeRejectsAggregatePackageReceipt(t *testing.T) {
+	for _, test := range []struct {
+		name, kind, environment, want string
+	}{
+		{"aggregate package receipt", "proofkit.package-artifact", "local-go-python", "does not cover witness selector"},
+		{"relabeled aggregate environment", "proofkit.python-minimum", "local-go-python", "environmentClass must match its witness-plan command"},
+		{"separate advisory linkage only", "proofkit.python-minimum", "local-go-python-native-docker", ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validBundleInput(t)
+			receipt := validProofReceipt()
+			receipt["receiptKind"] = test.kind
+			receipt["environmentClass"] = test.environment
+			receipt["witnessSelectors"] = []any{"proofkit.package-boundary.python-minimum-installed"}
+			// Synthetic metadata only: neither this fixture nor the aggregate
+			// package receipt is evidence of a native minimum-runtime execution.
+			input["receiptAdmission"] = proofReceiptChild(t, []any{receipt})
+			record, exit, err := Build(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.want == "" {
+				if exit != 0 || record.State != "passed" {
+					t.Fatalf("separate linkage rejected: %v", record.RuleResults)
+				}
+				return
+			}
+			if exit != 1 || record.State != "failed" {
+				t.Fatal("aggregate receipt was promoted to minimum-runtime proof")
+			}
+			assertFailedRuleMessage(t, record.RuleResults, "proofkit.spec-proof-bundle-admission.failure.", test.want)
+		})
+	}
+}
+
 func TestBundleAccumulatesAllWitnessesOfOneScenario(t *testing.T) {
 	const scenario = "proofkit.package-boundary.contract-map-table-shape"
 	for _, reversed := range []bool{false, true} {

@@ -1699,6 +1699,192 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-installed",
+      "witnessId": "proofkit.python-package.minimum-installed",
+      "witnessKind": "technical",
+      "witnessPath": "internal/tools/pythonpackage/minimum.go",
+      "commandIds": [
+        "proofkit.python-minimum"
+      ],
+      "environmentClasses": [
+        "local-go-python-native-docker"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-falsifiers",
+      "witnessId": "proofkit.python-package.minimum-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/minimum_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestMinimumPythonRequiresExactNativeRuntime",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumPythonRequiresExactNativeRuntime$'"
+        },
+        {
+          "selector": "TestMinimumPythonWheelSetRejectsOmissionAndIdentityDrift",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumPythonWheelSetRejectsOmissionAndIdentityDrift$'"
+        },
+        {
+          "selector": "TestMinimumPythonSnapshotBytesAndLinuxPermissions",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumPythonSnapshotBytesAndLinuxPermissions$'"
+        },
+        {
+          "selector": "TestMinimumPythonDockerConfinement",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumPythonDockerConfinement$'"
+        },
+        {
+          "selector": "TestMinimumPythonDockerLifecycleFailsClosed",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumPythonDockerLifecycleFailsClosed$'"
+        },
+        {
+          "selector": "TestMinimumPythonInstalledCarrierClosure",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumPythonInstalledCarrierClosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-cancellation",
+      "witnessId": "proofkit.python-package.minimum-cancellation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/minimum_cancellation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestMinimumSourceSnapshotCancellation",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumSourceSnapshotCancellation$'"
+        },
+        {
+          "selector": "TestMinimumFinalSourceIdentity",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumFinalSourceIdentity$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-carrier-observations",
+      "witnessId": "proofkit.python-package.minimum-carrier-observations",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/workflowsmoke/workflow_smoke_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestVerifyCarrierExactFiniteCases",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyCarrierExactFiniteCases$'"
+        },
+        {
+          "selector": "TestVerifyCarrierRejectsEachObservableMutation",
+          "command": "go test ./internal/tools/workflowsmoke -run '^TestVerifyCarrierRejectsEachObservableMutation$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "scenarioId": "proofkit.supply-chain-quality.python-minimum-required-step",
+      "witnessId": "proofkit.ci.python-minimum-required-step",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_python_minimum_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCIMinimumPythonStepRejectsOmissionAndNeutralization",
+          "command": "go test ./scripts -run '^TestCIMinimumPythonStepRejectsOmissionAndNeutralization$'"
+        },
+        {
+          "selector": "TestCIMinimumFailureCannotSatisfyAggregate",
+          "command": "go test ./scripts -run '^TestCIMinimumFailureCannotSatisfyAggregate$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-013",
+      "scenarioId": "proofkit.supply-chain-quality.python-minimum-step-order",
+      "witnessId": "proofkit.ci.python-minimum-step-order",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_python_minimum_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCIMinimumPythonStepRejectsOmissionAndNeutralization",
+          "command": "go test ./scripts -run '^TestCIMinimumPythonStepRejectsOmissionAndNeutralization$'"
+        },
+        {
+          "selector": "TestCIMinimumFailureCannotSatisfyAggregate",
+          "command": "go test ./scripts -run '^TestCIMinimumFailureCannotSatisfyAggregate$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-witness-plan",
+      "witnessId": "proofkit.python-package.minimum-witness-plan",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/self_hosting_python_minimum_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSelfHostingPythonMinimumRequiresExplicitCatalog",
+          "command": "go test ./internal/app -run '^TestSelfHostingPythonMinimumRequiresExplicitCatalog$'"
+        },
+        {
+          "selector": "TestSelfHostingPythonMinimumWitnessPlanClosure",
+          "command": "go test ./internal/app -run '^TestSelfHostingPythonMinimumWitnessPlanClosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-receipt-isolation",
+      "witnessId": "proofkit.python-package.minimum-receipt-isolation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/specproofbundleadmission/linkage_relation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestMinimumRuntimeRejectsAggregatePackageReceipt",
+          "command": "go test ./internal/command/specproofbundleadmission -run '^TestMinimumRuntimeRejectsAggregatePackageReceipt$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
       "scenarioId": "proofkit.package-boundary.python-platform-doc-projection",
       "witnessId": "proofkit.python-package.platform-doc-projection-falsifier",
       "witnessKind": "contract",
@@ -3260,12 +3446,14 @@
         "proofkit.actionlint",
         "proofkit.package-gate",
         "proofkit.platform-smoke",
+        "proofkit.python-minimum",
         "proofkit.python-package",
         "proofkit.python-verify"
       ],
       "environmentClasses": [
         "local-go",
         "local-go-python",
+        "local-go-python-native-docker",
         "local-python"
       ]
     },
@@ -8810,6 +8998,11 @@
       "commandId": "proofkit.python-package",
       "command": "npm run python:package",
       "environmentClass": "local-python"
+    },
+    {
+      "commandId": "proofkit.python-minimum",
+      "command": "go run ./internal/tools/pythonpackage verify-minimum",
+      "environmentClass": "local-go-python-native-docker"
     },
     {
       "commandId": "proofkit.python-verify",

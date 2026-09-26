@@ -21,6 +21,62 @@ import (
 
 const processHelperMode = "PROOFKIT_WORKFLOW_SMOKE_HELPER_MODE"
 
+func TestVerifyCarrierExactFiniteCases(t *testing.T) {
+	var got []string
+	err := workflowsmoke.VerifyCarrier(t.Context(), func(ctx context.Context, invocation workflowsmoke.Invocation) (workflowsmoke.Result, error) {
+		if invocation.StdinClass != workflowsmoke.StdinBytes || len(invocation.Input) == 0 {
+			t.Fatal("minimum carrier must receive explicit stdin bytes")
+		}
+		got = append(got, strings.Join(invocation.Args, " "))
+		return applicationRunner(ctx, invocation)
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"change plan --input -", "--json-layout compact change plan --input -", "change plan --input -"}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Fatalf("carrier cases=%v, want exactly %v", got, want)
+	}
+}
+
+func TestVerifyCarrierRejectsEachObservableMutation(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		index  int
+		mutate func(*workflowsmoke.Result)
+	}{
+		{"success exit", 0, func(r *workflowsmoke.Result) { r.ExitCode = 1 }},
+		{"success stderr", 0, func(r *workflowsmoke.Result) { r.Stderr = []byte("unexpected") }},
+		{"success body", 0, func(r *workflowsmoke.Result) { r.Stdout = []byte("{}\n") }},
+		{"compact body", 1, func(r *workflowsmoke.Result) { r.Stdout = []byte("{}\n") }},
+		{"compact layout", 1, func(r *workflowsmoke.Result) { r.Stdout = append([]byte("\n"), r.Stdout...) }},
+		{"error exit", 2, func(r *workflowsmoke.Result) { r.ExitCode = 0 }},
+		{"error stdout", 2, func(r *workflowsmoke.Result) { r.Stdout = []byte("{}\n") }},
+		{"error stderr", 2, func(r *workflowsmoke.Result) { r.Stderr = nil }},
+		{"error diagnostic", 2, func(r *workflowsmoke.Result) { r.Stderr = []byte("unrelated failure\n") }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			index, applied := 0, false
+			err := workflowsmoke.VerifyCarrier(t.Context(), func(ctx context.Context, invocation workflowsmoke.Invocation) (workflowsmoke.Result, error) {
+				result, err := applicationRunner(ctx, invocation)
+				if index == test.index && err == nil {
+					test.mutate(&result)
+					applied = true
+				}
+				index++
+				return result, err
+			})
+			if err == nil || !applied {
+				t.Fatalf("mutation applied=%t error=%v", applied, err)
+			}
+		})
+	}
+	//lint:ignore SA1012 Exercise intentional nil-context rejection at the carrier boundary.
+	if workflowsmoke.VerifyCarrier(nil, applicationRunner) == nil || workflowsmoke.VerifyCarrier(t.Context(), nil) == nil {
+		t.Fatal("missing carrier prerequisites were accepted")
+	}
+}
+
 func TestVerifyAcceptsApplicationCLI(t *testing.T) {
 	trustModes := map[string]int{}
 	runner := func(ctx context.Context, invocation workflowsmoke.Invocation) (workflowsmoke.Result, error) {

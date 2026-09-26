@@ -117,6 +117,9 @@ jobs:
       - name: Build and verify package artifacts
         run: npm run package:artifact
 
+      - name: Verify Python 3.9.0 installed wheel
+        run: go run ./internal/tools/pythonpackage verify-minimum
+
       - name: Verify self-hosting receipts
         run: npm run self:receipt
 
