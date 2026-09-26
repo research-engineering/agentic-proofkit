@@ -299,8 +299,13 @@ func tsInitializer(s *tsTokens) error {
 			case "+", "-", "!", "~", "++", "--", "typeof", "void", "delete", "await", "new":
 				s.take()
 				continue
-			case "function", "class":
+			case "function":
 				if err := tsFunctionValue(s); err != nil {
+					return err
+				}
+				parameters = false
+			case "class":
+				if err := tsClassValue(s); err != nil {
 					return err
 				}
 				parameters = false
@@ -414,40 +419,126 @@ func tsExpressionOperator(text string) bool {
 }
 
 func tsFunctionValue(s *tsTokens) error {
-	kind := s.text(s.take())
-	if kind == "function" {
-		if s.at("*") {
-			s.take()
-		}
-		if s.peek(0).kind == tsWord {
-			s.take()
-		}
-		if !s.at("(") {
-			return unsupportedTypeScriptSourceGrammar("function expression requires parameters")
-		}
-		s.region()
-		if s.at(":") {
-			s.take()
-			if err := tsTypeOutline(s); err != nil {
-				return err
-			}
-		}
-	} else {
-		for s.err == nil && !s.at("{") {
-			t := s.peek(0)
-			if t.kind == tsEnd || tsVariableAngle(s, s.text(t)) {
-				return unsupportedTypeScriptSourceGrammar("class expression requires a body")
-			}
-			if tsOpen(s.text(t)) {
-				s.region()
-			} else {
-				s.take()
-			}
+	s.take()
+	if s.at("*") {
+		s.take()
+	}
+	if s.peek(0).kind == tsWord {
+		s.take()
+	}
+	if !s.at("(") {
+		return unsupportedTypeScriptSourceGrammar("function expression requires parameters")
+	}
+	s.region()
+	if s.at(":") {
+		s.take()
+		if err := tsTypeOutline(s); err != nil {
+			return err
 		}
 	}
 	if !s.at("{") {
 		return unsupportedTypeScriptSourceGrammar("function or class expression requires a body")
 	}
 	s.region()
+	return s.err
+}
+
+// Every suspended class awaits one heritage primary, then resumes its suffix.
+// Identical continuations compress to a counter; only primary-position class
+// tokens push it. Bodies and groups stay opaque, so .class and interior class
+// tokens never push. Each transition consumes input or advances to consumption.
+func tsClassValue(s *tsTokens) error {
+	const (
+		header = iota
+		primary
+		suffix
+		body
+	)
+	s.take()
+	pending, state := 1, header
+	for pending != 0 && s.err == nil {
+		t := s.peek(0)
+		text := s.text(t)
+		if t.kind == tsEnd {
+			return unsupportedTypeScriptSourceGrammar("class expression requires a body")
+		}
+		if tsVariableAngle(s, text) {
+			return s.err
+		}
+		switch state {
+		case header:
+			if t.kind == tsWord && text != "extends" && text != "implements" {
+				s.take()
+			}
+			if s.at("extends") {
+				s.take()
+				state = primary
+			} else {
+				state = body
+			}
+		case primary:
+			if text == "async" && !s.peek(1).lineBefore && s.text(s.peek(1)) == "function" {
+				s.take()
+				text = "function"
+			}
+			switch text {
+			case "new":
+				s.take()
+			case "class":
+				s.take()
+				pending++
+				state = header
+			case "function":
+				if err := tsFunctionValue(s); err != nil {
+					return err
+				}
+				state = suffix
+			default:
+				if tsOpen(text) {
+					s.region()
+				} else if t.kind == tsWord || t.kind == tsNumber || t.kind == tsString || t.kind == tsTemplate {
+					s.take()
+				} else {
+					return unsupportedTypeScriptSourceGrammar("class heritage requires a value")
+				}
+				state = suffix
+			}
+		case suffix:
+			switch {
+			case text == "(" || text == "[":
+				s.region()
+			case text == "." || text == "?.":
+				s.take()
+				if s.at("(") || s.at("[") {
+					s.region()
+				} else if s.take().kind != tsWord {
+					s.fail("class heritage member access requires an identifier")
+				}
+			case t.kind == tsTemplate || text == "!" && !t.lineBefore:
+				s.take()
+			default:
+				state = body
+			}
+		case body:
+			if s.at("implements") {
+				s.take()
+				for s.err == nil {
+					if err := tsTypeOutline(s); err != nil {
+						return err
+					}
+					if !s.at(",") {
+						break
+					}
+					s.take()
+				}
+			}
+			if !s.at("{") {
+				return unsupportedTypeScriptSourceGrammar("class expression requires a body")
+			}
+			s.region()
+			pending--
+			state = suffix
+		}
+	}
 	return s.err
 }

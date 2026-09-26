@@ -84,6 +84,10 @@ func TestTypeScriptBoundariesNativeCLI(t *testing.T) {
 		"property-export--block-lf": true, "type-index-corrected--lf": true, "function-type-arrow--block-ls": true,
 		"arrow-function-return-type--fixed": true, "conditional-untyped-arrow": true, "type-qualified--lf": true, "owner--direct-dollar": true,
 		"hashbang-export-ghost": true,
+		"nested-class-heritage": true, "heritage-object-method": true, "heritage-function-call": true,
+		"heritage-class-property": true, "heritage-function-property": true, "heritage-simple-function": true,
+		"heritage-following-private": true, "heritage-following-export": true,
+		"heritage-async-function-property": true,
 	}
 	for _, c := range corpus.Cases {
 		if !selected[c.ID] {

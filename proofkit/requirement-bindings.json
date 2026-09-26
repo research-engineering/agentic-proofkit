@@ -1340,6 +1340,10 @@
           "command": "go test ./internal/command/publicapi -run '^TestTypeScriptTokensProgressAndDeepOpaqueRegions$'"
         },
         {
+          "selector": "TestTypeScriptClassHeritageProgressWithinSourceDomain",
+          "command": "go test ./internal/command/publicapi -run '^TestTypeScriptClassHeritageProgressWithinSourceDomain$'"
+        },
+        {
           "selector": "TestVerifyTypeScriptReportProjectionNondisclosure",
           "command": "go test ./internal/command/publicapi -run '^TestVerifyTypeScriptReportProjectionNondisclosure$'"
         }

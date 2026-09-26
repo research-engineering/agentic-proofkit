@@ -181,6 +181,22 @@ func TestTypeScriptTokensProgressAndDeepOpaqueRegions(t *testing.T) {
 	}
 }
 
+func TestTypeScriptClassHeritageProgressWithinSourceDomain(t *testing.T) {
+	prefix, nested, last, body, tail := "export const C=", "class extends ", "class {}", " {}", ",b=2;"
+	depth := (maxSourceFileBytes - len(prefix) - len(last) - len(tail)) / (len(nested) + len(body))
+	source := prefix + strings.Repeat(nested, depth) + last + strings.Repeat(body, depth) + tail
+	source += strings.Repeat(" ", maxSourceFileBytes-len(source))
+	if len(source) != maxSourceFileBytes {
+		t.Fatal("class-chain stress must cover the existing source domain")
+	}
+	runtime, types, err := CollectExports(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertStringSlice(t, runtime, []string{"C", "b"})
+	assertStringSlice(t, types, nil)
+}
+
 func TestVerifyTypeScriptReportProjectionNondisclosure(t *testing.T) {
 	t.Run("long-ordinary-diagnostic", func(t *testing.T) {
 		root := writeTypeScriptPackageFixture(t)
