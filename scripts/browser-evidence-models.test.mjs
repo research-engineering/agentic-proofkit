@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {summarizeDiffPage} from "../internal/command/requirementbrowser/assets/workspace-diff.js";
 import {GEOMETRY, GRAPH_PAGE, GRAPH_PLANES, graphPagePositions, visibleGraphPage} from "../internal/command/requirementbrowser/assets/workspace-graph.js";
-import {assertGraphGeometry, graphNodeIntersections, segmentIntersectsRectangle} from "../tests/browser/graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, graphNodeIntersections, segmentIntersectsRectangle} from "../tests/browser/graph-geometry-oracle.mjs";
 import {resolveHandoffRequirement} from "../internal/command/requirementbrowser/assets/workspace-handoff.js";
 
 test("diff page classes partition changes while risk and lifecycle remain independent facets", () => {
@@ -41,6 +41,12 @@ const graph = {
 };
 const allPlanes = new Set(GRAPH_PLANES.map(plane => plane.id));
 const identities = page => ({nodes: page.nodes.map(node => node.nodeId), edges: page.edges.map(edge => edge.edgeId), selectedId: page.selectedId, neighborhood: page.neighborhood});
+
+test("graph commit budget distinguishes a real zero from missing or invalid measurements", () => {
+  for (const text of ["0", "0.125", "27", "100"]) assert.equal(admitGraphCommitMilliseconds(text), Number(text));
+  for (const absent of [null, undefined, "", " ", "\t\n", 0]) assert.throws(() => admitGraphCommitMilliseconds(absent), /must be present/);
+  for (const invalid of ["NaN", "Infinity", "-Infinity", "-1", "105", "100.001", "invalid"]) assert.throws(() => admitGraphCommitMilliseconds(invalid), /finite and within/);
+});
 
 test("graph visibility closes endpoints and preserves induced directed parallel relations", () => {
   const original = JSON.stringify(graph);
