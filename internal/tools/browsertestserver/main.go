@@ -25,6 +25,10 @@ func main() {
 		build = browserfixture.GraphCapacityWorkspace
 	} else if len(os.Args) == 2 && os.Args[1] == "--graph-numeric" {
 		build = browserfixture.GraphNumericWorkspace
+	} else if len(os.Args) == 2 && os.Args[1] == "--graph-layout" {
+		build = func() (map[string]any, error) { return browserfixture.GraphLayoutWorkspace(false) }
+	} else if len(os.Args) == 2 && os.Args[1] == "--graph-layout-mixed" {
+		build = func() (map[string]any, error) { return browserfixture.GraphLayoutWorkspace(true) }
 	} else if len(os.Args) == 2 && os.Args[1] == "--coverage-compact" {
 		build = func() (map[string]any, error) { return browserfixture.CoverageWorkspace("compact", false) }
 	} else if len(os.Args) == 2 && os.Args[1] == "--coverage-structured" {

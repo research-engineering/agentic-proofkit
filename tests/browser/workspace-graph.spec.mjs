@@ -1,7 +1,8 @@
 import {expect} from "@playwright/test";
-import {capacityTest, test} from "./workspace-test-harness.mjs";
+import {capacityTest, graphLayoutTest, test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
+import {assertGraphGeometry, assertGraphPaint, readGraphGeometry} from "./graph-geometry-oracle.mjs";
 
 async function openGraph(page, url) {
   await openWorkspace(page, url);
@@ -15,6 +16,117 @@ async function openGraph(page, url) {
 async function identities(page, kind) {
   return page.getByRole("list", {name: `Admitted traceability ${kind}`}).locator(":scope > li").evaluateAll(items => items.map(item => item.dataset.identity));
 }
+
+async function assertRenderedGraph(page, graph) {
+  const observed = await readGraphGeometry(page);
+  assertGraphGeometry(graph, observed, true);
+  assertGraphPaint(observed);
+  expect(await identities(page, "nodes")).toEqual(graph.nodes.map(n => n.nodeId));
+  expect(await identities(page, "edges")).toEqual(graph.edges.map(e => e.edgeId));
+  return observed;
+}
+
+graphLayoutTest("native graph geometry protects cards and preserves exact directed records", async ({graphLayoutURL, graphMixedLayoutURL, page}, testInfo) => {
+  await page.setViewportSize({width: 1920, height: 1080});
+  for (const [mode, url, nodeCount, edgeCount] of [["minimal", graphLayoutURL, 4, 3], ["mixed", graphMixedLayoutURL, 8, 8]]) {
+    const graph = await openGraph(page, url);
+    expect(graph.nodes).toHaveLength(nodeCount); expect(graph.edges).toHaveLength(edgeCount);
+    expect(graph.edges.find(e => e.fromNodeId === "spec:z" && e.toNodeId === "spec:a")).toEqual({
+      edgeId: "spec-edge:8b5fd51688cd41c917a84d10b0caa618a65322556db337d35fe218a345ed89ee",
+      edgeKind: "contains", evidencePlane: "specification_coverage", fromNodeId: "spec:z", toNodeId: "spec:a",
+    });
+    await assertRenderedGraph(page, graph);
+    await testInfo.attach(`graph-${mode}-desktop.png`, {body: await page.screenshot(), contentType: "image/png"});
+    const selection = page.locator('.graph-records button[data-graph-select="spec:z"]');
+    await selection.focus(); await page.keyboard.press("Enter");
+    await expect(selection).toBeFocused();
+    const node = graph.nodes.find(n => n.nodeId === "spec:z");
+    await expect(page.locator(".graph-inspector > dl dt")).toHaveText(Object.keys(node));
+    await expect(page.locator(".graph-inspector > dl dd")).toHaveText(Object.values(node));
+    await assertRenderedGraph(page, graph);
+    for (const edge of graph.edges) {
+      const record = page.getByRole("list", {name: "Admitted traceability edges"}).locator(`[data-identity="${edge.edgeId}"] > details`);
+      await record.locator("summary").focus(); await page.keyboard.press("Enter");
+      await expect(record.locator("dl dt")).toHaveText(Object.keys(edge));
+      await expect(record.locator("dl dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+    }
+  }
+});
+
+graphLayoutTest("graph geometry restores deterministic routes after filters and neighborhood rerenders", async ({graphMixedLayoutURL, page}) => {
+  await page.setViewportSize({width: 1920, height: 1080});
+  let requests = 0;
+  page.on("request", request => { if (request.url().endsWith("/api/v1/graph")) requests++; });
+  const graph = await openGraph(page, graphMixedLayoutURL);
+  const original = await assertRenderedGraph(page, graph);
+  await page.locator('.graph-records button[data-graph-select="spec:z"]').click();
+  await page.getByRole("checkbox", {name: "Selected node and neighbors", exact: true}).check();
+  const neighbors = new Set(["spec:z"]);
+  for (const edge of graph.edges) if (edge.fromNodeId === "spec:z" || edge.toNodeId === "spec:z") { neighbors.add(edge.fromNodeId); neighbors.add(edge.toNodeId); }
+  await assertRenderedGraph(page, {nodes: graph.nodes.filter(n => neighbors.has(n.nodeId)), edges: graph.edges.filter(e => neighbors.has(e.fromNodeId) && neighbors.has(e.toNodeId))});
+  const specifications = page.getByRole("checkbox", {name: "Specifications", exact: true});
+  await specifications.focus(); await page.keyboard.press("Space");
+  await expect(specifications).toBeFocused();
+  await expect(page.getByRole("checkbox", {name: "Selected node and neighbors", exact: true})).not.toBeChecked();
+  const remaining = graph.nodes.filter(n => n.evidencePlane !== "specification_coverage"), ids = new Set(remaining.map(n => n.nodeId));
+  await assertRenderedGraph(page, {nodes: remaining, edges: graph.edges.filter(e => e.evidencePlane !== "specification_coverage" && ids.has(e.fromNodeId) && ids.has(e.toNodeId))});
+  await specifications.check();
+  expect(await assertRenderedGraph(page, graph)).toEqual(original);
+  const names = ["Specifications", "Proof declarations", "Code", "Native execution"];
+  for (const name of names) await page.getByRole("checkbox", {name, exact: true}).uncheck();
+  await assertRenderedGraph(page, {nodes: [], edges: []});
+  for (const name of names) await page.getByRole("checkbox", {name, exact: true}).check();
+  expect(await assertRenderedGraph(page, graph)).toEqual(original);
+  expect(requests).toBe(1);
+});
+
+graphLayoutTest("graph geometry keeps desktop scrolling and mobile keyboard records at the breakpoint", async ({graphMixedLayoutURL, page}, testInfo) => {
+  const graph = await openGraph(page, graphMixedLayoutURL);
+  const viewport = page.getByRole("region", {name: "Traceability graph viewport"});
+  for (const width of [1920, 1280, 769, 768, 390]) {
+    await page.setViewportSize({width, height: 900});
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width > 768) {
+      await expect(viewport).toBeVisible();
+      await assertRenderedGraph(page, graph);
+      if (width < 1920) {
+        expect(await viewport.evaluate(e => e.scrollWidth > e.clientWidth)).toBe(true);
+        await viewport.evaluate(e => { e.scrollLeft = e.scrollWidth; });
+        expect(await viewport.evaluate(e => e.scrollLeft > 0)).toBe(true);
+        await assertRenderedGraph(page, graph);
+        await viewport.evaluate(e => { e.scrollLeft = 0; });
+      }
+    } else {
+      await expect(viewport).toBeHidden();
+      const record = page.locator('.graph-records button[data-graph-select="spec:z"]');
+      await record.focus(); await page.keyboard.press("Enter");
+      await expect(record).toBeFocused();
+      await expect(page.getByRole("region", {name: "Selected graph node"})).toContainText("contains: spec:z -> spec:a");
+      expect(await identities(page, "nodes")).toEqual(graph.nodes.map(n => n.nodeId));
+      expect(await identities(page, "edges")).toEqual(graph.edges.map(e => e.edgeId));
+    }
+    await testInfo.attach(`graph-width-${width}.png`, {body: await page.screenshot(), contentType: "image/png"});
+  }
+});
+
+graphLayoutTest("graph geometry preserves paint in dark and forced colors and detects CSS drift", async ({graphMixedLayoutURL, page}, testInfo) => {
+  await page.setViewportSize({width: 1920, height: 1080});
+  const graph = await openGraph(page, graphMixedLayoutURL);
+  for (const media of [{colorScheme: "dark", forcedColors: "none"}, {colorScheme: "light", forcedColors: "active"}]) {
+    await page.emulateMedia(media);
+    await assertRenderedGraph(page, graph);
+    await testInfo.attach(`graph-${media.forcedColors === "active" ? "forced" : "dark"}.png`, {body: await page.screenshot(), contentType: "image/png"});
+  }
+  await page.locator(".graph-canvas").evaluate(canvas => canvas.style.setProperty("--graph-card-width", "241px"));
+  const drift = await readGraphGeometry(page);
+  expect(drift.nodes.every(n => n.width === 241)).toBe(true);
+  expect(() => assertGraphGeometry(graph, drift, true)).toThrow(/DOM card width/);
+  await page.locator('.graph-records button[data-graph-select="spec:z"]').click();
+  await assertRenderedGraph(page, graph);
+  await page.locator(".graph-edge").first().evaluate(edge => { edge.style.fill = "currentColor"; });
+  const filled = await readGraphGeometry(page);
+  expect(() => assertGraphPaint(filled)).toThrow();
+});
 
 test("graph filters retain evidence scope, directed neighborhood and a keyboard record equivalent", async ({baseURL, page}) => {
   await page.setViewportSize({width: 1920, height: 1080});

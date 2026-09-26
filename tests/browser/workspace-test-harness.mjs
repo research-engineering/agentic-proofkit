@@ -43,6 +43,11 @@ export const capacityTest = test.extend({
   graphNumericURL: [async ({}, use) => { await withFixture("--graph-numeric", use); }, {scope: "worker"}],
 });
 
+export const graphLayoutTest = test.extend({
+  graphLayoutURL: [async ({}, use) => { await withFixture("--graph-layout", use); }, {scope: "worker"}],
+  graphMixedLayoutURL: [async ({}, use) => { await withFixture("--graph-layout-mixed", use); }, {scope: "worker"}],
+});
+
 export const coverageTest = test.extend({
   compactURL: [async ({}, use) => { await withFixture("--coverage-compact", use); }, {scope: "worker"}],
   structuredURL: [async ({}, use) => { await withFixture("--coverage-structured", use); }, {scope: "worker"}],
