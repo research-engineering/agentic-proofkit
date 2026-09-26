@@ -4440,6 +4440,25 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-024",
+      "scenarioId": "proofkit.supply-chain-quality.npm-registry-absence",
+      "witnessId": "proofkit.release-preflight.npm-absence-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/releasepreflight/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestRunNPMAbsenceAdmitsOnlyStructuredE404",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestRunNPMAbsenceAdmitsOnlyStructuredE404$'"
+        },
+        {
+          "selector": "TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView",
+          "command": "go test ./internal/tools/releasepreflight -run '^TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-024",
       "scenarioId": "proofkit.supply-chain-quality.release-predecessor-lineage",
       "witnessId": "proofkit.release-preflight.predecessor-lineage-falsifier",
       "witnessKind": "contract",

@@ -149,6 +149,13 @@ registry byte equality must be proven first and `latest` must equal the change
 record `version`. This separates a new release edge from an idempotent replay
 and rejects skipped or stale predecessor chains.
 
+Both npm release legs admit absence only after `npm view --json` fails and
+`releasepreflight npm-absent` admits its stdout: at most 64 KiB of strict JSON,
+only an `error` object, exact string `code` equal to `E404`, and optional opaque
+`summary`/`detail` fields. Invalid, ambiguous, unknown, or non-E404 reports stop
+the leg without echoing diagnostics or arbitrary keys. Absence proves neither
+byte identity nor publication, authentication, or release approval.
+
 ## Publish
 
 Create and push an exact version tag:

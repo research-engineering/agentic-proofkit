@@ -803,6 +803,13 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestValidateNPMReleaseLineage",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.npm-registry-absence"}: {
+			witnessPath: "internal/tools/releasepreflight/main_test.go",
+			selectors: []string{
+				"TestReleaseWorkflowAdmitsNPMAbsenceOnlyAfterFailedView",
+				"TestRunNPMAbsenceAdmitsOnlyStructuredE404",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-024", "proofkit.supply-chain-quality.release-predecessor-lineage-workflow"}: {
 			witnessPath: "scripts/validate-self-hosting-receipts_test.go",
 			selectors:   []string{"TestReleaseWorkflowCandidateEvidenceAllowsExistingNPMByteMatch"},

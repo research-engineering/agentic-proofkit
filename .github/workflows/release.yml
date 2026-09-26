@@ -134,10 +134,8 @@ jobs:
           writeFileSync(report, `${JSON.stringify({ [metadata.name]: { ...metadata, files } }, null, 2)}\n`);
           NODE
             else
-              if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-candidate-view.err; then
-                cat /tmp/proofkit-candidate-view.err >&2
-                exit 1
-              fi
+              go run ./internal/tools/releasepreflight npm-absent \
+                --error-file /tmp/proofkit-candidate-view.json
               npm publish "artifacts/package/${filename}" \
                 --dry-run \
                 --json \
@@ -341,10 +339,8 @@ jobs:
               echo "$filename" >> artifacts/registry/npm-existing-byte-match-filenames.txt
               continue
             fi
-            if ! grep -Eq 'E404|404 Not Found|Not found' /tmp/proofkit-npm-view.err; then
-              cat /tmp/proofkit-npm-view.err >&2
-              exit 1
-            fi
+            go run ./internal/tools/releasepreflight npm-absent \
+              --error-file /tmp/proofkit-npm-view.json
             npm publish "artifacts/package/${filename}" \
               --access public \
               --registry="${REGISTRY_URL}"
