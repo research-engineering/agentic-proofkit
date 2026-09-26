@@ -147,9 +147,10 @@ runner requires Python 3.9 or later and wraps the same Go CLI; it is not a
 Python SDK.
 
 Linux wheel installation requires pip 20.3 or later for the manylinux tag.
-Use an installer compatible with the selected Python; the bounded Python 3.9.0
-compatibility smoke uses checksum-pinned pip 26.0.1. This is compatibility
-evidence, not a recommendation to use an obsolete interpreter.
+Use an installer compatible with the selected Python. The bounded compatibility
+smoke exercises the initial Python 3.9 release with a checksum-pinned compatible
+installer. This is compatibility evidence, not a recommendation to use an
+obsolete interpreter.
 
 After an exact Python package version is available from an admitted channel,
 use one complete package-manager chain:
