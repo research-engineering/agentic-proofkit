@@ -2997,6 +2997,42 @@
         {
           "selector": "TestValidateCurrentRejectsProducerUnreachableCandidateProjection",
           "command": "go test ./internal/tools/commandoracle -run '^TestValidateCurrentRejectsProducerUnreachableCandidateProjection$'"
+        },
+        {
+          "selector": "TestCommandStderrCompletionAndDeadlineOrdering",
+          "command": "go test ./internal/tools/commandoracle -run '^TestCommandStderrCompletionAndDeadlineOrdering$'"
+        },
+        {
+          "selector": "TestCommandStderrUnexpectedClosedReaderIsNotSuccess",
+          "command": "go test ./internal/tools/commandoracle -run '^TestCommandStderrUnexpectedClosedReaderIsNotSuccess$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandHeldStderrAbort",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandHeldStderrAbort$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandHeldStderrCompletion",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandHeldStderrCompletion$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandRejectsHeldStderrWaitDelay",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandRejectsHeldStderrWaitDelay$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandRetainsSanitizedStderrFailures",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandRetainsSanitizedStderrFailures$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandStartFailure",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandStartFailure$'"
+        },
+        {
+          "selector": "TestRunGoTestCommandStderrCompletion",
+          "command": "go test ./internal/tools/commandoracle -run '^TestRunGoTestCommandStderrCompletion$'"
+        },
+        {
+          "selector": "TestWaitGoTestCommandExpiredOverflowTerminatesOnce",
+          "command": "go test ./internal/tools/commandoracle -run '^TestWaitGoTestCommandExpiredOverflowTerminatesOnce$'"
         }
       ],
       "commandIds": [
@@ -3853,6 +3889,50 @@
       "commandIds": [
         "proofkit.go-test",
         "proofkit.release-sbom"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-010",
+      "scenarioId": "proofkit.supply-chain-quality.binding-selector-batch-discovery",
+      "witnessId": "proofkit.coverage-metrics.batch-discovery",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/coveragemetrics/golist_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBindingWitnessGoListOrdering",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestBindingWitnessGoListOrdering$'"
+        },
+        {
+          "selector": "TestGoWitnessListLaunchFailureAndSplitting",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestGoWitnessListLaunchFailureAndSplitting$'"
+        },
+        {
+          "selector": "TestGoWitnessListNativePackageErrors",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestGoWitnessListNativePackageErrors$'"
+        },
+        {
+          "selector": "TestGoWitnessListNativeRootSelector",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestGoWitnessListNativeRootSelector$'"
+        },
+        {
+          "selector": "TestGoWitnessListNativeSources",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestGoWitnessListNativeSources$'"
+        },
+        {
+          "selector": "TestGoWitnessListPackageErrorsRemainNonEvidence",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestGoWitnessListPackageErrorsRemainNonEvidence$'"
+        },
+        {
+          "selector": "TestGoWitnessListStreamMapping",
+          "command": "go test ./internal/tools/coveragemetrics -run '^TestGoWitnessListStreamMapping$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.coverage-metrics",
+        "proofkit.go-test"
       ],
       "environmentClasses": [
         "local-go"

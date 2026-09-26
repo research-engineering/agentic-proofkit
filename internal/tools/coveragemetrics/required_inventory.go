@@ -14,6 +14,18 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-batch-discovery"}: {
+			witnessPath: "internal/tools/coveragemetrics/golist_test.go",
+			selectors: []string{
+				"TestBindingWitnessGoListOrdering",
+				"TestGoWitnessListLaunchFailureAndSplitting",
+				"TestGoWitnessListNativePackageErrors",
+				"TestGoWitnessListNativeRootSelector",
+				"TestGoWitnessListNativeSources",
+				"TestGoWitnessListPackageErrorsRemainNonEvidence",
+				"TestGoWitnessListStreamMapping",
+			},
+		},
 		{"REQ-PROOFKIT-WORKFLOW-001", "proofkit.agent-workflow.pure-single-admission-owner"}: {
 			witnessPath: "internal/command/changeworkflowplan/change_workflow_plan_test.go",
 			selectors:   []string{"TestWorkflowPurityPredicates"},
@@ -508,11 +520,20 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-execution-ledger"}: {
 			witnessPath: "internal/tools/commandoracle/execute_test.go",
 			selectors: []string{
+				"TestCommandStderrCompletionAndDeadlineOrdering",
+				"TestCommandStderrUnexpectedClosedReaderIsNotSuccess",
 				"TestExecuteBindsMaterializedSourceCandidatesAndRuntimeEvents",
+				"TestRunGoTestCommandHeldStderrAbort",
+				"TestRunGoTestCommandHeldStderrCompletion",
+				"TestRunGoTestCommandRejectsHeldStderrWaitDelay",
+				"TestRunGoTestCommandRetainsSanitizedStderrFailures",
+				"TestRunGoTestCommandStartFailure",
+				"TestRunGoTestCommandStderrCompletion",
 				"TestRunGoTestCommandTerminatesImmediatelyWhenStderrExceedsBound",
 				"TestRunGoTestsDoesNotExecuteCrossPackageNameMatches",
 				"TestRunGoTestsTerminatesOnContextDeadline",
 				"TestValidateCurrentRejectsProducerUnreachableCandidateProjection",
+				"TestWaitGoTestCommandExpiredOverflowTerminatesOnce",
 			},
 		},
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.command-oracle-counterfeit-corpus"}: {
