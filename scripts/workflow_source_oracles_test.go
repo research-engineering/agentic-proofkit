@@ -1,17 +1,21 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -312,6 +316,174 @@ func validateRootCheckScript(script string) error {
 		return errors.New("root check must run deterministic Go gates before browser gates")
 	}
 	return nil
+}
+
+func TestGoDependencyGateWiring(t *testing.T) {
+	scripts := readPackageScriptsForTest(t)
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
+	if err := validateGoDependencyGate(scripts, workflow); err != nil {
+		t.Fatal(err)
+	}
+	for _, mutant := range []struct {
+		name, key, value string
+	}{
+		{"missing tidy", "go:deps", "go mod verify"},
+		{"missing verify", "go:deps", "go mod tidy -diff"},
+		{"mutating tidy", "go:deps", "go mod tidy && go mod verify"},
+		{"ignored tidy failure", "go:deps", "go mod tidy -diff; go mod verify"},
+		{"ignored gate failure", "go:deps", scripts["go:deps"] + " || true"},
+		{"text-only gate", "go:deps", "echo 'go mod tidy -diff && go mod verify'"},
+		{"reversed dependency checks", "go:deps", "go mod verify && go mod tidy -diff"},
+		{"missing local gate", "go:check", strings.Replace(scripts["go:check"], " && npm run go:deps", "", 1)},
+		{"late local gate", "go:check", strings.Replace(scripts["go:check"], "npm run go:deps && npm run go:test", "npm run go:test && npm run go:deps", 1)},
+		{"ignored local failure", "go:check", strings.Replace(scripts["go:check"], "npm run go:deps &&", "npm run go:deps;", 1)},
+		{"missing root gate", "check", strings.Replace(scripts["check"], " && npm run go:check", "", 1)},
+	} {
+		t.Run(mutant.name, func(t *testing.T) {
+			changed := make(map[string]string, len(scripts))
+			for key, value := range scripts {
+				changed[key] = value
+			}
+			if changed[mutant.key] == mutant.value {
+				t.Fatal("mutation did not change owner script")
+			}
+			changed[mutant.key] = mutant.value
+			if err := validateGoDependencyGate(changed, workflow); err == nil {
+				t.Fatal("dependency gate oracle admitted changed script")
+			}
+		})
+	}
+	for _, mutation := range []string{"missing", "duplicate", "text only", "late", "condition", "continue on error"} {
+		t.Run("CI "+mutation, func(t *testing.T) {
+			changed := cloneWorkflow(t, workflow)
+			job := changed.Jobs["source-quality"]
+			index, err := uniqueStepIndex(job.Steps, "Verify Go dependency consistency")
+			if err != nil || index < 0 {
+				t.Fatalf("dependency step index=%d err=%v", index, err)
+			}
+			switch mutation {
+			case "missing":
+				job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
+			case "duplicate":
+				job.Steps = append(job.Steps, job.Steps[index])
+			case "text only":
+				job.Steps[index].Run = "echo 'npm run go:deps'"
+			case "late":
+				testIndex, err := uniqueStepIndex(job.Steps, "Run all Go tests")
+				if err != nil || testIndex < 0 {
+					t.Fatalf("Go test step index=%d err=%v", testIndex, err)
+				}
+				job.Steps[index], job.Steps[testIndex] = job.Steps[testIndex], job.Steps[index]
+			case "condition":
+				job.Steps[index].If = "${{ false }}"
+				job.Steps[index].ifPresent = true
+			case "continue on error":
+				job.Steps[index].ContinueOnError = true
+				job.Steps[index].continueOnErrorPresent = true
+			}
+			changed.Jobs["source-quality"] = job
+			if err := validateGoDependencyGate(scripts, changed); err == nil {
+				t.Fatal("dependency gate oracle admitted changed CI wiring")
+			}
+		})
+	}
+}
+
+func readPackageScriptsForTest(t *testing.T) map[string]string {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join("..", "package.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Scripts map[string]string `json:"scripts"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	return manifest.Scripts
+}
+
+func validateGoDependencyGate(scripts map[string]string, workflow githubWorkflow) error {
+	if scripts["go:deps"] != "go mod tidy -diff && go mod verify" {
+		return errors.New("go:deps must fail closed on non-mutating tidy and module verification")
+	}
+	if scripts["go:check"] != "npm run go:fmt && npm run go:deps && npm run go:test && npm run go:vet && npm run go:staticcheck && npm run go:actionlint && npm run go:vulncheck" {
+		return errors.New("go:check must retain the exact ordered Go gates")
+	}
+	if err := validateRootCheckScript(scripts["check"]); err != nil {
+		return err
+	}
+	return validateCIRequiredAggregate(workflow)
+}
+
+func TestGoDependencyGateFailurePropagation(t *testing.T) {
+	scripts := readPackageScriptsForTest(t)
+	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
+	steps := workflow.Jobs["source-quality"].Steps
+	index, err := uniqueStepIndex(steps, "Verify Go dependency consistency")
+	if err != nil || index < 0 {
+		t.Fatalf("dependency step index=%d err=%v", index, err)
+	}
+	for _, entry := range []struct {
+		name, script, prefix, suffix string
+	}{
+		{"local composition", scripts["go:check"], "npm run go:fmt\n", "npm run go:test\nnpm run go:vet\nnpm run go:staticcheck\nnpm run go:actionlint\nnpm run go:vulncheck\n"},
+		{"CI source step", steps[index].Run, "", ""},
+	} {
+		for _, failure := range []struct {
+			name                 string
+			tidyExit, verifyExit int
+		}{
+			{"positive control", 0, 0},
+			{"tidy failure", 23, 0},
+			{"verify failure", 0, 29},
+		} {
+			t.Run(entry.name+"/"+failure.name, func(t *testing.T) {
+				dir := t.TempDir()
+				trace := filepath.Join(dir, "trace")
+				// Execute owner shell composition with controlled children, never real full gates.
+				for name, body := range map[string]string{
+					"npm": "#!/bin/sh\nprintf 'npm %s\\n' \"$*\" >> \"$TRACE\"\nif [ \"$*\" = 'run go:deps' ]; then exec /bin/sh -c \"$DEPS_SCRIPT\"; fi\n",
+					"go":  "#!/bin/sh\nprintf 'go %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'mod tidy -diff') exit \"$TIDY_EXIT\";;\n'mod verify') exit \"$VERIFY_EXIT\";;\n*) exit 91;;\nesac\n",
+				} {
+					if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				command := exec.CommandContext(ctx, "/bin/sh", "-c", entry.script)
+				command.Dir = dir
+				command.Env = []string{
+					"PATH=" + dir + ":/usr/bin:/bin", "TRACE=" + trace,
+					"DEPS_SCRIPT=" + scripts["go:deps"],
+					"TIDY_EXIT=" + strconv.Itoa(failure.tidyExit),
+					"VERIFY_EXIT=" + strconv.Itoa(failure.verifyExit),
+				}
+				output, runErr := command.CombinedOutput()
+				wantExit := failure.tidyExit
+				wantTrace := entry.prefix + "npm run go:deps\ngo mod tidy -diff\n"
+				if wantExit == 0 {
+					wantExit = failure.verifyExit
+					wantTrace += "go mod verify\n"
+				}
+				if wantExit == 0 {
+					wantTrace += entry.suffix
+				}
+				if command.ProcessState == nil || command.ProcessState.ExitCode() != wantExit {
+					t.Fatalf("exit state=%v, want %d: %v\n%s", command.ProcessState, wantExit, runErr, output)
+				}
+				actual, err := os.ReadFile(trace)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if string(actual) != wantTrace {
+					t.Fatalf("trace=%q, want %q", actual, wantTrace)
+				}
+			})
+		}
+	}
 }
 
 func TestExistingReleasePathIsReadOnlyAndFailsOnDrift(t *testing.T) {

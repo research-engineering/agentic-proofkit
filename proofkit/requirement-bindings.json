@@ -3285,6 +3285,25 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "scenarioId": "proofkit.supply-chain-quality.go-dependency-consistency-gates",
+      "witnessId": "proofkit.ci.go-dependency-gate-falsifiers",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_source_oracles_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGoDependencyGateWiring",
+          "command": "go test ./scripts -run '^TestGoDependencyGateWiring$'"
+        },
+        {
+          "selector": "TestGoDependencyGateFailurePropagation",
+          "command": "go test ./scripts -run '^TestGoDependencyGateFailurePropagation$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-QUALITY-012",
       "scenarioId": "proofkit.supply-chain-quality.release-channel-authority-vocabulary",
       "witnessId": "proofkit.release-channel.authority-vocabulary",

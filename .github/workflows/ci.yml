@@ -81,6 +81,9 @@ jobs:
       - name: Verify Go formatting
         run: npm run go:fmt
 
+      - name: Verify Go dependency consistency
+        run: npm run go:deps
+
       - name: Verify generated command contracts
         run: npm run command-contract:check
 

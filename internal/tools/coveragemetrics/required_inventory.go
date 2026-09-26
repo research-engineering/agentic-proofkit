@@ -680,6 +680,13 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestCIWorkflowDeclaresFailClosedRequiredAggregate",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.go-dependency-consistency-gates"}: {
+			witnessPath: "scripts/workflow_source_oracles_test.go",
+			selectors: []string{
+				"TestGoDependencyGateFailurePropagation",
+				"TestGoDependencyGateWiring",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}: {
 			witnessPath: "scripts/workflow_package_gate_oracle_test.go",
 			selectors: []string{
