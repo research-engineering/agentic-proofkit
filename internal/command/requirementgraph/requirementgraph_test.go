@@ -286,7 +286,7 @@ func TestAdmitOutputRejectsBudgetsBeforePerItemSemantics(t *testing.T) {
 func TestBuildRejectsSemanticallyInertTopologyID(t *testing.T) {
 	input := graphPermutationInput(t)
 	input["codeTopology"].(map[string]any)["topologyId"] = "consumer.code-topology"
-	if _, err := Build(input); err == nil || !strings.Contains(err.Error(), "unsupported field(s): topologyId") {
+	if _, err := Build(input); err == nil || err.Error() != "codeTopology has unsupported field(s): 1" {
 		t.Fatalf("Build() error = %v, want topologyId rejection", err)
 	}
 }

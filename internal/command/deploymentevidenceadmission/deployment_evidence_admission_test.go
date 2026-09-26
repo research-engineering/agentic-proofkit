@@ -49,8 +49,8 @@ func TestBuildRedactsSecretLikeUnknownEvidenceFields(t *testing.T) {
 	if strings.Contains(text, "api_key") || strings.Contains(text, "ghp_secretvalue") {
 		t.Fatalf("record leaked secret-like unsupported field name: %s", text)
 	}
-	if !strings.Contains(text, "redacted-unsupported-field-001") {
-		t.Fatalf("record missing redacted unsupported field label: %s", text)
+	if !strings.Contains(text, `"evidence has unsupported field(s): 1"`) {
+		t.Fatalf("record missing fixed evidence stage and unsupported field count: %s", text)
 	}
 }
 

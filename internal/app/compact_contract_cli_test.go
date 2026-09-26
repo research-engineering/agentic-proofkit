@@ -326,7 +326,7 @@ func TestCompactV2PublicCLIRejectsFullLegacyNestedPayloads(t *testing.T) {
 			mutate: func(t *testing.T, input map[string]any) {
 				replaceJSONObject(jsonObjectField(t, firstObjectField(t, input, "impactDemos"), "impactInput"), impactV1)
 			},
-			want: "proof impact report input has unsupported field(s): changedRecordIds",
+			want: "proof impact report input has unsupported field(s): 1",
 		},
 		{
 			name: "pilot envelope impact child", args: []string{"pilot-admission", "--input", "-", "--contract-envelope", "--pilot", "all"},
@@ -334,7 +334,7 @@ func TestCompactV2PublicCLIRejectsFullLegacyNestedPayloads(t *testing.T) {
 			mutate: func(t *testing.T, input map[string]any) {
 				replaceJSONObject(jsonObjectField(t, firstObjectField(t, jsonObjectField(t, input, "input"), "impactDemos"), "impactInput"), impactV1)
 			},
-			want: "proof impact report input has unsupported field(s): changedRecordIds",
+			want: "proof impact report input has unsupported field(s): 1",
 		},
 		{
 			name: "adoption aggregate impact child", args: []string{"adoption-contract-envelope", "--input", "-", "--mode", "pilot", "--pilot", "all"},
@@ -343,7 +343,7 @@ func TestCompactV2PublicCLIRejectsFullLegacyNestedPayloads(t *testing.T) {
 				pilot := jsonObjectField(t, input, "pilot")
 				replaceJSONObject(jsonObjectField(t, firstObjectField(t, jsonObjectField(t, pilot, "input"), "impactDemos"), "impactInput"), impactV1)
 			},
-			want: "proof impact report input has unsupported field(s): changedRecordIds",
+			want: "proof impact report input has unsupported field(s): 1",
 		},
 	}
 

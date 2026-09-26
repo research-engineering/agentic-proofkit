@@ -38,7 +38,6 @@ var (
 	secretPathContextPattern   = regexp.MustCompile(`(?i)(?:` + secretContextPatternSource + `)`)
 	secretPathTokenPattern     = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:` + secretPathTokenPatternSource + `)(?:$|[^A-Za-z0-9_])`)
 	urlUserInfoPattern         = regexp.MustCompile(`[A-Za-z][A-Za-z0-9+.-]*://[^/` + secretWhitespaceClassSource + `:@]+:[^/` + secretWhitespaceClassSource + `@]+@`)
-	controlRunePattern         = regexp.MustCompile(`[\x00-\x1f\x7f]`)
 	shellControlTokenPattern   = regexp.MustCompile("(&&|\\|\\||[;&|<>`]|\\$\\(|\\r|\\n)")
 )
 
@@ -108,17 +107,16 @@ func KnownKeys(record map[string]any, admitted []string, context string) error {
 	for _, key := range admitted {
 		admittedSet[key] = struct{}{}
 	}
-	unknown := []string{}
+	unknownCount := 0
 	for key := range record {
 		if _, ok := admittedSet[key]; !ok {
-			unknown = append(unknown, key)
+			unknownCount++
 		}
 	}
-	if len(unknown) == 0 {
+	if unknownCount == 0 {
 		return nil
 	}
-	sort.Strings(unknown)
-	return fmt.Errorf("%s has unsupported field(s): %s", context, strings.Join(diagnosticFieldLabels(unknown), ", "))
+	return fmt.Errorf("%s has unsupported field(s): %d", context, unknownCount)
 }
 
 func RuleID(raw any, context string) (string, error) {
@@ -394,20 +392,6 @@ func StructuredSelectorSourcePath(selector string, sourcePath string, context st
 		return fmt.Errorf("%s sourcePath must match selector path: %s !== %s", context, sourcePath, selectorPath)
 	}
 	return nil
-}
-
-func diagnosticFieldLabels(values []string) []string {
-	labels := make([]string, 0, len(values))
-	redacted := 0
-	for _, value := range values {
-		if ContainsSecretLikeValue(value) || controlRunePattern.MatchString(value) || len(value) > 120 {
-			redacted++
-			labels = append(labels, fmt.Sprintf("<redacted-unsupported-field-%03d>", redacted))
-			continue
-		}
-		labels = append(labels, value)
-	}
-	return labels
 }
 
 func NullableText(raw any, context string) (*string, error) {
