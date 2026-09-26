@@ -11,6 +11,15 @@ export const GRAPH_PLANES = Object.freeze([
   {id: "native_execution_coverage", label: "Native execution"},
 ]);
 
+export const GEOMETRY = Object.freeze({
+  cardWidth: 240, cardHeight: 96, columnGap: 20, rowGap: 20,
+  leftPadding: 12, rightPadding: 8, headingBand: 48, bottomPadding: 32,
+  minimumHeight: 180, slotPitch: 6, strokeWidth: 1.5, markerSize: 6, markerViewBox: 10,
+});
+
+/** @typedef {{gap: number, rank: number}} GraphSlot */
+/** @typedef {[number, number]} GraphPoint */
+
 /** @param {{nodes: any[], edges: any[]}} graph @param {Set<string>} planes @param {string | null} selectedId @param {boolean} neighborhood */
 export function visibleGraphPage(graph, planes, selectedId, neighborhood) {
   let nodes = graph.nodes.filter(node => planes.has(node.evidencePlane));
@@ -29,18 +38,70 @@ export function visibleGraphPage(graph, planes, selectedId, neighborhood) {
   return {nodes, edges, selectedId, neighborhood};
 }
 
-/** @param {any[]} nodes */
-export function graphPagePositions(nodes) {
-  const rows = [0, 0, 0, 0];
+/** @param {any[]} nodes @param {any[]} [edges] */
+export function graphPagePositions(nodes, edges = []) {
+  const g = GEOMETRY;
+  const rows = GRAPH_PLANES.map(() => 0);
+  const slotCounts = GRAPH_PLANES.map(() => 0);
+  /** @type {Map<string, number>} */
+  const nodeColumns = new Map();
   /** @type {Map<string, {x: number, y: number}>} */
   const positions = new Map();
+  /** @type {Map<string, {source: GraphSlot, target: GraphSlot}>} */
+  const slots = new Map();
+  /** @type {Map<string, GraphPoint[]>} */
+  const routes = new Map();
   const ordered = [...nodes].sort((a, b) => a.nodeId < b.nodeId ? -1 : a.nodeId > b.nodeId ? 1 : 0);
   for (const node of ordered) {
     const column = GRAPH_PLANES.findIndex(plane => plane.id === node.evidencePlane);
     if (column < 0) throw new Error("Unknown admitted evidence plane");
-    positions.set(node.nodeId, {x: 12 + column * 260, y: 48 + rows[column]++ * 116});
+    nodeColumns.set(node.nodeId, column);
   }
-  return {positions, width: 1040, height: Math.max(180, 60 + Math.max(...rows) * 116)};
+  /** @param {number} gap */
+  const reserve = gap => ({gap, rank: slotCounts[gap]++});
+  const orderedEdges = [...edges].sort((a, b) => a.edgeId < b.edgeId ? -1 : a.edgeId > b.edgeId ? 1 : 0);
+  for (const edge of orderedEdges) {
+    const from = nodeColumns.get(edge.fromNodeId), to = nodeColumns.get(edge.toNodeId);
+    if (from === undefined || to === undefined) throw new Error("Visible edge endpoint is unavailable");
+    if (edge.fromNodeId === edge.toNodeId) throw new Error("Coincident graph endpoints are unsupported");
+    // Endpoint roles get distinct slots even in a shared adjacent-column gap.
+    // Lower-column endpoints reserve first, independently of edge direction.
+    if (from === to) {
+      const slot = reserve(from);
+      slots.set(edge.edgeId, {source: slot, target: slot});
+    } else if (from < to) {
+      slots.set(edge.edgeId, {source: reserve(from), target: reserve(to - 1)});
+    } else {
+      const target = reserve(to), source = reserve(from - 1);
+      slots.set(edge.edgeId, {source, target});
+    }
+  }
+  /** @type {number[]} */
+  const columns = [g.leftPadding];
+  for (let column = 1; column < GRAPH_PLANES.length; column++) columns.push(columns[column - 1] + g.cardWidth + g.columnGap + g.slotPitch * slotCounts[column - 1]);
+  for (const node of ordered) {
+    const column = nodeColumns.get(node.nodeId);
+    if (column === undefined) throw new Error("Node column is unavailable");
+    positions.set(node.nodeId, {x: columns[column], y: g.headingBand + rows[column]++ * (g.cardHeight + g.rowGap)});
+  }
+  /** @param {GraphSlot} slot */
+  const lane = slot => columns[slot.gap] + g.cardWidth + g.columnGap / 2 + g.slotPitch * slot.rank;
+  for (const edge of orderedEdges) {
+    const from = positions.get(edge.fromNodeId), to = positions.get(edge.toNodeId), pair = slots.get(edge.edgeId);
+    if (!from || !to || !pair) throw new Error("Visible edge endpoint is unavailable");
+    /** @type {GraphPoint} */
+    const source = [from.x + (from.x > to.x ? 0 : g.cardWidth), from.y + g.cardHeight / 2];
+    /** @type {GraphPoint} */
+    const target = [to.x + (from.x < to.x ? 0 : g.cardWidth), to.y + g.cardHeight / 2];
+    const sourceLane = lane(pair.source), targetLane = lane(pair.target);
+    const corridor = from.y + g.cardHeight + g.rowGap / 2;
+    routes.set(edge.edgeId, from.x === to.x
+      ? [source, [sourceLane, source[1]], [sourceLane, target[1]], target]
+      : [source, [sourceLane, source[1]], [sourceLane, corridor], [targetLane, corridor], [targetLane, target[1]], target]);
+  }
+  const width = g.leftPadding + GRAPH_PLANES.length * g.cardWidth + (GRAPH_PLANES.length - 1) * g.columnGap + g.rightPadding + g.slotPitch * slotCounts.reduce((sum, count) => sum + count, 0);
+  const height = Math.max(g.minimumHeight, g.headingBand + Math.max(...rows) * (g.cardHeight + g.rowGap) - g.rowGap + g.bottomPadding);
+  return {positions, columns, routes, width, height};
 }
 
 /** @param {HTMLElement} container @param {any} graph @param {{follow: (offset: number, id: string) => void, reconcile: () => void, initialId?: string | null}} options */
@@ -125,16 +186,19 @@ export function renderGraphPage(container, graph, options) {
     if (oldSelection !== null && selectedId === null) announcement.textContent = "Selection cleared by evidence-plane filters.";
     else announcement.textContent = selectedId === null ? "No node selected." : `Selected ${selectedId}.`;
     counts.textContent = `Available: ${graph.availableNodeCount} nodes, ${graph.availableEdgeCount} relations. Returned page: ${graph.primaryNodeCount} primary and ${graph.boundaryNodeCount} boundary nodes, ${graph.selectedEdgeCount} relations. Visible in this returned page: ${visible.nodes.length} nodes, ${visible.edges.length} relations.`;
-    const {positions, width, height} = graphPagePositions(visible.nodes);
+    const {positions, columns, routes, width, height} = graphPagePositions(visible.nodes, visible.edges);
     const canvas = document.createElement("div");
     canvas.className = "graph-canvas";
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
+    canvas.style.setProperty("--graph-card-width", `${GEOMETRY.cardWidth}px`);
+    canvas.style.setProperty("--graph-card-height", `${GEOMETRY.cardHeight}px`);
+    canvas.style.setProperty("--graph-edge-stroke", `${GEOMETRY.strokeWidth}px`);
     for (let column = 0; column < GRAPH_PLANES.length; column++) {
       const heading = document.createElement("p");
       heading.className = "graph-plane-heading";
       heading.textContent = GRAPH_PLANES[column].label;
-      heading.style.left = `${12 + column * 260}px`;
+      heading.style.left = `${columns[column]}px`;
       canvas.append(heading);
     }
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -146,18 +210,17 @@ export function renderGraphPage(container, graph, options) {
     svg.dataset.edgeIds = visible.edges.map(edge => edge.edgeId).join(" ");
     const defs = document.createElementNS(svg.namespaceURI, "defs");
     const marker = document.createElementNS(svg.namespaceURI, "marker");
-    for (const [key, value] of Object.entries({id: "graph-arrow", viewBox: "0 0 10 10", refX: "9", refY: "5", markerWidth: "6", markerHeight: "6", orient: "auto-start-reverse"})) marker.setAttribute(key, value);
+    const unit = GEOMETRY.markerViewBox;
+    for (const [key, value] of Object.entries({id: "graph-arrow", viewBox: `0 0 ${unit} ${unit}`, refX: unit, refY: unit / 2, markerWidth: GEOMETRY.markerSize, markerHeight: GEOMETRY.markerSize, markerUnits: "userSpaceOnUse", orient: "auto-start-reverse"})) marker.setAttribute(key, String(value));
     const arrow = document.createElementNS(svg.namespaceURI, "path");
-    arrow.setAttribute("d", "M 0 0 L 10 5 L 0 10 z");
+    arrow.setAttribute("d", `M 0 0 L ${unit} ${unit / 2} L 0 ${unit} z`);
     marker.append(arrow); defs.append(marker); svg.append(defs);
     for (const edge of visible.edges) {
-      const from = positions.get(edge.fromNodeId), to = positions.get(edge.toNodeId);
-      if (!from || !to) throw new Error("Visible edge endpoint is unavailable");
-      const dx = to.x - from.x, dy = to.y - from.y;
-      const boundary = Math.min(120 / Math.abs(dx), 48 / Math.abs(dy));
-      const line = document.createElementNS(svg.namespaceURI, "line");
-      for (const [key, value] of Object.entries({"data-edge-id": edge.edgeId, x1: String(from.x + 120 + dx * boundary), y1: String(from.y + 48 + dy * boundary), x2: String(to.x + 120 - dx * boundary), y2: String(to.y + 48 - dy * boundary), "marker-end": "url(#graph-arrow)"})) line.setAttribute(key, value);
-      svg.append(line);
+      const points = routes.get(edge.edgeId);
+      if (!points) throw new Error("Visible edge route is unavailable");
+      const polyline = document.createElementNS(svg.namespaceURI, "polyline");
+      for (const [key, value] of Object.entries({class: "graph-edge", "data-edge-id": edge.edgeId, points: points.map(point => point.join(",")).join(" "), "marker-end": "url(#graph-arrow)"})) polyline.setAttribute(key, value);
+      svg.append(polyline);
     }
     canvas.append(svg);
     /** @type {Map<string, HTMLButtonElement>} */

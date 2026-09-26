@@ -137,8 +137,8 @@ pre { margin: 0; max-width: 100%; overflow-wrap: anywhere; white-space: pre-wrap
 .table-viewport { margin-block: 1rem; }
 .graph-canvas { position: relative; }
 .graph-canvas > svg { position: absolute; inset: 0; pointer-events: none; }
-.graph-plane-heading { position: absolute; top: 0; width: 240px; font-size: .8125rem; font-weight: 650; }
-.graph-node { position: absolute; width: 240px; height: 96px; display: flex; flex-direction: column; align-items: start; text-align: start; overflow: hidden; }
+.graph-plane-heading { position: absolute; top: 0; width: var(--graph-card-width); font-size: .8125rem; font-weight: 650; }
+.graph-node { position: absolute; width: var(--graph-card-width); height: var(--graph-card-height); display: flex; flex-direction: column; align-items: start; text-align: start; overflow: hidden; }
 .graph-node[data-boundary="true"] { border-style: dashed; }
 .graph-node[data-plane="proof_coverage"] { border-inline-start: 4px solid #77589b; }
 .graph-node[data-plane="code_traceability"] { border-inline-start: 4px solid #387080; }
@@ -170,8 +170,8 @@ dd { margin: 0; min-width: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 #handoff-preview p, #handoff-preview li, #handoff-preview blockquote { font-size: .8125rem; }
 #handoff-preview blockquote { margin-inline: 0; border-inline-start: 2px solid var(--border); padding-inline-start: .75rem; }
 [data-select-anchor][aria-pressed="true"] { outline: 3px solid var(--focus); outline-offset: 2px; }
-.graph-viewport svg line { stroke: var(--text); stroke-width: 1.5; }
-.graph-viewport svg path { fill: var(--text); }
+.graph-viewport .graph-edge { fill: none; stroke: var(--text); stroke-width: var(--graph-edge-stroke); stroke-linejoin: round; }
+.graph-viewport marker path { fill: var(--text); }
 table { border-collapse: collapse; min-width: 100%; width: max-content; }
 th, td { border: 1px solid var(--border); max-width: 24rem; padding: .5rem; text-align: left; }
 
@@ -215,6 +215,6 @@ th, td { border: 1px solid var(--border); max-width: 24rem; padding: .5rem; text
 @media (forced-colors: active) {
   .product-bar, .workspace-panel, article, button, input, select, textarea, .graph-viewport, .table-viewport, th, td { border-color: CanvasText; }
   button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible, [data-select-anchor][aria-pressed="true"] { outline-color: Highlight; }
-  .graph-viewport svg line { stroke: CanvasText; }
-  .graph-viewport svg path { fill: CanvasText; }
+  .graph-viewport .graph-edge { stroke: CanvasText; }
+  .graph-viewport marker path { fill: CanvasText; }
 }

@@ -8,6 +8,59 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/browserfixture"
 )
 
+func TestGraphLayoutFixtureAdmitsExactNativeRelations(t *testing.T) {
+	for _, mixed := range []bool{false, true} {
+		name := "minimal"
+		wantNodes, wantEdges := 4, 3
+		if mixed {
+			name, wantNodes, wantEdges = "mixed", 8, 8
+		}
+		t.Run(name, func(t *testing.T) {
+			input, err := browserfixture.GraphLayoutWorkspace(mixed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			session, _, err := buildWorkspace(input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			page, state := graphWindow(session.Graph, projectionQuery{MaxRecords: 64, MaxEdges: 128})
+			if state != "complete" || page["selectedNodeCount"] != wantNodes || page["selectedEdgeCount"] != wantEdges || page["boundaryNodeCount"] != 0 {
+				t.Fatal("native layout fixture lost its compact complete page")
+			}
+			want := map[string]any{
+				"edgeId":   "spec-edge:8b5fd51688cd41c917a84d10b0caa618a65322556db337d35fe218a345ed89ee",
+				"edgeKind": "contains", "evidencePlane": "specification_coverage", "fromNodeId": "spec:z", "toNodeId": "spec:a",
+			}
+			found, children, traces, observations := false, 0, map[string]bool{}, 0
+			for _, raw := range page["edges"].([]any) {
+				edge := raw.(map[string]any)
+				if edge["fromNodeId"] == edge["toNodeId"] {
+					t.Fatal("layout witness unexpectedly contains a self-loop")
+				}
+				if edge["edgeId"] == want["edgeId"] {
+					found = reflect.DeepEqual(edge, want)
+				}
+				if edge["fromNodeId"] == "spec:z" && edge["edgeKind"] == "contains" && (edge["toNodeId"] == "spec:a" || edge["toNodeId"] == "spec:b") {
+					children++
+				}
+				if edge["fromNodeId"] == "requirement:REQ-CONSUMER-001" && edge["toNodeId"] == "code:code.retry" && edge["edgeKind"] == "traced_to" {
+					traces[edge["edgeId"].(string)] = true
+				}
+				if edge["fromNodeId"] == "requirement:REQ-CONSUMER-001" && edge["edgeKind"] == "observed_by" && edge["codeNodeId"] == "code:code.retry" {
+					observations++
+				}
+			}
+			if !found || children != 2 || graphNodeOffset(t, session.Graph, "spec:a") >= graphNodeOffset(t, session.Graph, "spec:b") || graphNodeOffset(t, session.Graph, "spec:b") >= graphNodeOffset(t, session.Graph, "spec:z") {
+				t.Fatal("native parent-to-child relation or lexical obstruction changed")
+			}
+			if mixed && (len(traces) != 2 || observations != 2) {
+				t.Fatal("mixed fixture lost distinct parallel or skip-plane relations")
+			}
+		})
+	}
+}
+
 func TestGraphWindowDistinguishesOffPageParentsWithoutInferringEdges(t *testing.T) {
 	input, err := browserfixture.Workspace()
 	if err != nil {

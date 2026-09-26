@@ -5809,6 +5809,20 @@
       "witnessId": "proofkit.graph-reference-window.falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementbrowser/workspace_graph_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGraphLayoutFixtureAdmitsExactNativeRelations",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestGraphLayoutFixtureAdmitsExactNativeRelations$'"
+        },
+        {
+          "selector": "TestGraphWindowDistinguishesOffPageParentsWithoutInferringEdges",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestGraphWindowDistinguishesOffPageParentsWithoutInferringEdges$'"
+        },
+        {
+          "selector": "TestGraphWindowKeepsAuxiliaryCodeTargetSeparateFromEndpoints",
+          "command": "go test ./internal/command/requirementbrowser -run '^TestGraphWindowKeepsAuxiliaryCodeTargetSeparateFromEndpoints$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],

@@ -891,15 +891,16 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         const rect = element.getBoundingClientRect();
         return {id: element.dataset.graphSelect, x: rect.left, y: rect.top, width: rect.width, height: rect.height};
       }),
-      lines: Array.from(svg.querySelectorAll("line"), line => {
-        const matrix = line.getScreenCTM();
-        if (!matrix) throw new Error("Native line coordinate system is unavailable");
-        const start = new DOMPoint(line.x1.baseVal.value, line.y1.baseVal.value).matrixTransform(matrix);
-        const end = new DOMPoint(line.x2.baseVal.value, line.y2.baseVal.value).matrixTransform(matrix);
-        return {id: line.dataset.edgeId, raw: ["x1", "y1", "x2", "y2"].map(name => Number(line.getAttribute(name))), points: [start.x, start.y, end.x, end.y]};
+      routes: Array.from(svg.querySelectorAll("polyline"), route => {
+        const matrix = route.getScreenCTM();
+        const raw = Array.from(route.points, point => [point.x, point.y]).flat();
+        if (!matrix || raw.length < 4) throw new Error("Native relation coordinates are unavailable");
+        const start = new DOMPoint(raw[0], raw[1]).matrixTransform(matrix);
+        const end = new DOMPoint(raw.at(-2), raw.at(-1)).matrixTransform(matrix);
+        return {id: route.dataset.edgeId, raw, points: [start.x, start.y, end.x, end.y]};
       }),
     }));
-    expect(nativeGraph.lines.map(line => line.id), "complete native line identities").toEqual(edgeIDs);
+    expect(nativeGraph.routes.map(route => route.id), "complete native relation identities").toEqual(edgeIDs);
     const boxes = nativeGraph.boxes;
     const boxesByID = new Map(boxes.map(box => [box.id, box]));
     expect([...boxesByID.keys()]).toEqual(nodeIDs);
@@ -914,11 +915,11 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
       await details.locator("summary").click();
       await expect(details.locator("dt")).toHaveText(Object.keys(edge));
       await expect(details.locator("dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
-      const line = graph.locator("line").nth(index);
-      await expect(line).toHaveAttribute("data-edge-id", edge.edgeId);
-      await expect(line).toHaveAttribute("marker-end", "url(#graph-arrow)");
-      const geometry = nativeGraph.lines[index].points;
-      expect(nativeGraph.lines[index].raw.every(Number.isFinite)).toBe(true);
+      const route = graph.locator("polyline").nth(index);
+      await expect(route).toHaveAttribute("data-edge-id", edge.edgeId);
+      await expect(route).toHaveAttribute("marker-end", "url(#graph-arrow)");
+      const geometry = nativeGraph.routes[index].points;
+      expect(nativeGraph.routes[index].raw.every(Number.isFinite)).toBe(true);
       expect(geometry.every(Number.isFinite)).toBe(true);
       expect(geometry[0] !== geometry[2] || geometry[1] !== geometry[3]).toBe(true);
       for (const [role, id, x, y] of [["source", edge.fromNodeId, geometry[0], geometry[1]], ["target", edge.toNodeId, geometry[2], geometry[3]]]) {
@@ -929,7 +930,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         const perimeter = Math.min(Math.abs(x - box.x), Math.abs(x - box.x - box.width), Math.abs(y - box.y), Math.abs(y - box.y - box.height)) <= tolerance;
         expect(inside && perimeter, `${role} endpoint of ${edge.edgeId} touches ${id}`).toBe(true);
       }
-      await expectCSS(line, {visibility: "visible", opacity: "1", stroke: "rgb(32, 37, 34)", "stroke-width": "1.5px", filter: "none", "clip-path": "none"});
+      await expectCSS(route, {visibility: "visible", opacity: "1", stroke: "rgb(32, 37, 34)", "stroke-width": "1.5px", filter: "none", "clip-path": "none"});
     }
     for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
       const a = boxes[i], b = boxes[j];

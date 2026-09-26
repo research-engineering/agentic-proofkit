@@ -79,6 +79,14 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/app/unsupported_key_diagnostics_cli_test.go",
 			selectors:   []string{"TestKnownKeysNativeCLIDiagnostics"},
 		},
+		{"REQ-PROOFKIT-SPEC-039", "proofkit.spec-proof-core.graph-reference-window"}: {
+			witnessPath: "internal/command/requirementbrowser/workspace_graph_test.go",
+			selectors: []string{
+				"TestGraphLayoutFixtureAdmitsExactNativeRelations",
+				"TestGraphWindowDistinguishesOffPageParentsWithoutInferringEdges",
+				"TestGraphWindowKeepsAuxiliaryCodeTargetSeparateFromEndpoints",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-batch-discovery"}: {
 			witnessPath: "internal/tools/coveragemetrics/golist_test.go",
 			selectors: []string{

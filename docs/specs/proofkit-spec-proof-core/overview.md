@@ -223,6 +223,8 @@ execution receipts, and merge policy.
   and never interprets an absent row as a failed requirement.
 - `REQ-PROOFKIT-SPEC-039`: graph inspection preserves primary and boundary sets,
   typed off-page references, evidence planes and accessible bounded navigation.
+  Directed relation routes preserve endpoint identity and avoid unrelated cards;
+  parallel routes remain distinguishable without claiming edge-disjointness.
 - `REQ-PROOFKIT-SPEC-040`: handoff preview and explicit export preserve exact
   server bytes, source identity, drafts and independent generation/lock state.
 - `REQ-PROOFKIT-SPEC-041`: diff summaries count only admitted page changes and
