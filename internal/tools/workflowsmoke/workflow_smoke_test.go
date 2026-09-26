@@ -71,6 +71,7 @@ func TestVerifyCarrierRejectsEachObservableMutation(t *testing.T) {
 			}
 		})
 	}
+	//lint:ignore SA1012 Exercise intentional nil-context rejection at the carrier boundary.
 	if workflowsmoke.VerifyCarrier(nil, applicationRunner) == nil || workflowsmoke.VerifyCarrier(t.Context(), nil) == nil {
 		t.Fatal("missing carrier prerequisites were accepted")
 	}
