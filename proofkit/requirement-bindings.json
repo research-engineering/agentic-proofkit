@@ -6650,6 +6650,10 @@
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueDeterministicReobservationBarriers$'"
         },
         {
+          "selector": "TestPreparationResidueFilesystemOperands",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueFilesystemOperands$'"
+        },
+        {
           "selector": "TestPreparationResiduePostPublicationFailures",
           "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResiduePostPublicationFailures$'"
         },

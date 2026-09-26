@@ -38,6 +38,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestPreparationResidueDestinationFirstLostAcknowledgment",
 				"TestPreparationResidueDestinationRoutes",
 				"TestPreparationResidueDeterministicReobservationBarriers",
+				"TestPreparationResidueFilesystemOperands",
 				"TestPreparationResidueLockModesAndBusy",
 				"TestPreparationResidueMissingNamespaceAndSourceStayReadOnly",
 				"TestPreparationResidueNumericOwnershipOperand",

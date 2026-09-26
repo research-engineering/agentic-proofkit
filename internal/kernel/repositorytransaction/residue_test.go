@@ -661,7 +661,7 @@ func TestPreparationResidueOperationalErrorsNeverEligibility(t *testing.T) {
 }
 
 func TestPreparationResidueDeterministicReobservationBarriers(t *testing.T) {
-	for _, scenario := range []string{"bytes", "mode", "inode", "root", "namespace-appearance", "cancel", "parent-replacement", "destination-appearance", "cross-device"} {
+	for _, scenario := range []string{"bytes", "mode", "inode", "root", "namespace-appearance", "cancel", "parent-replacement", "destination-appearance"} {
 		t.Run(scenario, func(t *testing.T) {
 			root := filepath.Join(t.TempDir(), "repository")
 			residueFixture(t, root, []byte("partial"))
@@ -671,7 +671,7 @@ func TestPreparationResidueDeterministicReobservationBarriers(t *testing.T) {
 			operations := nativeResidueOperations()
 			fired := false
 			point := "reobserve"
-			if scenario == "parent-replacement" || scenario == "destination-appearance" || scenario == "cross-device" {
+			if scenario == "parent-replacement" || scenario == "destination-appearance" {
 				point = "parent-pinned"
 			}
 			if scenario == "namespace-appearance" {
@@ -720,9 +720,6 @@ func TestPreparationResidueDeterministicReobservationBarriers(t *testing.T) {
 				}
 				return nil
 			}
-			if scenario == "cross-device" {
-				operations.sameFilesystem = func(os.FileInfo, os.FileInfo) (bool, error) { return false, nil }
-			}
 			var err error
 			if point == "parent-pinned" {
 				_, err = quarantinePreparationResidue(ctx, root, observation.ObservationID, operations)
@@ -739,12 +736,60 @@ func TestPreparationResidueDeterministicReobservationBarriers(t *testing.T) {
 			if scenario == "destination-appearance" {
 				want = ErrResidueDestinationPresent
 			}
-			if scenario == "cross-device" {
-				want = ErrResidueFilesystem
-			}
 			residueAssertError(t, err, want)
 			if !fired {
 				t.Fatal("barrier not reached")
+			}
+		})
+	}
+}
+
+func TestPreparationResidueFilesystemOperands(t *testing.T) {
+	for _, rejected := range []string{"control", "active"} {
+		t.Run(rejected, func(t *testing.T) {
+			root := t.TempDir()
+			residueFixture(t, root, []byte("retained"))
+			observation := residueObservation(t, root)
+			control := residueStat(t, root, ControlDirectory)
+			active := residueStat(t, root, activeDirectory)
+			before := residueTree(t, filepath.Join(root, activeDirectory))
+			operations := nativeResidueOperations()
+			var compared []string
+			operations.sameFilesystem = func(left, right os.FileInfo) (bool, error) {
+				parent := residueStat(t, root, preparationResidueDirectory)
+				if !os.SameFile(right, parent) {
+					t.Fatal("filesystem comparison omitted destination parent")
+				}
+				var operand string
+				switch {
+				case os.SameFile(left, control):
+					operand = "control"
+				case os.SameFile(left, active):
+					operand = "active"
+				default:
+					t.Fatal("filesystem comparison used an unrelated source")
+				}
+				compared = append(compared, operand)
+				return operand != rejected, nil
+			}
+			got, err := quarantinePreparationResidue(context.Background(), root, observation.ObservationID, operations)
+			residueAssertError(t, err, ErrResidueFilesystem)
+			if got != (PreparationResidueRelocation{}) {
+				t.Fatalf("filesystem rejection returned relocation: %#v", got)
+			}
+			wantCompared := []string{"control"}
+			if rejected == "active" {
+				wantCompared = append(wantCompared, "active")
+			}
+			if !reflect.DeepEqual(compared, wantCompared) {
+				t.Fatalf("filesystem operands = %v, want %v", compared, wantCompared)
+			}
+			after := residueStat(t, root, activeDirectory)
+			if !os.SameFile(active, after) || active.Mode() != after.Mode() || !reflect.DeepEqual(before, residueTree(t, filepath.Join(root, activeDirectory))) {
+				t.Fatal("filesystem rejection changed retained source evidence")
+			}
+			if _, err := os.Lstat(filepath.Join(root, residueDestination(observation.ObservationID))); !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("filesystem rejection relocated evidence: %v", err)
 			}
 		})
 	}
