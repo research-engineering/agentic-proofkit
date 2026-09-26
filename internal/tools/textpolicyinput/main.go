@@ -48,9 +48,9 @@ type policy struct {
 }
 
 type fileRecord struct {
-	ContentBase64 string `json:"contentBase64,omitempty"`
-	Path          string `json:"path"`
-	State         string `json:"state"`
+	ContentBase64 *string `json:"contentBase64,omitempty"`
+	Path          string  `json:"path"`
+	State         string  `json:"state"`
 }
 
 func main() {
@@ -78,7 +78,8 @@ func main() {
 		if err != nil {
 			exit(fmt.Errorf("read %s: %w", path, err))
 		}
-		record.ContentBase64 = base64.StdEncoding.EncodeToString(data)
+		contentBase64 := base64.StdEncoding.EncodeToString(data)
+		record.ContentBase64 = &contentBase64
 		records = append(records, record)
 	}
 	payload := input{
