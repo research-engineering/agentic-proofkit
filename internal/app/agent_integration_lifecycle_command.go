@@ -21,6 +21,9 @@ func runAgentIntegrationLifecycle(ctx context.Context, command string, args []st
 	if err != nil {
 		return writeJSON(nil, 1, err, stdout, stderr)
 	}
+	scope := newTransactionSignalScope(ctx)
+	defer scope.Close()
+	ctx = scope.Context
 	var value any
 	var plain string
 	var exitCode int

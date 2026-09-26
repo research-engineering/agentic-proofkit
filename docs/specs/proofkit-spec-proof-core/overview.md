@@ -234,6 +234,10 @@ execution receipts, and merge policy.
   reuses the existing workspace and terminal lifecycle without manufacturing
   proof coverage, losing source restrictions or rereading live files.
 
+- `REQ-PROOFKIT-SPEC-043`: CLI transaction scopes register signals only after
+  input admission, pass cooperative cancellation to native owners, restore
+  previous signal handling and join their waiter without replacing owner results.
+
 ## Non-Claims
 
 - This spec does not claim consumer repository adoption.

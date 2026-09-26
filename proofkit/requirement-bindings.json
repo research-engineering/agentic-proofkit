@@ -1013,9 +1013,76 @@
       "nonClaims": [
         "Viewing a captured project does not establish native witness execution, semantic proof adequacy, live source freshness after capture, owner approval, merge, release, deployment or production readiness. Coverage and semantic diff require their own admitted evidence and are unavailable in the project front door."
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-043",
+      "ownerId": "proofkit.spec-proof-core",
+      "specPath": "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
+      "claimLevel": "blocking",
+      "proofState": "witness_backed",
+      "nonClaims": [
+        "This policy does not guarantee prompt cancellation of blocking system calls, exact counting of coalesced signals, atomic stdout after forced termination, launcher or proof-tool signal propagation, or process-group absence. Native signal witnesses do not enumerate every transaction mutation phase."
+      ]
     }
   ],
   "bindings": [
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-043",
+      "scenarioId": "proofkit.spec-proof-core.transaction-signal-scope",
+      "witnessId": "proofkit.transaction-signal.scope-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/transaction_signal_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTransactionSignalScopeCloseJoins",
+          "command": "go test ./internal/app -run '^TestTransactionSignalScopeCloseJoins$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-043",
+      "scenarioId": "proofkit.spec-proof-core.transaction-signal-native",
+      "witnessId": "proofkit.transaction-signal.native-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/transaction_signal_process_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTransactionSignalScopeFirstSignalRestores",
+          "command": "go test ./internal/app -run '^TestTransactionSignalScopeFirstSignalRestores$'"
+        },
+        {
+          "selector": "TestTransactionSignalScopeSecondSignal",
+          "command": "go test ./internal/app -run '^TestTransactionSignalScopeSecondSignal$'"
+        },
+        {
+          "selector": "TestTransactionSignalScopeNoSignal",
+          "command": "go test ./internal/app -run '^TestTransactionSignalScopeNoSignal$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-043",
+      "scenarioId": "proofkit.spec-proof-core.transaction-signal-command-boundary",
+      "witnessId": "proofkit.transaction-signal.command-boundary-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/transaction_signal_command_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTransactionSignalCommandBoundary",
+          "command": "go test ./internal/app -run '^TestTransactionSignalCommandBoundary$'"
+        },
+        {
+          "selector": "TestTransactionSignalDefaultStdinInterruption",
+          "command": "go test ./internal/app -run '^TestTransactionSignalDefaultStdinInterruption$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-001",
       "scenarioId": "proofkit.package-boundary.root-export-and-deep-import-denial",

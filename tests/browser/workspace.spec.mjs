@@ -409,11 +409,11 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     mainFrame: () => cleanupFrame,
     evaluate: async () => undefined,
     on: (event) => {
-      expect(["request", "download"]).toContain(event);
+      expect(["request", "response", "download"]).toContain(event);
       cleanupEvents.push(`${event}-armed`);
     },
     off: (event) => {
-      expect(["request", "download"]).toContain(event);
+      expect(["request", "response", "download"]).toContain(event);
       cleanupEvents.push(`${event}-disarmed`);
     },
     waitForResponse: (_predicate, {signal}) => pendingWaiter("response", signal),
@@ -435,6 +435,7 @@ test("workspace navigation admits the exact base and ignores response decoys", a
   expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
   expect(cleanupEvents).toEqual([
     "request-armed",
+    "response-armed",
     "download-armed",
     "response-armed",
     "navigation-armed",
@@ -444,8 +445,44 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     "response-aborted",
     "navigation-aborted",
     "request-disarmed",
+    "response-disarmed",
     "download-disarmed",
   ]);
+});
+
+test("workspace navigation admits a response-less earlier attempt at the same target", async ({baseURL, page}) => {
+  const workspaceURL = admittedWorkspaceURL(baseURL);
+  const requests = [];
+  await page.route((url) => url.href === workspaceURL, async (route) => {
+    if (!route.request().isNavigationRequest()) return route.continue();
+    requests.push(route.request());
+    if (requests.length === 1) return route.abort("aborted");
+    return route.continue();
+  });
+  await navigateWorkspace(
+    page,
+    workspaceURL,
+    async (token) => {
+      await Promise.all([
+        page.waitForEvent("requestfailed", {
+          predicate: (request) => request.isNavigationRequest() && request.url() === workspaceURL,
+        }),
+        page.evaluate((target) => {
+          window.setTimeout(() => window.location.assign(target), 0);
+        }, workspaceURL),
+      ]);
+      return page.evaluate(({target, value}) => {
+        window.setTimeout(() => window.location.assign(target), 0);
+        return value;
+      }, {target: workspaceURL, value: token});
+    },
+    "Workspace navigation did not return a successful response",
+  );
+  expect(requests).toHaveLength(2);
+  expect(requests[0].failure()).not.toBeNull();
+  expect(await requests[0].response()).toBeNull();
+  expect((await requests[1].response()).status()).toBe(200);
+  await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
 });
 
 for (const mutation of ["history", "document-open", "replace-root"]) test(`attachment with ${mutation} cannot satisfy workspace navigation`, async ({baseURL, page}) => {
@@ -577,6 +614,42 @@ test("download response cannot certify a script-created or unchanged document", 
       expect(scriptDocumentObserved).toBe(true);
     }
     if (scriptDocumentObserved) await expect(page.locator("#script-document")).toHaveCount(1);
+  } finally {
+    server.closeAllConnections();
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test("a later response-less request cannot borrow an earlier document response", async ({page}) => {
+  const requests = [];
+  const statuses = [];
+  const server = createServer((request, response) => {
+    if (request.url !== "/") return response.writeHead(404).end();
+    statuses.push(200);
+    response.setHeader("Content-Type", "text/html");
+    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.end("<p>loading</p><script>setTimeout(() => location.reload(), 250)</script>");
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
+  await page.route((url) => url.href === workspaceURL, async (route) => {
+    requests.push(route.request());
+    if (requests.length === 1) return route.continue();
+    await route.abort("aborted");
+    await page.evaluate(() => {
+      document.body.innerHTML = "<h1>browser.fixture.workspace</h1>";
+    });
+  });
+  try {
+    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+    expect(statuses).toEqual([200]);
+    expect(requests).toHaveLength(2);
+    expect((await requests[0].response()).status()).toBe(200);
+    expect(requests[1].failure()).not.toBeNull();
+    expect(await requests[1].response()).toBeNull();
+    await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
   } finally {
     server.closeAllConnections();
     await new Promise((resolve) => server.close(resolve));

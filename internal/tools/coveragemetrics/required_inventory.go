@@ -14,6 +14,25 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-SPEC-043", "proofkit.spec-proof-core.transaction-signal-scope"}: {
+			witnessPath: "internal/app/transaction_signal_test.go",
+			selectors:   []string{"TestTransactionSignalScopeCloseJoins"},
+		},
+		{"REQ-PROOFKIT-SPEC-043", "proofkit.spec-proof-core.transaction-signal-native"}: {
+			witnessPath: "internal/app/transaction_signal_process_unix_test.go",
+			selectors: []string{
+				"TestTransactionSignalScopeFirstSignalRestores",
+				"TestTransactionSignalScopeNoSignal",
+				"TestTransactionSignalScopeSecondSignal",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-043", "proofkit.spec-proof-core.transaction-signal-command-boundary"}: {
+			witnessPath: "internal/app/transaction_signal_command_unix_test.go",
+			selectors: []string{
+				"TestTransactionSignalCommandBoundary",
+				"TestTransactionSignalDefaultStdinInterruption",
+			},
+		},
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-residue-cli"}: {
 			witnessPath: "internal/app/transaction_residue_command_test.go",
 			selectors: []string{
