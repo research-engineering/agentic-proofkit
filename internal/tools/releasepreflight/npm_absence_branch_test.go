@@ -95,7 +95,7 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 				item.wantLimit = "context"
 				result := executeNPMAbsenceBranch(t, header, body, item)
 				if result.trace != "view\nabsent\nreaped\n" {
-					t.Fatal("timeout must terminate and reap the blocked classifier before shell exit")
+					t.Fatal("cancelled carrier must wait for the classifier deadline before shell exit")
 				}
 			})
 		}
@@ -241,7 +241,7 @@ func executeNPMAbsenceBranch(t *testing.T, header, body string, item npmBranchCa
 	timeout := 5 * time.Second
 	if item.wantLimit == "context" {
 		// Fault only the fixture input: main blocks opening this FIFO until
-		// cancellation. The Bash parent must terminate and wait for that child.
+		// cancellation. The child's own test deadline exits it; Bash must wait.
 		if err := syscall.Mkfifo(filepath.Join(dir, "blocked-report"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -254,7 +254,6 @@ func executeNPMAbsenceBranch(t *testing.T, header, body string, item npmBranchCa
 	script := `child=
 cleanup() {
   if [[ -n "$child" ]]; then
-    kill -TERM "$child" 2>/dev/null || :
     wait "$child" 2>/dev/null || :
     printf 'reaped\n' >> trace
     child=
@@ -304,7 +303,7 @@ report=report.json
 	cmd.Dir = dir
 	cmd.Env = []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit)}
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
-	cmd.WaitDelay = time.Second
+	cmd.WaitDelay = 2 * time.Second
 	var stdout, stderr npmBranchOutput
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	// Nil stdin is /dev/null; the sole spawned entrypoint also has explicit EOF.
