@@ -413,7 +413,7 @@ test("workspace navigation owns waiter rejection before a delayed trigger", asyn
     await new Promise((resolve) => setTimeout(resolve, 50));
     return token;
   }, "unexpected navigation response"), /early response rejection/);
-  assert.deepEqual(armed, ["request", "download"]);
+  assert.deepEqual(armed, ["request", "response", "download"]);
   assert.deepEqual(disarmed, armed);
 });
 

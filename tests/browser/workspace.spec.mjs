@@ -463,7 +463,14 @@ test("workspace navigation admits a response-less earlier attempt at the same ta
     page,
     workspaceURL,
     async (token) => {
-      await expect(page.goto(workspaceURL)).rejects.toThrow();
+      await Promise.all([
+        page.waitForEvent("requestfailed", {
+          predicate: (request) => request.isNavigationRequest() && request.url() === workspaceURL,
+        }),
+        page.evaluate((target) => {
+          window.setTimeout(() => window.location.assign(target), 0);
+        }, workspaceURL),
+      ]);
       return page.evaluate(({target, value}) => {
         window.setTimeout(() => window.location.assign(target), 0);
         return value;
