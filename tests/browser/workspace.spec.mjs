@@ -891,7 +891,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
         const rect = element.getBoundingClientRect();
         return {id: element.dataset.graphSelect, x: rect.left, y: rect.top, width: rect.width, height: rect.height};
       }),
-      routes: Array.from(svg.querySelectorAll(":scope > [data-edge-id]"), route => {
+      routes: Array.from(svg.querySelectorAll("polyline"), route => {
         const matrix = route.getScreenCTM();
         const raw = Array.from(route.points, point => [point.x, point.y]).flat();
         if (!matrix || raw.length < 4) throw new Error("Native relation coordinates are unavailable");
@@ -915,7 +915,7 @@ test("workspace renders admitted views and creates a keyboard-authorized handoff
       await details.locator("summary").click();
       await expect(details.locator("dt")).toHaveText(Object.keys(edge));
       await expect(details.locator("dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
-      const route = graph.locator(":scope > [data-edge-id]").nth(index);
+      const route = graph.locator("polyline").nth(index);
       await expect(route).toHaveAttribute("data-edge-id", edge.edgeId);
       await expect(route).toHaveAttribute("marker-end", "url(#graph-arrow)");
       const geometry = nativeGraph.routes[index].points;

@@ -4,6 +4,12 @@ import {openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 import {assertGraphGeometry, assertGraphPaint, readGraphGeometry} from "./graph-geometry-oracle.mjs";
 
+async function attachGraphScreenshot(page, testInfo, name) {
+  const path = testInfo.outputPath(name);
+  await page.screenshot({path});
+  await testInfo.attach(name, {path, contentType: "image/png"});
+}
+
 async function openGraph(page, url) {
   await openWorkspace(page, url);
   const response = page.waitForResponse(response => response.url().endsWith("/api/v1/graph"));
@@ -36,7 +42,7 @@ graphLayoutTest("native graph geometry protects cards and preserves exact direct
       edgeKind: "contains", evidencePlane: "specification_coverage", fromNodeId: "spec:z", toNodeId: "spec:a",
     });
     await assertRenderedGraph(page, graph);
-    await testInfo.attach(`graph-${mode}-desktop.png`, {body: await page.screenshot(), contentType: "image/png"});
+    await attachGraphScreenshot(page, testInfo, `graph-${mode}-desktop.png`);
     const selection = page.locator('.graph-records button[data-graph-select="spec:z"]');
     await selection.focus(); await page.keyboard.press("Enter");
     await expect(selection).toBeFocused();
@@ -105,7 +111,7 @@ graphLayoutTest("graph geometry keeps desktop scrolling and mobile keyboard reco
       expect(await identities(page, "nodes")).toEqual(graph.nodes.map(n => n.nodeId));
       expect(await identities(page, "edges")).toEqual(graph.edges.map(e => e.edgeId));
     }
-    await testInfo.attach(`graph-width-${width}.png`, {body: await page.screenshot(), contentType: "image/png"});
+    await attachGraphScreenshot(page, testInfo, `graph-width-${width}.png`);
   }
 });
 
@@ -115,7 +121,7 @@ graphLayoutTest("graph geometry preserves paint in dark and forced colors and de
   for (const media of [{colorScheme: "dark", forcedColors: "none"}, {colorScheme: "light", forcedColors: "active"}]) {
     await page.emulateMedia(media);
     await assertRenderedGraph(page, graph);
-    await testInfo.attach(`graph-${media.forcedColors === "active" ? "forced" : "dark"}.png`, {body: await page.screenshot(), contentType: "image/png"});
+    await attachGraphScreenshot(page, testInfo, `graph-${media.forcedColors === "active" ? "forced" : "dark"}.png`);
   }
   await page.locator(".graph-canvas").evaluate(canvas => canvas.style.setProperty("--graph-card-width", "241px"));
   const drift = await readGraphGeometry(page);
