@@ -4502,6 +4502,44 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.unsupported-key-diagnostic-count",
+      "witnessId": "proofkit.admission.unsupported-key-count-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/admit/fields_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestKnownKeysDiagnosticsDependOnlyOnContextAndCount",
+          "command": "go test ./internal/kernel/admit -run '^TestKnownKeysDiagnosticsDependOnlyOnContextAndCount$'"
+        },
+        {
+          "selector": "TestKnownKeysPreservesExactAdmissionAndInput",
+          "command": "go test ./internal/kernel/admit -run '^TestKnownKeysPreservesExactAdmissionAndInput$'"
+        },
+        {
+          "selector": "TestKnownKeysRedactsSecretLikeUnsupportedFieldNames",
+          "command": "go test ./internal/kernel/admit -run '^TestKnownKeysRedactsSecretLikeUnsupportedFieldNames$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.unsupported-key-diagnostic-cli",
+      "witnessId": "proofkit.admission.unsupported-key-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/unsupported_key_diagnostics_cli_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestKnownKeysNativeCLIDiagnostics",
+          "command": "go test ./internal/app -run '^TestKnownKeysNativeCLIDiagnostics$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
       "scenarioId": "proofkit.supply-chain-quality.dynamic-stderr-diagnostic-owner",
       "witnessId": "proofkit.tool-diagnostic.dynamic-stderr-falsifier",
       "witnessKind": "contract",

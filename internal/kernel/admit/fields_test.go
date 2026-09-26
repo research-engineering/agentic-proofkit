@@ -2,6 +2,9 @@ package admit
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -439,6 +442,91 @@ func TestPositiveIntegerRequiresDecodedPositiveInteger(t *testing.T) {
 	}
 }
 
+func TestKnownKeysDiagnosticsDependOnlyOnContextAndCount(t *testing.T) {
+	opaque := []string{"synthetic-batch20-opaque-alpha", "synthetic-batch20-opaque-omega"}
+	for _, key := range opaque {
+		if ContainsSecretLikeValue(key) {
+			t.Fatal("opaque synthetic witness entered the detector taxonomy")
+		}
+	}
+	for _, family := range []struct {
+		name string
+		keys []string
+	}{
+		{"opaque", opaque},
+		{"renamed", []string{"synthetic-batch20-renamed-z", "synthetic-batch20-renamed-a"}},
+		{"secret_shaped", []string{"api_key=synthetic-batch20-fixture", "Bearer synthetic-batch20-fixture"}},
+		{"empty_and_control", []string{"", "synthetic-batch20\n\x00"}},
+		{"unicode_and_invalid_utf8", []string{"synthetic-batch20\u200b\U000e0001", "synthetic-batch20\xff"}},
+		{"long", []string{strings.Repeat("a", 120), strings.Repeat("b", 1024)}},
+	} {
+		t.Run(family.name, func(t *testing.T) {
+			for count := 1; count <= len(family.keys); count++ {
+				t.Run(fmt.Sprintf("count_%d", count), func(t *testing.T) {
+					for _, context := range []string{"test input", "public.items[7]", ""} {
+						want := fmt.Sprintf("%s has unsupported field(s): %d", context, count)
+						for _, value := range []any{nil, true, json.Number("1"), "synthetic-batch20-value", []any{"synthetic-batch20-value"}, map[string]any{"payload": "synthetic-batch20-value"}} {
+							for _, reverse := range []bool{false, true} {
+								keys := slices.Clone(family.keys[:count])
+								if reverse {
+									slices.Reverse(keys)
+								}
+								record := map[string]any{"known": value}
+								for _, key := range keys {
+									record[key] = value
+								}
+								if err := KnownKeys(record, []string{"known"}, context); err == nil || err.Error() != want {
+									t.Fatalf("KnownKeys() = %v, want %q (reverse=%t valueType=%T)", err, want, reverse, value)
+								}
+							}
+						}
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestKnownKeysPreservesExactAdmissionAndInput(t *testing.T) {
+	if err := KnownKeys(nil, nil, "test input"); err != nil {
+		t.Fatalf("KnownKeys(nil, nil) = %v", err)
+	}
+	for _, test := range []struct {
+		name     string
+		keys     []string
+		admitted []string
+		want     string
+	}{
+		{name: "empty"},
+		{name: "known subset", keys: []string{"known"}, admitted: []string{"unused", "known", "known"}},
+		{name: "arbitrary known names", keys: []string{"", "api_key=synthetic-batch20-fixture", "\xff"}, admitted: []string{"", "api_key=synthetic-batch20-fixture", "\xff"}},
+		{name: "no admitted names", keys: []string{"synthetic-batch20-extra"}, want: "test input has unsupported field(s): 1"},
+		{name: "duplicate map assignment", keys: []string{"synthetic-batch20-extra", "synthetic-batch20-extra"}, want: "test input has unsupported field(s): 1"},
+		{name: "exact bytes", keys: []string{"known", "Known", " known ", "\u00e9", "e\u0301"}, admitted: []string{"known", "\u00e9"}, want: "test input has unsupported field(s): 3"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			record := map[string]any{}
+			before := map[string]any{}
+			for _, key := range test.keys {
+				record[key] = []any{map[string]any{"payload": " synthetic-batch20-value\u200b "}, nil}
+				before[key] = []any{map[string]any{"payload": " synthetic-batch20-value\u200b "}, nil}
+			}
+			admittedBefore := slices.Clone(test.admitted)
+			err := KnownKeys(record, test.admitted, "test input")
+			if test.want == "" {
+				if err != nil {
+					t.Fatalf("KnownKeys() = %v, want nil", err)
+				}
+			} else if err == nil || err.Error() != test.want {
+				t.Fatalf("KnownKeys() = %v, want %q", err, test.want)
+			}
+			if !reflect.DeepEqual(record, before) || !reflect.DeepEqual(test.admitted, admittedBefore) {
+				t.Fatal("KnownKeys mutated caller-owned keys, nested values or admitted names")
+			}
+		})
+	}
+}
+
 func TestKnownKeysRedactsSecretLikeUnsupportedFieldNames(t *testing.T) {
 	err := KnownKeys(
 		map[string]any{"api_key=ghp_secretvalue": true, "safeExtra": true},
@@ -452,8 +540,8 @@ func TestKnownKeysRedactsSecretLikeUnsupportedFieldNames(t *testing.T) {
 	if strings.Contains(message, "ghp_secretvalue") || strings.Contains(message, "api_key=") {
 		t.Fatalf("KnownKeys() error leaked secret-like field name: %q", message)
 	}
-	if !strings.Contains(message, "<redacted-unsupported-field-001>") || !strings.Contains(message, "safeExtra") {
-		t.Fatalf("KnownKeys() error = %q, want redacted secret-like field and safe field label", message)
+	if message != "test input has unsupported field(s): 2" {
+		t.Fatalf("KnownKeys() error = %q, want fixed context and unsupported field count", message)
 	}
 }
 

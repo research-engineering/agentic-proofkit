@@ -188,11 +188,15 @@ func TestRegistryExpectedReleaseAuthorityOutputUsesOwnerDigest(t *testing.T) {
 func TestRegistryConsumerRejectsLegacyRootImportProof(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.069611182226856486814388939792127069656350462633771514327526952480435375689324")
 	input := validRegistryConsumerInput(t)
+	baseline, baselineCode, baselineErr := Build(input)
+	if baselineErr != nil || baselineCode != 0 || baseline.State != "passed" {
+		t.Fatalf("baseline Build() exit=%d error=%v state=%s, want valid control", baselineCode, baselineErr, baseline.State)
+	}
 	proof := input["proof"].(map[string]any)
 	proof["rootImportOutputSha256"] = sha256Hex()
 
 	_, exitCode, err := Build(input)
-	if exitCode != 1 || err == nil || !strings.Contains(err.Error(), "rootImportOutputSha256") {
+	if exitCode != 1 || err == nil || err.Error() != "proofkit registry-consumer proof has unsupported field(s): 1" {
 		t.Fatalf("Build() exit=%d error=%v, want admission failure", exitCode, err)
 	}
 }

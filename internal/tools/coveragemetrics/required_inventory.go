@@ -67,6 +67,18 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestPreparationResidueRejectsSpecialFileWithoutBlocking",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.unsupported-key-diagnostic-count"}: {
+			witnessPath: "internal/kernel/admit/fields_test.go",
+			selectors: []string{
+				"TestKnownKeysDiagnosticsDependOnlyOnContextAndCount",
+				"TestKnownKeysPreservesExactAdmissionAndInput",
+				"TestKnownKeysRedactsSecretLikeUnsupportedFieldNames",
+			},
+		},
+		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.unsupported-key-diagnostic-cli"}: {
+			witnessPath: "internal/app/unsupported_key_diagnostics_cli_test.go",
+			selectors:   []string{"TestKnownKeysNativeCLIDiagnostics"},
+		},
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-batch-discovery"}: {
 			witnessPath: "internal/tools/coveragemetrics/golist_test.go",
 			selectors: []string{

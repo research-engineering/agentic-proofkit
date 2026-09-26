@@ -199,6 +199,9 @@ vulnerability absence, or consumer rollout safety by itself.
 	  tools. On supported Unix hosts, an installed-carrier success additionally
 	  requires confirmed process-group absence after the parent is reaped; cleanup
 	  timeout is an explicit failure rather than a successful terminal result.
+  Shared unsupported-key diagnostics preserve their context argument and report
+  an unknown-key count instead of unknown names or values. Context and ordinary
+  report fields retain their separate admission owners.
 
 ## Non-Claims
 
