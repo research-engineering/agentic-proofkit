@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -183,7 +184,7 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	image, _ := minimumImage("arm64")
-	for _, failure := range []string{"", "pull", "image architecture", "run", "cancel", "result", "cleanup query", "cleanup removal", "cleanup residue", "image cleanup"} {
+	for _, failure := range []string{"", "pull", "image architecture", "run", "cancel", "result", "cleanup query", "cleanup removal", "cleanup residue"} {
 		t.Run(failure, func(t *testing.T) {
 			parent, cancel := context.WithCancel(t.Context())
 			defer cancel()
@@ -199,7 +200,7 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 				case strings.HasPrefix(joined, "image inspect "):
 					inspect++
 					if inspect == 1 {
-						return nil, errors.New("image absent")
+						return nil, errors.New("initial inspect unavailable")
 					}
 					if failure == "image architecture" {
 						return []byte("linux/amd64\n"), nil
@@ -234,9 +235,7 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 						return nil, errors.New("remove failed")
 					}
 				case strings.HasPrefix(joined, "image rm "):
-					if failure == "image cleanup" {
-						return nil, errors.New("image removal failed")
-					}
+					t.Fatal("lifecycle attempted to delete shared image cache")
 				}
 				return nil, nil
 			}
@@ -248,6 +247,67 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 				t.Fatalf("cleanup not attempted after failure: %v", calls)
 			}
 		})
+	}
+	assertMinimumSharedImageRetention(t, input, snapshot, image)
+}
+
+func assertMinimumSharedImageRetention(t *testing.T, input string, snapshot []byte, image string) {
+	t.Helper()
+	for _, initial := range []string{"cached", "transient-inspect", "concurrent-pull"} {
+		for _, cleanupFails := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/cleanup-fails-%t", initial, cleanupFails), func(t *testing.T) {
+				imagePresent := initial != "concurrent-pull"
+				inspections, pulls, removals := 0, 0, 0
+				containerPresent := true
+				command := func(ctx context.Context, args ...string) ([]byte, error) {
+					if ctx.Err() != nil {
+						return nil, ctx.Err()
+					}
+					switch {
+					case len(args) > 1 && args[0] == "image" && args[1] == "inspect":
+						inspections++
+						if inspections == 1 && initial != "cached" {
+							return nil, errors.New("transient daemon or inspection failure")
+						}
+						return []byte("linux/arm64\n"), nil
+					case args[0] == "pull":
+						pulls++
+						// Another caller can populate the same immutable digest.
+						imagePresent = true
+					case args[0] == "run":
+						return minimumInstalledResult(minimumHash(snapshot), "arm64"), nil
+					case args[0] == "ps":
+						if containerPresent {
+							return []byte("owned-container\n"), nil
+						}
+					case args[0] == "rm":
+						if !reflect.DeepEqual(args, []string{"rm", "-f", "owned"}) {
+							t.Fatalf("cleanup targeted an unrelated container: %v", args)
+						}
+						removals++
+						if cleanupFails {
+							return nil, errors.New("container removal failed")
+						}
+						containerPresent = false
+					default:
+						imagePresent = false
+						t.Fatalf("unexpected daemon mutation or cache removal: %v", args)
+					}
+					return nil, nil
+				}
+				err := minimumDockerLifecycle(t.Context(), command, input, "owned", "arm64", image)
+				if (err != nil) != cleanupFails || !imagePresent || removals != 1 {
+					t.Fatalf("shared image=%t container removals=%d cleanup failure=%t error=%v", imagePresent, removals, cleanupFails, err)
+				}
+				wantPulls := 1
+				if initial == "cached" {
+					wantPulls = 0
+				}
+				if pulls != wantPulls {
+					t.Fatalf("pulls=%d, want %d", pulls, wantPulls)
+				}
+			})
+		}
 	}
 }
 

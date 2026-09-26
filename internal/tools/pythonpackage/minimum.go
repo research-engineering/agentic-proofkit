@@ -52,6 +52,7 @@ type minimumReceipt struct {
 	ExecutionMillis   int64           `json:"executionMillis"`
 	TotalMillis       int64           `json:"totalMillis"`
 	Cleanup           string          `json:"cleanup"`
+	ImageCachePolicy  string          `json:"imageCachePolicy"`
 	NonClaims         []string        `json:"nonClaims"`
 }
 
@@ -323,7 +324,8 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 		return receipt, fmt.Errorf("minimum smoke source snapshot changed during execution")
 	}
 	receipt.Snapshot, receipt.Image, receipt.Python, receipt.Pip = snapshot, image, minimumPython, minimumPipVersion
-	receipt.NonClaims = []string{"Finite native Linux installed-carrier minimum only, not all Python versions, commands or platforms.", "Local source-bound execution, not registry, hosted CI, branch protection, release or interpreter security proof."}
+	receipt.ImageCachePolicy = "retain_shared_image"
+	receipt.NonClaims = []string{"Finite native Linux installed-carrier minimum only, not all Python versions, commands or platforms.", "Local source-bound execution, not registry, hosted CI, branch protection, release or interpreter security proof.", "The pinned interpreter image is retained as shared Docker cache. Cleanup covers only the owned container and temporary workdir, not cache reclamation or exclusive image ownership."}
 	return receipt, nil
 }
 

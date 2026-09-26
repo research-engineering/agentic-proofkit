@@ -54,15 +54,15 @@ func minimumDockerSmoke(ctx context.Context, input, architecture, image string) 
 }
 
 func minimumDockerLifecycle(ctx context.Context, command minimumDockerCommand, input, name, architecture, image string) (err error) {
-	// Only a newly pulled digest is removed. An existing image is shared state.
+	// Inspection failure is only a reason to try a pinned pull, never evidence
+	// of absence or exclusive ownership. Images remain shared Docker cache.
 	_, inspectErr := command(ctx, "image", "inspect", image, "--format", "{{.Os}}/{{.Architecture}}")
-	ownedImage := inspectErr != nil
 	defer func() {
 		cleanupContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		err = errors.Join(err, minimumDockerCleanup(cleanupContext, command, name, image, ownedImage))
+		err = errors.Join(err, minimumDockerCleanup(cleanupContext, command, name))
 	}()
-	if ownedImage {
+	if inspectErr != nil {
 		if _, err := command(ctx, "pull", "--platform", "linux/"+architecture, image); err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func minimumDockerLifecycle(ctx context.Context, command minimumDockerCommand, i
 	return nil
 }
 
-func minimumDockerCleanup(ctx context.Context, command minimumDockerCommand, name, image string, ownedImage bool) error {
+func minimumDockerCleanup(ctx context.Context, command minimumDockerCommand, name string) error {
 	filter := "name=^/" + name + "$"
 	remaining, err := command(ctx, "ps", "-aq", "--filter", filter)
 	if err != nil {
@@ -103,11 +103,6 @@ func minimumDockerCleanup(ctx context.Context, command minimumDockerCommand, nam
 	remaining, err = command(ctx, "ps", "-aq", "--filter", filter)
 	if err != nil || strings.TrimSpace(string(remaining)) != "" {
 		return fmt.Errorf("minimum container cleanup could not confirm absence")
-	}
-	if ownedImage {
-		if _, err := command(ctx, "image", "rm", image); err != nil {
-			return fmt.Errorf("minimum owned image cleanup failed: %w", err)
-		}
 	}
 	return nil
 }
