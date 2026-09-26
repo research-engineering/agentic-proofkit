@@ -26,6 +26,17 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestGoWitnessListStreamMapping",
 			},
 		},
+		{"REQ-PROOFKIT-PACKAGE-005", "proofkit.package-boundary.native-text-policy-inventory"}: {
+			witnessPath: "internal/tools/textpolicyinput/main_test.go",
+			selectors: []string{
+				"TestNativeInventoryDeduplicatesUnmergedPaths",
+				"TestNativeInventoryEmptyRepository",
+				"TestNativeInventoryGitFailuresHaveNoPartialStdout",
+				"TestNativeInventoryOmitsBinaryBytesByCaseFoldedSuffix",
+				"TestNativeInventoryProjectsGitAndCurrentWorktree",
+				"TestNativeInventoryTextPolicyRoundtrip",
+			},
+		},
 		{"REQ-PROOFKIT-WORKFLOW-001", "proofkit.agent-workflow.pure-single-admission-owner"}: {
 			witnessPath: "internal/command/changeworkflowplan/change_workflow_plan_test.go",
 			selectors:   []string{"TestWorkflowPurityPredicates"},

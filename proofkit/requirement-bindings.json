@@ -1525,6 +1525,45 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-005",
+      "scenarioId": "proofkit.package-boundary.native-text-policy-inventory",
+      "witnessId": "proofkit.text-policy.native-git-projection",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/textpolicyinput/main_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNativeInventoryProjectsGitAndCurrentWorktree",
+          "command": "go test ./internal/tools/textpolicyinput -run '^TestNativeInventoryProjectsGitAndCurrentWorktree$'"
+        },
+        {
+          "selector": "TestNativeInventoryDeduplicatesUnmergedPaths",
+          "command": "go test ./internal/tools/textpolicyinput -run '^TestNativeInventoryDeduplicatesUnmergedPaths$'"
+        },
+        {
+          "selector": "TestNativeInventoryOmitsBinaryBytesByCaseFoldedSuffix",
+          "command": "go test ./internal/tools/textpolicyinput -run '^TestNativeInventoryOmitsBinaryBytesByCaseFoldedSuffix$'"
+        },
+        {
+          "selector": "TestNativeInventoryEmptyRepository",
+          "command": "go test ./internal/tools/textpolicyinput -run '^TestNativeInventoryEmptyRepository$'"
+        },
+        {
+          "selector": "TestNativeInventoryGitFailuresHaveNoPartialStdout",
+          "command": "go test ./internal/tools/textpolicyinput -run '^TestNativeInventoryGitFailuresHaveNoPartialStdout$'"
+        },
+        {
+          "selector": "TestNativeInventoryTextPolicyRoundtrip",
+          "command": "go test ./internal/tools/textpolicyinput -run '^TestNativeInventoryTextPolicyRoundtrip$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-005",
       "scenarioId": "proofkit.package-boundary.staged-and-worktree-source-hygiene",
       "witnessId": "proofkit.source-hygiene.tracked-language-closure",
       "witnessKind": "contract",
