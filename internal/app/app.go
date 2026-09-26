@@ -148,6 +148,8 @@ func runWithProjectView(ctx context.Context, args []string, stdin io.Reader, std
 		return runAgentIntegration(ctx, args[0], args[1:], stdout, stderr)
 	case commandRunnerAgentIntegrationLifecycle:
 		return runAgentIntegrationLifecycle(ctx, args[0], args[1:], stdout, stderr, capabilities)
+	case commandRunnerTransactionResidue:
+		return runTransactionResidue(ctx, args[0], args[1:], stdout, stderr, capabilities)
 	case commandRunnerAgentRoute:
 		return runAgentRoute(args[1:], stdin, stdout, stderr, renderer)
 	case commandRunnerContractEnvelope:

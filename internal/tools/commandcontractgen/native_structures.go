@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
+	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
@@ -128,6 +129,14 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.requirement-semantic-diff.output.v3.json-schema", direction: "output",
 		predecessors: []string{"proofkit.requirement-semantic-diff.output.v3.root-shape"}, commands: []string{"requirement-semantic-diff"},
 		schema: func() (map[string]any, error) { return requirementdiff.OutputStructure(), nil },
+	}, {
+		id: "proofkit.transaction-inspect-residue.output.v1.json-schema", direction: "output",
+		commands: []string{"transaction-inspect-residue"},
+		schema:   func() (map[string]any, error) { return transactionresidue.InspectionOutputStructure(), nil },
+	}, {
+		id: "proofkit.transaction-quarantine-residue.output.v1.json-schema", direction: "output",
+		commands: []string{"transaction-quarantine-residue"},
+		schema:   func() (map[string]any, error) { return transactionresidue.RelocationOutputStructure(), nil },
 	}}
 }
 

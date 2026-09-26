@@ -523,6 +523,13 @@ func TestNoInputCommandDescriptorsHaveRuntimeSmoke(t *testing.T) {
 func noInputRuntimeSmokeArgs(t *testing.T, descriptor commandDescriptor) ([]string, bool) {
 	t.Helper()
 	switch descriptor.name {
+	case "transaction-inspect-residue":
+		return residueCLIArgs(t.TempDir(), "inspect-residue"), true
+	case "transaction-quarantine-residue":
+		root := t.TempDir()
+		residueCLIFixture(t, root, nil)
+		value := residueCLIOutput(t, residueCLIArgs(root, "inspect-residue"), "eligible", nil)
+		return residueCLIArgs(root, "quarantine-residue", value["observationId"].(string)), true
 	case "adopt-materialize-recover", "integration-recover":
 		return append(cloneStrings(descriptor.routeTokens), "--help"), false
 	case "adopt-plan":

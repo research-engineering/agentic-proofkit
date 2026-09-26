@@ -6542,6 +6542,189 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-residue-cli",
+      "witnessId": "proofkit.repository-transaction.residue-cli-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/transaction_residue_command_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTransactionResidueLostOutputAcknowledgment",
+          "command": "go test ./internal/app -run '^TestTransactionResidueLostOutputAcknowledgment$'"
+        },
+        {
+          "selector": "TestTransactionInspectResidueCLI",
+          "command": "go test ./internal/app -run '^TestTransactionInspectResidueCLI$'"
+        },
+        {
+          "selector": "TestTransactionQuarantineResidueCLI",
+          "command": "go test ./internal/app -run '^TestTransactionQuarantineResidueCLI$'"
+        },
+        {
+          "selector": "TestTransactionResidueInvocationAndPresentation",
+          "command": "go test ./internal/app -run '^TestTransactionResidueInvocationAndPresentation$'"
+        },
+        {
+          "selector": "TestTransactionResidueStructuralContracts",
+          "command": "go test ./internal/app -run '^TestTransactionResidueStructuralContracts$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-residue-projection",
+      "witnessId": "proofkit.repository-transaction.residue-projection-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/transactionresidue/residue_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestResidueProjectionUsesNativeObservation",
+          "command": "go test ./internal/command/transactionresidue -run '^TestResidueProjectionUsesNativeObservation$'"
+        },
+        {
+          "selector": "TestResidueOutputStructuresRejectIndependentMutants",
+          "command": "go test ./internal/command/transactionresidue -run '^TestResidueOutputStructuresRejectIndependentMutants$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-residue-disposition",
+      "witnessId": "proofkit.repository-transaction.residue-disposition-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/residue_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPreparationResiduePreservesWholeDirectoryAndTerminal",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResiduePreservesWholeDirectoryAndTerminal$'"
+        },
+        {
+          "selector": "TestPreparationResidueRejectsRecognizedPlans",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueRejectsRecognizedPlans$'"
+        },
+        {
+          "selector": "TestPreparationResidueRejectsForbiddenShapes",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueRejectsForbiddenShapes$'"
+        },
+        {
+          "selector": "TestPreparationResidueStaleTokenOperands",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueStaleTokenOperands$'"
+        },
+        {
+          "selector": "TestPreparationResidueMissingNamespaceAndSourceStayReadOnly",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueMissingNamespaceAndSourceStayReadOnly$'"
+        },
+        {
+          "selector": "TestPreparationResidueAdmitsTokenBeforeIO",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueAdmitsTokenBeforeIO$'"
+        },
+        {
+          "selector": "TestPreparationResidueLockModesAndBusy",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueLockModesAndBusy$'"
+        },
+        {
+          "selector": "TestPreparationResidueDestinationFirstLostAcknowledgment",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueDestinationFirstLostAcknowledgment$'"
+        },
+        {
+          "selector": "TestPreparationResidueDestinationRoutes",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueDestinationRoutes$'"
+        },
+        {
+          "selector": "TestPreparationResidueOperationalErrorsNeverEligibility",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueOperationalErrorsNeverEligibility$'"
+        },
+        {
+          "selector": "TestPreparationResidueDeterministicReobservationBarriers",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueDeterministicReobservationBarriers$'"
+        },
+        {
+          "selector": "TestPreparationResiduePostPublicationFailures",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResiduePostPublicationFailures$'"
+        },
+        {
+          "selector": "TestPreparationResidueNumericOwnershipOperand",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueNumericOwnershipOperand$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-residue-observation",
+      "witnessId": "proofkit.repository-transaction.residue-observation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/residue_observation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPreparationResidueExactTokenReference",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueExactTokenReference$'"
+        },
+        {
+          "selector": "TestPreparationResidueStableReadRejectsIntervalChanges",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueStableReadRejectsIntervalChanges$'"
+        },
+        {
+          "selector": "TestPreparationResidueCleanTerminalOwnerParity",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueCleanTerminalOwnerParity$'"
+        },
+        {
+          "selector": "TestPreparationResidueTerminalReadFailureAndCancellation",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueTerminalReadFailureAndCancellation$'"
+        },
+        {
+          "selector": "TestPreparationResiduePinsParentThroughFinalReadback",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResiduePinsParentThroughFinalReadback$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-residue-native-filesystem",
+      "witnessId": "proofkit.repository-transaction.residue-native-filesystem-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/residue_unix_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPreparationResidueRejectsSpecialFileWithoutBlocking",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueRejectsSpecialFileWithoutBlocking$'"
+        },
+        {
+          "selector": "TestPreparationResidueRejectsForeignOwnerOperand",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationResidueRejectsForeignOwnerOperand$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
       "scenarioId": "proofkit.spec-proof-core.repository-transaction-preparation-publication",
       "witnessId": "proofkit.repository-transaction.preparation-publication-falsifier",
       "witnessKind": "contract",

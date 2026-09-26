@@ -78,6 +78,10 @@ type InspectionLease struct {
 }
 
 func OpenInspectionLease(ctx context.Context, rootPath string) (lease *InspectionLease, returnErr error) {
+	return openInspectionLease(ctx, rootPath, transactionReadLock)
+}
+
+func openInspectionLease(ctx context.Context, rootPath string, mode transactionLockMode) (lease *InspectionLease, returnErr error) {
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("open repository inspection lease cancelled: %w", err)
 	}
@@ -106,7 +110,7 @@ func OpenInspectionLease(ctx context.Context, rootPath string) (lease *Inspectio
 	if controlErr != nil && !errors.Is(controlErr, os.ErrNotExist) {
 		return nil, fmt.Errorf("inspect repository transaction control root")
 	}
-	lock, exists, err := acquireExistingLock(root, transactionReadLock)
+	lock, exists, err := acquireExistingLock(root, mode)
 	if err != nil {
 		return nil, err
 	}

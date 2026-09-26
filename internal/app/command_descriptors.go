@@ -29,6 +29,7 @@ const (
 	commandRunnerAgentRoute                  commandRunner = "agent_route"
 	commandRunnerAgentIntegration            commandRunner = "agent_integration"
 	commandRunnerAgentIntegrationLifecycle   commandRunner = "agent_integration_lifecycle"
+	commandRunnerTransactionResidue          commandRunner = "transaction_residue"
 	commandRunnerConformanceProfile          commandRunner = "conformance_profile"
 	commandRunnerContractEnvelope            commandRunner = "contract_envelope"
 	commandRunnerGradualAdoptionBootstrap    commandRunner = "gradual_adoption_bootstrap"
@@ -183,6 +184,8 @@ var commandDescriptors = []commandDescriptor{
 	command("status", commandInputNone, flags("--color", "--format", "--repo-root"), modes("json", "text"), ownerDirs("projectstatus"), withRunner(commandRunnerProjectStatus), withSemanticAppTests("TestStatusCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--repo-root")),
 	command("test-evidence-inventory", commandInputRequired, flags("--input", "--input-pointer", "--normalized-inventory", "--projection"), modes("json", "normalized-inventory"), ownerDirs("proofbindingtestinventory", "testevidenceinventory"), withRunner(commandRunnerTestEvidenceInventory)),
 	command("text-policy", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("textpolicy")),
+	command("transaction-inspect-residue", commandInputNone, flags("--color", "--format", "--repo-root"), modes("json", "text"), ownerDirs("transactionresidue"), withRunner(commandRunnerTransactionResidue), withSemanticAppTests("TestTransactionInspectResidueCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--format", "--repo-root")),
+	command("transaction-quarantine-residue", commandInputNone, flags("--color", "--expect-observation", "--format", "--repo-root"), modes("json", "text"), ownerDirs("transactionresidue"), withRunner(commandRunnerTransactionResidue), withSemanticAppTests("TestTransactionQuarantineResidueCLI"), withScopeClass(commandScopeExplicitFileSystemMutation), withRequiredFlags("--expect-observation", "--repo-root"), withFlagChoices("--color", "auto", "never"), withFlagChoices("--format", "json", "text"), withFlagPresenceAndRequiredValue("--color", "--format", "text"), withSingleOccurrenceFlags("--color", "--expect-observation", "--format", "--repo-root")),
 	command("typescript-public-api-surfaces", commandInputRequired, flags("--input", "--input-pointer", "--repo-root"), modes("json"), ownerDirs("publicapi"), withRunner(commandRunnerTypeScriptPublicAPISurfaces), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root")),
 	command("view", commandInputNone, flags("--host", "--open", "--port", "--repo-root", "--serve", "--session-mode", "--session-timeout-seconds"), modes("json", "server"), ownerDirs("requirementbrowser"), withRunner(commandRunnerProjectView), withSemanticAppTests("TestProjectViewCLI"), withScopeClass(commandScopeExplicitFileSystemScan), withRequiredFlags("--repo-root"), withFlagChoices("--host", requirementbrowser.HostChoices()...), withFlagChoices("--session-mode", requirementbrowser.SessionModeChoices()...), withFlagPresenceRequirement("--open", "--serve"), withFlagPresenceRequirement("--session-mode", "--serve"), withFlagPresenceAndRequiredValue("--session-timeout-seconds", "--session-mode", "one-shot-question"), withFlagValueRequirement("--session-mode", "one-shot-question", "--open", "--serve"), withSingleOccurrenceFlags("--host", "--open", "--port", "--repo-root", "--serve", "--session-mode", "--session-timeout-seconds")),
 	command("witness-plan", commandInputRequired, flags("--input", "--input-pointer"), modes("json"), ownerDirs("witnessplan")),
@@ -196,6 +199,7 @@ var commandDescriptors = []commandDescriptor{
 var knownCommandRunners = map[commandRunner]struct{}{
 	commandRunnerAgentIntegration:            {},
 	commandRunnerAgentIntegrationLifecycle:   {},
+	commandRunnerTransactionResidue:          {},
 	commandRunnerGenericInput:                {},
 	commandRunnerAdoptionFrontDoor:           {},
 	commandRunnerAdoptionMaterialization:     {},

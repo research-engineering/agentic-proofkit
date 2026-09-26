@@ -14,6 +14,58 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-residue-cli"}: {
+			witnessPath: "internal/app/transaction_residue_command_test.go",
+			selectors: []string{
+				"TestTransactionInspectResidueCLI",
+				"TestTransactionQuarantineResidueCLI",
+				"TestTransactionResidueInvocationAndPresentation",
+				"TestTransactionResidueLostOutputAcknowledgment",
+				"TestTransactionResidueStructuralContracts",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-residue-projection"}: {
+			witnessPath: "internal/command/transactionresidue/residue_test.go",
+			selectors: []string{
+				"TestResidueOutputStructuresRejectIndependentMutants",
+				"TestResidueProjectionUsesNativeObservation",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-residue-disposition"}: {
+			witnessPath: "internal/kernel/repositorytransaction/residue_test.go",
+			selectors: []string{
+				"TestPreparationResidueAdmitsTokenBeforeIO",
+				"TestPreparationResidueDestinationFirstLostAcknowledgment",
+				"TestPreparationResidueDestinationRoutes",
+				"TestPreparationResidueDeterministicReobservationBarriers",
+				"TestPreparationResidueLockModesAndBusy",
+				"TestPreparationResidueMissingNamespaceAndSourceStayReadOnly",
+				"TestPreparationResidueNumericOwnershipOperand",
+				"TestPreparationResidueOperationalErrorsNeverEligibility",
+				"TestPreparationResiduePostPublicationFailures",
+				"TestPreparationResiduePreservesWholeDirectoryAndTerminal",
+				"TestPreparationResidueRejectsForbiddenShapes",
+				"TestPreparationResidueRejectsRecognizedPlans",
+				"TestPreparationResidueStaleTokenOperands",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-residue-observation"}: {
+			witnessPath: "internal/kernel/repositorytransaction/residue_observation_test.go",
+			selectors: []string{
+				"TestPreparationResidueCleanTerminalOwnerParity",
+				"TestPreparationResidueExactTokenReference",
+				"TestPreparationResiduePinsParentThroughFinalReadback",
+				"TestPreparationResidueStableReadRejectsIntervalChanges",
+				"TestPreparationResidueTerminalReadFailureAndCancellation",
+			},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-residue-native-filesystem"}: {
+			witnessPath: "internal/kernel/repositorytransaction/residue_unix_test.go",
+			selectors: []string{
+				"TestPreparationResidueRejectsForeignOwnerOperand",
+				"TestPreparationResidueRejectsSpecialFileWithoutBlocking",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-010", "proofkit.supply-chain-quality.binding-selector-batch-discovery"}: {
 			witnessPath: "internal/tools/coveragemetrics/golist_test.go",
 			selectors: []string{
