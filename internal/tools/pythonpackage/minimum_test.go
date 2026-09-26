@@ -184,7 +184,7 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 		t.Fatal(err)
 	}
 	image, _ := minimumImage("arm64")
-	for _, failure := range []string{"", "pull", "image architecture", "run", "cancel", "result", "cleanup query", "cleanup removal", "cleanup residue"} {
+	for _, failure := range []string{"", "pull", "image architecture", "run", "cancel", "cancel during cleanup", "result", "cleanup query", "cleanup removal", "cleanup residue"} {
 		t.Run(failure, func(t *testing.T) {
 			parent, cancel := context.WithCancel(t.Context())
 			defer cancel()
@@ -224,6 +224,9 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 					return minimumInstalledResult(minimumHash(snapshot), "arm64"), nil
 				case args[0] == "ps":
 					query++
+					if failure == "cancel during cleanup" && query == 1 {
+						cancel()
+					}
 					if failure == "cleanup query" {
 						return nil, errors.New("query failed")
 					}
@@ -245,6 +248,9 @@ func TestMinimumPythonDockerLifecycleFailsClosed(t *testing.T) {
 			}
 			if query == 0 {
 				t.Fatalf("cleanup not attempted after failure: %v", calls)
+			}
+			if failure == "cancel during cleanup" && (!errors.Is(err, context.Canceled) || query != 2) {
+				t.Fatalf("parent cancellation or independent cleanup lost: error=%v queries=%d", err, query)
 			}
 		})
 	}

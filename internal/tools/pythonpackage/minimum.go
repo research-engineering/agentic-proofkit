@@ -22,7 +22,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
-	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
@@ -184,18 +183,22 @@ func verifyMinimumPython() error {
 	if err != nil {
 		return err
 	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	receipt.TotalMillis = time.Since(started).Milliseconds()
 	receipt.Cleanup = "passed"
 	return json.NewEncoder(os.Stdout).Encode(receipt)
 }
 
 func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
+	defer func() { err = errors.Join(err, ctx.Err()) }()
 	started := time.Now()
 	root, err := os.Getwd()
 	if err != nil {
 		return receipt, err
 	}
-	revision, sourceDigest, err := packageartifactrecord.SourceSnapshot(root)
+	source, err := repositorysnapshot.CaptureContext(ctx, root)
 	if err != nil {
 		return receipt, err
 	}
@@ -227,7 +230,7 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 	if err := os.Chmod(input, 0o755); err != nil {
 		return receipt, err
 	}
-	snapshot := minimumSnapshot{SourceRevision: revision, SourceDigest: sourceDigest, Architecture: architecture, Files: map[string]string{}}
+	snapshot := minimumSnapshot{SourceRevision: source.Revision, SourceDigest: source.Digest, Architecture: architecture, Files: map[string]string{}}
 	put := func(path string, content []byte, executable bool) error {
 		if err := minimumWriteInput(input, path, content, executable); err != nil {
 			return err
@@ -316,17 +319,24 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 	if err := minimumCheckSnapshot(input, snapshot); err != nil {
 		return receipt, err
 	}
-	afterRevision, afterDigest, err := packageartifactrecord.SourceSnapshot(root)
-	if err != nil {
+	if err := minimumCheckSource(ctx, root, snapshot); err != nil {
 		return receipt, err
-	}
-	if afterRevision != revision || afterDigest != sourceDigest {
-		return receipt, fmt.Errorf("minimum smoke source snapshot changed during execution")
 	}
 	receipt.Snapshot, receipt.Image, receipt.Python, receipt.Pip = snapshot, image, minimumPython, minimumPipVersion
 	receipt.ImageCachePolicy = "retain_shared_image"
 	receipt.NonClaims = []string{"Finite native Linux installed-carrier minimum only, not all Python versions, commands or platforms.", "Local source-bound execution, not registry, hosted CI, branch protection, release or interpreter security proof.", "The pinned interpreter image is retained as shared Docker cache. Cleanup covers only the owned container and temporary workdir, not cache reclamation or exclusive image ownership."}
 	return receipt, nil
+}
+
+func minimumCheckSource(ctx context.Context, root string, expected minimumSnapshot) error {
+	current, err := repositorysnapshot.CaptureContext(ctx, root)
+	if err != nil {
+		return err
+	}
+	if current.Revision != expected.SourceRevision || current.Digest != expected.SourceDigest {
+		return fmt.Errorf("minimum smoke source snapshot changed during execution")
+	}
+	return nil
 }
 
 func minimumCheckSnapshot(root string, snapshot minimumSnapshot) error {

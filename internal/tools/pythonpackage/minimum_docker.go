@@ -60,7 +60,7 @@ func minimumDockerLifecycle(ctx context.Context, command minimumDockerCommand, i
 	defer func() {
 		cleanupContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
-		err = errors.Join(err, minimumDockerCleanup(cleanupContext, command, name))
+		err = errors.Join(err, minimumDockerCleanup(cleanupContext, command, name), ctx.Err())
 	}()
 	if inspectErr != nil {
 		if _, err := command(ctx, "pull", "--platform", "linux/"+architecture, image); err != nil {

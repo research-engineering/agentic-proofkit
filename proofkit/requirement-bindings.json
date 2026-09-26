@@ -1751,6 +1751,29 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-006",
+      "scenarioId": "proofkit.package-boundary.python-minimum-cancellation",
+      "witnessId": "proofkit.python-package.minimum-cancellation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/minimum_cancellation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestMinimumSourceSnapshotCancellation",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumSourceSnapshotCancellation$'"
+        },
+        {
+          "selector": "TestMinimumFinalSourceIdentity",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestMinimumFinalSourceIdentity$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-006",
       "scenarioId": "proofkit.package-boundary.python-minimum-carrier-observations",
       "witnessId": "proofkit.python-package.minimum-carrier-observations",
       "witnessKind": "contract",
