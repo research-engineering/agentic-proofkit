@@ -23,7 +23,8 @@ const (
 )
 
 type engine struct {
-	fault func(failurePoint, int) error
+	fault                 func(failurePoint, int) error
+	preparationParentSync func(*os.Root, string) error
 }
 
 type transactionLock struct {
@@ -96,8 +97,11 @@ func (runtime engine) apply(ctx context.Context, rootPath string, plan Plan) (Re
 	if err := ctx.Err(); err != nil {
 		return Result{}, fmt.Errorf("repository transaction apply cancelled: %w", err)
 	}
-	if err := prepareJournal(root, plan); err != nil {
-		return runtime.abortPreparingFailure(root, plan)
+	if published, err := runtime.prepareJournal(ctx, root, lock, plan); err != nil {
+		if published {
+			return Result{FailureClass: "journal_preparation_failed", State: StateRecoveryRequired, TransactionID: plan.TransactionID}, nil
+		}
+		return Result{}, err
 	}
 	if err := ctx.Err(); err != nil {
 		return runtime.finishPreparingFailure(root, plan, "cancelled")

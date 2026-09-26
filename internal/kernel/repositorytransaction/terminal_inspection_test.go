@@ -108,7 +108,7 @@ func nativeArchivedPrefix(t *testing.T, state string) (string, Plan, string) {
 		t.Fatal(err)
 	}
 	defer lock.release()
-	if err := prepareJournal(root, plan); err != nil {
+	if _, err := (engine{}).prepareJournal(context.Background(), root, lock, plan); err != nil {
 		t.Fatal(err)
 	}
 	if err := stageObjects(root, plan); err != nil {

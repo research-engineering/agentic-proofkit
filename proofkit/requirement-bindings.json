@@ -6503,6 +6503,61 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-preparation-publication",
+      "witnessId": "proofkit.repository-transaction.preparation-publication-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/preparation_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPreparationAttemptsNeverReuseResidue",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationAttemptsNeverReuseResidue$'"
+        },
+        {
+          "selector": "TestPreparationCancellationAfterRenameRetainsEvidence",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationCancellationAfterRenameRetainsEvidence$'"
+        },
+        {
+          "selector": "TestPreparationErrorsPreserveEvidence",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationErrorsPreserveEvidence$'"
+        },
+        {
+          "selector": "TestPreparationLockExcludesPlanningAtEachBoundary",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationLockExcludesPlanningAtEachBoundary$'"
+        },
+        {
+          "selector": "TestPreparationParentSyncErrorsRetainPublishedIdentity",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationParentSyncErrorsRetainPublishedIdentity$'"
+        },
+        {
+          "selector": "TestPreparationProcessDeath",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationProcessDeath$'"
+        },
+        {
+          "selector": "TestPreparationRejectsExistingActive",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationRejectsExistingActive$'"
+        },
+        {
+          "selector": "TestPreparationRetainedResidueIsNotReusedByNextApply",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationRetainedResidueIsNotReusedByNextApply$'"
+        },
+        {
+          "selector": "TestPreparationRetentionDoesNotChangeOtherWriterCleanup",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationRetentionDoesNotChangeOtherWriterCleanup$'"
+        },
+        {
+          "selector": "TestPreparationRevalidatesBeforePromotion",
+          "command": "go test ./internal/kernel/repositorytransaction -run '^TestPreparationRevalidatesBeforePromotion$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
       "scenarioId": "proofkit.spec-proof-core.repository-transaction-native-construction",
       "witnessId": "proofkit.repository-transaction.native-construction-falsifier",
       "witnessKind": "contract",

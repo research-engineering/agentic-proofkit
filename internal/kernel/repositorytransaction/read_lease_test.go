@@ -37,7 +37,7 @@ func TestBuildPlanLiveWriterPrecedesPendingClassification(t *testing.T) {
 			case "empty-active":
 				err = ensureDirectory(root, activeDirectory, 0o700)
 			case "valid-active":
-				err = prepareJournal(root, original)
+				_, err = (engine{}).prepareJournal(context.Background(), root, writer, original)
 			}
 			if err != nil {
 				t.Fatal(err)
