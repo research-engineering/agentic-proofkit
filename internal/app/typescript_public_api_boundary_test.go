@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -87,7 +88,17 @@ func TestTypeScriptBoundariesNativeCLI(t *testing.T) {
 		"nested-class-heritage": true, "heritage-object-method": true, "heritage-function-call": true,
 		"heritage-class-property": true, "heritage-function-property": true, "heritage-simple-function": true,
 		"heritage-following-private": true, "heritage-following-export": true,
-		"heritage-async-function-property": true,
+		"heritage-async-function-property":    true,
+		"review-arrow-block-bracket-lf-plain": true, "review-conditional-false-arrow": true,
+		"review-conditional-false-curried-arrow": true, "postreview-annotation-true": true,
+		"postreview-annotation-async": true, "postreview-annotation-call-consequent": true,
+		"postreview-annotation-nested-true": true, "postreview-nested-false-corrected": true,
+		"postreview-type-prefix-private-arrow": true, "postreview-arrow-function-return": true,
+		"postreview-grouped-arrow-call": true, "postreview-arrow-block-ls-block-template-call": true,
+		"completion-root-update": true, "completion-root-as": true, "completion-root-satisfies": true,
+		"completion-nonnull-lf-index-corrected": true, "completion-nonnull-lf-call-corrected": true,
+		"completion-nonnull-lf-template-corrected": true,
+		"postreview-nested-call-consequent":        true,
 	}
 	for _, c := range corpus.Cases {
 		if !selected[c.ID] {
@@ -110,6 +121,9 @@ func TestTypeScriptBoundariesNativeCLI(t *testing.T) {
 			}
 			check(c.Runtime, c.Types, 0)
 			check(append(append([]string{}, c.Runtime...), "zzUnexpected"), c.Types, 1)
+			if strings.Contains(c.Source, "hidden") && !slices.Contains(c.Runtime, "hidden") {
+				check(append(append([]string{}, c.Runtime...), "hidden"), c.Types, 1)
+			}
 			if len(c.Runtime) > 0 {
 				check(c.Runtime[1:], c.Types, 1)
 				check(c.Runtime[1:], append(append([]string{}, c.Types...), c.Runtime[0]), 1)

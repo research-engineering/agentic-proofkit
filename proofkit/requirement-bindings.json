@@ -1344,6 +1344,10 @@
           "command": "go test ./internal/command/publicapi -run '^TestTypeScriptClassHeritageProgressWithinSourceDomain$'"
         },
         {
+          "selector": "TestTypeScriptAssignmentFramesProgress",
+          "command": "go test ./internal/command/publicapi -run '^TestTypeScriptAssignmentFramesProgress$'"
+        },
+        {
           "selector": "TestVerifyTypeScriptReportProjectionNondisclosure",
           "command": "go test ./internal/command/publicapi -run '^TestVerifyTypeScriptReportProjectionNondisclosure$'"
         }

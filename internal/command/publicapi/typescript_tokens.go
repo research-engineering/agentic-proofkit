@@ -16,6 +16,7 @@ const (
 type tsToken struct {
 	kind       tsTokenKind
 	start, end int
+	leading    int
 	depth      int
 	lineBefore bool
 }
@@ -83,6 +84,7 @@ func tsIdentifierPart(c byte) bool { return tsIdentifierStart(c) || tsDigit(c) }
 func tsDigit(c byte) bool          { return c >= '0' && c <= '9' }
 
 func (s *tsTokens) lex() tsToken {
+	leading := s.pos
 	line := false
 	for s.pos < len(s.source) && s.err == nil {
 		if width := tsLineWidth(s.source, s.pos); width != 0 {
@@ -121,7 +123,7 @@ func (s *tsTokens) lex() tsToken {
 		}
 		break
 	}
-	t := tsToken{start: s.pos, end: s.pos, depth: len(s.stack), lineBefore: line}
+	t := tsToken{start: s.pos, end: s.pos, leading: leading, depth: len(s.stack), lineBefore: line}
 	if s.err != nil || s.pos == len(s.source) {
 		if s.err == nil && len(s.stack) != 0 {
 			s.fail("delimiters must be balanced")
@@ -255,15 +257,15 @@ func (s *tsTokens) quoted(quote byte) {
 	s.fail("quoted strings and template literals must terminate")
 }
 
-type tsRegion struct{ parameterHead bool }
+type tsRegion struct{ parameterHead, definiteParameters bool }
 
 func tsOpen(text string) bool { return text == "(" || text == "[" || text == "{" }
 
-// Only parameter-start and its following token distinguish a function type
-// signature from a parenthesized type. No parameter/body AST is retained.
+// A bounded parameter-start summary distinguishes covers and definite arrow
+// signatures while retaining the existing function-type outline. No AST.
 func (s *tsTokens) region() tsRegion {
 	open := s.take()
-	first, second := "", ""
+	first, second, third := "", "", ""
 	firstKind := tsEnd
 	for s.err == nil {
 		t := s.take()
@@ -276,13 +278,16 @@ func (s *tsTokens) region() tsRegion {
 			if firstKind == tsWord || first == "{" || first == "[" {
 				parameter = second == "" || second == ":" || second == "?" || second == "=" || second == ","
 			}
-			return tsRegion{parameterHead: parameter}
+			definite := first == "" || first == "..." || firstKind == tsWord && (second == ":" || second == "?" && (third == "" || third == ":" || third == "," || third == "="))
+			return tsRegion{parameterHead: parameter, definiteParameters: definite}
 		}
 		if t.depth == open.depth+1 {
 			if first == "" {
 				first, firstKind = text, t.kind
 			} else if second == "" {
 				second = text
+			} else if third == "" {
+				third = text
 			}
 		}
 	}

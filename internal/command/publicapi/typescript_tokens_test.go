@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -90,6 +91,10 @@ func TestVerifyTypeScriptCompilerQualifiedBoundaries(t *testing.T) {
 			}
 			set(append(append([]string{}, c.Runtime...), "zzUnexpected"), c.Types)
 			checkMismatch()
+			if strings.Contains(c.Source, "hidden") && !slices.Contains(c.Runtime, "hidden") {
+				set(append(append([]string{}, c.Runtime...), "hidden"), c.Types)
+				checkMismatch()
+			}
 			if len(c.Runtime) > 0 {
 				set(c.Runtime[1:], c.Types)
 				checkMismatch()
@@ -195,6 +200,28 @@ func TestTypeScriptClassHeritageProgressWithinSourceDomain(t *testing.T) {
 	}
 	assertStringSlice(t, runtime, []string{"C", "b"})
 	assertStringSlice(t, types, nil)
+}
+
+func TestTypeScriptAssignmentFramesProgress(t *testing.T) {
+	const depth = 10000
+	for _, parts := range [][3]string{
+		{"x=>", "{}", ""},
+		{"c?", "1", ":1"},
+		{"c?(x):T=>", "1", ":1"},
+		{"c?(x):T=>", "1", ""},
+	} {
+		source := "const c=true,x=1; type T=any; export const f=" + strings.Repeat(parts[0], depth) + parts[1] + strings.Repeat(parts[2], depth) + ",b=2;"
+		runtime, types, err := CollectExports(source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStringSlice(t, runtime, []string{"b", "f"})
+		assertStringSlice(t, types, nil)
+		runtime, types, err = CollectExports(source + " const bad=1/2;")
+		if err == nil || runtime != nil || types != nil {
+			t.Fatal("replay exposed inventory before late lexical failure")
+		}
+	}
 }
 
 func TestVerifyTypeScriptReportProjectionNondisclosure(t *testing.T) {
