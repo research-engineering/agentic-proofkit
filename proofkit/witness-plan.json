@@ -14,6 +14,7 @@
     "environmentClasses": [
       "local-go",
       "local-go-python",
+      "local-go-python-native-docker",
       "local-node-browser",
       "local-python"
     ],
@@ -49,6 +50,18 @@
         ]
       },
       {
+        "environmentClass": "local-go-python-native-docker",
+        "networkPolicies": [
+          "external"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "cachePolicies": [
+          "disabled"
+        ]
+      },
+      {
         "environmentClass": "local-node-browser",
         "networkPolicies": [
           "none"
@@ -81,6 +94,7 @@
       "package-artifact",
       "performance-benchmark",
       "platform-smoke",
+      "python-minimum-runtime",
       "python-package-build",
       "python-package-verify",
       "release-sbom",
@@ -450,6 +464,50 @@
         }
       ],
       "parallelGroup": "platform-smoke",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.python-minimum",
+      "cwd": ".",
+      "argv": [
+        "go",
+        "run",
+        "./internal/tools/pythonpackage",
+        "verify-minimum"
+      ],
+      "environment": {
+        "inherit": "allowlist",
+        "allowlist": [
+          "DOCKER_CONFIG",
+          "DOCKER_CONTEXT",
+          "DOCKER_HOST",
+          "GOCACHE",
+          "GOFLAGS",
+          "GOMAXPROCS",
+          "GOMODCACHE",
+          "GOPATH",
+          "GOROOT",
+          "GOTOOLCHAIN",
+          "HOME",
+          "PATH",
+          "TMPDIR"
+        ],
+        "classes": [
+          "local-go-python-native-docker"
+        ]
+      },
+      "timeoutMs": 360000,
+      "networkPolicy": "external",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "python-minimum-runtime",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
@@ -1380,6 +1438,54 @@
       },
       "nonClaims": [
         "Python wheel candidate generation does not publish to PyPI or prove registry install authority."
+      ]
+    },
+    {
+      "commandId": "proofkit.python-minimum",
+      "inputSelectors": [
+        ".",
+        "artifacts/pypi/*.whl",
+        "artifacts/pypi/python-packages.json"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.docker-daemon",
+        "resource.proofkit.docker-image-cache",
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.package-artifacts",
+        "resource.proofkit.public-package-sources",
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.docker-containers",
+        "resource.proofkit.docker-image-cache",
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "network",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 30000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 360000
+      },
+      "nonClaims": [
+        "Disabled cachePolicy prohibits witness-result reuse, not Go build-cache or Docker image-cache writes.",
+        "Native prerequisites are not provisioned by this plan: repository-root execution, go and git on PATH, an accessible native Linux arm64/amd64 Docker daemon matching host architecture, and the fresh package:artifact wheel set.",
+        "Network external covers host acquisition of the pinned official image, checksum-pinned pip wheel, and required Go dependencies; installed CPython 3.9.0/pip 26.0.1 execution is offline and unprivileged.",
+        "Planned environment allowlisting is a caller obligation; this metadata does not attest ambient CI filtering, registry credential absence, or daemon state.",
+        "Prerequisite ordering is owned by CI and native validation, not a scheduler dependency graph; this record does not execute or authenticate a minimum-runtime witness.",
+        "Shared Docker and Go caches may be populated; images are retained without exclusive ownership or cleanup. Only the owned container and temporary workdir are removed before success; SIGKILL or daemon loss can prevent cleanup.",
+        "The command emits its bounded observation on stdout and does not create a repository proof-receipt artifact or promote package-artifact receipts to minimum-runtime proof."
       ]
     },
     {

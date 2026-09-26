@@ -271,7 +271,7 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 	buildEnvironment := environmentWithOverrides(os.Environ(), map[string]string{"CGO_ENABLED": "0", "GOOS": "linux", "GOARCH": architecture, "GOMAXPROCS": "2"})
 	for _, build := range []struct{ path, packagePath string }{{native.BinaryPath, "./cmd/agentic-proofkit"}, {"runner", "./internal/tools/pythonpackage"}} {
 		output := filepath.Join(work, "build-output")
-		if _, err := minimumCommand(ctx, root, buildEnvironment, "go", "build", "-p=2", "-trimpath", "-buildvcs=false", "-ldflags=-buildid=", "-o", output, build.packagePath); err != nil {
+		if _, err := minimumCommand(ctx, root, buildEnvironment, "go", "build", "-p=1", "-trimpath", "-buildvcs=false", "-ldflags=-buildid=", "-o", output, build.packagePath); err != nil {
 			return receipt, err
 		}
 		content, err := artifactfile.ReadBounded(work, "build-output", maximumWheelBinaryBytes)

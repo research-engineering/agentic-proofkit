@@ -512,6 +512,21 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "scripts/validate-self-hosting-receipts_test.go",
 			selectors:   []string{"TestPythonArtifactRefsRejectEachWheelIdentityDefect"},
 		},
+		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-minimum-witness-plan"}: {
+			witnessPath:        "internal/app/self_hosting_python_minimum_test.go",
+			commandIDs:         []string{"proofkit.go-test"},
+			environmentClasses: []string{"local-go"},
+			selectors: []string{
+				"TestSelfHostingPythonMinimumRequiresExplicitCatalog",
+				"TestSelfHostingPythonMinimumWitnessPlanClosure",
+			},
+		},
+		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-minimum-receipt-isolation"}: {
+			witnessPath:        "internal/command/specproofbundleadmission/linkage_relation_test.go",
+			commandIDs:         []string{"proofkit.go-test"},
+			environmentClasses: []string{"local-go"},
+			selectors:          []string{"TestMinimumRuntimeRejectsAggregatePackageReceipt"},
+		},
 		{"REQ-PROOFKIT-PACKAGE-006", "proofkit.package-boundary.python-wheel-generated-continuation"}: {
 			witnessPath: "internal/tools/pythonpackage/continuation_test.go",
 			selectors: []string{
