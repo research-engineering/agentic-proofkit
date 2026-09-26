@@ -208,10 +208,10 @@ func TestRunGoTestCommandStderrCompletion(t *testing.T) {
 		return fmt.Sprintf("/bin/dd if=/dev/zero bs=%d count=1 1>&2 2>/dev/null\n", size)
 	}
 	for _, test := range []struct {
-		name     string
-		body     string
-		decision string
-		timeout  time.Duration
+		name        string
+		body        string
+		decision    string
+		cancelAtEOF bool
 	}{
 		{name: "empty", body: ":\n"},
 		{name: "exact_bound", body: writeStderr(maxStderrBytes)},
@@ -233,22 +233,22 @@ func TestRunGoTestCommandStderrCompletion(t *testing.T) {
 			decision: "process.stderr_exceeded",
 		},
 		{
-			name:     "timeout_while_waiting",
-			body:     "exec 1>&-\nexec /bin/sleep 5\n",
-			decision: "process.timeout",
-			timeout:  250 * time.Millisecond,
+			name:        "timeout_while_waiting",
+			body:        "exec 1>&-\nexec /bin/sleep 60\n",
+			decision:    "process.timeout",
+			cancelAtEOF: true,
 		},
 		{
-			name:     "stderr_eof_before_parent_exit",
-			body:     "exec 1>&-\nexec 2>&-\nexec /bin/sleep 5\n",
-			decision: "process.timeout",
-			timeout:  250 * time.Millisecond,
+			name:        "stderr_eof_before_parent_exit",
+			body:        "exec 2>&-\nexec 1>&-\nexec /bin/sleep 60\n",
+			decision:    "process.timeout",
+			cancelAtEOF: true,
 		},
 		{
-			name:     "inherited_timeout_while_waiting",
-			body:     "exec 1>&-\n( exec /bin/sleep 5 ) &\nexit 0\n",
-			decision: "process.timeout",
-			timeout:  250 * time.Millisecond,
+			name:        "inherited_timeout_while_waiting",
+			body:        "( exec 1>&-\nexec /bin/sleep 60 ) &\nexec 1>&-\nexit 0\n",
+			decision:    "process.timeout",
+			cancelAtEOF: true,
 		},
 		{name: "exit_failure", body: "printf 'private stderr sentinel' >&2\nexit 7\n", decision: "process.suite_failed"},
 		{name: "malformed_stdout", body: "printf 'not-json\\n'\n/bin/sleep 5\n", decision: "event.json_invalid"},
@@ -260,23 +260,21 @@ func TestRunGoTestCommandStderrCompletion(t *testing.T) {
 			if err := os.WriteFile(path, []byte(prefix+test.body), 0o700); err != nil {
 				t.Fatal(err)
 			}
-			timeout := test.timeout
-			if timeout == 0 {
-				timeout = 3 * time.Second
-			}
-			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
-			err := runGoTestCommand(ctx, root, []string{path}, ledger)
+			var err error
+			if test.cancelAtEOF {
+				err = cancelCommandAtStdoutEOF(t, root, path, ledger)
+			} else {
+				err = runGoTestCommand(ctx, root, []string{path}, ledger)
+			}
 			if test.decision == "" && err != nil || test.decision != "" && DecisionID(err) != test.decision {
 				t.Fatalf("runGoTestCommand() error = %v, want %q", err, test.decision)
 			}
 			if err != nil && strings.Contains(err.Error(), "private stderr sentinel") {
 				t.Fatalf("runGoTestCommand() disclosed child stderr: %v", err)
 			}
-			if test.decision == "process.timeout" && ctx.Err() == nil {
-				t.Fatal("timeout decision without caller cancellation")
-			}
-			if test.decision != "process.timeout" && ctx.Err() != nil {
+			if !test.cancelAtEOF && ctx.Err() != nil {
 				t.Fatalf("caller context expired before completion: %v", ctx.Err())
 			}
 			if test.name == "inherited_exact_bound" {
@@ -288,6 +286,88 @@ func TestRunGoTestCommandStderrCompletion(t *testing.T) {
 				t.Fatalf("valid stdout event ledger did not close: %v", err)
 			}
 		})
+	}
+}
+
+type eofObservedReader struct {
+	io.ReadCloser
+	eof  chan struct{}
+	once sync.Once
+}
+
+func (reader *eofObservedReader) Read(value []byte) (int, error) {
+	n, err := reader.ReadCloser.Read(value)
+	if n == 0 && err == io.EOF {
+		reader.once.Do(func() { close(reader.eof) })
+	}
+	return n, err
+}
+
+func cancelCommandAtStdoutEOF(t *testing.T, root, path string, ledger *eventLedger) error {
+	t.Helper()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	defer writer.Close()
+	command := exec.CommandContext(ctx, path)
+	command.Dir, command.WaitDelay, command.Stderr = root, processWaitDelay, writer
+	processgroup.Configure(command)
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stdout.Close()
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	observed := &eofObservedReader{ReadCloser: stdout, eof: make(chan struct{})}
+	stderr := startCommandStderr(reader)
+	done := make(chan error, 1)
+	go func() {
+		done <- waitGoTestCommand(ctx, command, observed, stderr, ledger, nil, func() error {
+			return processgroup.Terminate(command)
+		})
+	}()
+	joined := false
+	defer func() {
+		cancel()
+		if !joined {
+			select {
+			case <-done:
+			case <-time.After(processWaitDelay + 5*time.Second):
+				t.Error("EOF cancellation fixture did not join")
+			}
+		}
+	}()
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-observed.eof:
+	case err := <-done:
+		joined = true
+		t.Fatalf("command completed before cancellation: %v", err)
+	case <-time.After(15 * time.Second):
+		t.Fatal("command did not reach stdout EOF")
+	}
+	if ctx.Err() != nil {
+		t.Fatalf("context cancelled before the readiness boundary: %v", ctx.Err())
+	}
+	cancel()
+	select {
+	case err := <-done:
+		joined = true
+		if !errors.Is(ctx.Err(), context.Canceled) {
+			t.Fatalf("cancellation result without requested cancellation: %v", ctx.Err())
+		}
+		return err
+	case <-time.After(processWaitDelay + 5*time.Second):
+		t.Fatal("command did not complete after EOF-bound cancellation")
+		return nil
 	}
 }
 
