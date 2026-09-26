@@ -195,7 +195,11 @@ execution receipts, and merge policy.
   read-only plan plus apply and recovery receipts to complete state identities.
 - `REQ-PROOFKIT-SPEC-033`: repository transactions confine bounded immutable
   plans, private journals, atomic target replacement, exact rollback, and
-  action-stable replay recovery without claiming repository-wide atomicity.
+  action-stable replay recovery. Explicit read-only preparation-residue
+  inspection and observation-bound quarantine preserve unknown evidence and
+  old receipts, reject recognized journals and stale observations, refuse
+  occupied destinations before new active state, and distinguish post-rename
+  uncertainty from success without claiming rollback or repository-wide atomicity.
 - `REQ-PROOFKIT-SPEC-034`: the pre-materialization-to-transactional-
   materialization public version edge binds all three transactional
   materialization routes and their exact public contracts to a compatible

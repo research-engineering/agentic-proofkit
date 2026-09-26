@@ -6,8 +6,59 @@ import (
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
+	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 )
+
+func TestResidueNativeStructuresRejectRehashedDrift(t *testing.T) {
+	for id, schema := range map[string]func() map[string]any{
+		"proofkit.transaction-inspect-residue.output.v1.json-schema":    transactionresidue.InspectionOutputStructure,
+		"proofkit.transaction-quarantine-residue.output.v1.json-schema": transactionresidue.RelocationOutputStructure,
+	} {
+		owner, exists := nativeStructureOwner(id)
+		if !exists || owner.direction != "output" || len(owner.commands) != 1 {
+			t.Fatal("residue native owner is missing or ambiguous")
+		}
+		for _, mutation := range []string{"valid", "nullable-token", "open-root", "changed-claim", "wrong-version"} {
+			definition, err := owner.definition()
+			if err != nil {
+				t.Fatal(err)
+			}
+			projected := definition["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
+			if !reflect.DeepEqual(projected, schema()) {
+				t.Fatal("native sum or output projection was flattened")
+			}
+			branch := projected
+			if alternatives, ok := projected["oneOf"].([]any); ok {
+				if len(alternatives) != 2 {
+					t.Fatal("inspect sum lost a branch")
+				}
+				branch = alternatives[1].(map[string]any)
+			}
+			properties := branch["properties"].(map[string]any)
+			switch mutation {
+			case "nullable-token":
+				properties["observationId"] = map[string]any{"type": "null"}
+			case "open-root":
+				branch["additionalProperties"] = true
+			case "changed-claim":
+				properties["nonClaims"].(map[string]any)["prefixItems"].([]any)[0].(map[string]any)["const"] = "proves no historical effects"
+			case "wrong-version":
+				properties["schemaVersion"].(map[string]any)["const"] = json.Number("2")
+			}
+			delete(definition, "canonicalDigest")
+			encoded, err := canonicalJSON(definition)
+			if err != nil {
+				t.Fatal(err)
+			}
+			definition["canonicalDigest"] = sha256Digest(encoded)
+			_, err = admitDefinitions(map[string]any{"contractDefinitions": []any{definition}})
+			if (err == nil) != (mutation == "valid") {
+				t.Fatalf("%s/%s: %v", id, mutation, err)
+			}
+		}
+	}
+}
 
 func TestNativeSumStructureRetainsBranchesAndRequiresOneRootIdentity(t *testing.T) {
 	for _, mutation := range []string{"valid", "open", "missing-version", "wrong-version", "new-field", "optional-field", "scalar", "unknown-root"} {

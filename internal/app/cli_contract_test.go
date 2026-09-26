@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "9d815aea110aebae97f2d85d3fa6aff4a11119f070ab78943c7bfc974f533a33"
+	cliContractPublicABISHA256               = "d0c04fce7372fb867fe3c37d74bcf6ab53515b9afb73b7418392d5cff4b13f97"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -538,14 +538,16 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			bindingStructureDefinition: {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
-			specTreeStructureDefinition:                                    {},
-			"proofkit.requirement-coverage-view.output.v4.json-schema":     {},
-			"proofkit.requirement-context-compose.output.v4.json-schema":   {},
-			"proofkit.requirement-context-slice.input.v2.json-schema":      {},
-			"proofkit.requirement-context-slice.output.v2.json-schema":     {},
-			"proofkit.requirement-semantic-diff.input.v3.json-schema":      {},
-			"proofkit.requirement-semantic-diff.output.v3.json-schema":     {},
-			"proofkit.requirement-traceability-graph.input.v3.json-schema": {},
+			specTreeStructureDefinition:                                     {},
+			"proofkit.requirement-coverage-view.output.v4.json-schema":      {},
+			"proofkit.requirement-context-compose.output.v4.json-schema":    {},
+			"proofkit.requirement-context-slice.input.v2.json-schema":       {},
+			"proofkit.requirement-context-slice.output.v2.json-schema":      {},
+			"proofkit.requirement-semantic-diff.input.v3.json-schema":       {},
+			"proofkit.requirement-semantic-diff.output.v3.json-schema":      {},
+			"proofkit.requirement-traceability-graph.input.v3.json-schema":  {},
+			"proofkit.transaction-inspect-residue.output.v1.json-schema":    {},
+			"proofkit.transaction-quarantine-residue.output.v1.json-schema": {},
 		}[id]; !admitted {
 			t.Fatalf("%s has no admitted structural projection owner", id)
 		}
@@ -1572,6 +1574,8 @@ func TestDescriptorFlagConstraintsMatchCommandParsers(t *testing.T) {
 
 func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 	expectedConstrainedUsage := map[string]string{
+		"transaction-inspect-residue":    "agentic-proofkit transaction inspect-residue [--color <auto|never>] [--format <json|text>] --repo-root <path>",
+		"transaction-quarantine-residue": "agentic-proofkit transaction quarantine-residue [--color <auto|never>] --expect-observation <sha256-ref> [--format <json|text>] --repo-root <path>",
 		"adopt-materialize-apply":        "agentic-proofkit adopt materialize apply --input <path|-> [--color <auto|never>] --expect-desired-state <sha256-ref> --expect-transaction <sha256-ref> [--format <json|text>] [--input-pointer <pointer>] --repo-root <path>",
 		"adopt-materialize-plan":         "agentic-proofkit adopt materialize plan --input <path|-> [--color <auto|never>] [--format <json|text>] [--input-pointer <pointer>] --repo-root <path>",
 		"adopt-materialize-recover":      "agentic-proofkit adopt materialize recover --action <resume|rollback> [--color <auto|never>] [--format <json|text>] --repo-root <path> --transaction <sha256-ref>",

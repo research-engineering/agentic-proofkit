@@ -68,6 +68,12 @@ func commandUsageWithRenderer(descriptor commandDescriptor, renderer cliexec.Ren
 			lines = append(lines, "  "+renderer.DisplayCommand("stack-preset", "--preset", presetID))
 		}
 	}
+	if descriptor.runner == commandRunnerTransactionResidue {
+		lines = append(lines, "", "Preparation residue safety:",
+			"  Inspect is read-only. Quarantine requires the exact inspected observation and retains the entire directory.",
+			"  An error after rename may leave evidence already moved; retries never move another active directory.",
+			"  These operations do not infer a transaction identity, roll back targets, delete evidence, or create a receipt.")
+	}
 	if renderer.Profile() == cliexec.ProfileNPMOffline && (descriptor.name == "stack-preset" || descriptor.name == "requirement-source-admission") {
 		lines = append(lines,
 			"",
@@ -214,7 +220,7 @@ func commandUsageLine(descriptor commandDescriptor) string {
 			segments = append(segments, "[--format <mode>]")
 		case "--repo-root":
 			segments = append(segments, optionalUsageSegment(flag+" <path>", required))
-		case "--expect-desired-state", "--expect-transaction", "--transaction":
+		case "--expect-desired-state", "--expect-transaction", "--expect-observation", "--transaction":
 			segments = append(segments, optionalUsageSegment(flag+" <sha256-ref>", required))
 		case "--host":
 			segments = append(segments, "[--host 127.0.0.1|::1]")

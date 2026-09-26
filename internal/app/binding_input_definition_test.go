@@ -159,6 +159,9 @@ func TestSharedBindingInputDefinitionRejectsCoherentDrift(t *testing.T) {
 			}
 			if mutation == "other-command" {
 				_, err = sourceCutoverDirectionDelta(readArchivedSourceCutoverPredecessor(t), current)
+				if err == nil || err.Error() != "proof-receipt-admission command-level CLI behavior changed without declaration" {
+					t.Fatalf("unrelated command drift rejected at wrong boundary: %v", err)
+				}
 			} else {
 				err = normalizeBindingInputSharingPublicABIDelta(current)
 			}

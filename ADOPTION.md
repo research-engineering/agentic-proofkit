@@ -261,9 +261,46 @@ the active transaction. Interrupted unpublished preparation is retained there,
 does not block a later plan and is never automatically resumed or removed.
 An error after active publication preserves the known journal for recovery.
 Older empty or incomplete active state may lack a recoverable transaction ID:
-preserve the control directory and escalate to its owner; do not invent an ID
-or delete unknown entries to bypass the failure. These operations do not prove
-power-loss durability or protect against non-cooperative same-user modification.
+do not invent an ID or delete unknown entries to bypass the failure. The explicit
+repository transaction maintenance routes inspect and retain this evidence:
+
+```bash
+npm exec --offline -- agentic-proofkit transaction inspect-residue --repo-root /absolute/inspected/repository
+npm exec --offline -- agentic-proofkit transaction quarantine-residue --repo-root /absolute/inspected/repository --expect-observation <reviewed-observation-sha256-ref>
+```
+
+Inspection never writes. An absent active directory returns `absent` with
+`observationId: null`; eligible private empty or bounded partial preparation
+returns `eligible` and a SHA256 observation. Recognized journals, unsafe or
+unsupported entries and invalid coexisting terminal state reject, not classify
+as eligible. No raw journal, repository path or inferred transaction ID is
+returned. Unknown bytes are not evidence of zero historical effects.
+
+Quarantine takes the existing exclusive lease, requires the exact current
+observation and relocates the entire active directory by one same-filesystem
+rename to `.agentic-proofkit/transaction-residue/quarantined-<observation-hex>`.
+The token binds native root/control/active identities, modes, numeric user
+ownership, admitted child bytes and coexisting terminal state. It is a freshness
+precondition, not authenticated provenance. Bytes, modes, directory/file
+identities and retained receipts are preserved. An occupied destination rejects
+before inspecting a new active source, so retry after lost acknowledgment never
+moves a replacement active directory. No copy, merge, rewrite, deletion, guessed
+identity, rollback or transaction receipt is involved. Planning can proceed
+after a successful move but neither planning nor recovery consumes the archive.
+
+Both commands require `--repo-root`, accept no input or stdin, default to JSON
+and support `--format text` with optional `--color auto|never` (default `never`).
+All flags and the quarantine SHA256 reference are admitted before repository
+I/O. Success exits 0 with one closed version-1 observation and fixed non-claims.
+Operational, stale, unsupported and outcome-unverified failures exit 1 on stderr
+without a success JSON packet. An error after rename can leave evidence already
+moved; inspect retained state before deciding what to do, and never treat an
+error as a no-mutation guarantee. An earlier failure can leave an empty private
+residue parent. Unresolved state requires its owner's decision, not blind retry
+or control-state deletion. Archive disposal needs separate authority.
+
+These operations do not prove power-loss durability or protect against
+non-cooperative same-user modification.
 
 Present-only v1 journals and historical v1 receipts remain readable. A legacy
 receipt does not bind its missing desired identity: replan before applying.

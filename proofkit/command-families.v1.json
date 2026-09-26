@@ -153,6 +153,15 @@
       ]
     },
     {
+      "familyId": "repository-transaction-maintenance",
+      "label": "Repository transaction maintenance",
+      "purpose": "Explicitly inspect unknown preparation residue and quarantine observation-bound evidence without rollback, deletion, or transaction identity inference.",
+      "commands": [
+        "transaction-inspect-residue",
+        "transaction-quarantine-residue"
+      ]
+    },
+    {
       "familyId": "requirement-context-and-traceability",
       "label": "Requirement context and traceability",
       "purpose": "Compose bounded semantic context and derive diff and traceability projections.",
