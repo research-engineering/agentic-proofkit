@@ -47,8 +47,8 @@ func TestVerifyTypeScriptPublicAPIPreservesDollarSuffixedIdentifiers(t *testing.
 	entry["typeExports"] = []any{"Interface$", "Shape$"}
 	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode != 0 {
 		t.Fatalf("Verify(full names) exit=%d error=%v output=%#v", exitCode, err, output)
-	} else if !strings.Contains(fmt.Sprint(output["nonClaims"]), "TYPESCRIPT-ASI-01") {
-		t.Fatalf("Verify(full names) omits semicolonless boundary non-claim: %#v", output)
+	} else if !strings.Contains(fmt.Sprint(output["nonClaims"]), "not syntax or type validation") {
+		t.Fatalf("Verify(full names) omits the lexical inventory non-claim: %#v", output)
 	}
 	entry["runtimeExports"] = []any{"Class$", "Enum$", "public"}
 	if output, exitCode, err := Verify(input, Options{RepoRoot: repoRoot}); err != nil || exitCode == 0 {

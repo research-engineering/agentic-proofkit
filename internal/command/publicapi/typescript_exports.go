@@ -2,427 +2,452 @@ package publicapi
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 )
 
-var (
-	namedExportPattern    = regexp.MustCompile(`^export\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
-	typeExportPattern     = regexp.MustCompile(`^export\s+type\s+(\{[^}]+\})\s+from\s+["'][^"']+["'];?$`)
-	runtimeDeclPattern    = regexp.MustCompile(`^export\s+(?:abstract\s+)?(?:async\s+)?(?:function|class|enum)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:[^A-Za-z0-9_$]|$)`)
-	typeDeclPattern       = regexp.MustCompile(`^export\s+(?:interface|type)\s+([A-Za-z_$][A-Za-z0-9_$]*)(?:[^A-Za-z0-9_$]|$)`)
-	varDeclPattern        = regexp.MustCompile(`^export\s+(?:const|let|var)\s+(.+?);?$`)
-	exportClauseNameRegex = regexp.MustCompile(`\bas\s+([A-Za-z_$][A-Za-z0-9_$]*)$`)
-	identifierRegex       = regexp.MustCompile(`^[A-Za-z_$][A-Za-z0-9_$]*$`)
-)
-
+// CollectExports inventories compiler-valid sources in the declared lexical
+// profile. Balanced private regions are not a claim of TypeScript validity.
 func CollectExports(source string) ([]string, []string, error) {
-	runtimeExports := map[string]struct{}{}
-	typeExports := map[string]struct{}{}
-	statements, err := exportStatements(source)
-	if err != nil {
-		return nil, nil, err
+	p := tsInventory{tokens: tsTokens{source: source}, runtime: map[string]struct{}{}, types: map[string]struct{}{}}
+	hashbangEnd := 0
+	if strings.HasPrefix(source, "#!") {
+		for hashbangEnd < len(source) && tsLineWidth(source, hashbangEnd) == 0 {
+			hashbangEnd++
+		}
 	}
-	for _, statement := range statements {
-		if strings.HasPrefix(statement, "export *") {
-			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use export *")
+	previous := ""
+	for p.tokens.err == nil && p.tokens.peek(0).kind != tsEnd {
+		t := p.tokens.peek(0)
+		// Keep the existing lexical exclusions in the header, but never project
+		// its words as module declarations. Slash-bearing hashbangs still fail.
+		if t.start < hashbangEnd {
+			p.tokens.take()
+			continue
 		}
-		if strings.HasPrefix(statement, "export default") || strings.HasPrefix(statement, "export =") {
-			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use default exports")
-		}
-		if strings.HasPrefix(statement, "export declare") {
-			return nil, nil, fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
-		}
-		if match := typeExportPattern.FindStringSubmatch(statement); match != nil {
-			if err := addTypeClauseExports(match[1], typeExports); err != nil {
+		text := p.tokens.text(t)
+		if tsOpen(text) {
+			p.tokens.region()
+			previous = ""
+		} else if text == "export" && previous != "." && previous != "?." {
+			p.tokens.take()
+			if err := p.export(); err != nil {
 				return nil, nil, err
 			}
-			continue
+			previous = ""
+		} else {
+			p.tokens.take()
+			previous = text
 		}
-		if match := namedExportPattern.FindStringSubmatch(statement); match != nil {
-			if err := addNamedClauseExports(match[1], runtimeExports, typeExports); err != nil {
-				return nil, nil, err
-			}
-			continue
-		}
-		if match := runtimeDeclPattern.FindStringSubmatch(statement); match != nil {
-			runtimeExports[match[1]] = struct{}{}
-			continue
-		}
-		if match := typeDeclPattern.FindStringSubmatch(statement); match != nil {
-			typeExports[match[1]] = struct{}{}
-			continue
-		}
-		if match := varDeclPattern.FindStringSubmatch(statement); match != nil {
-			names, err := variableExportNames(match[1])
-			if err != nil {
-				return nil, nil, err
-			}
-			for _, name := range names {
-				runtimeExports[name] = struct{}{}
-			}
-			continue
-		}
-		return nil, nil, fmt.Errorf("unsupported public export statement")
 	}
-	return sortedSet(runtimeExports), sortedSet(typeExports), nil
+	if p.tokens.err != nil {
+		return nil, nil, p.tokens.err
+	}
+	return sortedSet(p.runtime), sortedSet(p.types), nil
 }
 
-type typeScriptLexicalState uint8
-
-const (
-	typeScriptCode typeScriptLexicalState = iota
-	typeScriptLineComment
-	typeScriptBlockComment
-	typeScriptSingleQuoted
-	typeScriptDoubleQuoted
-	typeScriptTemplateQuoted
-)
-
-type typeScriptLexicalScan struct {
-	masked                string
-	topLevelExportOffsets []int
-}
-
-func exportStatements(source string) ([]string, error) {
-	scan, err := scanTypeScriptSource(source)
-	if err != nil {
-		return nil, err
-	}
-	statements := make([]string, 0, len(scan.topLevelExportOffsets))
-	for index, start := range scan.topLevelExportOffsets {
-		limit := len(source)
-		if index+1 < len(scan.topLevelExportOffsets) {
-			limit = scan.topLevelExportOffsets[index+1]
-		}
-		end := exportStatementEnd(scan.masked, start, limit)
-		statement := strings.Join(strings.Fields(scan.masked[start:end]), " ")
-		if statement != "" {
-			statements = append(statements, statement)
-		}
-	}
-	return statements, nil
-}
-
-func scanTypeScriptSource(source string) (typeScriptLexicalScan, error) {
-	masked := []byte(source)
-	starts := make([]int, 0)
-	state := typeScriptCode
-	escaped := false
-	braceDepth := 0
-	bracketDepth := 0
-	parenDepth := 0
-	for index := 0; index < len(source); index++ {
-		current := source[index]
-		next := byte(0)
-		if index+1 < len(source) {
-			next = source[index+1]
-		}
-		switch state {
-		case typeScriptLineComment:
-			if width := unicodeLineTerminatorWidth(source, index); width > 0 {
-				state = typeScriptCode
-				index += width - 1
-				continue
-			}
-			if current == '\n' || current == '\r' {
-				state = typeScriptCode
-			} else {
-				masked[index] = ' '
-			}
-			continue
-		case typeScriptBlockComment:
-			if current == '*' && next == '/' {
-				masked[index], masked[index+1] = ' ', ' '
-				state = typeScriptCode
-				index++
-			} else if current != '\n' {
-				masked[index] = ' '
-			}
-			continue
-		case typeScriptSingleQuoted, typeScriptDoubleQuoted:
-			closing := byte('\'')
-			if state == typeScriptDoubleQuoted {
-				closing = '"'
-			}
-			unicodeLineWidth := unicodeLineTerminatorWidth(source, index)
-			if (current == '\n' || current == '\r' || unicodeLineWidth > 0) && !escaped {
-				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("quoted strings must terminate before an unescaped newline")
-			}
-			if escaped {
-				if unicodeLineWidth > 0 {
-					escaped = false
-					index += unicodeLineWidth - 1
-					continue
-				}
-				if current == '\r' && next == '\n' {
-					escaped = false
-					index++
-					continue
-				}
-				if current != '\n' && current != '\r' {
-					masked[index] = ' '
-				}
-				escaped = false
-			} else if current == '\\' {
-				masked[index] = ' '
-				escaped = true
-			} else if current == closing {
-				state = typeScriptCode
-			} else if current != '\n' {
-				masked[index] = ' '
-			}
-			continue
-		case typeScriptTemplateQuoted:
-			if current != '\n' {
-				masked[index] = ' '
-			}
-			if escaped {
-				escaped = false
-			} else if current == '\\' {
-				escaped = true
-			} else if current == '$' && next == '{' {
-				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("template interpolation is not admitted")
-			} else if current == '`' {
-				state = typeScriptCode
-			}
-			continue
-		}
-		if current >= 0x80 {
-			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("code tokens must use direct ASCII identifiers")
-		}
-		switch {
-		case current == '/' && next == '/':
-			masked[index], masked[index+1] = ' ', ' '
-			state = typeScriptLineComment
-			index++
-			continue
-		case current == '/' && next == '*':
-			masked[index], masked[index+1] = ' ', ' '
-			state = typeScriptBlockComment
-			index++
-			continue
-		case current == '/':
-			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("slash tokens outside comments are not admitted")
-		case current == '\'':
-			state = typeScriptSingleQuoted
-			continue
-		case current == '"':
-			state = typeScriptDoubleQuoted
-			continue
-		case current == '`':
-			masked[index] = ' '
-			state = typeScriptTemplateQuoted
-			continue
-		case current == '\\':
-			return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("escaped code identifiers are not admitted")
-		}
-		if braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 && strings.HasPrefix(source[index:], "export") {
-			beforeOK := index == 0 || !isASCIITypeScriptIdentifierByte(source[index-1]) && source[index-1] != '.'
-			after := index + len("export")
-			afterOK := after == len(source) || !isASCIITypeScriptIdentifierByte(source[after])
-			if beforeOK && afterOK {
-				starts = append(starts, index)
-			}
-		}
-		switch current {
-		case '{':
-			braceDepth++
-		case '}':
-			if braceDepth == 0 {
-				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("closing brace has no matching opener")
-			}
-			braceDepth--
-		case '[':
-			bracketDepth++
-		case ']':
-			if bracketDepth == 0 {
-				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("closing bracket has no matching opener")
-			}
-			bracketDepth--
-		case '(':
-			parenDepth++
-		case ')':
-			if parenDepth == 0 {
-				return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("closing parenthesis has no matching opener")
-			}
-			parenDepth--
-		}
-	}
-	switch state {
-	case typeScriptCode, typeScriptLineComment:
-	case typeScriptBlockComment:
-		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("block comments must terminate")
-	case typeScriptSingleQuoted, typeScriptDoubleQuoted:
-		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("quoted strings must terminate")
-	case typeScriptTemplateQuoted:
-		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("template literals must terminate")
-	}
-	if braceDepth != 0 || bracketDepth != 0 || parenDepth != 0 {
-		return typeScriptLexicalScan{}, unsupportedTypeScriptSourceGrammar("delimiters must be balanced")
-	}
-	return typeScriptLexicalScan{masked: string(masked), topLevelExportOffsets: starts}, nil
-}
-
-func exportStatementEnd(masked string, start int, limit int) int {
-	parenDepth := 0
-	bracketDepth := 0
-	braceDepth := 0
-	for index := start; index < limit; index++ {
-		switch masked[index] {
-		case '(':
-			parenDepth++
-		case ')':
-			if parenDepth > 0 {
-				parenDepth--
-			}
-		case '[':
-			bracketDepth++
-		case ']':
-			if bracketDepth > 0 {
-				bracketDepth--
-			}
-		case '{':
-			braceDepth++
-		case '}':
-			if braceDepth > 0 {
-				braceDepth--
-			}
-		case ';':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				return index + 1
-			}
-		}
-	}
-	return limit
-}
-
-func isASCIITypeScriptIdentifierByte(value byte) bool {
-	return value == '_' || value == '$' || value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' || value >= '0' && value <= '9'
-}
-
-func unicodeLineTerminatorWidth(source string, index int) int {
-	if index+2 >= len(source) || source[index] != 0xe2 || source[index+1] != 0x80 {
-		return 0
-	}
-	if source[index+2] == 0xa8 || source[index+2] == 0xa9 {
-		return 3
-	}
-	return 0
+type tsInventory struct {
+	tokens         tsTokens
+	runtime, types map[string]struct{}
 }
 
 func unsupportedTypeScriptSourceGrammar(reason string) error {
 	return fmt.Errorf("unsupported TypeScript public API source grammar: %s", reason)
 }
 
-func addTypeClauseExports(clause string, target map[string]struct{}) error {
-	return addClauseExports(clause, nil, target, true)
-}
-
-func addNamedClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}) error {
-	return addClauseExports(clause, runtimeTarget, typeTarget, false)
-}
-
-func addClauseExports(clause string, runtimeTarget map[string]struct{}, typeTarget map[string]struct{}, typeClause bool) error {
-	body := strings.TrimSuffix(strings.TrimPrefix(strings.TrimSpace(clause), "{"), "}")
-	for _, rawPart := range strings.Split(body, ",") {
-		part := strings.TrimSpace(rawPart)
-		if part == "" {
-			continue
+func (p *tsInventory) export() error {
+	s := &p.tokens
+	kind := s.text(s.take())
+	switch kind {
+	case "*":
+		return fmt.Errorf("TypeScript public API entrypoints must not use export *")
+	case "default", "=":
+		return fmt.Errorf("TypeScript public API entrypoints must not use default exports")
+	case "declare":
+		return fmt.Errorf("TypeScript public API entrypoints must not use ambient declare exports")
+	case "{":
+		return p.clause(false)
+	case "type":
+		if s.at("{") {
+			s.take()
+			return p.clause(true)
 		}
-		typeOnly := typeClause
-		if isInlineTypeOnlyReexport(part) {
-			typeOnly = true
-			part = strings.TrimSpace(strings.TrimPrefix(part, "type "))
+		return p.named(p.types)
+	case "interface":
+		return p.named(p.types)
+	case "const", "let", "var":
+		return p.variables()
+	case "abstract", "async":
+		if kind == "abstract" && s.at("async") {
+			s.take()
 		}
-		name := part
-		if match := exportClauseNameRegex.FindStringSubmatch(part); match != nil {
-			name = match[1]
-		}
-		if name == "default" {
-			return fmt.Errorf("TypeScript public API entrypoints must not export a default alias")
-		}
-		if !identifierRegex.MatchString(name) {
-			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
-		}
-		if typeOnly {
-			typeTarget[name] = struct{}{}
-			continue
-		}
-		runtimeTarget[name] = struct{}{}
+		kind = s.text(s.take())
 	}
+	if kind == "function" || kind == "class" || kind == "enum" {
+		return p.named(p.runtime)
+	}
+	return fmt.Errorf("unsupported public export statement")
+}
+
+func (p *tsInventory) named(target map[string]struct{}) error {
+	t := p.tokens.take()
+	if t.kind != tsWord {
+		return fmt.Errorf("unsupported public export statement")
+	}
+	target[p.tokens.text(t)] = struct{}{}
 	return nil
 }
 
-func isInlineTypeOnlyReexport(part string) bool {
-	if !strings.HasPrefix(part, "type ") {
-		return false
+func (p *tsInventory) clause(typeClause bool) error {
+	s := &p.tokens
+	for s.err == nil && !s.at("}") {
+		var item [4]tsToken
+		n := 0
+		for !s.at(",") && !s.at("}") {
+			if n == len(item) || s.peek(0).kind == tsEnd || s.err != nil {
+				return fmt.Errorf("unsupported public export statement")
+			}
+			item[n] = s.take()
+			n++
+		}
+		typeOnly := typeClause
+		name := tsToken{}
+		switch {
+		case n == 1 && item[0].kind == tsWord:
+			name = item[0]
+		case n == 2 && s.text(item[0]) == "type" && item[1].kind == tsWord:
+			name, typeOnly = item[1], true
+		case n == 3 && (item[0].kind == tsWord || item[0].kind == tsString) && s.text(item[1]) == "as":
+			name = item[2]
+		case n == 4 && s.text(item[0]) == "type" && (item[1].kind == tsWord || item[1].kind == tsString) && s.text(item[2]) == "as":
+			name, typeOnly = item[3], true
+		default:
+			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
+		}
+		if name.kind != tsWord {
+			return fmt.Errorf("TypeScript public API re-exports must use identifier names")
+		}
+		if s.text(name) == "default" {
+			return fmt.Errorf("TypeScript public API entrypoints must not export a default alias")
+		}
+		if typeOnly {
+			p.types[s.text(name)] = struct{}{}
+		} else {
+			p.runtime[s.text(name)] = struct{}{}
+		}
+		if s.at(",") {
+			s.take()
+		}
 	}
-	rest := strings.TrimSpace(strings.TrimPrefix(part, "type "))
-	return rest != "" && !strings.HasPrefix(rest, "as ")
+	s.take()
+	if !s.at("from") {
+		return fmt.Errorf("unsupported public export statement")
+	}
+	s.take()
+	if s.take().kind != tsString {
+		return fmt.Errorf("unsupported public export statement")
+	}
+	return p.end()
 }
 
-func variableExportNames(declarations string) ([]string, error) {
-	names := []string{}
-	parts, err := splitTopLevelComma(declarations)
-	if err != nil {
-		return nil, err
+func (p *tsInventory) end() error {
+	s := &p.tokens
+	t := s.peek(0)
+	if s.at(";") {
+		s.take()
+		return nil
 	}
-	for _, rawPart := range parts {
-		part := strings.TrimSpace(rawPart)
-		if equals := strings.Index(part, "="); equals >= 0 {
-			part = strings.TrimSpace(part[:equals])
-		}
-		if colon := strings.Index(part, ":"); colon >= 0 {
-			part = strings.TrimSpace(part[:colon])
-		}
-		if !identifierRegex.MatchString(part) {
-			return nil, fmt.Errorf("TypeScript public API variable exports must use identifier declarations")
-		}
-		names = append(names, part)
+	if t.kind == tsEnd || t.lineBefore {
+		return s.err
 	}
-	return names, nil
+	return fmt.Errorf("unsupported public export statement boundary")
 }
 
-func splitTopLevelComma(value string) ([]string, error) {
-	parts := []string{}
-	start := 0
-	parenDepth := 0
-	bracketDepth := 0
-	braceDepth := 0
-	for index, char := range value {
-		switch char {
-		case '(':
-			parenDepth++
-		case ')':
-			if parenDepth > 0 {
-				parenDepth--
+func (p *tsInventory) variables() error {
+	s := &p.tokens
+	for s.err == nil {
+		name := s.take()
+		if name.kind != tsWord {
+			return fmt.Errorf("TypeScript public API variable exports must use identifier declarations")
+		}
+		p.runtime[s.text(name)] = struct{}{}
+		if s.at(":") {
+			s.take()
+			if err := tsTypeOutline(s); err != nil {
+				return err
 			}
-		case '[':
-			bracketDepth++
-		case ']':
-			if bracketDepth > 0 {
-				bracketDepth--
+		}
+		if s.at("=") {
+			s.take()
+			if err := tsInitializer(s); err != nil {
+				return err
 			}
-		case '{':
-			braceDepth++
-		case '}':
-			if braceDepth > 0 {
-				braceDepth--
+		}
+		if s.at(",") {
+			s.take()
+			continue
+		}
+		return p.end()
+	}
+	return s.err
+}
+
+func tsVariableAngle(s *tsTokens, text string) bool {
+	if s.peek(0).kind == tsPunctuation && strings.ContainsAny(text, "<>") && text != "=>" {
+		s.fail("top-level angle-bracket syntax in variable exports is not admitted")
+		return true
+	}
+	return false
+}
+
+// Type interiors in groups stay opaque. Exterior state distinguishes completed
+// types, operands, function-type signatures and conditional colons, without AST
+// allocation or recursion (including for curried function types).
+func tsTypeOutline(s *tsTokens) error {
+	complete, signature, conditional := false, false, false
+	questions := 0
+	for s.err == nil {
+		t := s.peek(0)
+		text := s.text(t)
+		if t.kind == tsEnd || text == "," || text == ";" || text == "=" {
+			break
+		}
+		if tsVariableAngle(s, text) {
+			break
+		}
+		if !complete {
+			if text == "|" || text == "&" || text == "-" || text == "keyof" || text == "typeof" || text == "readonly" || text == "unique" || text == "infer" || text == "new" {
+				s.take()
+				continue
 			}
-		case '<', '>':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				if char != '>' || index == 0 || value[index-1] != '=' {
-					return nil, unsupportedTypeScriptSourceGrammar("top-level angle-bracket syntax in variable exports is not admitted")
+			if text == "abstract" && s.text(s.peek(1)) == "new" {
+				s.take()
+				continue
+			}
+			if text == "asserts" && !s.peek(1).lineBefore && s.peek(1).kind == tsWord {
+				s.take()
+				continue
+			}
+			if tsOpen(text) {
+				group := s.region()
+				signature = text == "(" && group.parameterHead
+			} else if t.kind == tsWord || t.kind == tsNumber || t.kind == tsString || t.kind == tsTemplate {
+				s.take()
+				if text == "import" && s.at("(") {
+					s.region()
+				}
+				signature = false
+			} else {
+				break
+			}
+			complete = true
+			continue
+		}
+		switch {
+		case text == ".":
+			s.take()
+			if s.take().kind != tsWord {
+				s.fail("qualified types require an identifier")
+			}
+			signature = false
+		case text == "[" && !t.lineBefore:
+			s.region()
+			signature = false
+		case text == "=>" && signature:
+			s.take()
+			complete, signature = false, false
+		case text == "|" || text == "&":
+			s.take()
+			complete, signature = false, false
+		case text == "extends" && !t.lineBefore:
+			s.take()
+			complete, signature, conditional = false, false, true
+		case text == "is" && !t.lineBefore:
+			s.take()
+			complete, signature = false, false
+		case text == "?" && conditional:
+			s.take()
+			questions++
+			complete, signature, conditional = false, false, false
+		case text == ":" && questions != 0:
+			s.take()
+			questions--
+			complete, signature = false, false
+		default:
+			return s.err
+		}
+	}
+	if s.err == nil && (!complete || questions != 0) {
+		s.fail("incomplete exported type boundary")
+	}
+	return s.err
+}
+
+func tsInitializer(s *tsTokens) error {
+	complete, parameters, async := false, false, false
+	questions := 0
+	for s.err == nil {
+		t := s.peek(0)
+		text := s.text(t)
+		if t.kind == tsEnd || text == ";" || text == "," {
+			break
+		}
+		if tsVariableAngle(s, text) {
+			break
+		}
+		if !complete {
+			switch text {
+			case "+", "-", "!", "~", "++", "--", "typeof", "void", "delete", "await", "new":
+				s.take()
+				continue
+			case "function", "class":
+				if err := tsFunctionValue(s); err != nil {
+					return err
+				}
+				parameters = false
+			default:
+				if tsOpen(text) {
+					s.region()
+					parameters = text == "("
+				} else if t.kind == tsWord || t.kind == tsNumber || t.kind == tsString || t.kind == tsTemplate {
+					s.take()
+					parameters = false
+				} else {
+					return unsupportedTypeScriptSourceGrammar("incomplete exported initializer")
 				}
 			}
-		case ',':
-			if parenDepth == 0 && bracketDepth == 0 && braceDepth == 0 {
-				parts = append(parts, value[start:index])
-				start = index + len(string(char))
+			complete, async = true, text == "async"
+			continue
+		}
+		switch {
+		case text == "(" || text == "[":
+			s.region()
+			parameters, async = text == "(", false
+		case text == "." || text == "?.":
+			s.take()
+			if s.at("(") || s.at("[") {
+				s.region()
+			} else if s.take().kind != tsWord {
+				s.fail("member access requires an identifier")
+			}
+			parameters, async = false, false
+		case t.kind == tsTemplate:
+			s.take()
+			parameters, async = false, false
+		case (text == "++" || text == "--" || text == "!") && !t.lineBefore:
+			s.take()
+			parameters, async = false, false
+		case (text == "as" || text == "satisfies") && !t.lineBefore:
+			s.take()
+			if err := tsTypeOutline(s); err != nil {
+				return err
+			}
+			parameters, async = false, false
+		case text == "=>":
+			s.take()
+			complete, parameters, async = false, false, false
+		case text == ":" && parameters && questions != 0 && tsConditionalArrowReturn(s):
+			complete, parameters, async = false, false, false
+		case text == ":" && parameters && questions == 0:
+			s.take()
+			if err := tsTypeOutline(s); err != nil {
+				return err
+			}
+			if !s.at("=>") {
+				return unsupportedTypeScriptSourceGrammar("arrow return type requires an arrow")
+			}
+			s.take()
+			complete, parameters, async = false, false, false
+		case text == "?":
+			s.take()
+			questions++
+			complete, parameters, async = false, false, false
+		case text == ":" && questions != 0:
+			s.take()
+			questions--
+			complete, parameters, async = false, false, false
+		case tsExpressionOperator(text):
+			s.take()
+			complete, parameters, async = false, false, false
+		case async && !t.lineBefore && text == "function":
+			if err := tsFunctionValue(s); err != nil {
+				return err
+			}
+			parameters, async = false, false
+		case async && !t.lineBefore && t.kind == tsWord && s.text(s.peek(1)) == "=>":
+			s.take()
+			async = false
+		default:
+			return s.err
+		}
+	}
+	if s.err == nil && (!complete || questions != 0) {
+		s.fail("incomplete exported initializer boundary")
+	}
+	return s.err
+}
+
+// In `c ? (x): T => x : y`, the first colon is a return annotation, not
+// the conditional separator. A fixed token window cannot bound T's length.
+// Probe only this ambiguity, streaming spans rather than buffering T. A failed
+// type probe ends before another expression-level ambiguity: groups are opaque;
+// ungrouped type conditionals require `extends`, which cannot continue an
+// expression. Successful probes transfer their cursor, so do not rescan T.
+func tsConditionalArrowReturn(s *tsTokens) bool {
+	probe := *s
+	probe.stack = append([]byte(nil), s.stack...)
+	probe.take()
+	if tsTypeOutline(&probe) != nil || !probe.at("=>") {
+		return false
+	}
+	probe.take()
+	*s = probe
+	return true
+}
+
+func tsExpressionOperator(text string) bool {
+	switch text {
+	case "+", "-", "*", "**", "%", "&", "|", "^", "&&", "||", "??", "==", "!=", "===", "!==", "in", "instanceof",
+		"=", "+=", "-=", "*=", "**=", "%=", "&=", "|=", "^=", "&&=", "||=", "??=":
+		return true
+	}
+	return false
+}
+
+func tsFunctionValue(s *tsTokens) error {
+	kind := s.text(s.take())
+	if kind == "function" {
+		if s.at("*") {
+			s.take()
+		}
+		if s.peek(0).kind == tsWord {
+			s.take()
+		}
+		if !s.at("(") {
+			return unsupportedTypeScriptSourceGrammar("function expression requires parameters")
+		}
+		s.region()
+		if s.at(":") {
+			s.take()
+			if err := tsTypeOutline(s); err != nil {
+				return err
+			}
+		}
+	} else {
+		for s.err == nil && !s.at("{") {
+			t := s.peek(0)
+			if t.kind == tsEnd || tsVariableAngle(s, s.text(t)) {
+				return unsupportedTypeScriptSourceGrammar("class expression requires a body")
+			}
+			if tsOpen(s.text(t)) {
+				s.region()
+			} else {
+				s.take()
 			}
 		}
 	}
-	parts = append(parts, value[start:])
-	return parts, nil
+	if !s.at("{") {
+		return unsupportedTypeScriptSourceGrammar("function or class expression requires a body")
+	}
+	s.region()
+	return s.err
 }

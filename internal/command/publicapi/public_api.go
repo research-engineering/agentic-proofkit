@@ -143,6 +143,9 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 	}
 	exitCode := 0
 	if len(failures) > 0 {
+		for index, failure := range failures {
+			failures[index] = admit.RedactStructuralText(failure)
+		}
 		sort.Strings(failures)
 		exitCode = 1
 	}
@@ -154,7 +157,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 			"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
 			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
 			"TypeScript public API verification does not parse JSX or admit TSX source files.",
-			"The TypeScript public API scanner does not parse unrestricted TypeScript; it is a bounded lexical inventory, not a compiler proof. Semicolonless statement boundaries require a repository-owned compiler witness until TYPESCRIPT-ASI-01 is closed.",
+			"The TypeScript public API scanner does not parse unrestricted TypeScript; it is a bounded lexical inventory, not a compiler proof. Export names are inventoried for compiler-valid sources in the declared lexical profile; balanced opaque regions are not syntax or type validation.",
 			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
 		},
 	}, exitCode, nil
