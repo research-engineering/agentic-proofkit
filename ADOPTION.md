@@ -247,6 +247,16 @@ Removal deletes selected managed files only, leaving their directories and
 adjacent instructions. It does not archive or replace instructions with an
 empty file. Baseline-only removal can clean a valid orphan baseline.
 
+In the standalone native CLI, transaction plan/apply/recover and residue
+maintenance routes register SIGINT/SIGTERM handling after argument admission
+and input reading. A handled signal requests cooperative cancellation; the
+native owner still determines recovery, output and exit status. Handling is
+then restored independently of native work or output returning, so a later
+signal can terminate a normally configured process even during blocked I/O.
+Signals may coalesce before restoration. Forced termination can lose or truncate
+the acknowledgement without undoing committed files. This is not a hard
+cancellation deadline or a guarantee about package launchers or proof tools.
+
 After interruption, use `integration recover --repo-root <root> --transaction
 <pending-sha256-ref> --action <resume|rollback>`. It uses the existing native
 journal, not the current bootstrap source. A completed recovery is historical

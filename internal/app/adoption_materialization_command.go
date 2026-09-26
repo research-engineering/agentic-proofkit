@@ -32,7 +32,9 @@ func runAdoptionMaterialization(ctx context.Context, command string, args []stri
 		return 1
 	}
 	if command == "adopt-materialize-recover" {
-		receipt, exitCode, err := adoptionmaterialization.Recover(ctx, options.repositoryRoot, options.transactionID, options.action)
+		scope := newTransactionSignalScope(ctx)
+		defer scope.Close()
+		receipt, exitCode, err := adoptionmaterialization.Recover(scope.Context, options.repositoryRoot, options.transactionID, options.action)
 		return writeAdoptionMaterializationReceipt(receipt, exitCode, err, options, stdout, stderr, capabilities)
 	}
 	input, err := readInput(options.inputPath, stdin)
@@ -47,6 +49,9 @@ func runAdoptionMaterialization(ctx context.Context, command string, args []stri
 			return 1
 		}
 	}
+	scope := newTransactionSignalScope(ctx)
+	defer scope.Close()
+	ctx = scope.Context
 	if command == "adopt-materialize-plan" {
 		plan, err := adoptionmaterialization.BuildPlan(ctx, input, options.repositoryRoot)
 		if options.format == "json" {

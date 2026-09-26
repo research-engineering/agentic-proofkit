@@ -19,6 +19,9 @@ func runTransactionResidue(ctx context.Context, command string, args []string, s
 	if err != nil {
 		return writeJSON(nil, 1, err, stdout, stderr)
 	}
+	scope := newTransactionSignalScope(ctx)
+	defer scope.Close()
+	ctx = scope.Context
 	var output transactionresidue.Output
 	if command == "transaction-inspect-residue" {
 		output, err = transactionresidue.Inspect(ctx, options.root)
