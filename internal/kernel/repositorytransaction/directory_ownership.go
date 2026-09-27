@@ -32,7 +32,10 @@ func ensureTargetDirectories(root *os.Root, plan Plan) error {
 		}
 		if recorded {
 			identity, exists, err := plan.inspectOwnedTargetDirectory(root, directory)
-			if err != nil || !exists || identity != record.Identity {
+			if err != nil {
+				return err
+			}
+			if !exists || identity != record.Identity {
 				return fmt.Errorf("repository target directory ownership changed")
 			}
 			continue
@@ -49,14 +52,16 @@ func ensureTargetDirectories(root *os.Root, plan Plan) error {
 				return fmt.Errorf("create repository target directory")
 			}
 			identity, exists, err = plan.admitRecoverableTargetDirectory(root, directory)
-			if err != nil || !exists {
+			if err != nil {
+				return err
+			}
+			if !exists {
 				return fmt.Errorf("admit created repository target directory")
 			}
 		}
 		record = directoryOwnership{Identity: identity, Path: directory, TransactionID: plan.TransactionID}
 		if err := writeDirectoryOwnership(root, index, record); err != nil {
-			_ = plan.removeOwnedTargetDirectory(root, directory, identity)
-			return err
+			return errors.Join(err, plan.removeOwnedTargetDirectory(root, directory, identity))
 		}
 	}
 	return nil
@@ -109,7 +114,7 @@ func removeCreatedDirectories(root *os.Root, plan Plan) error {
 	return nil
 }
 
-func (plan Plan) admitRecoverableTargetDirectory(root *os.Root, relativePath string) (string, bool, error) {
+func (plan Plan) admitRecoverableTargetDirectory(root *os.Root, relativePath string) (resultIdentity string, resultExists bool, returnErr error) {
 	exact, err := plan.exactRouteExists(root, relativePath)
 	if err != nil || !exact {
 		return "", false, err
@@ -130,7 +135,7 @@ func (plan Plan) admitRecoverableTargetDirectory(root *os.Root, relativePath str
 	if err != nil {
 		return "", false, fmt.Errorf("open recoverable repository target directory")
 	}
-	defer directory.Close()
+	defer closeDirectoryAdmission(directory, &resultIdentity, &resultExists, &returnErr)
 	handleInfo, err := directory.Stat()
 	if err != nil || !os.SameFile(routeInfo, handleInfo) || handleInfo.Mode().Perm() != routeInfo.Mode().Perm() {
 		return "", false, fmt.Errorf("inspect recoverable repository target directory")
@@ -163,7 +168,10 @@ func (plan Plan) admitRecoverableTargetDirectory(root *os.Root, relativePath str
 		}
 	}
 	verifiedIdentity, exists, err := plan.inspectOwnedTargetDirectory(root, relativePath)
-	if err != nil || !exists || verifiedIdentity != identity {
+	if err != nil {
+		return "", false, err
+	}
+	if !exists || verifiedIdentity != identity {
 		return "", false, fmt.Errorf("repository target directory changed after recovery admission")
 	}
 	return identity, true, nil
@@ -173,7 +181,7 @@ func inspectOwnedTargetDirectory(root *os.Root, relativePath string) (string, bo
 	return (Plan{version: "3"}).inspectOwnedTargetDirectory(root, relativePath)
 }
 
-func (plan Plan) inspectOwnedTargetDirectory(root *os.Root, relativePath string) (string, bool, error) {
+func (plan Plan) inspectOwnedTargetDirectory(root *os.Root, relativePath string) (resultIdentity string, resultExists bool, returnErr error) {
 	exact, err := plan.exactRouteExists(root, relativePath)
 	if err != nil || !exact {
 		return "", false, err
@@ -194,7 +202,7 @@ func (plan Plan) inspectOwnedTargetDirectory(root *os.Root, relativePath string)
 	if err != nil {
 		return "", false, fmt.Errorf("open repository target directory")
 	}
-	defer directory.Close()
+	defer closeDirectoryAdmission(directory, &resultIdentity, &resultExists, &returnErr)
 	handleInfo, err := directory.Stat()
 	if err != nil || !os.SameFile(routeInfo, handleInfo) {
 		return "", false, fmt.Errorf("repository target directory changed during admission")
@@ -210,9 +218,22 @@ func (plan Plan) inspectOwnedTargetDirectory(root *os.Root, relativePath string)
 	return identity, true, nil
 }
 
+// Cleanup failure cannot publish a successfully admitted directory identity.
+func closeDirectoryAdmission(directory io.Closer, identity *string, exists *bool, returnErr *error) {
+	if closeErr := closeReadResource(directory, "target directory admission"); closeErr != nil {
+		*returnErr = errors.Join(*returnErr, closeErr)
+	}
+	if *returnErr != nil {
+		*identity, *exists = "", false
+	}
+}
+
 func (plan Plan) removeOwnedTargetDirectory(root *os.Root, relativePath, expectedIdentity string) error {
 	identity, exists, err := plan.inspectOwnedTargetDirectory(root, relativePath)
-	if err != nil || !exists || identity != expectedIdentity {
+	if err != nil {
+		return err
+	}
+	if !exists || identity != expectedIdentity {
 		return fmt.Errorf("repository target directory cannot be restored")
 	}
 	if err := root.Remove(filepath.FromSlash(relativePath)); err != nil {
