@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/semversion"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/witnesscommand"
+	"github.com/research-engineering/agentic-proofkit/internal/npmpackage"
 )
 
 const reportKind = "proofkit.external-consumer"
@@ -32,30 +33,6 @@ var (
 	hexSHA256Pattern   = regexp.MustCompile(`^[0-9a-f]{64}$`)
 	decimalTextPattern = regexp.MustCompile(`^\d+$`)
 )
-
-var requiredPackedFiles = []string{
-	"AGENTS.md",
-	"CONTRIBUTING.md",
-	"LICENSE",
-	"NON_CLAIMS.md",
-	"README.md",
-	"SECURITY.md",
-	"dist/agentic-proofkit",
-	"package.json",
-	"proofkit/cli-contract.v2.json",
-	"proofkit/receipt-producer-policy.json",
-	"proofkit/requirement-bindings.json",
-	"proofkit/witness-plan.json",
-}
-
-var forbiddenPackedFiles = []string{
-	"bun.lock",
-	"dist/cli.js",
-	"dist/index.js",
-	"src/index.ts",
-	"test/public-api.test.ts",
-	"tsconfig.json",
-}
 
 type input struct {
 	NonClaims              []string
@@ -688,14 +665,9 @@ func packMetadataFailures(input input, evidence packMetadataEvidence) []string {
 	for _, file := range record.Files {
 		filePaths[file.Path] = struct{}{}
 	}
-	for _, required := range requiredPackedFiles {
+	for _, required := range npmpackage.RequiredPaths() {
 		if _, ok := filePaths[required]; !ok {
 			failures = append(failures, "npm pack metadata missing required packed file: "+required)
-		}
-	}
-	for _, forbidden := range forbiddenPackedFiles {
-		if _, ok := filePaths[forbidden]; ok {
-			failures = append(failures, "npm pack metadata must not include source or workspace file: "+forbidden)
 		}
 	}
 	orderedPaths := make([]string, 0, len(filePaths))
@@ -704,8 +676,8 @@ func packMetadataFailures(input input, evidence packMetadataEvidence) []string {
 	}
 	sort.Strings(orderedPaths)
 	for _, path := range orderedPaths {
-		if strings.HasPrefix(path, "src/") || strings.HasPrefix(path, "test/") || strings.HasSuffix(path, ".d.ts") || strings.HasSuffix(path, ".map") {
-			failures = append(failures, "npm pack metadata must not include non-runtime file: "+path)
+		if npmpackage.IsForbiddenPath(path) || !npmpackage.IsAllowedPath(path) {
+			failures = append(failures, "npm pack metadata must not include a file outside the package path policy")
 		}
 	}
 	return failures

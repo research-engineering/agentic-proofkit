@@ -1777,6 +1777,42 @@ func TestVerifyRootPackageRejectsEachForbiddenRootEntry(t *testing.T) {
 	}
 }
 
+func TestVerifyRootPackageRejectsUnlistedEntries(t *testing.T) {
+	for _, unexpected := range []string{"package/AGENTS.md", "package/CONTRIBUTING.md", "package/internal/a.go", "package/docs/unknown.md", "package/dist/platform/unknown/agentic-proofkit"} {
+		t.Run(unexpected, func(t *testing.T) {
+			root := t.TempDir()
+			withWorkingDirectory(t, root)
+			entries := map[string]string{}
+			for _, required := range requiredRootEntries() {
+				entries[required] = "fixture"
+			}
+			entries[unexpected] = "unexpected"
+			tarball := writePackageTarball(t, entries)
+			content, err := os.ReadFile(tarball)
+			if err != nil {
+				t.Fatal(err)
+			}
+			const filename = "agentic-proofkit-1.2.3.tgz"
+			writeFileBytes(t, filepath.Join(root, "artifacts", "package", filename), content)
+			record := packRecord{Filename: filename, Integrity: testNPMIntegrity(content), Name: rootPackageName, Shasum: testSHA1(content), Version: "1.2.3"}
+			if _, err := verifyRootPackage(record); err == nil || err.Error() != "root package contains unexpected entry "+unexpected {
+				t.Fatalf("unexpected policy outcome: %v", err)
+			}
+		})
+	}
+}
+
+func TestPackagePathAdapterRequiresExactTarPrefix(t *testing.T) {
+	for _, path := range []string{"README.md", "Package/README.md", "package/package/README.md", "package//README.md", "package/./README.md", "package/../README.md"} {
+		if allowedRootEntry(path) {
+			t.Fatalf("tar path alias admitted: %q", path)
+		}
+	}
+	if !allowedRootEntry("package/README.md") || !forbiddenRootEntry("package/dist/fixture.ts") {
+		t.Fatal("exact tar path projection changed")
+	}
+}
+
 func TestPackedPlatformBinariesMatchReleaseBinaryBytes(t *testing.T) {
 	root := t.TempDir()
 	withWorkingDirectory(t, root)
