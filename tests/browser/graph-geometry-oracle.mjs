@@ -122,7 +122,7 @@ export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   }
   assert.equal(demand, graph.edges.reduce((sum, e) => sum + (columns.get(e.fromNodeId) === columns.get(e.toNodeId) ? 1 : 2), 0));
   assert(demand <= 256, "slot ceiling");
-  assert.equal(observed.width, 1040 + 6 * demand, "slot width budget");
+  equalCoordinate(observed.width, 1040 + 6 * demand, "slot width budget");
   const sorted = [...verticals].sort((a, b) => a - b);
   for (let i = 1; i < sorted.length; i++) assert(sorted[i] - sorted[i - 1] >= 6, "slot spacing");
 }
@@ -187,8 +187,7 @@ export function normalizeGraphGeometry(observed) {
 }
 
 export function assertGraphPaint(observed) {
-  const design = normalizeGraphGeometry(observed);
-  assert.equal(observed.viewBox, `0 0 ${design.width} ${design.height}`);
+  normalizeGraphGeometry(observed);
   assert.deepEqual(observed.marker, {viewBox: "0 0 10 10", markerUnits: "userSpaceOnUse", markerWidth: "6", markerHeight: "6", refX: "10", refY: "5", orient: "auto-start-reverse"});
   assert.equal(observed.markerPath, "M 0 0 L 10 5 L 0 10 z");
   assert.equal(observed.markerFill, observed.expectedInk);

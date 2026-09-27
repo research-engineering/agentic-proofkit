@@ -52,11 +52,14 @@ npm exec --yes --package="$(node -p "require('./package.json').packageManager")"
   npm run check
 '
 git diff --check
+git diff --cached --check
 ```
 
 The browser engine installation is a one-time prerequisite for the pinned
-rendered-runtime gate. CI installs the same engines with their Linux system
-dependencies before running that gate.
+rendered-runtime gate. On Linux, the engines also need system libraries; use
+`npx playwright install-deps chromium firefox webkit` with the required host
+privileges before the gate, or use an already provisioned host. CI installs
+the same engines and Linux system dependencies before running that gate.
 
 The Firefox test project explicitly enables
 [site-origin process isolation](https://searchfox.org/mozilla-central/source/dom/ipc/ProcessIsolation.cpp)

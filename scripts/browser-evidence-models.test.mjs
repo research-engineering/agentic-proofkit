@@ -252,6 +252,14 @@ test("joint-scale DOM oracle retains physical evidence and rejects isolated proj
     verify(observed);
     assert.deepEqual(observed, before, "normalization must not overwrite physical evidence");
   }
+  for (const dimension of ["width", "height"]) for (const sign of [-1, 1]) {
+    const rounded = physical(48);
+    rounded[dimension] += sign / 16384;
+    verify(rounded);
+    const drifted = physical(48);
+    drifted[dimension] += sign * 2 / 1024;
+    assert.throws(() => verify(drifted), /SVG canvas/);
+  }
   const roundedAtBottom = physical(48);
   roundedAtBottom.height = roundedAtBottom.svgHeight = 260 * 3;
   roundedAtBottom.viewBox = "0 0 1046 260";
