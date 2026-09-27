@@ -43,6 +43,61 @@ func TestBuildComposesInputAcceptedByRegistryConsumer(t *testing.T) {
 	}
 }
 
+func TestIntegrityShapePreservesCompositionAndFailureClassification(t *testing.T) {
+	valid := "sha512-" + strings.Repeat("A", 85) + "Q=="
+	for _, tt := range []struct {
+		name           string
+		value          any
+		state          string
+		admissionError bool
+	}{
+		{"valid", valid, "passed", false},
+		{"normalized", " \t" + valid + "\n", "passed", false},
+		{"32 bytes", "sha512-" + strings.Repeat("A", 43) + "=", "failed", false},
+		{"63 bytes", "sha512-" + strings.Repeat("A", 84), "failed", false},
+		{"65 bytes", "sha512-" + strings.Repeat("A", 87) + "=", "failed", false},
+		{"pad bits", "sha512-" + strings.Repeat("A", 85) + "B==", "failed", false},
+		{"empty", "", "", true},
+		{"wrong type", true, "", true},
+		{"secret", "api_key=synthetic-fixture-value", "", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			input := validComposeInput(t)
+			input["registryMetadata"].(map[string]any)["tarballIntegrity"] = tt.value
+			output, exitCode, err := Build(input)
+			if tt.admissionError {
+				if err == nil || strings.Contains(err.Error(), "synthetic-fixture-value") {
+					t.Fatalf("unsafe or missing admission error: %v", err)
+				}
+				return
+			}
+			if err != nil || output["state"] != tt.state || (exitCode == 0) != (tt.state == "passed") {
+				t.Fatalf("Build() state=%v exit=%d error=%v, want %s", output["state"], exitCode, err, tt.state)
+			}
+			if tt.state == "failed" {
+				if output["registryConsumerInput"] != nil {
+					t.Fatal("invalid integrity emitted consumer input")
+				}
+				assertRuleMessage(t, output, "registry metadata tarballIntegrity must be npm sha512 integrity text")
+				setPreconditionState(t, input, "registry.metadata", "unavailable")
+				blocked, code, err := Build(input)
+				if err != nil || code != 1 || blocked["state"] != "blocked" || blocked["registryConsumerInput"] != nil {
+					t.Fatalf("precondition precedence changed: exit=%d error=%v output=%#v", code, err, blocked)
+				}
+				return
+			}
+			composed := composedRegistryInput(t, output)
+			if composed["input"].(map[string]any)["tarballIntegrity"] != valid {
+				t.Fatal("composition did not preserve normalized integrity")
+			}
+			record, code, err := registryconsumer.Build(composed)
+			if err != nil || code != 0 || record.State != "passed" {
+				t.Fatalf("downstream rejected composed input: state=%s exit=%d error=%v", record.State, code, err)
+			}
+		})
+	}
+}
+
 func TestPackageVersionRejectsNonSemVer(t *testing.T) {
 	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
 		if _, err := packageVersion(version, "package version"); err == nil {
@@ -341,7 +396,7 @@ func TestBuildOutputIsStableForEquivalentPrimitiveFactMaps(t *testing.T) {
 	rightInput := validComposeInput(t)
 	rightInput["registryMetadata"] = map[string]any{
 		"tarballShasum":    strings.Repeat("a", 40),
-		"tarballIntegrity": "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+		"tarballIntegrity": "sha512-" + strings.Repeat("A", 86) + "==",
 		"tarballFileName":  "agentic-proofkit-1.2.3.tgz",
 		"packageVersion":   "1.2.3",
 		"packageName":      "agentic-proofkit",
@@ -401,7 +456,7 @@ func validComposeInput(t *testing.T) map[string]any {
 			"packageName":      "agentic-proofkit",
 			"packageVersion":   "1.2.3",
 			"tarballFileName":  "agentic-proofkit-1.2.3.tgz",
-			"tarballIntegrity": "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"tarballIntegrity": "sha512-" + strings.Repeat("A", 86) + "==",
 			"tarballShasum":    strings.Repeat("a", 40),
 		},
 		"registryPackProof": map[string]any{

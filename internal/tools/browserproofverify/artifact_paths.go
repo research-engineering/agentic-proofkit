@@ -103,7 +103,6 @@ func writeRootedJSON(root, path string, value any) error {
 	if err != nil {
 		return err
 	}
-	encoded = append(encoded, '\n')
 	rootFS, err := os.OpenRoot(root)
 	if err != nil {
 		return err

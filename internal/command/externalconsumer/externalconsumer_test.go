@@ -34,6 +34,66 @@ func TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock(t *testing.T) {
 	}
 }
 
+func TestExternalConsumerIntegrityShapeAndEqualityAreIndependent(t *testing.T) {
+	zero := "sha512-" + strings.Repeat("A", 86) + "=="
+	one := "sha512-" + strings.Repeat("A", 85) + "Q=="
+	short := "sha512-" + strings.Repeat("A", 43) + "="
+	inputFailure := "npmIntegrity must be canonical base64 sha512 integrity text"
+	recordFailure := "npm pack metadata integrity must be canonical base64 sha512 integrity text"
+	equalityFailure := "npm pack metadata integrity must match npmIntegrity"
+	for _, tt := range []struct {
+		name            string
+		input, metadata any
+		failures        []string
+		admissionError  bool
+	}{
+		{"valid", one, one, nil, false},
+		{"normalized", " " + one + "\n", "\t" + one + " ", nil, false},
+		{"matched 32 bytes", short, short, []string{inputFailure, recordFailure}, false},
+		{"matched 63 bytes", "sha512-" + strings.Repeat("A", 84), "sha512-" + strings.Repeat("A", 84), []string{inputFailure, recordFailure}, false},
+		{"matched 65 bytes", "sha512-" + strings.Repeat("A", 87) + "=", "sha512-" + strings.Repeat("A", 87) + "=", []string{inputFailure, recordFailure}, false},
+		{"input only", short, zero, []string{inputFailure, equalityFailure}, false},
+		{"metadata only", zero, short, []string{recordFailure, equalityFailure}, false},
+		{"equality only", zero, one, []string{equalityFailure}, false},
+		{"empty input", "", zero, nil, true},
+		{"empty metadata", zero, "", nil, true},
+		{"input type", true, zero, nil, true},
+		{"metadata type", zero, true, nil, true},
+		{"secret input", "api_key=synthetic-fixture-value", zero, nil, true},
+		{"secret metadata", zero, "api_key=synthetic-fixture-value", nil, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			input := validExternalConsumerInput(t)
+			input["input"].(map[string]any)["npmIntegrity"] = tt.input
+			input["evidence"].(map[string]any)["packMetadata"].(map[string]any)["records"].([]any)[0].(map[string]any)["integrity"] = tt.metadata
+			record, code, err := Build(input)
+			if tt.admissionError {
+				if err == nil || strings.Contains(err.Error(), "synthetic-fixture-value") {
+					t.Fatalf("unsafe or missing admission error: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(tt.failures) == 0 {
+				if code != 0 || record.State != "passed" {
+					t.Fatalf("valid input rejected: exit=%d record=%#v", code, record)
+				}
+				return
+			}
+			if code != 1 || record.State != "failed" || len(record.RuleResults) != len(tt.failures) {
+				t.Fatalf("unexpected failure: exit=%d record=%#v", code, record)
+			}
+			for i, want := range tt.failures {
+				if record.RuleResults[i].Status != "failed" || record.RuleResults[i].Message != want {
+					t.Fatalf("rule %d=%#v, want failed %q", i, record.RuleResults[i], want)
+				}
+			}
+		})
+	}
+}
+
 func TestVersionTextRejectsNonSemVer(t *testing.T) {
 	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
 		if _, err := versionText(version, "package version"); err == nil {
@@ -305,7 +365,7 @@ func validExternalConsumerInput(t *testing.T) map[string]any {
 	tarballSHA := strings.Repeat("b", 64)
 	packSHA := strings.Repeat("c", 64)
 	npmSHASum := strings.Repeat("d", 40)
-	npmIntegrity := "sha512-testintegrity"
+	npmIntegrity := "sha512-" + strings.Repeat("A", 86) + "=="
 	root := map[string]any{
 		"schemaVersion": json.Number("1"),
 		"input": map[string]any{

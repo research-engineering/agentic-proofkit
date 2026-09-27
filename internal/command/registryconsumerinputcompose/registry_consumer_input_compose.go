@@ -17,12 +17,11 @@ import (
 const compositionKind = "proofkit.registry-consumer-proof-input-compose"
 
 var (
-	packageNamePattern        = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
-	registryURLPattern        = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)?$`)
-	tarballNamePattern        = regexp.MustCompile(`^[A-Za-z0-9._@-]+-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\.tgz$`)
-	hexSHA1Pattern            = regexp.MustCompile(`^[0-9a-f]{40}$`)
-	hexSHA256Pattern          = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	npmSHA512IntegrityPattern = regexp.MustCompile(`^sha512-[A-Za-z0-9+/]+={0,2}$`)
+	packageNamePattern = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
+	registryURLPattern = regexp.MustCompile(`^https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)?$`)
+	tarballNamePattern = regexp.MustCompile(`^[A-Za-z0-9._@-]+-\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?\.tgz$`)
+	hexSHA1Pattern     = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	hexSHA256Pattern   = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 
 var requiredPreconditionIDs = []string{
@@ -491,7 +490,7 @@ func registryMetadataFailures(input input) []string {
 	if !hexSHA1Pattern.MatchString(input.RegistryMetadata.TarballShasum) {
 		failures = append(failures, "registry metadata tarballShasum must be lowercase sha1 hex")
 	}
-	if !npmSHA512IntegrityPattern.MatchString(input.RegistryMetadata.TarballIntegrity) {
+	if !admit.IsSHA512Integrity(input.RegistryMetadata.TarballIntegrity) {
 		failures = append(failures, "registry metadata tarballIntegrity must be npm sha512 integrity text")
 	}
 	if !input.RegistryPackProof.IntegrityMatches {
