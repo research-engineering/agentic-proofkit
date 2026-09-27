@@ -28,7 +28,10 @@ export default defineConfig({
   },
   projects: [
     {name: "chromium", use: {...devices["Desktop Chrome"]}},
-    {name: "firefox", use: {...devices["Desktop Firefox"]}},
+    {name: "firefox", use: {
+      ...devices["Desktop Firefox"],
+      launchOptions: {firefoxUserPrefs: {"fission.webContentIsolationStrategy": 1}},
+    }},
     {name: "webkit", use: {...devices["Desktop Safari"]}},
   ],
 });

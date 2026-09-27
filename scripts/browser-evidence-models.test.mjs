@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {summarizeDiffPage} from "../internal/command/requirementbrowser/assets/workspace-diff.js";
 import {GEOMETRY, GRAPH_PAGE, GRAPH_PLANES, graphPagePositions, visibleGraphPage} from "../internal/command/requirementbrowser/assets/workspace-graph.js";
-import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle} from "../tests/browser/graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle, unrelatedCollinearOverlaps} from "../tests/browser/graph-geometry-oracle.mjs";
 import {resolveHandoffRequirement} from "../internal/command/requirementbrowser/assets/workspace-handoff.js";
 
 test("diff page classes partition changes while risk and lifecycle remain independent facets", () => {
@@ -133,6 +133,38 @@ test("graph endpoint-role slots reach the page ceilings without requiring planar
   assertLayout({nodes, edges}); // K3,3: edge crossings are allowed; node crossings are not.
 });
 
+test("unrelated graph relations retain separate horizontal corridors", () => {
+  const fixture = {nodes: [
+    {nodeId: "a0", evidencePlane: spec}, {nodeId: "b0", evidencePlane: proof},
+    {nodeId: "d0", evidencePlane: native}, {nodeId: "d1", evidencePlane: native},
+  ], edges: [
+    {edgeId: "e1", fromNodeId: "a0", toNodeId: "d0"},
+    {edgeId: "e2", fromNodeId: "b0", toNodeId: "d1"},
+  ]};
+  const observed = assertLayout(fixture);
+  const [first, second] = observed.routes;
+  second.points[2][1] = second.points[3][1] = first.points[2][1];
+  assert.equal(unrelatedCollinearOverlaps(fixture, observed).length, 1);
+  assert.throws(() => assertGraphGeometry(fixture, observed), /unrelated edge separation/);
+});
+
+test("bounded mixed-plane graph samples preserve complete segment separation", () => {
+  let seed = 0x46d1c08;
+  const next = limit => { seed = (1664525 * seed + 1013904223) >>> 0; return Math.floor(seed * limit / 0x100000000); };
+  let unevenMixedCohort = false;
+  for (let sample = 0; sample < 200; sample++) {
+    const nodes = Array.from({length: 2 + next(191)}, (_, i) => ({nodeId: `n${i}`, evidencePlane: GRAPH_PLANES[next(4)].id}));
+    const counts = GRAPH_PLANES.map(plane => nodes.filter(node => node.evidencePlane === plane.id).length);
+    unevenMixedCohort ||= counts.filter(count => count > 0).length > 1 && Math.max(...counts) - Math.min(...counts) > 1;
+    const edges = Array.from({length: next(129)}, (_, i) => {
+      const from = next(nodes.length), to = (from + 1 + next(nodes.length - 1)) % nodes.length;
+      return {edgeId: `e${i}`, fromNodeId: nodes[from].nodeId, toNodeId: nodes[to].nodeId};
+    });
+    assertLayout({nodes, edges});
+  }
+  assert(unevenMixedCohort, "mixed samples must include unequal plane populations");
+});
+
 test("graph geometry oracle rejects independent causal mutants", () => {
   const fixture = {nodes: [
     {nodeId: "spec:a", evidencePlane: spec}, {nodeId: "spec:b", evidencePlane: spec}, {nodeId: "spec:z", evidencePlane: spec},
@@ -146,7 +178,10 @@ test("graph geometry oracle rejects independent causal mutants", () => {
   const good = assertLayout(fixture);
   const route = (value, id) => value.routes.find(e => e.id === id);
   const mutants = {
-    nodeCrossing(value) { route(value, "contains").points[1][0] = route(value, "contains").points[2][0] = 132; },
+    nodeCrossing(value) {
+      const card = value.nodes.find(node => node.id === "proof"), x = card.x + card.width / 2;
+      route(value, "cross").points[1][0] = route(value, "cross").points[2][0] = x;
+    },
     unsafeCrossRow(value) { route(value, "cross").points[2][1] = route(value, "cross").points[3][1] = 96; },
     collapsedAdjacentSlots(value) { const e = route(value, "adjacent"); e.points[3][0] = e.points[4][0] = e.points[1][0]; },
     wrongFacingPort(value) { route(value, "cross").points.at(-1)[0] += 240; },
@@ -219,6 +254,24 @@ test("joint-scale DOM oracle retains physical evidence and rejects isolated proj
     const observed = physical(rootFont), before = structuredClone(observed);
     verify(observed);
     assert.deepEqual(observed, before, "normalization must not overwrite physical evidence");
+  }
+  for (const viewBox of ["  0 0 1046 292  ", "0\t0\n1046 292", "+0 -0 1046.0 2.92e2"]) {
+    const observed = physical(48);
+    observed.viewBox = viewBox;
+    verify(observed);
+  }
+  for (const viewBox of ["0 0 1046", "0 0 1046 292 0", "0 0 1046 292 ignored", "0 0 1046 NaN", "0 0 1046 Infinity", "0 0 1046 1e309", "0 0 0x416 292"]) {
+    const observed = physical(48);
+    observed.viewBox = viewBox;
+    assert.throws(() => verify(observed), undefined, `invalid complete viewBox: ${viewBox}`);
+  }
+  for (const dimension of ["width", "height"]) for (const sign of [-1, 1]) {
+    const rounded = physical(48);
+    rounded[dimension] += sign / 16384;
+    verify(rounded);
+    const drifted = physical(48);
+    drifted[dimension] += sign * 2 / 1024;
+    assert.throws(() => verify(drifted), /SVG canvas/);
   }
   const roundedAtBottom = physical(48);
   roundedAtBottom.height = roundedAtBottom.svgHeight = 260 * 3;

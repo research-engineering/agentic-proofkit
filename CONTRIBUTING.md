@@ -52,11 +52,22 @@ npm exec --yes --package="$(node -p "require('./package.json').packageManager")"
   npm run check
 '
 git diff --check
+git diff --cached --check
 ```
 
 The browser engine installation is a one-time prerequisite for the pinned
-rendered-runtime gate. CI installs the same engines with their Linux system
-dependencies before running that gate.
+rendered-runtime gate. On Linux, the engines also need system libraries; use
+`npx playwright install-deps chromium firefox webkit` with the required host
+privileges before the gate, or use an already provisioned host. CI installs
+the same engines and Linux system dependencies before running that gate.
+
+The Firefox test project explicitly enables
+[site-origin process isolation](https://searchfox.org/mozilla-central/source/dom/ipc/ProcessIsolation.cpp)
+with `fission.webContentIsolationStrategy=1`. This avoids the observed navigation
+completion failure in the pinned bundle's shared-process configuration, without
+replacing its browser binary or weakening CSP, navigation assertions or retries.
+The engine fixture checks the requested launch policy. Keep the exact stable SDK
+and all three engine gates until a complete qualification admits a successor.
 
 The composed `go:check` and CI source job both run `npm run go:deps`:
 `go mod tidy -diff` rejects manifest drift without rewriting `go.mod` or

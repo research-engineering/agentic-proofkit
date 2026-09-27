@@ -42,6 +42,27 @@ export function graphNodeIntersections(graph, observed, inflate = 0.75) {
   return hits;
 }
 
+export function unrelatedCollinearOverlaps(graph, observed) {
+  const edges = new Map(graph.edges.map(edge => [edge.edgeId, edge]));
+  const hits = [];
+  for (let i = 0; i < observed.routes.length; i++) for (let j = i + 1; j < observed.routes.length; j++) {
+    const left = observed.routes[i], right = observed.routes[j];
+    const a = edges.get(left.id), b = edges.get(right.id);
+    assert(a && b, "observed edge identity");
+    if ([a.fromNodeId, a.toNodeId].some(id => id === b.fromNodeId || id === b.toNodeId)) continue;
+    for (let p = 1; p < left.points.length; p++) for (let q = 1; q < right.points.length; q++) {
+      for (const axis of [0, 1]) {
+        const fixed = 1 - axis, start = left.points[p - 1], end = left.points[p], otherStart = right.points[q - 1], otherEnd = right.points[q];
+        if (start[fixed] !== end[fixed] || start[fixed] !== otherStart[fixed] || start[fixed] !== otherEnd[fixed]) continue;
+        const low = Math.max(Math.min(start[axis], end[axis]), Math.min(otherStart[axis], otherEnd[axis]));
+        const high = Math.min(Math.max(start[axis], end[axis]), Math.max(otherStart[axis], otherEnd[axis]));
+        if (low < high) hits.push({left: left.id, right: right.id, axis, low, high});
+      }
+    }
+  }
+  return hits;
+}
+
 export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   // getBoundingClientRect subtraction can lose low bits after Firefox scrolls.
   // Only DOM comparisons allow <1/1024 CSS px; pure geometry stays exact.
@@ -53,7 +74,9 @@ export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   assert.deepEqual(observed.nodes.map(n => n.id).sort(), graph.nodes.map(n => n.nodeId).sort(), "node identity");
   assert.deepEqual(observed.routes.map(e => e.id).sort(), graph.edges.map(e => e.edgeId).sort(), "edge identity");
   assert.deepEqual(graphNodeIntersections(graph, observed, 6 + 2 * epsilon), [], "unrelated node clearance");
-  assert(observed.width <= 2576 && observed.height <= 22332, "canvas ceiling");
+  assert.deepEqual(unrelatedCollinearOverlaps(graph, observed), [], "unrelated edge separation");
+  // At most 127 additional six-unit horizontal corridors across all rows.
+  assert(observed.width <= 2576 && observed.height <= 23094, "canvas ceiling");
   assert.equal(observed.columns.length, 4);
   for (const x of observed.columns) assert(Number.isFinite(x) && x >= 0 && x + 240 <= observed.width, "heading bounds");
   const rects = new Map(observed.nodes.map(n => [n.id, n]));
@@ -99,7 +122,7 @@ export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   }
   assert.equal(demand, graph.edges.reduce((sum, e) => sum + (columns.get(e.fromNodeId) === columns.get(e.toNodeId) ? 1 : 2), 0));
   assert(demand <= 256, "slot ceiling");
-  assert.equal(observed.width, 1040 + 6 * demand, "slot width budget");
+  equalCoordinate(observed.width, 1040 + 6 * demand, "slot width budget");
   const sorted = [...verticals].sort((a, b) => a - b);
   for (let i = 1; i < sorted.length; i++) assert(sorted[i] - sorted[i - 1] >= 6, "slot spacing");
 }
@@ -146,8 +169,12 @@ export function normalizeGraphGeometry(observed) {
   const equal = (a, b, message) => assert(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 1 / 1024, message);
   equal(observed.svgWidth, observed.width, "SVG canvas width");
   equal(observed.svgHeight, observed.height, "SVG canvas height");
-  const [x, y, width, height] = observed.viewBox.split(/\s+/).map(Number);
-  assert.equal(x, 0); assert.equal(y, 0);
+  const components = observed.viewBox.trim().split(/\s+/);
+  assert.equal(components.length, 4, "viewBox component count");
+  assert(components.every(value => /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)), "viewBox numeric components");
+  const [x, y, width, height] = components.map(Number);
+  assert([x, y, width, height].every(Number.isFinite), "finite viewBox components");
+  assert(x === 0 && y === 0, "viewBox zero origin");
   equal(observed.width, width * scale, "root-scaled canvas width");
   equal(observed.height, height * scale, "root-scaled canvas height");
   for (const [key, expected] of Object.entries({a: scale, b: 0, c: 0, d: scale, x: 0, y: 0})) equal(observed.svgTransform[key], expected, `SVG joint scale ${key}`);
@@ -164,8 +191,7 @@ export function normalizeGraphGeometry(observed) {
 }
 
 export function assertGraphPaint(observed) {
-  const design = normalizeGraphGeometry(observed);
-  assert.equal(observed.viewBox, `0 0 ${design.width} ${design.height}`);
+  normalizeGraphGeometry(observed);
   assert.deepEqual(observed.marker, {viewBox: "0 0 10 10", markerUnits: "userSpaceOnUse", markerWidth: "6", markerHeight: "6", refX: "10", refY: "5", orient: "auto-start-reverse"});
   assert.equal(observed.markerPath, "M 0 0 L 10 5 L 0 10 z");
   assert.equal(observed.markerFill, observed.expectedInk);

@@ -8,9 +8,13 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -123,31 +127,82 @@ func TestSnapshotSizeProductionLimitBinding(t *testing.T) {
 
 func TestComposePreservesIdentityLayoutsAndDetachedAdmission(t *testing.T) {
 	root := fixtureRepository(t)
+	readFixture := func(entry map[string]any) (any, string) {
+		t.Helper()
+		content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(entry["path"].(string))))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var value any
+		decoder := json.NewDecoder(bytes.NewReader(content))
+		decoder.UseNumber()
+		if err := decoder.Decode(&value); err != nil {
+			t.Fatal(err)
+		}
+		return value, fmt.Sprintf("sha256:%x", sha256.Sum256(content))
+	}
+	catalog := fixtureCatalog()
+	treeEntry := catalog["specTree"].(map[string]any)
+	sourceEntry := catalog["requirementSources"].([]any)[0].(map[string]any)
+	treeInput, treeDigest := readFixture(treeEntry)
+	sourceInput, sourceDigest := readFixture(sourceEntry)
+	tree, err := requirementspectree.Evaluate(treeInput)
+	if err != nil || tree.ExitCode != 0 {
+		t.Fatalf("independent tree fixture admission: %v", err)
+	}
+	source, err := requirementsourceadmission.Evaluate(sourceInput)
+	if err != nil || source.ExitCode != 0 {
+		t.Fatalf("independent requirement fixture admission: %v", err)
+	}
+	sourceProjection, err := requirementsourceadmission.SourceValue(source.Source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantProjections := map[string]any{
+		"specTree":           requirementspectree.TreeValue(tree.Tree),
+		"requirementSources": []any{sourceProjection},
+	}
 	for _, mode := range []string{"none", "partial", "all"} {
 		t.Run(mode, func(t *testing.T) {
 			catalog := fixtureCatalog()
 			if mode != "none" {
-				setExpectedFixtureDigest(t, root, catalog["specTree"].(map[string]any))
+				catalog["specTree"].(map[string]any)["expectedSourceDigest"] = treeDigest
 			}
 			if mode == "all" {
-				setExpectedFixtureDigest(t, root, catalog["requirementSources"].([]any)[0].(map[string]any))
+				catalog["requirementSources"].([]any)[0].(map[string]any)["expectedSourceDigest"] = sourceDigest
 			}
+			// This fixture's requirement source sorts before its spec_tree identity.
+			// All operands come from the catalog, exact file bytes and child owners.
+			wantSources := []any{
+				map[string]any{"currentDigest": sourceDigest, "kind": "requirement_source", "nodeId": sourceEntry["nodeId"], "path": sourceEntry["path"], "sourceRef": source.Source.SourceID(), "sourceRole": "requirements"},
+				map[string]any{"currentDigest": treeDigest, "kind": "spec_tree", "path": treeEntry["path"], "sourceRef": "spec_tree:" + tree.Tree.TreeID},
+			}
+			if mode != "none" {
+				wantSources[1].(map[string]any)["expectedDigest"] = treeDigest
+			}
+			if mode == "all" {
+				wantSources[0].(map[string]any)["expectedDigest"] = sourceDigest
+			}
+			// Identity encoding retains empty expected digests; wire output omits them.
+			identities := []any{}
+			for _, raw := range wantSources {
+				identity := map[string]any{"expectedDigest": ""}
+				for key, value := range raw.(map[string]any) {
+					identity[key] = value
+				}
+				identities = append(identities, identity)
+			}
+			preimage := independentSnapshotJSON(t, map[string]any{"catalogId": catalog["catalogId"], "projections": wantProjections, "sources": identities}, stablejson.LayoutPretty)
 			value, err := Compose(root, catalog)
 			if err != nil || value["expectedDigestCoverage"] != mode {
 				t.Fatalf("Compose digest coverage %s: %v", mode, err)
 			}
-			identities := []any{}
-			for _, raw := range value["sources"].([]any) {
-				source := raw.(map[string]any)
-				identity := map[string]any{"currentDigest": source["currentDigest"], "expectedDigest": "", "kind": source["kind"], "path": source["path"], "sourceRef": source["sourceRef"]}
-				for _, key := range []string{"expectedDigest", "nodeId", "sourceRole"} {
-					if v, present := source[key]; present {
-						identity[key] = v
-					}
-				}
-				identities = append(identities, identity)
+			if !reflect.DeepEqual(value["sources"], wantSources) {
+				t.Fatal("Compose sources differ from the fixture identities")
 			}
-			preimage := independentSnapshotJSON(t, map[string]any{"catalogId": catalog["catalogId"], "projections": value["projections"], "sources": identities}, stablejson.LayoutPretty)
+			if !reflect.DeepEqual(value["projections"], wantProjections) {
+				t.Fatal("Compose projections differ from the independently admitted children")
+			}
 			if want := fmt.Sprintf("sha256:%x", sha256.Sum256(preimage)); value["snapshotId"] != want {
 				t.Fatal("Compose identity differs from the independent preimage")
 			}
