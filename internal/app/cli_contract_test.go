@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "8b375a5108f66319c977bebdca33491810b93430404912fa3e01137f201ba863"
+	cliContractPublicABISHA256               = "50cbaf542e9fd9f5aac7d7823571bcff5e5df6b4014eec17c7df3dc8bb859a07"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1406,11 +1406,47 @@ func mutateDescriptor(name string, mutate func(*commandDescriptor)) []commandDes
 func helpLineForCommand(help string, command string) string {
 	prefix := "  agentic-proofkit " + command
 	for _, line := range strings.Split(help, "\n") {
-		if strings.HasPrefix(line, prefix) {
+		if line == prefix || strings.HasPrefix(line, prefix+" ") || strings.HasPrefix(line, prefix+"\t") {
 			return line
 		}
 	}
 	return ""
+}
+
+func TestHelpLineRequiresExactCommandRoute(t *testing.T) {
+	for _, item := range []struct{ name, help, command, want string }{
+		{"exact", "  agentic-proofkit help", "help", "  agentic-proofkit help"},
+		{"flags", "  agentic-proofkit registry-consumer --input <path|->", "registry-consumer", "  agentic-proofkit registry-consumer --input <path|->"},
+		{"multi token", "  agentic-proofkit adopt materialize apply --input -", "adopt materialize apply", "  agentic-proofkit adopt materialize apply --input -"},
+		{"tab", "  agentic-proofkit help\t--help", "help", "  agentic-proofkit help\t--help"},
+		{"hyphenated neighbor", "  agentic-proofkit registry-consumer-proof-input-compose --input <path|->", "registry-consumer", ""},
+		{"character neighbor", "  agentic-proofkit helper", "help", ""},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			if got := helpLineForCommand(item.help, item.command); got != item.want {
+				t.Fatalf("help route = %q, want %q", got, item.want)
+			}
+		})
+	}
+}
+
+func TestCoverageComposerRequiredFieldSummaryMatchesRootDefinition(t *testing.T) {
+	contract := readCLIContract(t)
+	command := commandByContractID(contract.Commands, "requirement-coverage-input-compose")
+	input := command.InputContract.(map[string]any)
+	definitions := cliContractDefinitionMap(t, contract.ContractDefinitions)
+	definition := definitions[input["rootDefinitionRef"].(string)]
+	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	if len(variants) != 1 {
+		t.Fatalf("coverage composer root variants = %d, want one", len(variants))
+	}
+	want := []any{"composerInputId", "coverageUniverse", "localEnvironmentPolicy", "options", "ownerInvariantRegistry", "requirementSource", "schemaVersion", "selectedOwnerIds", "viewInputId"}
+	if !reflect.DeepEqual(variants[0].(map[string]any)["requiredFields"], want) {
+		t.Fatal("coverage composer root definition changed required fields")
+	}
+	if !reflect.DeepEqual(input["commonRequiredFields"], want) {
+		t.Fatalf("coverage composer required summary = %v, want %v", input["commonRequiredFields"], want)
+	}
 }
 
 func helpLineFlags(line string) []string {
@@ -1655,28 +1691,32 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 	}
 }
 
-func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
+func TestDescriptorFlagConstraintsRejectAtCLIBeforeInput(t *testing.T) {
 	cases := []struct {
 		command string
 		args    []string
+		stderr  string
 	}{
-		{command: "adoption-contract-envelope", args: []string{"--input", "-"}},
-		{command: "conformance-profile", args: []string{"--input", "-", "--list", "--verify"}},
-		{command: "pilot-admission", args: []string{"--input", "-", "--pilot", "all"}},
-		{command: "requirement-browser-server", args: []string{"--input", "-", "--open", "--view", "source"}},
-		{command: "requirement-browser-server", args: []string{"--input", "-", "--scope", "graph", "--view", "source"}},
-		{command: "requirement-browser-server", args: []string{"--empty-local-environment-policy", "--input", "-", "--local-environment-class", "local-go", "--view", "proof"}},
-		{command: "requirement-browser-server", args: []string{"--input", "-", "--open", "--serve", "--session-mode", "one-shot-question", "--view", "spec-tree"}},
-		{command: "requirement-browser-server", args: []string{"--input", "-", "--serve", "--session-timeout-seconds", "30", "--view", "workspace"}},
-		{command: "requirement-browser-server", args: []string{"--input", "-", "--scope", "unknown", "--view", "proof"}},
-		{command: "requirement-browser-server", args: []string{"--input", "-", "--serve", "--session-mode", "browse", "--session-mode", "browse", "--view", "workspace"}},
-		{command: "requirement-proof-resolver", args: []string{"--input", "-"}},
-		{command: "stack-preset", args: nil},
+		{command: "adoption-contract-envelope", args: []string{"--input", "-"}, stderr: "adoption-contract-envelope requires --mode\n"},
+		{command: "conformance-profile", args: []string{"--input", "-", "--list", "--verify"}, stderr: "conformance-profile requires exactly one of [--list --profile --verify]\n"},
+		{command: "pilot-admission", args: []string{"--input", "-", "--pilot", "all"}, stderr: "pilot-admission --pilot all requires --contract-envelope\n"},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--open", "--view", "source"}, stderr: "requirement-browser-server --open requires --serve\n"},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--scope", "graph", "--view", "source"}, stderr: "requirement-browser-server --scope requires --view proof\n"},
+		{command: "requirement-browser-server", args: []string{"--empty-local-environment-policy", "--input", "-", "--local-environment-class", "local-go", "--view", "proof"}, stderr: "requirement-browser-server permits at most one of [--empty-local-environment-policy --local-environment-class]\n"},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--open", "--serve", "--session-mode", "one-shot-question", "--view", "spec-tree"}, stderr: "requirement-browser-server --session-mode one-shot-question requires --view workspace\n"},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--serve", "--session-timeout-seconds", "30", "--view", "workspace"}, stderr: "requirement-browser-server --session-timeout-seconds requires --session-mode one-shot-question\n"},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--scope", "unknown", "--view", "proof"}, stderr: "--scope requires one of: graph, slice\n"},
+		{command: "requirement-browser-server", args: []string{"--input", "-", "--serve", "--session-mode", "browse", "--session-mode", "browse", "--view", "workspace"}, stderr: "--session-mode may be specified only once\n"},
+		{command: "requirement-proof-resolver", args: []string{"--input", "-"}, stderr: "requirement-proof-resolver requires exactly one of [--empty-local-environment-policy --local-environment-class]\n"},
+		{command: "stack-preset", args: nil, stderr: "stack-preset requires --preset\n"},
 	}
 	for _, item := range cases {
 		descriptor := commandDescriptorByName[item.command]
-		if err := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, item.args)); err == nil {
-			t.Fatalf("%s invalid argv was admitted by descriptor owner", item.command)
+		args := append(slices.Clone(descriptor.routeTokens), item.args...)
+		var stdout, stderr bytes.Buffer
+		status := Run(t.Context(), args, panicReader{}, &stdout, &stderr)
+		if status != 1 || stdout.Len() != 0 || stderr.String() != item.stderr {
+			t.Fatalf("%s did not reject its flags at the CLI boundary: exit=%d stdout=%q stderr=%q", item.command, status, stdout.String(), stderr.String())
 		}
 	}
 }

@@ -24,7 +24,7 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-context-compose/output:childDefinitionBindings,compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-coverage-input-compose/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-coverage-input-compose/input:childDefinitionBindings,commonRequiredFields,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-input-compose/output:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-view/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-view/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
@@ -49,10 +49,46 @@ var nativeBoundaryDirectionDeltas = []string{
 	"adopt-materialize-apply/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-plan/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-recover/output:compatibilitySummary,contractId,nativeSources",
+	"external-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources",
+	"external-consumer/output:nativeSource,nativeSources",
 	"integration-apply/output:compatibilitySummary,contractId,nativeSources",
 	"integration-plan/output:compatibilitySummary,contractId,nativeSources",
 	"integration-recover/output:compatibilitySummary,contractId,nativeSources",
+	"registry-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources",
+	"registry-consumer/output:nativeSource,nativeSources",
+	"registry-consumer-proof-input-compose/input:compatibilitySummary,contractId,nativeSource,nativeSources",
+	"registry-consumer-proof-input-compose/output:nativeSource,nativeSources",
 	"typescript-public-api-surfaces/input:compatibilitySummary,nonClaims,sourceGrammar",
+}
+
+func TestIntegrityInputSemanticVersionsPreserveWireShapes(t *testing.T) {
+	previous := readArchivedSourceCutoverPredecessor(t)
+	current := readCLIContractRaw(t)
+	before, _, err := indexPublicABIRecords(previous["commands"], "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, _, err := indexPublicABIRecords(current["commands"], "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"external-consumer", "registry-consumer", "registry-consumer-proof-input-compose"} {
+		t.Run(name, func(t *testing.T) {
+			prior := before[name]["inputContract"].(map[string]any)
+			next := after[name]["inputContract"].(map[string]any)
+			if prior["contractId"] != "proofkit."+name+".input.v1" || next["contractId"] != "proofkit."+name+".input.v2" {
+				t.Fatal("narrowed integrity domain must have a new input semantic identity")
+			}
+			for _, field := range []string{"schemaVersion", "rootDefinitionRef", "rootDefinitionDigest"} {
+				if !reflect.DeepEqual(prior[field], next[field]) {
+					t.Fatalf("unchanged wire field %s changed", field)
+				}
+			}
+			if before[name]["outputContract"].(map[string]any)["contractId"] != after[name]["outputContract"].(map[string]any)["contractId"] {
+				t.Fatal("output identity changed without a wire-shape change")
+			}
+		})
+	}
 }
 
 func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {

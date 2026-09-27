@@ -23,6 +23,46 @@ func TestRegistryConsumerAcceptsRegistryReleaseProof(t *testing.T) {
 	assertRuleMessage(t, record.RuleResults, "proofkit.registry-consumer.accepted", "registry consumer install proof accepted")
 }
 
+func TestRegistryConsumerIntegrityShapeAndAdmissionClassification(t *testing.T) {
+	valid := "sha512-" + strings.Repeat("A", 85) + "Q=="
+	for _, tt := range []struct {
+		name           string
+		value          any
+		state          string
+		admissionError bool
+	}{
+		{"valid", valid, "passed", false},
+		{"normalized", " \t" + valid + "\n", "passed", false},
+		{"32 bytes", "sha512-" + strings.Repeat("A", 43) + "=", "failed", false},
+		{"63 bytes", "sha512-" + strings.Repeat("A", 84), "failed", false},
+		{"65 bytes", "sha512-" + strings.Repeat("A", 87) + "=", "failed", false},
+		{"pad bits", "sha512-" + strings.Repeat("A", 85) + "B==", "failed", false},
+		{"empty", "", "", true},
+		{"wrong type", true, "", true},
+		{"secret", "api_key=synthetic-fixture-value", "", true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			input := validRegistryConsumerInput(t)
+			input["input"].(map[string]any)["tarballIntegrity"] = tt.value
+			record, exitCode, err := Build(input)
+			if tt.admissionError {
+				if err == nil || strings.Contains(err.Error(), "synthetic-fixture-value") {
+					t.Fatalf("unsafe or missing admission error: %v", err)
+				}
+				return
+			}
+			if err != nil || record.State != tt.state || (exitCode == 0) != (tt.state == "passed") {
+				t.Fatalf("Build() state=%s exit=%d error=%v, want %s", record.State, exitCode, err, tt.state)
+			}
+			if tt.state == "failed" {
+				if len(record.RuleResults) != 1 || record.RuleResults[0].Status != "failed" || record.RuleResults[0].Message != "registry consumer tarballIntegrity must be base64 sha512 npm integrity text" {
+					t.Fatalf("unexpected failure rules: %#v", record.RuleResults)
+				}
+			}
+		})
+	}
+}
+
 func TestPackageVersionRejectsNonSemVer(t *testing.T) {
 	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
 		if _, err := packageVersion(version, "package version"); err == nil {
@@ -237,7 +277,7 @@ func validRegistryConsumerInput(t *testing.T) map[string]any {
 			"releaseAuthorityInput": releaseInput,
 			"rollbackVersionPin":    "agentic-proofkit@1.2.2",
 			"tarballFileName":       "agentic-proofkit-1.2.3.tgz",
-			"tarballIntegrity":      "sha512-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+			"tarballIntegrity":      "sha512-" + strings.Repeat("A", 86) + "==",
 			"tarballShasum":         "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
 		"proof": map[string]any{

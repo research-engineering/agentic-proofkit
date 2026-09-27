@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathpattern"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
@@ -89,7 +90,7 @@ type removal struct {
 }
 
 type ruleInput struct {
-	AffectedPathGlobs     []string
+	AffectedPathGlobs     []pathpattern.Pattern
 	BoundaryRole          string
 	CredentialPolicy      string
 	DeterministicOutput   deterministicOutput
@@ -216,7 +217,7 @@ func ruleArray(raw any) ([]ruleInput, error) {
 	})
 	for index := 1; index < len(rules); index++ {
 		if rules[index-1].RuleID == rules[index].RuleID {
-			return nil, fmt.Errorf("custom-rule boundary rule ids must be sorted and unique")
+			return nil, fmt.Errorf("custom-rule boundary rule ids must be unique")
 		}
 	}
 	return rules, nil
@@ -457,7 +458,7 @@ func customRuleFailures(rule ruleInput) []string {
 		failures = append(failures, fmt.Sprintf("custom rule %s exceeds maxAffectedPathGlobs", rule.RuleID))
 	}
 	for _, glob := range rule.AffectedPathGlobs {
-		if glob == "*" || glob == "**" || glob == "**/*" {
+		if glob.MatchesAllRootNames() {
 			failures = append(failures, fmt.Sprintf("custom rule %s must not use repository-wide catch-all affected globs", rule.RuleID))
 			break
 		}
@@ -518,7 +519,7 @@ func sortedRuleIDs(raw any, context string) ([]string, error) {
 	return admit.PreserveSortedText(ruleIDs, context, false)
 }
 
-func sortedGlobs(raw any, context string) ([]string, error) {
+func sortedGlobs(raw any, context string) ([]pathpattern.Pattern, error) {
 	values, ok := raw.([]any)
 	if !ok {
 		return nil, fmt.Errorf("%s must be a sorted unique glob array", context)
@@ -529,12 +530,13 @@ func sortedGlobs(raw any, context string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, err := admit.SafeRepoRelativePath(glob, fmt.Sprintf("glob %s", glob)); err != nil {
-			return nil, err
-		}
 		globs = append(globs, glob)
 	}
-	return admit.PreserveSortedText(globs, context, false)
+	canonical, err := admit.PreserveSortedText(globs, context, false)
+	if err != nil {
+		return nil, err
+	}
+	return pathpattern.CompileAll(canonical, context)
 }
 
 func countSeverity(rules []ruleInput, severity string) int {

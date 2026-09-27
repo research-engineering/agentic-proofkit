@@ -252,7 +252,7 @@ func candidateStates(raw any) ([]string, error) {
 	})
 	for index := 1; index < len(states); index++ {
 		if states[index-1] == states[index] {
-			return nil, fmt.Errorf("obligation decision candidate states must be sorted and unique")
+			return nil, fmt.Errorf("obligation decision candidate states must be unique")
 		}
 	}
 	return states, nil

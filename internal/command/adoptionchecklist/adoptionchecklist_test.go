@@ -66,7 +66,7 @@ func TestBuildClassifiesRequiredChecklistItemsAndPreservesOptionalNonFailures(t 
 			mutate: func(input map[string]any) {
 				input["items"] = append(input["items"].([]any), firstChecklistItem(input))
 			},
-			wantError: "item ids must be sorted and unique",
+			wantError: "item ids must be unique",
 		},
 		{
 			name: "satisfied item without evidence",

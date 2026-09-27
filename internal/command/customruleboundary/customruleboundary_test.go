@@ -96,6 +96,31 @@ func TestBuildAdmitsBoundedCustomRuleAndRejectsUnsafeEffects(t *testing.T) {
 	}
 }
 
+func TestBuildRejectsEquivalentCatchAllPatterns(t *testing.T) {
+	for _, glob := range []string{"*", "**", "**/*", "**/**", "***", "****/*", "**/**/**"} {
+		t.Run(glob, func(t *testing.T) {
+			input := validCustomRuleBoundaryInput()
+			firstCustomRule(input)["affectedPathGlobs"] = []any{glob}
+			record, exitCode, err := Build(input)
+			if err != nil || exitCode != 1 || record.State != "failed" {
+				t.Fatalf("catch-all boundary: exit=%d error=%v state=%s", exitCode, err, record.State)
+			}
+			wire, err := json.Marshal(record)
+			if err != nil || !strings.Contains(string(wire), "repository-wide catch-all") {
+				t.Fatalf("wrong catch-all rejection: %s %v", wire, err)
+			}
+		})
+	}
+	for _, glob := range []string{"docs/**", "*.go", "*/*", "*/**", "**/*/*", "***/*"} {
+		input := validCustomRuleBoundaryInput()
+		firstCustomRule(input)["affectedPathGlobs"] = []any{glob}
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 0 || record.State != "passed" {
+			t.Fatalf("bounded pattern %q rejected: exit=%d error=%v state=%s", glob, exitCode, err, record.State)
+		}
+	}
+}
+
 func validCustomRuleBoundaryInput() map[string]any {
 	return map[string]any{
 		"schemaVersion": json.Number("1"),

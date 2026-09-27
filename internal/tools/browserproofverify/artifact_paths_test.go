@@ -102,3 +102,30 @@ func TestWriteRootedJSONRejectsSymlinkDestination(t *testing.T) {
 		t.Fatalf("external destination changed: content=%q err=%v", content, err)
 	}
 }
+
+func TestWriteRootedJSONPreservesExactPrettyEncodingAndMode(t *testing.T) {
+	root := t.TempDir()
+	if err := writeRootedJSON(root, proofPath, map[string]any{"state": "passed"}); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, filepath.FromSlash(proofPath))
+	content, err := os.ReadFile(path)
+	if err != nil || string(content) != "{\n  \"state\": \"passed\"\n}\n" {
+		t.Fatalf("unexpected pretty bytes: %q error=%v", content, err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0o644 {
+		t.Fatalf("mode=%v, want 0644", info.Mode())
+	}
+	value, err := readRootedJSON(root, proofPath, 1024)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, ok := value.(map[string]any)
+	if !ok || len(record) != 1 || record["state"] != "passed" {
+		t.Fatalf("unexpected decoded value: %#v", value)
+	}
+}

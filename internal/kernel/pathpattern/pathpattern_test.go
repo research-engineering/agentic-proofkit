@@ -2,6 +2,36 @@ package pathpattern
 
 import "testing"
 
+func TestMatchesAllRootNamesUsesTheCompiledWildcardLanguage(t *testing.T) {
+	for _, test := range []struct {
+		pattern string
+		want    bool
+	}{
+		{"*", true}, {"**", true}, {"**/*", true}, {"**/**", true},
+		{"***", true}, {"****/*", true}, {"**/**/**", true},
+		{"docs/**", false}, {"*.go", false}, {"*/*", false},
+		{"*/**", false}, {"**/*/*", false}, {"***/*", false}, {"x", false},
+	} {
+		pattern, err := Compile(test.pattern, "root-name predicate")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := pattern.MatchesAllRootNames(); got != test.want {
+			t.Fatalf("%q root-name universality=%v, want %v", test.pattern, got, test.want)
+		}
+		if test.want {
+			for _, name := range []string{"a", "arbitrary-name.txt", ".hidden", "\u00e9", "\U0001f4c4"} {
+				if !pattern.Match(name) {
+					t.Fatalf("universal pattern %q missed admitted root name %q", test.pattern, name)
+				}
+			}
+		}
+	}
+	if (Pattern{}).MatchesAllRootNames() {
+		t.Fatal("zero-value pattern is not admitted universal authority")
+	}
+}
+
 func TestMatchAdmitsRepoRelativeGlobSemantics(t *testing.T) {
 	cases := []struct {
 		pattern string

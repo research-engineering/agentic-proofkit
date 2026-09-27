@@ -34,10 +34,108 @@ func TestBuildAdmitsExternalConsumerProofAndRejectsWorkspaceLock(t *testing.T) {
 	}
 }
 
+func TestExternalConsumerIntegrityShapeAndEqualityAreIndependent(t *testing.T) {
+	zero := "sha512-" + strings.Repeat("A", 86) + "=="
+	one := "sha512-" + strings.Repeat("A", 85) + "Q=="
+	short := "sha512-" + strings.Repeat("A", 43) + "="
+	inputFailure := "npmIntegrity must be canonical base64 sha512 integrity text"
+	recordFailure := "npm pack metadata integrity must be canonical base64 sha512 integrity text"
+	equalityFailure := "npm pack metadata integrity must match npmIntegrity"
+	for _, tt := range []struct {
+		name            string
+		input, metadata any
+		failures        []string
+		admissionError  bool
+	}{
+		{"valid", one, one, nil, false},
+		{"normalized", " " + one + "\n", "\t" + one + " ", nil, false},
+		{"matched 32 bytes", short, short, []string{inputFailure, recordFailure}, false},
+		{"matched 63 bytes", "sha512-" + strings.Repeat("A", 84), "sha512-" + strings.Repeat("A", 84), []string{inputFailure, recordFailure}, false},
+		{"matched 65 bytes", "sha512-" + strings.Repeat("A", 87) + "=", "sha512-" + strings.Repeat("A", 87) + "=", []string{inputFailure, recordFailure}, false},
+		{"input only", short, zero, []string{inputFailure, equalityFailure}, false},
+		{"metadata only", zero, short, []string{recordFailure, equalityFailure}, false},
+		{"equality only", zero, one, []string{equalityFailure}, false},
+		{"empty input", "", zero, nil, true},
+		{"empty metadata", zero, "", nil, true},
+		{"input type", true, zero, nil, true},
+		{"metadata type", zero, true, nil, true},
+		{"secret input", "api_key=synthetic-fixture-value", zero, nil, true},
+		{"secret metadata", zero, "api_key=synthetic-fixture-value", nil, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			input := validExternalConsumerInput(t)
+			input["input"].(map[string]any)["npmIntegrity"] = tt.input
+			input["evidence"].(map[string]any)["packMetadata"].(map[string]any)["records"].([]any)[0].(map[string]any)["integrity"] = tt.metadata
+			record, code, err := Build(input)
+			if tt.admissionError {
+				if err == nil || strings.Contains(err.Error(), "synthetic-fixture-value") {
+					t.Fatalf("unsafe or missing admission error: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(tt.failures) == 0 {
+				if code != 0 || record.State != "passed" {
+					t.Fatalf("valid input rejected: exit=%d record=%#v", code, record)
+				}
+				return
+			}
+			if code != 1 || record.State != "failed" || len(record.RuleResults) != len(tt.failures) {
+				t.Fatalf("unexpected failure: exit=%d record=%#v", code, record)
+			}
+			for i, want := range tt.failures {
+				if record.RuleResults[i].Status != "failed" || record.RuleResults[i].Message != want {
+					t.Fatalf("rule %d=%#v, want failed %q", i, record.RuleResults[i], want)
+				}
+			}
+		})
+	}
+}
+
 func TestVersionTextRejectsNonSemVer(t *testing.T) {
 	for _, version := range []string{"01.2.3", "1.2.3-alpha..x"} {
 		if _, err := versionText(version, "package version"); err == nil {
 			t.Fatalf("versionText(%q) accepted invalid semantic version", version)
+		}
+	}
+}
+
+func TestBuildOrdersMultipleReleaseProofFailures(t *testing.T) {
+	input := validExternalConsumerInput(t)
+	proof := input["input"].(map[string]any)["releaseAuthorityInput"].(map[string]any)["artifactProof"].(map[string]any)
+	keys := []string{"binarySmokeProofId", "cliSmokeProofId", "deepImportRejectionProofId", "outsideConsumerInstallProofId", "packDryRunCommandId", "packageArtifactCommandId"}
+	for _, key := range keys {
+		proof[key] = "proof.unexpected." + key
+	}
+	var first string
+	for iteration := 0; iteration < 32; iteration++ {
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 1 || record.State != "failed" {
+			t.Fatalf("multiple proof mismatches: exit=%d error=%v", exitCode, err)
+		}
+		index := 0
+		for _, result := range record.RuleResults {
+			if !strings.HasPrefix(result.Message, "releaseAuthorityInput.artifactProof.") {
+				continue
+			}
+			if index >= len(keys) || !strings.HasPrefix(result.Message, "releaseAuthorityInput.artifactProof."+keys[index]+" must be ") {
+				t.Fatalf("proof failure #%d is not in canonical key order: %s", index, result.Message)
+			}
+			index++
+		}
+		if index != len(keys) {
+			t.Fatalf("proof failures=%d, want %d", index, len(keys))
+		}
+		wire, err := json.Marshal(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if iteration == 0 {
+			first = string(wire)
+		} else if string(wire) != first {
+			t.Fatal("identical input changed the complete report")
 		}
 	}
 }
@@ -97,6 +195,83 @@ func TestBuildUsesAdmittedReleaseAuthorityProjection(t *testing.T) {
 	if exitCode != 0 || record.State != "passed" {
 		encoded, _ := json.Marshal(record)
 		t.Fatalf("Build() exit=%d record=%s, want passed", exitCode, string(encoded))
+	}
+}
+
+func TestAdmittedWitnessPlanDoesNotRetainCallerOrProjectionAliases(t *testing.T) {
+	for _, operand := range []string{"argv", "vocabulary", "command", "projection"} {
+		t.Run(operand, func(t *testing.T) {
+			raw := validExternalConsumerInput(t)
+			admitted, err := admitReportInput(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cliHash := expectedCLIWitnessPlanOutputSHA256(admitted.Input)
+			binaryHash := expectedBinarySmokeOutputSHA256(admitted.Input)
+			if cliHash == "" || binaryHash == "" {
+				t.Fatal("valid admitted fixture lost plan identity")
+			}
+			plan := raw["input"].(map[string]any)["witnessPlan"].(map[string]any)
+			switch operand {
+			case "argv":
+				plan["commands"].([]any)[0].(map[string]any)["argv"].([]any)[1] = "--help"
+			case "vocabulary":
+				plan["vocabulary"].(map[string]any)["maxTimeoutMs"] = json.Number("0")
+			case "command":
+				plan["commands"].([]any)[0] = nil
+			case "projection":
+				projection, err := expectedWitnessPlan(admitted.Input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				projection["commands"].([]any)[0].(map[string]any)["argv"].([]any)[1] = "--help"
+			}
+			if expectedCLIWitnessPlanOutputSHA256(admitted.Input) != cliHash || expectedBinarySmokeOutputSHA256(admitted.Input) != binaryHash {
+				t.Fatal("mutable caller or projection changed an admitted witness identity")
+			}
+		})
+	}
+}
+
+func TestBuildPreservesWitnessPlanAdmissionAndReportFailureBoundaries(t *testing.T) {
+	for _, mode := range []string{"outer_shape", "empty_commands", "inner_vocabulary", "inner_command", "duplicate_command"} {
+		t.Run(mode, func(t *testing.T) {
+			raw := validExternalConsumerInput(t)
+			input := raw["input"].(map[string]any)
+			plan := input["witnessPlan"].(map[string]any)
+			switch mode {
+			case "outer_shape":
+				input["witnessPlan"] = nil
+			case "empty_commands":
+				plan["commands"] = []any{}
+			case "inner_vocabulary":
+				plan["vocabulary"].(map[string]any)["maxTimeoutMs"] = json.Number("0")
+			case "inner_command":
+				plan["commands"].([]any)[0] = nil
+			case "duplicate_command":
+				plan["commands"] = append(plan["commands"].([]any), plan["commands"].([]any)[0])
+			}
+			record, exitCode, err := Build(raw)
+			if exitCode != 1 {
+				t.Fatalf("invalid witness plan returned exit=%d", exitCode)
+			}
+			if mode == "outer_shape" || mode == "empty_commands" {
+				if err == nil || !strings.Contains(err.Error(), "witnessPlan") {
+					t.Fatalf("outer admission error lost: %v", err)
+				}
+				return
+			}
+			if err != nil || record.State != "failed" {
+				t.Fatalf("inner failure lost failed-report boundary: %v %#v", err, record)
+			}
+			found := false
+			for _, result := range record.RuleResults {
+				found = found || strings.HasPrefix(result.Message, "witnessPlan: ")
+			}
+			if !found {
+				t.Fatal("inner witness failure missing from report")
+			}
+		})
 	}
 }
 
@@ -190,7 +365,7 @@ func validExternalConsumerInput(t *testing.T) map[string]any {
 	tarballSHA := strings.Repeat("b", 64)
 	packSHA := strings.Repeat("c", 64)
 	npmSHASum := strings.Repeat("d", 40)
-	npmIntegrity := "sha512-testintegrity"
+	npmIntegrity := "sha512-" + strings.Repeat("A", 86) + "=="
 	root := map[string]any{
 		"schemaVersion": json.Number("1"),
 		"input": map[string]any{

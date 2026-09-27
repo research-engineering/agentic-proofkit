@@ -219,7 +219,7 @@ func branchRefs(raw any) ([]refInput, error) {
 	})
 	for index := 1; index < len(refs); index++ {
 		if refs[index-1].RefID == refs[index].RefID {
-			return nil, fmt.Errorf("branch authority ref ids must be sorted and unique")
+			return nil, fmt.Errorf("branch authority ref ids must be unique")
 		}
 	}
 	return refs, nil

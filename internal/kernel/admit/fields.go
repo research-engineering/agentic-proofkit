@@ -1,6 +1,7 @@
 package admit
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"path"
@@ -165,6 +166,16 @@ func LowercaseSHA256(raw any, context string) (string, error) {
 		return "", fmt.Errorf("%s must be lowercase sha256", context)
 	}
 	return value, nil
+}
+
+// IsSHA512Integrity checks encoding shape, not correspondence to artifact bytes.
+func IsSHA512Integrity(value string) bool {
+	encoded, ok := strings.CutPrefix(value, "sha512-")
+	if !ok || len(encoded) != base64.StdEncoding.EncodedLen(64) {
+		return false
+	}
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	return err == nil && len(decoded) == 64 && base64.StdEncoding.EncodeToString(decoded) == encoded
 }
 
 func SHA256Ref(raw any, context string) (string, error) {

@@ -173,7 +173,7 @@ func criteriaArray(raw any) ([]criterionInput, error) {
 	})
 	for index := 1; index < len(items); index++ {
 		if items[index-1].CriterionID == items[index].CriterionID {
-			return nil, fmt.Errorf("completion criterion ids must be sorted and unique")
+			return nil, fmt.Errorf("completion criterion ids must be unique")
 		}
 	}
 	return items, nil
