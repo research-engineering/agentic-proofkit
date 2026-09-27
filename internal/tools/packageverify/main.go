@@ -31,7 +31,6 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/unicodepolicy"
-	"github.com/research-engineering/agentic-proofkit/internal/npmpackage"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
@@ -355,10 +354,24 @@ func verifyPackRecordContent(record packRecord, content []byte) error {
 }
 
 func requiredRootEntries() []string {
-	required := npmpackage.RequiredPaths()
-	for index, path := range required {
-		required[index] = "package/" + path
+	required := []string{
+		"package/ADOPTION.md",
+		"package/LICENSE",
+		"package/NON_CLAIMS.md",
+		"package/README.md",
+		"package/SECURITY.md",
+		"package/dist/agentic-proofkit",
+		workspaceImageEntry,
+		"package/docs/proofkit-contract-map.md",
+		"package/docs/release-process.md",
+		"package/package.json",
+		"package/proofkit/cli-contract.v2.json",
+		"package/proofkit/command-families.v1.json",
+		"package/proofkit/receipt-producer-policy.json",
+		"package/proofkit/requirement-bindings.json",
+		"package/proofkit/witness-plan.json",
 	}
+	required = append(required, releaseplatform.PackageTarEntries()...)
 	return required
 }
 
@@ -546,13 +559,60 @@ func readTarFileFromGzip(gzipReader io.Reader, label string, target string) ([]b
 }
 
 func forbiddenRootEntry(path string) bool {
-	relative, ok := strings.CutPrefix(path, "package/")
-	return ok && npmpackage.IsForbiddenPath(relative)
+	forbiddenSuffixes := []string{".d.ts", ".ts", ".map"}
+	for _, suffix := range forbiddenSuffixes {
+		if strings.HasSuffix(path, suffix) {
+			return true
+		}
+	}
+	forbiddenExact := map[string]struct{}{
+		"package/bun.lock":                        {},
+		"package/dist/cli.js":                     {},
+		"package/dist/index.js":                   {},
+		"package/proofkit/sdk-cli-parity.v1.json": {},
+		"package/tsconfig.json":                   {},
+	}
+	_, ok := forbiddenExact[path]
+	return ok
 }
 
 func allowedRootEntry(path string) bool {
-	relative, ok := strings.CutPrefix(path, "package/")
-	return ok && npmpackage.IsAllowedPath(relative)
+	allowedExact := map[string]struct{}{
+		workspaceImageEntry:                                                          {},
+		"package/ADOPTION.md":                                                        {},
+		"package/LICENSE":                                                            {},
+		"package/NON_CLAIMS.md":                                                      {},
+		"package/README.md":                                                          {},
+		"package/SECURITY.md":                                                        {},
+		"package/dist/agentic-proofkit":                                              {},
+		"package/docs/proofkit-contract-map.md":                                      {},
+		"package/docs/release-process.md":                                            {},
+		"package/package.json":                                                       {},
+		"package/proofkit/cli-contract.v2.json":                                      {},
+		"package/proofkit/command-families.v1.json":                                  {},
+		"package/proofkit/receipt-producer-policy.json":                              {},
+		"package/proofkit/requirement-bindings.json":                                 {},
+		"package/proofkit/witness-plan.json":                                         {},
+		"package/docs/specs/proofkit-agent-workflow/overview.md":                     {},
+		"package/docs/specs/proofkit-agent-workflow/requirements.v2.json":            {},
+		"package/docs/specs/proofkit-consumer-infra-retirement/overview.md":          {},
+		"package/docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json": {},
+		"package/docs/specs/proofkit-package-boundary/overview.md":                   {},
+		"package/docs/specs/proofkit-package-boundary/requirements.v2.json":          {},
+		"package/docs/specs/proofkit-receipt-authority/overview.md":                  {},
+		"package/docs/specs/proofkit-receipt-authority/requirements.v2.json":         {},
+		"package/docs/specs/proofkit-spec-proof-core/overview.md":                    {},
+		"package/docs/specs/proofkit-spec-proof-core/requirements.v2.json":           {},
+		"package/docs/specs/proofkit-supply-chain-quality/overview.md":               {},
+		"package/docs/specs/proofkit-supply-chain-quality/requirements.v2.json":      {},
+	}
+	if _, ok := allowedExact[path]; ok {
+		return true
+	}
+	if embeddedPlatformBinaryEntry(path) {
+		return true
+	}
+	return false
 }
 
 func embeddedPlatformBinaryEntry(path string) bool {

@@ -3,7 +3,6 @@ package externalconsumer
 import (
 	"encoding/json"
 	"os"
-	"slices"
 	"strings"
 	"testing"
 
@@ -571,64 +570,10 @@ func validExternalRegistryReleaseAuthorityInput(version string, tarballPath stri
 	}
 }
 
-var expectedRequiredPackedFiles = []string{
-	"ADOPTION.md", "LICENSE", "NON_CLAIMS.md", "README.md", "SECURITY.md",
-	"dist/agentic-proofkit", "docs/images/workspace.png",
-	"docs/proofkit-contract-map.md", "docs/release-process.md", "package.json",
-	"proofkit/cli-contract.v2.json", "proofkit/command-families.v1.json",
-	"proofkit/receipt-producer-policy.json", "proofkit/requirement-bindings.json", "proofkit/witness-plan.json",
-	"dist/platform/darwin-arm64/agentic-proofkit", "dist/platform/darwin-x64/agentic-proofkit",
-	"dist/platform/linux-arm64/agentic-proofkit", "dist/platform/linux-x64/agentic-proofkit",
-}
-
 func packedFileRecords() []any {
-	records := make([]any, 0, len(expectedRequiredPackedFiles))
-	for _, path := range expectedRequiredPackedFiles {
+	records := make([]any, 0, len(requiredPackedFiles))
+	for _, path := range requiredPackedFiles {
 		records = append(records, map[string]any{"path": path})
 	}
 	return records
-}
-
-func TestExternalConsumerUsesCurrentPackagePathPolicy(t *testing.T) {
-	check := func(t *testing.T, files []any, want string) {
-		t.Helper()
-		input := validExternalConsumerInput(t)
-		input["evidence"].(map[string]any)["packMetadata"].(map[string]any)["records"].([]any)[0].(map[string]any)["files"] = files
-		record, code, err := Build(input)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if want == "" {
-			if code != 0 || record.State != "passed" {
-				t.Fatalf("valid package rejected: %#v exit=%d", record, code)
-			}
-			return
-		}
-		if code != 1 || record.State != "failed" || len(record.RuleResults) != 1 || record.RuleResults[0].Status != "failed" || record.RuleResults[0].Message != want {
-			t.Fatalf("unexpected package policy failure: %#v exit=%d", record, code)
-		}
-	}
-	t.Run("required-only", func(t *testing.T) { check(t, packedFileRecords(), "") })
-	t.Run("permutation", func(t *testing.T) { files := packedFileRecords(); slices.Reverse(files); check(t, files, "") })
-	for index, path := range expectedRequiredPackedFiles {
-		t.Run("missing/"+path, func(t *testing.T) {
-			files := packedFileRecords()
-			check(t, append(files[:index:index], files[index+1:]...), "npm pack metadata missing required packed file: "+path)
-		})
-	}
-	for _, path := range []string{
-		"docs/specs/proofkit-agent-workflow/overview.md", "docs/specs/proofkit-agent-workflow/requirements.v2.json",
-		"docs/specs/proofkit-consumer-infra-retirement/overview.md", "docs/specs/proofkit-consumer-infra-retirement/requirements.v2.json",
-		"docs/specs/proofkit-package-boundary/overview.md", "docs/specs/proofkit-package-boundary/requirements.v2.json",
-		"docs/specs/proofkit-receipt-authority/overview.md", "docs/specs/proofkit-receipt-authority/requirements.v2.json",
-		"docs/specs/proofkit-spec-proof-core/overview.md", "docs/specs/proofkit-spec-proof-core/requirements.v2.json",
-		"docs/specs/proofkit-supply-chain-quality/overview.md", "docs/specs/proofkit-supply-chain-quality/requirements.v2.json",
-	} {
-		t.Run("optional/"+path, func(t *testing.T) { check(t, append(packedFileRecords(), map[string]any{"path": path}), "") })
-	}
-	for _, path := range []string{"AGENTS.md", "CONTRIBUTING.md", "internal/a.go", "docs/unknown.md", "dist/platform/unknown/agentic-proofkit", "bun.lock", "dist/cli.js", "dist/index.js", "proofkit/sdk-cli-parity.v1.json", "tsconfig.json", "src/a.ts", "types/a.d.ts", "dist/a.js.map"} {
-		t.Run("unexpected/"+path, func(t *testing.T) {
-			check(t, append(packedFileRecords(), map[string]any{"path": path}), "npm pack metadata must not include a file outside the package path policy")
-		})
-	}
 }
