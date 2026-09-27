@@ -9,6 +9,8 @@ export const staticViewCSP = `default-src 'none'; script-src 'sha256-${staticScr
 const cspBySecurityProfile = Object.freeze({
   workspace: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
   "static-view": staticViewCSP,
+  // Exact positive-control script; this is not a caller-supplied policy override.
+  "static-script-probe": staticViewCSP.replace("; style-src", " 'sha256-Uc+LwWSoOyaCayQvfTj/1ixgvISeuaqAPyroBajSFT8='; style-src"),
 });
 
 export function admittedWorkspaceURL(baseURL) {

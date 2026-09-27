@@ -33,9 +33,7 @@ test("static CSP admits the exact embedded script and blocks a different inline 
       response: actual, body, headers: {...actual.headers(), "content-security-policy": policy},
     }));
     try {
-      const response = await page.goto(staticViewURL, {waitUntil: "load"});
-      expect(response.headers()["content-security-policy"]).toBe(policy);
-      expect(await response.text()).toBe(body);
+      await openWorkspace(page, staticViewURL, heading, allowOther ? "static-script-probe" : "static-view");
       await expect(page.locator("script")).toHaveCount(2);
       await expect(page.getByRole("heading", {name: heading, exact: true})).toBeVisible();
       if (allowOther) await expect(page.locator("body")).toHaveAttribute("data-unapproved-script", "executed");
