@@ -222,7 +222,7 @@ func Markdown(profile ProfileReport) string {
 		fmt.Sprintf("- Witness mappings: %d", profile.WitnessMappingCount),
 		fmt.Sprintf("- Commands: %d", profile.CommandCount),
 		fmt.Sprintf("- Preconditioned bindings: %d", profile.PreconditionedBindingCount),
-		"- Environment classes: " + strings.Join(profile.EnvironmentClasses, ", "),
+		"- Environment classes: " + markdownfmt.Text(strings.Join(profile.EnvironmentClasses, ", ")),
 		"",
 		"## Verify Commands",
 		"",

@@ -460,3 +460,29 @@ func TestMarkdownEscapesCommandCodeSpans(t *testing.T) {
 		t.Fatalf("Markdown() output missing widened code span:\n%s", output)
 	}
 }
+
+func TestMarkdownEscapesAdmittedEnvironmentClasses(t *testing.T) {
+	input := validConformanceProfileInput()
+	const environment = "<em>local</em> [link](https://example.invalid)"
+	policy := input["policy"].(map[string]any)
+	policy["knownEnvironmentClasses"] = []any{environment}
+	policy["localEnvironmentClasses"] = []any{environment}
+	input["manifest"].(map[string]any)["profiles"].([]any)[0].(map[string]any)["allowedEnvironmentClasses"] = []any{environment}
+	proof := input["proofContract"].(map[string]any)
+	proof["surfaces"].([]any)[0].(map[string]any)["requiredEnvironmentClasses"] = []any{environment}
+	binding := proof["bindings"].([]any)[0].(map[string]any)
+	binding["requiredEnvironmentClasses"] = []any{environment}
+	for _, witness := range binding["witnessRefs"].([]any) {
+		witness.(map[string]any)["environmentClasses"] = []any{environment}
+	}
+	result, err := BuildProfile(input, "local")
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("valid caller environment rejected: %v %#v", err, result.ProfileReport.Failures)
+	}
+	assertStringSlice(t, result.ProfileReport.EnvironmentClasses, []string{environment})
+	output := Markdown(result.ProfileReport)
+	want := "- Environment classes: &lt;em&gt;local&lt;/em&gt; \\[link\\]\\(https://example\\.invalid\\)\n"
+	if !strings.Contains(output, want) || strings.Contains(output, environment) {
+		t.Fatalf("caller environment became Markdown syntax:\n%s", output)
+	}
+}

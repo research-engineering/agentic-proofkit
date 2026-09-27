@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"errors"
 	"fmt"
 	"io"
@@ -52,6 +53,7 @@ type npmBranchCase struct {
 	viewExit, existingExit int
 	publish, success       bool
 	wantLimit              string
+	readyObservationDelay  time.Duration
 }
 
 func testNPMAbsenceBranchExecution(t *testing.T) {
@@ -93,6 +95,21 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 		{name: "existing byte mismatch", payload: `[]`, existingExit: 1, stderr: "fixture existing byte mismatch\n"},
 	}
 	for _, job := range []string{"candidate", "publish"} {
+		t.Run(job+"/omitted setup changes shell policy", func(t *testing.T) {
+			marker := "      - name: Build publish dry-run evidence\n        run: |\n          set -euo pipefail\n          mkdir -p artifacts/publish\n"
+			if job == "publish" {
+				marker = "      - name: Publish to npm\n        run: |\n          set -euo pipefail\n          mkdir -p artifacts/registry\n"
+			}
+			if bytes.Count(raw, []byte(marker)) != 1 {
+				t.Fatal("omitted setup mutation target drift")
+			}
+			mutated := bytes.Replace(raw, []byte(marker), []byte(marker+"          set +e\n"), 1)
+			if _, _, err := npmAbsenceBranchFragment(mutated, job); err == nil || err.Error() != "branch witness omitted setup changed; requalify shell context" {
+				t.Fatalf("changed omitted context admitted: %v", err)
+			}
+		})
+	}
+	for _, job := range []string{"candidate", "publish"} {
 		header, body, err := npmAbsenceBranchFragment(raw, job)
 		if err != nil {
 			t.Fatal(err)
@@ -103,15 +120,20 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 				item.wantLimit = "stdio"
 				executeNPMAbsenceBranch(t, header+"printf '%17000s' x\n", body, item)
 			})
-			for _, startup := range []struct{ name, prefix string }{
-				{"immediate", ""},
-				{"delayed", "while (( SECONDS < 3 )); do :; done\n"},
+			for _, startup := range []struct {
+				name, prefix     string
+				observationDelay time.Duration
+			}{
+				{name: "immediate"},
+				{name: "delayed child startup", prefix: "while (( SECONDS < 3 )); do :; done\n"},
+				{name: "delayed readiness observation", observationDelay: 1500 * time.Millisecond},
 			} {
-				t.Run("carrier/blocked entrypoint timeout/"+startup.name, func(t *testing.T) {
+				t.Run("carrier/blocked entrypoint cancellation/"+startup.name, func(t *testing.T) {
 					item := cases[0]
 					item.wantLimit = "context"
+					item.readyObservationDelay = startup.observationDelay
 					result := executeNPMAbsenceBranch(t, header+startup.prefix, body, item)
-					if result.trace != "view\nabsent\nreaped\n" {
+					if result.trace != "view\nabsent\ncancelled\nreaped\n" {
 						t.Fatal("cancelled carrier must wait for the classifier deadline before shell exit")
 					}
 				})
@@ -197,6 +219,15 @@ func npmAbsenceBranchFragment(raw []byte, job string) (string, string, error) {
 	if !strings.HasPrefix(run, "set -euo pipefail\n") || h <= 0 || h >= strings.Index(run, loopStart) || strings.Index(run, loopStart) >= start || start >= end || end >= strings.Index(run, loopEnd) {
 		return "", "", fmt.Errorf("branch witness header or boundary order drift")
 	}
+	// The nonexecuted setup may affect shell options and loop context. Changes
+	// require requalification instead of silently inheriting the branch proof.
+	expectedSetup := map[string]string{
+		"candidate": "a8d1ee67b758183ddc848fda88e8d11f81d9dd109f4535ea024cbdd1224e9941",
+		"publish":   "ab41fc4621d336f0ed75d271bae7c2aeecaa040944de2d715d3b551c18fcee67",
+	}
+	if fmt.Sprintf("%x", sha256.Sum256([]byte(run[h:start]))) != expectedSetup[job] {
+		return "", "", fmt.Errorf("branch witness omitted setup changed; requalify shell context")
+	}
 	body := run[start:end]
 	if strings.Count(body, path+".json") != 3 || strings.Count(body, path+".err") != 1 {
 		return "", "", fmt.Errorf("branch witness temporary file wiring drift")
@@ -277,7 +308,7 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
-trap 'exit 124' TERM INT
+trap 'printf "cancelled\n" >> trace; exit 124' TERM INT
 npm() {
   case "$1" in
     view) printf 'view\n' >> trace; printf '%s' "$BRANCH_PAYLOAD"; printf 'E404 Not found diagnostic-marker\n' >&2; return "$BRANCH_VIEW_EXIT" ;;
@@ -350,13 +381,16 @@ report=report.json
 			if err == nil && marker[0] != 1 {
 				err = fmt.Errorf("invalid classifier readiness marker")
 			}
+			if item.readyObservationDelay != 0 {
+				time.Sleep(item.readyObservationDelay)
+			}
 			ready <- err
 		}()
 		select {
 		case readinessError = <-ready:
 			if readinessError == nil {
 				if deadline.Stop() {
-					deadline.Reset(childTimeout - time.Second)
+					cancel()
 				} else {
 					readinessError = fmt.Errorf("classifier startup watchdog elapsed")
 				}
