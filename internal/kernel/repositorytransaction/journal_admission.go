@@ -1,12 +1,12 @@
 package repositorytransaction
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
@@ -34,9 +34,11 @@ func admitJournal(raw any) (Plan, error) {
 	if err := admit.KnownKeys(record, []string{"createdDirectories", "desiredStateId", "journalKind", "operations", "rootId", "schemaVersion", "transactionId"}, "repository transaction journal"); err != nil {
 		return Plan{}, err
 	}
-	if (!admit.JSONNumberEquals(record["schemaVersion"], 1) && !admit.JSONNumberEquals(record["schemaVersion"], 2)) || record["journalKind"] != "proofkit.repository-write-journal" {
+	version, ok := record["schemaVersion"].(json.Number)
+	if !ok || (version != "1" && version != "2" && version != "3") || record["journalKind"] != "proofkit.repository-write-journal" {
 		return Plan{}, fmt.Errorf("repository transaction journal identity is invalid")
 	}
+	dialect := (Plan{version: version}).pathDialect()
 	rootID, err := admit.SHA256Ref(record["rootId"], "repository transaction rootId")
 	if err != nil {
 		return Plan{}, err
@@ -54,7 +56,7 @@ func admitJournal(raw any) (Plan, error) {
 		return Plan{}, err
 	}
 	for _, directory := range directories {
-		if pathsOverlap(directory, ControlRoot) {
+		if pathsOverlapIn(directory, ControlRoot, dialect) {
 			return Plan{}, fmt.Errorf("repository transaction created directory overlaps its control directory")
 		}
 	}
@@ -75,8 +77,12 @@ func admitJournal(raw any) (Plan, error) {
 		previous = operation.Path
 		operations = append(operations, operation)
 	}
-	plan := Plan{CreatedDirectories: directories, DesiredStateID: desiredStateID, Operations: operations, RootID: rootID, TransactionID: transactionID}
-	if record["schemaVersion"] != plan.schemaVersion() {
+	plan := Plan{CreatedDirectories: directories, DesiredStateID: desiredStateID, Operations: operations, RootID: rootID, TransactionID: transactionID, version: version}
+	hasAbsent := false
+	for _, operation := range operations {
+		hasAbsent = hasAbsent || !operation.After.Exists
+	}
+	if version == "1" && hasAbsent || version == "2" && !hasAbsent {
 		return Plan{}, fmt.Errorf("repository transaction journal schema does not match its target semantics")
 	}
 	if err := validatePlanShape(plan); err != nil {
@@ -107,9 +113,6 @@ func admitOperation(raw any, index int) (Operation, error) {
 	targetPath, err := admit.SafeRepoRelativePath(recordText(record["path"]), fmt.Sprintf("repository transaction operation %d path", index))
 	if err != nil {
 		return Operation{}, err
-	}
-	if pathsOverlap(targetPath, ControlRoot) {
-		return Operation{}, fmt.Errorf("repository transaction operation overlaps its control directory")
 	}
 	action, ok := record["action"].(string)
 	if !ok || (action != ActionCreate && action != ActionReplace && action != ActionDelete && action != ActionUnchanged) {
@@ -166,6 +169,10 @@ func admitSnapshot(raw any, context string) (Snapshot, error) {
 }
 
 func validatePlanShape(plan Plan) error {
+	dialect := plan.pathDialect()
+	if _, err := dialect.Key(ControlRoot); err != nil {
+		return err
+	}
 	if len(plan.Operations) == 0 || len(plan.Operations) > MaximumOperations {
 		return fmt.Errorf("repository transaction operation count is invalid")
 	}
@@ -173,11 +180,11 @@ func validatePlanShape(plan Plan) error {
 	paths := make([]string, 0, len(plan.Operations))
 	for _, operation := range plan.Operations {
 		for _, existingPath := range paths {
-			if pathsOverlap(operation.Path, existingPath) {
+			if pathsOverlapIn(operation.Path, existingPath, dialect) {
 				return fmt.Errorf("repository transaction operation paths must be unique and non-overlapping")
 			}
 		}
-		if pathsOverlap(operation.Path, ControlRoot) {
+		if pathsOverlapIn(operation.Path, ControlRoot, dialect) {
 			return fmt.Errorf("repository transaction operation overlaps its control directory")
 		}
 		paths = append(paths, operation.Path)
@@ -187,11 +194,11 @@ func validatePlanShape(plan Plan) error {
 		}
 	}
 	portablePaths := append(append([]string(nil), paths...), plan.CreatedDirectories...)
-	if err := validatePortablePathSet(portablePaths); err != nil {
+	if err := validatePortablePathSet(portablePaths, dialect); err != nil {
 		return fmt.Errorf("repository transaction paths have conflicting portable identities: %w", err)
 	}
 	for _, directory := range plan.CreatedDirectories {
-		if pathsOverlap(directory, ControlRoot) {
+		if pathsOverlapIn(directory, ControlRoot, dialect) {
 			return fmt.Errorf("repository transaction created directory overlaps its control directory")
 		}
 		ownsTarget := false
@@ -214,7 +221,7 @@ func validatePlanShape(plan Plan) error {
 		if parent == "." {
 			continue
 		}
-		prefixes, err := pathidentity.Prefixes(parent)
+		prefixes, err := dialect.Prefixes(parent)
 		if err != nil {
 			return fmt.Errorf("repository transaction operation parent is invalid")
 		}

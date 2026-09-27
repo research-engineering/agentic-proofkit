@@ -12,7 +12,7 @@ import (
 func (runtime engine) applyForward(ctx context.Context, root *os.Root, plan Plan, prefix int) error {
 	for _, operation := range plan.Operations {
 		if operation.Action == ActionDelete {
-			if err := verifyDeletionFilesystem(root, operation.Path); err != nil {
+			if err := plan.verifyDeletionFilesystem(root, operation.Path); err != nil {
 				return err
 			}
 		}
@@ -41,10 +41,10 @@ func (runtime engine) applyForward(ctx context.Context, root *os.Root, plan Plan
 			return err
 		}
 		if operation.Action == ActionDelete {
-			if err := verifyDeletionFilesystem(root, operation.Path); err != nil {
+			if err := plan.verifyDeletionFilesystem(root, operation.Path); err != nil {
 				return err
 			}
-			if err := removeExactTarget(root, operation.Path, operation.Before); err != nil {
+			if err := plan.removeExactTarget(root, operation.Path, operation.Before); err != nil {
 				return err
 			}
 		} else if err := publishContent(root, plan, operationIndex, operation.Before, operation.afterContent, operation.After.Mode); err != nil {
@@ -98,7 +98,7 @@ func (runtime engine) rollbackPrefix(ctx context.Context, root *os.Root, plan Pl
 		operationIndex := changed[position]
 		operation := plan.Operations[operationIndex]
 		if operation.Action == ActionCreate {
-			if err := removeCreatedTarget(root, operation); err != nil {
+			if err := plan.removeExactTarget(root, operation.Path, operation.After); err != nil {
 				return err
 			}
 		} else if err := publishContent(root, plan, operationIndex, operation.After, operation.beforeContent, operation.Before.Mode); err != nil {

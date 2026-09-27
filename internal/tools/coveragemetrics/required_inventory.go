@@ -14,6 +14,51 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-canonical-contract-identity"}: {
+			witnessPath: "internal/app/canonical_path_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCanonicalPathContractIdentitySeparatesWireVersion"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-canonical-caseless"}: {
+			witnessPath: "internal/kernel/repositorytransaction/canonical_recovery_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCanonicalDialectFreshMergeSplitAndRecovery", "TestCanonicalDialectFreshReplayRejectsLegacyReceipt", "TestCanonicalDialectPreservesFrozenV1V2Bytes", "TestCanonicalDialectVersionForgeriesAndNativeAuthority", "TestCanonicalDialectWholeLegacyASCIILifecycle", "TestCanonicalDialectWholeLegacyRecovery"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-required-unicode-positive"}: {
+			witnessPath: "internal/kernel/repositorytransaction/canonical_recovery_test.go",
+			commandIDs:  []string{"proofkit.transaction-legacy-positive"}, environmentClasses: []string{"local-go-legacy-positive"},
+			selectors: []string{"TestCanonicalDialectWholeLegacyRecovery"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-native-fixture-admission"}: {
+			witnessPath: "internal/kernel/repositorytransaction/canonical_fixture_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCanonicalFixtureExclusivePreparationAndVector", "TestCanonicalFixtureModeAndEvidencePredicates", "TestCanonicalFixtureRejectsASCIISubstitution", "TestCanonicalFixtureVectorRejectsIndependentMutants"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-unmanaged-split-refusal"}: {
+			witnessPath: "internal/kernel/repositorytransaction/canonical_refusal_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCanonicalDialectUnmanagedSplitRoutesRejectBeforeEffects"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-transaction-positive-ci-closure"}: {
+			witnessPath: "scripts/workflow_legacy_unicode_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCILegacyUnicodeRequiresPositiveMode", "TestLegacyUnicodeWitnessPlanClosure"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-path-unicode17"}: {
+			witnessPath: "internal/kernel/pathidentity/canonical_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCanonicalCaseFoldCherokeeIsStableAndLegacyIsFrozen", "TestCanonicalCaselessExactKeysAndDialectClasses", "TestCanonicalCaselessPathBoundsAndPrefixes", "TestCanonicalCaselessUnicode17Corpus", "TestCanonicalFoldPinnedUnicode17Tables"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-canonical-observation"}: {
+			witnessPath: "internal/kernel/repositorytransaction/canonical_observation_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestCanonicalControlObservationVersionNamesAndOrder"},
+		},
+		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-exact-route-dialect"}: {
+			witnessPath: "internal/kernel/rootpath/dialect_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestExactEntryUsesOneAdmittedDialect"},
+		},
 		{"REQ-PROOFKIT-SPEC-043", "proofkit.spec-proof-core.transaction-signal-scope"}: {
 			witnessPath: "internal/app/transaction_signal_test.go",
 			selectors:   []string{"TestTransactionSignalScopeCloseJoins"},
@@ -1013,6 +1058,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/command/adoptionmaterialization/adoptionmaterialization_test.go",
 			selectors: []string{
 				"TestApplyBlocksStaleMutationButAcceptsLostAcknowledgementRetry",
+				"TestMaterializationNestedLegacyTransactionRemainsDescriptive",
 				"TestMaterializationOutputAdmissionRejectsCrossOwnerMutants",
 				"TestMaterializationRejectsCrossRecordDriftAndManifestMutation",
 				"TestMaterializationWholeChainIsCanonicalAndOwnerClosed",
@@ -1025,6 +1071,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestInventoryReferencesMustResolveThroughBindingEdges",
 				"TestManifestAdmissionEqualsProducerImage",
 				"TestPathRoleLedgerRejectsWriteReferenceCollisions",
+				"TestPathRoleLedgerUsesCurrentCanonicalClasses",
 				"TestRequirementProjectionRequiresClaimLevelParity",
 			},
 		},

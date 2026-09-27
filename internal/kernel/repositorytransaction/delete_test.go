@@ -16,12 +16,12 @@ func TestAbsentTargetsDistinguishDeletionEmptyAndUnchanged(t *testing.T) {
 		name, before, action, version string
 		exists, absent                bool
 	}{
-		{"missing-absent", "", ActionUnchanged, "2", false, true},
-		{"empty-delete", "", ActionDelete, "2", true, true},
-		{"text-delete", "old", ActionDelete, "2", true, true},
-		{"missing-empty", "", ActionCreate, "1", false, false},
-		{"empty-unchanged", "", ActionUnchanged, "1", true, false},
-		{"text-to-empty", "old", ActionReplace, "1", true, false},
+		{"missing-absent", "", ActionUnchanged, "3", false, true},
+		{"empty-delete", "", ActionDelete, "3", true, true},
+		{"text-delete", "old", ActionDelete, "3", true, true},
+		{"missing-empty", "", ActionCreate, "3", false, false},
+		{"empty-unchanged", "", ActionUnchanged, "3", true, false},
+		{"text-to-empty", "old", ActionReplace, "3", true, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := t.TempDir()
@@ -90,7 +90,7 @@ func TestAbsentTargetRejectsPayloadAndNoncanonicalVersionWithoutMutation(t *test
 		wire := plan.JSONValue()
 		wrong := json.Number("2")
 		if absent {
-			wrong = "1"
+			wrong = json.Number("1")
 		}
 		wire["schemaVersion"] = wrong
 		if _, err := AdmitPlanOutput(wire); err == nil || !strings.Contains(err.Error(), "schema") {

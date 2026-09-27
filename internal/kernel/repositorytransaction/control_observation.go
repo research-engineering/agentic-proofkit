@@ -51,7 +51,7 @@ func observeControlNamespace(ctx context.Context, root *os.Root) (controlObserva
 	value := map[string]any{
 		"controlObservationKind": "proofkit.repository-control-observation",
 		"entries":                values,
-		"schemaVersion":          json.Number("1"),
+		"schemaVersion":          json.Number("2"),
 	}
 	observationID, err := digest.StableJSONSHA256Ref(value)
 	if err != nil {

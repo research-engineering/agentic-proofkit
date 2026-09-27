@@ -52,6 +52,10 @@ func openRepository(rootPath string) (*os.Root, string, error) {
 }
 
 func exactRouteExists(root *os.Root, relativePath string) (bool, error) {
+	return (Plan{version: "3"}).exactRouteExists(root, relativePath)
+}
+
+func (plan Plan) exactRouteExists(root *os.Root, relativePath string) (bool, error) {
 	current := ""
 	components := strings.Split(relativePath, "/")
 	for index, component := range components {
@@ -59,7 +63,7 @@ func exactRouteExists(root *os.Root, relativePath string) (bool, error) {
 		if parent == "" {
 			parent = "."
 		}
-		exists, err := rootpath.ExactEntryExists(root, parent, component)
+		exists, err := rootpath.ExactEntryExistsIn(root, parent, component, plan.pathDialect())
 		if err != nil || !exists {
 			return false, err
 		}
@@ -79,6 +83,10 @@ func exactRouteExists(root *os.Root, relativePath string) (bool, error) {
 }
 
 func inspectParentDirectories(root *os.Root, directory string) ([]string, error) {
+	return (Plan{version: "3"}).inspectParentDirectories(root, directory)
+}
+
+func (plan Plan) inspectParentDirectories(root *os.Root, directory string) ([]string, error) {
 	if directory == "." || directory == "" {
 		return nil, nil
 	}
@@ -97,7 +105,7 @@ func inspectParentDirectories(root *os.Root, directory string) ([]string, error)
 			continue
 		}
 		parent := path.Dir(current)
-		exists, err := rootpath.ExactEntryExists(root, parent, component)
+		exists, err := rootpath.ExactEntryExistsIn(root, parent, component, plan.pathDialect())
 		if err != nil {
 			return nil, err
 		}
@@ -118,14 +126,18 @@ func inspectParentDirectories(root *os.Root, directory string) ([]string, error)
 }
 
 func inspectTarget(root *os.Root, relativePath string, maximum int64) (snapshot Snapshot, content []byte, returnErr error) {
-	missing, err := inspectParentDirectories(root, path.Dir(relativePath))
+	return (Plan{version: "3"}).inspectTarget(root, relativePath, maximum)
+}
+
+func (plan Plan) inspectTarget(root *os.Root, relativePath string, maximum int64) (snapshot Snapshot, content []byte, returnErr error) {
+	missing, err := plan.inspectParentDirectories(root, path.Dir(relativePath))
 	if err != nil {
 		return Snapshot{}, nil, err
 	}
 	if len(missing) > 0 {
 		return Snapshot{}, nil, nil
 	}
-	targetExists, err := rootpath.ExactEntryExists(root, path.Dir(relativePath), path.Base(relativePath))
+	targetExists, err := rootpath.ExactEntryExistsIn(root, path.Dir(relativePath), path.Base(relativePath), plan.pathDialect())
 	if err != nil {
 		return Snapshot{}, nil, err
 	}
@@ -398,7 +410,11 @@ func discardOwnedTemporaryFile(root *os.Root, relativePath string) error {
 }
 
 func readOwnedFile(root *os.Root, relativePath string, maximum int64) (content []byte, returnErr error) {
-	exists, err := exactRouteExists(root, relativePath)
+	return (Plan{version: "3"}).readOwnedFile(root, relativePath, maximum)
+}
+
+func (plan Plan) readOwnedFile(root *os.Root, relativePath string, maximum int64) (content []byte, returnErr error) {
+	exists, err := plan.exactRouteExists(root, relativePath)
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +471,7 @@ func publishContent(root *os.Root, plan Plan, operationIndex int, expected Snaps
 	if err := writeOwnedFile(root, temporaryPath, content, mode); err != nil {
 		return err
 	}
-	observed, _, err := inspectTarget(root, operation.Path, MaximumFileBytes)
+	observed, _, err := plan.inspectTarget(root, operation.Path, MaximumFileBytes)
 	if err != nil || !equalSnapshot(observed, expected) {
 		return fmt.Errorf("repository transaction target changed before publication")
 	}
@@ -465,19 +481,15 @@ func publishContent(root *os.Root, plan Plan, operationIndex int, expected Snaps
 	if err := syncDirectory(root, path.Dir(operation.Path)); err != nil {
 		return err
 	}
-	observed, observedContent, err := inspectTarget(root, operation.Path, MaximumFileBytes)
+	observed, observedContent, err := plan.inspectTarget(root, operation.Path, MaximumFileBytes)
 	if err != nil || !equalSnapshot(observed, snapshotForContent(content, mode)) || !bytes.Equal(observedContent, content) {
 		return fmt.Errorf("repository transaction target failed after publication verification")
 	}
 	return nil
 }
 
-func removeCreatedTarget(root *os.Root, operation Operation) error {
-	return removeExactTarget(root, operation.Path, operation.After)
-}
-
-func removeExactTarget(root *os.Root, targetPath string, expected Snapshot) error {
-	observed, _, err := inspectTarget(root, targetPath, MaximumFileBytes)
+func (plan Plan) removeExactTarget(root *os.Root, targetPath string, expected Snapshot) error {
+	observed, _, err := plan.inspectTarget(root, targetPath, MaximumFileBytes)
 	if err != nil || !expected.Exists || !equalSnapshot(observed, expected) {
 		return fmt.Errorf("repository transaction target cannot be restored")
 	}
@@ -487,7 +499,7 @@ func removeExactTarget(root *os.Root, targetPath string, expected Snapshot) erro
 	if err := syncDirectory(root, path.Dir(targetPath)); err != nil {
 		return err
 	}
-	observed, _, err = inspectTarget(root, targetPath, MaximumFileBytes)
+	observed, _, err = plan.inspectTarget(root, targetPath, MaximumFileBytes)
 	if err != nil || observed.Exists {
 		return fmt.Errorf("repository transaction target is not absent after removal")
 	}
@@ -495,10 +507,14 @@ func removeExactTarget(root *os.Root, targetPath string, expected Snapshot) erro
 }
 
 func verifyDeletionFilesystem(root *os.Root, targetPath string) error {
-	if _, err := inspectParentDirectories(root, path.Dir(targetPath)); err != nil {
+	return (Plan{version: "3"}).verifyDeletionFilesystem(root, targetPath)
+}
+
+func (plan Plan) verifyDeletionFilesystem(root *os.Root, targetPath string) error {
+	if _, err := plan.inspectParentDirectories(root, path.Dir(targetPath)); err != nil {
 		return err
 	}
-	missing, err := inspectParentDirectories(root, activeDirectory)
+	missing, err := plan.inspectParentDirectories(root, activeDirectory)
 	if err != nil {
 		return err
 	}

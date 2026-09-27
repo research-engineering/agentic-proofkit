@@ -48,7 +48,8 @@ func stageObjects(root *os.Root, plan Plan) error {
 }
 
 func loadJournal(root *os.Root) (Plan, error) {
-	content, err := readOwnedFile(root, journalPath, MaximumJournalBytes)
+	// Bootstrap retained evidence without applying the fresh dialect first.
+	content, err := (Plan{version: "1"}).readOwnedFile(root, journalPath, MaximumJournalBytes)
 	if err != nil {
 		return Plan{}, err
 	}
@@ -64,6 +65,11 @@ func loadJournal(root *os.Root) (Plan, error) {
 	if err != nil || !bytes.Equal(content, canonical) {
 		return Plan{}, fmt.Errorf("repository transaction journal is not canonical")
 	}
+	if exists, err := plan.exactRouteExists(root, journalPath); err != nil {
+		return Plan{}, err
+	} else if !exists {
+		return Plan{}, fmt.Errorf("repository transaction journal namespace is invalid for its version")
+	}
 	return plan, nil
 }
 
@@ -74,14 +80,14 @@ func loadObjects(root *os.Root, plan Plan) (Plan, error) {
 			continue
 		}
 		if operation.After.Exists {
-			after, err := readOwnedFile(root, afterObjectPath(index), MaximumFileBytes)
+			after, err := plan.readOwnedFile(root, afterObjectPath(index), MaximumFileBytes)
 			if err != nil || !contentMatches(after, operation.After) {
 				return Plan{}, fmt.Errorf("repository transaction after object is invalid")
 			}
 			operation.afterContent = after
 		}
 		if operation.Before.Exists {
-			before, err := readOwnedFile(root, beforeObjectPath(index), MaximumFileBytes)
+			before, err := plan.readOwnedFile(root, beforeObjectPath(index), MaximumFileBytes)
 			if err != nil || !contentMatches(before, operation.Before) {
 				return Plan{}, fmt.Errorf("repository transaction before object is invalid")
 			}

@@ -84,7 +84,17 @@ func ExactEntryExists(root *os.Root, directory, component string) (bool, error) 
 	return exactEntryExistsWithClose(root, directory, component, func(file *os.File) error { return file.Close() })
 }
 
+// ExactEntryExistsIn retains the admitted transaction dialect during recovery.
+// Fresh callers use ExactEntryExists; no arbitrary equivalence callback exists.
+func ExactEntryExistsIn(root *os.Root, directory, component string, dialect pathidentity.Dialect) (bool, error) {
+	return exactEntryExistsInWithClose(root, directory, component, dialect, func(file *os.File) error { return file.Close() })
+}
+
 func exactEntryExistsWithClose(root *os.Root, directory, component string, closeFile func(*os.File) error) (bool, error) {
+	return exactEntryExistsInWithClose(root, directory, component, pathidentity.CanonicalCaseless, closeFile)
+}
+
+func exactEntryExistsInWithClose(root *os.Root, directory, component string, dialect pathidentity.Dialect, closeFile func(*os.File) error) (bool, error) {
 	if root == nil {
 		return false, fmt.Errorf("exact root path lookup requires a root")
 	}
@@ -98,7 +108,7 @@ func exactEntryExistsWithClose(root *os.Root, directory, component string, close
 	if err != nil {
 		return false, fmt.Errorf("open exact root path parent directory")
 	}
-	_, exists, err := exactDirectoryEntry(handle, component)
+	_, exists, err := exactDirectoryEntryIn(handle, component, dialect)
 	if closeErr := closeFile(handle); closeErr != nil {
 		return false, fmt.Errorf("%w: close parent directory", ErrTraversalCleanup)
 	}
@@ -106,7 +116,11 @@ func exactEntryExistsWithClose(root *os.Root, directory, component string, close
 }
 
 func exactDirectoryEntry(handle *os.File, component string) (fs.DirEntry, bool, error) {
-	wantedKey, err := pathidentity.Key(component)
+	return exactDirectoryEntryIn(handle, component, pathidentity.CanonicalCaseless)
+}
+
+func exactDirectoryEntryIn(handle *os.File, component string, dialect pathidentity.Dialect) (fs.DirEntry, bool, error) {
+	wantedKey, err := dialect.Key(component)
 	if err != nil || filepath.Base(component) != component {
 		return nil, false, fmt.Errorf("exact root path component is invalid")
 	}
@@ -119,7 +133,7 @@ func exactDirectoryEntry(handle *os.File, component string) (fs.DirEntry, bool, 
 	}
 	var exact fs.DirEntry
 	for _, entry := range entries {
-		entryKey, keyErr := pathidentity.Key(entry.Name())
+		entryKey, keyErr := dialect.Key(entry.Name())
 		if keyErr != nil || entryKey != wantedKey {
 			continue
 		}

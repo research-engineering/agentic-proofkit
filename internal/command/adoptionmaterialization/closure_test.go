@@ -10,6 +10,15 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 )
 
+func TestPathRoleLedgerUsesCurrentCanonicalClasses(t *testing.T) {
+	if err := validatePathRoles([]pathUse{{Path: "docs/s\u015b", Role: roleBindingTarget, Target: true}, {Path: "docs/\u00df\u0301", Role: roleOverviewReference}}); err == nil {
+		t.Fatal("current merged path-role class admitted")
+	}
+	if err := validatePathRoles([]pathUse{{Path: "\u1fb3\u030a", Role: roleBindingTarget, Target: true}, {Path: "\u03b1\u03b9\u030a", Role: roleOverviewReference}}); err != nil {
+		t.Fatal("current split path-role class rejected")
+	}
+}
+
 func TestPathRoleLedgerRejectsWriteReferenceCollisions(t *testing.T) {
 	tests := []struct {
 		name string

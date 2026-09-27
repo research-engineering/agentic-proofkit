@@ -56,27 +56,11 @@ func loadPredecessorVectors(t *testing.T) (string, []predecessorCase) {
 }
 
 func TestPresentOnlyPlansPreserveIndependentPredecessorBytes(t *testing.T) {
-	rootID, cases := loadPredecessorVectors(t)
+	_, cases := loadPredecessorVectors(t)
 	for _, fixture := range cases {
 		t.Run(fixture.Name, func(t *testing.T) {
-			root := t.TempDir()
-			for _, initial := range fixture.Initial {
-				mustWriteTestFile(t, root, initial.Path, initial.Content, initial.Mode)
-			}
-			targets := make([]Target, 0, len(fixture.Targets))
-			for _, target := range fixture.Targets {
-				targets = append(targets, Target{Path: target.Path, Content: []byte(target.Content), Mode: target.Mode})
-			}
-			plan, err := BuildPlan(context.Background(), root, targets)
-			if err != nil {
-				t.Fatal(err)
-			}
-			plan.RootID = rootID
-			plan.DesiredStateID, err = digest.StableJSONSHA256Ref(desiredStateIdentityValue(plan))
-			if err != nil {
-				t.Fatal(err)
-			}
-			plan.TransactionID, err = digest.StableJSONSHA256Ref(planIdentityValue(plan))
+			// Retained v1, not fresh construction, owns the frozen byte contract.
+			plan, err := AdmitPlanOutput(decodePredecessorObject(t, fixture.Plan))
 			if err != nil {
 				t.Fatal(err)
 			}

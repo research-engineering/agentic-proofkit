@@ -46,7 +46,7 @@ func emptyControlObservationID() (string, error) {
 	value, err := digest.StableJSONSHA256Ref(map[string]any{
 		"controlObservationKind": "proofkit.repository-control-observation",
 		"entries":                []any{},
-		"schemaVersion":          json.Number("1"),
+		"schemaVersion":          json.Number("2"),
 	})
 	if err != nil {
 		return "", fmt.Errorf("derive empty repository transaction control observation: %w", err)

@@ -5,6 +5,7 @@ import (
 	"io/fs"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathidentity"
 )
 
 const (
@@ -76,6 +77,7 @@ type Plan struct {
 	TransactionID      string
 
 	constructedTransactionID string
+	version                  json.Number
 }
 
 type Result struct {
@@ -131,12 +133,18 @@ func (plan Plan) JSONValue() map[string]any {
 }
 
 func (plan Plan) schemaVersion() json.Number {
-	for _, operation := range plan.Operations {
-		if !operation.After.Exists {
-			return json.Number("2")
-		}
+	return plan.version
+}
+
+func (plan Plan) pathDialect() pathidentity.Dialect {
+	switch plan.version {
+	case "1", "2":
+		return pathidentity.Legacy
+	case "3":
+		return pathidentity.CanonicalCaseless
+	default:
+		return 0
 	}
-	return json.Number("1")
 }
 
 func (result Result) JSONValue() map[string]any {
