@@ -14,6 +14,8 @@ export const test = base.extend({
     expect(connectOptions).toBeUndefined();
     expect(launchOptions.channel).toBeUndefined();
     expect(launchOptions.executablePath).toBeUndefined();
+    expect(launchOptions.firefoxUserPrefs?.["fission.webContentIsolationStrategy"])
+      .toBe(browserName === "firefox" ? 1 : undefined);
     await use();
   }, {auto: true}],
 });

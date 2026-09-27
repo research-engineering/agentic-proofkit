@@ -58,12 +58,13 @@ The browser engine installation is a one-time prerequisite for the pinned
 rendered-runtime gate. CI installs the same engines with their Linux system
 dependencies before running that gate.
 
-The browser-test dependency temporarily uses an exact prerelease pin in
-`package.json` and `package-lock.json` for the upstream
-[Firefox channel-identity repair](https://github.com/microsoft/playwright/commit/e5d880b05f9a1d7fb5d17dd031b53739e5e39c0e).
-This does not change installed CLI dependencies. Keep native navigation checks,
-all three engines, and zero test retries; return to a stable pin only after it
-contains the repair and passes the same complete browser gate.
+The Firefox test project explicitly enables
+[site-origin process isolation](https://searchfox.org/mozilla-central/source/dom/ipc/ProcessIsolation.cpp)
+with `fission.webContentIsolationStrategy=1`. This avoids the observed navigation
+completion failure in the pinned bundle's shared-process configuration, without
+replacing its browser binary or weakening CSP, navigation assertions or retries.
+The engine fixture checks the requested launch policy. Keep the exact stable SDK
+and all three engine gates until a complete qualification admits a successor.
 
 The composed `go:check` and CI source job both run `npm run go:deps`:
 `go mod tidy -diff` rejects manifest drift without rewriting `go.mod` or

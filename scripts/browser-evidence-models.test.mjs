@@ -150,15 +150,19 @@ test("unrelated graph relations retain separate horizontal corridors", () => {
 
 test("bounded mixed-plane graph samples preserve complete segment separation", () => {
   let seed = 0x46d1c08;
-  const next = limit => { seed = (1664525 * seed + 1013904223) >>> 0; return seed % limit; };
+  const next = limit => { seed = (1664525 * seed + 1013904223) >>> 0; return Math.floor(seed * limit / 0x100000000); };
+  let unevenMixedCohort = false;
   for (let sample = 0; sample < 200; sample++) {
     const nodes = Array.from({length: 2 + next(191)}, (_, i) => ({nodeId: `n${i}`, evidencePlane: GRAPH_PLANES[next(4)].id}));
+    const counts = GRAPH_PLANES.map(plane => nodes.filter(node => node.evidencePlane === plane.id).length);
+    unevenMixedCohort ||= counts.filter(count => count > 0).length > 1 && Math.max(...counts) - Math.min(...counts) > 1;
     const edges = Array.from({length: next(129)}, (_, i) => {
       const from = next(nodes.length), to = (from + 1 + next(nodes.length - 1)) % nodes.length;
       return {edgeId: `e${i}`, fromNodeId: nodes[from].nodeId, toNodeId: nodes[to].nodeId};
     });
     assertLayout({nodes, edges});
   }
+  assert(unevenMixedCohort, "mixed samples must include unequal plane populations");
 });
 
 test("graph geometry oracle rejects independent causal mutants", () => {
