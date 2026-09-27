@@ -30,8 +30,13 @@ denial, and package artifact behavior only.
   without claiming nested shape or type parity.
   Explicit scanners consume only caller-named bounded canonical files under
   documented grammars with explicit proof limits. The TypeScript public API
-  lexical inventory is advisory for semicolonless source until a
-  repository-owned compiler witness is provided. The scanners pin each
+  lexical inventory owns top-level export boundaries for compiler-valid sources
+  in its declared profile, including semicolonless declarations and contextual
+  type-only aliases. One streaming tokenizer owns trivia and LF/CR/CRLF/LS/PS;
+  balanced bodies and groups remain opaque, not syntax or type validation.
+  Compiler observations are test-only oracles, never runtime dependencies.
+  Source-derived and package-observed mismatch failures pass through shared
+  diagnostic redaction before sorting and JSON projection. The scanners pin each
   referenced package sub-root before reading its manifest and sources, bind
   every alias of one canonical source
   to its first immutable identity, digest, and parsed result, and reject later

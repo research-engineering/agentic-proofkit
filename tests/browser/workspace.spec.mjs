@@ -421,6 +421,7 @@ test("workspace navigation admits the exact base and ignores response decoys", a
       expect(event).toBe("framenavigated");
       return pendingWaiter("navigation", signal);
     },
+    waitForFunction: (_predicate, _argument, {signal}) => pendingWaiter("document", signal),
   };
   await expect(navigateWorkspace(
     cleanupPage,
@@ -431,19 +432,22 @@ test("workspace navigation admits the exact base and ignores response decoys", a
     },
     "Workspace navigation fallback response was admitted",
   )).rejects.toThrow("Workspace navigation trigger token is invalid");
-  expect([...cleanupAborted].sort()).toEqual(["navigation", "response"]);
-  expect([...cleanupConsumed].sort()).toEqual(["navigation", "response"]);
+  expect([...cleanupAborted].sort()).toEqual(["document", "navigation", "response"]);
+  expect([...cleanupConsumed].sort()).toEqual(["document", "navigation", "response"]);
   expect(cleanupEvents).toEqual([
     "request-armed",
     "response-armed",
     "download-armed",
     "response-armed",
     "navigation-armed",
+    "document-armed",
     "response-consumed",
     "navigation-consumed",
+    "document-consumed",
     "trigger-called",
     "response-aborted",
     "navigation-aborted",
+    "document-aborted",
     "request-disarmed",
     "response-disarmed",
     "download-disarmed",

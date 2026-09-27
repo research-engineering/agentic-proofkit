@@ -68,7 +68,7 @@ func assertRejectsUndeclaredPublicABIDrift(t *testing.T, frozen frozenPublicABI,
 			process["successExitCode"] = json.Number("9")
 			current["processContract"] = process
 		}},
-		{name: "classified exit code", mutate: func(current map[string]any) {
+		{name: "stdout drift", mutate: func(current map[string]any) {
 			process := clonePublicABIRecord(current["processContract"].(map[string]any))
 			process["stdout"] = "unexpected"
 			current["processContract"] = process

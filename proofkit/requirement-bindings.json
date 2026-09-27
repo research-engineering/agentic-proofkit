@@ -1314,6 +1314,76 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.typescript-boundary-inventory",
+      "witnessId": "proofkit.typescript-public-api.boundary-inventory",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/publicapi/typescript_tokens_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCollectExportsCompilerQualifiedBoundaries",
+          "command": "go test ./internal/command/publicapi -run '^TestCollectExportsCompilerQualifiedBoundaries$'"
+        },
+        {
+          "selector": "TestVerifyTypeScriptCompilerQualifiedBoundaries",
+          "command": "go test ./internal/command/publicapi -run '^TestVerifyTypeScriptCompilerQualifiedBoundaries$'"
+        },
+        {
+          "selector": "TestTypeScriptTokensOwnTriviaAndMaximalMunch",
+          "command": "go test ./internal/command/publicapi -run '^TestTypeScriptTokensOwnTriviaAndMaximalMunch$'"
+        },
+        {
+          "selector": "TestCollectExportsRejectsLateLexicalErrorsWithoutPartialInventory",
+          "command": "go test ./internal/command/publicapi -run '^TestCollectExportsRejectsLateLexicalErrorsWithoutPartialInventory$'"
+        },
+        {
+          "selector": "TestTypeScriptTokensProgressAndDeepOpaqueRegions",
+          "command": "go test ./internal/command/publicapi -run '^TestTypeScriptTokensProgressAndDeepOpaqueRegions$'"
+        },
+        {
+          "selector": "TestTypeScriptClassHeritageProgressWithinSourceDomain",
+          "command": "go test ./internal/command/publicapi -run '^TestTypeScriptClassHeritageProgressWithinSourceDomain$'"
+        },
+        {
+          "selector": "TestTypeScriptAssignmentFramesProgress",
+          "command": "go test ./internal/command/publicapi -run '^TestTypeScriptAssignmentFramesProgress$'"
+        },
+        {
+          "selector": "TestVerifyTypeScriptReportProjectionNondisclosure",
+          "command": "go test ./internal/command/publicapi -run '^TestVerifyTypeScriptReportProjectionNondisclosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
+      "scenarioId": "proofkit.package-boundary.typescript-boundary-native-cli",
+      "witnessId": "proofkit.typescript-public-api.boundary-native-cli",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/typescript_public_api_boundary_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestTypeScriptBoundariesNativeCLI",
+          "command": "go test ./internal/app -run '^TestTypeScriptBoundariesNativeCLI$'"
+        },
+        {
+          "selector": "TestTypeScriptReportProjectionNativeNondisclosure",
+          "command": "go test ./internal/app -run '^TestTypeScriptReportProjectionNativeNondisclosure$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-PACKAGE-002",
       "scenarioId": "proofkit.package-boundary.typescript-lexical-guardrails",
       "witnessId": "proofkit.typescript-public-api.lexical-guardrails",
       "witnessKind": "contract",

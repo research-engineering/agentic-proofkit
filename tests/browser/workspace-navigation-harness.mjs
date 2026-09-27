@@ -34,6 +34,13 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
   const expectedCSP = cspBySecurityProfile[securityProfile];
   if (!expectedCSP) throw new Error("Unsupported workspace security profile");
   const controller = new AbortController();
+  const observationsComplete = new Error("Workspace navigation observations are complete");
+  const documents = new Set();
+  const observationErrors = new Set();
+  const retainDocument = (handle) => { documents.add(handle); return handle; };
+  const settle = (promise) => promise.catch((error) => {
+    if (error?.cause !== observationsComplete) observationErrors.add(error);
+  });
   const mainFrame = page.mainFrame();
   const documentMarker = `proofkitNavigationMarker_${randomUUID()}`;
   await page.evaluate((marker) => { Object.defineProperty(document, marker, {value: true}); }, documentMarker);
@@ -51,6 +58,14 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
   page.on("request", recordNavigationRequest);
   page.on("response", recordNavigationResponse);
   page.on("download", recordDownload);
+  let observing = true;
+  const stopObserving = () => {
+    if (!observing) return;
+    observing = false;
+    page.off("request", recordNavigationRequest);
+    page.off("response", recordNavigationResponse);
+    page.off("download", recordDownload);
+  };
   const responsePromise = page.waitForResponse(
     (candidate) => isWorkspaceNavigationResponse(candidate, workspaceURL, mainFrame),
     {signal: controller.signal},
@@ -59,8 +74,16 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     predicate: (frame) => frame === mainFrame && frame.url() === workspaceURL,
     signal: controller.signal,
   });
-  const responseSettled = responsePromise.catch(() => undefined);
-  const navigationSettled = navigationPromise.catch(() => undefined);
+  const documentPromise = page.waitForFunction(({marker, target}) => {
+    return !Object.hasOwn(document, marker) && document.location.href === target
+      && document.readyState !== "loading" ? document : false;
+  }, {marker: documentMarker, target: workspaceURL}, {signal: controller.signal});
+  const eventDocument = navigationPromise.then(() => page.evaluateHandle(() => document)).then(retainDocument);
+  const readyDocument = documentPromise.then(retainDocument);
+  const settled = [responsePromise, navigationPromise, documentPromise, eventDocument, readyDocument].map(settle);
+  let failed = false;
+  let failure;
+  const cleanupErrors = [];
   try {
     const token = await trigger(workspaceNavigationToken);
     if (token !== workspaceNavigationToken) {
@@ -68,36 +91,57 @@ export async function navigateWorkspace(page, workspaceURL, trigger, responseErr
     }
     const response = await responsePromise;
     if (!response.ok()) throw new Error(responseError);
-    await navigationPromise;
+    const witness = await Promise.race([eventDocument, readyDocument]);
     await mainFrame.waitForLoadState("domcontentloaded");
     await expect(
       page.getByRole("heading", {name: heading, exact: true}),
     ).toBeVisible();
-    const oldDocumentRetained = await page.evaluate((marker) => Object.hasOwn(document, marker), documentMarker);
+    controller.abort(observationsComplete);
+    await Promise.all(settled);
+    if (observationErrors.size) throw observationErrors.values().next().value;
+    let terminal;
+    try {
+      terminal = await page.evaluate(({marker, witness}) => ({
+        sameDocument: witness === document,
+        oldDocumentRetained: Object.hasOwn(document, marker),
+        url: document.location.href,
+        ready: document.readyState !== "loading",
+      }), {marker: documentMarker, witness});
+    } catch (cause) {
+      throw new Error(responseError, {cause});
+    }
     const headers = response.headers();
     const disposition = headers["content-disposition"]?.split(";", 1)[0].trim().toLowerCase();
     // A provisional request may be restarted without a response. It cannot
     // certify a document, nor may any later navigation borrow this response.
     if (
-      oldDocumentRetained || downloadObserved || disposition === "attachment"
+      !terminal.sameDocument || terminal.oldDocumentRetained || !terminal.ready
+      || downloadObserved || disposition === "attachment"
       || navigationRequests.at(-1) !== response.request()
       || navigationRequests.some((request) => request.url() !== workspaceURL)
       || navigationResponses.length !== 1 || navigationResponses[0] !== response
-      || page.url() !== workspaceURL
+      || terminal.url !== workspaceURL
       || headers["content-security-policy"] !== expectedCSP
       || headers["x-content-type-options"] !== "nosniff"
     ) {
       throw new Error(responseError);
     }
+    // Close the certified observation interval before asynchronous handle cleanup.
+    stopObserving();
   } catch (error) {
-    controller.abort();
-    await Promise.all([responseSettled, navigationSettled]);
-    throw error;
+    failed = true;
+    failure = error;
   } finally {
-    page.off("request", recordNavigationRequest);
-    page.off("response", recordNavigationResponse);
-    page.off("download", recordDownload);
+    controller.abort(observationsComplete);
+    await Promise.all(settled);
+    stopObserving();
+    for (const handle of documents) {
+      try { await handle.dispose(); }
+      catch (error) { cleanupErrors.push(error); }
+    }
   }
+  if (cleanupErrors.length) throw new AggregateError(failed ? [failure, ...cleanupErrors] : cleanupErrors, "Workspace navigation cleanup failed", {cause: failure});
+  if (failed) throw failure;
 }
 
 export async function openWorkspace(page, baseURL, heading, securityProfile = "workspace") {

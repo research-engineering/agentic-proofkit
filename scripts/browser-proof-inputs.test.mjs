@@ -408,6 +408,7 @@ test("workspace navigation owns waiter rejection before a delayed trigger", asyn
     off: (event) => { disarmed.push(event); },
     waitForResponse: () => Promise.reject(new Error("early response rejection")),
     waitForEvent: () => Promise.reject(new Error("early navigation rejection")),
+    waitForFunction: () => Promise.reject(new Error("early document rejection")),
   };
   await assert.rejects(navigateWorkspace(page, "http://127.0.0.1:41001/", async (token) => {
     await new Promise((resolve) => setTimeout(resolve, 50));

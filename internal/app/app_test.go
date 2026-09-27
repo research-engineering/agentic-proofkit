@@ -789,6 +789,9 @@ func TestRequirementSourceRejectsRepeatedlyEscapedSecretShapedTextWithoutDisclos
 		t.Fatal(err)
 	}
 	nested := strings.Replace(string(encoded), "u006f", `\u0075006f`, 1)
+	if nested == string(encoded) {
+		t.Fatal("nested JSON slash parity fixture mutation did not change input")
+	}
 	for depth := 0; depth <= 4; depth++ {
 		check(nested, "nested JSON slash parity", depth)
 		encoded, err = json.Marshal(nested)

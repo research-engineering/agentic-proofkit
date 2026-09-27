@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "786753f6806aa4c46a3c0bb38bf0ae6b5cfa62c4ee3d2dae209104b1f809f710"
+	cliContractPublicABISHA256               = "60fd427f061572d33f14d66bb1612e887e9bfad47759fe526df68ebb9479921f"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2089,7 +2089,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 	}
 	nonClaims := stringsFromAny(inputContract["nonClaims"].([]any))
 	joinedNonClaims := strings.Join(nonClaims, " ")
-	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "TYPESCRIPT-ASI-01") {
+	if !strings.Contains(joinedNonClaims, "compiler output provenance") || !strings.Contains(joinedNonClaims, "does not parse JSX") || !strings.Contains(joinedNonClaims, "does not parse unrestricted TypeScript") || !strings.Contains(joinedNonClaims, "not syntax or type validation") {
 		t.Fatalf("TypeScript public API input contract omits scanner non-claims: %v", nonClaims)
 	}
 }
