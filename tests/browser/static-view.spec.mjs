@@ -1,10 +1,70 @@
 import {readFile} from "node:fs/promises";
+import {createHash} from "node:crypto";
 import {expect} from "@playwright/test";
 import {staticViewTest as test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 
 const heading = "Requirement Source View: browser.fixture.requirements";
 const treeHeading = "Requirement Spec Tree View: browser.fixture.tree";
+
+test("static CSP admits the exact embedded script and blocks a different inline script with an allowed control", async ({staticViewURL, page, request}) => {
+  const actual = await request.get(staticViewURL);
+  expect(actual.status()).toBe(200);
+  const actualHTML = await actual.text();
+  const scripts = [...actualHTML.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
+  expect(scripts).toHaveLength(1);
+  expect(scripts[0][1]).toBe("");
+  const source = await readFile(new URL("../../internal/kernel/browserdoc/browser.js", import.meta.url));
+  expect(Buffer.from(scripts[0][2])).toEqual(source);
+  const digest = createHash("sha256").update(scripts[0][2]).digest("base64");
+  const expectedCSP = `default-src 'none'; script-src 'sha256-${digest}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
+  expect(actual.headers()["content-security-policy"]).toBe(expectedCSP);
+
+  const otherScript = 'document.body.setAttribute("data-unapproved-script", "executed");';
+  const otherDigest = createHash("sha256").update(otherScript).digest("base64");
+  expect(otherDigest).not.toBe(digest);
+  const body = actualHTML.replace("</body>", `<script>${otherScript}</script></body>`);
+  expect(body).not.toBe(actualHTML);
+  for (const allowOther of [false, true]) {
+    const policy = allowOther
+      ? expectedCSP.replace("; style-src", ` 'sha256-${otherDigest}'; style-src`)
+      : expectedCSP;
+    await page.route(staticViewURL, (route) => route.fulfill({
+      response: actual, body, headers: {...actual.headers(), "content-security-policy": policy},
+    }));
+    try {
+      const response = await page.goto(staticViewURL, {waitUntil: "load"});
+      expect(response.headers()["content-security-policy"]).toBe(policy);
+      expect(await response.text()).toBe(body);
+      await expect(page.locator("script")).toHaveCount(2);
+      await expect(page.getByRole("heading", {name: heading, exact: true})).toBeVisible();
+      if (allowOther) await expect(page.locator("body")).toHaveAttribute("data-unapproved-script", "executed");
+      else await expect(page.locator("body")).not.toHaveAttribute("data-unapproved-script", "executed");
+      // User interactions witness the embedded script in both otherwise equal pages.
+      await page.getByRole("searchbox").fill("no-such-record");
+      await expect(page.locator("#proofkit-visible-count")).toHaveText("0");
+      await page.getByLabel("Show IDs", {exact: true}).uncheck();
+      await expect(page.locator("html")).toHaveAttribute("data-show-ids", "false");
+    } finally {
+      await page.unroute(staticViewURL);
+    }
+  }
+});
+
+test("static navigation rejects a different syntactically valid script hash", async ({staticViewURL, page, request}) => {
+  const actual = await request.get(staticViewURL);
+  const digest = createHash("sha256").update("different script").digest("base64");
+  const wrongCSP = `default-src 'none'; script-src 'sha256-${digest}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
+  expect(actual.headers()["content-security-policy"]).not.toBe(wrongCSP);
+  await page.route(staticViewURL, (route) => route.fulfill({
+    response: actual, headers: {...actual.headers(), "content-security-policy": wrongCSP},
+  }));
+  try {
+    await expect(openWorkspace(page, staticViewURL, heading, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+  } finally {
+    await page.unroute(staticViewURL);
+  }
+});
 
 test("static exact Unicode and ASCII search preserves cards/table parity without normalization", async ({staticViewURL, page}) => {
   await openWorkspace(page, staticViewURL, heading, "static-view");

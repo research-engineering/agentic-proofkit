@@ -3,13 +3,17 @@ package requirementbrowser
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -48,20 +52,31 @@ func TestStartServerServesExplicitSourceViews(t *testing.T) {
 	if !strings.Contains(root.Header.Get("content-type"), "text/html") {
 		t.Fatalf("unexpected root content-type: %s", root.Header.Get("content-type"))
 	}
+	rootBody, err := io.ReadAll(root.Body)
+	if err != nil {
+		t.Fatalf("read root body: %v", err)
+	}
+	scripts := regexp.MustCompile(`(?is)<script\b([^>]*)>(.*?)</script\s*>`).FindAllSubmatch(rootBody, -1)
+	source, err := os.ReadFile("../../kernel/browserdoc/browser.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(scripts) != 1 || len(scripts[0][1]) != 0 || !bytes.Equal(scripts[0][2], source) {
+		t.Fatal("served HTML must contain exactly the unchanged browser script")
+	}
+	digest := sha256.Sum256(scripts[0][2])
+	expectedCSP := "default-src 'none'; script-src 'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 	for name, want := range map[string]string{
-		"content-security-policy":      "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+		"content-security-policy":      expectedCSP,
 		"cross-origin-opener-policy":   "same-origin",
 		"cross-origin-resource-policy": "same-origin",
+		"permissions-policy":           "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()",
 		"referrer-policy":              "no-referrer",
 		"x-content-type-options":       "nosniff",
 	} {
 		if got := root.Header.Get(name); got != want {
 			t.Fatalf("source view header %s=%q, want %q", name, got, want)
 		}
-	}
-	rootBody, err := io.ReadAll(root.Body)
-	if err != nil {
-		t.Fatalf("read root body: %v", err)
 	}
 	rootOutput := string(rootBody)
 	for _, want := range []string{

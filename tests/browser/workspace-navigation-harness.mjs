@@ -1,10 +1,14 @@
 import {expect} from "@playwright/test";
-import {randomUUID} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
+import {readFileSync} from "node:fs";
 
 const workspaceNavigationToken = "proofkit.workspace-navigation.scheduled";
+// Expected authority comes from source bytes, never a received CSP header.
+const staticScriptDigest = createHash("sha256").update(readFileSync(new URL("../../internal/kernel/browserdoc/browser.js", import.meta.url))).digest("base64");
+export const staticViewCSP = `default-src 'none'; script-src 'sha256-${staticScriptDigest}'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`;
 const cspBySecurityProfile = Object.freeze({
   workspace: "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-  "static-view": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+  "static-view": staticViewCSP,
 });
 
 export function admittedWorkspaceURL(baseURL) {

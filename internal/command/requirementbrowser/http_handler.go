@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/browserdoc"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/secretjson"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
@@ -566,7 +567,7 @@ func setWorkspaceSecurityHeaders(response http.ResponseWriter) {
 }
 
 func setStaticDocumentSecurityHeaders(response http.ResponseWriter) {
-	response.Header().Set("content-security-policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+	response.Header().Set("content-security-policy", "default-src 'none'; script-src "+browserdoc.ScriptHashSource()+"; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 	setCommonDocumentSecurityHeaders(response)
 }
 

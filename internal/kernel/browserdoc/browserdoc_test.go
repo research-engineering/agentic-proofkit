@@ -1,11 +1,41 @@
 package browserdoc
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
 )
+
+func TestScriptHashSourceCommitsToExactEmittedBytes(t *testing.T) {
+	source, err := os.ReadFile("browser.js")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, document := range []Document{
+		{},
+		{Title: "<script>different()</script>", Cards: []Card{{Body: Text("</script>")}}, Table: &Table{}},
+	} {
+		output := HTML(document)
+		scripts := regexp.MustCompile(`(?is)<script\b([^>]*)>(.*?)</script\s*>`).FindAllStringSubmatch(output, -1)
+		if len(scripts) != 1 || scripts[0][1] != "" || scripts[0][2] != string(source) {
+			t.Fatal("HTML must emit exactly the unchanged embedded script")
+		}
+		digest := sha256.Sum256([]byte(scripts[0][2]))
+		want := "'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'"
+		if got := ScriptHashSource(); got != want {
+			t.Fatalf("script commitment=%q, want actual emitted bytes %q", got, want)
+		}
+		for _, changed := range []string{scripts[0][2] + "\n", "different()"} {
+			other := sha256.Sum256([]byte(changed))
+			if want == "'sha256-"+base64.StdEncoding.EncodeToString(other[:])+"'" {
+				t.Fatal("script commitment admitted different bytes")
+			}
+		}
+	}
+}
 
 func TestSearchTextPreservesOriginalUnicodeAndCase(t *testing.T) {
 	values := []string{"\u039f\u0394\u039f\u03a3", "\u0130stanbul", "ASCII", "Cafe\u0301", `<script>"&`}
