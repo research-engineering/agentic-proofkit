@@ -44,7 +44,8 @@ func (drain *commandStderr) receive(err error) {
 	}
 }
 
-func (drain *commandStderr) parentWaited() {
+// drainReady is reached only after retained terminal AND parser completion.
+func (drain *commandStderr) drainReady() {
 	if drain.done != nil && !drain.aborted && drain.timer == nil {
 		drain.timer = time.NewTimer(processWaitDelay)
 		drain.deadline = drain.timer.C

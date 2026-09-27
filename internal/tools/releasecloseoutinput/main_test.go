@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -28,6 +29,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/specproofbundleadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
@@ -1259,6 +1261,24 @@ func TestSelfEvidenceInvokesCurrentCommandOracleOwner(t *testing.T) {
 		t.Fatal("release closeout did not invoke the current command oracle owner")
 	}
 	assertCriterionStatus(t, input, "proofkit.release_closeout.self_evidence", "missing_evidence")
+}
+
+func TestSelfEvidenceFatalCleanupStopsCloseout(t *testing.T) {
+	root := completeFixture(t)
+	previous := commandOracleValidateCurrent
+	t.Cleanup(func() { commandOracleValidateCurrent = previous })
+	for _, failure := range []error{processgroup.ErrOwnershipLost, context.Canceled} {
+		commandOracleValidateCurrent = func(ctx context.Context, _ string, _ commandoracle.Evidence) error {
+			if ctx.Done() == nil {
+				t.Fatal("source entrypoint did not install signal scope")
+			}
+			return failure
+		}
+		input, err := buildInput(root)
+		if !errors.Is(err, failure) || len(input.Criteria) != 0 {
+			t.Fatalf("fatal cleanup became an advisory criterion: %v %+v", err, input)
+		}
+	}
 }
 
 func TestSelfEvidenceRequiresCurrentMatchingPackageArtifactExecution(t *testing.T) {

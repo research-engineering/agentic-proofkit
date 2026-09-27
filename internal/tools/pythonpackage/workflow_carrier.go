@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
@@ -35,8 +38,10 @@ func installedPythonWorkflowCarriers(dir string, environment []string, venvPytho
 }
 
 func verifyInstalledPythonWorkflowSmokes(dir string, environment []string, venvPython string, binPath string) error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	for _, candidate := range installedPythonWorkflowCarriers(dir, environment, venvPython, binPath) {
-		if err := workflowsmoke.VerifyProcess(context.Background(), candidate.carrier); err != nil {
+		if err := workflowsmoke.VerifyProcess(ctx, candidate.carrier); err != nil {
 			return fmt.Errorf("%s agent-workflow smoke failed: %w", candidate.label, err)
 		}
 	}

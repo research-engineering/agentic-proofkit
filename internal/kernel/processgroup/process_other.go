@@ -1,34 +1,18 @@
 //go:build !darwin && !linux
 
-// Package processgroup owns bounded external-process group termination.
 package processgroup
 
 import (
 	"errors"
-	"os"
 	"os/exec"
 	"time"
 )
 
-// Configure retains exec.CommandContext's direct-process cancellation on
-// platforms where this package has no process-group primitive.
-func Configure(command *exec.Cmd) {}
+var errUnsupported = errors.New("retained process observation requires a qualified Darwin or Linux source host")
 
-// Terminate kills the direct child on platforms without a process-group
-// primitive.
-func Terminate(command *exec.Cmd) error {
-	if command.Process == nil {
-		return nil
-	}
-	err := command.Process.Kill()
-	if errors.Is(err, os.ErrProcessDone) {
-		return nil
-	}
-	return err
-}
-
-// TerminateAndWait terminates the direct child. The caller invokes it after
-// exec.Cmd.Run has already waited for that child on unsupported platforms.
-func TerminateAndWait(command *exec.Cmd, _ time.Duration) error {
-	return Terminate(command)
-}
+func configure(*exec.Cmd) error              { return errUnsupported }
+func observeTerminal(int, int) (bool, error) { return false, errUnsupported }
+func killGroup(int) error                    { return errUnsupported }
+func absentSignal(error) bool                { return false }
+func permissionSignal(error) bool            { return false }
+func waitAbsent(int, time.Duration) error    { return errUnsupported }

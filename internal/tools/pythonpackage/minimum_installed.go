@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
+	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
@@ -96,7 +98,8 @@ func verifyMinimumInstalledPython() error {
 	if err := minimumCheckDigest(pip, minimumPipSHA256); err != nil {
 		return err
 	}
-	ctx := context.Background()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	environment := pythonVerificationEnvironment([]string{"PATH=/usr/local/bin:/usr/bin:/bin", "HOME=/tmp"}, nil)
 	const identityScript = `import json, os, platform, sys; print(json.dumps(dict(python=platform.python_version(), machine=platform.machine(), uid=os.getuid(), implementation=sys.implementation.name)))`
 	identity, err := minimumCommand(ctx, "/tmp", environment, "/usr/local/bin/python", "-I", "-c", identityScript)

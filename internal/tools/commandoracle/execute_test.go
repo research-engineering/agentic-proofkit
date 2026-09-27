@@ -313,24 +313,22 @@ func cancelCommandAtStdoutEOF(t *testing.T, root, path string, ledger *eventLedg
 	}
 	defer reader.Close()
 	defer writer.Close()
-	command := exec.CommandContext(ctx, path)
-	command.Dir, command.WaitDelay, command.Stderr = root, processWaitDelay, writer
-	processgroup.Configure(command)
+	command := exec.Command(path)
+	command.Dir, command.Stderr = root, writer
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer stdout.Close()
-	if err := command.Start(); err != nil {
+	child, err := processgroup.Start(ctx, command)
+	if err != nil {
 		t.Fatal(err)
 	}
 	observed := &eofObservedReader{ReadCloser: stdout, eof: make(chan struct{})}
 	stderr := startCommandStderr(reader)
 	done := make(chan error, 1)
 	go func() {
-		done <- waitGoTestCommand(ctx, command, observed, stderr, ledger, nil, func() error {
-			return processgroup.Terminate(command)
-		})
+		done <- waitGoTestCommand(ctx, child, observed, stderr, ledger, nil, child.Abort)
 	}()
 	joined := false
 	defer func() {
@@ -544,7 +542,7 @@ func startHeldStderrCommand(t *testing.T, body string, wrap func(io.ReadCloser) 
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), processWaitDelay+5*time.Second)
 	fixture := &heldStderrCommand{ctx: ctx, cancel: cancel, writer: writer}
-	// Register before Start/assertions. Only waitGoTestCommand calls Cmd.Wait.
+	// Register before Start/assertions. Only the retained lifecycle calls Cmd.Wait.
 	t.Cleanup(func() {
 		cancel()
 		if err := writer.Close(); err != nil && !errors.Is(err, os.ErrClosed) {
@@ -562,15 +560,14 @@ func startHeldStderrCommand(t *testing.T, body string, wrap func(io.ReadCloser) 
 		}
 	})
 	prefix, ledger := passingCommandScript(t)
-	command := exec.CommandContext(ctx, "/bin/sh", "-c", prefix+body)
-	command.WaitDelay = processWaitDelay
-	processgroup.Configure(command)
+	command := exec.Command("/bin/sh", "-c", prefix+body)
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		t.Fatal(err)
 	}
 	command.Stderr = writer
-	if err := command.Start(); err != nil {
+	child, err := processgroup.Start(ctx, command)
+	if err != nil {
 		t.Fatal(err)
 	}
 	var stderrReader io.ReadCloser = reader
@@ -580,9 +577,7 @@ func startHeldStderrCommand(t *testing.T, body string, wrap func(io.ReadCloser) 
 	fixture.stderr = startCommandStderr(stderrReader)
 	fixture.done = make(chan error, 1)
 	go func() {
-		fixture.done <- waitGoTestCommand(ctx, command, stdout, fixture.stderr, ledger, nil, func() error {
-			return processgroup.Terminate(command)
-		})
+		fixture.done <- waitGoTestCommand(ctx, child, stdout, fixture.stderr, ledger, nil, child.Abort)
 	}()
 	return fixture
 }
@@ -628,7 +623,7 @@ func TestCommandStderrCompletionAndDeadlineOrdering(t *testing.T) {
 					drain.receive(<-drain.done)
 				}
 			})
-			drain.parentWaited()
+			drain.drainReady()
 			if drain.deadline == nil || drain.failure() == nil {
 				t.Fatal("pending observation was accepted or left unbounded")
 			}
@@ -702,8 +697,9 @@ func TestWaitGoTestCommandExpiredOverflowTerminatesOnce(t *testing.T) {
 			if test.malformed {
 				body = "printf 'not-json\\n'"
 			}
-			command := exec.CommandContext(ctx, "/bin/sh", "-c", body)
+			command := exec.Command("/bin/sh", "-c", body)
 			started, waitOwned := false, false
+			var child *processgroup.Child
 			var stderr *commandStderr
 			t.Cleanup(func() {
 				cancel()
@@ -718,8 +714,8 @@ func TestWaitGoTestCommandExpiredOverflowTerminatesOnce(t *testing.T) {
 					}
 				}
 				if started && !waitOwned {
-					_ = command.Process.Kill()
-					_ = command.Wait()
+					_ = child.Abort()
+					_, _ = child.Finish(time.Second)
 				}
 			})
 			stdout, err := command.StdoutPipe()
@@ -727,7 +723,8 @@ func TestWaitGoTestCommandExpiredOverflowTerminatesOnce(t *testing.T) {
 				t.Fatal(err)
 			}
 			command.Stderr = writer
-			if err := command.Start(); err != nil {
+			child, err = processgroup.Start(ctx, command)
+			if err != nil {
 				t.Fatal(err)
 			}
 			started = true
@@ -748,12 +745,13 @@ func TestWaitGoTestCommandExpiredOverflowTerminatesOnce(t *testing.T) {
 			}
 			terminationCalls := 0
 			waitOwned = true
-			err = waitGoTestCommand(ctx, command, &releasingStdoutReader{ReadCloser: stdout, release: releaseCopy}, stderr, nil, nil, func() error {
+			err = waitGoTestCommand(ctx, child, &releasingStdoutReader{ReadCloser: stdout, release: releaseCopy}, stderr, nil, nil, func() error {
 				terminationCalls++
+				abortErr := child.Abort()
 				if test.terminateErr {
 					return errors.New("private termination sentinel")
 				}
-				return nil
+				return abortErr
 			})
 			if terminationCalls != 1 {
 				t.Errorf("local termination calls = %d, want exactly one after stream expiry", terminationCalls)
