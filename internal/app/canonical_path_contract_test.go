@@ -62,19 +62,28 @@ func verifyCanonicalPathContracts(contract map[string]any) error {
 }
 
 func TestCanonicalPathContractIdentitySeparatesWireVersion(t *testing.T) {
-	current := readCLIContractRaw(t)
-	if err := verifyCanonicalPathContracts(current); err != nil {
-		t.Fatal(err)
+	cases := []struct {
+		name string
+		want string
+	}{
+		{"old-input-identity", "canonical path semantic/wire identity mismatch: adopt-materialize-plan input"},
+		{"wire-version-churn", "canonical path semantic/wire identity mismatch: adopt-materialize-plan input"},
+		{"missing-policy", "canonical path policy missing: adopt-materialize-plan input"},
+		{"missing-path-owner", "canonical path owner missing: internal/kernel/pathidentity"},
+		{"old-plan-output-identity", "canonical path semantic/wire identity mismatch: integration-plan output"},
 	}
-	for _, mutation := range []string{"old-input-identity", "wire-version-churn", "missing-policy", "missing-path-owner", "old-plan-output-identity"} {
-		t.Run(mutation, func(t *testing.T) {
-			changed := clonePublicABIRecord(current)
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			changed := readCLIContractRaw(t)
+			if err := verifyCanonicalPathContracts(changed); err != nil {
+				t.Fatalf("pristine contract fixture was rejected: %v", err)
+			}
 			commands, _, err := indexPublicABIRecords(changed["commands"], "command")
 			if err != nil {
 				t.Fatal(err)
 			}
 			input := commands["adopt-materialize-plan"]["inputContract"].(map[string]any)
-			switch mutation {
+			switch test.name {
 			case "old-input-identity":
 				input["contractId"] = "proofkit.adopt-materialize-plan.input.v2"
 			case "wire-version-churn":
@@ -90,8 +99,8 @@ func TestCanonicalPathContractIdentitySeparatesWireVersion(t *testing.T) {
 			case "old-plan-output-identity":
 				commands["integration-plan"]["outputContract"].(map[string]any)["contractId"] = "proofkit.integration-plan.output.v1"
 			}
-			if verifyCanonicalPathContracts(changed) == nil {
-				t.Fatal("contract boundary mutation was admitted")
+			if err := verifyCanonicalPathContracts(changed); err == nil || err.Error() != test.want {
+				t.Fatalf("contract boundary mutation rejection: got %v, want %q", err, test.want)
 			}
 		})
 	}
