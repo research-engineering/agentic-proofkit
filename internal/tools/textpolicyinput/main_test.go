@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -19,8 +18,8 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 func TestMain(m *testing.M) {
@@ -287,26 +286,26 @@ func inventoryRun(t *testing.T, template *exec.Cmd) ([]byte, []byte, int) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, template.Path, template.Args[1:]...)
-	command.Dir, command.Env, command.Stdin = template.Dir, template.Env, template.Stdin
-	command.WaitDelay = time.Second
-	processgroup.Configure(command)
-	// These cooperative fixtures start no background service; Run owns Wait.
-	var stdout, stderr bytes.Buffer
-	command.Stdout, command.Stderr = &stdout, &stderr
-	err := command.Run()
+	var input []byte
+	if template.Stdin != nil {
+		var err error
+		input, err = io.ReadAll(template.Stdin)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := workflowsmoke.RunProcess(ctx, workflowsmoke.ProcessCarrier{
+		Directory: template.Dir, Executable: template.Path, Environment: template.Env,
+	}, workflowsmoke.Invocation{
+		Args: template.Args[1:], Input: input, StdinClass: workflowsmoke.StdinBytes,
+	})
 	if ctx.Err() != nil {
 		t.Fatalf("process watchdog: %v", ctx.Err())
 	}
-	code := 0
-	if err != nil {
-		var exitError *exec.ExitError
-		if !errors.As(err, &exitError) || exitError.ExitCode() < 0 {
-			t.Fatalf("unexpected process failure: %v; stderr=%q", err, stderr.Bytes())
-		}
-		code = exitError.ExitCode()
+	if err != nil || result.ExitCode < 0 {
+		t.Fatalf("unexpected process failure: %v; exit=%d stderr=%q", err, result.ExitCode, result.Stderr)
 	}
-	return stdout.Bytes(), stderr.Bytes(), code
+	return result.Stdout, result.Stderr, result.ExitCode
 }
 
 func inventoryPayload(t *testing.T, root string) ([]byte, map[string]any) {
