@@ -213,7 +213,7 @@ func workspaceHTML(workspaceID string) string {
 		"<meta name=\"proofkit-browser-capability\" content=\"" + workspaceCapabilityPlaceholder + "\">",
 		"<title>" + html.EscapeString(workspaceID) + " - Proofkit workspace</title>",
 		"<link rel=\"stylesheet\" href=\"/assets/workspace.css\"></head>",
-		`<body data-state="bootstrap-loading"><header class="product-bar">
+		`<body data-state="bootstrap-loading"><a class="skip-link" href="#workspace-main" tabindex="0">Skip to workspace content</a><header class="product-bar">
 <button id="open-navigation" class="icon-button" type="button" data-open-panel="navigation" data-icon="panel-left" aria-label="Toggle specification navigation" title="Toggle specification navigation" aria-controls="workspace-navigation" aria-expanded="false"></button>
 <div class="product-identity"><strong>Proofkit</strong><h1>` + html.EscapeString(workspaceID) + `</h1></div>
 <button id="open-inspector" class="icon-button" type="button" data-open-panel="inspector" data-icon="panel-right" aria-label="Toggle question inspector" title="Toggle question inspector" aria-controls="workspace-inspector" aria-expanded="false"></button></header>
@@ -224,7 +224,7 @@ func workspaceHTML(workspaceID string) string {
 <button id="reset-filters" type="button" data-protected-request disabled>Reset filters</button></form>
 <section id="selected-scope" aria-label="Selected specification scope"></section><h3>Specification hierarchy</h3><button id="all-requirements" type="button" data-protected-request disabled>All requirements</button>
 <div id="spec-navigation" aria-live="polite"></div></dialog>
-<main><nav class="view-controls" aria-label="Workspace views"><button type="button" data-view="specifications" data-protected-request data-icon="file-text" disabled>Specifications</button><button type="button" data-view="coverage" data-protected-request data-icon="check" disabled>Coverage</button><button type="button" data-view="diff" data-protected-request data-icon="git-compare-arrows" disabled>Diff</button><button type="button" data-view="graph" data-protected-request data-icon="network" disabled>Traceability</button></nav>
+<main id="workspace-main" tabindex="-1"><nav class="view-controls" aria-label="Workspace views"><button type="button" data-view="specifications" data-protected-request data-icon="file-text" disabled>Specifications</button><button type="button" data-view="coverage" data-protected-request data-icon="check" disabled>Coverage</button><button type="button" data-view="diff" data-protected-request data-icon="git-compare-arrows" disabled>Diff</button><button type="button" data-view="graph" data-protected-request data-icon="network" disabled>Traceability</button></nav>
 <details id="workspace-authority" aria-label="Authority boundary"><summary data-icon="info">Derived view</summary><h2>Authority boundary</h2><p data-authority>Loading admitted authority...</p><ul data-non-claims></ul></details>
 <section id="workspace-content" aria-busy="true"><h2>Loading workspace</h2><p role="status" aria-live="polite">Loading admitted manifest...</p></section></main>
 <dialog id="workspace-inspector" class="workspace-panel" aria-labelledby="inspector-heading"><div class="panel-heading"><h2 id="inspector-heading">Ask about selection</h2><button class="icon-button" type="button" data-close-panel data-icon="x" aria-label="Close inspector" title="Close inspector"></button></div>

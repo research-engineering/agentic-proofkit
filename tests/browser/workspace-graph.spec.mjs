@@ -258,28 +258,47 @@ capacityTest("maximum admitted graph page remains bounded, inspectable and below
   for (const sample of samples) admitGraphCommitMilliseconds(sample);
 });
 
-capacityTest("Go-built unverified coordinates retain exact HTTP and DOM values or fail closed", async ({graphNumericURL, page}) => {
-  await openWorkspace(page, graphNumericURL);
-  const response = page.waitForResponse(response => response.url().endsWith("/api/v1/graph"));
-  await page.getByRole("button", {name: "Traceability", exact: true}).click();
-  const body = await (await response).text();
-  const wire = JSON.parse(body, (key, value, context) => key === "byteStart" || key === "byteEnd" ? context.source : value);
-  const range = wire.projection.nodes.find(node => node.nodeId === "code:code.retry");
-  expect([range.byteStart, range.byteEnd]).toEqual(["9007199254740992", "9007199254740993"]);
-  await page.locator('.graph-records button[data-graph-select="code:code.retry"]').click();
-  const inspector = page.getByRole("region", {name: "Selected graph node"});
-  await expect(inspector.locator('dt:has-text("byteStart") + dd')).toHaveText("9007199254740992");
-  await expect(inspector.locator('dt:has-text("byteEnd") + dd')).toHaveText("9007199254740993");
-  await expect(inspector.locator('dt:has-text("rangeVerification") + dd')).toHaveText("unverified");
-  await expect(inspector.locator('dt:has-text("currentnessState") + dd')).toHaveText("unverified");
+for (const missing of ["source-context", "rawJSON", "isRawJSON"]) {
+  capacityTest(`Go-built exact coordinates diagnose missing ${missing} separately from malformed input`, async ({graphNumericURL, page}) => {
+    await openWorkspace(page, graphNumericURL);
+    const response = page.waitForResponse(response => response.url().endsWith("/api/v1/graph"));
+    await page.getByRole("button", {name: "Traceability", exact: true}).click();
+    const body = await (await response).text();
+    const wire = JSON.parse(body, (key, value, context) => key === "byteStart" || key === "byteEnd" ? context.source : value);
+    const range = wire.projection.nodes.find(node => node.nodeId === "code:code.retry");
+    expect([range.byteStart, range.byteEnd]).toEqual(["9007199254740992", "9007199254740993"]);
+    await page.locator('.graph-records button[data-graph-select="code:code.retry"]').click();
+    const inspector = page.getByRole("region", {name: "Selected graph node"});
+    await expect(inspector.locator('dt:has-text("byteStart") + dd')).toHaveText("9007199254740992");
+    await expect(inspector.locator('dt:has-text("byteEnd") + dd')).toHaveText("9007199254740993");
+    await expect(inspector.locator('dt:has-text("rangeVerification") + dd')).toHaveText("unverified");
+    await expect(inspector.locator('dt:has-text("currentnessState") + dd')).toHaveText("unverified");
 
-  await page.evaluate(() => Reflect.set(JSON, "rawJSON", undefined));
-  await page.getByRole("button", {name: "Specifications", exact: true}).click();
-  await expect(page.locator("body")).toHaveAttribute("data-state", "specifications");
-  await page.getByRole("button", {name: "Traceability", exact: true}).click();
-  await expect(page.getByText("The admitted workspace is unavailable.", {exact: true})).toBeVisible();
-  await expect(page.locator(".graph-inspector")).toHaveCount(0);
-});
+    await page.evaluate(feature => {
+      if (feature === "source-context") {
+        const nativeParse = JSON.parse;
+        JSON.parse = (source, reviver) => typeof reviver === "function" ? nativeParse(source, (key, value) => reviver(key, value)) : nativeParse(source, reviver);
+      } else Reflect.set(JSON, feature, undefined);
+    }, missing);
+    await page.getByRole("button", {name: "Specifications", exact: true}).click();
+    await expect(page.locator("body")).toHaveAttribute("data-state", missing === "source-context" ? "view-failed" : "specifications");
+    await page.getByRole("button", {name: "Traceability", exact: true}).click();
+    const alert = page.locator("#workspace-content [role=alert]");
+    await expect(alert).toHaveText("This browser cannot preserve exact workspace numbers. Use a browser with JSON numeric source and raw JSON support.");
+    await expect(alert).toHaveAttribute("data-state", "unsupported-engine");
+    await expect(page.locator(".graph-inspector, .graph-records, .graph-canvas")).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Retry", exact: true})).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Reload workspace", exact: true})).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Specifications", exact: true})).toBeEnabled();
+
+    await page.route("**/api/v1/graph", route => route.fulfill({status: 200, contentType: "application/json", body: '{"privateDetail":9007199254740993,"broken":}'}));
+    await page.getByRole("button", {name: "Traceability", exact: true}).click();
+    await expect(alert).toHaveText("The admitted workspace is unavailable.");
+    await expect(alert).toHaveAttribute("data-state", "unavailable");
+    await expect(page.locator("body")).not.toContainText("privateDetail");
+    await expect(page.locator(".graph-inspector, .graph-records, .graph-canvas")).toHaveCount(0);
+  });
+}
 
 test("native numeric observation preserves fractional tokens, strings and control values", async ({baseURL, page}) => {
   const body = '{"start":9007199254740992,"end":9007199254740993,"safe":9007199254740991,"zero":0,"string":"9007199254740993","nested":[1.0000000000000001,1e-400,-0,1e400,-9007199254740993,0.123456789012345678901],"unbranded":{"rawJSON":"17"}}';

@@ -564,6 +564,18 @@ not change `verification_required` into verified. Existing
 `requirement-browser-server` routes remain available for explicitly composed
 source, proof, coverage, tree or comparison workspaces.
 
+The browser test matrix uses the Chromium, Firefox and WebKit engines bundled
+with the repository's pinned Playwright version, not minimum branded-browser
+versions or a Safari certification. Interactive workspaces require JavaScript
+and native dialogs. Exact numeric responses require the `JSON.parse` reviver's
+numeric source context; tokens other than canonical safe integers additionally
+require native `JSON.rawJSON` and `JSON.isRawJSON`. Canonical safe integers do
+not require the raw JSON factories. Missing numeric features stop the affected
+response with an unsupported-engine message rather than display rounded data.
+Use an engine providing those features; malformed responses remain data errors,
+not an instruction to change browsers. Native CLI output and exports retain
+their existing exact-data contract.
+
 Rendered HTML, Markdown, lookup graphs, and browser views are presentation
 products. They should be generated on demand from explicit caller-owned inputs
 unless a consumer explicitly admits a small tracked artifact with a freshness
