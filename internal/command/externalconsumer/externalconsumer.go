@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -77,8 +79,8 @@ type input struct {
 }
 
 type witnessPlan struct {
-	Commands   []any
-	Vocabulary any
+	Plan witnesscommand.Plan
+	Err  error
 }
 
 type rollback struct {
@@ -335,7 +337,20 @@ func admitWitnessPlan(raw any) (witnessPlan, error) {
 	if !ok || len(commands) == 0 {
 		return witnessPlan{}, fmt.Errorf("proofkit external-consumer witnessPlan.commands must be a non-empty array")
 	}
-	return witnessPlan{Commands: commands, Vocabulary: record["vocabulary"]}, nil
+	vocabulary, err := witnesscommand.AdmitVocabulary(record["vocabulary"])
+	if err != nil {
+		return witnessPlan{Err: err}, nil
+	}
+	admittedCommands := make([]witnesscommand.Command, 0, len(commands))
+	for _, rawCommand := range commands {
+		command, err := witnesscommand.AdmitWithVocabulary(rawCommand, vocabulary)
+		if err != nil {
+			return witnessPlan{Err: err}, nil
+		}
+		admittedCommands = append(admittedCommands, command)
+	}
+	plan, err := witnesscommand.PlanCommands(admittedCommands)
+	return witnessPlan{Plan: plan, Err: err}, nil
 }
 
 func admitRollback(raw any) (rollback, error) {
@@ -736,7 +751,8 @@ func releaseAuthorityFailures(input input) []string {
 		"cliSmokeProofId":               releaseProjection.ArtifactProof.CLISmokeProofID,
 		"deepImportRejectionProofId":    releaseProjection.ArtifactProof.DeepImportRejectionProofID,
 	}
-	for key, actual := range expectedProofIDs {
+	for _, key := range slices.Sorted(maps.Keys(expectedProofIDs)) {
+		actual := expectedProofIDs[key]
 		expected := expectedExternalProofID(key)
 		if actual != expected {
 			failures = append(failures, "releaseAuthorityInput.artifactProof."+key+" must be "+expected)
@@ -810,23 +826,10 @@ func consumerProofFailures(input input, proofValue *consumerProof) []string {
 }
 
 func expectedWitnessPlan(input input) (map[string]any, error) {
-	vocabulary, err := witnesscommand.AdmitVocabulary(input.WitnessPlan.Vocabulary)
-	if err != nil {
-		return nil, err
+	if input.WitnessPlan.Err != nil {
+		return nil, input.WitnessPlan.Err
 	}
-	commands := make([]witnesscommand.Command, 0, len(input.WitnessPlan.Commands))
-	for _, rawCommand := range input.WitnessPlan.Commands {
-		command, err := witnesscommand.AdmitWithVocabulary(rawCommand, vocabulary)
-		if err != nil {
-			return nil, err
-		}
-		commands = append(commands, command)
-	}
-	plan, err := witnesscommand.PlanCommands(commands)
-	if err != nil {
-		return nil, err
-	}
-	return plan.JSONValue(), nil
+	return input.WitnessPlan.Plan.JSONValue(), nil
 }
 
 func expectedBinarySmokeOutputSHA256(input input) string {
@@ -970,7 +973,7 @@ func sortedText(raw any, context string) ([]string, error) {
 	}
 	for index := 1; index < len(result); index++ {
 		if result[index-1] == result[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
+			return nil, fmt.Errorf("%s must be unique", context)
 		}
 	}
 	return result, nil

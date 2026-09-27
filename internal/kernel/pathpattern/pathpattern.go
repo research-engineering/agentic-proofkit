@@ -51,6 +51,12 @@ func (pattern Pattern) String() string {
 	return pattern.source
 }
 
+// MatchesAllRootNames tests the wildcard-only language, not a sample of paths:
+// literals exclude some names; matching one root name then excludes required slashes.
+func (pattern Pattern) MatchesAllRootNames() bool {
+	return strings.Trim(pattern.source, "*/") == "" && pattern.MatchAdmitted("x")
+}
+
 func (pattern Pattern) MatchAdmitted(target string) bool {
 	if pattern.regexp != nil {
 		return pattern.regexp.MatchString(target)

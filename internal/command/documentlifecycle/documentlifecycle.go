@@ -214,7 +214,7 @@ func documentArray(raw any) ([]documentInput, error) {
 	})
 	for index := 1; index < len(documents); index++ {
 		if documents[index-1].DocumentID == documents[index].DocumentID {
-			return nil, fmt.Errorf("document lifecycle document ids must be sorted and unique")
+			return nil, fmt.Errorf("document lifecycle document ids must be unique")
 		}
 	}
 	return documents, nil

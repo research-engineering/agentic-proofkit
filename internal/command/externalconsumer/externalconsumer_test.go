@@ -42,6 +42,44 @@ func TestVersionTextRejectsNonSemVer(t *testing.T) {
 	}
 }
 
+func TestBuildOrdersMultipleReleaseProofFailures(t *testing.T) {
+	input := validExternalConsumerInput(t)
+	proof := input["input"].(map[string]any)["releaseAuthorityInput"].(map[string]any)["artifactProof"].(map[string]any)
+	keys := []string{"binarySmokeProofId", "cliSmokeProofId", "deepImportRejectionProofId", "outsideConsumerInstallProofId", "packDryRunCommandId", "packageArtifactCommandId"}
+	for _, key := range keys {
+		proof[key] = "proof.unexpected." + key
+	}
+	var first string
+	for iteration := 0; iteration < 32; iteration++ {
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 1 || record.State != "failed" {
+			t.Fatalf("multiple proof mismatches: exit=%d error=%v", exitCode, err)
+		}
+		index := 0
+		for _, result := range record.RuleResults {
+			if !strings.HasPrefix(result.Message, "releaseAuthorityInput.artifactProof.") {
+				continue
+			}
+			if index >= len(keys) || !strings.HasPrefix(result.Message, "releaseAuthorityInput.artifactProof."+keys[index]+" must be ") {
+				t.Fatalf("proof failure #%d is not in canonical key order: %s", index, result.Message)
+			}
+			index++
+		}
+		if index != len(keys) {
+			t.Fatalf("proof failures=%d, want %d", index, len(keys))
+		}
+		wire, err := json.Marshal(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if iteration == 0 {
+			first = string(wire)
+		} else if string(wire) != first {
+			t.Fatal("identical input changed the complete report")
+		}
+	}
+}
+
 func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
 	record, exitCode, err := Build(validExternalConsumerInput(t))
 	if err != nil {
@@ -97,6 +135,83 @@ func TestBuildUsesAdmittedReleaseAuthorityProjection(t *testing.T) {
 	if exitCode != 0 || record.State != "passed" {
 		encoded, _ := json.Marshal(record)
 		t.Fatalf("Build() exit=%d record=%s, want passed", exitCode, string(encoded))
+	}
+}
+
+func TestAdmittedWitnessPlanDoesNotRetainCallerOrProjectionAliases(t *testing.T) {
+	for _, operand := range []string{"argv", "vocabulary", "command", "projection"} {
+		t.Run(operand, func(t *testing.T) {
+			raw := validExternalConsumerInput(t)
+			admitted, err := admitReportInput(raw)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cliHash := expectedCLIWitnessPlanOutputSHA256(admitted.Input)
+			binaryHash := expectedBinarySmokeOutputSHA256(admitted.Input)
+			if cliHash == "" || binaryHash == "" {
+				t.Fatal("valid admitted fixture lost plan identity")
+			}
+			plan := raw["input"].(map[string]any)["witnessPlan"].(map[string]any)
+			switch operand {
+			case "argv":
+				plan["commands"].([]any)[0].(map[string]any)["argv"].([]any)[1] = "--help"
+			case "vocabulary":
+				plan["vocabulary"].(map[string]any)["maxTimeoutMs"] = json.Number("0")
+			case "command":
+				plan["commands"].([]any)[0] = nil
+			case "projection":
+				projection, err := expectedWitnessPlan(admitted.Input)
+				if err != nil {
+					t.Fatal(err)
+				}
+				projection["commands"].([]any)[0].(map[string]any)["argv"].([]any)[1] = "--help"
+			}
+			if expectedCLIWitnessPlanOutputSHA256(admitted.Input) != cliHash || expectedBinarySmokeOutputSHA256(admitted.Input) != binaryHash {
+				t.Fatal("mutable caller or projection changed an admitted witness identity")
+			}
+		})
+	}
+}
+
+func TestBuildPreservesWitnessPlanAdmissionAndReportFailureBoundaries(t *testing.T) {
+	for _, mode := range []string{"outer_shape", "empty_commands", "inner_vocabulary", "inner_command", "duplicate_command"} {
+		t.Run(mode, func(t *testing.T) {
+			raw := validExternalConsumerInput(t)
+			input := raw["input"].(map[string]any)
+			plan := input["witnessPlan"].(map[string]any)
+			switch mode {
+			case "outer_shape":
+				input["witnessPlan"] = nil
+			case "empty_commands":
+				plan["commands"] = []any{}
+			case "inner_vocabulary":
+				plan["vocabulary"].(map[string]any)["maxTimeoutMs"] = json.Number("0")
+			case "inner_command":
+				plan["commands"].([]any)[0] = nil
+			case "duplicate_command":
+				plan["commands"] = append(plan["commands"].([]any), plan["commands"].([]any)[0])
+			}
+			record, exitCode, err := Build(raw)
+			if exitCode != 1 {
+				t.Fatalf("invalid witness plan returned exit=%d", exitCode)
+			}
+			if mode == "outer_shape" || mode == "empty_commands" {
+				if err == nil || !strings.Contains(err.Error(), "witnessPlan") {
+					t.Fatalf("outer admission error lost: %v", err)
+				}
+				return
+			}
+			if err != nil || record.State != "failed" {
+				t.Fatalf("inner failure lost failed-report boundary: %v %#v", err, record)
+			}
+			found := false
+			for _, result := range record.RuleResults {
+				found = found || strings.HasPrefix(result.Message, "witnessPlan: ")
+			}
+			if !found {
+				t.Fatal("inner witness failure missing from report")
+			}
+		})
 	}
 }
 

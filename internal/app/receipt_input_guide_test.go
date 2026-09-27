@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/childcoverage"
 )
 
 func receiptHelpTemplate(t *testing.T, command ...string) (map[string]any, string) {
@@ -127,7 +128,7 @@ func TestReceiptInputGuideExecutionAndBundleChain(t *testing.T) {
 				ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 				defer cancel()
 				process := exec.CommandContext(ctx, args[0], args[1:]...)
-				process.Dir, process.Env, process.WaitDelay = root, []string{"GOCOVERDIR=" + t.TempDir()}, time.Second
+				process.Dir, process.Env, process.WaitDelay = root, childcoverage.Environment(t, nil), time.Second
 				process.Stdout = &output
 				var diagnostic bytes.Buffer
 				process.Stderr = &diagnostic

@@ -2,6 +2,7 @@ package conformanceprofile
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -221,7 +222,7 @@ func Markdown(profile ProfileReport) string {
 		fmt.Sprintf("- Witness mappings: %d", profile.WitnessMappingCount),
 		fmt.Sprintf("- Commands: %d", profile.CommandCount),
 		fmt.Sprintf("- Preconditioned bindings: %d", profile.PreconditionedBindingCount),
-		"- Environment classes: " + strings.Join(profile.EnvironmentClasses, ", "),
+		"- Environment classes: " + markdownfmt.Text(strings.Join(profile.EnvironmentClasses, ", ")),
 		"",
 		"## Verify Commands",
 		"",
@@ -404,7 +405,7 @@ func admitManifest(raw any, policy Policy) (Manifest, error) {
 	if manifest.SourceContract != policy.ExpectedManifest.SourceContract {
 		return Manifest{}, fmt.Errorf("conformance profile manifest sourceContract drift")
 	}
-	if strings.Join(manifest.NonClaims, "\n") != strings.Join(policy.ExpectedManifest.NonClaims, "\n") {
+	if !slices.Equal(manifest.NonClaims, policy.ExpectedManifest.NonClaims) {
 		return Manifest{}, fmt.Errorf("conformance profile manifest nonClaims drift")
 	}
 	profileValues, ok := record["profiles"].([]any)
@@ -741,6 +742,23 @@ func validateProfile(profile Profile, proofContract ProofContract, policy Policy
 		}
 	}
 	selectedBindings := profileBindings(profile, proofContract)
+	selectedSurfaces := set(profile.RequiredSurfaceIDs)
+	for _, binding := range selectedBindings {
+		selectedSurfaces[binding.SurfaceID] = struct{}{}
+	}
+	for _, surface := range proofContract.Surfaces {
+		if _, selected := selectedSurfaces[surface.SurfaceID]; !selected {
+			continue
+		}
+		for _, environmentClass := range surface.RequiredEnvironmentClasses {
+			if _, allowed := allowedEnvironments[environmentClass]; !allowed {
+				failures = append(failures, fmt.Sprintf("profile %s surface %s requires unallowed environment %s", profile.ProfileID, surface.SurfaceID, environmentClass))
+			}
+			if _, local := policy.LocalEnvironmentClasses[environmentClass]; profile.PreconditionPolicy == "local_only" && !local {
+				failures = append(failures, fmt.Sprintf("profile %s local-only profile selects surface %s requiring non-local environment %s", profile.ProfileID, surface.SurfaceID, environmentClass))
+			}
+		}
+	}
 	selectedEnvironments := set(flatMapEnvironments(selectedBindings))
 	if policy.FailOnUnusedAllowedEnvironment {
 		for _, environmentClass := range profile.AllowedEnvironmentClasses {
@@ -1010,10 +1028,10 @@ func uniqueSorted(values []string) []string {
 }
 
 func assertSortedUnique(values []string, context string) error {
-	sorted := append([]string{}, values...)
-	sort.Strings(sorted)
-	if strings.Join(values, "\n") != strings.Join(sorted, "\n") || len(values) != len(set(values)) {
-		return fmt.Errorf("%s must be sorted and unique", context)
+	for index := 1; index < len(values); index++ {
+		if values[index-1] >= values[index] {
+			return fmt.Errorf("%s must be sorted and unique", context)
+		}
 	}
 	return nil
 }

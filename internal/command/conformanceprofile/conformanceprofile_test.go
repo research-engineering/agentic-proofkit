@@ -38,6 +38,58 @@ func TestBuildProfileResolvesRequiredSurfaceAndRejectsMissingSurface(t *testing.
 	}
 }
 
+func TestBuildProfileEnforcesSelectedSurfaceRequiredEnvironments(t *testing.T) {
+	for _, test := range []struct {
+		name, policy, want string
+		allowRemote        bool
+		optionalUnbound    bool
+		optionalBound      bool
+		failOnUnused       bool
+	}{
+		{name: "unallowed", policy: "allow_preconditioned", want: "requires unallowed environment remote-ci"},
+		{name: "non-local", policy: "local_only", allowRemote: true, want: "requiring non-local environment remote-ci"},
+		{name: "admitted remote", policy: "allow_preconditioned", allowRemote: true},
+		{name: "unselected optional", policy: "local_only", optionalUnbound: true},
+		{name: "selected optional", policy: "allow_preconditioned", optionalBound: true, want: "surface surface.remote requires unallowed environment remote-ci"},
+		{name: "declarations are not used witness environments", policy: "allow_preconditioned", allowRemote: true, failOnUnused: true, want: "declares unused environment class remote-ci"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := validConformanceProfileInput()
+			policy := input["policy"].(map[string]any)
+			policy["knownEnvironmentClasses"] = []any{"local-go", "remote-ci"}
+			policy["failOnUnusedAllowedEnvironmentClass"] = test.failOnUnused
+			profile := input["manifest"].(map[string]any)["profiles"].([]any)[0].(map[string]any)
+			profile["preconditionPolicy"] = test.policy
+			if test.allowRemote {
+				profile["allowedEnvironmentClasses"] = []any{"local-go", "remote-ci"}
+			}
+			proof := input["proofContract"].(map[string]any)
+			if test.optionalUnbound || test.optionalBound {
+				proof["surfaces"] = append(proof["surfaces"].([]any), map[string]any{
+					"surfaceId": "surface.remote", "requiredEnvironmentClasses": []any{"remote-ci"}, "preconditionedEnvironmentClasses": []any{},
+				})
+				profile["optionalSurfaceIds"] = []any{"surface.remote"}
+				if test.optionalBound {
+					proof["bindings"] = append(proof["bindings"].([]any), conformanceBindingFixtureForSurface("go test ./...", "surface.remote", "surface.remote::scenario"))
+				}
+			} else {
+				proof["surfaces"].([]any)[0].(map[string]any)["requiredEnvironmentClasses"] = []any{"remote-ci"}
+			}
+			result, err := BuildProfile(input, "local")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if test.want == "" {
+				if result.ExitCode != 0 || result.Report.State != "passed" {
+					t.Fatalf("admitted profile failed: %#v", result.ProfileReport.Failures)
+				}
+			} else if result.ExitCode != 1 || result.Report.State != "failed" || !strings.Contains(strings.Join(result.ProfileReport.Failures, "\n"), test.want) {
+				t.Fatalf("missing surface environment rejection: %#v", result.ProfileReport.Failures)
+			}
+		})
+	}
+}
+
 func TestBuildProfilePreservesMultipleBindingsAndRoleQualifiedRoutes(t *testing.T) {
 	input := validConformanceProfileInput()
 	proofContract := input["proofContract"].(map[string]any)
@@ -406,5 +458,31 @@ func TestMarkdownEscapesCommandCodeSpans(t *testing.T) {
 	}
 	if !strings.Contains(output, "``go test ./`pkg```") {
 		t.Fatalf("Markdown() output missing widened code span:\n%s", output)
+	}
+}
+
+func TestMarkdownEscapesAdmittedEnvironmentClasses(t *testing.T) {
+	input := validConformanceProfileInput()
+	const environment = "<em>local</em> [link](https://example.invalid)"
+	policy := input["policy"].(map[string]any)
+	policy["knownEnvironmentClasses"] = []any{environment}
+	policy["localEnvironmentClasses"] = []any{environment}
+	input["manifest"].(map[string]any)["profiles"].([]any)[0].(map[string]any)["allowedEnvironmentClasses"] = []any{environment}
+	proof := input["proofContract"].(map[string]any)
+	proof["surfaces"].([]any)[0].(map[string]any)["requiredEnvironmentClasses"] = []any{environment}
+	binding := proof["bindings"].([]any)[0].(map[string]any)
+	binding["requiredEnvironmentClasses"] = []any{environment}
+	for _, witness := range binding["witnessRefs"].([]any) {
+		witness.(map[string]any)["environmentClasses"] = []any{environment}
+	}
+	result, err := BuildProfile(input, "local")
+	if err != nil || result.ExitCode != 0 {
+		t.Fatalf("valid caller environment rejected: %v %#v", err, result.ProfileReport.Failures)
+	}
+	assertStringSlice(t, result.ProfileReport.EnvironmentClasses, []string{environment})
+	output := Markdown(result.ProfileReport)
+	want := "- Environment classes: &lt;em&gt;local&lt;/em&gt; \\[link\\]\\(https://example\\.invalid\\)\n"
+	if !strings.Contains(output, want) || strings.Contains(output, environment) {
+		t.Fatalf("caller environment became Markdown syntax:\n%s", output)
 	}
 }

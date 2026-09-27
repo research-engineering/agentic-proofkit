@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -75,23 +76,34 @@ func TestWorkspaceLookupHTTPEnforcesExpandedWireBudget(t *testing.T) {
 	if len(stableWorkspaceBytes(t, contextValue)) >= 8<<20 {
 		t.Fatal("wire expansion fixture must fit the independently admitted snapshot input cap")
 	}
-	handle, capability := startWorkspaceTestServer(t, fixture, false)
 	// Fifteen 1 MiB source notices fit, but sixteen plus metadata cannot fit.
 	// The second request uses the actual first-page cardinality, not its limit.
+	// Witness byte admission separately from native transport: race-instrumented
+	// projection work is not a promise to finish within the socket write deadline.
+	rendered, err := render(fixture, Options{View: "workspace"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	const authority = "127.0.0.1:1"
+	capability, err := browserCapability()
+	if err != nil {
+		t.Fatal(err)
+	}
+	snapshotID := workspaceSnapshotID(rendered.workspace)
+	handler := browserHandler("workspace", rendered, authority, capability, false, newTerminalArbiter())
 	offset := 0
 	for page := 0; page < 2; page++ {
 		query := map[string]any{"nodeId": "spec.child", "maxRecords": json.Number("128"), "offset": json.Number(fmt.Sprint(offset))}
-		request, err := http.NewRequest(http.MethodPost, handle.URL+"api/v1/requirements", bytes.NewReader(stableWorkspaceBytes(t, map[string]any{"requestId": "lookup.capacity", "snapshotId": handle.SnapshotID, "query": query})))
+		request, err := http.NewRequest(http.MethodPost, "http://"+authority+"/api/v1/requirements", bytes.NewReader(stableWorkspaceBytes(t, map[string]any{"requestId": "lookup.capacity", "snapshotId": snapshotID, "query": query})))
 		if err != nil {
 			t.Fatal(err)
 		}
 		request.Header.Set("Content-Type", "application/json")
-		request.Header.Set("Origin", strings.TrimSuffix(handle.URL, "/"))
+		request.Header.Set("Origin", "http://"+authority)
 		request.Header.Set("X-Proofkit-Browser-Capability", capability)
-		response, err := http.DefaultClient.Do(request)
-		if err != nil {
-			t.Fatal(err)
-		}
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, request)
+		response := recorder.Result()
 		body, readErr := io.ReadAll(io.LimitReader(response.Body, wireLimit+1))
 		closeErr := response.Body.Close()
 		if readErr != nil || closeErr != nil {
@@ -100,6 +112,7 @@ func TestWorkspaceLookupHTTPEnforcesExpandedWireBudget(t *testing.T) {
 		if response.StatusCode != http.StatusOK || len(body) > wireLimit || len(body) <= 15*boundaryBytes {
 			t.Fatalf("expanded HTTP response status=%d bytes=%d, want 200 with 15 MiB < bytes <= 16 MiB", response.StatusCode, len(body))
 		}
+		assertWorkspaceResponseTransport(t, body, response.Header)
 		decoded, err := admission.DecodeJSON(bytes.NewReader(body), wireLimit)
 		if err != nil {
 			t.Fatal(err)
@@ -128,9 +141,38 @@ func TestWorkspaceLookupHTTPEnforcesExpandedWireBudget(t *testing.T) {
 				t.Fatalf("byte-limited HTTP %s = %v, want %d", field, projection[field], expected)
 			}
 		}
-		if record["state"] != "partial_with_omissions" || record["requestId"] != "lookup.capacity" || record["snapshotId"] != handle.SnapshotID {
+		if record["state"] != "partial_with_omissions" || record["requestId"] != "lookup.capacity" || record["snapshotId"] != snapshotID {
 			t.Fatal("byte-limited HTTP page lost completion state or request identity")
 		}
 		offset += len(rows)
+	}
+}
+
+func assertWorkspaceResponseTransport(t *testing.T, body []byte, headers http.Header) {
+	t.Helper()
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		serveWorkspaceJSONBytes(response, request.Method, body)
+	}))
+	server.Config.WriteTimeout = serverWriteTimeout
+	server.Start()
+	defer server.Close()
+	client := server.Client()
+	client.Timeout = serverReadTimeout + serverWriteTimeout
+	response, err := client.Get(server.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual, readErr := io.ReadAll(io.LimitReader(response.Body, int64(len(body))+1))
+	closeErr := response.Body.Close()
+	if readErr != nil || closeErr != nil {
+		t.Fatalf("native response transport: read=%v close=%v", readErr, closeErr)
+	}
+	if response.StatusCode != http.StatusOK || !bytes.Equal(actual, body) {
+		t.Fatalf("native response transport changed status or body: status=%d bytes=%d", response.StatusCode, len(actual))
+	}
+	for _, name := range []string{"Content-Type", "Cache-Control", "Content-Security-Policy", "X-Content-Type-Options"} {
+		if headers.Get(name) == "" || response.Header.Get(name) != headers.Get(name) {
+			t.Fatalf("native response transport changed required header %s", name)
+		}
 	}
 }

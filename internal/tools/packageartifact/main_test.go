@@ -3,13 +3,13 @@ package main
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
@@ -20,6 +20,11 @@ func (run runnerFunc) Run(root string, argv []string) (int, error) {
 }
 
 func TestRunWithDependenciesRecordsCanonicalAndExecutionArgv(t *testing.T) {
+	t.Setenv("GIT_CONFIG_COUNT", "2")
+	t.Setenv("GIT_CONFIG_KEY_0", "commit.gpgSign")
+	t.Setenv("GIT_CONFIG_VALUE_0", "true")
+	t.Setenv("GIT_CONFIG_KEY_1", "gpg.program")
+	t.Setenv("GIT_CONFIG_VALUE_1", "proofkit-test-unavailable-signing-program")
 	root := packageArtifactFixture(t)
 	staleRecord := packageartifactrecord.Record{Status: "passed"}
 	if err := packageartifactrecord.Write(root, staleRecord); err != nil {
@@ -38,18 +43,20 @@ func TestRunWithDependenciesRecordsCanonicalAndExecutionArgv(t *testing.T) {
 	if err := runWithDependencies(root, runner, stableDependencies()); err != nil {
 		t.Fatalf("runWithDependencies() error = %v", err)
 	}
-	if !reflect.DeepEqual(actualArgv, packageartifactrecord.CanonicalExecutionArgv()) {
-		t.Fatalf("runner argv = %v, want %v", actualArgv, packageartifactrecord.CanonicalExecutionArgv())
+	wantExecutionArgv := []string{"npm", "run", "package:artifact:steps"}
+	wantCommandArgv := []string{"npm", "run", "package:artifact"}
+	if !reflect.DeepEqual(actualArgv, wantExecutionArgv) {
+		t.Fatalf("runner argv = %v, want %v", actualArgv, wantExecutionArgv)
 	}
 	record, err := packageartifactrecord.Read(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(record.Argv, packageartifactrecord.CanonicalCommandArgv()) {
-		t.Fatalf("record argv = %v, want canonical %v", record.Argv, packageartifactrecord.CanonicalCommandArgv())
+	if !reflect.DeepEqual(record.Argv, wantCommandArgv) {
+		t.Fatalf("record argv = %v, want canonical %v", record.Argv, wantCommandArgv)
 	}
-	if !reflect.DeepEqual(record.ExecutionArgv, packageartifactrecord.CanonicalExecutionArgv()) {
-		t.Fatalf("record executionArgv = %v, want %v", record.ExecutionArgv, packageartifactrecord.CanonicalExecutionArgv())
+	if !reflect.DeepEqual(record.ExecutionArgv, wantExecutionArgv) {
+		t.Fatalf("record executionArgv = %v, want %v", record.ExecutionArgv, wantExecutionArgv)
 	}
 	if record.Status != "passed" || record.ExitCode != 0 {
 		t.Fatalf("record result = %s/%d, want passed/0", record.Status, record.ExitCode)
@@ -193,39 +200,66 @@ func TestRunWithDependenciesInvalidatesPassedRecordOnFailedRun(t *testing.T) {
 }
 
 func TestRunWithDependenciesRejectsSourceAndExecutionContextMutation(t *testing.T) {
-	root := packageArtifactFixture(t)
-	toolchainCalls := 0
-	environmentCalls := 0
-	dependencies := stableDependencies()
-	dependencies.toolchainDigest = func() (string, error) {
-		toolchainCalls++
-		return strings.Repeat(string(rune('a'+toolchainCalls-1)), 64), nil
-	}
-	dependencies.environ = func() []string {
-		environmentCalls++
-		return []string{"GOFLAGS=-mod=" + []string{"readonly", "vendor"}[environmentCalls-1]}
-	}
-	runner := runnerFunc(func(root string, _ []string) (int, error) {
-		writeFileFixture(t, root, "source.txt", "source-v2")
-		writeArtifactFixture(t, root, "artifact-v2")
-		return 0, nil
-	})
+	for _, item := range []struct {
+		name                           string
+		source, environment, toolchain bool
+	}{
+		{name: "source only", source: true},
+		{name: "environment only", environment: true},
+		{name: "toolchain only", toolchain: true},
+		{name: "combined", source: true, environment: true, toolchain: true},
+	} {
+		t.Run(item.name, func(t *testing.T) {
+			root := packageArtifactFixture(t)
+			toolchainCalls := 0
+			environmentCalls := 0
+			dependencies := stableDependencies()
+			dependencies.toolchainDigest = func() (string, error) {
+				toolchainCalls++
+				if item.toolchain && toolchainCalls > 1 {
+					return strings.Repeat("b", 64), nil
+				}
+				return strings.Repeat("a", 64), nil
+			}
+			dependencies.environ = func() []string {
+				environmentCalls++
+				if item.environment && environmentCalls > 1 {
+					return []string{"GOFLAGS=-mod=vendor"}
+				}
+				return []string{"GOFLAGS=-mod=readonly"}
+			}
+			runner := runnerFunc(func(root string, _ []string) (int, error) {
+				if item.source {
+					writeFileFixture(t, root, "source.txt", "source-v2")
+				}
+				writeArtifactFixture(t, root, "artifact-v2")
+				return 0, nil
+			})
 
-	err := runWithDependencies(root, runner, dependencies)
-	if err == nil {
-		t.Fatal("runWithDependencies() accepted mutated source and execution context")
-	}
-	for _, fragment := range []string{"changed its source snapshot", "changed its environment snapshot", "changed its toolchain snapshot"} {
-		if !strings.Contains(err.Error(), fragment) {
-			t.Errorf("runWithDependencies() error %q does not contain %q", err, fragment)
-		}
-	}
-	record, readErr := packageartifactrecord.Read(root)
-	if readErr != nil {
-		t.Fatal(readErr)
-	}
-	if record.Status != "failed" {
-		t.Fatalf("record status = %q, want failed", record.Status)
+			err := runWithDependencies(root, runner, dependencies)
+			if err == nil {
+				t.Fatal("runWithDependencies() accepted mutated source and execution context")
+			}
+			for _, diagnostic := range []struct {
+				fragment string
+				want     bool
+			}{
+				{"changed its source snapshot", item.source},
+				{"changed its environment snapshot", item.environment},
+				{"changed its toolchain snapshot", item.toolchain},
+			} {
+				if strings.Contains(err.Error(), diagnostic.fragment) != diagnostic.want {
+					t.Errorf("runWithDependencies() error %q, diagnostic %q presence must be %v", err, diagnostic.fragment, diagnostic.want)
+				}
+			}
+			record, readErr := packageartifactrecord.Read(root)
+			if readErr != nil {
+				t.Fatal(readErr)
+			}
+			if record.Status != "failed" {
+				t.Fatalf("record status = %q, want failed", record.Status)
+			}
+		})
 	}
 }
 
@@ -277,8 +311,7 @@ func writeFileFixture(t *testing.T, root string, relativePath string, content st
 
 func runFixtureGit(t *testing.T, root string, args ...string) {
 	t.Helper()
-	command := exec.Command("git", args...)
-	command.Dir = root
+	command := gitfixture.Command(root, args...)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v: %s", args, err, output)
 	}
