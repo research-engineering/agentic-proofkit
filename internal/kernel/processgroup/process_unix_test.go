@@ -11,6 +11,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -118,45 +119,49 @@ func TestRetainedSignalSealReapTrace(t *testing.T) {
 func TestRetainedDelayedObserverAbortAndLostIdentity(t *testing.T) {
 	for _, lost := range []bool{false, true} {
 		t.Run(map[bool]string{false: "delayed_terminal", true: "lost_identity"}[lost], func(t *testing.T) {
-			entered, release, killed := make(chan struct{}), make(chan struct{}), make(chan struct{})
-			var once sync.Once
-			kills, waits, probes := 0, 0, 0
-			child := newChild(123, 1, operations{
-				observe: func(int, int) (bool, error) {
-					close(entered)
-					<-release
-					if lost {
-						return false, ErrOwnershipLost
-					}
-					return true, nil
-				},
-				kill:   func(int) error { kills++; once.Do(func() { close(killed) }); return nil },
-				wait:   func() error { waits++; return nil },
-				absent: func(int, time.Duration) error { probes++; return nil },
-			})
-			close(child.watchDone)
-			go child.observe()
-			<-entered
-			if err := child.Abort(); err != nil {
-				t.Fatal(err)
-			}
-			<-killed // Abort made progress without joining the blocked observer.
-			done := make(chan error, 1)
-			go func() { _, err := child.Finish(time.Second); done <- err }()
-			select {
-			case <-done:
-				t.Fatal("detached observer reported closure")
-			default:
-			}
-			close(release)
-			err := <-done
-			if lost {
-				if !errors.Is(err, ErrOwnershipLost) || kills != 1 || waits != 0 || probes != 0 {
-					t.Fatalf("lost authority: %v %d %d %d", err, kills, waits, probes)
+			synctest.Test(t, func(t *testing.T) {
+				entered, release, killed := make(chan struct{}), make(chan struct{}), make(chan struct{})
+				releaseObserver := sync.OnceFunc(func() { close(release) })
+				defer releaseObserver()
+				var once sync.Once
+				kills, waits, probes := 0, 0, 0
+				child := newChild(123, 1, operations{
+					observe: func(int, int) (bool, error) {
+						close(entered)
+						<-release
+						if lost {
+							return false, ErrOwnershipLost
+						}
+						return true, nil
+					},
+					kill:   func(int) error { kills++; once.Do(func() { close(killed) }); return nil },
+					wait:   func() error { waits++; return nil },
+					absent: func(int, time.Duration) error { probes++; return nil },
+				})
+				close(child.watchDone)
+				go child.observe()
+				<-entered
+				if err := child.Abort(); err != nil {
+					t.Fatal(err)
 				}
-			} else if err != nil || kills != 2 || waits != 1 || probes != 1 {
-				t.Fatalf("join: %v %d %d %d", err, kills, waits, probes)
-			}
+				<-killed // Abort made progress without joining the blocked observer.
+				done := make(chan error, 1)
+				go func() { _, err := child.Finish(time.Second); done <- err }()
+				synctest.Wait()
+				if len(done) != 0 {
+					t.Error("detached observer reported closure")
+				}
+				releaseObserver()
+				err := <-done
+				synctest.Wait()
+				if lost {
+					if !errors.Is(err, ErrOwnershipLost) || kills != 1 || waits != 0 || probes != 0 {
+						t.Fatalf("lost authority: %v %d %d %d", err, kills, waits, probes)
+					}
+				} else if err != nil || kills != 2 || waits != 1 || probes != 1 {
+					t.Fatalf("join: %v %d %d %d", err, kills, waits, probes)
+				}
+			})
 		})
 	}
 }

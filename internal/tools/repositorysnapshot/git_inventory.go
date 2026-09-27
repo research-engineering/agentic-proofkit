@@ -113,9 +113,6 @@ func gitOutput(ctx context.Context, root string, args ...string) (string, error)
 	defer command.Stderr.(*os.File).Close()
 	child, err := processgroup.Start(ctx, command)
 	if err != nil {
-		if ctx.Err() != nil {
-			return "", fmt.Errorf("repository snapshot operation canceled: %w", ctx.Err())
-		}
 		return "", fmt.Errorf("git %s failed to start", strings.Join(args, " "))
 	}
 	outDone, errDone := make(chan error, 1), make(chan error, 1)
