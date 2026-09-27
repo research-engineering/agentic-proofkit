@@ -1617,9 +1617,7 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		}
 		var allowedStepEnv map[string]map[string]any
 		if jobID == "source-quality" {
-			allowedStepEnv = map[string]map[string]any{
-				"Verify required legacy Unicode recovery": {"GOFLAGS": "-p=1", "GOMAXPROCS": "2"},
-			}
+			allowedStepEnv = ciSourceQualityStepEnv()
 		}
 		if err := validateJobExecutionControls(jobID, job, allowedStepEnv); err != nil {
 			return err

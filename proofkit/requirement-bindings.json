@@ -9170,7 +9170,7 @@
     },
     {
       "commandId": "proofkit.transaction-legacy-positive",
-      "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectWholeLegacyRecovery$' -count=1 -timeout=90s -v -args -proofkit-require-legacy-unicode-positive",
+      "command": "go test ./internal/kernel/repositorytransaction -run ^TestCanonicalDialectWholeLegacyRecovery$ -count=1 -timeout=90s -v -args -proofkit-require-legacy-unicode-positive",
       "environmentClass": "local-go-legacy-positive"
     },
     {

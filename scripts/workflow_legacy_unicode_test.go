@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
 const legacyUnicodeStep = "Verify required legacy Unicode recovery"
@@ -24,7 +26,7 @@ func validateCILegacyUnicodeStep(job githubJob) error {
 		return fmt.Errorf("CI must contain exactly one required Unicode recovery witness")
 	}
 	step := job.Steps[index]
-	wantEnv := map[string]any{"GOFLAGS": "-p=1", "GOMAXPROCS": "2"}
+	wantEnv := ciSourceQualityStepEnv()[legacyUnicodeStep]
 	if step.Run != legacyUnicodeCommand || !step.runPresent || !reflect.DeepEqual(step.Env, wantEnv) ||
 		step.If != "" || step.ifPresent || step.ContinueOnError != nil || step.continueOnErrorPresent ||
 		step.Uses != "" || step.usesPresent || step.With != nil || step.withPresent || step.ID != "" || step.idPresent ||
@@ -155,9 +157,10 @@ func validateLegacyWitnessPlan(plan, bindings map[string]any) error {
 	if err != nil {
 		return err
 	}
+	argv := []string{"go", "test", "./internal/kernel/repositorytransaction", "-run", "^TestCanonicalDialectWholeLegacyRecovery$", "-count=1", "-timeout=90s", "-v", "-args", "-proofkit-require-legacy-unicode-positive"}
 	want := map[string]any{
 		"schemaVersion": json.Number("1"), "id": legacyUnicodeWitness, "cwd": ".",
-		"argv":        []any{"go", "test", "./internal/kernel/repositorytransaction", "-run", "^TestCanonicalDialectWholeLegacyRecovery$", "-count=1", "-timeout=90s", "-v", "-args", "-proofkit-require-legacy-unicode-positive"},
+		"argv":        admit.StringSliceToAny(argv),
 		"environment": map[string]any{"inherit": "allowlist", "allowlist": []any{"GOCACHE", "GOFLAGS", "GOMAXPROCS", "GOMODCACHE", "GOPATH", "GOROOT", "GOTOOLCHAIN", "HOME", "PATH", "TMPDIR"}, "classes": []any{legacyUnicodeClass}},
 		"timeoutMs":   json.Number("120000"), "networkPolicy": "none", "credentialClass": "none", "cachePolicy": "disabled",
 		"expectedArtifacts": []any{}, "parallelGroup": "local-go-static", "exitCodePolicy": map[string]any{"kind": "zero", "successCodes": []any{json.Number("0")}},
@@ -189,7 +192,7 @@ func validateLegacyWitnessPlan(plan, bindings map[string]any) error {
 	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(bound, map[string]any{"commandId": legacyUnicodeWitness, "command": legacyUnicodeCommand, "environmentClass": legacyUnicodeClass}) {
+	if !reflect.DeepEqual(bound, map[string]any{"commandId": legacyUnicodeWitness, "command": strings.Join(argv, " "), "environmentClass": legacyUnicodeClass}) {
 		return fmt.Errorf("legacy required witness command/environment mismatch")
 	}
 	row, err := legacyNamedRecord(bindings["bindings"], "scenarioId", "proofkit.spec-proof-core.repository-transaction-required-unicode-positive")
@@ -234,7 +237,7 @@ func TestLegacyUnicodeWitnessPlanClosure(t *testing.T) {
 	if err := validateLegacyWitnessPlan(plan, bindings); err != nil {
 		t.Fatal(err)
 	}
-	for _, mutation := range []string{"command", "missing declared-mode flag", "disabled declared-mode flag", "invalid declared-mode flag", "allowlist", "class", "mode boundary", "inputs", "required demoted", "ordinary promoted", "display command", "display class"} {
+	for _, mutation := range []string{"command", "missing declared-mode flag", "disabled declared-mode flag", "invalid declared-mode flag", "allowlist", "class", "mode boundary", "inputs", "required demoted", "ordinary promoted", "display command", "quoted display command", "display class"} {
 		t.Run(mutation, func(t *testing.T) {
 			p, b := cloneLegacyWitnessRecord(t, plan), cloneLegacyWitnessRecord(t, bindings)
 			command, _ := legacyNamedRecord(p["commands"], "id", legacyUnicodeWitness)
@@ -267,6 +270,8 @@ func TestLegacyUnicodeWitnessPlanClosure(t *testing.T) {
 				ordinary["commandIds"], ordinary["environmentClasses"] = []any{legacyUnicodeWitness}, []any{legacyUnicodeClass}
 			case "display command":
 				display["command"] = "go test ./..."
+			case "quoted display command":
+				display["command"] = legacyUnicodeCommand
 			case "display class":
 				display["environmentClass"] = "local-go"
 			}
