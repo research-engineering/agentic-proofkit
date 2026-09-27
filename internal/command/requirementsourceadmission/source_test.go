@@ -2,6 +2,7 @@ package requirementsourceadmission
 
 import (
 	"reflect"
+	"sort"
 	"testing"
 )
 
@@ -37,6 +38,9 @@ func TestSourceProjectionsCannotMutateAdmittedSnapshot(t *testing.T) {
 		t.Fatal("identity or count projection differs from admitted input")
 	}
 	for name, mutate := range map[string]func([]Requirement){
+		"sort": func(values []Requirement) {
+			sort.Slice(values, func(i, j int) bool { return values[i].RequirementID > values[j].RequirementID })
+		},
 		"member":             func(values []Requirement) { values[0].RequirementID = "REQ-CHANGED" },
 		"nonclaim refs":      func(values []Requirement) { values[0].NonClaimRefs[0] = "changed" },
 		"external refs":      func(values []Requirement) { values[0].ExternalNonClaimRefs[0] = "changed" },
@@ -49,7 +53,20 @@ func TestSourceProjectionsCannotMutateAdmittedSnapshot(t *testing.T) {
 		"deferral evidence":  func(values []Requirement) { values[0].Deferral.EvidenceRefs[0] = "changed.json" },
 	} {
 		t.Run(name, func(t *testing.T) {
-			mutate(source.Requirements())
+			firstProjection, secondProjection := source.Requirements(), source.Requirements()
+			secondBefore := make([]map[string]any, len(secondProjection))
+			for i, requirement := range secondProjection {
+				secondBefore[i] = RequirementValue(requirement)
+			}
+			mutate(firstProjection)
+			for i, requirement := range secondProjection {
+				if !reflect.DeepEqual(RequirementValue(requirement), secondBefore[i]) {
+					t.Fatal("mutation changed an independently retained accessor result")
+				}
+			}
+			if !reflect.DeepEqual(source.Requirements(), secondProjection) {
+				t.Fatal("mutation changed a later accessor result or its review digests")
+			}
 			if got := mustSourceValue(t, source); !reflect.DeepEqual(got, want) {
 				t.Fatalf("detached projection mutated admitted source: got=%#v want=%#v", got, want)
 			}
