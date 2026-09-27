@@ -144,34 +144,38 @@ test("controlled navigation protocol preserves operands, document identity and j
     {name: "terminal context error", change: s => { s.terminalError = new Error("terminal sentinel"); }, error: rejection},
     {name: "terminal and disposal errors", change: s => { s.terminalError = new Error("terminal sentinel"); s.disposeError = true; }, error: "cleanup failed"},
   ];
-  for (const item of cases) await test.step(item.name, async () => {
-    const {state, fake, trigger} = protocolModel(page, item.change);
-    const operation = navigateWorkspace(fake, target, trigger, rejection);
-    if (item.passed) await operation;
-    else {
-      const error = await operation.then(() => undefined, error => error);
-      expect(error).toBeInstanceOf(Error);
-      expect(error.message).toContain(item.error);
-      if (state.terminalError) {
-        const terminalError = state.disposeError ? error.cause : error;
-        expect(terminalError.message).toBe(rejection);
-        expect(terminalError.cause).toBe(state.terminalError);
-        if (state.disposeError) {
-          expect(error.errors[0]).toBe(terminalError);
-          expect(error.errors).toHaveLength(state.handles.length + 1);
+  for (const item of cases) {
+    try {
+      const {state, fake, trigger} = protocolModel(page, item.change);
+      const operation = navigateWorkspace(fake, target, trigger, rejection);
+      if (item.passed) await operation;
+      else {
+        const error = await operation.then(() => undefined, error => error);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toContain(item.error);
+        if (state.terminalError) {
+          const terminalError = state.disposeError ? error.cause : error;
+          expect(terminalError.message).toBe(rejection);
+          expect(terminalError.cause).toBe(state.terminalError);
+          if (state.disposeError) {
+            expect(error.errors[0]).toBe(terminalError);
+            expect(error.errors).toHaveLength(state.handles.length + 1);
+          }
         }
+        if (state.rejectAcquisition) expect(error).toBe(state.rejectAcquisition);
       }
-      if (state.rejectAcquisition) expect(error).toBe(state.rejectAcquisition);
+      expect(state.waits.size).toBe(0);
+      expect(state.listeners.size).toBe(0);
+      expect(state.handles.every(handle => handle.disposed && handle.disposals === 1)).toBe(true);
+      if (item.passed) {
+        expect(state.phases.filter(phase => phase === "domcontentloaded")).toHaveLength(1);
+        expect(state.phases.indexOf("domcontentloaded")).toBeLessThan(state.phases.indexOf("terminal"));
+        if (state.deferredAcquisition) expect(state.phases).toContain("acquisition:after-abort");
+      }
+    } catch (cause) {
+      throw new Error(`Controlled navigation case failed: ${item.name}`, {cause});
     }
-    expect(state.waits.size).toBe(0);
-    expect(state.listeners.size).toBe(0);
-    expect(state.handles.every(handle => handle.disposed && handle.disposals === 1)).toBe(true);
-    if (item.passed) {
-      expect(state.phases.filter(phase => phase === "domcontentloaded")).toHaveLength(1);
-      expect(state.phases.indexOf("domcontentloaded")).toBeLessThan(state.phases.indexOf("terminal"));
-      if (state.deferredAcquisition) expect(state.phases).toContain("acquisition:after-abort");
-    }
-  });
+  }
 });
 
 for (const action of ["open", "reload"]) test(`actual document readiness admits ${action} without a frame-event observation`, async ({baseURL, page}) => {
