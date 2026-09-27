@@ -30,6 +30,18 @@ func TestNPMAbsenceBranchEntrypoint(t *testing.T) {
 	if index < 0 || len(os.Args[index+1:]) != 3 || os.Args[index+1] != "npm-absent" || os.Args[index+2] != "--error-file" {
 		os.Exit(97)
 	}
+	if os.Getenv("PROOFKIT_BRANCH_READY") == "1" {
+		ready := os.NewFile(3, "classifier-readiness")
+		if ready == nil {
+			os.Exit(97)
+		}
+		if _, err := ready.Write([]byte{1}); err != nil {
+			os.Exit(97)
+		}
+		if err := ready.Close(); err != nil {
+			os.Exit(97)
+		}
+	}
 	os.Args = append([]string{"releasepreflight"}, os.Args[index+1:]...)
 	main()
 	os.Exit(0)
@@ -91,14 +103,19 @@ func testNPMAbsenceBranchExecution(t *testing.T) {
 				item.wantLimit = "stdio"
 				executeNPMAbsenceBranch(t, header+"printf '%17000s' x\n", body, item)
 			})
-			t.Run("carrier/blocked entrypoint timeout", func(t *testing.T) {
-				item := cases[0]
-				item.wantLimit = "context"
-				result := executeNPMAbsenceBranch(t, header, body, item)
-				if result.trace != "view\nabsent\nreaped\n" {
-					t.Fatal("cancelled carrier must wait for the classifier deadline before shell exit")
-				}
-			})
+			for _, startup := range []struct{ name, prefix string }{
+				{"immediate", ""},
+				{"delayed", "while (( SECONDS < 3 )); do :; done\n"},
+			} {
+				t.Run("carrier/blocked entrypoint timeout/"+startup.name, func(t *testing.T) {
+					item := cases[0]
+					item.wantLimit = "context"
+					result := executeNPMAbsenceBranch(t, header+startup.prefix, body, item)
+					if result.trace != "view\nabsent\nreaped\n" {
+						t.Fatal("cancelled carrier must wait for the classifier deadline before shell exit")
+					}
+				})
+			}
 		}
 		for _, item := range cases {
 			t.Run(job+"/"+item.name, func(t *testing.T) {
@@ -239,7 +256,7 @@ func executeNPMAbsenceBranch(t *testing.T, header, body string, item npmBranchCa
 	if err != nil {
 		t.Fatal(err)
 	}
-	timeout := 5 * time.Second
+	const childTimeout = 3 * time.Second
 	if item.wantLimit == "context" {
 		// Fault only the fixture input: main blocks opening this FIFO until
 		// cancellation. The child's own test deadline exits it; Bash must wait.
@@ -250,7 +267,6 @@ func executeNPMAbsenceBranch(t *testing.T, header, body string, item npmBranchCa
 			t.Fatal("blocked-input fault target drift")
 		}
 		body = strings.Replace(body, "--error-file ./npm-view.json", "--error-file ./blocked-report", 1)
-		timeout = 2 * time.Second
 	}
 	script := `child=
 cleanup() {
@@ -280,7 +296,7 @@ go() {
       ;;
     npm-absent)
       printf 'absent\n' >> trace
-      "$BRANCH_BINARY" -test.run='^TestNPMAbsenceBranchEntrypoint$' -test.timeout=3s -- "$@" </dev/null &
+      "$BRANCH_BINARY" -test.run='^TestNPMAbsenceBranchEntrypoint$' -test.timeout=` + childTimeout.String() + ` -- "$@" </dev/null &
       child=$!
       local status=0
       wait "$child" || status=$?
@@ -298,17 +314,66 @@ REGISTRY_URL=unused
 metadata=fixture
 report=report.json
 ` + header + "for filename in fixture.tgz; do\n" + body + "\ndone\nprintf 'complete\\n' >> trace\n"
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	deadline := time.AfterFunc(5*time.Second, cancel)
+	defer deadline.Stop()
 	cmd := exec.CommandContext(ctx, "/bin/bash", "--noprofile", "--norc", "-c", script)
 	cmd.Dir = dir
 	cmd.Env = childcoverage.Environment(t, []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit)})
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
-	cmd.WaitDelay = 2 * time.Second
+	cmd.WaitDelay = childTimeout + time.Second
+	var readyReader, readyWriter *os.File
+	if item.wantLimit == "context" {
+		readyReader, readyWriter, err = os.Pipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer readyReader.Close()
+		defer readyWriter.Close()
+		cmd.ExtraFiles = []*os.File{readyWriter}
+		cmd.Env = append(cmd.Env, "PROOFKIT_BRANCH_READY=1")
+	}
 	var stdout, stderr npmBranchOutput
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	// Nil stdin is /dev/null; the sole spawned entrypoint also has explicit EOF.
-	err = cmd.Run()
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("branch shell failed to start: %v", err)
+	}
+	var readinessError error
+	if readyReader != nil {
+		_ = readyWriter.Close()
+		ready := make(chan error, 1)
+		go func() {
+			var marker [1]byte
+			_, err := io.ReadFull(readyReader, marker[:])
+			if err == nil && marker[0] != 1 {
+				err = fmt.Errorf("invalid classifier readiness marker")
+			}
+			ready <- err
+		}()
+		select {
+		case readinessError = <-ready:
+			if readinessError == nil {
+				if deadline.Stop() {
+					deadline.Reset(childTimeout - time.Second)
+				} else {
+					readinessError = fmt.Errorf("classifier startup watchdog elapsed")
+				}
+			}
+			if readinessError != nil {
+				cancel()
+			}
+		case <-ctx.Done():
+			_ = readyReader.Close()
+			readinessError = errors.Join(fmt.Errorf("classifier startup watchdog elapsed"), <-ready)
+		}
+		_ = readyReader.Close()
+	}
+	err = cmd.Wait()
+	if readinessError != nil {
+		t.Fatalf("classifier did not reach the operation boundary: %v", readinessError)
+	}
 	if cmd.ProcessState == nil {
 		t.Fatal("branch shell did not start and finish")
 	}

@@ -1,6 +1,7 @@
 package packageartifactrecord
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -269,22 +270,29 @@ func TestExecutionRecordOperationsRejectSymlinkEscape(t *testing.T) {
 		t.Run(operation.name, func(t *testing.T) {
 			root := t.TempDir()
 			external := t.TempDir()
+			if err := Write(external, Record{SchemaVersion: SchemaVersion, CommandID: "proofkit.external-sentinel"}); err != nil {
+				t.Fatal(err)
+			}
+			if record, err := Read(external); err != nil || record.CommandID != "proofkit.external-sentinel" {
+				t.Fatalf("external positive control is not readable: %v", err)
+			}
+			externalRecord := filepath.Join(external, filepath.FromSlash(RecordPath))
+			before, err := os.ReadFile(externalRecord)
+			if err != nil {
+				t.Fatal(err)
+			}
 			if err := os.MkdirAll(filepath.Join(root, "artifacts"), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.Symlink(external, filepath.Join(root, "artifacts", "proofkit")); err != nil {
+			if err := os.Symlink(filepath.Dir(externalRecord), filepath.Join(root, "artifacts", "proofkit")); err != nil {
 				t.Skipf("symlink unavailable: %v", err)
-			}
-			externalRecord := filepath.Join(external, filepath.Base(RecordPath))
-			if err := os.WriteFile(externalRecord, []byte("external-sentinel"), 0o600); err != nil {
-				t.Fatal(err)
 			}
 
 			if err := operation.run(root); err == nil {
 				t.Fatalf("%s accepted an execution-record symlink escape", operation.name)
 			}
 			content, err := os.ReadFile(externalRecord)
-			if err != nil || string(content) != "external-sentinel" {
+			if err != nil || !bytes.Equal(content, before) {
 				t.Fatalf("%s changed external record: content=%q err=%v", operation.name, content, err)
 			}
 		})

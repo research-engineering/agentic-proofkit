@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "3560416f708f1dbd7977d183530132b675ef02c736ad38794c1551829f25f50d"
+	cliContractPublicABISHA256               = "583cc2812d5daef5fa5d7422a68aa7cd8c713ba250518131ebec29cf51f92d11"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -1655,7 +1655,7 @@ func TestDescriptorFlagConstraintsAreRenderedTruthfully(t *testing.T) {
 	}
 }
 
-func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
+func TestDescriptorFlagConstraintsRejectAtCLIBeforeInput(t *testing.T) {
 	cases := []struct {
 		command string
 		args    []string
@@ -1675,8 +1675,15 @@ func TestDescriptorFlagConstraintsExecuteBeforeCommandDispatch(t *testing.T) {
 	}
 	for _, item := range cases {
 		descriptor := commandDescriptorByName[item.command]
-		if err := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, item.args)); err == nil {
+		constraintError := validateFlagConstraints(descriptor, classifyDescriptorArguments(descriptor, item.args))
+		if constraintError == nil {
 			t.Fatalf("%s invalid argv was admitted by descriptor owner", item.command)
+		}
+		args := append(slices.Clone(descriptor.routeTokens), item.args...)
+		var stdout, stderr bytes.Buffer
+		status := Run(t.Context(), args, panicReader{}, &stdout, &stderr)
+		if status != 1 || stdout.Len() != 0 || !strings.Contains(stderr.String(), constraintError.Error()) {
+			t.Fatalf("%s did not reject its flags at the CLI boundary: exit=%d stdout=%q stderr=%q", item.command, status, stdout.String(), stderr.String())
 		}
 	}
 }

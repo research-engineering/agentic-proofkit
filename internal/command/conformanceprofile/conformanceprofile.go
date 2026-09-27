@@ -742,6 +742,23 @@ func validateProfile(profile Profile, proofContract ProofContract, policy Policy
 		}
 	}
 	selectedBindings := profileBindings(profile, proofContract)
+	selectedSurfaces := set(profile.RequiredSurfaceIDs)
+	for _, binding := range selectedBindings {
+		selectedSurfaces[binding.SurfaceID] = struct{}{}
+	}
+	for _, surface := range proofContract.Surfaces {
+		if _, selected := selectedSurfaces[surface.SurfaceID]; !selected {
+			continue
+		}
+		for _, environmentClass := range surface.RequiredEnvironmentClasses {
+			if _, allowed := allowedEnvironments[environmentClass]; !allowed {
+				failures = append(failures, fmt.Sprintf("profile %s surface %s requires unallowed environment %s", profile.ProfileID, surface.SurfaceID, environmentClass))
+			}
+			if _, local := policy.LocalEnvironmentClasses[environmentClass]; profile.PreconditionPolicy == "local_only" && !local {
+				failures = append(failures, fmt.Sprintf("profile %s local-only profile selects surface %s requiring non-local environment %s", profile.ProfileID, surface.SurfaceID, environmentClass))
+			}
+		}
+	}
 	selectedEnvironments := set(flatMapEnvironments(selectedBindings))
 	if policy.FailOnUnusedAllowedEnvironment {
 		for _, environmentClass := range profile.AllowedEnvironmentClasses {
