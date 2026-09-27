@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {summarizeDiffPage} from "../internal/command/requirementbrowser/assets/workspace-diff.js";
 import {GEOMETRY, GRAPH_PAGE, GRAPH_PLANES, graphPagePositions, visibleGraphPage} from "../internal/command/requirementbrowser/assets/workspace-graph.js";
-import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle} from "../tests/browser/graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle, unrelatedCollinearOverlaps} from "../tests/browser/graph-geometry-oracle.mjs";
 import {resolveHandoffRequirement} from "../internal/command/requirementbrowser/assets/workspace-handoff.js";
 
 test("diff page classes partition changes while risk and lifecycle remain independent facets", () => {
@@ -131,6 +131,34 @@ test("graph endpoint-role slots reach the page ceilings without requiring planar
   const nodes = Array.from({length: 6}, (_, i) => ({nodeId: `n${i}`, evidencePlane: i < 3 ? spec : proof}));
   const edges = nodes.slice(0, 3).flatMap(a => nodes.slice(3).map(b => ({edgeId: `${a.nodeId}.${b.nodeId}`, fromNodeId: a.nodeId, toNodeId: b.nodeId})));
   assertLayout({nodes, edges}); // K3,3: edge crossings are allowed; node crossings are not.
+});
+
+test("unrelated graph relations retain separate horizontal corridors", () => {
+  const fixture = {nodes: [
+    {nodeId: "a0", evidencePlane: spec}, {nodeId: "b0", evidencePlane: proof},
+    {nodeId: "d0", evidencePlane: native}, {nodeId: "d1", evidencePlane: native},
+  ], edges: [
+    {edgeId: "e1", fromNodeId: "a0", toNodeId: "d0"},
+    {edgeId: "e2", fromNodeId: "b0", toNodeId: "d1"},
+  ]};
+  const observed = assertLayout(fixture);
+  const [first, second] = observed.routes;
+  second.points[2][1] = second.points[3][1] = first.points[2][1];
+  assert.equal(unrelatedCollinearOverlaps(fixture, observed).length, 1);
+  assert.throws(() => assertGraphGeometry(fixture, observed), /unrelated edge separation/);
+});
+
+test("bounded mixed-plane graph samples preserve complete segment separation", () => {
+  let seed = 0x46d1c08;
+  const next = limit => { seed = (1664525 * seed + 1013904223) >>> 0; return seed % limit; };
+  for (let sample = 0; sample < 200; sample++) {
+    const nodes = Array.from({length: 2 + next(191)}, (_, i) => ({nodeId: `n${i}`, evidencePlane: GRAPH_PLANES[next(4)].id}));
+    const edges = Array.from({length: next(129)}, (_, i) => {
+      const from = next(nodes.length), to = (from + 1 + next(nodes.length - 1)) % nodes.length;
+      return {edgeId: `e${i}`, fromNodeId: nodes[from].nodeId, toNodeId: nodes[to].nodeId};
+    });
+    assertLayout({nodes, edges});
+  }
 });
 
 test("graph geometry oracle rejects independent causal mutants", () => {

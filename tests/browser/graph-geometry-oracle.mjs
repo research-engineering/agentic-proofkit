@@ -42,6 +42,27 @@ export function graphNodeIntersections(graph, observed, inflate = 0.75) {
   return hits;
 }
 
+export function unrelatedCollinearOverlaps(graph, observed) {
+  const edges = new Map(graph.edges.map(edge => [edge.edgeId, edge]));
+  const hits = [];
+  for (let i = 0; i < observed.routes.length; i++) for (let j = i + 1; j < observed.routes.length; j++) {
+    const left = observed.routes[i], right = observed.routes[j];
+    const a = edges.get(left.id), b = edges.get(right.id);
+    assert(a && b, "observed edge identity");
+    if ([a.fromNodeId, a.toNodeId].some(id => id === b.fromNodeId || id === b.toNodeId)) continue;
+    for (let p = 1; p < left.points.length; p++) for (let q = 1; q < right.points.length; q++) {
+      for (const axis of [0, 1]) {
+        const fixed = 1 - axis, start = left.points[p - 1], end = left.points[p], otherStart = right.points[q - 1], otherEnd = right.points[q];
+        if (start[fixed] !== end[fixed] || start[fixed] !== otherStart[fixed] || start[fixed] !== otherEnd[fixed]) continue;
+        const low = Math.max(Math.min(start[axis], end[axis]), Math.min(otherStart[axis], otherEnd[axis]));
+        const high = Math.min(Math.max(start[axis], end[axis]), Math.max(otherStart[axis], otherEnd[axis]));
+        if (low < high) hits.push({left: left.id, right: right.id, axis, low, high});
+      }
+    }
+  }
+  return hits;
+}
+
 export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   // getBoundingClientRect subtraction can lose low bits after Firefox scrolls.
   // Only DOM comparisons allow <1/1024 CSS px; pure geometry stays exact.
@@ -53,7 +74,9 @@ export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   assert.deepEqual(observed.nodes.map(n => n.id).sort(), graph.nodes.map(n => n.nodeId).sort(), "node identity");
   assert.deepEqual(observed.routes.map(e => e.id).sort(), graph.edges.map(e => e.edgeId).sort(), "edge identity");
   assert.deepEqual(graphNodeIntersections(graph, observed, 6 + 2 * epsilon), [], "unrelated node clearance");
-  assert(observed.width <= 2576 && observed.height <= 22332, "canvas ceiling");
+  assert.deepEqual(unrelatedCollinearOverlaps(graph, observed), [], "unrelated edge separation");
+  // At most 127 additional six-unit horizontal corridors across all rows.
+  assert(observed.width <= 2576 && observed.height <= 23094, "canvas ceiling");
   assert.equal(observed.columns.length, 4);
   for (const x of observed.columns) assert(Number.isFinite(x) && x >= 0 && x + 240 <= observed.width, "heading bounds");
   const rects = new Map(observed.nodes.map(n => [n.id, n]));

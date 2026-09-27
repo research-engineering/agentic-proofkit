@@ -21,7 +21,7 @@ export const GEOMETRY = Object.freeze({
 /** @param {number} value */
 const designRem = value => `${value / 16}rem`;
 
-/** @typedef {{gap: number, rank: number}} GraphSlot */
+/** @typedef {{gap: number, rank: number, left: boolean}} GraphSlot */
 /** @typedef {[number, number]} GraphPoint */
 
 /** @param {{nodes: any[], edges: any[]}} graph @param {Set<string>} planes @param {string | null} selectedId @param {boolean} neighborhood */
@@ -47,8 +47,15 @@ export function graphPagePositions(nodes, edges = []) {
   const g = GEOMETRY;
   const rows = GRAPH_PLANES.map(() => 0);
   const slotCounts = GRAPH_PLANES.map(() => 0);
+  const leftSlotCounts = GRAPH_PLANES.map(() => 0);
+  /** @type {number[]} */
+  const corridorCounts = [];
   /** @type {Map<string, number>} */
   const nodeColumns = new Map();
+  /** @type {Map<string, number>} */
+  const nodeRows = new Map();
+  /** @type {Map<string, number>} */
+  const corridorRanks = new Map();
   /** @type {Map<string, {x: number, y: number}>} */
   const positions = new Map();
   /** @type {Map<string, {source: GraphSlot, target: GraphSlot}>} */
@@ -60,36 +67,53 @@ export function graphPagePositions(nodes, edges = []) {
     const column = GRAPH_PLANES.findIndex(plane => plane.id === node.evidencePlane);
     if (column < 0) throw new Error("Unknown admitted evidence plane");
     nodeColumns.set(node.nodeId, column);
+    nodeRows.set(node.nodeId, rows[column]++);
   }
-  /** @param {number} gap */
-  const reserve = gap => ({gap, rank: slotCounts[gap]++});
+  /** @param {number} gap @param {boolean} left */
+  const reserve = (gap, left) => {
+    const rank = left ? leftSlotCounts[gap]++ : slotCounts[gap] - leftSlotCounts[gap];
+    slotCounts[gap]++;
+    return {gap, rank, left};
+  };
   const orderedEdges = [...edges].sort((a, b) => a.edgeId < b.edgeId ? -1 : a.edgeId > b.edgeId ? 1 : 0);
   for (const edge of orderedEdges) {
     const from = nodeColumns.get(edge.fromNodeId), to = nodeColumns.get(edge.toNodeId);
     if (from === undefined || to === undefined) throw new Error("Visible edge endpoint is unavailable");
     if (edge.fromNodeId === edge.toNodeId) throw new Error("Coincident graph endpoints are unsupported");
-    // Endpoint roles get distinct slots even in a shared adjacent-column gap.
-    // Lower-column endpoints reserve first, independently of edge direction.
+    if (from !== to) {
+      const row = nodeRows.get(edge.fromNodeId);
+      if (row === undefined) throw new Error("Visible edge source row is unavailable");
+      const rank = corridorCounts[row] ?? 0;
+      corridorRanks.set(edge.edgeId, rank);
+      corridorCounts[row] = rank + 1;
+    }
+    // Separate gap sides prevent unrelated opposing endpoint stubs from merging.
     if (from === to) {
-      const slot = reserve(from);
+      const slot = reserve(from, true);
       slots.set(edge.edgeId, {source: slot, target: slot});
     } else if (from < to) {
-      slots.set(edge.edgeId, {source: reserve(from), target: reserve(to - 1)});
+      slots.set(edge.edgeId, {source: reserve(from, true), target: reserve(to - 1, false)});
     } else {
-      const target = reserve(to), source = reserve(from - 1);
+      const target = reserve(to, true), source = reserve(from - 1, false);
       slots.set(edge.edgeId, {source, target});
     }
   }
   /** @type {number[]} */
   const columns = [g.leftPadding];
   for (let column = 1; column < GRAPH_PLANES.length; column++) columns.push(columns[column - 1] + g.cardWidth + g.columnGap + g.slotPitch * slotCounts[column - 1]);
+  const rowOffsets = [];
+  let bottom = g.headingBand;
+  for (let row = 0; row < Math.max(...rows); row++) {
+    rowOffsets.push(bottom);
+    bottom += g.cardHeight + g.rowGap + g.slotPitch * Math.max(0, (corridorCounts[row] ?? 0) - 1);
+  }
   for (const node of ordered) {
-    const column = nodeColumns.get(node.nodeId);
-    if (column === undefined) throw new Error("Node column is unavailable");
-    positions.set(node.nodeId, {x: columns[column], y: g.headingBand + rows[column]++ * (g.cardHeight + g.rowGap)});
+    const column = nodeColumns.get(node.nodeId), row = nodeRows.get(node.nodeId);
+    if (column === undefined || row === undefined) throw new Error("Node placement is unavailable");
+    positions.set(node.nodeId, {x: columns[column], y: rowOffsets[row]});
   }
   /** @param {GraphSlot} slot */
-  const lane = slot => columns[slot.gap] + g.cardWidth + g.columnGap / 2 + g.slotPitch * slot.rank;
+  const lane = slot => columns[slot.gap] + g.cardWidth + g.columnGap / 2 + g.slotPitch * (slot.rank + (slot.left ? 0 : leftSlotCounts[slot.gap]));
   for (const edge of orderedEdges) {
     const from = positions.get(edge.fromNodeId), to = positions.get(edge.toNodeId), pair = slots.get(edge.edgeId);
     if (!from || !to || !pair) throw new Error("Visible edge endpoint is unavailable");
@@ -98,13 +122,13 @@ export function graphPagePositions(nodes, edges = []) {
     /** @type {GraphPoint} */
     const target = [to.x + (from.x < to.x ? 0 : g.cardWidth), to.y + g.cardHeight / 2];
     const sourceLane = lane(pair.source), targetLane = lane(pair.target);
-    const corridor = from.y + g.cardHeight + g.rowGap / 2;
+    const corridor = from.y + g.cardHeight + g.rowGap / 2 + g.slotPitch * (corridorRanks.get(edge.edgeId) ?? 0);
     routes.set(edge.edgeId, from.x === to.x
       ? [source, [sourceLane, source[1]], [sourceLane, target[1]], target]
       : [source, [sourceLane, source[1]], [sourceLane, corridor], [targetLane, corridor], [targetLane, target[1]], target]);
   }
   const width = g.leftPadding + GRAPH_PLANES.length * g.cardWidth + (GRAPH_PLANES.length - 1) * g.columnGap + g.rightPadding + g.slotPitch * slotCounts.reduce((sum, count) => sum + count, 0);
-  const height = Math.max(g.minimumHeight, g.headingBand + Math.max(...rows) * (g.cardHeight + g.rowGap) - g.rowGap + g.bottomPadding);
+  const height = Math.max(g.minimumHeight, bottom - g.rowGap + g.bottomPadding);
   return {positions, columns, routes, width, height};
 }
 
