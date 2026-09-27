@@ -669,6 +669,12 @@ func packMetadataFailures(input input, evidence packMetadataEvidence) []string {
 	if record.Version != input.PackageVersion {
 		failures = append(failures, "npm pack metadata version must match packageVersion")
 	}
+	if !admit.IsSHA512Integrity(input.NPMIntegrity) {
+		failures = append(failures, "npmIntegrity must be canonical base64 sha512 integrity text")
+	}
+	if !admit.IsSHA512Integrity(record.Integrity) {
+		failures = append(failures, "npm pack metadata integrity must be canonical base64 sha512 integrity text")
+	}
 	if record.Integrity != input.NPMIntegrity {
 		failures = append(failures, "npm pack metadata integrity must match npmIntegrity")
 	}

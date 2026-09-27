@@ -9,6 +9,38 @@ import (
 	"testing"
 )
 
+func TestSHA512IntegrityRequiresCanonical64ByteEncoding(t *testing.T) {
+	zero := "sha512-" + strings.Repeat("A", 86) + "=="
+	for _, tt := range []struct {
+		name, value string
+		want        bool
+	}{
+		{"zero", zero, true},
+		{"last byte one", "sha512-" + strings.Repeat("A", 85) + "Q==", true},
+		{"standard alphabet", "sha512-" + strings.Repeat("/", 85) + "w==", true},
+		{"empty", "", false},
+		{"wrong algorithm", "sha256-" + strings.Repeat("A", 86) + "==", false},
+		{"wrong prefix case", "SHA512-" + strings.Repeat("A", 86) + "==", false},
+		{"32 bytes", "sha512-" + strings.Repeat("A", 43) + "=", false},
+		{"63 bytes", "sha512-" + strings.Repeat("A", 84), false},
+		{"65 bytes", "sha512-" + strings.Repeat("A", 87) + "=", false},
+		{"missing padding", strings.TrimSuffix(zero, "="), false},
+		{"extra padding", zero + "=", false},
+		{"pad bits", "sha512-" + strings.Repeat("A", 85) + "B==", false},
+		{"URL alphabet", "sha512-" + strings.Repeat("_", 85) + "w==", false},
+		{"line break", "sha512-\n" + strings.Repeat("A", 85) + "==", false},
+		{"space", "sha512- " + strings.Repeat("A", 85) + "==", false},
+		{"outer whitespace", " " + zero + "\n", false},
+		{"multiple tokens", zero + " " + zero, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsSHA512Integrity(tt.value); got != tt.want {
+				t.Fatalf("IsSHA512Integrity()=%v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestSecretLikeValueSurvivesJSONWhitespaceEscaping(t *testing.T) {
 	for _, separator := range []string{"\n", "\t", "\r", "\v", "\u2028"} {
 		serialized := `{"password"` + separator + `:"synthetic-fixture-value"}`
