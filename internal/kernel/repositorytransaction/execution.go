@@ -17,7 +17,7 @@ func (runtime engine) applyForward(ctx context.Context, root *os.Root, plan Plan
 			}
 		}
 	}
-	if err := ensureTargetDirectories(root, plan); err != nil {
+	if err := runtime.ensureTargetDirectories(root, plan); err != nil {
 		return err
 	}
 	for directoryIndex := range plan.CreatedDirectories {

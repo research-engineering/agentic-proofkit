@@ -2,18 +2,73 @@ package repositorytransaction
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 )
 
 var legacyPositiveCommand = flag.Bool("proofkit-require-legacy-unicode-positive", false, "require all 28 qualified legacy Unicode positive cases")
+var legacyPositiveCompleted bool
+
+func TestMain(m *testing.M) {
+	flag.Parse()
+	code := m.Run()
+	if code == 0 && *legacyPositiveCommand && !legacyPositiveCompleted {
+		fmt.Fprintln(os.Stderr, "required legacy Unicode positive corpus did not complete")
+		code = 1
+	}
+	os.Exit(code)
+}
+
+func TestRequiredLegacyPositiveModeRejectsFilteredExecution(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		args     []string
+		wantExit int
+		failure  string
+	}{
+		{"ordinary no-match", []string{"-test.run=^NoSuchLegacyCorpus$"}, 0, ""},
+		{"required no-match", []string{"-test.run=^NoSuchLegacyCorpus$", "-proofkit-require-legacy-unicode-positive"}, 1, "required legacy Unicode positive corpus did not complete"},
+		{"required top-level skip", []string{"-test.run=^TestCanonicalDialectWholeLegacyRecovery$", "-test.skip=^TestCanonicalDialectWholeLegacyRecovery$", "-proofkit-require-legacy-unicode-positive"}, 1, "required legacy Unicode positive corpus did not complete"},
+		{"required unit substitute", []string{"-test.run=^TestCanonicalFixtureModeAndEvidencePredicates$", "-proofkit-require-legacy-unicode-positive"}, 1, "required legacy Unicode positive corpus did not complete"},
+		{"required ASCII substitute", []string{"-test.run=^TestCanonicalDialectWholeLegacyASCIILifecycle$", "-proofkit-require-legacy-unicode-positive"}, 1, "required legacy Unicode positive corpus did not complete"},
+		{"required list only", []string{"-test.list=^TestCanonicalDialectWholeLegacyRecovery$", "-proofkit-require-legacy-unicode-positive"}, 1, "required legacy Unicode positive corpus did not complete"},
+		{"filtered v2 subtree", []string{"-test.run=^TestCanonicalDialectWholeLegacyASCIILifecycle$", "-test.skip=^TestCanonicalDialectWholeLegacyASCIILifecycle$/v2"}, 1, "legacy witness evidence set is incomplete"},
+		{"filtered leaf", []string{"-test.run=^TestCanonicalDialectWholeLegacyASCIILifecycle$", "-test.skip=^TestCanonicalDialectWholeLegacyASCIILifecycle$/v1/ready/resume/0$"}, 1, "legacy witness evidence set is incomplete"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+			defer cancel()
+			command := exec.CommandContext(ctx, os.Args[0], tt.args...)
+			command.WaitDelay = 2 * time.Second
+			output, err := command.CombinedOutput()
+			code := 0
+			if err != nil {
+				var exit *exec.ExitError
+				if !errors.As(err, &exit) {
+					t.Fatal(err)
+				}
+				code = exit.ExitCode()
+			}
+			if ctx.Err() != nil || code != tt.wantExit {
+				t.Fatalf("exit=%d want=%d watchdog=%v output=%s", code, tt.wantExit, ctx.Err(), output)
+			}
+			if tt.wantExit == 1 && !strings.Contains(string(output), tt.failure) {
+				t.Fatalf("missing required-mode rejection: %s", output)
+			}
+		})
+	}
+}
 
 type caselessCoexistenceError struct {
 	requested, existing string

@@ -23,8 +23,9 @@ const (
 )
 
 type engine struct {
-	fault                 func(failurePoint, int) error
-	preparationParentSync func(*os.Root, string) error
+	fault                   func(failurePoint, int) error
+	preparationParentSync   func(*os.Root, string) error
+	directoryOwnershipWrite func(*os.Root, int, directoryOwnership) error
 }
 
 type transactionLock struct {

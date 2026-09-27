@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -175,7 +176,12 @@ func seedCaselessRecovery(t *testing.T, fixture caselessPredecessor, phase strin
 			if err != nil {
 				return preparedCaselessCase{}, err
 			}
-			record, err := stablejson.Marshal(directoryOwnershipValue(directoryOwnership{Identity: identity, Path: directory, TransactionID: plan.TransactionID}))
+			// Historical fields from d7fa2af; never seed compatibility via today's writer.
+			record, err := stablejson.Marshal(map[string]any{
+				"directoryKind": "proofkit.repository-created-directory",
+				"identity":      identity, "path": directory, "schemaVersion": json.Number("1"),
+				"transactionId": plan.TransactionID,
+			})
 			if err != nil {
 				return preparedCaselessCase{}, err
 			}
@@ -214,8 +220,39 @@ func seedCaselessRecovery(t *testing.T, fixture caselessPredecessor, phase strin
 		return preparedCaselessCase{}, err
 	}
 	if phase == "terminal-only" {
-		if _, err := archiveTerminal(root, plan, Result{State: StateApplied, TransactionID: plan.TransactionID, AppliedCountKnown: true, AppliedCount: len(plan.Operations)}); err != nil {
+		terminal, err := stablejson.Marshal(map[string]any{
+			"appliedCount":   json.Number(fmt.Sprint(len(plan.Operations))),
+			"desiredStateId": plan.DesiredStateID, "failureClass": nil, "recoveredBy": nil,
+			"schemaVersion": json.Number("2"), "state": "applied",
+			"terminalKind": "proofkit.repository-terminal-receipt", "transactionId": plan.TransactionID,
+		})
+		if err != nil {
 			return preparedCaselessCase{}, err
+		}
+		const historicalActive = ".agentic-proofkit/transactions/active"
+		const historicalReceipt = historicalActive + "/terminal.json"
+		if err := owned.create(historicalReceipt, terminal, 0600); err != nil {
+			return preparedCaselessCase{}, err
+		}
+		if err := owned.verify(historicalReceipt); err != nil {
+			return preparedCaselessCase{}, err
+		}
+		hexID, ok := strings.CutPrefix(plan.TransactionID, "sha256:")
+		if !ok {
+			return preparedCaselessCase{}, fmt.Errorf("historical transaction identity lacks digest prefix")
+		}
+		tombstone := ".agentic-proofkit/transactions/gc-" + hexID + "-applied"
+		if err := root.Rename(filepath.FromSlash(historicalActive), filepath.FromSlash(tombstone)); err != nil {
+			return preparedCaselessCase{}, err
+		}
+		moved := filepath.Join(rootPath, filepath.FromSlash(tombstone), "terminal.json")
+		info, err := os.Lstat(moved)
+		if err != nil {
+			return preparedCaselessCase{}, err
+		}
+		content, err := os.ReadFile(moved)
+		if err != nil || !os.SameFile(info, owned.entries[historicalReceipt].info) || info.Mode().Perm() != 0600 || !bytes.Equal(content, terminal) {
+			return preparedCaselessCase{}, fmt.Errorf("historical terminal fixture identity, bytes or mode changed")
 		}
 	}
 	return preparedCaselessCase{root: rootPath, plan: plan, fixture: owned, before: snapshotTestTree(t, rootPath), identities: caselessTreeIdentities(t, rootPath)}, nil
@@ -239,9 +276,11 @@ func TestCanonicalDialectWholeLegacyRecovery(t *testing.T) {
 		// failure can fall back, and no negative observation is a positive ID.
 		for _, version := range []string{"1", "2"} {
 			id := "non-representable-state-refusal/v" + version
+			completed := false
 			if t.Run(id, func(t *testing.T) {
 				testCaselessUnmanagedRefusal(t, version, coexistence.requested, coexistence.existing, RecoveryResume, coexistence.directory, false)
-			}) {
+				completed = true
+			}) && completed {
 				observed = append(observed, caselessCaseEvidence{id, false})
 			}
 		}
@@ -249,6 +288,9 @@ func TestCanonicalDialectWholeLegacyRecovery(t *testing.T) {
 	}
 	if err := validateLegacyPositiveEvidence(required, setupErr, observed); err != nil {
 		t.Fatal(err)
+	}
+	if setupErr == nil {
+		legacyPositiveCompleted = true
 	}
 }
 
@@ -328,6 +370,7 @@ func runCaselessLifecycle(t *testing.T, cases []preparedCaselessCase) []caseless
 	observed := []caselessCaseEvidence{}
 	for _, item := range cases {
 		test, rootPath, retained := item.scenario, item.root, item.plan
+		completed := false
 		if t.Run(test.id(), func(t *testing.T) {
 			assertCaselessTreeUnchanged(t, rootPath, item.before, item.identities)
 			inspection, err := InspectControlState(context.Background(), rootPath)
@@ -378,7 +421,8 @@ func runCaselessLifecycle(t *testing.T, cases []preparedCaselessCase) []caseless
 				t.Fatalf("repeat: %#v %v", repeated, err)
 			}
 			assertCaselessTreeUnchanged(t, rootPath, before, identities)
-		}) {
+			completed = true
+		}) && completed {
 			observed = append(observed, caselessCaseEvidence{test.id(), true})
 		}
 	}

@@ -120,6 +120,50 @@ func TestMaterializationNestedLegacyTransactionRemainsDescriptive(t *testing.T) 
 	}
 }
 
+func TestMaterializationAdmissionRejectsCoherentOmittedRoute(t *testing.T) {
+	root := t.TempDir()
+	raw := validRequest(t, root)
+	plan, err := BuildPlan(t.Context(), raw, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AdmitPlanOutput(plan.JSONValue()); err != nil {
+		t.Fatal(err)
+	}
+	request, err := admitRequest(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	children, err := childArtifacts(request)
+	if err != nil || len(children) < 2 {
+		t.Fatalf("fixture children: %d %v", len(children), err)
+	}
+	manifest, err := stablejson.Marshal(plan.Manifest.JSONValue())
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := []repositorytransaction.Target{{Path: ProjectManifestPath, Content: manifest, Mode: 0644}}
+	for _, child := range children[1:] {
+		targets = append(targets, repositorytransaction.Target{Path: child.Path, Content: child.Content, Mode: 0644})
+	}
+	reduced, err := repositorytransaction.BuildPlan(t.Context(), root, targets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repositorytransaction.AdmitPlanOutput(reduced.JSONValue()); err != nil {
+		t.Fatalf("reduced fixture is not independently canonical: %v", err)
+	}
+	const want = "adoption materialization manifest routes do not close the transaction target set"
+	if err := validatePlanRouteClosure(plan.Manifest, reduced); err == nil || err.Error() != want {
+		t.Fatalf("route-specific guard missed coherent omitted route: %v", err)
+	}
+	wire := plan.JSONValue()
+	wire["transaction"] = reduced.JSONValue()
+	if _, err := AdmitPlanOutput(wire); err == nil || err.Error() != want {
+		t.Fatalf("whole-operation route guard missed coherent omitted route: %v", err)
+	}
+}
+
 func TestMaterializationOutputAdmissionRejectsCrossOwnerMutants(t *testing.T) {
 	root := t.TempDir()
 	request := validRequest(t, root)

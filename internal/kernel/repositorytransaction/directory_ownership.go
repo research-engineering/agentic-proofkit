@@ -24,7 +24,11 @@ type directoryOwnership struct {
 	TransactionID string
 }
 
-func ensureTargetDirectories(root *os.Root, plan Plan) error {
+func (runtime engine) ensureTargetDirectories(root *os.Root, plan Plan) error {
+	writeOwnership := runtime.directoryOwnershipWrite
+	if writeOwnership == nil {
+		writeOwnership = writeDirectoryOwnership
+	}
 	for index, directory := range plan.CreatedDirectories {
 		record, recorded, err := loadDirectoryOwnership(root, plan, index)
 		if err != nil {
@@ -60,8 +64,9 @@ func ensureTargetDirectories(root *os.Root, plan Plan) error {
 			}
 		}
 		record = directoryOwnership{Identity: identity, Path: directory, TransactionID: plan.TransactionID}
-		if err := writeDirectoryOwnership(root, index, record); err != nil {
-			return errors.Join(err, plan.removeOwnedTargetDirectory(root, directory, identity))
+		if err := writeOwnership(root, index, record); err != nil {
+			// A failed acknowledgement may follow publication. Recovery owns cleanup.
+			return err
 		}
 	}
 	return nil
