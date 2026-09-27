@@ -178,7 +178,10 @@ test("graph geometry oracle rejects independent causal mutants", () => {
   const good = assertLayout(fixture);
   const route = (value, id) => value.routes.find(e => e.id === id);
   const mutants = {
-    nodeCrossing(value) { route(value, "contains").points[1][0] = route(value, "contains").points[2][0] = 132; },
+    nodeCrossing(value) {
+      const card = value.nodes.find(node => node.id === "proof"), x = card.x + card.width / 2;
+      route(value, "cross").points[1][0] = route(value, "cross").points[2][0] = x;
+    },
     unsafeCrossRow(value) { route(value, "cross").points[2][1] = route(value, "cross").points[3][1] = 96; },
     collapsedAdjacentSlots(value) { const e = route(value, "adjacent"); e.points[3][0] = e.points[4][0] = e.points[1][0]; },
     wrongFacingPort(value) { route(value, "cross").points.at(-1)[0] += 240; },
@@ -251,6 +254,16 @@ test("joint-scale DOM oracle retains physical evidence and rejects isolated proj
     const observed = physical(rootFont), before = structuredClone(observed);
     verify(observed);
     assert.deepEqual(observed, before, "normalization must not overwrite physical evidence");
+  }
+  for (const viewBox of ["  0 0 1046 292  ", "0\t0\n1046 292", "+0 -0 1046.0 2.92e2"]) {
+    const observed = physical(48);
+    observed.viewBox = viewBox;
+    verify(observed);
+  }
+  for (const viewBox of ["0 0 1046", "0 0 1046 292 0", "0 0 1046 292 ignored", "0 0 1046 NaN", "0 0 1046 Infinity", "0 0 1046 1e309", "0 0 0x416 292"]) {
+    const observed = physical(48);
+    observed.viewBox = viewBox;
+    assert.throws(() => verify(observed), undefined, `invalid complete viewBox: ${viewBox}`);
   }
   for (const dimension of ["width", "height"]) for (const sign of [-1, 1]) {
     const rounded = physical(48);

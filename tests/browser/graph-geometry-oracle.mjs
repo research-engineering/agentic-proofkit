@@ -169,8 +169,12 @@ export function normalizeGraphGeometry(observed) {
   const equal = (a, b, message) => assert(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 1 / 1024, message);
   equal(observed.svgWidth, observed.width, "SVG canvas width");
   equal(observed.svgHeight, observed.height, "SVG canvas height");
-  const [x, y, width, height] = observed.viewBox.split(/\s+/).map(Number);
-  assert.equal(x, 0); assert.equal(y, 0);
+  const components = observed.viewBox.trim().split(/\s+/);
+  assert.equal(components.length, 4, "viewBox component count");
+  assert(components.every(value => /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)), "viewBox numeric components");
+  const [x, y, width, height] = components.map(Number);
+  assert([x, y, width, height].every(Number.isFinite), "finite viewBox components");
+  assert(x === 0 && y === 0, "viewBox zero origin");
   equal(observed.width, width * scale, "root-scaled canvas width");
   equal(observed.height, height * scale, "root-scaled canvas height");
   for (const [key, expected] of Object.entries({a: scale, b: 0, c: 0, d: scale, x: 0, y: 0})) equal(observed.svgTransform[key], expected, `SVG joint scale ${key}`);
