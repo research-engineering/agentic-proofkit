@@ -179,15 +179,7 @@ func Compose(repoRoot string, raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, fmt.Errorf("self-admit composed requirement context: %w", err)
 	}
-	output = SnapshotValue(admitted)
-	encoded, err = stablejson.Marshal(output)
-	if err != nil {
-		return nil, err
-	}
-	if len(encoded) > maxSnapshotBytes {
-		return nil, fmt.Errorf("requirement context snapshot exceeds byte limit")
-	}
-	return output, nil
+	return SnapshotValue(admitted), nil
 }
 
 func admitCatalog(raw any) (string, []catalogSource, error) {

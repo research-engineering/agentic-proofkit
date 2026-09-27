@@ -173,6 +173,10 @@ func admitSnapshotRecord(record map[string]any, expectedNonClaims []string) (Sna
 }
 
 func validateSnapshotSize(snapshot Snapshot) (Snapshot, error) {
+	return validateSnapshotSizeLimit(snapshot, maxSnapshotBytes)
+}
+
+func validateSnapshotSizeLimit(snapshot Snapshot, limit int) (Snapshot, error) {
 	value := SnapshotValue(snapshot)
 	shape := catalogSnapshotShape
 	if snapshot.projectOrigin != nil {
@@ -185,7 +189,7 @@ func validateSnapshotSize(snapshot Snapshot) (Snapshot, error) {
 	if err != nil {
 		return Snapshot{}, err
 	}
-	if len(fullValue) > maxSnapshotBytes {
+	if len(fullValue) > limit {
 		return Snapshot{}, fmt.Errorf("requirement context snapshot exceeds byte limit")
 	}
 	return snapshot, nil
