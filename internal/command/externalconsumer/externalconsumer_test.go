@@ -42,6 +42,44 @@ func TestVersionTextRejectsNonSemVer(t *testing.T) {
 	}
 }
 
+func TestBuildOrdersMultipleReleaseProofFailures(t *testing.T) {
+	input := validExternalConsumerInput(t)
+	proof := input["input"].(map[string]any)["releaseAuthorityInput"].(map[string]any)["artifactProof"].(map[string]any)
+	keys := []string{"binarySmokeProofId", "cliSmokeProofId", "deepImportRejectionProofId", "outsideConsumerInstallProofId", "packDryRunCommandId", "packageArtifactCommandId"}
+	for _, key := range keys {
+		proof[key] = "proof.unexpected." + key
+	}
+	var first string
+	for iteration := 0; iteration < 32; iteration++ {
+		record, exitCode, err := Build(input)
+		if err != nil || exitCode != 1 || record.State != "failed" {
+			t.Fatalf("multiple proof mismatches: exit=%d error=%v", exitCode, err)
+		}
+		index := 0
+		for _, result := range record.RuleResults {
+			if !strings.HasPrefix(result.Message, "releaseAuthorityInput.artifactProof.") {
+				continue
+			}
+			if index >= len(keys) || !strings.HasPrefix(result.Message, "releaseAuthorityInput.artifactProof."+keys[index]+" must be ") {
+				t.Fatalf("proof failure #%d is not in canonical key order: %s", index, result.Message)
+			}
+			index++
+		}
+		if index != len(keys) {
+			t.Fatalf("proof failures=%d, want %d", index, len(keys))
+		}
+		wire, err := json.Marshal(record)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if iteration == 0 {
+			first = string(wire)
+		} else if string(wire) != first {
+			t.Fatal("identical input changed the complete report")
+		}
+	}
+}
+
 func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
 	record, exitCode, err := Build(validExternalConsumerInput(t))
 	if err != nil {

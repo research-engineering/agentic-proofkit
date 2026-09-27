@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -736,7 +738,8 @@ func releaseAuthorityFailures(input input) []string {
 		"cliSmokeProofId":               releaseProjection.ArtifactProof.CLISmokeProofID,
 		"deepImportRejectionProofId":    releaseProjection.ArtifactProof.DeepImportRejectionProofID,
 	}
-	for key, actual := range expectedProofIDs {
+	for _, key := range slices.Sorted(maps.Keys(expectedProofIDs)) {
+		actual := expectedProofIDs[key]
 		expected := expectedExternalProofID(key)
 		if actual != expected {
 			failures = append(failures, "releaseAuthorityInput.artifactProof."+key+" must be "+expected)

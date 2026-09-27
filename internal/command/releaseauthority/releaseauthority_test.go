@@ -33,6 +33,55 @@ func TestBuildRejectsNonSemVerPackageVersions(t *testing.T) {
 	}
 }
 
+func TestBuildRequiresExplicitRegistryAuthorityAndExactTarballBasename(t *testing.T) {
+	for _, version := range []string{"1", "2", "3"} {
+		for _, test := range []struct {
+			name, pin string
+			omit      bool
+			want      string
+		}{
+			{name: "bare filename", pin: "file:agentic-proofkit-1.2.3.tgz"},
+			{name: "alternate directory", pin: "file:retained/agentic-proofkit-1.2.3.tgz"},
+			{name: "other package", pin: "file:other-agentic-proofkit-1.2.3.tgz", want: "same package tarball filename"},
+			{name: "other version", pin: "file:agentic-proofkit-1.2.4.tgz", want: "same package tarball filename"},
+			{name: "directory suffix", pin: "file:agentic-proofkit-1.2.3.tgz/", want: "same package tarball filename"},
+			{name: "dot suffix", pin: "file:agentic-proofkit-1.2.3.tgz/.", want: "same package tarball filename"},
+			{name: "missing prefix", pin: "agentic-proofkit-1.2.3.tgz", want: "exact file: tarball pin"},
+			{name: "missing authority", pin: "file:agentic-proofkit-1.2.3.tgz", omit: true, want: "must declare registryAuthority"},
+		} {
+			t.Run(version+"/"+test.name, func(t *testing.T) {
+				input := validRegistryReleaseInput("npm_trusted_publishing", "public")
+				input["schemaVersion"] = json.Number(version)
+				input["channel"] = "tarball_pilot"
+				input["registryAuthority"] = nil
+				input["package"].(map[string]any)["manifestPrivate"] = true
+				input["package"].(map[string]any)["publishConfigRegistry"] = nil
+				input["consumerContract"].(map[string]any)["dependencyPinType"] = "file_tarball"
+				delete(input["artifactProof"].(map[string]any), "registryPublishDryRunProofId")
+				input["rollback"].(map[string]any)["versionPin"] = test.pin
+				if test.omit {
+					delete(input, "registryAuthority")
+				}
+				record, exitCode, err := Build(input)
+				if test.want == "" {
+					if err != nil || exitCode != 0 || record.State != "passed" {
+						t.Fatalf("valid tarball authority rejected: exit=%d error=%v record=%#v", exitCode, err, record)
+					}
+				} else if test.omit {
+					if err == nil || exitCode != 1 || !strings.Contains(err.Error(), test.want) {
+						t.Fatalf("missing required key: exit=%d error=%v", exitCode, err)
+					}
+				} else {
+					if err != nil || exitCode != 1 || record.State != "failed" {
+						t.Fatalf("invalid pin result: exit=%d error=%v", exitCode, err)
+					}
+					assertFailedRuleMessage(t, record.RuleResults, "proofkit.release-authority.failure.", test.want)
+				}
+			})
+		}
+	}
+}
+
 func TestBuildAddsMandatoryBoundaryNonClaims(t *testing.T) {
 	input := validRegistryReleaseInput("npm_trusted_publishing", "private")
 

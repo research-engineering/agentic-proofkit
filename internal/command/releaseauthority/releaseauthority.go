@@ -438,6 +438,9 @@ func admitInput(raw any, failures *[]string) (admittedInput, error) {
 	if err != nil {
 		return admittedInput{}, err
 	}
+	if _, present := record["registryAuthority"]; !present {
+		return admittedInput{}, fmt.Errorf("release authority input must declare registryAuthority")
+	}
 	authority, err := admitRegistryAuthorityForSchema(record["registryAuthority"], schemaVersion, channel)
 	if err != nil {
 		return admittedInput{}, err
@@ -887,7 +890,7 @@ func enforceTarballIdentity(input admittedInput, failures *[]string) {
 	}
 	if !strings.HasPrefix(input.Rollback.VersionPin, "file:") {
 		*failures = append(*failures, "tarball_pilot rollback versionPin must be an exact file: tarball pin")
-	} else if !strings.HasSuffix(input.Rollback.VersionPin, tarballName) {
+	} else if input.Rollback.VersionPin != "file:"+tarballName && !strings.HasSuffix(input.Rollback.VersionPin, "/"+tarballName) {
 		*failures = append(*failures, "tarball_pilot rollback versionPin must reference the same package tarball filename")
 	}
 }
