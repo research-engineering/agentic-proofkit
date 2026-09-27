@@ -10,13 +10,16 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
@@ -26,6 +29,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/digest"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasechannel"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releasepublisher"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/trustedpublisher"
@@ -430,12 +434,16 @@ func buildInput(root string) (completionInput, error) {
 	if err != nil {
 		return completionInput{}, err
 	}
+	selfEvidence, err := selfEvidenceCriterion(root)
+	if err != nil {
+		return completionInput{}, err
+	}
 	criteria := []criterion{
 		packageArtifactCriterion(root, manifest),
 		pythonArtifactCriterion(root, manifest),
 		releaseManifestCriterion(root, manifest),
 		releaseChannelClassificationCriterion(root, manifest),
-		selfEvidenceCriterion(root),
+		selfEvidence,
 		registryPublicationNonClaimCriterion(),
 	}
 	sort.Slice(criteria, func(left int, right int) bool {
@@ -539,7 +547,7 @@ func releaseChannelClassificationCriterion(root string, packageManifest packageJ
 	)
 }
 
-func selfEvidenceCriterion(root string) criterion {
+func selfEvidenceCriterion(root string) (criterion, error) {
 	evidence := []string{
 		commandOracleRecordPath,
 		coverageMetricsPath,
@@ -551,7 +559,11 @@ func selfEvidenceCriterion(root string) criterion {
 		specProofBundleReportPath,
 		specProofBundlePath,
 	}
-	ok := selfEvidenceValid(root)
+	snapshot, err := readSelfEvidenceSnapshot(root)
+	if errors.Is(err, processgroup.ErrOwnershipLost) || errors.Is(err, context.Canceled) {
+		return criterion{}, err
+	}
+	ok := err == nil && snapshot.valid()
 	return blockingCriterion(
 		"proofkit.release_closeout.self_evidence",
 		"Current package-artifact execution, command-oracle diagnostic, self-hosting receipt, producer admission, spec-proof bundle, and coverage metrics evidence must form one coherent local advisory closeout snapshot.",
@@ -560,18 +572,12 @@ func selfEvidenceCriterion(root string) criterion {
 		[]string{"npm:self:receipt", "npm:self:coverage"},
 		[]string{"Package-artifact execution is missing, stale, invalid, or mismatched with the self receipt.", "Self-hosting receipt, producer admission, spec-proof bundle, or coverage metrics evidence is missing or invalid."},
 		[]string{"This criterion does not make local advisory receipts merge-satisfying or release-satisfying provider evidence."},
-	)
-}
-
-func selfEvidenceValid(root string) bool {
-	snapshot, err := readSelfEvidenceSnapshot(root)
-	if err != nil {
-		return false
-	}
-	return snapshot.valid()
+	), nil
 }
 
 func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	cliContract, err := readTypedJSON[cliContractEvidence](root, cliContractPath)
 	if err != nil {
 		return SelfEvidenceSnapshot{}, err
@@ -592,7 +598,7 @@ func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
 	if err != nil {
 		return SelfEvidenceSnapshot{}, err
 	}
-	if err := commandOracleValidateCurrent(context.Background(), root, commandOracle); err != nil {
+	if err := commandOracleValidateCurrent(ctx, root, commandOracle); err != nil {
 		return SelfEvidenceSnapshot{}, err
 	}
 	proofReceiptReport, err := readSelfEvidenceDocument[selfEvidenceReport](root, proofReceiptReportPath)
@@ -623,7 +629,7 @@ func readSelfEvidenceSnapshot(root string) (SelfEvidenceSnapshot, error) {
 	if err != nil {
 		return SelfEvidenceSnapshot{}, err
 	}
-	if err := packageartifactrecord.ValidateCurrent(root, execution); err != nil {
+	if err := packageartifactrecord.ValidateCurrentContext(ctx, root, execution); err != nil {
 		return SelfEvidenceSnapshot{}, err
 	}
 	return SelfEvidenceSnapshot{

@@ -7,12 +7,52 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 )
+
+func TestCaptureContextPreservesFailedStartBoundary(t *testing.T) {
+	for _, mode := range []string{"canceled", "deadline", "missing_directory"} {
+		t.Run(mode, func(t *testing.T) {
+			bin := t.TempDir()
+			marker := filepath.Join(t.TempDir(), "started")
+			if err := os.WriteFile(filepath.Join(bin, "git"), []byte("#!/bin/sh\n: > \"$PROOFKIT_TEST_GIT_START_MARKER\"\nexit 1\n"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("PATH", bin)
+			t.Setenv("PROOFKIT_TEST_GIT_START_MARKER", marker)
+			root := t.TempDir()
+			ctx := t.Context()
+			switch mode {
+			case "canceled":
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithCancel(ctx)
+				cancel()
+			case "deadline":
+				var cancel context.CancelFunc
+				ctx, cancel = context.WithDeadline(ctx, time.Now().Add(-time.Second))
+				defer cancel()
+			case "missing_directory":
+				root = filepath.Join(root, "absent")
+			}
+			snapshot, err := CaptureContext(ctx, root)
+			const expected = "git ls-files -z --cached --others --exclude-standard failed to start"
+			if err == nil || err.Error() != expected || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+				t.Errorf("startup classification: %v, want fixed failed-to-start result", err)
+			}
+			if !reflect.DeepEqual(snapshot, Snapshot{}) {
+				t.Errorf("failed startup retained snapshot progress: %#v", snapshot)
+			}
+			if _, err := os.Stat(marker); !errors.Is(err, os.ErrNotExist) {
+				t.Errorf("failed startup executed the Git application: %v", err)
+			}
+		})
+	}
+}
 
 func TestGitOutputTerminatesGroupAfterParentExit(t *testing.T) {
 	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)

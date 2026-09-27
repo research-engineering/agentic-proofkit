@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -28,6 +29,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/gotestsource"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/commandoracle"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
@@ -193,6 +195,8 @@ func main() {
 }
 
 func run() error {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 	if err := invalidateExecutionMetrics(); err != nil {
 		return err
 	}
@@ -217,10 +221,16 @@ func run() error {
 		out := buildMetrics(requirements, bindings, witnesses, contract, testevidenceinventory.Inventory{})
 		return writeMetrics(out, err)
 	}
-	executionEvidence, err := commandOracleExecute(context.Background(), ".")
+	executionEvidence, err := commandOracleExecute(ctx, ".")
 	if err != nil {
+		if errors.Is(err, processgroup.ErrOwnershipLost) || ctx.Err() != nil {
+			return err
+		}
 		out := buildMetrics(requirements, bindings, witnesses, contract, commandInventory)
-		if provenanceErr := bindCurrentSourceProvenance(&out); provenanceErr != nil {
+		if provenanceErr := bindCurrentSourceProvenance(ctx, &out); provenanceErr != nil {
+			if errors.Is(provenanceErr, processgroup.ErrOwnershipLost) || ctx.Err() != nil {
+				return provenanceErr
+			}
 			err = errors.Join(err, provenanceErr)
 		}
 		return writeMetrics(out, err)
@@ -235,7 +245,7 @@ func run() error {
 	if closeoutErr != nil {
 		return writeMetrics(out, closeoutErr)
 	}
-	return writeCurrentExecutionMetrics(context.Background(), out, executionEvidence)
+	return writeCurrentExecutionMetrics(ctx, out, executionEvidence)
 }
 
 func commandExecutionSummaryFromEvidence(evidence commandoracle.Evidence) commandExecutionSummary {
@@ -591,8 +601,8 @@ func equalStrings(left, right []string) bool {
 	return slices.Equal(left, right)
 }
 
-func bindCurrentSourceProvenance(out *metrics) error {
-	revision, sourceDigest, err := packageartifactrecord.SourceSnapshot(".")
+func bindCurrentSourceProvenance(ctx context.Context, out *metrics) error {
+	revision, sourceDigest, err := packageartifactrecord.SourceSnapshotContext(ctx, ".")
 	if err != nil {
 		return fmt.Errorf("bind coverage metrics source snapshot: %w", err)
 	}

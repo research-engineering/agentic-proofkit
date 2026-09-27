@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
@@ -74,7 +78,7 @@ func runWithDependencies(root string, runner Runner, dependencies orchestrationD
 	if err := packageartifactrecord.PrepareCandidateArtifactOutputs(root); err != nil {
 		return err
 	}
-	sourceRevision, sourceDigest, err := packageartifactrecord.SourceSnapshot(root)
+	sourceRevision, sourceDigest, err := sourceSnapshot(root)
 	if err != nil {
 		return err
 	}
@@ -89,8 +93,11 @@ func runWithDependencies(root string, runner Runner, dependencies orchestrationD
 	finishedAt := dependencies.now().UTC()
 
 	evidenceErr := error(nil)
-	afterRevision, afterSourceDigest, err := packageartifactrecord.SourceSnapshot(root)
+	afterRevision, afterSourceDigest, err := sourceSnapshot(root)
 	if err != nil {
+		if errors.Is(err, processgroup.ErrOwnershipLost) || errors.Is(err, context.Canceled) {
+			return err
+		}
 		evidenceErr = errors.Join(evidenceErr, err)
 	} else if afterRevision != sourceRevision || afterSourceDigest != sourceDigest {
 		evidenceErr = errors.Join(evidenceErr, fmt.Errorf("package artifact command changed its source snapshot"))
@@ -136,4 +143,12 @@ func runWithDependencies(root string, runner Runner, dependencies orchestrationD
 		return errors.Join(runErr, evidenceErr, err)
 	}
 	return errors.Join(runErr, evidenceErr)
+}
+
+// Scope only the owned Git work; the separate artifact runner keeps its own
+// existing signal behavior. Both snapshot calls finish all joins before stop.
+func sourceSnapshot(root string) (string, string, error) {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return packageartifactrecord.SourceSnapshotContext(ctx, root)
 }

@@ -1,6 +1,7 @@
 package packageartifactrecord
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/binary"
@@ -401,6 +402,10 @@ func artifactPathState(rootFS *os.Root, relativePath string) (string, bool, erro
 }
 
 func ValidateCurrent(root string, record Record) error {
+	return ValidateCurrentContext(context.Background(), root, record)
+}
+
+func ValidateCurrentContext(ctx context.Context, root string, record Record) error {
 	if record.SchemaVersion != SchemaVersion || record.CommandID != CommandID || !equalStrings(record.Argv, commandArgv) || !equalStrings(record.ExecutionArgv, executionArgv) {
 		return fmt.Errorf("package artifact execution record identity is invalid")
 	}
@@ -421,7 +426,7 @@ func ValidateCurrent(root string, record Record) error {
 		!isSHA256(record.ToolchainDigest) {
 		return fmt.Errorf("package artifact execution record snapshot digests must be lowercase sha256")
 	}
-	revision, sourceDigest, err := SourceSnapshot(root)
+	revision, sourceDigest, err := SourceSnapshotContext(ctx, root)
 	if err != nil {
 		return err
 	}
@@ -451,7 +456,11 @@ func isSHA256(value string) bool {
 }
 
 func SourceSnapshot(root string) (string, string, error) {
-	snapshot, err := repositorysnapshot.Capture(root)
+	return SourceSnapshotContext(context.Background(), root)
+}
+
+func SourceSnapshotContext(ctx context.Context, root string) (string, string, error) {
+	snapshot, err := repositorysnapshot.CaptureContext(ctx, root)
 	if err != nil {
 		return "", "", err
 	}

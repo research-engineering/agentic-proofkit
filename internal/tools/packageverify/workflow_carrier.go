@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
 func verifyInstalledNPMWorkflowSmoke(consumer string) error {
-	return workflowsmoke.VerifyProcess(context.Background(), installedNPMWorkflowCarrier(consumer))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	return workflowsmoke.VerifyProcess(ctx, installedNPMWorkflowCarrier(consumer))
 }
 
 func installedNPMWorkflowCarrier(consumer string) workflowsmoke.ProcessCarrier {

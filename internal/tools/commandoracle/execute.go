@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/research-engineering/agentic-proofkit/internal/app"
@@ -161,19 +160,8 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 	if err != nil {
 		return decision("process.go_executable_missing")
 	}
-	command := exec.CommandContext(ctx, goExecutable, argv[1:]...)
+	command := exec.Command(goExecutable, argv[1:]...)
 	command.Dir = root
-	command.WaitDelay = processWaitDelay
-	processgroup.Configure(command)
-	var terminationFailed atomic.Bool
-	cancelCommand := command.Cancel
-	command.Cancel = func() error {
-		err := cancelCommand()
-		if err != nil && !errors.Is(err, os.ErrProcessDone) {
-			terminationFailed.Store(true)
-		}
-		return err
-	}
 	stderrReader, stderrWriter, err := os.Pipe()
 	if err != nil {
 		return decision("process.stderr_pipe_failed")
@@ -196,9 +184,15 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 	if err != nil {
 		return decision("process.stdout_pipe_failed")
 	}
+	defer stdout.Close()
+	defer command.Stdout.(*os.File).Close()
 	// A direct file keeps Wait from truncating or waiting on this owned reader.
 	command.Stderr = stderrWriter
-	if err := command.Start(); err != nil {
+	child, err := processgroup.Start(ctx, command)
+	if err != nil {
+		if ctx.Err() != nil {
+			return decision("process.timeout")
+		}
 		return decision("process.start_failed")
 	}
 	var lifecycleErr error
@@ -208,20 +202,16 @@ func runGoTestCommand(ctx context.Context, root string, argv []string, ledger *e
 	}
 	stderr := startCommandStderr(stderrReader)
 	readerTransferred = true
-	result = waitGoTestCommand(ctx, command, stdout, stderr, ledger, lifecycleErr, func() error {
-		return processgroup.Terminate(command)
-	})
-	if terminationFailed.Load() {
-		result = withCommandFailures(result, errors.New("command oracle process termination failed"))
-	}
+	result = waitGoTestCommand(ctx, child, stdout, stderr, ledger, lifecycleErr, child.Abort)
 	return result
 }
 
-// waitGoTestCommand owns both readers and the sole Wait after a successful Start.
-// terminate represents only the local abort attempt, not Cmd.Cancel.
-func waitGoTestCommand(ctx context.Context, command *exec.Cmd, stdout io.ReadCloser, stderr *commandStderr, ledger *eventLedger, lifecycleErr error, terminate func() error) error {
+// waitGoTestCommand owns parser/stream policy. Child alone owns signals and Wait.
+// terminate is the operation's one early abort attempt; Finish retains the sweep.
+func waitGoTestCommand(ctx context.Context, child *processgroup.Child, stdout io.ReadCloser, stderr *commandStderr, ledger *eventLedger, lifecycleErr error, terminate func() error) error {
 	parseDone := make(chan error, 1)
-	go func() { parseDone <- parseEvents(stdout, ledger) }()
+	parsedStdout := &parserInput{reader: stdout}
+	go func() { parseDone <- parseEvents(parsedStdout, ledger) }()
 	stdoutClosed := false
 	closeStdout := func() {
 		if !stdoutClosed {
@@ -234,7 +224,6 @@ func waitGoTestCommand(ctx context.Context, command *exec.Cmd, stdout io.ReadClo
 	operationAbortAttempted := false
 	abort := func() {
 		if !operationAbortAttempted {
-			// Stderr expiry closes its reader without attempting process termination.
 			operationAbortAttempted = true
 			stderr.aborted = true
 			if err := terminate(); err != nil {
@@ -260,46 +249,72 @@ func waitGoTestCommand(ctx context.Context, command *exec.Cmd, stdout io.ReadClo
 		}
 	}
 	parseComplete := false
-	for !parseComplete {
+	terminalSeen := false
+	terminalChannel, abortChannel := child.Terminal(), child.Aborted()
+	for !parseComplete || stderr.done != nil || (!terminalSeen && !operationAbortAttempted) {
 		select {
 		case parseErr = <-parseDone:
 			parseComplete = true
+			parseDone = nil
+			// Our failed-path close is not a new parser defect. Genuine malformed
+			// events still retain parser precedence over secondary stream failures.
+			if operationAbortAttempted && errors.Is(parsedStdout.readErr, os.ErrClosed) && DecisionID(parseErr) == "event.line_invalid_or_oversized" {
+				parseErr = nil
+			}
 			closeStdout()
 			if parseErr != nil || lifecycleErr != nil {
 				abort()
 			}
 		case err := <-stderr.done:
 			stderr.receive(err)
-		case <-overflowChannel:
-		case <-contextChannel:
-			contextChannel = nil
+			stderr.close()
+			if stderr.copyErr != nil || stderr.closeErr != nil {
+				abort()
+			}
+		case <-terminalChannel:
+			terminalSeen, terminalChannel = true, nil
+		case <-abortChannel:
+			abortChannel = nil
 			abort()
-		}
-		observeOverflow()
-	}
-	waitDone := make(chan error, 1)
-	go func() { waitDone <- command.Wait() }()
-	var waitErr error
-	waitComplete := false
-	for !waitComplete || stderr.done != nil {
-		select {
-		case waitErr = <-waitDone:
-			waitComplete = true
-			waitDone = nil
-			stderr.parentWaited()
-		case err := <-stderr.done:
-			stderr.receive(err)
 		case <-stderr.deadline:
-			stderr.expire()
+			// Ready completion wins expiry; otherwise kill BEFORE closing/joining.
+			select {
+			case err := <-stderr.done:
+				stderr.receive(err)
+				stderr.close()
+				if stderr.copyErr != nil || stderr.closeErr != nil {
+					abort()
+				}
+			default:
+				stderr.expired = true
+				abort()
+			}
 		case <-overflowChannel:
 		case <-contextChannel:
 			contextChannel = nil
 			abort()
 		}
-		// Completion may win select while an overflow notification is also ready.
 		observeOverflow()
+		if terminalSeen && parseComplete {
+			stderr.drainReady()
+		}
 	}
 	stderr.close()
+	if stderr.closeErr != nil {
+		abort()
+	}
+	observeOverflow()
+	if ctx.Err() != nil {
+		abort()
+	}
+	waitErr, cleanupErr := child.Finish(processWaitDelay)
+	if cleanupErr != nil {
+		failure := errors.New("command oracle process cleanup failed")
+		if errors.Is(cleanupErr, processgroup.ErrOwnershipLost) {
+			failure = processgroup.ErrOwnershipLost
+		}
+		lifecycleErr = errors.Join(lifecycleErr, failure)
+	}
 	var result error
 	switch {
 	case overflowed || stderr.bounded.Overflowed():
@@ -312,6 +327,20 @@ func waitGoTestCommand(ctx context.Context, command *exec.Cmd, stdout io.ReadClo
 		result = decision("process.suite_failed")
 	}
 	return withCommandFailures(result, lifecycleErr, stderr.failure())
+}
+
+// Only the parser goroutine writes readErr; its completion joins that write.
+type parserInput struct {
+	reader  io.Reader
+	readErr error
+}
+
+func (input *parserInput) Read(value []byte) (int, error) {
+	n, err := input.reader.Read(value)
+	if err != nil {
+		input.readErr = err
+	}
+	return n, err
 }
 
 type boundedDrain struct {

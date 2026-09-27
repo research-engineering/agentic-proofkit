@@ -1,16 +1,12 @@
 package workflowsmoke
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
 	"sync"
 	"time"
-
-	"github.com/research-engineering/agentic-proofkit/internal/kernel/processgroup"
 )
 
 const (
@@ -42,8 +38,9 @@ func VerifyProcess(ctx context.Context, carrier ProcessCarrier) error {
 	})
 }
 
-// RunProcess executes one bounded carrier invocation and terminates its whole
-// process group before returning on every post-start path.
+// RunProcess executes one bounded carrier invocation with retained group cleanup.
+// Identity loss returns a fatal cleanup-unverified error; kernel stalls retain
+// the join obligation rather than promising an impossible finite joined return.
 func RunProcess(ctx context.Context, carrier ProcessCarrier, invocation Invocation) (Result, error) {
 	return RunProcessWithOutputLimits(ctx, carrier, invocation, ProcessOutputLimits{
 		MaximumStdoutBytes: defaultMaximumStdoutBytes,
@@ -66,33 +63,14 @@ func RunProcessWithOutputLimits(ctx context.Context, carrier ProcessCarrier, inv
 	processContext, cancel := context.WithCancel(ctx)
 	defer cancel()
 	args := append(append([]string(nil), carrier.Prefix...), invocation.Args...)
-	command := exec.CommandContext(processContext, carrier.Executable, args...)
+	command := exec.Command(carrier.Executable, args...)
 	command.Dir = carrier.Directory
-	command.WaitDelay = processWaitDelay
 	if carrier.Environment != nil {
 		command.Env = append([]string(nil), carrier.Environment...)
 	}
-	processgroup.Configure(command)
 	stdout := newBoundedBuffer(limits.MaximumStdoutBytes, cancel)
 	stderr := newBoundedBuffer(limits.MaximumStderrBytes, cancel)
-	command.Stdout = stdout
-	command.Stderr = stderr
-	var stdinRead *os.File
-	var stdinWrite *os.File
-	if invocation.StdinClass == StdinMustRemainUnread {
-		var err error
-		stdinRead, stdinWrite, err = os.Pipe()
-		if err != nil {
-			return Result{}, fmt.Errorf("create unread-stdin oracle: %w", err)
-		}
-		defer stdinRead.Close()
-		defer stdinWrite.Close()
-		command.Stdin = stdinRead
-	} else {
-		command.Stdin = bytes.NewReader(invocation.Input)
-	}
-	runErr := command.Run()
-	cleanupErr := processgroup.TerminateAndWait(command, processWaitDelay)
+	runErr, cleanupErr, streamErr := runCarrierStreams(processContext, command, invocation, stdout, stderr)
 	result := Result{Stdout: stdout.Bytes(), Stderr: stderr.Bytes()}
 	if cleanupErr != nil {
 		return Result{}, fmt.Errorf("terminate process carrier group: %w", cleanupErr)
@@ -105,6 +83,9 @@ func RunProcessWithOutputLimits(ctx context.Context, carrier ProcessCarrier, inv
 	}
 	if ctx.Err() != nil {
 		return Result{}, fmt.Errorf("process carrier invocation canceled: %w", ctx.Err())
+	}
+	if streamErr != nil {
+		return Result{}, fmt.Errorf("process carrier stream observation failed: %w", streamErr)
 	}
 	if runErr == nil {
 		return result, nil

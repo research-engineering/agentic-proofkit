@@ -81,6 +81,49 @@ equivalent. Release and package-authority proof remains npm-owned.
 For CLI or Go changes, run focused Go tests first. For package or release
 changes, inspect [docs/release-process.md](docs/release-process.md).
 
+### Source-Tool Child Ownership
+
+`internal/kernel/processgroup` owns the retained-child lifecycle used only by
+`workflowsmoke`, `commandoracle`, and `repositorysnapshot`. Each caller creates
+an ordinary `exec.Command` with explicitly owned file-backed streams. The child
+is not reaped until the final group signal has completed and the lifecycle has
+sealed all further destructive effects. Normal completion requires both a
+positive non-reaping terminal observation and complete required output. Abort
+signals immediately, joins local streams and the single observer, retains a
+final pre-seal sweep, then performs the sole real `Cmd.Wait`. Post-reap signal 0
+must observe ESRCH; EPERM, elapsed time and EOF do not establish absence or exit.
+Caller-specific output/parser limits and the 2s/5s/10s drain budgets remain owned
+by the callers. No library installs a global signal handler; source entrypoints
+retain their SIGINT/SIGTERM scopes through cleanup and join.
+
+Darwin observation admits the pinned x/sys `kern.proc.pid` SPI only for these
+source tools: full-sized records, matching PID/parent/group, and SZOMB. Linux
+uses fresh `waitid(P_PID, WEXITED|WNOWAIT|WNOHANG)` records. Source-check targets
+are the configured Ubuntu 24.04 and macos-15 jobs and the native Linux wheel
+verifier profile, each requiring actual host/API qualification. A CI label,
+cross-build or one local run is not native qualification of another host.
+This package is outside the CLI dependency closure on all four shipped targets;
+consumer wheel tags and platform minima are unchanged. Import or payload changes
+require a fresh closure proof, and unsupported hosts fail before child Start.
+Retained identity assumes an owned Setpgid Start and no foreign/second reap,
+auto-reap, Release, reparenting or tracing interference.
+
+ECHILD or an identity contradiction revokes authority: no numeric signal,
+reacquisition or Wait is permitted. Tools close and join owned local streams,
+report fatal ownership loss with child cleanup unverified, and stop further
+work. Permanent kernel refusal or a stuck syscall retains an outstanding join
+obligation: a userspace timeout cannot promise both finite completion and join.
+SIGKILL of the root, escaped/privileged descendants, hostile indefinite forking,
+and producers requiring parent reap before output are not containment promises.
+
+Proof requires independent signal/seal/reap traces, adapter classification and
+native owned-child controls, preserved inherited-output/parser/stdin witnesses,
+and root-coordinated final gates. Removing cleanup, signaling after reap, or
+killing at terminal before output drains is not an admissible simplification.
+Revisit this owner if a qualified generation handle is cheaper, source-host SPI
+changes, or a protected producer requires reap-dependent output. The narrow
+lifecycle replaces the unsafe path, not the callers' stream or result policies.
+
 ## Change Admission
 
 An accepted change should have:

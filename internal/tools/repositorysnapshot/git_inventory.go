@@ -2,7 +2,10 @@ package repositorysnapshot
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
@@ -92,51 +95,126 @@ func sourceRevision(ctx context.Context, root, digest string) (string, error) {
 }
 
 func gitOutput(ctx context.Context, root string, args ...string) (string, error) {
-	command := exec.CommandContext(ctx, "git", args...)
+	command := exec.Command("git", args...)
 	command.Dir = root
-	command.WaitDelay = processWaitDelay
-	processgroup.Configure(command)
 	stdout := newBoundedBuffer()
 	stderr := newBoundedBuffer()
-	command.Stdout = stdout
-	command.Stderr = stderr
-	if err := command.Start(); err != nil {
+	out, err := command.StdoutPipe()
+	if err != nil {
+		return "", fmt.Errorf("git stdout pipe failed")
+	}
+	defer out.Close()
+	defer command.Stdout.(*os.File).Close()
+	errout, err := command.StderrPipe()
+	if err != nil {
+		return "", fmt.Errorf("git stderr pipe failed")
+	}
+	defer errout.Close()
+	defer command.Stderr.(*os.File).Close()
+	child, err := processgroup.Start(ctx, command)
+	if err != nil {
 		return "", fmt.Errorf("git %s failed to start", strings.Join(args, " "))
 	}
-	waitDone := make(chan error, 1)
-	go func() { waitDone <- command.Wait() }()
-	var waitErr error
-	overflowed := false
-	stdoutExceeded := stdout.Exceeded()
-	stderrExceeded := stderr.Exceeded()
-	contextDone := ctx.Done()
-	waitComplete := false
-	for !waitComplete {
-		select {
-		case waitErr = <-waitDone:
-			waitComplete = true
-		case <-stdoutExceeded:
-			overflowed = true
-			stdoutExceeded = nil
-			_ = processgroup.Terminate(command)
-		case <-stderrExceeded:
-			overflowed = true
-			stderrExceeded = nil
-			_ = processgroup.Terminate(command)
-		case <-contextDone:
-			contextDone = nil
-			_ = processgroup.Terminate(command)
+	outDone, errDone := make(chan error, 1), make(chan error, 1)
+	go func() { _, err := io.Copy(stdout, out); outDone <- err }()
+	go func() { _, err := io.Copy(stderr, errout); errDone <- err }()
+	var streamErr error
+	record := func(err error) {
+		if err != nil {
+			streamErr = errors.Join(streamErr, errors.New("git stream observation failed"))
+			_ = child.Abort()
 		}
 	}
-	outputOverflowed := overflowed || stdout.Overflowed() || stderr.Overflowed()
-	if err := processgroup.TerminateAndWait(command, processWaitDelay); err != nil {
+	stdoutExceeded := stdout.Exceeded()
+	stderrExceeded := stderr.Exceeded()
+	terminal, abort := child.Terminal(), child.Aborted()
+	terminalSeen, aborted := false, false
+	var timer *time.Timer
+	var deadline <-chan time.Time
+	defer func() {
+		if timer != nil {
+			timer.Stop()
+		}
+	}()
+	outClosed, erroutClosed := false, false
+	closeOutput := func() {
+		if !outClosed {
+			outClosed = true
+			record(out.Close())
+		}
+		if !erroutClosed {
+			erroutClosed = true
+			record(errout.Close())
+		}
+	}
+	for outDone != nil || errDone != nil || (!terminalSeen && !aborted) {
+		select {
+		case err := <-outDone:
+			outDone = nil
+			if !(aborted && errors.Is(err, os.ErrClosed)) {
+				record(err)
+			}
+		case err := <-errDone:
+			errDone = nil
+			if !(aborted && errors.Is(err, os.ErrClosed)) {
+				record(err)
+			}
+		case <-terminal:
+			terminalSeen, terminal = true, nil
+			if !aborted {
+				timer = time.NewTimer(processWaitDelay)
+				deadline = timer.C
+			}
+		case <-stdoutExceeded:
+			stdoutExceeded = nil
+			_ = child.Abort()
+		case <-stderrExceeded:
+			stderrExceeded = nil
+			_ = child.Abort()
+		case <-abort:
+			aborted, abort = true, nil
+			if timer != nil {
+				timer.Stop()
+			}
+			deadline = nil
+			closeOutput()
+		case <-deadline:
+			deadline = nil
+			if outDone != nil {
+				select {
+				case err := <-outDone:
+					outDone = nil
+					record(err)
+				default:
+				}
+			}
+			if errDone != nil {
+				select {
+				case err := <-errDone:
+					errDone = nil
+					record(err)
+				default:
+				}
+			}
+			if outDone != nil || errDone != nil {
+				record(exec.ErrWaitDelay)
+			}
+		}
+		if stdout.Overflowed() || stderr.Overflowed() {
+			_ = child.Abort()
+		}
+	}
+	closeOutput()
+	waitErr, cleanupErr := child.Finish(processWaitDelay)
+	outputOverflowed := stdout.Overflowed() || stderr.Overflowed()
+	if cleanupErr != nil {
 		switch {
 		case ctx.Err() != nil:
-			return "", fmt.Errorf("repository snapshot operation canceled and process cleanup failed: %w", ctx.Err())
+			return "", fmt.Errorf("repository snapshot operation canceled and process cleanup failed: %w", errors.Join(ctx.Err(), cleanupErr))
 		case outputOverflowed:
-			return "", fmt.Errorf("git output exceeds resource limit and process cleanup failed")
+			return "", fmt.Errorf("git output exceeds resource limit and process cleanup failed: %w", cleanupErr)
 		default:
-			return "", fmt.Errorf("git process cleanup failed")
+			return "", fmt.Errorf("git process cleanup failed: %w", cleanupErr)
 		}
 	}
 	if ctx.Err() != nil {
@@ -147,6 +225,9 @@ func gitOutput(ctx context.Context, root string, args ...string) (string, error)
 	}
 	if waitErr != nil {
 		return "", fmt.Errorf("git %s failed", strings.Join(args, " "))
+	}
+	if streamErr != nil {
+		return "", streamErr
 	}
 	if len(stderr.content) != 0 {
 		return "", fmt.Errorf("git %s emitted diagnostics", strings.Join(args, " "))
