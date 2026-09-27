@@ -45,7 +45,9 @@ export function graphNodeIntersections(graph, observed, inflate = 0.75) {
 export function assertGraphGeometry(graph, observed, domMeasurement = false) {
   // getBoundingClientRect subtraction can lose low bits after Firefox scrolls.
   // Only DOM comparisons allow <1/1024 CSS px; pure geometry stays exact.
-  const epsilon = domMeasurement ? 1 / 1024 : 0;
+  const scale = domMeasurement ? observed.coordinateScale ?? 1 : 1;
+  assert(Number.isFinite(scale) && scale > 0, "positive DOM coordinate scale");
+  const epsilon = domMeasurement ? 1 / 1024 / scale : 0;
   const equalCoordinate = (actual, expected, message) => assert(Number.isFinite(actual) && Number.isFinite(expected) && Math.abs(actual - expected) <= epsilon, message);
   const equalPoint = (actual, expected, message) => { assert.equal(actual.length, 2); for (let i = 0; i < 2; i++) equalCoordinate(actual[i], expected[i], message); };
   assert.deepEqual(observed.nodes.map(n => n.id).sort(), graph.nodes.map(n => n.nodeId).sort(), "node identity");
@@ -64,7 +66,7 @@ export function assertGraphGeometry(graph, observed, domMeasurement = false) {
       equalCoordinate(n.x, n.placement.left, "DOM left placement");
       equalCoordinate(n.y, n.placement.top, "DOM top placement");
     }
-    assert(Number.isFinite(n.y) && n.y >= 48 && n.y + n.height <= observed.height, "card bounds");
+    assert(Number.isFinite(n.y) && n.y + epsilon >= 48 && n.y + n.height <= observed.height + epsilon, "card bounds");
     for (const other of observed.nodes) if (other.id !== n.id) assert(n.x + n.width <= other.x || other.x + other.width <= n.x || n.y + n.height <= other.y || other.y + other.height <= n.y, "card separation");
   }
   const verticals = new Set();
@@ -154,7 +156,7 @@ export function normalizeGraphGeometry(observed) {
     for (let i = 0; i < route.points.length; i++) for (let axis = 0; axis < 2; axis++) equal(route.physicalPoints[i][axis], route.points[i][axis] * scale, "physical SVG route scale");
   }
   return {
-    ...observed, width: observed.width / scale, height: observed.height / scale,
+    ...observed, coordinateScale: scale, width: observed.width / scale, height: observed.height / scale,
     columns: observed.columns.map(x => x / scale),
     nodes: observed.nodes.map(n => ({...n, x: n.x / scale, y: n.y / scale, width: n.width / scale, height: n.height / scale,
       placement: {left: n.placement.left / scale, top: n.placement.top / scale}})),

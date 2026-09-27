@@ -180,6 +180,16 @@ test("graph DOM precision allowance neither relaxes pure geometry nor hides visi
   observed.nodes[0].y += 1 / 16384;
   assert.throws(() => assertGraphGeometry(graph, observed), /source port/);
   assertGraphGeometry(graph, observed, true);
+  const roundedBelowHeading = structuredClone(observed);
+  roundedBelowHeading.nodes[0].y -= 2 / 16384;
+  assert.throws(() => assertGraphGeometry(graph, roundedBelowHeading), /card bounds/);
+  assertGraphGeometry(graph, roundedBelowHeading, true);
+  const scaledRounding = structuredClone(roundedBelowHeading);
+  scaledRounding.coordinateScale = 3;
+  assertGraphGeometry(graph, scaledRounding, true);
+  const physicalDrift = structuredClone(scaledRounding);
+  physicalDrift.nodes[0].y -= 0.002 / 3;
+  assert.throws(() => assertGraphGeometry(graph, physicalDrift, true), /DOM top placement/);
   const wrongEndpoint = structuredClone(observed);
   wrongEndpoint.routes[0].points[0][1] += 1 / 16384;
   assert.throws(() => assertGraphGeometry(graph, wrongEndpoint, true), /exact DOM source port/);
