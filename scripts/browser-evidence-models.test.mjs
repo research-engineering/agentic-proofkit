@@ -220,6 +220,11 @@ test("joint-scale DOM oracle retains physical evidence and rejects isolated proj
     verify(observed);
     assert.deepEqual(observed, before, "normalization must not overwrite physical evidence");
   }
+  const roundedAtBottom = physical(48);
+  roundedAtBottom.height = roundedAtBottom.svgHeight = 260 * 3;
+  roundedAtBottom.viewBox = "0 0 1046 260";
+  roundedAtBottom.nodes[1].y += 1 / 8192;
+  verify(roundedAtBottom);
   const mutants = {
     invalidRoot(v) { v.rootFont = 0; },
     fixedCanvas(v) { v.width = v.svgWidth = 1046; },
@@ -230,6 +235,7 @@ test("joint-scale DOM oracle retains physical evidence and rejects isolated proj
     enlargedMinHeightMask(v) { v.nodes[0].height = 132; },
     fixedCardHeight(v) { v.nodes[0].height = 96; },
     fixedPlacement(v) { v.nodes[0].x = v.nodes[0].placement.left = 12; },
+    subpixelPhysicalCardDrift(v) { v.nodes[0].y -= 0.002; },
     fixedHeading(v) { v.columns[0] = 12; },
     shiftedPhysicalEdge(v) { v.routes[0].physicalPoints[0][0]++; },
     doublyScaledStroke(v) { v.paint[0].width = 4.5; },
