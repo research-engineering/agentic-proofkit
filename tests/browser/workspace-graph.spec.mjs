@@ -2,7 +2,7 @@ import {expect} from "@playwright/test";
 import {capacityTest, graphLayoutTest, test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
-import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, readGraphGeometry} from "./graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, normalizeGraphGeometry, readGraphGeometry} from "./graph-geometry-oracle.mjs";
 
 async function attachGraphScreenshot(page, testInfo, name) {
   const path = testInfo.outputPath(name);
@@ -25,12 +25,102 @@ async function identities(page, kind) {
 
 async function assertRenderedGraph(page, graph) {
   const observed = await readGraphGeometry(page);
-  assertGraphGeometry(graph, observed, true);
+  assertGraphGeometry(graph, normalizeGraphGeometry(observed), true);
   assertGraphPaint(observed);
   expect(await identities(page, "nodes")).toEqual(graph.nodes.map(n => n.nodeId));
   expect(await identities(page, "edges")).toEqual(graph.edges.map(e => e.edgeId));
   return observed;
 }
+
+async function assertGraphLabelsAndRecords(page, graph, rootFont) {
+  const samples = [];
+  for (const node of graph.nodes) {
+    const card = page.locator(`.graph-canvas button[data-graph-select="${node.nodeId}"]`);
+    await card.scrollIntoViewIfNeeded();
+    await expect(card.locator(".graph-node-label")).toHaveText(node.label);
+    await expect(card.locator(".graph-node-identity")).toHaveText(node.nodeId);
+    const text = await card.evaluate(button => [...button.children].map(element => {
+      const range = document.createRange();
+      range.setStart(element.firstChild, 0);
+      range.setEnd(element.firstChild, [...element.textContent][0].length);
+      const glyph = range.getBoundingClientRect(), style = getComputedStyle(element);
+      const clips = [element, button, button.closest(".graph-viewport")].map(e => e.getBoundingClientRect());
+      const left = Math.max(glyph.left, 0, ...clips.map(r => r.left));
+      const right = Math.min(glyph.right, innerWidth, ...clips.map(r => r.right));
+      const top = Math.max(glyph.top, 0, ...clips.map(r => r.top));
+      const bottom = Math.min(glyph.bottom, innerHeight, ...clips.map(r => r.bottom));
+      const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+      return {text: element.textContent, font: parseFloat(style.fontSize), visibility: style.visibility, opacity: style.opacity,
+        visibleWidth: right - left, visibleHeight: bottom - top, unobscured: hit !== null && button.contains(hit)};
+    }));
+    expect(text.map(t => t.font)).toEqual([rootFont * .875, rootFont * .75]);
+    for (const t of text) {
+      expect(t.visibility).toBe("visible"); expect(t.opacity).toBe("1");
+      expect(t.visibleWidth).toBeGreaterThan(0); expect(t.visibleHeight).toBeGreaterThan(0); expect(t.unobscured).toBe(true);
+    }
+    samples.push({id: node.nodeId, text});
+    const record = page.locator(`.graph-records button[data-graph-select="${node.nodeId}"]`);
+    await expect(record.locator(".graph-node-label")).toHaveText(node.label);
+    await expect(record.locator(".graph-node-identity")).toHaveText(node.nodeId);
+    await record.focus(); await page.keyboard.press("Enter");
+    await expect(record).toBeFocused();
+    await expect(page.locator(".graph-inspector > h3")).toHaveText(node.label);
+    await expect(page.locator(".graph-inspector > dl dt")).toHaveText(Object.keys(node));
+    await expect(page.locator(".graph-inspector > dl dd")).toHaveText(Object.values(node).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+  }
+  for (const edge of graph.edges) {
+    const record = page.getByRole("list", {name: "Admitted traceability edges"}).locator(`[data-identity="${edge.edgeId}"] > details`);
+    if (!(await record.evaluate(element => element.open))) await record.locator("summary").click();
+    await expect(record.locator("dl dt")).toHaveText(Object.keys(edge));
+    await expect(record.locator("dl dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+  }
+  return samples;
+}
+
+const graphFontTest = graphLayoutTest.extend({
+  launchOptions: async ({browserName, launchOptions}, use) => {
+    await use(browserName === "firefox" ? {
+      ...launchOptions, firefoxUserPrefs: {...launchOptions.firefoxUserPrefs, "font.size.variable.x-western": 48},
+    } : launchOptions);
+  },
+});
+
+graphFontTest("visible desktop graph scales jointly with native default and dynamic relative fonts", async ({browserName, graphMixedLayoutURL, page}, testInfo) => {
+  const nativeDefault = browserName === "firefox" ? 48 : 16;
+  await page.evaluate(() => { document.documentElement.lang = "en"; });
+  await expect(page.locator("html")).toHaveCSS("font-size", `${nativeDefault}px`);
+  // Media-query rem uses the native default, not the author's dynamic root size.
+  await page.setViewportSize({width: 4096, height: 2160});
+  let requests = 0;
+  page.on("request", request => { if (request.url().endsWith("/api/v1/graph")) requests++; });
+  const graph = await openGraph(page, graphMixedLayoutURL);
+  const canvas = await page.locator(".graph-canvas").elementHandle();
+  const observations = [];
+  try {
+    for (const [font, rootFont] of [["", nativeDefault], ["150%", nativeDefault * 1.5], ["16px", 16]]) {
+      if (font) await page.locator("html").evaluate((element, value) => { element.style.fontSize = value; }, font);
+      await expect(page.locator("html")).toHaveCSS("font-size", `${rootFont}px`);
+      await expect(page.locator(".graph-viewport")).toBeVisible();
+      expect(await canvas.evaluate(element => element === document.querySelector(".graph-canvas"))).toBe(true);
+      const physical = await readGraphGeometry(page);
+      const observation = {font, rootFont, physical};
+      observations.push(observation);
+      await assertRenderedGraph(page, graph);
+      expect(physical.rootFont).toBe(rootFont);
+      expect(physical.nodes.map(n => [n.width, n.height])).toEqual(graph.nodes.map(() => [240 * rootFont / 16, 96 * rootFont / 16]));
+      observation.labels = await assertGraphLabelsAndRecords(page, graph, rootFont);
+      await page.locator(".graph-node").first().scrollIntoViewIfNeeded();
+      await attachGraphScreenshot(page, testInfo, `graph-root-${rootFont}px.png`);
+    }
+    await page.locator("html").evaluate(element => element.style.removeProperty("font-size"));
+    await expect(page.locator("html")).toHaveCSS("font-size", `${nativeDefault}px`);
+    await assertRenderedGraph(page, graph);
+    expect(requests).toBe(1);
+  } finally {
+    await canvas.dispose();
+    await testInfo.attach("graph-font-physical-observations.json", {body: JSON.stringify({browserName, nativeDefault, observations}), contentType: "application/json"});
+  }
+});
 
 graphLayoutTest("native graph geometry protects cards and preserves exact directed records", async ({graphLayoutURL, graphMixedLayoutURL, page}, testInfo) => {
   await page.setViewportSize({width: 1920, height: 1080});
@@ -130,7 +220,7 @@ graphLayoutTest("graph geometry preserves paint in dark and forced colors and de
   });
   const drift = await readGraphGeometry(page);
   expect(drift.nodes.every(n => n.width === 241)).toBe(true);
-  expect(() => assertGraphGeometry(graph, drift, true)).toThrow(/DOM card width/);
+  expect(() => assertGraphGeometry(graph, normalizeGraphGeometry(drift), true)).toThrow(/DOM card width/);
   await page.locator(".graph-canvas").evaluate((canvas, width) => canvas.style.setProperty("--graph-card-width", width), originalWidth);
   await page.locator('.graph-records button[data-graph-select="spec:z"]').click();
   await assertRenderedGraph(page, graph);

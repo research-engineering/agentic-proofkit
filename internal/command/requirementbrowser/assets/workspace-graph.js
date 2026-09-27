@@ -17,6 +17,10 @@ export const GEOMETRY = Object.freeze({
   minimumHeight: 180, slotPitch: 6, strokeWidth: 1.5, markerSize: 6, markerViewBox: 10,
 });
 
+// The router and SVG retain design units; HTML shares their root-relative scale.
+/** @param {number} value */
+const designRem = value => `${value / 16}rem`;
+
 /** @typedef {{gap: number, rank: number}} GraphSlot */
 /** @typedef {[number, number]} GraphPoint */
 
@@ -253,23 +257,23 @@ export function renderGraphPage(container, graph, options) {
     const {positions, columns, routes, width, height} = graphPagePositions(visible.nodes, visible.edges);
     const canvas = document.createElement("div");
     canvas.className = "graph-canvas";
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-    canvas.style.setProperty("--graph-card-width", `${GEOMETRY.cardWidth}px`);
-    canvas.style.setProperty("--graph-card-height", `${GEOMETRY.cardHeight}px`);
-    canvas.style.setProperty("--graph-edge-stroke", `${GEOMETRY.strokeWidth}px`);
+    canvas.style.width = designRem(width);
+    canvas.style.height = designRem(height);
+    canvas.style.setProperty("--graph-card-width", designRem(GEOMETRY.cardWidth));
+    canvas.style.setProperty("--graph-card-height", designRem(GEOMETRY.cardHeight));
+    canvas.style.setProperty("--graph-edge-stroke", String(GEOMETRY.strokeWidth));
     for (let column = 0; column < GRAPH_PLANES.length; column++) {
       const heading = document.createElement("p");
       heading.className = "graph-plane-heading";
       heading.textContent = GRAPH_PLANES[column].label;
-      heading.style.left = `${columns[column]}px`;
+      heading.style.left = designRem(columns[column]);
       canvas.append(heading);
     }
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("aria-hidden", "true");
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    svg.setAttribute("width", String(width));
-    svg.setAttribute("height", String(height));
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
     svg.dataset.nodeIds = visible.nodes.map(node => node.nodeId).join(" ");
     svg.dataset.edgeIds = visible.edges.map(edge => edge.edgeId).join(" ");
     const defs = document.createElementNS(svg.namespaceURI, "defs");
@@ -292,8 +296,8 @@ export function renderGraphPage(container, graph, options) {
       if (!position) throw new Error("Node position is unavailable");
       const button = nodeButton(node);
       button.classList.add("graph-node");
-      button.style.left = `${position.x}px`;
-      button.style.top = `${position.y}px`;
+      button.style.left = designRem(position.x);
+      button.style.top = designRem(position.y);
       button.dataset.plane = node.evidencePlane;
       button.dataset.boundary = String(!primaryIDs.has(node.nodeId));
       nodeButtons.set(node.nodeId, button);

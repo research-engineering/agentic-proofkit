@@ -106,6 +106,7 @@ export async function readGraphGeometry(page) {
   return page.locator(".graph-canvas").evaluate(canvas => {
     const bounds = canvas.getBoundingClientRect(), svg = canvas.querySelector(":scope > svg");
     const svgBounds = svg.getBoundingClientRect();
+    const matrix = svg.getScreenCTM();
     // HTML authored color and SVG system ink need not have equal computed
     // values in forced colors. Resolve the required token independently.
     const probe = document.createElement("span");
@@ -114,12 +115,21 @@ export async function readGraphGeometry(page) {
     const expectedInk = getComputedStyle(probe).color;
     probe.remove();
     return {
+      rootFont: parseFloat(getComputedStyle(document.documentElement).fontSize),
       width: bounds.width, height: bounds.height, svgWidth: svgBounds.width, svgHeight: svgBounds.height,
+      svgTransform: {a: matrix.a, b: matrix.b, c: matrix.c, d: matrix.d, x: matrix.e - bounds.x, y: matrix.f - bounds.y},
       viewBox: svg.getAttribute("viewBox"),
       columns: [...canvas.querySelectorAll(".graph-plane-heading")].map(h => h.getBoundingClientRect().x - bounds.x),
-      nodes: [...canvas.querySelectorAll(".graph-node")].map(n => {const r = n.getBoundingClientRect(); return {id: n.dataset.graphSelect, x: r.x - bounds.x, y: r.y - bounds.y, width: r.width, height: r.height, placement: {left: parseFloat(n.style.left), top: parseFloat(n.style.top)}};}),
-      routes: [...svg.querySelectorAll("[data-edge-id]")].map(e => ({id: e.dataset.edgeId, points: e.tagName === "line" ? [[e.x1.baseVal.value, e.y1.baseVal.value], [e.x2.baseVal.value, e.y2.baseVal.value]] : [...e.points].map(p => [p.x, p.y]), marker: e.getAttribute("marker-end")})),
-      paint: [...svg.querySelectorAll("[data-edge-id]")].map(e => {const s = getComputedStyle(e); return {fill: s.fill, stroke: s.stroke, width: parseFloat(s.strokeWidth), join: s.strokeLinejoin};}),
+      nodes: [...canvas.querySelectorAll(".graph-node")].map(n => {const r = n.getBoundingClientRect(), s = getComputedStyle(n); return {id: n.dataset.graphSelect, x: r.x - bounds.x, y: r.y - bounds.y, width: r.width, height: r.height, placement: {left: parseFloat(s.left), top: parseFloat(s.top)}};}),
+      routes: [...svg.querySelectorAll("[data-edge-id]")].map(e => {
+        const points = e.tagName === "line" ? [[e.x1.baseVal.value, e.y1.baseVal.value], [e.x2.baseVal.value, e.y2.baseVal.value]] : [...e.points].map(p => [p.x, p.y]);
+        const transform = e.getScreenCTM();
+        return {id: e.dataset.edgeId, points, physicalPoints: points.map(([x, y]) => {
+          const p = new DOMPoint(x, y).matrixTransform(transform);
+          return [p.x - bounds.x, p.y - bounds.y];
+        }), marker: e.getAttribute("marker-end")};
+      }),
+      paint: [...svg.querySelectorAll("[data-edge-id]")].map(e => {const s = getComputedStyle(e); return {fill: s.fill, stroke: s.stroke, width: parseFloat(s.strokeWidth), join: s.strokeLinejoin, vectorEffect: s.vectorEffect};}),
       marker: Object.fromEntries(["viewBox", "markerUnits", "markerWidth", "markerHeight", "refX", "refY", "orient"].map(key => [key, svg.querySelector("marker").getAttribute(key)])),
       markerPath: svg.querySelector("marker path").getAttribute("d"), markerFill: getComputedStyle(svg.querySelector("marker path")).fill,
       expectedInk,
@@ -127,12 +137,36 @@ export async function readGraphGeometry(page) {
   });
 }
 
+export function normalizeGraphGeometry(observed) {
+  // Normalize only after proving a joint linear scale, never by card dimensions.
+  const scale = observed.rootFont / 16;
+  assert(Number.isFinite(scale) && scale > 0, "positive root-font scale");
+  const equal = (a, b, message) => assert(Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= 1 / 1024, message);
+  equal(observed.svgWidth, observed.width, "SVG canvas width");
+  equal(observed.svgHeight, observed.height, "SVG canvas height");
+  const [x, y, width, height] = observed.viewBox.split(/\s+/).map(Number);
+  assert.equal(x, 0); assert.equal(y, 0);
+  equal(observed.width, width * scale, "root-scaled canvas width");
+  equal(observed.height, height * scale, "root-scaled canvas height");
+  for (const [key, expected] of Object.entries({a: scale, b: 0, c: 0, d: scale, x: 0, y: 0})) equal(observed.svgTransform[key], expected, `SVG joint scale ${key}`);
+  for (const route of observed.routes) {
+    assert.equal(route.physicalPoints.length, route.points.length);
+    for (let i = 0; i < route.points.length; i++) for (let axis = 0; axis < 2; axis++) equal(route.physicalPoints[i][axis], route.points[i][axis] * scale, "physical SVG route scale");
+  }
+  return {
+    ...observed, width: observed.width / scale, height: observed.height / scale,
+    columns: observed.columns.map(x => x / scale),
+    nodes: observed.nodes.map(n => ({...n, x: n.x / scale, y: n.y / scale, width: n.width / scale, height: n.height / scale,
+      placement: {left: n.placement.left / scale, top: n.placement.top / scale}})),
+  };
+}
+
 export function assertGraphPaint(observed) {
-  assert.equal(observed.svgWidth, observed.width); assert.equal(observed.svgHeight, observed.height);
-  assert.equal(observed.viewBox, `0 0 ${observed.width} ${observed.height}`);
+  const design = normalizeGraphGeometry(observed);
+  assert.equal(observed.viewBox, `0 0 ${design.width} ${design.height}`);
   assert.deepEqual(observed.marker, {viewBox: "0 0 10 10", markerUnits: "userSpaceOnUse", markerWidth: "6", markerHeight: "6", refX: "10", refY: "5", orient: "auto-start-reverse"});
   assert.equal(observed.markerPath, "M 0 0 L 10 5 L 0 10 z");
   assert.equal(observed.markerFill, observed.expectedInk);
-  for (const p of observed.paint) assert.deepEqual(p, {fill: "none", stroke: observed.expectedInk, width: 1.5, join: "round"});
+  for (const p of observed.paint) assert.deepEqual(p, {fill: "none", stroke: observed.expectedInk, width: 1.5, join: "round", vectorEffect: "none"});
   for (const e of observed.routes) assert.equal(e.marker, "url(#graph-arrow)");
 }
