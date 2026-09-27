@@ -2,6 +2,133 @@ import {expect} from "@playwright/test";
 import {lookupTest as test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 
+const numericHandoff = '{"handoffKind":"proofkit.requirement-browser-question","instructionAuthority":"context-only","sourceTextAuthority":"untrusted","annotations":[{"anchor":{"requirementId":"REQ-HANDOFF-CONTROL"},"question":"Controlled numeric response","exactQuote":"Controlled quote","startCodePoint":0,"endCodePoint":16}],"snapshotRefs":[],"nonClaims":[],"numericWitness":9007199254740993}';
+const numericDiagnostic = "This browser cannot preserve exact workspace numbers. Use a browser with JSON numeric source and raw JSON support.";
+
+async function removeNumericCapability(page, feature) {
+  return page.evaluateHandle(feature => {
+    const parse = JSON.parse, descriptor = Object.getOwnPropertyDescriptor(JSON, feature);
+    if (feature === "source-context") {
+      JSON.parse = (source, reviver) => typeof reviver === "function" ? parse(source, (key, value) => reviver(key, value)) : parse(source, reviver);
+    } else Reflect.set(JSON, feature, undefined);
+    return () => {
+      JSON.parse = parse;
+      if (feature !== "source-context") Object.defineProperty(JSON, feature, descriptor);
+    };
+  }, feature);
+}
+
+for (const outcome of [
+  {name: "success", status: 200},
+  ...["rawJSON", "isRawJSON", "source-context"].map(feature => ({name: feature, feature, status: 200, message: numericDiagnostic})),
+  {name: "malformed numeric JSON", status: 200, malformed: true, message: "The handoff packet could not be created."},
+  {name: "400 correction", status: 400, message: "The handoff packet could not be created."},
+  {name: "403 denial", status: 403, locked: true, message: "Access to this workspace was denied."},
+  {name: "409 stale snapshot", status: 409, locked: true, message: "The workspace snapshot has changed."},
+  {name: "410 ended session", status: 410, locked: true, message: "This one-shot session has already ended. No further handoff can be created."},
+]) {
+  test(`handoff numeric sink preserves ${outcome.name}, cleanup and terminal controls`, async ({lookupURL, page}) => {
+    let calls = 0, release, markStarted, restore;
+    const held = new Promise(resolve => { release = resolve; });
+    const started = new Promise(resolve => { markStarted = resolve; });
+    // Controlled endpoint responses exercise the native sink, not backend admission.
+    await page.route("**/api/v1/handoff", async route => {
+      const second = ++calls === 2;
+      if (second) { markStarted(); await held; }
+      await route.fulfill({status: second ? outcome.status : 200, contentType: "application/json",
+        body: second && (outcome.malformed || outcome.status !== 200) ? '{"privateNumericDetail":9007199254740993,"broken":}' : numericHandoff});
+    });
+    try {
+      await openWorkspace(page, lookupURL);
+      await page.getByRole("button", {name: "Select invariant", exact: true}).first().click();
+      const question = page.getByRole("textbox", {name: "Question", exact: true});
+      const submit = page.getByRole("button", {name: "Create handoff packet", exact: true});
+      const status = page.locator("#handoff-status");
+      await question.fill("Keep the numeric capability draft.");
+      await submit.click();
+      await expect(status).toHaveText("Handoff packet created.");
+      await expect(page.locator("#handoff-packet")).toHaveText(numericHandoff);
+      await expect(page.locator("#handoff-preview")).toContainText("Code points 0-16");
+      if (outcome.feature) restore = await removeNumericCapability(page, outcome.feature);
+      await submit.click();
+      await started;
+      await expect(submit).toBeDisabled();
+      await expect(status).toHaveText("Creating handoff packet...");
+      release();
+      await expect(page.locator("body")).toHaveAttribute("data-state", outcome.message ? "handoff-failed" : "handoff-result");
+      await expect(status).toHaveText(outcome.message ?? "Handoff packet created.");
+      await expect(status).toHaveAttribute("role", outcome.message ? "alert" : "status");
+      await expect(status).toHaveAttribute("aria-live", outcome.message ? "assertive" : "polite");
+      await expect(question).toHaveValue("Keep the numeric capability draft.");
+      await expect(page.locator("body")).not.toContainText("privateNumericDetail");
+      if (outcome.message) {
+        await expect(page.locator("#handoff-packet")).toBeEmpty();
+        await expect(page.locator("#handoff-preview")).toBeEmpty();
+        await expect(page.getByRole("button", {name: "Copy JSON", exact: true})).toHaveCount(0);
+        await expect(page.getByRole("button", {name: "Download JSON", exact: true})).toHaveCount(0);
+      } else await expect(page.locator("#handoff-packet")).toHaveText(numericHandoff);
+      await expect(page.getByRole("button", {name: "Retry", exact: true})).toHaveCount(0);
+      await expect(page.getByRole("button", {name: "Reload workspace", exact: true})).toHaveCount(outcome.status === 409 ? 1 : 0);
+      if (outcome.locked) {
+        await expect(submit).toBeDisabled();
+        expect(await page.locator("[data-protected-request]").evaluateAll(elements => elements.every(element => element.disabled))).toBe(true);
+        await submit.evaluate(button => button.click());
+        expect(calls).toBe(2);
+      } else {
+        await expect(submit).toBeEnabled();
+        await expect(page.getByRole("button", {name: "Specifications", exact: true})).toBeEnabled();
+        if (restore) { await restore.evaluate(restore => restore()); await restore.dispose(); restore = null; }
+        await submit.click();
+        await expect(status).toHaveText("Handoff packet created.");
+        await expect(page.locator("#handoff-packet")).toHaveText(numericHandoff);
+        await expect(submit).toBeEnabled();
+        expect(calls).toBe(3);
+      }
+    } finally {
+      release();
+      if (restore) { await restore.evaluate(restore => restore()); await restore.dispose(); }
+      await page.unrouteAll({behavior: "wait"});
+    }
+  });
+}
+
+for (const feature of ["rawJSON", "isRawJSON", "source-context"]) {
+  test(`late handoff ${feature} diagnostic cannot overwrite a newer view`, async ({lookupURL, page}) => {
+    let release, markStarted, restore;
+    const held = new Promise(resolve => { release = resolve; });
+    const started = new Promise(resolve => { markStarted = resolve; });
+    await page.route("**/api/v1/handoff", async route => {
+      markStarted(); await held;
+      await route.fulfill({status: 200, contentType: "application/json", body: numericHandoff});
+    });
+    try {
+      await openWorkspace(page, lookupURL);
+      await page.getByRole("button", {name: "Select invariant", exact: true}).first().click();
+      await page.getByRole("textbox", {name: "Question", exact: true}).fill("Keep this draft after navigation.");
+      const submit = page.getByRole("button", {name: "Create handoff packet", exact: true});
+      await submit.click(); await started;
+      await page.getByRole("button", {name: "Specifications", exact: true}).click();
+      await expect(page.locator("body")).toHaveAttribute("data-state", "specifications");
+      await expect(submit).toBeDisabled();
+      // Remove support only after the newer view is fully admitted.
+      restore = await removeNumericCapability(page, feature);
+      const status = await page.locator("#handoff-status").textContent();
+      release();
+      await expect(submit).toBeEnabled();
+      await expect(page.locator("body")).toHaveAttribute("data-state", "specifications");
+      await expect(page.locator("#handoff-status")).toHaveText(status);
+      await expect(page.locator("body")).not.toContainText(numericDiagnostic);
+      await expect(page.locator("#handoff-packet")).toBeEmpty();
+      await expect(page.locator("#handoff-preview")).toBeEmpty();
+      await expect(page.getByRole("textbox", {name: "Question", exact: true})).toHaveValue("Keep this draft after navigation.");
+    } finally {
+      release();
+      if (restore) { await restore.evaluate(restore => restore()); await restore.dispose(); }
+      await page.unrouteAll({behavior: "wait"});
+    }
+  });
+}
+
 test("a new selection resets a handoff error to polite routine status", async ({lookupURL, page}) => {
   await page.route("**/api/v1/handoff", route => route.fulfill({status: 400, body: "private failure detail"}));
   await openWorkspace(page, lookupURL);

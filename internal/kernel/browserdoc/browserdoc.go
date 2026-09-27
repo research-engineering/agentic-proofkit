@@ -1,6 +1,7 @@
 package browserdoc
 
 import (
+	"crypto/sha256"
 	_ "embed"
 	"encoding/base64"
 	"fmt"
@@ -101,6 +102,12 @@ var filterKeyPattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
 //go:embed browser.js
 var browserScript string
+
+// ScriptHashSource commits to the exact inline script bytes emitted by HTML.
+func ScriptHashSource() string {
+	digest := sha256.Sum256([]byte(browserScript))
+	return "'sha256-" + base64.StdEncoding.EncodeToString(digest[:]) + "'"
+}
 
 func HTML(input Document) string {
 	hasTable := input.Table != nil

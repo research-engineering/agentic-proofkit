@@ -643,7 +643,7 @@ submit.addEventListener("click", async () => {
     handoffPreview.clear();
     status.setAttribute("role", "alert");
     status.setAttribute("aria-live", "assertive");
-    status.textContent = failure.lock ? failure.message : "The handoff packet could not be created.";
+    status.textContent = failure.lock || failure.kind === "unsupported-engine" ? failure.message : "The handoff packet could not be created.";
     setWorkspaceState("handoff-failed");
   } finally {
     handoffPending = false;

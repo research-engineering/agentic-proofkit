@@ -48,6 +48,7 @@ type githubJob struct {
 	Permissions     any             `yaml:"permissions"`
 	RunsOn          any             `yaml:"runs-on"`
 	Steps           []githubStep    `yaml:"steps"`
+	Strategy        map[string]any  `yaml:"strategy,omitempty"`
 	TimeoutMinutes  any             `yaml:"timeout-minutes,omitempty"`
 	Uses            string          `yaml:"uses,omitempty"`
 
@@ -266,9 +267,22 @@ func validateWorkflowClosedKeys(path string, raw []byte) error {
 			"permissions",
 			"env",
 			"steps",
+			"strategy",
 			"environment",
 		); err != nil {
 			return err
+		}
+		if strategy := yamlMappingValue(job, "strategy"); strategy != nil {
+			if filepath.Base(path) != "codeql.yml" || jobID != "analyze" {
+				return fmt.Errorf("workflow %q job %q contains unowned strategy", path, jobID)
+			}
+			var decoded map[string]any
+			if err := strategy.Decode(&decoded); err != nil {
+				return err
+			}
+			if err := validateCodeQLStrategy(decoded); err != nil {
+				return err
+			}
 		}
 		if environment := yamlMappingValue(job, "environment"); environment != nil {
 			if err := validateOwnedReleaseEnvironment(path, jobID, environment); err != nil {

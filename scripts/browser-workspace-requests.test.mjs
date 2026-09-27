@@ -3,7 +3,7 @@ import {createServer} from "node:http";
 import test from "node:test";
 
 import {fetchWorkspaceJSON, fetchWorkspaceResponse, workspaceFailure, WorkspaceRequestError} from "../internal/command/requirementbrowser/assets/workspace-requests.js";
-import {workspaceScalarText} from "../internal/command/requirementbrowser/assets/workspace-json.js";
+import {parseWorkspaceJSON, WorkspaceNumericCapabilityError, workspaceScalarText} from "../internal/command/requirementbrowser/assets/workspace-json.js";
 
 async function endpoint(t, respond) {
   const received = Promise.withResolvers();
@@ -139,24 +139,53 @@ test("HTTP numeric observations retain exact tokens and native scalar branding",
   }
 });
 
-test("missing native numeric factories fail closed without a rounded success", async t => {
-  const fixture = await endpoint(t, response => response.end("9007199254740993"));
-  for (const name of ["rawJSON", "isRawJSON"]) {
-    const descriptor = Object.getOwnPropertyDescriptor(JSON, name);
-    assert(descriptor);
-    try {
-      Object.defineProperty(JSON, name, {...descriptor, value: undefined});
+for (const missing of ["source-context", "rawJSON", "isRawJSON"]) {
+  test(`missing ${missing} has a safe capability diagnosis, separate from malformed input`, async t => {
+    let body = "9007199254740993";
+    const fixture = await endpoint(t, response => response.end(body));
+    assert.equal(workspaceScalarText(await fetchWorkspaceJSON(fixture.url, {})), body);
+    if (missing === "source-context") {
+      const nativeParse = JSON.parse;
+      t.mock.method(JSON, "parse", (source, reviver) => typeof reviver === "function" ? nativeParse(source, (key, value) => reviver(key, value)) : nativeParse(source, reviver));
+    } else {
+      const descriptor = Object.getOwnPropertyDescriptor(JSON, missing);
+      assert(descriptor);
+      t.after(() => Object.defineProperty(JSON, missing, descriptor));
+      Object.defineProperty(JSON, missing, {...descriptor, value: undefined});
+    }
+    assert.deepEqual(parseWorkspaceJSON('{"text":"9007199254740993","ok":true,"nil":null}'), {text: "9007199254740993", ok: true, nil: null});
+    for (const token of ["9007199254740993", "1.0000000000000001", "1e-400", "-0", "1e400", "1.0", "1e0"]) {
+      body = token;
       const error = await fetchWorkspaceJSON(fixture.url, {}).catch(error => error);
-      assert(error instanceof SyntaxError);
-      assert.deepEqual(workspaceFailure(error), {message: "The admitted workspace is unavailable.", action: "none", lock: false, kind: "unavailable"});
-    } finally { Object.defineProperty(JSON, name, descriptor); }
-  }
-});
+      assert(error instanceof WorkspaceNumericCapabilityError);
+      assert.equal(error.message, "Exact numeric observation is unavailable");
+      for (const optional of [false, true]) assert.deepEqual(workspaceFailure(error, optional), {
+        message: "This browser cannot preserve exact workspace numbers. Use a browser with JSON numeric source and raw JSON support.",
+        action: "none", lock: false, kind: "unsupported-engine",
+      });
+    }
+    body = "[0,1,-1,9007199254740991]";
+    if (missing === "source-context") await assert.rejects(fetchWorkspaceJSON(fixture.url, {}), WorkspaceNumericCapabilityError);
+    else assert.deepEqual(await fetchWorkspaceJSON(fixture.url, {}), [0, 1, -1, 9007199254740991]);
 
-test("missing reviver source context cannot admit rounded numeric observations", async t => {
-  const nativeParse = JSON.parse;
-  t.mock.method(JSON, "parse", (source, reviver) => typeof reviver === "function" ? nativeParse(source, (key, value) => reviver(key, value)) : nativeParse(source, reviver));
-  assert.deepEqual(JSON.parse('{"unrelated":1}'), {unrelated: 1});
-  const fixture = await endpoint(t, response => response.end("1.0000000000000001"));
-  await assert.rejects(fetchWorkspaceJSON(fixture.url, {}), {name: "SyntaxError", message: "Exact numeric observation is unavailable"});
+    // Syntax admission precedes reviver feature checks, even with numeric tokens.
+    body = '{"privateDetail":9007199254740993,"broken":}';
+    const malformed = await fetchWorkspaceJSON(fixture.url, {}).catch(error => error);
+    assert(malformed instanceof SyntaxError);
+    assert(!(malformed instanceof WorkspaceNumericCapabilityError));
+    assert.deepEqual(workspaceFailure(malformed), {
+      message: "The admitted workspace is unavailable.", action: "none", lock: false, kind: "unavailable",
+    });
+  });
+}
+
+test("raw parser failures and lookalike error names do not claim a missing capability", t => {
+  const failure = new SyntaxError("private raw parser detail");
+  t.mock.method(JSON, "rawJSON", () => { throw failure; });
+  assert.throws(() => parseWorkspaceJSON("1.0"), error => error === failure);
+  for (const error of [failure, {name: "WorkspaceNumericCapabilityError", message: "private lookalike detail"}]) {
+    assert.deepEqual(workspaceFailure(error), {
+      message: "The admitted workspace is unavailable.", action: "none", lock: false, kind: "unavailable",
+    });
+  }
 });

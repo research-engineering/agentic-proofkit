@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {summarizeDiffPage} from "../internal/command/requirementbrowser/assets/workspace-diff.js";
 import {GEOMETRY, GRAPH_PAGE, GRAPH_PLANES, graphPagePositions, visibleGraphPage} from "../internal/command/requirementbrowser/assets/workspace-graph.js";
-import {admitGraphCommitMilliseconds, assertGraphGeometry, graphNodeIntersections, segmentIntersectsRectangle} from "../tests/browser/graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, graphNodeIntersections, normalizeGraphGeometry, segmentIntersectsRectangle} from "../tests/browser/graph-geometry-oracle.mjs";
 import {resolveHandoffRequirement} from "../internal/command/requirementbrowser/assets/workspace-handoff.js";
 
 test("diff page classes partition changes while risk and lifecycle remain independent facets", () => {
@@ -180,6 +180,16 @@ test("graph DOM precision allowance neither relaxes pure geometry nor hides visi
   observed.nodes[0].y += 1 / 16384;
   assert.throws(() => assertGraphGeometry(graph, observed), /source port/);
   assertGraphGeometry(graph, observed, true);
+  const roundedBelowHeading = structuredClone(observed);
+  roundedBelowHeading.nodes[0].y -= 2 / 16384;
+  assert.throws(() => assertGraphGeometry(graph, roundedBelowHeading), /card bounds/);
+  assertGraphGeometry(graph, roundedBelowHeading, true);
+  const scaledRounding = structuredClone(roundedBelowHeading);
+  scaledRounding.coordinateScale = 3;
+  assertGraphGeometry(graph, scaledRounding, true);
+  const physicalDrift = structuredClone(scaledRounding);
+  physicalDrift.nodes[0].y -= 0.002 / 3;
+  assert.throws(() => assertGraphGeometry(graph, physicalDrift, true), /DOM top placement/);
   const wrongEndpoint = structuredClone(observed);
   wrongEndpoint.routes[0].points[0][1] += 1 / 16384;
   assert.throws(() => assertGraphGeometry(graph, wrongEndpoint, true), /exact DOM source port/);
@@ -187,6 +197,55 @@ test("graph DOM precision allowance neither relaxes pure geometry nor hides visi
   assert.throws(() => assertGraphGeometry(graph, observed, true), /DOM top placement/);
   observed.nodes[0].width = 241;
   assert.throws(() => assertGraphGeometry(graph, observed, true), /DOM card width/);
+});
+
+test("joint-scale DOM oracle retains physical evidence and rejects isolated projection drift", () => {
+  const fixture = {nodes: [{nodeId: "a", evidencePlane: spec}, {nodeId: "b", evidencePlane: spec}], edges: [{edgeId: "e", fromNodeId: "a", toNodeId: "b"}]};
+  // Independent authored observations, not output from the production router.
+  const physical = rootFont => {
+    const scale = rootFont / 16, points = [[252, 96], [262, 96], [262, 212], [252, 212]];
+    return {rootFont, width: 1046 * scale, height: 292 * scale, svgWidth: 1046 * scale, svgHeight: 292 * scale,
+      viewBox: "0 0 1046 292", svgTransform: {a: scale, b: 0, c: 0, d: scale, x: 0, y: 0},
+      columns: [12, 278, 538, 798].map(x => x * scale),
+      nodes: [48, 164].map((y, i) => ({id: i === 0 ? "a" : "b", x: 12 * scale, y: y * scale, width: 240 * scale, height: 96 * scale, placement: {left: 12 * scale, top: y * scale}})),
+      routes: [{id: "e", points, physicalPoints: points.map(p => p.map(x => x * scale)), marker: "url(#graph-arrow)"}],
+      marker: {viewBox: "0 0 10 10", markerUnits: "userSpaceOnUse", markerWidth: "6", markerHeight: "6", refX: "10", refY: "5", orient: "auto-start-reverse"},
+      markerPath: "M 0 0 L 10 5 L 0 10 z", markerFill: "rgb(32, 37, 34)", expectedInk: "rgb(32, 37, 34)",
+      paint: [{fill: "none", stroke: "rgb(32, 37, 34)", width: 1.5, join: "round", vectorEffect: "none"}],
+    };
+  };
+  const verify = value => { assertGraphGeometry(fixture, normalizeGraphGeometry(value), true); assertGraphPaint(value); };
+  for (const rootFont of [16, 24, 48, 72]) {
+    const observed = physical(rootFont), before = structuredClone(observed);
+    verify(observed);
+    assert.deepEqual(observed, before, "normalization must not overwrite physical evidence");
+  }
+  const roundedAtBottom = physical(48);
+  roundedAtBottom.height = roundedAtBottom.svgHeight = 260 * 3;
+  roundedAtBottom.viewBox = "0 0 1046 260";
+  roundedAtBottom.nodes[1].y += 1 / 8192;
+  verify(roundedAtBottom);
+  const mutants = {
+    invalidRoot(v) { v.rootFont = 0; },
+    fixedCanvas(v) { v.width = v.svgWidth = 1046; },
+    fixedSVG(v) { v.svgWidth = 1046; },
+    nonuniformSVG(v) { v.svgTransform.d = 1; },
+    translatedSVG(v) { v.svgTransform.x = 1; },
+    fixedCardWidth(v) { v.nodes[0].width = 240; },
+    enlargedMinHeightMask(v) { v.nodes[0].height = 132; },
+    fixedCardHeight(v) { v.nodes[0].height = 96; },
+    fixedPlacement(v) { v.nodes[0].x = v.nodes[0].placement.left = 12; },
+    subpixelPhysicalCardDrift(v) { v.nodes[0].y -= 0.002; },
+    fixedHeading(v) { v.columns[0] = 12; },
+    shiftedPhysicalEdge(v) { v.routes[0].physicalPoints[0][0]++; },
+    doublyScaledStroke(v) { v.paint[0].width = 4.5; },
+    nonScalingStroke(v) { v.paint[0].vectorEffect = "non-scaling-stroke"; },
+    doublyScaledMarker(v) { v.marker.markerWidth = "18"; },
+  };
+  for (const [name, mutate] of Object.entries(mutants)) {
+    const observed = physical(48); mutate(observed);
+    assert.throws(() => verify(observed), name);
+  }
 });
 
 test("handoff detail resolution uses requirement identity rather than unsliced source offsets", () => {

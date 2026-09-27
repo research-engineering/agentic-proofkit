@@ -1,7 +1,7 @@
 :root {
   color-scheme: light dark;
   font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 16px;
+  font-size: 100%;
   --canvas: #ffffff;
   --surface: #f5f6f5;
   --active-surface: #e0f0e8;
@@ -28,6 +28,19 @@ body {
 body[data-navigation-open="false"] { --navigation-width: 0rem; }
 body[data-inspector-open="false"] { --inspector-width: 0rem; }
 header, main, .workspace-panel { min-width: 0; max-width: 100%; }
+.skip-link {
+  position: fixed;
+  inset-block-start: .5rem;
+  inset-inline-start: .5rem;
+  z-index: 3;
+  max-width: calc(100% - 1rem);
+  padding: .75rem 1rem;
+  background: var(--canvas);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+  transform: translateY(calc(-100% - 1rem));
+}
+.skip-link:focus { transform: none; }
 .product-bar {
   grid-column: 1 / -1;
   display: flex;
@@ -43,12 +56,17 @@ header, main, .workspace-panel { min-width: 0; max-width: 100%; }
 }
 .product-identity { flex: 1; min-width: 0; }
 .product-identity strong { color: var(--accent); font-size: 1.125rem; }
+@media (max-width: 24rem) {
+  .product-bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; position: static; }
+  .product-identity { grid-column: 1 / -1; grid-row: 1; }
+  .product-bar > .icon-button { grid-row: 2; }
+}
 h1 { margin: .125rem 0 0; font-size: .8125rem; font-weight: 500; color: var(--muted-text); }
 h2 { font-size: 1.25rem; margin: 1rem 0; }
 h3 { font-size: .875rem; margin: 1rem 0 .5rem; }
 h1, h2, h3, p, li, td, th, label, button, summary { overflow-wrap: anywhere; }
 p, li { line-height: 1.55; }
-main { grid-column: 2; grid-row: 2; padding: 1.25rem 1.5rem 3rem; }
+main { grid-column: 2; grid-row: 2; padding: 1.25rem 1.5rem 3rem; scroll-margin-block-start: 4.25rem; }
 nav { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; min-width: 0; max-width: 100%; }
 button, input, select, textarea {
   background: var(--canvas);
@@ -73,7 +91,7 @@ button:disabled { color: var(--muted-text); opacity: 1; cursor: default; }
 button[aria-current], button[aria-pressed="true"] { background: var(--active-surface); font-weight: 650; }
 .icon-button { flex: 0 0 2.75rem; width: 2.75rem; height: 2.75rem; padding: .5rem; }
 .workspace-icon { display: inline-block; flex: 0 0 1.25rem; width: 1.25rem; height: 1.25rem; min-width: 1.25rem; vertical-align: middle; }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible {
+.skip-link:focus-visible, #workspace-main:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
@@ -214,7 +232,7 @@ th, td { border: 1px solid var(--border); max-width: 24rem; padding: .5rem; text
 }
 @media (forced-colors: active) {
   .product-bar, .workspace-panel, article, button, input, select, textarea, .graph-viewport, .table-viewport, th, td { border-color: CanvasText; }
-  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible, [data-select-anchor][aria-pressed="true"] { outline-color: Highlight; }
+  .skip-link:focus-visible, #workspace-main:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible, [data-select-anchor][aria-pressed="true"] { outline-color: Highlight; }
   .graph-viewport .graph-edge { stroke: CanvasText; }
   .graph-viewport marker path { fill: CanvasText; }
 }

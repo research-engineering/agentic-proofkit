@@ -11,6 +11,65 @@ const test = lookupTest.extend({
   },
 });
 
+for (const width of [1440, 390, 320]) {
+  lookupTest(`native skip link transfers keyboard focus without a request at ${width}px`, async ({lookupURL, page}) => {
+    await page.setViewportSize({width, height: 900});
+    await openWorkspace(page, lookupURL);
+    await expect(page.locator("#workspace-content [data-requirement-id]").first()).toBeVisible();
+    await expect(page.getByRole("button", {name: "Specifications", exact: true})).toBeEnabled();
+    const calls = [];
+    page.on("request", request => calls.push(request.url()));
+    const skip = page.getByRole("link", {name: "Skip to workspace content", exact: true});
+    await expect(page.locator("body")).toBeFocused();
+    await expect(skip).not.toBeInViewport();
+    await page.keyboard.press("Tab");
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport({ratio: 1});
+    expect(await skip.evaluate(element => element.matches(":focus-visible"))).toBe(true);
+    await expect(skip).toHaveCSS("outline-style", "solid");
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("main")).toBeFocused();
+    await expect(page.getByRole("main")).toHaveAttribute("id", "workspace-main");
+    await page.keyboard.press("Tab");
+    const nextControl = page.locator("#workspace-main :focus");
+    await expect(nextControl).toHaveCount(1);
+    await expect(nextControl).toBeInViewport({ratio: 1});
+    expect(await nextControl.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      const painted = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+      return painted === element || element.contains(painted);
+    })).toBe(true);
+    await expect(skip).not.toBeInViewport();
+    expect(calls).toEqual([]);
+    await expect(page.locator("dialog:modal")).toHaveCount(0);
+    await expect(page.locator("body")).toHaveAttribute("data-modal-open", "false");
+  });
+}
+
+lookupTest("native skip link reaches the main shell when application bootstrap fails", async ({lookupURL, page}) => {
+  await page.setViewportSize({width: 390, height: 844});
+  let scriptRequested = false;
+  await page.route("**/assets/workspace.js", async route => {
+    scriptRequested = true;
+    await route.abort("failed");
+  });
+  await openWorkspace(page, lookupURL);
+  expect(scriptRequested).toBe(true);
+  await expect(page.locator("body")).toHaveAttribute("data-state", "bootstrap-loading");
+  const calls = [];
+  page.on("request", request => calls.push(request.url()));
+  await page.keyboard.press("Tab");
+  const skip = page.getByRole("link", {name: "Skip to workspace content", exact: true});
+  await expect(skip).toBeFocused();
+  await expect(skip).toBeInViewport({ratio: 1});
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("main")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.locator("#workspace-authority > summary")).toBeFocused();
+  await expect(page.getByRole("button", {name: "Specifications", exact: true})).toBeDisabled();
+  expect(calls).toEqual([]);
+});
+
 for (const panel of ["navigation", "inspector"]) {
   lookupTest(`desktop-to-mobile focus returns to the corresponding ${panel} opener`, async ({lookupURL, page}) => {
     await page.setViewportSize({width: 1440, height: 900});

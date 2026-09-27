@@ -5,10 +5,9 @@ import {test} from "./workspace-test-harness.mjs";
 
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
 
-import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace} from "./workspace-navigation-harness.mjs";
+import {admittedWorkspaceURL, isWorkspaceNavigationResponse, navigateWorkspace, openWorkspace, reloadWorkspace, staticViewCSP} from "./workspace-navigation-harness.mjs";
 
 const fixtureWorkspaceCSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
-const fixtureStaticViewCSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
 test("requirement boundary resolves its named source restriction and labels external references", async ({baseURL, page}) => {
   await openWorkspace(page, baseURL);
@@ -576,7 +575,7 @@ test("download response cannot certify a script-created or unchanged document", 
       return;
     }
     response.setHeader("Content-Type", "text/html");
-    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("Content-Security-Policy", staticViewCSP);
     response.setHeader("X-Content-Type-Options", "nosniff");
     if (attachment) {
       attachmentRequestCount++;
@@ -597,7 +596,11 @@ test("download response cannot certify a script-created or unchanged document", 
     let finishScriptAction;
     const scriptAction = new Promise((resolve) => { finishScriptAction = resolve; });
     page.once("download", () => {
-      void page.evaluate(() => window.location.assign("javascript:'<h1>browser.fixture.workspace</h1><i id=script-document></i>'"))
+      void page.evaluate(() => {
+        document.open();
+        document.write("<h1>browser.fixture.workspace</h1><i id=script-document></i>");
+        document.close();
+      })
         .then(async () => {
           await page.locator("#script-document").waitFor({state: "attached"});
           await page.evaluate(() => window.history.pushState({}, "", window.location.href)).catch(() => undefined);
@@ -628,12 +631,13 @@ test("a later response-less request cannot borrow an earlier document response",
   const requests = [];
   const statuses = [];
   const server = createServer((request, response) => {
+    if (request.url === "/reload.js") return response.writeHead(200, {"Content-Type": "text/javascript"}).end("setTimeout(() => location.reload(), 250)");
     if (request.url !== "/") return response.writeHead(404).end();
     statuses.push(200);
     response.setHeader("Content-Type", "text/html");
-    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("Content-Security-Policy", fixtureWorkspaceCSP);
     response.setHeader("X-Content-Type-Options", "nosniff");
-    response.end("<p>loading</p><script>setTimeout(() => location.reload(), 250)</script>");
+    response.end('<p>loading</p><script src="/reload.js"></script>');
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -647,7 +651,7 @@ test("a later response-less request cannot borrow an earlier document response",
     });
   });
   try {
-    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
     expect(statuses).toEqual([200]);
     expect(requests).toHaveLength(2);
     expect((await requests[0].response()).status()).toBe(200);
@@ -663,6 +667,7 @@ test("a later response-less request cannot borrow an earlier document response",
 test("a later failed reload cannot complete an earlier successful navigation", async ({page}) => {
   const statuses = [];
   const server = createServer((request, response) => {
+    if (request.url === "/reload.js") return response.writeHead(200, {"Content-Type": "text/javascript"}).end("setTimeout(() => location.reload(), 250)");
     if (request.url !== "/") {
       response.writeHead(404).end();
       return;
@@ -671,17 +676,17 @@ test("a later failed reload cannot complete an earlier successful navigation", a
     statuses.push(status);
     response.statusCode = status;
     response.setHeader("Content-Type", "text/html");
-    response.setHeader("Content-Security-Policy", fixtureStaticViewCSP);
+    response.setHeader("Content-Security-Policy", fixtureWorkspaceCSP);
     response.setHeader("X-Content-Type-Options", "nosniff");
     response.end(status === 200
-      ? "<p>loading</p><script>setTimeout(() => location.reload(), 250)</script>"
+      ? '<p>loading</p><script src="/reload.js"></script>'
       : "<h1>browser.fixture.workspace</h1>");
   });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   const workspaceURL = `http://127.0.0.1:${server.address().port}/`;
   try {
-    await expect(openWorkspace(page, workspaceURL, undefined, "static-view")).rejects.toThrow("Workspace navigation did not return a successful response");
+    await expect(openWorkspace(page, workspaceURL)).rejects.toThrow("Workspace navigation did not return a successful response");
     expect(statuses).toEqual([200, 503]);
     await expect(page.getByRole("heading", {name: "browser.fixture.workspace", exact: true})).toBeVisible();
   } finally {

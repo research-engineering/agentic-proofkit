@@ -2,7 +2,7 @@ import {expect} from "@playwright/test";
 import {capacityTest, graphLayoutTest, test} from "./workspace-test-harness.mjs";
 import {openWorkspace} from "./workspace-navigation-harness.mjs";
 import {analyzeAxe, assertAxeTestComplete, initializeAxe} from "./axe-harness.mjs";
-import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, readGraphGeometry} from "./graph-geometry-oracle.mjs";
+import {admitGraphCommitMilliseconds, assertGraphGeometry, assertGraphPaint, normalizeGraphGeometry, readGraphGeometry} from "./graph-geometry-oracle.mjs";
 
 async function attachGraphScreenshot(page, testInfo, name) {
   const path = testInfo.outputPath(name);
@@ -25,12 +25,102 @@ async function identities(page, kind) {
 
 async function assertRenderedGraph(page, graph) {
   const observed = await readGraphGeometry(page);
-  assertGraphGeometry(graph, observed, true);
+  assertGraphGeometry(graph, normalizeGraphGeometry(observed), true);
   assertGraphPaint(observed);
   expect(await identities(page, "nodes")).toEqual(graph.nodes.map(n => n.nodeId));
   expect(await identities(page, "edges")).toEqual(graph.edges.map(e => e.edgeId));
   return observed;
 }
+
+async function assertGraphLabelsAndRecords(page, graph, rootFont) {
+  const samples = [];
+  for (const node of graph.nodes) {
+    const card = page.locator(`.graph-canvas button[data-graph-select="${node.nodeId}"]`);
+    await card.scrollIntoViewIfNeeded();
+    await expect(card.locator(".graph-node-label")).toHaveText(node.label);
+    await expect(card.locator(".graph-node-identity")).toHaveText(node.nodeId);
+    const text = await card.evaluate(button => [...button.children].map(element => {
+      const range = document.createRange();
+      range.setStart(element.firstChild, 0);
+      range.setEnd(element.firstChild, [...element.textContent][0].length);
+      const glyph = range.getBoundingClientRect(), style = getComputedStyle(element);
+      const clips = [element, button, button.closest(".graph-viewport")].map(e => e.getBoundingClientRect());
+      const left = Math.max(glyph.left, 0, ...clips.map(r => r.left));
+      const right = Math.min(glyph.right, innerWidth, ...clips.map(r => r.right));
+      const top = Math.max(glyph.top, 0, ...clips.map(r => r.top));
+      const bottom = Math.min(glyph.bottom, innerHeight, ...clips.map(r => r.bottom));
+      const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
+      return {text: element.textContent, font: parseFloat(style.fontSize), visibility: style.visibility, opacity: style.opacity,
+        visibleWidth: right - left, visibleHeight: bottom - top, unobscured: hit !== null && button.contains(hit)};
+    }));
+    expect(text.map(t => t.font)).toEqual([rootFont * .875, rootFont * .75]);
+    for (const t of text) {
+      expect(t.visibility).toBe("visible"); expect(t.opacity).toBe("1");
+      expect(t.visibleWidth).toBeGreaterThan(0); expect(t.visibleHeight).toBeGreaterThan(0); expect(t.unobscured).toBe(true);
+    }
+    samples.push({id: node.nodeId, text});
+    const record = page.locator(`.graph-records button[data-graph-select="${node.nodeId}"]`);
+    await expect(record.locator(".graph-node-label")).toHaveText(node.label);
+    await expect(record.locator(".graph-node-identity")).toHaveText(node.nodeId);
+    await record.focus(); await page.keyboard.press("Enter");
+    await expect(record).toBeFocused();
+    await expect(page.locator(".graph-inspector > h3")).toHaveText(node.label);
+    await expect(page.locator(".graph-inspector > dl dt")).toHaveText(Object.keys(node));
+    await expect(page.locator(".graph-inspector > dl dd")).toHaveText(Object.values(node).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+  }
+  for (const edge of graph.edges) {
+    const record = page.getByRole("list", {name: "Admitted traceability edges"}).locator(`[data-identity="${edge.edgeId}"] > details`);
+    if (!(await record.evaluate(element => element.open))) await record.locator("summary").click();
+    await expect(record.locator("dl dt")).toHaveText(Object.keys(edge));
+    await expect(record.locator("dl dd")).toHaveText(Object.values(edge).map(value => Array.isArray(value) ? value.join(", ") : String(value)));
+  }
+  return samples;
+}
+
+const graphFontTest = graphLayoutTest.extend({
+  launchOptions: async ({browserName, launchOptions}, use) => {
+    await use(browserName === "firefox" ? {
+      ...launchOptions, firefoxUserPrefs: {...launchOptions.firefoxUserPrefs, "font.size.variable.x-western": 48},
+    } : launchOptions);
+  },
+});
+
+graphFontTest("visible desktop graph scales jointly with native default and dynamic relative fonts", async ({browserName, graphMixedLayoutURL, page}, testInfo) => {
+  const nativeDefault = browserName === "firefox" ? 48 : 16;
+  await page.evaluate(() => { document.documentElement.lang = "en"; });
+  await expect(page.locator("html")).toHaveCSS("font-size", `${nativeDefault}px`);
+  // Media-query rem uses the native default, not the author's dynamic root size.
+  await page.setViewportSize({width: 4096, height: 2160});
+  let requests = 0;
+  page.on("request", request => { if (request.url().endsWith("/api/v1/graph")) requests++; });
+  const graph = await openGraph(page, graphMixedLayoutURL);
+  const canvas = await page.locator(".graph-canvas").elementHandle();
+  const observations = [];
+  try {
+    for (const [font, rootFont] of [["", nativeDefault], ["150%", nativeDefault * 1.5], ["16px", 16]]) {
+      if (font) await page.locator("html").evaluate((element, value) => { element.style.fontSize = value; }, font);
+      await expect(page.locator("html")).toHaveCSS("font-size", `${rootFont}px`);
+      await expect(page.locator(".graph-viewport")).toBeVisible();
+      expect(await canvas.evaluate(element => element === document.querySelector(".graph-canvas"))).toBe(true);
+      const physical = await readGraphGeometry(page);
+      const observation = {font, rootFont, physical};
+      observations.push(observation);
+      await assertRenderedGraph(page, graph);
+      expect(physical.rootFont).toBe(rootFont);
+      expect(physical.nodes.map(n => [n.width, n.height])).toEqual(graph.nodes.map(() => [240 * rootFont / 16, 96 * rootFont / 16]));
+      observation.labels = await assertGraphLabelsAndRecords(page, graph, rootFont);
+      await page.locator(".graph-node").first().scrollIntoViewIfNeeded();
+      await attachGraphScreenshot(page, testInfo, `graph-root-${rootFont}px.png`);
+    }
+    await page.locator("html").evaluate(element => element.style.removeProperty("font-size"));
+    await expect(page.locator("html")).toHaveCSS("font-size", `${nativeDefault}px`);
+    await assertRenderedGraph(page, graph);
+    expect(requests).toBe(1);
+  } finally {
+    await canvas.dispose();
+    await testInfo.attach("graph-font-physical-observations.json", {body: JSON.stringify({browserName, nativeDefault, observations}), contentType: "application/json"});
+  }
+});
 
 graphLayoutTest("native graph geometry protects cards and preserves exact directed records", async ({graphLayoutURL, graphMixedLayoutURL, page}, testInfo) => {
   await page.setViewportSize({width: 1920, height: 1080});
@@ -130,7 +220,7 @@ graphLayoutTest("graph geometry preserves paint in dark and forced colors and de
   });
   const drift = await readGraphGeometry(page);
   expect(drift.nodes.every(n => n.width === 241)).toBe(true);
-  expect(() => assertGraphGeometry(graph, drift, true)).toThrow(/DOM card width/);
+  expect(() => assertGraphGeometry(graph, normalizeGraphGeometry(drift), true)).toThrow(/DOM card width/);
   await page.locator(".graph-canvas").evaluate((canvas, width) => canvas.style.setProperty("--graph-card-width", width), originalWidth);
   await page.locator('.graph-records button[data-graph-select="spec:z"]').click();
   await assertRenderedGraph(page, graph);
@@ -258,28 +348,47 @@ capacityTest("maximum admitted graph page remains bounded, inspectable and below
   for (const sample of samples) admitGraphCommitMilliseconds(sample);
 });
 
-capacityTest("Go-built unverified coordinates retain exact HTTP and DOM values or fail closed", async ({graphNumericURL, page}) => {
-  await openWorkspace(page, graphNumericURL);
-  const response = page.waitForResponse(response => response.url().endsWith("/api/v1/graph"));
-  await page.getByRole("button", {name: "Traceability", exact: true}).click();
-  const body = await (await response).text();
-  const wire = JSON.parse(body, (key, value, context) => key === "byteStart" || key === "byteEnd" ? context.source : value);
-  const range = wire.projection.nodes.find(node => node.nodeId === "code:code.retry");
-  expect([range.byteStart, range.byteEnd]).toEqual(["9007199254740992", "9007199254740993"]);
-  await page.locator('.graph-records button[data-graph-select="code:code.retry"]').click();
-  const inspector = page.getByRole("region", {name: "Selected graph node"});
-  await expect(inspector.locator('dt:has-text("byteStart") + dd')).toHaveText("9007199254740992");
-  await expect(inspector.locator('dt:has-text("byteEnd") + dd')).toHaveText("9007199254740993");
-  await expect(inspector.locator('dt:has-text("rangeVerification") + dd')).toHaveText("unverified");
-  await expect(inspector.locator('dt:has-text("currentnessState") + dd')).toHaveText("unverified");
+for (const missing of ["source-context", "rawJSON", "isRawJSON"]) {
+  capacityTest(`Go-built exact coordinates diagnose missing ${missing} separately from malformed input`, async ({graphNumericURL, page}) => {
+    await openWorkspace(page, graphNumericURL);
+    const response = page.waitForResponse(response => response.url().endsWith("/api/v1/graph"));
+    await page.getByRole("button", {name: "Traceability", exact: true}).click();
+    const body = await (await response).text();
+    const wire = JSON.parse(body, (key, value, context) => key === "byteStart" || key === "byteEnd" ? context.source : value);
+    const range = wire.projection.nodes.find(node => node.nodeId === "code:code.retry");
+    expect([range.byteStart, range.byteEnd]).toEqual(["9007199254740992", "9007199254740993"]);
+    await page.locator('.graph-records button[data-graph-select="code:code.retry"]').click();
+    const inspector = page.getByRole("region", {name: "Selected graph node"});
+    await expect(inspector.locator('dt:has-text("byteStart") + dd')).toHaveText("9007199254740992");
+    await expect(inspector.locator('dt:has-text("byteEnd") + dd')).toHaveText("9007199254740993");
+    await expect(inspector.locator('dt:has-text("rangeVerification") + dd')).toHaveText("unverified");
+    await expect(inspector.locator('dt:has-text("currentnessState") + dd')).toHaveText("unverified");
 
-  await page.evaluate(() => Reflect.set(JSON, "rawJSON", undefined));
-  await page.getByRole("button", {name: "Specifications", exact: true}).click();
-  await expect(page.locator("body")).toHaveAttribute("data-state", "specifications");
-  await page.getByRole("button", {name: "Traceability", exact: true}).click();
-  await expect(page.getByText("The admitted workspace is unavailable.", {exact: true})).toBeVisible();
-  await expect(page.locator(".graph-inspector")).toHaveCount(0);
-});
+    await page.evaluate(feature => {
+      if (feature === "source-context") {
+        const nativeParse = JSON.parse;
+        JSON.parse = (source, reviver) => typeof reviver === "function" ? nativeParse(source, (key, value) => reviver(key, value)) : nativeParse(source, reviver);
+      } else Reflect.set(JSON, feature, undefined);
+    }, missing);
+    await page.getByRole("button", {name: "Specifications", exact: true}).click();
+    await expect(page.locator("body")).toHaveAttribute("data-state", missing === "source-context" ? "view-failed" : "specifications");
+    await page.getByRole("button", {name: "Traceability", exact: true}).click();
+    const alert = page.locator("#workspace-content [role=alert]");
+    await expect(alert).toHaveText("This browser cannot preserve exact workspace numbers. Use a browser with JSON numeric source and raw JSON support.");
+    await expect(alert).toHaveAttribute("data-state", "unsupported-engine");
+    await expect(page.locator(".graph-inspector, .graph-records, .graph-canvas")).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Retry", exact: true})).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Reload workspace", exact: true})).toHaveCount(0);
+    await expect(page.getByRole("button", {name: "Specifications", exact: true})).toBeEnabled();
+
+    await page.route("**/api/v1/graph", route => route.fulfill({status: 200, contentType: "application/json", body: '{"privateDetail":9007199254740993,"broken":}'}));
+    await page.getByRole("button", {name: "Traceability", exact: true}).click();
+    await expect(alert).toHaveText("The admitted workspace is unavailable.");
+    await expect(alert).toHaveAttribute("data-state", "unavailable");
+    await expect(page.locator("body")).not.toContainText("privateDetail");
+    await expect(page.locator(".graph-inspector, .graph-records, .graph-canvas")).toHaveCount(0);
+  });
+}
 
 test("native numeric observation preserves fractional tokens, strings and control values", async ({baseURL, page}) => {
   const body = '{"start":9007199254740992,"end":9007199254740993,"safe":9007199254740991,"zero":0,"string":"9007199254740993","nested":[1.0000000000000001,1e-400,-0,1e400,-9007199254740993,0.123456789012345678901],"unbranded":{"rawJSON":"17"}}';

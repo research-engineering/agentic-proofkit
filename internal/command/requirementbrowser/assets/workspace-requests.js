@@ -1,6 +1,6 @@
 // @ts-check
 
-import {parseWorkspaceJSON} from "./workspace-json.js";
+import {parseWorkspaceJSON, WorkspaceNumericCapabilityError} from "./workspace-json.js";
 
 export class WorkspaceRequestError extends Error {
   /** @param {number} status */
@@ -32,6 +32,7 @@ export async function fetchWorkspaceResponse(path, init) {
 
 /** @param {unknown} error @param {boolean} optional */
 export function workspaceFailure(error, optional = false) {
+  if (error instanceof WorkspaceNumericCapabilityError) return {message: "This browser cannot preserve exact workspace numbers. Use a browser with JSON numeric source and raw JSON support.", action: "none", lock: false, kind: "unsupported-engine"};
   const status = error instanceof WorkspaceRequestError ? error.status : -1;
   if (status === 400) return {message: "The query could not be accepted. Check its fields and submit again.", action: "none", lock: false, kind: "correction"};
   if (status === 403) return {message: "Access to this workspace was denied.", action: "none", lock: true, kind: "denied"};
