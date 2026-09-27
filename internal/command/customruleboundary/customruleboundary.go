@@ -216,7 +216,7 @@ func ruleArray(raw any) ([]ruleInput, error) {
 	})
 	for index := 1; index < len(rules); index++ {
 		if rules[index-1].RuleID == rules[index].RuleID {
-			return nil, fmt.Errorf("custom-rule boundary rule ids must be sorted and unique")
+			return nil, fmt.Errorf("custom-rule boundary rule ids must be unique")
 		}
 	}
 	return rules, nil

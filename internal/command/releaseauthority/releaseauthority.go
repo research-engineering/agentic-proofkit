@@ -1037,7 +1037,7 @@ func sortedText(raw any, context string) ([]string, error) {
 	}
 	for index := 1; index < len(result); index++ {
 		if result[index-1] == result[index] {
-			return nil, fmt.Errorf("%s must be sorted and unique", context)
+			return nil, fmt.Errorf("%s must be unique", context)
 		}
 	}
 	return result, nil

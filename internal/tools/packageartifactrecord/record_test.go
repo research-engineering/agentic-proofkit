@@ -2,13 +2,19 @@ package packageartifactrecord
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
 )
 
 func TestValidateCurrentBindsSourceAndArtifactSnapshots(t *testing.T) {
+	t.Setenv("GIT_CONFIG_COUNT", "2")
+	t.Setenv("GIT_CONFIG_KEY_0", "commit.gpgSign")
+	t.Setenv("GIT_CONFIG_VALUE_0", "true")
+	t.Setenv("GIT_CONFIG_KEY_1", "gpg.program")
+	t.Setenv("GIT_CONFIG_VALUE_1", "proofkit-test-unavailable-signing-program")
 	root := t.TempDir()
 	runGit(t, root, "init")
 	runGit(t, root, "config", "user.email", "proofkit@example.invalid")
@@ -355,8 +361,7 @@ func TestSnapshotDigestRejectsIntermediateSymlinkEscape(t *testing.T) {
 
 func runGit(t *testing.T, root string, args ...string) {
 	t.Helper()
-	command := exec.Command("git", args...)
-	command.Dir = root
+	command := gitfixture.Command(root, args...)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v: %s", args, err, output)
 	}

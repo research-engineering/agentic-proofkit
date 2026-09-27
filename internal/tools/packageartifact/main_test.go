@@ -3,13 +3,13 @@ package main
 import (
 	"errors"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/gitfixture"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/packageartifactrecord"
 )
 
@@ -20,6 +20,11 @@ func (run runnerFunc) Run(root string, argv []string) (int, error) {
 }
 
 func TestRunWithDependenciesRecordsCanonicalAndExecutionArgv(t *testing.T) {
+	t.Setenv("GIT_CONFIG_COUNT", "2")
+	t.Setenv("GIT_CONFIG_KEY_0", "commit.gpgSign")
+	t.Setenv("GIT_CONFIG_VALUE_0", "true")
+	t.Setenv("GIT_CONFIG_KEY_1", "gpg.program")
+	t.Setenv("GIT_CONFIG_VALUE_1", "proofkit-test-unavailable-signing-program")
 	root := packageArtifactFixture(t)
 	staleRecord := packageartifactrecord.Record{Status: "passed"}
 	if err := packageartifactrecord.Write(root, staleRecord); err != nil {
@@ -277,8 +282,7 @@ func writeFileFixture(t *testing.T, root string, relativePath string, content st
 
 func runFixtureGit(t *testing.T, root string, args ...string) {
 	t.Helper()
-	command := exec.Command("git", args...)
-	command.Dir = root
+	command := gitfixture.Command(root, args...)
 	if output, err := command.CombinedOutput(); err != nil {
 		t.Fatalf("git %v: %v: %s", args, err, output)
 	}

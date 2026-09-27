@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
@@ -424,7 +425,8 @@ func ruleFragment(value string) string {
 		}
 	}
 	fragment := strings.Trim(builder.String(), "_")
-	if fragment == "" || !unicode.IsLetter(rune(fragment[0])) {
+	first, _ := utf8.DecodeRuneInString(fragment)
+	if !unicode.IsLetter(first) {
 		return "id_" + fragment
 	}
 	return fragment

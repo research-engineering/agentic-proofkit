@@ -262,7 +262,7 @@ func admitItems(raw any) ([]itemInput, error) {
 	})
 	for index := 1; index < len(items); index++ {
 		if items[index-1].ItemID == items[index].ItemID {
-			return nil, fmt.Errorf("adoption checklist item ids must be sorted and unique")
+			return nil, fmt.Errorf("adoption checklist item ids must be unique")
 		}
 	}
 	return items, nil

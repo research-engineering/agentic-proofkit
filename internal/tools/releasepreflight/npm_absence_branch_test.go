@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/research-engineering/agentic-proofkit/internal/testsupport/childcoverage"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -301,7 +302,7 @@ report=report.json
 	defer cancel()
 	cmd := exec.CommandContext(ctx, "/bin/bash", "--noprofile", "--norc", "-c", script)
 	cmd.Dir = dir
-	cmd.Env = []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit)}
+	cmd.Env = childcoverage.Environment(t, []string{"PATH=" + dir, "HOME=" + dir, "TMPDIR=" + dir, "PROOFKIT_BRANCH_ENTRYPOINT=1", "BRANCH_BINARY=" + binary, "BRANCH_PAYLOAD=" + item.payload, fmt.Sprintf("BRANCH_VIEW_EXIT=%d", item.viewExit), fmt.Sprintf("BRANCH_EXISTING_EXIT=%d", item.existingExit)})
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
 	cmd.WaitDelay = 2 * time.Second
 	var stdout, stderr npmBranchOutput
