@@ -38,7 +38,7 @@ func classifyPrefix(root *os.Root, plan Plan) (int, error) {
 	prefix := 0
 	seenBefore := false
 	for _, operation := range plan.Operations {
-		observed, _, err := inspectTarget(root, operation.Path, MaximumFileBytes)
+		observed, _, err := plan.inspectTarget(root, operation.Path, MaximumFileBytes)
 		if err != nil {
 			return 0, err
 		}
@@ -80,7 +80,7 @@ func validateExecutablePlan(plan Plan, rootID string) error {
 	}
 	// Empty payloads survive wire projection; only native construction binds
 	// execution to the complete immutable transaction identity.
-	if plan.constructedTransactionID != plan.TransactionID {
+	if plan.version != "3" || plan.constructedTransactionID != plan.TransactionID {
 		return fmt.Errorf("repository transaction plan lacks native construction for this identity")
 	}
 	if _, err := admitJournal(journalValue(plan)); err != nil {
@@ -116,7 +116,7 @@ func validateActivePlan(plan Plan) error {
 func verifyCreatedDirectories(root *os.Root, plan Plan) error {
 	directorySet := map[string]struct{}{}
 	for _, operation := range plan.Operations {
-		missing, err := inspectParentDirectories(root, path.Dir(operation.Path))
+		missing, err := plan.inspectParentDirectories(root, path.Dir(operation.Path))
 		if err != nil {
 			return err
 		}

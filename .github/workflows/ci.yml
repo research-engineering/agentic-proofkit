@@ -93,6 +93,12 @@ jobs:
       - name: Run all Go tests
         run: npm run go:test
 
+      - name: Verify required legacy Unicode recovery
+        env:
+          GOFLAGS: '-p=1'
+          GOMAXPROCS: '2'
+        run: go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectWholeLegacyRecovery$' -count=1 -timeout=90s -v -args -proofkit-require-legacy-unicode-positive
+
       - name: Verify deletion across filesystem boundaries
         run: |
           set -euo pipefail

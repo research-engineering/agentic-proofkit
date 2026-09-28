@@ -13,6 +13,7 @@
     ],
     "environmentClasses": [
       "local-go",
+      "local-go-legacy-positive",
       "local-go-python",
       "local-go-python-native-docker",
       "local-node-browser",
@@ -33,6 +34,12 @@
           "read-only",
           "write-local"
         ]
+      },
+      {
+        "environmentClass": "local-go-legacy-positive",
+        "networkPolicies": ["none"],
+        "credentialClasses": ["none"],
+        "cachePolicies": ["disabled"]
       },
       {
         "environmentClass": "local-go-python",
@@ -271,6 +278,24 @@
           0
         ]
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.transaction-legacy-positive",
+      "cwd": ".",
+      "argv": ["go", "test", "./internal/kernel/repositorytransaction", "-run", "^TestCanonicalDialectWholeLegacyRecovery$", "-count=1", "-timeout=90s", "-v", "-args", "-proofkit-require-legacy-unicode-positive"],
+      "environment": {
+        "inherit": "allowlist",
+        "allowlist": ["GOCACHE", "GOFLAGS", "GOMAXPROCS", "GOMODCACHE", "GOPATH", "GOROOT", "GOTOOLCHAIN", "HOME", "PATH", "TMPDIR"],
+        "classes": ["local-go-legacy-positive"]
+      },
+      "timeoutMs": 120000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "local-go-static",
+      "exitCodePolicy": {"kind": "zero", "successCodes": [0]}
     },
     {
       "schemaVersion": 1,
@@ -1179,6 +1204,26 @@
       },
       "nonClaims": [
         "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.transaction-legacy-positive",
+      "inputSelectors": [".github/workflows/ci.yml", "go.mod", "go.sum", "internal/kernel/pathidentity", "internal/kernel/repositorytransaction", "proofkit/requirement-bindings.json", "proofkit/witness-plan.json", "scripts/workflow_legacy_unicode_test.go"],
+      "outputSelectors": [],
+      "resourceReads": ["resource.proofkit.source"],
+      "resourceWrites": ["resource.proofkit.go-build-cache", "resource.proofkit.temporary-workdir"],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {"kind": "none", "maxAttempts": 1},
+      "cancellationPolicy": {"kind": "cooperative", "graceMs": 5000},
+      "timeoutPolicy": {"kind": "bounded", "timeoutMs": 120000},
+      "nonClaims": [
+        "Ordinary local-go runs may prove native refusal only and cannot satisfy this command's positive obligation.",
+        "Owned transaction fixture preparation qualifies exact identities, spelling, bytes and modes, not a filesystem-wide Unicode equivalence relation.",
+        "Successful required-mode execution demands exactly all 28 frozen Unicode positive lifecycle IDs; zero, duplicate, substituted and negative IDs do not satisfy this witness.",
+        "The declared test argument enables required-positive mode independently of environment variables; ordinary execution without that argument does not satisfy this witness."
       ]
     },
     {

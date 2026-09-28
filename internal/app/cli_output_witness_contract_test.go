@@ -365,7 +365,7 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 		{
 			Command:           "adopt-materialize-apply",
 			NativeSourceForm:  "nativeSources",
-			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/repositorytransaction"},
+			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/pathidentity", "internal/kernel/repositorytransaction", "internal/kernel/rootpath"},
 			SelectorPath:      "internal/app/adoption_materialization_command_test.go",
 			SelectorTest:      "TestAdoptMaterializeApplyOutputUsesExactRootShape",
 			ExecutableCommand: "go test ./internal/app -run '^TestAdoptMaterializeApplyOutputUsesExactRootShape$'",
@@ -373,7 +373,7 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 		{
 			Command:           "adopt-materialize-plan",
 			NativeSourceForm:  "nativeSources",
-			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/repositorytransaction"},
+			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/pathidentity", "internal/kernel/repositorytransaction", "internal/kernel/rootpath"},
 			SelectorPath:      "internal/app/adoption_materialization_command_test.go",
 			SelectorTest:      "TestAdoptMaterializePlanOutputUsesExactRootShape",
 			ExecutableCommand: "go test ./internal/app -run '^TestAdoptMaterializePlanOutputUsesExactRootShape$'",
@@ -381,7 +381,7 @@ func rootDistinctOutputContractExpectations() []rootDistinctOutputContractExpect
 		{
 			Command:           "adopt-materialize-recover",
 			NativeSourceForm:  "nativeSources",
-			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/repositorytransaction"},
+			NativeSourcePaths: []string{"internal/app", "internal/command/adoptionmaterialization", "internal/kernel/pathidentity", "internal/kernel/repositorytransaction", "internal/kernel/rootpath"},
 			SelectorPath:      "internal/app/adoption_materialization_command_test.go",
 			SelectorTest:      "TestAdoptMaterializeRecoverOutputUsesExactRootShape",
 			ExecutableCommand: "go test ./internal/app -run '^TestAdoptMaterializeRecoverOutputUsesExactRootShape$'",

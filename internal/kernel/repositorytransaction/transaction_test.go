@@ -868,7 +868,7 @@ func leaveInterruptedPrefix(t *testing.T, rootPath string, plan Plan, prefix int
 	if err := writeMarker(root, readyMarker); err != nil {
 		t.Fatal(err)
 	}
-	if err := ensureTargetDirectories(root, plan); err != nil {
+	if err := (engine{}).ensureTargetDirectories(root, plan); err != nil {
 		t.Fatal(err)
 	}
 	changed := changedOperationIndexes(plan)

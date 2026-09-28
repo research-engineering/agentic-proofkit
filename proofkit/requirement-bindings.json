@@ -6898,6 +6898,10 @@
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationWholeChainIsCanonicalAndOwnerClosed$'"
         },
         {
+          "selector": "TestMaterializationNestedLegacyTransactionRemainsDescriptive",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationNestedLegacyTransactionRemainsDescriptive$'"
+        },
+        {
           "selector": "TestMaterializationOutputAdmissionRejectsCrossOwnerMutants",
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestMaterializationOutputAdmissionRejectsCrossOwnerMutants$'"
         },
@@ -6929,6 +6933,10 @@
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestPathRoleLedgerRejectsWriteReferenceCollisions$'"
         },
         {
+          "selector": "TestPathRoleLedgerUsesCurrentCanonicalClasses",
+          "command": "go test ./internal/command/adoptionmaterialization -run '^TestPathRoleLedgerUsesCurrentCanonicalClasses$'"
+        },
+        {
           "selector": "TestRequirementProjectionRequiresClaimLevelParity",
           "command": "go test ./internal/command/adoptionmaterialization -run '^TestRequirementProjectionRequiresClaimLevelParity$'"
         },
@@ -6955,6 +6963,127 @@
           "selector": "TestAdoptionMaterializationCLI",
           "command": "go test ./internal/app -run '^TestAdoptionMaterializationCLI$'"
         }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-canonical-contract-identity",
+      "witnessId": "proofkit.repository-transaction.canonical-contract-identity",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/canonical_path_contract_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalPathContractIdentitySeparatesWireVersion", "command": "go test ./internal/app -run '^TestCanonicalPathContractIdentitySeparatesWireVersion$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-canonical-caseless",
+      "witnessId": "proofkit.repository-transaction.canonical-caseless-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/canonical_recovery_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalDialectPreservesFrozenV1V2Bytes", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectPreservesFrozenV1V2Bytes$'"},
+        {"selector": "TestCanonicalDialectWholeLegacyRecovery", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectWholeLegacyRecovery$'"},
+        {"selector": "TestCanonicalDialectWholeLegacyASCIILifecycle", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectWholeLegacyASCIILifecycle$'"},
+        {"selector": "TestCanonicalDialectFreshMergeSplitAndRecovery", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectFreshMergeSplitAndRecovery$'"},
+        {"selector": "TestCanonicalDialectVersionForgeriesAndNativeAuthority", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectVersionForgeriesAndNativeAuthority$'"},
+        {"selector": "TestCanonicalDialectFreshReplayRejectsLegacyReceipt", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectFreshReplayRejectsLegacyReceipt$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-required-unicode-positive",
+      "witnessId": "proofkit.repository-transaction.required-unicode-positive",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/canonical_recovery_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalDialectWholeLegacyRecovery", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectWholeLegacyRecovery$'"}
+      ],
+      "commandIds": ["proofkit.transaction-legacy-positive"],
+      "environmentClasses": ["local-go-legacy-positive"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-native-fixture-admission",
+      "witnessId": "proofkit.repository-transaction.native-fixture-admission",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/canonical_fixture_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalFixtureExclusivePreparationAndVector", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalFixtureExclusivePreparationAndVector$'"},
+        {"selector": "TestCanonicalFixtureModeAndEvidencePredicates", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalFixtureModeAndEvidencePredicates$'"},
+        {"selector": "TestCanonicalFixtureRejectsASCIISubstitution", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalFixtureRejectsASCIISubstitution$'"},
+        {"selector": "TestCanonicalFixtureVectorRejectsIndependentMutants", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalFixtureVectorRejectsIndependentMutants$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-unmanaged-split-refusal",
+      "witnessId": "proofkit.repository-transaction.unmanaged-split-refusal",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/canonical_refusal_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalDialectUnmanagedSplitRoutesRejectBeforeEffects", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalDialectUnmanagedSplitRoutesRejectBeforeEffects$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-transaction-positive-ci-closure",
+      "witnessId": "proofkit.repository-transaction.positive-ci-closure",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_legacy_unicode_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCILegacyUnicodeRequiresPositiveMode", "command": "go test ./scripts -run '^TestCILegacyUnicodeRequiresPositiveMode$'"},
+        {"selector": "TestLegacyUnicodeWitnessPlanClosure", "command": "go test ./scripts -run '^TestLegacyUnicodeWitnessPlanClosure$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-path-unicode17",
+      "witnessId": "proofkit.repository-path.unicode17-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/pathidentity/canonical_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalCaseFoldCherokeeIsStableAndLegacyIsFrozen", "command": "go test ./internal/kernel/pathidentity -run '^TestCanonicalCaseFoldCherokeeIsStableAndLegacyIsFrozen$'"},
+        {"selector": "TestCanonicalCaselessUnicode17Corpus", "command": "go test ./internal/kernel/pathidentity -run '^TestCanonicalCaselessUnicode17Corpus$'"},
+        {"selector": "TestCanonicalCaselessExactKeysAndDialectClasses", "command": "go test ./internal/kernel/pathidentity -run '^TestCanonicalCaselessExactKeysAndDialectClasses$'"},
+        {"selector": "TestCanonicalCaselessPathBoundsAndPrefixes", "command": "go test ./internal/kernel/pathidentity -run '^TestCanonicalCaselessPathBoundsAndPrefixes$'"},
+        {"selector": "TestCanonicalFoldPinnedUnicode17Tables", "command": "go test ./internal/kernel/pathidentity -run '^TestCanonicalFoldPinnedUnicode17Tables$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-canonical-observation",
+      "witnessId": "proofkit.repository-transaction.canonical-observation-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/repositorytransaction/canonical_observation_test.go",
+      "witnessSelectors": [
+        {"selector": "TestCanonicalControlObservationVersionNamesAndOrder", "command": "go test ./internal/kernel/repositorytransaction -run '^TestCanonicalControlObservationVersionNamesAndOrder$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-033",
+      "scenarioId": "proofkit.spec-proof-core.repository-exact-route-dialect",
+      "witnessId": "proofkit.repository-path.exact-route-dialect-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/rootpath/dialect_test.go",
+      "witnessSelectors": [
+        {"selector": "TestExactEntryUsesOneAdmittedDialect", "command": "go test ./internal/kernel/rootpath -run '^TestExactEntryUsesOneAdmittedDialect$'"}
       ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
@@ -9038,6 +9167,11 @@
       "commandId": "proofkit.go-vet",
       "command": "go vet ./...",
       "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.transaction-legacy-positive",
+      "command": "go test ./internal/kernel/repositorytransaction -run ^TestCanonicalDialectWholeLegacyRecovery$ -count=1 -timeout=90s -v -args -proofkit-require-legacy-unicode-positive",
+      "environmentClass": "local-go-legacy-positive"
     },
     {
       "commandId": "proofkit.go-vulncheck",

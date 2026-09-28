@@ -29,6 +29,11 @@ func validateActiveState(root *os.Root, plan Plan) error {
 	if err := validateActivePlan(plan); err != nil {
 		return err
 	}
+	if exists, err := plan.exactRouteExists(root, activeDirectory); err != nil {
+		return err
+	} else if !exists {
+		return fmt.Errorf("repository transaction active namespace is invalid for its version")
+	}
 	entries, err := activeEntries(root)
 	if err != nil {
 		return err
@@ -340,7 +345,7 @@ func loadPreparingJournal(root *os.Root) (Plan, bool, error) {
 	if len(entries) == 0 {
 		return Plan{}, false, nil
 	}
-	content, err := readOwnedFile(root, journalTemp, MaximumJournalBytes)
+	content, err := (Plan{version: "1"}).readOwnedFile(root, journalTemp, MaximumJournalBytes)
 	if err != nil {
 		return Plan{}, false, err
 	}
@@ -355,6 +360,11 @@ func loadPreparingJournal(root *os.Root) (Plan, bool, error) {
 	canonical, err := stablejson.Marshal(journalValue(plan))
 	if err != nil || !bytes.Equal(content, canonical) {
 		return Plan{}, false, nil
+	}
+	if exists, err := plan.exactRouteExists(root, journalTemp); err != nil {
+		return Plan{}, false, err
+	} else if !exists {
+		return Plan{}, false, fmt.Errorf("repository transaction preparing namespace is invalid for its version")
 	}
 	return plan, true, nil
 }

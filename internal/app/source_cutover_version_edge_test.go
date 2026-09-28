@@ -11,8 +11,8 @@ import (
 // This inventory is reviewed against the archived 0.14.21 public contract.
 // Native source byte digests are freshness evidence, not wire semantics.
 var sourceCutoverDirectionDeltas = []string{
-	"adopt-materialize-apply/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"adopt-materialize-plan/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"adopt-materialize-apply/input:childDefinitionBindings,compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"adopt-materialize-plan/input:childDefinitionBindings,compatibilitySummary,contractId,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"evidence-graph/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"proof-slice/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-authoring-plan/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
@@ -46,8 +46,14 @@ var sourceCutoverDirectionDeltas = []string{
 }
 
 var nativeBoundaryDirectionDeltas = []string{
+	"adopt-materialize-apply/output:compatibilitySummary,contractId,nativeSources",
+	"adopt-materialize-plan/output:compatibilitySummary,contractId,nativeSources",
+	"adopt-materialize-recover/output:compatibilitySummary,contractId,nativeSources",
 	"external-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources",
 	"external-consumer/output:nativeSource,nativeSources",
+	"integration-apply/output:compatibilitySummary,contractId,nativeSources",
+	"integration-plan/output:compatibilitySummary,contractId,nativeSources",
+	"integration-recover/output:compatibilitySummary,contractId,nativeSources",
 	"registry-consumer/input:compatibilitySummary,contractId,nativeSource,nativeSources",
 	"registry-consumer/output:nativeSource,nativeSources",
 	"registry-consumer-proof-input-compose/input:compatibilitySummary,contractId,nativeSource,nativeSources",

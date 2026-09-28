@@ -103,7 +103,7 @@ func buildPlanWithDependencies(ctx context.Context, rootPath string, targets []T
 		ordered[index].Content = append([]byte(nil), target.Content...)
 	}
 	sort.Slice(ordered, func(left, right int) bool { return ordered[left].Path < ordered[right].Path })
-	plan = Plan{RootID: lease.rootID}
+	plan = Plan{RootID: lease.rootID, version: "3"}
 	directories := map[string]struct{}{}
 	prefixSpellings := map[string]string{}
 	var aggregate int64
@@ -202,7 +202,11 @@ func buildPlanWithDependencies(ctx context.Context, rootPath string, targets []T
 }
 
 func registerPortablePrefixes(spellings map[string]string, value string) error {
-	prefixes, err := pathidentity.Prefixes(value)
+	return registerPortablePrefixesIn(spellings, value, pathidentity.CanonicalCaseless)
+}
+
+func registerPortablePrefixesIn(spellings map[string]string, value string, dialect pathidentity.Dialect) error {
+	prefixes, err := dialect.Prefixes(value)
 	if err != nil {
 		return err
 	}
@@ -215,10 +219,10 @@ func registerPortablePrefixes(spellings map[string]string, value string) error {
 	return nil
 }
 
-func validatePortablePathSet(paths []string) error {
+func validatePortablePathSet(paths []string, dialect pathidentity.Dialect) error {
 	spellings := map[string]string{}
 	for _, value := range paths {
-		if err := registerPortablePrefixes(spellings, value); err != nil {
+		if err := registerPortablePrefixesIn(spellings, value, dialect); err != nil {
 			return err
 		}
 	}
@@ -276,7 +280,11 @@ func snapshotAction(before, after Snapshot) string {
 }
 
 func pathsOverlap(left, right string) bool {
-	overlaps, err := pathidentity.Overlaps(left, right)
+	return pathsOverlapIn(left, right, pathidentity.CanonicalCaseless)
+}
+
+func pathsOverlapIn(left, right string, dialect pathidentity.Dialect) bool {
+	overlaps, err := dialect.Overlaps(left, right)
 	return err != nil || overlaps
 }
 

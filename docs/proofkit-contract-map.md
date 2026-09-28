@@ -21,6 +21,17 @@ admission and runtime witnesses remain mandatory.
 Its `commandRouteGrammar.omittedRoutePolicy` field owns how consumers expand a
 command record that omits an explicit `route`.
 
+A command's `contractId` versions its admitted semantics; `schemaVersion`
+names the outer JSON wire shape. These versions need not coincide. Adoption
+materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the
+six adoption/integration lifecycle output contracts use semantic v2 with outer
+`schemaVersion: 1`. Fresh transaction plans and journals use `schemaVersion: 3`
+and Unicode 17 canonical caseless path matching; retained transaction versions
+1 and 2 keep their historical path rules and recovery identities. Transaction
+receipt version 2 is independent.
+The exact compatibility clauses and native-owner bindings are shipped in the
+CLI contract, not inferred from the enclosing root-shape definition.
+
 Formal rule:
 
 ```text

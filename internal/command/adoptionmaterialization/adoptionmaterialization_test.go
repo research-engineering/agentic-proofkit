@@ -29,7 +29,10 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildPlan() error = %v", err)
 	}
-	planRaw := jsonRoundTripValue(t, plan.JSONValue())
+	planRaw := jsonRoundTripValue(t, plan.JSONValue()).(map[string]any)
+	if planRaw["schemaVersion"] != json.Number("1") || planRaw["transaction"].(map[string]any)["schemaVersion"] != json.Number("3") {
+		t.Fatal("outer adoption v1 did not carry the fresh nested transaction v3")
+	}
 	if admitted, err := AdmitPlanOutput(planRaw); err != nil || admitted.Transaction.TransactionID != plan.Transaction.TransactionID {
 		t.Fatalf("AdmitPlanOutput() plan=%#v error=%v", admitted, err)
 	}
@@ -73,6 +76,91 @@ func TestMaterializationWholeChainIsCanonicalAndOwnerClosed(t *testing.T) {
 	manifest, err := AdmitManifest(manifestRaw)
 	if err != nil || manifest.ProjectID != "pilot.project" || len(manifest.Routes) != 3 {
 		t.Fatalf("materialized manifest=%#v err=%v", manifest, err)
+	}
+}
+
+func TestMaterializationNestedLegacyTransactionRemainsDescriptive(t *testing.T) {
+	root := t.TempDir()
+	plan, err := BuildPlan(context.Background(), validRequest(t, root), root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire := jsonRoundTripValue(t, plan.JSONValue()).(map[string]any)
+	transaction := wire["transaction"].(map[string]any)
+	transaction["schemaVersion"] = json.Number("1")
+	targets := []any{}
+	for _, raw := range transaction["operations"].([]any) {
+		operation := raw.(map[string]any)
+		targets = append(targets, map[string]any{"after": operation["after"], "path": operation["path"]})
+	}
+	transaction["desiredStateId"], err = digest.StableJSONSHA256Ref(map[string]any{"desiredStateKind": "proofkit.repository-desired-state", "rootId": transaction["rootId"], "schemaVersion": json.Number("1"), "targets": targets})
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := map[string]any{}
+	for key, value := range transaction {
+		if key != "transactionId" && key != "transactionKind" && key != "nonClaims" {
+			identity[key] = value
+		}
+	}
+	transaction["transactionId"], err = digest.StableJSONSHA256Ref(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retained, err := AdmitPlanOutput(wire)
+	if err != nil || retained.Transaction.JSONValue()["schemaVersion"] != json.Number("1") {
+		t.Fatalf("nested legacy admission: %v", err)
+	}
+	if _, err := repositorytransaction.Apply(context.Background(), root, retained.Transaction); err == nil {
+		t.Fatal("nested descriptive legacy plan gained native authority")
+	}
+	transaction["schemaVersion"] = json.Number("3")
+	if _, err := AdmitPlanOutput(wire); err == nil {
+		t.Fatal("nested version forgery retained old identities")
+	}
+}
+
+func TestMaterializationAdmissionRejectsCoherentOmittedRoute(t *testing.T) {
+	root := t.TempDir()
+	raw := validRequest(t, root)
+	plan, err := BuildPlan(t.Context(), raw, root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := AdmitPlanOutput(plan.JSONValue()); err != nil {
+		t.Fatal(err)
+	}
+	request, err := admitRequest(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	children, err := childArtifacts(request)
+	if err != nil || len(children) < 2 {
+		t.Fatalf("fixture children: %d %v", len(children), err)
+	}
+	manifest, err := stablejson.Marshal(plan.Manifest.JSONValue())
+	if err != nil {
+		t.Fatal(err)
+	}
+	targets := []repositorytransaction.Target{{Path: ProjectManifestPath, Content: manifest, Mode: 0644}}
+	for _, child := range children[1:] {
+		targets = append(targets, repositorytransaction.Target{Path: child.Path, Content: child.Content, Mode: 0644})
+	}
+	reduced, err := repositorytransaction.BuildPlan(t.Context(), root, targets)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repositorytransaction.AdmitPlanOutput(reduced.JSONValue()); err != nil {
+		t.Fatalf("reduced fixture is not independently canonical: %v", err)
+	}
+	const want = "adoption materialization manifest routes do not close the transaction target set"
+	if err := validatePlanRouteClosure(plan.Manifest, reduced); err == nil || err.Error() != want {
+		t.Fatalf("route-specific guard missed coherent omitted route: %v", err)
+	}
+	wire := plan.JSONValue()
+	wire["transaction"] = reduced.JSONValue()
+	if _, err := AdmitPlanOutput(wire); err == nil || err.Error() != want {
+		t.Fatalf("whole-operation route guard missed coherent omitted route: %v", err)
 	}
 }
 

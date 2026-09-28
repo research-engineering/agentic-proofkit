@@ -633,6 +633,15 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 	}
 
 	for _, scenarioID := range []string{
+		"proofkit.spec-proof-core.repository-canonical-contract-identity",
+		"proofkit.spec-proof-core.repository-transaction-canonical-caseless",
+		"proofkit.spec-proof-core.repository-transaction-required-unicode-positive",
+		"proofkit.spec-proof-core.repository-transaction-native-fixture-admission",
+		"proofkit.spec-proof-core.repository-transaction-unmanaged-split-refusal",
+		"proofkit.spec-proof-core.repository-transaction-positive-ci-closure",
+		"proofkit.spec-proof-core.repository-path-unicode17",
+		"proofkit.spec-proof-core.repository-canonical-observation",
+		"proofkit.spec-proof-core.repository-exact-route-dialect",
 		"proofkit.agent-workflow.bounded-safe-text",
 		"proofkit.agent-workflow.catalog-prerequisite-causality",
 		"proofkit.agent-workflow.cli-presentation-capability-product",

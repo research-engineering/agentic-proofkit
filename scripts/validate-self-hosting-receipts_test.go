@@ -637,6 +637,7 @@ func ciPackageGateWorkflowExpectation() packageGateWorkflowExpectation {
 			cancelInProgress: true,
 		},
 		jobID:                              "source-quality",
+		allowedStepEnv:                     ciSourceQualityStepEnv(),
 		stepName:                           "Verify release closeout",
 		runCommand:                         "npm run release:closeout",
 		mustFollowSteps:                    ciSourceQualityProofSteps(),
@@ -647,6 +648,12 @@ func ciPackageGateWorkflowExpectation() packageGateWorkflowExpectation {
 			{event: "pull_request"},
 			{event: "push", path: []string{"branches"}, value: "main"},
 		},
+	}
+}
+
+func ciSourceQualityStepEnv() map[string]map[string]any {
+	return map[string]map[string]any{
+		legacyUnicodeStep: {"GOFLAGS": "-p=1", "GOMAXPROCS": "2"},
 	}
 }
 

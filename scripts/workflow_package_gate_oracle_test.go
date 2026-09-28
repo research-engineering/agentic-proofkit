@@ -20,7 +20,7 @@ const mergeSatisfyingProducerEnv = "PROOFKIT_MERGE_SATISFYING_PRODUCER"
 
 const requiredPlatformSmokeOwnerCommand = "go run ./internal/tools/packagebuild current && ./dist/agentic-proofkit --help >/dev/null && go run ./internal/tools/pythonpackage build-current && go run ./internal/tools/pythonpackage verify-current"
 const setupVerifiedNPMActionSHA256 = "73e760391a9f93b95034aec8edd12af081051ce6859d3114e3561c4d255d061f"
-const ciSourceQualityStepInventorySHA256 = "6d55e4669b8989ef5e25b4686618d4e7b8d005bca69c5732f348281e885aa16b"
+const ciSourceQualityStepInventorySHA256 = "b8c98aaffaa1d7749cae0b1feb97aa3125cc7239991ea49798505f6b20f1bfe6"
 const ciBrowserRuntimeStepInventorySHA256 = "75774851de2c5d6a020d2ee9aa4d1c877d4d9d879b4272e715bdaaf7f7da9cec"
 const releaseCandidateStepInventorySHA256 = "38acd75118e3d782feb9ab7606f1788c86e6cb45dd33cc372326e145a49219c7"
 
@@ -1615,7 +1615,11 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		if !ok {
 			return fmt.Errorf("ci workflow missing required job %q", jobID)
 		}
-		if err := validateJobExecutionControls(jobID, job, nil); err != nil {
+		var allowedStepEnv map[string]map[string]any
+		if jobID == "source-quality" {
+			allowedStepEnv = ciSourceQualityStepEnv()
+		}
+		if err := validateJobExecutionControls(jobID, job, allowedStepEnv); err != nil {
 			return err
 		}
 	}
@@ -1669,6 +1673,9 @@ func validateCIRequiredAggregate(workflow githubWorkflow) error {
 		return err
 	}
 	if err := validateCIMinimumPythonStep(workflow.Jobs["source-quality"]); err != nil {
+		return err
+	}
+	if err := validateCILegacyUnicodeStep(workflow.Jobs["source-quality"]); err != nil {
 		return err
 	}
 	if err := validateExactStepInventory(

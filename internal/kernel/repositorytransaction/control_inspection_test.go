@@ -717,7 +717,7 @@ func TestInspectControlStateUsesPortableObservationFields(t *testing.T) {
 			"mode":   json.Number("448"),
 			"nameId": digest.SHA256TextRef(directoryName),
 		}},
-		"schemaVersion": json.Number("1"),
+		"schemaVersion": json.Number("2"),
 	})
 	if err != nil {
 		t.Fatal(err)
