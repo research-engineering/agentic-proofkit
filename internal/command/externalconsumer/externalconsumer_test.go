@@ -198,6 +198,68 @@ func TestBuildUsesAdmittedReleaseAuthorityProjection(t *testing.T) {
 	}
 }
 
+func TestAdmittedReleaseAuthorityIgnoresMutableJSON(t *testing.T) {
+	for _, carrier := range []string{"caller", "projection"} {
+		for _, change := range []struct {
+			object, field string
+			value         any
+			failure       string
+		}{
+			{"", "rolloutClaim", true, "releaseAuthorityInput.rolloutClaim must be false"},
+			{"package", "version", "9.9.9", "releaseAuthorityInput.package.version must match packageVersion"},
+			{"artifactProof", "binarySmokeProofId", "proof.unexpected.binary-smoke", "releaseAuthorityInput.artifactProof.binarySmokeProofId must be proofkit.external-consumer.binary-smoke"},
+			{"rollback", "versionPin", "file:artifacts/other.tgz", "releaseAuthorityInput.rollback.versionPin must reference the exact file tarball path"},
+		} {
+			t.Run(carrier+"/"+change.field, func(t *testing.T) {
+				raw := validExternalConsumerInput(t)
+				admitted, err := admitReportInput(raw)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantProjection := admitted.Input.ReleaseAuthority.Projection
+				wantDigest := expectedReleaseAuthorityOutputSHA256(admitted.Input)
+				if wantDigest == "" || len(releaseAuthorityFailures(admitted.Input)) != 0 || len(consumerProofFailures(admitted.Input, admitted.Evidence.ConsumerProof)) != 0 {
+					t.Fatal("baseline must admit the release and matching consumer evidence")
+				}
+
+				input := raw["input"].(map[string]any)
+				changed := input["releaseAuthorityInput"].(map[string]any)
+				if carrier == "projection" {
+					changed = admitted.Input.ReleaseAuthority.InputJSON
+				}
+				object := changed
+				if change.object != "" {
+					object = changed[change.object].(map[string]any)
+				}
+				object[change.field] = change.value
+				if got := releaseAuthorityFailures(admitted.Input); len(got) != 0 {
+					t.Fatalf("mutable JSON changed the admitted decision: %v", got)
+				}
+				if admitted.Input.ReleaseAuthority.Projection != wantProjection || expectedReleaseAuthorityOutputSHA256(admitted.Input) != wantDigest {
+					t.Fatal("mutable JSON changed the admitted projection or output identity")
+				}
+				if got := consumerProofFailures(admitted.Input, admitted.Evidence.ConsumerProof); len(got) != 0 {
+					t.Fatalf("mutable JSON changed the admitted consumer evidence decision: %v", got)
+				}
+
+				// The same mutation must matter to a new admission, not the old one.
+				input["releaseAuthorityInput"] = changed
+				record, code, err := Build(raw)
+				if err != nil || code != 1 || record.State != "failed" {
+					t.Fatalf("fresh admission missed mutation: exit=%d state=%s error=%v", code, record.State, err)
+				}
+				found := false
+				for _, result := range record.RuleResults {
+					found = found || result.Status == "failed" && result.Message == change.failure
+				}
+				if !found {
+					t.Fatalf("fresh admission did not report %q: %#v", change.failure, record.RuleResults)
+				}
+			})
+		}
+	}
+}
+
 func TestAdmittedWitnessPlanDoesNotRetainCallerOrProjectionAliases(t *testing.T) {
 	for _, operand := range []string{"argv", "vocabulary", "command", "projection"} {
 		t.Run(operand, func(t *testing.T) {
