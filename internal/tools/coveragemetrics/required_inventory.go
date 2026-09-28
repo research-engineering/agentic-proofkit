@@ -747,6 +747,13 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 				"TestGoDependencyGateWiring",
 			},
 		},
+		{"REQ-PROOFKIT-QUALITY-011", "proofkit.supply-chain-quality.workflow-fixture-fidelity"}: {
+			witnessPath: "scripts/workflow_oracle_support_test.go",
+			selectors: []string{
+				"TestWorkflowClonePreservesDecodedOwners",
+				"TestWorkflowClonePreservesPresenceAndIsolation",
+			},
+		},
 		{"REQ-PROOFKIT-QUALITY-013", "proofkit.supply-chain-quality.workflow-package-gate-oracle"}: {
 			witnessPath: "scripts/workflow_package_gate_oracle_test.go",
 			selectors: []string{

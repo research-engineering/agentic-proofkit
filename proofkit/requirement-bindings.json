@@ -3606,6 +3606,29 @@
       ]
     },
     {
+      "requirementId": "REQ-PROOFKIT-QUALITY-011",
+      "scenarioId": "proofkit.supply-chain-quality.workflow-fixture-fidelity",
+      "witnessId": "proofkit.ci.workflow-fixture-fidelity",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workflow_oracle_support_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkflowClonePreservesDecodedOwners",
+          "command": "go test ./scripts -run '^TestWorkflowClonePreservesDecodedOwners$'"
+        },
+        {
+          "selector": "TestWorkflowClonePreservesPresenceAndIsolation",
+          "command": "go test ./scripts -run '^TestWorkflowClonePreservesPresenceAndIsolation$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
       "requirementId": "REQ-PROOFKIT-QUALITY-013",
       "scenarioId": "proofkit.supply-chain-quality.workflow-package-gate-oracle",
       "witnessId": "proofkit.workflow-package-gate.typed-oracle",

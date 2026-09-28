@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -465,15 +466,119 @@ func yamlMappingValue(node *yaml.Node, key string) *yaml.Node {
 
 func cloneWorkflow(t *testing.T, workflow githubWorkflow) githubWorkflow {
 	t.Helper()
-	content, err := yaml.Marshal(workflow)
-	if err != nil {
-		t.Fatal(err)
+	return cloneWorkflowValue(t, reflect.ValueOf(workflow)).Interface().(githubWorkflow)
+}
+
+// Clone the decoded fixture, not its YAML projection: absent and empty values
+// and the private presence bits are distinct inputs to the workflow oracle.
+func cloneWorkflowValue(t *testing.T, value reflect.Value) reflect.Value {
+	t.Helper()
+	copy := reflect.New(value.Type()).Elem()
+	copy.Set(value)
+	switch value.Kind() {
+	case reflect.Interface, reflect.Pointer:
+		if value.IsNil() {
+			return copy
+		}
+		child := cloneWorkflowValue(t, value.Elem())
+		if value.Kind() == reflect.Pointer {
+			copy = reflect.New(value.Type().Elem())
+			copy.Elem().Set(child)
+		} else {
+			copy.Set(child)
+		}
+	case reflect.Map:
+		if value.IsNil() {
+			return copy
+		}
+		copy = reflect.MakeMapWithSize(value.Type(), value.Len())
+		iter := value.MapRange()
+		for iter.Next() {
+			copy.SetMapIndex(iter.Key(), cloneWorkflowValue(t, iter.Value()))
+		}
+	case reflect.Slice:
+		if value.IsNil() {
+			return copy
+		}
+		copy = reflect.MakeSlice(value.Type(), value.Len(), value.Len())
+		for i := 0; i < value.Len(); i++ {
+			copy.Index(i).Set(cloneWorkflowValue(t, value.Index(i)))
+		}
+	case reflect.Struct:
+		for i := 0; i < value.NumField(); i++ {
+			if copy.Field(i).CanSet() {
+				copy.Field(i).Set(cloneWorkflowValue(t, value.Field(i)))
+			} else if value.Field(i).Kind() != reflect.Bool {
+				t.Fatalf("unsupported private workflow fixture field: %s", value.Type().Field(i).Name)
+			}
+		}
+	case reflect.Bool, reflect.String, reflect.Int, reflect.Int64, reflect.Float64:
+	default:
+		t.Fatalf("unsupported workflow fixture kind: %s", value.Kind())
 	}
-	var cloned githubWorkflow
-	if err := yaml.Unmarshal(content, &cloned); err != nil {
-		t.Fatal(err)
+	return copy
+}
+
+func TestWorkflowClonePreservesDecodedOwners(t *testing.T) {
+	for _, path := range admittedWorkflowPaths {
+		t.Run(path, func(t *testing.T) {
+			base := readWorkflowForTest(t, filepath.Join("..", path))
+			if !reflect.DeepEqual(base, cloneWorkflow(t, base)) {
+				t.Fatal("clone changed the decoded owner model")
+			}
+		})
 	}
-	return cloned
+}
+
+func TestWorkflowClonePreservesPresenceAndIsolation(t *testing.T) {
+	const fixture = `name: clone fixture
+concurrency: {group: original, cancel-in-progress: false}
+defaults: {run: {shell: bash}}
+env: {}
+on: {push: {branches: [main]}}
+jobs:
+  test:
+    runs-on: runner
+    defaults: {run: {shell: bash}}
+    needs: [build]
+    if: null
+    continue-on-error: false
+    steps:
+      - name: omitted
+        run: echo fixture
+      - name: present
+        run: ""
+        if: null
+        with: {}
+        env: {VALUE: [1, {name: original}]}
+`
+	decode := func() githubWorkflow {
+		t.Helper()
+		var workflow githubWorkflow
+		if err := yaml.Unmarshal([]byte(fixture), &workflow); err != nil {
+			t.Fatal(err)
+		}
+		return workflow
+	}
+	base := decode()
+	cloned := cloneWorkflow(t, base)
+	if !reflect.DeepEqual(base, cloned) {
+		t.Fatal("clone changed nil, empty, scalar, or field-presence state")
+	}
+	cloned.Concurrency.Group = "changed"
+	cloned.Defaults.Run.Shell = "changed"
+	cloned.Env["NEW"] = true
+	cloned.On["push"].(map[string]any)["branches"].([]any)[0] = "changed"
+	job := cloned.Jobs["test"]
+	job.Defaults.Run.Shell = "changed"
+	job.Needs.([]any)[0] = "changed"
+	job.Steps[0].Run = "changed"
+	job.Steps[1].With["NEW"] = true
+	job.Steps[1].Env["VALUE"].([]any)[1].(map[string]any)["name"] = "changed"
+	delete(cloned.Jobs, "test")
+	if !reflect.DeepEqual(base, decode()) {
+		t.Fatal("clone retained mutable aliases into the original fixture")
+	}
 }
 
 func withString(values map[string]any, key string) string {
