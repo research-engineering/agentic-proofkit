@@ -44,6 +44,9 @@ func TestBranchAuthorityCLISeparatesFramingAdmissionAndEvaluation(t *testing.T) 
 	for _, test := range []struct {
 		name, input, pointer, state, diagnostic string
 	}{
+		{name: "empty refs", input: `{"schemaVersion":1,"reportId":"proofkit.test.branch","branchRefs":[],"preexistingFailures":[],"nonClaims":["caller observation"]}`, diagnostic: "branch authority branchRefs must be a non-empty array"},
+		{name: "empty root nonClaims", input: strings.Replace(branchContractInput, `"nonClaims":["  caller observation  "]`, `"nonClaims":[]`, 1), diagnostic: "branch authority nonClaims must be non-empty"},
+		{name: "empty ref nonClaims", input: strings.Replace(branchContractInput, `"nonClaims":["  not live  "]`, `"nonClaims":[]`, 1), diagnostic: "nonClaims must be non-empty"},
 		{name: "required drift", input: strings.Replace(branchContractInput, `"observedBranch":"main"`, `"observedBranch":"other"`, 1), state: "failed"},
 		{name: "prior failure", input: strings.Replace(branchContractInput, `"preexistingFailures":[]`, `"preexistingFailures":["earlier failure"]`, 1), state: "failed"},
 		{name: "fraction token", input: strings.Replace(branchContractInput, `"schemaVersion":1`, `"schemaVersion":1.0`, 1), diagnostic: "schemaVersion"},
