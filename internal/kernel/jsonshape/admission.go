@@ -190,6 +190,19 @@ func (shape Shape) admit(raw any, mode admissionMode) (any, *violation) {
 			return nil, invalid(fmt.Sprintf("must be a canonical int64 integer at least %d", n.integer))
 		}
 		return raw, nil
+	case integerRangeKind:
+		value, ok := raw.(json.Number)
+		if !ok || len(value.String()) > 20 {
+			return nil, invalid("must be a decimal int64 integer token")
+		}
+		if value == "-0" {
+			value = "0"
+		}
+		integer, err := admit.CanonicalInteger(value, "integer")
+		if err != nil || integer < n.integer || integer > n.maximumInteger {
+			return nil, invalid(fmt.Sprintf("must be a decimal int64 integer between %d and %d", n.integer, n.maximumInteger))
+		}
+		return raw, nil
 	case booleanKind:
 		value, ok := raw.(bool)
 		if !ok {

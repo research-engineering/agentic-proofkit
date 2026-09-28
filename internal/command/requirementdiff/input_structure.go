@@ -11,12 +11,12 @@ var diffInputShape = jsonshape.Object(
 	jsonshape.Required("baseContext", requirementcontext.SnapshotShape()),
 	jsonshape.Required("currentContext", requirementcontext.SnapshotShape()),
 	jsonshape.Optional("query", jsonshape.Nullable(jsonshape.Object(
-		jsonshape.Optional("maxChanges", jsonshape.Nullable(jsonshape.IntegerMinimum(1))),
+		jsonshape.Optional("maxChanges", jsonshape.WithIntegerDefault(jsonshape.Nullable(jsonshape.IntegerRange(1, maxChanges)), maxChanges)),
 		jsonshape.Optional("ownerIds", jsonshape.Nullable(jsonshape.Array(jsonshape.String(), 0))),
 		jsonshape.Optional("requirementIds", jsonshape.Nullable(jsonshape.Array(jsonshape.String(), 0))),
 	))),
 )
 
 // InputStructure describes wire structure; native query admission additionally
-// owns the maxChanges ceiling, ID uniqueness and snapshot semantic validity.
+// owns ID uniqueness, selector semantics and snapshot semantic validity.
 func InputStructure() map[string]any { return diffInputShape.JSONSchema() }

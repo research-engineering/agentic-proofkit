@@ -10,6 +10,38 @@ func diffStructureInput(t *testing.T) map[string]any {
 	return map[string]any{"schemaVersion": json.Number("3"), "diffId": "diff.structure", "baseContext": contextFixture(t, "Before."), "currentContext": contextFixture(t, "After.")}
 }
 
+func TestDiffNumericStructureMatchesWholeOperation(t *testing.T) {
+	for _, test := range []struct {
+		token string
+		valid bool
+	}{
+		{"1", true}, {"8192", true}, {"0", false}, {"-0", false}, {"-1", false},
+		{"8193", false}, {"1.0", false}, {"1e0", false}, {"9223372036854775808", false},
+	} {
+		t.Run(test.token, func(t *testing.T) {
+			input := diffStructureInput(t)
+			input["query"] = map[string]any{"maxChanges": json.Number(test.token)}
+			_, nativeErr := Build(input)
+			_, shapeErr := diffInputShape.Admit(input, "diff")
+			if (nativeErr == nil) != test.valid || (shapeErr == nil) != test.valid {
+				t.Fatalf("expected admission %v, native=%v shape=%v", test.valid, nativeErr, shapeErr)
+			}
+		})
+	}
+	for _, raw := range []any{nil, map[string]any{}, map[string]any{"maxChanges": nil}} {
+		query, err := admitQuery(raw)
+		if err != nil || query.MaxChanges != 8192 {
+			t.Fatalf("native default drifted: %+v, %v", query, err)
+		}
+	}
+	querySchema := InputStructure()["properties"].(map[string]any)["query"].(map[string]any)["anyOf"].([]any)[1].(map[string]any)
+	limit := querySchema["properties"].(map[string]any)["maxChanges"].(map[string]any)
+	integer := limit["anyOf"].([]any)[1].(map[string]any)
+	if integer["type"] != "integer" || integer["minimum"] != json.Number("1") || integer["maximum"] != json.Number("8192") || limit["default"] != json.Number("8192") {
+		t.Fatal("numeric schema does not describe the native limits and default")
+	}
+}
+
 func TestDiffInputStructurePreservesQueryDomainAndWholeOperation(t *testing.T) {
 	for _, query := range []any{nil, map[string]any{}, map[string]any{"maxChanges": nil, "ownerIds": nil, "requirementIds": nil}, map[string]any{"maxChanges": json.Number("1")}} {
 		input := diffStructureInput(t)

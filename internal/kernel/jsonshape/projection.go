@@ -108,11 +108,19 @@ func (shape Shape) schemaValue() map[string]any {
 		value["minimum"] = json.Number(strconv.FormatInt(n.integer, 10))
 		value["maximum"] = json.Number("9223372036854775807")
 		value["x-proofkit-number-encoding"] = "canonical-int64"
+	case integerRangeKind:
+		value["type"] = "integer"
+		value["minimum"] = json.Number(strconv.FormatInt(n.integer, 10))
+		value["maximum"] = json.Number(strconv.FormatInt(n.maximumInteger, 10))
+		value["x-proofkit-number-encoding"] = "decimal-integer-token-int64"
 	default:
 		panic("invalid JSON shape kind")
 	}
 	if n.nullable {
-		return map[string]any{"anyOf": []any{map[string]any{"type": "null"}, value}}
+		value = map[string]any{"anyOf": []any{map[string]any{"type": "null"}, value}}
+	}
+	if n.defaultInteger != nil {
+		value["default"] = json.Number(strconv.FormatInt(*n.defaultInteger, 10))
 	}
 	return value
 }
