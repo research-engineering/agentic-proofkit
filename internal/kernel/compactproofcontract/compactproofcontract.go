@@ -45,6 +45,11 @@ var witnessColumns = [...]string{
 	"resolution_order_index",
 }
 
+var inputKeys = []string{
+	"authority_state", "binding_columns", "bindings", "contract_id", "contract_kind",
+	"non_claims", "normalization_profile", "schema_version", "surface_columns", "surfaces", "witness_columns",
+}
+
 type Contract struct {
 	contractID string
 	nonClaims  []string
@@ -258,7 +263,7 @@ func Admit(raw any) (Contract, error) {
 	if !ok {
 		return Contract{}, fmt.Errorf("compact requirement proof contract must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"authority_state", "binding_columns", "bindings", "contract_id", "contract_kind", "non_claims", "normalization_profile", "schema_version", "surface_columns", "surfaces", "witness_columns"}, "compact requirement proof contract"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "compact requirement proof contract"); err != nil {
 		return Contract{}, err
 	}
 	if !admit.JSONNumberEquals(record["schema_version"], 2) {

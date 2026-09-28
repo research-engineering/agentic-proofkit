@@ -20,6 +20,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcemodel"
 )
@@ -32,6 +33,7 @@ type nativeStructure struct {
 	schema       func() (map[string]any, error)
 	variants     []nativeStructureVariant
 	wireVersion  json.Number
+	versionField string
 }
 
 type nativeStructureVariant struct {
@@ -146,7 +148,21 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.branch-authority.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.branch-authority.output.v1.root-shape"}, commands: []string{"branch-authority"},
 		schema: func() (map[string]any, error) { return branchauthority.OutputStructure(), nil },
+	}, {
+		id: compactV2DefinitionID, direction: "input", versionField: "schema_version",
+		predecessors: []string{"proofkit.requirement-proof-resolver.input.v2.root-shape"},
+		commands:     []string{"requirement-proof-resolver"},
+		variants: []nativeStructureVariant{{id: "01-compact", when: "default JSON mode", schema: func() (map[string]any, error) {
+			return compactproofcontract.InputStructure(), nil
+		}}},
 	}}
+}
+
+func (owner nativeStructure) schemaVersionField() string {
+	if owner.versionField != "" {
+		return owner.versionField
+	}
+	return "schemaVersion"
 }
 
 func (owner nativeStructure) definition() (map[string]any, error) {
@@ -166,7 +182,7 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 		if err != nil {
 			return nil, fmt.Errorf("native structure %s: %w", owner.id, err)
 		}
-		root, err := nativeStructureRoot(schema)
+		root, err := nativeStructureRoot(schema, owner.schemaVersionField())
 		if err != nil {
 			return nil, err
 		}
@@ -204,7 +220,7 @@ func (owner nativeStructure) contractVersion(definition map[string]any) (json.Nu
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
 	if owner.wireVersion != "" {
 		for _, raw := range variants {
-			version, err := nativeSchemaVersion(raw.(map[string]any)["schema"].(map[string]any))
+			version, err := nativeSchemaVersion(raw.(map[string]any)["schema"].(map[string]any), owner.schemaVersionField())
 			if err != nil {
 				return "", err
 			}
@@ -214,7 +230,7 @@ func (owner nativeStructure) contractVersion(definition map[string]any) (json.Nu
 		}
 		return "", fmt.Errorf("native structure %s has no variant with wire version %s", owner.id, owner.wireVersion)
 	}
-	return nativeSchemaVersion(variants[0].(map[string]any)["schema"].(map[string]any))
+	return nativeSchemaVersion(variants[0].(map[string]any)["schema"].(map[string]any), owner.schemaVersionField())
 }
 
 // The generic envelope owner fixes root keys and types; its nested records
@@ -251,22 +267,22 @@ func agentEnvelopeRootStructure() (map[string]any, error) {
 }
 
 func (owner nativeStructure) summary(version json.Number) []any {
-	return []any{"schemaVersion=" + version.String(), "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
+	return []any{owner.schemaVersionField() + "=" + version.String(), "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
 }
 
-func nativeSchemaVersion(schema map[string]any) (json.Number, error) {
-	root, err := nativeStructureRoot(schema)
+func nativeSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {
+	root, err := nativeStructureRoot(schema, versionField)
 	if err != nil {
 		return "", err
 	}
-	return nativeObjectSchemaVersion(root)
+	return nativeObjectSchemaVersion(root, versionField)
 }
 
 // A structural sum retains its full schema. Only its common root summary is
 // projected; branches with different roots or wire versions need separate owners.
-func nativeStructureRoot(schema map[string]any) (map[string]any, error) {
+func nativeStructureRoot(schema map[string]any, versionField string) (map[string]any, error) {
 	if schema["type"] == "object" {
-		if _, err := nativeObjectSchemaVersion(schema); err != nil {
+		if _, err := nativeObjectSchemaVersion(schema, versionField); err != nil {
 			return nil, err
 		}
 		return schema, nil
@@ -287,7 +303,7 @@ func nativeStructureRoot(schema map[string]any) (map[string]any, error) {
 		if !ok {
 			return nil, fmt.Errorf("native structure alternative must be an object schema")
 		}
-		nextVersion, err := nativeObjectSchemaVersion(branch)
+		nextVersion, err := nativeObjectSchemaVersion(branch, versionField)
 		if err != nil {
 			return nil, err
 		}
@@ -303,16 +319,16 @@ func nativeStructureRoot(schema map[string]any) (map[string]any, error) {
 	return root, nil
 }
 
-func nativeObjectSchemaVersion(schema map[string]any) (json.Number, error) {
+func nativeObjectSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {
 	if _, ok := schema["properties"].(map[string]any); !ok || schema["type"] != "object" || schema["additionalProperties"] != false {
 		return "", fmt.Errorf("native structure requires a closed object projection")
 	}
 	properties, _ := schema["properties"].(map[string]any)
-	field, _ := properties["schemaVersion"].(map[string]any)
+	field, _ := properties[versionField].(map[string]any)
 	version, ok := field["const"].(json.Number)
 	required, _ := schema["required"].([]any)
-	if !ok || field["type"] != "integer" || !slices.Contains(required, any("schemaVersion")) {
-		return "", fmt.Errorf("native structure requires a required literal integer schemaVersion")
+	if !ok || field["type"] != "integer" || !slices.Contains(required, any(versionField)) {
+		return "", fmt.Errorf("native structure requires a required literal integer %s", versionField)
 	}
 	number, err := version.Int64()
 	if err != nil || number < 1 || version.String() != fmt.Sprint(number) {

@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "ec582994e28d061984c799ff005488ca2a423c98681941ca8cad52a949eb41ba"
+	cliContractPublicABISHA256               = "33dc48eb3cbe10d92a967d3b9db6524c166251a5e18710ef163aea7ea83a8077"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -550,6 +550,7 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.transaction-quarantine-residue.output.v1.json-schema": {},
 			"proofkit.branch-authority.input.v1.json-schema":                {},
 			"proofkit.branch-authority.output.v1.json-schema":               {},
+			"proofkit.compact-proof-contract.input.v2.json-schema":          {},
 		}[id]; !admitted {
 			t.Fatalf("%s has no admitted structural projection owner", id)
 		}

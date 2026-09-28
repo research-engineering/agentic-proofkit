@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	MaximumContractBytes = 1 << 20
+	MaximumContractBytes = 2 << 20
 	MaximumCommands      = 512
 	MaximumPresetIDs     = 128
 	maximumHelpBytes     = 256 << 10

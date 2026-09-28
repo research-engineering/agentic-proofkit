@@ -230,7 +230,7 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 		return nil, err
 	}
 	if len(encoded) > installedclicontract.MaximumContractBytes {
-		return nil, fmt.Errorf("generated CLI contract exceeds installed carrier byte limit")
+		return nil, fmt.Errorf("generated CLI contract has %d bytes, exceeding installed carrier byte limit %d", len(encoded), installedclicontract.MaximumContractBytes)
 	}
 	return encoded, nil
 }

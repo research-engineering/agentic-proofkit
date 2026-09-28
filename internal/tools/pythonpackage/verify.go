@@ -1156,6 +1156,9 @@ func maximumWheelEntryBytes(name string) int64 {
 	if name == "agentic_proofkit/bin/agentic-proofkit" {
 		return maximumWheelBinaryBytes
 	}
+	if name == embeddedCLIContractPath {
+		return installedclicontract.MaximumContractBytes
+	}
 	return maximumWheelTextEntryBytes
 }
 

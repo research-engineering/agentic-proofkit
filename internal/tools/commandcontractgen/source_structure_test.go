@@ -32,7 +32,7 @@ func TestSourceStructureHasOneCodecOwnerAndExplicitWireVersion(t *testing.T) {
 	if !reflect.DeepEqual(variant["requiredFields"], []any{"groups", "kind", "schemaVersion", "sourceId", "sourceNonClaims", "specPackagePath"}) {
 		t.Fatalf("required source fields: %#v", variant["requiredFields"])
 	}
-	version, err := nativeSchemaVersion(schema)
+	version, err := nativeSchemaVersion(schema, "schemaVersion")
 	if err != nil || version != json.Number("2") {
 		t.Fatalf("source wire version: %v, %v", version, err)
 	}
