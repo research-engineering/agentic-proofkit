@@ -60,7 +60,7 @@
     "release:sbom": "go run ./internal/tools/releasesbom",
     "self:receipt": "go run ./scripts/validate-self-hosting-receipts.go",
     "self:coverage": "go run ./internal/tools/coveragemetrics",
-    "source-hygiene": "node scripts/source-hygiene.mjs",
+    "source-hygiene": "node --test scripts/source-hygiene.test.mjs && node scripts/source-hygiene.mjs",
     "text-policy": "go run ./internal/tools/textpolicyinput | go run ./cmd/agentic-proofkit text-policy --input -",
     "mermaid:check": "go run ./internal/tools/mermaidcheck",
     "go:staticcheck": "go tool staticcheck ./...",

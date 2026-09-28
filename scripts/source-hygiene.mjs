@@ -74,7 +74,7 @@ await runDiagnosticEntrypoint(() => {
     }
 
     const lowerText = decodeUTF8Strict(
-      execFileSync("git", ["cat-file", "-p", entry.object]),
+      execFileSync("git", ["cat-file", "-p", entry.object], {maxBuffer: 16 << 20}),
       "tracked text object",
     ).toLowerCase();
     if (containsOrganizationSpecificToken(lowerText)) {
