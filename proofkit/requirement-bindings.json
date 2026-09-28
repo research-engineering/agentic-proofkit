@@ -9211,6 +9211,84 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.branch-native-contract",
+      "witnessId": "proofkit.branch-native-contract",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/branchauthority/structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBranchIdentifiersAndNormalizedCollisions",
+          "command": "go test ./internal/command/branchauthority -run '^TestBranchIdentifiersAndNormalizedCollisions$'"
+        },
+        {
+          "selector": "TestBranchRequiredMembersAndUnknownFieldsFailAtAdmission",
+          "command": "go test ./internal/command/branchauthority -run '^TestBranchRequiredMembersAndUnknownFieldsFailAtAdmission$'"
+        },
+        {
+          "selector": "TestBranchStructuresAreDetachedFromEachOtherAndNativePolicy",
+          "command": "go test ./internal/command/branchauthority -run '^TestBranchStructuresAreDetachedFromEachOtherAndNativePolicy$'"
+        },
+        {
+          "selector": "TestBranchStructuresDeclareExactNestedCarriers",
+          "command": "go test ./internal/command/branchauthority -run '^TestBranchStructuresDeclareExactNestedCarriers$'"
+        },
+        {
+          "selector": "TestBranchWireEvaluationTruthTableAndOrder",
+          "command": "go test ./internal/command/branchauthority -run '^TestBranchWireEvaluationTruthTableAndOrder$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.branch-cli-contract",
+      "witnessId": "proofkit.branch-cli-contract",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/branch_contract_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBranchAuthorityCLISeparatesFramingAdmissionAndEvaluation",
+          "command": "go test ./internal/app -run '^TestBranchAuthorityCLISeparatesFramingAdmissionAndEvaluation$'"
+        },
+        {
+          "selector": "TestBranchAuthorityCLIWireAndInputTransports",
+          "command": "go test ./internal/app -run '^TestBranchAuthorityCLIWireAndInputTransports$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.branch-schema-owner",
+      "witnessId": "proofkit.branch-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/native_structures_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBranchNativeStructuresRejectRehashedNestedDrift",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestBranchNativeStructuresRejectRehashedNestedDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.command-contract-check",
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [
