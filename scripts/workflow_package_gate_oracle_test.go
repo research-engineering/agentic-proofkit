@@ -1125,6 +1125,9 @@ func TestCIRequiredAggregateRejectsPlatformSmokeSubstitution(t *testing.T) {
 	if err := validateCIRequiredAggregate(base); err != nil {
 		t.Fatalf("owner CI workflow: %v", err)
 	}
+	if err := validateCIRequiredAggregate(cloneWorkflow(t, base)); err != nil {
+		t.Fatalf("unmodified CI workflow clone: %v", err)
+	}
 	packageManifest := readPackageManifestForTest(t)
 	if err := validatePlatformSmokeOwnerScript(packageManifest); err != nil {
 		t.Fatalf("owner platform-smoke package script: %v", err)
@@ -1137,6 +1140,28 @@ func TestCIRequiredAggregateRejectsPlatformSmokeSubstitution(t *testing.T) {
 		name   string
 		mutate func(*githubWorkflow)
 	}{
+		{
+			name: "Darwin process package omitted",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				for i := range job.Steps {
+					job.Steps[i].Run = strings.ReplaceAll(job.Steps[i].Run, " ./internal/kernel/processgroup", "")
+				}
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
+		{
+			name: "Darwin process suite narrowed",
+			mutate: func(workflow *githubWorkflow) {
+				job := workflow.Jobs["platform-smoke"]
+				for i := range job.Steps {
+					if strings.HasPrefix(job.Steps[i].Run, "go test ./internal/kernel/rootpath ") {
+						job.Steps[i].Run += " -run '^TestDarwinObservationClassification$'"
+					}
+				}
+				workflow.Jobs["platform-smoke"] = job
+			},
+		},
 		{
 			name: "wrong platform runner",
 			mutate: func(workflow *githubWorkflow) {
@@ -1552,8 +1577,8 @@ func validateExactPlatformSmokeSteps(job githubJob) error {
 			},
 		},
 		{
-			Name: "Run Darwin filesystem invariants",
-			Run:  "go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/command/projectstatus -count=1",
+			Name: "Run Darwin filesystem and process invariants",
+			Run:  "go test ./internal/kernel/rootpath ./internal/kernel/repositorytransaction ./internal/kernel/processgroup ./internal/command/projectstatus -count=1",
 		},
 		{
 			Name: "Run platform smoke",
