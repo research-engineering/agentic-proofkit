@@ -5179,6 +5179,7 @@
       "witnessPath": "internal/command/requirementcontext/slice_input_structure_test.go",
       "witnessSelectors": [
         {"selector": "TestSliceLimitSchemaDefaultsAndBounds", "command": "go test ./internal/command/requirementcontext -run '^TestSliceLimitSchemaDefaultsAndBounds$'"},
+        {"selector": "TestSliceNativeLimitDiagnosticsAndPrecedence", "command": "go test ./internal/command/requirementcontext -run '^TestSliceNativeLimitDiagnosticsAndPrecedence$'"},
         {"selector": "TestSliceNumericStructureMatchesNativeLimits", "command": "go test ./internal/command/requirementcontext -run '^TestSliceNumericStructureMatchesNativeLimits$'"}
       ],
       "commandIds": ["proofkit.go-test"],
@@ -5287,6 +5288,7 @@
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementdiff/input_structure_test.go",
       "witnessSelectors": [
+        {"selector": "TestDiffNativeLimitDiagnosticsAndPrecedence", "command": "go test ./internal/command/requirementdiff -run '^TestDiffNativeLimitDiagnosticsAndPrecedence$'"},
         {"selector": "TestDiffNumericStructureMatchesWholeOperation", "command": "go test ./internal/command/requirementdiff -run '^TestDiffNumericStructureMatchesWholeOperation$'"}
       ],
       "commandIds": ["proofkit.go-test"],

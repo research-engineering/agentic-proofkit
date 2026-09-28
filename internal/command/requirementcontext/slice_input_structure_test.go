@@ -49,6 +49,36 @@ func TestSliceNumericStructureMatchesNativeLimits(t *testing.T) {
 	}
 }
 
+func TestSliceNativeLimitDiagnosticsAndPrecedence(t *testing.T) {
+	context, err := Compose(fixtureRepository(t), fixtureCatalog())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name  string
+		query map[string]any
+		want  string
+	}{
+		{"nodes", map[string]any{"maxNodes": json.Number("4097")}, "requirement context slice maxNodes must be between 1 and 4096"},
+		{"requirements", map[string]any{"maxRequirements": json.Number("16385")}, "requirement context slice maxRequirements must be between 1 and 16384"},
+		{"depth", map[string]any{"nodeIds": []any{"spec.root"}, "maxDepth": json.Number("513")}, "requirement context slice maxDepth must be between 0 and 512"},
+		{"nodes-before-requirements", map[string]any{"maxNodes": json.Number("4097"), "maxRequirements": json.Number("16385")}, "requirement context slice maxNodes must be between 1 and 4096"},
+		{"requirements-before-depth", map[string]any{"maxRequirements": json.Number("16385"), "maxDepth": json.Number("513"), "nodeIds": []any{"spec.root"}}, "requirement context slice maxRequirements must be between 1 and 16384"},
+		{"depth-selector-before-bound", map[string]any{"maxDepth": json.Number("513")}, "requirement context slice maxDepth requires nodeIds"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			test.query["profile"] = "routing"
+			_, directErr := admitSliceQuery(test.query)
+			_, operationErr := Slice(map[string]any{"schemaVersion": json.Number("2"), "sliceId": "slice.numeric", "context": context, "query": test.query})
+			for _, err := range []error{directErr, operationErr} {
+				if err == nil || err.Error() != test.want {
+					t.Fatalf("numeric diagnostic = %v, want %q", err, test.want)
+				}
+			}
+		})
+	}
+}
+
 func TestSliceLimitSchemaDefaultsAndBounds(t *testing.T) {
 	properties := SliceInputStructure()["properties"].(map[string]any)["query"].(map[string]any)["properties"].(map[string]any)
 	for _, field := range []struct{ name, minimum, maximum, fallback string }{

@@ -42,6 +42,24 @@ func TestDiffNumericStructureMatchesWholeOperation(t *testing.T) {
 	}
 }
 
+func TestDiffNativeLimitDiagnosticsAndPrecedence(t *testing.T) {
+	for _, query := range []map[string]any{
+		{"maxChanges": json.Number("8193")},
+		{"maxChanges": json.Number("8193"), "ownerIds": true},
+	} {
+		input := diffStructureInput(t)
+		input["query"] = query
+		_, directErr := admitQuery(query)
+		_, operationErr := Build(input)
+		for _, err := range []error{directErr, operationErr} {
+			const want = "requirement semantic diff maxChanges must be between 1 and 8192"
+			if err == nil || err.Error() != want {
+				t.Fatalf("numeric diagnostic = %v, want %q", err, want)
+			}
+		}
+	}
+}
+
 func TestDiffInputStructurePreservesQueryDomainAndWholeOperation(t *testing.T) {
 	for _, query := range []any{nil, map[string]any{}, map[string]any{"maxChanges": nil, "ownerIds": nil, "requirementIds": nil}, map[string]any{"maxChanges": json.Number("1")}} {
 		input := diffStructureInput(t)

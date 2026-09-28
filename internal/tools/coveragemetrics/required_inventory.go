@@ -17,7 +17,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-SPEC-020", "proofkit.spec-proof-core.requirement-context-numeric-contract"}: {
 			witnessPath: "internal/command/requirementcontext/slice_input_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
-			selectors: []string{"TestSliceLimitSchemaDefaultsAndBounds", "TestSliceNumericStructureMatchesNativeLimits"},
+			selectors: []string{"TestSliceLimitSchemaDefaultsAndBounds", "TestSliceNativeLimitDiagnosticsAndPrecedence", "TestSliceNumericStructureMatchesNativeLimits"},
 		},
 		{"REQ-PROOFKIT-SPEC-020", "proofkit.spec-proof-core.requirement-context-integer-domain"}: {
 			witnessPath: "internal/kernel/jsonshape/integer_range_test.go",
@@ -27,7 +27,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-SPEC-022", "proofkit.spec-proof-core.requirement-semantic-diff-numeric-contract"}: {
 			witnessPath: "internal/command/requirementdiff/input_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
-			selectors: []string{"TestDiffNumericStructureMatchesWholeOperation"},
+			selectors: []string{"TestDiffNativeLimitDiagnosticsAndPrecedence", "TestDiffNumericStructureMatchesWholeOperation"},
 		},
 		{"REQ-PROOFKIT-SPEC-033", "proofkit.spec-proof-core.repository-canonical-contract-identity"}: {
 			witnessPath: "internal/app/canonical_path_contract_test.go",
