@@ -3730,6 +3730,24 @@
       "witnessId": "proofkit.external-consumer.release-authority-projection",
       "witnessKind": "contract",
       "witnessPath": "internal/command/externalconsumer/externalconsumer_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestAdmittedReleaseAuthorityIgnoresMutableJSON",
+          "command": "go test ./internal/command/externalconsumer -run '^TestAdmittedReleaseAuthorityIgnoresMutableJSON$'"
+        },
+        {
+          "selector": "TestBuildRejectsRegistryReleaseAuthorityProjection",
+          "command": "go test ./internal/command/externalconsumer -run '^TestBuildRejectsRegistryReleaseAuthorityProjection$'"
+        },
+        {
+          "selector": "TestBuildUsesAdmittedReleaseAuthorityProjection",
+          "command": "go test ./internal/command/externalconsumer -run '^TestBuildUsesAdmittedReleaseAuthorityProjection$'"
+        },
+        {
+          "selector": "TestExpectedReleaseAuthorityOutputUsesOwnerDigest",
+          "command": "go test ./internal/command/externalconsumer -run '^TestExpectedReleaseAuthorityOutputUsesOwnerDigest$'"
+        }
+      ],
       "commandIds": [
         "proofkit.go-test"
       ],

@@ -14,6 +14,11 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-014", "proofkit.supply-chain-quality.external-release-authority-typed-projection"}: {
+			witnessPath: "internal/command/externalconsumer/externalconsumer_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestAdmittedReleaseAuthorityIgnoresMutableJSON", "TestBuildRejectsRegistryReleaseAuthorityProjection", "TestBuildUsesAdmittedReleaseAuthorityProjection", "TestExpectedReleaseAuthorityOutputUsesOwnerDigest"},
+		},
 		{"REQ-PROOFKIT-SPEC-020", "proofkit.spec-proof-core.requirement-context-numeric-contract"}: {
 			witnessPath: "internal/command/requirementcontext/slice_input_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
