@@ -14,6 +14,21 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.branch-native-contract"}: {
+			witnessPath: "internal/command/branchauthority/structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBranchIdentifiersAndNormalizedCollisions", "TestBranchRequiredMembersAndUnknownFieldsFailAtAdmission", "TestBranchStructuresAreDetachedFromEachOtherAndNativePolicy", "TestBranchStructuresDeclareExactNestedCarriers", "TestBranchWireEvaluationTruthTableAndOrder"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.branch-cli-contract"}: {
+			witnessPath: "internal/app/branch_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBranchAuthorityCLISeparatesFramingAdmissionAndEvaluation", "TestBranchAuthorityCLIWireAndInputTransports"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.branch-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/native_structures_test.go",
+			commandIDs:  []string{"proofkit.command-contract-check", "proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBranchNativeStructuresRejectRehashedNestedDrift"},
+		},
 		{"REQ-PROOFKIT-QUALITY-014", "proofkit.supply-chain-quality.external-release-authority-typed-projection"}: {
 			witnessPath: "internal/command/externalconsumer/externalconsumer_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},

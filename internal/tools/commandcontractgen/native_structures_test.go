@@ -95,6 +95,39 @@ func TestNativeStructureConsumersAreClosed(t *testing.T) {
 	}
 }
 
+func TestBranchNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
+	for _, direction := range []string{"input", "output"} {
+		id := "proofkit.branch-authority." + direction + ".v1.json-schema"
+		index := slices.IndexFunc(nativeStructures(), func(owner nativeStructure) bool { return owner.id == id })
+		if index < 0 {
+			t.Fatalf("native owner %s is missing", id)
+		}
+		owner := nativeStructures()[index]
+		if owner.direction != direction || !slices.Equal(owner.commands, []string{"branch-authority"}) {
+			t.Fatal("branch native consumer binding drifted")
+		}
+		row, err := owner.definition()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{row}}); err != nil {
+			t.Fatal(err)
+		}
+		variant := row["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)
+		properties := variant["schema"].(map[string]any)["properties"].(map[string]any)
+		properties["nonClaims"].(map[string]any)["items"].(map[string]any)["type"] = "boolean"
+		delete(row, "canonicalDigest")
+		encoded, err := canonicalJSON(row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		row["canonicalDigest"] = sha256Digest(encoded)
+		if _, err := admitDefinitions(map[string]any{"contractDefinitions": []any{row}}); err == nil {
+			t.Fatal("recomputed digest authorized a wrong nested branch schema")
+		}
+	}
+}
+
 func TestStructureRefreshPreservesUnrelatedRecordsAndIsIdempotent(t *testing.T) {
 	root := writeNativeStructureFixture(t)
 	source, before, err := readContract(filepath.Join(root, cliContractPath))

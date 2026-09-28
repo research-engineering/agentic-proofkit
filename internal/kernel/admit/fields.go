@@ -45,7 +45,7 @@ var (
 const (
 	maxDiagnosticRunes    = 512
 	maxSecretDecodePasses = 16
-	maxRuleIDBytes        = 256
+	MaxRuleIDBytes        = 256
 	redactedValueLabel    = "<redacted-diagnostic-value>"
 )
 
@@ -125,8 +125,8 @@ func RuleID(raw any, context string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("%s must be stable rule identifier text", context)
 	}
-	if len(value) > maxRuleIDBytes {
-		return "", fmt.Errorf("%s exceeds the %d-byte stable identifier limit", context, maxRuleIDBytes)
+	if len(value) > MaxRuleIDBytes {
+		return "", fmt.Errorf("%s exceeds the %d-byte stable identifier limit", context, MaxRuleIDBytes)
 	}
 	if !ruleIDPattern.MatchString(value) {
 		return "", fmt.Errorf("%s must be stable rule identifier text", context)

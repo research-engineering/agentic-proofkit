@@ -9,7 +9,15 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const reportKind = "proofkit.branch-authority"
+const (
+	reportKind        = "proofkit.branch-authority"
+	advisoryRuleID    = "branch_authority.advisory_refs_visible"
+	preexistingRuleID = "branch_authority.preexisting_failures"
+	requiredRuleID    = "branch_authority.required_refs_aligned"
+)
+
+var inputKeys = []string{"branchRefs", "nonClaims", "preexistingFailures", "reportId", "schemaVersion"}
+var refKeys = []string{"evidenceRef", "expectedBranch", "nonClaims", "observedBranch", "refId", "refKind", "required"}
 
 var refKinds = map[string]struct{}{
 	"branch_protection":     {},
@@ -77,15 +85,7 @@ func Build(raw any) (report.Record, int, error) {
 			"required":       ref.Required,
 		})
 	}
-	failures := append([]string{}, input.PreexistingFailures...)
-	for _, refID := range requiredDrift {
-		failures = append(failures, fmt.Sprintf("required branch ref %s drifted", refID))
-	}
-	sort.Strings(failures)
-	state := "passed"
-	if len(failures) > 0 {
-		state = "failed"
-	}
+	state := statusFailedIf(len(input.PreexistingFailures) > 0 || len(requiredDrift) > 0)
 	record := report.Record{
 		SchemaVersion: 1,
 		ReportKind:    reportKind,
@@ -102,9 +102,9 @@ func Build(raw any) (report.Record, int, error) {
 			{Key: "requiredDriftRefIds", Value: admit.StringSliceToAny(requiredDrift)},
 		},
 		RuleResults: []report.RuleResult{
-			rule("branch_authority.advisory_refs_visible", statusWarningIf(len(advisoryDrift) > 0), messageAdvisory(len(advisoryDrift))),
-			rule("branch_authority.preexisting_failures", statusFailedIf(len(input.PreexistingFailures) > 0), messagePreexisting(len(input.PreexistingFailures))),
-			rule("branch_authority.required_refs_aligned", statusFailedIf(len(requiredDrift) > 0), messageRequired(len(requiredDrift))),
+			rule(advisoryRuleID, statusWarningIf(len(advisoryDrift) > 0), messageAdvisory(len(advisoryDrift))),
+			rule(preexistingRuleID, statusFailedIf(len(input.PreexistingFailures) > 0), messagePreexisting(len(input.PreexistingFailures))),
+			rule(requiredRuleID, statusFailedIf(len(requiredDrift) > 0), messageRequired(len(requiredDrift))),
 		},
 		NonClaims: input.NonClaims,
 	}
@@ -119,7 +119,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("branch authority input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"branchRefs", "nonClaims", "preexistingFailures", "reportId", "schemaVersion"}, "branch authority input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "branch authority input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -169,7 +169,7 @@ func branchRefs(raw any) ([]refInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("branch authority ref %d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"evidenceRef", "expectedBranch", "nonClaims", "observedBranch", "refId", "refKind", "required"}, fmt.Sprintf("branch authority ref %d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, refKeys, fmt.Sprintf("branch authority ref %d", index+1)); err != nil {
 			return nil, err
 		}
 		refID, err := admit.RuleID(record["refId"], fmt.Sprintf("branch authority ref %d refId", index+1))

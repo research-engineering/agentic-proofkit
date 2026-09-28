@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
@@ -137,6 +138,14 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.transaction-quarantine-residue.output.v1.json-schema", direction: "output",
 		commands: []string{"transaction-quarantine-residue"},
 		schema:   func() (map[string]any, error) { return transactionresidue.RelocationOutputStructure(), nil },
+	}, {
+		id: "proofkit.branch-authority.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.branch-authority.input.v1.root-shape"}, commands: []string{"branch-authority"},
+		schema: func() (map[string]any, error) { return branchauthority.InputStructure(), nil },
+	}, {
+		id: "proofkit.branch-authority.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.branch-authority.output.v1.root-shape"}, commands: []string{"branch-authority"},
+		schema: func() (map[string]any, error) { return branchauthority.OutputStructure(), nil },
 	}}
 }
 
