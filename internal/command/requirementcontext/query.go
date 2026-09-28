@@ -10,6 +10,14 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 )
 
+const (
+	defaultSliceNodes        = 256
+	maximumSliceNodes        = 4096
+	defaultSliceRequirements = 2048
+	maximumSliceRequirements = 16384
+	maximumSliceDepth        = 512
+)
+
 func admitSliceQuery(raw any) (SliceQuery, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -38,13 +46,13 @@ func admitSliceQuery(raw any) (SliceQuery, error) {
 	if err != nil {
 		return SliceQuery{}, err
 	}
-	maxNodes, err := optionalPositiveInteger(record["maxNodes"], 256, "requirement context slice maxNodes")
-	if err != nil || maxNodes > 4096 {
-		return SliceQuery{}, fmt.Errorf("requirement context slice maxNodes must be between 1 and 4096")
+	maxNodes, err := optionalPositiveInteger(record["maxNodes"], defaultSliceNodes, "requirement context slice maxNodes")
+	if err != nil || maxNodes > maximumSliceNodes {
+		return SliceQuery{}, fmt.Errorf("requirement context slice maxNodes must be between 1 and %d", maximumSliceNodes)
 	}
-	maxRequirements, err := optionalPositiveInteger(record["maxRequirements"], 2048, "requirement context slice maxRequirements")
-	if err != nil || maxRequirements > 16384 {
-		return SliceQuery{}, fmt.Errorf("requirement context slice maxRequirements must be between 1 and 16384")
+	maxRequirements, err := optionalPositiveInteger(record["maxRequirements"], defaultSliceRequirements, "requirement context slice maxRequirements")
+	if err != nil || maxRequirements > maximumSliceRequirements {
+		return SliceQuery{}, fmt.Errorf("requirement context slice maxRequirements must be between 1 and %d", maximumSliceRequirements)
 	}
 	var maxDepth *int
 	if record["maxDepth"] != nil {
@@ -52,8 +60,8 @@ func admitSliceQuery(raw any) (SliceQuery, error) {
 			return SliceQuery{}, fmt.Errorf("requirement context slice maxDepth requires nodeIds")
 		}
 		depth, err := nonNegativeInteger(record["maxDepth"], "requirement context slice maxDepth")
-		if err != nil || depth > 512 {
-			return SliceQuery{}, fmt.Errorf("requirement context slice maxDepth must be between 0 and 512")
+		if err != nil || depth > maximumSliceDepth {
+			return SliceQuery{}, fmt.Errorf("requirement context slice maxDepth must be between 0 and %d", maximumSliceDepth)
 		}
 		maxDepth = &depth
 	}

@@ -3,8 +3,10 @@
 package jsonshape
 
 import (
+	"encoding/json"
 	"regexp"
 	"slices"
+	"strconv"
 )
 
 type kind uint8
@@ -16,6 +18,7 @@ const (
 	numberKind
 	integerLiteralKind
 	integerMinimumKind
+	integerRangeKind
 	tupleKind
 	booleanKind
 	stringLiteralKind
@@ -31,23 +34,25 @@ const (
 type Shape struct{ node *node }
 
 type node struct {
-	kind          kind
-	nullable      bool
-	properties    []Property
-	allowed       map[string]struct{}
-	exactlyOne    []string
-	element       Shape
-	minItems      int
-	maxItems      int
-	enum          []string
-	integer       int64
-	tuple         []Shape
-	text          string
-	grammar       *regexp.Regexp
-	boolean       *bool
-	alternatives  []Shape
-	discriminator string
-	branches      map[string]Shape
+	kind           kind
+	nullable       bool
+	properties     []Property
+	allowed        map[string]struct{}
+	exactlyOne     []string
+	element        Shape
+	minItems       int
+	maxItems       int
+	enum           []string
+	integer        int64
+	maximumInteger int64
+	defaultInteger *int64
+	tuple          []Shape
+	text           string
+	grammar        *regexp.Regexp
+	boolean        *bool
+	alternatives   []Shape
+	discriminator  string
+	branches       map[string]Shape
 }
 
 type Property struct {
@@ -212,6 +217,30 @@ func IntegerLiteral(value int64) Shape {
 // IntegerMinimum requires canonical int64 spelling, not a floating-point token.
 func IntegerMinimum(minimum int64) Shape {
 	return Shape{node: &node{kind: integerMinimumKind, integer: minimum}}
+}
+
+// IntegerRange admits decimal int64 integer tokens, including -0 when zero is
+// in range. It preserves that token; decimal points and exponents are not integers
+// in this wire representation. Existing canonical integer shapes remain stricter.
+func IntegerRange(minimum, maximum int64) Shape {
+	if maximum < minimum {
+		panic("invalid JSON integer shape bounds")
+	}
+	return Shape{node: &node{kind: integerRangeKind, integer: minimum, maximumInteger: maximum}}
+}
+
+// WithIntegerDefault annotates a numeric declaration without inserting a value
+// during admission. The native owner decides when absence or null uses a default.
+func WithIntegerDefault(shape Shape, value int64) Shape {
+	if shape.node == nil || (shape.node.kind != integerLiteralKind && shape.node.kind != integerMinimumKind && shape.node.kind != integerRangeKind) {
+		panic("JSON integer default requires an integer shape")
+	}
+	if _, failure := shape.admit(json.Number(strconv.FormatInt(value, 10)), callerSnapshot); failure != nil {
+		panic("JSON integer default violates its shape")
+	}
+	copy := *shape.node
+	copy.defaultInteger = &value
+	return Shape{node: &copy}
 }
 
 // Tuple owns an exact ordered array, including the empty tuple.

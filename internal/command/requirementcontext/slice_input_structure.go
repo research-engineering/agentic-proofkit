@@ -13,10 +13,9 @@ var sliceQueryShape = jsonshape.Object(
 	jsonshape.Optional("ownerIds", jsonshape.Nullable(jsonshape.Array(jsonshape.String(), 0))),
 	jsonshape.Optional("requirementIds", jsonshape.Nullable(jsonshape.Array(jsonshape.String(), 0))),
 	jsonshape.Optional("lifecycleStates", jsonshape.Nullable(jsonshape.Array(requirementsourceadmission.LifecycleStateShape(), 0))),
-	jsonshape.Optional("maxNodes", jsonshape.Nullable(jsonshape.IntegerMinimum(1))),
-	jsonshape.Optional("maxRequirements", jsonshape.Nullable(jsonshape.IntegerMinimum(1))),
-	// Depth retains native non-negative integer parsing, including the -0 token.
-	jsonshape.Optional("maxDepth", jsonshape.Nullable(jsonshape.Number())),
+	jsonshape.Optional("maxNodes", jsonshape.WithIntegerDefault(jsonshape.Nullable(jsonshape.IntegerRange(1, maximumSliceNodes)), defaultSliceNodes)),
+	jsonshape.Optional("maxRequirements", jsonshape.WithIntegerDefault(jsonshape.Nullable(jsonshape.IntegerRange(1, maximumSliceRequirements)), defaultSliceRequirements)),
+	jsonshape.Optional("maxDepth", jsonshape.Nullable(jsonshape.IntegerRange(0, maximumSliceDepth))),
 )
 
 var sliceInputShape = jsonshape.Object(

@@ -5173,6 +5173,33 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-SPEC-020",
+      "scenarioId": "proofkit.spec-proof-core.requirement-context-numeric-contract",
+      "witnessId": "proofkit.requirement-context.numeric-contract-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementcontext/slice_input_structure_test.go",
+      "witnessSelectors": [
+        {"selector": "TestSliceLimitSchemaDefaultsAndBounds", "command": "go test ./internal/command/requirementcontext -run '^TestSliceLimitSchemaDefaultsAndBounds$'"},
+        {"selector": "TestSliceNativeLimitDiagnosticsAndPrecedence", "command": "go test ./internal/command/requirementcontext -run '^TestSliceNativeLimitDiagnosticsAndPrecedence$'"},
+        {"selector": "TestSliceNumericStructureMatchesNativeLimits", "command": "go test ./internal/command/requirementcontext -run '^TestSliceNumericStructureMatchesNativeLimits$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-020",
+      "scenarioId": "proofkit.spec-proof-core.requirement-context-integer-domain",
+      "witnessId": "proofkit.json-shape.integer-domain-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/jsonshape/integer_range_test.go",
+      "witnessSelectors": [
+        {"selector": "TestIntegerRangeDefaultsAreDetachedAnnotations", "command": "go test ./internal/kernel/jsonshape -run '^TestIntegerRangeDefaultsAreDetachedAnnotations$'"},
+        {"selector": "TestIntegerRangePreservesTokenDomainAndBoundaries", "command": "go test ./internal/kernel/jsonshape -run '^TestIntegerRangePreservesTokenDomainAndBoundaries$'"}
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-020",
       "scenarioId": "proofkit.spec-proof-core.requirement-context-slicing-whole-cli",
       "witnessId": "proofkit.app.requirement-context-slice-cli-falsifier",
       "witnessKind": "contract",
@@ -5251,6 +5278,19 @@
       "witnessId": "proofkit.requirement-semantic-diff.owner-field-falsifier",
       "witnessKind": "contract",
       "witnessPath": "internal/command/requirementdiff/requirementdiff_test.go",
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-SPEC-022",
+      "scenarioId": "proofkit.spec-proof-core.requirement-semantic-diff-numeric-contract",
+      "witnessId": "proofkit.requirement-semantic-diff.numeric-contract-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementdiff/input_structure_test.go",
+      "witnessSelectors": [
+        {"selector": "TestDiffNativeLimitDiagnosticsAndPrecedence", "command": "go test ./internal/command/requirementdiff -run '^TestDiffNativeLimitDiagnosticsAndPrecedence$'"},
+        {"selector": "TestDiffNumericStructureMatchesWholeOperation", "command": "go test ./internal/command/requirementdiff -run '^TestDiffNumericStructureMatchesWholeOperation$'"}
+      ],
       "commandIds": ["proofkit.go-test"],
       "environmentClasses": ["local-go"]
     },
