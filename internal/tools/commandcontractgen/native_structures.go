@@ -8,6 +8,8 @@ import (
 	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
@@ -148,6 +150,22 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.branch-authority.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.branch-authority.output.v1.root-shape"}, commands: []string{"branch-authority"},
 		schema: func() (map[string]any, error) { return branchauthority.OutputStructure(), nil },
+	}, {
+		id: "proofkit.receipt-currentness-scope.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.receipt-currentness-scope.input.v1.root-shape"}, commands: []string{"receipt-currentness-scope"},
+		schema: func() (map[string]any, error) { return receiptcurrentnessscope.InputStructure(), nil },
+	}, {
+		id: "proofkit.receipt-currentness-scope.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.receipt-currentness-scope.output.v1.root-shape"}, commands: []string{"receipt-currentness-scope"},
+		schema: func() (map[string]any, error) { return receiptcurrentnessscope.OutputStructure(), nil },
+	}, {
+		id: "proofkit.receipt-trust-class.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.receipt-trust-class.input.v1.root-shape"}, commands: []string{"receipt-trust-class"},
+		schema: func() (map[string]any, error) { return receipttrustclass.InputStructure(), nil },
+	}, {
+		id: "proofkit.receipt-trust-class.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.receipt-trust-class.output.v1.root-shape"}, commands: []string{"receipt-trust-class"},
+		schema: func() (map[string]any, error) { return receipttrustclass.OutputStructure(), nil },
 	}, {
 		id: compactV2DefinitionID, direction: "input", versionField: "schema_version",
 		predecessors: []string{"proofkit.requirement-proof-resolver.input.v2.root-shape"},

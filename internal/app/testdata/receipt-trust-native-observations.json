@@ -1,0 +1,618 @@
+[
+  {
+    "case": "passed",
+    "exitCode": 0,
+    "input": {
+      "nonClaims": [
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "obligationReceipts": [
+        {
+          "artifactRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "nonClaims": [
+            "Receipt trust test input does not prove native command success."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "producerAdmissionClass": "merge_satisfying",
+          "proofClassId": "proofkit.test.proof_class",
+          "proofRouteRef": "proofkit.test.route",
+          "provenanceRef": "artifacts/proofkit/provenance.json",
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "proofkit.package-gate",
+          "receiptStatus": "passed",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ],
+      "policyId": "proofkit.test.trust_policy",
+      "proofClasses": [
+        {
+          "allowedEnvironmentClasses": [
+            "local-go"
+          ],
+          "allowedReceiptKinds": [
+            "proofkit.package-gate"
+          ],
+          "minimumTrustClassId": "proofkit.test.trusted",
+          "nonClaims": [
+            "Proof class test fixture is not merge approval."
+          ],
+          "owner": "proofkit.test.owner",
+          "proofClassId": "proofkit.test.proof_class",
+          "rationale": "test merge-satisfying receipts require provenance",
+          "riskClass": "merge_gate"
+        }
+      ],
+      "schemaVersion": 1,
+      "trustClasses": [
+        {
+          "allowedProducerAdmissionLevels": [
+            "merge_satisfying"
+          ],
+          "allowedReceiptStatuses": [
+            "passed"
+          ],
+          "nonClaims": [
+            "Trust class test fixture does not authenticate producers."
+          ],
+          "rank": 2,
+          "requiresArtifactRefs": true,
+          "requiresProvenanceRef": true,
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": []
+        },
+        {
+          "key": "obligationReceiptTrust",
+          "value": [
+            {
+              "actualTrustRank": 2,
+              "decisionCandidateStates": [],
+              "environmentClass": "local-go",
+              "minimumTrustClassId": "proofkit.test.trusted",
+              "minimumTrustRank": 2,
+              "obligationId": "proofkit.test.obligation",
+              "producerAdmissionClass": "merge_satisfying",
+              "proofClassId": "proofkit.test.proof_class",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "proofkit.package-gate",
+              "receiptStatus": "passed",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "riskClass": "merge_gate",
+              "structuralFindings": [],
+              "trustClassId": "proofkit.test.trusted"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt trust-class admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt trust-class admission does not authenticate producer identity.",
+        "Receipt trust-class admission does not compute receipt freshness.",
+        "Receipt trust-class admission does not execute native commands or prove command semantics.",
+        "Receipt trust-class admission does not own proof-class or risk policy.",
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "reportId": "proofkit.test.trust_policy",
+      "reportKind": "proofkit.receipt-trust-class-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptTrustClass",
+              "value": {
+                "actualTrustRank": 2,
+                "decisionCandidateStates": [],
+                "environmentClass": "local-go",
+                "minimumTrustClassId": "proofkit.test.trusted",
+                "minimumTrustRank": 2,
+                "obligationId": "proofkit.test.obligation",
+                "producerAdmissionClass": "merge_satisfying",
+                "proofClassId": "proofkit.test.proof_class",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "receiptKind": "proofkit.package-gate",
+                "receiptStatus": "passed",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "riskClass": "merge_gate",
+                "structuralFindings": [],
+                "trustClassId": "proofkit.test.trusted"
+              }
+            }
+          ],
+          "message": "obligation proofkit.test.obligation has admitted receipt trust class",
+          "ruleId": "proofkit.receipt-trust-class.proofkit.test.obligation",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "failedObligationCount": 0,
+        "obligationReceiptCount": 1,
+        "proofClassCount": 1,
+        "trustClassCount": 1
+      }
+    }
+  },
+  {
+    "case": "missing-provenance",
+    "exitCode": 1,
+    "input": {
+      "nonClaims": [
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "obligationReceipts": [
+        {
+          "artifactRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "nonClaims": [
+            "Receipt trust test input does not prove native command success."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "producerAdmissionClass": "merge_satisfying",
+          "proofClassId": "proofkit.test.proof_class",
+          "proofRouteRef": "proofkit.test.route",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "proofkit.package-gate",
+          "receiptStatus": "passed",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ],
+      "policyId": "proofkit.test.trust_policy",
+      "proofClasses": [
+        {
+          "allowedEnvironmentClasses": [
+            "local-go"
+          ],
+          "allowedReceiptKinds": [
+            "proofkit.package-gate"
+          ],
+          "minimumTrustClassId": "proofkit.test.trusted",
+          "nonClaims": [
+            "Proof class test fixture is not merge approval."
+          ],
+          "owner": "proofkit.test.owner",
+          "proofClassId": "proofkit.test.proof_class",
+          "rationale": "test merge-satisfying receipts require provenance",
+          "riskClass": "merge_gate"
+        }
+      ],
+      "schemaVersion": 1,
+      "trustClasses": [
+        {
+          "allowedProducerAdmissionLevels": [
+            "merge_satisfying"
+          ],
+          "allowedReceiptStatuses": [
+            "passed"
+          ],
+          "nonClaims": [
+            "Trust class test fixture does not authenticate producers."
+          ],
+          "rank": 2,
+          "requiresArtifactRefs": true,
+          "requiresProvenanceRef": true,
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": [
+            "proofkit.test.obligation"
+          ]
+        },
+        {
+          "key": "obligationReceiptTrust",
+          "value": [
+            {
+              "actualTrustRank": 2,
+              "decisionCandidateStates": [
+                "invalid_receipt"
+              ],
+              "environmentClass": "local-go",
+              "minimumTrustClassId": "proofkit.test.trusted",
+              "minimumTrustRank": 2,
+              "obligationId": "proofkit.test.obligation",
+              "producerAdmissionClass": "merge_satisfying",
+              "proofClassId": "proofkit.test.proof_class",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "proofkit.package-gate",
+              "receiptStatus": "passed",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "riskClass": "merge_gate",
+              "structuralFindings": [
+                "obligation proofkit.test.obligation requires provenanceRef for trust class proofkit.test.trusted"
+              ],
+              "trustClassId": "proofkit.test.trusted"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt trust-class admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt trust-class admission does not authenticate producer identity.",
+        "Receipt trust-class admission does not compute receipt freshness.",
+        "Receipt trust-class admission does not execute native commands or prove command semantics.",
+        "Receipt trust-class admission does not own proof-class or risk policy.",
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "reportId": "proofkit.test.trust_policy",
+      "reportKind": "proofkit.receipt-trust-class-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptTrustClass",
+              "value": {
+                "actualTrustRank": 2,
+                "decisionCandidateStates": [
+                  "invalid_receipt"
+                ],
+                "environmentClass": "local-go",
+                "minimumTrustClassId": "proofkit.test.trusted",
+                "minimumTrustRank": 2,
+                "obligationId": "proofkit.test.obligation",
+                "producerAdmissionClass": "merge_satisfying",
+                "proofClassId": "proofkit.test.proof_class",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "receiptKind": "proofkit.package-gate",
+                "receiptStatus": "passed",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "riskClass": "merge_gate",
+                "structuralFindings": [
+                  "obligation proofkit.test.obligation requires provenanceRef for trust class proofkit.test.trusted"
+                ],
+                "trustClassId": "proofkit.test.trusted"
+              }
+            }
+          ],
+          "message": "obligation proofkit.test.obligation has invalid receipt trust class",
+          "ruleId": "proofkit.receipt-trust-class.proofkit.test.obligation",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "failedObligationCount": 1,
+        "obligationReceiptCount": 1,
+        "proofClassCount": 1,
+        "trustClassCount": 1
+      }
+    }
+  },
+  {
+    "case": "unknown-proof",
+    "exitCode": 1,
+    "input": {
+      "nonClaims": [
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "obligationReceipts": [
+        {
+          "artifactRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "nonClaims": [
+            "Receipt trust test input does not prove native command success."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "producerAdmissionClass": "merge_satisfying",
+          "proofClassId": "proofkit.test.unknown",
+          "proofRouteRef": "proofkit.test.route",
+          "provenanceRef": "artifacts/proofkit/provenance.json",
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "proofkit.package-gate",
+          "receiptStatus": "passed",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ],
+      "policyId": "proofkit.test.trust_policy",
+      "proofClasses": [
+        {
+          "allowedEnvironmentClasses": [
+            "local-go"
+          ],
+          "allowedReceiptKinds": [
+            "proofkit.package-gate"
+          ],
+          "minimumTrustClassId": "proofkit.test.trusted",
+          "nonClaims": [
+            "Proof class test fixture is not merge approval."
+          ],
+          "owner": "proofkit.test.owner",
+          "proofClassId": "proofkit.test.proof_class",
+          "rationale": "test merge-satisfying receipts require provenance",
+          "riskClass": "merge_gate"
+        }
+      ],
+      "schemaVersion": 1,
+      "trustClasses": [
+        {
+          "allowedProducerAdmissionLevels": [
+            "merge_satisfying"
+          ],
+          "allowedReceiptStatuses": [
+            "passed"
+          ],
+          "nonClaims": [
+            "Trust class test fixture does not authenticate producers."
+          ],
+          "rank": 2,
+          "requiresArtifactRefs": true,
+          "requiresProvenanceRef": true,
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": [
+            "proofkit.test.obligation"
+          ]
+        },
+        {
+          "key": "obligationReceiptTrust",
+          "value": [
+            {
+              "actualTrustRank": 2,
+              "decisionCandidateStates": [
+                "invalid_producer"
+              ],
+              "environmentClass": "local-go",
+              "minimumTrustClassId": null,
+              "minimumTrustRank": null,
+              "obligationId": "proofkit.test.obligation",
+              "producerAdmissionClass": "merge_satisfying",
+              "proofClassId": "proofkit.test.unknown",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "proofkit.package-gate",
+              "receiptStatus": "passed",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "riskClass": null,
+              "structuralFindings": [
+                "obligation proofkit.test.obligation references unknown proofClassId: proofkit.test.unknown"
+              ],
+              "trustClassId": "proofkit.test.trusted"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt trust-class admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt trust-class admission does not authenticate producer identity.",
+        "Receipt trust-class admission does not compute receipt freshness.",
+        "Receipt trust-class admission does not execute native commands or prove command semantics.",
+        "Receipt trust-class admission does not own proof-class or risk policy.",
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "reportId": "proofkit.test.trust_policy",
+      "reportKind": "proofkit.receipt-trust-class-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptTrustClass",
+              "value": {
+                "actualTrustRank": 2,
+                "decisionCandidateStates": [
+                  "invalid_producer"
+                ],
+                "environmentClass": "local-go",
+                "minimumTrustClassId": null,
+                "minimumTrustRank": null,
+                "obligationId": "proofkit.test.obligation",
+                "producerAdmissionClass": "merge_satisfying",
+                "proofClassId": "proofkit.test.unknown",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "receiptKind": "proofkit.package-gate",
+                "receiptStatus": "passed",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "riskClass": null,
+                "structuralFindings": [
+                  "obligation proofkit.test.obligation references unknown proofClassId: proofkit.test.unknown"
+                ],
+                "trustClassId": "proofkit.test.trusted"
+              }
+            }
+          ],
+          "message": "obligation proofkit.test.obligation has invalid receipt trust class",
+          "ruleId": "proofkit.receipt-trust-class.proofkit.test.obligation",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "failedObligationCount": 1,
+        "obligationReceiptCount": 1,
+        "proofClassCount": 1,
+        "trustClassCount": 1
+      }
+    }
+  },
+  {
+    "case": "int64-rank",
+    "exitCode": 0,
+    "input": {
+      "nonClaims": [
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "obligationReceipts": [
+        {
+          "artifactRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "nonClaims": [
+            "Receipt trust test input does not prove native command success."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "producerAdmissionClass": "merge_satisfying",
+          "proofClassId": "proofkit.test.proof_class",
+          "proofRouteRef": "proofkit.test.route",
+          "provenanceRef": "artifacts/proofkit/provenance.json",
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "proofkit.package-gate",
+          "receiptStatus": "passed",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ],
+      "policyId": "proofkit.test.trust_policy",
+      "proofClasses": [
+        {
+          "allowedEnvironmentClasses": [
+            "local-go"
+          ],
+          "allowedReceiptKinds": [
+            "proofkit.package-gate"
+          ],
+          "minimumTrustClassId": "proofkit.test.trusted",
+          "nonClaims": [
+            "Proof class test fixture is not merge approval."
+          ],
+          "owner": "proofkit.test.owner",
+          "proofClassId": "proofkit.test.proof_class",
+          "rationale": "test merge-satisfying receipts require provenance",
+          "riskClass": "merge_gate"
+        }
+      ],
+      "schemaVersion": 1,
+      "trustClasses": [
+        {
+          "allowedProducerAdmissionLevels": [
+            "merge_satisfying"
+          ],
+          "allowedReceiptStatuses": [
+            "passed"
+          ],
+          "nonClaims": [
+            "Trust class test fixture does not authenticate producers."
+          ],
+          "rank": 9223372036854775807,
+          "requiresArtifactRefs": true,
+          "requiresProvenanceRef": true,
+          "trustClassId": "proofkit.test.trusted"
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": []
+        },
+        {
+          "key": "obligationReceiptTrust",
+          "value": [
+            {
+              "actualTrustRank": 9223372036854775807,
+              "decisionCandidateStates": [],
+              "environmentClass": "local-go",
+              "minimumTrustClassId": "proofkit.test.trusted",
+              "minimumTrustRank": 9223372036854775807,
+              "obligationId": "proofkit.test.obligation",
+              "producerAdmissionClass": "merge_satisfying",
+              "proofClassId": "proofkit.test.proof_class",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "proofkit.package-gate",
+              "receiptStatus": "passed",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "riskClass": "merge_gate",
+              "structuralFindings": [],
+              "trustClassId": "proofkit.test.trusted"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt trust-class admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt trust-class admission does not authenticate producer identity.",
+        "Receipt trust-class admission does not compute receipt freshness.",
+        "Receipt trust-class admission does not execute native commands or prove command semantics.",
+        "Receipt trust-class admission does not own proof-class or risk policy.",
+        "Receipt trust-class test input does not approve merge."
+      ],
+      "reportId": "proofkit.test.trust_policy",
+      "reportKind": "proofkit.receipt-trust-class-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptTrustClass",
+              "value": {
+                "actualTrustRank": 9223372036854775807,
+                "decisionCandidateStates": [],
+                "environmentClass": "local-go",
+                "minimumTrustClassId": "proofkit.test.trusted",
+                "minimumTrustRank": 9223372036854775807,
+                "obligationId": "proofkit.test.obligation",
+                "producerAdmissionClass": "merge_satisfying",
+                "proofClassId": "proofkit.test.proof_class",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "receiptKind": "proofkit.package-gate",
+                "receiptStatus": "passed",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "riskClass": "merge_gate",
+                "structuralFindings": [],
+                "trustClassId": "proofkit.test.trusted"
+              }
+            }
+          ],
+          "message": "obligation proofkit.test.obligation has admitted receipt trust class",
+          "ruleId": "proofkit.receipt-trust-class.proofkit.test.obligation",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "failedObligationCount": 0,
+        "obligationReceiptCount": 1,
+        "proofClassCount": 1,
+        "trustClassCount": 1
+      }
+    }
+  }
+]

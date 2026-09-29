@@ -1,0 +1,504 @@
+[
+  {
+    "case": "passed",
+    "exitCode": 0,
+    "input": {
+      "admissionId": "proofkit.test.currentness",
+      "nonClaims": [
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "obligationReceipts": [
+        {
+          "currentnessChecks": [
+            {
+              "checkClass": "binding",
+              "checkId": "proofkit.test.current",
+              "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "evidenceRefs": [
+                "proofkit/requirement-bindings.json"
+              ],
+              "nonClaims": [
+                "Currentness test input does not read files."
+              ],
+              "recordedDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "evidenceRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "nonClaims": [
+            "Receipt currentness test input does not prove merge readiness."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "owner": "proofkit.test.owner",
+          "proofRouteRef": "proofkit.test.route",
+          "reason": "test receipt is current",
+          "receiptId": "proofkit.test.receipt",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "scopeChecks": [
+            {
+              "admissionState": "admitted_current_scope",
+              "checkId": "proofkit.test.scope",
+              "currentScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "evidenceRefs": [
+                "artifacts/proofkit/scope.json"
+              ],
+              "nonClaims": [
+                "Scope test input does not compute changed files."
+              ],
+              "reason": "same scope",
+              "recordedScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "scopeClass": "changed_files"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": []
+        },
+        {
+          "key": "receiptCurrentnessScope",
+          "value": [
+            {
+              "currentnessFindings": [],
+              "decisionCandidateStates": [],
+              "obligationId": "proofkit.test.obligation",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "scopeFindings": []
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt currentness-scope admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt currentness-scope admission does not authenticate producer identity.",
+        "Receipt currentness-scope admission does not compute time-based receipt freshness.",
+        "Receipt currentness-scope admission does not discover current repository facts.",
+        "Receipt currentness-scope admission does not execute native commands or prove command semantics.",
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "reportId": "proofkit.test.currentness",
+      "reportKind": "proofkit.receipt-currentness-scope-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptCurrentnessScope",
+              "value": {
+                "currentnessFindings": [],
+                "decisionCandidateStates": [],
+                "obligationId": "proofkit.test.obligation",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "scopeFindings": []
+              }
+            }
+          ],
+          "message": "receipt proofkit.test.receipt is current and scoped for proofkit.test.obligation",
+          "ruleId": "proofkit.receipt-currentness-scope.proofkit.test.obligation",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "currentReceiptCount": 1,
+        "currentnessFindingCount": 0,
+        "failedObligationCount": 0,
+        "notApplicableCount": 0,
+        "obligationReceiptCount": 1,
+        "scopeFindingCount": 0,
+        "staleReceiptCount": 0,
+        "unknownScopeCount": 0
+      }
+    }
+  },
+  {
+    "case": "stale",
+    "exitCode": 1,
+    "input": {
+      "admissionId": "proofkit.test.currentness",
+      "nonClaims": [
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "obligationReceipts": [
+        {
+          "currentnessChecks": [
+            {
+              "checkClass": "binding",
+              "checkId": "proofkit.test.current",
+              "currentDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "evidenceRefs": [
+                "proofkit/requirement-bindings.json"
+              ],
+              "nonClaims": [
+                "Currentness test input does not read files."
+              ],
+              "recordedDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "evidenceRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "nonClaims": [
+            "Receipt currentness test input does not prove merge readiness."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "owner": "proofkit.test.owner",
+          "proofRouteRef": "proofkit.test.route",
+          "reason": "test receipt is current",
+          "receiptId": "proofkit.test.receipt",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "scopeChecks": [
+            {
+              "admissionState": "admitted_current_scope",
+              "checkId": "proofkit.test.scope",
+              "currentScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "evidenceRefs": [
+                "artifacts/proofkit/scope.json"
+              ],
+              "nonClaims": [
+                "Scope test input does not compute changed files."
+              ],
+              "reason": "same scope",
+              "recordedScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "scopeClass": "changed_files"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": [
+            "proofkit.test.obligation"
+          ]
+        },
+        {
+          "key": "receiptCurrentnessScope",
+          "value": [
+            {
+              "currentnessFindings": [
+                "currentness check proofkit.test.current recorded digest does not match current digest"
+              ],
+              "decisionCandidateStates": [
+                "stale_receipt"
+              ],
+              "obligationId": "proofkit.test.obligation",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "scopeFindings": []
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt currentness-scope admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt currentness-scope admission does not authenticate producer identity.",
+        "Receipt currentness-scope admission does not compute time-based receipt freshness.",
+        "Receipt currentness-scope admission does not discover current repository facts.",
+        "Receipt currentness-scope admission does not execute native commands or prove command semantics.",
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "reportId": "proofkit.test.currentness",
+      "reportKind": "proofkit.receipt-currentness-scope-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptCurrentnessScope",
+              "value": {
+                "currentnessFindings": [
+                  "currentness check proofkit.test.current recorded digest does not match current digest"
+                ],
+                "decisionCandidateStates": [
+                  "stale_receipt"
+                ],
+                "obligationId": "proofkit.test.obligation",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "scopeFindings": []
+              }
+            }
+          ],
+          "message": "receipt proofkit.test.receipt is stale or not scoped for proofkit.test.obligation",
+          "ruleId": "proofkit.receipt-currentness-scope.proofkit.test.obligation",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "currentReceiptCount": 0,
+        "currentnessFindingCount": 1,
+        "failedObligationCount": 1,
+        "notApplicableCount": 0,
+        "obligationReceiptCount": 1,
+        "scopeFindingCount": 0,
+        "staleReceiptCount": 1,
+        "unknownScopeCount": 0
+      }
+    }
+  },
+  {
+    "case": "not-applicable",
+    "exitCode": 0,
+    "input": {
+      "admissionId": "proofkit.test.currentness",
+      "nonClaims": [
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "obligationReceipts": [
+        {
+          "currentnessChecks": [
+            {
+              "checkClass": "binding",
+              "checkId": "proofkit.test.current",
+              "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "evidenceRefs": [
+                "proofkit/requirement-bindings.json"
+              ],
+              "nonClaims": [
+                "Currentness test input does not read files."
+              ],
+              "recordedDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "evidenceRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "nonClaims": [
+            "Receipt currentness test input does not prove merge readiness."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "owner": "proofkit.test.owner",
+          "proofRouteRef": "proofkit.test.route",
+          "reason": "test receipt is current",
+          "receiptId": "proofkit.test.receipt",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "scopeChecks": [
+            {
+              "admissionState": "not_applicable",
+              "checkId": "proofkit.test.scope",
+              "currentScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "evidenceRefs": [
+                "artifacts/proofkit/scope.json"
+              ],
+              "nonClaims": [
+                "Scope test input does not compute changed files."
+              ],
+              "reason": "same scope",
+              "recordedScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "scopeClass": "changed_files"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": []
+        },
+        {
+          "key": "receiptCurrentnessScope",
+          "value": [
+            {
+              "currentnessFindings": [],
+              "decisionCandidateStates": [
+                "not_applicable"
+              ],
+              "obligationId": "proofkit.test.obligation",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "scopeFindings": []
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt currentness-scope admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt currentness-scope admission does not authenticate producer identity.",
+        "Receipt currentness-scope admission does not compute time-based receipt freshness.",
+        "Receipt currentness-scope admission does not discover current repository facts.",
+        "Receipt currentness-scope admission does not execute native commands or prove command semantics.",
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "reportId": "proofkit.test.currentness",
+      "reportKind": "proofkit.receipt-currentness-scope-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptCurrentnessScope",
+              "value": {
+                "currentnessFindings": [],
+                "decisionCandidateStates": [
+                  "not_applicable"
+                ],
+                "obligationId": "proofkit.test.obligation",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "scopeFindings": []
+              }
+            }
+          ],
+          "message": "receipt proofkit.test.receipt is not applicable for proofkit.test.obligation",
+          "ruleId": "proofkit.receipt-currentness-scope.proofkit.test.obligation",
+          "status": "skipped"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "currentReceiptCount": 0,
+        "currentnessFindingCount": 0,
+        "failedObligationCount": 0,
+        "notApplicableCount": 1,
+        "obligationReceiptCount": 1,
+        "scopeFindingCount": 0,
+        "staleReceiptCount": 0,
+        "unknownScopeCount": 0
+      }
+    }
+  },
+  {
+    "case": "null-scope",
+    "exitCode": 0,
+    "input": {
+      "admissionId": "proofkit.test.currentness",
+      "nonClaims": [
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "obligationReceipts": [
+        {
+          "currentnessChecks": [
+            {
+              "checkClass": "binding",
+              "checkId": "proofkit.test.current",
+              "currentDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+              "evidenceRefs": [
+                "proofkit/requirement-bindings.json"
+              ],
+              "nonClaims": [
+                "Currentness test input does not read files."
+              ],
+              "recordedDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          ],
+          "evidenceRefs": [
+            "artifacts/proofkit/receipt.json"
+          ],
+          "nonClaims": [
+            "Receipt currentness test input does not prove merge readiness."
+          ],
+          "obligationId": "proofkit.test.obligation",
+          "owner": "proofkit.test.owner",
+          "proofRouteRef": "proofkit.test.route",
+          "reason": "test receipt is current",
+          "receiptId": "proofkit.test.receipt",
+          "requirementId": "REQ-PROOFKIT-TEST-001",
+          "scopeChecks": [
+            {
+              "admissionState": "admitted_current_scope",
+              "checkId": "proofkit.test.scope",
+              "currentScopeDigest": null,
+              "evidenceRefs": [
+                "artifacts/proofkit/scope.json"
+              ],
+              "nonClaims": [
+                "Scope test input does not compute changed files."
+              ],
+              "reason": "same scope",
+              "recordedScopeDigest": null,
+              "scopeClass": "changed_files"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failedObligationIds",
+          "value": []
+        },
+        {
+          "key": "receiptCurrentnessScope",
+          "value": [
+            {
+              "currentnessFindings": [],
+              "decisionCandidateStates": [],
+              "obligationId": "proofkit.test.obligation",
+              "proofRouteRef": "proofkit.test.route",
+              "receiptId": "proofkit.test.receipt",
+              "requirementId": "REQ-PROOFKIT-TEST-001",
+              "scopeFindings": []
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt currentness-scope admission does not approve merge, release, rollout, or production readiness.",
+        "Receipt currentness-scope admission does not authenticate producer identity.",
+        "Receipt currentness-scope admission does not compute time-based receipt freshness.",
+        "Receipt currentness-scope admission does not discover current repository facts.",
+        "Receipt currentness-scope admission does not execute native commands or prove command semantics.",
+        "Receipt currentness-scope report test input is not merge proof."
+      ],
+      "reportId": "proofkit.test.currentness",
+      "reportKind": "proofkit.receipt-currentness-scope-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "receiptCurrentnessScope",
+              "value": {
+                "currentnessFindings": [],
+                "decisionCandidateStates": [],
+                "obligationId": "proofkit.test.obligation",
+                "proofRouteRef": "proofkit.test.route",
+                "receiptId": "proofkit.test.receipt",
+                "requirementId": "REQ-PROOFKIT-TEST-001",
+                "scopeFindings": []
+              }
+            }
+          ],
+          "message": "receipt proofkit.test.receipt is current and scoped for proofkit.test.obligation",
+          "ruleId": "proofkit.receipt-currentness-scope.proofkit.test.obligation",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "currentReceiptCount": 1,
+        "currentnessFindingCount": 0,
+        "failedObligationCount": 0,
+        "notApplicableCount": 0,
+        "obligationReceiptCount": 1,
+        "scopeFindingCount": 0,
+        "staleReceiptCount": 0,
+        "unknownScopeCount": 0
+      }
+    }
+  }
+]

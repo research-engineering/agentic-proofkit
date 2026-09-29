@@ -2,12 +2,9 @@ package compactproofcontract
 
 import (
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"slices"
 	"strconv"
-	"strings"
-	"unicode"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
@@ -16,7 +13,7 @@ import (
 // InputStructure describes raw compact rows, including their header-dependent
 // cell types. Native normalization and semantic admission remain authoritative.
 func InputStructure() map[string]any {
-	space := trimSpacePatternClass()
+	space := jsonshape.TrimSpacePatternClass()
 	text := map[string]any{"type": "string", "pattern": "[^" + space + "]"}
 	identifier := jsonshape.StringGrammar(admit.RuleIDPatternBody).JSONSchema()
 	delete(identifier, "$schema")
@@ -169,17 +166,4 @@ func positionStructure(position int, cell any) map[string]any {
 
 func trimmedLiteralSchema(value, space string) map[string]any {
 	return map[string]any{"type": "string", "pattern": "^[" + space + "]*" + regexp.QuoteMeta(value) + "[" + space + "]*(?![\\s\\S])"}
-}
-
-func trimSpacePatternClass() string {
-	var result strings.Builder
-	for _, row := range unicode.White_Space.R16 {
-		for r := uint32(row.Lo); r <= uint32(row.Hi); r += uint32(row.Stride) {
-			fmt.Fprintf(&result, `\u%04x`, r)
-		}
-	}
-	if len(unicode.White_Space.R32) != 0 {
-		panic("compact structural whitespace projection requires supplementary escape support")
-	}
-	return result.String()
 }

@@ -90,6 +90,9 @@ jobs:
       - name: Verify compact contract structure
         run: npm run compact-contract:check
 
+      - name: Verify receipt contract structure
+        run: npm run receipt-contract:check
+
       - name: Verify generated command family catalog
         run: npm run command-family:check
 

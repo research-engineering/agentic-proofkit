@@ -226,7 +226,19 @@ func (shape Shape) admit(raw any, mode admissionMode) (any, *violation) {
 		return raw, nil
 	case stringGrammarKind:
 		value, ok := raw.(string)
-		if !ok || !n.grammar.MatchString(value) {
+		if !ok {
+			return nil, invalid("must match the declared text grammar")
+		}
+		if n.maxStringRunes > 0 {
+			remaining := n.maxStringRunes
+			for range value {
+				if remaining == 0 {
+					return nil, invalid(fmt.Sprintf("must contain at most %d code points", n.maxStringRunes))
+				}
+				remaining--
+			}
+		}
+		if !n.grammar.MatchString(value) {
 			return nil, invalid("must match the declared text grammar")
 		}
 		return raw, nil

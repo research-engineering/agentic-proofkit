@@ -16,3 +16,19 @@ func Structure(version int64, kind string, state, summary, diagnostics, rules js
 		jsonshape.Required("nonClaims", jsonshape.Array(jsonshape.String(), 0)),
 	)
 }
+
+func DiagnosticStructure(key string, value jsonshape.Shape) jsonshape.Shape {
+	return jsonshape.Object(
+		jsonshape.Required("key", jsonshape.StringLiteral(key)),
+		jsonshape.Required("value", value),
+	)
+}
+
+func RuleStructure(id, status, message, diagnostics jsonshape.Shape) jsonshape.Shape {
+	return jsonshape.Object(
+		jsonshape.Required("ruleId", id),
+		jsonshape.Required("status", status),
+		jsonshape.Required("message", message),
+		jsonshape.Required("diagnostics", diagnostics),
+	)
+}

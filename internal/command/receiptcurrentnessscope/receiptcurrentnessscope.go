@@ -9,7 +9,16 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
 )
 
-const reportKind = "proofkit.receipt-currentness-scope-admission"
+const (
+	reportKind        = "proofkit.receipt-currentness-scope-admission"
+	ruleIDPrefix      = "proofkit.receipt-currentness-scope."
+	digestPatternBody = `sha256:[a-f0-9]{64}`
+)
+
+var inputKeys = []string{"admissionId", "nonClaims", "obligationReceipts", "schemaVersion"}
+var obligationKeys = []string{"currentnessChecks", "evidenceRefs", "nonClaims", "obligationId", "owner", "proofRouteRef", "reason", "receiptId", "requirementId", "scopeChecks"}
+var currentnessKeys = []string{"checkClass", "checkId", "currentDigest", "evidenceRefs", "nonClaims", "recordedDigest"}
+var scopeKeys = []string{"admissionState", "checkId", "currentScopeDigest", "evidenceRefs", "nonClaims", "reason", "recordedScopeDigest", "scopeClass"}
 
 var scopeAdmissionStates = []string{
 	"admitted_current_scope",
@@ -19,7 +28,7 @@ var scopeAdmissionStates = []string{
 }
 var scopeAdmissionStateSet = toSet(scopeAdmissionStates)
 
-var digestPattern = regexp.MustCompile(`^sha256:[a-f0-9]{64}$`)
+var digestPattern = regexp.MustCompile(`^` + digestPatternBody + `$`)
 
 var boundaryNonClaims = []string{
 	"Receipt currentness-scope admission does not approve merge, release, rollout, or production readiness.",
@@ -166,7 +175,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("receipt currentness-scope input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"admissionId", "nonClaims", "obligationReceipts", "schemaVersion"}, "receipt currentness-scope input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "receipt currentness-scope input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -218,7 +227,7 @@ func obligationReceiptArray(raw any) ([]obligationReceipt, error) {
 }
 
 func admitObligationReceipt(record map[string]any) (obligationReceipt, error) {
-	if err := admit.KnownKeys(record, []string{"currentnessChecks", "evidenceRefs", "nonClaims", "obligationId", "owner", "proofRouteRef", "reason", "receiptId", "requirementId", "scopeChecks"}, "receipt currentness-scope obligation receipt"); err != nil {
+	if err := admit.KnownKeys(record, obligationKeys, "receipt currentness-scope obligation receipt"); err != nil {
 		return obligationReceipt{}, err
 	}
 	obligationID, err := admit.RuleID(record["obligationId"], "receipt currentness-scope obligationId")
@@ -302,7 +311,7 @@ func currentnessChecks(raw any) ([]currentnessCheck, error) {
 }
 
 func admitCurrentnessCheck(record map[string]any) (currentnessCheck, error) {
-	if err := admit.KnownKeys(record, []string{"checkClass", "checkId", "currentDigest", "evidenceRefs", "nonClaims", "recordedDigest"}, "receipt currentness-scope currentness check"); err != nil {
+	if err := admit.KnownKeys(record, currentnessKeys, "receipt currentness-scope currentness check"); err != nil {
 		return currentnessCheck{}, err
 	}
 	checkID, err := admit.RuleID(record["checkId"], "receipt currentness-scope currentness checkId")
@@ -366,7 +375,7 @@ func scopeChecks(raw any) ([]scopeCheck, error) {
 }
 
 func admitScopeCheck(record map[string]any) (scopeCheck, error) {
-	if err := admit.KnownKeys(record, []string{"admissionState", "checkId", "currentScopeDigest", "evidenceRefs", "nonClaims", "reason", "recordedScopeDigest", "scopeClass"}, "receipt currentness-scope scope check"); err != nil {
+	if err := admit.KnownKeys(record, scopeKeys, "receipt currentness-scope scope check"); err != nil {
 		return scopeCheck{}, err
 	}
 	checkID, err := admit.RuleID(record["checkId"], "receipt currentness-scope scope checkId")
@@ -489,7 +498,7 @@ func ruleResults(diagnostics []diagnostic) []report.RuleResult {
 			message = fmt.Sprintf("receipt %s is not applicable for %s", item.ReceiptID, item.ObligationID)
 		}
 		results = append(results, report.RuleResult{
-			RuleID:  "proofkit.receipt-currentness-scope." + item.ObligationID,
+			RuleID:  ruleIDPrefix + item.ObligationID,
 			Status:  status,
 			Message: message,
 			Diagnostics: []report.Diagnostic{

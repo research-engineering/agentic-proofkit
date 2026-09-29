@@ -118,6 +118,7 @@
       "python-minimum-runtime",
       "python-package-build",
       "python-package-verify",
+      "receipt-contract",
       "release-sbom",
       "self-hosting-package-gate",
       "self-hosting-receipt",
@@ -831,6 +832,35 @@
         }
       ],
       "parallelGroup": "browser-runtime",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.receipt-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "receipt-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "receipt-contract",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
@@ -1695,6 +1725,47 @@
       },
       "nonClaims": [
         "Release SBOM generation does not prove vulnerability absence, license approval, registry identity, or release approval.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.receipt-contract-check",
+      "inputSelectors": [
+        "cmd",
+        "go.mod",
+        "go.sum",
+        "internal",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/receipt-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
         "Self-hosting witness policy does not prove producer authentication or merge approval."
       ]
     }

@@ -49,6 +49,7 @@ type node struct {
 	tuple          []Shape
 	text           string
 	grammar        *regexp.Regexp
+	maxStringRunes int
 	boolean        *bool
 	alternatives   []Shape
 	discriminator  string
@@ -94,6 +95,23 @@ func Object(properties ...Property) Shape {
 	return Shape{node: &node{kind: objectKind, properties: fields, allowed: allowed}}
 }
 
+// RequiredObject binds an existing native member inventory to its complete
+// structural projection. Neither missing nor independently added fields fit.
+func RequiredObject(names []string, fields map[string]Shape) Shape {
+	if len(names) != len(fields) {
+		panic("JSON structure differs from native member inventory")
+	}
+	properties := make([]Property, 0, len(names))
+	for _, name := range names {
+		shape, ok := fields[name]
+		if !ok {
+			panic("JSON structure omits a native member")
+		}
+		properties = append(properties, Required(name, shape))
+	}
+	return Object(properties...)
+}
+
 func String() Shape { return Shape{node: &node{kind: stringKind}} }
 
 func StringSuffix(suffix string) Shape {
@@ -112,6 +130,17 @@ func StringGrammar(body string) Shape {
 		panic("invalid JSON string grammar declaration")
 	}
 	return Shape{node: &node{kind: stringGrammarKind, text: body, grammar: grammar}}
+}
+
+// BoundedStringGrammar counts Unicode code points, as JSON Schema maxLength does.
+// An ASCII-only grammar therefore also has the same byte bound.
+func BoundedStringGrammar(body string, maximumRunes int) Shape {
+	if maximumRunes <= 0 {
+		panic("JSON string grammar bound must be positive")
+	}
+	shape := StringGrammar(body)
+	shape.node.maxStringRunes = maximumRunes
+	return shape
 }
 
 func Boolean() Shape { return Shape{node: &node{kind: booleanKind}} }

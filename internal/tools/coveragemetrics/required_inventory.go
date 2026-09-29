@@ -38,6 +38,30 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "scripts/compact-proof-structure.test.mjs",
 			commandIDs:  []string{"proofkit.compact-contract-check"}, environmentClasses: []string{"local-go-node"},
 		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-cli-contract"}: {
+			witnessPath: "internal/app/receipt_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptCLIHistoricalWireAndTransports", "TestReceiptTrustCLIExactIntegerTokens"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/receipt_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptChildBindingsPreservePartialParent", "TestReceiptStructuresRejectRehashedNestedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-shared-structures"}: {
+			witnessPath: "internal/kernel/jsonshape/inventory_projection_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestBoundedStringGrammarPreservesCodePointLimits", "TestRequiredObjectPreservesItsExactInventory", "TestTrimSpacePatternClassMatchesNativeWhitespace"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-report-carriers"}: {
+			witnessPath: "internal/kernel/report/structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestNestedStructuresOwnJSONValueCarriers"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-schema-independent-runtime"}: {
+			witnessPath: "scripts/receipt-structure.test.mjs",
+			commandIDs:  []string{"proofkit.receipt-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.branch-native-contract"}: {
 			witnessPath: "internal/command/branchauthority/structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
