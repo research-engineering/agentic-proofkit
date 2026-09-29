@@ -87,6 +87,9 @@ jobs:
       - name: Verify generated command contracts
         run: npm run command-contract:check
 
+      - name: Verify compact contract structure
+        run: npm run compact-contract:check
+
       - name: Verify generated command family catalog
         run: npm run command-family:check
 

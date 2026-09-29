@@ -701,6 +701,7 @@ func TestBindingWitnessSelectorsRequireExactCriticalInventories(t *testing.T) {
 		"proofkit.supply-chain-quality.compact-contract-resource-bounds",
 		"proofkit.supply-chain-quality.compact-schema-isolation",
 		"proofkit.supply-chain-quality.compact-schema-owner",
+		"proofkit.supply-chain-quality.compact-schema-package-references",
 		"proofkit.supply-chain-quality.codeql-permission-separation",
 		"proofkit.supply-chain-quality.external-release-authority-typed-projection",
 		"proofkit.supply-chain-quality.go-dependency-consistency-gates",

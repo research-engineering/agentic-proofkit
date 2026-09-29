@@ -14,6 +14,11 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.compact-schema-package-references"}: {
+			witnessPath: "internal/tools/packageverify/reference_inventory_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestPublishedContractReferenceInventoryAcceptsCurrentNativeSchema", "TestSchemaDefinitionsAndReferencesAreResourceBound", "TestSchemaPropertyNamesAreNotPackageReferences", "TestSchemaReferenceInventoryCannotHideRealReferences"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.compact-schema-owner"}: {
 			witnessPath: "internal/tools/commandcontractgen/compact_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},

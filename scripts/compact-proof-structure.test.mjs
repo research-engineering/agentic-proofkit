@@ -22,7 +22,10 @@ let binary;
 before(() => {
   directory = mkdtempSync(join(tmpdir(), "proofkit-compact-structure-"));
   binary = join(directory, "agentic-proofkit");
-  execFileSync("go", ["build", "-o", binary, "./cmd/agentic-proofkit"], {cwd: root, timeout: 120_000, maxBuffer: 2 << 20});
+  execFileSync("go", ["build", "-mod=readonly", "-o", binary, "./cmd/agentic-proofkit"], {
+    cwd: root, timeout: 120_000, maxBuffer: 2 << 20,
+    env: {...process.env, GOPROXY: "off", GOSUMDB: "off", GOTOOLCHAIN: "local"},
+  });
 });
 after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
 
@@ -67,6 +70,14 @@ test("compact schema preserves every header/name position and rejects a wrong ce
       moveColumn(input, header, input[table], name, position);
       const label = `${header}/${name}/${position}`;
       pair(input, true, label);
+      const domainCase = structuredClone(input);
+      if (["requirement_id", "surface_id", "invariant_role", "owned_invariant", "blocking_status", "declared_mutation_resistance_claim_id"].includes(name)) {
+        domainCase[table][0][position] = "bad value";
+        pair(domainCase, false, `${label}/non-null identifier domain`);
+      } else if (["required_environment_classes", "preconditioned_environment_classes"].includes(name)) {
+        domainCase[table][0][position] = ["a b"];
+        pair(domainCase, false, `${label}/non-null identifier-list domain`);
+      }
       input[table][0][position] = null;
       pair(input, false, `${label}/null`);
     }
@@ -84,6 +95,11 @@ test("nested witness cell follows both independent header permutations", () => {
         const rows = input.bindings.flatMap(row => [row[input.binding_columns.indexOf("positive_witness")], row[input.binding_columns.indexOf("falsification_witness")]]);
         moveColumn(input, "witness_columns", rows, name, witnessPosition);
         pair(input, true, `${witness}/${bindingPosition}/${name}/${witnessPosition}`);
+        if (name === "environment_classes" || name === "resolution_order_index") {
+          const domainCase = structuredClone(input);
+          domainCase.bindings[0][bindingPosition][witnessPosition] = name === "environment_classes" ? ["a b"] : 0.5;
+          pair(domainCase, false, `${witness}/${bindingPosition}/${name}/${witnessPosition}/non-null domain`);
+        }
         input.bindings[0][bindingPosition][witnessPosition] = null;
         pair(input, false, `${witness}/${bindingPosition}/${name}/${witnessPosition}/null`);
       }

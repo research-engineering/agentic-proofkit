@@ -284,7 +284,7 @@ func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
 	if err := validateRootCheckScript(manifest.Scripts["check"]); err != nil {
 		t.Fatal(err)
 	}
-	for _, removed := range []string{"npm run go:check", "npm run browser:check", "npm run package:artifact"} {
+	for _, removed := range []string{"npm run compact-contract:check", "npm run go:check", "npm run browser:check", "npm run package:artifact"} {
 		mutant := strings.Replace(manifest.Scripts["check"], " && "+removed, "", 1)
 		if err := validateRootCheckScript(mutant); err == nil {
 			t.Fatalf("check oracle admitted removal of %q", removed)
@@ -293,7 +293,7 @@ func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
 }
 
 func validateRootCheckScript(script string) error {
-	if script != "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout" {
+	if script != "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout" {
 		return errors.New("root check must retain the exact ordered AND-only proof gates")
 	}
 	return nil
@@ -338,6 +338,7 @@ func TestGoDependencyGateWiring(t *testing.T) {
 	// Independent keys cover the protected chains and upstream CI npm gates.
 	for _, gate := range []string{
 		"check", "npm:version", "source-hygiene", "command-contract:check",
+		"compact-contract:check",
 		"command-family:check", "text-policy", "mermaid:check", "go:check",
 		"browser:check", "package:artifact", "self:receipt", "self:coverage",
 		"release:closeout", "go:fmt", "go:deps", "go:test", "go:vet",
@@ -463,7 +464,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 	}
 	const rootBeforeGo = "npm run npm:version\nnpm run source-hygiene\nnpm run command-contract:check\nnpm run command-family:check\nnpm run text-policy\nnpm run mermaid:check\nnpm run go:check\n"
 	const goAfterDeps = "npm run go:test\nnpm run go:vet\nnpm run go:staticcheck\nnpm run go:actionlint\nnpm run go:vulncheck\n"
-	const rootAfterGo = "npm run browser:check\nnpm run package:artifact\nnpm run self:receipt\nnpm run self:coverage\nnpm run release:closeout\n"
+	const rootAfterGo = "npm run compact-contract:check\nnpm run browser:check\nnpm run package:artifact\nnpm run self:receipt\nnpm run self:coverage\nnpm run release:closeout\n"
 	for _, entry := range []struct {
 		name, script, prefix, suffix string
 		root, masked                 bool
@@ -474,15 +475,16 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 		{"masked root control", scripts["check"] + " && true || true", rootBeforeGo + "npm run go:fmt\n", goAfterDeps + rootAfterGo, true, true},
 	} {
 		for _, failure := range []struct {
-			name                              string
-			tidyExit, verifyExit, goCheckExit int
+			name                                           string
+			tidyExit, verifyExit, goCheckExit, compactExit int
 		}{
-			{"positive control", 0, 0, 0},
-			{"tidy failure", 23, 0, 0},
-			{"verify failure", 0, 29, 0},
-			{"Go composition failure", 0, 0, 31},
+			{"positive control", 0, 0, 0, 0},
+			{"tidy failure", 23, 0, 0, 0},
+			{"verify failure", 0, 29, 0, 0},
+			{"Go composition failure", 0, 0, 31, 0},
+			{"compact schema failure", 0, 0, 0, 37},
 		} {
-			if failure.goCheckExit != 0 && !entry.root {
+			if (failure.goCheckExit != 0 || failure.compactExit != 0) && !entry.root {
 				continue
 			}
 			t.Run(entry.name+"/"+failure.name, func(t *testing.T) {
@@ -491,7 +493,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 				// Hook absence is proved by the separate map oracle, not emulated here.
 				// Execute owner shell composition with controlled children, never real full gates.
 				for name, body := range map[string]string{
-					"npm": "#!/bin/sh\nprintf 'npm %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'run go:deps') exec /bin/sh -c \"$DEPS_SCRIPT\";;\n'run go:check') if [ \"$GO_CHECK_EXIT\" != 0 ]; then exit \"$GO_CHECK_EXIT\"; fi; exec /bin/sh -c \"$GO_CHECK_SCRIPT\";;\nesac\n",
+					"npm": "#!/bin/sh\nprintf 'npm %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'run compact-contract:check') exit \"$COMPACT_EXIT\";;\n'run go:deps') exec /bin/sh -c \"$DEPS_SCRIPT\";;\n'run go:check') if [ \"$GO_CHECK_EXIT\" != 0 ]; then exit \"$GO_CHECK_EXIT\"; fi; exec /bin/sh -c \"$GO_CHECK_SCRIPT\";;\nesac\n",
 					"go":  "#!/bin/sh\nprintf 'go %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'mod tidy -diff') exit \"$TIDY_EXIT\";;\n'mod verify') exit \"$VERIFY_EXIT\";;\n*) exit 91;;\nesac\n",
 				} {
 					if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o700); err != nil {
@@ -509,6 +511,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 					"TIDY_EXIT=" + strconv.Itoa(failure.tidyExit),
 					"VERIFY_EXIT=" + strconv.Itoa(failure.verifyExit),
 					"GO_CHECK_EXIT=" + strconv.Itoa(failure.goCheckExit),
+					"COMPACT_EXIT=" + strconv.Itoa(failure.compactExit),
 				}
 				output, runErr := command.CombinedOutput()
 				wantExit := failure.tidyExit
@@ -523,6 +526,10 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 				if failure.goCheckExit != 0 {
 					wantExit = failure.goCheckExit
 					wantTrace = rootBeforeGo
+				}
+				if failure.compactExit != 0 {
+					wantExit = failure.compactExit
+					wantTrace = rootBeforeGo + "npm run go:fmt\nnpm run go:deps\ngo mod tidy -diff\ngo mod verify\n" + goAfterDeps + "npm run compact-contract:check\n"
 				}
 				if entry.masked {
 					wantExit = 0

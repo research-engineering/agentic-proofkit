@@ -109,6 +109,7 @@
     ],
     "parallelGroups": [
       "browser-runtime",
+      "compact-contract",
       "coverage-metrics",
       "local-go-static",
       "package-artifact",
@@ -255,7 +256,7 @@
       "credentialClass": "none",
       "cachePolicy": "disabled",
       "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
+      "parallelGroup": "compact-contract",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [

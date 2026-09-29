@@ -28,6 +28,42 @@ func TestSchemaPropertyNamesAreNotPackageReferences(t *testing.T) {
 	}
 }
 
+func TestSchemaDefinitionsAndReferencesAreResourceBound(t *testing.T) {
+	for _, schema := range []map[string]any{
+		{"$defs": map[string]any{"sourceRef": map[string]any{"type": "string"}}, "properties": map[string]any{"value": map[string]any{"$ref": "#/$defs/sourceRef"}}},
+		{"$defs": map[string]any{"escaped/name": true}, "$ref": "#/$defs/escaped~1name"},
+		{"$defs": map[string]any{"spaced name": false}, "$ref": "#/$defs/spaced%20name"},
+		{"$defs": map[string]any{"percent%name": true}, "$ref": "#/$defs/percent%25name"},
+		{"$defs": map[string]any{"self": map[string]any{"$ref": "#/$defs/self"}}, "$ref": "#/$defs/self"},
+		{"$defs": map[string]any{"inner": map[string]any{"$id": "urn:proofkit:inner", "$defs": map[string]any{"own": true}, "$ref": "#/$defs/own"}}},
+	} {
+		if err := checkSchemaReferenceFixture(t, schema, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, test := range []struct {
+		name   string
+		schema map[string]any
+	}{
+		{"missing", map[string]any{"$ref": "#/$defs/missing"}},
+		{"invalid escape", map[string]any{"$ref": "#/$defs/a~2b"}},
+		{"invalid percent", map[string]any{"$ref": "#/$defs/%zz"}},
+		{"encoded literal mismatch", map[string]any{"$defs": map[string]any{"spaced%20name": true}, "$ref": "#/$defs/spaced%20name"}},
+		{"outside definitions", map[string]any{"properties": map[string]any{"value": true}, "$ref": "#/properties/value"}},
+		{"non-object definitions", map[string]any{"$defs": []any{true}}},
+		{"non-schema declaration", map[string]any{"$defs": map[string]any{"sourceRef": "missing.json"}}},
+		{"metadata definition spoof", map[string]any{"metadata": map[string]any{"$defs": map[string]any{"sourceRef": true}}}},
+		{"external nested ref", map[string]any{"$defs": map[string]any{"safe": map[string]any{"$ref": "https://example.test/schema"}}}},
+		{"nested id cannot see outer", map[string]any{"$defs": map[string]any{"outer": true, "inner": map[string]any{"$id": "urn:proofkit:inner", "$ref": "#/$defs/outer"}}}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if checkSchemaReferenceFixture(t, test.schema, nil) == nil {
+				t.Fatal("unclosed schema reference admitted")
+			}
+		})
+	}
+}
+
 func TestSchemaReferenceInventoryCannotHideRealReferences(t *testing.T) {
 	tests := []struct {
 		name   string
