@@ -666,6 +666,7 @@ func ciSourceQualityProofSteps() []workflowStepExpectation {
 		{name: "Verify Go formatting", runCommand: "npm run go:fmt"},
 		{name: "Verify Go dependency consistency", runCommand: "npm run go:deps"},
 		{name: "Verify generated command contracts", runCommand: "npm run command-contract:check"},
+		{name: "Verify compact contract structure", runCommand: "npm run compact-contract:check"},
 		{name: "Verify generated command family catalog", runCommand: "npm run command-family:check"},
 		{name: "Run all Go tests", runCommand: "npm run go:test"},
 		{name: "Run Go vet", runCommand: "npm run go:vet"},

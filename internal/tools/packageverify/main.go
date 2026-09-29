@@ -654,9 +654,9 @@ func verifyRootManifestBoundary(artifact rootPackageArtifact) error {
 	if manifest.SideEffects {
 		return fmt.Errorf("root package sideEffects must be false")
 	}
-	expectedDevDependencies := map[string]string{"@playwright/test": "1.62.1", "axe-core": "4.13.0", "typescript": "7.0.2"}
+	expectedDevDependencies := map[string]string{"@playwright/test": "1.62.1", "ajv": "8.20.0", "axe-core": "4.13.0", "typescript": "7.0.2"}
 	if !maps.Equal(manifest.DevDependencies, expectedDevDependencies) {
-		return fmt.Errorf("root package devDependencies must equal the source-only browser proof toolchain")
+		return fmt.Errorf("root package devDependencies must equal the source-only proof toolchain")
 	}
 	if manifest.Repository.Type != "git" || manifest.Repository.URL != "git+https://github.com/research-engineering/agentic-proofkit.git" {
 		return fmt.Errorf("root package repository must be git+https://github.com/research-engineering/agentic-proofkit.git")

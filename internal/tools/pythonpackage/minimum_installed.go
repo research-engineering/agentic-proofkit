@@ -13,6 +13,7 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/cliexec"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/workflowsmoke"
 )
 
@@ -135,7 +136,7 @@ func verifyMinimumInstalledPython() error {
 	if err != nil {
 		return err
 	}
-	contract, err := artifactfile.ReadBounded(root, sourceCLIContractPath, maximumWheelTextEntryBytes)
+	contract, err := artifactfile.ReadBounded(root, sourceCLIContractPath, installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return err
 	}

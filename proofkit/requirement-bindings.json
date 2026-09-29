@@ -1707,6 +1707,10 @@
       "witnessPath": "scripts/source_hygiene_test.go",
       "witnessSelectors": [
         {
+          "selector": "TestSourceHygieneBoundsLargeStagedBlobs",
+          "command": "go test ./scripts -run '^TestSourceHygieneBoundsLargeStagedBlobs$'"
+        },
+        {
           "selector": "TestSourceHygieneIgnoresTokenSubstringsInsideContentDigests",
           "command": "go test ./scripts -run '^TestSourceHygieneIgnoresTokenSubstringsInsideContentDigests$'"
         },
@@ -9289,6 +9293,111 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.compact-schema-owner",
+      "witnessId": "proofkit.compact-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/compact_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCompactChildBindingsHaveExactIndependentConsumers",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestCompactChildBindingsHaveExactIndependentConsumers$'"
+        },
+        {
+          "selector": "TestCompactStructureVersionAndRehashedClausesRemainOwnerBound",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestCompactStructureVersionAndRehashedClausesRemainOwnerBound$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.compact-schema-isolation",
+      "witnessId": "proofkit.compact-schema-isolation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/compactproofcontract/structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestCompactInputStructureIsDetachedAndPreservesNativeAdmission",
+          "command": "go test ./internal/kernel/compactproofcontract -run '^TestCompactInputStructureIsDetachedAndPreservesNativeAdmission$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.compact-contract-resource-bounds",
+      "witnessId": "proofkit.compact-contract-resource-bounds",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/pythonpackage/contract_resource_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWheelContractResourceLimitDoesNotRaiseOtherEntryLimits",
+          "command": "go test ./internal/tools/pythonpackage -run '^TestWheelContractResourceLimitDoesNotRaiseOtherEntryLimits$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.compact-schema-independent-runtime",
+      "witnessId": "proofkit.compact-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/compact-proof-structure.test.mjs",
+      "commandIds": [
+        "proofkit.compact-contract-check"
+      ],
+      "environmentClasses": [
+        "local-go-node"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.compact-schema-package-references",
+      "witnessId": "proofkit.compact-schema-package-references",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/packageverify/reference_inventory_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestPublishedContractReferenceInventoryAcceptsCurrentNativeSchema",
+          "command": "go test ./internal/tools/packageverify -run '^TestPublishedContractReferenceInventoryAcceptsCurrentNativeSchema$'"
+        },
+        {
+          "selector": "TestSchemaDefinitionsAndReferencesAreResourceBound",
+          "command": "go test ./internal/tools/packageverify -run '^TestSchemaDefinitionsAndReferencesAreResourceBound$'"
+        },
+        {
+          "selector": "TestSchemaPropertyNamesAreNotPackageReferences",
+          "command": "go test ./internal/tools/packageverify -run '^TestSchemaPropertyNamesAreNotPackageReferences$'"
+        },
+        {
+          "selector": "TestSchemaReferenceInventoryCannotHideRealReferences",
+          "command": "go test ./internal/tools/packageverify -run '^TestSchemaReferenceInventoryCannotHideRealReferences$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [
@@ -9391,6 +9500,11 @@
       "commandId": "proofkit.release-sbom",
       "command": "npm run release:sbom",
       "environmentClass": "local-go"
+    },
+    {
+      "commandId": "proofkit.compact-contract-check",
+      "command": "npm run compact-contract:check",
+      "environmentClass": "local-go-node"
     }
   ],
   "nonClaims": [

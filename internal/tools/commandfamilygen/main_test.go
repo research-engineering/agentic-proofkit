@@ -8,6 +8,31 @@ import (
 	"testing"
 )
 
+func TestCLIContractAndFamilyCatalogHaveDistinctResourceBounds(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "resource.json")
+	const prefix = `{"commands":[{"command":"sample"}]}`
+	for _, size := range []int{2 << 20, (2 << 20) + 1} {
+		content := prefix + strings.Repeat(" ", size-len(prefix))
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+		commands, err := readCLICommands(path)
+		if size == 2<<20 {
+			if err != nil || len(commands) != 1 || commands[0] != "sample" {
+				t.Fatalf("exact-bound contract rejected: %v", err)
+			}
+		} else if err == nil || commands != nil || !strings.Contains(err.Error(), "exceeds resource limit") {
+			t.Fatalf("one-over contract did not fail closed: %v", err)
+		}
+	}
+	if err := os.WriteFile(path, bytes.Repeat([]byte(" "), (1<<20)+1), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := readCatalog(path); err == nil || !strings.Contains(err.Error(), "catalog exceeds size limit") {
+		t.Fatalf("unrelated family-catalog bound was raised: %v", err)
+	}
+}
+
 func TestGeneratedCommandFamilyProjectionIsFresh(t *testing.T) {
 	root := repositoryRoot(t)
 	expected, err := render(root)

@@ -19,6 +19,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/diagnostic"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 )
 
 const (
@@ -141,7 +142,7 @@ func readCLICommands(path string) ([]string, error) {
 		return nil, err
 	}
 	defer file.Close()
-	raw, err := admission.DecodeJSON(file, maxCatalogBytes)
+	raw, err := admission.DecodeJSON(file, installedclicontract.MaximumContractBytes)
 	if err != nil {
 		return nil, err
 	}

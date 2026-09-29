@@ -22,6 +22,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admission"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/releaseplatform"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/artifactfile"
+	"github.com/research-engineering/agentic-proofkit/internal/tools/installedclicontract"
 	"github.com/research-engineering/agentic-proofkit/internal/tools/repositorysnapshot"
 )
 
@@ -240,7 +241,11 @@ func runMinimumPython(ctx context.Context) (receipt minimumReceipt, err error) {
 	}
 	sources := []string{"package.json", "LICENSE", sourceCLIContractPath, "python/agentic_proofkit/__init__.py", "python/agentic_proofkit/__main__.py", "python/agentic_proofkit/cli.py", "artifacts/pypi/python-packages.json"}
 	for _, path := range sources {
-		content, err := artifactfile.ReadBounded(root, path, 1<<20)
+		limit := int64(maximumWheelTextEntryBytes)
+		if path == sourceCLIContractPath {
+			limit = installedclicontract.MaximumContractBytes
+		}
+		content, err := artifactfile.ReadBounded(root, path, limit)
 		if err != nil {
 			return receipt, err
 		}

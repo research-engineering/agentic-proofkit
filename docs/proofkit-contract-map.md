@@ -21,6 +21,18 @@ admission and runtime witnesses remain mandatory.
 Its `commandRouteGrammar.omittedRoutePolicy` field owns how consumers expand a
 command record that omits an explicit `route`.
 
+Compact proof declaration v2 has one structural definition:
+`proofkit.compact-proof-contract.input.v2.json-schema`. Its raw table headers
+may be permuted or padded; the normalized column name selects each cell type,
+including the independently permutable witness rows. Load this schema resource
+once and compose `$ref` references to its `$id`, rather than duplicating the
+identified schema inline. Child bindings apply to the child value when present
+and non-null in the admitted variant; they do not make an optional child required.
+Native admission still owns canonical numeric tokens, privacy, normalization,
+identity parsing and cross-record references. Parent commands retain their own
+root-shape-only limits. The installed machine-contract resource is bounded to
+2 MiB; this does not raise other package entry limits.
+
 A command's `contractId` versions its admitted semantics; `schemaVersion`
 names the outer JSON wire shape. These versions need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the

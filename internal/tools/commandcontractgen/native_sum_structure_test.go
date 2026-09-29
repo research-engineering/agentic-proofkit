@@ -97,7 +97,7 @@ func TestNativeSumStructureRetainsBranchesAndRequiresOneRootIdentity(t *testing.
 			if !reflect.DeepEqual(variant["schema"], schema) {
 				t.Fatal("sum was flattened")
 			}
-			version, err := nativeSchemaVersion(schema)
+			version, err := nativeSchemaVersion(schema, "schemaVersion")
 			if err != nil || version != "4" {
 				t.Fatalf("version=%v: %v", version, err)
 			}

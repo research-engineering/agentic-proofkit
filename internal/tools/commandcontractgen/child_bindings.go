@@ -7,6 +7,7 @@ import (
 )
 
 const sourceV2DefinitionID = "proofkit.requirement-source.input.v2.json-schema"
+const compactV2DefinitionID = "proofkit.compact-proof-contract.input.v2.json-schema"
 
 type nativeChildBinding struct {
 	command    string
@@ -33,6 +34,15 @@ func nativeChildBindings() []nativeChildBinding {
 		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{"requirementSource"}}, ""},
 		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{"context", "projections", "requirementSources", "*"}}, "07-workspace"},
 		{"requirement-browser-server", "input", sourceV2DefinitionID, [][]string{{}}, "05-source"},
+		{"requirement-proof-view", "input", compactV2DefinitionID, [][]string{{}}, "01-compact"},
+		{"requirement-browser-server", "input", compactV2DefinitionID, [][]string{{}}, "03-proof-compact"},
+		{"requirement-browser-server", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
+		{"requirement-coverage-input-compose", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
+		{"requirement-coverage-input-compose", "output", compactV2DefinitionID, [][]string{{"compactProofContract"}}, ""},
+		{"requirement-coverage-view", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "01-coverage-compact"},
+		{"requirement-impact-input-compose", "input", compactV2DefinitionID, [][]string{{"baseCompactProofContract"}, {"currentCompactProofContract"}}, ""},
+		{"test-evidence-inventory", "input", compactV2DefinitionID, [][]string{{"compactProofContract"}}, "03-proof-binding-derived"},
+		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, ""},
 	}
 }
 

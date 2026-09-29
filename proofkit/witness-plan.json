@@ -14,6 +14,7 @@
     "environmentClasses": [
       "local-go",
       "local-go-legacy-positive",
+      "local-go-node",
       "local-go-python",
       "local-go-python-native-docker",
       "local-node-browser",
@@ -40,6 +41,18 @@
         "networkPolicies": ["none"],
         "credentialClasses": ["none"],
         "cachePolicies": ["disabled"]
+      },
+      {
+        "environmentClass": "local-go-node",
+        "networkPolicies": [
+          "none"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "cachePolicies": [
+          "disabled"
+        ]
       },
       {
         "environmentClass": "local-go-python",
@@ -96,6 +109,7 @@
     ],
     "parallelGroups": [
       "browser-runtime",
+      "compact-contract",
       "coverage-metrics",
       "local-go-static",
       "package-artifact",
@@ -214,6 +228,35 @@
       "cachePolicy": "disabled",
       "expectedArtifacts": [],
       "parallelGroup": "local-go-static",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.compact-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "compact-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "compact-contract",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
@@ -1015,6 +1058,47 @@
       "nonClaims": [
         "Generated projection freshness does not execute native command semantics or validate package publication.",
         "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.compact-contract-check",
+      "inputSelectors": [
+        "cmd",
+        "go.mod",
+        "go.sum",
+        "internal",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/compact-proof-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "The independent schema and native CLI matrix proves selected structural clauses, not equivalence with native-only semantics or every possible input.",
+        "The test builds the CLI and uses pinned development dependencies; it does not execute caller witnesses or prove package publication."
       ]
     },
     {

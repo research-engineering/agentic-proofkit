@@ -1,13 +1,56 @@
 package main
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+	"time"
 )
+
+func TestSourceHygieneBoundsLargeStagedBlobs(t *testing.T) {
+	root := t.TempDir()
+	runCommand(t, root, "git", "init")
+	path := filepath.Join(root, "source.json")
+	prefix := strings.Repeat(" ", 2<<20)
+	write := func(content string) {
+		t.Helper()
+		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := func() (string, error) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+		defer cancel()
+		command := exec.CommandContext(ctx, "node", sourceHygieneScriptPath(t))
+		command.Dir = root
+		output, err := command.CombinedOutput()
+		if ctx.Err() != nil {
+			t.Fatalf("source hygiene timed out: %v", ctx.Err())
+		}
+		return string(output), err
+	}
+	write(prefix + "{}\n")
+	runCommand(t, root, "git", "add", "source.json")
+	if output, err := run(); err != nil || output != "" {
+		t.Fatalf("large clean staged blob: %v %s", err, output)
+	}
+	write(prefix + strings.Join([]string{"auto", "fleet"}, ""))
+	runCommand(t, root, "git", "add", "source.json")
+	write("{}\n")
+	if output, err := run(); err == nil || !strings.Contains(output, "organization-specific text leaked into Proofkit: source.json") {
+		t.Fatalf("staged suffix beyond old buffer was not scanned: %v %s", err, output)
+	}
+	write(strings.Repeat(" ", (16<<20)+1))
+	runCommand(t, root, "git", "add", "source.json")
+	if output, err := run(); err == nil || !strings.Contains(output, "ENOBUFS") {
+		t.Fatalf("oversized index must fail without truncation: %v %s", err, output)
+	}
+}
 
 func TestSourceHygieneReadsStagedBlob(t *testing.T) {
 	t.Parallel()
