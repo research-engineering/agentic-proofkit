@@ -241,6 +241,18 @@ func TestVerifyRootManifestBoundaryRejectsDevDependencyDrift(t *testing.T) {
 		patch func(string) string
 	}{
 		{
+			name: "missing schema validator",
+			patch: func(manifest string) string {
+				return strings.Replace(manifest, "    \"ajv\": \"8.20.0\",\n", "", 1)
+			},
+		},
+		{
+			name: "wrong schema validator version",
+			patch: func(manifest string) string {
+				return strings.Replace(manifest, "\"ajv\": \"8.20.0\"", "\"ajv\": \"8.19.0\"", 1)
+			},
+		},
+		{
 			name: "missing dependency",
 			patch: func(manifest string) string {
 				return strings.Replace(manifest, "    \"axe-core\": \"4.13.0\",\n", "", 1)
@@ -2107,6 +2119,7 @@ func packageManifestFixture(repositoryURL string) string {
   "sideEffects": false,
   "devDependencies": {
     "@playwright/test": "1.62.1",
+    "ajv": "8.20.0",
     "axe-core": "4.13.0",
     "typescript": "7.0.2"
   },
