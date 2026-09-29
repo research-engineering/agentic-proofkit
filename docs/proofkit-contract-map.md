@@ -33,6 +33,14 @@ identity parsing and cross-record references. Parent commands retain their own
 root-shape-only limits. The installed machine-contract resource is bounded to
 2 MiB; this does not raise other package entry limits.
 
+`receipt-currentness-scope` and `receipt-trust-class` publish nested input and
+output structures, including required nullable fields and typed report
+diagnostics. Their optional inputs in
+`selective-gate-obligation-decision-input` bind those same owners. Native
+admission still owns normalized uniqueness, reference resolution and declared
+trust-policy evaluation. A failed JSON report is an admitted negative result,
+not an input-admission error; the latter produces stderr without a report.
+
 A command's `contractId` versions its admitted semantics; `schemaVersion`
 names the outer JSON wire shape. These versions need not coincide. Adoption
 materialization plan/apply input v3 retains payload `schemaVersion: 2`, while the

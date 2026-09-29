@@ -51,6 +51,11 @@ var sourceCutoverDirectionDeltas = []string{
 var nativeBoundaryDirectionDeltas = []string{
 	"branch-authority/input:compatibilitySummary,nativeAdmissionWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"branch-authority/output:compatibilitySummary,nativeOutputWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"receipt-currentness-scope/input:compatibilitySummary,nativeAdmissionWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"receipt-currentness-scope/output:compatibilitySummary,nativeOutputWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"receipt-trust-class/input:compatibilitySummary,nativeAdmissionWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"receipt-trust-class/output:compatibilitySummary,nativeOutputWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-obligation-decision-input/input:childDefinitionBindings",
 	"adopt-materialize-apply/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-plan/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-recover/output:compatibilitySummary,contractId,nativeSources",
@@ -119,7 +124,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 33 || len(added) != 29+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 37 || len(added) != 33+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

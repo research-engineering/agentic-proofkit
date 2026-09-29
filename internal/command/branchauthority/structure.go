@@ -13,10 +13,10 @@ const branchDescription = "Native branchName admission preserves the original st
 // InputStructure describes the carrier; native annotations do not turn JSON
 // Schema validation into framing, normalization or semantic evaluation.
 func InputStructure() map[string]any {
-	shape := requiredObject(inputKeys, map[string]jsonshape.Shape{
+	shape := jsonshape.RequiredObject(inputKeys, map[string]jsonshape.Shape{
 		"schemaVersion":       jsonshape.IntegerLiteral(1),
 		"reportId":            jsonshape.StringGrammar(admit.RuleIDPatternBody),
-		"branchRefs":          jsonshape.Array(requiredObject(refKeys, refFields()), 1),
+		"branchRefs":          jsonshape.Array(jsonshape.RequiredObject(refKeys, refFields()), 1),
 		"preexistingFailures": jsonshape.Array(jsonshape.String(), 0),
 		"nonClaims":           jsonshape.Array(jsonshape.String(), 1),
 	})
@@ -35,11 +35,8 @@ func InputStructure() map[string]any {
 func OutputStructure() map[string]any {
 	refs := refFields()
 	refs["alignment"] = jsonshape.Enum(map[string]struct{}{"aligned": {}, "drifted": {}})
-	outputRef := requiredObject(append(slices.Clone(refKeys), "alignment"), refs)
+	outputRef := jsonshape.RequiredObject(append(slices.Clone(refKeys), "alignment"), refs)
 	identifiers := jsonshape.Array(jsonshape.StringGrammar(admit.RuleIDPatternBody), 0)
-	diagnostic := func(key string, value jsonshape.Shape) jsonshape.Shape {
-		return jsonshape.Object(jsonshape.Required("key", jsonshape.StringLiteral(key)), jsonshape.Required("value", value))
-	}
 	shape := report.Structure(1, reportKind,
 		jsonshape.Enum(map[string]struct{}{statusFailedIf(false): {}, statusFailedIf(true): {}}),
 		jsonshape.Object(
@@ -48,9 +45,9 @@ func OutputStructure() map[string]any {
 			jsonshape.Required("requiredDriftCount", jsonshape.IntegerMinimum(0)),
 		),
 		jsonshape.Tuple(
-			diagnostic("advisoryDriftRefIds", identifiers),
-			diagnostic("branchRefs", jsonshape.Array(outputRef, 1)),
-			diagnostic("requiredDriftRefIds", identifiers),
+			report.DiagnosticStructure("advisoryDriftRefIds", identifiers),
+			report.DiagnosticStructure("branchRefs", jsonshape.Array(outputRef, 1)),
+			report.DiagnosticStructure("requiredDriftRefIds", identifiers),
 		),
 		jsonshape.Tuple(
 			ruleResultStructure(advisoryRuleID, statusWarningIf, messageAdvisory),
@@ -79,22 +76,6 @@ func OutputStructure() map[string]any {
 	}
 	nonClaims["allOf"] = contains
 	return schema
-}
-
-// Both nested declarations must match the native KnownKeys inventories.
-func requiredObject(keys []string, fields map[string]jsonshape.Shape) jsonshape.Shape {
-	if len(keys) != len(fields) {
-		panic("branch authority structure differs from native member inventory")
-	}
-	properties := make([]jsonshape.Property, 0, len(keys))
-	for _, key := range keys {
-		shape, ok := fields[key]
-		if !ok {
-			panic("branch authority structure omits a native member")
-		}
-		properties = append(properties, jsonshape.Required(key, shape))
-	}
-	return jsonshape.Object(properties...)
 }
 
 func refFields() map[string]jsonshape.Shape {
@@ -136,12 +117,8 @@ func describeRef(schema map[string]any) {
 
 func ruleResultStructure(id string, status func(bool) string, message func(int) string) jsonshape.Shape {
 	variant := func(active bool, count int) jsonshape.Shape {
-		return jsonshape.Object(
-			jsonshape.Required("ruleId", jsonshape.StringLiteral(id)),
-			jsonshape.Required("status", jsonshape.StringLiteral(status(active))),
-			jsonshape.Required("message", jsonshape.StringLiteral(message(count))),
-			jsonshape.Required("diagnostics", jsonshape.Tuple()),
-		)
+		return report.RuleStructure(jsonshape.StringLiteral(id), jsonshape.StringLiteral(status(active)),
+			jsonshape.StringLiteral(message(count)), jsonshape.Tuple())
 	}
 	return jsonshape.OneOf(variant(false, 0), variant(true, 1))
 }

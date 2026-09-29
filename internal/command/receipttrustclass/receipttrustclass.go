@@ -11,8 +11,14 @@ import (
 
 const (
 	reportKind      = "proofkit.receipt-trust-class-admission"
+	ruleIDPrefix    = "proofkit.receipt-trust-class."
 	maxTrustClasses = 4096
 )
+
+var inputKeys = []string{"nonClaims", "obligationReceipts", "policyId", "proofClasses", "schemaVersion", "trustClasses"}
+var trustClassKeys = []string{"allowedProducerAdmissionLevels", "allowedReceiptStatuses", "nonClaims", "rank", "requiresArtifactRefs", "requiresProvenanceRef", "trustClassId"}
+var proofClassKeys = []string{"allowedEnvironmentClasses", "allowedReceiptKinds", "minimumTrustClassId", "nonClaims", "owner", "proofClassId", "rationale", "riskClass"}
+var obligationKeys = []string{"artifactRefs", "environmentClass", "evidenceRefs", "nonClaims", "obligationId", "producerAdmissionClass", "proofClassId", "proofRouteRef", "provenanceRef", "receiptId", "receiptKind", "receiptStatus", "requirementId", "trustClassId"}
 
 var producerAdmissionLevels = proofvocab.MergeSatisfactionClasses()
 var producerAdmissionLevelSet = proofvocab.MergeSatisfactionClassSet()
@@ -172,7 +178,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("receipt trust-class input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"nonClaims", "obligationReceipts", "policyId", "proofClasses", "schemaVersion", "trustClasses"}, "receipt trust-class input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "receipt trust-class input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -286,7 +292,7 @@ func isSubset(values []string, allowed []string) bool {
 }
 
 func admitTrustClass(record map[string]any) (trustClass, error) {
-	if err := admit.KnownKeys(record, []string{"allowedProducerAdmissionLevels", "allowedReceiptStatuses", "nonClaims", "rank", "requiresArtifactRefs", "requiresProvenanceRef", "trustClassId"}, "receipt trust-class trustClass"); err != nil {
+	if err := admit.KnownKeys(record, trustClassKeys, "receipt trust-class trustClass"); err != nil {
 		return trustClass{}, err
 	}
 	requiresProvenanceRef, err := admit.Bool(record["requiresProvenanceRef"], "receipt trust-class requiresProvenanceRef")
@@ -355,7 +361,7 @@ func proofClassArray(raw any, trustClassIDs map[string]struct{}) ([]proofClass, 
 }
 
 func admitProofClass(record map[string]any, trustClassIDs map[string]struct{}) (proofClass, error) {
-	if err := admit.KnownKeys(record, []string{"allowedEnvironmentClasses", "allowedReceiptKinds", "minimumTrustClassId", "nonClaims", "owner", "proofClassId", "rationale", "riskClass"}, "receipt trust-class proofClass"); err != nil {
+	if err := admit.KnownKeys(record, proofClassKeys, "receipt trust-class proofClass"); err != nil {
 		return proofClass{}, err
 	}
 	minimumTrustClassID, err := admit.RuleID(record["minimumTrustClassId"], "receipt trust-class minimumTrustClassId")
@@ -432,7 +438,7 @@ func obligationArray(raw any) ([]obligationReceipt, error) {
 }
 
 func admitObligation(record map[string]any) (obligationReceipt, error) {
-	if err := admit.KnownKeys(record, []string{"artifactRefs", "environmentClass", "evidenceRefs", "nonClaims", "obligationId", "producerAdmissionClass", "proofClassId", "proofRouteRef", "provenanceRef", "receiptId", "receiptKind", "receiptStatus", "requirementId", "trustClassId"}, "receipt trust-class obligation receipt"); err != nil {
+	if err := admit.KnownKeys(record, obligationKeys, "receipt trust-class obligation receipt"); err != nil {
 		return obligationReceipt{}, err
 	}
 	obligationID, err := admit.RuleID(record["obligationId"], "receipt trust-class obligationId")
@@ -599,7 +605,7 @@ func ruleResults(diagnostics []diagnostic) []report.RuleResult {
 			message = fmt.Sprintf("obligation %s has invalid receipt trust class", item.ObligationID)
 		}
 		results = append(results, report.RuleResult{
-			RuleID:  "proofkit.receipt-trust-class." + item.ObligationID,
+			RuleID:  ruleIDPrefix + item.ObligationID,
 			Status:  status,
 			Message: message,
 			Diagnostics: []report.Diagnostic{

@@ -97,6 +97,9 @@ func (shape Shape) schemaValue() map[string]any {
 		value["type"], value["pattern"] = "string", regexp.QuoteMeta(n.text)+`(?![\s\S])`
 	case stringGrammarKind:
 		value["type"], value["pattern"] = "string", "^(?:"+n.text+`)(?![\s\S])`
+		if n.maxStringRunes > 0 {
+			value["maxLength"] = json.Number(strconv.Itoa(n.maxStringRunes))
+		}
 	case decimalIntegerKind:
 		value["type"], value["x-proofkit-number-encoding"] = "string", "decimal-int64"
 	case integerLiteralKind:

@@ -9398,6 +9398,111 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-cli-contract",
+      "witnessId": "proofkit.receipt-cli-contract",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/receipt_contract_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReceiptCLIHistoricalWireAndTransports",
+          "command": "go test ./internal/app -run '^TestReceiptCLIHistoricalWireAndTransports$'"
+        },
+        {
+          "selector": "TestReceiptTrustCLIExactIntegerTokens",
+          "command": "go test ./internal/app -run '^TestReceiptTrustCLIExactIntegerTokens$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-schema-owner",
+      "witnessId": "proofkit.receipt-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/receipt_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestReceiptChildBindingsPreservePartialParent",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestReceiptChildBindingsPreservePartialParent$'"
+        },
+        {
+          "selector": "TestReceiptStructuresRejectRehashedNestedDrift",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestReceiptStructuresRejectRehashedNestedDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-shared-structures",
+      "witnessId": "proofkit.receipt-shared-structures",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/jsonshape/inventory_projection_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestBoundedStringGrammarPreservesCodePointLimits",
+          "command": "go test ./internal/kernel/jsonshape -run '^TestBoundedStringGrammarPreservesCodePointLimits$'"
+        },
+        {
+          "selector": "TestRequiredObjectPreservesItsExactInventory",
+          "command": "go test ./internal/kernel/jsonshape -run '^TestRequiredObjectPreservesItsExactInventory$'"
+        },
+        {
+          "selector": "TestTrimSpacePatternClassMatchesNativeWhitespace",
+          "command": "go test ./internal/kernel/jsonshape -run '^TestTrimSpacePatternClassMatchesNativeWhitespace$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-report-carriers",
+      "witnessId": "proofkit.receipt-report-carriers",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/report/structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestNestedStructuresOwnJSONValueCarriers",
+          "command": "go test ./internal/kernel/report -run '^TestNestedStructuresOwnJSONValueCarriers$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-schema-independent-runtime",
+      "witnessId": "proofkit.receipt-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/receipt-structure.test.mjs",
+      "commandIds": [
+        "proofkit.receipt-contract-check"
+      ],
+      "environmentClasses": [
+        "local-go-node"
+      ]
     }
   ],
   "witnessCommands": [
@@ -9504,6 +9609,11 @@
     {
       "commandId": "proofkit.compact-contract-check",
       "command": "npm run compact-contract:check",
+      "environmentClass": "local-go-node"
+    },
+    {
+      "commandId": "proofkit.receipt-contract-check",
+      "command": "npm run receipt-contract:check",
       "environmentClass": "local-go-node"
     }
   ],

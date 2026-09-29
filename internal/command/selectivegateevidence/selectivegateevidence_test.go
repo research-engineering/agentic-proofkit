@@ -89,20 +89,27 @@ func TestProjectObligationDecisionRejectsDuplicateObligationIDs(t *testing.T) {
 }
 
 func TestProjectObligationDecisionWithoutCurrentnessOrTrustDoesNotSatisfyBlockingObligation(t *testing.T) {
-	projected, err := ProjectObligationDecision(validProjectionInput())
-	if err != nil {
-		t.Fatalf("ProjectObligationDecision() error=%v", err)
-	}
-	result, err := obligationdecision.Build(projected)
-	if err != nil {
-		t.Fatalf("obligationdecision.Build() error=%v", err)
-	}
-	if result.ExitCode == 0 || result.Report.State != "failed" {
-		t.Fatalf("obligation decision exit=%d state=%s, want failed", result.ExitCode, result.Report.State)
-	}
-	encoded, _ := json.Marshal(result.Report.JSONValue())
-	if !strings.Contains(string(encoded), "invalid_producer") || !strings.Contains(string(encoded), "unknown_scope") {
-		t.Fatalf("obligation decision missing trust/currentness blockers: %s", encoded)
+	for _, missing := range []bool{false, true} {
+		input := validProjectionInput()
+		if missing {
+			delete(input, "receiptCurrentnessScopeAdmission")
+			delete(input, "receiptTrustClassAdmission")
+		}
+		projected, err := ProjectObligationDecision(input)
+		if err != nil {
+			t.Fatalf("ProjectObligationDecision() error=%v", err)
+		}
+		result, err := obligationdecision.Build(projected)
+		if err != nil {
+			t.Fatalf("obligationdecision.Build() error=%v", err)
+		}
+		if result.ExitCode == 0 || result.Report.State != "failed" {
+			t.Fatalf("obligation decision exit=%d state=%s, want failed", result.ExitCode, result.Report.State)
+		}
+		encoded, _ := json.Marshal(result.Report.JSONValue())
+		if !strings.Contains(string(encoded), "invalid_producer") || !strings.Contains(string(encoded), "unknown_scope") {
+			t.Fatalf("obligation decision missing trust/currentness blockers: %s", encoded)
+		}
 	}
 }
 
