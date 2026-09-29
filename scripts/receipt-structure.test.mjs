@@ -61,6 +61,7 @@ function pair(family, input, outcome, label) {
 }
 
 function at(value, path) { return path.reduce((record, key) => record[key], value); }
+function wrongReceiptType(value) { return value === null ? {} : typeof value === "string" ? 42 : "wrong-type"; }
 function objectPaths(value, path = []) {
   if (value === null || typeof value !== "object") return [];
   return [...(Array.isArray(value) ? [] : [path]), ...Object.entries(value).flatMap(([key, child]) => objectPaths(child, [...path, key]))];
@@ -172,10 +173,29 @@ test("receipt output objects, report variants and domains reject structural corr
   for (const family of families) for (const row of family.rows) {
     const baseline = row.output;
     for (const path of objectPaths(baseline)) {
+      for (const [key, value] of Object.entries(at(baseline, path))) {
+        const output = structuredClone(baseline);
+        at(output, path)[key] = wrongReceiptType(value);
+        assert.equal(family.output(output), false, `${family.command}/${row.case}/${path}/${key}/type`);
+      }
       for (const key of [...Object.keys(at(baseline, path)), "extra"]) {
         const output = structuredClone(baseline);
         if (key === "extra") at(output, path)[key] = true; else delete at(output, path)[key];
         assert.equal(family.output(output), false, `${family.command}/${row.case}/${path}/${key}`);
+      }
+    }
+    for (const path of arrayPaths(baseline)) {
+      const items = at(baseline, path);
+      if (items.length === 0) {
+        // Empty receipt collections are string/state lists, not numeric lists.
+        const output = structuredClone(baseline);
+        at(output, path).push(42);
+        assert.equal(family.output(output), false, `${family.command}/${row.case}/${path}/empty-item-type`);
+      }
+      for (const [index, value] of items.entries()) {
+        const output = structuredClone(baseline);
+        at(output, path)[index] = wrongReceiptType(value);
+        assert.equal(family.output(output), false, `${family.command}/${row.case}/${path}/${index}/item-type`);
       }
     }
     for (const [path, invalid] of [
