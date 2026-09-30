@@ -71,6 +71,16 @@ attestation records is retained under `retained-evidence-checksums.sha256`
 instead of being treated as public release assets.
 `sbom-subjects.sha256` covers only the package and wheel subjects described by
 that SBOM, so SBOM attestations do not make the SBOM file describe itself.
+
+Each required CLI binary must expose complete Go build info from the immutable
+bytes used for its subject digest. Admission checks the unique ELF/Mach-O
+build-info section against the supported toolchain's canonical inline encoding,
+including module framing and every decoded record. Unreadable, unsupported or
+noncanonical metadata rejects admission; a complete section with no dependency
+modules admits an empty runtime inventory. This does not authenticate the
+metadata or prove dependency reachability. Package and wheel subjects do not
+require Go build info.
+
 Workflow-local scripts must not own a divergent release manifest or SBOM
 algorithm. PyPI wheels may be built and archived as candidate artifacts before
 PyPI publication. PyPI publication is enabled only when
