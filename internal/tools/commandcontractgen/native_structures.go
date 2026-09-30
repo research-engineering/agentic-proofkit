@@ -103,6 +103,14 @@ func nativeStructures() []nativeStructure {
 		commands:     []string{"requirement-spec-tree", "requirement-spec-tree-view"},
 		schema:       func() (map[string]any, error) { return requirementspectree.InputStructure(), nil },
 	}, {
+		id: "proofkit.requirement-spec-tree.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-spec-tree.output.v1.root-shape"}, commands: []string{"requirement-spec-tree"},
+		schema: func() (map[string]any, error) { return requirementspectree.OutputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-spec-tree-view.output.v2.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-spec-tree-view.output.v2.root-shape"}, commands: []string{"requirement-spec-tree-view"},
+		schema: func() (map[string]any, error) { return requirementspectree.ViewOutputStructure(), nil },
+	}, {
 		id: "proofkit.requirement-coverage-view.output.v4.json-schema", direction: "output",
 		predecessors: []string{"proofkit.requirement-coverage-view.output.v4.root-shape"}, commands: []string{"requirement-coverage-view"},
 		wireVersion: json.Number("4"),

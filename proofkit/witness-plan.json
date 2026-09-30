@@ -38,9 +38,15 @@
       },
       {
         "environmentClass": "local-go-legacy-positive",
-        "networkPolicies": ["none"],
-        "credentialClasses": ["none"],
-        "cachePolicies": ["disabled"]
+        "networkPolicies": [
+          "none"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "cachePolicies": [
+          "disabled"
+        ]
       },
       {
         "environmentClass": "local-go-node",
@@ -122,6 +128,7 @@
       "release-sbom",
       "self-hosting-package-gate",
       "self-hosting-receipt",
+      "spec-tree-contract",
       "workflow-static"
     ],
     "nonCacheableCredentialClasses": [],
@@ -327,11 +334,35 @@
       "schemaVersion": 1,
       "id": "proofkit.transaction-legacy-positive",
       "cwd": ".",
-      "argv": ["go", "test", "./internal/kernel/repositorytransaction", "-run", "^TestCanonicalDialectWholeLegacyRecovery$", "-count=1", "-timeout=90s", "-v", "-args", "-proofkit-require-legacy-unicode-positive"],
+      "argv": [
+        "go",
+        "test",
+        "./internal/kernel/repositorytransaction",
+        "-run",
+        "^TestCanonicalDialectWholeLegacyRecovery$",
+        "-count=1",
+        "-timeout=90s",
+        "-v",
+        "-args",
+        "-proofkit-require-legacy-unicode-positive"
+      ],
       "environment": {
         "inherit": "allowlist",
-        "allowlist": ["GOCACHE", "GOFLAGS", "GOMAXPROCS", "GOMODCACHE", "GOPATH", "GOROOT", "GOTOOLCHAIN", "HOME", "PATH", "TMPDIR"],
-        "classes": ["local-go-legacy-positive"]
+        "allowlist": [
+          "GOCACHE",
+          "GOFLAGS",
+          "GOMAXPROCS",
+          "GOMODCACHE",
+          "GOPATH",
+          "GOROOT",
+          "GOTOOLCHAIN",
+          "HOME",
+          "PATH",
+          "TMPDIR"
+        ],
+        "classes": [
+          "local-go-legacy-positive"
+        ]
       },
       "timeoutMs": 120000,
       "networkPolicy": "none",
@@ -339,7 +370,12 @@
       "cachePolicy": "disabled",
       "expectedArtifacts": [],
       "parallelGroup": "local-go-static",
-      "exitCodePolicy": {"kind": "zero", "successCodes": [0]}
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
     },
     {
       "schemaVersion": 1,
@@ -867,6 +903,35 @@
           0
         ]
       }
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.spec-tree-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "spec-tree-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "spec-tree-contract",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
     }
   ],
   "policies": [
@@ -1322,17 +1387,40 @@
     },
     {
       "commandId": "proofkit.transaction-legacy-positive",
-      "inputSelectors": [".github/workflows/ci.yml", "go.mod", "go.sum", "internal/kernel/pathidentity", "internal/kernel/repositorytransaction", "proofkit/requirement-bindings.json", "proofkit/witness-plan.json", "scripts/workflow_legacy_unicode_test.go"],
+      "inputSelectors": [
+        ".github/workflows/ci.yml",
+        "go.mod",
+        "go.sum",
+        "internal/kernel/pathidentity",
+        "internal/kernel/repositorytransaction",
+        "proofkit/requirement-bindings.json",
+        "proofkit/witness-plan.json",
+        "scripts/workflow_legacy_unicode_test.go"
+      ],
       "outputSelectors": [],
-      "resourceReads": ["resource.proofkit.source"],
-      "resourceWrites": ["resource.proofkit.go-build-cache", "resource.proofkit.temporary-workdir"],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
       "exclusiveLocks": [],
       "sideEffectClass": "local_write",
       "deterministicOutput": false,
       "cacheAdmissionRefs": [],
-      "retryPolicy": {"kind": "none", "maxAttempts": 1},
-      "cancellationPolicy": {"kind": "cooperative", "graceMs": 5000},
-      "timeoutPolicy": {"kind": "bounded", "timeoutMs": 120000},
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 120000
+      },
       "nonClaims": [
         "Ordinary local-go runs may prove native refusal only and cannot satisfy this command's positive obligation.",
         "Owned transaction fixture preparation qualifies exact identities, spelling, bytes and modes, not a filesystem-wide Unicode equivalence relation.",
@@ -1739,6 +1827,47 @@
         "package.json",
         "proofkit/cli-contract.v2.json",
         "scripts/receipt-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.spec-tree-contract-check",
+      "inputSelectors": [
+        "cmd",
+        "go.mod",
+        "go.sum",
+        "internal",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/spec-tree-structure.test.mjs"
       ],
       "outputSelectors": [],
       "resourceReads": [

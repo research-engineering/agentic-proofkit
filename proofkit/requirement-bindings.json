@@ -9503,6 +9503,84 @@
       "environmentClasses": [
         "local-go-node"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.spec-tree-cli-contract",
+      "witnessId": "proofkit.spec-tree-cli-contract",
+      "witnessKind": "contract",
+      "witnessPath": "internal/app/spec_tree_contract_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSpecTreeCLIExactDisplayOrderTokens",
+          "command": "go test ./internal/app -run '^TestSpecTreeCLIExactDisplayOrderTokens$'"
+        },
+        {
+          "selector": "TestSpecTreeCLIHistoricalWireAndTransports",
+          "command": "go test ./internal/app -run '^TestSpecTreeCLIHistoricalWireAndTransports$'"
+        },
+        {
+          "selector": "TestSpecTreeOutputContractsMatchNativeOwners",
+          "command": "go test ./internal/app -run '^TestSpecTreeOutputContractsMatchNativeOwners$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.spec-tree-schema-owner",
+      "witnessId": "proofkit.spec-tree-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/spec_tree_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSpecTreeOutputStructuresRejectRehashedNestedDrift",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestSpecTreeOutputStructuresRejectRehashedNestedDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.spec-tree-schema-isolation",
+      "witnessId": "proofkit.spec-tree-schema-isolation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/requirementspectree/output_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestSpecTreeOutputStructuresAreDetached",
+          "command": "go test ./internal/command/requirementspectree -run '^TestSpecTreeOutputStructuresAreDetached$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.spec-tree-schema-independent-runtime",
+      "witnessId": "proofkit.spec-tree-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/spec-tree-structure.test.mjs",
+      "commandIds": [
+        "proofkit.spec-tree-contract-check"
+      ],
+      "environmentClasses": [
+        "local-go-node"
+      ]
     }
   ],
   "witnessCommands": [
@@ -9614,6 +9692,11 @@
     {
       "commandId": "proofkit.receipt-contract-check",
       "command": "npm run receipt-contract:check",
+      "environmentClass": "local-go-node"
+    },
+    {
+      "commandId": "proofkit.spec-tree-contract-check",
+      "command": "npm run spec-tree-contract:check",
       "environmentClass": "local-go-node"
     }
   ],
