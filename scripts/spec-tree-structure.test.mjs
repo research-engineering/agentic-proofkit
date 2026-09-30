@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import {spawnSync} from "node:child_process";
 import test from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
 
@@ -44,6 +47,9 @@ test("every observed output field retains independent required, type, null and c
         check(mutateValue(row.output, pointer, null));
         const wrong = Array.isArray(value) ? {} : typeof value === "object" ? [] : typeof value === "string" ? 0 : "wrong type";
         check(mutateValue(row.output, pointer, wrong));
+        if (typeof value === "string" && value !== "" && !pointer.endsWith("/parentNodeId")) {
+          check(mutateValue(row.output, pointer, ""));
+        }
       }
       if (Array.isArray(value)) {
         value.forEach((child, i) => inspect(child, `${pointer}/${i}`));
@@ -62,7 +68,7 @@ test("every observed output field retains independent required, type, null and c
 
 test("spec tree summary bounds and scalar types cannot be weakened unnoticed", () => {
   const bounds = {
-    report: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [0, 512], sourceRefCount: [1, null], visitedNodeCount: [0, 4096]},
+    report: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [0, 512], sourceRefCount: [1, null], visitedNodeCount: [0, 8193]},
     view: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [1, 512], sourceRefCount: [1, null], staleSourceRefCount: [0, 0]},
   };
   for (const [kind, counters] of Object.entries(bounds)) {
@@ -117,4 +123,66 @@ test("spec tree structure preserves intentional empty root parent and semantic n
   assert.equal(validators.report(observations.find(row => row.kind === "report" && row.case === "failed").output), true);
   // Referential truth is not schema validity: native validation remains owner.
   assert.equal(validators.view(mutated("view", "/nodes/1/parentNodeId", "missing")), true);
+});
+
+test("spec tree fixed native tuples reject empty, shortened and extended arrays", () => {
+  for (const [kind, pointer, length] of [
+    ["report", "/diagnostics", 6], ["report", "/ruleResults", 4],
+    ["report", "/ruleResults/0/diagnostics", 1], ["report", "/ruleResults/1/diagnostics", 1],
+    ["report", "/ruleResults/2/diagnostics", 1], ["report", "/nonClaims", 8],
+    ["view", "/nonClaims", 13],
+  ]) {
+    const value = pointer.split("/").slice(1).reduce((object, part) => object[part], baseline(kind));
+    assert.equal(value.length, length);
+    for (const replacement of [[], value.slice(0, -1), [...value, value.at(-1)]]) {
+      assert.equal(validators[kind](mutated(kind, pointer, replacement)), false, `${kind}${pointer}: tuple length`);
+    }
+  }
+});
+
+test("spec tree bounded arrays retain native minimum and maximum cardinalities", () => {
+  for (const [kind, pointer, min, max] of [
+    ["report", "/diagnostics/4/value", 1, 4096], ["report", "/diagnostics/2/value", 0, 8192],
+    ["report", "/diagnostics/5/value", 0, 4096], ["view", "/nodes", 1, 4096],
+    ["view", "/nodes/1/overlays", 0, 4096],
+  ]) {
+    const values = pointer.split("/").slice(1).reduce((object, part) => object[part], baseline(kind));
+    assert(values.length > 0, `${kind}${pointer}: native representative`);
+    if (min > 0) assert.equal(validators[kind](mutated(kind, pointer, [])), false, `${kind}${pointer}: minimum`);
+    assert.equal(validators[kind](mutated(kind, pointer, Array(max + 1).fill(values[0]))), false, `${kind}${pointer}: maximum`);
+  }
+});
+
+test("spec tree schemas accept native failed reports visiting undeclared child IDs", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "proofkit-spec-tree-native-"));
+  const binary = path.join(dir, "agentic-proofkit");
+  const env = {...process.env};
+  for (const key of ["OPENAI_API_KEY", "OPENROUTER_API_KEY", "GH_TOKEN", "GITHUB_TOKEN", "NODE_AUTH_TOKEN", "NPM_TOKEN"]) delete env[key];
+  try {
+    // Private witness commands execute from the repository root.
+    const build = spawnSync("go", ["build", "-buildvcs=false", "-o", binary, "./cmd/agentic-proofkit"], {env, encoding: "utf8", timeout: 60000, maxBuffer: 2 << 20});
+    assert.equal(build.error, undefined);
+    assert.equal(build.signal, null);
+    assert.equal(build.status, 0, build.stderr);
+    const original = observations.find(row => row.kind === "report" && row.case === "valid").input;
+    for (const count of [0, 4096, 8192]) {
+      const input = structuredClone(original);
+      input.nodes = input.nodes.filter(node => node.nodeId === input.rootNodeId);
+      input.overlays = [];
+      input.edges = Array.from({length: count}, (_, i) => ({parentNodeId: input.rootNodeId, childNodeId: `missing${String(i).padStart(5, "0")}`}));
+      const run = spawnSync(binary, ["requirement-spec-tree", "--input", "-"], {env, input: JSON.stringify(input), encoding: "utf8", timeout: 60000, maxBuffer: 32 << 20});
+      assert.equal(run.error, undefined);
+      assert.equal(run.signal, null);
+      assert.equal(run.status, count === 0 ? 0 : 1);
+      assert.equal(run.stderr, "");
+      const output = JSON.parse(run.stdout);
+      assert.equal(output.state, count === 0 ? "passed" : "failed");
+      assert.equal(output.summary.nodeCount, 1);
+      assert.equal(output.summary.edgeCount, count);
+      assert.equal(output.summary.visitedNodeCount, count + 1);
+      assert.equal(validators.report(output), true, JSON.stringify(validators.report.errors));
+    }
+  } finally {
+    fs.rmSync(dir, {recursive: true, force: true});
+  }
 });

@@ -32,7 +32,7 @@ func OutputStructure() map[string]any {
 		jsonshape.Required("overlayCount", jsonshape.IntegerRange(0, maxSpecTreeOverlays)),
 		jsonshape.Required("sourceRefCount", jsonshape.IntegerMinimum(1)),
 		jsonshape.Required("staleSourceRefCount", jsonshape.IntegerMinimum(0)),
-		jsonshape.Required("visitedNodeCount", jsonshape.IntegerRange(0, maxSpecTreeNodes)),
+		jsonshape.Required("visitedNodeCount", jsonshape.IntegerRange(0, maxSpecTreeEdges+1)),
 	}
 	rules := []jsonshape.Shape{}
 	for _, suffix := range []string{"topology", "source_refs", "overlays"} {

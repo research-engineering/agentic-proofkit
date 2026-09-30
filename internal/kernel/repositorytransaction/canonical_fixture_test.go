@@ -47,7 +47,8 @@ func TestRequiredLegacyPositiveModeRejectsFilteredExecution(t *testing.T) {
 		{"filtered leaf", []string{"-test.run=^TestCanonicalDialectWholeLegacyASCIILifecycle$", "-test.skip=^TestCanonicalDialectWholeLegacyASCIILifecycle$/v1/ready/resume/0$"}, 1, "legacy witness evidence set is incomplete"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+			// Bound liveness of the complete filesystem corpus, not its performance.
+			ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
 			defer cancel()
 			command := exec.CommandContext(ctx, os.Args[0], tt.args...)
 			command.WaitDelay = 2 * time.Second
