@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {execFileSync, spawnSync} from "node:child_process";
 import {mkdtempSync, readFileSync, rmSync} from "node:fs";
+import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
@@ -21,7 +22,7 @@ const families = [
 });
 let directory, binary;
 before(() => {
-  directory = mkdtempSync("/private/tmp/proofkit-receipt-admission-");
+  directory = mkdtempSync(join(tmpdir(), "proofkit-receipt-admission-"));
   binary = join(directory, "agentic-proofkit");
   execFileSync("go", ["build", "-mod=readonly", "-o", binary, "./cmd/agentic-proofkit"], {
     cwd: root, timeout: 120_000, maxBuffer: 2 << 20,
@@ -65,6 +66,72 @@ function arrayPaths(value, path = []) {
 test("pre-schema receipt/producer carriers preserve actual native wire observations", () => {
   for (const family of families) for (const row of family.rows) {
     assert.deepEqual(pair(family, row.input, row.exitCode === 0 ? "passed" : "failed", `${family.command}/${row.case}`), row.output);
+  }
+});
+
+test("every optional concrete branch and finite vocabulary has a native-valid positive", () => {
+  const proof = families[0], producer = families[1];
+  for (const key of ["dependencyDigest", "lockfileDigest", "provenanceRef"]) {
+    const input = structuredClone(proof.rows[0].input);
+    input.receipts[0][key] = key === "provenanceRef" ? "artifacts/proofkit/provenance.json" : "sha256:" + "a".repeat(64);
+    pair(proof, input, "passed", `${key}/concrete`);
+    for (const invalid of key === "provenanceRef" ? [""] : ["", "sha256:" + "a".repeat(63), "sha256:" + "A".repeat(64)]) {
+      input.receipts[0][key] = invalid;
+      pair(proof, input, "rejected", `${key}/invalid-concrete`);
+    }
+  }
+  for (const kind of ["artifact", "log", "report"]) {
+    const input = structuredClone(proof.rows[0].input);
+    input.receipts[0].artifactRefs[0].kind = kind;
+    pair(proof, input, "passed", `artifact-kind/${kind}`);
+  }
+  for (const level of ["advisory", "merge_satisfying"]) {
+    const input = structuredClone(proof.rows[0].input);
+    input.receipts[0].producerAdmissionClass = level;
+    input.receipts[0].provenanceRef = "artifacts/proofkit/provenance.json";
+    pair(proof, input, "passed", `proof-producer-class/${level}`);
+    const policy = structuredClone(producer.rows[0].input);
+    policy.producers[0].admissionLevel = level;
+    policy.receipts[0].satisfiesMergeObligation = false;
+    pair(producer, policy, "passed", `producer-admission/${level}`);
+  }
+});
+
+test("every native string and text-list item rejects empty content", () => {
+  for (const family of families) {
+    const baseline = family.rows[0].input;
+    for (const path of objectPaths(baseline)) for (const [key, value] of Object.entries(at(baseline, path))) {
+      if (typeof value !== "string") continue;
+      const input = structuredClone(baseline);
+      at(input, path)[key] = "";
+      pair(family, input, "rejected", `${family.command}/${path}/${key}/empty-string`);
+    }
+    for (const path of arrayPaths(baseline)) {
+      const items = at(baseline, path);
+      if (items.length ? typeof items[0] !== "string" : path.at(-1) !== "nonClaims") continue;
+      const input = structuredClone(baseline);
+      const parent = at(input, path.slice(0, -1));
+      parent[path.at(-1)] = [""];
+      pair(family, input, "rejected", `${family.command}/${path}/empty-item`);
+    }
+  }
+});
+
+test("output free text and ref strings cannot lose their nonempty guard", () => {
+  for (const family of families) for (const row of family.rows) {
+    const baseline = row.output;
+    for (const path of objectPaths(baseline)) for (const [key, value] of Object.entries(at(baseline, path))) {
+      if (typeof value !== "string") continue;
+      const output = structuredClone(baseline);
+      at(output, path)[key] = "";
+      assert.equal(family.output(output), false, `${family.command}/${row.case}/${path}/${key}/empty-string`);
+    }
+    for (const path of arrayPaths(baseline)) {
+      if (!at(baseline, path).some(item => typeof item === "string")) continue;
+      const output = structuredClone(baseline);
+      at(output, path).push("");
+      assert.equal(family.output(output), false, `${family.command}/${row.case}/${path}/empty-item`);
+    }
   }
 });
 
