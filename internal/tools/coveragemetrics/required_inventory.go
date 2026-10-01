@@ -14,6 +14,25 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-native-vocabulary"}: {
+			witnessPath: "internal/command/requirementgraph/output_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestGraphKindVocabularyPreservesNativeAdmission", "TestGraphOutputStructureIsDetached"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-cli-contract"}: {
+			witnessPath: "internal/app/graph_output_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestGraphCLIHistoricalCarriersAndExactIntegerTransports", "TestGraphOutputContractMatchesNativeOwner", "TestGraphSchemaWitnessPlanClosure"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/graph_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestGraphOutputStructureRejectsRehashedNestedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.graph-schema-independent-runtime"}: {
+			witnessPath: "scripts/graph-structure.test.mjs",
+			commandIDs:  []string{"proofkit.graph-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-cli-contract"}: {
 			witnessPath: "internal/app/spec_tree_contract_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},

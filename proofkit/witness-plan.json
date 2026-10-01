@@ -117,6 +117,7 @@
       "browser-runtime",
       "compact-contract",
       "coverage-metrics",
+      "graph-contract",
       "local-go-static",
       "package-artifact",
       "performance-benchmark",
@@ -932,6 +933,35 @@
           0
         ]
       }
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "graph-contract:check"
+      ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
+      "environment": {
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.graph-contract-check",
+      "networkPolicy": "none",
+      "parallelGroup": "graph-contract",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     }
   ],
   "policies": [
@@ -1896,6 +1926,45 @@
       "nonClaims": [
         "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
         "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ]
+    },
+    {
+      "commandId": "proofkit.graph-contract-check",
+      "inputSelectors": [
+        "internal/app/testdata/graph-native-observations.json",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/graph-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.node-dependencies",
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.npm-cache"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Graph schema witnesses validate structure, not native graph semantics, freshness, witness execution or merge approval.",
+        "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
+        "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
       ]
     }
   ],
