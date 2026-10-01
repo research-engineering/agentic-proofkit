@@ -13,12 +13,18 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/stablejson"
 )
 
-// These observations were captured on 5f24adf before receipt structural
-// projections existed. Expected reports are not produced by the current builder.
+// Currentness/trust observations were captured on 5f24adf; receipt/producer
+// observations on e9df147, before their structural projections existed.
+// Expected reports are not produced by the current builder.
 func TestReceiptCLIHistoricalWireAndTransports(t *testing.T) {
-	for _, family := range []struct{ command, file string }{
-		{"receipt-currentness-scope", "receipt-currentness-native-observations.json"},
-		{"receipt-trust-class", "receipt-trust-native-observations.json"},
+	for _, family := range []struct {
+		command, file string
+		count         int
+	}{
+		{"receipt-currentness-scope", "receipt-currentness-native-observations.json", 4},
+		{"receipt-trust-class", "receipt-trust-native-observations.json", 4},
+		{"proof-receipt-admission", "proof-receipt-native-observations.json", 7},
+		{"receipt-producer-admission", "receipt-producer-native-observations.json", 7},
 	} {
 		data, err := os.ReadFile(filepath.Join("testdata", family.file))
 		if err != nil {
@@ -30,7 +36,7 @@ func TestReceiptCLIHistoricalWireAndTransports(t *testing.T) {
 			Output   json.RawMessage `json:"output"`
 			ExitCode int             `json:"exitCode"`
 		}
-		if err := json.Unmarshal(data, &rows); err != nil || len(rows) != 4 {
+		if err := json.Unmarshal(data, &rows); err != nil || len(rows) != family.count {
 			t.Fatalf("invalid observation inventory: %v", err)
 		}
 		for _, row := range rows {

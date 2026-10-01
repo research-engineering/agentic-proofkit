@@ -1856,6 +1856,7 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "scripts/receipt-admission-structure.test.mjs",
         "scripts/receipt-structure.test.mjs"
       ],
       "outputSelectors": [],

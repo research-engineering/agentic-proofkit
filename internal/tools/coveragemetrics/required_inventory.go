@@ -81,6 +81,25 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
 			selectors: []string{"TestReceiptCLIHistoricalWireAndTransports", "TestReceiptTrustCLIExactIntegerTokens"},
 		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.proof-receipt-schema-isolation"}: {
+			witnessPath: "internal/command/proofreceiptadmission/admission_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptAdmissionStructuresAreDetachedFromNativePolicy"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.producer-receipt-schema-isolation"}: {
+			witnessPath: "internal/command/receiptproduceradmission/admission_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptAdmissionStructuresAreDetachedFromNativePolicy"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-admission-schema-independent-runtime"}: {
+			witnessPath: "scripts/receipt-admission-structure.test.mjs",
+			commandIDs:  []string{"proofkit.receipt-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-admission-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/receipt_admission_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestReceiptNativeStructuresRejectRehashedNestedDrift"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-schema-owner"}: {
 			witnessPath: "internal/tools/commandcontractgen/receipt_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},

@@ -9663,6 +9663,76 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.proof-receipt-schema-isolation",
+      "witnessId": "proofkit.proof-receipt-schema-isolation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/proofreceiptadmission/admission_structure_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./internal/command/proofreceiptadmission -run '^TestReceiptAdmissionStructuresAreDetachedFromNativePolicy$'",
+          "selector": "TestReceiptAdmissionStructuresAreDetachedFromNativePolicy"
+        }
+      ]
+    },
+    {
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.producer-receipt-schema-isolation",
+      "witnessId": "proofkit.producer-receipt-schema-isolation",
+      "witnessKind": "contract",
+      "witnessPath": "internal/command/receiptproduceradmission/admission_structure_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./internal/command/receiptproduceradmission -run '^TestReceiptAdmissionStructuresAreDetachedFromNativePolicy$'",
+          "selector": "TestReceiptAdmissionStructuresAreDetachedFromNativePolicy"
+        }
+      ]
+    },
+    {
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-admission-schema-owner",
+      "witnessId": "proofkit.receipt-admission-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/receipt_admission_structure_test.go",
+      "witnessSelectors": [
+        {
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestReceiptNativeStructuresRejectRehashedNestedDrift$'",
+          "selector": "TestReceiptNativeStructuresRejectRehashedNestedDrift"
+        }
+      ]
+    },
+    {
+      "commandIds": [
+        "proofkit.receipt-contract-check"
+      ],
+      "environmentClasses": [
+        "local-go-node"
+      ],
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.receipt-admission-schema-independent-runtime",
+      "witnessId": "proofkit.receipt-admission-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/receipt-admission-structure.test.mjs"
     }
   ],
   "witnessCommands": [

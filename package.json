@@ -67,7 +67,7 @@
     "go:vulncheck": "go tool govulncheck ./...",
     "command-contract:check": "go run ./internal/tools/commandcontractgen --check",
     "compact-contract:check": "node --test scripts/compact-proof-structure.test.mjs",
-    "receipt-contract:check": "node --test scripts/receipt-structure.test.mjs",
+    "receipt-contract:check": "node --test scripts/receipt-structure.test.mjs scripts/receipt-admission-structure.test.mjs",
     "spec-tree-contract:check": "node --test scripts/spec-tree-structure.test.mjs",
     "graph-contract:check": "node --test scripts/graph-structure.test.mjs"
   },
