@@ -303,7 +303,7 @@ func TestReceiptSchemaGateWiring(t *testing.T) {
 	scripts := readPackageScriptsForTest(t)
 	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
 	validate := func(commands map[string]string, source githubWorkflow) error {
-		if commands["receipt-contract:check"] != "node --test scripts/receipt-structure.test.mjs" {
+		if commands["receipt-contract:check"] != "node --test scripts/receipt-structure.test.mjs scripts/receipt-admission-structure.test.mjs" {
 			return errors.New("receipt gate must execute its independent schema witness")
 		}
 		if err := validateRootCheckScript(commands["check"]); err != nil {
@@ -314,7 +314,7 @@ func TestReceiptSchemaGateWiring(t *testing.T) {
 	if err := validate(scripts, workflow); err != nil {
 		t.Fatal(err)
 	}
-	for _, mutation := range []string{"local-noop", "CI-removed", "CI-noop"} {
+	for _, mutation := range []string{"local-noop", "missing-admission", "missing-currentness-trust", "CI-removed", "CI-noop"} {
 		commands, source := maps.Clone(scripts), cloneWorkflow(t, workflow)
 		job := source.Jobs["source-quality"]
 		index, err := uniqueStepIndex(job.Steps, "Verify receipt contract structure")
@@ -324,6 +324,10 @@ func TestReceiptSchemaGateWiring(t *testing.T) {
 		switch mutation {
 		case "local-noop":
 			commands["receipt-contract:check"] = "true"
+		case "missing-admission":
+			commands["receipt-contract:check"] = "node --test scripts/receipt-structure.test.mjs"
+		case "missing-currentness-trust":
+			commands["receipt-contract:check"] = "node --test scripts/receipt-admission-structure.test.mjs"
 		case "CI-removed":
 			job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
 		case "CI-noop":

@@ -1,0 +1,803 @@
+[
+  {
+    "case": "passed",
+    "input": {
+      "environmentClasses": [
+        "local-go"
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [
+        {
+          "admissionLevel": "merge_satisfying",
+          "environmentClasses": [
+            "local-go"
+          ],
+          "evidenceRefs": [
+            "docs/test.md"
+          ],
+          "nonClaim": "Synthetic producer only admits this test receipt.",
+          "owner": "proofkit.test",
+          "producerId": "github.actions.package",
+          "receiptKinds": [
+            "proofkit.package-gate"
+          ]
+        }
+      ],
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "receipts": [
+        {
+          "artifactRefs": [
+            "artifacts/test/report.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRef": "artifacts/test/report.json",
+          "nonClaim": "Synthetic producer receipt.",
+          "producerId": "github.actions.package",
+          "provenanceRef": "artifacts/test/provenance.json",
+          "receiptId": "receipt.producer.one",
+          "receiptKind": "proofkit.package-gate",
+          "satisfiesMergeObligation": true,
+          "status": "passed",
+          "subjectRef": "proofkit.go-test"
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "receiptKinds": [
+              "proofkit.package-gate"
+            ]
+          }
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerId": "github.actions.package",
+              "provenanceRef": "artifacts/test/provenance.json",
+              "receiptId": "receipt.producer.one",
+              "receiptKind": "proofkit.package-gate",
+              "status": "passed",
+              "subjectRef": "proofkit.go-test"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 1,
+        "failureCount": 0,
+        "mergeSatisfyingProducerCount": 1,
+        "mergeSatisfyingReceiptCount": 1,
+        "producerCount": 1,
+        "receiptCount": 1,
+        "receiptKindCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "failed",
+    "input": {
+      "environmentClasses": [
+        "local-go"
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [
+        {
+          "admissionLevel": "merge_satisfying",
+          "environmentClasses": [
+            "local-go"
+          ],
+          "evidenceRefs": [
+            "docs/test.md"
+          ],
+          "nonClaim": "Synthetic producer only admits this test receipt.",
+          "owner": "proofkit.test",
+          "producerId": "github.actions.package",
+          "receiptKinds": [
+            "proofkit.package-gate"
+          ]
+        }
+      ],
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "receipts": [
+        {
+          "artifactRefs": [
+            "artifacts/test/report.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRef": "artifacts/test/report.json",
+          "nonClaim": "Synthetic producer receipt.",
+          "producerId": "github.actions.package",
+          "provenanceRef": "artifacts/test/provenance.json",
+          "receiptId": "receipt.producer.one",
+          "receiptKind": "proofkit.package-gate",
+          "satisfiesMergeObligation": false,
+          "status": "failed",
+          "subjectRef": "proofkit.go-test"
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "receiptKinds": [
+              "proofkit.package-gate"
+            ]
+          }
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 1,
+        "failureCount": 0,
+        "mergeSatisfyingProducerCount": 1,
+        "mergeSatisfyingReceiptCount": 0,
+        "producerCount": 1,
+        "receiptCount": 1,
+        "receiptKindCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "blocked",
+    "input": {
+      "environmentClasses": [
+        "local-go"
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [
+        {
+          "admissionLevel": "merge_satisfying",
+          "environmentClasses": [
+            "local-go"
+          ],
+          "evidenceRefs": [
+            "docs/test.md"
+          ],
+          "nonClaim": "Synthetic producer only admits this test receipt.",
+          "owner": "proofkit.test",
+          "producerId": "github.actions.package",
+          "receiptKinds": [
+            "proofkit.package-gate"
+          ]
+        }
+      ],
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "receipts": [
+        {
+          "artifactRefs": [
+            "artifacts/test/report.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRef": "artifacts/test/report.json",
+          "nonClaim": "Synthetic producer receipt.",
+          "producerId": "github.actions.package",
+          "provenanceRef": "artifacts/test/provenance.json",
+          "receiptId": "receipt.producer.one",
+          "receiptKind": "proofkit.package-gate",
+          "satisfiesMergeObligation": false,
+          "status": "blocked",
+          "subjectRef": "proofkit.go-test"
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "receiptKinds": [
+              "proofkit.package-gate"
+            ]
+          }
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 1,
+        "failureCount": 0,
+        "mergeSatisfyingProducerCount": 1,
+        "mergeSatisfyingReceiptCount": 0,
+        "producerCount": 1,
+        "receiptCount": 1,
+        "receiptKindCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "not_run",
+    "input": {
+      "environmentClasses": [
+        "local-go"
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [
+        {
+          "admissionLevel": "merge_satisfying",
+          "environmentClasses": [
+            "local-go"
+          ],
+          "evidenceRefs": [
+            "docs/test.md"
+          ],
+          "nonClaim": "Synthetic producer only admits this test receipt.",
+          "owner": "proofkit.test",
+          "producerId": "github.actions.package",
+          "receiptKinds": [
+            "proofkit.package-gate"
+          ]
+        }
+      ],
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "receipts": [
+        {
+          "artifactRefs": [
+            "artifacts/test/report.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRef": "artifacts/test/report.json",
+          "nonClaim": "Synthetic producer receipt.",
+          "producerId": "github.actions.package",
+          "provenanceRef": "artifacts/test/provenance.json",
+          "receiptId": "receipt.producer.one",
+          "receiptKind": "proofkit.package-gate",
+          "satisfiesMergeObligation": false,
+          "status": "not_run",
+          "subjectRef": "proofkit.go-test"
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "receiptKinds": [
+              "proofkit.package-gate"
+            ]
+          }
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 1,
+        "failureCount": 0,
+        "mergeSatisfyingProducerCount": 1,
+        "mergeSatisfyingReceiptCount": 0,
+        "producerCount": 1,
+        "receiptCount": 1,
+        "receiptKindCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "absent-optionals",
+    "input": {
+      "environmentClasses": [
+        "local-go"
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [
+        {
+          "admissionLevel": "merge_satisfying",
+          "environmentClasses": [
+            "local-go"
+          ],
+          "evidenceRefs": [
+            "docs/test.md"
+          ],
+          "nonClaim": "Synthetic producer only admits this test receipt.",
+          "owner": "proofkit.test",
+          "producerId": "github.actions.package",
+          "receiptKinds": [
+            "proofkit.package-gate"
+          ]
+        }
+      ],
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "receipts": [
+        {
+          "artifactRefs": [
+            "artifacts/test/report.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRef": "artifacts/test/report.json",
+          "nonClaim": "Synthetic producer receipt.",
+          "producerId": "github.actions.package",
+          "receiptId": "receipt.producer.one",
+          "receiptKind": "proofkit.package-gate",
+          "satisfiesMergeObligation": true,
+          "status": "passed",
+          "subjectRef": "proofkit.go-test"
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "receiptKinds": [
+              "proofkit.package-gate"
+            ]
+          }
+        },
+        {
+          "key": "failures",
+          "value": [
+            "receipt receipt.producer.one claims merge obligation without provenanceRef"
+          ]
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerId": "github.actions.package",
+              "provenanceRef": null,
+              "receiptId": "receipt.producer.one",
+              "receiptKind": "proofkit.package-gate",
+              "status": "passed",
+              "subjectRef": "proofkit.go-test"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failure.001",
+              "value": "receipt receipt.producer.one claims merge obligation without provenanceRef"
+            }
+          ],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 1,
+        "failureCount": 1,
+        "mergeSatisfyingProducerCount": 1,
+        "mergeSatisfyingReceiptCount": 1,
+        "producerCount": 1,
+        "receiptCount": 1,
+        "receiptKindCount": 1
+      }
+    },
+    "exitCode": 1
+  },
+  {
+    "case": "builtin-collision",
+    "input": {
+      "environmentClasses": [
+        "local-go"
+      ],
+      "nonClaims": [
+        "Receipt producer admission does not approve merge, rollout, or repository policy."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [
+        {
+          "admissionLevel": "merge_satisfying",
+          "environmentClasses": [
+            "local-go"
+          ],
+          "evidenceRefs": [
+            "docs/test.md"
+          ],
+          "nonClaim": "Synthetic producer only admits this test receipt.",
+          "owner": "proofkit.test",
+          "producerId": "github.actions.package",
+          "receiptKinds": [
+            "proofkit.package-gate"
+          ]
+        }
+      ],
+      "receiptKinds": [
+        "proofkit.package-gate"
+      ],
+      "receipts": [
+        {
+          "artifactRefs": [
+            "artifacts/test/report.json"
+          ],
+          "environmentClass": "local-go",
+          "evidenceRef": "artifacts/test/report.json",
+          "nonClaim": "Synthetic producer receipt.",
+          "producerId": "github.actions.package",
+          "provenanceRef": "artifacts/test/provenance.json",
+          "receiptId": "receipt.producer.one",
+          "receiptKind": "proofkit.package-gate",
+          "satisfiesMergeObligation": true,
+          "status": "passed",
+          "subjectRef": "proofkit.go-test"
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [
+              "local-go"
+            ],
+            "receiptKinds": [
+              "proofkit.package-gate"
+            ]
+          }
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerId": "github.actions.package",
+              "provenanceRef": "artifacts/test/provenance.json",
+              "receiptId": "receipt.producer.one",
+              "receiptKind": "proofkit.package-gate",
+              "status": "passed",
+              "subjectRef": "proofkit.go-test"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 1,
+        "failureCount": 0,
+        "mergeSatisfyingProducerCount": 1,
+        "mergeSatisfyingReceiptCount": 1,
+        "producerCount": 1,
+        "receiptCount": 1,
+        "receiptKindCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "empty-inventories",
+    "input": {
+      "environmentClasses": [],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers."
+      ],
+      "policyId": "proofkit.test.producer_policy",
+      "producers": [],
+      "receiptKinds": [],
+      "receipts": [],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "coverage",
+          "value": {
+            "environmentClasses": [],
+            "receiptKinds": []
+          }
+        },
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "mergeSatisfyingReceipts",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Producer admission test input does not authenticate producers.",
+        "Receipt producer admission does not approve merge, rollout, or repository policy.",
+        "Receipt producer admission does not authenticate producer identity.",
+        "Receipt producer admission does not prove command execution or result correctness.",
+        "Receipt producer admission does not prove receipt freshness."
+      ],
+      "reportId": "proofkit.test.producer_policy",
+      "reportKind": "proofkit.receipt-producer-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validated caller-provided producer policy without authenticating producers or executing commands",
+          "ruleId": "proofkit.receipt-producer-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "producer policy covers declared receipt kinds and environment classes",
+          "ruleId": "proofkit.receipt-producer-admission.coverage",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts match declared producer, kind, environment, status, and merge-obligation boundaries",
+          "ruleId": "proofkit.receipt-producer-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "advisoryProducerCount": 0,
+        "environmentClassCount": 0,
+        "failureCount": 0,
+        "mergeSatisfyingProducerCount": 0,
+        "mergeSatisfyingReceiptCount": 0,
+        "producerCount": 0,
+        "receiptCount": 0,
+        "receiptKindCount": 0
+      }
+    },
+    "exitCode": 0
+  }
+]

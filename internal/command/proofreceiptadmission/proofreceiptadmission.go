@@ -166,7 +166,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("proof receipt admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"nonClaims", "receiptSetId", "receipts", "schemaVersion"}, "proof receipt admission input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "proof receipt admission input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -221,7 +221,7 @@ func receipts(raw any) ([]receipt, error) {
 }
 
 func admitReceipt(record map[string]any) (receipt, error) {
-	if err := admit.KnownKeys(record, []string{"artifactRefs", "commandDigest", "dependencyDigest", "environmentClass", "environmentDigest", "evidenceRefs", "exitCode", "finishedAt", "lockfileDigest", "nonClaims", "preconditionDigest", "producerAdmissionClass", "producerId", "proofBindingDigest", "proofPlanId", "provenanceRef", "receiptId", "receiptKind", "runnerClass", "runnerIdentity", "sourceRevision", "startedAt", "status", "toolchainDigest", "witnessSelectorDigest", "witnessSelectors"}, "proof receipt admission receipt"); err != nil {
+	if err := admit.KnownKeys(record, receiptKeys, "proof receipt admission receipt"); err != nil {
 		return receipt{}, err
 	}
 	artifacts, err := artifactRefs(record["artifactRefs"])
@@ -388,7 +388,7 @@ func artifactRefs(raw any) ([]artifactRef, error) {
 }
 
 func admitArtifactRef(record map[string]any) (artifactRef, error) {
-	if err := admit.KnownKeys(record, []string{"kind", "path", "sha256"}, "proof receipt admission artifactRef"); err != nil {
+	if err := admit.KnownKeys(record, artifactKeys, "proof receipt admission artifactRef"); err != nil {
 		return artifactRef{}, err
 	}
 	kind, err := enum(record["kind"], artifactKindSet, artifactKinds, "proof receipt admission artifactRef.kind")

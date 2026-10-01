@@ -1,0 +1,776 @@
+[
+  {
+    "case": "passed",
+    "input": {
+      "nonClaims": [],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [
+            {
+              "kind": "report",
+              "path": "artifacts/proofkit/report.json",
+              "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "dependencyDigest": null,
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "exitCode": 0,
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "lockfileDigest": null,
+          "nonClaims": [],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "passed",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "passed"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactRefCount": 1,
+        "blockedReceiptCount": 0,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 0,
+        "failureCount": 0,
+        "notRunReceiptCount": 0,
+        "passedReceiptCount": 1,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "failed",
+    "input": {
+      "nonClaims": [],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [
+            {
+              "kind": "report",
+              "path": "artifacts/proofkit/report.json",
+              "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "dependencyDigest": null,
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "exitCode": 1,
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "lockfileDigest": null,
+          "nonClaims": [],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "failed",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "failed"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactRefCount": 1,
+        "blockedReceiptCount": 0,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 1,
+        "failureCount": 0,
+        "notRunReceiptCount": 0,
+        "passedReceiptCount": 0,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "blocked",
+    "input": {
+      "nonClaims": [],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [
+            {
+              "kind": "report",
+              "path": "artifacts/proofkit/report.json",
+              "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "dependencyDigest": null,
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "exitCode": null,
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "lockfileDigest": null,
+          "nonClaims": [
+            "No execution is asserted."
+          ],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "blocked",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "blocked"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactRefCount": 1,
+        "blockedReceiptCount": 1,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 0,
+        "failureCount": 0,
+        "notRunReceiptCount": 0,
+        "passedReceiptCount": 0,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "not_run",
+    "input": {
+      "nonClaims": [],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [
+            {
+              "kind": "report",
+              "path": "artifacts/proofkit/report.json",
+              "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "dependencyDigest": null,
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "exitCode": null,
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "lockfileDigest": null,
+          "nonClaims": [
+            "No execution is asserted."
+          ],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "not_run",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "not_run"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactRefCount": 1,
+        "blockedReceiptCount": 0,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 0,
+        "failureCount": 0,
+        "notRunReceiptCount": 1,
+        "passedReceiptCount": 0,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "absent-optionals",
+    "input": {
+      "nonClaims": [],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [
+            {
+              "kind": "report",
+              "path": "artifacts/proofkit/report.json",
+              "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "nonClaims": [],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "passed",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": [
+            "receipt proofkit.test.receipt records passed without exitCode"
+          ]
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "passed"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failure.001",
+              "value": "receipt proofkit.test.receipt records passed without exitCode"
+            }
+          ],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "artifactRefCount": 1,
+        "blockedReceiptCount": 0,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 0,
+        "failureCount": 1,
+        "notRunReceiptCount": 0,
+        "passedReceiptCount": 1,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 1
+  },
+  {
+    "case": "builtin-collision",
+    "input": {
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness."
+      ],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [
+            {
+              "kind": "report",
+              "path": "artifacts/proofkit/report.json",
+              "sha256": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            }
+          ],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "dependencyDigest": null,
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "exitCode": 0,
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "lockfileDigest": null,
+          "nonClaims": [],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "passed",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "passed"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactRefCount": 1,
+        "blockedReceiptCount": 0,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 0,
+        "failureCount": 0,
+        "notRunReceiptCount": 0,
+        "passedReceiptCount": 1,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "case": "empty-artifacts",
+    "input": {
+      "nonClaims": [],
+      "receiptSetId": "proofkit.test.receipt-set",
+      "receipts": [
+        {
+          "artifactRefs": [],
+          "commandDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "dependencyDigest": null,
+          "environmentClass": "local-go",
+          "environmentDigest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+          "evidenceRefs": [
+            "artifacts/proofkit/evidence.json"
+          ],
+          "exitCode": 0,
+          "finishedAt": "2026-06-26T10:00:01Z",
+          "lockfileDigest": null,
+          "nonClaims": [],
+          "preconditionDigest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+          "producerAdmissionClass": "advisory",
+          "producerId": "producer.local",
+          "proofBindingDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+          "proofPlanId": "proofkit.test.plan",
+          "provenanceRef": null,
+          "receiptId": "proofkit.test.receipt",
+          "receiptKind": "unit-test",
+          "runnerClass": "local",
+          "runnerIdentity": "runner.local",
+          "sourceRevision": "commit",
+          "startedAt": "2026-06-26T10:00:00Z",
+          "status": "passed",
+          "toolchainDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+          "witnessSelectorDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "witnessSelectors": [
+            "proofkit.test.witness"
+          ]
+        }
+      ],
+      "schemaVersion": 1
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": [
+            "receipt proofkit.test.receipt records passed without artifact refs"
+          ]
+        },
+        {
+          "key": "receipts",
+          "value": [
+            {
+              "environmentClass": "local-go",
+              "producerAdmissionClass": "advisory",
+              "producerId": "producer.local",
+              "proofPlanId": "proofkit.test.plan",
+              "receiptId": "proofkit.test.receipt",
+              "receiptKind": "unit-test",
+              "runnerClass": "local",
+              "status": "passed"
+            }
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Proof receipt admission does not approve merge, release, rollout, or production readiness.",
+        "Proof receipt admission does not authenticate producer identity.",
+        "Proof receipt admission does not compute receipt freshness.",
+        "Proof receipt admission does not execute native commands or prove command semantics.",
+        "Proof receipt admission does not match receipts to current repository obligations."
+      ],
+      "reportId": "proofkit.test.receipt-set",
+      "reportKind": "proofkit.proof-receipt-admission",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "proofkit validates proof receipt shape without authenticating producers, executing commands, or deciding freshness",
+          "ruleId": "proofkit.proof-receipt-admission.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failure.001",
+              "value": "receipt proofkit.test.receipt records passed without artifact refs"
+            }
+          ],
+          "message": "receipts carry required plan, binding, command, environment, witness, runner, producer, timestamp, evidence, artifact, and non-claim fields",
+          "ruleId": "proofkit.proof-receipt-admission.receipts",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "artifactRefCount": 0,
+        "blockedReceiptCount": 0,
+        "declaredAdvisoryProducerClassReceiptCount": 1,
+        "declaredMergeSatisfyingProducerClassReceiptCount": 0,
+        "evidenceRefCount": 1,
+        "failedReceiptCount": 0,
+        "failureCount": 1,
+        "notRunReceiptCount": 0,
+        "passedReceiptCount": 1,
+        "receiptCount": 1
+      }
+    },
+    "exitCode": 1
+  }
+]

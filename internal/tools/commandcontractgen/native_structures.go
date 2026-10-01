@@ -8,7 +8,9 @@ import (
 	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
+	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
@@ -185,6 +187,22 @@ func nativeStructures() []nativeStructure {
 		variants: []nativeStructureVariant{{id: "01-compact", when: "default JSON mode", schema: func() (map[string]any, error) {
 			return compactproofcontract.InputStructure(), nil
 		}}},
+	}, {
+		id: "proofkit.proof-receipt-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.proof-receipt-admission.input.v1.root-shape"}, commands: []string{"proof-receipt-admission"},
+		schema: func() (map[string]any, error) { return proofreceiptadmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.proof-receipt-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.proof-receipt-admission.output.v1.root-shape"}, commands: []string{"proof-receipt-admission"},
+		schema: func() (map[string]any, error) { return proofreceiptadmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.receipt-producer-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.receipt-producer-admission.input.v1.root-shape"}, commands: []string{"receipt-producer-admission"},
+		schema: func() (map[string]any, error) { return receiptproduceradmission.InputStructure(), nil },
+	}, {
+		id: "proofkit.receipt-producer-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.receipt-producer-admission.output.v1.root-shape"}, commands: []string{"receipt-producer-admission"},
+		schema: func() (map[string]any, error) { return receiptproduceradmission.OutputStructure(), nil },
 	}}
 }
 

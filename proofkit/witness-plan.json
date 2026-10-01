@@ -1,152 +1,15 @@
 {
-  "schemaVersion": 1,
-  "schedulerPlanId": "proofkit.self-hosting.witness-plan",
-  "vocabulary": {
-    "artifactKinds": [
-      "npm-package-artifact",
-      "python-wheel-artifact",
-      "report",
-      "sbom"
-    ],
-    "credentialClasses": [
-      "none"
-    ],
-    "environmentClasses": [
-      "local-go",
-      "local-go-legacy-positive",
-      "local-go-node",
-      "local-go-python",
-      "local-go-python-native-docker",
-      "local-node-browser",
-      "local-python"
-    ],
-    "environmentClassPolicies": [
-      {
-        "environmentClass": "local-go",
-        "networkPolicies": [
-          "external",
-          "none"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled",
-          "read-only",
-          "write-local"
-        ]
-      },
-      {
-        "environmentClass": "local-go-legacy-positive",
-        "networkPolicies": [
-          "none"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled"
-        ]
-      },
-      {
-        "environmentClass": "local-go-node",
-        "networkPolicies": [
-          "none"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled"
-        ]
-      },
-      {
-        "environmentClass": "local-go-python",
-        "networkPolicies": [
-          "external",
-          "none"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled",
-          "read-only",
-          "write-local"
-        ]
-      },
-      {
-        "environmentClass": "local-go-python-native-docker",
-        "networkPolicies": [
-          "external"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled"
-        ]
-      },
-      {
-        "environmentClass": "local-node-browser",
-        "networkPolicies": [
-          "none"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled"
-        ]
-      },
-      {
-        "environmentClass": "local-python",
-        "networkPolicies": [
-          "none"
-        ],
-        "credentialClasses": [
-          "none"
-        ],
-        "cachePolicies": [
-          "disabled",
-          "write-local"
-        ]
-      }
-    ],
-    "parallelGroups": [
-      "browser-runtime",
-      "compact-contract",
-      "coverage-metrics",
-      "graph-contract",
-      "local-go-static",
-      "package-artifact",
-      "performance-benchmark",
-      "platform-smoke",
-      "python-minimum-runtime",
-      "python-package-build",
-      "python-package-verify",
-      "receipt-contract",
-      "release-sbom",
-      "self-hosting-package-gate",
-      "self-hosting-receipt",
-      "spec-tree-contract",
-      "workflow-static"
-    ],
-    "nonCacheableCredentialClasses": [],
-    "maxTimeoutMs": 600000
-  },
   "commands": [
     {
-      "schemaVersion": 1,
-      "id": "proofkit.ci-receipt-anchor",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "self:receipt"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "allowlist",
         "allowlist": [
           "GITHUB_ACTIONS",
           "GITHUB_EVENT_NAME",
@@ -164,12 +27,15 @@
         ],
         "classes": [
           "local-go-python"
+        ],
+        "inherit": "allowlist"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "report",
@@ -207,134 +73,129 @@
           "required": true
         }
       ],
+      "id": "proofkit.ci-receipt-anchor",
+      "networkPolicy": "none",
       "parallelGroup": "self-hosting-receipt",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.command-contract-check",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "command-contract:check"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.command-contract-check",
+      "networkPolicy": "none",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.compact-contract-check",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "compact-contract:check"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go-node"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "compact-contract",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.compact-contract-check",
+      "networkPolicy": "none",
+      "parallelGroup": "compact-contract",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.go-fmt",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "go:fmt"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.go-fmt",
+      "networkPolicy": "none",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.go-test",
-      "cwd": ".",
       "argv": [
         "go",
         "test",
         "./..."
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.go-test",
+      "networkPolicy": "none",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.transaction-legacy-positive",
-      "cwd": ".",
       "argv": [
         "go",
         "test",
@@ -347,8 +208,10 @@
         "-args",
         "-proofkit-require-legacy-unicode-positive"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "allowlist",
         "allowlist": [
           "GOCACHE",
           "GOFLAGS",
@@ -363,70 +226,73 @@
         ],
         "classes": [
           "local-go-legacy-positive"
-        ]
+        ],
+        "inherit": "allowlist"
       },
-      "timeoutMs": 120000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.transaction-legacy-positive",
+      "networkPolicy": "none",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 120000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.go-vet",
-      "cwd": ".",
       "argv": [
         "go",
         "vet",
         "./..."
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.go-vet",
+      "networkPolicy": "none",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.package-artifact",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "package:artifact"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go-python"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "report",
@@ -459,63 +325,63 @@
           "required": true
         }
       ],
+      "id": "proofkit.package-artifact",
+      "networkPolicy": "none",
       "parallelGroup": "package-artifact",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.package-gate",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "check"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go-python"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "external",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "self-hosting-package-gate",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.package-gate",
+      "networkPolicy": "external",
+      "parallelGroup": "self-hosting-package-gate",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.python-package",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "python:package"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-python"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "python-wheel-artifact",
@@ -528,35 +394,35 @@
           "required": true
         }
       ],
+      "id": "proofkit.python-package",
+      "networkPolicy": "none",
       "parallelGroup": "python-package-build",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.platform-smoke",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "platform:smoke"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go",
           "local-python"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "python-wheel-artifact",
@@ -569,26 +435,23 @@
           "required": true
         }
       ],
+      "id": "proofkit.platform-smoke",
+      "networkPolicy": "none",
       "parallelGroup": "platform-smoke",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.python-minimum",
-      "cwd": ".",
       "argv": [
         "go",
         "run",
         "./internal/tools/pythonpackage",
         "verify-minimum"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "allowlist",
         "allowlist": [
           "DOCKER_CONFIG",
           "DOCKER_CONTEXT",
@@ -606,157 +469,160 @@
         ],
         "classes": [
           "local-go-python-native-docker"
-        ]
+        ],
+        "inherit": "allowlist"
       },
-      "timeoutMs": 360000,
-      "networkPolicy": "external",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "python-minimum-runtime",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.python-minimum",
+      "networkPolicy": "external",
+      "parallelGroup": "python-minimum-runtime",
+      "schemaVersion": 1,
+      "timeoutMs": 360000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.python-verify",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "python:verify"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-python"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "python-package-verify",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.python-verify",
+      "networkPolicy": "none",
+      "parallelGroup": "python-package-verify",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.go-staticcheck",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "go:staticcheck"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.go-staticcheck",
+      "networkPolicy": "none",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.go-vulncheck",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "go:vulncheck"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "external",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "local-go-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.go-vulncheck",
+      "networkPolicy": "external",
+      "parallelGroup": "local-go-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.actionlint",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "go:actionlint"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "workflow-static",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.actionlint",
+      "networkPolicy": "none",
+      "parallelGroup": "workflow-static",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.coverage-metrics",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "self:coverage"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "report",
@@ -769,63 +635,63 @@
           "required": true
         }
       ],
+      "id": "proofkit.coverage-metrics",
+      "networkPolicy": "none",
       "parallelGroup": "coverage-metrics",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.go-bench",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "go:bench"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "performance-benchmark",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.go-bench",
+      "networkPolicy": "none",
+      "parallelGroup": "performance-benchmark",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.release-sbom",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "release:sbom"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "sbom",
@@ -833,34 +699,34 @@
           "required": true
         }
       ],
+      "id": "proofkit.release-sbom",
+      "networkPolicy": "none",
       "parallelGroup": "release-sbom",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.browser-check",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "browser:check"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-node-browser"
+        ],
+        "inherit": "none"
+      },
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
         ]
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
       "expectedArtifacts": [
         {
           "kind": "report",
@@ -868,71 +734,69 @@
           "required": true
         }
       ],
+      "id": "proofkit.browser-check",
+      "networkPolicy": "none",
       "parallelGroup": "browser-runtime",
-      "exitCodePolicy": {
-        "kind": "zero",
-        "successCodes": [
-          0
-        ]
-      }
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.receipt-contract-check",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "receipt-contract:check"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go-node"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "receipt-contract",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.receipt-contract-check",
+      "networkPolicy": "none",
+      "parallelGroup": "receipt-contract",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
-      "schemaVersion": 1,
-      "id": "proofkit.spec-tree-contract-check",
-      "cwd": ".",
       "argv": [
         "npm",
         "run",
         "spec-tree-contract:check"
       ],
+      "cachePolicy": "disabled",
+      "credentialClass": "none",
+      "cwd": ".",
       "environment": {
-        "inherit": "none",
         "allowlist": [],
         "classes": [
           "local-go-node"
-        ]
+        ],
+        "inherit": "none"
       },
-      "timeoutMs": 600000,
-      "networkPolicy": "none",
-      "credentialClass": "none",
-      "cachePolicy": "disabled",
-      "expectedArtifacts": [],
-      "parallelGroup": "spec-tree-contract",
       "exitCodePolicy": {
         "kind": "zero",
         "successCodes": [
           0
         ]
-      }
+      },
+      "expectedArtifacts": [],
+      "id": "proofkit.spec-tree-contract-check",
+      "networkPolicy": "none",
+      "parallelGroup": "spec-tree-contract",
+      "schemaVersion": 1,
+      "timeoutMs": 600000
     },
     {
       "argv": [
@@ -964,9 +828,20 @@
       "timeoutMs": 600000
     }
   ],
+  "nonClaims": [
+    "Local-go environment policy does not claim cross-platform package publication readiness.",
+    "Self-hosting witness plan does not authenticate producers, execute CI, publish packages, or approve merge."
+  ],
   "policies": [
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.actionlint",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         ".github/workflows/ci.yml",
         ".github/workflows/codeql.yml",
@@ -977,34 +852,34 @@
         "go.sum",
         "package.json"
       ],
+      "nonClaims": [
+        "Actionlint validates GitHub Actions syntax and expression structure only; it does not prove workflow runtime success or external action safety.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Actionlint validates GitHub Actions syntax and expression structure only; it does not prove workflow runtime success or external action safety.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.browser-check",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "go.mod",
         "go.sum",
@@ -1070,6 +945,10 @@
         "tests/browser",
         "tsconfig.browser.json"
       ],
+      "nonClaims": [
+        "Browser runtime proof does not establish full WCAG 2.2 conformance, complete screen-reader interoperability, every operating-system theme, 400-percent zoom behavior, registry publication, rollout, or production readiness.",
+        "Pinned Chromium, Firefox, and Playwright WebKit engines do not prove branded Safari compatibility."
+      ],
       "outputSelectors": [
         "artifacts/proofkit/browser-runtime-proof.json"
       ],
@@ -1079,29 +958,25 @@
       "resourceWrites": [
         "resource.proofkit.local-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Browser runtime proof does not establish full WCAG 2.2 conformance, complete screen-reader interoperability, every operating-system theme, 400-percent zoom behavior, registry publication, rollout, or production readiness.",
-        "Pinned Chromium, Firefox, and Playwright WebKit engines do not prove branded Safari compatibility."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.ci-receipt-anchor",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         ".github/workflows/ci.yml",
         "artifacts/package/*.tgz",
@@ -1113,6 +988,10 @@
         "proofkit/requirement-bindings.json",
         "proofkit/witness-plan.json",
         "scripts/validate-self-hosting-receipts.go"
+      ],
+      "nonClaims": [
+        "Self-hosting receipt output includes current timestamp and admitted CI environment metadata.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
       ],
       "outputSelectors": [
         "artifacts/proofkit/ci-provenance.json",
@@ -1130,63 +1009,59 @@
       "resourceWrites": [
         "resource.proofkit.local-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting receipt output includes current timestamp and admitted CI environment metadata.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.command-contract-check",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "internal/app/command_contract_generated.go",
         "internal/command/stackpreset/preset_ids_generated.go",
         "internal/tools/commandcontractgen",
         "proofkit/cli-contract.v2.json"
       ],
+      "nonClaims": [
+        "Generated projection freshness does not execute native command semantics or validate package publication.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Generated projection freshness does not execute native command semantics or validate package publication.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.compact-contract-check",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
@@ -1197,6 +1072,10 @@
         "proofkit/cli-contract.v2.json",
         "scripts/compact-proof-structure.test.mjs"
       ],
+      "nonClaims": [
+        "The independent schema and native CLI matrix proves selected structural clauses, not equivalence with native-only semantics or every possible input.",
+        "The test builds the CLI and uses pinned development dependencies; it does not execute caller witnesses or prove package publication."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
@@ -1205,29 +1084,25 @@
         "resource.proofkit.go-build-cache",
         "resource.proofkit.temporary-workdir"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "The independent schema and native CLI matrix proves selected structural clauses, not equivalence with native-only semantics or every possible input.",
-        "The test builds the CLI and uses pinned development dependencies; it does not execute caller witnesses or prove package publication."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.coverage-metrics",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "docs/specs",
         "internal/app",
@@ -1244,6 +1119,10 @@
         "proofkit/requirement-bindings.json",
         "proofkit/witness-plan.json"
       ],
+      "nonClaims": [
+        "Coverage metrics do not claim line coverage, semantic correctness, receipt freshness, or merge satisfaction.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [
         "artifacts/proofkit/command-oracle-execution.json",
         "artifacts/proofkit/coverage-metrics.json"
@@ -1254,29 +1133,25 @@
       "resourceWrites": [
         "resource.proofkit.local-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Coverage metrics do not claim line coverage, semantic correctness, receipt freshness, or merge satisfaction.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.go-bench",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "go.mod",
         "go.sum",
@@ -1284,66 +1159,66 @@
         "internal/kernel/stablejson",
         "package.json"
       ],
+      "nonClaims": [
+        "Benchmark output is diagnostic performance evidence only and does not enforce PR budget or release readiness.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Benchmark output is diagnostic performance evidence only and does not enforce PR budget or release readiness.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.go-fmt",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "internal",
         "scripts/validate-self-hosting-receipts.go"
       ],
+      "nonClaims": [
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.go-staticcheck",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
@@ -1351,33 +1226,33 @@
         "internal",
         "scripts/validate-self-hosting-receipts.go"
       ],
+      "nonClaims": [
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.go-test",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
@@ -1390,33 +1265,33 @@
         "scripts/browser-runtime-proof-inputs.v1.json",
         "scripts/validate-self-hosting-receipts.go"
       ],
+      "nonClaims": [
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.transaction-legacy-positive",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         ".github/workflows/ci.yml",
         "go.mod",
@@ -1427,6 +1302,12 @@
         "proofkit/witness-plan.json",
         "scripts/workflow_legacy_unicode_test.go"
       ],
+      "nonClaims": [
+        "Ordinary local-go runs may prove native refusal only and cannot satisfy this command's positive obligation.",
+        "Owned transaction fixture preparation qualifies exact identities, spelling, bytes and modes, not a filesystem-wide Unicode equivalence relation.",
+        "Successful required-mode execution demands exactly all 28 frozen Unicode positive lifecycle IDs; zero, duplicate, substituted and negative IDs do not satisfy this witness.",
+        "The declared test argument enables required-positive mode independently of environment variables; ordinary execution without that argument does not satisfy this witness."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
@@ -1435,64 +1316,58 @@
         "resource.proofkit.go-build-cache",
         "resource.proofkit.temporary-workdir"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 120000
-      },
-      "nonClaims": [
-        "Ordinary local-go runs may prove native refusal only and cannot satisfy this command's positive obligation.",
-        "Owned transaction fixture preparation qualifies exact identities, spelling, bytes and modes, not a filesystem-wide Unicode equivalence relation.",
-        "Successful required-mode execution demands exactly all 28 frozen Unicode positive lifecycle IDs; zero, duplicate, substituted and negative IDs do not satisfy this witness.",
-        "The declared test argument enables required-positive mode independently of environment variables; ordinary execution without that argument does not satisfy this witness."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.go-vet",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
         "internal",
         "scripts/validate-self-hosting-receipts.go"
       ],
+      "nonClaims": [
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "none",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "none",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.go-vulncheck",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
@@ -1500,34 +1375,34 @@
         "internal",
         "scripts/validate-self-hosting-receipts.go"
       ],
+      "nonClaims": [
+        "Govulncheck may consult the Go vulnerability database and local module caches.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
       ],
       "resourceWrites": [],
-      "exclusiveLocks": [],
-      "sideEffectClass": "network",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "network",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Govulncheck may consult the Go vulnerability database and local module caches.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.package-artifact",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "ADOPTION.md",
         "AGENTS.md",
@@ -1545,6 +1420,10 @@
         "proofkit",
         "python"
       ],
+      "nonClaims": [
+        "Self-hosting witness policy does not prove producer authentication or merge approval.",
+        "The full package gate includes networked vulnerability database lookup through govulncheck."
+      ],
       "outputSelectors": [
         "artifacts/package/*.tgz",
         "artifacts/package/npm-pack.json",
@@ -1561,29 +1440,25 @@
         "resource.proofkit.local-artifacts",
         "resource.proofkit.package-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting witness policy does not prove producer authentication or merge approval.",
-        "The full package gate includes networked vulnerability database lookup through govulncheck."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.package-gate",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         ".github/workflows",
         "ADOPTION.md",
@@ -1603,6 +1478,9 @@
         "python",
         "scripts/validate-self-hosting-receipts.go"
       ],
+      "nonClaims": [
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [
         "artifacts/package/npm-pack.json",
         "artifacts/proofkit/*.json",
@@ -1614,28 +1492,25 @@
       "resourceWrites": [
         "resource.proofkit.local-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.platform-smoke",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         ".github/workflows/ci.yml",
         "cmd",
@@ -1644,6 +1519,9 @@
         "internal",
         "package.json",
         "python"
+      ],
+      "nonClaims": [
+        "Platform smoke does not publish packages, prove registry install authority, run full source quality gates, or approve release."
       ],
       "outputSelectors": [
         "artifacts/pypi/*.whl",
@@ -1658,33 +1536,33 @@
         "resource.proofkit.local-artifacts",
         "resource.proofkit.package-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Platform smoke does not publish packages, prove registry install authority, run full source quality gates, or approve release."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.python-package",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "dist/platform/*/agentic-proofkit",
         "internal/tools/pythonpackage",
         "package.json",
         "python"
+      ],
+      "nonClaims": [
+        "Python wheel candidate generation does not publish to PyPI or prove registry install authority."
       ],
       "outputSelectors": [
         "artifacts/pypi/*.whl",
@@ -1697,32 +1575,38 @@
         "resource.proofkit.local-artifacts",
         "resource.proofkit.package-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Python wheel candidate generation does not publish to PyPI or prove registry install authority."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 30000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.python-minimum",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         ".",
         "artifacts/pypi/*.whl",
         "artifacts/pypi/python-packages.json"
+      ],
+      "nonClaims": [
+        "Disabled cachePolicy prohibits witness-result reuse, not Go build-cache or Docker image-cache writes.",
+        "Native prerequisites are not provisioned by this plan: repository-root execution, go and git on PATH, an accessible native Linux arm64/amd64 Docker daemon matching host architecture, and the fresh package:artifact wheel set.",
+        "Network external covers host acquisition of the pinned official image, checksum-pinned pip wheel, and required Go dependencies; installed CPython 3.9.0/pip 26.0.1 execution is offline and unprivileged.",
+        "Planned environment allowlisting is a caller obligation; this metadata does not attest ambient CI filtering, registry credential absence, or daemon state.",
+        "Prerequisite ordering is owned by CI and native validation, not a scheduler dependency graph; this record does not execute or authenticate a minimum-runtime witness.",
+        "Shared Docker and Go caches may be populated; images are retained without exclusive ownership or cleanup. Only the owned container and temporary workdir are removed before success; SIGKILL or daemon loss can prevent cleanup.",
+        "The command emits its bounded observation on stdout and does not create a repository proof-receipt artifact or promote package-artifact receipts to minimum-runtime proof."
       ],
       "outputSelectors": [],
       "resourceReads": [
@@ -1739,34 +1623,25 @@
         "resource.proofkit.go-build-cache",
         "resource.proofkit.temporary-workdir"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "network",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 30000
-      },
+      "sideEffectClass": "network",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 360000
-      },
-      "nonClaims": [
-        "Disabled cachePolicy prohibits witness-result reuse, not Go build-cache or Docker image-cache writes.",
-        "Native prerequisites are not provisioned by this plan: repository-root execution, go and git on PATH, an accessible native Linux arm64/amd64 Docker daemon matching host architecture, and the fresh package:artifact wheel set.",
-        "Network external covers host acquisition of the pinned official image, checksum-pinned pip wheel, and required Go dependencies; installed CPython 3.9.0/pip 26.0.1 execution is offline and unprivileged.",
-        "Planned environment allowlisting is a caller obligation; this metadata does not attest ambient CI filtering, registry credential absence, or daemon state.",
-        "Prerequisite ordering is owned by CI and native validation, not a scheduler dependency graph; this record does not execute or authenticate a minimum-runtime witness.",
-        "Shared Docker and Go caches may be populated; images are retained without exclusive ownership or cleanup. Only the owned container and temporary workdir are removed before success; SIGKILL or daemon loss can prevent cleanup.",
-        "The command emits its bounded observation on stdout and does not create a repository proof-receipt artifact or promote package-artifact receipts to minimum-runtime proof."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.python-verify",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "artifacts/pypi/*.whl",
         "artifacts/pypi/python-packages.json",
@@ -1774,6 +1649,9 @@
         "internal/tools/pythonpackage",
         "package.json",
         "python"
+      ],
+      "nonClaims": [
+        "Local Python venv smoke proof covers only the current native platform."
       ],
       "outputSelectors": [],
       "resourceReads": [
@@ -1783,28 +1661,25 @@
       "resourceWrites": [
         "resource.proofkit.local-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Local Python venv smoke proof covers only the current native platform."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.release-sbom",
+      "deterministicOutput": true,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "artifacts/package/*.tgz",
         "artifacts/pypi/*.whl",
@@ -1813,6 +1688,10 @@
         "go.sum",
         "internal/tools/releasesbom",
         "package.json"
+      ],
+      "nonClaims": [
+        "Release SBOM generation does not prove vulnerability absence, license approval, registry identity, or release approval.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
       ],
       "outputSelectors": [
         "artifacts/release/sbom.cdx.json"
@@ -1825,29 +1704,25 @@
       "resourceWrites": [
         "resource.proofkit.local-artifacts"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": true,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Release SBOM generation does not prove vulnerability absence, license approval, registry identity, or release approval.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.receipt-contract-check",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
@@ -1856,7 +1731,12 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "scripts/receipt-admission-structure.test.mjs",
         "scripts/receipt-structure.test.mjs"
+      ],
+      "nonClaims": [
+        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
       ],
       "outputSelectors": [],
       "resourceReads": [
@@ -1866,29 +1746,25 @@
         "resource.proofkit.go-build-cache",
         "resource.proofkit.temporary-workdir"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.spec-tree-contract-check",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "cmd",
         "go.mod",
@@ -1899,6 +1775,10 @@
         "proofkit/cli-contract.v2.json",
         "scripts/spec-tree-structure.test.mjs"
       ],
+      "nonClaims": [
+        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
+        "Self-hosting witness policy does not prove producer authentication or merge approval."
+      ],
       "outputSelectors": [],
       "resourceReads": [
         "resource.proofkit.source"
@@ -1907,35 +1787,36 @@
         "resource.proofkit.go-build-cache",
         "resource.proofkit.temporary-workdir"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Receipt schema witnesses do not authenticate receipts, prove producer truth or approve merge.",
-        "Self-hosting witness policy does not prove producer authentication or merge approval."
-      ]
+      }
     },
     {
+      "cacheAdmissionRefs": [],
+      "cancellationPolicy": {
+        "graceMs": 5000,
+        "kind": "cooperative"
+      },
       "commandId": "proofkit.graph-contract-check",
+      "deterministicOutput": false,
+      "exclusiveLocks": [],
       "inputSelectors": [
         "internal/app/testdata/graph-native-observations.json",
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
         "scripts/graph-structure.test.mjs"
+      ],
+      "nonClaims": [
+        "Graph schema witnesses validate structure, not native graph semantics, freshness, witness execution or merge approval.",
+        "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
+        "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
       ],
       "outputSelectors": [],
       "resourceReads": [
@@ -1945,31 +1826,151 @@
       "resourceWrites": [
         "resource.proofkit.npm-cache"
       ],
-      "exclusiveLocks": [],
-      "sideEffectClass": "local_write",
-      "deterministicOutput": false,
-      "cacheAdmissionRefs": [],
       "retryPolicy": {
         "kind": "none",
         "maxAttempts": 1
       },
-      "cancellationPolicy": {
-        "kind": "cooperative",
-        "graceMs": 5000
-      },
+      "sideEffectClass": "local_write",
       "timeoutPolicy": {
         "kind": "bounded",
         "timeoutMs": 600000
-      },
-      "nonClaims": [
-        "Graph schema witnesses validate structure, not native graph semantics, freshness, witness execution or merge approval.",
-        "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
-        "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
-      ]
+      }
     }
   ],
-  "nonClaims": [
-    "Local-go environment policy does not claim cross-platform package publication readiness.",
-    "Self-hosting witness plan does not authenticate producers, execute CI, publish packages, or approve merge."
-  ]
+  "schedulerPlanId": "proofkit.self-hosting.witness-plan",
+  "schemaVersion": 1,
+  "vocabulary": {
+    "artifactKinds": [
+      "npm-package-artifact",
+      "python-wheel-artifact",
+      "report",
+      "sbom"
+    ],
+    "credentialClasses": [
+      "none"
+    ],
+    "environmentClassPolicies": [
+      {
+        "cachePolicies": [
+          "disabled",
+          "read-only",
+          "write-local"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-go",
+        "networkPolicies": [
+          "external",
+          "none"
+        ]
+      },
+      {
+        "cachePolicies": [
+          "disabled"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-go-legacy-positive",
+        "networkPolicies": [
+          "none"
+        ]
+      },
+      {
+        "cachePolicies": [
+          "disabled"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-go-node",
+        "networkPolicies": [
+          "none"
+        ]
+      },
+      {
+        "cachePolicies": [
+          "disabled",
+          "read-only",
+          "write-local"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-go-python",
+        "networkPolicies": [
+          "external",
+          "none"
+        ]
+      },
+      {
+        "cachePolicies": [
+          "disabled"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-go-python-native-docker",
+        "networkPolicies": [
+          "external"
+        ]
+      },
+      {
+        "cachePolicies": [
+          "disabled"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-node-browser",
+        "networkPolicies": [
+          "none"
+        ]
+      },
+      {
+        "cachePolicies": [
+          "disabled",
+          "write-local"
+        ],
+        "credentialClasses": [
+          "none"
+        ],
+        "environmentClass": "local-python",
+        "networkPolicies": [
+          "none"
+        ]
+      }
+    ],
+    "environmentClasses": [
+      "local-go",
+      "local-go-legacy-positive",
+      "local-go-node",
+      "local-go-python",
+      "local-go-python-native-docker",
+      "local-node-browser",
+      "local-python"
+    ],
+    "maxTimeoutMs": 600000,
+    "nonCacheableCredentialClasses": [],
+    "parallelGroups": [
+      "browser-runtime",
+      "compact-contract",
+      "coverage-metrics",
+      "graph-contract",
+      "local-go-static",
+      "package-artifact",
+      "performance-benchmark",
+      "platform-smoke",
+      "python-minimum-runtime",
+      "python-package-build",
+      "python-package-verify",
+      "receipt-contract",
+      "release-sbom",
+      "self-hosting-package-gate",
+      "self-hosting-receipt",
+      "spec-tree-contract",
+      "workflow-static"
+    ]
+  }
 }
