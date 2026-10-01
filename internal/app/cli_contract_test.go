@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "7e3e66f69500cd2b3c8926129a0f586efb03a7108f3383051eed93ddd9c091de"
+	cliContractPublicABISHA256               = "4639b37b799e555f99421647f20758f601e0e3b73bae3326cab2a046c9bbc2e0"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2122,9 +2122,9 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		t.Fatalf("TypeScript public API export condition rule=%v", rule)
 	}
 	budgets := inputContract["resourceBudgets"].(map[string]any)
-	if budgets["maxSourceFileBytes"] != float64(maxSourceFileBytesForContractTest) ||
-		budgets["maxPackageManifestBytes"] != float64(maxPackageManifestBytesForContractTest) ||
-		budgets["maxAggregateFileReadBytes"] != float64(maxAggregateFileReadBytesForContractTest) {
+	if budgets["maxSourceFileBytes"] != json.Number(fmt.Sprint(maxSourceFileBytesForContractTest)) ||
+		budgets["maxPackageManifestBytes"] != json.Number(fmt.Sprint(maxPackageManifestBytesForContractTest)) ||
+		budgets["maxAggregateFileReadBytes"] != json.Number(fmt.Sprint(maxAggregateFileReadBytesForContractTest)) {
 		t.Fatalf("TypeScript public API resource budgets drifted: %#v", budgets)
 	}
 	grammar := inputContract["sourceGrammar"].(map[string]any)
@@ -2208,12 +2208,12 @@ func TestRequirementCoverageViewBreakingRootUsesVersionedOutputContract(t *testi
 			continue
 		}
 		output := canonicalJSONValue(t, command.OutputContract).(map[string]any)
-		if output["contractId"] != "proofkit.requirement-coverage-view.output.v4" || output["schemaVersion"] != float64(4) {
+		if output["contractId"] != "proofkit.requirement-coverage-view.output.v4" || output["schemaVersion"] != json.Number("4") {
 			t.Fatalf("requirement coverage output identity=%#v, want versioned v4 contract", output)
 		}
 		definitionID := output["rootDefinitionRef"].(string)
 		definition := definitions[definitionID]
-		if definitionID != "proofkit.requirement-coverage-view.output.v4.json-schema" || definition["schemaVersion"] != float64(1) {
+		if definitionID != "proofkit.requirement-coverage-view.output.v4.json-schema" || definition["schemaVersion"] != json.Number("1") {
 			t.Fatal("requirement coverage output lacks its structural v4 definition")
 		}
 		foundEnvelope, foundReport := false, false
@@ -2536,14 +2536,14 @@ func TestAgentRouteOutputContractPreservesReportSemantics(t *testing.T) {
 		t.Fatal("agent-route output contract is missing")
 	}
 	report, ok := output["reportContract"].(map[string]any)
-	if !ok || report["contractId"] != "proofkit.agent-route.report.v3" || report["schemaVersion"] != float64(3) {
+	if !ok || report["contractId"] != "proofkit.agent-route.report.v3" || report["schemaVersion"] != json.Number("3") {
 		t.Fatalf("agent-route report contract identity is invalid: %#v", report)
 	}
 	assertStringSet(t, stringsFromAny(report["requiredFields"].([]any)), []string{
 		"guidanceSlice", "reportId", "reportKind", "schemaVersion", "selectedRouteFamily", "state", "summary",
 	}, "agent-route report contract required fields")
 	fields := report["fields"].(map[string]any)
-	if fields["schemaVersion"].(map[string]any)["value"] != float64(3) {
+	if fields["schemaVersion"].(map[string]any)["value"] != json.Number("3") {
 		t.Fatalf("agent-route report schema value drifted: %#v", fields["schemaVersion"])
 	}
 	family := fields["selectedRouteFamily"].(map[string]any)
@@ -2586,9 +2586,9 @@ func canonicalJSONValue(t *testing.T, value any) any {
 	if err != nil {
 		t.Fatalf("marshal value: %v", err)
 	}
-	var decoded any
-	if err := json.Unmarshal(content, &decoded); err != nil {
-		t.Fatalf("unmarshal value: %v", err)
+	decoded, err := admission.DecodeJSON(bytes.NewReader(content), int64(len(content)))
+	if err != nil {
+		t.Fatalf("decode value: %v", err)
 	}
 	return decoded
 }

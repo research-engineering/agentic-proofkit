@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -17,6 +18,23 @@ import (
 
 func TestGraphOutputContractMatchesNativeOwner(t *testing.T) {
 	assertSourceStructure(t, "requirement-traceability-graph", "output", "proofkit.requirement-traceability-graph.output.v1.json-schema", requirementgraph.OutputStructure())
+	t.Run("exact numeric normalization", func(t *testing.T) {
+		for _, token := range []string{"0", "-0", "1.0", "1e0", "9007199254740993", "9007199254740995", "9223372036854775807", "9223372036854775808"} {
+			if value := canonicalJSONValue(t, json.Number(token)); value != json.Number(token) {
+				t.Fatalf("numeric token %s changed to %v", token, value)
+			}
+		}
+		for _, tokens := range [][2]string{{"9007199254740992", "9007199254740993"}, {"9223372036854775807", "9223372036854775808"}} {
+			left := canonicalJSONValue(t, map[string]any{"maximum": json.Number(tokens[0])})
+			right := canonicalJSONValue(t, map[string]any{"maximum": json.Number(tokens[1])})
+			if reflect.DeepEqual(left, right) {
+				t.Fatal("schema normalization collapsed adjacent integers")
+			}
+		}
+		if !reflect.DeepEqual(canonicalJSONValue(t, map[string]any{"maximum": 1}), canonicalJSONValue(t, map[string]any{"maximum": json.Number("1")})) {
+			t.Fatal("equivalent integer representations differ after normalization")
+		}
+	})
 }
 
 func TestGraphSchemaWitnessPlanClosure(t *testing.T) {
