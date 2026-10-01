@@ -1,10 +1,17 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
+
+	"go.yaml.in/yaml/v3"
 )
 
 func TestCIBrowserRuntimeInstallsEnginesBeforeProofAndRetainsOnlySuccessfulEvidence(t *testing.T) {
@@ -31,6 +38,7 @@ func TestCIBrowserRuntimeInstallsEnginesBeforeProofAndRetainsOnlySuccessfulEvide
 	if job.Steps[installIndex].Run != "npx playwright install --with-deps chromium firefox webkit" || job.Steps[proofIndex].Run != "npm run browser:check" {
 		t.Fatalf("browser runtime commands are not exact: install=%q proof=%q", job.Steps[installIndex].Run, job.Steps[proofIndex].Run)
 	}
+	assertUbuntuMirrorPreparationForTest(t, job.Steps, installIndex)
 	upload := job.Steps[uploadIndex]
 	if usesAlwaysStatusCheck(upload.If) || upload.With["if-no-files-found"] != "error" || upload.With["path"] != "artifacts/proofkit/browser-runtime-proof.json" {
 		t.Fatalf("browser proof upload is not fail-closed success evidence: %#v", upload)
@@ -94,5 +102,104 @@ func TestReleaseCandidateInstallsBrowserEnginesBeforePackageGate(t *testing.T) {
 	}
 	if installIndex >= gateIndex || job.Steps[installIndex].Run != "npx playwright install --with-deps chromium firefox webkit" || job.Steps[gateIndex].Run != "npm run check" {
 		t.Fatalf("release browser prerequisite is not fail-closed before package gate: install=%#v gate=%#v", job.Steps[installIndex], job.Steps[gateIndex])
+	}
+	assertUbuntuMirrorPreparationForTest(t, job.Steps, installIndex)
+}
+
+func assertUbuntuMirrorPreparationForTest(t *testing.T, steps []githubStep, installIndex int) {
+	t.Helper()
+	index, err := uniqueStepIndex(steps, "Select official Ubuntu package mirrors")
+	if err != nil {
+		t.Fatal(err)
+	}
+	step := steps[index]
+	if index >= installIndex || step.Uses != "./.github/actions/setup-ubuntu-mirrors" ||
+		step.Run != "" || step.ifPresent || step.continueOnErrorPresent || len(step.With) != 0 || len(step.Env) != 0 {
+		t.Fatalf("Ubuntu mirror preparation is not an unconditional shared prerequisite: %#v", step)
+	}
+}
+
+func TestUbuntuMirrorActionPreservesExactPriorityAndRejectsFailedPreparation(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", ".github", "actions", "setup-ubuntu-mirrors", "action.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var action struct {
+		Name        string `yaml:"name"`
+		Description string `yaml:"description"`
+		Runs        struct {
+			Using string `yaml:"using"`
+			Steps []struct {
+				Name  string `yaml:"name"`
+				Shell string `yaml:"shell"`
+				Run   string `yaml:"run"`
+			} `yaml:"steps"`
+		} `yaml:"runs"`
+	}
+	decoder := yaml.NewDecoder(strings.NewReader(string(raw)))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&action); err != nil {
+		t.Fatal(err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		t.Fatalf("Ubuntu mirror action must contain exactly one YAML document: %v", err)
+	}
+	if action.Runs.Using != "composite" || len(action.Runs.Steps) != 1 || action.Runs.Steps[0].Shell != "bash" {
+		t.Fatalf("Ubuntu mirror action has an unexpected execution surface: %#v", action)
+	}
+	const want = "https://archive.ubuntu.com/ubuntu/\tpriority:1\nhttps://security.ubuntu.com/ubuntu/\tpriority:2\nhttp://azure.archive.ubuntu.com/ubuntu/\tpriority:3\n"
+	for _, control := range []struct {
+		name, setup, want  string
+		failed             bool
+		mayCreateEmptyFile bool
+	}{
+		{name: "exact signed-repository mirror order", want: want},
+		{name: "missing mirror list", setup: "test() { return 1; }", failed: true},
+		{name: "symlink mirror list", setup: "test() { [[ \"$*\" != '! -L /etc/apt/apt-mirrors.txt' ]]; }", failed: true},
+		{name: "source interface absent", setup: "grep() { return 1; }", failed: true},
+		{name: "writer failure", setup: "sudo() { return 7; }", failed: true},
+		{name: "upstream pipe failure", setup: "printf() { return 7; }", failed: true, mayCreateEmptyFile: true},
+	} {
+		t.Run(control.name, func(t *testing.T) {
+			output := filepath.Join(t.TempDir(), "mirrors.txt")
+			// Replace privileged host effects, but execute the actual action shell.
+			harness := `test() {
+  case "$*" in
+    '-f /etc/apt/apt-mirrors.txt'|'! -L /etc/apt/apt-mirrors.txt') return 0 ;;
+    *) return 2 ;;
+  esac
+}
+grep() {
+  [[ "$*" == '-Fq mirror+file:/etc/apt/apt-mirrors.txt /etc/apt/sources.list.d/ubuntu.sources' ]]
+}
+sudo() {
+  [[ "$*" == 'tee /etc/apt/apt-mirrors.txt' ]] || return 2
+  command tee "$MIRROR_TEST_OUTPUT"
+}
+` + control.setup + "\n" + action.Runs.Steps[0].Run
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			command := exec.CommandContext(ctx, "bash", "--noprofile", "--norc", "-c", harness)
+			command.Env = append(os.Environ(), "MIRROR_TEST_OUTPUT="+output)
+			log, err := command.CombinedOutput()
+			if ctx.Err() != nil || (err != nil) != control.failed {
+				t.Fatalf("action failure=%v timeout=%v, want failure=%v; output=%s", err, ctx.Err(), control.failed, log)
+			}
+			actual, readErr := os.ReadFile(output)
+			if control.want == "" {
+				if !control.mayCreateEmptyFile && !os.IsNotExist(readErr) {
+					t.Fatalf("failed prerequisite reached the privileged writer: bytes=%q error=%v", actual, readErr)
+				}
+				if readErr != nil && !os.IsNotExist(readErr) {
+					t.Fatal(readErr)
+				}
+				if len(actual) != 0 {
+					t.Fatalf("failed preparation wrote mirror bytes: %q", actual)
+				}
+			} else if readErr != nil || string(actual) != control.want {
+				t.Fatalf("mirrors=%q error=%v, want exact %q", actual, readErr, control.want)
+			}
+		})
 	}
 }
