@@ -284,7 +284,7 @@ func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
 	if err := validateRootCheckScript(manifest.Scripts["check"]); err != nil {
 		t.Fatal(err)
 	}
-	for _, removed := range []string{"npm run compact-contract:check", "npm run receipt-contract:check", "npm run spec-tree-contract:check", "npm run go:check", "npm run browser:check", "npm run package:artifact"} {
+	for _, removed := range []string{"npm run compact-contract:check", "npm run receipt-contract:check", "npm run spec-tree-contract:check", "npm run graph-contract:check", "npm run go:check", "npm run browser:check", "npm run package:artifact"} {
 		mutant := strings.Replace(manifest.Scripts["check"], " && "+removed, "", 1)
 		if err := validateRootCheckScript(mutant); err == nil {
 			t.Fatalf("check oracle admitted removal of %q", removed)
@@ -293,7 +293,7 @@ func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
 }
 
 func validateRootCheckScript(script string) error {
-	if script != "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run receipt-contract:check && npm run spec-tree-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout" {
+	if script != "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run receipt-contract:check && npm run spec-tree-contract:check && npm run graph-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout" {
 		return errors.New("root check must retain the exact ordered AND-only proof gates")
 	}
 	return nil
@@ -337,11 +337,20 @@ func TestReceiptSchemaGateWiring(t *testing.T) {
 }
 
 func TestSpecTreeSchemaGateWiring(t *testing.T) {
+	assertSchemaGateWiring(t, "spec-tree-contract:check", "scripts/spec-tree-structure.test.mjs", "Verify spec tree contract structure")
+}
+
+func TestGraphSchemaGateWiring(t *testing.T) {
+	assertSchemaGateWiring(t, "graph-contract:check", "scripts/graph-structure.test.mjs", "Verify graph contract structure")
+}
+
+func assertSchemaGateWiring(t *testing.T, gate, witness, step string) {
+	t.Helper()
 	scripts := readPackageScriptsForTest(t)
 	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
 	validate := func(commands map[string]string, source githubWorkflow) error {
-		if commands["spec-tree-contract:check"] != "node --test scripts/spec-tree-structure.test.mjs" {
-			return errors.New("spec tree gate must execute its independent schema witness")
+		if commands[gate] != "node --test "+witness {
+			return errors.New("schema gate must execute its independent witness")
 		}
 		if err := validateRootCheckScript(commands["check"]); err != nil {
 			return err
@@ -354,15 +363,15 @@ func TestSpecTreeSchemaGateWiring(t *testing.T) {
 	for _, mutation := range []string{"local-noop", "root-removed", "CI-removed", "CI-noop"} {
 		commands, source := maps.Clone(scripts), cloneWorkflow(t, workflow)
 		job := source.Jobs["source-quality"]
-		index, err := uniqueStepIndex(job.Steps, "Verify spec tree contract structure")
+		index, err := uniqueStepIndex(job.Steps, step)
 		if err != nil || index < 0 {
-			t.Fatal("spec tree step is absent or ambiguous")
+			t.Fatal("schema step is absent or ambiguous")
 		}
 		switch mutation {
 		case "local-noop":
-			commands["spec-tree-contract:check"] = "true"
+			commands[gate] = "true"
 		case "root-removed":
-			commands["check"] = strings.Replace(commands["check"], " && npm run spec-tree-contract:check", "", 1)
+			commands["check"] = strings.Replace(commands["check"], " && npm run "+gate, "", 1)
 		case "CI-removed":
 			job.Steps = append(job.Steps[:index], job.Steps[index+1:]...)
 		case "CI-noop":
@@ -370,7 +379,7 @@ func TestSpecTreeSchemaGateWiring(t *testing.T) {
 		}
 		source.Jobs["source-quality"] = job
 		if validate(commands, source) == nil {
-			t.Fatalf("spec tree gate mutation survived: %s", mutation)
+			t.Fatalf("%s gate mutation survived: %s", gate, mutation)
 		}
 	}
 }
@@ -414,7 +423,7 @@ func TestGoDependencyGateWiring(t *testing.T) {
 	// Independent keys cover the protected chains and upstream CI npm gates.
 	for _, gate := range []string{
 		"check", "npm:version", "source-hygiene", "command-contract:check",
-		"compact-contract:check", "receipt-contract:check", "spec-tree-contract:check",
+		"compact-contract:check", "receipt-contract:check", "spec-tree-contract:check", "graph-contract:check",
 		"command-family:check", "text-policy", "mermaid:check", "go:check",
 		"browser:check", "package:artifact", "self:receipt", "self:coverage",
 		"release:closeout", "go:fmt", "go:deps", "go:test", "go:vet",
@@ -540,7 +549,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 	}
 	const rootBeforeGo = "npm run npm:version\nnpm run source-hygiene\nnpm run command-contract:check\nnpm run command-family:check\nnpm run text-policy\nnpm run mermaid:check\nnpm run go:check\n"
 	const goAfterDeps = "npm run go:test\nnpm run go:vet\nnpm run go:staticcheck\nnpm run go:actionlint\nnpm run go:vulncheck\n"
-	const rootAfterGo = "npm run compact-contract:check\nnpm run receipt-contract:check\nnpm run spec-tree-contract:check\nnpm run browser:check\nnpm run package:artifact\nnpm run self:receipt\nnpm run self:coverage\nnpm run release:closeout\n"
+	const rootAfterGo = "npm run compact-contract:check\nnpm run receipt-contract:check\nnpm run spec-tree-contract:check\nnpm run graph-contract:check\nnpm run browser:check\nnpm run package:artifact\nnpm run self:receipt\nnpm run self:coverage\nnpm run release:closeout\n"
 	for _, entry := range []struct {
 		name, script, prefix, suffix string
 		root, masked                 bool
@@ -551,18 +560,19 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 		{"masked root control", scripts["check"] + " && true || true", rootBeforeGo + "npm run go:fmt\n", goAfterDeps + rootAfterGo, true, true},
 	} {
 		for _, failure := range []struct {
-			name                                                                      string
-			tidyExit, verifyExit, goCheckExit, compactExit, receiptExit, specTreeExit int
+			name                                                                                 string
+			tidyExit, verifyExit, goCheckExit, compactExit, receiptExit, specTreeExit, graphExit int
 		}{
-			{"positive control", 0, 0, 0, 0, 0, 0},
-			{"tidy failure", 23, 0, 0, 0, 0, 0},
-			{"verify failure", 0, 29, 0, 0, 0, 0},
-			{"Go composition failure", 0, 0, 31, 0, 0, 0},
-			{"compact schema failure", 0, 0, 0, 37, 0, 0},
-			{"receipt schema failure", 0, 0, 0, 0, 41, 0},
-			{"spec tree schema failure", 0, 0, 0, 0, 0, 43},
+			{"positive control", 0, 0, 0, 0, 0, 0, 0},
+			{"tidy failure", 23, 0, 0, 0, 0, 0, 0},
+			{"verify failure", 0, 29, 0, 0, 0, 0, 0},
+			{"Go composition failure", 0, 0, 31, 0, 0, 0, 0},
+			{"compact schema failure", 0, 0, 0, 37, 0, 0, 0},
+			{"receipt schema failure", 0, 0, 0, 0, 41, 0, 0},
+			{"spec tree schema failure", 0, 0, 0, 0, 0, 43, 0},
+			{"graph schema failure", 0, 0, 0, 0, 0, 0, 47},
 		} {
-			if (failure.goCheckExit != 0 || failure.compactExit != 0 || failure.receiptExit != 0 || failure.specTreeExit != 0) && !entry.root {
+			if (failure.goCheckExit != 0 || failure.compactExit != 0 || failure.receiptExit != 0 || failure.specTreeExit != 0 || failure.graphExit != 0) && !entry.root {
 				continue
 			}
 			t.Run(entry.name+"/"+failure.name, func(t *testing.T) {
@@ -571,7 +581,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 				// Hook absence is proved by the separate map oracle, not emulated here.
 				// Execute owner shell composition with controlled children, never real full gates.
 				for name, body := range map[string]string{
-					"npm": "#!/bin/sh\nprintf 'npm %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'run spec-tree-contract:check') exit \"$SPEC_TREE_EXIT\";;\n'run receipt-contract:check') exit \"$RECEIPT_EXIT\";;\n'run compact-contract:check') exit \"$COMPACT_EXIT\";;\n'run go:deps') exec /bin/sh -c \"$DEPS_SCRIPT\";;\n'run go:check') if [ \"$GO_CHECK_EXIT\" != 0 ]; then exit \"$GO_CHECK_EXIT\"; fi; exec /bin/sh -c \"$GO_CHECK_SCRIPT\";;\nesac\n",
+					"npm": "#!/bin/sh\nprintf 'npm %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'run graph-contract:check') exit \"$GRAPH_EXIT\";;\n'run spec-tree-contract:check') exit \"$SPEC_TREE_EXIT\";;\n'run receipt-contract:check') exit \"$RECEIPT_EXIT\";;\n'run compact-contract:check') exit \"$COMPACT_EXIT\";;\n'run go:deps') exec /bin/sh -c \"$DEPS_SCRIPT\";;\n'run go:check') if [ \"$GO_CHECK_EXIT\" != 0 ]; then exit \"$GO_CHECK_EXIT\"; fi; exec /bin/sh -c \"$GO_CHECK_SCRIPT\";;\nesac\n",
 					"go":  "#!/bin/sh\nprintf 'go %s\\n' \"$*\" >> \"$TRACE\"\ncase \"$*\" in\n'mod tidy -diff') exit \"$TIDY_EXIT\";;\n'mod verify') exit \"$VERIFY_EXIT\";;\n*) exit 91;;\nesac\n",
 				} {
 					if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o700); err != nil {
@@ -592,6 +602,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 					"COMPACT_EXIT=" + strconv.Itoa(failure.compactExit),
 					"RECEIPT_EXIT=" + strconv.Itoa(failure.receiptExit),
 					"SPEC_TREE_EXIT=" + strconv.Itoa(failure.specTreeExit),
+					"GRAPH_EXIT=" + strconv.Itoa(failure.graphExit),
 				}
 				output, runErr := command.CombinedOutput()
 				wantExit := failure.tidyExit
@@ -618,6 +629,10 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 				if failure.specTreeExit != 0 {
 					wantExit = failure.specTreeExit
 					wantTrace = rootBeforeGo + "npm run go:fmt\nnpm run go:deps\ngo mod tidy -diff\ngo mod verify\n" + goAfterDeps + "npm run compact-contract:check\nnpm run receipt-contract:check\nnpm run spec-tree-contract:check\n"
+				}
+				if failure.graphExit != 0 {
+					wantExit = failure.graphExit
+					wantTrace = rootBeforeGo + "npm run go:fmt\nnpm run go:deps\ngo mod tidy -diff\ngo mod verify\n" + goAfterDeps + "npm run compact-contract:check\nnpm run receipt-contract:check\nnpm run spec-tree-contract:check\nnpm run graph-contract:check\n"
 				}
 				if entry.masked {
 					// The deliberately masked variant remains a negative control.

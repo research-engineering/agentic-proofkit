@@ -135,6 +135,10 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.requirement-traceability-graph.input.v3.root-shape"}, commands: []string{"requirement-traceability-graph"},
 		schema: func() (map[string]any, error) { return requirementgraph.InputStructure(), nil },
 	}, {
+		id: "proofkit.requirement-traceability-graph.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-traceability-graph.output.v1.root-shape"}, commands: []string{"requirement-traceability-graph"},
+		schema: func() (map[string]any, error) { return requirementgraph.OutputStructure(), nil },
+	}, {
 		id: "proofkit.requirement-context-slice.output.v2.json-schema", direction: "output",
 		predecessors: []string{"proofkit.requirement-context-slice.output.v2.root-shape"}, commands: []string{"requirement-context-slice"},
 		schema: func() (map[string]any, error) { return requirementcontext.SliceOutputStructure(), nil },
