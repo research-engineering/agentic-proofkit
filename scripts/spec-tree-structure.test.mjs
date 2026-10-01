@@ -67,9 +67,13 @@ test("every observed output field retains independent required, type, null and c
         if (field === "staleDigest") check(mutateValue(row.output, pointer, true));
         if (field === "depth") {
           check(mutateValue(row.output, pointer, 0));
+          check(mutateValue(row.output, pointer, 1.5));
           check(mutateValue(row.output, pointer, 513));
         }
-        if (field === "displayOrder") check(mutateValue(row.output, pointer, 0));
+        if (field === "displayOrder") {
+          check(mutateValue(row.output, pointer, 0));
+          check(mutateValue(row.output, pointer, 1.5));
+        }
       }
       if (Array.isArray(value)) {
         value.forEach((child, i) => inspect(child, `${pointer}/${i}`));
