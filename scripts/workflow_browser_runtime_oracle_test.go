@@ -155,7 +155,7 @@ func TestUbuntuMirrorActionPreservesExactPriorityAndRejectsFailedPreparation(t *
 		mayCreateEmptyFile bool
 	}{
 		{name: "exact signed-repository mirror order", want: want},
-		{name: "missing mirror list", setup: "test() { return 1; }", failed: true},
+		{name: "missing mirror list", setup: "test() { [[ \"$*\" != '-f /etc/apt/apt-mirrors.txt' ]]; }", failed: true},
 		{name: "symlink mirror list", setup: "test() { [[ \"$*\" != '! -L /etc/apt/apt-mirrors.txt' ]]; }", failed: true},
 		{name: "source interface absent", setup: "grep() { return 1; }", failed: true},
 		{name: "writer failure", setup: "sudo() { return 7; }", failed: true},
