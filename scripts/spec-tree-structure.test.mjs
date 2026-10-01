@@ -43,6 +43,7 @@ test("every observed output field retains independent required, type, null and c
   for (const row of observations.filter(row => row.output !== undefined)) {
     function inspect(value, pointer) {
       const check = candidate => assert.equal(validators[row.kind](candidate), false, `${row.kind}/${row.case}${pointer}`);
+      const field = pointer.split("/").at(-1);
       if (pointer !== "") {
         check(mutateValue(row.output, pointer, null));
         const wrong = Array.isArray(value) ? {} : typeof value === "object" ? [] : typeof value === "string" ? 0 : "wrong type";
@@ -50,6 +51,25 @@ test("every observed output field retains independent required, type, null and c
         if (typeof value === "string" && value !== "" && !pointer.endsWith("/parentNodeId")) {
           check(mutateValue(row.output, pointer, ""));
         }
+        if (typeof value === "string") {
+          if (/(?:Id|Ids\/\d+)$/.test(pointer)) {
+            check(mutateValue(row.output, pointer, "bad id"));
+            check(mutateValue(row.output, pointer, "a".repeat(257)));
+          }
+          if (["reportKind", "viewKind", "authority", "callerAnnotationAuthority", "key", "nodeKind", "overlayKind", "refKind", "sourceRole", "sourceRefKind", "digestAlgorithm", "status", "state"].includes(field) || /^\/nonClaims\/\d+$/.test(pointer) || /^\/diagnostics\/0\/value\/\d+$/.test(pointer)) {
+            check(mutateValue(row.output, pointer, "foreign"));
+          }
+          if (["currentSourceDigest", "recordedSourceDigest", "refDigest"].includes(field)) {
+            check(mutateValue(row.output, pointer, "sha256:bad"));
+          }
+        }
+        if (field === "schemaVersion") check(mutateValue(row.output, pointer, 999));
+        if (field === "staleDigest") check(mutateValue(row.output, pointer, true));
+        if (field === "depth") {
+          check(mutateValue(row.output, pointer, 0));
+          check(mutateValue(row.output, pointer, 513));
+        }
+        if (field === "displayOrder") check(mutateValue(row.output, pointer, 0));
       }
       if (Array.isArray(value)) {
         value.forEach((child, i) => inspect(child, `${pointer}/${i}`));
@@ -68,8 +88,8 @@ test("every observed output field retains independent required, type, null and c
 
 test("spec tree summary bounds and scalar types cannot be weakened unnoticed", () => {
   const bounds = {
-    report: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [0, 512], sourceRefCount: [1, null], visitedNodeCount: [0, 8193]},
-    view: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [1, 512], sourceRefCount: [1, null], staleSourceRefCount: [0, 0]},
+    report: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [0, 512], sourceRefCount: [1, null], visitedNodeCount: [0, 8193], failureCount: [0, null], staleSourceRefCount: [0, null], callerAnnotationCount: [0, null]},
+    view: {nodeCount: [1, 4096], edgeCount: [0, 8192], overlayCount: [0, 4096], maxDepth: [1, 512], sourceRefCount: [1, null], staleSourceRefCount: [0, 0], callerAnnotationCount: [0, null]},
   };
   for (const [kind, counters] of Object.entries(bounds)) {
     for (const [name, [min, max]] of Object.entries(counters)) {
@@ -96,6 +116,9 @@ test("spec tree nested required, null, enum, cardinality and tuple guards are in
     ["report", "/nonClaims/0", "foreign"],
     ["view", "/authority", "proof"], ["view", "/callerAnnotationAuthority", "trusted"],
     ["view", "/nodes", []], ["view", "/nodes/0/parentNodeId", null],
+    ["view", "/nodes/0/depth", 0], ["view", "/nodes/0/depth", 513],
+    ["view", "/nodes/0/displayOrder", 0], ["view", "/nodes/0/nodeKind", "foreign"],
+    ["view", "/nodes/0/sourceRefs", []],
     ["view", "/nodes/2/sourceRefs/0/staleDigest", true],
     ["view", "/nodes/2/sourceRefs/0/digestAlgorithm", "md5"],
     ["view", "/nodes/2/sourceRefs/0/sourceRole", "foreign"],
@@ -121,6 +144,8 @@ test("spec tree structure preserves intentional empty root parent and semantic n
   assert.equal(baseline("view").nodes[0].parentNodeId, "");
   assert.equal(validators.view(mutated("view", "/nodes/0/parentNodeId", "")), true);
   assert.equal(validators.report(observations.find(row => row.kind === "report" && row.case === "failed").output), true);
+  const failed = observations.find(row => row.kind === "report" && row.case === "failed").output;
+  assert.equal(validators.report(mutateValue(failed, "/ruleResults/0/diagnostics/0/value/0", "foreign")), true);
   // Referential truth is not schema validity: native validation remains owner.
   assert.equal(validators.view(mutated("view", "/nodes/1/parentNodeId", "missing")), true);
 });
@@ -128,6 +153,7 @@ test("spec tree structure preserves intentional empty root parent and semantic n
 test("spec tree fixed native tuples reject empty, shortened and extended arrays", () => {
   for (const [kind, pointer, length] of [
     ["report", "/diagnostics", 6], ["report", "/ruleResults", 4],
+    ["report", "/diagnostics/0/value", 8],
     ["report", "/ruleResults/0/diagnostics", 1], ["report", "/ruleResults/1/diagnostics", 1],
     ["report", "/ruleResults/2/diagnostics", 1], ["report", "/nonClaims", 8],
     ["view", "/nonClaims", 13],

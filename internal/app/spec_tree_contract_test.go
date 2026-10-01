@@ -16,6 +16,39 @@ import (
 func TestSpecTreeOutputContractsMatchNativeOwners(t *testing.T) {
 	assertSourceStructure(t, "requirement-spec-tree", "output", "proofkit.requirement-spec-tree.output.v1.json-schema", requirementspectree.OutputStructure())
 	assertSourceStructure(t, "requirement-spec-tree-view", "output", "proofkit.requirement-spec-tree-view.output.v2.json-schema", requirementspectree.ViewOutputStructure())
+	for _, command := range readCLIContract(t).Commands {
+		if command.Command != "requirement-spec-tree-view" {
+			continue
+		}
+		output, ok := command.OutputContract.(map[string]any)
+		if !ok {
+			t.Fatal("spec tree JSON view output contract is absent")
+		}
+		selector, ok := output["nativeOutputWitnessSelector"].(map[string]any)
+		if !ok {
+			t.Fatal("spec tree JSON view output witness is absent")
+		}
+		valid := func(value map[string]any) bool {
+			return len(value) == 4 &&
+				value["path"] == "internal/command/requirementspectree/requirementspectree_test.go" &&
+				value["test"] == "TestBuildViewJSONIsPermutationStable" &&
+				value["command"] == "go test ./internal/command/requirementspectree -run '^TestBuildViewJSONIsPermutationStable$'" &&
+				value["evidenceClass"] == "source_checkout"
+		}
+		if !valid(selector) {
+			t.Fatal("spec tree JSON output must bind its direct native JSON witness")
+		}
+		previous := map[string]any{
+			"path": selector["path"], "evidenceClass": selector["evidenceClass"],
+			"test":    "TestBuildViewMarkdownAndHTMLAreDeterministicAndEscaped",
+			"command": "go test ./internal/command/requirementspectree -run '^TestBuildViewMarkdownAndHTMLAreDeterministicAndEscaped$'",
+		}
+		if valid(previous) {
+			t.Fatal("JSON witness oracle admitted the previous non-JSON selector")
+		}
+		return
+	}
+	t.Fatal("spec tree JSON view command is absent")
 }
 
 func TestSpecTreeCLIHistoricalWireAndTransports(t *testing.T) {
