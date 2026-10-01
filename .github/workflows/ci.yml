@@ -93,6 +93,9 @@ jobs:
       - name: Verify receipt contract structure
         run: npm run receipt-contract:check
 
+      - name: Verify spec tree contract structure
+        run: npm run spec-tree-contract:check
+
       - name: Verify generated command family catalog
         run: npm run command-family:check
 

@@ -14,6 +14,25 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-cli-contract"}: {
+			witnessPath: "internal/app/spec_tree_contract_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestSpecTreeCLIExactDisplayOrderTokens", "TestSpecTreeCLIHistoricalWireAndTransports", "TestSpecTreeOutputContractsMatchNativeOwners"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-schema-owner"}: {
+			witnessPath: "internal/tools/commandcontractgen/spec_tree_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestSpecTreeOutputStructuresRejectRehashedNestedDrift"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-schema-isolation"}: {
+			witnessPath: "internal/command/requirementspectree/output_structure_test.go",
+			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
+			selectors: []string{"TestSpecTreeOutputStructuresAreDetached"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.spec-tree-schema-independent-runtime"}: {
+			witnessPath: "scripts/spec-tree-structure.test.mjs",
+			commandIDs:  []string{"proofkit.spec-tree-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.compact-schema-package-references"}: {
 			witnessPath: "internal/tools/packageverify/reference_inventory_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
