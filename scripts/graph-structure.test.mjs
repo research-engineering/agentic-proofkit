@@ -74,7 +74,7 @@ test("graph node branches independently preserve required and optional field inv
         if (node.kind !== "source_range") {
           for (const [key, value] of [["byteStart", 0], ["byteEnd", 1], ["coordinateUnit", "utf8_byte"], ["rangeVerification", "verified"]]) reject(row.output, `/nodes/${index}/${key}`, value);
         } else {
-          for (const [key, values] of [["byteStart", [-1, 0.5]], ["byteEnd", [0, 1.5]]]) {
+          for (const [key, values] of [["byteStart", [-1, 0.5, 2**64]], ["byteEnd", [0, 1.5, 2**64]]]) {
             for (const value of values) reject(row.output, `/nodes/${index}/${key}`, value);
           }
         }
