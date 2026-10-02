@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
 	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
@@ -397,6 +398,47 @@ func agentEnvelopeRootStructure() (map[string]any, error) {
 
 func (owner nativeStructure) summary(version json.Number) []any {
 	return []any{owner.schemaVersionField() + "=" + version.String(), "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
+}
+
+// Human field navigation is derived separately from the machine contract digest.
+func nativeInputRootSummary(id string, definition map[string]any) ([]string, error) {
+	owner, ok := nativeStructureOwner(id)
+	if !ok {
+		return nil, nil
+	}
+	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	result := make([]string, 0, len(variants))
+	for _, raw := range variants {
+		variant := raw.(map[string]any)
+		schema := variant["schema"].(map[string]any)
+		root, err := nativeStructureRoot(schema, owner.schemaVersionField())
+		if err != nil {
+			return nil, err
+		}
+		properties := root["properties"].(map[string]any)
+		fields := make([]string, 0, len(properties))
+		for _, name := range sortedKeys(properties) {
+			if name == owner.schemaVersionField() {
+				continue
+			}
+			field, _ := properties[name].(map[string]any)
+			if schema["type"] == "object" {
+				switch field["type"] {
+				case "array":
+					name += "[]"
+				case "object":
+					name += "{}"
+				}
+			}
+			fields = append(fields, name)
+		}
+		label := "root fields"
+		if len(variants) > 1 {
+			label += " (" + variant["variantId"].(string) + ")"
+		}
+		result = append(result, label+": "+strings.Join(fields, ", "))
+	}
+	return result, nil
 }
 
 func nativeSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {

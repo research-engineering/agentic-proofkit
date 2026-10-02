@@ -1548,7 +1548,12 @@ func TestHelpCommandContractForms(t *testing.T) {
 	}{
 		{command: "migration-parity-admission", needles: []string{"Input schema summary:", "parityRecords[]", "targetProofkitRefs[]"}},
 		{command: "migration-plan", needles: []string{"Input schema summary:", "retirementCandidates[]", "followUpCommands[]"}},
+		{command: "adoption-checklist", needles: []string{"Input schema summary:", "checklistId", "items[]", "requiredItemIds[]"}},
+		{command: "binding-partition", needles: []string{"Input schema summary:", "bindingSurfaces[]", "delegations[]", "routeOwners[]"}},
+		{command: "completion-criteria", needles: []string{"Input schema summary:", "completionId", "criteria[]"}},
 		{command: "package-runtime-dependency-admission", needles: []string{"Input schema summary:", "expectedLockfileIntegrity", "packageResolution{}"}},
+		{command: "proof-obligation-algebra", needles: []string{"Input schema summary:", "algebraId", "obligations[]"}},
+		{command: "text-policy", needles: []string{"Input schema summary:", "files[]", "policy{}"}},
 	} {
 		t.Run("schema summary "+item.command, func(t *testing.T) {
 			stdout.Reset()
