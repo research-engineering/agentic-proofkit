@@ -1,0 +1,18 @@
+name: setup Ubuntu mirrors
+description: Prefer official HTTPS Ubuntu archives without changing APT package trust.
+
+runs:
+  using: composite
+  steps:
+    - name: Select official Ubuntu package mirrors
+      shell: bash
+      run: |
+        set -euo pipefail
+        test -f /etc/apt/apt-mirrors.txt
+        test ! -L /etc/apt/apt-mirrors.txt
+        grep -Fq 'mirror+file:/etc/apt/apt-mirrors.txt' /etc/apt/sources.list.d/ubuntu.sources
+        printf '%s\tpriority:%s\n' \
+          'https://archive.ubuntu.com/ubuntu/' 1 \
+          'https://security.ubuntu.com/ubuntu/' 2 \
+          'http://azure.archive.ubuntu.com/ubuntu/' 3 \
+          | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
