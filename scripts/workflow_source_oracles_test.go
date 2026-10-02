@@ -341,23 +341,23 @@ func TestReceiptSchemaGateWiring(t *testing.T) {
 }
 
 func TestSpecTreeSchemaGateWiring(t *testing.T) {
-	assertSchemaGateWiring(t, "spec-tree-contract:check", "scripts/spec-tree-structure.test.mjs", "Verify spec tree contract structure")
+	assertSchemaGateWiring(t, "spec-tree-contract:check", "Verify spec tree contract structure", "scripts/spec-tree-structure.test.mjs")
 }
 
 func TestGraphSchemaGateWiring(t *testing.T) {
-	assertSchemaGateWiring(t, "graph-contract:check", "scripts/graph-structure.test.mjs", "Verify graph contract structure")
+	assertSchemaGateWiring(t, "graph-contract:check", "Verify graph contract structure", "scripts/graph-structure.test.mjs")
 }
 
 func TestBoundarySchemaGateWiring(t *testing.T) {
-	assertSchemaGateWiring(t, "boundary-contract:check", "scripts/boundary-structure.test.mjs", "Verify boundary contract structures")
+	assertSchemaGateWiring(t, "boundary-contract:check", "Verify boundary contract structures", "scripts/boundary-structure.test.mjs", "scripts/report-admission-structure.test.mjs")
 }
 
-func assertSchemaGateWiring(t *testing.T, gate, witness, step string) {
+func assertSchemaGateWiring(t *testing.T, gate, step string, witnesses ...string) {
 	t.Helper()
 	scripts := readPackageScriptsForTest(t)
 	workflow := readWorkflowForTest(t, filepath.Join("..", ".github", "workflows", "ci.yml"))
 	validate := func(commands map[string]string, source githubWorkflow) error {
-		if commands[gate] != "node --test "+witness {
+		if commands[gate] != "node --test "+strings.Join(witnesses, " ") {
 			return errors.New("schema gate must execute its independent witness")
 		}
 		if err := validateRootCheckScript(commands["check"]); err != nil {
@@ -367,6 +367,13 @@ func assertSchemaGateWiring(t *testing.T, gate, witness, step string) {
 	}
 	if err := validate(scripts, workflow); err != nil {
 		t.Fatal(err)
+	}
+	for _, witness := range witnesses {
+		commands := maps.Clone(scripts)
+		commands[gate] = strings.Replace(commands[gate], " "+witness, "", 1)
+		if commands[gate] == scripts[gate] || validate(commands, workflow) == nil {
+			t.Fatalf("%s gate lost-witness mutation survived: %s", gate, witness)
+		}
 	}
 	for _, mutation := range []string{"local-noop", "root-removed", "CI-removed", "CI-noop"} {
 		commands, source := maps.Clone(scripts), cloneWorkflow(t, workflow)

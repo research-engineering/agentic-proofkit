@@ -351,6 +351,34 @@ test("all report members, array elements and integer counts reject structural co
   }
 });
 
+test("finite report count maxima preserve exact declared neighbors", () => {
+  const command = "package-runtime-dependency-admission", family = families[command], input = seed(command);
+  Object.assign(input.packageResolution, {
+    packageName: "different-package", packageVersion: "0.2.0", dependencySpec: null,
+    lockfileEntryPresent: false, lockfileIntegrity: "sha512-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  });
+  input.admissibleLocations = {};
+  const failed = pair(command, input, "failed", "six-independent-package-failures").output;
+  assert.equal(failed.summary.failureCount, 6);
+  failed.summary.failureCount = 7;
+  assert.equal(family.output(failed), false, "package/failureCount/over-maximum");
+
+  const algebra = families["proof-obligation-algebra"];
+  const output = native(algebra, seed(algebra.command), "passed", "algebra-count-seed").output;
+  const targets = [
+    ...["failedObligationCount", "nonRouteBearingObligationCount", "obligationCount", "routeBearingObligationCount", "rootObligationCount"].map(key => ["summary", key]),
+    ...["all_of", "any_of", "atomic", "conditional", "deferred", "waived_until"].map(key => ["summary", "kindCounts", key]),
+    ...objects(output).filter(path => Object.hasOwn(at(output, path), "graphDepth")).map(path => [...path, "graphDepth"]),
+  ];
+  for (const path of targets) {
+    const changed = structuredClone(output), object = at(changed, path.slice(0, -1)), key = path.at(-1);
+    object[key] = 2048;
+    assert.equal(algebra.output(changed), true, `algebra/${path}/at-maximum`);
+    object[key] = 2049;
+    assert.equal(algebra.output(changed), false, `algebra/${path}/over-maximum`);
+  }
+});
+
 test("nested text and identifier domains reject empty, malformed and oversized values", () => {
   const ids = {
     "adoption-checklist": new Set(["reportId", "checklistId", "itemId", "requiredItemIds", "blockedRequiredItemIds", "missingRequiredItemIds", "notApplicableRequiredItemIds"]),
