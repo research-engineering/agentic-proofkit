@@ -151,6 +151,95 @@ test("native normalization preserves distinct text, path and glob policies", () 
   native(families[2], fresh, "rejected", "normalized-builtin-collision");
 });
 
+test("array elements have independent scalar, object and tuple-position controls", () => {
+  for (const family of families) {
+    const baseline = family.rows[0].input;
+    for (const path of arrays(baseline)) {
+      const recordItems = path.length === 1 && path[0] === family.list;
+      for (const value of [null, 0, true, [], "", ...(recordItems ? [] : [{}])]) {
+        const input = structuredClone(baseline);
+        at(input, path).push(value);
+        pair(family, input, "rejected", `${family.command}/${path}/item/${JSON.stringify(value)}`);
+      }
+    }
+    for (const row of family.rows.filter(row => row.output)) for (const path of arrays(row.output)) {
+      const tuple = path.length === 1 && ["diagnostics", "ruleResults"].includes(path[0]);
+      const textItems = path[0] === "nonClaims" || (path[0] === "diagnostics" && path.at(-1) === "value" && row.output.diagnostics[path[1]].key === "failures");
+      for (const value of [null, 0, true, [], "", ...(textItems ? [{}] : [])]) {
+        // Append to homogeneous arrays so builtin-presence guards stay satisfied.
+        // Fixed tuples require replacement at each existing position instead.
+        for (const index of tuple ? at(row.output, path).map((_, index) => index) : [at(row.output, path).length]) {
+          const output = structuredClone(row.output);
+          at(output, path)[index] = value;
+          assert.equal(family.output(output), false, `${family.command}/${path}/${index}/item/${JSON.stringify(value)}`);
+        }
+      }
+    }
+  }
+});
+
+test("boolean false and nonempty optional arrays remain native-valid domains", () => {
+  const custom = families[0];
+  for (const flag of ["secretRedaction", "stableFindingIds", "stableOrdering"]) {
+    const input = structuredClone(custom.rows[0].input);
+    input.rules[0].deterministicOutput[flag] = false;
+    pair(custom, input, "failed", `admitted-false/${flag}`);
+  }
+  const document = families[1], input = structuredClone(document.rows[0].input);
+  input.documents[0].sourceRefs = ["docs/context.json"];
+  pair(document, input, "passed", "nonempty-document-sourceRefs");
+  const duplicate = structuredClone(input);
+  duplicate.documents[0].sourceRefs.push("docs/context.json");
+  pair(document, duplicate, "rejected", "duplicate-document-sourceRefs");
+  const wrongItem = structuredClone(input);
+  wrongItem.documents[0].sourceRefs = [true];
+  pair(document, wrongItem, "rejected", "mistyped-document-sourceRefs");
+});
+
+test("schema constants, integer domains and upper bounds are observable independently", () => {
+  for (const family of families) {
+    for (const version of [0, 2, 1.5]) {
+      const input = structuredClone(family.rows[0].input);
+      input.schemaVersion = version;
+      pair(family, input, "rejected", `${family.command}/schema-version/${version}`);
+    }
+    const baseline = family.rows[0].output;
+    for (const [field, value] of Object.entries(baseline.summary)) for (const invalid of [value + 0.5, 1e20]) {
+      const output = structuredClone(baseline);
+      output.summary[field] = invalid;
+      assert.equal(family.output(output), false, `${family.command}/${field}/integer-domain/${invalid}`);
+    }
+  }
+  for (const invalid of [1.5, 1e20]) {
+    const input = structuredClone(families[0].rows[0].input);
+    input.rules[0].useLimit.maxAffectedPathGlobs = invalid;
+    pair(families[0], input, "rejected", `positive-integer-domain/${invalid}`);
+  }
+});
+
+test("identifier sites preserve their independent ASCII and 256-byte domain", () => {
+  const inputPaths = {
+    "custom-rule-boundary": [["boundaryId"], ["rules", 0, "ruleId"], ["rules", 0, "namespace"], ["rules", 0, "inputArtifactKinds", 0]],
+    "document-lifecycle-boundary": [["boundaryId"], ["documents", 0, "documentId"]],
+    "rendered-artifact-freshness": [["freshnessSetId"], ["artifacts", 0, "artifactId"], ["artifacts", 0, "generationScopeId"], ["artifacts", 0, "rendererId"]],
+  };
+  for (const family of families) {
+    for (const path of inputPaths[family.command]) {
+      for (const value of ["a", "a".repeat(256), "a".repeat(257), "invalid id", "7invalid"]) {
+        const input = structuredClone(family.rows[0].input);
+        at(input, path.slice(0, -1))[path.at(-1)] = value;
+        pair(family, input, value === "a" || value.length === 256 ? undefined : "rejected", `${family.command}/${path}/identifier/${value.length}`);
+      }
+    }
+    const outputPaths = [["reportId"], ...(family.command === "rendered-artifact-freshness" ? ["artifactId", "generationScopeId", "rendererId"].map(key => ["diagnostics", 0, "value", 0, key]) : [])];
+    for (const path of outputPaths) for (const value of ["a", "a".repeat(256), "a".repeat(257), "invalid id", "7invalid"]) {
+      const output = structuredClone(family.rows[0].output);
+      at(output, path.slice(0, -1))[path.at(-1)] = value;
+      assert.equal(family.output(output), value === "a" || value.length === 256, `${family.command}/${path}/output-identifier/${value.length}`);
+    }
+  }
+});
+
 test("independent finite vocabularies preserve admitted semantic failure states", () => {
   for (const family of families) for (const [field, values] of Object.entries(family.enums)) {
     const path = field.split("."), key = path.pop();
