@@ -677,6 +677,13 @@ func admitCommandContract(root string, command string, direction string, contrac
 	if err != nil {
 		return "", nil, err
 	}
+	if direction == "input" {
+		fields, err := nativeInputRootSummary(definitionID, definition.Content)
+		if err != nil {
+			return "", nil, fmt.Errorf("%s help fields: %w", context, err)
+		}
+		summary = append(summary, fields...)
+	}
 	return sha256Digest(encoded), summary, nil
 }
 

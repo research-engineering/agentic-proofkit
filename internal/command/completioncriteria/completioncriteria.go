@@ -119,7 +119,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("completion criteria input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"completionId", "criteria", "nonClaims", "schemaVersion"}, "completion criteria input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "completion criteria input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -159,7 +159,7 @@ func criteriaArray(raw any) ([]criterionInput, error) {
 		if !ok {
 			return nil, fmt.Errorf("completion criterion must be an object")
 		}
-		if err := admit.KnownKeys(record, []string{"blocker", "criterion", "criterionClass", "criterionId", "evidenceRefs", "failsWhen", "nonClaims", "owner", "proofRefs", "status", "structuredDecisionRefs", "validatorRefs"}, "completion criterion"); err != nil {
+		if err := admit.KnownKeys(record, criterionKeys, "completion criterion"); err != nil {
 			return nil, err
 		}
 		item, err := criterionFromRecord(record)
@@ -275,14 +275,9 @@ func validateCriterionState(class string, status string, evidenceRefs []string, 
 }
 
 func statusCounts(criteria []criterion) map[string]any {
-	counts := map[string]any{
-		"advisory_skipped":             0,
-		"blocked_missing_precondition": 0,
-		"deferred_admitted":            0,
-		"failed":                       0,
-		"missing_evidence":             0,
-		"not_applicable":               0,
-		"satisfied":                    0,
+	counts := make(map[string]any, len(criterionStatuses))
+	for status := range criterionStatuses {
+		counts[status] = 0
 	}
 	for _, item := range criteria {
 		counts[item.Status] = counts[item.Status].(int) + 1

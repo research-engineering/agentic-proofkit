@@ -6,10 +6,16 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
+	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
+	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
@@ -25,6 +31,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
+	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
@@ -230,6 +237,54 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.rendered-artifact-freshness.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.rendered-artifact-freshness.output.v1.root-shape"}, commands: []string{"rendered-artifact-freshness"},
 		schema: func() (map[string]any, error) { return renderedartifactfreshness.OutputStructure(), nil },
+	}, {
+		id: "proofkit.adoption-checklist.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.adoption-checklist.input.v1.root-shape"}, commands: []string{"adoption-checklist"},
+		schema: func() (map[string]any, error) { return adoptionchecklist.InputStructure(), nil },
+	}, {
+		id: "proofkit.adoption-checklist.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.adoption-checklist.output.v1.root-shape"}, commands: []string{"adoption-checklist"},
+		schema: func() (map[string]any, error) { return adoptionchecklist.OutputStructure(), nil },
+	}, {
+		id: "proofkit.binding-partition.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.binding-partition.input.v1.root-shape"}, commands: []string{"binding-partition"},
+		schema: func() (map[string]any, error) { return bindingpartition.InputStructure(), nil },
+	}, {
+		id: "proofkit.binding-partition.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.binding-partition.output.v1.root-shape"}, commands: []string{"binding-partition"},
+		schema: func() (map[string]any, error) { return bindingpartition.OutputStructure(), nil },
+	}, {
+		id: "proofkit.completion-criteria.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.completion-criteria.input.v1.root-shape"}, commands: []string{"completion-criteria"},
+		schema: func() (map[string]any, error) { return completioncriteria.InputStructure(), nil },
+	}, {
+		id: "proofkit.completion-criteria.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.completion-criteria.output.v1.root-shape"}, commands: []string{"completion-criteria"},
+		schema: func() (map[string]any, error) { return completioncriteria.OutputStructure(), nil },
+	}, {
+		id: "proofkit.package-runtime-dependency-admission.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.package-runtime-dependency-admission.input.v1.root-shape"}, commands: []string{"package-runtime-dependency-admission"},
+		schema: func() (map[string]any, error) { return packageruntimedependency.InputStructure(), nil },
+	}, {
+		id: "proofkit.package-runtime-dependency-admission.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.package-runtime-dependency-admission.output.v1.root-shape"}, commands: []string{"package-runtime-dependency-admission"},
+		schema: func() (map[string]any, error) { return packageruntimedependency.OutputStructure(), nil },
+	}, {
+		id: "proofkit.proof-obligation-algebra.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.proof-obligation-algebra.input.v1.root-shape"}, commands: []string{"proof-obligation-algebra"},
+		schema: func() (map[string]any, error) { return proofobligationalgebra.InputStructure(), nil },
+	}, {
+		id: "proofkit.proof-obligation-algebra.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.proof-obligation-algebra.output.v1.root-shape"}, commands: []string{"proof-obligation-algebra"},
+		schema: func() (map[string]any, error) { return proofobligationalgebra.OutputStructure(), nil },
+	}, {
+		id: "proofkit.text-policy.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.text-policy.input.v1.root-shape"}, commands: []string{"text-policy"},
+		schema: func() (map[string]any, error) { return textpolicy.InputStructure(), nil },
+	}, {
+		id: "proofkit.text-policy.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.text-policy.output.v1.root-shape"}, commands: []string{"text-policy"},
+		schema: func() (map[string]any, error) { return textpolicy.OutputStructure(), nil },
 	}}
 }
 
@@ -343,6 +398,47 @@ func agentEnvelopeRootStructure() (map[string]any, error) {
 
 func (owner nativeStructure) summary(version json.Number) []any {
 	return []any{owner.schemaVersionField() + "=" + version.String(), "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
+}
+
+// Human field navigation is derived separately from the machine contract digest.
+func nativeInputRootSummary(id string, definition map[string]any) ([]string, error) {
+	owner, ok := nativeStructureOwner(id)
+	if !ok {
+		return nil, nil
+	}
+	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	result := make([]string, 0, len(variants))
+	for _, raw := range variants {
+		variant := raw.(map[string]any)
+		schema := variant["schema"].(map[string]any)
+		root, err := nativeStructureRoot(schema, owner.schemaVersionField())
+		if err != nil {
+			return nil, err
+		}
+		properties := root["properties"].(map[string]any)
+		fields := make([]string, 0, len(properties))
+		for _, name := range sortedKeys(properties) {
+			if name == owner.schemaVersionField() {
+				continue
+			}
+			field, _ := properties[name].(map[string]any)
+			if schema["type"] == "object" {
+				switch field["type"] {
+				case "array":
+					name += "[]"
+				case "object":
+					name += "{}"
+				}
+			}
+			fields = append(fields, name)
+		}
+		label := "root fields"
+		if len(variants) > 1 {
+			label += " (" + variant["variantId"].(string) + ")"
+		}
+		result = append(result, label+": "+strings.Join(fields, ", "))
+	}
+	return result, nil
 }
 
 func nativeSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {

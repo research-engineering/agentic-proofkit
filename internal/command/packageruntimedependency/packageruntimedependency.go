@@ -152,7 +152,7 @@ func admitInput(raw any) (input, error) {
 	if !ok {
 		return input{}, fmt.Errorf("package runtime dependency admission input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"admissibleLocations", "expectedDependencySpec", "expectedLockfileIntegrity", "expectedPackageName", "expectedPackageVersion", "nonClaims", "packageResolution", "reportId", "schemaVersion"}, "package runtime dependency admission input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "package runtime dependency admission input"); err != nil {
 		return input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -207,7 +207,7 @@ func admitResolution(raw any) (resolutionInput, error) {
 	if !ok {
 		return resolutionInput{}, fmt.Errorf("package runtime dependency resolution must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"dependencySpec", "lockfileEntryPresent", "lockfileIntegrity", "packageName", "packageRoot", "packageVersion", "realPackageRoot", "resolvedEntryPoint"}, "package runtime dependency resolution"); err != nil {
+	if err := admit.KnownKeys(record, resolutionKeys, "package runtime dependency resolution"); err != nil {
 		return resolutionInput{}, err
 	}
 	lockfileEntryPresent, ok := record["lockfileEntryPresent"].(bool)
@@ -263,7 +263,7 @@ func admitLocations(raw any) (locationsInput, error) {
 	if !ok {
 		return locationsInput{}, fmt.Errorf("package runtime dependency admissibleLocations must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"expectedPackageRoot", "localWorkspaceRoot", "nodeModulesRoot"}, "package runtime dependency admissibleLocations"); err != nil {
+	if err := admit.KnownKeys(record, locationKeys, "package runtime dependency admissibleLocations"); err != nil {
 		return locationsInput{}, err
 	}
 	expectedPackageRoot, err := nullableRuntimePath(record["expectedPackageRoot"], "admissibleLocations.expectedPackageRoot")

@@ -1,24 +1,44 @@
 package main
 
 import (
+	"bytes"
+	"maps"
 	"reflect"
 	"slices"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
+	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
+	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
+	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
+	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 )
 
-func TestBoundaryNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
-	for _, family := range []struct {
-		command       string
-		input, output func() map[string]any
-	}{
+type boundaryStructureFamily struct {
+	command       string
+	input, output func() map[string]any
+}
+
+func boundaryStructureFamilies() []boundaryStructureFamily {
+	return []boundaryStructureFamily{
 		{"custom-rule-boundary", customruleboundary.InputStructure, customruleboundary.OutputStructure},
 		{"document-lifecycle-boundary", documentlifecycle.InputStructure, documentlifecycle.OutputStructure},
 		{"rendered-artifact-freshness", renderedartifactfreshness.InputStructure, renderedartifactfreshness.OutputStructure},
-	} {
+		{"adoption-checklist", adoptionchecklist.InputStructure, adoptionchecklist.OutputStructure},
+		{"binding-partition", bindingpartition.InputStructure, bindingpartition.OutputStructure},
+		{"completion-criteria", completioncriteria.InputStructure, completioncriteria.OutputStructure},
+		{"package-runtime-dependency-admission", packageruntimedependency.InputStructure, packageruntimedependency.OutputStructure},
+		{"proof-obligation-algebra", proofobligationalgebra.InputStructure, proofobligationalgebra.OutputStructure},
+		{"text-policy", textpolicy.InputStructure, textpolicy.OutputStructure},
+	}
+}
+
+func TestBoundaryNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
+	for _, family := range boundaryStructureFamilies() {
 		for _, direction := range []string{"input", "output"} {
 			id := "proofkit." + family.command + "." + direction + ".v1.json-schema"
 			t.Run(id, func(t *testing.T) {
@@ -60,6 +80,60 @@ func TestBoundaryNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
 					t.Fatal("a recomputed digest authorized nested schema drift")
 				}
 			})
+		}
+	}
+}
+
+func TestBoundaryNativeStructuresAreDetached(t *testing.T) {
+	for _, family := range boundaryStructureFamilies() {
+		for direction, projection := range map[string]func() map[string]any{"input": family.input, "output": family.output} {
+			t.Run(family.command+"/"+direction, func(t *testing.T) {
+				value := projection()
+				before, err := canonicalJSON(value)
+				if err != nil {
+					t.Fatal(err)
+				}
+				restore := mutateStructureContainers(value)
+				defer restore()
+				after, err := canonicalJSON(projection())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !bytes.Equal(before, after) {
+					t.Fatal("mutating a returned container changed the owner projection")
+				}
+			})
+		}
+	}
+}
+
+// Visit children before replacing parents so nested aliases are exercised too.
+func mutateStructureContainers(value any) func() {
+	var restores []func()
+	var mutate func(any)
+	mutate = func(value any) {
+		switch value := value.(type) {
+		case map[string]any:
+			previous := maps.Clone(value)
+			for _, child := range previous {
+				mutate(child)
+			}
+			clear(value)
+			value["unexpected"] = true
+			restores = append(restores, func() { clear(value); maps.Copy(value, previous) })
+		case []any:
+			previous := slices.Clone(value)
+			for index, child := range previous {
+				mutate(child)
+				value[index] = nil
+			}
+			restores = append(restores, func() { copy(value, previous) })
+		}
+	}
+	mutate(value)
+	return func() {
+		for index := len(restores) - 1; index >= 0; index-- {
+			restores[index]()
 		}
 	}
 }
