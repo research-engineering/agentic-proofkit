@@ -46,8 +46,8 @@ function native(family, input, expected, label, extra = []) {
   const result = spawnSync(binary, [family.command, "--input", "-", ...extra], {
     input: typeof input === "string" ? input : JSON.stringify(input), encoding: "utf8", timeout: 10_000, maxBuffer: 8 << 20,
   });
-  assert.equal(result.error, undefined, label);
-  assert.equal(result.signal, null, label);
+  assert.equal(result.error, undefined, `${label}/transport-error`);
+  assert.equal(result.signal, null, `${label}/transport-signal`);
   if (expected === "rejected") {
     assert.equal(result.status, 1, label);
     assert.equal(result.stdout, "", label);
@@ -55,7 +55,7 @@ function native(family, input, expected, label, extra = []) {
     return result;
   }
   assert.ok(result.status === 0 || result.status === 1, label);
-  assert.equal(result.stderr, "", `${label}: ${result.stderr}`);
+  assert.equal(result.stderr, "", `${label}/stderr`);
   const output = JSON.parse(result.stdout);
   assert.equal(output.reportKind, `proofkit.${family.command}${family.command === "binding-partition" ? "-admission" : ""}`, label);
   assert.equal(output.state, result.status === 0 ? "passed" : "failed", label);
@@ -284,6 +284,25 @@ test("output vocabularies and prefixed identities reject unsupported values and 
       assert.equal(family.output(changed), true, `${family.command}/${prefix}/maximum`);
       changed.ruleResults[index].ruleId += "x";
       assert.equal(family.output(changed), false, `${family.command}/${prefix}/overflow`);
+    }
+  }
+});
+
+test("positive report counts reject zero independently of schema declarations", () => {
+  const positiveCounts = {
+    "adoption-checklist": ["itemCount", "requiredItemCount"],
+    "binding-partition": ["proofRouteCount", "surfaceCount"],
+    "completion-criteria": ["criterionCount"],
+    "proof-obligation-algebra": ["obligationCount"],
+  };
+  for (const [command, keys] of Object.entries(positiveCounts)) {
+    const family = families[command], output = native(family, seed(command), "passed", command).output;
+    for (const key of keys) {
+      const changed = structuredClone(output);
+      changed.summary[key] = 1;
+      assert.equal(family.output(changed), true, `${command}/${key}/at-minimum`);
+      changed.summary[key] = 0;
+      assert.equal(family.output(changed), false, `${command}/${key}/below-minimum`);
     }
   }
 });
