@@ -19,6 +19,11 @@ var fileStates = map[string]struct{}{
 	"present": {},
 }
 
+var standardNonClaims = []string{
+	"Text policy checks caller-provided file inventory only.",
+	"Text policy does not discover git state, read repository files, own repository-specific documentation topology, decide proof freshness, approve merge, release, or rollout.",
+}
+
 type Input struct {
 	Files     []FileRecord
 	NonClaims []string
@@ -97,10 +102,7 @@ func Evaluate(raw any) (Result, error) {
 		state = "failed"
 		exitCode = 1
 	}
-	nonClaims := append([]string{
-		"Text policy checks caller-provided file inventory only.",
-		"Text policy does not discover git state, read repository files, own repository-specific documentation topology, decide proof freshness, approve merge, release, or rollout.",
-	}, input.NonClaims...)
+	nonClaims := append(append([]string{}, standardNonClaims...), input.NonClaims...)
 	sort.Strings(nonClaims)
 	record := report.Record{
 		SchemaVersion: 1,
@@ -145,7 +147,7 @@ func admitInput(raw any) (Input, error) {
 	if !ok {
 		return Input{}, fmt.Errorf("text policy input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"files", "nonClaims", "policy", "reportId", "schemaVersion"}, "text policy input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "text policy input"); err != nil {
 		return Input{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -175,7 +177,7 @@ func admitPolicy(raw any) (Policy, error) {
 	if !ok {
 		return Policy{}, fmt.Errorf("text policy policy must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"allowTab", "asciiOnly", "binarySuffixes", "rejectTrailingWhitespace", "requireFinalNewline"}, "text policy policy"); err != nil {
+	if err := admit.KnownKeys(record, policyKeys, "text policy policy"); err != nil {
 		return Policy{}, err
 	}
 	allowTab, err := boolField(record["allowTab"], "text policy allowTab")
@@ -224,7 +226,7 @@ func admitFiles(raw any) ([]FileRecord, error) {
 		if !ok {
 			return nil, fmt.Errorf("text policy files[%d] must be an object", index)
 		}
-		if err := admit.KnownKeys(record, []string{"contentBase64", "path", "state"}, fmt.Sprintf("text policy files[%d]", index)); err != nil {
+		if err := admit.KnownKeys(record, fileKeys, fmt.Sprintf("text policy files[%d]", index)); err != nil {
 			return nil, err
 		}
 		pathValue, ok := record["path"].(string)

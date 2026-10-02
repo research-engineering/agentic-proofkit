@@ -98,8 +98,21 @@ func Object(properties ...Property) Shape {
 // RequiredObject binds an existing native member inventory to its complete
 // structural projection. Neither missing nor independently added fields fit.
 func RequiredObject(names []string, fields map[string]Shape) Shape {
+	return ObjectFromKeys(names, fields)
+}
+
+// ObjectFromKeys preserves the complete native key inventory and admits only
+// an explicitly declared optional subset. Optional does not imply nullable.
+func ObjectFromKeys(names []string, fields map[string]Shape, optionalNames ...string) Shape {
 	if len(names) != len(fields) {
 		panic("JSON structure differs from native member inventory")
+	}
+	optional := make(map[string]bool, len(optionalNames))
+	for _, name := range optionalNames {
+		if _, exists := fields[name]; !exists || optional[name] {
+			panic("invalid optional JSON structure member")
+		}
+		optional[name] = true
 	}
 	properties := make([]Property, 0, len(names))
 	for _, name := range names {
@@ -107,7 +120,7 @@ func RequiredObject(names []string, fields map[string]Shape) Shape {
 		if !ok {
 			panic("JSON structure omits a native member")
 		}
-		properties = append(properties, Required(name, shape))
+		properties = append(properties, Property{name: name, shape: shape, optional: optional[name]})
 	}
 	return Object(properties...)
 }

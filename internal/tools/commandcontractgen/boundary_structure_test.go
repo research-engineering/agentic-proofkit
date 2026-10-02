@@ -5,9 +5,15 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/adoptionchecklist"
+	"github.com/research-engineering/agentic-proofkit/internal/command/bindingpartition"
+	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
+	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
+	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 )
 
 func TestBoundaryNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
@@ -18,6 +24,12 @@ func TestBoundaryNativeStructuresRejectRehashedNestedDrift(t *testing.T) {
 		{"custom-rule-boundary", customruleboundary.InputStructure, customruleboundary.OutputStructure},
 		{"document-lifecycle-boundary", documentlifecycle.InputStructure, documentlifecycle.OutputStructure},
 		{"rendered-artifact-freshness", renderedartifactfreshness.InputStructure, renderedartifactfreshness.OutputStructure},
+		{"adoption-checklist", adoptionchecklist.InputStructure, adoptionchecklist.OutputStructure},
+		{"binding-partition", bindingpartition.InputStructure, bindingpartition.OutputStructure},
+		{"completion-criteria", completioncriteria.InputStructure, completioncriteria.OutputStructure},
+		{"package-runtime-dependency-admission", packageruntimedependency.InputStructure, packageruntimedependency.OutputStructure},
+		{"proof-obligation-algebra", proofobligationalgebra.InputStructure, proofobligationalgebra.OutputStructure},
+		{"text-policy", textpolicy.InputStructure, textpolicy.OutputStructure},
 	} {
 		for _, direction := range []string{"input", "output"} {
 			id := "proofkit." + family.command + "." + direction + ".v1.json-schema"
