@@ -33,6 +33,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
+	"github.com/research-engineering/agentic-proofkit/internal/command/workspacemanifestfacts"
+	"github.com/research-engineering/agentic-proofkit/internal/command/workspaceplanning"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/requirementsourcecodec"
@@ -285,6 +287,38 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.text-policy.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.text-policy.output.v1.root-shape"}, commands: []string{"text-policy"},
 		schema: func() (map[string]any, error) { return textpolicy.OutputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-manifest-facts.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.workspace-manifest-facts.input.v1.root-shape"}, commands: []string{"workspace-manifest-facts"},
+		schema: func() (map[string]any, error) { return workspacemanifestfacts.InputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-manifest-facts.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.workspace-manifest-facts.output.v1.root-shape"}, commands: []string{"workspace-manifest-facts"},
+		schema: func() (map[string]any, error) { return workspacemanifestfacts.OutputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-changed-package-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.workspace-changed-package-plan.input.v1.root-shape"}, commands: []string{"workspace-changed-package-plan"},
+		schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanInputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-changed-package-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.workspace-changed-package-plan.output.v1.root-shape"}, commands: []string{"workspace-changed-package-plan"},
+		wireVersion: json.Number("1"),
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "02-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanOutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.workspace-shard-partition.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.workspace-shard-partition.input.v1.root-shape"}, commands: []string{"workspace-shard-partition"},
+		schema: func() (map[string]any, error) { return workspaceplanning.ShardInputStructure(), nil },
+	}, {
+		id: "proofkit.workspace-shard-partition.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.workspace-shard-partition.output.v1.root-shape"}, commands: []string{"workspace-shard-partition"},
+		wireVersion: json.Number("1"),
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
+			{id: "02-partition", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ShardOutputStructure(), nil }},
+		},
 	}}
 }
 
