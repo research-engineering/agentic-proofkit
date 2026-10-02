@@ -167,7 +167,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("document lifecycle boundary input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"boundaryId", "documents", "nonClaims", "schemaVersion"}, "document lifecycle boundary input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "document lifecycle boundary input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -221,7 +221,7 @@ func documentArray(raw any) ([]documentInput, error) {
 }
 
 func admitDocument(record map[string]any) (documentInput, error) {
-	if err := admit.KnownKeys(record, []string{"authorityRole", "documentId", "forbiddenPayloads", "freshnessCheckRefs", "kind", "lifecycleState", "mutationTriggers", "nonClaims", "owner", "path", "routingRole", "sourceRefs"}, "document lifecycle record"); err != nil {
+	if err := admit.KnownKeys(record, documentKeys, "document lifecycle record"); err != nil {
 		return documentInput{}, err
 	}
 	documentID, err := admit.RuleID(record["documentId"], "document lifecycle documentId")

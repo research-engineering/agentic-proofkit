@@ -99,6 +99,9 @@ jobs:
       - name: Verify graph contract structure
         run: npm run graph-contract:check
 
+      - name: Verify boundary contract structures
+        run: npm run boundary-contract:check
+
       - name: Verify generated command family catalog
         run: npm run command-family:check
 

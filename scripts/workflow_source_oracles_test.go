@@ -284,7 +284,7 @@ func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
 	if err := validateRootCheckScript(manifest.Scripts["check"]); err != nil {
 		t.Fatal(err)
 	}
-	for _, removed := range []string{"npm run compact-contract:check", "npm run receipt-contract:check", "npm run spec-tree-contract:check", "npm run graph-contract:check", "npm run go:check", "npm run browser:check", "npm run package:artifact"} {
+	for _, removed := range []string{"npm run compact-contract:check", "npm run receipt-contract:check", "npm run spec-tree-contract:check", "npm run graph-contract:check", "npm run boundary-contract:check", "npm run go:check", "npm run browser:check", "npm run package:artifact"} {
 		mutant := strings.Replace(manifest.Scripts["check"], " && "+removed, "", 1)
 		if err := validateRootCheckScript(mutant); err == nil {
 			t.Fatalf("check oracle admitted removal of %q", removed)
@@ -293,7 +293,7 @@ func TestRootCheckRetainsRequiredProofGates(t *testing.T) {
 }
 
 func validateRootCheckScript(script string) error {
-	if script != "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run receipt-contract:check && npm run spec-tree-contract:check && npm run graph-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout" {
+	if script != "npm run npm:version && npm run source-hygiene && npm run command-contract:check && npm run command-family:check && npm run text-policy && npm run mermaid:check && npm run go:check && npm run compact-contract:check && npm run receipt-contract:check && npm run spec-tree-contract:check && npm run graph-contract:check && npm run boundary-contract:check && npm run browser:check && npm run package:artifact && npm run self:receipt && npm run self:coverage && npm run release:closeout" {
 		return errors.New("root check must retain the exact ordered AND-only proof gates")
 	}
 	return nil
@@ -346,6 +346,10 @@ func TestSpecTreeSchemaGateWiring(t *testing.T) {
 
 func TestGraphSchemaGateWiring(t *testing.T) {
 	assertSchemaGateWiring(t, "graph-contract:check", "scripts/graph-structure.test.mjs", "Verify graph contract structure")
+}
+
+func TestBoundarySchemaGateWiring(t *testing.T) {
+	assertSchemaGateWiring(t, "boundary-contract:check", "scripts/boundary-structure.test.mjs", "Verify boundary contract structures")
 }
 
 func assertSchemaGateWiring(t *testing.T, gate, witness, step string) {
@@ -427,7 +431,7 @@ func TestGoDependencyGateWiring(t *testing.T) {
 	// Independent keys cover the protected chains and upstream CI npm gates.
 	for _, gate := range []string{
 		"check", "npm:version", "source-hygiene", "command-contract:check",
-		"compact-contract:check", "receipt-contract:check", "spec-tree-contract:check", "graph-contract:check",
+		"compact-contract:check", "receipt-contract:check", "spec-tree-contract:check", "graph-contract:check", "boundary-contract:check",
 		"command-family:check", "text-policy", "mermaid:check", "go:check",
 		"browser:check", "package:artifact", "self:receipt", "self:coverage",
 		"release:closeout", "go:fmt", "go:deps", "go:test", "go:vet",
@@ -553,7 +557,7 @@ func TestGoDependencyGateFailurePropagation(t *testing.T) {
 	}
 	const rootBeforeGo = "npm run npm:version\nnpm run source-hygiene\nnpm run command-contract:check\nnpm run command-family:check\nnpm run text-policy\nnpm run mermaid:check\nnpm run go:check\n"
 	const goAfterDeps = "npm run go:test\nnpm run go:vet\nnpm run go:staticcheck\nnpm run go:actionlint\nnpm run go:vulncheck\n"
-	const rootAfterGo = "npm run compact-contract:check\nnpm run receipt-contract:check\nnpm run spec-tree-contract:check\nnpm run graph-contract:check\nnpm run browser:check\nnpm run package:artifact\nnpm run self:receipt\nnpm run self:coverage\nnpm run release:closeout\n"
+	const rootAfterGo = "npm run compact-contract:check\nnpm run receipt-contract:check\nnpm run spec-tree-contract:check\nnpm run graph-contract:check\nnpm run boundary-contract:check\nnpm run browser:check\nnpm run package:artifact\nnpm run self:receipt\nnpm run self:coverage\nnpm run release:closeout\n"
 	for _, entry := range []struct {
 		name, script, prefix, suffix string
 		root, masked                 bool

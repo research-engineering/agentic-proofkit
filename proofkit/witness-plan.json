@@ -114,6 +114,7 @@
       }
     ],
     "parallelGroups": [
+      "boundary-contract",
       "browser-runtime",
       "compact-contract",
       "coverage-metrics",
@@ -962,6 +963,35 @@
       "parallelGroup": "graph-contract",
       "schemaVersion": 1,
       "timeoutMs": 600000
+    },
+    {
+      "schemaVersion": 1,
+      "id": "proofkit.boundary-contract-check",
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "boundary-contract:check"
+      ],
+      "environment": {
+        "inherit": "none",
+        "allowlist": [],
+        "classes": [
+          "local-go-node"
+        ]
+      },
+      "timeoutMs": 600000,
+      "networkPolicy": "none",
+      "credentialClass": "none",
+      "cachePolicy": "disabled",
+      "expectedArtifacts": [],
+      "parallelGroup": "boundary-contract",
+      "exitCodePolicy": {
+        "kind": "zero",
+        "successCodes": [
+          0
+        ]
+      }
     }
   ],
   "policies": [
@@ -1964,6 +1994,50 @@
       },
       "nonClaims": [
         "Graph schema witnesses validate structure, not native graph semantics, freshness, witness execution or merge approval.",
+        "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
+        "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
+      ]
+    },
+    {
+      "commandId": "proofkit.boundary-contract-check",
+      "inputSelectors": [
+        "cmd",
+        "go.mod",
+        "go.sum",
+        "internal",
+        "package-lock.json",
+        "package.json",
+        "proofkit/cli-contract.v2.json",
+        "scripts/boundary-structure.test.mjs"
+      ],
+      "outputSelectors": [],
+      "resourceReads": [
+        "resource.proofkit.node-dependencies",
+        "resource.proofkit.source"
+      ],
+      "resourceWrites": [
+        "resource.proofkit.go-build-cache",
+        "resource.proofkit.npm-cache",
+        "resource.proofkit.temporary-workdir"
+      ],
+      "exclusiveLocks": [],
+      "sideEffectClass": "local_write",
+      "deterministicOutput": false,
+      "cacheAdmissionRefs": [],
+      "retryPolicy": {
+        "kind": "none",
+        "maxAttempts": 1
+      },
+      "cancellationPolicy": {
+        "kind": "cooperative",
+        "graceMs": 5000
+      },
+      "timeoutPolicy": {
+        "kind": "bounded",
+        "timeoutMs": 600000
+      },
+      "nonClaims": [
+        "Boundary schema witnesses validate declared carriers and preserved CLI behavior, not native evidence truth or merge approval.",
         "Npm may write local cache or diagnostic files; disabled cachePolicy denies proof-result reuse, not those writes.",
         "Planned environment and resource metadata does not attest ambient filtering or filesystem isolation."
       ]
