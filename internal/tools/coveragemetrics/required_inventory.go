@@ -26,7 +26,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.boundary-schema-owner"}: {
 			witnessPath: "internal/tools/commandcontractgen/boundary_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
-			selectors: []string{"TestBoundaryNativeStructuresRejectRehashedNestedDrift"},
+			selectors: []string{"TestBoundaryNativeStructuresAreDetached", "TestBoundaryNativeStructuresRejectRehashedNestedDrift"},
 		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.boundary-schema-independent-runtime"}: {
 			witnessPath: "scripts/boundary-structure.test.mjs",

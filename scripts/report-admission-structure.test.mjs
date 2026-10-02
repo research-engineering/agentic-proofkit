@@ -332,6 +332,176 @@ test("all report members, array elements and integer counts reject structural co
   }
 });
 
+test("nested text and identifier domains reject empty, malformed and oversized values", () => {
+  const ids = {
+    "adoption-checklist": new Set(["reportId", "checklistId", "itemId", "requiredItemIds", "blockedRequiredItemIds", "missingRequiredItemIds", "notApplicableRequiredItemIds"]),
+    "binding-partition": new Set(["reportId", "partitionId", "ownerId", "surfaceId", "selectorRefs", "cohesionGroupId", "proofRouteRef", "proofRouteRefs", "referenceId", "referenceIds", "referrerOwnerId", "referrerSurfaceId", "delegationRef", "delegationRefs", "reviewConditionRef", "fromOwnerId", "fromSurfaceId", "toOwnerId", "toSurfaceId", "canonicalOwnerId", "canonicalSurfaceId", "matchedDelegationRefs", "cohesionGroupIds", "ownedProofRouteRefs", "ownedSelectorRefs", "failedProofRouteRefs", "failedSurfaceIds"]),
+    "completion-criteria": new Set(["reportId", "completionId", "criterionId", "blockingUnsatisfiedCriterionIds"]),
+    "package-runtime-dependency-admission": new Set(["reportId"]),
+    "proof-obligation-algebra": new Set(["reportId", "algebraId", "obligationId", "requirementId", "childObligationIds", "conditionRefs", "delegationRefs", "proofRouteRefs", "transitiveChildObligationIds", "failedObligationIds", "nonRouteBearingObligationIds", "rootObligationIds"]),
+    "text-policy": new Set(["reportId"]),
+  };
+  for (const family of Object.values(families)) {
+    const visited = new Set();
+    for (const row of family.rows.filter(row => row.expected !== "rejected")) {
+      const output = native(family, row.input, row.expected, row.name).output;
+      for (const [direction, original] of [["input", row.input], ["output", output]]) {
+        const targets = [];
+        for (const path of objects(original)) for (const [key, value] of Object.entries(at(original, path))) {
+          const nullableText = value === null && ["blocker", "expiryRef", "reviewConditionRef", "canonicalOwnerId", "canonicalSurfaceId", "dependencySpec", "expectedPackageRoot", "localWorkspaceRoot", "nodeModulesRoot"].includes(key);
+          if ((typeof value === "string" || nullableText) && key !== "contentBase64") targets.push({path: [...path, key], id: ids[family.command].has(key)});
+        }
+        for (const path of arrays(original)) {
+          const parent = at(original, path.slice(0,-1));
+          const name = path.at(-1) === "value" && typeof parent.key === "string" ? parent.key : path.at(-1);
+          // Empty ID arrays still need an element-grammar counterexample.
+          if (ids[family.command].has(name)) targets.push({path: [...path, 0], id: true});
+          else for (let index = 0; index < at(original, path).length; index++) if (typeof at(original, path)[index] === "string") targets.push({path: [...path, index], id: false});
+        }
+        for (const target of targets) for (const value of ["", ...(target.id ? ["invalid id", "x".repeat(257), "valid\n"] : [])]) {
+          const key = JSON.stringify([direction, target.path, value.length, value.includes(" "), value.includes("\n")]);
+          if (visited.has(key)) continue;
+          visited.add(key);
+          const changed = structuredClone(original);
+          at(changed, target.path.slice(0,-1))[target.path.at(-1)] = value;
+          assert.equal(family[direction](changed), false, `${family.command}/${direction}/${target.path}/lexical`);
+          if (direction === "input") native(family, changed, "rejected", `${family.command}/${target.path}/native-lexical`);
+        }
+      }
+    }
+  }
+  for (const path of [["expectedPackageName"], ["packageResolution", "packageName"], ["expectedLockfileIntegrity"], ["packageResolution", "lockfileIntegrity"], ["expectedDependencySpec"], ["packageResolution", "dependencySpec"]]) {
+    const input = seed("package-runtime-dependency-admission"), key = path.at(-1);
+    at(input, path.slice(0,-1))[key] = /name/i.test(key) ? "UPPERCASE" : /integrity/i.test(key) ? "not-integrity" : "value\n";
+    pair("package-runtime-dependency-admission", input, "rejected", `${path}/grammar`);
+  }
+});
+
+test("output array minima and fixed tuple lengths are independently enforced", () => {
+  const diagnosticCounts = {"adoption-checklist": 1, "binding-partition": 5, "completion-criteria": 2, "package-runtime-dependency-admission": 11, "proof-obligation-algebra": 4, "text-policy": 1};
+  const ruleMinima = {"adoption-checklist": 1, "binding-partition": 2, "completion-criteria": 1, "package-runtime-dependency-admission": 4, "proof-obligation-algebra": 1, "text-policy": 1};
+  const nonemptyFields = {
+    "adoption-checklist": new Set(["items", "requiredItemIds", "nonClaims"]),
+    "binding-partition": new Set(["selectorRefs", "ownedSelectorRefs"]),
+    "completion-criteria": new Set(["failsWhen", "nonClaims"]),
+    "package-runtime-dependency-admission": new Set(),
+    "proof-obligation-algebra": new Set(["nonClaims"]), "text-policy": new Set(),
+  };
+  for (const family of Object.values(families)) {
+    const input = seed(family.command), output = native(family, input, "passed", family.command).output;
+    const minima = [[['diagnostics'], diagnosticCounts[family.command]], [['ruleResults'], ruleMinima[family.command]]];
+    for (const path of arrays(output)) {
+      if (path[0] === "ruleResults" && path.at(-1) === "diagnostics") minima.push([path, at(output, path).length]);
+      if (path.length > 1 && nonemptyFields[family.command].has(path.at(-1))) {
+        // The missing-owner placeholder alone permits empty selectorRefs.
+        if (family.command === "binding-partition" && path.at(-1) === "selectorRefs" && at(output, path.slice(0,-1)).proofRouteRef) continue;
+        minima.push([path, 1]);
+      }
+      if (path.length === 3 && path[0] === "diagnostics" && path[2] === "value" && ["routeOwnership", "surfaceDiagnostics", "criteria", "obligations"].includes(output.diagnostics[path[1]].key)) minima.push([path, 1]);
+    }
+    for (const [path, minimum] of minima.filter(([,minimum]) => minimum > 0)) {
+      // NonClaims have a separate precursor below, keeping all builtin guards.
+      if (path.at(-1) === "nonClaims") continue;
+      const atMinimum = structuredClone(output);
+      at(atMinimum, path).length = minimum;
+      assert.equal(family.output(atMinimum), true, `${family.command}/${path}/at-minimum`);
+      at(atMinimum, path).length = minimum - 1;
+      assert.equal(family.output(atMinimum), false, `${family.command}/${path}/below-minimum`);
+    }
+    for (const path of arrays(output).filter(path => path.at(-1) === "nonClaims")) {
+      const changed = structuredClone(output), values = at(changed, path);
+      if (path.length === 1 || family.command === "adoption-checklist" && path.join('/') === 'diagnostics/0/value/nonClaims') {
+        if (["package-runtime-dependency-admission", "text-policy"].includes(family.command)) continue;
+        const index = values.indexOf(input.nonClaims[0]);
+        assert.notEqual(index, -1);
+        values.splice(index, 1);
+      } else values.length = 0;
+      assert.equal(family.output(changed), false, `${family.command}/${path}/claim-minimum`);
+    }
+    const extra = structuredClone(output);
+    extra.diagnostics.push(structuredClone(extra.diagnostics[0]));
+    assert.equal(family.output(extra), false, `${family.command}/diagnostic-tuple-maximum`);
+  }
+});
+
+test("native ordering and terminal nondisclosure survive complete CLI boundaries", () => {
+  const input = seed("proof-obligation-algebra");
+  input.obligations[0].evidenceRefs = [" z.txt", " a.txt"];
+  const result = pair("proof-obligation-algebra", input, "passed", "native-path-normalization").output;
+  assert.deepEqual(result.diagnostics.find(row => row.key === "obligations").value[0].evidenceRefs, [" a.txt", " z.txt"]);
+  input.obligations[0].proofRouteRefs = ["route.z", "route.a"];
+  assert.equal(families["proof-obligation-algebra"].input(input), true, "ID order is a native constraint");
+  native(families["proof-obligation-algebra"], input, "rejected", "native-id-order");
+  const canary = "api" + "_key=" + "synthetic".repeat(4);
+  for (const family of Object.values(families)) {
+    const text = seed(family.command);
+    text.nonClaims = [canary];
+    const unknown = {...seed(family.command), [canary]: true};
+    const duplicate = `{${JSON.stringify(canary)}:1,${JSON.stringify(canary)}:2}`;
+    for (const [label, input] of [["text", text], ["key", unknown], ["framing", duplicate]]) {
+      const result = native(family, input, "rejected", `${family.command}/${label}/nondisclosure`);
+      assert.equal(result.stderr.includes(canary), false, `${family.command}/${label}/leaked-canary`);
+    }
+  }
+});
+
+test("resource limits and minimum-width IDs retain exact predecessor observations", () => {
+  const base = seed("proof-obligation-algebra");
+  const id = index => `obligation.n${String(index).padStart(4, "0")}`;
+  const leaf = index => ({...structuredClone(base.obligations[0]), obligationId: id(index)});
+  const graph = obligations => ({...structuredClone(base), obligations});
+  const edges = extra => {
+    const nodes = Array.from({length: 256 + extra}, (_, index) => leaf(index));
+    for (let index = 0; index < 128; index++) Object.assign(nodes[index], {
+      obligationKind: "all_of", proofRouteRefs: [], childObligationIds: Array.from({length: 128}, (_, child) => id(128 + child)),
+    });
+    if (extra) nodes[0].childObligationIds.push(id(256));
+    return graph(nodes);
+  };
+  const closure = extra => {
+    const nodes = Array.from({length: 363}, (_, index) => leaf(index));
+    for (let index = 0; index < 361; index++) Object.assign(nodes[index], {
+      obligationKind: "conditional", proofRouteRefs: [], conditionRefs: ["condition.enabled"], childObligationIds: [id(index+1)],
+    });
+    Object.assign(nodes[362], {obligationKind: "conditional", proofRouteRefs: [], conditionRefs: ["condition.enabled"], childObligationIds: [id(167-extra)]});
+    return graph(nodes);
+  };
+  const checklist = seed("adoption-checklist");
+  checklist.requiredItemIds = Array.from({length: 1001}, (_, index) => `item.n${String(index).padStart(4, "0")}`);
+  const reference = structuredClone(families["binding-partition"].rows.find(row => row.name === "crossing-with-delegation").input);
+  reference.routeReferences[0].referenceId = "r".repeat(256);
+  const surface = seed("binding-partition");
+  surface.bindingSurfaces[0].surfaceId = "s".repeat(256);
+  surface.routeOwners[0].surfaceId = surface.bindingSurfaces[0].surfaceId;
+  const cases = [
+    ["proof-obligation-algebra", "obligations-at-2048", graph(Array.from({length: 2048}, (_, index) => leaf(index))), true, "passed"],
+    ["proof-obligation-algebra", "obligations-over-2048", graph(Array.from({length: 2049}, (_, index) => leaf(index))), false, "rejected"],
+    ["proof-obligation-algebra", "edges-at-16384", edges(0), true, "passed"],
+    ["proof-obligation-algebra", "edges-over-16384", edges(1), true, "rejected"],
+    ["proof-obligation-algebra", "closure-at-65536", closure(0), true, "passed"],
+    ["proof-obligation-algebra", "closure-over-65536", closure(1), true, "rejected"],
+    ["adoption-checklist", "minimum-width-failure-ids", checklist, true, "failed"],
+    ["binding-partition", "derived-reference-id", reference, true, "passed"],
+    ["binding-partition", "derived-surface-id", surface, true, "passed"],
+  ];
+  const observations = corpus.extremeSources.flatMap(source => source.records);
+  assert.equal(observations.length, cases.length);
+  for (const [command, name, input, schemaAccepted, expected] of cases) {
+    const prior = observations.find(row => row.name === name);
+    assert.ok(prior, name);
+    assert.equal(sha256(JSON.stringify(input)), prior.inputSHA256, `${name}/input`);
+    assert.equal(families[command].input(input), schemaAccepted, `${name}/schema`);
+    const result = native(families[command], input, expected, name);
+    assert.equal(result.status, prior.exitCode, name);
+    assert.equal(result.stderr, prior.stderr ?? "", name);
+    assert.equal(sha256(result.stdout), prior.stdoutSHA256, `${name}/output`);
+    if (name === "minimum-width-failure-ids") {
+      assert.equal(result.output.ruleResults[998].ruleId, "proofkit.adoption-checklist.failure.999");
+      assert.equal(result.output.ruleResults[999].ruleId, "proofkit.adoption-checklist.failure.1000");
+    }
+  }
+});
+
 test("CLI transports, literal versions and carrier contracts preserve machine boundaries", () => {
   for (const family of Object.values(families)) {
     const input = seed(family.command), positive = family.rows.find(row => row.name === "positive");

@@ -2,6 +2,7 @@ package completioncriteria
 
 import (
 	"regexp"
+	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
@@ -32,7 +33,7 @@ func InputStructure() map[string]any {
 	}).JSONSchema()
 	properties := schema["properties"].(map[string]any)
 	properties["nonClaims"].(map[string]any)["uniqueItems"] = true
-	properties["nonClaims"].(map[string]any)["items"].(map[string]any)["not"] = map[string]any{"enum": boundaryNonClaims}
+	properties["nonClaims"].(map[string]any)["items"].(map[string]any)["not"] = map[string]any{"enum": slices.Clone(boundaryNonClaims)}
 	properties["criteria"].(map[string]any)["uniqueItems"] = true
 	criterion := properties["criteria"].(map[string]any)["items"].(map[string]any)
 	fields := criterion["properties"].(map[string]any)

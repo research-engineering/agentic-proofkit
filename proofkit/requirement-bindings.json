@@ -9761,6 +9761,10 @@
       "witnessPath": "internal/tools/commandcontractgen/boundary_structure_test.go",
       "witnessSelectors": [
         {
+          "selector": "TestBoundaryNativeStructuresAreDetached",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestBoundaryNativeStructuresAreDetached$'"
+        },
+        {
           "selector": "TestBoundaryNativeStructuresRejectRehashedNestedDrift",
           "command": "go test ./internal/tools/commandcontractgen -run '^TestBoundaryNativeStructuresRejectRehashedNestedDrift$'"
         }

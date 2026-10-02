@@ -1,6 +1,8 @@
 package adoptionchecklist
 
 import (
+	"slices"
+
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/report"
@@ -30,7 +32,7 @@ func InputStructure() map[string]any {
 	for _, key := range []string{"items", "nextCommandRefs", "nonClaims", "requiredItemIds"} {
 		properties[key].(map[string]any)["uniqueItems"] = true
 	}
-	properties["nonClaims"].(map[string]any)["items"].(map[string]any)["not"] = map[string]any{"enum": checklistNonClaims}
+	properties["nonClaims"].(map[string]any)["items"].(map[string]any)["not"] = map[string]any{"enum": slices.Clone(checklistNonClaims)}
 	item := properties["items"].(map[string]any)["items"].(map[string]any)
 	fields := item["properties"].(map[string]any)
 	for _, key := range []string{"commandRefs", "evidenceRefs", "nonClaims"} {

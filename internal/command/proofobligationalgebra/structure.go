@@ -47,7 +47,11 @@ func InputStructure() map[string]any {
 	obligations := properties["obligations"].(map[string]any)
 	obligations["uniqueItems"] = true
 	refineObligationLists(obligations["items"].(map[string]any))
-	schema["description"] = "All members except expiryRef/reviewConditionRef are required; both exceptions are optional nullable nonempty text. Obligation rows sort by unique obligationId. ID/path lists must already be canonical sorted unique; evidence paths preserve spaces and use safe repository-relative POSIX admission. Text is privacy admitted; root builtin nonClaim collisions reject. At most2048obligations,16384total child edges and65536total transitive refs are admitted; the latter two aggregate bounds remain native. Kind-specific relations, missing children, cycles and cross-requirement edges produce failed reports, not malformed-input rejection. IDs, canonical integer spelling, privacy, normalized text uniqueness, path safety and graph evaluation remain native. No proof satisfaction or delegation authorization follows from admission."
+	schema["description"] = "All members except expiryRef/reviewConditionRef are required; both exceptions are optional nullable nonempty text. " +
+		"Obligation rows sort by unique obligationId. ID lists must already be canonical sorted unique. Evidence paths preserve spaces, use safe repository-relative POSIX admission and are sorted by native admission with duplicates rejected. " +
+		"Text is privacy admitted; root builtin nonClaim collisions reject. At most 2048 obligations, 16384 total child edges and 65536 total transitive refs are admitted; the latter two aggregate bounds remain native. " +
+		"Kind-specific relations, missing children, cycles and cross-requirement edges produce failed reports, not malformed-input rejection. " +
+		"IDs, canonical integer spelling, privacy, normalized text uniqueness, path safety and graph evaluation remain native. No proof satisfaction or delegation authorization follows from admission."
 	return schema
 }
 
