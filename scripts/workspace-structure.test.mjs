@@ -137,6 +137,9 @@ test("array elements and optional defaults are independently constrained", () =>
     }
   }
   const base = seed(changed), expected = native(changed, base).stdout;
+  const properties = contract.contractDefinitions.find(row => row.definitionId === `proofkit.${changed}.input.v1.json-schema`).fieldTree.variants[0].schema.properties;
+  assert.equal(properties.includeReverseDependents.default, true, "includeReverseDependents/default");
+  assert.equal(properties.packagesRoot.default, "packages", "packagesRoot/default");
   for (const [key, value] of [["includeReverseDependents", true], ["packagesRoot", "packages"]]) {
     assert.equal(native(changed, {...base, [key]: value}).stdout, expected, `${key}/default`);
     for (const invalid of [null, [], {}, 1]) rejected(changed, {...base, [key]: invalid}, `${key}/invalid`);
@@ -159,6 +162,27 @@ test("array elements and optional defaults are independently constrained", () =>
     input.root.manifest[key] = null;
     assert.equal(families[manifest].input(input), true);
     assert.equal(native(manifest, input).stdout, absent, `${key}/null-is-absent`);
+  }
+});
+
+test("declared input and output uniqueness rejects duplicates without changing allowed repetitions", () => {
+  for (const key of ["dependencyFields", "nonClaims"]) {
+    const input = seed(manifest);
+    input[key].push(input[key].at(-1));
+    rejected(manifest, input, `${manifest}/${key}/duplicate`);
+  }
+  const changedInput = seed(changed);
+  changedInput.changedPaths.push("global/config.json");
+  const changedOutput = native(changed, changedInput).output;
+  const shardOutput = native(shard, {...seed(shard), shardTotal: 3}).output;
+  for (const [command, output, keys] of [
+    [changed, changedOutput, ["directRootPackageNames", "directRoots", "escalationReasons", "rootPackageNames", "roots"]],
+    [shard, shardOutput, ["failures", "rootPackageNames"]],
+  ]) for (const key of keys) {
+    assert.ok(output[key].length > 0, `${command}/${key}/positive-prerequisite`);
+    const duplicate = structuredClone(output);
+    duplicate[key].push(structuredClone(duplicate[key][0]));
+    assert.equal(families[command].output(duplicate), false, `${command}/${key}/duplicate`);
   }
 });
 
