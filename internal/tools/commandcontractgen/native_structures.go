@@ -8,10 +8,13 @@ import (
 	"slices"
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/branchauthority"
+	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
+	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
+	"github.com/research-engineering/agentic-proofkit/internal/command/renderedartifactfreshness"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
@@ -203,6 +206,30 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.receipt-producer-admission.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.receipt-producer-admission.output.v1.root-shape"}, commands: []string{"receipt-producer-admission"},
 		schema: func() (map[string]any, error) { return receiptproduceradmission.OutputStructure(), nil },
+	}, {
+		id: "proofkit.custom-rule-boundary.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.custom-rule-boundary.input.v1.root-shape"}, commands: []string{"custom-rule-boundary"},
+		schema: func() (map[string]any, error) { return customruleboundary.InputStructure(), nil },
+	}, {
+		id: "proofkit.custom-rule-boundary.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.custom-rule-boundary.output.v1.root-shape"}, commands: []string{"custom-rule-boundary"},
+		schema: func() (map[string]any, error) { return customruleboundary.OutputStructure(), nil },
+	}, {
+		id: "proofkit.document-lifecycle-boundary.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.document-lifecycle-boundary.input.v1.root-shape"}, commands: []string{"document-lifecycle-boundary"},
+		schema: func() (map[string]any, error) { return documentlifecycle.InputStructure(), nil },
+	}, {
+		id: "proofkit.document-lifecycle-boundary.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.document-lifecycle-boundary.output.v1.root-shape"}, commands: []string{"document-lifecycle-boundary"},
+		schema: func() (map[string]any, error) { return documentlifecycle.OutputStructure(), nil },
+	}, {
+		id: "proofkit.rendered-artifact-freshness.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.rendered-artifact-freshness.input.v1.root-shape"}, commands: []string{"rendered-artifact-freshness"},
+		schema: func() (map[string]any, error) { return renderedartifactfreshness.InputStructure(), nil },
+	}, {
+		id: "proofkit.rendered-artifact-freshness.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.rendered-artifact-freshness.output.v1.root-shape"}, commands: []string{"rendered-artifact-freshness"},
+		schema: func() (map[string]any, error) { return renderedartifactfreshness.OutputStructure(), nil },
 	}}
 }
 

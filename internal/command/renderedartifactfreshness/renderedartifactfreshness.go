@@ -119,7 +119,7 @@ func admitInput(raw any) (admittedInput, error) {
 	if !ok {
 		return admittedInput{}, fmt.Errorf("rendered artifact freshness input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"artifacts", "freshnessSetId", "nonClaims", "schemaVersion"}, "rendered artifact freshness input"); err != nil {
+	if err := admit.KnownKeys(record, inputKeys, "rendered artifact freshness input"); err != nil {
 		return admittedInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -187,7 +187,7 @@ func artifactArray(raw any) ([]artifactInput, error) {
 }
 
 func admitArtifact(record map[string]any) (artifactInput, error) {
-	if err := admit.KnownKeys(record, []string{"artifactFormat", "artifactId", "artifactKind", "artifactPath", "authority", "currentArtifactDigest", "currentGenerationScopeDigest", "currentRendererDigest", "currentRendererVersion", "currentSourceDigest", "freshnessCheckRefs", "generationScopeId", "nonClaims", "recordedArtifactDigest", "recordedGenerationScopeDigest", "recordedRendererDigest", "recordedRendererVersion", "recordedSourceDigest", "rendererId", "sourceRefs"}, "rendered artifact freshness artifact"); err != nil {
+	if err := admit.KnownKeys(record, artifactKeys, "rendered artifact freshness artifact"); err != nil {
 		return artifactInput{}, err
 	}
 	artifactID, err := admit.RuleID(record["artifactId"], "rendered artifact freshness artifactId")

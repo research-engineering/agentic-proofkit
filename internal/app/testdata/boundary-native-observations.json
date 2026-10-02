@@ -1,0 +1,1750 @@
+[
+  {
+    "command": "custom-rule-boundary",
+    "case": "positive",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "consumer.boundary",
+      "profileRef": "proofkit/repo-profile.json",
+      "nonClaims": [
+        "Boundary fixture is not execution proof."
+      ],
+      "rules": [
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "append_only",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": "proofkit/custom.schema.json",
+          "owner": "consumer-owners",
+          "remediation": {
+            "commandRefs": [
+              "consumer.review.verify"
+            ],
+            "kind": "command_ref",
+            "summary": "Run the consumer verification command."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "profileRef",
+          "value": "proofkit/repo-profile.json"
+        }
+      ],
+      "nonClaims": [
+        "Boundary fixture is not execution proof.",
+        "Custom-rule boundary reports do not approve suppression or downgrade of generic Proofkit findings.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not own product requirement meaning or repository policy.",
+        "Custom-rule boundary reports do not prove custom-rule findings, receipt freshness, or merge readiness.",
+        "Custom-rule boundary reports do not read repository state."
+      ],
+      "reportId": "consumer.boundary",
+      "reportKind": "proofkit.custom-rule-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "custom rules are validated as caller-provided metadata without execution",
+          "ruleId": "proofkit.custom-rule-boundary.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "custom rules must remain append-only, deterministic, bounded, credential-free, network-free, and removable",
+          "ruleId": "proofkit.custom-rule-boundary.monotone-removable",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "customRuleCount": 1,
+        "errorSeverityCount": 1,
+        "failureCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "custom-rule-boundary",
+    "case": "failed",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "consumer.boundary",
+      "profileRef": "proofkit/repo-profile.json",
+      "nonClaims": [
+        "Boundary fixture is not execution proof."
+      ],
+      "rules": [
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "suppress",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": "proofkit/custom.schema.json",
+          "owner": "consumer-owners",
+          "remediation": {
+            "commandRefs": [
+              "consumer.review.verify"
+            ],
+            "kind": "command_ref",
+            "summary": "Run the consumer verification command."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": [
+            "custom rule consumer.review.rule must add findings only"
+          ]
+        },
+        {
+          "key": "profileRef",
+          "value": "proofkit/repo-profile.json"
+        }
+      ],
+      "nonClaims": [
+        "Boundary fixture is not execution proof.",
+        "Custom-rule boundary reports do not approve suppression or downgrade of generic Proofkit findings.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not own product requirement meaning or repository policy.",
+        "Custom-rule boundary reports do not prove custom-rule findings, receipt freshness, or merge readiness.",
+        "Custom-rule boundary reports do not read repository state."
+      ],
+      "reportId": "consumer.boundary",
+      "reportKind": "proofkit.custom-rule-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "custom rules are validated as caller-provided metadata without execution",
+          "ruleId": "proofkit.custom-rule-boundary.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [
+            {
+              "key": "failure.001",
+              "value": "custom rule consumer.review.rule must add findings only"
+            }
+          ],
+          "message": "custom rules must remain append-only, deterministic, bounded, credential-free, network-free, and removable",
+          "ruleId": "proofkit.custom-rule-boundary.monotone-removable",
+          "status": "failed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "customRuleCount": 1,
+        "errorSeverityCount": 1,
+        "failureCount": 1
+      }
+    },
+    "exitCode": 1
+  },
+  {
+    "command": "custom-rule-boundary",
+    "case": "alternate-positive",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "consumer.boundary",
+      "profileRef": "proofkit/repo-profile.json",
+      "nonClaims": [
+        "Boundary fixture is not execution proof."
+      ],
+      "rules": [
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "append_only",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": "proofkit/custom.schema.json",
+          "owner": "consumer-owners",
+          "remediation": {
+            "commandRefs": [],
+            "kind": "human_review",
+            "summary": "Review the local finding."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "profileRef",
+          "value": "proofkit/repo-profile.json"
+        }
+      ],
+      "nonClaims": [
+        "Boundary fixture is not execution proof.",
+        "Custom-rule boundary reports do not approve suppression or downgrade of generic Proofkit findings.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not own product requirement meaning or repository policy.",
+        "Custom-rule boundary reports do not prove custom-rule findings, receipt freshness, or merge readiness.",
+        "Custom-rule boundary reports do not read repository state."
+      ],
+      "reportId": "consumer.boundary",
+      "reportKind": "proofkit.custom-rule-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "custom rules are validated as caller-provided metadata without execution",
+          "ruleId": "proofkit.custom-rule-boundary.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "custom rules must remain append-only, deterministic, bounded, credential-free, network-free, and removable",
+          "ruleId": "proofkit.custom-rule-boundary.monotone-removable",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "customRuleCount": 1,
+        "errorSeverityCount": 1,
+        "failureCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "custom-rule-boundary",
+    "case": "unsorted-records",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "consumer.boundary",
+      "profileRef": "proofkit/repo-profile.json",
+      "nonClaims": [
+        "Boundary fixture is not execution proof."
+      ],
+      "rules": [
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "append_only",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": "proofkit/custom.schema.json",
+          "owner": "consumer-owners",
+          "remediation": {
+            "commandRefs": [
+              "consumer.review.verify"
+            ],
+            "kind": "command_ref",
+            "summary": "Run the consumer verification command."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule.z",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        },
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "append_only",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": "proofkit/custom.schema.json",
+          "owner": "consumer-owners",
+          "remediation": {
+            "commandRefs": [
+              "consumer.review.verify"
+            ],
+            "kind": "command_ref",
+            "summary": "Run the consumer verification command."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule.a",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "profileRef",
+          "value": "proofkit/repo-profile.json"
+        }
+      ],
+      "nonClaims": [
+        "Boundary fixture is not execution proof.",
+        "Custom-rule boundary reports do not approve suppression or downgrade of generic Proofkit findings.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not own product requirement meaning or repository policy.",
+        "Custom-rule boundary reports do not prove custom-rule findings, receipt freshness, or merge readiness.",
+        "Custom-rule boundary reports do not read repository state."
+      ],
+      "reportId": "consumer.boundary",
+      "reportKind": "proofkit.custom-rule-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "custom rules are validated as caller-provided metadata without execution",
+          "ruleId": "proofkit.custom-rule-boundary.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "custom rules must remain append-only, deterministic, bounded, credential-free, network-free, and removable",
+          "ruleId": "proofkit.custom-rule-boundary.monotone-removable",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "customRuleCount": 2,
+        "errorSeverityCount": 2,
+        "failureCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "custom-rule-boundary",
+    "case": "builtin-collision",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "consumer.boundary",
+      "profileRef": "proofkit/repo-profile.json",
+      "nonClaims": [
+        "Custom-rule boundary reports do not execute custom rules."
+      ],
+      "rules": [
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "append_only",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": "proofkit/custom.schema.json",
+          "owner": "consumer-owners",
+          "remediation": {
+            "commandRefs": [
+              "consumer.review.verify"
+            ],
+            "kind": "command_ref",
+            "summary": "Run the consumer verification command."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "profileRef",
+          "value": "proofkit/repo-profile.json"
+        }
+      ],
+      "nonClaims": [
+        "Custom-rule boundary reports do not approve suppression or downgrade of generic Proofkit findings.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not own product requirement meaning or repository policy.",
+        "Custom-rule boundary reports do not prove custom-rule findings, receipt freshness, or merge readiness.",
+        "Custom-rule boundary reports do not read repository state."
+      ],
+      "reportId": "consumer.boundary",
+      "reportKind": "proofkit.custom-rule-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "custom rules are validated as caller-provided metadata without execution",
+          "ruleId": "proofkit.custom-rule-boundary.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "custom rules must remain append-only, deterministic, bounded, credential-free, network-free, and removable",
+          "ruleId": "proofkit.custom-rule-boundary.monotone-removable",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "customRuleCount": 1,
+        "errorSeverityCount": 1,
+        "failureCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "custom-rule-boundary",
+    "case": "trimmed-scalars",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "consumer.boundary",
+      "profileRef": "proofkit/repo-profile.json",
+      "nonClaims": [
+        "Boundary fixture is not execution proof."
+      ],
+      "rules": [
+        {
+          "affectedPathGlobs": [
+            "docs/**"
+          ],
+          "boundaryRole": "local_diagnostics_only",
+          "credentialPolicy": "none",
+          "deterministicOutput": {
+            "secretRedaction": true,
+            "stableFindingIds": true,
+            "stableOrdering": true
+          },
+          "genericDecisionEffect": "no_downgrade",
+          "genericFindingEffect": "append_only",
+          "inputArtifactKinds": [
+            "consumer.requirement-source"
+          ],
+          "inputArtifactRefs": [
+            "docs/requirements.json"
+          ],
+          "namespace": "consumer.review",
+          "networkPolicy": "none",
+          "nonClaims": [
+            "Local rule is not merge authority."
+          ],
+          "outputSchemaRef": " proofkit/custom.schema.json ",
+          "owner": " consumer-owners ",
+          "remediation": {
+            "commandRefs": [
+              "consumer.review.verify"
+            ],
+            "kind": "command_ref",
+            "summary": "Run the consumer verification command."
+          },
+          "removal": {
+            "condition": "Remove after the replacement native invariant is owner-admitted.",
+            "owner": "consumer-owners",
+            "reviewRef": "docs/review.md"
+          },
+          "ruleId": "consumer.review.rule",
+          "severity": "error",
+          "useLimit": {
+            "maxAffectedPathGlobs": 2,
+            "rationale": "Restrict the rule to documentation.",
+            "scope": "module_scoped"
+          }
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        },
+        {
+          "key": "profileRef",
+          "value": "proofkit/repo-profile.json"
+        }
+      ],
+      "nonClaims": [
+        "Boundary fixture is not execution proof.",
+        "Custom-rule boundary reports do not approve suppression or downgrade of generic Proofkit findings.",
+        "Custom-rule boundary reports do not execute custom rules.",
+        "Custom-rule boundary reports do not own product requirement meaning or repository policy.",
+        "Custom-rule boundary reports do not prove custom-rule findings, receipt freshness, or merge readiness.",
+        "Custom-rule boundary reports do not read repository state."
+      ],
+      "reportId": "consumer.boundary",
+      "reportKind": "proofkit.custom-rule-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "custom rules are validated as caller-provided metadata without execution",
+          "ruleId": "proofkit.custom-rule-boundary.boundary",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "custom rules must remain append-only, deterministic, bounded, credential-free, network-free, and removable",
+          "ruleId": "proofkit.custom-rule-boundary.monotone-removable",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "customRuleCount": 1,
+        "errorSeverityCount": 1,
+        "failureCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "document-lifecycle-boundary",
+    "case": "positive",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "docs.boundary",
+      "nonClaims": [
+        "Lifecycle fixture does not read document content."
+      ],
+      "documents": [
+        {
+          "authorityRole": "durable_meaning",
+          "documentId": "docs.requirements",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [
+            "scripts/verify.sh"
+          ],
+          "kind": "requirement_records",
+          "lifecycleState": "current",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": "spec-owners",
+          "path": "docs/requirements.json",
+          "routingRole": "owner_surface",
+          "sourceRefs": []
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Document lifecycle boundary reports do not approve merge or archive deletion.",
+        "Document lifecycle boundary reports do not decide product semantics.",
+        "Document lifecycle boundary reports do not execute documentation checks.",
+        "Document lifecycle boundary reports do not prove generated artifact freshness.",
+        "Document lifecycle boundary reports do not read document content.",
+        "Lifecycle fixture does not read document content."
+      ],
+      "reportId": "docs.boundary",
+      "reportKind": "proofkit.document-lifecycle-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "temporary, archived, generated, routed, and durable documents must keep declared authority boundaries",
+          "ruleId": "proofkit.document-lifecycle-boundary.authority-demotion",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "documentation lifecycle facts are validated without reading document content",
+          "ruleId": "proofkit.document-lifecycle-boundary.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "archivedDocumentCount": 0,
+        "currentAuthorityCount": 1,
+        "documentCount": 1,
+        "failureCount": 0,
+        "historicalAuthorityCount": 0,
+        "temporaryDocumentCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "document-lifecycle-boundary",
+    "case": "failed",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "docs.boundary",
+      "nonClaims": [
+        "Lifecycle fixture does not read document content."
+      ],
+      "documents": [
+        {
+          "authorityRole": "durable_meaning",
+          "documentId": "docs.requirements",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [
+            "scripts/verify.sh"
+          ],
+          "kind": "requirement_records",
+          "lifecycleState": "archived_historical",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": "spec-owners",
+          "path": "docs/requirements.json",
+          "routingRole": "owner_surface",
+          "sourceRefs": []
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": [
+            "archived document must not keep active authority: docs.requirements",
+            "archived document must not keep current routing role: docs.requirements"
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Document lifecycle boundary reports do not approve merge or archive deletion.",
+        "Document lifecycle boundary reports do not decide product semantics.",
+        "Document lifecycle boundary reports do not execute documentation checks.",
+        "Document lifecycle boundary reports do not prove generated artifact freshness.",
+        "Document lifecycle boundary reports do not read document content.",
+        "Lifecycle fixture does not read document content."
+      ],
+      "reportId": "docs.boundary",
+      "reportKind": "proofkit.document-lifecycle-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "failure.001",
+              "value": "archived document must not keep active authority: docs.requirements"
+            },
+            {
+              "key": "failure.002",
+              "value": "archived document must not keep current routing role: docs.requirements"
+            }
+          ],
+          "message": "temporary, archived, generated, routed, and durable documents must keep declared authority boundaries",
+          "ruleId": "proofkit.document-lifecycle-boundary.authority-demotion",
+          "status": "failed"
+        },
+        {
+          "diagnostics": [],
+          "message": "documentation lifecycle facts are validated without reading document content",
+          "ruleId": "proofkit.document-lifecycle-boundary.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "archivedDocumentCount": 1,
+        "currentAuthorityCount": 1,
+        "documentCount": 1,
+        "failureCount": 2,
+        "historicalAuthorityCount": 0,
+        "temporaryDocumentCount": 0
+      }
+    },
+    "exitCode": 1
+  },
+  {
+    "command": "document-lifecycle-boundary",
+    "case": "alternate-positive",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "docs.boundary",
+      "nonClaims": [
+        "Lifecycle fixture does not read document content."
+      ],
+      "documents": [
+        {
+          "authorityRole": "historical_evidence",
+          "documentId": "docs.requirements",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [],
+          "kind": "context",
+          "lifecycleState": "merged_retained",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": "spec-owners",
+          "path": "docs/requirements.json",
+          "routingRole": "historical_reference",
+          "sourceRefs": []
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Document lifecycle boundary reports do not approve merge or archive deletion.",
+        "Document lifecycle boundary reports do not decide product semantics.",
+        "Document lifecycle boundary reports do not execute documentation checks.",
+        "Document lifecycle boundary reports do not prove generated artifact freshness.",
+        "Document lifecycle boundary reports do not read document content.",
+        "Lifecycle fixture does not read document content."
+      ],
+      "reportId": "docs.boundary",
+      "reportKind": "proofkit.document-lifecycle-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "temporary, archived, generated, routed, and durable documents must keep declared authority boundaries",
+          "ruleId": "proofkit.document-lifecycle-boundary.authority-demotion",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "documentation lifecycle facts are validated without reading document content",
+          "ruleId": "proofkit.document-lifecycle-boundary.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "archivedDocumentCount": 0,
+        "currentAuthorityCount": 0,
+        "documentCount": 1,
+        "failureCount": 0,
+        "historicalAuthorityCount": 1,
+        "temporaryDocumentCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "document-lifecycle-boundary",
+    "case": "unsorted-records",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "docs.boundary",
+      "nonClaims": [
+        "Lifecycle fixture does not read document content."
+      ],
+      "documents": [
+        {
+          "authorityRole": "durable_meaning",
+          "documentId": "docs.requirements.z",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [
+            "scripts/verify.sh"
+          ],
+          "kind": "requirement_records",
+          "lifecycleState": "current",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": "spec-owners",
+          "path": "docs/requirements.json",
+          "routingRole": "owner_surface",
+          "sourceRefs": []
+        },
+        {
+          "authorityRole": "durable_meaning",
+          "documentId": "docs.requirements.a",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [
+            "scripts/verify.sh"
+          ],
+          "kind": "requirement_records",
+          "lifecycleState": "current",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": "spec-owners",
+          "path": "docs/requirements.json",
+          "routingRole": "owner_surface",
+          "sourceRefs": []
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Document lifecycle boundary reports do not approve merge or archive deletion.",
+        "Document lifecycle boundary reports do not decide product semantics.",
+        "Document lifecycle boundary reports do not execute documentation checks.",
+        "Document lifecycle boundary reports do not prove generated artifact freshness.",
+        "Document lifecycle boundary reports do not read document content.",
+        "Lifecycle fixture does not read document content."
+      ],
+      "reportId": "docs.boundary",
+      "reportKind": "proofkit.document-lifecycle-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "temporary, archived, generated, routed, and durable documents must keep declared authority boundaries",
+          "ruleId": "proofkit.document-lifecycle-boundary.authority-demotion",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "documentation lifecycle facts are validated without reading document content",
+          "ruleId": "proofkit.document-lifecycle-boundary.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "archivedDocumentCount": 0,
+        "currentAuthorityCount": 2,
+        "documentCount": 2,
+        "failureCount": 0,
+        "historicalAuthorityCount": 0,
+        "temporaryDocumentCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "document-lifecycle-boundary",
+    "case": "builtin-collision",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "docs.boundary",
+      "nonClaims": [
+        "Document lifecycle boundary reports do not read document content."
+      ],
+      "documents": [
+        {
+          "authorityRole": "durable_meaning",
+          "documentId": "docs.requirements",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [
+            "scripts/verify.sh"
+          ],
+          "kind": "requirement_records",
+          "lifecycleState": "current",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": "spec-owners",
+          "path": "docs/requirements.json",
+          "routingRole": "owner_surface",
+          "sourceRefs": []
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Document lifecycle boundary reports do not approve merge or archive deletion.",
+        "Document lifecycle boundary reports do not decide product semantics.",
+        "Document lifecycle boundary reports do not execute documentation checks.",
+        "Document lifecycle boundary reports do not prove generated artifact freshness.",
+        "Document lifecycle boundary reports do not read document content.",
+        "Document lifecycle boundary reports do not read document content."
+      ],
+      "reportId": "docs.boundary",
+      "reportKind": "proofkit.document-lifecycle-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "temporary, archived, generated, routed, and durable documents must keep declared authority boundaries",
+          "ruleId": "proofkit.document-lifecycle-boundary.authority-demotion",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "documentation lifecycle facts are validated without reading document content",
+          "ruleId": "proofkit.document-lifecycle-boundary.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "archivedDocumentCount": 0,
+        "currentAuthorityCount": 1,
+        "documentCount": 1,
+        "failureCount": 0,
+        "historicalAuthorityCount": 0,
+        "temporaryDocumentCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "document-lifecycle-boundary",
+    "case": "trimmed-scalars",
+    "input": {
+      "schemaVersion": 1,
+      "boundaryId": "docs.boundary",
+      "nonClaims": [
+        "Lifecycle fixture does not read document content."
+      ],
+      "documents": [
+        {
+          "authorityRole": "durable_meaning",
+          "documentId": "docs.requirements",
+          "forbiddenPayloads": [
+            "local execution notes"
+          ],
+          "freshnessCheckRefs": [
+            "scripts/verify.sh"
+          ],
+          "kind": "requirement_records",
+          "lifecycleState": "current",
+          "mutationTriggers": [
+            "requirement invariant changes"
+          ],
+          "nonClaims": [
+            "Requirements do not execute witnesses."
+          ],
+          "owner": " spec-owners ",
+          "path": " docs/requirements.json ",
+          "routingRole": "owner_surface",
+          "sourceRefs": []
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Document lifecycle boundary reports do not approve merge or archive deletion.",
+        "Document lifecycle boundary reports do not decide product semantics.",
+        "Document lifecycle boundary reports do not execute documentation checks.",
+        "Document lifecycle boundary reports do not prove generated artifact freshness.",
+        "Document lifecycle boundary reports do not read document content.",
+        "Lifecycle fixture does not read document content."
+      ],
+      "reportId": "docs.boundary",
+      "reportKind": "proofkit.document-lifecycle-boundary",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "temporary, archived, generated, routed, and durable documents must keep declared authority boundaries",
+          "ruleId": "proofkit.document-lifecycle-boundary.authority-demotion",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "documentation lifecycle facts are validated without reading document content",
+          "ruleId": "proofkit.document-lifecycle-boundary.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "archivedDocumentCount": 0,
+        "currentAuthorityCount": 1,
+        "documentCount": 1,
+        "failureCount": 0,
+        "historicalAuthorityCount": 0,
+        "temporaryDocumentCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "rendered-artifact-freshness",
+    "case": "positive",
+    "input": {
+      "schemaVersion": 1,
+      "freshnessSetId": "fixture.freshness",
+      "nonClaims": [
+        "Freshness fixture is not execution proof."
+      ],
+      "artifacts": [
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view",
+          "artifactKind": "rendered_view",
+          "artifactPath": "docs/view.md",
+          "authority": "presentation_only",
+          "currentArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": "renderer-v1",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": "renderer-v1",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "artifacts",
+          "value": [
+            {
+              "artifactFormat": "markdown",
+              "artifactId": "fixture.view",
+              "artifactKind": "rendered_view",
+              "artifactPath": "docs/view.md",
+              "authority": "presentation_only",
+              "generationScopeId": "fixture.scope",
+              "rendererId": "fixture.renderer"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Freshness fixture is not execution proof.",
+        "Rendered artifact freshness reports do not approve merge, release, rollout, or production readiness.",
+        "Rendered artifact freshness reports do not execute renderers or generators.",
+        "Rendered artifact freshness reports do not own requirement meaning or proof routes.",
+        "Rendered artifact freshness reports do not prove native witness execution.",
+        "Rendered artifact freshness reports do not read rendered artifacts or source files."
+      ],
+      "reportId": "fixture.freshness",
+      "reportKind": "proofkit.rendered-artifact-freshness",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "generated artifacts must be lookup-only, rendered artifacts must be presentation-only, and recorded/current source, renderer, scope, and artifact digests must match",
+          "ruleId": "proofkit.rendered-artifact-freshness.artifacts",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "rendered artifact freshness validates caller-provided digest facts without reading files or running renderers",
+          "ruleId": "proofkit.rendered-artifact-freshness.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactCount": 1,
+        "failureCount": 0,
+        "generatedLookupCount": 0,
+        "renderedViewCount": 1,
+        "staleArtifactCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "rendered-artifact-freshness",
+    "case": "failed",
+    "input": {
+      "schemaVersion": 1,
+      "freshnessSetId": "fixture.freshness",
+      "nonClaims": [
+        "Freshness fixture is not execution proof."
+      ],
+      "artifacts": [
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view",
+          "artifactKind": "rendered_view",
+          "artifactPath": "docs/view.md",
+          "authority": "presentation_only",
+          "currentArtifactDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": "renderer-v1",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": "renderer-v1",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "artifacts",
+          "value": [
+            {
+              "artifactFormat": "markdown",
+              "artifactId": "fixture.view",
+              "artifactKind": "rendered_view",
+              "artifactPath": "docs/view.md",
+              "authority": "presentation_only",
+              "generationScopeId": "fixture.scope",
+              "rendererId": "fixture.renderer"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": [
+            "rendered artifact digest drifted: fixture.view"
+          ]
+        }
+      ],
+      "nonClaims": [
+        "Freshness fixture is not execution proof.",
+        "Rendered artifact freshness reports do not approve merge, release, rollout, or production readiness.",
+        "Rendered artifact freshness reports do not execute renderers or generators.",
+        "Rendered artifact freshness reports do not own requirement meaning or proof routes.",
+        "Rendered artifact freshness reports do not prove native witness execution.",
+        "Rendered artifact freshness reports do not read rendered artifacts or source files."
+      ],
+      "reportId": "fixture.freshness",
+      "reportKind": "proofkit.rendered-artifact-freshness",
+      "ruleResults": [
+        {
+          "diagnostics": [
+            {
+              "key": "failure.001",
+              "value": "rendered artifact digest drifted: fixture.view"
+            }
+          ],
+          "message": "generated artifacts must be lookup-only, rendered artifacts must be presentation-only, and recorded/current source, renderer, scope, and artifact digests must match",
+          "ruleId": "proofkit.rendered-artifact-freshness.artifacts",
+          "status": "failed"
+        },
+        {
+          "diagnostics": [],
+          "message": "rendered artifact freshness validates caller-provided digest facts without reading files or running renderers",
+          "ruleId": "proofkit.rendered-artifact-freshness.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "failed",
+      "summary": {
+        "artifactCount": 1,
+        "failureCount": 1,
+        "generatedLookupCount": 0,
+        "renderedViewCount": 1,
+        "staleArtifactCount": 1
+      }
+    },
+    "exitCode": 1
+  },
+  {
+    "command": "rendered-artifact-freshness",
+    "case": "alternate-positive",
+    "input": {
+      "schemaVersion": 1,
+      "freshnessSetId": "fixture.freshness",
+      "nonClaims": [
+        "Freshness fixture is not execution proof."
+      ],
+      "artifacts": [
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view",
+          "artifactKind": "generated_lookup",
+          "artifactPath": "docs/view.md",
+          "authority": "lookup_only",
+          "currentArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": "renderer-v1",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": "renderer-v1",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "artifacts",
+          "value": [
+            {
+              "artifactFormat": "markdown",
+              "artifactId": "fixture.view",
+              "artifactKind": "generated_lookup",
+              "artifactPath": "docs/view.md",
+              "authority": "lookup_only",
+              "generationScopeId": "fixture.scope",
+              "rendererId": "fixture.renderer"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Freshness fixture is not execution proof.",
+        "Rendered artifact freshness reports do not approve merge, release, rollout, or production readiness.",
+        "Rendered artifact freshness reports do not execute renderers or generators.",
+        "Rendered artifact freshness reports do not own requirement meaning or proof routes.",
+        "Rendered artifact freshness reports do not prove native witness execution.",
+        "Rendered artifact freshness reports do not read rendered artifacts or source files."
+      ],
+      "reportId": "fixture.freshness",
+      "reportKind": "proofkit.rendered-artifact-freshness",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "generated artifacts must be lookup-only, rendered artifacts must be presentation-only, and recorded/current source, renderer, scope, and artifact digests must match",
+          "ruleId": "proofkit.rendered-artifact-freshness.artifacts",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "rendered artifact freshness validates caller-provided digest facts without reading files or running renderers",
+          "ruleId": "proofkit.rendered-artifact-freshness.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactCount": 1,
+        "failureCount": 0,
+        "generatedLookupCount": 1,
+        "renderedViewCount": 0,
+        "staleArtifactCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "rendered-artifact-freshness",
+    "case": "unsorted-records",
+    "input": {
+      "schemaVersion": 1,
+      "freshnessSetId": "fixture.freshness",
+      "nonClaims": [
+        "Freshness fixture is not execution proof."
+      ],
+      "artifacts": [
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view.z",
+          "artifactKind": "rendered_view",
+          "artifactPath": "docs/view.md",
+          "authority": "presentation_only",
+          "currentArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": "renderer-v1",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": "renderer-v1",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        },
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view.a",
+          "artifactKind": "rendered_view",
+          "artifactPath": "docs/earlier.md",
+          "authority": "presentation_only",
+          "currentArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": "renderer-v1",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": "renderer-v1",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "artifacts",
+          "value": [
+            {
+              "artifactFormat": "markdown",
+              "artifactId": "fixture.view.a",
+              "artifactKind": "rendered_view",
+              "artifactPath": "docs/earlier.md",
+              "authority": "presentation_only",
+              "generationScopeId": "fixture.scope",
+              "rendererId": "fixture.renderer"
+            },
+            {
+              "artifactFormat": "markdown",
+              "artifactId": "fixture.view.z",
+              "artifactKind": "rendered_view",
+              "artifactPath": "docs/view.md",
+              "authority": "presentation_only",
+              "generationScopeId": "fixture.scope",
+              "rendererId": "fixture.renderer"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Freshness fixture is not execution proof.",
+        "Rendered artifact freshness reports do not approve merge, release, rollout, or production readiness.",
+        "Rendered artifact freshness reports do not execute renderers or generators.",
+        "Rendered artifact freshness reports do not own requirement meaning or proof routes.",
+        "Rendered artifact freshness reports do not prove native witness execution.",
+        "Rendered artifact freshness reports do not read rendered artifacts or source files."
+      ],
+      "reportId": "fixture.freshness",
+      "reportKind": "proofkit.rendered-artifact-freshness",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "generated artifacts must be lookup-only, rendered artifacts must be presentation-only, and recorded/current source, renderer, scope, and artifact digests must match",
+          "ruleId": "proofkit.rendered-artifact-freshness.artifacts",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "rendered artifact freshness validates caller-provided digest facts without reading files or running renderers",
+          "ruleId": "proofkit.rendered-artifact-freshness.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactCount": 2,
+        "failureCount": 0,
+        "generatedLookupCount": 0,
+        "renderedViewCount": 2,
+        "staleArtifactCount": 0
+      }
+    },
+    "exitCode": 0
+  },
+  {
+    "command": "rendered-artifact-freshness",
+    "case": "builtin-collision",
+    "input": {
+      "schemaVersion": 1,
+      "freshnessSetId": "fixture.freshness",
+      "nonClaims": [
+        "Rendered artifact freshness reports do not read rendered artifacts or source files."
+      ],
+      "artifacts": [
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view",
+          "artifactKind": "rendered_view",
+          "artifactPath": "docs/view.md",
+          "authority": "presentation_only",
+          "currentArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": "renderer-v1",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": "renderer-v1",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        }
+      ]
+    },
+    "output": null,
+    "exitCode": 1,
+    "stderr": "rendered artifact freshness report nonClaims must be unique\n"
+  },
+  {
+    "command": "rendered-artifact-freshness",
+    "case": "trimmed-scalars",
+    "input": {
+      "schemaVersion": 1,
+      "freshnessSetId": "fixture.freshness",
+      "nonClaims": [
+        "Freshness fixture is not execution proof."
+      ],
+      "artifacts": [
+        {
+          "artifactFormat": "markdown",
+          "artifactId": "fixture.view",
+          "artifactKind": "rendered_view",
+          "artifactPath": " docs/view.md ",
+          "authority": "presentation_only",
+          "currentArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "currentRendererVersion": " renderer-v1 ",
+          "currentSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "freshnessCheckRefs": [
+            "scripts/freshness.json"
+          ],
+          "generationScopeId": "fixture.scope",
+          "nonClaims": [
+            "Rendered fixture is not merge authority."
+          ],
+          "recordedArtifactDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedGenerationScopeDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "recordedRendererVersion": " renderer-v1 ",
+          "recordedSourceDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "rendererId": "fixture.renderer",
+          "sourceRefs": [
+            "docs/requirements.json"
+          ]
+        }
+      ]
+    },
+    "output": {
+      "diagnostics": [
+        {
+          "key": "artifacts",
+          "value": [
+            {
+              "artifactFormat": "markdown",
+              "artifactId": "fixture.view",
+              "artifactKind": "rendered_view",
+              "artifactPath": "docs/view.md",
+              "authority": "presentation_only",
+              "generationScopeId": "fixture.scope",
+              "rendererId": "fixture.renderer"
+            }
+          ]
+        },
+        {
+          "key": "failures",
+          "value": []
+        }
+      ],
+      "nonClaims": [
+        "Freshness fixture is not execution proof.",
+        "Rendered artifact freshness reports do not approve merge, release, rollout, or production readiness.",
+        "Rendered artifact freshness reports do not execute renderers or generators.",
+        "Rendered artifact freshness reports do not own requirement meaning or proof routes.",
+        "Rendered artifact freshness reports do not prove native witness execution.",
+        "Rendered artifact freshness reports do not read rendered artifacts or source files."
+      ],
+      "reportId": "fixture.freshness",
+      "reportKind": "proofkit.rendered-artifact-freshness",
+      "ruleResults": [
+        {
+          "diagnostics": [],
+          "message": "generated artifacts must be lookup-only, rendered artifacts must be presentation-only, and recorded/current source, renderer, scope, and artifact digests must match",
+          "ruleId": "proofkit.rendered-artifact-freshness.artifacts",
+          "status": "passed"
+        },
+        {
+          "diagnostics": [],
+          "message": "rendered artifact freshness validates caller-provided digest facts without reading files or running renderers",
+          "ruleId": "proofkit.rendered-artifact-freshness.boundary",
+          "status": "passed"
+        }
+      ],
+      "schemaVersion": 1,
+      "state": "passed",
+      "summary": {
+        "artifactCount": 1,
+        "failureCount": 0,
+        "generatedLookupCount": 0,
+        "renderedViewCount": 1,
+        "staleArtifactCount": 0
+      }
+    },
+    "exitCode": 0
+  }
+]
