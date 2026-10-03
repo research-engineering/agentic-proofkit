@@ -56,7 +56,7 @@ var nativeBoundaryDirectionDeltas = []string{
 	"proof-slice/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-bindings/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-proof-resolver/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"witness-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"witness-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef,variants",
 	"witness-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"witness-scheduler-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"witness-scheduler-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",

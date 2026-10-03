@@ -160,6 +160,17 @@ func TestBuildResolverRejectsCompactShellControlCommandText(t *testing.T) {
 
 func TestBuildResolverRejectsUnscopedCompactIdentity(t *testing.T) {
 	commandcoverage.SemanticRoute(t, "proofkit.command_coverage.source_oracle.v1.083861718564193628743761217964380808871199122810480767631328821342986116941585")
+	output, exitCode, err := BuildResolver(validCompactContract(), ResolverOptions{LocalEnvironmentClasses: []string{"local-go"}})
+	if err != nil || exitCode != 0 {
+		t.Fatalf("valid resolver prerequisite failed: exit=%d err=%v", exitCode, err)
+	}
+	record, ok := output.(map[string]any)
+	if !ok || record["schemaVersion"] != 2 || record["projectionKind"] != "proofkit.requirement-proof-route-resolver" || record["contractId"] != "proofkit.test.compact" {
+		t.Fatal("unexpected successful resolver identity")
+	}
+	if len(record["bindings"].([]any)) != 1 || len(record["witnessRoutes"].([]any)) != 2 || len(record["scenarios"].([]any)) != 1 {
+		t.Fatal("valid resolver must retain one binding/scenario and two witness roles")
+	}
 	type selectorCase struct {
 		name   string
 		mutate func(map[string]any)

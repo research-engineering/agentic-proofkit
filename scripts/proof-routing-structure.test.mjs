@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {execFileSync, spawnSync} from "node:child_process";
+import {createHash} from "node:crypto";
 import {mkdtempSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -18,14 +19,34 @@ for (const command of names) for (const direction of ["input", "output"]) {
   assert.equal(definition.fieldTree.kind, "structural_json_schema", `${command}/${direction}`);
   validators.set(`${command}/${direction}`, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
 }
-let directory, binary;
+let directory, binary, executionSubjects;
+const fileDigest = path => createHash("sha256").update(readFileSync(path)).digest("hex");
+function binaryIdentity(path) {
+  const metadata = execFileSync("go", ["version", "-m", path], {encoding: "utf8", timeout: 10000, maxBuffer: 1 << 20});
+  const revision = /^\s*build\tvcs\.revision=([0-9a-f]{40})$/m.exec(metadata)?.[1];
+  const modified = /^\s*build\tvcs\.modified=(true|false)$/m.exec(metadata)?.[1];
+  assert.ok(revision && modified);
+  return {sha256: fileDigest(path), revision, modified: modified === "true"};
+}
 before(() => {
   directory = mkdtempSync(join(tmpdir(), "proofkit-routing-"));
   binary = join(directory, "proofkit");
   execFileSync("go", ["build", "-mod=readonly", "-o", binary, "./cmd/agentic-proofkit"],
     {cwd: root, timeout: 120000, maxBuffer: 2 << 20, env: {...process.env, GOPROXY: "off", GOSUMDB: "off", GOTOOLCHAIN: "local"}});
+  if (process.env.PROOFKIT_ROUTING_BASELINE) {
+    executionSubjects = {kind: "proofkit.routing-comparison-subjects", baseline: binaryIdentity(process.env.PROOFKIT_ROUTING_BASELINE),
+      candidate: binaryIdentity(binary), testSourceSHA256: fileDigest(new URL(import.meta.url))};
+    console.log(JSON.stringify(executionSubjects));
+  }
 });
-after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
+after(() => {
+  try {
+    if (executionSubjects) {
+      assert.equal(fileDigest(binary), executionSubjects.candidate.sha256);
+      assert.equal(fileDigest(process.env.PROOFKIT_ROUTING_BASELINE), executionSubjects.baseline.sha256);
+    }
+  } finally { if (directory) rmSync(directory, {recursive: true, force: true}); }
+});
 function validates(command, direction, input, expected = true, label = "") {
   const check = validators.get(`${command}/${direction}`);
   assert.equal(check(input), expected, `${command}/${direction}/${label}: ${ajv.errorsText(check.errors)}`);
@@ -102,6 +123,17 @@ test("witness input variants retain absence null defaults and empty-plan behavio
   const fromBinding = native("witness-plan", projected);
   assert.deepEqual(fromBinding.commands.map(x => x.id), ["test.one"]);
   assert.deepEqual(fromBinding.commands[0].argv, ["go", "test", "./tests", "-run", "TestOne"]);
+  for (const groups of [undefined, ["first", "second"]]) {
+    const emptyBinding = bindingInput(); emptyBinding.requirements = []; emptyBinding.bindings = []; emptyBinding.witnessCommands = [];
+    const input = {schemaVersion: 1, projection: "requirement-bindings", requirementProofBinding: emptyBinding,
+      vocabulary: {artifactKinds: [], credentialClasses: [], environmentClasses: []}};
+    if (groups) input.vocabulary.parallelGroups = groups;
+    validates("witness-plan", "input", input);
+    assert.deepEqual(native("witness-plan", input), {commands: [], parallelGroups: []});
+  }
+  const ambiguous = structuredClone(projected); ambiguous.vocabulary.parallelGroups = ["first", "second"];
+  validates("witness-plan", "input", ambiguous);
+  native("witness-plan", ambiguous, {exit: 1, report: false});
   for (const value of [null, 2, "1"]) {
     const bad = {...direct, schemaVersion: value};
     validates("witness-plan", "input", bad, false);
@@ -182,6 +214,14 @@ test("resolver supports empty contracts surface-only environments and caller pol
   input.surfaces = [];
   assert.deepEqual(native("requirement-proof-resolver", input).environmentClasses, []);
   assert.equal(native("requirement-proof-resolver", resolverInput(), {extra: ["--empty-local-environment-policy"]}).bindings[0].preconditioned, true);
+});
+
+test("failed binding reports retain mandatory nonempty failure rules", () => {
+  const input = bindingInput(); input.bindings[0].requirementId = "REQ-MISSING";
+  const output = native("requirement-bindings", input, {exit: 1});
+  assert.equal(output.state, "failed"); assert.ok(output.ruleResults.length > 0);
+  output.ruleResults = [];
+  validates("requirement-bindings", "output", output, false, "failed report must retain failure rules");
 });
 
 test("closed witness and scheduler records reject isolated missing null unknown and mistyped members", () => {

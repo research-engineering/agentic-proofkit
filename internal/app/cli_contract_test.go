@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "8a8abad81e716c487da9194fd1b8a16311b52ccbf61319fed61d35425d72fede"
+	cliContractPublicABISHA256               = "75fda6259b3d5f20083ded64356295d6c6e0b8736a584dcd1301727044385772"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -2438,7 +2438,7 @@ func TestWitnessPlanContractDescribesBindingProjectionInput(t *testing.T) {
 	assertStringSet(t, stringsFromAny(bindingProjection["admissionRules"].([]any)), []string{
 		"requirementProofBinding must pass requirement-bindings admission",
 		"vocabulary must pass witness command vocabulary admission",
-		"binding-derived projection requires exactly one admitted parallelGroup; multi-group vocabularies require an explicit witness command catalog",
+		"each binding-derived command requires exactly one admitted parallelGroup; an empty command catalog permits zero or multiple groups",
 		"display command text must be display-only command text without shell control tokens, quoting, escaping, or secret-like tokens",
 		"each referenced environment class must admit networkPolicy none, credentialClass none, and cachePolicy disabled",
 	}, "witness-plan requirement-bindings admission rules")

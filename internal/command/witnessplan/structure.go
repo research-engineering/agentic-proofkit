@@ -25,7 +25,7 @@ func ProjectedInputStructure() map[string]any {
 	).JSONSchema()
 	schema["properties"].(map[string]any)["vocabulary"] = witnesscommand.VocabularyStructure()
 	schema["required"] = append(schema["required"].([]any), "vocabulary")
-	schema["description"] = "Presence of projection selects binding projection; it never falls back to direct admission. Projection requires schemaVersion=1, a passing binding report, exactly one parallelGroup and commands expressible without shell quoting/control. Binding ownership and cross-record links, canonical token spelling, privacy, command safety and vocabulary policy remain native checks. No root nonClaims field is accepted. This plan does not execute commands."
+	schema["description"] = "Presence of projection selects binding projection; it never falls back to direct admission. Projection requires schemaVersion=1 and a passing binding report. Each projected command requires exactly one admitted parallelGroup and display text expressible without shell quoting/control. With no commands, the empty plan does not require a parallelGroup. Binding ownership and cross-record links, canonical token spelling, privacy, command safety and vocabulary policy remain native checks. No root nonClaims field is accepted. This plan does not execute commands."
 	return schema
 }
 
