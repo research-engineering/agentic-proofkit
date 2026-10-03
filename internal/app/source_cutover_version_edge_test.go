@@ -94,6 +94,12 @@ var nativeBoundaryDirectionDeltas = []string{
 	"registry-consumer-proof-input-compose/input:compatibilitySummary,contractId,nativeSource,nativeSources",
 	"registry-consumer-proof-input-compose/output:nativeSource,nativeSources",
 	"typescript-public-api-surfaces/input:compatibilitySummary,nonClaims,sourceGrammar",
+	"workspace-changed-package-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-changed-package-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-manifest-facts/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-manifest-facts/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-shard-partition/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-shard-partition/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 }
 
 func TestIntegrityInputSemanticVersionsPreserveWireShapes(t *testing.T) {
@@ -149,7 +155,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 62 || len(added) != 58+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 68 || len(added) != 64+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
