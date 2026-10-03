@@ -9801,6 +9801,38 @@
       "environmentClasses": [
         "local-go-node"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.workspace-schema-independent-runtime",
+      "witnessId": "proofkit.workspace-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/workspace-structure.test.mjs",
+      "commandIds": [
+        "proofkit.boundary-contract-check"
+      ],
+      "environmentClasses": [
+        "local-go-node"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.workspace-schema-owner",
+      "witnessId": "proofkit.workspace-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/workspace_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestWorkspaceStructuresBindExactOwnersAndRejectRehashedDrift",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestWorkspaceStructuresBindExactOwnersAndRejectRehashedDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [

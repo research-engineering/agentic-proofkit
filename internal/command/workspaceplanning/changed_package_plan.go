@@ -46,7 +46,7 @@ func admitChangedPlanInput(raw any) (changedPlanInput, error) {
 	if !ok {
 		return changedPlanInput{}, fmt.Errorf("workspace changed-package plan input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"changedPaths", "escalationRules", "includeReverseDependents", "packages", "packagesRoot", "schemaVersion"}, "workspace changed-package plan input"); err != nil {
+	if err := admit.KnownKeys(record, changedInputKeys, "workspace changed-package plan input"); err != nil {
 		return changedPlanInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -101,7 +101,7 @@ func pathNodeInputs(raw any) ([]packagePathNode, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace package %d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"dirName", "name", "workspaceDependencies"}, fmt.Sprintf("workspace package %d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, pathNodeKeys, fmt.Sprintf("workspace package %d", index+1)); err != nil {
 			return nil, err
 		}
 		dirName, err := admit.RuleID(record["dirName"], fmt.Sprintf("workspace package %d dirName", index+1))
@@ -128,7 +128,7 @@ func escalationRuleInputs(raw any) ([]escalationRule, error) {
 		if !ok {
 			return nil, fmt.Errorf("workspace escalation rule %d must be an object", index+1)
 		}
-		if err := admit.KnownKeys(record, []string{"pattern", "reason"}, fmt.Sprintf("workspace escalation rule %d", index+1)); err != nil {
+		if err := admit.KnownKeys(record, escalationRuleKeys, fmt.Sprintf("workspace escalation rule %d", index+1)); err != nil {
 			return nil, err
 		}
 		pattern, ok := record["pattern"].(string)

@@ -103,7 +103,7 @@ func admitShardInput(raw any) (shardInput, error) {
 	if !ok {
 		return shardInput{}, fmt.Errorf("workspace shard partition input must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"packages", "roots", "schemaVersion", "shardTotal"}, "workspace shard partition input"); err != nil {
+	if err := admit.KnownKeys(record, shardInputKeys, "workspace shard partition input"); err != nil {
 		return shardInput{}, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
