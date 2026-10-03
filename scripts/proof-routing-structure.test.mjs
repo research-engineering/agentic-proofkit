@@ -86,6 +86,11 @@ function objects(value, path = []) {
   if (!value || typeof value !== "object") return [];
   return [...(Array.isArray(value) ? [] : [path]), ...Object.entries(value).flatMap(([key, child]) => objects(child, [...path, key]))];
 }
+function stringPaths(value, path = []) {
+  if (typeof value === "string") return [path];
+  if (!value || typeof value !== "object") return [];
+  return Object.entries(value).flatMap(([key, child]) => stringPaths(child, [...path, key]));
+}
 function seed(command) {
   if (command === "witness-plan") return witnessInput();
   if (command === "witness-scheduler-plan") return schedulerInput();
@@ -314,6 +319,9 @@ test("environment allowlist names retain their grammar in alternative branches",
     input.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
     validates(command, "input", input);
     const output = native(command, input);
+    const empty = structuredClone(input); empty.commands[0].environment.allowlist = [];
+    validates(command, "input", empty, false, "empty declared allowlist");
+    native(command, empty, {exit: 1, report: false});
     for (const name of ["1HOME", "home", "HOME-KEY", "HOME KEY", ""]) {
       const bad = structuredClone(input); bad.commands[0].environment.allowlist = [name];
       validates(command, "input", bad, false, "invalid environment name");
@@ -352,6 +360,13 @@ test("closed witness and scheduler records reject isolated missing null unknown 
         }
       }
     }
+    for (const path of stringPaths(input)) {
+      // The unchanged binding child deliberately leaves text semantics native-only.
+      if (path[0] === "requirementProofBinding") continue;
+      const bad = structuredClone(input); at(bad, path.slice(0, -1))[path.at(-1)] = "";
+      validates(command, "input", bad, false, `${path}/empty-text`);
+      native(command, bad, {exit: 1, report: false});
+    }
   }
 });
 
@@ -381,6 +396,13 @@ test("populated output members reject missing null unknown and mistyped values",
           validates(command, "output", bad, false, `${path}/${key}/${mode}`);
         }
       }
+    }
+    for (const path of stringPaths(output)) {
+      // Generic report framing accepts arbitrary strings in these two slots.
+      const report = command === "requirement-bindings" || command === "witness-scheduler-plan";
+      if (report && (path[0] === "nonClaims" || path.join("/") === "reportId")) continue;
+      const bad = structuredClone(output); at(bad, path.slice(0, -1))[path.at(-1)] = "";
+      validates(command, "output", bad, false, `${path}/empty-text`);
     }
   }
 });
@@ -456,6 +478,8 @@ test("witness leaf domains and native-only safety predicates remain distinct", (
     [["commands", 0, "environment", "classes"], ["other"], true],
     [["commands", 0, "environment", "allowlist"], ["HOME"], false],
     [["commands", 0, "exitCodePolicy", "successCodes"], [1], false],
+    [["commands", 0, "exitCodePolicy", "successCodes"], [], false],
+    [["commands", 0, "exitCodePolicy", "successCodes"], [0, 0], false],
     [["commands", 0, "argv"], ["sh", "-c", "true"], true],
     [["commands", 0, "cwd"], "../outside", true],
     [["vocabulary", "maxTimeoutMs"], 0, false],
@@ -469,8 +493,8 @@ test("witness leaf domains and native-only safety predicates remain distinct", (
   listed.commands[0].exitCodePolicy = {kind: "listed", successCodes: [0, 255]};
   listed.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
   validates("witness-plan", "input", listed); native("witness-plan", listed);
-  for (const value of [-1, 256]) {
-    const input = structuredClone(listed); input.commands[0].exitCodePolicy.successCodes = [value];
+  for (const codes of [[], [-1], [256]]) {
+    const input = structuredClone(listed); input.commands[0].exitCodePolicy.successCodes = codes;
     validates("witness-plan", "input", input, false); native("witness-plan", input, {exit: 1, report: false});
   }
   for (const value of [[0, 0], [255, 0]]) {
