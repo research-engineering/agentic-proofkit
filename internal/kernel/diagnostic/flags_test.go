@@ -46,6 +46,16 @@ func TestParseFlagsPreservesStandardParserObservations(t *testing.T) {
 }
 
 func TestParseFlagsRedactsWholeDiagnostics(t *testing.T) {
+	for _, argument := range []string{"--unknown\nFORGED", "--unknown\tFORGED", "---unknown\nFORGED"} {
+		set := flag.NewFlagSet("tool", flag.ContinueOnError)
+		var output bytes.Buffer
+		if err := ParseFlags(set, []string{argument}, &output); err == nil {
+			t.Fatal("unknown or malformed flag accepted")
+		}
+		if output.String() != "<redacted-diagnostic-value>\n" {
+			t.Fatal("caller layout escaped scalar-error admission")
+		}
+	}
 	for _, fixture := range admit.ReportVisibleRedactionFixtures() {
 		t.Run(fixture.Name, func(t *testing.T) {
 			set := flag.NewFlagSet("tool", flag.ContinueOnError)

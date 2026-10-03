@@ -28,6 +28,9 @@ func ParseFlags(set *flag.FlagSet, args []string, output io.Writer) error {
 	capture.mu.Unlock()
 	if overflow {
 		_, _ = io.WriteString(output, "flag diagnostics exceeded the capture limit\n")
+	} else if err != nil && admit.ContainsReportVisibleUnsafeValue(err.Error()) {
+		// A caller-owned flag name is scalar data, never Usage layout.
+		WriteError(output, err)
 	} else if raw != "" {
 		text := raw
 		if admit.ContainsSecretLikeValue(raw) {
