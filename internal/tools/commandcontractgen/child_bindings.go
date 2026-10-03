@@ -45,6 +45,9 @@ func nativeChildBindings() []nativeChildBinding {
 		{"requirement-proof-source-set", "output", compactV2DefinitionID, [][]string{{"resolverInput"}}, ""},
 		{"selective-gate-obligation-decision-input", "input", "proofkit.receipt-currentness-scope.input.v1.json-schema", [][]string{{"receiptCurrentnessScopeAdmission"}}, ""},
 		{"selective-gate-obligation-decision-input", "input", "proofkit.receipt-trust-class.input.v1.json-schema", [][]string{{"receiptTrustClassAdmission"}}, ""},
+		{"selective-gate-evidence", "input", "proofkit.receipt-producer-admission.input.v1.json-schema", [][]string{{"producerAdmission"}}, ""},
+		{"selective-gate-obligation-decision-input", "input", "proofkit.selective-gate-evidence.input.v1.json-schema", [][]string{{"evidence"}}, ""},
+		{"selective-gate-obligation-decision-input", "output", "proofkit.obligation-decision.input.v1.json-schema", [][]string{{}}, ""},
 	}
 }
 
@@ -115,7 +118,7 @@ func admitChildBindings(command, direction string, contract map[string]any, root
 				if schema, complete := variantRecord["schema"].(map[string]any); complete {
 					child := definitions[raw.(map[string]any)["definitionRef"].(string)].Content["fieldTree"].(map[string]any)["variants"].([]any)[0].(map[string]any)["schema"].(map[string]any)
 					leaf, err := schemaChildAtPath(schema, path)
-					if err != nil || !equalSchemaIgnoringDialect(leaf, child) {
+					if err != nil || !equalBoundChildSchema(leaf, child) {
 						return fmt.Errorf("%s %s child binding path does not contain its source definition", command, direction)
 					}
 				}
@@ -126,6 +129,31 @@ func admitChildBindings(command, direction string, contract map[string]any, root
 		}
 	}
 	return nil
+}
+
+// An optional child can explicitly admit null without changing the nonnull
+// child owner. Admit only the exact two-branch wrapper, never an extra domain.
+func equalBoundChildSchema(leaf, child map[string]any) bool {
+	if equalSchemaIgnoringDialect(leaf, child) {
+		return true
+	}
+	if len(leaf) != 1 {
+		return false
+	}
+	for _, keyword := range []string{"anyOf", "oneOf"} {
+		alternatives, ok := leaf[keyword].([]any)
+		if !ok || len(alternatives) != 2 {
+			continue
+		}
+		for index, raw := range alternatives {
+			null, ok := raw.(map[string]any)
+			other, otherOK := alternatives[1-index].(map[string]any)
+			if ok && otherOK && len(null) == 1 && null["type"] == "null" && equalSchemaIgnoringDialect(other, child) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error) {

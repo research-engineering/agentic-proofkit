@@ -15,6 +15,9 @@ var selectiveGatePlanNonClaims = []string{
 	"Selective gate plans do not decide consumer fallback policy for unknown edges or unbound proof-like paths.",
 }
 
+var scanOwnershipSet = map[string]struct{}{"caller_owned_external": {}, "proofkit_secret_scan": {}, "proofkit_text_policy": {}}
+var scanReasonSet = map[string]struct{}{"external_secret_scan": {}, "secret_scan": {}, "text_policy": {}}
+
 func admitInput(raw any) (input, error) {
 	record, ok := raw.(map[string]any)
 	if !ok {
@@ -187,11 +190,11 @@ func admitScanObligation(record map[string]any) (scanObligation, error) {
 		if err != nil {
 			return scanObligation{}, err
 		}
-		commandOwnership, err := admit.Enum(scan["commandOwnership"], map[string]struct{}{"caller_owned_external": {}, "proofkit_secret_scan": {}, "proofkit_text_policy": {}}, "selective gate scanObligation commandOwnership")
+		commandOwnership, err := admit.Enum(scan["commandOwnership"], scanOwnershipSet, "selective gate scanObligation commandOwnership")
 		if err != nil {
 			return scanObligation{}, err
 		}
-		reason, err := admit.Enum(scan["reason"], map[string]struct{}{"external_secret_scan": {}, "secret_scan": {}, "text_policy": {}}, "selective gate scanObligation reason")
+		reason, err := admit.Enum(scan["reason"], scanReasonSet, "selective gate scanObligation reason")
 		if err != nil {
 			return scanObligation{}, err
 		}

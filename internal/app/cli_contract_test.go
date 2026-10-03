@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "54bce8036a8b8d77b373a88e421f76d0fdb73c8f96a02cbafdb8797947716200"
+	cliContractPublicABISHA256               = "69eaed15497719beadc7a9a8e470b6a31653c84adadf4a4029ebffb3360afcf3"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -206,7 +206,7 @@ func TestCLIContractInputRootShapesMatchNativeOwnerVariants(t *testing.T) {
 			required:     []string{"files", "nonClaims", "reportId", "schemaVersion"},
 		},
 		{
-			definitionID: "proofkit.selective-gate-obligation-decision-input.input.v1.root-shape",
+			definitionID: "proofkit.selective-gate-obligation-decision-input.input.v1.json-schema",
 			allowed:      []string{"commandRoutes", "decisionId", "evidence", "nonClaims", "receiptCurrentnessScopeAdmission", "receiptTrustClassAdmission", "schemaVersion"},
 			required:     []string{"commandRoutes", "decisionId", "evidence", "nonClaims", "schemaVersion"},
 		},
@@ -535,15 +535,23 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
-			"proofkit.requirement-bindings.output.v1.json-schema":       {},
-			"proofkit.evidence-graph.output.v1.json-schema":             {},
-			"proofkit.proof-slice.output.v1.json-schema":                {},
-			"proofkit.requirement-proof-resolver.output.v2.json-schema": {},
-			"proofkit.witness-plan.input.v1.json-schema":                {},
-			"proofkit.witness-plan.output.v1.json-schema":               {},
-			"proofkit.witness-scheduler-plan.input.v1.json-schema":      {},
-			"proofkit.witness-scheduler-plan.output.v1.json-schema":     {},
-			bindingStructureDefinition:                                  {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
+			"proofkit.selective-gate-plan.input.v1.json-schema":                       {},
+			"proofkit.selective-gate-plan.output.v1.json-schema":                      {},
+			"proofkit.selective-gate-evidence.input.v1.json-schema":                   {},
+			"proofkit.selective-gate-evidence.output.v1.json-schema":                  {},
+			"proofkit.selective-gate-obligation-decision-input.input.v1.json-schema":  {},
+			"proofkit.selective-gate-obligation-decision-input.output.v1.json-schema": {},
+			"proofkit.obligation-decision.input.v1.json-schema":                       {},
+			"proofkit.obligation-decision.output.v1.json-schema":                      {},
+			"proofkit.requirement-bindings.output.v1.json-schema":                     {},
+			"proofkit.evidence-graph.output.v1.json-schema":                           {},
+			"proofkit.proof-slice.output.v1.json-schema":                              {},
+			"proofkit.requirement-proof-resolver.output.v2.json-schema":               {},
+			"proofkit.witness-plan.input.v1.json-schema":                              {},
+			"proofkit.witness-plan.output.v1.json-schema":                             {},
+			"proofkit.witness-scheduler-plan.input.v1.json-schema":                    {},
+			"proofkit.witness-scheduler-plan.output.v1.json-schema":                   {},
+			bindingStructureDefinition:                                                {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
 			specTreeStructureDefinition:                                           {},

@@ -62,7 +62,7 @@ func TestReceiptStructuresRejectRehashedNestedDrift(t *testing.T) {
 	}
 }
 
-func TestReceiptChildBindingsPreservePartialParent(t *testing.T) {
+func TestReceiptChildBindingsPreserveOwnersInStructuredParent(t *testing.T) {
 	_, contract, err := readContract(filepath.Join("..", "..", "..", cliContractPath))
 	if err != nil {
 		t.Fatal(err)
@@ -74,16 +74,17 @@ func TestReceiptChildBindingsPreservePartialParent(t *testing.T) {
 	const command = "selective-gate-obligation-decision-input"
 	direction := commandAt(contract, command)["inputContract"].(map[string]any)
 	root := definitions[direction["rootDefinitionRef"].(string)]
-	if root.Content["fieldTree"].(map[string]any)["kind"] != "root_shape_only" {
-		t.Fatal("child definitions promoted the whole parent")
+	if root.Content["fieldTree"].(map[string]any)["kind"] != "structural_json_schema" {
+		t.Fatal("selective projection parent lacks its owned structure")
 	}
 	bindings := direction["childDefinitionBindings"].([]any)
-	if len(bindings) != 2 {
+	if len(bindings) != 3 {
 		t.Fatalf("unexpected receipt child count: %d", len(bindings))
 	}
 	for i, expected := range []struct{ field, definition string }{
 		{"receiptCurrentnessScopeAdmission", "proofkit.receipt-currentness-scope.input.v1.json-schema"},
 		{"receiptTrustClassAdmission", "proofkit.receipt-trust-class.input.v1.json-schema"},
+		{"evidence", "proofkit.selective-gate-evidence.input.v1.json-schema"},
 	} {
 		binding := bindings[i].(map[string]any)
 		if binding["definitionRef"] != expected.definition || !reflect.DeepEqual(binding["pathSegments"], []any{expected.field}) {

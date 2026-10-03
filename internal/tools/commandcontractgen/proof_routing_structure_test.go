@@ -7,9 +7,13 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
+	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
+	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
+	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/compactproofcontract"
 )
 
@@ -26,6 +30,14 @@ func TestProofRoutingStructuresBindOwnersAndRejectRehashedDrift(t *testing.T) {
 		{"witness-plan", "output", "1", []func() map[string]any{witnessplan.OutputStructure}},
 		{"witness-scheduler-plan", "input", "1", []func() map[string]any{witnessschedulerplan.InputStructure}},
 		{"witness-scheduler-plan", "output", "1", []func() map[string]any{witnessschedulerplan.OutputStructure}},
+		{"selective-gate-plan", "input", "1", []func() map[string]any{selectivegateplan.InputStructure}},
+		{"selective-gate-plan", "output", "1", []func() map[string]any{selectivegateplan.EnvelopeStructure, agentenvelope.InvalidInputStructure, selectivegateplan.OutputStructure}},
+		{"selective-gate-evidence", "input", "1", []func() map[string]any{selectivegateevidence.InputStructure}},
+		{"selective-gate-evidence", "output", "1", []func() map[string]any{selectivegateevidence.EnvelopeStructure, agentenvelope.InvalidInputStructure, selectivegateevidence.OutputStructure}},
+		{"selective-gate-obligation-decision-input", "input", "1", []func() map[string]any{selectivegateevidence.ProjectionInputStructure}},
+		{"selective-gate-obligation-decision-input", "output", "1", []func() map[string]any{obligationdecision.InputStructure}},
+		{"obligation-decision", "input", "1", []func() map[string]any{obligationdecision.InputStructure}},
+		{"obligation-decision", "output", "1", []func() map[string]any{obligationdecision.EnvelopeStructure, agentenvelope.InvalidInputStructure, obligationdecision.OutputStructure}},
 	}
 	for _, row := range rows {
 		prefix := "proofkit." + row.command + "." + row.direction + ".v" + row.version

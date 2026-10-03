@@ -88,7 +88,14 @@ var nativeBoundaryDirectionDeltas = []string{
 	"receipt-currentness-scope/output:compatibilitySummary,nativeOutputWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"receipt-trust-class/input:compatibilitySummary,nativeAdmissionWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
 	"receipt-trust-class/output:compatibilitySummary,nativeOutputWitnessSelector,nativeSource,nativeSources,rootDefinitionDigest,rootDefinitionRef",
-	"selective-gate-obligation-decision-input/input:childDefinitionBindings",
+	"selective-gate-plan/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-evidence/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-evidence/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-obligation-decision-input/input:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"selective-gate-obligation-decision-input/output:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"obligation-decision/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"obligation-decision/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"adopt-materialize-apply/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-plan/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-recover/output:compatibilitySummary,contractId,nativeSources",
@@ -164,7 +171,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 78 || len(added) != 74+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 86 || len(added) != 82+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
