@@ -38,6 +38,19 @@ export function schedulerInput() {
       timeoutPolicy: {kind: "bounded", timeoutMs: 1000}, nonClaims: ["Synthetic policy only."]}]};
 }
 
+export function populatedSchedulerInput() {
+  const input = schedulerInput();
+  input.commands[0].cachePolicy = "read-only";
+  input.vocabulary.environmentClassPolicies[0].cachePolicies = ["disabled", "read-only"];
+  Object.assign(input.policies[0], {
+    inputSelectors: ["src/**"], outputSelectors: ["artifacts/report.json"],
+    resourceReads: ["resource.input"], resourceWrites: ["resource.output"],
+    exclusiveLocks: ["lock.build"], sideEffectClass: "shared_resource",
+    cacheAdmissionRefs: ["artifacts/cache.json"],
+  });
+  return input;
+}
+
 export function resolverInput() {
   return {schema_version: 2, authority_state: "caller_owned_declaration", contract_id: "contract.one",
     contract_kind: "requirement_proof_route_declaration", normalization_profile: "proofkit.compact.declaration.v2",

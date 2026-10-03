@@ -6,7 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {bindingInput, witnessInput, projectedWitnessInput, schedulerInput, resolverInput} from "./proof-routing-fixtures.mjs";
+import {bindingInput, witnessInput, projectedWitnessInput, schedulerInput, populatedSchedulerInput, resolverInput} from "./proof-routing-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_ROUTING_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -86,11 +86,12 @@ function objects(value, path = []) {
   if (!value || typeof value !== "object") return [];
   return [...(Array.isArray(value) ? [] : [path]), ...Object.entries(value).flatMap(([key, child]) => objects(child, [...path, key]))];
 }
-function stringPaths(value, path = []) {
-  if (typeof value === "string") return [path];
+function primitivePaths(value, kind, path = []) {
+  if (typeof value === kind) return [path];
   if (!value || typeof value !== "object") return [];
-  return Object.entries(value).flatMap(([key, child]) => stringPaths(child, [...path, key]));
+  return Object.entries(value).flatMap(([key, child]) => primitivePaths(child, kind, [...path, key]));
 }
+const stringPaths = value => primitivePaths(value, "string");
 function seed(command) {
   if (command === "witness-plan") return witnessInput();
   if (command === "witness-scheduler-plan") return schedulerInput();
@@ -100,6 +101,13 @@ function seed(command) {
 
 function* outputCases() {
   for (const command of names) yield [command, native(command, seed(command))];
+  const selected = bindingInput();
+  selected.selection = {changedPaths: ["tests/one.go"], ownerIds: ["owner.one"], requirementIds: ["REQ-ONE"]};
+  selected.requirements[0].nonClaims = ["Synthetic requirement only."];
+  for (const command of ["requirement-bindings", "evidence-graph", "proof-slice"]) yield [command, native(command, selected)];
+  yield ["witness-scheduler-plan", native("witness-scheduler-plan", populatedSchedulerInput())];
+  const preconditioned = resolverInput(); preconditioned.surfaces[0][2] = ["local-go"];
+  yield ["requirement-proof-resolver", native("requirement-proof-resolver", preconditioned)];
   const binding = bindingInput(); binding.bindings[0].requirementId = "REQ-MISSING";
   yield ["requirement-bindings", native("requirement-bindings", binding, {exit: 1})];
   const scheduler = schedulerInput(); scheduler.policies[0].commandId = "test.other";
@@ -113,6 +121,8 @@ function* outputCases() {
 function* witnessInputs() {
   for (const command of ["witness-plan", "witness-scheduler-plan"]) {
     yield [command, seed(command)];
+    const nonCacheable = seed(command); nonCacheable.vocabulary.nonCacheableCredentialClasses = ["none"];
+    yield [command, nonCacheable];
     const input = seed(command);
     input.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
     input.commands[0].exitCodePolicy = {kind: "listed", successCodes: [0, 255]};
@@ -122,6 +132,7 @@ function* witnessInputs() {
     }
     yield [command, input];
   }
+  yield ["witness-scheduler-plan", populatedSchedulerInput()];
   yield ["witness-plan", projectedWitnessInput()];
   const projected = projectedWitnessInput();
   const binding = projected.requirementProofBinding;
@@ -381,6 +392,103 @@ test("scheduler primitive domains reject their adjacent invalid boundaries", () 
     validates("witness-scheduler-plan", "input", input, false, `${path}/domain`);
     native("witness-scheduler-plan", input, {exit: 1, report: false});
   }
+});
+
+test("scheduler list items retain populated domains and native-only constraints", () => {
+  const command = "witness-scheduler-plan", input = populatedSchedulerInput();
+  validates(command, "input", input);
+  const output = native(command, input);
+  assert.equal(output.summary.cacheableCommandCount, 1);
+  assert.deepEqual(output.diagnostics[0].value[0].exclusiveLocks, ["lock.build"]);
+  const unsafe = {inputSelectors: "../outside", outputSelectors: "/outside",
+    resourceReads: "bad id", resourceWrites: "bad id", exclusiveLocks: "bad id", cacheAdmissionRefs: "../outside"};
+  for (const [key, value] of Object.entries(unsafe)) {
+    for (const item of [0, null, false, {}, [], ""]) {
+      const bad = structuredClone(input); bad.policies[0][key] = [item];
+      validates(command, "input", bad, false, `scheduler list item: ${key}`);
+      native(command, bad, {exit: 1, report: false});
+    }
+    const bad = structuredClone(input); bad.policies[0][key] = [value];
+    validates(command, "input", bad);
+    native(command, bad, {exit: 1, report: false});
+    const duplicate = structuredClone(input); duplicate.policies[0][key].push(duplicate.policies[0][key][0]);
+    validates(command, "input", duplicate);
+    native(command, duplicate, {exit: 1, report: false});
+  }
+});
+
+test("integer input and output fields reject fractions and representable overflow", () => {
+  for (const [command, input] of witnessInputs()) {
+    for (const path of primitivePaths(input, "number")) {
+      for (const value of [at(input, path) + 0.5, 2 ** 63 + 2048]) {
+        const bad = structuredClone(input); at(bad, path.slice(0, -1))[path.at(-1)] = value;
+        validates(command, "input", bad, false, `integer input domain: ${path}`);
+        native(command, bad, {exit: 1, report: false});
+      }
+    }
+  }
+  for (const [command, output] of outputCases()) {
+    for (const path of primitivePaths(output, "number")) {
+      for (const value of [at(output, path) + 0.5, 2 ** 63 + 2048]) {
+        const bad = structuredClone(output); at(bad, path.slice(0, -1))[path.at(-1)] = value;
+        validates(command, "output", bad, false, `integer output domain: ${path}`);
+      }
+    }
+  }
+});
+
+test("resolver order positions retain the exact safe-integer upper boundary", () => {
+  const command = "requirement-proof-resolver", input = resolverInput();
+  input.bindings[0][7][3] = Number.MAX_SAFE_INTEGER;
+  const output = native(command, input);
+  assert.equal(output.bindings[0].testWitnesses.positive.resolutionOrderIndex, Number.MAX_SAFE_INTEGER);
+  const paths = primitivePaths(output, "number").filter(path => path.at(-1) === "resolutionOrderIndex");
+  assert.equal(paths.length, 6);
+  for (const path of paths) {
+    const good = structuredClone(output); at(good, path.slice(0, -1))[path.at(-1)] = Number.MAX_SAFE_INTEGER;
+    validates(command, "output", good);
+    for (const value of [0.5, Number.MAX_SAFE_INTEGER + 1]) {
+      const bad = structuredClone(output); at(bad, path.slice(0, -1))[path.at(-1)] = value;
+      validates(command, "output", bad, false, `resolver order boundary: ${path}`);
+    }
+  }
+});
+
+test("bounded output identifiers retain grammar and both length neighbors", () => {
+  const bindingScalars = new Set(["bindingId", "requirementId", "ownerId", "scenarioId", "witnessId"]);
+  const bindingLists = new Set(["commandIds", "environmentClasses", "selectedCommandIds"]);
+  const resolverScalars = new Set(["blockingStatus", "declaredMutationResistanceClaimId", "invariantRole", "ownedInvariant", "requirementId", "surfaceId", "environmentClass"]);
+  const resolverLists = new Set(["requiredEnvironmentClasses", "environmentClasses", "localEnvironmentClasses", "preconditionedEnvironmentClasses", "requirementIds"]);
+  for (const [command, output] of outputCases()) {
+    const resolver = command === "requirement-proof-resolver";
+    if (!resolver && command !== "evidence-graph" && command !== "proof-slice") continue;
+    const scalars = resolver ? resolverScalars : bindingScalars, lists = resolver ? resolverLists : bindingLists;
+    const paths = stringPaths(output).filter(path => scalars.has(path.at(-1)) || lists.has(path.at(-2)));
+    assert.ok(paths.length > 0);
+    for (const path of paths) {
+      // Selection arrays are native-owned text, unlike the derived stable IDs.
+      if (path[0] === "selection") continue;
+      for (const [value, valid] of [["a".repeat(256), true], ["a".repeat(257), false], ["bad id", false]]) {
+        const candidate = structuredClone(output); at(candidate, path.slice(0, -1))[path.at(-1)] = value;
+        validates(command, "output", candidate, valid, `bounded output identifier: ${path}`);
+      }
+    }
+  }
+});
+
+test("mandatory empty output collections reject populated neighbors", () => {
+  for (const failed of [false, true]) {
+    const input = schedulerInput();
+    if (failed) input.policies[0].commandId = "test.other";
+    const output = native("witness-scheduler-plan", input, {exit: failed ? 1 : 0});
+    assert.deepEqual(output.ruleResults[0].diagnostics, []);
+    output.ruleResults[0].diagnostics = ["unexpected"];
+    validates("witness-scheduler-plan", "output", output, false, "nonempty boundary diagnostics");
+  }
+  const output = native("witness-plan", witnessInput());
+  assert.deepEqual(output.commands[0].environment.allowlist, []);
+  output.commands[0].environment.allowlist = ["HOME"];
+  validates("witness-plan", "output", output, false, "nonempty none-inheritance allowlist");
 });
 
 test("populated output members reject missing null unknown and mistyped values", () => {
