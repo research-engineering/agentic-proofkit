@@ -319,6 +319,19 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 			witnessPath: "internal/app/unsupported_key_diagnostics_cli_test.go",
 			selectors:   []string{"TestKnownKeysNativeCLIDiagnostics"},
 		},
+		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.generator-flag-diagnostics"}: {
+			witnessPath: "scripts/generator_flags_test.go",
+			selectors:   []string{"TestGeneratorFlagDiagnosticsPreserveProcessContract"},
+		},
+		{"REQ-PROOFKIT-QUALITY-027", "proofkit.supply-chain-quality.flag-diagnostic-adapter"}: {
+			witnessPath: "internal/kernel/diagnostic/flags_test.go",
+			selectors: []string{
+				"TestParseFlagsCapturesSplitUsageAndBoundsOutput",
+				"TestParseFlagsPreservesStandardParserObservations",
+				"TestParseFlagsRedactsWholeDiagnostics",
+				"TestParseFlagsRejectsNonReturningHandlersBeforeParsing",
+			},
+		},
 		{"REQ-PROOFKIT-SPEC-039", "proofkit.spec-proof-core.graph-reference-window"}: {
 			witnessPath: "internal/command/requirementbrowser/workspace_graph_test.go",
 			selectors: []string{
