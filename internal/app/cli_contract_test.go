@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "3add7dc47af8ea32f98b6f78b76b38fb0ac57522818b1114da668dd0d9dcd6d0"
+	cliContractPublicABISHA256               = "8a8abad81e716c487da9194fd1b8a16311b52ccbf61319fed61d35425d72fede"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -535,7 +535,15 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
-			bindingStructureDefinition: {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
+			"proofkit.requirement-bindings.output.v1.json-schema":       {},
+			"proofkit.evidence-graph.output.v1.json-schema":             {},
+			"proofkit.proof-slice.output.v1.json-schema":                {},
+			"proofkit.requirement-proof-resolver.output.v2.json-schema": {},
+			"proofkit.witness-plan.input.v1.json-schema":                {},
+			"proofkit.witness-plan.output.v1.json-schema":               {},
+			"proofkit.witness-scheduler-plan.input.v1.json-schema":      {},
+			"proofkit.witness-scheduler-plan.output.v1.json-schema":     {},
+			bindingStructureDefinition:                                  {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
 			specTreeStructureDefinition:                                           {},
