@@ -16,6 +16,24 @@ func TestAdmitWithVocabularyAcceptsExplicitCommandContract(t *testing.T) {
 	}
 }
 
+func TestZeroExitCodeStructurePreservesNativeNumericTokens(t *testing.T) {
+	for _, token := range []string{"0", "-0", "0.0", "0e0", "-1", "1"} {
+		t.Run(token, func(t *testing.T) {
+			raw := validCommand()
+			raw["exitCodePolicy"] = map[string]any{"kind": "zero", "successCodes": []any{json.Number(token)}}
+			command, nativeErr := AdmitWithVocabulary(raw, validVocabulary())
+			_, shapeErr := CommandStructure().Admit(raw, "command")
+			accepted := token == "0" || token == "-0"
+			if (nativeErr == nil) != accepted || (shapeErr == nil) != accepted {
+				t.Fatalf("token=%s native=%v structure=%v wantAccepted=%v", token, nativeErr, shapeErr, accepted)
+			}
+			if accepted && (len(command.ExitCodePolicy.SuccessCodes) != 1 || command.ExitCodePolicy.SuccessCodes[0] != 0) {
+				t.Fatal("zero exit-code token did not normalize to one zero")
+			}
+		})
+	}
+}
+
 func TestAdmitWithVocabularyRejectsRiskCorpus(t *testing.T) {
 	cases := []struct {
 		name   string

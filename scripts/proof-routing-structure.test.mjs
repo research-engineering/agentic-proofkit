@@ -93,6 +93,18 @@ function seed(command) {
   return bindingInput();
 }
 
+function* outputCases() {
+  for (const command of names) yield [command, native(command, seed(command))];
+  const binding = bindingInput(); binding.bindings[0].requirementId = "REQ-MISSING";
+  yield ["requirement-bindings", native("requirement-bindings", binding, {exit: 1})];
+  const scheduler = schedulerInput(); scheduler.policies[0].commandId = "test.other";
+  yield ["witness-scheduler-plan", native("witness-scheduler-plan", scheduler, {exit: 1})];
+  const witness = witnessInput();
+  witness.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
+  witness.commands[0].exitCodePolicy = {kind: "listed", successCodes: [0, 255]};
+  yield ["witness-plan", native("witness-plan", witness)];
+}
+
 test("six whole-CLI routes preserve stdin pointer compact and distinct owner outputs", () => {
   for (const command of names) {
     const input = seed(command);
@@ -224,6 +236,60 @@ test("failed binding reports retain mandatory nonempty failure rules", () => {
   validates("requirement-bindings", "output", output, false, "failed report must retain failure rules");
 });
 
+test("binding rule statuses stay fixed in both passed and failed report branches", () => {
+  for (const failed of [false, true]) {
+    const input = bindingInput();
+    if (failed) input.bindings[0].requirementId = "REQ-MISSING";
+    const output = native("requirement-bindings", input, {exit: failed ? 1 : 0});
+    const status = failed ? "failed" : "passed";
+    assert.equal(output.state, status); assert.ok(output.ruleResults.length > 0);
+    for (const [index, rule] of output.ruleResults.entries()) {
+      assert.equal(rule.status, status);
+      const bad = structuredClone(output); bad.ruleResults[index].status = failed ? "passed" : "failed";
+      validates("requirement-bindings", "output", bad, false, "opposite rule status in binding report");
+    }
+  }
+});
+
+test("zero exit codes retain decimal integer tokens including raw negative zero", () => {
+  for (const command of ["witness-plan", "witness-scheduler-plan"]) {
+    const input = seed(command), expected = native(command, input);
+    const definitionId = contract.commands.find(row => row.command === command).inputContract.rootDefinitionRef;
+    const schema = contract.contractDefinitions.find(row => row.definitionId === definitionId).fieldTree.variants[0].schema;
+    const policy = schema.properties.commands.items.properties.exitCodePolicy.oneOf.find(row => row.properties.kind.const === "zero");
+    assert.equal(policy.properties.successCodes.prefixItems[0]["x-proofkit-number-encoding"], "decimal-integer-token-int64");
+    for (const token of ["0", "-0", "0.0", "0e0"]) {
+      const bytes = JSON.stringify(input).replace('"successCodes":[0]', `"successCodes":[${token}]`);
+      assert.ok(bytes.includes(`"successCodes":[${token}]`));
+      if (token === "0" || token === "-0") assert.deepEqual(native(command, bytes), expected);
+      else native(command, bytes, {exit: 1, report: false});
+    }
+    if (command === "witness-plan") assert.deepEqual(expected.commands[0].exitCodePolicy.successCodes, [0]);
+  }
+});
+
+test("environment allowlist names retain their grammar in alternative branches", () => {
+  for (const command of ["witness-plan", "witness-scheduler-plan"]) {
+    const input = seed(command);
+    input.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
+    validates(command, "input", input);
+    const output = native(command, input);
+    for (const name of ["1HOME", "home", "HOME-KEY", "HOME KEY", ""]) {
+      const bad = structuredClone(input); bad.commands[0].environment.allowlist = [name];
+      validates(command, "input", bad, false, "invalid environment name");
+      native(command, bad, {exit: 1, report: false});
+      if (command === "witness-plan") {
+        const badOutput = structuredClone(output); badOutput.commands[0].environment.allowlist = [name];
+        validates(command, "output", badOutput, false, "invalid environment name");
+      }
+    }
+    for (const name of ["_", "A", "HOME_1"]) {
+      const good = structuredClone(input); good.commands[0].environment.allowlist = [name];
+      validates(command, "input", good); native(command, good);
+    }
+  }
+});
+
 test("closed witness and scheduler records reject isolated missing null unknown and mistyped members", () => {
   for (const command of ["witness-plan", "witness-scheduler-plan"]) {
     const input = seed(command);
@@ -245,8 +311,7 @@ test("closed witness and scheduler records reject isolated missing null unknown 
 });
 
 test("populated output members reject missing null unknown and mistyped values", () => {
-  for (const command of names) {
-    const output = native(command, seed(command));
+  for (const [command, output] of outputCases()) {
     for (const path of objects(output)) {
       const bad = structuredClone(output); at(bad, path).unexpected = true;
       validates(command, "output", bad, false, `${path}/unknown`);
@@ -360,11 +425,11 @@ test("witness leaf domains and native-only safety predicates remain distinct", (
 });
 
 test("output literal roles counts hashes and selector omission have independent controls", () => {
-  for (const command of names) {
-    const output = native(command, seed(command));
+  for (const [command, output] of outputCases()) {
     for (const path of objects(output)) for (const [key, value] of Object.entries(at(output, path))) {
       let replacement;
-      if (["reportKind", "graphKind", "sliceKind", "projectionKind", "declarationKind", "state", "status", "role", "authority", "claimLevel", "proofState", "witnessKind"].includes(key)) replacement = "unknown";
+      if (["reportKind", "graphKind", "sliceKind", "projectionKind", "declarationKind", "state", "status", "role", "authority", "claimLevel", "proofState", "witnessKind", "ruleId", "key"].includes(key)) replacement = "unknown";
+      else if (key === "message" || (key === "value" && typeof value === "string")) replacement = "";
       else if (key === "schemaVersion") replacement = value + 1;
       else if (key.endsWith("Count") || key === "resolutionOrderIndex") replacement = -1;
       else if (key === "bindingRecordId" || key === "witnessRouteId") replacement = "sha256:abc";

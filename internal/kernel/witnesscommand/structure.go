@@ -20,7 +20,7 @@ func CommandStructure() jsonshape.Shape {
 	exit := jsonshape.DiscriminatedUnion("kind",
 		jsonshape.Object(
 			jsonshape.Required("kind", jsonshape.StringLiteral("zero")),
-			jsonshape.Required("successCodes", jsonshape.Tuple(jsonshape.IntegerLiteral(0)))),
+			jsonshape.Required("successCodes", jsonshape.Tuple(jsonshape.IntegerRange(0, 0)))),
 		jsonshape.Object(
 			jsonshape.Required("kind", jsonshape.StringLiteral("listed")),
 			jsonshape.Required("successCodes", jsonshape.Array(jsonshape.IntegerRange(0, 255), 1))),
