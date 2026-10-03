@@ -34,6 +34,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/witnessschedulerplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/workspacemanifestfacts"
 	"github.com/research-engineering/agentic-proofkit/internal/command/workspaceplanning"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/agentenvelope"
@@ -43,15 +45,16 @@ import (
 )
 
 type nativeStructure struct {
-	id               string
-	direction        string
-	predecessors     []string
-	commands         []string
-	schema           func() (map[string]any, error)
-	variants         []nativeStructureVariant
-	wireVersion      json.Number
-	versionField     string
-	outOfBandVersion json.Number
+	id                   string
+	direction            string
+	predecessors         []string
+	commands             []string
+	schema               func() (map[string]any, error)
+	variants             []nativeStructureVariant
+	wireVersion          json.Number
+	versionField         string
+	outOfBandVersion     json.Number
+	optionalInputVersion bool
 }
 
 type nativeStructureVariant struct {
@@ -64,11 +67,46 @@ type nativeStructureVariant struct {
 // It is not a second schema interpreter or a replacement for native semantics.
 func nativeStructures() []nativeStructure {
 	return []nativeStructure{{
-		id:           "proofkit.requirement-bindings.input.v1.json-schema",
-		direction:    "input",
-		predecessors: []string{"proofkit.requirement-bindings.input.v1.root-shape"},
-		commands:     []string{"evidence-graph", "proof-slice", "requirement-bindings"},
-		schema:       func() (map[string]any, error) { return requirementbinding.InputStructure(), nil },
+		id: "proofkit.requirement-bindings.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.requirement-bindings.input.v1.root-shape"}, commands: []string{"evidence-graph", "proof-slice", "requirement-bindings"},
+		schema: func() (map[string]any, error) { return requirementbinding.InputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-bindings.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-bindings.output.v1.root-shape"}, commands: []string{"requirement-bindings"},
+		schema: func() (map[string]any, error) { return requirementbinding.ReportOutputStructure(), nil },
+	}, {
+		id: "proofkit.evidence-graph.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.evidence-graph.output.v1.root-shape"}, commands: []string{"evidence-graph"},
+		schema: func() (map[string]any, error) { return requirementbinding.EvidenceGraphOutputStructure(), nil },
+	}, {
+		id: "proofkit.proof-slice.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.proof-slice.output.v1.root-shape"}, commands: []string{"proof-slice"},
+		schema: func() (map[string]any, error) { return requirementbinding.ProofSliceOutputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-proof-resolver.output.v2.json-schema", direction: "output", wireVersion: json.Number("2"),
+		predecessors: []string{"proofkit.requirement-proof-resolver.output.v2.root-shape"}, commands: []string{"requirement-proof-resolver"},
+		schema: func() (map[string]any, error) { return compactproofcontract.ResolverOutputStructure(), nil },
+	}, {
+		id: "proofkit.witness-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.witness-plan.input.v1.root-shape"}, commands: []string{"witness-plan"},
+		optionalInputVersion: true,
+		variants: []nativeStructureVariant{
+			{id: "01-direct", when: "without projection", schema: func() (map[string]any, error) { return witnessplan.DirectInputStructure(), nil }},
+			{id: "02-requirement-bindings-projection", when: "projection=requirement-bindings", schema: func() (map[string]any, error) { return witnessplan.ProjectedInputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.witness-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.witness-plan.output.v1.root-shape"}, commands: []string{"witness-plan"},
+		outOfBandVersion: json.Number("1"),
+		schema:           func() (map[string]any, error) { return witnessplan.OutputStructure(), nil },
+	}, {
+		id: "proofkit.witness-scheduler-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.witness-scheduler-plan.input.v1.root-shape"}, commands: []string{"witness-scheduler-plan"},
+		schema: func() (map[string]any, error) { return witnessschedulerplan.InputStructure(), nil },
+	}, {
+		id: "proofkit.witness-scheduler-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.witness-scheduler-plan.output.v1.root-shape"}, commands: []string{"witness-scheduler-plan"},
+		schema: func() (map[string]any, error) { return witnessschedulerplan.OutputStructure(), nil },
 	}, {
 		id:           "proofkit.requirement-source.input.v2.json-schema",
 		direction:    "input",
@@ -393,6 +431,21 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	if owner.optionalInputVersion {
+		var version json.Number
+		for _, raw := range variants {
+			root, err := owner.root(raw.(map[string]any)["schema"].(map[string]any))
+			if err != nil {
+				return "", err
+			}
+			value, err := nativeObjectVersion(root, owner.schemaVersionField(), true)
+			if err != nil || (version != "" && version != value) {
+				return "", fmt.Errorf("optional input versions must agree across variants")
+			}
+			version = value
+		}
+		return version, nil
+	}
 	if owner.outOfBandVersion != "" {
 		for _, raw := range variants {
 			if _, err := owner.root(raw.(map[string]any)["schema"].(map[string]any)); err != nil {
@@ -507,6 +560,13 @@ func nativeSchemaVersion(schema map[string]any, versionField string) (json.Numbe
 }
 
 func (owner nativeStructure) root(schema map[string]any) (map[string]any, error) {
+	if owner.optionalInputVersion {
+		if owner.direction != "input" || owner.outOfBandVersion != "" || owner.wireVersion != "" {
+			return nil, fmt.Errorf("optional inline version requires an input owner without version overrides")
+		}
+		_, err := nativeObjectVersion(schema, owner.schemaVersionField(), true)
+		return schema, err
+	}
 	if owner.outOfBandVersion == "" {
 		return nativeStructureRoot(schema, owner.schemaVersionField())
 	}
@@ -567,6 +627,10 @@ func nativeStructureRoot(schema map[string]any, versionField string) (map[string
 }
 
 func nativeObjectSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {
+	return nativeObjectVersion(schema, versionField, false)
+}
+
+func nativeObjectVersion(schema map[string]any, versionField string, optional bool) (json.Number, error) {
 	if err := validateNativeClosedObject(schema); err != nil {
 		return "", err
 	}
@@ -574,7 +638,7 @@ func nativeObjectSchemaVersion(schema map[string]any, versionField string) (json
 	field, _ := properties[versionField].(map[string]any)
 	version, ok := field["const"].(json.Number)
 	required, _ := schema["required"].([]any)
-	if !ok || field["type"] != "integer" || !slices.Contains(required, any(versionField)) {
+	if !ok || field["type"] != "integer" || (!optional && !slices.Contains(required, any(versionField))) {
 		return "", fmt.Errorf("native structure requires a required literal integer %s", versionField)
 	}
 	if err := validateNativeVersion(version); err != nil {
