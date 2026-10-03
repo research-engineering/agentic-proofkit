@@ -417,6 +417,45 @@ test("scheduler list items retain populated domains and native-only constraints"
   }
 });
 
+test("witness policy choices retain all declared alternatives and both booleans", () => {
+  for (const command of ["witness-plan", "witness-scheduler-plan"]) {
+    for (const networkPolicy of ["external", "loopback", "none"]) {
+      const input = seed(command);
+      input.commands[0].networkPolicy = networkPolicy;
+      input.vocabulary.environmentClassPolicies[0].networkPolicies = [networkPolicy];
+      if (command === "witness-scheduler-plan" && networkPolicy !== "none") {
+        input.policies[0].sideEffectClass = "network";
+        input.policies[0].deterministicOutput = false;
+      }
+      validates(command, "input", input); native(command, input);
+    }
+    for (const cachePolicy of ["disabled", "read-only", "write-local"]) {
+      const input = command === "witness-scheduler-plan" ? populatedSchedulerInput() : witnessInput();
+      input.commands[0].cachePolicy = cachePolicy;
+      input.vocabulary.environmentClassPolicies[0].cachePolicies = [cachePolicy];
+      if (command === "witness-scheduler-plan" && cachePolicy === "disabled") input.policies[0].cacheAdmissionRefs = [];
+      validates(command, "input", input); native(command, input);
+    }
+    const optional = seed(command); optional.commands[0].expectedArtifacts[0].required = false;
+    validates(command, "input", optional); native(command, optional);
+  }
+  for (const sideEffectClass of ["destructive", "local_write", "shared_resource"]) {
+    const input = populatedSchedulerInput(); input.policies[0].sideEffectClass = sideEffectClass;
+    validates("witness-scheduler-plan", "input", input); native("witness-scheduler-plan", input);
+  }
+  const nondeterministic = schedulerInput(); nondeterministic.policies[0].deterministicOutput = false;
+  validates("witness-scheduler-plan", "input", nondeterministic);
+  native("witness-scheduler-plan", nondeterministic);
+});
+
+test("scheduler identity preserves the native stable-identifier length boundary", () => {
+  for (const [length, valid] of [[256, true], [257, false]]) {
+    const input = schedulerInput(); input.schedulerPlanId = "a".repeat(length);
+    validates("witness-scheduler-plan", "input", input, valid, "scheduler identity length");
+    native("witness-scheduler-plan", input, valid ? {} : {exit: 1, report: false});
+  }
+});
+
 test("integer input and output fields reject fractions and representable overflow", () => {
   for (const [command, input] of witnessInputs()) {
     for (const path of primitivePaths(input, "number")) {
