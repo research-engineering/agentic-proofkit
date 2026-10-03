@@ -244,7 +244,7 @@ test("closed witness and scheduler records reject isolated missing null unknown 
   }
 });
 
-test("all output members and discriminators are independently falsifiable", () => {
+test("populated output members reject missing null unknown and mistyped values", () => {
   for (const command of names) {
     const output = native(command, seed(command));
     for (const path of objects(output)) {
@@ -258,6 +258,64 @@ test("all output members and discriminators are independently falsifiable", () =
           validates(command, "output", bad, false, `${path}/${key}/${mode}`);
         }
       }
+    }
+  }
+});
+
+test("output collection and positive-count minima have independent boundary cases", () => {
+  const scenarios = key => ["commandIds", "environmentClasses", "witnessSelectors"].map(field => [[key, 0, "scenarios", 0, field], 1]);
+  const cases = [
+    ["requirement-bindings", [[["diagnostics"], 1], [["ruleResults"], 1]]],
+    ["evidence-graph", scenarios("requirements")],
+    ["proof-slice", scenarios("selectedRequirements")],
+    ["witness-plan", [
+      [["parallelGroups", 0, "commandIds"], 1], [["commands", 0, "argv"], 1],
+      [["commands", 0, "environment", "classes"], 1], [["commands", 0, "exitCodePolicy", "successCodes"], 1],
+    ]],
+    ["witness-scheduler-plan", [
+      [["diagnostics"], 2], [["ruleResults"], 2], [["diagnostics", 0, "value"], 1],
+      [["diagnostics", 0, "value", 0, "commandIds"], 1],
+    ]],
+    ["requirement-proof-resolver", [
+      [["commands", 0, "bindingRecordIds"], 1], [["environmentClasses", 0, "surfaceIds"], 1],
+      [["conformanceProofContract", "bindings", 0, "witnessRefs"], 2],
+    ]],
+  ];
+  for (const [command, boundaries] of cases) {
+    const output = native(command, seed(command));
+    for (const [path, minimum] of boundaries) {
+      const values = at(output, path);
+      assert.ok(Array.isArray(values) && values.length >= minimum, `${command}/${path}: valid boundary prerequisite`);
+      const bad = structuredClone(output);
+      at(bad, path.slice(0, -1))[path.at(-1)] = values.slice(0, minimum - 1);
+      validates(command, "output", bad, false, `output cardinality below minimum: ${path}`);
+    }
+  }
+  const listed = witnessInput();
+  listed.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
+  listed.commands[0].exitCodePolicy = {kind: "listed", successCodes: [0, 255]};
+  const output = native("witness-plan", listed);
+  for (const path of [["commands", 0, "environment", "allowlist"], ["commands", 0, "exitCodePolicy", "successCodes"]]) {
+    const bad = structuredClone(output); at(bad, path.slice(0, -1))[path.at(-1)] = [];
+    validates("witness-plan", "output", bad, false, `output cardinality below minimum: ${path}`);
+  }
+  const scheduler = native("witness-scheduler-plan", schedulerInput());
+  for (const field of ["commandCount", "policyCount", "executionGroupCount"]) {
+    assert.ok(scheduler.summary[field] >= 1);
+    const bad = structuredClone(scheduler); bad.summary[field] = 0;
+    validates("witness-scheduler-plan", "output", bad, false, `positive count lower boundary: ${field}`);
+  }
+});
+
+test("resolver fixed role positions reject the opposite valid role", () => {
+  const command = "requirement-proof-resolver", output = native(command, resolverInput());
+  for (const [index, role] of ["falsification", "positive"].entries()) {
+    for (const path of [["bindings", 0, "testWitnesses", role, "role"],
+      ["conformanceProofContract", "bindings", 0, "witnessRefs", index, "role"]]) {
+      assert.equal(at(output, path), role);
+      const bad = structuredClone(output);
+      at(bad, path.slice(0, -1))[path.at(-1)] = role === "positive" ? "falsification" : "positive";
+      validates(command, "output", bad, false, `opposite role in fixed position: ${path}`);
     }
   }
 });
