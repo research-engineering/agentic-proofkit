@@ -6,7 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import test, {before, after} from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
-import {bindingInput, witnessInput, schedulerInput, resolverInput, vocabulary} from "./proof-routing-fixtures.mjs";
+import {bindingInput, witnessInput, projectedWitnessInput, schedulerInput, resolverInput} from "./proof-routing-fixtures.mjs";
 
 const root = new URL("../", import.meta.url);
 const contract = JSON.parse(readFileSync(process.env.PROOFKIT_ROUTING_CONTRACT || new URL("proofkit/cli-contract.v2.json", root), "utf8"));
@@ -81,7 +81,7 @@ function native(command, input, {exit = 0, report = true, carrier = "stdin", ext
   return output;
 }
 const at = (value, path) => path.reduce((node, key) => node[key], value);
-const wrongType = value => typeof value === "string" ? false : typeof value === "boolean" || typeof value === "number" ? "bad" : Array.isArray(value) ? {} : [];
+const wrongType = value => value === null || typeof value === "string" ? false : typeof value === "boolean" || typeof value === "number" ? "bad" : Array.isArray(value) ? {} : [];
 function objects(value, path = []) {
   if (!value || typeof value !== "object") return [];
   return [...(Array.isArray(value) ? [] : [path]), ...Object.entries(value).flatMap(([key, child]) => objects(child, [...path, key]))];
@@ -103,6 +103,28 @@ function* outputCases() {
   witness.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
   witness.commands[0].exitCodePolicy = {kind: "listed", successCodes: [0, 255]};
   yield ["witness-plan", native("witness-plan", witness)];
+}
+
+function* witnessInputs() {
+  for (const command of ["witness-plan", "witness-scheduler-plan"]) {
+    yield [command, seed(command)];
+    const input = seed(command);
+    input.commands[0].environment = {inherit: "allowlist", allowlist: ["HOME"], classes: ["local-go"]};
+    input.commands[0].exitCodePolicy = {kind: "listed", successCodes: [0, 255]};
+    if (command === "witness-scheduler-plan") {
+      input.policies[0].retryPolicy = {kind: "bounded", maxAttempts: 2};
+      input.policies[0].cancellationPolicy = {kind: "not_supported", graceMs: null};
+    }
+    yield [command, input];
+  }
+  yield ["witness-plan", projectedWitnessInput()];
+  const projected = projectedWitnessInput();
+  const binding = projected.requirementProofBinding;
+  delete binding.witnessCommands[0].environmentClass;
+  binding.witnessCommands[0].environmentClasses = ["local-go"];
+  binding.bindings[0].witnessSelectors = null;
+  binding.selection = {changedPaths: [], ownerIds: [], requirementIds: []};
+  yield ["witness-plan", projected];
 }
 
 test("six whole-CLI routes preserve stdin pointer compact and distinct owner outputs", () => {
@@ -130,11 +152,14 @@ test("six whole-CLI routes preserve stdin pointer compact and distinct owner out
 test("witness input variants retain absence null defaults and empty-plan behavior", () => {
   const direct = witnessInput(), expected = native("witness-plan", direct);
   assert.deepEqual(native("witness-plan", {...direct, schemaVersion: 1}), expected);
-  const projected = {schemaVersion: 1, projection: "requirement-bindings", requirementProofBinding: bindingInput(), vocabulary: vocabulary()};
+  const projected = projectedWitnessInput();
   validates("witness-plan", "input", projected);
   const fromBinding = native("witness-plan", projected);
   assert.deepEqual(fromBinding.commands.map(x => x.id), ["test.one"]);
   assert.deepEqual(fromBinding.commands[0].argv, ["go", "test", "./tests", "-run", "TestOne"]);
+  const extra = {...projected, nonClaims: ["Root metadata must not be discarded."]};
+  validates("witness-plan", "input", extra, false, "projected root nonClaims");
+  native("witness-plan", extra, {exit: 1, report: false});
   for (const groups of [undefined, ["first", "second"]]) {
     const emptyBinding = bindingInput(); emptyBinding.requirements = []; emptyBinding.bindings = []; emptyBinding.witnessCommands = [];
     const input = {schemaVersion: 1, projection: "requirement-bindings", requirementProofBinding: emptyBinding,
@@ -179,6 +204,9 @@ test("scheduler variants distinguish failed linkage from invalid metadata", () =
     const input = schedulerInput(); input.policies[0].retryPolicy = {kind: "bounded", maxAttempts: attempts};
     validates(command, "input", input); native(command, input);
   }
+  const below = schedulerInput(); below.policies[0].retryPolicy = {kind: "bounded", maxAttempts: 1};
+  validates(command, "input", below, false, "bounded retry lower boundary");
+  native(command, below, {exit: 1, report: false});
   const empty = schedulerInput(); empty.policies = [];
   validates(command, "input", empty, false);
   native(command, empty, {exit: 1, report: false});
@@ -251,6 +279,18 @@ test("binding rule statuses stay fixed in both passed and failed report branches
   }
 });
 
+test("scheduler boundary rule remains passed independently of the safety verdict", () => {
+  for (const failed of [false, true]) {
+    const input = schedulerInput();
+    if (failed) input.policies[0].commandId = "test.other";
+    const output = native("witness-scheduler-plan", input, {exit: failed ? 1 : 0});
+    assert.equal(output.ruleResults[0].ruleId, "proofkit.witness-scheduler-plan.boundary");
+    assert.equal(output.ruleResults[0].status, "passed");
+    output.ruleResults[0].status = "failed";
+    validates("witness-scheduler-plan", "output", output, false, "fixed scheduler boundary status");
+  }
+});
+
 test("zero exit codes retain decimal integer tokens including raw negative zero", () => {
   for (const command of ["witness-plan", "witness-scheduler-plan"]) {
     const input = seed(command), expected = native(command, input);
@@ -291,14 +331,19 @@ test("environment allowlist names retain their grammar in alternative branches",
 });
 
 test("closed witness and scheduler records reject isolated missing null unknown and mistyped members", () => {
-  for (const command of ["witness-plan", "witness-scheduler-plan"]) {
-    const input = seed(command);
+  for (const [command, input] of witnessInputs()) {
+    validates(command, "input", input); native(command, input);
     for (const path of objects(input)) {
       const bad = structuredClone(input); at(bad, path).unexpected = true;
       validates(command, "input", bad, false, `${path}/unknown`); native(command, bad, {exit: 1, report: false});
       for (const [key, value] of Object.entries(at(input, path))) {
-        const optional = path.join("/") === "vocabulary" && ["maxTimeoutMs", "environmentClassPolicies", "parallelGroups", "nonCacheableCredentialClasses"].includes(key);
-        for (const mode of optional ? ["wrong-type"] : ["missing", "null", "wrong-type"]) {
+        const location = path.join("/");
+        const nullableOptional = (location === "vocabulary" && ["maxTimeoutMs", "environmentClassPolicies", "parallelGroups", "nonCacheableCredentialClasses"].includes(key))
+          || (path[0] === "requirementProofBinding" && key === "witnessSelectors")
+          || (location === "requirementProofBinding" && key === "selection")
+          || location === "requirementProofBinding/selection"
+          || (key === "graceMs" && at(input, path).kind === "not_supported");
+        for (const mode of nullableOptional ? ["wrong-type"] : ["missing", "null", "wrong-type"]) {
           const bad = structuredClone(input);
           if (mode === "missing") delete at(bad, path)[key];
           else at(bad, path)[key] = mode === "null" ? null : wrongType(value);
@@ -307,6 +352,19 @@ test("closed witness and scheduler records reject isolated missing null unknown 
         }
       }
     }
+  }
+});
+
+test("scheduler primitive domains reject their adjacent invalid boundaries", () => {
+  for (const [path, value] of [
+    [["commands"], []], [["nonClaims"], []], [["policies", 0, "nonClaims"], []],
+    [["policies", 0, "sideEffectClass"], "unknown"], [["policies", 0, "retryPolicy", "kind"], "unknown"],
+    [["policies", 0, "cancellationPolicy", "kind"], "unknown"], [["policies", 0, "cancellationPolicy", "graceMs"], 0],
+    [["policies", 0, "timeoutPolicy", "kind"], "unknown"], [["policies", 0, "timeoutPolicy", "timeoutMs"], 0],
+  ]) {
+    const input = schedulerInput(); at(input, path.slice(0, -1))[path.at(-1)] = value;
+    validates("witness-scheduler-plan", "input", input, false, `${path}/domain`);
+    native("witness-scheduler-plan", input, {exit: 1, report: false});
   }
 });
 
@@ -389,6 +447,8 @@ test("witness leaf domains and native-only safety predicates remain distinct", (
   for (const [path, value, structural] of [
     [["commands", 0, "networkPolicy"], "ambient", false],
     [["commands", 0, "cachePolicy"], "shared", false],
+    [["commands", 0, "environment", "inherit"], "unknown", false],
+    [["commands", 0, "exitCodePolicy", "kind"], "unknown", false],
     [["commands", 0, "id"], "UPPER", false],
     [["commands", 0, "timeoutMs"], 0, false],
     [["commands", 0, "argv"], [], false],

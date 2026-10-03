@@ -26,6 +26,10 @@ export function witnessInput() {
     exitCodePolicy: {kind: "zero", successCodes: [0]}}]};
 }
 
+export function projectedWitnessInput() {
+  return {schemaVersion: 1, projection: "requirement-bindings", requirementProofBinding: bindingInput(), vocabulary: vocabulary()};
+}
+
 export function schedulerInput() {
   return {...witnessInput(), schemaVersion: 1, schedulerPlanId: "scheduler.one", nonClaims: ["Synthetic scheduling only."],
     policies: [{commandId: "test.one", inputSelectors: [], outputSelectors: [], resourceReads: [], resourceWrites: [],
