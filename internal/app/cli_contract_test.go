@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "3add7dc47af8ea32f98b6f78b76b38fb0ac57522818b1114da668dd0d9dcd6d0"
+	cliContractPublicABISHA256               = "54bce8036a8b8d77b373a88e421f76d0fdb73c8f96a02cbafdb8797947716200"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -535,7 +535,15 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 	}
 	if structural {
 		if _, admitted := map[string]struct{}{
-			bindingStructureDefinition: {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
+			"proofkit.requirement-bindings.output.v1.json-schema":       {},
+			"proofkit.evidence-graph.output.v1.json-schema":             {},
+			"proofkit.proof-slice.output.v1.json-schema":                {},
+			"proofkit.requirement-proof-resolver.output.v2.json-schema": {},
+			"proofkit.witness-plan.input.v1.json-schema":                {},
+			"proofkit.witness-plan.output.v1.json-schema":               {},
+			"proofkit.witness-scheduler-plan.input.v1.json-schema":      {},
+			"proofkit.witness-scheduler-plan.output.v1.json-schema":     {},
+			bindingStructureDefinition:                                  {}, sourceStructureDefinition: {}, sourceOutputStructureDefinition: {},
 			sourceViewOutputStructureDefinition: {}, transitionInputStructureDefinition: {}, transitionOutputStructureDefinition: {},
 			authoringInputStructureDefinition: {}, authoringOutputStructureDefinition: {}, contextCatalogStructureDefinition: {},
 			specTreeStructureDefinition:                                           {},
@@ -2430,7 +2438,7 @@ func TestWitnessPlanContractDescribesBindingProjectionInput(t *testing.T) {
 	assertStringSet(t, stringsFromAny(bindingProjection["admissionRules"].([]any)), []string{
 		"requirementProofBinding must pass requirement-bindings admission",
 		"vocabulary must pass witness command vocabulary admission",
-		"binding-derived projection requires exactly one admitted parallelGroup; multi-group vocabularies require an explicit witness command catalog",
+		"each binding-derived command requires exactly one admitted parallelGroup; an empty command catalog permits zero or multiple groups",
 		"display command text must be display-only command text without shell control tokens, quoting, escaping, or secret-like tokens",
 		"each referenced environment class must admit networkPolicy none, credentialClass none, and cachePolicy disabled",
 	}, "witness-plan requirement-bindings admission rules")
