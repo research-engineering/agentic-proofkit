@@ -37,6 +37,6 @@ func OutputStructure() map[string]any {
 		jsonshape.Required("inputAuthority", jsonshape.StringLiteral("caller_manifest_plus_filesystem_snapshot")),
 		jsonshape.Required("nonClaims", jsonshape.Tuple(claims...)),
 	).JSONSchema()
-	schema["description"] = "The same closed report shape describes passed and failed filesystem verification. Empty failures implies exit 0; nonempty, sorted, redacted failures implies exit 1. Native admission or filesystem errors instead return exit 1 without a JSON report. entryCount equals the original admitted manifest length, including entries that produce duplicate diagnostics. The five built-in nonClaims retain their exact order. Report values are derived observations of the explicitly selected filesystem snapshot, not compiler, registry or execution authority."
+	schema["description"] = "The same closed report shape describes passed and failed filesystem verification. Empty failures implies exit 0; nonempty, sorted, redacted failures implies exit 1. A missing declared source is a failed verification report. Fatal admission or operational errors, including a missing referenced package manifest, return exit 1 without a JSON report. entryCount equals the original admitted manifest length, including entries that produce duplicate diagnostics. The five built-in nonClaims retain their exact order. Report values are derived observations of the explicitly selected filesystem snapshot, not compiler, registry or execution authority."
 	return schema
 }

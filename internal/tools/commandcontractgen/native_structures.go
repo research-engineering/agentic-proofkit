@@ -651,6 +651,12 @@ func admitNativeStructureConsumers(contract map[string]any, definitions map[stri
 					return fmt.Errorf("%s %s contract violates native structure consumer ownership", name, direction)
 				}
 				if isConsumer {
+					if owner.outOfBandVersion != "" {
+						expectedID := "proofkit." + name + "." + direction + ".v" + string(owner.outOfBandVersion)
+						if binding["schemaVersion"] != owner.outOfBandVersion || binding["contractId"] != expectedID {
+							return fmt.Errorf("%s %s contract violates native out-of-band contract identity", name, direction)
+						}
+					}
 					seen[name] = true
 				}
 			}

@@ -21,7 +21,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.public-api-schema-owner"}: {
 			witnessPath: "internal/tools/commandcontractgen/public_api_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
-			selectors: []string{"TestOutOfBandContractVersionDoesNotInventWireFields", "TestPublicAPIStructuresRejectRehashedDrift"},
+			selectors: []string{"TestOutOfBandConsumerIdentityRejectsMetadataDrift", "TestOutOfBandContractVersionDoesNotInventWireFields", "TestPublicAPIStructuresRejectRehashedDrift"},
 		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.workspace-schema-independent-runtime"}: {
 			witnessPath: "scripts/workspace-structure.test.mjs",

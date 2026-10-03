@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -9,6 +10,54 @@ import (
 
 	"github.com/research-engineering/agentic-proofkit/internal/command/publicapi"
 )
+
+func TestOutOfBandConsumerIdentityRejectsMetadataDrift(t *testing.T) {
+	root, err := filepath.Abs("../../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, mode := range []string{"unchanged", "version", "identity", "both"} {
+		t.Run(mode, func(t *testing.T) {
+			_, contract, err := readContract(filepath.Join(root, cliContractPath))
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, raw := range contract["commands"].([]any) {
+				command := raw.(map[string]any)
+				if command["command"] != "typescript-public-api-surfaces" {
+					continue
+				}
+				found = true
+				binding := command["outputContract"].(map[string]any)
+				if mode == "version" || mode == "both" {
+					binding["schemaVersion"] = json.Number("2")
+				}
+				if mode == "identity" || mode == "both" {
+					binding["contractId"] = "proofkit.typescript-public-api-surfaces.output.v2"
+				}
+			}
+			if !found {
+				t.Fatal("missing out-of-band consumer")
+			}
+			source, err := canonicalJSON(contract)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Ordinary admission must reject drift; refresh would repair the evidence.
+			app, presets, err := renderContract(root, source, contract)
+			if mode == "unchanged" {
+				if err != nil || len(app) == 0 || len(presets) == 0 {
+					t.Fatalf("valid render: app=%d presets=%d error=%v", len(app), len(presets), err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), "out-of-band contract identity") || app != nil || presets != nil {
+				t.Fatalf("metadata drift emitted output: app=%d presets=%d error=%v", len(app), len(presets), err)
+			}
+		})
+	}
+}
 
 func TestPublicAPIStructuresRejectRehashedDrift(t *testing.T) {
 	for direction, projection := range map[string]func() map[string]any{

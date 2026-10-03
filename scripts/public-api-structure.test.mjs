@@ -115,6 +115,11 @@ test("closed manifest records preserve required optional nullable and scalar dom
 });
 
 test("array items bounds and independent uniqueness clauses are enforced", () => {
+  for (const field of ["runtimeExports", "typeExports", "deniedExportKeys"]) {
+    const input = seed();
+    input.entries[0][field] = [""];
+    rejected(input, `${field}/empty-item`);
+  }
   for (const path of [["entries"], ["entries", 0, "exportConditions"], ["entries", 0, "runtimeExports"], ["entries", 0, "typeExports"], ["entries", 0, "deniedExportKeys"]]) {
     for (const wrong of [null, false, 1, []]) {
       const input = seed();
@@ -147,6 +152,23 @@ test("array items bounds and independent uniqueness clauses are enforced", () =>
   assert.equal(report.failures.length, 1023);
   boundary.entries.push(structuredClone(boundary.entries[0]));
   rejected(boundary, "entries/maximum");
+});
+
+test("missing sources report verification failure but missing package manifests are fatal", () => {
+  const input = seed(), sourceFiles = {...corpus.observations[0].files};
+  delete sourceFiles["modules/alpha/lib/api.mts"];
+  const missingSource = native(input, {files: sourceFiles});
+  assert.equal(missingSource.status, 1);
+  assert.equal(missingSource.stderr, "");
+  assert.equal(missingSource.output.entryCount, 1);
+  assert.ok(missingSource.output.failures.includes("@example/alpha:. source does not exist: modules/alpha/lib/api.mts"));
+
+  const packageFiles = {...corpus.observations[0].files};
+  delete packageFiles["modules/alpha/package.json"];
+  const missingPackage = native(input, {files: packageFiles});
+  assert.equal(missingPackage.status, 1);
+  assert.equal(missingPackage.stdout, "");
+  assert.notEqual(missingPackage.stderr, "");
 });
 
 test("native-only ordering normalization paths privacy and numeric spelling remain explicit", () => {
