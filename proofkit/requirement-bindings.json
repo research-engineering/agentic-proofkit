@@ -9833,6 +9833,42 @@
       "environmentClasses": [
         "local-go"
       ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.public-api-schema-independent-runtime",
+      "witnessId": "proofkit.public-api-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/public-api-structure.test.mjs",
+      "commandIds": [
+        "proofkit.boundary-contract-check"
+      ],
+      "environmentClasses": [
+        "local-go-node"
+      ]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.public-api-schema-owner",
+      "witnessId": "proofkit.public-api-schema-owner",
+      "witnessKind": "contract",
+      "witnessPath": "internal/tools/commandcontractgen/public_api_structure_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestOutOfBandContractVersionDoesNotInventWireFields",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestOutOfBandContractVersionDoesNotInventWireFields$'"
+        },
+        {
+          "selector": "TestPublicAPIStructuresRejectRehashedDrift",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestPublicAPIStructuresRejectRehashedDrift$'"
+        }
+      ],
+      "commandIds": [
+        "proofkit.go-test"
+      ],
+      "environmentClasses": [
+        "local-go"
+      ]
     }
   ],
   "witnessCommands": [

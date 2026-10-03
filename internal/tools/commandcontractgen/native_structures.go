@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
+	"github.com/research-engineering/agentic-proofkit/internal/command/publicapi"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptcurrentnessscope"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receiptproduceradmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/receipttrustclass"
@@ -42,14 +43,15 @@ import (
 )
 
 type nativeStructure struct {
-	id           string
-	direction    string
-	predecessors []string
-	commands     []string
-	schema       func() (map[string]any, error)
-	variants     []nativeStructureVariant
-	wireVersion  json.Number
-	versionField string
+	id               string
+	direction        string
+	predecessors     []string
+	commands         []string
+	schema           func() (map[string]any, error)
+	variants         []nativeStructureVariant
+	wireVersion      json.Number
+	versionField     string
+	outOfBandVersion json.Number
 }
 
 type nativeStructureVariant struct {
@@ -319,6 +321,15 @@ func nativeStructures() []nativeStructure {
 			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
 			{id: "02-partition", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ShardOutputStructure(), nil }},
 		},
+	}, {
+		id: "proofkit.typescript-public-api-surfaces.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.typescript-public-api-surfaces.input.v1.root-shape"}, commands: []string{"typescript-public-api-surfaces"},
+		schema: func() (map[string]any, error) { return publicapi.InputStructure(), nil },
+	}, {
+		id: "proofkit.typescript-public-api-surfaces.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.typescript-public-api-surfaces.output.v1.root-shape"}, commands: []string{"typescript-public-api-surfaces"},
+		outOfBandVersion: json.Number("1"),
+		schema:           func() (map[string]any, error) { return publicapi.OutputStructure(), nil },
 	}}
 }
 
@@ -346,7 +357,7 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 		if err != nil {
 			return nil, fmt.Errorf("native structure %s: %w", owner.id, err)
 		}
-		root, err := nativeStructureRoot(schema, owner.schemaVersionField())
+		root, err := owner.root(schema)
 		if err != nil {
 			return nil, err
 		}
@@ -382,6 +393,14 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	if owner.outOfBandVersion != "" {
+		for _, raw := range variants {
+			if _, err := owner.root(raw.(map[string]any)["schema"].(map[string]any)); err != nil {
+				return "", err
+			}
+		}
+		return owner.outOfBandVersion, nil
+	}
 	if owner.wireVersion != "" {
 		for _, raw := range variants {
 			version, err := nativeSchemaVersion(raw.(map[string]any)["schema"].(map[string]any), owner.schemaVersionField())
@@ -431,7 +450,11 @@ func agentEnvelopeRootStructure() (map[string]any, error) {
 }
 
 func (owner nativeStructure) summary(version json.Number) []any {
-	return []any{owner.schemaVersionField() + "=" + version.String(), "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
+	identity := owner.schemaVersionField() + "=" + version.String()
+	if owner.outOfBandVersion != "" {
+		identity = "contractSchemaVersion=" + version.String() + " (out-of-band; no serialized schemaVersion field)"
+	}
+	return []any{identity, "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
 }
 
 // Human field navigation is derived separately from the machine contract digest.
@@ -445,7 +468,7 @@ func nativeInputRootSummary(id string, definition map[string]any) ([]string, err
 	for _, raw := range variants {
 		variant := raw.(map[string]any)
 		schema := variant["schema"].(map[string]any)
-		root, err := nativeStructureRoot(schema, owner.schemaVersionField())
+		root, err := owner.root(schema)
 		if err != nil {
 			return nil, err
 		}
@@ -481,6 +504,25 @@ func nativeSchemaVersion(schema map[string]any, versionField string) (json.Numbe
 		return "", err
 	}
 	return nativeObjectSchemaVersion(root, versionField)
+}
+
+func (owner nativeStructure) root(schema map[string]any) (map[string]any, error) {
+	if owner.outOfBandVersion == "" {
+		return nativeStructureRoot(schema, owner.schemaVersionField())
+	}
+	if owner.versionField != "" || owner.wireVersion != "" || len(owner.variants) != 0 {
+		return nil, fmt.Errorf("out-of-band contract version cannot select inline versions or variants")
+	}
+	if err := validateNativeVersion(owner.outOfBandVersion); err != nil {
+		return nil, err
+	}
+	if err := validateNativeClosedObject(schema); err != nil {
+		return nil, err
+	}
+	if _, exists := schema["properties"].(map[string]any)["schemaVersion"]; exists {
+		return nil, fmt.Errorf("out-of-band contract version cannot coexist with a schemaVersion field")
+	}
+	return schema, nil
 }
 
 // A structural sum retains its full schema. Only its common root summary is
@@ -525,8 +567,8 @@ func nativeStructureRoot(schema map[string]any, versionField string) (map[string
 }
 
 func nativeObjectSchemaVersion(schema map[string]any, versionField string) (json.Number, error) {
-	if _, ok := schema["properties"].(map[string]any); !ok || schema["type"] != "object" || schema["additionalProperties"] != false {
-		return "", fmt.Errorf("native structure requires a closed object projection")
+	if err := validateNativeClosedObject(schema); err != nil {
+		return "", err
 	}
 	properties, _ := schema["properties"].(map[string]any)
 	field, _ := properties[versionField].(map[string]any)
@@ -535,11 +577,25 @@ func nativeObjectSchemaVersion(schema map[string]any, versionField string) (json
 	if !ok || field["type"] != "integer" || !slices.Contains(required, any(versionField)) {
 		return "", fmt.Errorf("native structure requires a required literal integer %s", versionField)
 	}
-	number, err := version.Int64()
-	if err != nil || number < 1 || version.String() != fmt.Sprint(number) {
-		return "", fmt.Errorf("native structure schemaVersion must be a positive canonical integer")
+	if err := validateNativeVersion(version); err != nil {
+		return "", err
 	}
 	return version, nil
+}
+
+func validateNativeClosedObject(schema map[string]any) error {
+	if _, ok := schema["properties"].(map[string]any); !ok || schema["type"] != "object" || schema["additionalProperties"] != false {
+		return fmt.Errorf("native structure requires a closed object projection")
+	}
+	return nil
+}
+
+func validateNativeVersion(version json.Number) error {
+	number, err := version.Int64()
+	if err != nil || number < 1 || version.String() != fmt.Sprint(number) {
+		return fmt.Errorf("native structure schemaVersion must be a positive canonical integer")
+	}
+	return nil
 }
 
 func admitNativeStructureDefinition(id string, record map[string]any) error {

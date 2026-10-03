@@ -24,6 +24,17 @@ const (
 	maxManifestEntries      = 1024
 )
 
+var manifestKeys = []string{"entries", "machineContract", "schemaVersion"}
+var manifestEntryKeys = []string{"deniedExportKeys", "exportConditions", "exportKey", "packageManifestPath", "packageName", "runtimeExports", "typeExports"}
+var conditionKeys = []string{"condition", "path", "sourcePath"}
+var commandNonClaims = []string{
+	"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
+	"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
+	"TypeScript public API verification does not parse JSX or admit TSX source files.",
+	"The TypeScript public API scanner does not parse unrestricted TypeScript; it is a bounded lexical inventory, not a compiler proof. Export names are inventoried for compiler-valid sources in the declared lexical profile; balanced opaque regions are not syntax or type validation.",
+	"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
+}
+
 type Options struct {
 	MachineContract string
 	RepoRoot        string
@@ -153,13 +164,7 @@ func verifyWithScanBudget(raw any, options Options, scanBudget int64) (map[strin
 		"entryCount":     len(manifest),
 		"failures":       admit.StringSliceToAny(failures),
 		"inputAuthority": "caller_manifest_plus_filesystem_snapshot",
-		"nonClaims": []any{
-			"TypeScript public API verification is a filesystem verifier for a caller-selected checkout.",
-			"TypeScript source-to-export-condition mappings are caller-owned manifest facts; this command does not prove compiler output provenance.",
-			"TypeScript public API verification does not parse JSX or admit TSX source files.",
-			"The TypeScript public API scanner does not parse unrestricted TypeScript; it is a bounded lexical inventory, not a compiler proof. Export names are inventoried for compiler-valid sources in the declared lexical profile; balanced opaque regions are not syntax or type validation.",
-			"TypeScript public API verification does not claim pure JSON admission or repository freshness beyond the supplied repo root.",
-		},
+		"nonClaims":      admit.StringSliceToAny(commandNonClaims),
 	}, exitCode, nil
 }
 
@@ -168,7 +173,7 @@ func admitManifest(raw any, machineContract string) ([]entry, error) {
 	if !ok {
 		return nil, fmt.Errorf("TypeScript public API manifest must be an object")
 	}
-	if err := admit.KnownKeys(record, []string{"entries", "machineContract", "schemaVersion"}, "TypeScript public API manifest"); err != nil {
+	if err := admit.KnownKeys(record, manifestKeys, "TypeScript public API manifest"); err != nil {
 		return nil, err
 	}
 	if !admit.JSONNumberEquals(record["schemaVersion"], 1) {
@@ -200,7 +205,7 @@ func manifestEntry(raw any, context string) (entry, error) {
 	if !ok {
 		return entry{}, fmt.Errorf("%s must be an object", context)
 	}
-	if err := admit.KnownKeys(record, []string{"deniedExportKeys", "exportConditions", "exportKey", "packageManifestPath", "packageName", "runtimeExports", "typeExports"}, context); err != nil {
+	if err := admit.KnownKeys(record, manifestEntryKeys, context); err != nil {
 		return entry{}, err
 	}
 	conditions, err := exportConditions(record["exportConditions"], context+".exportConditions")
@@ -254,7 +259,7 @@ func exportConditions(raw any, context string) ([]exportCondition, error) {
 		if !ok {
 			return nil, fmt.Errorf("%s[%d] must be an object", context, index)
 		}
-		if err := admit.KnownKeys(record, []string{"condition", "path", "sourcePath"}, fmt.Sprintf("%s[%d]", context, index)); err != nil {
+		if err := admit.KnownKeys(record, conditionKeys, fmt.Sprintf("%s[%d]", context, index)); err != nil {
 			return nil, err
 		}
 		condition, err := nonEmptyString(record["condition"], fmt.Sprintf("%s[%d].condition", context, index))
