@@ -2009,6 +2009,7 @@
         "package.json",
         "proofkit/cli-contract.v2.json",
         "scripts/boundary-structure.test.mjs",
+        "scripts/public-api-structure.test.mjs",
         "scripts/report-admission-structure.test.mjs",
         "scripts/workspace-structure.test.mjs"
       ],

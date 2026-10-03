@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "195d5fa96b98e26cfc859753336635cad97063070718b58c464f9627f5305b8e"
+	cliContractPublicABISHA256               = "3add7dc47af8ea32f98b6f78b76b38fb0ac57522818b1114da668dd0d9dcd6d0"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -586,6 +586,8 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.workspace-changed-package-plan.output.v1.json-schema":       {},
 			"proofkit.workspace-shard-partition.input.v1.json-schema":             {},
 			"proofkit.workspace-shard-partition.output.v1.json-schema":            {},
+			"proofkit.typescript-public-api-surfaces.input.v1.json-schema":        {},
+			"proofkit.typescript-public-api-surfaces.output.v1.json-schema":       {},
 		}[id]; !admitted {
 			t.Fatalf("%s has no admitted structural projection owner", id)
 		}
@@ -2165,7 +2167,7 @@ func TestTypeScriptPublicAPIContractOwnsExplicitScanTopology(t *testing.T) {
 		t.Fatalf("TypeScript public API source grammar overstates its authority: %#v", grammar)
 	}
 	rejected := strings.Join(stringsFromAny(grammar["rejectedLexicalForms"].([]any)), " ")
-	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax"} {
+	for _, required := range []string{"slash tokens outside comments", "template interpolation", "non-ASCII code identifiers", "unbalanced delimiters", "angle-bracket syntax", "direct exported generator function declarations"} {
 		if !strings.Contains(rejected, required) {
 			t.Fatalf("TypeScript public API source grammar omits %q: %s", required, rejected)
 		}
