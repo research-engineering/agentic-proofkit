@@ -4967,6 +4967,48 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.generator-flag-diagnostics",
+      "witnessId": "proofkit.generator-flag.process-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/generator_flags_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestGeneratorFlagDiagnosticsPreserveProcessContract",
+          "command": "go test ./scripts -run '^TestGeneratorFlagDiagnosticsPreserveProcessContract$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
+      "scenarioId": "proofkit.supply-chain-quality.flag-diagnostic-adapter",
+      "witnessId": "proofkit.generator-flag.adapter-falsifier",
+      "witnessKind": "contract",
+      "witnessPath": "internal/kernel/diagnostic/flags_test.go",
+      "witnessSelectors": [
+        {
+          "selector": "TestParseFlagsCapturesSplitUsageAndBoundsOutput",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestParseFlagsCapturesSplitUsageAndBoundsOutput$'"
+        },
+        {
+          "selector": "TestParseFlagsPreservesStandardParserObservations",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestParseFlagsPreservesStandardParserObservations$'"
+        },
+        {
+          "selector": "TestParseFlagsRedactsWholeDiagnostics",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestParseFlagsRedactsWholeDiagnostics$'"
+        },
+        {
+          "selector": "TestParseFlagsRejectsNonReturningHandlersBeforeParsing",
+          "command": "go test ./internal/kernel/diagnostic -run '^TestParseFlagsRejectsNonReturningHandlersBeforeParsing$'"
+        }
+      ],
+      "commandIds": ["proofkit.go-test"],
+      "environmentClasses": ["local-go"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-027",
       "scenarioId": "proofkit.supply-chain-quality.go-bounded-diagnostic-capture",
       "witnessId": "proofkit.diagnostic.bounded-capture-falsifier",
       "witnessKind": "contract",
