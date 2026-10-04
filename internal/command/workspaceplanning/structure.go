@@ -1,6 +1,8 @@
 package workspaceplanning
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
 )
@@ -68,7 +70,8 @@ func ShardInputStructure() map[string]any {
 		"packages": nodes, "roots": nodes, "schemaVersion": jsonshape.IntegerLiteral(1),
 		"shardTotal": jsonshape.IntegerMinimum(1),
 	}).JSONSchema()
-	schema["description"] = "All root fields are required; arrays may be empty. Native shardTotal is a canonical positive int64 also representable as host int; JSON Schema alone does not enforce wire token spelling or host integer range. No small operational shard limit is asserted by this structure. Names and dependency text trim; dependency lists sort without deduplication. Root order determines modulo shard ownership. Duplicate identities, missing dependencies and cycles are evaluated by the native planner and may produce failed reports rather than input errors. Structure does not prove graph consistency, privacy or feasible resource cost."
+	schema["properties"].(map[string]any)["shardTotal"].(map[string]any)["maximum"] = json.Number(fmt.Sprint(maximumShardTotal))
+	schema["description"] = fmt.Sprintf("All root fields are required; arrays may be empty. Native shardTotal is a canonical integer from 1 to %d, checked before nested package admission. Before expansion native quotas bound shardTotal times (one plus every package/root node and dependency occurrence) to %d work items, and shardTotal times every normalized name/dependency UTF-8 byte occurrence to %d bytes. Repeated occurrences are charged, not deduplicated. These are operational cost units, not exact serialized bytes, RSS or latency; JSON Schema alone does not enforce numeric spelling or the aggregate quotas. Names and dependency text trim; dependency lists sort without deduplication. Root order determines modulo shard ownership. Within quotas, duplicate identities, missing dependencies and cycles may produce failed reports rather than input errors. Structure does not prove graph consistency or privacy.", maximumShardTotal, maximumShardWorkItems, maximumShardTextBytes)
 	return schema
 }
 
@@ -82,16 +85,25 @@ func ShardOutputStructure() map[string]any {
 		jsonshape.Required("rootPackageNames", texts), jsonshape.Required("shardIndex", index),
 		jsonshape.Required("shardLabel", label), jsonshape.Required("shardTotal", total),
 	)
-	matrix := jsonshape.Object(jsonshape.Required("include", jsonshape.Array(jsonshape.Object(
+	matrix := jsonshape.Object(jsonshape.Required("include", jsonshape.BoundedArray(jsonshape.Object(
 		jsonshape.Required("shard_index", index), jsonshape.Required("shard_label", label), jsonshape.Required("shard_total", total),
-	), 1)))
+	), 1, maximumShardTotal)))
 	schema := jsonshape.Object(
 		jsonshape.Required("failures", texts), jsonshape.Required("packageShards", matrix),
 		jsonshape.Required("rootPackageCount", index), jsonshape.Required("rootPackageNames", texts),
 		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(1)), jsonshape.Required("shardTotal", total),
-		jsonshape.Required("shards", jsonshape.Array(shard, 1)),
+		jsonshape.Required("shards", jsonshape.BoundedArray(shard, 1, maximumShardTotal)),
 	).JSONSchema()
 	fields := schema["properties"].(map[string]any)
+	shardFields := fields["shards"].(map[string]any)["items"].(map[string]any)["properties"].(map[string]any)
+	matrixFields := fields["packageShards"].(map[string]any)["properties"].(map[string]any)["include"].(map[string]any)["items"].(map[string]any)["properties"].(map[string]any)
+	// Narrow the canonical integer projections without admitting negative-zero tokens.
+	for _, field := range []any{fields["shardTotal"], shardFields["shardTotal"], matrixFields["shard_total"]} {
+		field.(map[string]any)["maximum"] = json.Number(fmt.Sprint(maximumShardTotal))
+	}
+	for _, field := range []any{shardFields["shardIndex"], matrixFields["shard_index"]} {
+		field.(map[string]any)["maximum"] = json.Number(fmt.Sprint(maximumShardTotal - 1))
+	}
 	for _, key := range []string{"failures", "rootPackageNames"} {
 		fields[key].(map[string]any)["uniqueItems"] = true
 	}

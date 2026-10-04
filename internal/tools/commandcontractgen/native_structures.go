@@ -60,6 +60,7 @@ type nativeStructure struct {
 	versionField         string
 	outOfBandVersion     json.Number
 	optionalInputVersion bool
+	semanticVersion      uint // Zero follows the wire version; nonzero identifies changed semantics.
 }
 
 type nativeStructureVariant struct {
@@ -353,12 +354,12 @@ func nativeStructures() []nativeStructure {
 			{id: "02-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return workspaceplanning.ChangedPlanOutputStructure(), nil }},
 		},
 	}, {
-		id: "proofkit.workspace-shard-partition.input.v1.json-schema", direction: "input",
-		predecessors: []string{"proofkit.workspace-shard-partition.input.v1.root-shape"}, commands: []string{"workspace-shard-partition"},
+		id: "proofkit.workspace-shard-partition.input.v2.json-schema", direction: "input", semanticVersion: 2,
+		predecessors: []string{"proofkit.workspace-shard-partition.input.v1.root-shape", "proofkit.workspace-shard-partition.input.v1.json-schema"}, commands: []string{"workspace-shard-partition"},
 		schema: func() (map[string]any, error) { return workspaceplanning.ShardInputStructure(), nil },
 	}, {
-		id: "proofkit.workspace-shard-partition.output.v1.json-schema", direction: "output",
-		predecessors: []string{"proofkit.workspace-shard-partition.output.v1.root-shape"}, commands: []string{"workspace-shard-partition"},
+		id: "proofkit.workspace-shard-partition.output.v2.json-schema", direction: "output", semanticVersion: 2,
+		predecessors: []string{"proofkit.workspace-shard-partition.output.v1.root-shape", "proofkit.workspace-shard-partition.output.v1.json-schema"}, commands: []string{"workspace-shard-partition"},
 		wireVersion: json.Number("1"),
 		variants: []nativeStructureVariant{
 			{id: "01-agent-envelope", when: "--agent-envelope", schema: agentEnvelopeRootStructure},
@@ -492,6 +493,14 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 	}
 	record["canonicalDigest"] = sha256Digest(encoded)
 	return record, nil
+}
+
+func (owner nativeStructure) contractID(command string, wireVersion json.Number) string {
+	version := wireVersion.String()
+	if owner.semanticVersion != 0 {
+		version = fmt.Sprint(owner.semanticVersion)
+	}
+	return "proofkit." + command + "." + owner.direction + ".v" + version
 }
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
@@ -780,6 +789,19 @@ func admitNativeStructureConsumers(contract map[string]any, definitions map[stri
 					return fmt.Errorf("%s %s contract violates native structure consumer ownership", name, direction)
 				}
 				if isConsumer {
+					if owner.semanticVersion != 0 {
+						definition, exists := definitions[owner.id]
+						if !exists {
+							return fmt.Errorf("%s %s contract lacks its native structural owner", name, direction)
+						}
+						wireVersion, err := owner.contractVersion(definition.Content)
+						if err != nil {
+							return err
+						}
+						if binding["schemaVersion"] != wireVersion || binding["contractId"] != owner.contractID(name, wireVersion) {
+							return fmt.Errorf("%s %s contract violates native semantic contract identity", name, direction)
+						}
+					}
 					if owner.outOfBandVersion != "" {
 						expectedID := "proofkit." + name + "." + direction + ".v" + string(owner.outOfBandVersion)
 						if binding["schemaVersion"] != owner.outOfBandVersion || binding["contractId"] != expectedID {

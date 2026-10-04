@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "0eeeca43c313fb6fd59f30c25d16decd61af32614993a21477a8786068db3815"
+	cliContractPublicABISHA256               = "e4ec3a0cb120351972522be65b7624ce8e0c92ed9d12b1e8f7d384139dd472b7"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -604,8 +604,8 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.workspace-manifest-facts.output.v1.json-schema":             {},
 			"proofkit.workspace-changed-package-plan.input.v1.json-schema":        {},
 			"proofkit.workspace-changed-package-plan.output.v1.json-schema":       {},
-			"proofkit.workspace-shard-partition.input.v1.json-schema":             {},
-			"proofkit.workspace-shard-partition.output.v1.json-schema":            {},
+			"proofkit.workspace-shard-partition.input.v2.json-schema":             {},
+			"proofkit.workspace-shard-partition.output.v2.json-schema":            {},
 			"proofkit.typescript-public-api-surfaces.input.v1.json-schema":        {},
 			"proofkit.typescript-public-api-surfaces.output.v1.json-schema":       {},
 		}[id]; !admitted {
