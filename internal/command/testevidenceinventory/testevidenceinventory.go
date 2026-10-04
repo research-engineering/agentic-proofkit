@@ -13,6 +13,7 @@ import (
 
 const ReportKind = "proofkit.test-evidence-inventory"
 const NormalizedInventoryKind = "proofkit.test-evidence-inventory.normalized"
+const normalizedInventoryIDSuffix = ".normalized"
 const directAuthority = "caller_owned_inventory"
 const sourceSetAuthority = "caller_owned_inventory_source_set"
 const wrappedInventorySchema = "proofkit.requirement-test-inventory.v1"
@@ -195,7 +196,11 @@ func BuildNormalized(raw any) (map[string]any, int, error) {
 	if result.ExitCode != 0 {
 		return result.Report.JSONValue(), result.ExitCode, nil
 	}
-	return normalizedInventoryValue(result.Inventory), 0, nil
+	output, err := normalizedInventoryValue(result.Inventory)
+	if err != nil {
+		return nil, 1, err
+	}
+	return output, 0, nil
 }
 
 // InventoryValue returns the admitted direct inventory projection owned by this package.
@@ -282,10 +287,14 @@ func EvaluateDirect(raw any) (Result, error) {
 	return result, nil
 }
 
-func normalizedInventoryValue(inventory Inventory) map[string]any {
+func normalizedInventoryValue(inventory Inventory) (map[string]any, error) {
+	normalizedID, err := admitNormalizedInventoryID(inventory.InventoryID+normalizedInventoryIDSuffix, "normalizedInventoryId")
+	if err != nil {
+		return nil, err
+	}
 	return map[string]any{
 		"schemaVersion":         json.Number("1"),
-		"normalizedInventoryId": inventory.InventoryID + ".normalized",
+		"normalizedInventoryId": normalizedID,
 		"normalizedKind":        NormalizedInventoryKind,
 		"sourceAuthority":       inventory.Authority,
 		"sourceCount":           json.Number(fmt.Sprintf("%d", inventory.SourceCount)),
@@ -298,7 +307,7 @@ func normalizedInventoryValue(inventory Inventory) map[string]any {
 			"Normalized test evidence inventory is a deterministic projection over explicit caller-owned inventory input.",
 			"Normalized test evidence inventory does not discover repository files, execute tests, authenticate receipts, or approve merge, release, rollout, or repository policy.",
 		})),
-	}
+	}, nil
 }
 
 func sourceRowsToAny(rows []SourceMetadata) []any {
