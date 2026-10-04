@@ -321,6 +321,20 @@ test("every required input member has an isolated missing-member counterexample"
   }
 });
 
+test("input scalar types and boolean nullability reject independent wrong-type neighbors", () => {
+  for (const [name, input] of [[names[0], populatedPlanInput()], [names[1], evidenceInput()], [names[2], boundProjectionInput()], [names[3], decisionInput()]]) {
+    validates(name, "input", input); native(name, input);
+    for (const [path, record] of entries(input)) for (const [key, value] of Object.entries(record)) {
+      const badValues = typeof value === "boolean" ? [null, "false", 0] : ["number", "string"].includes(typeof value) ? [false, {}] : [];
+      for (const badValue of badValues) {
+        const bad = structuredClone(input); at(bad, path)[key] = badValue;
+        validates(name, "input", bad, false, [...path, key].join("/"));
+        native(name, bad, {exit: 1, report: false});
+      }
+    }
+  }
+});
+
 test("scalar domains reject wrong types empty strings and numeric boundary neighbors", () => {
   const enumFields = new Set(["decisionState", "obligationClass", "status", "state", "planState", "mode", "commandOwnership", "coverageState", "phase", "kind", "role", "expectedAnswerKind", "producerAdmission", "receiptClass", "selectedState", "fanout", "stopReason", "reportKind", "ruleId", "envelopeId", "evidenceClass", "producerAdmissionState"]);
   for (const [name, output] of outputCases()) for (const [path, value] of entries(output)) {

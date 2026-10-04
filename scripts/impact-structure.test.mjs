@@ -175,6 +175,20 @@ test("nested impact objects require every owned member and reject unknown fields
   }
 });
 
+test("input scalar types and boolean nullability reject independent wrong-type neighbors", () => {
+  for (const [name, input] of [[impact, impactInput(true)], [compose, composeInput()]]) {
+    validates(name, "input", input); native(name, input);
+    for (const [path, record] of entries(input)) for (const [key, value] of Object.entries(record)) {
+      const badValues = typeof value === "boolean" ? [null, "false", 0] : ["number", "string"].includes(typeof value) ? [false, {}] : [];
+      for (const badValue of badValues) {
+        const bad = structuredClone(input); at(bad, path)[key] = badValue;
+        validates(name, "input", bad, false, [...path, key].join("/"));
+        native(name, bad, badNative);
+      }
+    }
+  }
+});
+
 test("composer records and both reused child owners stay closed", () => {
   const input = composeInput();
   for (const path of [[], ["changedPathSources", 0], ["localEnvironmentPolicy"], ["proofLikePathPolicy"],
