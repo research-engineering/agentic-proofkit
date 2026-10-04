@@ -947,37 +947,6 @@ func diagnosticClassifications(diagnostics []string, severity string) []map[stri
 	return result
 }
 
-func diagnosticClassID(diagnostic string) string {
-	switch {
-	case strings.HasPrefix(diagnostic, "candidate_only:"):
-		return "candidate_only"
-	case strings.HasPrefix(diagnostic, "declared_duplicate_falsifier:"):
-		return "declared_duplicate_falsifier"
-	case strings.HasPrefix(diagnostic, "invalid_falsifier_supersession:"):
-		return "invalid_falsifier_supersession"
-	case strings.HasPrefix(diagnostic, "missing_declared_route_anchor:"):
-		return "missing_declared_route_anchor"
-	case strings.HasPrefix(diagnostic, "missing_executable_command_ref:"):
-		return "missing_executable_command_ref"
-	case strings.HasPrefix(diagnostic, "quality_finding:"):
-		parts := strings.SplitN(diagnostic, ":", 4)
-		if len(parts) >= 2 {
-			return parts[1]
-		}
-	case strings.HasPrefix(diagnostic, "proof_route_candidate:"):
-		return "proof_route_candidate"
-	case strings.HasPrefix(diagnostic, "route_only_nonclaim:"):
-		return "routing_smoke_only"
-	case strings.HasPrefix(diagnostic, "selector_fragility:"):
-		return "selector_fragility"
-	case strings.HasPrefix(diagnostic, "incomplete_declared_oracle_metadata:"):
-		return "incomplete_declared_oracle_metadata"
-	case strings.HasPrefix(diagnostic, "wrong_evidence_boundary:"):
-		return "wrong_evidence_boundary"
-	}
-	return "unclassified_test_inventory_gap"
-}
-
 func mapsToAny(values []map[string]any) []any {
 	result := make([]any, 0, len(values))
 	for _, value := range values {
