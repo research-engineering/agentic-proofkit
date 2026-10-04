@@ -96,6 +96,9 @@ var nativeBoundaryDirectionDeltas = []string{
 	"selective-gate-obligation-decision-input/output:childDefinitionBindings,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"obligation-decision/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"obligation-decision/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"impact/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"impact/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"requirement-impact-input-compose/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"adopt-materialize-apply/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-plan/output:compatibilitySummary,contractId,nativeSources",
 	"adopt-materialize-recover/output:compatibilitySummary,contractId,nativeSources",
@@ -171,7 +174,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 86 || len(added) != 82+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 89 || len(added) != 85+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {

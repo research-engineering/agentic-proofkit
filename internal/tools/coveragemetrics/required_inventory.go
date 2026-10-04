@@ -14,6 +14,10 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.impact-schema-independent-runtime"}: {
+			witnessPath: "scripts/impact-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.selective-proof-schema-independent-runtime"}: {
 			witnessPath: "scripts/selective-proof-structure.test.mjs",
 			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},

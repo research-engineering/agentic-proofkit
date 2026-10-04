@@ -10,6 +10,19 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/pathpattern"
 )
 
+const (
+	stateOK            = "ok"
+	stateFailed        = "failed"
+	requirementChanged = "requirement_changed"
+	bindingChanged     = "proof_binding_changed"
+	witnessChanged     = "proof_witness_changed"
+)
+
+var witnessRoles = map[string]struct{}{
+	compactproofcontract.FalsificationWitnessRole: {},
+	compactproofcontract.PositiveWitnessRole:      {},
+}
+
 type obligationBase struct {
 	BindingRecordID                   string
 	BlockingStatus                    string
@@ -104,11 +117,11 @@ func build(input input) (map[string]any, int) {
 			continue
 		}
 		for _, bindingRecordID := range bindingRecordIDs {
-			addReason(reasonsByRecordID, bindingRecordID, "requirement_changed")
+			addReason(reasonsByRecordID, bindingRecordID, requirementChanged)
 		}
 	}
 	for _, recordID := range input.ChangedBindingRecordIDs {
-		addReason(reasonsByRecordID, recordID, "proof_binding_changed")
+		addReason(reasonsByRecordID, recordID, bindingChanged)
 	}
 	changedWitnessCoverage := append([]witnessCoverage{}, input.ChangedWitnessPathCoverage...)
 	sort.Slice(changedWitnessCoverage, func(left int, right int) bool {
@@ -122,7 +135,7 @@ func build(input input) (map[string]any, int) {
 		}
 		parentedProofPaths[coverage.Path] = struct{}{}
 		for _, route := range coverage.Routes {
-			addReason(reasonsByRecordID, route.BindingRecordID, "proof_witness_changed")
+			addReason(reasonsByRecordID, route.BindingRecordID, witnessChanged)
 			if witnessRoutesByRecordID[route.BindingRecordID] == nil {
 				witnessRoutesByRecordID[route.BindingRecordID] = map[string]witnessRoute{}
 			}
@@ -176,10 +189,10 @@ func build(input input) (map[string]any, int) {
 	}
 	failures = append(failures, generatedMirrorFailures(input.GeneratedArtifactRules, input.ChangedPaths)...)
 	failures = sortedUniqueFailures(failures)
-	impactState := "ok"
+	impactState := stateOK
 	exitCode := 0
 	if len(failures) > 0 {
-		impactState = "failed"
+		impactState = stateFailed
 		exitCode = 1
 	}
 	var headCommit any
@@ -447,10 +460,7 @@ func admitDeclaredWitnessRoutes(raw any, bindingRecordID string) ([]declaredWitn
 		if routeBindingID != bindingRecordID {
 			return nil, fmt.Errorf("%s bindingRecordId must equal its obligation bindingRecordId", context)
 		}
-		role, err := admit.Enum(record["role"], map[string]struct{}{
-			compactproofcontract.FalsificationWitnessRole: {},
-			compactproofcontract.PositiveWitnessRole:      {},
-		}, context+" role")
+		role, err := admit.Enum(record["role"], witnessRoles, context+" role")
 		if err != nil {
 			return nil, err
 		}
@@ -558,10 +568,7 @@ func admitWitnessRoutes(raw any, witnessPath string, catalog map[string]obligati
 		if !ok {
 			return nil, fmt.Errorf("%s references unknown obligation bindingRecordId", context)
 		}
-		role, err := admit.Enum(record["role"], map[string]struct{}{
-			compactproofcontract.FalsificationWitnessRole: {},
-			compactproofcontract.PositiveWitnessRole:      {},
-		}, context+" role")
+		role, err := admit.Enum(record["role"], witnessRoles, context+" role")
 		if err != nil {
 			return nil, err
 		}

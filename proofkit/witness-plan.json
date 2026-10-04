@@ -2009,6 +2009,8 @@
         "package.json",
         "proofkit/cli-contract.v2.json",
         "scripts/boundary-structure.test.mjs",
+        "scripts/impact-fixtures.mjs",
+        "scripts/impact-structure.test.mjs",
         "scripts/proof-routing-fixtures.mjs",
         "scripts/proof-routing-structure.test.mjs",
         "scripts/public-api-structure.test.mjs",

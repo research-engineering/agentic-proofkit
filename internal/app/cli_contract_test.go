@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	cliContractPublicABISHA256               = "69eaed15497719beadc7a9a8e470b6a31653c84adadf4a4029ebffb3360afcf3"
+	cliContractPublicABISHA256               = "0aa543e066a0bf25bf3155ef9e5cad1c33b5bf74595ebd2def927a3c7b944693"
 	maxAggregateFileReadBytesForContractTest = 64 << 20
 	maxPackageManifestBytesForContractTest   = 256 << 10
 	maxSourceFileBytesForContractTest        = 8 << 20
@@ -543,6 +543,10 @@ func assertRootShapeDefinition(t *testing.T, id string, definition map[string]an
 			"proofkit.selective-gate-obligation-decision-input.output.v1.json-schema": {},
 			"proofkit.obligation-decision.input.v1.json-schema":                       {},
 			"proofkit.obligation-decision.output.v1.json-schema":                      {},
+			"proofkit.impact.input.v2.json-schema":                                    {},
+			"proofkit.impact.output.v2.json-schema":                                   {},
+			"proofkit.requirement-impact-input-compose.input.v3.json-schema":          {},
+			"proofkit.requirement-impact-input-compose.output.v2.json-schema":         {},
 			"proofkit.requirement-bindings.output.v1.json-schema":                     {},
 			"proofkit.evidence-graph.output.v1.json-schema":                           {},
 			"proofkit.proof-slice.output.v1.json-schema":                              {},

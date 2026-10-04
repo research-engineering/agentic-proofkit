@@ -9864,6 +9864,15 @@
     },
     {
       "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.impact-schema-independent-runtime",
+      "witnessId": "proofkit.impact-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/impact-structure.test.mjs",
+      "commandIds": ["proofkit.boundary-contract-check"],
+      "environmentClasses": ["local-go-node"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
       "scenarioId": "proofkit.supply-chain-quality.proof-routing-schema-owner",
       "witnessId": "proofkit.proof-routing-schema-owner",
       "witnessKind": "contract",

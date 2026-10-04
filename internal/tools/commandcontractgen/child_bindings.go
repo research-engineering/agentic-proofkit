@@ -159,6 +159,11 @@ func equalBoundChildSchema(leaf, child map[string]any) bool {
 func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error) {
 	current := schema
 	for _, raw := range path {
+		var err error
+		current, err = localSchemaResource(schema, current)
+		if err != nil {
+			return nil, err
+		}
 		if alternatives, wrapped := current["anyOf"].([]any); wrapped {
 			var nonNull map[string]any
 			for _, alternative := range alternatives {
@@ -175,6 +180,10 @@ func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error
 				return nil, fmt.Errorf("child schema union has no value")
 			}
 			current = nonNull
+		}
+		current, err = localSchemaResource(schema, current)
+		if err != nil {
+			return nil, err
 		}
 		segment := raw.(string)
 		if segment == "*" {
@@ -195,7 +204,61 @@ func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error
 		}
 		current = child
 	}
+	current, err := localSchemaResource(schema, current)
+	if err != nil {
+		return nil, err
+	}
+	for _, keyword := range []string{"anyOf", "oneOf"} {
+		alternatives, ok := current[keyword].([]any)
+		if len(current) != 1 || !ok {
+			continue
+		}
+		resolved := make([]any, len(alternatives))
+		for i, raw := range alternatives {
+			branch, ok := raw.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("child schema union member is not an object")
+			}
+			resolved[i], err = localSchemaResource(schema, branch)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return map[string]any{keyword: resolved}, nil
+	}
 	return current, nil
+}
+
+// Resolve only a pure alias to one inline resource. This does not evaluate
+// schemas, fetch remote references, or rewrite the child owner's own references.
+func localSchemaResource(root, value map[string]any) (map[string]any, error) {
+	raw, present := value["$ref"]
+	if !present {
+		return value, nil
+	}
+	ref, ok := raw.(string)
+	if !ok || ref == "" || len(value) != 1 {
+		return nil, fmt.Errorf("child schema alias must contain only a resource reference")
+	}
+	definitions, _ := root["$defs"].(map[string]any)
+	var found map[string]any
+	for _, raw := range definitions {
+		resource, ok := raw.(map[string]any)
+		if !ok || resource["$id"] != ref {
+			continue
+		}
+		if found != nil {
+			return nil, fmt.Errorf("child schema resource identity is ambiguous")
+		}
+		if _, aliases := resource["$ref"]; aliases {
+			return nil, fmt.Errorf("child schema resource must be materialized")
+		}
+		found = resource
+	}
+	if found == nil {
+		return nil, fmt.Errorf("child schema resource is not defined locally")
+	}
+	return found, nil
 }
 
 func equalSchemaIgnoringDialect(left, right map[string]any) bool {
