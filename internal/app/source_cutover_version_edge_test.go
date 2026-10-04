@@ -117,8 +117,8 @@ var nativeBoundaryDirectionDeltas = []string{
 	"workspace-changed-package-plan/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"workspace-manifest-facts/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"workspace-manifest-facts/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"workspace-shard-partition/input:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
-	"workspace-shard-partition/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-shard-partition/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
+	"workspace-shard-partition/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef",
 }
 
 func TestIntegrityInputSemanticVersionsPreserveWireShapes(t *testing.T) {

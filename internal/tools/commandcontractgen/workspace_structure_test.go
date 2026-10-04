@@ -18,7 +18,15 @@ func TestWorkspaceStructuresBindExactOwnersAndRejectRehashedDrift(t *testing.T) 
 	}
 	for _, family := range families {
 		for direction, projection := range map[string]func() map[string]any{"input": family.input, "output": family.output} {
-			id := "proofkit." + family.command + "." + direction + ".v1.json-schema"
+			prefix := "proofkit." + family.command + "." + direction
+			id := prefix + ".v1.json-schema"
+			predecessors := []string{prefix + ".v1.root-shape"}
+			var semanticVersion uint
+			if family.command == "workspace-shard-partition" {
+				id = prefix + ".v2.json-schema"
+				predecessors = append(predecessors, prefix+".v1.json-schema")
+				semanticVersion = 2
+			}
 			t.Run(id, func(t *testing.T) {
 				owners := nativeStructures()
 				index := slices.IndexFunc(owners, func(owner nativeStructure) bool { return owner.id == id })
@@ -26,7 +34,7 @@ func TestWorkspaceStructuresBindExactOwnersAndRejectRehashedDrift(t *testing.T) 
 					t.Fatal("missing native structure")
 				}
 				owner := owners[index]
-				if owner.direction != direction || !slices.Equal(owner.commands, []string{family.command}) || !slices.Equal(owner.predecessors, []string{"proofkit." + family.command + "." + direction + ".v1.root-shape"}) {
+				if owner.direction != direction || owner.semanticVersion != semanticVersion || !slices.Equal(owner.commands, []string{family.command}) || !slices.Equal(owner.predecessors, predecessors) {
 					t.Fatal("incorrect native owner registration")
 				}
 				definition, err := owner.definition()

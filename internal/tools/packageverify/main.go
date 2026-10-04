@@ -297,7 +297,7 @@ func verifyRootPackage(record packRecord) (rootPackageArtifact, error) {
 	if record.Name != rootPackageName {
 		return rootPackageArtifact{}, fmt.Errorf("unexpected root package name: %s", record.Name)
 	}
-	content, err := os.ReadFile(recordPath(record))
+	content, err := readPackageArchive(record)
 	if err != nil {
 		return rootPackageArtifact{}, fmt.Errorf("read package artifact %s: %w", record.Filename, err)
 	}
@@ -332,7 +332,7 @@ func verifyRootPackage(record packRecord) (rootPackageArtifact, error) {
 }
 
 func verifyPackRecordBytes(record packRecord) error {
-	content, err := os.ReadFile(recordPath(record))
+	content, err := readPackageArchive(record)
 	if err != nil {
 		return fmt.Errorf("read package artifact %s: %w", record.Filename, err)
 	}
@@ -397,36 +397,6 @@ func readPackRecords(path string) ([]packRecord, error) {
 
 func recordPath(record packRecord) string {
 	return filepath.Join("artifacts", "package", record.Filename)
-}
-
-func tarEntryHeadersFromBytes(content []byte) ([]tarEntry, error) {
-	gzipReader, err := gzip.NewReader(bytes.NewReader(content))
-	if err != nil {
-		return nil, err
-	}
-	defer gzipReader.Close()
-	return tarEntryHeadersFromGzip(gzipReader)
-}
-
-func tarEntryHeadersFromGzip(gzipReader io.Reader) ([]tarEntry, error) {
-	tarReader := tar.NewReader(gzipReader)
-	entries := []tarEntry{}
-	for {
-		header, err := tarReader.Next()
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			return nil, err
-		}
-		entries = append(entries, tarEntry{
-			Mode:     header.Mode,
-			Name:     header.Name,
-			Size:     header.Size,
-			Typeflag: header.Typeflag,
-		})
-	}
-	return entries, nil
 }
 
 func tarEntryNames(entries []tarEntry) []string {

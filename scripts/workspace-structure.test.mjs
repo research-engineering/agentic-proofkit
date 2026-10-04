@@ -16,7 +16,13 @@ const names = ["workspace-manifest-facts", "workspace-changed-package-plan", "wo
 const [manifest, changed, shard] = names;
 const ajv = new Ajv2020({strict: false, allErrors: false, validateFormats: false});
 const families = Object.fromEntries(names.map(command => [command, Object.fromEntries(["input", "output"].map(direction => {
-  const id = `proofkit.${command}.${direction}.v1.json-schema`;
+  const semanticVersion = command === shard ? 2 : 1;
+  const contractId = `proofkit.${command}.${direction}.v${semanticVersion}`;
+  const id = `${contractId}.json-schema`;
+  const binding = contract.commands.find(row => row.command === command)[`${direction}Contract`];
+  assert.equal(binding.contractId, contractId);
+  assert.equal(binding.schemaVersion, 1);
+  assert.equal(binding.rootDefinitionRef, id);
   const definition = contract.contractDefinitions.find(row => row.definitionId === id);
   assert.ok(definition, id);
   return [direction, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)})];
@@ -76,6 +82,28 @@ test("all predecessor observations preserve exact exit stderr and stdout bytes",
     assert.equal(result.stderr, row.stderr, `${label}/stderr`);
     assert.equal(hash(result.stdout), row.stdoutSHA256, `${label}/stdout`);
   }
+});
+
+test("shard resource limits reject before expansion while preserving wire version one", () => {
+  for (const shardTotal of [1, 1024]) {
+    const input = {schemaVersion: 1, packages: [], roots: [], shardTotal};
+    assert.equal(families[shard].input(input), true);
+    const result = native(shard, input);
+    assert.equal(result.status, 1);
+    assert.equal(result.output.schemaVersion, 1);
+    assert.equal(result.output.shards.length, shardTotal);
+    assert.equal(result.output.packageShards.include.length, shardTotal);
+  }
+  const tooMany = {schemaVersion: 1, packages: [false], roots: [], shardTotal: 1025};
+  rejected(shard, tooMany, "shard ceiling before malformed child");
+  assert.match(native(shard, tooMany).stderr, /workspace shard total exceeds limit 1024/);
+  const repeated = {name: "repeated", workspaceDependencies: []};
+  const workOverflow = {schemaVersion: 1, packages: Array.from({length: 1024}, () => repeated), roots: [], shardTotal: 1024};
+  rejected(shard, workOverflow, "expanded occurrence ceiling", false);
+  assert.match(native(shard, workOverflow).stderr, /work-item limit/);
+  const byteOverflow = {schemaVersion: 1, packages: [{name: "\u00e9".repeat(8192) + "x", workspaceDependencies: []}], roots: [], shardTotal: 1024};
+  rejected(shard, byteOverflow, "expanded UTF-8 ceiling", false);
+  assert.match(native(shard, byteOverflow).stderr, /text-byte limit/);
 });
 
 test("closed input records preserve exact required nullable and type partitions", () => {

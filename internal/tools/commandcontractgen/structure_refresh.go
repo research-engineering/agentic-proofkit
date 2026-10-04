@@ -111,7 +111,7 @@ func refreshStructureSource(source []byte, contract map[string]any) ([]byte, err
 			command, input = cloneRecord(command), cloneRecord(input)
 			input["rootDefinitionRef"] = owner.id
 			input["rootDefinitionDigest"] = definition["canonicalDigest"]
-			input["contractId"] = "proofkit." + name + "." + owner.direction + ".v" + version.String()
+			input["contractId"] = owner.contractID(name, version)
 			input["schemaVersion"] = version
 			input["compatibilitySummary"] = owner.summary(version)
 			command[key] = input
