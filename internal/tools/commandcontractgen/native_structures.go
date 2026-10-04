@@ -59,6 +59,7 @@ type nativeStructure struct {
 	wireVersion          json.Number
 	versionField         string
 	outOfBandVersion     json.Number
+	aggregateVersion     json.Number // Contract version for variants with independent wire headers.
 	optionalInputVersion bool
 	semanticVersion      uint // Zero follows the wire version; nonzero identifies changed semantics.
 }
@@ -505,6 +506,14 @@ func (owner nativeStructure) contractID(command string, wireVersion json.Number)
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	if owner.aggregateVersion != "" {
+		for _, raw := range variants {
+			if _, err := owner.root(raw.(map[string]any)["schema"].(map[string]any)); err != nil {
+				return "", err
+			}
+		}
+		return owner.aggregateVersion, nil
+	}
 	if owner.optionalInputVersion {
 		var version json.Number
 		for _, raw := range variants {
@@ -581,6 +590,9 @@ func (owner nativeStructure) summary(version json.Number) []any {
 	if owner.outOfBandVersion != "" {
 		identity = "contractSchemaVersion=" + version.String() + " (out-of-band; no serialized schemaVersion field)"
 	}
+	if owner.aggregateVersion != "" {
+		identity = "contractSchemaVersion=" + version.String() + " (aggregate; wire headers are defined per variant)"
+	}
 	return []any{identity, "structural JSON Schema definition " + owner.id + "; canonicalization and semantic validity remain native admission obligations"}
 }
 
@@ -590,6 +602,10 @@ func nativeInputRootSummary(id string, definition map[string]any) ([]string, err
 	if !ok {
 		return nil, nil
 	}
+	return owner.inputRootSummary(definition)
+}
+
+func (owner nativeStructure) inputRootSummary(definition map[string]any) ([]string, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
 	result := make([]string, 0, len(variants))
 	for _, raw := range variants {
@@ -602,10 +618,18 @@ func nativeInputRootSummary(id string, definition map[string]any) ([]string, err
 		properties := root["properties"].(map[string]any)
 		fields := make([]string, 0, len(properties))
 		for _, name := range sortedKeys(properties) {
-			if name == owner.schemaVersionField() {
+			if name == owner.schemaVersionField() && owner.aggregateVersion == "" {
 				continue
 			}
 			field, _ := properties[name].(map[string]any)
+			if value, literal := field["const"]; literal && owner.aggregateVersion != "" {
+				encoded, err := canonicalJSON(value)
+				if err != nil {
+					return nil, err
+				}
+				fields = append(fields, name+"="+string(encoded))
+				continue
+			}
 			if schema["type"] == "object" {
 				switch field["type"] {
 				case "array":
@@ -634,6 +658,16 @@ func nativeSchemaVersion(schema map[string]any, versionField string) (json.Numbe
 }
 
 func (owner nativeStructure) root(schema map[string]any) (map[string]any, error) {
+	if owner.aggregateVersion != "" {
+		if len(owner.variants) < 2 || owner.schema != nil || owner.versionField != "" || owner.wireVersion != "" ||
+			owner.outOfBandVersion != "" || owner.optionalInputVersion || owner.semanticVersion != 0 {
+			return nil, fmt.Errorf("aggregate contract version requires multiple variants without other version modes")
+		}
+		if err := validateNativeVersion(owner.aggregateVersion); err != nil {
+			return nil, err
+		}
+		return schema, validateNativeClosedObject(schema)
+	}
 	if owner.optionalInputVersion {
 		if owner.direction != "input" || owner.outOfBandVersion != "" || owner.wireVersion != "" {
 			return nil, fmt.Errorf("optional inline version requires an input owner without version overrides")
@@ -789,7 +823,7 @@ func admitNativeStructureConsumers(contract map[string]any, definitions map[stri
 					return fmt.Errorf("%s %s contract violates native structure consumer ownership", name, direction)
 				}
 				if isConsumer {
-					if owner.semanticVersion != 0 {
+					if owner.semanticVersion != 0 || owner.aggregateVersion != "" {
 						definition, exists := definitions[owner.id]
 						if !exists {
 							return fmt.Errorf("%s %s contract lacks its native structural owner", name, direction)
