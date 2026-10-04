@@ -243,6 +243,19 @@ test("digest whitespace and Unicode nonblank text follow native admission", () =
   validates(impact, "input", bad, false); native(impact, bad, badNative);
 });
 
+test("composer local environment classes preserve normalized RuleID admission", () => {
+  for (const value of ["local-go", " local-go ", "\u0085local-go\u2028", " ".repeat(300) + "local-go" + " ".repeat(300), "a".repeat(256)]) {
+    const input = composeInput(); input.localEnvironmentPolicy.localEnvironmentClasses = [value];
+    validates(compose, "input", input);
+    native(compose, input);
+  }
+  for (const value of ["a".repeat(257), " invalid class "]) {
+    const input = composeInput(); input.localEnvironmentPolicy.localEnvironmentClasses = [value];
+    validates(compose, "input", input);
+    native(compose, input, {exit: 1, report: false});
+  }
+});
+
 test("numeric role and cardinality bounds reject isolated malformed neighbors", () => {
   for (const value of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, "0", null]) {
     const bad = impactInput(true); bad.obligationCatalog[0].declaredWitnessRoutes[0].resolutionOrderIndex = value;

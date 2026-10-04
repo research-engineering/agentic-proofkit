@@ -28,7 +28,7 @@ func InputStructure() (map[string]any, error) {
 			jsonshape.Required("sourceId", id), jsonshape.Required("paths", texts)), 1)),
 		jsonshape.Required("proofBindingSourcePaths", texts),
 		jsonshape.Required("localEnvironmentPolicy", jsonshape.Object(
-			jsonshape.Required("localEnvironmentClasses", jsonshape.Array(id, 0)))),
+			jsonshape.Required("localEnvironmentClasses", texts))),
 		jsonshape.Required("proofLikePathPolicy", jsonshape.Object(
 			jsonshape.Required("ignoredProofLikePaths", texts), jsonshape.Required("proofLikePathPatterns", texts),
 			jsonshape.Required("nonClaims", jsonshape.Array(text, 1)))),
@@ -51,7 +51,7 @@ func InputStructure() (map[string]any, error) {
 	required := append(schema["required"].([]any), "currentCompactProofContract", "currentRequirementSources")
 	sort.Slice(required, func(i, j int) bool { return required[i].(string) < required[j].(string) })
 	schema["required"] = required
-	schema["description"] = "Native source admission, source scenario links, unique requirement IDs and compact-proof semantics remain owned by the children. Base sources and compact contract must both be absent/null or both supplied. Native composition owns changed-path admission, normalized uniqueness, preserved sorted arrays, path/pattern/display/privacy rules, binding fingerprints and impact routing. Generated policy source/state are arbitrary admitted RuleIDs; non-complete state or uncovered paths add downstream failures rather than rejecting structure. Composer admission can succeed while the emitted impact input evaluates to failed. headCommit admits absence/null; the emitted input always includes it. There is no agent-envelope mode."
+	schema["description"] = "Native source admission, source scenario links, unique requirement IDs and compact-proof semantics remain owned by the children. Base sources and compact contract must both be absent/null or both supplied. Native composition owns changed-path admission, normalized uniqueness, preserved sorted arrays, path/pattern/display/privacy rules, binding fingerprints and impact routing. Local environment classes trim before RuleID and length validation; surrounding Unicode whitespace and raw strings longer than the normalized ID bound are admissible. Native admission owns that normalized RuleID grammar, byte bound and sorted uniqueness. Generated policy source/state are arbitrary admitted RuleIDs; non-complete state or uncovered paths add downstream failures rather than rejecting structure. Composer admission can succeed while the emitted impact input evaluates to failed. headCommit admits absence/null; the emitted input always includes it. There is no agent-envelope mode."
 	return schema, nil
 }
 
