@@ -266,9 +266,40 @@ test("nested output records reject field removal unknown members and item corrup
     } else {
       const copy = structuredClone(output); at(copy, path).unknownField = true; validates(name, "output", copy, false, path.join("/"));
       for (const key of Object.keys(value)) {
-        if (["sourcePath", "truncated", "prunedLocalReferenceCount", "referenceClosurePreserved", "boundsViolationCount", "boundsViolations"].includes(key) || key === "commandOwnership" && path.at(-1) !== "scanObligation") continue;
+        const optionalSourcePath = key === "sourcePath" && name === names[0] &&
+          (path.length === 2 && path[0] === "requiredCommands" || path.length === 3 && path[0] === "fallbackCoverage" && path[2] === "command");
+        if (optionalSourcePath || ["truncated", "prunedLocalReferenceCount", "referenceClosurePreserved", "boundsViolationCount", "boundsViolations"].includes(key) || key === "commandOwnership" && path.at(-1) !== "scanObligation") continue;
         const missing = structuredClone(output); delete at(missing, path)[key]; validates(name, "output", missing, false, [...path, key].join("/"));
       }
+    }
+  }
+});
+
+test("coverage sourcePath is required nullable across receipt and command-key records", () => {
+  for (const key of ["failedReceipts", "blockedReceipts", "notRunReceipts", "missingReceipts", "duplicateReceipts", "unexpectedReceipts"]) {
+    for (const sourcePath of [null, "src/check.go"]) {
+      const input = evidenceInput();
+      const receipt = {artifactRefs: [], command: "go test ./...", evidenceRef: "evidence/check.json", exitCode: 0, id: "check.one", status: "passed"};
+      const command = {command: receipt.command, id: receipt.id, reason: "Synthetic check."};
+      if (sourcePath !== null) {
+        command.sourcePath = sourcePath;
+        receipt.sourcePath = sourcePath;
+      }
+      input.plan.requiredCommands.push(command);
+      input.receipts.push(receipt);
+      native(names[1], input);
+      const status = {failedReceipts: "failed", blockedReceipts: "blocked", notRunReceipts: "not_run"}[key];
+      if (status) Object.assign(receipt, {status, exitCode: status === "failed" ? 1 : null});
+      if (key === "missingReceipts") input.receipts.pop();
+      if (key === "duplicateReceipts") input.receipts.push(structuredClone(receipt));
+      if (key === "unexpectedReceipts") receipt.id = "unknown.command";
+      const output = native(names[1], input, {exit: 1});
+      const records = diagnostic(output, "coverage")[key];
+      assert.ok(records.length > 0, key);
+      assert.equal(records[0].sourcePath, sourcePath, key);
+      const missing = structuredClone(output);
+      delete diagnostic(missing, "coverage")[key][0].sourcePath;
+      validates(names[1], "output", missing, false, `${key}/sourcePath/absent`);
     }
   }
 });
