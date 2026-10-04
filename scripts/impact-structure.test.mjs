@@ -179,7 +179,7 @@ test("input scalar types and boolean nullability reject independent wrong-type n
   for (const [name, input] of [[impact, impactInput(true)], [compose, composeInput()]]) {
     validates(name, "input", input); native(name, input);
     for (const [path, record] of entries(input)) for (const [key, value] of Object.entries(record)) {
-      const badValues = typeof value === "boolean" ? [null, "false", 0] : ["number", "string"].includes(typeof value) ? [false, {}] : [];
+      const badValues = typeof value === "boolean" ? [null, "false", 0] : ["number", "string"].includes(typeof value) ? [false, true, {}] : [];
       for (const badValue of badValues) {
         const bad = structuredClone(input); at(bad, path)[key] = badValue;
         validates(name, "input", bad, false, [...path, key].join("/"));

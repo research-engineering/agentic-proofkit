@@ -304,6 +304,64 @@ test("coverage sourcePath is required nullable across receipt and command-key re
   }
 });
 
+test("delimiter-bearing duplicate keys retain command text and only repair the declared legacy fields", () => {
+  const invoke = (file, input) => {
+    const result = spawnSync(file, [names[1], "--input", "-"], {input: JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+    assert.equal(result.error, undefined); assert.equal(result.signal, null);
+    assert.equal(result.status, 1); assert.equal(result.stderr, "");
+    return result;
+  };
+  for (const command of ["\u0000", "go\u0000test", "\u0000go\u0000test\u0000"]) {
+    for (const sourcePath of [null, "src/check.go"]) {
+      const input = evidenceInput(); input.receipts[0].command = command;
+      if (sourcePath !== null) input.receipts[0].sourcePath = sourcePath;
+      input.receipts.push(structuredClone(input.receipts[0]));
+      validates(names[1], "input", input);
+      const current = invoke(binary, input), output = JSON.parse(current.stdout);
+      validates(names[1], "output", output);
+      const expected = {command, id: "scan.one", sourcePath};
+      assert.deepEqual(diagnostic(output, "coverage").duplicateReceipts, [expected]);
+      const message = `duplicate receipt for required command: scan.one :: ${command}` + (sourcePath === null ? "" : ` :: ${sourcePath}`);
+      const ruleId = "proofkit.selective-gate-evidence.failure.001";
+      assert.equal(output.ruleResults.find(row => row.ruleId === ruleId).message, message);
+      if (process.env.PROOFKIT_SELECTIVE_BASELINE) {
+        const previous = invoke(process.env.PROOFKIT_SELECTIVE_BASELINE, input);
+        const corrected = JSON.parse(previous.stdout);
+        assert.notDeepEqual(diagnostic(corrected, "coverage").duplicateReceipts, [expected]);
+        diagnostic(corrected, "coverage").duplicateReceipts = [expected];
+        const failure = corrected.ruleResults.find(row => row.ruleId === ruleId);
+        assert.ok(failure.message.startsWith("duplicate receipt for required command: scan.one :: "));
+        failure.message = message;
+        assert.deepEqual(output, corrected);
+        assert.equal(current.stdout, JSON.stringify(corrected, null, 2) + "\n");
+      }
+    }
+  }
+  const input = evidenceInput(), receipt = input.receipts[0];
+  const expected = [{command: "go", id: "scan.one", sourcePath: "test"}, {command: "go\u0000test", id: "scan.one", sourcePath: null}];
+  input.receipts = expected.flatMap(key => {
+    const value = {...receipt, command: key.command};
+    if (key.sourcePath !== null) value.sourcePath = key.sourcePath;
+    return [value, structuredClone(value)];
+  });
+  const current = invoke(binary, input), output = JSON.parse(current.stdout);
+  validates(names[1], "output", output);
+  assert.deepEqual(diagnostic(output, "coverage").duplicateReceipts, expected);
+  assert.equal(output.summary.duplicateReceiptCount, 2);
+  if (process.env.PROOFKIT_SELECTIVE_BASELINE) {
+    const previous = invoke(process.env.PROOFKIT_SELECTIVE_BASELINE, input);
+    const corrected = JSON.parse(previous.stdout);
+    assert.deepEqual(diagnostic(corrected, "coverage").duplicateReceipts, [expected[0], expected[0]]);
+    diagnostic(corrected, "coverage").duplicateReceipts = expected;
+    const messages = ["duplicate receipt for required command: scan.one :: go\u0000test", "duplicate receipt for required command: scan.one :: go :: test"];
+    for (const [index, message] of messages.entries()) {
+      corrected.ruleResults.find(row => row.ruleId === `proofkit.selective-gate-evidence.failure.00${index + 1}`).message = message;
+    }
+    assert.deepEqual(output, corrected);
+    assert.equal(current.stdout, JSON.stringify(corrected, null, 2) + "\n");
+  }
+});
+
 test("every required input member has an isolated missing-member counterexample", () => {
   for (const [name, input] of [[names[0], populatedPlanInput()], [names[1], evidenceInput()], [names[2], boundProjectionInput()], [names[3], decisionInput()]]) {
     for (const [path, value] of entries(input)) {
@@ -325,7 +383,7 @@ test("input scalar types and boolean nullability reject independent wrong-type n
   for (const [name, input] of [[names[0], populatedPlanInput()], [names[1], evidenceInput()], [names[2], boundProjectionInput()], [names[3], decisionInput()]]) {
     validates(name, "input", input); native(name, input);
     for (const [path, record] of entries(input)) for (const [key, value] of Object.entries(record)) {
-      const badValues = typeof value === "boolean" ? [null, "false", 0] : ["number", "string"].includes(typeof value) ? [false, {}] : [];
+      const badValues = typeof value === "boolean" ? [null, "false", 0] : ["number", "string"].includes(typeof value) ? [false, true, {}] : [];
       for (const badValue of badValues) {
         const bad = structuredClone(input); at(bad, path)[key] = badValue;
         validates(name, "input", bad, false, [...path, key].join("/"));
