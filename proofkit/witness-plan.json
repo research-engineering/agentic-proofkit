@@ -2008,6 +2008,7 @@
         "package-lock.json",
         "package.json",
         "proofkit/cli-contract.v2.json",
+        "proofkit/witness-plan.json",
         "scripts/boundary-structure.test.mjs",
         "scripts/impact-fixtures.mjs",
         "scripts/impact-structure.test.mjs",

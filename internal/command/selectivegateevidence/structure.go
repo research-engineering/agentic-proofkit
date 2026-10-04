@@ -105,6 +105,6 @@ func OutputStructure() map[string]any {
 	properties := schema["properties"].(map[string]any)
 	properties["reportId"] = id.JSONSchema()
 	properties["nonClaims"] = jsonshape.Array(text, len(boundaryNonClaims)).JSONSchema()
-	schema["description"] = "reportId preserves evidenceId. Counts and diagnostic partitions are native projections; duplicate/unexpected receipts remain reportable. The six fixed rules occur once, followed by any failure rules in lexical ruleId order. Any failure yields failed, otherwise blocked receipts or a fail-closed plan yield blocked, otherwise passed. Only passed exits 0. The plan hash binds the normalized plan, not execution or freshness. Producer admission booleans classify the supplied producer evidence; the consumer still owns obligation and merge decisions."
+	schema["description"] = "reportId preserves evidenceId. Counts and diagnostic partitions are native projections; duplicate/unexpected receipts remain reportable. Each of the six fixed rules occurs once; fixed and additional failure rules are sorted together by ruleId. Any failure yields failed, otherwise blocked receipts or a fail-closed plan yield blocked, otherwise passed. Only passed exits 0. The plan hash binds the normalized plan, not execution or freshness. Producer admission booleans classify the supplied producer evidence; the consumer still owns obligation and merge decisions."
 	return schema
 }

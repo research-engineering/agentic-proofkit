@@ -51,7 +51,7 @@ function validates(name, direction, value, expected = true, label = "") {
   const check = validators.get(`${name}/${direction}`);
   assert.equal(check(value), expected, `${name}/${direction}/${label}: ${ajv.errorsText(check.errors)}`);
 }
-function native(name, value, {exit = 0, report = true, extra = [], carrier = "stdin"} = {}) {
+function native(name, value, {exit = 0, report = true, extra = [], carrier = "stdin", expectedStderr} = {}) {
   let args = [name, "--input", "-", ...extra], input = typeof value === "string" ? value : JSON.stringify(value);
   if (carrier === "pointer") {
     const path = join(directory, "input.json"); writeFileSync(path, JSON.stringify({payload: value}));
@@ -60,6 +60,7 @@ function native(name, value, {exit = 0, report = true, extra = [], carrier = "st
   const invoke = file => spawnSync(file, args, {input, encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
   const result = invoke(binary);
   assert.equal(result.error, undefined); assert.equal(result.signal, null); assert.equal(result.status, exit, `${name}: ${result.stderr}`);
+  if (expectedStderr !== undefined) assert.equal(result.stderr, expectedStderr);
   if (process.env.PROOFKIT_SELECTIVE_BASELINE) {
     const previous = invoke(process.env.PROOFKIT_SELECTIVE_BASELINE);
     assert.equal(previous.error, undefined);
@@ -171,6 +172,24 @@ test("optional null partitions preserve the consuming owner domain", () => {
   const broader = evidenceInput(); broader.plan.nonClaims = [];
   broader.plan.touchedRequirementWitnesses = [{commands: [], path: "tests/one.go", requirementIds: []}];
   validates(names[1], "input", broader); native(names[1], broader);
+});
+
+test("projected nonClaims retain the downstream native admission boundary", () => {
+  const input = boundProjectionInput();
+  input.nonClaims = ["Obligation decision reports do not execute proofs."];
+  validates(names[2], "input", input);
+  const projected = native(names[2], input);
+  validates(names[3], "input", projected);
+  assert.ok(projected.nonClaims.includes(input.nonClaims[0]));
+  native(names[3], projected, {exit: 1, report: false, expectedStderr: "obligation decision nonClaims must be unique\n"});
+});
+
+test("evidence failure rules sort together with the fixed rules", () => {
+  const input = evidenceInput(); input.receipts = [];
+  const output = native(names[1], input, {exit: 1});
+  assert.deepEqual(output.ruleResults.map(row => row.ruleId), [
+    "coverage", "duplicates", "failure.001", "plan", "producer-admission", "status", "unexpected",
+  ].map(suffix => `proofkit.selective-gate-evidence.${suffix}`));
 });
 
 test("receipt statuses own exit-code presence and report partitions", () => {
@@ -359,14 +378,15 @@ test("nonempty collections and bounded envelope arrays have boundary falsifiers"
   validates(names[3], "output", withCommands, false);
 });
 
-test("boundary witness inputs include the executed tests and local import closure", () => {
+test("boundary witness inputs include build fixture and local import operands", () => {
   const manifest = JSON.parse(readFileSync(new URL("package.json", root), "utf8"));
   const argv = manifest.scripts["boundary-contract:check"].split(" ");
   assert.deepEqual(argv.slice(0, 2), ["node", "--test"]);
   assert.ok(argv.length > 2);
   for (const path of argv.slice(2)) assert.match(path, /^scripts\/[a-z0-9.-]+\.test\.mjs$/);
-  // The installed compiler resolves static imports; this is not a runtime
-  // filesystem-read inventory or a parser implemented by the test itself.
+  // Static imports and authored non-import operands have different owners.
+  // The latter includes native build inputs, fixture roots and this read plan;
+  // neither inventory claims arbitrary runtime filesystem discovery.
   const listing = execFileSync(process.execPath, ["node_modules/typescript/bin/tsc", "--allowJs", "--noEmit", "--listFilesOnly", ...argv.slice(2)],
     {cwd: root, encoding: "utf8", timeout: 30000, maxBuffer: 4 << 20});
   const sources = new Set();
@@ -377,6 +397,8 @@ test("boundary witness inputs include the executed tests and local import closur
     assert.match(path, /^scripts\/[a-z0-9.-]+\.mjs$/); sources.add(path);
   }
   for (const path of argv.slice(2)) assert.ok(sources.has(path));
+  for (const path of ["cmd", "go.mod", "go.sum", "internal", "package-lock.json", "package.json",
+    "proofkit/cli-contract.v2.json", "proofkit/witness-plan.json"]) sources.add(path);
   const plan = JSON.parse(readFileSync(new URL("proofkit/witness-plan.json", root), "utf8"));
   const selectors = plan.policies.find(row => row.commandId === "proofkit.boundary-contract-check").inputSelectors;
   const missing = input => [...sources].filter(path => !input.includes(path));
