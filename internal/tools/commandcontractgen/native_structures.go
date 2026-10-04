@@ -17,6 +17,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
 	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
+	"github.com/research-engineering/agentic-proofkit/internal/command/proofbindingtestinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/publicapi"
@@ -27,6 +28,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementauthoringplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementbinding"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcontext"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
@@ -37,6 +39,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessplan"
@@ -435,6 +438,39 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.requirement-impact-input-compose.output.v2.json-schema", direction: "output", wireVersion: json.Number("2"),
 		predecessors: []string{"proofkit.requirement-impact-input-compose.output.v2.root-shape"}, commands: []string{"requirement-impact-input-compose"},
 		schema: func() (map[string]any, error) { return requirementimpactinput.OutputStructure(), nil },
+	}, {
+		id: "proofkit.test-evidence-inventory.input.v3.json-schema", direction: "input", aggregateVersion: "3",
+		predecessors: []string{"proofkit.test-evidence-inventory.input.v3.root-shape"}, commands: []string{"test-evidence-inventory"},
+		variants: []nativeStructureVariant{
+			{id: "01-direct-inventory", when: "without --projection; direct inventory", schema: func() (map[string]any, error) { return testevidenceinventory.DirectInputShape().JSONSchema(), nil }},
+			{id: "02-discovery-draft", when: "--projection discovery-draft", schema: func() (map[string]any, error) { return testevidenceinventory.DiscoveryInputShape().JSONSchema(), nil }},
+			{id: "03-proof-binding-derived", when: "--projection proof-binding-derived", schema: proofbindingtestinventory.InputStructure},
+			{id: "04-source-set", when: "without --projection; source-set inventory", schema: func() (map[string]any, error) { return testevidenceinventory.SourceSetInputShape().JSONSchema(), nil }},
+			{id: "05-wrapped-inventory", when: "without --projection; wrapped inventory", schema: func() (map[string]any, error) { return testevidenceinventory.WrappedInputShape().JSONSchema(), nil }},
+		},
+	}, {
+		id: "proofkit.test-evidence-inventory.output.v2.json-schema", direction: "output", aggregateVersion: "2",
+		predecessors: []string{"proofkit.test-evidence-inventory.output.v2.root-shape"}, commands: []string{"test-evidence-inventory"},
+		variants: []nativeStructureVariant{
+			{id: "01-normalized-direct", when: "--normalized-inventory without --projection; passed inventory", schema: func() (map[string]any, error) { return testevidenceinventory.NormalizedOutputStructure(), nil }},
+			{id: "02-normalized-proof-binding", when: "--normalized-inventory --projection proof-binding-derived; passed inventory", schema: func() (map[string]any, error) {
+				return testevidenceinventory.ProofBindingNormalizedOutputStructure(), nil
+			}},
+			{id: "03-report", when: "without --normalized-inventory except --projection discovery-draft; or --normalized-inventory failure report", schema: func() (map[string]any, error) { return testevidenceinventory.ReportOutputShape().JSONSchema(), nil }},
+			{id: "04-discovery-report", when: "--projection discovery-draft without --normalized-inventory", schema: func() (map[string]any, error) { return testevidenceinventory.DiscoveryOutputShape().JSONSchema(), nil }},
+		},
+	}, {
+		id: "proofkit.requirement-coverage-input-compose.input.v3.json-schema", direction: "input",
+		predecessors: []string{"proofkit.requirement-coverage-input-compose.input.v3.root-shape"}, commands: []string{"requirement-coverage-input-compose"},
+		schema: requirementcoverageinput.InputStructure,
+	}, {
+		id: "proofkit.requirement-coverage-input-compose.output.v3.json-schema", direction: "output",
+		predecessors: []string{"proofkit.requirement-coverage-input-compose.output.v3.root-shape"}, commands: []string{"requirement-coverage-input-compose"},
+		schema: requirementcoverageinput.OutputStructure,
+	}, {
+		id: "proofkit.requirement-coverage-view.input.v3.json-schema", direction: "input",
+		predecessors: []string{"proofkit.requirement-coverage-view.input.v3.root-shape"}, commands: []string{"requirement-coverage-view"},
+		schema: requirementcoverageview.InputStructure,
 	}}
 }
 
