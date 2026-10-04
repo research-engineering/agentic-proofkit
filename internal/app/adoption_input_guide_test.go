@@ -287,7 +287,9 @@ func TestAdoptionInputGuideGroupedDenialsNormalizeButRejectDuplicates(t *testing
 
 func TestAdoptionInputGuideInventoryVersion(t *testing.T) {
 	_, help, _ := executeAgentWorkflowCLI(t, []string{"test-evidence-inventory", "--help"}, panicReader{}, PresentationCapabilities{})
-	if !strings.Contains(help, "direct inventory schemaVersion=1") || strings.Contains(help, "\n  schemaVersion=2\n") {
+	const direct = `root fields (01-direct-inventory): authority="caller_owned_inventory", entries[], inventoryId, nonClaims[], ownerId, schemaVersion=1, sourceId`
+	if !strings.Contains(help, direct) || !strings.Contains(help, "contractSchemaVersion=3 (aggregate; wire headers are defined per variant)") ||
+		strings.Contains(help, "\n  schemaVersion=2\n") || strings.Contains(help, "\n  schemaVersion=3\n") {
 		t.Fatal("inventory help confuses aggregate contract version with direct input schema")
 	}
 	packet := adoptionHelpPacket(t, t.TempDir(), "fresh")

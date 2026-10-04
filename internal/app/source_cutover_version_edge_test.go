@@ -24,7 +24,7 @@ var sourceCutoverDirectionDeltas = []string{
 	"requirement-context-compose/output:childDefinitionBindings,compatibilitySummary,contractId,nativeOutputWitnessSelector,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/input:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-context-slice/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
-	"requirement-coverage-input-compose/input:childDefinitionBindings,commonRequiredFields,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
+	"requirement-coverage-input-compose/input:childDefinitionBindings,commonRequiredFields,compatibilitySummary,contractId,modes,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-input-compose/output:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-view/input:childDefinitionBindings,compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
 	"requirement-coverage-view/output:compatibilitySummary,contractId,rootDefinitionDigest,rootDefinitionRef,schemaVersion",
@@ -52,6 +52,7 @@ var sourceCutoverDirectionDeltas = []string{
 }
 
 var nativeBoundaryDirectionDeltas = []string{
+	"test-evidence-inventory/output:classificationIds,compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"evidence-graph/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"proof-slice/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
 	"requirement-bindings/output:compatibilitySummary,rootDefinitionDigest,rootDefinitionRef",
@@ -174,7 +175,7 @@ func TestPublicVersionEdgesCloseDirectionDeltas(t *testing.T) {
 	if err := verifyResidueDefinitionAdditions(previousDefinitions, currentDefinitions); err != nil {
 		t.Fatal(err)
 	}
-	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 89 || len(added) != 85+len(residueCommandAdditions) {
+	if removed, added := differenceKeys(previousDefinitions, currentDefinitions), differenceKeys(currentDefinitions, previousDefinitions); len(removed) != 90 || len(added) != 86+len(residueCommandAdditions) {
 		t.Fatalf("public definition replacement is incomplete: removed=%v added=%v", removed, added)
 	}
 	for id, prior := range previousDefinitions {
