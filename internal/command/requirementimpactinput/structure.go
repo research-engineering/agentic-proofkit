@@ -20,22 +20,24 @@ func InputStructure() (map[string]any, error) {
 	id := jsonshape.BoundedStringGrammar(admit.RuleIDPatternBody, admit.MaxRuleIDBytes)
 	text := jsonshape.NonBlankString()
 	texts := jsonshape.Array(text, 0)
+	// Only fields admitted without text normalization use this path domain.
+	paths := jsonshape.Array(jsonshape.StringGrammar(`[\s\S]+`), 0)
 	schema := jsonshape.Object(
 		jsonshape.Required("schemaVersion", jsonshape.IntegerLiteral(3)), jsonshape.Required("composerInputId", id),
 		jsonshape.Required("baseCommit", text), jsonshape.Required("baseRef", text), jsonshape.Required("headRef", text),
 		jsonshape.Optional("headCommit", jsonshape.Nullable(text)),
 		jsonshape.Required("changedPathSources", jsonshape.Array(jsonshape.Object(
 			jsonshape.Required("sourceId", id), jsonshape.Required("paths", texts)), 1)),
-		jsonshape.Required("proofBindingSourcePaths", texts),
+		jsonshape.Required("proofBindingSourcePaths", paths),
 		jsonshape.Required("localEnvironmentPolicy", jsonshape.Object(
 			jsonshape.Required("localEnvironmentClasses", texts))),
 		jsonshape.Required("proofLikePathPolicy", jsonshape.Object(
-			jsonshape.Required("ignoredProofLikePaths", texts), jsonshape.Required("proofLikePathPatterns", texts),
+			jsonshape.Required("ignoredProofLikePaths", paths), jsonshape.Required("proofLikePathPatterns", paths),
 			jsonshape.Required("nonClaims", jsonshape.Array(text, 1)))),
 		jsonshape.Required("generatedArtifactPolicyState", jsonshape.Object(
-			jsonshape.Required("source", id), jsonshape.Required("state", id), jsonshape.Required("uncoveredGeneratedPaths", texts))),
+			jsonshape.Required("source", id), jsonshape.Required("state", id), jsonshape.Required("uncoveredGeneratedPaths", paths))),
 		jsonshape.Required("generatedArtifactRules", jsonshape.Array(jsonshape.Object(
-			jsonshape.Required("generatedPath", text), jsonshape.Required("sourcePathPatterns", texts)), 0)),
+			jsonshape.Required("generatedPath", text), jsonshape.Required("sourcePathPatterns", paths)), 0)),
 		jsonshape.Required("preexistingFailures", texts), jsonshape.Required("nonClaims", jsonshape.Array(text, 1)),
 		jsonshape.Optional("unboundProofChangeRationale", text),
 	).JSONSchema()

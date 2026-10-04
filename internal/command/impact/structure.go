@@ -59,14 +59,17 @@ func impactIdentityFields() []jsonshape.Property {
 func InputStructure() map[string]any {
 	text := jsonshape.NonBlankString()
 	texts := jsonshape.Array(text, 0)
+	// Raw paths preserve whitespace; display text is normalized separately.
+	path := jsonshape.StringGrammar(`[\s\S]+`)
+	paths := jsonshape.Array(path, 0)
 	fields := append(impactIdentityFields(),
-		jsonshape.Required("changedPaths", texts), jsonshape.Required("changedRequirementIds", jsonshape.Array(impactIdentifier(), 0)),
+		jsonshape.Required("changedPaths", paths), jsonshape.Required("changedRequirementIds", jsonshape.Array(impactIdentifier(), 0)),
 		jsonshape.Required("changedBindingRecordIds", jsonshape.Array(impactDigest(true), 0)),
 		jsonshape.Required("changedWitnessPathCoverage", jsonshape.Array(jsonshape.Object(
-			jsonshape.Required("path", text), jsonshape.Required("routes", jsonshape.Array(witnessRouteShape(true, false), 1))), 0)),
+			jsonshape.Required("path", path), jsonshape.Required("routes", jsonshape.Array(witnessRouteShape(true, false), 1))), 0)),
 		jsonshape.Required("generatedArtifactRules", jsonshape.Array(jsonshape.Object(
-			jsonshape.Required("generatedPath", text), jsonshape.Required("sourcePathPatterns", texts)), 0)),
-		jsonshape.Required("ignoredProofLikePaths", texts), jsonshape.Required("proofLikePaths", texts),
+			jsonshape.Required("generatedPath", path), jsonshape.Required("sourcePathPatterns", paths)), 0)),
+		jsonshape.Required("ignoredProofLikePaths", paths), jsonshape.Required("proofLikePaths", paths),
 		jsonshape.Required("obligationCatalog", jsonshape.Array(obligationShape(true), 0)),
 		jsonshape.Required("preexistingFailures", texts), jsonshape.Optional("nonClaims", jsonshape.Nullable(texts)),
 		jsonshape.Optional("unboundProofChangeRationale", text),
@@ -78,8 +81,9 @@ func InputStructure() map[string]any {
 
 func OutputStructure() map[string]any {
 	text := jsonshape.NonBlankString()
+	path := jsonshape.StringGrammar(`[\s\S]+`)
 	fields := append(impactIdentityFields(),
-		jsonshape.Required("changedPaths", jsonshape.Array(text, 0)),
+		jsonshape.Required("changedPaths", jsonshape.Array(path, 0)),
 		jsonshape.Required("changedRequirementIds", jsonshape.Array(impactIdentifier(), 0)),
 		jsonshape.Required("failures", jsonshape.Array(text, 0)),
 		jsonshape.Required("impactState", jsonshape.Enum(map[string]struct{}{stateOK: {}, stateFailed: {}})),
@@ -89,7 +93,7 @@ func OutputStructure() map[string]any {
 				requirementChanged: {}, bindingChanged: {}, witnessChanged: {},
 			}), 1)), jsonshape.Required("witnessRoutes", jsonshape.Array(witnessRouteShape(false, false), 0))), 0)),
 		jsonshape.Required("unboundProofChanges", jsonshape.Array(jsonshape.Object(
-			jsonshape.Required("path", text), jsonshape.Required("rationale", jsonshape.String())), 0)),
+			jsonshape.Required("path", path), jsonshape.Required("rationale", jsonshape.String())), 0)),
 	)
 	schema := jsonshape.Object(fields...).JSONSchema()
 	schema["description"] = "Native evaluation owns failure/state/exit equality, selected obligations, reference joins, sorted unique failures and paths, content-derived identities and normalized values. Changed paths or requirements can be empty, and an obligation may have no changed witness routes. Declared route order is witnessRouteId order, not fixed role order. Unbound rationale can be empty on failed reports. This is caller-owned impact information, not execution, freshness or merge authority. Admission errors emit no report."

@@ -159,6 +159,54 @@ test("nullable optional and nonempty fields preserve the distinct parent and chi
   validates(compose, "input", empty); native(compose, empty);
 });
 
+test("raw paths preserve whitespace separately from normalized text across the impact chain", () => {
+  const cases = [
+    [impact, "changedPaths", (x, path) => x.changedPaths = [path]],
+    [impact, "ignoredProofLikePaths", (x, path) => x.ignoredProofLikePaths = [path]],
+    [impact, "proofLikePaths", (x, path) => x.proofLikePaths = [path]],
+    [impact, "generatedPath", (x, path) => x.generatedArtifactRules = [{generatedPath: path, sourcePathPatterns: []}]],
+    [impact, "sourcePathPatterns", (x, path) => x.generatedArtifactRules = [{generatedPath: "out.txt", sourcePathPatterns: [path]}]],
+    [compose, "proofBindingSourcePaths", (x, path) => x.proofBindingSourcePaths = [path]],
+    [compose, "ignoredProofLikePaths", (x, path) => x.proofLikePathPolicy.ignoredProofLikePaths = [path]],
+    [compose, "proofLikePathPatterns", (x, path) => x.proofLikePathPolicy.proofLikePathPatterns = [path]],
+    [compose, "uncoveredGeneratedPaths", (x, path) => x.generatedArtifactPolicyState.uncoveredGeneratedPaths = [path]],
+    [compose, "sourcePathPatterns", (x, path) => x.generatedArtifactRules[0].sourcePathPatterns = [path]],
+  ];
+  for (const [name, field, change] of cases) {
+    for (const path of [" ", "\u00a0", "\u2003"]) {
+      const input = name === impact ? impactInput() : composeInput(); change(input, path);
+      validates(name, "input", input, true, field);
+      // The composed carrier inherits impact input structure, not every native join.
+      if (name === impact) validates(compose, "output", input);
+      const output = native(name, input, {exit: field === "proofLikePaths" ? 1 : 0});
+      if (name === impact && field === "changedPaths") assert.deepEqual(output.changedPaths, [path]);
+      if (field === "proofLikePaths") assert.deepEqual(output.unboundProofChanges, [{path, rationale: ""}]);
+      if (name === compose) {
+        if (field === "ignoredProofLikePaths") assert.deepEqual(output.ignoredProofLikePaths, [path]);
+        if (field === "sourcePathPatterns") assert.deepEqual(output.generatedArtifactRules[0].sourcePathPatterns, [path]);
+        validates(impact, "input", output);
+        native(impact, output, {exit: field === "uncoveredGeneratedPaths" ? 1 : 0});
+      }
+      change(input, ""); validates(name, "input", input, false, field + "/empty"); native(name, input, badNative);
+    }
+  }
+  for (const path of [" ", "\u00a0", "\u2003"]) {
+    for (const name of [impact, compose]) {
+      const input = name === impact ? impactInput() : composeInput(); input.baseRef = path;
+      validates(name, "input", input, false, "baseRef/blank"); native(name, input, badNative);
+    }
+    for (const change of [x => x.changedPathSources[0].paths = [path], x => x.generatedArtifactRules[0].generatedPath = path]) {
+      const input = composeInput(); change(input);
+      validates(compose, "input", input, false, "normalized-path/blank"); native(compose, input, badNative);
+    }
+    const input = impactInput(true); input.changedWitnessPathCoverage[0].path = path;
+    validates(impact, "input", input);
+    validates(compose, "output", input);
+    // A raw path passes structure, but cannot bypass the selector/path join.
+    native(impact, input, badNative);
+  }
+});
+
 test("nested impact objects require every owned member and reject unknown fields", () => {
   const input = impactInput(true);
   for (const [path, value] of entries(input)) {

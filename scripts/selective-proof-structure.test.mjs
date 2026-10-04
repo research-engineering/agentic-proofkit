@@ -143,6 +143,20 @@ test("populated plan traverses evidence projector and decision without hidden ad
   assert.ok(diagnostic(result, "decisions").every(row => row.decisionState === "invalid_producer"));
 });
 
+test("raw changed paths retain whitespace through the selective command chain", () => {
+  for (const path of [" ", "\u00a0", "\u2003"]) {
+    const source = planInput(); source.changedPaths = [path];
+    validates(names[0], "input", source);
+    const plan = native(names[0], source); assert.deepEqual(plan.changedPaths, [path]);
+    const evidence = evidenceInput(); evidence.plan = plan;
+    validates(names[1], "input", evidence); native(names[1], evidence);
+    const projection = projectionInput(); projection.evidence = evidence;
+    validates(names[2], "input", projection);
+    const decision = native(names[2], projection); validates(names[3], "input", decision);
+    native(names[3], decision, {exit: 1});
+  }
+});
+
 test("complete child evidence supports a satisfied decision without implying execution", () => {
   const input = boundProjectionInput(); validates(names[2], "input", input);
   assert.equal(native(names[1], input.evidence).summary.producerAdmissionState, "passed");
