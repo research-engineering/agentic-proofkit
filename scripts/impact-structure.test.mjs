@@ -16,6 +16,7 @@ for (const name of [impact, compose]) for (const direction of ["input", "output"
   const ref = contract.commands.find(row => row.command === name)[`${direction}Contract`].rootDefinitionRef;
   const definition = contract.contractDefinitions.find(row => row.definitionId === ref);
   assert.equal(definition.fieldTree.kind, "structural_json_schema");
+  assert.match(JSON.stringify(definition.fieldTree), /^[\x00-\x7F]*$/);
   const ajv = new Ajv2020({strict: false, validateFormats: false});
   validators.set(`${name}/${direction}`, ajv.compile({oneOf: definition.fieldTree.variants.map(row => row.schema)}));
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestNonBlankStringUsesNativeWhitespaceInventory(t *testing.T) {
@@ -20,7 +21,7 @@ func TestNonBlankStringUsesNativeWhitespaceInventory(t *testing.T) {
 		}
 	}
 	var escaped strings.Builder
-	for _, value := range TrimSpaceCharacters() {
+	for _, value := range trimSpaceCharacters() {
 		if strings.TrimSpace(string(value)) != "" {
 			t.Fatal("projected whitespace is not native whitespace")
 		}
@@ -28,5 +29,10 @@ func TestNonBlankStringUsesNativeWhitespaceInventory(t *testing.T) {
 	}
 	if escaped.String() != TrimSpacePatternClass() {
 		t.Fatal("ECMAScript and Go whitespace projections differ")
+	}
+	for _, r := range shape.JSONSchema()["pattern"].(string) {
+		if r >= utf8.RuneSelf {
+			t.Fatal("schema grammar contains non-ASCII source instead of escaped Unicode")
+		}
 	}
 }

@@ -14,8 +14,10 @@ func impactDigest(input bool) jsonshape.Shape {
 	if !input {
 		return jsonshape.StringGrammar(`sha256:[0-9a-f]{64}`)
 	}
-	space := `[` + jsonshape.TrimSpaceCharacters() + `]*`
-	return jsonshape.StringGrammar(space + `sha256:` + space + `[0-9a-f]{64}` + space)
+	return jsonshape.WhitespaceStringGrammar(func(class string) string {
+		space := `[` + class + `]*`
+		return space + `sha256:` + space + `[0-9a-f]{64}` + space
+	})
 }
 
 func witnessRouteShape(input, declared bool) jsonshape.Shape {
