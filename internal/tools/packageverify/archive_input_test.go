@@ -3,6 +3,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"io"
 	"os"
@@ -27,6 +28,43 @@ type forbiddenArchiveBody struct{ read bool }
 func (body *forbiddenArchiveBody) Read([]byte) (int, error) {
 	body.read = true
 	return 0, errors.New("forbidden body read")
+}
+
+type archiveZeroStream struct{}
+
+func (archiveZeroStream) Read(buffer []byte) (int, error) {
+	clear(buffer)
+	return len(buffer), nil
+}
+
+func TestArchiveGzipEntrypointRejectsExpandedOverflowBeforeMissingBody(t *testing.T) {
+	var compressed bytes.Buffer
+	writer, err := gzip.NewWriterLevel(&compressed, gzip.BestSpeed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for index := 0; index < 3; index++ {
+		if _, err := writer.Write(archiveHeader(t, "package/expanded", 128<<20)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := io.CopyN(writer, archiveZeroStream{}, 128<<20); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := writer.Write(archiveHeader(t, "package/unread", 128<<20)); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// No fourth body exists. A bypass reaches truncation instead of quota refusal.
+	if compressed.Len() >= 128<<20 {
+		t.Fatal("fixture does not reach the expanded-input boundary")
+	}
+	entries, err := tarEntryHeadersFromBytes(compressed.Bytes())
+	if err == nil || !strings.Contains(err.Error(), "remaining expanded byte limit") || entries != nil {
+		t.Fatalf("gzip entrypoint did not reject before the absent body: count=%d err=%v", len(entries), err)
+	}
 }
 
 func archiveHeader(t *testing.T, name string, size int64) []byte {
