@@ -171,6 +171,43 @@ func TestArchiveDefaultCardinalityLimit(t *testing.T) {
 	}
 }
 
+func TestArchiveGzipEntrypointPreservesCardinalityBoundary(t *testing.T) {
+	var headers bytes.Buffer
+	for index := 0; index < 4096; index++ {
+		headers.Write(archiveHeader(t, "package/data", 0))
+	}
+	for _, test := range []struct {
+		name string
+		tail []byte
+		want string
+	}{
+		{"exact", make([]byte, 1024), ""},
+		{"overflow", archiveHeader(t, "package/unread", 1), "entry count limit"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var compressed bytes.Buffer
+			writer, err := gzip.NewWriterLevel(&compressed, gzip.BestSpeed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := io.Copy(writer, io.MultiReader(bytes.NewReader(headers.Bytes()), bytes.NewReader(test.tail))); err != nil {
+				t.Fatal(err)
+			}
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+			entries, err := tarEntryHeadersFromBytes(compressed.Bytes())
+			if test.want == "" {
+				if err != nil || len(entries) != 4096 {
+					t.Fatalf("inclusive gzip cardinality boundary: count=%d err=%v", len(entries), err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), test.want) || entries != nil {
+				t.Fatalf("gzip entry count did not reject before the absent body: count=%d err=%v", len(entries), err)
+			}
+		})
+	}
+}
+
 func TestPackageArchiveReadBoundsBeforeHashing(t *testing.T) {
 	withWorkingDirectory(t, t.TempDir())
 	name := filepath.Join("artifacts", "package", "oversized.tgz")
