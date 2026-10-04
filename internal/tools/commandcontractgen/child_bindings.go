@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strings"
 )
 
 const sourceV2DefinitionID = "proofkit.requirement-source.input.v2.json-schema"
@@ -229,8 +230,8 @@ func schemaChildAtPath(schema map[string]any, path []any) (map[string]any, error
 	return current, nil
 }
 
-// Resolve only a pure alias to one inline resource. This does not evaluate
-// schemas, fetch remote references, or rewrite the child owner's own references.
+// Resolve only a pure alias to one directly named local definition. This does
+// not evaluate schemas, fetch resources, or rewrite the child's own references.
 func localSchemaResource(root, value map[string]any) (map[string]any, error) {
 	raw, present := value["$ref"]
 	if !present {
@@ -240,23 +241,17 @@ func localSchemaResource(root, value map[string]any) (map[string]any, error) {
 	if !ok || ref == "" || len(value) != 1 {
 		return nil, fmt.Errorf("child schema alias must contain only a resource reference")
 	}
-	definitions, _ := root["$defs"].(map[string]any)
-	var found map[string]any
-	for _, raw := range definitions {
-		resource, ok := raw.(map[string]any)
-		if !ok || resource["$id"] != ref {
-			continue
-		}
-		if found != nil {
-			return nil, fmt.Errorf("child schema resource identity is ambiguous")
-		}
-		if _, aliases := resource["$ref"]; aliases {
-			return nil, fmt.Errorf("child schema resource must be materialized")
-		}
-		found = resource
+	name, local := strings.CutPrefix(ref, "#/$defs/")
+	if !local || name == "" || strings.ContainsAny(name, "/%~") {
+		return nil, fmt.Errorf("child schema alias must name one direct local definition")
 	}
-	if found == nil {
+	definitions, _ := root["$defs"].(map[string]any)
+	found, ok := definitions[name].(map[string]any)
+	if !ok {
 		return nil, fmt.Errorf("child schema resource is not defined locally")
+	}
+	if _, aliases := found["$ref"]; aliases {
+		return nil, fmt.Errorf("child schema resource must be materialized")
 	}
 	return found, nil
 }

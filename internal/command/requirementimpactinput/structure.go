@@ -41,7 +41,8 @@ func InputStructure() (map[string]any, error) {
 	).JSONSchema()
 	sources := map[string]any{"type": "array", "minItems": 1, "items": source}
 	compact := compactproofcontract.InputStructure()
-	compactRef := map[string]any{"$ref": compact["$id"]}
+	compactRef := map[string]any{"$ref": "#/$defs/compactProofContract"}
+	schema["$id"] = "urn:proofkit:requirement-impact-input-compose:input:schema:3"
 	schema["$defs"] = map[string]any{"compactProofContract": compact}
 	properties := schema["properties"].(map[string]any)
 	properties["currentRequirementSources"], properties["currentCompactProofContract"] = sources, compactRef

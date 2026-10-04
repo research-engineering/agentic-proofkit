@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-func TestChildBindingsResolveOnlyUniqueMaterializedLocalResources(t *testing.T) {
+func TestChildBindingsResolveOnlyMaterializedLocalDefinitions(t *testing.T) {
 	child := map[string]any{"$id": "urn:test:child", "type": "object", "additionalProperties": false}
 	for _, union := range []string{"", "anyOf", "oneOf"} {
-		ref := map[string]any{"$ref": "urn:test:child"}
+		ref := map[string]any{"$ref": "#/$defs/child"}
 		var value any = ref
 		if union != "" {
 			value = map[string]any{union: []any{map[string]any{"type": "null"}, ref}}
@@ -33,11 +33,16 @@ func TestChildBindingsResolveOnlyUniqueMaterializedLocalResources(t *testing.T) 
 		refs map[string]any
 		leaf map[string]any
 	}{
-		{"missing", nil, map[string]any{"$ref": "urn:test:child"}},
+		{"missing", nil, map[string]any{"$ref": "#/$defs/child"}},
 		{"external", map[string]any{"child": child}, map[string]any{"$ref": "https://example.invalid/schema"}},
-		{"duplicate", map[string]any{"a": child, "b": child}, map[string]any{"$ref": "urn:test:child"}},
-		{"sibling", map[string]any{"child": child}, map[string]any{"$ref": "urn:test:child", "type": "array"}},
-		{"alias-chain", map[string]any{"child": map[string]any{"$id": "urn:test:child", "$ref": "urn:test:child"}}, map[string]any{"$ref": "urn:test:child"}},
+		{"resource-uri", map[string]any{"child": child}, map[string]any{"$ref": "urn:test:child"}},
+		{"sibling", map[string]any{"child": child}, map[string]any{"$ref": "#/$defs/child", "type": "array"}},
+		{"alias-chain", map[string]any{"child": map[string]any{"$ref": "#/$defs/child"}}, map[string]any{"$ref": "#/$defs/child"}},
+		{"nested", map[string]any{"child": child}, map[string]any{"$ref": "#/$defs/child/type"}},
+		{"encoded", map[string]any{"child": child}, map[string]any{"$ref": "#/$defs/%63hild"}},
+		{"escaped", map[string]any{"child": child}, map[string]any{"$ref": "#/$defs/~0child"}},
+		{"empty", map[string]any{"": child}, map[string]any{"$ref": "#/$defs/"}},
+		{"not-object", map[string]any{"child": true}, map[string]any{"$ref": "#/$defs/child"}},
 		{"non-text", map[string]any{"child": child}, map[string]any{"$ref": 1}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
