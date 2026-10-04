@@ -88,8 +88,12 @@ func TestCompactChildBindingsHaveExactIndependentConsumers(t *testing.T) {
 	for _, row := range want {
 		direction := commandAt(contract, row.command)[row.direction+"Contract"].(map[string]any)
 		root := definitions[direction["rootDefinitionRef"].(string)]
-		if root.Content["fieldTree"].(map[string]any)["kind"] != "root_shape_only" {
-			t.Fatalf("%s parent was promoted to full structural closure", row.command)
+		wantKind := "root_shape_only"
+		if row.command == "requirement-impact-input-compose" {
+			wantKind = "structural_json_schema"
+		}
+		if root.Content["fieldTree"].(map[string]any)["kind"] != wantKind {
+			t.Fatalf("%s parent structure changed outside its declared closure", row.command)
 		}
 		bindings := direction["childDefinitionBindings"].([]any)
 		for index, raw := range bindings {

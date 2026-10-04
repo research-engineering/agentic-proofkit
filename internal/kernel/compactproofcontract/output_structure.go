@@ -1,8 +1,6 @@
 package compactproofcontract
 
 import (
-	"strconv"
-
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/admit"
 	"github.com/research-engineering/agentic-proofkit/internal/kernel/jsonshape"
 )
@@ -26,14 +24,10 @@ func bindingOutputProperties() []jsonshape.Property {
 }
 
 func witnessOutputStructure(role jsonshape.Shape, commandField string, extra ...jsonshape.Property) jsonshape.Shape {
-	maximum := maxJSONSafeInteger
-	if strconv.IntSize == 32 {
-		maximum = 1<<31 - 1
-	}
 	text := jsonshape.StringGrammar(`[\s\S]+`)
 	return jsonshape.Object(append([]jsonshape.Property{
 		jsonshape.Required("environmentClasses", jsonshape.Array(outputIdentifier(), 0)),
-		jsonshape.Required("resolutionOrderIndex", jsonshape.IntegerRange(0, maximum)),
+		jsonshape.Required("resolutionOrderIndex", jsonshape.IntegerRange(0, MaxResolutionOrderIndex)),
 		jsonshape.Required("role", role), jsonshape.Required("selector", text),
 		jsonshape.Required(commandField, jsonshape.Array(text, 0)), jsonshape.Required("witnessRouteId", outputDigest()),
 	}, extra...)...)

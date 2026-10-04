@@ -9472,8 +9472,8 @@
       "witnessPath": "internal/tools/commandcontractgen/receipt_structure_test.go",
       "witnessSelectors": [
         {
-          "selector": "TestReceiptChildBindingsPreservePartialParent",
-          "command": "go test ./internal/tools/commandcontractgen -run '^TestReceiptChildBindingsPreservePartialParent$'"
+          "selector": "TestReceiptChildBindingsPreserveOwnersInStructuredParent",
+          "command": "go test ./internal/tools/commandcontractgen -run '^TestReceiptChildBindingsPreserveOwnersInStructuredParent$'"
         },
         {
           "selector": "TestReceiptStructuresRejectRehashedNestedDrift",
@@ -9850,6 +9850,24 @@
       "witnessId": "proofkit.proof-routing-schema-independent-runtime",
       "witnessKind": "contract",
       "witnessPath": "scripts/proof-routing-structure.test.mjs",
+      "commandIds": ["proofkit.boundary-contract-check"],
+      "environmentClasses": ["local-go-node"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.selective-proof-schema-independent-runtime",
+      "witnessId": "proofkit.selective-proof-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/selective-proof-structure.test.mjs",
+      "commandIds": ["proofkit.boundary-contract-check"],
+      "environmentClasses": ["local-go-node"]
+    },
+    {
+      "requirementId": "REQ-PROOFKIT-QUALITY-004",
+      "scenarioId": "proofkit.supply-chain-quality.impact-schema-independent-runtime",
+      "witnessId": "proofkit.impact-schema-independent-runtime",
+      "witnessKind": "contract",
+      "witnessPath": "scripts/impact-structure.test.mjs",
       "commandIds": ["proofkit.boundary-contract-check"],
       "environmentClasses": ["local-go-node"]
     },

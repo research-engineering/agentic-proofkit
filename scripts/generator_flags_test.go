@@ -24,14 +24,15 @@ func TestGeneratorFlagDiagnosticsPreserveProcessContract(t *testing.T) {
 	for _, tool := range []string{"commandcontractgen", "commandfamilygen"} {
 		t.Run(tool, func(t *testing.T) {
 			binary := filepath.Join(t.TempDir(), tool)
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-			defer cancel()
-			build := exec.CommandContext(ctx, "go", "build", "-o", binary, "./internal/tools/"+tool)
+			setupCtx, cancelSetup := context.WithTimeout(t.Context(), 2*time.Minute)
+			defer cancelSetup()
+			build := exec.CommandContext(setupCtx, "go", "build", "-o", binary, "./internal/tools/"+tool)
 			build.Dir = root
 			if output, err := build.CombinedOutput(); err != nil {
 				t.Fatalf("build failed: %v\n%s", err, output)
 			}
-			directory := generatorSourceFixture(t, ctx, root)
+			directory := generatorSourceFixture(t, setupCtx, root)
+			cancelSetup()
 			outputs := []string{"internal/app/command_family_catalog_generated.go"}
 			modeError := "commandfamilygen accepts only --check\n"
 			staleError := "generated command family projection is stale; run go run ./internal/tools/commandfamilygen\n"
@@ -72,6 +73,8 @@ func TestGeneratorFlagDiagnosticsPreserveProcessContract(t *testing.T) {
 			}
 			run := func(t *testing.T, args []string, argvZero string, wantExit int, wantStderr string) {
 				t.Helper()
+				ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
+				defer cancel()
 				command := exec.CommandContext(ctx, binary, args...)
 				command.Dir = directory
 				if argvZero != "" {

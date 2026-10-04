@@ -14,6 +14,8 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/completioncriteria"
 	"github.com/research-engineering/agentic-proofkit/internal/command/customruleboundary"
 	"github.com/research-engineering/agentic-proofkit/internal/command/documentlifecycle"
+	"github.com/research-engineering/agentic-proofkit/internal/command/impact"
+	"github.com/research-engineering/agentic-proofkit/internal/command/obligationdecision"
 	"github.com/research-engineering/agentic-proofkit/internal/command/packageruntimedependency"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofobligationalgebra"
 	"github.com/research-engineering/agentic-proofkit/internal/command/proofreceiptadmission"
@@ -28,10 +30,13 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementcoverageview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementdiff"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementgraph"
+	"github.com/research-engineering/agentic-proofkit/internal/command/requirementimpactinput"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceadmission"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourcetransition"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementsourceview"
 	"github.com/research-engineering/agentic-proofkit/internal/command/requirementspectree"
+	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
+	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
 	"github.com/research-engineering/agentic-proofkit/internal/command/witnessplan"
@@ -368,6 +373,66 @@ func nativeStructures() []nativeStructure {
 		predecessors: []string{"proofkit.typescript-public-api-surfaces.output.v1.root-shape"}, commands: []string{"typescript-public-api-surfaces"},
 		outOfBandVersion: json.Number("1"),
 		schema:           func() (map[string]any, error) { return publicapi.OutputStructure(), nil },
+	}, {
+		id: "proofkit.selective-gate-plan.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.selective-gate-plan.input.v1.root-shape"}, commands: []string{"selective-gate-plan"},
+		schema: func() (map[string]any, error) { return selectivegateplan.InputStructure(), nil },
+	}, {
+		id: "proofkit.selective-gate-plan.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.selective-gate-plan.output.v1.root-shape"}, commands: []string{"selective-gate-plan"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return selectivegateplan.EnvelopeStructure(), nil }},
+			{id: "02-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+			{id: "03-plan", when: "without --agent-envelope", schema: func() (map[string]any, error) { return selectivegateplan.OutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.selective-gate-evidence.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.selective-gate-evidence.input.v1.root-shape"}, commands: []string{"selective-gate-evidence"},
+		schema: func() (map[string]any, error) { return selectivegateevidence.InputStructure(), nil },
+	}, {
+		id: "proofkit.selective-gate-evidence.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.selective-gate-evidence.output.v1.root-shape"}, commands: []string{"selective-gate-evidence"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return selectivegateevidence.EnvelopeStructure(), nil }},
+			{id: "02-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+			{id: "03-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return selectivegateevidence.OutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.selective-gate-obligation-decision-input.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.selective-gate-obligation-decision-input.input.v1.root-shape"}, commands: []string{"selective-gate-obligation-decision-input"},
+		schema: func() (map[string]any, error) { return selectivegateevidence.ProjectionInputStructure(), nil },
+	}, {
+		id: "proofkit.selective-gate-obligation-decision-input.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.selective-gate-obligation-decision-input.output.v1.root-shape"}, commands: []string{"selective-gate-obligation-decision-input"},
+		schema: func() (map[string]any, error) { return obligationdecision.InputStructure(), nil },
+	}, {
+		id: "proofkit.obligation-decision.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.obligation-decision.input.v1.root-shape"}, commands: []string{"obligation-decision"},
+		schema: func() (map[string]any, error) { return obligationdecision.InputStructure(), nil },
+	}, {
+		id: "proofkit.obligation-decision.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.obligation-decision.output.v1.root-shape"}, commands: []string{"obligation-decision"},
+		variants: []nativeStructureVariant{
+			{id: "01-agent-envelope", when: "--agent-envelope with admitted input", schema: func() (map[string]any, error) { return obligationdecision.EnvelopeStructure(), nil }},
+			{id: "02-invalid-input-envelope", when: "--agent-envelope after command admission rejects decoded input; JSON framing and argument errors use stderr", schema: func() (map[string]any, error) { return agentenvelope.InvalidInputStructure(), nil }},
+			{id: "03-report", when: "without --agent-envelope", schema: func() (map[string]any, error) { return obligationdecision.OutputStructure(), nil }},
+		},
+	}, {
+		id: "proofkit.impact.input.v2.json-schema", direction: "input", wireVersion: json.Number("2"),
+		predecessors: []string{"proofkit.impact.input.v2.root-shape"}, commands: []string{"impact"},
+		schema: func() (map[string]any, error) { return impact.InputStructure(), nil },
+	}, {
+		id: "proofkit.impact.output.v2.json-schema", direction: "output", wireVersion: json.Number("2"),
+		predecessors: []string{"proofkit.impact.output.v2.root-shape"}, commands: []string{"impact"},
+		schema: func() (map[string]any, error) { return impact.OutputStructure(), nil },
+	}, {
+		id: "proofkit.requirement-impact-input-compose.input.v3.json-schema", direction: "input", wireVersion: json.Number("3"),
+		predecessors: []string{"proofkit.requirement-impact-input-compose.input.v3.root-shape"}, commands: []string{"requirement-impact-input-compose"},
+		schema: requirementimpactinput.InputStructure,
+	}, {
+		id: "proofkit.requirement-impact-input-compose.output.v2.json-schema", direction: "output", wireVersion: json.Number("2"),
+		predecessors: []string{"proofkit.requirement-impact-input-compose.output.v2.root-shape"}, commands: []string{"requirement-impact-input-compose"},
+		schema: func() (map[string]any, error) { return requirementimpactinput.OutputStructure(), nil },
 	}}
 }
 

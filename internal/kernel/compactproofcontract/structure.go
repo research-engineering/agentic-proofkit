@@ -25,12 +25,8 @@ func InputStructure() map[string]any {
 	texts := func(item map[string]any) map[string]any {
 		return map[string]any{"type": "array", "items": item, "uniqueItems": true}
 	}
-	maximumOrder := maxJSONSafeInteger
-	if strconv.IntSize == 32 {
-		maximumOrder = 1<<31 - 1
-	}
 	order := map[string]any{"type": "integer", "minimum": json.Number("0"),
-		"maximum": json.Number(strconv.FormatInt(maximumOrder, 10))}
+		"maximum": json.Number(strconv.FormatInt(MaxResolutionOrderIndex, 10))}
 	definitions := map[string]any{
 		"text": text, "identifier": identifier, "normalizedIdentifier": normalizedIdentifier,
 		"texts": texts(schemaReference("text")), "identifiers": texts(schemaReference("normalizedIdentifier")),

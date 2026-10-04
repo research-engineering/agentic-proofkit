@@ -653,16 +653,20 @@ func keyString(key commandKey) string {
 }
 
 func parseKey(value string) commandKey {
-	parts := strings.Split(value, "\x00")
-	key := commandKey{}
-	if len(parts) > 0 {
-		key.ID = parts[0]
+	id, rest, found := strings.Cut(value, "\x00")
+	key := commandKey{ID: id}
+	if !found {
+		return key
 	}
-	if len(parts) > 1 {
-		key.Command = parts[1]
+	// Admitted IDs and source paths contain no NUL; command text may contain it.
+	separator := strings.LastIndexByte(rest, 0)
+	if separator < 0 {
+		key.Command = rest
+		return key
 	}
-	if len(parts) > 2 && parts[2] != "" {
-		key.SourcePath = &parts[2]
+	key.Command = rest[:separator]
+	if source := rest[separator+1:]; source != "" {
+		key.SourcePath = &source
 	}
 	return key
 }

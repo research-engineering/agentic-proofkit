@@ -161,7 +161,7 @@ func outputCommandRecord(raw any, context string) (map[string]any, error) {
 	}
 	item := map[string]any{"command": commandText, "id": id, "reason": reason}
 	if rawOwnership, ok := record["commandOwnership"]; ok {
-		ownership, err := admit.Enum(rawOwnership, map[string]struct{}{"caller_owned_external": {}, "proofkit_secret_scan": {}, "proofkit_text_policy": {}}, context+" commandOwnership")
+		ownership, err := admit.Enum(rawOwnership, scanOwnershipSet, context+" commandOwnership")
 		if err != nil {
 			return nil, err
 		}
@@ -193,7 +193,7 @@ func outputScanObligationRecord(raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	commandOwnership, err := admit.Enum(record["commandOwnership"], map[string]struct{}{"caller_owned_external": {}, "proofkit_secret_scan": {}, "proofkit_text_policy": {}}, "selective gate plan output scanObligation commandOwnership")
+	commandOwnership, err := admit.Enum(record["commandOwnership"], scanOwnershipSet, "selective gate plan output scanObligation commandOwnership")
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func outputScanObligationRecord(raw any) (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
-	reason, err := admit.Enum(record["reason"], map[string]struct{}{"external_secret_scan": {}, "secret_scan": {}, "text_policy": {}}, "selective gate plan output scanObligation reason")
+	reason, err := admit.Enum(record["reason"], scanReasonSet, "selective gate plan output scanObligation reason")
 	if err != nil {
 		return nil, err
 	}

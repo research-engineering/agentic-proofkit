@@ -62,8 +62,35 @@ func TestChangedSourceChildrenBindTheSinglePublishedOwner(t *testing.T) {
 			})
 		}
 	}
-	if seen != 29 {
-		t.Fatalf("changed source-child path count=%d, want 29", seen)
+	if seen != 32 {
+		t.Fatalf("changed source-child path count=%d, want 32", seen)
+	}
+}
+
+func TestNullableChildBindingPreservesExactNonnullOwner(t *testing.T) {
+	child := map[string]any{"type": "object", "additionalProperties": false, "properties": map[string]any{"id": map[string]any{"type": "string"}}}
+	for _, keyword := range []string{"anyOf", "oneOf"} {
+		for _, reversed := range []bool{false, true} {
+			values := []any{map[string]any{"type": "null"}, child}
+			if reversed {
+				values[0], values[1] = values[1], values[0]
+			}
+			if !equalBoundChildSchema(map[string]any{keyword: values}, child) {
+				t.Fatal("nullable child lost its owner")
+			}
+		}
+		for _, bad := range []map[string]any{
+			{keyword: []any{map[string]any{"type": "null"}, map[string]any{"type": "object"}}},
+			{keyword: []any{map[string]any{"type": "null"}, child, map[string]any{"type": "string"}}},
+			{keyword: []any{child, child}},
+			{keyword: []any{map[string]any{"type": "null", "not": true}, child}},
+			{keyword: []any{map[string]any{"type": "null"}, child}, "not": true},
+			{keyword: []any{nil, child}},
+		} {
+			if equalBoundChildSchema(bad, child) {
+				t.Fatal("nullable wrapper admitted unowned semantics")
+			}
+		}
 	}
 }
 

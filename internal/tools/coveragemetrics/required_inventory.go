@@ -14,6 +14,14 @@ type requiredInventoryEntry struct {
 
 func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 	return map[inventoryKey]requiredInventoryEntry{
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.impact-schema-independent-runtime"}: {
+			witnessPath: "scripts/impact-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
+		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.selective-proof-schema-independent-runtime"}: {
+			witnessPath: "scripts/selective-proof-structure.test.mjs",
+			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
+		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.proof-routing-schema-independent-runtime"}: {
 			witnessPath: "scripts/proof-routing-structure.test.mjs",
 			commandIDs:  []string{"proofkit.boundary-contract-check"}, environmentClasses: []string{"local-go-node"},
@@ -148,7 +156,7 @@ func requiredBindingWitnessInventory() map[inventoryKey]requiredInventoryEntry {
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-schema-owner"}: {
 			witnessPath: "internal/tools/commandcontractgen/receipt_structure_test.go",
 			commandIDs:  []string{"proofkit.go-test"}, environmentClasses: []string{"local-go"},
-			selectors: []string{"TestReceiptChildBindingsPreservePartialParent", "TestReceiptStructuresRejectRehashedNestedDrift"},
+			selectors: []string{"TestReceiptChildBindingsPreserveOwnersInStructuredParent", "TestReceiptStructuresRejectRehashedNestedDrift"},
 		},
 		{"REQ-PROOFKIT-QUALITY-004", "proofkit.supply-chain-quality.receipt-shared-structures"}: {
 			witnessPath: "internal/kernel/jsonshape/inventory_projection_test.go",
