@@ -137,6 +137,8 @@ test("admission and evaluation failures are separate composer and impact outcome
 });
 
 test("nullable optional and nonempty fields preserve the distinct parent and child domains", () => {
+  const nullBaseRef = impactInput(); nullBaseRef.baseRef = null;
+  validates(impact, "input", nullBaseRef, false, "baseRef/null"); native(impact, nullBaseRef, badNative);
   for (const nonClaims of [undefined, null, []]) {
     const input = impactInput(); if (nonClaims === undefined) delete input.nonClaims; else input.nonClaims = nonClaims;
     validates(impact, "input", input); assert.ok(native(impact, input).nonClaims.length);

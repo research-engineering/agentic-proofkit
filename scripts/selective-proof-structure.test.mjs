@@ -156,6 +156,9 @@ test("complete child evidence supports a satisfied decision without implying exe
 });
 
 test("optional null partitions preserve the consuming owner domain", () => {
+  const nullCommand = planInput(); nullCommand.dependencyFreshness.command = null;
+  validates(names[0], "input", nullCommand, false, "dependencyFreshness/command/null");
+  native(names[0], nullCommand, {exit: 1, report: false});
   for (const key of ["fallbackCoverage", "pathTriggeredCommands", "unknownEdges"]) {
     const input = planInput(); input[key] = null; validates(names[0], "input", input); native(names[0], input);
   }
@@ -359,6 +362,49 @@ test("delimiter-bearing duplicate keys retain command text and only repair the d
     }
     assert.deepEqual(output, corrected);
     assert.equal(current.stdout, JSON.stringify(corrected, null, 2) + "\n");
+  }
+});
+
+test("repaired report hashes bind both envelope references across layouts and omissions", () => {
+  const sourceRefId = "proofkit.agent.context.selective-evidence.001";
+  const invoke = (file, input, layout) => {
+    const args = layout ? ["--json-layout", layout, names[1], "--input", "-", "--agent-envelope"] : [names[1], "--input", "-"];
+    const result = spawnSync(file, args,
+      {input: JSON.stringify(input), encoding: "utf8", timeout: 10000, maxBuffer: 4 << 20});
+    assert.equal(result.error, undefined); assert.equal(result.signal, null);
+    assert.equal(result.status, 1); assert.equal(result.stderr, "");
+    return {wire: result.stdout, value: JSON.parse(result.stdout)};
+  };
+  for (const crowded of [false, true]) {
+    const input = evidenceInput(); input.receipts[0].command = "go\u0000test";
+    input.receipts.push(structuredClone(input.receipts[0]));
+    if (crowded) for (let index = 0; index < 30; index++) {
+      input.plan.requiredCommands.push({command: "go test ./extra", id: `extra.${index}`, reason: "Synthetic missing receipt."});
+    }
+    validates(names[1], "input", input);
+    const report = invoke(binary, input);
+    validates(names[1], "output", report.value);
+    const digest = wire => "sha256:" + createHash("sha256").update(wire).digest("hex");
+    const currentHash = digest(report.wire);
+    const predecessor = process.env.PROOFKIT_SELECTIVE_BASELINE;
+    const previousHash = predecessor ? digest(invoke(predecessor, input).wire) : null;
+    if (predecessor) assert.notEqual(currentHash, previousHash);
+    for (const layout of ["pretty", "compact"]) {
+      const current = invoke(binary, input, layout);
+      validates(names[1], "output", current.value);
+      assert.equal(current.value.sourceReport.stableHash, currentHash);
+      assert.equal(current.value.contextRefs.find(row => row.refId === sourceRefId).ref, currentHash);
+      assert.equal(current.value.bounds.omittedCount > 0, crowded);
+      if (predecessor) {
+        const previous = invoke(predecessor, input, layout).value;
+        assert.equal(previous.sourceReport.stableHash, previousHash);
+        const sourceRef = previous.contextRefs.find(row => row.refId === sourceRefId);
+        assert.equal(sourceRef.ref, previousHash);
+        previous.sourceReport.stableHash = currentHash; sourceRef.ref = currentHash;
+        assert.deepEqual(current.value, previous);
+        assert.equal(current.wire, JSON.stringify(previous, null, layout === "pretty" ? 2 : 0) + "\n");
+      }
+    }
   }
 });
 
