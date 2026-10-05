@@ -1,0 +1,610 @@
+{
+  "schemaVersion": 1,
+  "head": "0a6a9e91c953880384ae641a57c8bee1a97fcf7a",
+  "tree": "74e161dff94a11de672038579723aab378a121ac",
+  "binarySHA256": "da95d77ed911bbeaffb5c38f018afde809346b0837b83af4654a2cbbff814dc4",
+  "observations": [
+    {
+      "name": "valid",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "e6017f9797d8ba585b338e084c98e0367be8c1cf2646a4ceb76308fd99115777",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "compact",
+      "argv": [
+        "--json-layout",
+        "compact",
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "f50be5aaa3e16bd4d5644ea02a83978935a73cf41a2339df1a1d6dca4ea5f526",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "empty-claims",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "0fdb29d07473f568c28a68a54d6308f75b739468f22636de064129646325508f",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "example_or_rationale",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"example_or_rationale\",\"citedRequirementIds\":[],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "ba40dc3ffaa20f1e4d48fb129b257516c5bdb60736f556df2d61b467e83cd4f4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "example_or_rationale-cited",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"example_or_rationale\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "69272094364a30a7e74306cbbd4a7a631e13a3d8127a8ad54c3060aa0a68bd6a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "quoted_or_code",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"quoted_or_code\",\"citedRequirementIds\":[],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "ba40dc3ffaa20f1e4d48fb129b257516c5bdb60736f556df2d61b467e83cd4f4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "quoted_or_code-cited",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"quoted_or_code\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "69272094364a30a7e74306cbbd4a7a631e13a3d8127a8ad54c3060aa0a68bd6a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "section_heading",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"section_heading\",\"citedRequirementIds\":[],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "ba40dc3ffaa20f1e4d48fb129b257516c5bdb60736f556df2d61b467e83cd4f4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "section_heading-cited",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"section_heading\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "69272094364a30a7e74306cbbd4a7a631e13a3d8127a8ad54c3060aa0a68bd6a",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "uncited-durable",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "36d695c8b71b2976aef6dd004a063a5139b87d9b1aa0fb1323d2e0239dffd637",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unknown-citation",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-404\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "4bd9c13cea01f73578dfb43f94ab4e6dba5afd4bbc31ecbb23f57c586a47f64d",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "both-paths-wrong",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/other.md\",\"requirementsPath\":\"docs/other.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "655a78f0316dab9c39c6fe22f7871ea6e09b80b657b1f6c83c01c31a73f085ac",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "retired-source-suffix",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v1.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": true,
+      "stdoutSHA256": "e583de10d34b566ff9f32a1ada50786931c0522fefdf585894e6136e4706e5ac",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "trim-paths-text",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\" docs/specs/example \",\"overviewPath\":\" docs/specs/example/overview.md \",\"requirementsPath\":\" docs/specs/example/requirements.v2.json \",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\" Synthetic caller extraction facts. \"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\" must \"],\"dispositionRationale\":\" Synthetic modal claim. \",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "e6017f9797d8ba585b338e084c98e0367be8c1cf2646a4ceb76308fd99115777",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "builtin-overlap",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Spec overview claim boundary reports do not read Markdown files.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "8c928efcc34f634b1ce0f4d425092f93c2093eb23ec48ed258ead2ee974d9088",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "unsorted-claims",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]},{\"claimId\":\"claim.alpha\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "87bba9c1501ec0491473145a55082710eeaa66d79885dd179d046d65c2c86af4",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "duplicate-claim",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]},{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "533d3fa20eff4e8c734eacb5ee1af1adbbd62d20351cf465d1a75fc020c0aafc"
+    },
+    {
+      "name": "empty-requirementIds",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "0ca135529e39f2e226c667481b72e321eec30fe19dc18baed9c18c6e9ae9e028"
+    },
+    {
+      "name": "empty-extractionRefs",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "32c4d50321481001478b53c94d747c532bb5397e84d056dd7f1babb297765940"
+    },
+    {
+      "name": "empty-nonClaims",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "084b3193f301514b08a8c032f7f5cd8f717d033ad7e33d44d9a33096a6586019"
+    },
+    {
+      "name": "empty-claim-detectedMarkers",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "ac9117d6854984797640e416ae9c0f343af2bb0735d45f04ee03505ce1b8fe81"
+    },
+    {
+      "name": "empty-claim-nonClaims",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "58179945575060c6eebf59860f25139737c0d87ca2c17fdebb22d3e3988319ce"
+    },
+    {
+      "name": "unsorted-requirements",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-002\",\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "1fa3cfa8c434d089249485d12954603bbf808eff61a45ec8c258c8e39fea7ed0"
+    },
+    {
+      "name": "duplicate-marker-after-trim",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\" must \",\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "16417f8c2351e8dc2ec581aa63e0beec4879134efaec272e909a8b1f7130b837"
+    },
+    {
+      "name": "unsafe-path",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"../overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "907635dfb598722aa5f06e9c8cd9133efc7d0cce81656ca72eb010d38ebe722f"
+    },
+    {
+      "name": "trimmed-id",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\" proofkit.test.overview \",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "de669480cfd895d744471cec68af4bc782c86dda9510fa3675f3f3b2bc87fac5"
+    },
+    {
+      "name": "unknown-root",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}],\"unknown\":1}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "b22467eb446b49f3db41d40a0d68a14654e6594d1e028e30504ae0c4871e78a3"
+    },
+    {
+      "name": "unknown-child",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"],\"unknown\":1}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "21ffb2b35bdf3a94b49526252d6f2c8261ea12facd3410cdf63d7765053cb6d7"
+    },
+    {
+      "name": "missing-child",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "ee250811cc29d7ce130ca85cc4b90742f243739c6f9e23745bcc313f7d7add93"
+    },
+    {
+      "name": "null-kind",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":null,\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "9706c68459f7bd52fde490d25fdae6ae9ee1139e12090c9305d945a5808ecf20"
+    },
+    {
+      "name": "spaced-kind",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\" durable_claim \",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "9706c68459f7bd52fde490d25fdae6ae9ee1139e12090c9305d945a5808ecf20"
+    },
+    {
+      "name": "uppercase-digest",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "ee250811cc29d7ce130ca85cc4b90742f243739c6f9e23745bcc313f7d7add93"
+    },
+    {
+      "name": "spaced-digest",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111 \",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "ee250811cc29d7ce130ca85cc4b90742f243739c6f9e23745bcc313f7d7add93"
+    },
+    {
+      "name": "line-token-33",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":9223372036854775807,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "e6017f9797d8ba585b338e084c98e0367be8c1cf2646a4ceb76308fd99115777",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "line-token-34",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":9223372036854775808,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-35",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1.0,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-36",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1e0,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-37",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":0,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-38",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":-1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-39",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":null,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-40",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":true,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "line-token-41",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":\"1\",\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "6feb91f9abca67e5b1664e37c748f9b86e7b8028d0395f0ab7406e2961bd33bf"
+    },
+    {
+      "name": "duplicate-json-key",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-"
+      ],
+      "input": "{\"schemaVersion\":1,\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}",
+      "exitCode": 1,
+      "report": false,
+      "stdoutSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderrSHA256": "da127fc0c94cbd9dc508e02496bddf4c59297db82ab76a67fe4f3d8403bccacc"
+    },
+    {
+      "name": "help--help",
+      "argv": [
+        "spec-overview-claims",
+        "--help"
+      ],
+      "input": "",
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "72ccb20e4316ae1a4fc7c1a6e3352fcae82108d0d747d21d0f3917806dc5117e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "help-h",
+      "argv": [
+        "spec-overview-claims",
+        "-h"
+      ],
+      "input": "",
+      "exitCode": 0,
+      "report": false,
+      "help": true,
+      "stdoutSHA256": "72ccb20e4316ae1a4fc7c1a6e3352fcae82108d0d747d21d0f3917806dc5117e",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "pointer",
+      "argv": [
+        "spec-overview-claims",
+        "--input",
+        "-",
+        "--input-pointer",
+        "/boundary"
+      ],
+      "input": "{\"boundary\":{\"schemaVersion\":1,\"boundaryId\":\"proofkit.test.overview\",\"sourceId\":\"proofkit.test.source\",\"specPackagePath\":\"docs/specs/example\",\"overviewPath\":\"docs/specs/example/overview.md\",\"requirementsPath\":\"docs/specs/example/requirements.v2.json\",\"requirementIds\":[\"REQ-EXAMPLE-001\"],\"extractionRefs\":[\"scripts/extract.mjs\"],\"nonClaims\":[\"Synthetic caller extraction facts.\"],\"claims\":[{\"claimId\":\"claim.example\",\"claimKind\":\"durable_claim\",\"citedRequirementIds\":[\"REQ-EXAMPLE-001\"],\"detectedMarkers\":[\"must\"],\"dispositionRationale\":\"Synthetic modal claim.\",\"lineDigest\":\"sha256:1111111111111111111111111111111111111111111111111111111111111111\",\"lineNumber\":1,\"nonClaims\":[\"Synthetic claim.\"]}]}}",
+      "exitCode": 0,
+      "report": true,
+      "stdoutSHA256": "e6017f9797d8ba585b338e084c98e0367be8c1cf2646a4ceb76308fd99115777",
+      "stderrSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}
