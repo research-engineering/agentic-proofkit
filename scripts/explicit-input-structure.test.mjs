@@ -30,6 +30,9 @@ before(() => {
 after(() => { if (directory) rmSync(directory, {recursive: true, force: true}); });
 const hash = value => createHash("sha256").update(value).digest("hex");
 const seed = (command, name = "plain") => structuredClone(baseline.observations.find(x => x.command === command && x.name === name).input);
+const emptyEnvelopeCases = ["empty-sources", "empty-paths"].map(name => ({
+  command: "changed-path-set", name: `${name}-envelope`, input: seed("changed-path-set", name), args: ["--agent-envelope"],
+}));
 const at = (value, path) => path.reduce((x, key) => x[key], value);
 function containers(value, path = []) {
   if (!value || typeof value !== "object") return [];
@@ -139,8 +142,71 @@ test("raw duplicate keys and native-only predicates do not become schema proof",
   reject("changed-path-set", seed("changed-path-set", "duplicate-source-id"), "source identity", false);
 });
 
+test("empty successful envelopes populate the normal policy clarification variant", () => {
+  for (const row of emptyEnvelopeCases) {
+    const result = invoke(row.command, row.input, row.args);
+    assert.equal(result.status, 0, row.name); assert.equal(result.stderr, "", row.name);
+    const value = JSON.parse(result.stdout), validate = families.get(row.command).output[1];
+    assert.equal(validate(value), true, `${row.name}/normal output`);
+    assert.equal(families.get(row.command).output[2](value), false, `${row.name}/not invalid-input`);
+    assert.equal(value.sourceReport.state, "passed");
+    assert.equal(value.clarificationQuestions.length, 1);
+    const question = value.clarificationQuestions[0];
+    assert.equal(question.questionId, "proofkit.changed-path-set.clarify.empty-set");
+    assert.equal(question.expectedAnswerKind, "policy_choice");
+    assert.equal(question.blocking, false);
+    assert.deepEqual(question.evidenceRefs, ["proofkit.changed-path-set.context.changed-paths", "proofkit.changed-path-set.context.source-summaries"]);
+    const bad = structuredClone(value); bad.clarificationQuestions[0].expectedAnswerKind = "foreign_choice";
+    assert.equal(validate(bad), false, `${row.name}/clarification kind`);
+  }
+});
+
+test("caller nonclaims may overlap builtin claims without losing multiplicity", () => {
+  const builtin = "Secret scan checks caller-provided file inventory only.";
+  const input = seed("secret-scan"); input.nonClaims = [` ${builtin} `];
+  assert.equal(families.get("secret-scan").input[0](input), true);
+  const result = invoke("secret-scan", input);
+  assert.equal(result.status, 0); assert.equal(result.stderr, "");
+  const value = JSON.parse(result.stdout);
+  assert.equal(families.get("secret-scan").output[0](value), true, "caller/builtin overlap output");
+  assert.equal(value.nonClaims.filter(x => x === builtin).length, 2);
+  assert.deepEqual(value.nonClaims, [...value.nonClaims].sort());
+});
+
+test("path bytes are preserved and suppression coordinates match exactly", () => {
+  const changed = seed("changed-path-set"); changed.sources[0].paths = ["src/a.ts", " src/a.ts "];
+  const changeResult = invoke("changed-path-set", changed);
+  assert.equal(changeResult.status, 0); assert.equal(changeResult.stderr, "");
+  const report = JSON.parse(changeResult.stdout);
+  assert.deepEqual(report.changedPaths, [" src/a.ts ", "src/a.ts"]);
+  assert.deepEqual(report.duplicatePaths, []);
+  assert.equal(families.get("changed-path-set").output[0](report), true);
+  for (const exact of [false, true]) {
+    const input = seed("secret-scan", "suppressed-finding"); input.files[0].path = " src/a.txt ";
+    if (exact) input.suppressions[0].path = input.files[0].path;
+    const result = invoke("secret-scan", input);
+    assert.equal(result.status, exact ? 0 : 1); assert.equal(result.stderr, "");
+    const value = JSON.parse(result.stdout);
+    assert.equal(families.get("secret-scan").output[0](value), true);
+    assert.equal(value.summary.suppressedFindingCount, exact ? 1 : 0);
+    assert.equal(value.summary.unusedSuppressionCount, exact ? 0 : 1);
+    const findings = value.diagnostics.find(x => x.key === (exact ? "suppressedFindings" : "findings")).value;
+    assert.equal(findings[0].path, " src/a.txt ");
+  }
+  for (const path of ["./src/a.txt", "src//a.txt"]) {
+    const secret = seed("secret-scan"); secret.files[0].path = path;
+    reject("secret-scan", secret, "noncanonical path", false);
+    const changed = seed("changed-path-set"); changed.sources[0].paths = [path];
+    const result = invoke("changed-path-set", changed);
+    assert.equal(result.status, 1); assert.equal(result.stderr, "");
+    const value = JSON.parse(result.stdout);
+    assert.equal(value.invalidPaths.length, 1); assert.deepEqual(value.changedPaths, []);
+    assert.equal(families.get("changed-path-set").output[0](value), true);
+  }
+});
+
 test("every populated output record rejects missing, foreign, null and wrong-type members", () => {
-  for (const row of baseline.observations.filter(x => x.expected !== "rejected")) {
+  for (const row of [...baseline.observations.filter(x => x.expected !== "rejected"), ...emptyEnvelopeCases]) {
     const value = JSON.parse(invoke(row.command, row.input, row.args).stdout), validate = outputValidator(row.command, value, row.args);
     for (const path of containers(value).filter(p => !Array.isArray(at(value, p)))) {
       const unknown = structuredClone(value); at(unknown, path).foreignField = true;
