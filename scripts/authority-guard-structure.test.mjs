@@ -147,11 +147,11 @@ test("authority guard nested predicates have populated positive and negative spe
     const inputs = rows.map(row => row.name === "pointer" ? JSON.parse(row.input).payload : JSON.parse(row.input));
     const populated = validInput(command);
     if (command === producer) {
-      populated.nonClaimRefs = ["claim.policy"];
-      populated.admissionChanges[0].nonClaimRefs = ["claim.change"];
-      populated.mergeObligationReceiptRefs[0].nonClaimRefs = ["claim.receipt"];
+      populated.nonClaimRefs = ["p".repeat(256)];
+      populated.admissionChanges[0].nonClaimRefs = ["c".repeat(256)];
+      populated.mergeObligationReceiptRefs[0].nonClaimRefs = ["r".repeat(256)];
       populated.mergeObligationReceiptRefs[0].producerId = populated.admissionChanges[0].producerId;
-    } else populated.parityRecords[0].receiptRefs = ["receipt.claim"];
+    } else populated.parityRecords[0].receiptRefs = ["m".repeat(256)];
     assert.equal(validators[command].input(populated), true, `${command}/populated-reference-input`);
     const populatedResult = invoke(command, JSON.stringify(populated));
     assert.equal(populatedResult.status, command === producer ? 1 : 0); assert.equal(populatedResult.stderr, "");
