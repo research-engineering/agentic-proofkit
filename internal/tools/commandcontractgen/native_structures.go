@@ -41,6 +41,7 @@ import (
 	"github.com/research-engineering/agentic-proofkit/internal/command/secretscan"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateevidence"
 	"github.com/research-engineering/agentic-proofkit/internal/command/selectivegateplan"
+	"github.com/research-engineering/agentic-proofkit/internal/command/selfcheck"
 	"github.com/research-engineering/agentic-proofkit/internal/command/testevidenceinventory"
 	"github.com/research-engineering/agentic-proofkit/internal/command/textpolicy"
 	"github.com/research-engineering/agentic-proofkit/internal/command/transactionresidue"
@@ -66,6 +67,7 @@ type nativeStructure struct {
 	outOfBandVersion     json.Number
 	aggregateVersion     json.Number // Contract version for variants with independent wire headers.
 	optionalInputVersion bool
+	jsonValueInput       bool // Unconstrained JSON input; its contract version is metadata only.
 	semanticVersion      uint // Zero follows the wire version; nonzero identifies changed semantics.
 }
 
@@ -493,6 +495,15 @@ func nativeStructures() []nativeStructure {
 		id: "proofkit.secret-scan.output.v1.json-schema", direction: "output",
 		predecessors: []string{"proofkit.secret-scan.output.v1.root-shape"}, commands: []string{"secret-scan"},
 		schema: func() (map[string]any, error) { return secretscan.OutputStructure(), nil },
+	}, {
+		id: "proofkit.self-check.input.v1.json-schema", direction: "input",
+		predecessors: []string{"proofkit.self-check.input.v1.root-shape"}, commands: []string{"self-check"},
+		jsonValueInput: true, outOfBandVersion: json.Number("1"),
+		schema: func() (map[string]any, error) { return selfcheck.InputStructure(), nil },
+	}, {
+		id: "proofkit.self-check.output.v1.json-schema", direction: "output",
+		predecessors: []string{"proofkit.self-check.output.v1.root-shape"}, commands: []string{"self-check"},
+		schema: func() (map[string]any, error) { return selfcheck.OutputStructure(), nil },
 	}}
 }
 
@@ -506,6 +517,10 @@ func (owner nativeStructure) schemaVersionField() string {
 func (owner nativeStructure) definition() (map[string]any, error) {
 	if owner.direction != "input" && owner.direction != "output" {
 		return nil, fmt.Errorf("native structure has an invalid direction")
+	}
+	rootKind := "object"
+	if owner.jsonValueInput {
+		rootKind = "json_value"
 	}
 	variants := owner.variants
 	if len(variants) == 0 {
@@ -530,13 +545,13 @@ func (owner nativeStructure) definition() (map[string]any, error) {
 			allowed = append(allowed, key)
 		}
 		wireVariants = append(wireVariants, map[string]any{
-			"variantId": variant.id, "when": []any{variant.when}, "rootKind": "object",
+			"variantId": variant.id, "when": []any{variant.when}, "rootKind": rootKind,
 			"allowedFields": allowed, "requiredFields": root["required"], "schema": schema,
 		})
 	}
 	record := map[string]any{
 		"definitionId": owner.id, "schemaVersion": json.Number("1"),
-		"rootType": "object", "closed": true, "definitionRefs": []any{},
+		"rootType": rootKind, "closed": true, "definitionRefs": []any{},
 		"fieldTree": map[string]any{
 			"kind": "structural_json_schema",
 			"nonClaims": []any{
@@ -564,6 +579,13 @@ func (owner nativeStructure) contractID(command string, wireVersion json.Number)
 
 func (owner nativeStructure) contractVersion(definition map[string]any) (json.Number, error) {
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
+	if owner.jsonValueInput {
+		if len(variants) != 1 {
+			return "", fmt.Errorf("arbitrary JSON input requires one variant")
+		}
+		_, err := owner.root(variants[0].(map[string]any)["schema"].(map[string]any))
+		return owner.outOfBandVersion, err
+	}
 	if owner.aggregateVersion != "" {
 		for _, raw := range variants {
 			if _, err := owner.root(raw.(map[string]any)["schema"].(map[string]any)); err != nil {
@@ -648,6 +670,9 @@ func (owner nativeStructure) summary(version json.Number) []any {
 	if owner.outOfBandVersion != "" {
 		identity = "contractSchemaVersion=" + version.String() + " (out-of-band; no serialized schemaVersion field)"
 	}
+	if owner.jsonValueInput {
+		identity = "contractSchemaVersion=" + version.String() + " (out-of-band; arbitrary input members are not version headers)"
+	}
 	if owner.aggregateVersion != "" {
 		identity = "contractSchemaVersion=" + version.String() + " (aggregate; wire headers are defined per variant)"
 	}
@@ -664,6 +689,12 @@ func nativeInputRootSummary(id string, definition map[string]any) ([]string, err
 }
 
 func (owner nativeStructure) inputRootSummary(definition map[string]any) ([]string, error) {
+	if owner.jsonValueInput {
+		if _, err := owner.contractVersion(definition); err != nil {
+			return nil, err
+		}
+		return []string{"any JSON value; no required fields or inline version header"}, nil
+	}
 	variants := definition["fieldTree"].(map[string]any)["variants"].([]any)
 	result := make([]string, 0, len(variants))
 	for _, raw := range variants {
@@ -716,6 +747,22 @@ func nativeSchemaVersion(schema map[string]any, versionField string) (json.Numbe
 }
 
 func (owner nativeStructure) root(schema map[string]any) (map[string]any, error) {
+	if owner.jsonValueInput {
+		if owner.direction != "input" || owner.schema == nil || len(owner.variants) != 0 ||
+			owner.versionField != "" || owner.wireVersion != "" || owner.aggregateVersion != "" ||
+			owner.optionalInputVersion || owner.semanticVersion != 0 {
+			return nil, fmt.Errorf("arbitrary JSON input requires one input schema and only an out-of-band version")
+		}
+		if err := validateNativeVersion(owner.outOfBandVersion); err != nil {
+			return nil, err
+		}
+		description, ok := schema["description"].(string)
+		if len(schema) != 2 || schema["$schema"] != "https://json-schema.org/draft/2020-12/schema" || !ok || strings.TrimSpace(description) == "" {
+			return nil, fmt.Errorf("arbitrary JSON input permits only dialect and description annotations")
+		}
+		// This is a field-navigation summary, not an object constraint on input.
+		return map[string]any{"properties": map[string]any{}, "required": []any{}}, nil
+	}
 	if owner.aggregateVersion != "" {
 		if len(owner.variants) < 2 || owner.schema != nil || owner.versionField != "" || owner.wireVersion != "" ||
 			owner.outOfBandVersion != "" || owner.optionalInputVersion || owner.semanticVersion != 0 {
