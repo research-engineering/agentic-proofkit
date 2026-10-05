@@ -11,13 +11,13 @@ import (
 func TestCLIContractAndFamilyCatalogHaveDistinctResourceBounds(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "resource.json")
 	const prefix = `{"commands":[{"command":"sample"}]}`
-	for _, size := range []int{2 << 20, (2 << 20) + 1} {
+	for _, size := range []int{4 << 20, (4 << 20) + 1} {
 		content := prefix + strings.Repeat(" ", size-len(prefix))
 		if err := os.WriteFile(path, []byte(content), 0600); err != nil {
 			t.Fatal(err)
 		}
 		commands, err := readCLICommands(path)
-		if size == 2<<20 {
+		if size == 4<<20 {
 			if err != nil || len(commands) != 1 || commands[0] != "sample" {
 				t.Fatalf("exact-bound contract rejected: %v", err)
 			}

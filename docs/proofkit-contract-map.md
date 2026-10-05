@@ -31,7 +31,7 @@ and non-null in the admitted variant; they do not make an optional child require
 Native admission still owns canonical numeric tokens, privacy, normalization,
 identity parsing and cross-record references. Parent commands retain their own
 root-shape-only limits. The installed machine-contract resource is bounded to
-2 MiB; this does not raise other package entry limits.
+4 MiB; this does not raise other package entry limits.
 
 `receipt-currentness-scope` and `receipt-trust-class` publish nested input and
 output structures, including required nullable fields and typed report
